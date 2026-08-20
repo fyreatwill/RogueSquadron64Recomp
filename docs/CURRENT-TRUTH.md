@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2030 (2026-08-20).
+for session detail. Reviewed through s2031 (2026-08-20).
 
 ## Current state
 
@@ -43,6 +43,21 @@ for session detail. Reviewed through s2030 (2026-08-20).
   skip path. This selects the guest gate/consumer boundary as the immediate
   next M5 question; the image/task ABI remains unvalidated and the opt-in
   arm stays off by default.
+- s2031 completed the phase-gated guest gate/consumer census. The retail
+  oracle's whole-RDRAM control reached its 10,000-hit cap, retail reached VI
+  1024 and the hangar VI 512 route, the physical `0xA0F50` watch recorded 17
+  writes from the established `0x8008EA34`/`0x8008EB40` boot pair and
+  `0x8008ED48`/`0x8008EB7C`/`0x8008EC88` transition cluster, and the
+  `0x14998A` wait-word watch recorded zero writes. The fixed port run had
+  24/24 s2006 controls, phase-valid `factor5_ucode_b` task/DMA rows at VI
+  1024 and hangar VI 512, and all sampled PCM remained zero. In the target
+  phases the named `reapplyDisplayMode` writer at `0x8008EC88` stored zero
+  twice, while the raw gate consumer emitted 511 skip rows per target phase
+  (`gate=0`, `branch=1`); gate-1 and wait consumers did not run. This closes
+  the missing-control and wait-boundary explanations for this route. The
+  port/retail value discrepancy at `0x8008EC88` remains the next question:
+  the retail instruction sets `$v0=1`, while the existing port fixup forces
+  that store to zero. No value was changed in s2031.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -187,12 +202,12 @@ for session detail. Reviewed through s2030 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 guest gate/consumer contract.** Census all five `0x800A0F50` writers
-   and the gate-1/wait consumers in one opt-in, phase-gated run, joined to
-   `audtask-abi`/`audtask-dma-row`, the reserved-gap canary, and PCM rows.
-   Keep `ROGUESQ_AUDIO_UCODE=1` opt-in and make no store changes. The
-   discriminator is writer guest PC/value → consumer read/branch → task exit
-   and PCM; retail `0xA0F50` PCs are the independent attribution control.
+1. **M5 reapply writer/value contract.** Trace the divergent
+  `reapplyDisplayMode` writer at `0x8008EC88` before changing its value.
+  Use the retail PC/previous-PC attribution and one phase-keyed port table
+  joining writer order/value to the raw gate, gate-1, wait, task, slot, and
+  PCM rows. Keep `ROGUESQ_AUDIO_UCODE=1` opt-in; do not reverse the store
+  until the caller/order evidence is captured.
 2. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
    join the worker clear path and proceed to the seven-site callback join.
@@ -291,10 +306,26 @@ hangar row included two nonzero `0x6F0` payloads, but all sampled
 The phase-valid port gate witness read byte `0` and `musyx-gate1` took its
 skip path; the independent s2030 retail oracle passed 10,011 whole-RDRAM
 writes, reached VI 1024, and recorded the established `0xA0F50` writer PCs.
-This selects the guest gate/consumer boundary as the next discriminator, not
-a default audio flip or a host SDL change. The canary/PCM result leaves the
-MusyX image/task ABI unproven; it is not a mitigation or permission to skip
-the gate.
+The s2031 same-run census then supplied the missing gate controls: 24 s2006
+controls, two phase-valid `0x8008EC88` writer rows, 511 raw-gate skip rows in
+each target phase, and phase-valid opt-in task/DMA rows. The gate-1 and wait
+consumers were not reached because the raw gate stayed zero. This rules out
+an incomplete-control or wait-boundary interpretation for the observed route
+and selects the existing `0x8008EC88` force-zero versus retail-value contract
+as the next discriminator. The canary/PCM result leaves the MusyX image/task
+ABI unproven; it is not a mitigation or permission to skip the gate.
+
+**M5 guest gate/consumer contract.** s2031's retail oracle and port census
+are independently phase-valid. Retail executed the exact writer cluster,
+including `0x8008EC88`, while the port's phase-valid writer row reported
+`0 -> 0` at that site; the generated MIPS sequence immediately before the
+retail store sets `$v0=1`, and the current fixup intentionally replaces the
+store with zero for the stubbed engine. The port raw consumer then read zero
+and took its skip branch 511 times in each title/hangar target phase. No
+gate-1 or wait row fired, while the opt-in task returned through the
+Factor-5 arm and PCM stayed zero. This selects the writer/value divergence
+as the next M5 boundary, not a missing wait consumer or a missing positive
+control. The store remains unchanged pending caller/order tracing.
 
 **M5 retail gate writers.** The s2014 whole-RDRAM control and debugger-on Rice
 watch are both live: the control reached its 10,000-callback cap and the target
@@ -430,9 +461,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   wording was believable because the existing arm had only been attributed
   by dispatch and DMA probes; the same-build phase table now proves normal
   `Broke` returns and real DMEM/DMA activity, but no nonzero PCM, while the
-  guest gate remains zero and skipped. The next discriminator is therefore
-  the gate writer/consumer join; the image/task ABI remains open rather than
-  being promoted or blamed from a single null.
+  guest gate remains zero and skipped. s2031 supersedes that next-unit choice:
+  its retail and port phase controls are live, the port writer at
+  `0x8008EC88` records `0 -> 0`, and the raw consumer takes the zero branch;
+  the remaining question is the existing force-zero versus the retail store
+  value and caller/order, not whether the gate census was exercised. The
+  image/task ABI remains open rather than being promoted or blamed from a
+  single null.
 
 ## Evidence ledger summary
 
@@ -467,7 +502,10 @@ independently live in s2029, so the port census is not being used as its own
 ground truth. s2030 validates the opt-in task arm only as a reversible
 experiment: it returns `Broke` and writes DMEM/DMA state but produces no PCM;
 the independent retail gate watch and phase-valid port gate skip make the
-guest gate/consumer census the next M5 boundary.
+guest gate/consumer census the next M5 boundary. s2031 completes that census
+with live retail/port controls, two phase-valid `0x8008EC88` zero-valued writer
+rows, and 511 raw-gate skip rows in each target phase. The next boundary is
+the existing writer-value divergence and caller/order, not the wait consumer.
 
 ## Method and safety rules
 

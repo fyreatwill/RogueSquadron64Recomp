@@ -1412,8 +1412,10 @@ static void queue_samples(int16_t* samples, size_t num_samples) {
         }
         if (all_zero) s_pcm_allzero_calls++;
         if (s_pcm_n < 20 || (s_pcm_n % 256) == 0) {
-            fprintf(stderr, "[pcm-sanity] n=%u num_samples=%zu all_zero=%d allzero_calls=%u total_calls=%u\n",
-                    s_pcm_n, num_samples, all_zero ? 1 : 0, s_pcm_allzero_calls, s_pcm_n + 1);
+            fprintf(stderr, "[pcm-sanity] n=%u phase=%u width=%u origin=0x%06X num_samples=%zu all_zero=%d allzero_calls=%u total_calls=%u\n",
+                    s_pcm_n, rs64_phase_ord(), rs64_vi_committed_width(),
+                    rs64_vi_committed_origin(), num_samples, all_zero ? 1 : 0,
+                    s_pcm_allzero_calls, s_pcm_n + 1);
         }
         s_pcm_n++;
     }

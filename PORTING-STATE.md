@@ -97259,3 +97259,54 @@ audio-device-only explanation for this result.
 The next unit is one all-writer gate/consumer census with the opt-in image
 held constant, joined to the task, wait, slot, and PCM rows and the retail
 `0xA0F50` attribution.
+
+## Session 2031 (2026-08-20) — selected the M5 gate writer/value boundary
+
+`HYPOTHESIS-ID: m5-guest-gate-consumer-contract`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 33,235 bytes, so this was not a
+maintenance iteration. The prescribed retail oracle ran before the build.
+Its whole-RDRAM positive control reached the 10,000-hit cap; retail reached VI
+1024 and the hangar VI 512 route. The physical `0xA0F50` watch recorded 17
+writes from `0x8008EA34`, `0x8008EB40`, `0x8008ED48`, `0x8008EB7C`, and
+`0x8008EC88`. The physical `0x14998A` watch recorded zero writes. The oracle
+watch reports PCs, not old/new byte values, so its value line remains a
+static-instruction cross-check rather than a dynamic value witness.
+
+The first clean-regenerated capture was rejected as hypothesis D: the fresh
+tree carried the new M5 writer/consumer and task probes but did not carry the
+opt-in s2006 service-control chain. It therefore could not validate a gate or
+wait null. I repaired this in the same iteration by restoring the recoverable
+pre-regeneration `funcs_26.c` control file and combining it with the fresh
+s2031-instrumented `funcs_23.c`/`funcs_24.c`, then rebuilt. The final build
+completed successfully. The fixup report had matched all seven gate stores,
+both gate consumers, and the wait entry/seed/exit anchors.
+
+The fixed forced-LLE opt-in capture reached VI 1024 and the hangar VI 512
+phase before the known PI `do_rom_read` crash at guest PC `0x80001B08`. Its
+same-run controls were 24 `[s2006-control]` rows, 391 s2028 service-entry
+rows, 391 service-exit rows, 90 `audtask-abi` rows, 90 DMA rows, and 31 PCM
+rows. Target phases had `factor5_ucode_b` task rows with `exit=1`, DMEM
+changes beginning at `0x340` and ending at `0xFCF`, and the known canary
+failure. All sampled PCM rows were `all_zero=1`.
+
+The M5 table emitted 1,024 rows total. In both target keys
+(`phase=8,width=1024,origin=0x790400` and
+`phase=10,width=512,origin=0x6AB400`) it emitted one
+`reapplyDisplayMode:reapply-success` writer row with `0 -> 0`, followed by
+511 `musyxSynthFrame` raw-gate rows with `gate=0,branch=1`. No phase-valid
+gate-1 or wait consumer row fired. This rules out incomplete controls, a
+missing opt-in task/DMA path, and the wait consumer as the first boundary for
+this route. It does not prove the image/task ABI or PCM path, and it does not
+authorize changing the gate store.
+
+The next boundary is the existing writer/value discrepancy: the guest
+sequence immediately before retail `0x8008EC88` sets `$v0=1`, while the
+current port fixup forces that store to zero and the downstream consumer
+consistently skips. Caller/order attribution remains open and is the next
+experiment before any reversal.
+
+ORIGIN: `reapplyDisplayMode` at `0x8008EC88` is the writer. Its retail value
+`1` is legitimate guest state; the port value `0` is the existing
+`fixup_game_funcs.py` mitigation for the stubbed MusyX engine. No new
+mitigation or game-value change landed in this session.
