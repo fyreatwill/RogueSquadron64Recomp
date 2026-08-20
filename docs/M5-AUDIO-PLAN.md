@@ -21,12 +21,13 @@ The current default is silent, but “audio” is not one missing function:
   not call `factor5_ucode_b` “the MORT recompile” until its ROM segment and ABI
   are independently matched. The current working boundary is therefore
   **MusyX engine/task plumbing, MORT voice data/codec still unproven**.
-- s2002 supplied that missing negative attribution for the current opt-in arm:
-  `factor5_ucode_b` has `DPC_STATUS`/`SP_WR_LEN` graphics paths and its TOML
-  identifies the second Factor 5 graphics ucode. In the same-build audio-task
-  census it changed `0x340..0xFCF` DMEM but produced no PCM. Treat the arm as
-  a wrong-resident-ABI probe until a retail audio image and task contract are
-  identified; do not promote it or reinterpret its footprint as audio output.
+- s2002–s2003 supplied a task/image attribution for the current opt-in arm:
+  `0x80099FE0`/`0x800A4E00` are `aspMainTextStart`/`aspMainDataStart` in the
+  companion symbol map, and the ROM split labels `0x9ABE0` as `aspMainText`.
+  Its recompiled `SP_WR_LEN` writes changed `0x340..0xFCF` DMEM but produced
+  no PCM in the first bridge census. Treat it as an audio-image candidate
+  with an unvalidated MusyX/MORT task/output ABI; do not call it graphics from
+  the register names alone or promote it until payload-to-AI evidence exists.
 - The current generated tree is authoritative for behavior. It has live `=1`
   stores at guest `0x800A0F50` in `initMusyXEngine` (`0x8008E9F8`),
   `setDisplayMode` (`0x8008EB40`), and `reapplyDisplayMode` (`0x8008EC88`),

@@ -206,8 +206,8 @@ endif()
 # original "GBI-level plan is closed" conclusion) but is multi-day work.
 # Keeping LLE for now lets us ship visuals while migrating ops one at a time.
 set(FACTOR5_UCODE_C ${CMAKE_SOURCE_DIR}/build/factor5_ucode/factor5_ucode_recompiled.c)
-# Second F5 gfx ucode (RDRAM 0x80099FE0, ROM 0x9ABE0) — the game alternates
-# per task; ptr arrives embedded in ucode_data (see factor5b_rsp.toml).
+# Audio RSP image labelled aspMainText (RDRAM 0x80099FE0, ROM 0x9ABE0); its
+# task/output ABI remains under validation (see factor5b_rsp.toml).
 set(FACTOR5_UCODE_B_C ${CMAKE_SOURCE_DIR}/build/factor5_ucode/factor5_ucode_b_recompiled.c)
 set(FACTOR5_BOOT_C  ${CMAKE_SOURCE_DIR}/build/factor5_ucode/factor5_boot_recompiled.c)
 # Post-process: RSPRecomp emits a goto to a non-existent label for one

@@ -1,73 +1,69 @@
-# NEXT work unit (s2003) — attribute the retail audio resident and output ABI
+# NEXT work unit (s2004) — map audio DMA payloads to the AI/PCM bridge
 
-HYPOTHESIS-ID: m5-retail-audio-resident-attribution
+HYPOTHESIS-ID: m5-audio-dma-pcm-contract
 
 ## Single work unit
 
-Run the retail oracle positive control first, then make one batched host probe
-that scopes every `dma_dmem_to_rdram` write made while an `M_AUDTASK` is
-executing. For sampled audio rows, record the complete task descriptor, the
-selected function/source identity, DMEM pre/post hashes, every DMEM-to-RDRAM
-destination range, direct exit, slot transition, and PCM result. Keep the
-current `musyx_stub`/`factor5_ucode_b` A/B only; do not enable `aspMain`, add
-another image, reverse a guest gate, or change a guard. Export the runtime
-patch, build once, and run both arms concurrently on the same phase schedule.
+Run the retail oracle positive control first, then add one batched host probe
+to the existing phase-gated audio-task census. For every sampled
+DMEM-to-RDRAM range, record a payload FNV hash, nonzero-byte count, first and
+last nonzero byte, and the destination. In `ultramodern/src/audio.cpp`, record
+the phase, RDRAM pointer, byte count, payload hash/nonzero count, and the
+same buffer identity immediately before `queue_samples`. Keep the current
+`musyx_stub`/`factor5_ucode_b` A/B only; do not enable another image, change a
+guest gate, or add a skip/allow guard.
 
 ## Competing hypotheses and discriminating measurement
 
-- **H-image-mismatch:** `factor5_ucode_b` is graphics code being applied to an
-  audio task. Its DMEM-to-RDRAM writes will have graphics-like source/dest
-  ranges (including the task `data_ptr`/RDP stream), with no audio output range
-  and no PCM/slot completion.
-- **H-task-staging:** the selected image could be audio, but the port stages a
-  wrong DMEM input or task contract. Its observed input/source ranges will not
-  match the retail-shaped task data, and the treatment will lack a valid output
-  write even though the image's execution footprint is otherwise coherent.
-- **H-bridge:** the treatment will write a task-local audio output range or
-  produce a nonzero DMEM output, but `queue_samples` will remain all-zero;
-  this selects the downstream guest/host bridge.
-- **H-gate-scheduler:** the treatment will produce an output range and direct
-  completion matching the control, but slot/PCM consumers will not transition
-  in the same VI phase; this selects guest gating/scheduling after the RSP.
+- **H-task-staging:** the candidate audio image receives malformed or wrongly
+  staged input. Its treatment DMA payloads are zero or structurally invalid
+  for PCM, or no stable output buffer is presented to the AI callback.
+- **H-guest-buffer-selection:** the treatment creates nonzero PCM-like DMA
+  payloads, but `osAiSetNextBuffer`/`queue_audio_buffer` points at a different
+  or zero RDRAM range. This selects guest output-buffer routing or AI ordering.
+- **H-bridge:** the same nonzero PCM-like destination and bytes reach the AI
+  callback, but the callback-side samples/hash differ or `pcm-sanity` remains
+  silent. This selects the host bridge rather than RSP/task staging.
+- **H-audio-path-valid:** the treatment payload and AI buffer match and
+  `pcm-sanity` becomes nonzero. This closes the current RSP/bridge boundary
+  and moves the next unit to the remaining guest gate/scheduler behavior.
 
-The discriminator is one phase-gated table of sampled audio rows plus the
-same-run `[audtask-dispatch]`, independent `[pcm-sanity]`, slot-writer, and
-retail oracle controls. A graphics-like DMA footprint with no audio output
-selects H-image-mismatch; an output write plus silent PCM selects H-bridge;
-an output write plus absent consumer selects H-gate-scheduler; a missing or
-mis-staged input/output contract with no valid write keeps H-task-staging open.
-No conclusion is allowed from a null without the whole-RDRAM oracle control.
+The discriminator is one phase-gated table joined by task row `n` and RDRAM
+destination: DMA payload hash/nonzero count versus AI-buffer hash/nonzero
+count versus `pcm-sanity`, with `[audtask-dispatch]` and the retail oracle as
+positive controls. A null is unusable unless the whole-RDRAM oracle watch,
+aligned `0x14974C` watch, task dispatch, and PCM callback controls all fire in
+the same run.
 
 ## Ground-truth command before editing/building
 
 ```sh
-tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 45 --watch-write 0x0:0x800000 --watch-write 0x14974C:0x149750 --detail-watch 1 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start > scratch/s73_post_a_scene/m5-audio-step4-oracle.log 2>&1
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 45 --watch-write 0x0:0x800000 --watch-write 0x14974C:0x149750 --detail-watch 1 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start > scratch/s73_post_a_scene/m5-audio-step5-oracle.log 2>&1
 ```
 
-The whole-RDRAM watch must fire and the aligned `0x14974C` watch must fire
-from retail PCs. If either control is absent, do not interpret port nulls.
+Require nonzero whole-RDRAM and aligned-watch controls before interpreting
+port nulls. Use only VI 1024/origin `0x00790400` and VI 512/origin
+`0x006AB400` as phase gates.
 
 ## Exact probe/build/run sequence
 
-1. Add the audio-task scope and DMA-write census in one change to
-   `lib/N64ModernRuntime/librecomp/src/rsp.cpp`/`rsp.hpp`. The log must be
-   phase-scoped and rate-limited like the existing ABI rows, and must include
-   the task's `ucode`, `ucode_data`, sizes, `data_ptr`, `data_size`,
-   `dram_stack`, `dram_stack_size`, all DMEM-to-RDRAM `(dmem,len,dram)` ranges,
-   and whether each destination overlaps a task-declared output field.
+1. Add the payload fields to the existing `rsp.cpp`/`rsp.hpp` audio-DMA scope
+   and the AI-buffer fields to `ultramodern/src/audio.cpp`. Keep the existing
+   row/range join key and phase budgets; batch all fields into this one build.
 2. Run `./submodule-patches/export.sh` and build:
 
    ```sh
    cmake --build build --config Debug --target RogueSquadron64Recomp
    ```
 
-3. Run both arms from that one binary:
+3. Launch both arms concurrently from that one binary with the identical
+   phase schedule:
 
    ```sh
-   env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_SPBOOT=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step4-control 30 12
-   env ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_SPBOOT=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step4-treatment 30 12
+   env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_SPBOOT=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step5-control 30 12
+   env ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_SPBOOT=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step5-treatment 30 12
    ```
 
-Use VI 1024/origin `0x00790400` and VI 512/origin `0x006AB400` as the only
-phase gates. Do not compare rows by elapsed seconds. Capture both arms even
-if one process dies after its phase rows; SIGKILL only at the driver cap.
+If concurrent control dies before VI 1024 as in s2003, retain that failure
+as unevaluable and rerun the control standalone with the same binary before
+interpreting the treatment rows; do not call the failed arm a null.

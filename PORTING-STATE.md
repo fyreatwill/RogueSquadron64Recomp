@@ -96228,3 +96228,58 @@ it does not yet name the retail MusyX/MORT resident or its DMEM/output ABI.
 **OUTCOME: ADVANCED** — same-build task/DMEM rows plus independent static and
 retail controls selected the wrong-resident ABI; next is retail audio-image
 and output-contract attribution.
+
+## Session 2003 (2026-08-20) — mapped audio DMA writes to the unresolved PCM boundary
+
+The maintenance check was 52,262 bytes, so this was not a maintenance
+iteration. `scratch/agent/NEXT.md` named the task/image and bridge hypotheses
+and the phase-gated DMA-range discriminator before the build. The retail
+oracle ran first and passed both controls: 18,381 whole-RDRAM writes and 8,381
+aligned `0x14974C` writes, with the known writer PCs present.
+
+The one runtime change extended the existing `librecomp/src/rsp.cpp:run_task`
+audio scope through `rsp.hpp`. Each sampled row now retains every normalized
+DMEM-to-RDRAM range, the task descriptor, selected arm/function identity,
+phase, full-DMEM pre/post hashes, and overlap flags for `output_buff`,
+`yield_data_ptr`, and `data_ptr`. `submodule-patches/export.sh` refreshed the
+tracked runtime patch and the full Debug target built successfully.
+
+The first concurrent control/treatment launch was not a valid A/B: treatment
+reached title VI 1024 and hangar VI 512, but control crashed in
+`initCutsceneScene` before title 1024. The control was rerun standalone with
+the same binary and exact schedule; it reached both required phases and
+provided the positive control. The phase-scoped results were:
+
+- Control rerun: 115 audio-task rows, 0 DMEM-to-RDRAM ranges, 113
+  `[audtask-dispatch]` rows, and 71 `[pcm-sanity]` callbacks. Every PCM row
+  was `all_zero=1`; all sampled task exits were `1` (`Broke`).
+- Treatment: 119 audio-task rows, 248 DMEM-to-RDRAM ranges, 122 dispatch
+  rows, and 71 PCM callbacks. Every sampled PCM row was `all_zero=1`; every
+  treatment range had zero overlap with the three declared task spans. The
+  treatment returned `Broke` and changed the existing `0x340..0xFCF` DMEM
+  footprint (normal rows 1,590–1,600 bytes, one 1,793-byte outlier). The
+  write sources were DMEM `0x6F0`/`0xCB0`, plus one `0xC30`; no treatment-only
+  terminal slot transition appeared.
+
+This run corrected s2002's static role claim. The task descriptor's
+`0x80099FE0`/`0x800A4E00` fields match `aspMainTextStart`/`aspMainDataStart`
+in `syms/rogue_squadron.datasyms.toml`, and the companion split labels ROM
+`0x9ABE0` `main/aspMainText`. `DPC_STATUS` plus `SP_WR_LEN` is not a graphics
+witness by itself. The selected image remains an audio-image candidate, but
+the instrument did not hash DMA payload contents, so it cannot distinguish a
+valid PCM output from a bad staged/task result or prove the AI bridge is being
+given the same buffer. H-image-mismatch-as-graphics is superseded;
+H-task-staging versus H-bridge remains open.
+
+ORIGIN: the selected audio-image `SP_WR_LEN` path is the named writer of the
+observed ranges; the writes are legitimate image activity, not a mitigation
+target, and their payload/output contract is unproven. No dispatch default,
+guest gate, guard, or runtime audio behavior changed.
+
+The next work unit is one-build payload hashing joined to the AI/PCM buffer
+hash, using the same oracle and VI controls. It must not enable another image
+or change a gate.
+
+**OUTCOME: ADVANCED** — batched DMA scope built and phase-validated; the
+graphics classification was overturned and the payload-to-PCM discriminator
+is the next boundary.
