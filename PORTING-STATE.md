@@ -97130,3 +97130,38 @@ injection; it is not a ROM writer or a game-value mitigation.
 
 OUTCOME: ADVANCED — corrected the stale A/B binary gate and obtained a
 phase-valid tick-on/no-store witness; tick-off remains an anchor failure.
+
+## Session 2028 (2026-08-20) — A11 census selected writer-reaper ordering
+
+HYPOTHESIS-ID: m5-service-worker-dispatch-boundary
+
+The planned work unit was a regeneration-stable A11 census joining shutdown
+call 3, every s2008 status writer, worker dispatch/entry/exit, the status-3
+read, and the `0x8009B7EC` service-store edge. Before building it, the retail
+oracle was run with a whole-RDRAM positive-control watch and a physical watch
+on `0x80154620`–`0x80154632`. The positive control reached its 10,000-callback
+cap, and the retail run reached VI 2974, VI 1024, and the VI 512 hangar route;
+its writer-PC output included the retail `0x8009B2C4`/`0x8009B7EC` family.
+
+The A11 anchors were added to `fixup_game_funcs.py`, applied to the generated
+tree, and built successfully. One forced-LLE `tools/probe.sh` run with the
+eleven-Start schedule reached VI 1024 after 12.9 seconds and captured nine
+frames. Same-run controls were live: s2006 service entry/exit were 24/24,
+s2008 emitted five rows, and A11 emitted phase/width-tagged events. In the
+phase-10, width-512 hangar row, call 3 entered with slot 0 at `0x01`; the
+guest writer at `0x8009B2C4` changed it from `0x01` to `0x00`; and shutdown
+returned. A11 emitted no status-3 read, shutdown spin, service entry/store, or
+`0x8009B7EC` store for that call. Its only worker-dispatch row targeted
+`0x8000569C`, not `serviceVoicePoolFrame` at `0x8009B5A8`. The run later hit
+the known PI `do_rom_read` crash at guest PC `0x80001B08`, after the table was
+complete.
+
+This selects H3 of the planned table: writer/reaper ordering pre-empts the
+status-3 interval in the port path. It rules out the scheduler-dispatch and
+service-store arms for this phase, and rules out an incomplete A11 control.
+The retail oracle is an independent ground-truth line; the port census is not
+being used as its own witness. No status-value mitigation, default-audio
+change, or generated game-logic override was added.
+
+ORIGIN: diagnostic-only join instrumentation; the `0x8009B2C4` transition is
+the existing guest writer and is not a host-side mitigation.

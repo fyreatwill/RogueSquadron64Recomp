@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2027 (2026-08-20).
+for session detail. Reviewed through s2028 (2026-08-20).
 
 ## Current state
 
@@ -148,22 +148,32 @@ for session detail. Reviewed through s2027 (2026-08-20).
   not erase the result. The first s2027 pair, which explicitly set the on arm
   to `1` contrary to the prescribed unset/default arm, is invalid and is not
   evidence.
+- The s2028 A11 worker/status census passed its same-run controls: s2006
+  service entry/exit emitted 24/24 rows, s2008 emitted five writer rows, and
+  the A11 phase/width fields were live. In the phase-valid hangar row,
+  shutdown call 3 entered with slot 0 at `0x01`; the game writer at
+  `0x8009B2C4` changed it from `0x01` to `0x00` before the shutdown return.
+  There was no status-3 read, shutdown spin, worker entry/store, or
+  `0x8009B7EC` service-store row. The only worker-dispatch row targeted
+  `0x8000569C`, not `serviceVoicePoolFrame` at `0x8009B5A8`. This selects H3:
+  writer/reaper ordering pre-empts the status-3 interval in this port path;
+  it does not authorize forcing the byte to zero. The capture later hit the
+  known PI `do_rom_read` crash at guest PC `0x80001B08`, after the table was
+  complete. A same-iteration retail-oracle run independently passed its
+  whole-RDRAM control, reached the retail hangar route, and watched the
+  corresponding `0x8009B2C4`/`0x8009B7EC` writer family.
 
 ## Active investigation and ranked next steps
 
-1. **M5 worker dispatch/status-zero join.** The s2027 drain A/B is phase-valid
-   in both arms and selects the worker boundary: neither treatment produces a
-   status-3 interval, worker entry, or service store. Build one
-   regeneration-stable A11 census that joins shutdown call 3, every existing
-   status writer, worker dispatch/entry/exit, and the `0x8009B7EC` store in a
-   single phase-gated capture. Do not add a skip or force-zero mitigation; the
-   writer must be named and its value classified. If status 3 is written and
-   persists with no worker entry, scheduler dispatch is selected; if worker
-   entry precedes a zeroing store, the service path is selected; if call 3
-   never observes status 3, classify the writer/reaper ordering instead.
-2. **M5 service store edge.** Once the A11 census supplies a live slot-0
-   status-3 interval, use the existing s2022 store rows to join the worker
-   clear path and then proceed to the seven-site callback join.
+1. **M5 writer/reaper ordering audit.** The s2028 A11 census selects H3: call 3
+   sees `0x01`, `0x8009B2C4` writes `0x00`, and the scan never observes status
+   `0x03`. The next bounded unit must join that writer to its caller/slot
+   record and the shutdown scan in one phase-gated table. Do not add a skip or
+   force-zero mitigation; classify the writer as legitimate or corrupt from
+   its guest-side contract and the retail oracle.
+2. **M5 service store edge.** Reopen only if the writer audit supplies a live
+   slot-0 status-3 interval; then use the existing s2022 store rows to join the
+   worker clear path and proceed to the seven-site callback join.
 3. **M5 callback-side PCM witness (only if #2 requires it).** Phase-gate a
    callback census at the exact two nonzero bridge rows. Do not infer a bridge
    defect from the old rate-limited `pcm-sanity` rows or change default audio.
@@ -208,7 +218,10 @@ site, not a selected retail mismatch. This selects the port-side slot/status
 predicate as the next boundary, not the gate or registration path. The
 same-run result is port-side; the retail oracle independently proves that the
 retail branch/loop and store PCs are executed, so the missing store is not a
-retail-body absence.
+retail-body absence. s2028 adds the finer port boundary: call 3's
+`0x8009B2C4` writer changes slot 0 from `0x01` to `0x00` before the scan, so
+the service's zero-status skip is downstream of a writer/reaper ordering
+event, not an observed status-3 dispatch failure.
 
 **M5 status transition.** Shutdown call 3 enters and returns in the s2007
 capture. The s2012 and s2013 debugger-off retail oracles both reached VI 1024
@@ -223,8 +236,11 @@ is the legitimate worker-side zeroing path. The value branch is settled;
    phase-valid LLE arm adds the same-run route control: 409 service rows still
    read slot 0 as `0x00`, while the named `0x8009B2C4` writer records `0x01 ->
    0x00` during shutdown call 3. No status-3 service interval or worker store
-   was observed, so the next boundary is the drain/shutdown scheduling
-   contract, not a permission to force the byte to zero.
+   was observed, so the next boundary is the drain/shutdown writer ordering
+   contract, not a permission to force the byte to zero. s2028's call-3 row
+   supplies the first phase-valid join: the `0x8009B2C4` writer performs the
+   `0x01 -> 0x00` transition before shutdown exits, with no intervening
+   status-3 read.
 
 **M5 opt-in audio.** Both arms receive the same `M_AUDTASK` descriptor and
 the selected image matches `aspMainTextStart`/`aspMainDataStart`. Treatment
@@ -347,6 +363,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   service store. The earlier pre-phase-anchor wording was believable because
   the first corrected-looking arm did fail before VI 1024, but the fixed
   unset/default pair closes that route issue and selects the worker boundary.
+- s2028 supersedes s2027's “worker boundary” as the complete explanation. The
+  wording was believable because both s2027 arms lacked worker entry/store
+  evidence while the service body was already known to read zero. The batched
+  A11 table now shows the missing status-3 interval itself: call 3 starts at
+  `0x01`, the named game writer `0x8009B2C4` changes it to `0x00`, and shutdown
+  returns without a status-3 read. The next discriminator is the writer/reaper
+  caller and slot contract, not another worker-entry witness.
 
 ## Evidence ledger summary
 
@@ -365,13 +388,17 @@ service entry/exit and s2022 refines the body/store boundary to the port
 slot/status predicate because the gate and loop are live but every sampled
 slot-0 status is zero. s2025 selects forced LLE as the route gate under the
 common wrapper and leaves the port-side writer/read boundary at the drain /
-shutdown scheduling question. The durable milestones are: hangar reachability,
+shutdown scheduling question. s2028 closes the first A11 worker/status table
+with H3: the call-3 `0x8009B2C4` writer changes slot 0 from `0x01` to `0x00`
+before the scan, with no status-3 or service-store edge. The durable milestones
+are: hangar reachability,
 bltzal link repair, audio-drain writer mapping, M5 plan, opt-in DMA-to-queue
 mapping, shutdown call-3 reachability, the repeated retail status-value
 sequence, retail gate-writer attribution, and the unresolved port-side
-writer/read join. s2026 adds the stale-gate diagnosis and s2027 completes the
-corrected drain A/B: both arms are phase-valid, both reach call 3, and neither
-exposes the worker entry/store, selecting the worker boundary.
+writer/read join. s2026 adds the stale-gate diagnosis, s2027 completes the
+corrected drain A/B, and s2028 selects the writer/reaper ordering boundary with
+a phase-valid A11 table. The retail oracle was independently live in s2028, so
+the port census is not being used as its own ground truth.
 
 ## Method and safety rules
 
