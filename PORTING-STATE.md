@@ -98134,3 +98134,47 @@ neither-flag explanation of the qualified route. It does not rule out a
 callback/device or task/ABI boundary after the route handoff.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
+
+## Session 2056 (2026-08-20) — selected the C88 gate-to-route boundary
+
+HYPOTHESIS-ID: m5-guest-gate-c88-causality.
+
+Ground truth ran first. The retail oracle passed the whole-RDRAM positive
+control with 10,000 writes, reached title VI 1024 at `0x00790400` and hangar
+VI 512 at `0x006AB400`, and hit all three watched PCs. The unchanged Debug
+build then ran the qualified forced-LLE/audio/spin-yield recipe.
+
+Arm A set `ROGUESQ_M5_C88_VALUE=1`. It reached title VI 1024 at 16.8s and
+hangar VI 512 at 27.4s, with five host Start rises. The phase-keyed gate table
+recorded two `reapplyDisplayMode` writer rows changing `0 -> 1`, 532 raw-gate
+active rows (`branch=0`), and 490 `gate1` rows. It also emitted 16
+`menuControllerInput` and four `menuInput` rows, 75 audio-task dispatch rows,
+95 audio-ABI rows, and 95 source/consumer PCM pairs. PCM was all-zero.
+
+The first unset arm died at 7.8s in the known `waitForAnyAudioSlot` crash
+family before its phase/input anchors, so it was rejected rather than used as
+the counterfactual. The unchanged unset retry completed the same route: title
+VI 1024 at 11.9s and hangar VI 512 at 21.0s, with six host Start rises. Its
+writer rows stayed `0 -> 0`; 1,022 raw-gate rows all took `branch=1`, with no
+`gate1` rows. It emitted one `menuControllerInput` row and no `menuInput` row,
+97 audio-ABI rows, and 97 source/consumer PCM pairs, also all-zero. The
+wrapper reported only its known late Accessibility warning after both target
+anchors had already been reached.
+
+The table selects H-R at the current scope: C88 controls the raw guest-gate
+path, but is not sufficient to explain the title-to-hangar handoff. H-F is not
+selected because the gate branches differ; H-W is ruled out because both arms
+show the named writer and live input; H-C is ruled out because the unset retry
+also reaches both target VIs. The route/callback difference remains a
+single-source port observation; the oracle independently supplies route/phase
+qualification. The live C88=1 arm also supplied a status-3 service interval:
+an entry saw `0x02`, exited with `0x03`, and subsequent service calls observed
+`0x03`, which unparks the worker/store-edge work unit. No status-zero worker
+store was observed.
+
+What this rules out: C88 as the sole title-to-hangar route cause, a missing
+`reapplyDisplayMode` writer/control, and host PCM-boundary mutation in either
+arm. It does not explain the menu callback-count difference, the status-zero
+worker store, or why the Factor 5 task still produces all-zero PCM.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed; only the existing opt-in C88 behavior arm was exercised.

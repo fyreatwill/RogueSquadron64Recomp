@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2055 (2026-08-20).
+for session detail. Reviewed through s2056 (2026-08-20).
 
 ## Current state
 
@@ -77,6 +77,16 @@ for session detail. Reviewed through s2055 (2026-08-20).
   VIs. The accepted table was run sequentially because the first concurrent
   launch made `11`/`10` crash in `waitForAnyAudioSlot` and dropped the `00`
   result; those concurrent rows are invalid and are not flag evidence.
+- s2056's phase-valid C88 table selects H-R: `reapplyDisplayMode` writes
+  `0 -> 1` in the opt-in arm and `0 -> 0` in the unset arm, and the raw gate
+  correspondingly takes active versus skip branches. Both arms nevertheless
+  reached title VI 1024 and hangar VI 512 with live host Start rises. The
+  first unset attempt died in the known `waitForAnyAudioSlot` family and was
+  rejected; the unchanged retry supplied the admissible comparison. The
+  route-side callback counts differed (16/4 menu-controller/menu-input rows
+  versus 1/0), so C88 is upstream-correlated but not sufficient to explain the
+  handoff. This is single-source port evidence; the oracle independently
+  qualified the target route.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -86,12 +96,15 @@ for session detail. Reviewed through s2055 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 guest-gate value causality.** Keep the retail-value writer unchanged.
-   The C88=1/unset split is repeatable port evidence but GUI/focus-confounded;
-   revisit only with a genuinely focus-isolated, phase-valid discriminator.
-2. **M5 service store edge.** Park unless an audio arm supplies a live
-   slot-0 status-3 interval. Then use the existing store rows to join worker
-   clear, slot ownership, and callback reachability.
+1. **M5 service store edge.** The qualified C88=1 arm now supplies a live
+   slot-0 status-3 interval. Add a regeneration-stable worker/store census to
+   join the status-3 read, worker entry/exit, status-zero store, slot
+   ownership, and callback reachability. Do not force a status byte or add a
+   skip.
+2. **M5 guest-gate handoff boundary.** H-R is selected at the current scope:
+   C88 causally controls the raw gate, but not the title-to-hangar anchors.
+   Revisit only with a genuinely focus-isolated discriminator that explains
+   the menu callback-count difference; keep the retail writer unchanged.
 3. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -144,11 +157,13 @@ cluster. Static registration/linkage and the chosen indirect `get_function`
 witness are closed explanations.
 
 On the port, direct `serviceVoicePoolFrame` entry/exit and its gate/loop are
-live, but sampled slot 0 is `00` and takes the zero-status skip. During
-shutdown call 3, `stopVoiceSlotSynced` reaches the matching slot record and
-the legitimate `0x8009B2C4` writer changes status `01 -> 00` before the scan
-returns. No status-3/service-store interval has been observed, so the worker
-store edge is parked. Do not force a status byte or add a skip.
+live. s2056's qualified C88=1 arm reached a live slot-0 interval where a
+service entry saw `0x02`, exited with `0x03`, and subsequent service calls
+observed `0x03`; no status-zero worker store or clean reaping return was shown
+in that run. During shutdown call 3, `stopVoiceSlotSynced` reaches the matching
+slot record and the legitimate `0x8009B2C4` writer changes status `01 -> 00`
+before the scan returns. The worker store edge is now unparked, but remains
+unexplained. Do not force a status byte or add a skip.
 
 ### M5 audio and guest gate
 
@@ -163,12 +178,15 @@ selects H-P and refutes host-boundary mutation, callback absence, and phase/join
 error for this route, but does not prove playback or the guest gate.
 
 Retail executes the named display-mode writer cluster. The port fixup currently
-records `0 -> 0` at `0x8008EC88`, and the raw gate consumer skips on zero. The
-retail-value `1` arm remains opt-in and does not authorize changing the
-legitimate guest writer. The repeated C88 A/B is single-source port evidence
-with GUI arbitration unresolved. s2053's explicit C88=1 run recorded the
-reapply writer, live title/hangar gate and task controls, and the phase-keyed
-bridge/sanity split; this is still not causality for the guest value.
+records `0 -> 0` at `0x8008EC88`, and the raw gate consumer skips on zero. In
+s2056, the opt-in `1` arm made the same writer and raw consumer take the active
+path, while the unset retry kept `0` and the skip path; both arms still reached
+the two target VIs. This selects H-R at the current scope: C88 is causal for
+the guest gate, but not sufficient for the route handoff. The retail-value `1`
+arm remains opt-in and does not authorize changing the legitimate guest writer.
+The value/route conclusion is single-source port evidence; the oracle supplied
+the independent route qualification. PCM remained all-zero at the paired
+source/consumer boundary in both arms.
 
 ### M3, M4, and generated symbols
 
@@ -214,11 +232,18 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   recipe level; s2053's callback join did not separate `UNGATED` from `SOLO`.
   s2054's four-arm table closes that ambiguity and selects interaction H-I. The
   earlier wording was believable because s2052 had only a sufficient `11` arm.
+- s2056 narrows the earlier C88 wording from unresolved causality to H-R. The
+  first unset arm was a known early `waitForAnyAudioSlot` death, so it was not
+  used; the unchanged retry reached both target VIs and showed the writer/raw
+  gate split while retaining live input. The prior GUI/focus concern remained
+  believable because the route callback counts still differed, and the wrapper
+  emitted a late Accessibility warning.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
-  s2029 to the observed legitimate writer/reaper ordering; the status-3 worker
-  edge remains unmeasured.
+  s2029 to the observed legitimate writer/reaper ordering; s2056 now measures
+  a live status-3 interval, but the status-zero worker store remains
+  unmeasured.
 
 ## Evidence ledger summary
 
@@ -231,14 +256,13 @@ bltzal link repair; audio-drain writer mapping; the M5 plan; opt-in
 DMA-to-queue mapping; shutdown call-3 reachability; the retail status sequence
 and writer attribution; the guest-gate boundary; and the callback-side
 source/consumer join. s2054 selected the interacting `11` LLE-mode tuple for
-the full title-to-hangar chain. s2055 is the latest phase-valid port
-observation: the paired source/consumer witness matched every target row,
-with title content becoming zero after 19 nonzero pairs and hangar content
-zero throughout. This is single-source port evidence for the callback
-boundary; the independent oracle supplied the route/phase ground truth. The
-guest gate, task ABI, and complete playback remain open. The oracle and port
-both independently reach both target anchors, so this is not a retail-route
-absence.
+the full title-to-hangar chain. s2055 paired every target-phase source and
+consumer row; s2056 then selected H-R for the C88 gate-to-route boundary and
+observed a live port status-3 interval. The C88 and callback conclusions are
+single-source port evidence; the independent oracle supplied route/phase
+ground truth. The status-zero worker store, task ABI, and complete playback
+remain open. The oracle and port both independently reach both target anchors,
+so this is not a retail-route absence.
 
 ## Method and safety rules
 
