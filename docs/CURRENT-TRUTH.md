@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2029 (2026-08-20).
+for session detail. Reviewed through s2030 (2026-08-20).
 
 ## Current state
 
@@ -33,6 +33,16 @@ for session detail. Reviewed through s2029 (2026-08-20).
   Factor 5 audio-image arm is not defaulted on. Two nonzero hangar DMA
   buffers are proven to reach `queue_samples` byte-for-byte, but complete
   playback and task/bridge semantics remain unproven.
+- s2030 completed the step-2 opt-in comparison with the independent retail
+  gate control. The unset arm's phase-valid audio rows returned `Broke` with
+  `dmem_changed=0`, `canary_ok=1`, and `dma_count=0`; the opt-in arm returned
+  `Broke` after changing DMEM at `0x340..0xFCF`, failed the reserved-gap
+  canary, and reached hangar VI 512 with audio DMAs, including two nonzero
+  `0x6F0` payloads in its first hangar row. Both arms produced only all-zero
+  PCM, and the phase-valid port gate read `0` with `musyx-gate1` taking its
+  skip path. This selects the guest gate/consumer boundary as the immediate
+  next M5 question; the image/task ABI remains unvalidated and the opt-in
+  arm stays off by default.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -177,15 +187,16 @@ for session detail. Reviewed through s2029 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 opt-in RSP arm.** Execute step 2 of `M5-AUDIO-PLAN.md`: validate the
-   existing `ROGUESQ_AUDIO_UCODE=1` arm against the unset stub in one build and
-   phase-gated comparison. Require direct task dispatch/exit, DMEM canary,
-   slot transition, and PCM nonzero/silence fields; do not promote the image
-   or change default audio.
+1. **M5 guest gate/consumer contract.** Census all five `0x800A0F50` writers
+   and the gate-1/wait consumers in one opt-in, phase-gated run, joined to
+   `audtask-abi`/`audtask-dma-row`, the reserved-gap canary, and PCM rows.
+   Keep `ROGUESQ_AUDIO_UCODE=1` opt-in and make no store changes. The
+   discriminator is writer guest PC/value → consumer read/branch → task exit
+   and PCM; retail `0xA0F50` PCs are the independent attribution control.
 2. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
    join the worker clear path and proceed to the seven-site callback join.
-3. **M5 callback-side PCM witness (only if #1 produces a task result).**
+3. **M5 callback-side PCM witness (only after #1 produces a gate/task join).**
    Phase-gate a callback census at the exact two nonzero bridge rows. Do not
    infer a bridge defect from old rate-limited `pcm-sanity` rows.
 4. **M3 crash work.** Only perform complete idiom-class audits with a named
@@ -267,6 +278,23 @@ the selected image matches `aspMainTextStart`/`aspMainDataStart`. Treatment
 DMEM writes are real image activity, not yet a corruption diagnosis. Two
 nonzero `0x6F0`/`0x300` buffers match at the DMA writer and `queue_samples`;
 the default dispatch and guest gates remain unchanged.
+
+**M5 opt-in RSP boundary.** s2030's final same-build route pair passed the
+same 24/24 `s2006-svc` entry/exit controls. The stub arm reached VI 1024 but
+not hangar 512; its phase-valid row had `arm=musyx_stub`, `exit=1` (`Broke`),
+`dmem_changed=0`, `canary_ok=1`, and `dma_count=0`. The opt-in arm reached
+VI 1024 and VI 512 at origin `0x006AB400`; its phase-valid rows had
+`arm=factor5_ucode_b`, `exit=1`, DMEM changes beginning at `0x340` and
+extending through `0xFCF`, `canary_ok=0`, and audio DMA rows. Its first
+hangar row included two nonzero `0x6F0` payloads, but all sampled
+`pcm-sanity` rows in both arms had `all_zero=1` and no `all_zero=0` row fired.
+The phase-valid port gate witness read byte `0` and `musyx-gate1` took its
+skip path; the independent s2030 retail oracle passed 10,011 whole-RDRAM
+writes, reached VI 1024, and recorded the established `0xA0F50` writer PCs.
+This selects the guest gate/consumer boundary as the next discriminator, not
+a default audio flip or a host SDL change. The canary/PCM result leaves the
+MusyX image/task ABI unproven; it is not a mitigation or permission to skip
+the gate.
 
 **M5 retail gate writers.** The s2014 whole-RDRAM control and debugger-on Rice
 watch are both live: the control reached its 10,000-callback cap and the target
@@ -398,6 +426,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   record `0x80154620`, and the sole `0x8009B2C4` store. It selects legitimate
   W1 ordering for this route and leaves the opt-in audio task/PCM contract as
   the next M5 discriminator.
+- s2030 supersedes the ranked step-2 opt-in validation as the next unit. The
+  wording was believable because the existing arm had only been attributed
+  by dispatch and DMA probes; the same-build phase table now proves normal
+  `Broke` returns and real DMEM/DMA activity, but no nonzero PCM, while the
+  guest gate remains zero and skipped. The next discriminator is therefore
+  the gate writer/consumer join; the image/task ABI remains open rather than
+  being promoted or blamed from a single null.
 
 ## Evidence ledger summary
 
@@ -429,7 +464,10 @@ a phase-valid A11 table. s2029 closes the first writer/reaper join: the
 call-3 stop caller, slot record, before/after status, and named guest writer
 match, while no status-3/service-store edge is live. The retail oracle was
 independently live in s2029, so the port census is not being used as its own
-ground truth.
+ground truth. s2030 validates the opt-in task arm only as a reversible
+experiment: it returns `Broke` and writes DMEM/DMA state but produces no PCM;
+the independent retail gate watch and phase-valid port gate skip make the
+guest gate/consumer census the next M5 boundary.
 
 ## Method and safety rules
 

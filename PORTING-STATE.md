@@ -97209,3 +97209,53 @@ arm contract from `M5-AUDIO-PLAN.md`.
 
 ORIGIN: diagnostic-only s2029 join; the `0x8009B2C4` write remains existing
 guest logic and is classified as legitimate by its status-1 stop contract.
+
+## Session 2030 (2026-08-20) — validated the opt-in audio task boundary
+
+`HYPOTHESIS-ID: m5-optin-rsp-arm-contract`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 30,520 bytes, so this was not a
+maintenance iteration. Ran the prescribed retail oracle before the build. The
+whole-RDRAM positive control recorded 10,011 writes, the physical
+`0xA0F50` watch recorded 11 writes, and retail crossed VI 1024 at 17.3s. The
+target writes were the established `0x8008EA34`/`0x8008EB40` boot pair and
+repeated `0x8008ED48`/`0x8008EB7C`/`0x8008EC88` transition cluster. This is
+independent gate-writer ground truth, not port evidence.
+
+The existing binary was checked for the M5 dispatch/PCM/DMEM diagnostics and
+`cmake --build build --target RogueSquadron64Recomp -j2` completed cleanly.
+The first three capture recipes were control failures, not audio results:
+the six-Start no-LLE pair, the six-Start `ROGUESQ_LLE_FORCE=1` pair, and the
+six-Start `LLE_FORCE+LLE_SOLO` pair all stopped at VI 640. A phase-relative
+key schedule deadlocked waiting for VI 1024 because it could not press the
+keys needed to reach that phase. The archived route recipe corrected this:
+eleven from-boot Starts at 6..56s, `ROGUESQ_SPIN_YIELD=1`, and
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1`.
+
+The final same-build pair passed the same 24/24 `s2006-svc` entry/exit
+controls. The unset arm reached VI 1024 but not hangar 512. Its phase-valid
+rows were `arm=musyx_stub`, `exit=1` (`RspExitReason::Broke`),
+`dmem_changed=0`, `canary_ok=1`, `dma_count=0`, and PCM remained all-zero.
+The opt-in arm reached VI 1024 and hangar VI 512 at origin `0x006AB400`,
+then hit the known PI `do_rom_read` crash at guest PC `0x80001B08` after the
+phase table completed. Its phase-valid rows were
+`arm=factor5_ucode_b`, `exit=1`, DMEM changes beginning at `0x340` and ending
+at `0xFCF`, `canary_ok=0`, and nonzero audio-task DMA activity. The first
+hangar row had two nonzero `0x6F0` payloads (`payload_nz=621` and `639`),
+but every sampled `pcm-sanity` row in both arms had `all_zero=1`; no
+`all_zero=0` row fired. In the same phase the port gate witness read byte 0
+and `musyx-gate1` took its skip path. The opt-in arm therefore executes and
+returns the candidate image but does not establish the task/PCM contract.
+
+This selects C, the guest gate/consumer boundary, as the immediate M5
+boundary: both arms have the same disabled gate/PCM outcome, while the opt-in
+task has real DMEM/DMA activity and a normal `Broke` return. B, an image/task
+ABI mismatch, remains open as a secondary explanation for the failed canary
+and zero PCM; no default flip, guest-store change, wait skip, or SDL change
+was made. The six-Start/phase-relative recipe failures rule out nothing about
+audio; the final route pair rules out “M_AUDTASK is never dispatched” and an
+audio-device-only explanation for this result.
+
+The next unit is one all-writer gate/consumer census with the opt-in image
+held constant, joined to the task, wait, slot, and PCM rows and the retail
+`0xA0F50` attribution.
