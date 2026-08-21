@@ -303,6 +303,99 @@ extern "C" void rs64_m5_b40_route_event(const char* edge, uint32_t pc,
     std::fflush(stderr);
 }
 
+static thread_local uint32_t g_rs64_m5_route_state_call_ordinal = 0xFFFFFFFFu;
+static thread_local uint32_t g_rs64_m5_route_state_entry_a1 = 0xFFFFFFFFu;
+static thread_local uint32_t g_rs64_m5_route_state_audio_nonzero = 2u;
+
+static uint32_t rs64_m5_route_state_guest_byte(uint8_t* rdram, uint32_t guest) {
+    if (rdram == nullptr || guest < 0x80000000u || guest >= 0x80800000u) {
+        return 0xFFFFFFFFu;
+    }
+    return rdram[guest - 0x80000000u];
+}
+
+static void rs64_m5_route_state_log(uint8_t* rdram, const char* edge,
+                                     uint32_t pc, uint32_t call_ordinal,
+                                     uint32_t a0, uint32_t a1, uint32_t a2,
+                                     uint32_t a3, uint32_t a1_gate,
+                                     uint32_t audio_nonzero,
+                                     uint32_t function_nonzero) {
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t limit = phase == 7u ? 512u : 16u;
+    if (call_ordinal >= limit) return;
+
+    const char* b40 = std::getenv("ROGUESQ_M5_B40_VALUE");
+    const char* c88 = std::getenv("ROGUESQ_M5_C88_VALUE");
+    const uint32_t state_1ad0 = rs64_m5_route_state_guest_byte(rdram, 0x80141AD0u);
+    const uint32_t state_3b038 = rs64_m5_route_state_guest_byte(rdram, 0x8013B038u);
+    const uint32_t state_1ad1 = rs64_m5_route_state_guest_byte(rdram, 0x80141AD1u);
+    const uint32_t audio = audio_nonzero == 0xFFFFFFFFu
+        ? g_rs64_m5_route_state_audio_nonzero : audio_nonzero;
+    std::fprintf(stderr,
+        "[m5-route-state] arm=%s b40=%u c88=%u edge=%s phase=%u target=%u "
+        "call_ordinal=%u route_ordinal=%u width=%u origin=0x%06X "
+        "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X a1_gate=0x%08X "
+        "state_1ad0=0x%02X state_3b038=0x%02X state_1ad1=0x%02X "
+        "audio_nonzero=%u function_nonzero=%u\n",
+        (b40 && b40[0] && b40[0] != '0') ? "treatment" : "control",
+        (b40 && b40[0] && b40[0] != '0') ? 1u : 0u,
+        (c88 && c88[0] && c88[0] != '0') ? 1u : 0u,
+        edge ? edge : "?", phase, phase == 7u ? 1u : 0u, call_ordinal,
+        g_rs64_m5_b40_route_ordinal.load(std::memory_order_relaxed),
+        rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu,
+        a0, a1, a2, a3, a1_gate, state_1ad0, state_3b038, state_1ad1,
+        audio, function_nonzero);
+    std::fflush(stderr);
+}
+
+extern "C" uint32_t rs64_m5_route_state_callsite(uint8_t* rdram,
+                                                   uint32_t pc, uint32_t a0,
+                                                   uint32_t a1, uint32_t a2,
+                                                   uint32_t a3) {
+    static uint32_t phase_seen = 0xFFFFFFFFu;
+    static uint32_t next_ordinal = 0;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase != phase_seen) {
+        phase_seen = phase;
+        next_ordinal = 0;
+    }
+    g_rs64_m5_route_state_call_ordinal = next_ordinal++;
+    g_rs64_m5_route_state_entry_a1 = a1;
+    g_rs64_m5_route_state_audio_nonzero = 2u;
+    const char* all = std::getenv("ROGUESQ_LOG_ALL");
+    const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_STATE");
+    if ((all && all[0] && all[0] != '0') || (own && own[0] && own[0] != '0')) {
+        rs64_m5_route_state_log(rdram, "callsite", pc,
+                                g_rs64_m5_route_state_call_ordinal,
+                                a0, a1, a2, a3, a1, 0xFFFFFFFFu, 2u);
+    }
+    return g_rs64_m5_route_state_call_ordinal;
+}
+
+extern "C" void rs64_m5_route_state_event(uint8_t* rdram, const char* edge,
+                                            uint32_t pc, uint32_t a0,
+                                            uint32_t a1, uint32_t a2,
+                                            uint32_t a3,
+                                            uint32_t audio_nonzero,
+                                            uint32_t function_nonzero) {
+    const char* all = std::getenv("ROGUESQ_LOG_ALL");
+    const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_STATE");
+    if (!((all && all[0] && all[0] != '0') ||
+          (own && own[0] && own[0] != '0'))) return;
+
+    if (edge && edge[0] == 'e' && edge[1] == 'n') {
+        g_rs64_m5_route_state_entry_a1 = a1;
+    }
+    if (edge && edge[0] == 'a' && edge[1] == 'u') {
+        g_rs64_m5_route_state_audio_nonzero = audio_nonzero ? 1u : 0u;
+    }
+    rs64_m5_route_state_log(rdram, edge, pc,
+                            g_rs64_m5_route_state_call_ordinal,
+                            a0, a1, a2, a3,
+                            g_rs64_m5_route_state_entry_a1,
+                            audio_nonzero, function_nonzero);
+}
+
 extern "C" void rs64_m5_b40_read(uint8_t* /*rdram*/, uint32_t read_pc,
                                   uint32_t value, uint32_t branch_pc,
                                   uint32_t branch_taken) {

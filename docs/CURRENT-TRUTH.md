@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2111
-(2026-08-21); behavioral and source evidence is current through s2111.
+authoritative for exact commands and probe rows. Maintained in Session 2112
+(2026-08-21); behavioral and source evidence is current through s2112.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -54,18 +54,24 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `0x00695C00`) and the VI transitions differed only in timing. This refutes
   `H-B40-Consumer` at the sampled route boundary and selects
   `H-RecipeVariance`; the phase-7 origin/state writer remains open.
+- The s2112 phase-keyed route-state table was positive in both arms. At phase
+  7, callsite, `reapplyDisplayMode` entry, and route rows matched on all four
+  arguments, `a1_gate`, state bytes `0x80141AD0`/`0x8013B038`/`0x80141AD1`,
+  route ordinal, and boundary VI state; both arms had origin `0x00695C00`.
+  Both later recorded `audio_nonzero=0` and function exit `0`. Independent VI
+  traces differed in timing and later phase count only, so this pair selects
+  `H-RecipeTiming` and does not identify a phase-7 state writer.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 route variance: identify the phase-7 state/origin producer.** Audit
-   the complete argument/state table at the phase-7 reapply entry and its
-   predecessor, preserving the B40 value arm, explicit C88=0, route controls,
-   ABI/DMA/stage, slot, PCM, ordering, and VI controls. Do not change any
-   gate store, branch, dispatch, output routing, task field, canary, wait,
-   guard, or queue policy.
+1. **M5 image-task contract.** Resolve the opt-in Factor 5 image arm's final
+   `Broke`/writeback/output-routing boundary with one phase-keyed task table.
+   Preserve the generated DMA, task fields, canary, slot, PCM, wait, and queue
+   behavior; no output or exit mapping change is authorized until the writer
+   and host consumer are named.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -138,6 +144,11 @@ and route ordinal; host VI lines also matched phase order with a timing/origin
 variation. The B40-dependent route-admission claim is superseded at the s2111
 recipe scope; the remaining M5 question is the phase-7 state/origin producer,
 not another B40 read-site census.
+The s2112 caller/entry/route table matched at phase 7 in both arms, and both
+arms later returned from `reapplyAudioConfig` with zero. The prior phase-7
+origin split was not reproduced in this paired recipe; VI timing and later
+phase count varied, selecting recipe variance at this scope without proving
+the old divergence impossible in every recipe.
 
 ### M3, M4, and generated symbols
 
@@ -179,6 +190,11 @@ Detailed history and exact reasons are in `PROJECT-OVERVIEW.md` §§26 and
   identical with B40 values already 0 after reapply. Those earlier claims are
   superseded at the s2111 recipe scope; they remain historical results for
   their unqualified earlier scopes.
+- The s2111 phase-7 origin difference was believable as a state-producer issue
+  because the two arms had different host route origins. s2112's complete
+  phase-7 rows matched, both arms reached title and hangar, and independent VI
+  traces differed only in timing. This supersedes the producer selection at
+  the s2112 paired-recipe scope, not as a universal claim about all recipes.
 - `0x8000B650` is a shared last-guest-PC breadcrumb, not evidence that retail
   executes the port's fill/wait function. The generated crosswalk and
   independent retail PC watch establish that scope only.
@@ -188,7 +204,8 @@ Detailed history and exact reasons are in `PROJECT-OVERVIEW.md` §§26 and
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024 and
 spin-yield chain is in §36; the M5 archive through s2047 is in §§37–38; the
 late route/fill boundary is in §39; the s2080–s2108 archive is in §40; and the
-s2110–s2111 route/read results remain in the ledger and current front matter.
+s2110–s2112 route/read/state results remain in the ledger and current front
+matter.
 The exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. The current selected hypotheses are scoped above and
 must not be widened from single-source or single-arm observations.

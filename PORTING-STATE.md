@@ -100437,3 +100437,53 @@ canary, wait, guard, queue policy, or default dispatch changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-gate-writer-sweep`.
+
+## Session 2112 (2026-08-21) — paired phase-7 route-state census
+
+The planned work unit was the regeneration-stable, phase-keyed census joining
+the sole `runVideoFrameTick` caller at `0x8000153C` to
+`reapplyDisplayMode` entry `0x8008EB5C`, the `reapplyAudioConfig` route edge
+at `0x8008EBC0`, its return edge, and function exit `0x8008EC90`. Before the
+port witness, the retail oracle whole-RDRAM write watch reached 10,000
+callbacks and the physical `0x000A0F50` read watch reached 1,738 callbacks in
+8 seconds, with VI callbacks active. This was an independent positive control.
+
+The older complete recompiler named by the project instructions is absent on
+this macOS checkout; the only available `../N64Recomp/build/N64Recomp` is the
+known unsupported-cache binary. It was not invoked, and the intact generated
+tree was not cleared or truncated. The durable transform was added to
+`fixup_game_funcs.py`, then the same diagnostic-only calls were applied to the
+intact generated `funcs_0.c` and `funcs_23.c` so the planned experiment could
+run. `python3 -m py_compile` passed and the Debug target built successfully.
+
+The single build carried caller, entry, route, audio-return, and exit rows.
+The control used `ROGUESQ_M5_B40_VALUE=0`; treatment used `1`; both used
+explicit `C88=0`, `ROGUESQ_AUDIO_UCODE=1`, `SPIN_YIELD=1`, and identical
+route/ABI/DMA/stage/slot/PCM/ordering controls, launched concurrently. Each
+run had positive route-state rows in earlier phases, including audio-return
+and exit, so the target-phase result was not a null or a broken logger.
+
+At phase 7 both arms emitted the complete callsite, entry, and route rows with
+call ordinal 0 and route ordinal 0. The rows matched on all four entry
+arguments, the route-edge arguments, `a1_gate=0x0F`, state bytes
+`0x80141AD0=0`, `0x8013B038=0`, `0x80141AD1=0`, and boundary VI state
+`width=2`, `origin=0x00695C00`. Both later reached the audio-return row after
+the title transition with `audio_nonzero=0`, and the function exit row had
+`function_nonzero=0`. There were no crash markers. Host VI traces independently
+showed phase-7/title/hangar at 50.0/50.1/79.4 seconds in control and
+48.3/48.4/78.2 seconds in treatment; treatment then made an additional
+512-wide transition at 114.9 seconds.
+
+This selects `H-RecipeTiming` for the s2112 paired recipe: the complete
+phase-7 rows matched and only timing/later phase progression varied. It
+refutes `H-Phase7State`, `H-B40Indirect`, and `H-UnobservedCoverage` at this
+scope. It does not identify a universal phase-7 state writer or prove that
+the earlier s2111 origin split cannot recur under another recipe. The
+`Broke`/writeback/output task contract remains unresolved. No gate store,
+branch, dispatch, output routing, task field, canary, wait, guard, queue
+policy, or default behavior changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.
