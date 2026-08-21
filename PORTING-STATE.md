@@ -101842,3 +101842,60 @@ at `0x800FEF04` size `0xC` is adjacent and must stay untouched. The s416
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only moved a generated symbol mapping and compared ELF
 and generated names.
+
+
+## Session 2147 (2026-08-21) — repaired the object-orientation symbol mapping
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `53,322` bytes, so this was not a
+maintenance iteration. The last-15 session-title check was not an all-sweep
+run (s2132–s2140 were M5), so the bounded generated-symbol unit remained
+eligible. Soak-queue intake was historical 2026-08-18 rows already consumed;
+no new recipes. The prescribed unit was a no-edit versus two-line source
+mapping comparison for `func_800FEF10` -> `stepObjectOrientationTowardTarget`;
+no game run, runtime change, audio, task, guard, or mitigation behavior was
+involved.
+
+The no-edit make-ELF/N64Recomp/fixup sequence completed successfully and left
+the placeholder in the generated prototype, definition, overlay entry, and
+ELF. The baseline ELF row was `.ovl.mission`, start `0x800FEF10`, size
+`0xEF0`, ending at unchanged `resolveCraftAnimationNodeHandles` `0x800FFE00`;
+`stepObjectOrientationTowardTarget` was absent from the ELF. The leftover
+`fake_func_800FEF04` at `0x800FEF04` size `0xC` was unchanged. That refutes
+`H-RegenerationStale` without a boundary conflict. The prescribed two-line
+source move then removed the human mapping from `main_overlay.txt` and
+renamed the single `mission_overlay.txt` entry. The second
+make-ELF/N64Recomp/fixup/CMake sequence completed successfully and linked
+`RogueSquadron64Recomp`; the host binary exports
+`_stepObjectOrientationTowardTarget` and has no leftover `func_800FEF10`.
+
+The treatment table showed one global ELF function named
+`stepObjectOrientationTowardTarget` in `.ovl.mission` at `0x800FEF10`, size
+`0xEF0`, ending at unchanged `0x800FFE00`. The generated prototype,
+definition, and overlay entry used the human name; both generated callers,
+inside `updateSplineCraftTransform` at `funcs_29.c:18498` (`jal 0x800FEF10`)
+and `updatePlayerCraftPhysics` at `funcs_30.c:6813` (`jal 0x800FEF10`), also
+resolved to it. Zero leftover `func_800FEF10` remained in the generated
+tree. Adjacent leftover `fake_func_800FEF04` and
+`resolveCraftAnimationNodeHandles` were unchanged. Baseline and treatment
+rows are in `s2147_baseline_table.txt` and `s2147_treatment_table.txt`. This
+selects `H-MissionMapping` and finds no static boundary or caller conflict.
+The s416 `m4_known_bad.txt` live-crash warning (`slotDispatcherIter+1476`,
+last-guest-pc `0x800290d4`) remains a runtime-risk record, not evidence of a
+static conflict. No game soak was run: the source/ELF/generated boundary
+table was the work-unit discriminator. No runtime, mitigation, or task
+behavior changed.
+
+The next sweep lead is `func_800B2630` -> `buildFormatMessageGlyphBuffer`;
+its human mapping is currently in `main_overlay.txt` while `menu_overlay.txt`
+still has the placeholder, so the next unit must repeat the source/ELF/boundary
+and caller collision check before editing. The leftover `fake_func_800B2628`
+at `0x800B2628` size `0x8` is adjacent and must stay untouched. The s419
+`m4_known_bad.txt` record is a live-crash warning, not a static-boundary skip.
+Mission-overlay human-versus-placeholder mismatches are now exhausted; this
+is the first remaining menu-overlay instance of the same two-line pattern.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only moved a generated symbol mapping and compared ELF
+and generated names.
