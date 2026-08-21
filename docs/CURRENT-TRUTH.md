@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2132
-(2026-08-21); behavioral and source evidence is current through s2132.
+authoritative for exact commands and probe rows. Maintained in Session 2133
+(2026-08-21); behavioral and source evidence is current through s2133.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -26,6 +26,14 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `Broke` and fails the reserved host canary. The s2113 contract witness
   records the generated completion edge as guest PC `0x1328`, host exit
   `Broke`, task `output_buff=0`, and the phase-keyed post-DMA/PCM joins.
+- The s2133 same-build stub/image comparison reached title and hangar in both
+  arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
+  and `639`) and each had exact source/consumer PCM joins with matching FNV,
+  while the stub arm remained zero. This selects `H-PortAIQueueMatches` at
+  the sampled phase-gated host callback boundary; the run-lifetime
+  `[pcm-sanity]` sampler missed those transient rows and is not evidence
+  against the join. No AI-status, task-routing, output, wait, or default-arm
+  change is authorized.
 - In the route-qualified hangar sample, stage-2 `0x6F0`/`0x300` rows matched
   nonzero DMA payloads and PCM source/consumer spans exactly. The same scope
   had `output_buff=0`, `canary_ok=0`, and `exit=1`. This selects
@@ -269,21 +277,36 @@ This file is intentionally compact. The s2080–s2108 archive is in
   produces valid PCM or authorize a host/task change. The initial unaligned
   countdown watch, the PIF/status-poll coverage-only retry, and the
   voice-base-watch coverage-only retry are not evidence against the result.
+- The s2133 port-side same-build comparison passed positive LLE/audio controls
+  and reached title VI `1024 @ 0x00790400` plus hangar VI `512 @ 0x006AB400`
+  in both arms. The stub produced `2768` LLE tasks and no audio DMA rows; the
+  image produced `1749` phase-10 image stage rows and two nonzero
+  stage/source/consumer matches with `nz=621` and `639`, full-span FNV
+  equality, and zero ordering violations. The image task still reported
+  `break_pc=0x1328`, `exit=1`, `output_buff=0`, and `canary_ok=0`. The
+  phase-gated consumer callback supplies nonzero PCM evidence, but the
+  separately sampled `[pcm-sanity]` rows were all zero because its lifetime
+  sampling missed the transient phase-10 rows. This selects
+  `H-PortAIQueueMatches` at the sampled port boundary; it does not authorize
+  changing `osAiGetStatus_recomp`, output routing, waits, guards, or the
+  default audio arm. Both drivers later hit the existing terminal crash
+  family after target coverage.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 PCM/AI ordering.** Retail ground truth now selects
-   `H-RetailAIQueued` at the covered route: the gate, aligned countdown,
-   worker flag, nonzero pointer table, and `osAiSetNextBuffer` all co-occurred
-   after the whole-RDRAM control. The next unit is a same-build port-side
-   stub/image comparison using the existing phase-gated audio-return,
-   PCM-boundary, and PCM-sanity controls. It must compare target-phase
-   coverage, image-task exit, host AI submission, source/consumer span joins,
-   and nonzero PCM before any `osAiGetStatus_recomp`, task routing, or default
-   behavior change.
+1. **M5 voice-codec/MORT boundary.** Retail ground truth selects
+   `H-RetailAIQueued`, and s2133 now selects `H-PortAIQueueMatches` at the
+   sampled port host callback boundary: the image arm produced two exact
+   nonzero source/consumer PCM joins after real task DMAs. The task's
+   `output_buff=0`/`break_pc=0x1328` contract remains unchanged, and the
+   current image is still not proven to be the retail MORT path. The next
+   unit is a retail-oracle execution census of the named voice decode/filter
+   range, `musyxSynthFrame`, and `osAiSetNextBuffer`, with the whole-RDRAM
+   positive control and title/hangar VI gates. Do not add a port instrument or
+   create a MORT artifact until this independent boundary is classified.
 2. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
    three consecutive coverage-only results under the same hypothesis; the
    current renderer boundary supplies no new discriminator. The first sweep
@@ -383,6 +406,17 @@ executed retail `osAiSetNextBuffer` `8,556` times. This selects
 explanation. It is one independent source: the next M5 unit must compare the
 port stub/image arms at the existing PCM source/consumer and host callback
 boundaries before changing the AI status shortcut, task ABI, or default arm.
+
+The s2133 same-build port comparison supplied the missing nonzero host-boundary
+line. Both arms reached the target phases with positive controls; the image
+arm's phase-10 stage rows `nz=621` and `639` matched both source and consumer
+spans by address, byte count, FNV, and nonzero count, with no ordering
+violations. The stub arm remained zero. The `[pcm-sanity]` logger's lifetime
+sampling missed the two transient nonzero callbacks, so its all-zero sampled
+rows are a measurement-coverage limitation, not a silent-PCM result. The
+image `break_pc=0x1328`, `exit=1`, canary failure, and `output_buff=0` remain
+the task boundary; no host/task/default change is authorized. The next M5
+unit is the independent retail voice-codec/MORT execution census.
 
 ### M5 audio and guest gate
 
@@ -537,8 +571,13 @@ tree. s2132 supplied a retail-only PCM/AI ordering table: whole-RDRAM control,
 title/hangar VI coverage, nonzero pointer-table state, aligned countdown and
 worker writes, and `8,556` retail `osAiSetNextBuffer` executions co-occurred.
 This selects `H-RetailAIQueued` at the covered retail route; it is not port
-PCM or task-ABI evidence. The next unit is the port stub/image comparison,
-not the parked drain A/B or the symbol sweep.
+PCM or task-ABI evidence. s2133 supplied the port-side same-build comparison:
+both arms reached title/hangar, and the image arm's two phase-10 nonzero
+stage/source/consumer joins matched by address, byte count, FNV, and nonzero
+count while the stub remained zero. This selects `H-PortAIQueueMatches` at
+the sampled callback boundary; the task exit/output fields remain unchanged.
+The next unit is the retail voice-codec/MORT execution census, not the parked
+drain A/B or the symbol sweep.
 
 ## Method and safety rules
 

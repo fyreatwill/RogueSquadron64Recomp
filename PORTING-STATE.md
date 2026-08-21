@@ -101226,3 +101226,39 @@ the port's opt-in image arm produces valid host PCM, does not change
 `osAiGetStatus_recomp`, task output routing, waits, or guards, and does not
 authorize defaulting the image arm. The next unit is the port-side same-build
 stub/image PCM-and-AI boundary comparison using existing phase-gated controls.
+
+## Session 2133 (2026-08-21) — validated port PCM/AI boundary
+
+HYPOTHESIS-ID: m5-pcm-ai-ordering
+
+The prescribed work unit used one successful Debug build and two concurrent
+`run_mission_keys.sh` drivers: the unset-env `musyx_stub` control and the
+`ROGUESQ_AUDIO_UCODE=1` `factor5_ucode_b` arm. Both drivers returned `rc=0`,
+passed the LLE/audio positive controls, and reached title VI
+`1024 @ 0x00790400` plus hangar VI `512 @ 0x006AB400`. The stub summary had
+`2768` LLE tasks; the image summary had `2981`. Both drivers later recorded
+the existing terminal crash family after target coverage, so that terminal
+event was not used to classify the target rows.
+
+The stub's phase-10 image summary was empty and its audio-task rows retained
+the silent contract: no DMA, `break_pc=0`, `exit=1`, and `canary_ok=1`. The
+image arm had `1749` phase-10 stage rows, of which two were nonzero. Their
+phase-gated source and consumer callback rows matched the same guest spans by
+address, byte count, full-span FNV, and nonzero count: `nz=621`, FNV
+`0x2B9E9631`, and `nz=639`, FNV `0x6ADD4218`. The image summary reported
+`source_matches=2`, `consumer_matches=2`, `stage_only=0`, and
+`ordering_violations=0`. Representative image task rows still reported
+`break_pc=0x1328`, `exit=1`, `output_buff=0`, and `canary_ok=0`.
+
+This selects `H-PortAIQueueMatches` at the sampled port boundary and rules out
+`H-CoverageFailure` and `H-PortAIQueueSilent` at that scope. The independent
+`[pcm-sanity]` logger emitted eight phase-10 image samples and all were
+`all_zero=1`, but that logger is lifetime-sampled at its first 20 and every
+256th callback; it missed the transient nonzero phase-10 callbacks. The
+phase-gated `[pcm-boundary-consumer]` rows are the positive callback evidence,
+so the sampled sanity null is a measurement limitation, not a silent-PCM
+finding. This result does not identify the retail MORT boundary and does not
+authorize changing `osAiGetStatus_recomp`, task output routing, waits, guards,
+or the default arm. The next unit is a retail-oracle execution census of the
+named voice decode/filter functions, `musyxSynthFrame`, and
+`osAiSetNextBuffer`, with the whole-RDRAM control and title/hangar gates.

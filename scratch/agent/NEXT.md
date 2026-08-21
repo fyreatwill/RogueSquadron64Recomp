@@ -1,55 +1,61 @@
-# NEXT work unit (s2133) — port stub/image PCM and AI boundary
+# NEXT work unit (s2134) — retail voice-codec/MORT boundary census
 
-HYPOTHESIS-ID: m5-pcm-ai-ordering
+HYPOTHESIS-ID: m5-mort-boundary
 
 ## Work unit
 
-Execute M5 plan step 6's port-side same-build comparison now that the retail
-oracle selected `H-RetailAIQueued`. Use the existing phase-gated audio-return,
-PCM-boundary, PCM-sanity, and task-dispatch diagnostics. Build once, then run
-the silent stub and opt-in `factor5_ucode_b` arms concurrently. Do not change
-`osAiGetStatus_recomp`, task output routing, waits, guards, or the default
-audio arm in this unit.
+Run one retail-oracle ground-truth capture before adding any port-side
+instrument or creating a MORT artifact. Use the whole-RDRAM positive control,
+the qualified title/hangar VI gates, and execution watches at the named
+voice-sample/decode/filter functions, `musyxSynthFrame`, and
+`osAiSetNextBuffer`. This is one oracle experiment; do not build the port or
+change the audio arm, task ABI, output routing, waits, guards, or defaults.
 
 ## Competing hypotheses and discriminator
 
-- `H-PortAIQueueMatches`: both arms pass LLE/task positive controls and reach
-  title/hangar; the image arm emits real audio-task return rows, host AI/PCM
-  boundary rows, an exact source/consumer span join, and at least one
-  nonzero `[pcm-sanity]` callback. The stub arm retains the silent contract.
-  This selects the first port-side AI/PCM contract to preserve.
-- `H-PortAIQueueSilent`: the image arm reaches the target and its task/PCM
-  boundary controls fire, but every image `[pcm-sanity]` callback is all-zero
-  or the host consumer has no nonzero join while the task returns. This keeps
-  the host callback/decoder boundary open; it does not authorize an AI-status
-  or routing change.
-- `H-CoverageFailure`: either arm misses the target phase or its positive
-  dispatch control, or the image arm produces no task/PCM rows. This selects
-  no PCM hypothesis; do not interpret nulls.
+- `H-RetailMORTDecoderLive`: after the hangar gate, one or more of
+  `decodeAndFillVoiceBlock`, `filterVoiceSampleBlock`, `applyVoiceDelayFilter`,
+  `runVoiceLatticeFilter`, `renderVoiceAudioBlock`, `audioMixStereoBlock8`, or
+  `audioCompandS16` execute, and the same run also observes
+  `musyxSynthFrame` plus `osAiSetNextBuffer`. This selects the retail
+  voice-codec/MORT boundary as live and identifies the first port artifact
+  boundary to reproduce.
+- `H-RetailVoicePipelineNoDecoder`: the independent whole-RDRAM control and
+  title/hangar gates pass, `musyxSynthFrame` and `osAiSetNextBuffer` execute,
+  but every named decoder/filter watch is zero after the hangar gate. This
+  rules out the current MORT-codec execution theory at the covered retail
+  route; it does not prove that the port image is correct.
+- `H-CoverageFailure`: the whole-RDRAM watch does not reach its threshold, or
+  the title/hangar VI gates are absent. This selects no decoder hypothesis;
+  all zero execution-watch results are unevaluable.
 
-The discriminator is one table keyed by arm and VI phase/origin: positive
-LLE/audio dispatch counts; `audio-return` exit; `pcm-boundary-source` and
-`pcm-boundary-consumer` address/count/full-span/nonzero joins;
-`pcm-sanity` callback count and all-zero/nonzero counts; and target-phase
-coverage. Select `H-PortAIQueueMatches` only when image nonzero PCM and an
-exact source/consumer join co-occur after the controls. Select
-`H-PortAIQueueSilent` only with target coverage, image task returns, and a
-positive PCM callback control whose content remains zero. Any missing control
-or target phase selects `H-CoverageFailure`.
+The discriminating table is keyed by phase/origin and execution-watch PC:
+whole-RDRAM positive-control callbacks; title `1024 @ 0x00790400`; hangar
+`512 @ 0x006AB400`; counts for the seven named decode/filter functions;
+`musyxSynthFrame` at `0x8009123C`; and `osAiSetNextBuffer` at `0x80029E80`.
+`H-RetailMORTDecoderLive` requires the decoder/filter hits and the two known
+pipeline hits in the same hangar-covered run. A positive control or phase
+gate missing selects `H-CoverageFailure`, never a null decoder result.
 
 ## Exact commands
 
     cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    env ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5step6_stub 30 12 > scratch/agent/m5step6_stub_driver.log 2>&1 &
-    STUB_PID=$!
-    env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5step6_image 30 12 > scratch/agent/m5step6_image_driver.log 2>&1 &
-    IMAGE_PID=$!
-    wait "$STUB_PID"; STUB_RC=$?
-    wait "$IMAGE_PID"; IMAGE_RC=$?
-    printf 'stub_rc=%s image_rc=%s\n' "$STUB_RC" "$IMAGE_RC"
+    test -x tools/oracle/build/rs64_oracle
+    tools/oracle/build/rs64_oracle \
+      --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+      --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+      --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+      --secs 70 --hit-cap 64 \
+      --watch-write 0x0:0x800000 \
+      --watch-pc 0x8009C904,0x8009D7D0,0x8009D8C4,0x8009D980,0x8009DB44,0x8009DC98,0x8009DD7C,0x8009123C,0x80029E80 \
+      --first-watch 0 --vi-trace \
+      --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+      > scratch/agent/oracle_s2134_mort_boundary.log 2>&1
 
-Read `scratch/s73_post_a_scene/m5step6_stub/run.log` and
-`scratch/s73_post_a_scene/m5step6_image/run.log` only with bounded grep/tail.
-The work unit ends when the same-build table selects one hypothesis; do not
-promote any host or task change from a silent/null result.
+Inspect only bounded evidence:
+
+    grep -a -E '\[oracle\] positive|\[vi\]|\[hit\]|exec-prev|done:' scratch/agent/oracle_s2134_mort_boundary.log | tail -120
+
+The work unit ends when the table selects one hypothesis. If the oracle
+binary/core/ROM setup fails or a phase gate is absent, record
+`H-CoverageFailure`; do not substitute a port run.
