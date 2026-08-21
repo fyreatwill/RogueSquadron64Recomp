@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2089 (2026-08-20);
-behavioral and source evidence is current through s2089.
+for exact commands and probe rows. Maintained in Session 2090 (2026-08-20);
+behavioral and source evidence is current through s2090.
 
 ## Current state
 
@@ -48,10 +48,16 @@ behavioral and source evidence is current through s2089.
   `0x800921E8` produced 16 rows on the physical `base + index*0x88 + 0x34`
   lattice (indices 0 through 8) with descriptor values `0xB03910A0` and
   `0xB03698D8`; all 16 `0x80090C80` rows were off that lattice, with
-  residues 16 through 120 and zero/control-like values. At this retail-table
-  scope this selects `H-WrongField` over reallocation, a common valid base,
-  or scalar-only roles. It does not explain the off-lattice writer path or
-  authorize a port field rewrite, guard, or output change.
+  residues 16 through 120 and zero/control-like values. That comparison was
+  useful retail address evidence but not yet a field attribution. s2090's
+  generated-source and companion-symbol crosswalk shows why: `0x800921E8`
+  loads the voice-array entry `0x801496F8` and forms
+  `base + (a0 & 0xFFFF)*0x88 + 0x34`, while `0x80090C80` is in
+  `musyxKeyOnVoice` and forms its destination from the command-list globals
+  `0x80149750` (head) and `0x80149760` (count), not from the voice-array
+  entry. This selects `H-AlternateStructure` at generated source scope and
+  supersedes the s2089 `H-WrongField` interpretation; the exact retail
+  command-list root still needs independent qualification.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -120,18 +126,19 @@ behavioral and source evidence is current through s2089.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 off-lattice writer semantics.** The caller/callee audit selects
-   `H-CalleePointerContract`, and s2089's qualified retail table selects
-   `H-WrongField` at the writer-pair scope: the pointer is stable,
-   `0x800921E8` is descriptor-compatible on the voice lattice, and
-   `0x80090C80` remains off-lattice. Independently resolve the exact retail
-   and generated-source semantics of `0x80090C80`, including caller context
-   and source-field role. A voice-slot caller with the generated `+0x34`
-   store selects a retail/source field mismatch; an alternate
-   structure/field in both source and caller context selects a wrong-writer
-   attribution; a newly observed contemporaneous pointer relocation reopens
-   `H-ReallocatedVoiceBase`. No wait, guard, task-field, output-routing,
-   canary, gate, or host behavior change is authorized.
+1. **M5 command-list writer provenance.** s2090's generated-source and
+   companion-symbol crosswalk selects `H-AlternateStructure` for
+   `0x80090C80`: its destination is
+   `head + count*0xA10 + inner*0x50 + 0x44`, where head/count are the
+   command-list globals `0x80149750`/`0x80149760`; `0x800921E8` remains the
+   voice-array writer. Qualify that root and formula in one phase-gated retail
+   oracle table with a whole-RDRAM positive control, the command-list pointer
+   publisher, and both exact writer PCs. A contemporaneous command-list root
+   and matching destination selects the retail/source match; a voice-lattice
+   destination selects a retail/source divergence; a root relocation selects
+   reallocation; a PC or address mismatch selects oracle attribution failure.
+   No wait, guard, task-field, output-routing, canary, gate, or host behavior
+   change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -244,7 +251,14 @@ descriptor while the `0x80090C80` value is zero. The two destinations differ by
 showed that the pointer remained `0x801714D0`; the `0x800921E8` samples occupy
 the expected lattice while the `0x80090C80` samples do not. This is still a
 retail/source boundary result, not permission to rewrite the port field or to
-treat the off-lattice writer as corruption.
+treat the off-lattice writer as corruption. s2090 resolves the generated
+source side of that boundary: `musyxKeyOnVoice` receives a voice-slot pointer
+from `musyxBuildVoiceCommandList`, copies its `+0x38`, and stores it at a
+command-list-derived `+0x34`; `musyxInitVoiceFromSample` receives
+`(voiceIdx, sampleDesc, adsrFlag)` from `startStreamedSampleVoice` and
+`soundMacroOpPlaySampleKeymap`, then stores `sampleDesc+0x4` into the dynamic
+voice-array slot. The remaining question is whether the retail
+`0x80090C80` rows follow that command-list formula.
 
 ### M3, M4, and generated symbols
 
@@ -315,6 +329,13 @@ The maintenance compaction retains the reasons for the recent reversals here:
   the 0x88 stride. The generated code resolves that symbol as a pointer entry;
   exact watches instead hit unrelated song-structure `+0x134` stores. The
   dynamic retail allocation must be resolved before any writer attribution.
+- The s2089 `H-WrongField` attribution for `0x80090C80` was believable because
+  its qualified destinations were persistently off the `0x88` lattice while
+  `0x800921E8` landed on it. The s2090 source crosswalk shows the two stores
+  intentionally target different structures: `0x80090C80` derives its
+  destination from the command-list head/count, whereas `0x800921E8` uses the
+  voice-array entry. The lattice comparison therefore cannot identify a
+  wrong voice field; only the retail command-list-root join remains open.
 - The first s2088 oracle run appeared qualified because its whole-RDRAM
   control and target VI phases fired, but requested `--post-value-pc` samples
   bypassed the phase gate in the tool and were taken before title entry. The
@@ -336,8 +357,10 @@ while leaving the voice-slot writer boundary open, s2087 identifies the
 static voice writers while rejecting the pointer-table physical watch as a
 valid retail field witness, and s2088 qualifies the exact writer pair but
 finds a non-lattice destination separation. s2089 adds the repeated
-phase-keyed pointer/writer table and selects `H-WrongField` at its qualified
-retail-table scope while leaving the exact off-lattice writer semantics open.
+phase-keyed pointer/writer table and initially selects `H-WrongField` at its
+qualified retail-table scope. s2090's source/companion crosswalk supersedes
+that field attribution with `H-AlternateStructure` at generated-source scope
+and leaves the retail command-list-root join open.
 The chronological ledger is still the source for exact run commands, counts,
 and rejected retries.
 

@@ -99541,3 +99541,37 @@ the off-lattice `0x80090C80` writer before this becomes a port-facing conclusion
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-voice-output-base-provenance`.
+
+## Session 2090 (2026-08-20) — crosswalked the off-lattice writer structure
+
+Ran the M5 source-semantics work unit from `scratch/agent/NEXT.md` without a
+build or runtime change. The generated definition at `0x80090C80` is inside
+`musyxKeyOnVoice`: it receives a voice-slot pointer in `$s0`, copies source
+`+0x38`, and computes the destination through the command-list globals. The
+loads at `0x80090A4C` and `0x80090A54` resolve to `0x80149760` (halfword count)
+and `0x80149750` (head pointer). The instruction sequence forms
+`s2 = head + count*0xA10`, then `s1 = s2 + inner*0x50 + 0x10`, so the exact
+store is `head + count*0xA10 + inner*0x50 + 0x44`.
+
+The companion symbol mapping independently identifies `0x80149750`/`0x80149760`
+as the MusyX RSP command-list head/count and `0x801496F8` as the separate
+voice-slot-array pointer with stride `0x88`. The generated `0x800921E8` audit
+matches that second role: it loads `0x801496F8`, computes
+`base + (voiceIdx & 0xFFFF)*0x88`, and stores `sampleDesc+0x4` at `+0x34`.
+Caller context agrees: `musyxBuildVoiceCommandList` passes a voice-slot
+pointer to `musyxKeyOnVoice`, while `startStreamedSampleVoice` and
+`soundMacroOpPlaySampleKeymap` pass `(voiceIdx, sampleDesc, adsrFlag)` to
+`musyxInitVoiceFromSample`.
+
+This selects `H-AlternateStructure` at generated-source/companion scope and
+rejects `H-VoiceBaseMismatch` and `H-ReallocatedVoiceBase` as explanations of
+the source arithmetic. It supersedes s2089's `H-WrongField` interpretation,
+which was believable only because the two exact retail writers had been
+compared against the same assumed voice lattice. The retail command-list root
+and formula remain to be qualified independently; no port-facing conclusion,
+guard, field rewrite, or audio behavior change is authorized.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-command-list-root-provenance`.
