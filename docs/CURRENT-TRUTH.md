@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2076 (2026-08-20).
+for session detail. Reviewed through s2078 (2026-08-20).
 
 ## Current state
 
@@ -193,6 +193,17 @@ for session detail. Reviewed through s2076 (2026-08-20).
   consumption at this scope, and leaves worker starvation unevaluable. It is
   single-source port evidence; no wait, gate, task, slot, writer, or guard
   behavior changed.
+- s2078's corrected Rice oracle supplied the missing independent PC witness.
+  The whole-RDRAM positive control reached its 10,000-hit cap, all eleven
+  scheduled Start presses fired, and title VI `1024 @ 0x00790400` plus hangar
+  VI `512 @ 0x006AB400` were reached. Slot 0 showed `00 -> 01 -> 02 -> 03 ->
+  00`, then a second `01 -> 02` cycle. Retail PC counts were zero at
+  `0x8000B650` and `0x80095D54`, versus 4 at `0x800668B0`, 11 at
+  `0x8008DA00`, 3,275 at `0x8009B62C`, 659 at `0x8009B654`, 193 at
+  `0x8009B3EC`, 192 at `0x8009B44C`, and 5 at `0x8008EC88`. This selects
+  H-PortOnlyFillBoundary at requested-PC scope and refutes a retail shared
+  fill/wait boundary; it is single-source oracle evidence and changes no port
+  or guest behavior.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -331,9 +342,15 @@ are not active work items.
    known `fillSampleStreamRange+336` crash at `0x8000B650`. This selects
    H-PortWaitReturnsWithoutRetailSlot, refutes pre-wait failure and slot
    consumption at this scope, and leaves worker starvation unevaluable. The
-   result is single-source port evidence; the next unit must obtain an
-   independent retail PC witness for the fill/wait/tick/status boundary.
-   Do not change output routing, task fields, canary, waits, or guards.
+   result is single-source port evidence. s2078's corrected Rice oracle then
+   passed the whole-RDRAM, PIF, title, and hangar controls, while retail
+   recorded zero hits at `0x8000B650` and `0x80095D54`; neighboring
+   wait/tick/status PCs remained active and slot 0 completed a
+   `00 -> 01 -> 02 -> 03 -> 00` cycle. This selects H-PortOnlyFillBoundary at
+   requested-PC scope and refutes H-RetailFillBoundary and
+   H-RetailDistinctVoiceStage. The next unit is a bounded port crosswalk of
+   the fill crash label versus the generated symbol/host boundary. Do not
+   change output routing, task fields, canary, waits, or guards.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -419,6 +436,18 @@ then the known `fillSampleStreamRange+336` crash at guest `0x8000B650`.
 This selects H-PortWaitReturnsWithoutRetailSlot, refutes pre-wait failure and
 slot consumption at this scope, and leaves worker starvation unevaluable.
 It is single-source port evidence; no guest or host behavior changed.
+
+s2078 then supplied the independent retail PC witness for that treatment
+boundary. The corrected Rice run reached the whole-RDRAM 10,000-hit positive
+control cap, emitted eleven scheduled Start presses, and reached title
+`1024 @ 0x00790400` plus hangar `512 @ 0x006AB400`. Slot 0 showed
+`00 -> 01 -> 02 -> 03 -> 00` and then a later `01 -> 02` prefix. The requested
+retail PCs `0x8000B650` and `0x80095D54` had zero hits; neighboring PCs
+`0x800668B0`, `0x8008DA00`, `0x8009B62C`, `0x8009B654`, `0x8009B3EC`,
+`0x8009B44C`, and `0x8008EC88` had 4, 11, 3,275, 659, 193, 192, and 5
+hits. This selects H-PortOnlyFillBoundary at requested-PC scope and refutes
+a retail shared fill/wait boundary. It is single-source oracle evidence; no
+port or guest behavior changed.
 
 ### M5 audio and guest gate
 
@@ -759,6 +788,17 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   worker starvation unevaluable because the wait returned and no target route
   qualified. The later fill-sample crash is a separate downstream boundary;
   no mitigation or wait/guard change is authorized.
+- s2078 supersedes the wording that the port's `0x8000B650` fill crash still
+  needed a retail PC witness. That wording was believable because s2076's
+  port last-PC marker and the treatment's `fillSampleStreamRange` label had
+  not been joined to an independent retail execution trace. The corrected
+  Rice oracle passed the whole-RDRAM, input, title, hangar, and slot-cycle
+  controls, but recorded zero retail hits at both `0x8000B650` and
+  `0x80095D54` while neighboring wait/tick/status PCs were active. The
+  requested-PC null therefore selects H-PortOnlyFillBoundary and refutes a
+  retail shared fill/wait boundary at this scope; it does not yet identify
+  whether the port marker is stale guest-PC state or a host copy/readback
+  fault.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -853,6 +893,19 @@ named status-writer rows, before `fillSampleStreamRange+336` crashed at guest
 `0x8000B650`. This selects H-PortWaitReturnsWithoutRetailSlot at the port
 treatment scope and leaves the retail/port boundary as the next independent
 oracle question; no port behavior changed.
+
+s2078 then supplied that independent retail PC witness. The corrected Rice
+run reached the whole-RDRAM 10,000-hit positive-control cap, emitted eleven
+scheduled Start presses, and reached title `1024 @ 0x00790400` plus hangar
+`512 @ 0x006AB400`. Slot 0 showed the observed `00 -> 01 -> 02 -> 03 -> 00`
+cycle and a later `01 -> 02` prefix. The requested PCs
+`0x8000B650` and `0x80095D54` had zero hits; the neighboring requested PCs
+had counts `0x800668B0=4`, `0x8008DA00=11`, `0x8009B62C=3275`,
+`0x8009B654=659`, `0x8009B3EC=193`, `0x8009B44C=192`, and
+`0x8008EC88=5`. This selects H-PortOnlyFillBoundary and refutes
+H-RetailFillBoundary/H-RetailDistinctVoiceStage at requested-PC scope. The
+oracle result is single-source retail evidence paired with its independent
+positive-control/phase lines; no port or guest behavior changed.
 
 ## Method and safety rules
 

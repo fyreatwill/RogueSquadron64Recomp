@@ -99033,3 +99033,48 @@ required step is the retail oracle PC witness for the `0x8000B650`
 ### Next
 Run the oracle from NEXT.md (retail fill/wait/tick/status PC witness for
 the C88=1 crash boundary). See scratch/agent/NEXT.md.
+
+## Session 2078 (2026-08-20) — classified the retail fill/wait PC boundary
+
+### Work done
+
+Ran the exact corrected-Rice oracle command from `scratch/agent/NEXT.md` for
+65 seconds with the whole-RDRAM write control, eleven scheduled Start presses,
+title/hangar VI tracing, status polling, PIF tracing, and one batched PC watch
+set. No port build or guest/host behavior changed.
+
+### Result
+
+- The whole-RDRAM positive control reached its 10,000-hit cap. All eleven
+  scheduled Start presses fired.
+- The independent retail route reached title VI `1024 @ 0x00790400` and
+  hangar VI `512 @ 0x006AB400`.
+- Slot 0 status polling showed `00 -> 01 -> 02 -> 03 -> 00` at 43.3--49.1s,
+  followed by a later `01 -> 02` prefix at 59.9--60.2s.
+- Requested PC counts were: `0x8000B650=0`, `0x800668B0=4`,
+  `0x8008DA00=11`, `0x8009B62C=3275`, `0x8009B654=659`,
+  `0x8009B3EC=193`, `0x8009B44C=192`, `0x8008EC88=5`, and
+  `0x80095D54=0`.
+
+The whole-RDRAM, PIF, VI, and slot-cycle controls make the two requested
+nulls admissible. This selects H-PortOnlyFillBoundary at requested-PC scope
+and refutes H-RetailFillBoundary and H-RetailDistinctVoiceStage: the port's
+`0x8000B650` last-PC/fill crash marker and `0x80095D54` wait crash boundary
+have no matching retail execution on the qualified route, while neighboring
+wait/tick/status PCs are active. This is single-source oracle evidence; it
+does not yet identify whether the port marker is stale guest-PC state or a
+host copy/readback fault.
+
+### What it rules out
+
+It rules out treating the port's `0x8000B650` or `0x80095D54` markers as
+retail call-site contracts, and it rules out another retail-PC null caused by
+an unqualified route. It does not authorize changing waits, guards, task
+fields, canary handling, output routing, or the C88 gate.
+
+### Next
+
+Perform the bounded port crosswalk in `scratch/agent/NEXT.md`: reconcile the
+generated `fillSampleStreamRange` symbol range and its `+336`/`+6464` labels
+with the separate `0x8000B650` last-PC marker and host boundary before any
+further treatment arm.

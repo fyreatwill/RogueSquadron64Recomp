@@ -1,60 +1,54 @@
-# NEXT work unit (s2078)
+# NEXT work unit (s2079)
 
-HYPOTHESIS-ID: m5-retail-fill-sample-boundary
-
-## Resume note (s2077 was a partial session)
-s2077 landed `tools/agent/prune-scratch.sh` and the loop.sh hook for it but
-did not run the oracle. The oracle command below is unchanged from s2077's
-NEXT.md; no partial output or artifact exists for this work unit.
+HYPOTHESIS-ID: m5-port-fill-crash-origin
 
 ## Work unit
 
-Ask the independent retail oracle for one phase-qualified PC witness of the
-new boundary exposed by s2076. Do not build the port or change guest/host
-behavior. Use the corrected Rice oracle with a whole-RDRAM write positive
-control, PIF Start tracing, title/hangar VI anchors, status polling, and one
-batched `--watch-pc` set covering the port treatment's later crash PC
-`0x8000B650` (`fillSampleStreamRange`), the wait/tick/status readers, the
-retail wait candidate, and the named status writers.
+Perform one bounded port crosswalk of the `fillSampleStreamRange` crash label,
+the generated symbol range, and the separate `0x8000B650` last-guest-PC marker.
+This is a source/metadata audit only: do not build, run the game, change task
+fields, output routing, canary handling, waits, guards, gate stores, or host
+behavior. The purpose is to classify the port-only boundary exposed by s2078
+before another C88=1 treatment arm is considered.
 
 ## Competing hypotheses and discriminator
 
-- **H-RetailFillBoundary** — qualified retail execution reaches
-  `0x8000B650` and joins one or more wait/tick/status PCs, with a retail slot
-  transition; the port's no-slot treatment result is a scheduler/ABI
-  divergence at a shared audio boundary.
-- **H-PortOnlyFillBoundary** — whole-RDRAM, PIF, title, and hangar controls
-  fire, but retail has no `0x8000B650` hit; the later fill-sample crash is
-  port-only and must not be treated as a retail contract.
-- **H-RetailDistinctVoiceStage** — retail reaches `0x8000B650` but none of
-  the wait/tick/status PCs or slot-table writers join it; the fill routine is
-  a distinct voice-stage contract.
+- **H-StaleLastGuestPC** — `0x8000B650` is outside the generated
+  `fillSampleStreamRange` interval, and the `+336`/`+6464` labels resolve to
+  different guest addresses. The port's last-PC breadcrumb is stale or comes
+  from an unrelated guest-side event; it is not a retail fill contract.
+- **H-HostCopyReadback** — the function label is a host-stack or host-boundary
+  context, and existing RT64 copy/readback diagnostics identify the fault while
+  the guest symbol arithmetic remains valid. The crash is port-host-side, not
+  a missing retail call site.
+- **H-SymbolCrosswalkMismatch** — the generated symbol/overlay metadata maps
+  the function or offsets differently from `syms/rogue_squadron.syms.toml`.
+  A contradictory generated range or overlay mapping selects this and requires
+  metadata repair before any treatment change.
 
-The discriminator is the same-run PC intersection and phase/slot control
-table. A zero target-PC result without whole-RDRAM, PIF, title, and hangar
-controls is UNEVALUABLE. A retail hit on `0x8000B650` alone is not enough to
-select a shared boundary.
+The discriminator is one exact address table plus the existing crash-family
+and host-boundary breadcrumbs: symbol base, declared size, base+336,
+base+6464, and whether `0x8000B650` lies in that interval. A consistent range
+that excludes `0x8000B650` selects H-StaleLastGuestPC; a matching host
+copy/readback attribution selects H-HostCopyReadback; contradictory generated
+metadata selects H-SymbolCrosswalkMismatch. Do not infer from the retail PC
+null again; s2078 already qualified that null with whole-RDRAM, PIF, VI, and
+slot-cycle controls.
 
-## Exact command
+## Exact commands
 
-Run from the repository root and capture to an absolute path:
+Run from the repository root:
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom ../rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --rsp /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-rsp-hle.dylib \
-  --input /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-input-sdl.dylib \
-  --secs 65 --hit-cap 10000 \
-  --watch-write 0x0:0x800000 \
-  --watch-pc 0x8000B650,0x800668B0,0x8008DA00,0x8009B62C,0x8009B654,0x8009B3EC,0x8009B44C,0x8008EC88,0x80095D54 \
-  --status-poll --pif-trace --vi-trace \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/oracle_s2078_fill_boundary.log 2>&1
+rg -n -C 2 'name = "fillSampleStreamRange"|fillSampleStreamRange|8000B650|last-guest-pc|fillSampleStreamRange\+(336|6464)' \
+  syms docs src lib tools scratch/agent/soak_results PORTING-STATE.md | head -240
+printf 'fillSampleStreamRange+336 = 0x%08X\n' $((0x8008FAAC + 336))
+printf 'fillSampleStreamRange+6464 = 0x%08X\n' $((0x8008FAAC + 6464))
+printf 'fillSampleStreamRange end = 0x%08X\n' $((0x8008FAAC + 0x500))
 ```
 
-Report the whole-RDRAM hit count, PIF/title/hangar controls, each requested
-PC hit count and any phase/slot-cycle join. Do not infer from a null without
-the positive controls. No mitigation or treatment rerun is authorized until
-this oracle boundary is classified.
+Record the exact symbol base/size, the two offset addresses, the location of
+`0x8000B650` relative to the declared interval, and any independent host
+copy/readback attribution. If the address table selects H-StaleLastGuestPC,
+the next unit after this audit may add one regeneration-stable host/guest
+boundary witness; it may not change a wait, guard, task ABI, or output route.
