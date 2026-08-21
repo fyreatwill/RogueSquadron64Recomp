@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2133
-(2026-08-21); behavioral and source evidence is current through s2133.
+authoritative for exact commands and probe rows. Maintained in Session 2134
+(2026-08-21); behavioral and source evidence is current through s2134.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -291,22 +291,36 @@ This file is intentionally compact. The s2080–s2108 archive is in
   changing `osAiGetStatus_recomp`, output routing, waits, guards, or the
   default audio arm. Both drivers later hit the existing terminal crash
   family after target coverage.
+- The s2134 retail-oracle voice-codec census passed the independent whole-RDRAM
+  positive control (`10,000` callbacks before watch removal), reached title VI
+  `1024 @ 0x00790400` and hangar VI `512 @ 0x006AB400`, and observed all seven
+  named voice decode/filter functions: `decodeAndFillVoiceBlock` (`0x8009C904`),
+  `filterVoiceSampleBlock` (`0x8009D7D0`), `applyVoiceDelayFilter`
+  (`0x8009D8C4`), `runVoiceLatticeFilter` (`0x8009D980`),
+  `renderVoiceAudioBlock` (`0x8009DB44`), `audioMixStereoBlock8`
+  (`0x8009DC98`), and `audioCompandS16` (`0x8009DD7C`). The same run also
+  observed `musyxSynthFrame` (`0x8009123C`) and `osAiSetNextBuffer`
+  (`0x80029E80`). This selects `H-RetailMORTDecoderLive` at the covered
+  retail route and rejects `H-RetailVoicePipelineNoDecoder`; it does not yet
+  identify the port RSP ROM segment, task ABI, or authorize a default-arm or
+  runtime change.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 voice-codec/MORT boundary.** Retail ground truth selects
-   `H-RetailAIQueued`, and s2133 now selects `H-PortAIQueueMatches` at the
-   sampled port host callback boundary: the image arm produced two exact
-   nonzero source/consumer PCM joins after real task DMAs. The task's
-   `output_buff=0`/`break_pc=0x1328` contract remains unchanged, and the
-   current image is still not proven to be the retail MORT path. The next
-   unit is a retail-oracle execution census of the named voice decode/filter
-   range, `musyxSynthFrame`, and `osAiSetNextBuffer`, with the whole-RDRAM
-   positive control and title/hangar VI gates. Do not add a port instrument or
-   create a MORT artifact until this independent boundary is classified.
+1. **M5 MORT artifact boundary.** Retail ground truth now selects
+   `H-RetailAIQueued` and `H-RetailMORTDecoderLive`: the same qualified run
+   executed all seven named voice decode/filter functions, `musyxSynthFrame`,
+   and `osAiSetNextBuffer` after the whole-RDRAM control and title/hangar
+   gates. The port-side image arm still has the sampled
+   `H-PortAIQueueMatches` boundary, but its `output_buff=0`/`break_pc=0x1328`
+   contract and RSP ROM segment remain unresolved. The next unit is a static
+   MORT artifact-boundary census: map the retail audio RSP task's ROM segment,
+   entry/exit contract, and available MORT sample descriptors against the
+   existing RSPRecomp configs and companion decomp data. Create no runtime
+   dispatch or default-arm change until that table is complete.
 2. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
    three consecutive coverage-only results under the same hypothesis; the
    current renderer boundary supplies no new discriminator. The first sweep
@@ -416,7 +430,14 @@ sampling missed the two transient nonzero callbacks, so its all-zero sampled
 rows are a measurement-coverage limitation, not a silent-PCM result. The
 image `break_pc=0x1328`, `exit=1`, canary failure, and `output_buff=0` remain
 the task boundary; no host/task/default change is authorized. The next M5
-unit is the independent retail voice-codec/MORT execution census.
+unit is the static MORT artifact-boundary census.
+
+The s2134 retail oracle supplied the independent codec-side boundary. After
+the whole-RDRAM control and title/hangar gates, all seven named voice
+decode/filter functions executed, as did `musyxSynthFrame` and
+`osAiSetNextBuffer`. This selects `H-RetailMORTDecoderLive` for the covered
+retail route. It does not identify the port RSP ROM segment or task ABI, and
+does not prove that `factor5_ucode_b` is the MORT implementation.
 
 ### M5 audio and guest gate
 
@@ -576,8 +597,12 @@ both arms reached title/hangar, and the image arm's two phase-10 nonzero
 stage/source/consumer joins matched by address, byte count, FNV, and nonzero
 count while the stub remained zero. This selects `H-PortAIQueueMatches` at
 the sampled callback boundary; the task exit/output fields remain unchanged.
-The next unit is the retail voice-codec/MORT execution census, not the parked
-drain A/B or the symbol sweep.
+The s2134 retail oracle then supplied the independent voice-codec line:
+whole-RDRAM control and title/hangar gates passed, all seven named decoder/
+filter PCs executed, and `musyxSynthFrame` plus `osAiSetNextBuffer` executed
+in the same run. This selects `H-RetailMORTDecoderLive` at the covered retail
+route. The next unit is the static MORT artifact-boundary census, not a port
+dispatch change, the parked drain A/B, or the symbol sweep.
 
 ## Method and safety rules
 

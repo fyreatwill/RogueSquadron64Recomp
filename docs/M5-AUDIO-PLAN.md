@@ -17,10 +17,13 @@ The current default is silent, but “audio” is not one missing function:
 - The guest has a MusyX engine, voice tables, song sequencer, DMA-batch
   submission, and audio-task completion waits. The voice-compression material
   identifies MORT as a codec/library boundary inside the MusyX ecosystem; the
-  repository has no MORT RSPRecomp config or completed MORT decoder pass. Do
-  not call `factor5_ucode_b` “the MORT recompile” until its ROM segment and ABI
-  are independently matched. The current working boundary is therefore
-  **MusyX engine/task plumbing, MORT voice data/codec still unproven**.
+  repository has no MORT RSPRecomp config or completed MORT decoder pass. The
+  s2134 retail oracle proves that the named voice decode/filter pipeline is
+  live on the qualified retail route, but the port RSP ROM segment and ABI are
+  still unidentified. Do not call `factor5_ucode_b` “the MORT recompile” until
+  that segment and ABI are independently matched. The current working
+  boundary is therefore **retail MORT execution proven; port MORT artifact and
+  task contract unproven**.
 - s2002–s2003 supplied a task/image attribution for the current opt-in arm:
   `0x80099FE0`/`0x800A4E00` are `aspMainTextStart`/`aspMainDataStart` in the
   companion symbol map, and the ROM split labels `0x9ABE0` as `aspMainText`.
@@ -132,12 +135,17 @@ explicit control arm.
    control is host-only known nonzero PCM plus real-ucode `pcm-sanity`; a live
    SDL device alone proves nothing. Soak: title/hangar VI transition followed
    by the same 600-second hangar recipe; rollback host callback changes only.
-7. **MORT boundary work.** Only after the task ABI and PCM path are named,
-   create the separate MORT artifact/config and validate it against retail
-   sample descriptors. Positive control is a known MORT sample decode with
-   byte-count and waveform checks, followed by the in-game slot/PCM controls.
-   Soak: one controlled voice/sample phase, then hangar; rollback by leaving
-   the MORT dispatch arm opt-in.
+7. **MORT boundary work.** The s2134 retail oracle now satisfies the
+   independent codec-side entry condition: all seven named decode/filter
+   functions executed after the whole-RDRAM and title/hangar controls, with
+   `musyxSynthFrame` and `osAiSetNextBuffer` in the same run. First map the
+   retail audio RSP task's ROM segment, entry/exit contract, and available MORT
+   sample descriptors against the existing RSPRecomp configs and companion
+   decomp data. Then create the separate MORT artifact/config and validate it
+   against retail sample descriptors. Positive control is a known MORT sample
+   decode with byte-count and waveform checks, followed by the in-game
+   slot/PCM controls. Soak: one controlled voice/sample phase, then hangar;
+   rollback by leaving the MORT dispatch arm opt-in.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.

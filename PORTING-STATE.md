@@ -101262,3 +101262,40 @@ authorize changing `osAiGetStatus_recomp`, task output routing, waits, guards,
 or the default arm. The next unit is a retail-oracle execution census of the
 named voice decode/filter functions, `musyxSynthFrame`, and
 `osAiSetNextBuffer`, with the whole-RDRAM control and title/hangar gates.
+
+## Session 2134 (2026-08-21) — classified the retail MORT execution boundary
+
+HYPOTHESIS-ID: m5-mort-boundary
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `39,258` bytes, so this was not a
+maintenance iteration. The required ground-truth-first unit used one retail
+oracle capture only; no port build, runtime code, or new instrument was added.
+The capture was:
+
+    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 70 --hit-cap 64 --watch-write 0x0:0x800000 --watch-pc 0x8009C904,0x8009D7D0,0x8009D8C4,0x8009D980,0x8009DB44,0x8009DC98,0x8009DD7C,0x8009123C,0x80029E80 --first-watch 0 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > scratch/agent/oracle_s2134_mort_boundary.log 2>&1
+
+The whole-RDRAM positive-control threshold fired at `10,000` callbacks and
+the watch was removed. VI reached title `1024` at origin `0x00790400` and
+hangar `512` at origin `0x006AB400`. Every named voice-codec function had a
+nonzero execution witness: `decodeAndFillVoiceBlock` at `0x8009C904` (`1555`),
+`filterVoiceSampleBlock` at `0x8009D7D0` (`5198`), `applyVoiceDelayFilter` at
+`0x8009D8C4` (`5204`), `runVoiceLatticeFilter` at `0x8009D980` (`202953` on
+one caller row plus an additional nonzero caller row),
+`renderVoiceAudioBlock` at `0x8009DB44` (`1301`), `audioMixStereoBlock8` at
+`0x8009DC98` (`1301`), and `audioCompandS16` at `0x8009DD7C` (multiple
+nonzero caller rows, including `10408`). The same run observed
+`musyxSynthFrame` at `0x8009123C` (`4137` on the main caller row) and
+`osAiSetNextBuffer` at `0x80029E80` (`7989` on the main caller row).
+
+This selects `H-RetailMORTDecoderLive` and rejects
+`H-RetailVoicePipelineNoDecoder` at the covered retail route. It rules out
+`H-CoverageFailure`: both the positive control and both phase gates were
+present. It is independent retail evidence that the CPU-side MORT/voice-codec
+pipeline is live, not evidence that the port's `factor5_ucode_b` arm has the
+correct RSP ROM segment or task ABI. The next unit is a static MORT
+artifact-boundary census using the existing RSPRecomp configs and companion
+decomp/sample data. No runtime, mitigation, task, wait, guard, or default-arm
+behavior changed.
+
+ORIGIN: no mitigation or game-value machinery was added; this session only
+captured independent retail execution and phase-gated controls.
