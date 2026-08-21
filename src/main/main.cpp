@@ -349,6 +349,48 @@ static RspExitReason musyx_stub(uint8_t* /*rdram*/, uint32_t /*ucode_addr*/) {
     return RspExitReason::Broke;
 }
 
+static void rs64_log_audio_return(const char* arm, RspExitReason reason) {
+    static int enabled = -1;
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_AUDIO_RETURN");
+        enabled = ((all && *all && *all != '0') || (own && *own && *own != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+
+    static std::atomic<uint32_t> ordinal{0};
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t phase_row = 0;
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin();
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        phase_row = 0;
+    }
+    const uint32_t global_ordinal = ordinal.fetch_add(1, std::memory_order_relaxed);
+    const uint32_t row = phase_row++;
+    if (row < 256 || (row % 128) == 0) {
+        fprintf(stderr,
+                "[audio-return] arm=%s phase=%u width=%u origin=0x%06X ordinal=%u row=%u exit=%d\n",
+                arm, phase, width, origin, global_ordinal, row, (int)reason);
+        fflush(stderr);
+    }
+}
+
+static RspExitReason musyx_stub_probe(uint8_t* rdram, uint32_t ucode_addr) {
+    const RspExitReason reason = musyx_stub(rdram, ucode_addr);
+    rs64_log_audio_return("musyx_stub", reason);
+    return reason;
+}
+
+static RspExitReason factor5_ucode_b_probe(uint8_t* rdram, uint32_t ucode_addr) {
+    const RspExitReason reason = factor5_ucode_b(rdram, ucode_addr);
+    rs64_log_audio_return("factor5_ucode_b", reason);
+    return reason;
+}
+
 // Catch-all stub for unrecognised task types. Returning Broke (instead of
 // QUICK_EXIT'ing) avoids tearing down the process when a stale/uninitialised
 // task struct gets dispatched — observed early in boot with type fields like
@@ -1333,9 +1375,9 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
                         s_audtask_n, s_use_real_audio_ucode);
             }
             s_audtask_n++;
-            if (s_use_real_audio_ucode) return &factor5_ucode_b;
+            if (s_use_real_audio_ucode) return &factor5_ucode_b_probe;
         }
-        return &musyx_stub;
+        return &musyx_stub_probe;
     default:
         // Don't crash — log once per distinct type and stub it out.
         static thread_local uint32_t last_unknown = 0;

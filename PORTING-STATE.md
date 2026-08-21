@@ -99708,3 +99708,39 @@ guard, host, or default-dispatch behavior changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-pretarget-return-boundary`.
+
+## Session 2094 (2026-08-20) — isolated the audio-arm return boundary
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 29098 bytes, so this was not a
+maintenance iteration. The fixed retail oracle recipe from s2092 was rerun
+before instrumentation. Its whole-RDRAM positive control recorded 31635
+writes, title VI `1024 @ 0x00790400`, hangar VI `512 @ 0x006AB400`, and the
+qualified gate writer rows.
+
+Added regeneration-independent host wrappers in `src/main/main.cpp` around
+both `musyx_stub` and `factor5_ucode_b`. Each wrapper preserved the returned
+`RspExitReason` and logged a bounded phase/VI/ordinal row. The Debug target
+then built successfully; only the existing JSON literal and deployment-target
+warnings appeared.
+
+Ran the default control and `ROGUESQ_AUDIO_UCODE=1` treatment concurrently
+from the same eleven-Start driver with `ROGUESQ_LOG_AUDIO_RETURN=1` and the
+existing passive probes. Both drivers returned 4 because each process died
+before the driver could observe the 1024-VI phase. The control nevertheless
+produced 331 ordered wrapper rows, ordinals 0 through 330, all
+`arm=musyx_stub exit=1` (`RspExitReason::Broke`). The treatment produced 1048
+ordered rows, ordinals 0 through 1047, all `arm=factor5_ucode_b exit=1`.
+The treatment later bus-faulted in `viRetraceHandlerThread`; the control
+segfaulted in `waitForAnyAudioSlot`. Neither run reached a target VI, so no
+target-phase ABI, DMA, slot, or PCM conclusion is admissible.
+
+This selects `H-PostTaskRouteBoundary` at return scope and proves the wrapper
+positive control. It rules out a missing treatment return or non-`Broke` exit
+as the immediate boundary, but does not distinguish the downstream task
+completion, SP queue, guest consumer, or route failures. No runtime behavior,
+gate, wait, guard, output, or default dispatch changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-postreturn-route-state`.

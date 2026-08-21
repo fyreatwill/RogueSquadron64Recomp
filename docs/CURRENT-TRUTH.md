@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2093 (2026-08-20);
-behavioral and source evidence is current through s2093.
+for exact commands and probe rows. Maintained in Session 2094 (2026-08-20);
+behavioral and source evidence is current through s2094.
 
 ## Current state
 
@@ -103,6 +103,18 @@ behavioral and source evidence is current through s2093.
   `RT64::Interpreter::processRDPLists` with last guest PC `0x8000B650`.
   This selects `H-RouteRegression` at recipe scope and leaves the image task
   ABI, exit, slot, and PCM contract unevaluable; no runtime behavior changed.
+- s2094's fixed retail oracle again passed its whole-RDRAM positive control
+  (`31635` writes), reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and retained the qualified gate rows. The same-build
+  concurrent port A/B added regeneration-independent wrappers around both
+  audio arms. The control produced 331/331 observed wrapper returns from
+  `musyx_stub`, all `exit=1` (`Broke`); the treatment produced 1048/1048
+  observed returns from `factor5_ucode_b`, also all `exit=1`. Neither process
+  reached a target VI in this run: the treatment later bus-faulted in the VI
+  thread and the control faulted in `waitForAnyAudioSlot`. This selects
+  `H-PostTaskRouteBoundary` at return scope, proves the wrapper positive
+  control, and leaves task ABI, DMA, slot, PCM, and downstream queue causality
+  unevaluable. No runtime behavior changed.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -171,16 +183,16 @@ behavioral and source evidence is current through s2093.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 image-arm pre-target return-boundary isolation.** After the retail
-   positive-control check, add one host-side wrapper around both audio-arm
-   function returns, build one binary, and rerun the default stub control and
-   `ROGUESQ_AUDIO_UCODE=1` treatment concurrently. Keep the target VI gates and
-   all existing passive probes. A one-to-one treatment dispatch/return table
-   with `RspExitReason::Broke` before the crash selects a post-task route/state
-   boundary; a missing return or non-`Broke` return selects the image task
-   execution/exit boundary. The control wrapper must show matching stub returns
-   as its positive control. No gate, wait, guard, host, output, or default
-   dispatch change is authorized.
+1. **M5 post-return completion/queue boundary.** Retain the audio-arm return
+   wrapper and add one bounded runtime route table around `run_task` success,
+   task-thread `sp_complete`, and SP-message enqueue. Build the control and
+   `ROGUESQ_AUDIO_UCODE=1` treatment together and retain the retail oracle
+   positive control, target VI gates, and passive probes. Matching treatment
+   return → `run_task` success → `sp_complete`/enqueue rows select a downstream
+   queue or guest-consumer boundary; a missing post-return row selects the task
+   thread boundary; reaching both target VIs reopens the ABI/slot/PCM table.
+   The control must show the same route sequence as its positive control. No
+   gate, wait, guard, host output, or default dispatch change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -250,8 +262,10 @@ s2092's independent retail table now qualifies that boundary at the exact
 writes and the worker-flag word has named writers with post-store values
 `0x00000003`, `0x00010003`, and `0x01010003`. Retail therefore confirms the
 gate writer/source mapping but does not yet establish the port's task-exit or
-PCM contract. The next M5 step is the same-build default-stub versus opt-in
-Factor 5 image-arm dispatch comparison; no gate or wait change is authorized.
+PCM contract. s2094's wrapper proves that both arms return `Broke` in the
+observed pre-target run, but neither concurrent arm reached a target VI; the
+next boundary is the runtime task-completion and SP-message route. No gate or
+wait change is authorized.
 
 The s2080 crosswalk separates the generated fill function from the shared
 crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
@@ -396,6 +410,14 @@ The maintenance compaction retains the reasons for the recent reversals here:
   source audit exposed that `post_value_requested_index(pc)` admitted those
   rows before `g_post_value_armed`; the fixed arm removed that bypass and
   produced the qualified pair above.
+- The s2093 interpretation that the treatment's immediate boundary could
+  still be the image function's return was believable because that arm failed
+  before the target phase while the control qualified in that run. s2094's
+  wrapper records every observed treatment return through ordinal 1047 and
+  every control return through ordinal 330, with `exit=1` in both arms. This
+  supersedes only the missing/non-`Broke` return possibility; the downstream
+  route failure and all task/PCM interpretations remain open because neither
+  arm reached a target VI in s2094.
 
 ## Evidence ledger summary
 
@@ -425,6 +447,12 @@ s2093's same-build image-arm A/B then selects a treatment-only pre-title route
 failure because the control reached both target phases while the treatment
 crashed in RT64 before title; the treatment's phase-keyed ABI/PCM fields are
 therefore unevaluable and the next boundary is the audio-arm return.
+s2094's fixed retail oracle again passed its whole-RDRAM positive control and
+both target VIs. Its same-build return-wrapper A/B recorded 331 control and
+1048 treatment returns, all `RspExitReason::Broke`, but neither port arm
+reached a target VI. This selects `H-PostTaskRouteBoundary` at return scope
+and moves the next discriminator to `run_task` success and SP completion;
+task ABI, DMA, slot, PCM, and queue causality remain unevaluable.
 The chronological ledger is still the source for exact run commands, counts,
 and rejected retries.
 
