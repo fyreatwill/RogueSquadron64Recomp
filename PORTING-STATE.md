@@ -99664,3 +99664,47 @@ changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-arm-validation`.
+
+## Session 2093 (2026-08-20) — qualified the opt-in audio arm's pre-title route failure
+
+Built one Debug binary with:
+
+```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+```
+
+Ran the default silent-stub control and opt-in image treatment concurrently
+from the same eleven-Start driver:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step2-treatment 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/m5-audio-step2-treatment-driver.log 2>&1 &
+pid_t=$!
+env -u ROGUESQ_AUDIO_UCODE ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step2-control 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/m5-audio-step2-control-driver.log 2>&1 &
+pid_c=$!
+wait $pid_t; rc_t=$?
+wait $pid_c; rc_c=$?
+printf 'treatment_rc=%s control_rc=%s\n' "$rc_t" "$rc_c"
+```
+
+The control driver returned 0 and reached title `1024 @ 0x00790400` once and
+hangar `512 @ 0x006AB400` twice. Its target-phase table contained 1337
+`audtask-dma-row`s, all `exit=1` (`RspExitReason::Broke`) and `dma_count=0`;
+all 4465 `[audtask-abi]` rows retained `canary_ok=1` and `changed=0`. The
+target-phase PCM probe fired 23 times and the source/consumer join fired with
+zero nonzero samples; target-phase slot reads observed `slot0=0x01`.
+
+The treatment dispatched the real image arm 47 times but returned 4 from the
+driver before reaching title or hangar. It produced no phase-keyed ABI, DMA,
+or join rows; its only PCM sanity rows were pre-target and all zero. The game
+crashed before title with `[CRASH][pc-symbol]` in
+`RT64::Interpreter::processRDPLists` and last guest PC `0x8000B650`. The
+control's qualified target phases and the treatment-only crash are independent
+lines of evidence for `H-RouteRegression` at recipe scope. Because the
+treatment never reached the phase gate, this run does not select an image task
+ABI, exit, slot, or PCM hypothesis. No runtime, generated-code, gate, wait,
+guard, host, or default-dispatch behavior changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-pretarget-return-boundary`.

@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2092 (2026-08-20);
-behavioral and source evidence is current through s2092.
+for exact commands and probe rows. Maintained in Session 2093 (2026-08-20);
+behavioral and source evidence is current through s2093.
 
 ## Current state
 
@@ -91,6 +91,18 @@ behavioral and source evidence is current through s2092.
   gate/source scope, rejects `H-PortOnlyGateContract` and
   `H-GeneratedAnchorMismatch` there, and leaves the countdown/flag completion
   contract unresolved. No gate, RSP, wait, guard, or host behavior changed.
+- s2093's same-build concurrent A/B used the prescribed eleven-Start driver.
+  The unset-env control reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`; it produced 1337 target-phase `audtask-dma-row`s, all
+  with `exit=1` (`RspExitReason::Broke`) and `dma_count=0`, while its 4465
+  ABI rows all retained `canary_ok=1` and `changed=0`. The control also showed
+  target-phase `slot0=0x01` reads and the PCM sanity path fired,
+  though its sampled PCM remained zero. The opt-in image arm dispatched
+  `factor5_ucode_b` 47 times but never reached either target phase, emitted no
+  phase-keyed ABI/DMA/join row, and crashed before title in
+  `RT64::Interpreter::processRDPLists` with last guest PC `0x8000B650`.
+  This selects `H-RouteRegression` at recipe scope and leaves the image task
+  ABI, exit, slot, and PCM contract unevaluable; no runtime behavior changed.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -159,17 +171,16 @@ behavioral and source evidence is current through s2092.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 opt-in Factor 5 audio-arm validation.** Build one binary and run the
-   default silent-stub control and `ROGUESQ_AUDIO_UCODE=1` treatment from the
-   same eleven-Start driver, concurrently where possible. Phase-gate both at
-   title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; collect direct
-   `M_AUDTASK` dispatch, exit reason, DMEM canary, slot-status transition, and
-   PCM nonzero evidence. A treatment that exits non-`Broke` with an intact
-   canary and valid slot/PCM transition selects the current image arm for the
-   next M5 step. Dispatch with `Broke`, canary failure, or no valid slot/PCM
-   selects an unresolved task ABI/exit boundary. Missing target phases or a
-   treatment-only route failure is unevaluable. No gate reversal, wait, guard,
-   host, or default-dispatch change is authorized.
+1. **M5 image-arm pre-target return-boundary isolation.** After the retail
+   positive-control check, add one host-side wrapper around both audio-arm
+   function returns, build one binary, and rerun the default stub control and
+   `ROGUESQ_AUDIO_UCODE=1` treatment concurrently. Keep the target VI gates and
+   all existing passive probes. A one-to-one treatment dispatch/return table
+   with `RspExitReason::Broke` before the crash selects a post-task route/state
+   boundary; a missing return or non-`Broke` return selects the image task
+   execution/exit boundary. The control wrapper must show matching stub returns
+   as its positive control. No gate, wait, guard, host, output, or default
+   dispatch change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -410,6 +421,10 @@ s2092's corrected eleven-Start oracle table qualifies the gate/countdown/flag
 table with post-store values and reconciles all five gate PCs to generated and
 fixup anchors; it leaves the countdown and completion contract open and selects
 the opt-in image-arm A/B as the next M5 unit.
+s2093's same-build image-arm A/B then selects a treatment-only pre-title route
+failure because the control reached both target phases while the treatment
+crashed in RT64 before title; the treatment's phase-keyed ABI/PCM fields are
+therefore unevaluable and the next boundary is the audio-arm return.
 The chronological ledger is still the source for exact run commands, counts,
 and rejected retries.
 
