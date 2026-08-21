@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2149
-(2026-08-21); behavioral and source evidence is current through s2149.
+authoritative for exact commands and probe rows. Maintained in Session 2150
+(2026-08-21); behavioral and source evidence is current through s2150.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -141,6 +141,15 @@ This file is intentionally compact. The s2080–s2108 archive is in
   succeeded; no game run or runtime behavior changed. A post-move census
   found zero remaining human-in-main versus placeholder-in-overlay
   mismatches, so that two-line overlay-move class is closed.
+- The s2150 host-only leftover census selected `H-LeftoverAllHolds` for
+  leftover `fake_func_*` with ELF size `> 0xC`. ELF, `funcs.h`, and TOML
+  leftover names match exactly (`125` each), rejecting `H-CensusStale`.
+  Six leftovers have ELF size `> 0xC`; all six are parked, overlap a
+  named ucode/data/rspboot symbol, or are exception/cop0-trap data bodies
+  with no companion human name, and none is renameable. TOML leftover
+  sizes are all `0x4`/`0x8`/`0xC`; the ELF sizes swallow following named
+  ucode/data until the next function. The leftover class is closed. No
+  game run or runtime behavior changed.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -425,20 +434,12 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **Generated-symbol renaming sweep.** The M5 `data_ptr+0x100` boundary is
-   closed at the sampled output edge: s2140's independently watched retail
-   destinations agree with s2137's port `field348+0x100` relation. s2149
-   selected `H-MenuMapping` for `func_800B3824` /
-   `buildLevelSelectTextTextures` and closed the two-line
-   human-in-main versus placeholder-in-overlay class (zero remaining
-   rows). Remaining generated `func_*` names are five parked or
-   intentional holds (`func_8000040C`, `func_800927B0`,
-   `func_80092A54`, `func_80092CF0`, `func_800E9AE0`). The next lead is
-   a leftover-class census of remaining `fake_func_*` with size `> 0xC`
-   that are not on the parked list, checking ELF overlap with named
-   symbols and companion comments, to select one renameable leftover or
-   close that class as holds. Do not invent names for the parked inner
-   kernels.
+1. **M5 remaining MORT reference classes.** s2138 covered type-0 at
+   8000 Hz; s2139 covered types `1,2,3,5` at both rates. Type 0 at
+   16000 Hz and type 4 remain unsampled. The next unit is one host-only
+   `tools/mort_probe.py` four-row table covering those remaining classes
+   against the independent `CMORTDecoder::Decode` reference. Do not change
+   the audio arm, task ABI, output route, or default dispatch.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
@@ -451,6 +452,14 @@ work items.
    attestation and consumer-mode H1 by the RT64 census. H3 is unavailable
    because the oracle cannot screenshot the LLE path. Do not repeat the
    `0xD60` scan.
+5. **Generated-symbol renaming sweep — leftover class closed.** s2149
+   closed the two-line overlay-move class. s2150 selected
+   `H-LeftoverAllHolds` for leftover `fake_func_*` with ELF size `> 0xC`
+   (table in `scratch/agent/s2150_leftover_table.txt`). Remaining
+   generated `func_*` names are five parked or intentional holds
+   (`func_8000040C`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+   `func_800E9AE0`). Do not re-census leftover `fake_func_*` or invent
+   names for the parked inner kernels.
 
 ## Durable boundaries
 
@@ -633,12 +642,14 @@ and `0x800FEF10`, each with unchanged boundaries and callers.
 s2148 confirmed the menu-overlay mapping at `0x800B2630` /
 `buildFormatMessageGlyphBuffer` the same way. s2149 confirmed
 `0x800B3824` / `buildLevelSelectTextTextures` the same way and closed
-the two-line overlay-move class. Those warnings remain reasons to
-validate future relocations, not evidence of a static boundary conflict.
-M3 resumes only as an idiom-class audit or with a new discriminator. M4
-accumulator/beam evidence rules out the old shade-lane theory but is not
-pixel ground truth. The remaining generated `func_*` placeholders are
-semantic holds or intentional non-sync entries.
+the two-line overlay-move class. s2150 closed the leftover
+`fake_func_*` size-`> 0xC` class as holds. Those warnings remain
+reasons to validate future relocations, not evidence of a static
+boundary conflict. M3 resumes only as an idiom-class audit or with a
+new discriminator. M4 accumulator/beam evidence rules out the old
+shade-lane theory but is not pixel ground truth. The remaining
+generated `func_*` placeholders are semantic holds or intentional
+non-sync entries.
 
 ## Superseded conclusions
 
@@ -780,9 +791,11 @@ selected the static menu mapping for
 size `0x2D8`, end boundary `0x800B3AFC`, no leftover immediately before
 the start, and the single `initVwingHudAndSlotState` caller in the final
 ELF/generated tree. Human-in-main versus placeholder-in-overlay
-mismatches are exhausted. The next sweep unit is a leftover-class census
-of remaining `fake_func_*` with size `> 0xC`. No runtime or default-arm
-change follows.
+mismatches are exhausted. s2150 then selected `H-LeftoverAllHolds` for
+the leftover `fake_func_*` ELF-size-`> 0xC` class: six leftovers, all
+parked or overlapping named ucode/data/rspboot symbols, with matching
+ELF/`funcs.h`/TOML leftover names. That leftover class is closed. No
+runtime or default-arm change follows.
 
 ## Method and safety rules
 

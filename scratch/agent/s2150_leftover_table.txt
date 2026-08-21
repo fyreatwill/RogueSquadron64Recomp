@@ -1,0 +1,116 @@
+=== s2150 leftover fake_func class census ===
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+Work unit: leftover fake_func_* with ELF size > 0xC, classified
+renameable / overlap / parked / hold. Host-only; no game run, no regen.
+
+--- name-set control (H-CensusStale) ---
+ELF llvm-nm fake_func_* count: 125
+generated funcs.h fake_func_* prototypes: 125
+TOML fake_func_* rows: 125
+ELF - funcs.h: (empty)
+funcs.h - ELF: (empty)
+ELF - TOML: (empty)
+TOML - ELF: (empty)
+H-CensusStale: REJECTED (exact leftover-name match)
+
+--- leftover size histograms ---
+ELF fake_func sizes: 119 <= 0xC, 6 > 0xC
+TOML fake_func sizes: 47 x 0x4, 47 x 0x8, 31 x 0xC, 0 > 0xC
+The ELF size > 0xC set is the leftover *prefix* whose llvm-nm function
+size swallows following named ucode/data until the next function symbol.
+TOML records the actual leftover prefix (all six have TOML size <= 0xC).
+
+--- parked list (PROJECT-OVERVIEW "Parked (do not re-census)") ---
+func_8008ED6C, func_800927B0, func_80092A54, func_80092CF0, func_80092F10,
+fake_func_80093E74, fake_func_80094348, fake_func_8009711C, fake_func_80097D58,
+fake_func_80099C4C, fake_func_80099FDC, fake_func_8009C2C8, fake_func_8009D7CC,
+func_8009D8BC, func_8009D978, fake_func_800AF6A8, fake_func_800B42BC
+
+--- six ELF size>0xC leftovers ---
+
+1. fake_func_800186D8
+   ELF: .text start=0x800186D8 size=0x3C end=0x80018714
+   TOML size: 0x8
+   parked: no
+   companion: main_overlay.txt `defined:true` only; no human name
+   overlapping named ELF symbols: D_800186E0 (.text, f32 data at 0x800186E0)
+   next function: fetchVertexPositionPrimary at 0x80018714
+   generated: funcs.h prototype present; funcs_4.c body is an 8-byte
+   leftover (lw/sw) then decoded float constants as COP0/COP1/COP2 traps
+   class: overlap (data) + hold (no companion human name)
+
+2. fake_func_80024A0C
+   ELF: .text start=0x80024A0C size=0x1FA4 end=0x800269B0
+   TOML size: 0x4
+   parked: no
+   companion: main_overlay.txt `defined:true` plus "No accompanying real function"
+   overlapping named ELF symbols: gspF3DEXTextStart (.text, 0x80024A10 size 0x1FA0)
+   generated: funcs.h prototype present; funcs_7.c body is a 4-byte leftover
+   then F3DEX ucode (jal 0x8400..., mfc0 Context)
+   class: overlap (ucode)
+
+3. fake_func_800825C8
+   ELF: .text start=0x800825C8 size=0xD8 end=0x800826A0
+   TOML size: 0x8
+   parked: no
+   companion: main_overlay.txt `defined:true` plus "No accompanying real function"
+   overlapping named ELF symbols: rspbootTextStart (.text, 0x800825D0 size 0xD0)
+   generated: funcs.h prototype present; funcs_20.c body is an 8-byte leftover
+   then rspboot COP0 (mtc0 Index/Random/EntryLo0)
+   class: overlap (rspboot)
+
+4. fake_func_80099FDC
+   ELF: .text start=0x80099FDC size=0xF84 end=0x8009AF60
+   TOML size: 0x4
+   parked: yes (s1446/s1451 H2 already-fake one-word gap)
+   companion: main_overlay.txt `defined:true` plus "No accompanying real function"
+   overlapping named ELF symbols: aspMainTextStart (.text, 0x80099FE0 size 0xF80)
+   generated: funcs.h prototype present; funcs_26.c body is a 4-byte leftover
+   then aspMain ucode (mfc0 Compare)
+   class: parked + overlap (ucode)
+
+5. fake_func_800AF6A8
+   ELF: .ovl.cinematic start=0x800AF6A8 size=0x1298 end=0x800B0940
+   TOML size: 0x8
+   parked: yes (s1546 H2 already-fake data-tail)
+   companion: cinematic_overlay.txt `segment:cinematic_overlay` only; no human name
+   overlapping named ELF symbols (same overlay data plus overlay-aliased
+   functions occupying the same VRAM): cutsceneTypeStrings, gCutsceneIdMappingTable,
+   D_800AF92C, D_800B04AC, D_800B072C, plus menu/mission overlay functions
+   generated: funcs.h prototype present; funcs_29.c is a PATCH trap
+   "gap-filler decoded from data bytes; body was invalid C"
+   class: parked + overlap (data/BSS + overlay aliases)
+
+6. fake_func_800CC3D4
+   ELF: .ovl.menu start=0x800CC3D4 size=0x114C end=0x800CD520
+   TOML size: 0xC
+   parked: no
+   companion: menu_overlay.txt `segment:menu_overlay` only; no human name
+   overlapping named ELF symbols: hangarCameraState, hangarMap1ToCraftIdMap,
+   hangarBaytoMap1Map, hangarBaytoCraftNameMap, hangar color/string/blueprint
+   tables, languageTextIds, controllerActionTextIds, intro-crawl tables, plus
+   mission overlay functions at the same VRAM (tickAtAtBodyTransform family)
+   generated: funcs.h prototype present; funcs_37.c is a PATCH trap
+   "gap-filler decoded from data bytes; body was invalid C"
+   class: overlap (data + overlay aliases) + hold (no companion human name)
+
+--- renameable set ---
+renameable rows: 0
+A renameable leftover required a companion human name, a unique ELF
+section, and no overlap with a named symbol. None of the six satisfy that.
+
+--- hypothesis selection ---
+H-LeftoverRenameable: REJECTED (empty renameable set)
+H-CensusStale: REJECTED (125 leftover names match ELF, funcs.h, and TOML)
+H-LeftoverAllHolds: SELECTED (complete coverage of the ELF size>0xC class)
+
+The leftover fake_func_* class with ELF size > 0xC is closed as holds.
+Do not re-census leftover fake_func_* or invent names for them.
+
+--- remaining generated func_* placeholders (not this class) ---
+funcs.h leftover func_*: func_8000040C, func_800927B0, func_80092A54,
+func_80092CF0, func_800E9AE0 (the five parked/intentional holds).
+ELF leftover func_*: those five plus func_80000400 size 0xC (prefix of
+func_8000040C; not in the size>0xC leftover class).
+TOML still lists stale func_* names already mapped in the generated tree;
+those are metadata leftovers, not renameable kernels.

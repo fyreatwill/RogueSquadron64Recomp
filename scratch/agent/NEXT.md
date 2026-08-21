@@ -1,63 +1,86 @@
-# NEXT work unit (s2150) — leftover fake_func class census
+# NEXT work unit (s2151) — remaining MORT type-0 16000 Hz and type 4
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-mort-sample-contract
 
 ## Work unit
 
-The two-line overlay-move class is closed: s2149's post-move census found
-zero remaining human-in-main versus placeholder-in-overlay mismatches.
-Remaining generated `func_*` names are five parked or intentional holds
-(`func_8000040C`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
-`func_800E9AE0`) — do not re-census or invent names for those.
+s2150 closed the leftover `fake_func_*` ELF-size-`> 0xC` class as holds.
+Do not re-census leftover `fake_func_*` or invent names for the five
+parked `func_*` holds.
 
-The next source is leftover `fake_func_*` with ELF size `> 0xC` that are
-not on PROJECT-OVERVIEW's parked list. Run a host-only ELF/companion
-census (no game run, no regen unless a renameable leftover is selected
-and then only after writing the discriminator table). Classify every
-such leftover as renameable, overlapping-named-symbol, parked, or hold.
-If one renameable leftover has a companion human name, unique ELF
-section, and no overlap with a named symbol, that leftover is the next
-mapping unit; if none do, close the leftover class as holds.
-
-Do not run the game or change runtime, audio, task, output, guard, or
-mitigation behavior.
+The next unit is M5 remaining-codec coverage: one host-only
+`tools/mort_probe.py` four-row table covering descriptor type 0 at
+16000 Hz and descriptor type 4, against the independent
+`CMORTDecoder::Decode` reference already used by s2138/s2139. No game
+run, audio-arm change, task ABI, output route, guard, or default
+dispatch change.
 
 ## Competing hypotheses and discriminator
 
-- `H-LeftoverRenameable`: at least one leftover with size `> 0xC` has a
-  companion human name, a unique ELF section, and no overlap with a
-  named symbol; the census names that leftover as the next two-line or
-  one-line mapping unit.
-- `H-LeftoverAllHolds`: every leftover with size `> 0xC` is parked,
-  overlaps a named ELF symbol (including rspboot/ucode/data/BSS), or
-  is an exception/cop0 trap body with no independent companion name.
-- `H-CensusStale`: the ELF leftover list does not match generated
-  `fake_func_*` prototypes, so the leftover class cannot be closed or
-  selected from this tree.
+- `H-MORTRemainingMatches`: the four selected remaining-class rows
+  decode to complete nonempty signed-16-bit PCM with stable byte counts
+  and FNV hashes.
+- `H-MORTRemainingMismatch`: those rows exist in the speech table but
+  fail layout, endian, or codec-variant checks (empty, truncated, or
+  out-of-range samples).
+- `H-MORTRemainingUnavailable`: the speech table does not actually
+  contain type 0 at 16000 Hz or type 4, so the remaining-class claim
+  cannot be tested (would contradict the s2138 type/rate census).
 
-The discriminator is one leftover table containing name, ELF
-section/start/size/end, overlapping named symbols, parked-list
-membership, and companion-comment/human-name hits. A non-empty
-renameable row selects `H-LeftoverRenameable`; an empty renameable set
-with complete coverage selects `H-LeftoverAllHolds`; a prototype/ELF
-mismatch selects `H-CensusStale`.
+The discriminator is one four-row table that includes at least one type-0
+16000-Hz row and at least one type-4 row, plus the same-run speech
+positive controls (`546` descriptors, all `MORT` headers, type counts
+`419/59/36/17/9/6`, rates `8000:440`/`16000:106`). Complete nonempty
+rows select `H-MORTRemainingMatches`; decoder/range failure selects
+`H-MORTRemainingMismatch`; missing classes after the control census
+selects `H-MORTRemainingUnavailable`.
 
 ## Exact commands
 
-    /opt/homebrew/opt/llvm/bin/llvm-nm -S --format=posix \
-      /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf \
-      > scratch/agent/s2150_elf_syms.txt
-    /opt/homebrew/opt/llvm/bin/llvm-objdump -t \
-      /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf \
-      > scratch/agent/s2150_elf_objdump.txt
     python3 - <<'PY'
-    # Build one leftover table from the ELF dumps + parked list in
-    # docs/PROJECT-OVERVIEW.md + companion symbol_files comments.
-    # Write scratch/agent/s2150_leftover_table.txt with every fake_func
-    # whose size > 0xC, classified renameable / overlap / parked / hold.
+    from pathlib import Path
+    import collections, struct
+    rom = Path('build/rogue_squadron.z64').read_bytes()
+    off, size = 0x583D90, 0x31D3E4
+    speech = rom[off:off+size]
+    count = int.from_bytes(speech[0:4], 'big')
+    rows = []
+    for i in range(count):
+        packed = int.from_bytes(speech[4+i*4:8+i*4], 'big')
+        rel = packed & 0xFFFFFF
+        dtype = speech[rel+4]
+        rate = int.from_bytes(speech[rel+6:rel+8], 'big')
+        rows.append((i, dtype, rate))
+    need = [(0, 16000), (4, 8000), (4, 16000), (0, 16000)]
+    chosen = []
+    used = set()
+    for want_t, want_r in need:
+        for i, dtype, rate in rows:
+            if i in used:
+                continue
+            if dtype == want_t and rate == want_r:
+                chosen.append(i)
+                used.add(i)
+                break
+    print('count', count)
+    print('types', collections.Counter(r[1] for r in rows))
+    print('rates', collections.Counter(r[2] for r in rows))
+    print('type0_16000', [i for i,t,r in rows if t==0 and r==16000][:8])
+    print('type4', [(i,r) for i,t,r in rows if t==4][:12])
+    print('chosen', chosen)
+    Path('scratch/agent/s2151_mort_indices.txt').write_text(
+        ','.join(str(i) for i in chosen) + '\n')
     PY
 
-Compare generated `funcs.h` `fake_func_*` prototypes to the ELF leftover
-names in the same table so `H-CensusStale` is tested in the same pass.
-The work unit is complete when the table selects one of the three
-hypotheses and, if renameable, names the single next mapping lead.
+    python3 tools/mort_probe.py \
+      --rom build/rogue_squadron.z64 \
+      --speech-offset 0x583D90 \
+      --speech-size 0x31D3E4 \
+      --indices "$(cat scratch/agent/s2151_mort_indices.txt)" \
+      --reference scratch/agent/s2138_mort/N64-Tools/N64SoundListToolUpdated/N64SoundLibrary/MORTDecoder.cpp \
+      | tee scratch/agent/s2151_mort_result.txt
+
+If the census cannot fill four remaining-class indices, stop and record
+`H-MORTRemainingUnavailable` rather than padding with already-covered
+type-0 8000-Hz or type-1/2/3/5 rows. Do not run the game or change
+runtime, audio, task, output, guard, or mitigation behavior.

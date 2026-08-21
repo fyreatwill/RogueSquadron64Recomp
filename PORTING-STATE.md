@@ -102014,3 +102014,56 @@ a leftover-class census of remaining `fake_func_*` with size `> 0xC`.
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only moved a generated symbol mapping and compared ELF
 and generated names.
+
+
+## Session 2150 (2026-08-21) — closed leftover fake_func class as holds
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `53,176` bytes, so this was not a
+maintenance iteration. The last-15 session-title check was not an all-sweep
+run (s2135–s2140 were M5), so the leftover-class census remained eligible.
+Soak-queue intake was historical 2026-08-18 rows already consumed; no new
+recipes. The prescribed unit was a host-only ELF/companion leftover census
+of `fake_func_*` with ELF size `> 0xC`; no game run, regen, runtime change,
+audio, task, guard, or mitigation behavior was involved.
+
+`llvm-nm` and `llvm-objdump` dumps of the companion ELF, generated `funcs.h`
+prototypes, and TOML leftover rows all listed exactly `125` `fake_func_*`
+names, with empty set-differences. That same-pass name-set control rejects
+`H-CensusStale`. ELF leftover sizes split `119 <= 0xC` and `6 > 0xC`. TOML
+leftover sizes are only `0x4`/`0x8`/`0xC` (zero rows `> 0xC`); the ELF
+function-symbol size swallows following named ucode or data until the next
+function.
+
+The six ELF size-`> 0xC` leftovers, with overlapping named symbols and
+companion comments, are:
+
+- `fake_func_800186D8` `.text` ELF `0x3C` TOML `0x8`, overlaps `D_800186E0`
+  float data, companion `defined:true` only;
+- `fake_func_80024A0C` `.text` ELF `0x1FA4` TOML `0x4`, overlaps
+  `gspF3DEXTextStart`, companion "No accompanying real function";
+- `fake_func_800825C8` `.text` ELF `0xD8` TOML `0x8`, overlaps
+  `rspbootTextStart`, companion "No accompanying real function";
+- `fake_func_80099FDC` `.text` ELF `0xF84` TOML `0x4`, parked and overlaps
+  `aspMainTextStart`;
+- `fake_func_800AF6A8` `.ovl.cinematic` ELF `0x1298` TOML `0x8`, parked
+  cinematic data-tail overlapping `gCutsceneIdMappingTable`/`D_800AF92C`
+  and overlay-aliased functions, generated PATCH trap;
+- `fake_func_800CC3D4` `.ovl.menu` ELF `0x114C` TOML `0xC`, overlaps hangar
+  and menu data tables plus mission overlay aliases, companion has no
+  human name, generated PATCH trap.
+
+The renameable set is empty: none has a companion human name, a unique ELF
+section, and no named-symbol overlap. Generated bodies confirm the ELF
+sizes are leftover prefixes plus decoded ucode/data, not independent
+kernels. This selects `H-LeftoverAllHolds` and rejects
+`H-LeftoverRenameable`. The leftover class is closed. Remaining generated
+`func_*` names are the five parked holds (`func_8000040C`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_800E9AE0`). The
+full table is in `scratch/agent/s2150_leftover_table.txt`. No mapping
+move, regen, or runtime change followed.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only classified leftover ELF symbols against companion
+comments and generated prototypes.
