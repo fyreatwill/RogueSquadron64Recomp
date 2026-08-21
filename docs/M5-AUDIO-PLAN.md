@@ -147,13 +147,15 @@ explicit control arm.
    s2136 retail oracle census passed its whole-RDRAM control, reached title
    and hangar, observed `ucode=0x80099FE0`, `ucode_data=0x800A4E00`, nonzero
    `data_ptr`/`data_size`, and zero writes to both output-buffer fields. This
-   selects `H-RetailTaskMatchesFactor5b` at the task-field boundary. The next
-   work unit is a same-build stub/image port ABI and DMA comparison, followed
-   only after that table by a known-MORT sample decode with byte-count and
-   waveform checks. The retail `data_ptr+0x100` write itself was not watched
-   in s2136 and remains open. Positive control is the oracle whole-RDRAM watch
-   plus target-phase port controls; rollback remains leaving the existing RSP
-   dispatch arm opt-in.
+   selects `H-RetailTaskMatchesFactor5b` at the task-field boundary. s2137
+   then selected the matching port task/DMA boundary, including the sampled
+   `field348+0x100` destination relation. The retail `data_ptr+0x100` write
+   itself remains open. s2138 compiled the named independent MORT decoder and
+   decoded four mandated speech rows, but all were 8000-Hz/type-0; the next
+   unit must cover an uncovered descriptor type and the 16000-Hz class in one
+   reference table. Positive controls are the speech descriptor census and
+   complete decoder rows; rollback remains leaving the existing RSP dispatch
+   arm opt-in.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.

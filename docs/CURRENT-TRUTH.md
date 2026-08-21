@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2137
-(2026-08-21); behavioral and source evidence is current through s2137.
+authoritative for exact commands and probe rows. Maintained in Session 2138
+(2026-08-21); behavioral and source evidence is current through s2138.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -66,6 +66,15 @@ This file is intentionally compact. The s2080–s2108 archive is in
   The image still exits at guest break PC `0x1328` with `canary_ok=0`; no
   task-field rewrite, output-route change, new RSP config, or default-arm
   change follows.
+- The s2138 host-only MORT census compiled the independent
+  `CMORTDecoder::Decode` reference and passed the speech positive controls:
+  546 descriptors, all `MORT` headers, descriptor-type counts
+  `419/59/36/17/9/6`, and rates `8000:440`/`16000:106`. The mandated rows
+  `0,1,419,545` all decoded to stable nonempty PCM rows, selecting
+  `H-MORTReferenceMatches` only for those four 8000-Hz/type-0 samples. The
+  selection covers neither the 16000-Hz class nor nonzero descriptor types,
+  so the full codec-variant boundary remains open; no audio arm, task ABI,
+  output route, or default-arm change follows.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -357,8 +366,11 @@ work items.
    known-MORT sample decode using the retail `speech` asset and the named
    CPU-side decoder path, with descriptor identity, decoded byte count,
    sample rate, nonzero count, and waveform hash/summary compared against a
-   direct reference decode. Keep `factor5_ucode_b` opt-in and do not change
-   task fields, output routing, host AI status, guards, or the default arm.
+   direct reference decode. s2138 decoded the mandated four rows, but all
+   were 8000-Hz/type-0; the next unit must use one same-build reference table
+   covering an uncovered descriptor type and the 16000-Hz class. Keep
+   `factor5_ucode_b` opt-in and do not change task fields, output routing,
+   host AI status, guards, or the default arm.
 2. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
    three consecutive coverage-only results under the same hypothesis; the
    current renderer boundary supplies no new discriminator. The first sweep
@@ -663,8 +675,11 @@ s2137's same-build port table then selected `H-PortTaskFieldsMatchRetail`:
 both arms reached the target phases, the image had the expected fixed fields
 and zero output buffer, its stage-3 destination matched `field348+0x100`, and
 two nonzero stage/PCM joins matched by address, length, FNV, and nonzero count.
-The retail `data_ptr+0x100` write remains an independent open edge; the next
-M5 unit is a known-MORT sample decode with byte-count and waveform checks.
+The retail `data_ptr+0x100` write remains an independent open edge. s2138's
+independent decoder table produced four complete 8000-Hz/type-0 rows with
+nonzero PCM, but did not cover the 16000-Hz or nonzero-type classes. The next
+M5 unit is the coverage-completing reference table with byte-count and
+waveform checks.
 
 ## Method and safety rules
 

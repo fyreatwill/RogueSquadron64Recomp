@@ -101421,3 +101421,47 @@ flip. No runtime or mitigation code changed.
 ORIGIN: no mitigation or game-value machinery was added; this session only
 compared existing task fields, generated DMA destinations, and phase-keyed
 PCM joins.
+
+## Session 2138 (2026-08-21) — decoded four retail MORT samples
+
+HYPOTHESIS-ID: m5-mort-sample-contract
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `45,360` bytes, so this was not a
+maintenance iteration. The prescribed work unit was one bounded host-only
+reference comparison; it ran no game build, runtime process, oracle run, or
+soak. I read the oracle/F5 reference constraints and the companion speech
+layout before adding `tools/mort_probe.py`, then cloned the independent
+`jombo23/N64-Tools` source at the shallow checkout used by the harness.
+
+The harness passed the same-run speech positive controls: 546 descriptors, all
+headers beginning with `MORT`, descriptor-type counts `419/59/36/17/9/6`,
+and sample-rate counts `8000:440`/`16000:106`. The companion's five-byte
+`MORT\0` description needed to be interpreted against its own `mort_stuff.c`:
+the ROM has a four-byte `MORT` magic, a descriptor type at offset `+4`, the
+unknown byte at `+5`, the rate at `+6`, and the word count at `+8`. The
+initial strict five-byte check therefore failed on descriptor 4; the fixed
+layout check was rerun before decoding.
+
+The independent `CMORTDecoder::Decode` reference then compiled and returned
+four nonempty rows for the mandated indices `0,1,419,545`. They were all
+descriptor type 0 at 8000 Hz: index 0 had word count 4, 2240 decoded samples,
+157 nonzero samples, FNV `0xA667793D`; index 1 had word count 678, 13440
+samples, 13210 nonzero, FNV `0xA28B37D0`; index 419 had word count 249,
+6080 samples, 4783 nonzero, FNV `0xF166120B`; and index 545 had word count
+843, 18880 samples, 16344 nonzero, FNV `0xFB04E2D2`. Every row also had
+decoded first/last sample 0 and min/max values within the signed 16-bit
+range; the complete byte-count and waveform table is in
+`scratch/agent/s2138_mort/result.log`.
+
+This is single-source evidence selecting `H-MORTReferenceMatches` only for
+the four decoded 8000-Hz/type-0 rows. It does not cover the 16000-Hz or
+nonzero descriptor-type classes, so it does not select the extended codec
+contract. The reference compiler initially rejected the Windows-only
+`StdAfx.h` include and `unsigned __int64`; the harness's temporary adapter
+replaced those portability spellings without changing decoder logic, and the
+fixed command completed. No audio arm, task ABI, output route, host shortcut,
+guard, or default-arm behavior changed. This rules out reference
+unavailability for the covered rows, not a port MORT failure.
+
+ORIGIN: no mitigation or game-value machinery was added; this session only
+validated the external decoder and sampled retail speech descriptors.
