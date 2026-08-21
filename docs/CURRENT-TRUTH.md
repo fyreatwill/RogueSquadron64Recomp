@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2136
-(2026-08-21); behavioral and source evidence is current through s2136.
+authoritative for exact commands and probe rows. Maintained in Session 2137
+(2026-08-21); behavioral and source evidence is current through s2137.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -49,6 +49,23 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `data_ptr+0x100` destination, so that downstream edge remains an explicit
   validation item; no port task-field, output-routing, RSP-config, or
   default-arm change follows.
+- The s2137 same-build port task comparison passed positive dispatch controls
+  and reached title VI `1024 @ 0x00790400` plus hangar VI
+  `512 @ 0x006AB400` in both the `musyx_stub` and opt-in `factor5_ucode_b`
+  arms. The stub emitted zero audio DMA and zero-nonzero PCM rows. The image
+  emitted real DMEM-to-RDRAM DMA with fixed `ucode=0x80099FE0`,
+  `ucode_data=0x800A4E00`, nonzero task `data_ptr`/`data_size`, and zero
+  `output_buff` fields; its stage-3 `field348=0x80178C80` destination was
+  `0x80178D80`, exactly `field348+0x100`. In hangar phase 10, two image
+  stage-2 ranges joined both PCM source and consumer callbacks exactly:
+  `nz=621`, FNV `0x2B9E9631`, and `nz=639`, FNV `0x6ADD4218`, with
+  `complete=1` and no ordering violations. Together with the independent
+  s2136 retail task-field line, this selects `H-PortTaskFieldsMatchRetail`
+  at the sampled port boundary and rejects output-buffer mismatch,
+  data-pointer/output-relation mismatch, and coverage-unresolved hypotheses.
+  The image still exits at guest break PC `0x1328` with `canary_ok=0`; no
+  task-field rewrite, output-route change, new RSP config, or default-arm
+  change follows.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -333,18 +350,15 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 task-buffer contract validation.** The s2135 static census selected
-   `H-ExistingFactor5ConfigMatches`, and s2136's independent retail census
-   selected `H-RetailTaskMatchesFactor5b` at the task-field boundary:
-   `ucode=0x80099FE0`, `ucode_data=0x800A4E00`, nonzero `data_ptr`/`data_size`,
-   and no `output_buff` writes across title and hangar. The next unit is a
-   same-build port A/B of the existing `musyx_stub` and opt-in
-   `factor5_ucode_b` arms, comparing the phase-keyed `[audtask-abi]` and
-   `[audtask-dma-range]` table against that retail row and checking whether
-   the image's `data_ptr+0x100` ranges are the observed PCM boundary. The
-   retail downstream `data_ptr+0x100` edge was not dynamically watched in
-   s2136 and remains open. No task-field rewrite, output-route change, new
-   RSP config, or default-arm change is authorized.
+1. **M5 known-MORT sample decode and PCM validation.** The s2135 static census
+   rejected a new MORT RSP segment, s2136 selected the retail task-field
+   contract, and s2137 selected the matching port image/task boundary plus
+   the generated `field348+0x100` write relation. The next unit is a bounded
+   known-MORT sample decode using the retail `speech` asset and the named
+   CPU-side decoder path, with descriptor identity, decoded byte count,
+   sample rate, nonzero count, and waveform hash/summary compared against a
+   direct reference decode. Keep `factor5_ucode_b` opt-in and do not change
+   task fields, output routing, host AI status, guards, or the default arm.
 2. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
    three consecutive coverage-only results under the same hypothesis; the
    current renderer boundary supplies no new discriminator. The first sweep
@@ -456,8 +470,13 @@ image `break_pc=0x1328`, `exit=1`, canary failure, and `output_buff=0` remain
 the task boundary; no host/task/default change is authorized. The s2135 static
 census now identifies the existing RSP image and separate MORT speech asset;
 s2136's retail task-field table selects `H-RetailTaskMatchesFactor5b` at the
-covered task boundary. The next M5 unit is the same-build port stub/image ABI
-and DMA comparison; the retail `data_ptr+0x100` write remains unwatched.
+covered task boundary. s2137's same-build port table then selects
+`H-PortTaskFieldsMatchRetail`: both arms reached the target phases, the image
+had the expected fixed fields and zero output buffer, its stage-3 destination
+matched `field348+0x100`, and two nonzero stage/PCM joins matched by address,
+length, FNV, and nonzero count. The retail `data_ptr+0x100` write remains an
+independent open edge; the next M5 unit is the known-MORT sample decode and
+waveform check.
 
 The s2134 retail oracle supplied the independent codec-side boundary. After
 the whole-RDRAM control and title/hangar gates, all seven named voice
@@ -640,9 +659,12 @@ pair is the retail audio RSP image, and MORT samples are a separate speech
 asset consumed by CPU voice routines. The s2136 retail task-field census
 selected `H-RetailTaskMatchesFactor5b`: the fixed image/data pair and
 nonzero `data_ptr`/`data_size` co-occurred with zero output-buffer writes.
-The next unit is the same-build port stub/image ABI and DMA comparison, not a
-new RSP config, port dispatch change, the parked drain A/B, or the symbol
-sweep. Retail `data_ptr+0x100` write observation remains open.
+s2137's same-build port table then selected `H-PortTaskFieldsMatchRetail`:
+both arms reached the target phases, the image had the expected fixed fields
+and zero output buffer, its stage-3 destination matched `field348+0x100`, and
+two nonzero stage/PCM joins matched by address, length, FNV, and nonzero count.
+The retail `data_ptr+0x100` write remains an independent open edge; the next
+M5 unit is a known-MORT sample decode with byte-count and waveform checks.
 
 ## Method and safety rules
 

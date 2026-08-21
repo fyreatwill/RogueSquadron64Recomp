@@ -101380,3 +101380,44 @@ change. The exact captured output is in
 
 ORIGIN: no mitigation or game-value machinery was added; this session only
 captured independent retail task-field values and phase-qualified controls.
+
+## Session 2137 (2026-08-21) — validated the port audio task boundary
+
+HYPOTHESIS-ID: m5-port-task-contract
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `43,812` bytes, so this was not a
+maintenance iteration. The prescribed work unit was one same-build, two-arm
+port comparison of `musyx_stub` and opt-in `factor5_ucode_b`. The rebuilt
+`RogueSquadron64Recomp` target succeeded, both `tools/probe.sh` drivers
+returned `0`, and each captured 13 frames after the phase gate.
+
+Both arms passed the positive dispatch control and reached title VI
+`1024 @ 0x00790400` plus hangar VI `512 @ 0x006AB400`. The stub control
+reported `real_ucode=0` through dispatch `n=3840`, 1216 ABI rows, zero DMA
+ranges, and zero-nonzero PCM source/consumer rows. The image arm reported
+`real_ucode=1` through dispatch `n=4096`, 1318 ABI rows, 3024 DMA ranges, and
+the same target phases. This is positive-control-qualified coverage, not a
+run-lifetime null.
+
+At the image target task boundary, the fixed fields were
+`ucode=0x80099FE0`, `ucode_data=0x800A4E00`, nonzero `data_ptr`/`data_size`,
+and zero `output_buff`/`output_buff_size`; the image returned `exit=1` at
+guest break PC `0x1328` with `canary_ok=0`. Its phase-10 stage-3 witness
+recorded `field348=0x80178C80` and destination `0x80178D80`, proving the
+generated `field348+0x100` relation. Two stage-2 DMA ranges joined both PCM
+source and consumer callbacks exactly: `0x80169150`, FNV `0x2B9E9631`,
+`nz=621`, and `0x80166450`, FNV `0x6ADD4218`, `nz=639`; both joins had
+`complete=1` and `ordering_violation=0`.
+
+Together with the independent s2136 retail task-field census, this selects
+`H-PortTaskFieldsMatchRetail` at the sampled port boundary. It rejects
+`H-PortOutputBuffMismatch`, `H-PortDataPtrMismatch`, and
+`H-PortTaskComparisonUnresolved` for the covered route. It does not establish
+the retail dynamic `data_ptr+0x100` write, does not repair the image canary or
+task exit semantics, and does not authorize a task-field rewrite, output-route
+change, new RSP config, host AI-status change, guard change, or default-arm
+flip. No runtime or mitigation code changed.
+
+ORIGIN: no mitigation or game-value machinery was added; this session only
+compared existing task fields, generated DMA destinations, and phase-keyed
+PCM joins.
