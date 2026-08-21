@@ -22,17 +22,18 @@ RT64. The goal was to get the game building and rendering correctly on Apple Sil
 **Where it stands:** the game boots and renders through attribution, N64 logo, intro cinematic,
 star flare, Factor 5 logo, title-like 1024 (`0x00790400`), and hangar 512
 (`0x006AB400`) once `ROGUESQ_SPIN_YIELD=1` yields both `menuOverlayInit`
-`L_800C5930` and `menuControllerInput` `L_800B8050` (s1942, s1949). Overlay
-dispatch is fixed enough for mission entry and post-sec2 outdoor presentation. The
-war-room floor band defect (s12–s48) is fixed. Audio is stubbed. Yield stays
-default-off.
+`L_800C5930` and `menuControllerInput` `L_800B8050` (s1942, s1949), with
+`ROGUESQ_LLE_UNGATED=1` and `ROGUESQ_LLE_SOLO=1`. Overlay dispatch is fixed
+enough for mission entry and post-sec2 outdoor presentation. The war-room
+floor band defect (s12–s48) is fixed. Default audio is the silent `Broke`
+stub; the Factor 5 image arm is opt-in (`ROGUESQ_AUDIO_UCODE=1`) and not
+defaulted. Yield stays default-off.
 
-**What is not done:** the first hangar window dies ~4s later in
-`filterVoiceSampleBlock` (`last-guest-pc=0x8000834c`). Hangar visuals have
-geometry/color artifacts. M5 audio de-stubbing remains open; M3 is limited to
-idiom-class audits.
-M4 hangar/512 Y=0x8000 is not live on the first hangar capture. See
-`CURRENT-TRUTH.md`.
+**What is not done:** hangar visuals have geometry/color artifacts. M5 audio
+de-stubbing remains open at the A1 host canary-effect census (`canary_ok=0`
+is the mix buffer; whether that flag gates host completion is untested).
+M3 is limited to idiom-class audits. M4 hangar/512 Y=0x8000 is not live on
+the first hangar capture. See `CURRENT-TRUTH.md`.
 
 ## 2. How the pipeline fits together
 
@@ -3732,3 +3733,168 @@ phase 6 at width 640 and emitted a bus-error crash marker. This selects
 `H-B40-RouteRequired` at the sampled pre-title route-admission boundary. It
 does not identify the B40 reader or authorize changing any gate, task, output,
 wait, guard, queue, or default-dispatch behavior.
+
+s2111 then ran a whole-tree generated `lbu` census (71 sites) with both B40
+arms reaching title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. In
+both target phases the unique read/branch table matched exactly: every
+observed value was 0, with the same guest PCs, branch PCs, directions, and
+route ordinals. This refutes `H-B40-Consumer` at the sampled route boundary
+and selects `H-RecipeVariance`; the earlier `H-B40-RouteRequired` result is
+superseded at this recipe scope. s2112's phase-keyed caller/entry/route
+table then matched at phase 7 in both arms (same four arguments, `a1_gate`,
+state bytes, route ordinal, and origin `0x00695C00`). Independent VI traces
+differed in timing and later phase count only, selecting `H-RecipeTiming`
+without proving the old divergence impossible in every recipe. Do not reopen
+the B40 read-site census.
+
+## 42. M5 contract, pump/drain, symbol, MORT, AI, and canary archive (s2113–s2155), migrated in s2156
+
+The chronological ledger remains authoritative for exact commands, counts, and
+failed retries. This section preserves the durable selected hypotheses that no
+longer need to occupy the compact current-truth file. None of these results
+authorizes changing output routing, task fields, canary prefill, waits,
+guards, queue policy, or default dispatch.
+
+### Image-arm contract and C88 (s2113–s2120)
+
+- s2113 independently matched two nonzero phase-10 stage-2 spans (`nz=621`
+  and `639`) to dmem-to-RDRAM DMA ranges and exact PCM source/consumer spans,
+  with completion before both PCM edges. This rejects `H-WritebackLoss` and
+  `H-NoValidOutput` at that sampled boundary and selects `H-TaskExitMapping`
+  for the legitimate `break 0`/`Broke` edge at guest PC `0x1328`.
+  `output_buff=0` remains an ABI-semantics question.
+- s2114–s2117 were coverage failures: paired stub/image or C88 arms split
+  before both reached title/hangar, or one arm died in
+  `waitForAnyAudioSlot+1060` / `renderFlatMeshFaceGroup` / RT64 `fullSync`.
+  Absent target rows are not ABI evidence. s2116's C88=1 stub-only crash
+  selected `H-RouteRecipeFailure` for that recipe, not an image C88 claim.
+- s2118 supplied the missing C88=0 target comparison. Shared title-phase
+  stub/image control rows showed the silent stub contract; image hangar
+  phase-10 produced two nonzero stage-2 spans whose generated `0x6F0`/`0x300`
+  DMA ranges and PCM source/consumer rows matched by guest span, byte count,
+  full-span hash, and nonzero count. Image rows recorded `output_buff=0`,
+  `canary_ok=0`, `break_pc=0x1328`, and `exit=1`. This selects
+  `H-TaskExitMapping` and rejects `H-OutputRoute`, `H-WritebackLoss`, and
+  `H-NoValidOutput` at the sampled boundary. `H-ImageDestIsPCM` holds only
+  at that sampled stage-2 boundary.
+- s2119's retail oracle passed whole-RDRAM (`38511` writes), reached title
+  and hangar, and recorded mixed zero/nonzero writes to physical `0xA0F50`
+  from writer PCs `0x8008EB7C`, `0x8008ED48`, and `0x8008EC88`. This
+  single-source line rejects `H-GateNeverLive` and selects `H-GateMixed`.
+- s2120's same-build port arm then matched the named
+  `reapplyDisplayMode:reapply-success` writer at `0x8008EC88` to final gate
+  0 versus 1. C88=0 produced the nonzero stage/PCM join; C88=1 produced none.
+  This selects `H-C88-ReversedOrSuppressing` at sampled port gate scope. The
+  first s2120 pair was a coverage failure and is not evidence.
+
+### Key-on, wait, pump, and drain (s2121–s2128)
+
+- s2121's retail key-on census passed whole-RDRAM `10000` and title/hangar
+  gates; all eight `musyxKeyOnVoice` execution watches recorded zero hits.
+  Single-source `H-KeyOnRetailDead` at the covered retail route; it does not
+  prove the port class is dead or make guard removal safe.
+- s2122's port key-on census reached hangar phase 10: five normal-tail
+  entries, four nonzero divide witnesses with divisor `0xC0`, zero of eight
+  early-return guards. This selects `H-PortKeyOnNormal` without authorizing
+  any guard change.
+- s2123's retail wait census passed whole-RDRAM, title/hangar, and observed
+  countdown seed `0x80091ECC` / decrement `0x800916A4`, worker
+  `0x8008F490` `0x03` stores, `serviceVoicePoolFrame` `0x8009B7EC` at
+  `0x154620`, plus named wait/shutdown/synth executions. This selects
+  `H-RetailWaitContract`.
+- s2124's pump A/B was coverage failure (pump-off died at `0x8000B650`
+  before title). s2125's phase-repaired pair reached title/hangar in both
+  arms with the same ordered wait/drain/second-spin sequence and silent
+  stall/guard controls, selecting `H-PumpIrrelevant` at route-admission
+  scope only.
+- s2126–s2128 are the third consecutive drain-tick coverage failure. After
+  a stale-binary false start (gate absent), the repaired control reached
+  title/hangar while tick-off died at the pre-target VI-640 RT64 barrier.
+  A10 is parked pending a new discriminator. The legacy fixup gate is
+  instrumentation around the existing host tick injection, not a drain or
+  game-value change.
+
+### Generated-symbol overlay mappings and leftover close (s2129–s2150)
+
+Each unit used a no-edit regeneration versus a prescribed two-line mapping
+move. Boundaries, sizes, leftover `fake_func_*` immediately before the
+start, generated prototype/definition/overlay entry, and callers were the
+discriminator. No game run or runtime behavior changed.
+
+- Mission: `0x800AD380`/`computeTrackedObjectWorldAnchor`,
+  `0x800AE3F0`/`initPlayerCraftTrailBuffers`,
+  `0x800C41B0`/`plotRadarBlipColumn`,
+  `0x800BF790`/`updateHudHealthIndicator`,
+  `0x800C64B0`/`initHangarDisplayItemTimers`,
+  `0x800E71D0`/`transformCraftAnchorsApplySubFx3`,
+  `0x800EC110`/`allocObjectPoolNode`,
+  `0x800EC6F0`/`tickCraftMountedAnimationEffect`,
+  `0x800ED150`/`claimSongSlotForCurrentHandle`,
+  `0x800FEF10`/`stepObjectOrientationTowardTarget`. Mission-overlay
+  human-versus-placeholder mismatches are exhausted.
+- Menu: `0x800B2630`/`buildFormatMessageGlyphBuffer` (leftover
+  `fake_func_800B2628` unchanged) and
+  `0x800B3824`/`buildLevelSelectTextTextures` (no leftover immediately
+  before). Human-in-main versus placeholder-in-overlay mismatches are
+  exhausted; the two-line overlay-move class is closed.
+- s2150 leftover census: ELF/`funcs.h`/TOML leftover names match (`125`
+  each). Six leftovers have ELF size `> 0xC`; all six are parked, overlap a
+  named ucode/data/rspboot symbol, or are exception/cop0-trap data bodies
+  with no companion human name. This selects `H-LeftoverAllHolds`. Remaining
+  `func_*` placeholders are `func_8000040C`, `func_800927B0`,
+  `func_80092A54`, `func_80092CF0`, `func_800E9AE0`.
+
+### Retail/port task, MORT, AI, and canary (s2132–s2155)
+
+- s2132 retail PCM/AI: whole-RDRAM `33,346` writes, title/hangar, nonzero
+  audio-buffer pointer table, aligned countdown and worker writes, `8,556`
+  `osAiSetNextBuffer` executions. Selects `H-RetailAIQueued`.
+- s2133 same-build stub/image: both arms title/hangar; image phase-10
+  `nz=621`/`639` exact source/consumer joins; stub zero. Selects
+  `H-PortAIQueueMatches`. Image still `break_pc=0x1328`, `exit=1`,
+  `output_buff=0`, `canary_ok=0`.
+- s2134 retail voice-codec: all seven named decode/filter functions plus
+  `musyxSynthFrame` and `osAiSetNextBuffer`. Selects
+  `H-RetailMORTDecoderLive`.
+- s2135 static census: companion `aspMainText` equals `factor5b_rsp.toml`
+  ROM `0x09ABE0..0x09BB60`; `speech` is uncompressed MORT
+  `0x583D90..0x8A1174` (546 descriptors). Selects
+  `H-ExistingFactor5ConfigMatches`. Retail MORT is not a second RSP image.
+- s2136 retail task fields: `ucode=0x80099FE0`, `ucode_data=0x800A4E00`,
+  nonzero `data_ptr`/`data_size`, zero `output_buff` writes. Selects
+  `H-RetailTaskMatchesFactor5b`.
+- s2137 port task comparison: matching fixed fields, stage-3 dest
+  `field348+0x100`, two nonzero stage/PCM joins. Selects
+  `H-PortTaskFieldsMatchRetail`.
+- s2138/s2139/s2151 independent MORT reference tables cover all six
+  descriptor types and both rates (type 4 exists only at 16000 Hz). Selects
+  `H-MORTRemainingMatches` and closes remaining-class work.
+- s2140 retail `data_ptr+0x100` watch: both exact destinations written;
+  writer PC `0x80090CA4`. With s2137 this selects
+  `H-RetailDataPtrOffset100`.
+- s2152 AI-status poll: named `osAiGetStatus`/`osAiGetLength` absent;
+  only ROM `jal 0x80029F30` and `AI_STATUS_REG` load sit inside
+  `osAiSetNextBuffer`; oracle 1:1 `7958` executions of set-next and busy.
+  Selects `H-BusyIsThePoll`. Do not change `osAiGetStatus_recomp`.
+- s2153 busy-return: success PC `0x80029EF4` = set-next = busy `7983`;
+  reject PC `0x80029EF0` = 0; generated jals ignore v0. Selects
+  `H-BusyAlwaysClear`. Do not change `osAiSetNextBuffer_recomp`.
+- s2154 generated canary census: `L_1328` and stage-3 `field348+0x100`
+  controls live; zero immediates in `0xF80..0xFBF`; mix buffer `0xE50`
+  span `0x180` covers host canary `0xF80..0xF8F` and OSTask `0xFC0..0xFCF`.
+  Selects `H-CanaryComputedOnly`. Table:
+  `scratch/agent/s2154_image_canary_table.txt`.
+- s2155 write-span table: certain/bounded union `0x220..0xA3F` plus
+  `0xC30..0xFCF`; mix `0xE50..0xFCF` continuous; only unused `>=0x10`
+  holes in `0x000..0xFBF` are `0x000..0x21F` and `0xA40..0xC2F`, both
+  inside ucode-data DMA `0x000..0xF7F`. Selects
+  `H-CanaryOnlyInUcodeData` and co-holds `H-NoReservedGap`. Table:
+  `scratch/agent/s2155_image_dmem_write_spans.txt`. A relocated host
+  canary has nowhere to live in DMEM. The remaining A1 question is whether
+  `canary_ok=0` gates host task completion, writeback, or DMA.
+
+These records supersede treating `canary_ok=0` as a runaway write, treating
+named `osAiGetStatus` as a live jal target, treating MORT as a second RSP
+image, and treating leftover `fake_func_*` size `> 0xC` as renameable. They
+do not authorize changing the default audio arm, canary prefill, task ABI,
+output routing, waits, or guards.

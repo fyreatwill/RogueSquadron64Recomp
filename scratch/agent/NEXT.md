@@ -1,15 +1,16 @@
-# NEXT work unit (s2156) — A1 host canary-effect census
+# NEXT work unit (s2157) — A1 host canary-effect census
 
 HYPOTHESIS-ID: m5-image-canary-host-effect
 
 ## Work unit
 
-s2155 selected `H-CanaryOnlyInUcodeData`: mix occupies `0xE50..0xFCF`
-continuously, the `0xF7F..0xFC0` gap has no unused byte, and leftover
-`>=0x10` holes sit only in ucode-data. A relocated host canary has
-nowhere to live in DMEM. Do not move the canary, change canary prefill,
-default the image arm, or change `osAiGetStatus_recomp` /
-`osAiSetNextBuffer_recomp`.
+s2156 was a triggered maintenance iteration (CURRENT-TRUTH 60,162 bytes)
+and did not consume this unit. s2155 selected `H-CanaryOnlyInUcodeData`:
+mix occupies `0xE50..0xFCF` continuously, the `0xF7F..0xFC0` gap has no
+unused byte, and leftover `>=0x10` holes sit only in ucode-data. A
+relocated host canary has nowhere to live in DMEM. Do not move the
+canary, change canary prefill, default the image arm, or change
+`osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
 
 The remaining A1 question is whether `canary_ok=0` (now expected mix)
 changes host task completion, writeback, or DMA, or is log-only.
@@ -57,7 +58,7 @@ unclassified read selects `H-CoverageFailure`. Do not treat prior
 
 Grep `canary_ok`, `audio_canary_pre`, `audio_canary_post`,
 `audio_canary_offset`, and `ROGUESQ_AUDIO_CANARY_AB`. Classify each
-hit. Write `scratch/agent/s2156_canary_host_effect.txt`.
+hit. Write `scratch/agent/s2157_canary_host_effect.txt`.
 
 Do not edit `rsp.cpp` canary prefill, `osAiSetNextBuffer_recomp`, or
 the default audio arm.

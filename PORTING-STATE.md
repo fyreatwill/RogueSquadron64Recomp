@@ -102322,3 +102322,35 @@ writers of the host canary span remain `L_1CDC` / `L_15F8` / `L_1EF0`
 storing the `0xE50` mix buffer; that value is legitimate image working
 set. Leftover holes are overwritten by host ucode-data DMA at task start
 and cannot witness the runner.
+
+## Session 2156 (2026-08-21) — compacted current truth and migrated s2110–s2155 archive
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 60,162 bytes (916 lines), over
+the 60,000-byte maintenance trigger, so this iteration ran no build,
+instrument, oracle, or game soak. Durable s2110–s2155 B40, contract, C88,
+key-on, wait/pump/drain, generated-symbol, MORT, AI, and canary
+conclusions were migrated to `docs/PROJECT-OVERVIEW.md` §§41–42. The
+front matter was compacted from 916 lines / 60,162 bytes to 266 lines /
+16,049 bytes (net −650 lines). The selected-hypothesis table, five-item
+monotonic backlog, and “do not change” constraints were retained. The
+stale “Maintained in Session 2155” headline was refreshed to Session
+2156. `PROJECT-OVERVIEW.md` “Where it stands” was updated to name the
+opt-in image arm and the open A1 canary-effect census.
+
+`scratch/agent/SOAK-RESULTS.md` had no new lines since the s1974 hangar
+600s recipe; nothing new to fold.
+
+This confirms the maintenance trigger and preserves the ledger’s exact
+session history in the overview. It rules out no runtime hypothesis and
+does not select a canary-effect explanation; s2155’s
+`H-CanaryOnlyInUcodeData` result remains the last A1 discriminator. No
+source, runtime, gate, task, output, canary, wait, guard, queue, or
+default-dispatch behavior changed.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only compacted documentation.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-canary-host-effect`.
