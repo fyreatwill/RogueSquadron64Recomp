@@ -102178,3 +102178,55 @@ wait, guard, or default-arm behavior changed.
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only recorded generated/symbol presence and
 independent retail execution of the AI-status poll.
+
+## Session 2153 (2026-08-21) — selected H-BusyAlwaysClear for retail set-next reject
+
+HYPOTHESIS-ID: m5-ai-status-poll
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `56,061` bytes, so this was not a
+maintenance iteration. Soak-queue intake was historical 2026-08-18 rows
+already consumed; no new recipes. The prescribed unit was one retail-oracle
+census of `osAiSetNextBuffer` reject PC `0x80029EF0` (`li v0,-1`) versus
+success PC `0x80029EF4` (`jal osVirtualToPhysical`), with whole-RDRAM,
+`osAiSetNextBuffer` `0x80029E80`, and `__osAiDeviceBusy` `0x80029F30` as
+same-run controls. No port build, audio-arm change, task ABI, output route,
+host-shortcut edit, guard, or default dispatch change.
+
+ROM encodings at VRAM `0x80029E80` / ROM `0x2AA80` match s2152: jal busy at
+`+0x5C`, `beq v0,0` to success at `+0x64`, `li v0,-1` at `0x80029EF0` in
+the reject delay slot, `jal osVirtualToPhysical` at `0x80029EF4`. A taken
+reject skips `0x80029EF4`, so `success == set-next` is incompatible with
+any reject even if a delay-slot exec watch were silent.
+
+The retail oracle used the prescribed s2152-style recipe (`--secs 70
+--hit-cap 64 --watch-write 0x0:0x800000 --watch-pc
+0x80029E80,0x80029F30,0x80029EF4,0x80029EF0 --first-watch 0 --vi-trace`,
+Rice, eleven-Start). Hit-cap 64 silenced `[hit]` lines; counts and
+`exec-prev` remained complete, so no `--detail-watch` rerun was required.
+Whole-RDRAM reached the `10000` callback threshold and was removed. VI
+reached title `WIDTH 640 -> 1024` at origin `0x00790800` (17.4s, then the
+`0x00790400`/`0x00790800` pair) and hangar `WIDTH 1024 -> 512` at origin
+`0x006AB400` (38.4s). Counts: set-next `7983`, busy `7983` (1:1), success
+`7983`, reject `0`. `exec-prev` attributed set-next to `0x8008EE08`
+(`n=1`) and `0x8008EE84` (`n=7982`); busy to the in-function jal
+`0x80029EDC` (`n=7983`); success to the taken `beq` `0x80029EE4`
+(`n=7982`) and `__osDispatchThread` `0x8002BEEC` (`n=1`). No reject
+`exec-prev` rows. Success+reject partitions set-next exactly.
+
+Generated `runAiAudioStreamPlaybackLoop` ignores v0 after both jals: the
+first falls into `osRecvMesg`, the second overwrites v0 with `andi
+$v0,$s1,0xFF` in the `j L_8008EE98` delay slot.
+
+This selects `H-BusyAlwaysClear` at the covered retail title/hangar route
+and rejects `H-BusySometimesFull`, `H-BusyReturnUnmapped`, and
+`H-CoverageFailure`. Always-queue return-0 is observationally equivalent
+here (FIFO-full never fires; caller ignores the return). Do not change
+`osAiGetStatus_recomp` or `osAiSetNextBuffer_recomp`; a host SDL-fullness
+check would be a new contract, not a restore of the N64 AI FIFO. Table:
+`scratch/agent/s2153_ai_busy_return_table.txt`. Log:
+`scratch/agent/oracle_s2153_ai_busy_return.log`. No runtime, mitigation,
+task, wait, guard, or default-arm behavior changed.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only recorded independent retail reject/success PC
+counts and generated-caller v0 use.

@@ -1,57 +1,55 @@
-# NEXT work unit (s2153) — A13 busy-return polarity
+# NEXT work unit (s2154) — A1 image canary span
 
-HYPOTHESIS-ID: m5-ai-status-poll
+HYPOTHESIS-ID: m5-image-canary-span
 
 ## Work unit
 
-s2152 closed the presence/execution half of A13 (`H-BusyIsThePoll`).
-Named `osAiGetStatus` is not a jal target. Do not change
-`osAiGetStatus_recomp`. The live host shortcut is
-`osAiSetNextBuffer_recomp` skipping `__osAiDeviceBusy`.
+s2153 closed A13 busy-return polarity at the covered retail route
+(`H-BusyAlwaysClear`). Do not change `osAiGetStatus_recomp` or
+`osAiSetNextBuffer_recomp`.
 
-The next unit is one retail-oracle census of the set-next reject path
-versus the success path, with whole-RDRAM, `osAiSetNextBuffer`, and
-`__osAiDeviceBusy` as same-run controls. No port build, audio-arm change,
-task ABI, output route, host-shortcut edit, guard, or default dispatch
-change.
+The remaining A1 default-arm blocker is `canary_ok=0` on the already
+selected legitimate `break 0`/`Broke` edge at guest PC `0x1328`. The
+host plants a canary in DMEM `0xF80..0xF8F` (gap after ucode-data DMA
+ending at `0xF7F`, before OSTask at `0xFC0`). Next unit is one host-only
+generated census of `factor5_ucode_b` DMEM destinations in `0xF80..0xFBF`
+against that reserved-gap claim. No port build, game run, canary
+prefill change, task-exit mapping, default-arm, or output-route change.
 
 ## Competing hypotheses and discriminator
 
-- `H-BusyAlwaysClear`: after title/hangar gates, success PC `0x80029EF4`
-  (`jal osVirtualToPhysical`) equals `osAiSetNextBuffer` count and reject
-  PC `0x80029EF0` (`li v0,-1`) stays at zero.
-- `H-BusySometimesFull`: reject PC `0x80029EF0` is nonzero in the same
-  run as live set-next/busy and title/hangar gates.
-- `H-BusyReturnUnmapped`: the two PCs do not partition the set-next
-  count (success + reject != set-next, after allowing the n=1 dispatcher
-  resume at `0x8002BEEC`).
-- `H-CoverageFailure`: whole-RDRAM control or title/hangar VI gates miss,
-  so a zero reject count is unevaluable.
+- `H-CanaryInWorkingSet`: the generated image has explicit DMEM
+  load/store or DMA endpoints in `0xF80..0xF8F` as part of the named
+  completion path (stage-3 / `break 0x1328`).
+- `H-CanaryComputedOnly`: no immediate `0xF80..0xF8F` constant; the
+  previously observed canary-span writes come only from computed
+  pointers. Classify each such pointer's origin (task field vs overflow).
+- `H-CanaryHostOnly`: the generated image never targets `0xF80..0xFBF`;
+  `canary_ok=0` cannot be attributed to a named image op in this source.
+- `H-CoverageFailure`: the table misses the known `0x1328` break witness
+  or the stage-3 `field348+0x100` DMA (positive controls).
 
-The discriminator is one table: whole-RDRAM write control, title `1024`
-plus hangar `512 @ 0x006AB400`, `osAiSetNextBuffer` count, 
-`__osAiDeviceBusy` count, success PC `0x80029EF4` count, reject PC
-`0x80029EF0` count. Zero reject with matching success/set-next selects
-`H-BusyAlwaysClear`; nonzero reject selects `H-BusySometimesFull`;
-non-partitioning counts select `H-BusyReturnUnmapped`; missing
-control/gates select `H-CoverageFailure`. Do not treat a silent
-`AI_STATUS_REG` MMIO watch as evidence.
+The discriminator is one table: every generated DMEM address or DMA
+endpoint in `0xF80..0xFBF`, plus the same-file `L_1328` `break 0` and
+stage-3 `lw $6, 0x348($zero)` / `addiu $6, $6, 0x100` rows as positive
+controls. An explicit `0xF80..0xF8F` op selects `H-CanaryInWorkingSet`;
+computed-only pointers select `H-CanaryComputedOnly`; no targets plus
+live controls select `H-CanaryHostOnly`; missing controls select
+`H-CoverageFailure`. Do not treat `canary_ok=0` from a prior game run as
+this table.
 
 ## Exact commands
 
-    tools/oracle/build/rs64_oracle \
-      --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-      --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-      --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-      --secs 70 --hit-cap 64 \
-      --watch-write 0x0:0x800000 \
-      --watch-pc 0x80029E80,0x80029F30,0x80029EF4,0x80029EF0 \
-      --first-watch 0 --vi-trace \
-      --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-      > scratch/agent/oracle_s2153_ai_busy_return.log 2>&1
+    python3 - <<'PY'
+    from pathlib import Path
+    p = Path('build/factor5_ucode/factor5_ucode_b_recompiled.c')
+    text = p.read_text()
+    print('bytes', p.stat().st_size, 'L_1328', 'L_1328:' in text)
+    PY
 
-If the first oracle run saturates `--hit-cap` before the PC watches
-count, rerun with `--detail-watch` on the four PC watches after the
-whole-RDRAM threshold, following the s2121/s2134/s2152 recipe. Counts
-and `exec-prev` remain the discriminator even when `[hit]` lines go
-silent. Do not change `osAiGetStatus_recomp` or `osAiSetNextBuffer_recomp`.
+    rg -n 'L_1328|rs64_audio_image_break|0x348|0xF80|0x0F80|RSP_MEM_.*0xF[89ABab]|dmem.*0xF[89ABab]' \
+      build/factor5_ucode/factor5_ucode_b_recompiled.c
+
+Write the classified rows to `scratch/agent/s2154_image_canary_table.txt`.
+Do not edit `rsp.cpp` canary prefill, `osAiSetNextBuffer_recomp`, or the
+default audio arm.

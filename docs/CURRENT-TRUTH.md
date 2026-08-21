@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2152
-(2026-08-21); behavioral and source evidence is current through s2152.
+authoritative for exact commands and probe rows. Maintained in Session 2153
+(2026-08-21); behavioral and source evidence is current through s2153.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -165,6 +165,21 @@ This file is intentionally compact. The s2080–s2108 archive is in
   Do not change `osAiGetStatus_recomp`; it is not a jal target. The live
   host shortcut is `osAiSetNextBuffer_recomp` skipping that busy check.
   Table: `scratch/agent/s2152_ai_status_table.txt`. No runtime change.
+  s2153 then closed the reject/success half: see below.
+- The s2153 retail-oracle busy-return census passed whole-RDRAM `10000`,
+  title `1024` (origins `0x00790800`/`0x00790400`), and hangar
+  `512 @ 0x006AB400`. `osAiSetNextBuffer`, `__osAiDeviceBusy`, and
+  success PC `0x80029EF4` each executed `7983` times (1:1:1); reject PC
+  `0x80029EF0` executed `0` times. Success+reject partitions set-next
+  exactly. A taken reject would skip `0x80029EF4`, so the partition is
+  independent of delay-slot watch silence. Generated
+  `runAiAudioStreamPlaybackLoop` ignores v0 at both jals (`0x8008EE08`,
+  `0x8008EE84`). This selects `H-BusyAlwaysClear` at the covered retail
+  route and rejects `H-BusySometimesFull`, `H-BusyReturnUnmapped`, and
+  `H-CoverageFailure`. Always-queue return-0 is observationally
+  equivalent here; do not change `osAiSetNextBuffer_recomp` (host SDL
+  fullness is not the N64 AI FIFO). Table:
+  `scratch/agent/s2153_ai_busy_return_table.txt`. No runtime change.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -449,17 +464,17 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 A13 busy-return polarity.** s2152 closed the presence/execution
-   half: retail polls AI status only via `__osAiDeviceBusy` inside
-   `osAiSetNextBuffer` (1:1 with `7958` executions); named
-   `osAiGetStatus` is not a jal target. Do not change
-   `osAiGetStatus_recomp`. The next unit is one retail-oracle census of
-   the set-next reject PC `0x80029EF0` (`li v0,-1`) versus the success
-   PC `0x80029EF4` (`jal osVirtualToPhysical`), with whole-RDRAM plus
-   `osAiSetNextBuffer`/`__osAiDeviceBusy` as same-run controls. That
-   split decides whether `osAiSetNextBuffer_recomp`'s skipped busy check
-   is observationally equivalent or dropped FIFO-full backpressure. No
-   host-shortcut, default-arm, task ABI, or output-route change.
+1. **M5 A1 image canary span.** s2153 closed A13 busy-return polarity at
+   the covered retail route as `H-BusyAlwaysClear`: reject PC `0`,
+   success = set-next = busy = `7983`, and both generated jals ignore
+   v0. Do not change `osAiGetStatus_recomp` or `osAiSetNextBuffer_recomp`.
+   The remaining A1 default-arm blocker is `canary_ok=0` on the
+   legitimate `break 0`/`Broke` edge. Next unit is one host-only
+   generated census of `factor5_ucode_b` DMEM destinations in
+   `0xF80..0xFBF` against the host reserved-gap canary, with the known
+   `0x1328` break and stage-3 `field348+0x100` DMA as same-table
+   controls. No canary-prefill, task-exit, default-arm, or output-route
+   change.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
@@ -553,8 +568,11 @@ executed retail `osAiSetNextBuffer` `8,556` times. This selects
 explanation. It is one independent source; the subsequent s2133 port
 comparison supplied the separate PCM source/consumer and host-callback line.
 s2152 then showed that retail AI-status polling is `__osAiDeviceBusy`
-inside `osAiSetNextBuffer`, not a named `osAiGetStatus` jal. No
-AI-status shortcut, task ABI, or default-arm change follows.
+inside `osAiSetNextBuffer`, not a named `osAiGetStatus` jal. s2153
+then selected `H-BusyAlwaysClear` at the covered title/hangar route:
+success PC `0x80029EF4` matched set-next/busy `7983` times and reject
+PC `0x80029EF0` stayed at zero; the generated caller ignores the
+return. No AI-status shortcut, task ABI, or default-arm change follows.
 
 The s2133 same-build port comparison supplied the missing nonzero host-boundary
 line. Both arms reached the target phases with positive controls; the image
@@ -826,7 +844,11 @@ rows for type-0 at 16000 Hz and type 4. s2152 then selected
 `H-BusyIsThePoll`: whole-RDRAM `10000`, title `1024`, hangar
 `512 @ 0x006AB400`, and 1:1 `7958` executions of
 `osAiSetNextBuffer`/`__osAiDeviceBusy`, with named `osAiGetStatus`
-absent as a jal target. No runtime or default-arm change follows.
+absent as a jal target. s2153 then selected `H-BusyAlwaysClear` on
+the same covered route: whole-RDRAM `10000`, title `1024`, hangar
+`512 @ 0x006AB400`, success/set-next/busy `7983`, reject `0`, and
+both generated jals ignore v0. No runtime or default-arm change
+follows.
 
 ## Method and safety rules
 
