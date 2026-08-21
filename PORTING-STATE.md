@@ -101688,3 +101688,54 @@ record (`last-guest-pc=0x800290d4`) remains a runtime-risk note.
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only moved a generated symbol mapping and compared ELF
 and generated names.
+
+## Session 2144 (2026-08-21) — repaired the object-pool symbol mapping
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `50,016` bytes, so this was not a
+maintenance iteration. The last-15 session-title check was not an all-sweep
+run, so the bounded generated-symbol unit remained eligible. Soak-queue
+intake was empty. The prescribed unit was a no-edit versus two-line source
+mapping comparison for `func_800EC110` -> `allocObjectPoolNode`;
+no game run, runtime change, audio, task, guard, or mitigation behavior was
+involved.
+
+The no-edit make-ELF/N64Recomp/fixup sequence completed successfully and left
+the placeholder in the generated prototype, definition, overlay entry, and
+ELF. The baseline ELF row was `.ovl.mission`, start `0x800EC110`, size
+`0x278`, ending at unchanged `unlinkAndFreeChildNpcNode`
+`0x800EC388`; `allocObjectPoolNode` was absent from the ELF.
+The leftover `fake_func_800EC10C` at `0x800EC10C` size `0x4` was unchanged.
+That refutes `H-RegenerationStale` without a boundary conflict. The
+prescribed two-line source move then removed the human mapping from
+`main_overlay.txt` and renamed the single `mission_overlay.txt` entry. The
+second make-ELF/N64Recomp/fixup/CMake sequence completed successfully and
+linked `RogueSquadron64Recomp`.
+
+The treatment table showed one global ELF function named
+`allocObjectPoolNode` in `.ovl.mission` at `0x800EC110`, size
+`0x278`, ending at unchanged `0x800EC388`. The generated prototype,
+definition, and overlay entry used the human name; the only generated
+caller, inside `createAndInitObject` at `funcs_40.c:220`
+(`jal 0x800EC110`), also resolved to it. Zero leftover `func_800EC110`
+remained in the generated tree. Adjacent leftover `fake_func_800EC10C` and
+`unlinkAndFreeChildNpcNode` were unchanged. Baseline and treatment
+rows are in `s2144_baseline_table.txt` and `s2144_treatment_table.txt`. This
+selects `H-MissionMapping` and finds no static boundary or caller conflict.
+The s415 `m4_known_bad.txt` relocation warning remains a runtime-risk
+record, not evidence of a static conflict. No game soak was run: the
+source/ELF/generated boundary table was the work-unit discriminator. No
+runtime, mitigation, or task behavior changed.
+
+The next sweep lead is `func_800EC6F0` -> `tickCraftMountedAnimationEffect`;
+its human mapping is currently in `main_overlay.txt` while `mission_overlay.txt`
+still has the placeholder, so the next unit must repeat the source/ELF/boundary
+and caller collision check before editing. The leftover `fake_func_800EC6EC`
+at `0x800EC6EC` size `0x4` is adjacent and must stay untouched. The s415
+`m4_known_bad.txt` record (`last-guest-pc=0x800290d4`) remains a runtime-risk
+note.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only moved a generated symbol mapping and compared ELF
+and generated names.
