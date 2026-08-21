@@ -1,4 +1,4 @@
-# NEXT work unit (s2127) — phase-repaired M5 drain in-loop tick A/B
+# NEXT work unit (s2128) — renderer-recovery M5 drain in-loop tick A/B
 
 HYPOTHESIS-ID: m5-drain-inloop-tick-ab
 
@@ -10,9 +10,12 @@ recipe below, which keeps capturing after the title gate and sends the same
 phase-relative navigation keys to both arms. The only treatment difference is
 `ROGUESQ_DRAIN_INLOOP_TICK=0`; the control leaves it unset/default-on.
 
-The s2126 `run_mission_keys.sh` pair and its fixed treatment retry both failed
-at VI 640, so this is a coverage repair. Do not interpret any treatment null
-unless both arms reach title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`.
+The s2126 pair failed treatment coverage at VI 640; s2127 reversed the
+coverage failure: tick-off reached title/hangar, while the default-tick
+control crashed in RT64 `fullSync`/Metal barriers at VI 640 with last guest PC
+`0x8000834c`. This is a renderer-recovery retry of the same work unit. Do not
+interpret any arm split unless both arms reach title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`.
 
 ## Competing hypotheses and discriminator
 
@@ -40,9 +43,9 @@ mitigation is authorized by any outcome.
     cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
     cmake --build build --config Debug --target RogueSquadron64Recomp
 
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_WAITMUSYX_SPIN2=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_M5_POSTWAIT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 25:start 40:start 60:a 72:start 73:a' zsh tools/probe.sh scratch/agent/s2127_drain_tick_on 180 1 > scratch/agent/s2127_drain_tick_on_driver.log 2>&1 &
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_WAITMUSYX_SPIN2=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_M5_POSTWAIT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 25:start 40:start 60:a 72:start 73:a' zsh tools/probe.sh scratch/agent/s2128_drain_tick_on 180 1 > scratch/agent/s2128_drain_tick_on_driver.log 2>&1 &
     ON_PID=$!
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_WAITMUSYX_SPIN2=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_M5_POSTWAIT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_DRAIN_INLOOP_TICK=0 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 25:start 40:start 60:a 72:start 73:a' zsh tools/probe.sh scratch/agent/s2127_drain_tick_off 180 1 > scratch/agent/s2127_drain_tick_off_driver.log 2>&1 &
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_WAITMUSYX_SPIN2=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_M5_POSTWAIT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_DRAIN_INLOOP_TICK=0 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 25:start 40:start 60:a 72:start 73:a' zsh tools/probe.sh scratch/agent/s2128_drain_tick_off 180 1 > scratch/agent/s2128_drain_tick_off_driver.log 2>&1 &
     OFF_PID=$!
     wait $ON_PID; ON_RC=$?
     wait $OFF_PID; OFF_RC=$?
@@ -50,4 +53,4 @@ mitigation is authorized by any outcome.
 
 Inspect only bounded rows, never whole logs:
 
-    rg -n '\[phase\]|\[lle task\]|\[audtask-dispatch\]|\[audio-drain-(enter|heartbeat|exit)\]|\[drain-(timeout|forced-idle|return)\]|\[m5-(route-state|postwait|caller-edge)|\[waitmusyx-spin2-arm\]|\[slot-ret-caller\]|\[waitforslot-guard-fire\]|\[CRASH\]|\[ABORT\]' scratch/agent/s2127_drain_tick_on/run.log scratch/agent/s2127_drain_tick_off/run.log | tail -300
+    rg -n '\[phase\]|\[lle task\]|\[audtask-dispatch\]|\[audio-drain-(enter|heartbeat|exit)\]|\[drain-(timeout|forced-idle|return)\]|\[m5-(route-state|postwait|caller-edge)|\[waitmusyx-spin2-arm\]|\[slot-ret-caller\]|\[waitforslot-guard-fire\]|\[CRASH\]|\[ABORT\]' scratch/agent/s2128_drain_tick_on/run.log scratch/agent/s2128_drain_tick_off/run.log | tail -300

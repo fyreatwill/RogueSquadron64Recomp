@@ -101017,3 +101017,35 @@ A/B using the exact recipe in `scratch/agent/NEXT.md`.
 
 ORIGIN: no mitigation or game-value machinery was added; the only treatment
 was the existing environment gate around the authored drain-tick injection.
+
+## Session 2127 (2026-08-21) — repeated drain tick A/B was coverage-limited
+
+HYPOTHESIS-ID: m5-drain-inloop-tick-ab
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `29,185` bytes, so this was not a
+maintenance iteration. The Debug target built successfully. The prescribed
+same-build A/B launched both forced-LLE arms concurrently with
+`ROGUESQ_SPIN_YIELD=1` and the full passive audio/route instrumentation. The
+default-tick control left the drain tick enabled; the treatment set
+`ROGUESQ_DRAIN_INLOOP_TICK=0`.
+
+Both arms passed positive controls. The control produced `523` LLE-task rows
+and `48` audio-dispatch rows, but its route stopped at VI 640 and crashed in
+the existing RT64 `fullSync` Metal barrier path, with last guest PC
+`0x8000834c`; it never reached title or hangar. The treatment produced
+`2407` LLE-task rows and `78` audio-dispatch rows, reached title VI `1024 @
+0x00790400` at 49.1s and hangar VI `512 @ 0x006AB400` at 77.3s, and emitted
+five drain entries with four clean `iters_this_call=1` exits before the
+existing `do_rom_read` crash at `0x80001B08`. Neither arm emitted a
+drain-timeout, forced-idle, or wait-for-slot guard row.
+
+Under the planned discriminator this selects `H-CoverageFailure` again. The
+target-phase treatment rows are not an A/B contract comparison because the
+control lacks target coverage. It does not select
+`H-DrainTickRequired`, `H-DrainTickIrrelevant`, or `H-WorkerStatusOwner`, and
+no audio, wait, task, status, guard, or renderer mitigation is authorized.
+The next unit is a renderer-recovery retry using the same phase-gated
+`tools/probe.sh` table.
+
+ORIGIN: no mitigation or game-value machinery was added; the only treatment
+was the existing environment gate around the authored drain-tick injection.
