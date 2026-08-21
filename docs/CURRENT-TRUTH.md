@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2127
-(2026-08-21); behavioral and source evidence is current through s2127.
+authoritative for exact commands and probe rows. Maintained in Session 2128
+(2026-08-21); behavioral and source evidence is current through s2128.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -222,35 +222,37 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `do_rom_read` crash at `0x80001B08`. This selects `H-CoverageFailure` again
   and supplies no drain-contract comparison; no audio, wait, task, or guard
   behavior changed.
+- The s2128 prescribed pair first proved stale: the built binary contained no
+  `ROGUESQ_DRAIN_INLOOP_TICK` gate. After the required make-ELF, N64Recomp,
+  fixup, and CMake regeneration, a narrow legacy-s1976 fixup gate was added
+  around the existing host tick injection and the pair was rerun. The fixed
+  control enabled the gate, passed LLE/audio controls, and reached title and
+  hangar before the existing `do_rom_read` crash at `0x80001B08`; tick-off
+  passed controls but stopped pre-target at VI 640 in the existing RT64
+  `fullSync`/Metal barrier family at `0x8000834c`. This is the third
+  consecutive `H-CoverageFailure` result for the drain-tick A/B and selects
+  no drain hypothesis. The drain thread is parked; no audio, wait, task,
+  renderer, or guard behavior changed.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 drain in-loop tick A/B — renderer-recovery retry.** The s2125
-   phase-repaired pump pair selected `H-PumpIrrelevant` only at the sampled
-   route and left the current pump, waits, and guards unchanged. The s2126
-   `run_mission_keys.sh` pair and its fixed `tools/probe.sh` retry both failed
-   treatment coverage at VI 640. In s2127 the tick-off treatment reached
-   title/hangar but the default-tick control crashed in RT64 at VI 640, so
-   the paired discriminator still selects no drain hypothesis. Re-run A10
-   with the bounded same-build `tools/probe.sh` recipe in
-   `scratch/agent/NEXT.md`, keeping audio and pump fixed and requiring both
-   arms to survive the renderer pre-target phase. Require title/hangar
-   controls, a named status writer, drain return/iteration, and worker/status
-   transitions in both arms before interpreting a split. A timeout,
-   pre-target crash, or forced-idle row is coverage/failure evidence, not a
-   successful contract.
-2. **Generated-symbol renaming sweep.** After the remaining M5 contract
-   steps are parked or closed, M5's port census selected
-   `H-PortKeyOnNormal` and leaves all audio guards unchanged. Resume the
-   bounded companion-to-generated symbol sweep with one provable metadata
-   rename per session; the next lead remains `func_80001354` ->
-   `runVideoFrameTick` at `0x80001354` if M5 does not select a pump outcome.
-   Check the exact name, boundaries, and callers before editing the TOML. If
-   the name is already synchronized, advance to the next unparked lead rather
-   than reopening parked entries.
+1. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
+   three consecutive coverage-only results under the same hypothesis; the
+   current renderer boundary supplies no new discriminator. The first sweep
+   lead, `func_80001354` -> `runVideoFrameTick`, is already synchronized in
+   the regenerated tree and is skipped. The next lead is
+   `func_800AD380` -> `computeTrackedObjectWorldAnchor` at `0x800AD380`.
+   Its human name is in `main_overlay.txt`, while the actual address belongs
+   to `.ovl.mission` and `mission_overlay.txt` still carries the placeholder.
+   Resolve that duplicate section mapping and regenerate one symbol only.
+2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
+   pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
+   supplied positive controls but failed to put both drain arms in the target
+   comparison; do not repeat the same recipe. Resume only with a genuinely
+   new renderer-recovery or ground-truth discriminator.
 3. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -314,6 +316,13 @@ controls remain silent. The raw `musyxSynthFrame` countdown reads show
 decrement activity in both arms but differ in total amount with route timing;
 they are not treated as direct seed/exit proof. This closes the pump's sampled
 route-admission question without changing the pump, wait, task ABI, or guards.
+
+The s2128 fixed drain-tick pair is the third coverage-only result for A10.
+The control enabled the gate and reached title/hangar; tick-off stopped at
+the pre-target VI-640 renderer barrier. The initial pair was invalid because
+the binary lacked the requested gate, so it was not used as evidence. The
+legacy fixup gate is instrumentation around the existing host tick injection,
+not a drain or game-value change. A10 is parked pending a new discriminator.
 
 ### M5 audio and guest gate
 
@@ -425,6 +434,11 @@ Detailed history and exact reasons are in `PROJECT-OVERVIEW.md` §§26 and
 - `0x8000B650` is a shared last-guest-PC breadcrumb, not evidence that retail
   executes the port's fill/wait function. The generated crosswalk and
   independent retail PC watch establish that scope only.
+- The first s2128 drain pair's apparent no-split result was believable because
+  the run recipe named an environment gate absent from the binary. Binary
+  strings and generated-source inspection caught that stale-build condition;
+  the regenerated fixed pair, not the first pair, is the evidence recorded
+  above.
 
 ## Evidence ledger summary
 
@@ -446,9 +460,10 @@ changing any guard. s2123 supplied the independent retail completion-wait
 line; s2124 supplied the first port pump A/B but failed target coverage, and
 s2125 supplied the phase-repaired target comparison that selected
 `H-PumpIrrelevant` at route scope. The pump, wait, task ABI, and guards remain
-unchanged; s2127 added another coverage-only drain-tick pair in which the
-default arm died in RT64 before the target gate while tick-off reached the
-target route. The next M5 unit is a renderer-recovery drain-tick comparison.
+unchanged; s2127 and s2128 added coverage-only drain-tick pairs, with s2128's
+repaired control reaching the target route while tick-off died in RT64 before
+it. The next unit is the bounded generated-symbol sweep, beginning after the
+already-synchronized `runVideoFrameTick` lead.
 
 ## Method and safety rules
 

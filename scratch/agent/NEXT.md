@@ -1,56 +1,73 @@
-# NEXT work unit (s2128) — renderer-recovery M5 drain in-loop tick A/B
+# NEXT work unit (s2129) — repair one generated-symbol section mapping
 
-HYPOTHESIS-ID: m5-drain-inloop-tick-ab
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Build once, then run both forced-LLE port arms concurrently with the current
-audio implementation and pump unchanged. Use the phase-gated `tools/probe.sh`
-recipe below, which keeps capturing after the title gate and sends the same
-phase-relative navigation keys to both arms. The only treatment difference is
-`ROGUESQ_DRAIN_INLOOP_TICK=0`; the control leaves it unset/default-on.
+Run the required sweep preflight, then make one bounded companion-symbol
+mapping correction for `0x800AD380`. The already-regenerated
+`func_80001354` lead is synchronized as `runVideoFrameTick`, so do not reopen
+it. The next lead is `func_800AD380` -> `computeTrackedObjectWorldAnchor`.
 
-The s2126 pair failed treatment coverage at VI 640; s2127 reversed the
-coverage failure: tick-off reached title/hangar, while the default-tick
-control crashed in RT64 `fullSync`/Metal barriers at VI 640 with last guest PC
-`0x8000834c`. This is a renderer-recovery retry of the same work unit. Do not
-interpret any arm split unless both arms reach title `1024 @ 0x00790400` and
-hangar `512 @ 0x006AB400`.
+The companion has the human name in `symbol_files/main_overlay.txt`, but
+`0x800AD380` is outside the main `.text` range and inside `.ovl.mission`;
+`symbol_files/mission_overlay.txt` still has the placeholder. Because
+`make_elf.py` keeps the first duplicate name and assigns sections from the
+source file, the likely correction is to remove the misplaced main-overlay
+entry and rename the mission-overlay entry. This is a symbol metadata change,
+not game logic or mitigation.
 
 ## Competing hypotheses and discriminator
 
-- `H-DrainTickRequired`: both arms pass controls and target phases, but tick-off
-  develops a drain timeout/forced-idle or lacks a clean return while control
-  returns with the named status transition.
-- `H-DrainTickIrrelevant`: both arms reach title/hangar with matching drain
-  entry/heartbeat/return/iteration and worker/status rows, with no timeout.
-- `H-WorkerStatusOwner`: both arms reach the drain, but split at the named
-  status-3 worker entry or status-zero store; writer and return rows identify
-  the owner independently of the injected tick.
-- `H-CoverageFailure`: either arm lacks positive LLE/audio controls or title/
-  hangar coverage; absent drain rows cannot distinguish the other hypotheses.
+- `H-MissionMapping`: the duplicate is the cause. Moving the human name to
+  `mission_overlay.txt` makes `computeTrackedObjectWorldAnchor` the emitted
+  function at `0x800AD380`, with the same overlay offset/size and callers.
+- `H-RegenerationStale`: the source mapping is already effective and the
+  generated placeholder is stale. A clean make-ELF/N64Recomp/fixup sequence
+  changes the generated name without editing symbol files.
+- `H-BoundaryOrCollision`: the companion name is wrong for this generated
+  function or another section owns the address. The regenerated ELF either
+  drops the human symbol or produces a boundary/duplicate conflict; leave the
+  placeholder and advance to the next candidate rather than inventing a name.
 
-The discriminator is one same-build, two-arm table keyed by VI width/origin:
-LLE/audio controls; title/hangar transitions; drain entry, heartbeat, return,
-iteration, timeout, and forced-idle rows; named worker entry/status-zero
-stores; slot/status transitions; and terminal outcome. Select a drain
-hypothesis only if both arms reach the target phases. A timeout, pre-target
-crash, or forced-idle row is failure evidence, not a successful contract. No
-mitigation is authorized by any outcome.
+The discriminating table is: source file and section for the address; ELF
+emission; generated definition/prototype/overlay entry; function start/end
+(`0x800AD380` through the next generated boundary); and every generated
+caller. Select `H-MissionMapping` only if the human symbol is emitted in
+`.ovl.mission`, the placeholder disappears at that address, boundaries remain
+unchanged, and all callers resolve to the human name. Select
+`H-RegenerationStale` only if regeneration alone makes the same table true.
+Any dropped symbol, changed boundary, or duplicate conflict selects
+`H-BoundaryOrCollision` and no rename is landed.
 
 ## Exact commands
 
     cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
+    grep -n '^## Session ' PORTING-STATE.md | tail -15
+    rg -n -C 3 'computeTrackedObjectWorldAnchor|func_800AD380|800AD380' ../rogue_squadron64/symbol_files ../N64Recomp/RecompiledFuncs/funcs_28.c ../N64Recomp/RecompiledFuncs/funcs.h ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
+
+If the preflight confirms the mapping above, use `apply_patch` to remove only
+the misplaced `computeTrackedObjectWorldAnchor = 0x800AD380` line from
+`../rogue_squadron64/symbol_files/main_overlay.txt` and change only the
+`func_800AD380 = 0x800AD380` entry in
+`../rogue_squadron64/symbol_files/mission_overlay.txt` to the human name.
+Then run the mandated regeneration order:
+
+    cd /Users/williambuckley/Documents/Tools/rogue_squadron64
+    python3 tools/make_elf.py
+    cd /Users/williambuckley/Documents/Tools/N64Recomp
+    ./build/N64Recomp rogue_squadron.toml
+    python3 fixup_game_funcs.py
+    cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
     cmake --build build --config Debug --target RogueSquadron64Recomp
 
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_WAITMUSYX_SPIN2=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_M5_POSTWAIT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 25:start 40:start 60:a 72:start 73:a' zsh tools/probe.sh scratch/agent/s2128_drain_tick_on 180 1 > scratch/agent/s2128_drain_tick_on_driver.log 2>&1 &
-    ON_PID=$!
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_WAITMUSYX_SPIN2=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_M5_POSTWAIT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_DRAIN_INLOOP_TICK=0 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 25:start 40:start 60:a 72:start 73:a' zsh tools/probe.sh scratch/agent/s2128_drain_tick_off 180 1 > scratch/agent/s2128_drain_tick_off_driver.log 2>&1 &
-    OFF_PID=$!
-    wait $ON_PID; ON_RC=$?
-    wait $OFF_PID; OFF_RC=$?
-    printf 'drain_tick_on_rc=%s drain_tick_off_rc=%s\n' "$ON_RC" "$OFF_RC"
+Inspect only the bounded result:
 
-Inspect only bounded rows, never whole logs:
+    rg -n -C 2 'computeTrackedObjectWorldAnchor|func_800AD380|0x800AD380' ../N64Recomp/RecompiledFuncs/funcs_28.c ../N64Recomp/RecompiledFuncs/funcs.h ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
+    git -C ../rogue_squadron64 diff --check -- symbol_files/main_overlay.txt symbol_files/mission_overlay.txt
+    git -C ../N64Recomp diff --check -- fixup_game_funcs.py
 
-    rg -n '\[phase\]|\[lle task\]|\[audtask-dispatch\]|\[audio-drain-(enter|heartbeat|exit)\]|\[drain-(timeout|forced-idle|return)\]|\[m5-(route-state|postwait|caller-edge)|\[waitmusyx-spin2-arm\]|\[slot-ret-caller\]|\[waitforslot-guard-fire\]|\[CRASH\]|\[ABORT\]' scratch/agent/s2128_drain_tick_on/run.log scratch/agent/s2128_drain_tick_off/run.log | tail -300
+Do not run a game soak: this work unit is complete when the source/ELF/
+generated boundary table selects one hypothesis. If the table does not select
+one, restore no files destructively; record the conflict and choose the next
+placeholder lead in the next ledger entry.

@@ -101018,6 +101018,52 @@ A/B using the exact recipe in `scratch/agent/NEXT.md`.
 ORIGIN: no mitigation or game-value machinery was added; the only treatment
 was the existing environment gate around the authored drain-tick injection.
 
+## Session 2128 (2026-08-21) — repaired stale drain gate, then pivoted to symbols
+
+HYPOTHESIS-ID: m5-drain-inloop-tick-ab
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `30,233` bytes, so this was not a
+maintenance iteration. The prescribed same-build drain-tick A/B was first
+unevaluable: binary-string inspection showed that the built executable did
+not contain `ROGUESQ_DRAIN_INLOOP_TICK` or `[drain-inloop-gate]`, and the
+generated `funcs_30.c` still had the unconditional legacy s1976 host tick.
+The apparent initial pair therefore was not used as evidence.
+
+The required regeneration order completed successfully: `make_elf.py`,
+N64Recomp, the normal game-function fixup, and CMake. The current generated
+tree is a legacy s1976 fixup block, so the later incremental s1993 matcher
+could not see its expected site. A narrow fallback was added to
+`../N64Recomp/fixup_game_funcs.py` to wrap that exact existing tick call in the
+requested environment gate. It applies only to the authored host injection;
+it does not alter a ROM store, game value, task ABI, or renderer behavior.
+
+The fixed paired recipe used the same forced-LLE/audio controls, phase gates,
+navigation keys, and SIGKILL watchdog in both arms. The default control
+contained the positive `[drain-inloop-gate] en=1` row, produced `2502` LLE
+task rows and `79` audio-dispatch rows, reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and produced five drain
+entries with four clean `iters_this_call=1` exits before the existing
+`do_rom_read` crash at last guest PC `0x80001b08`. The tick-off arm produced
+`515` LLE task rows and `48` audio-dispatch rows, but stopped at VI 640 before
+the gate/drain phase and crashed in the existing RT64 `fullSync`/Metal barrier
+family at last guest PC `0x8000834c`. Neither arm emitted a timeout,
+forced-idle, or wait-for-slot guard row.
+
+The positive controls and the gate-on row prove the fixed A/B was armed, but
+the target-phase table is still incomplete. This is the third consecutive
+coverage-only result for `m5-drain-inloop-tick-ab` (s2126–s2128), so the iron
+rule requires a pivot. It selects no drain hypothesis and rules out no audio,
+wait, worker-status, task, renderer, or guard explanation. The drain thread is
+parked; the next bounded unit is the generated-symbol sweep. Its first lead,
+`func_80001354` -> `runVideoFrameTick`, was already synchronized in the
+regenerated tree, so the next lead is `func_800AD380` ->
+`computeTrackedObjectWorldAnchor` after resolving the main/mission section
+duplicate.
+
+ORIGIN: the only code change was a fixup-script instrumentation gate around
+the pre-existing s1976 host tick injection; no mitigation or game-value
+machinery was added, and the gate's writer is the existing host injection.
+
 ## Session 2127 (2026-08-21) — repeated drain tick A/B was coverage-limited
 
 HYPOTHESIS-ID: m5-drain-inloop-tick-ab
