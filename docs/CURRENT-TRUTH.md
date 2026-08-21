@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2124
-(2026-08-21); behavioral and source evidence is current through s2124.
+authoritative for exact commands and probe rows. Maintained in Session 2125
+(2026-08-21); behavioral and source evidence is current through s2125.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -190,23 +190,35 @@ This file is intentionally compact. The s2080–s2108 archive is in
   title. No target-phase countdown, spin-2, or pump-stall rows were present
   for pump-off. This selects `H-CoverageFailure`; it does not select a pump
   hypothesis or authorize a wait/guard change.
+- The s2125 phase-repaired pump A/B reached title `1024 @ 0x00790400` and
+  hangar `512 @ 0x006AB400` in both arms. Positive controls fired in both
+  arms (`2845`/`3552` LLE tasks and `85`/`94` audio dispatch rows for
+  pump-on/off). At the target phase both arms emitted the same ordered wait
+  edges through `wait-post-any-slot`, audio-drain enter/exit with one
+  iteration, and the same `waitmusyx-spin2-arm n=0 val=1` before the
+  existing `do_rom_read` crash (`last guest PC 0x80001B08`). Neither arm
+  emitted `audio-wait-pump-stall` or `waitforslot-guard-fire`. This refutes
+  `H-PumpRequired` and `H-SecondFlagOwner` at the sampled route and selects
+  `H-PumpIrrelevant` only for route admission/target wait behavior; the
+  phase-12 ordered contract is matched, but no direct countdown seed/exit
+  row was emitted, so no wait or task semantic change is authorized.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 port completion-wait A/B with repaired phase coverage.** The s2123
-   retail census selected `H-RetailWaitContract`, but s2124's port pair was
-   `H-CoverageFailure`: pump-on reached the target route while pump-off died
-   at 640 before any target wait rows. Re-run one same-build, phase-keyed
-   pair with `ROGUESQ_SPIN_YIELD=1` in both arms, holding the current audio
-   implementation fixed: pump-on versus `ROGUESQ_AUDIO_WAIT_NOPUMP=1`.
-   Require title and hangar controls in both arms before comparing countdown
-   seed/exit, second-spin activity, worker/status transitions, drain/synth
-   rows, and guard fires. Do not change a wait or guard until this
-   discriminator is complete.
-2. **Generated-symbol renaming sweep.** M5's port census selected
+1. **M5 drain in-loop tick A/B.** The s2125 phase-repaired pump pair
+   selected `H-PumpIrrelevant` only at the sampled route and left the
+   current pump, waits, and guards unchanged. Run the next A10 comparison
+   with `ROGUESQ_SPIN_YIELD=1` in both arms, holding the audio
+   implementation fixed: default drain tick versus
+   `ROGUESQ_DRAIN_INLOOP_TICK=0`. Require title/hangar controls, a named
+   status writer, drain return/iteration, and worker/status transitions in
+   both arms before interpreting a split. A timeout or forced-idle row is
+   failure evidence, not a successful contract.
+2. **Generated-symbol renaming sweep.** After the remaining M5 contract
+   steps are parked or closed, M5's port census selected
    `H-PortKeyOnNormal` and leaves all audio guards unchanged. Resume the
    bounded companion-to-generated symbol sweep with one provable metadata
    rename per session; the next lead remains `func_80001354` ->
@@ -269,6 +281,14 @@ worker/status memory activity, and named wait/service/shutdown execution all
 occur after the positive control and through the hangar phase. The port-side
 pump-on/off comparison is still required; this result is not permission to
 remove the current pump, wait timeout, or status guard.
+
+The s2125 phase-repaired port pump pair supplies the missing target coverage
+from s2124. Both arms reach the same title/hangar route and the same phase-12
+wait/drain/second-spin sequence, while pump-stall and wait-for-slot guard
+controls remain silent. The raw `musyxSynthFrame` countdown reads show
+decrement activity in both arms but differ in total amount with route timing;
+they are not treated as direct seed/exit proof. This closes the pump's sampled
+route-admission question without changing the pump, wait, task ABI, or guards.
 
 ### M5 audio and guest gate
 
@@ -398,8 +418,10 @@ the causal writer and reversed/suppressing gate polarity at the sampled
 route; s2121 supplied single-source retail zero-hit evidence for the eight-site
 key-on class; and s2122 supplied the independent port normal-path line without
 changing any guard. s2123 supplied the independent retail completion-wait
-line; s2124 supplied the first port pump A/B but failed target coverage,
-leaving the phase-repaired pump/guard A/B as the next M5 discriminator.
+line; s2124 supplied the first port pump A/B but failed target coverage, and
+s2125 supplied the phase-repaired target comparison that selected
+`H-PumpIrrelevant` at route scope. The pump, wait, task ABI, and guards remain
+unchanged; the next M5 unit is the drain tick comparison.
 
 ## Method and safety rules
 

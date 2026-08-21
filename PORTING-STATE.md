@@ -100938,3 +100938,43 @@ Run the phase-repaired port pump A/B in `scratch/agent/NEXT.md`, keeping the
 current audio implementation fixed and adding `ROGUESQ_SPIN_YIELD=1` to both
 arms before comparing the shipped pump-on path against
 `ROGUESQ_AUDIO_WAIT_NOPUMP=1`.
+
+## Session 2125 (2026-08-21) — ran the phase-repaired port pump A/B
+
+The planned M5 same-build A/B built successfully and launched both port arms
+concurrently with `ROGUESQ_SPIN_YIELD=1`; the control left
+`ROGUESQ_AUDIO_WAIT_NOPUMP` unset and the treatment set it to `1`. Positive
+controls fired in both runs: the pump-on log had `2845` LLE tasks and `85`
+audio-dispatch rows; pump-off had `3552` LLE tasks and `94` audio-dispatch
+rows. The driver phase gate reached title `1024 @ 0x00790400` at 49.7s and
+hangar `512 @ 0x006AB400` at 79.2s for pump-on, and title at 47.7s and hangar
+at 77.0s for pump-off.
+
+The target-phase guest tables matched in shape. Each arm emitted the ordered
+phase-12 wait edges `wait-entry`, `wait-pre-tick`, `tick-entry`,
+`wait-post-tick`, `wait-pre-any-slot`, and `wait-post-any-slot`; each target
+audio-drain call returned with `iters_this_call=1`. Both then reached the
+same `[waitmusyx-spin2-arm] n=0 val=1` row before terminating in the existing
+`do_rom_read` crash family with last guest PC `0x80001B08`. Neither log had an
+`audio-wait-pump-stall` or `waitforslot-guard-fire` row. The raw
+`musyxSynthFrame` countdown reads were active in both arms, with phase-10
+first/last values `0xEF78 -> 0xED8B` (on) and `0xEF8E -> 0xEE3D` (off); the
+different decrement span is timing/workload evidence, not a direct seed/exit
+measurement.
+
+This refutes `H-PumpRequired` and `H-SecondFlagOwner` at the sampled route and
+selects `H-PumpIrrelevant` only for route admission and the observed target
+wait behavior. The explicit countdown seed/exit edge did not print in either
+arm, so this does not establish the full wait ABI and authorizes no pump,
+wait, task-field, timeout, or guard change. The s2124 coverage-only result is
+superseded at this recipe scope; the terminal `do_rom_read` crash remains
+unrelated to the pump comparison.
+
+ORIGIN: same-build phase-gated port logs; no corruption value, writer,
+wait, task field, queue, timeout, guard, or mitigation was modified.
+
+### Next
+
+Run the A10 drain in-loop tick A/B from `scratch/agent/NEXT.md`, keeping the
+current audio implementation and pump fixed while comparing the default
+drain tick against `ROGUESQ_DRAIN_INLOOP_TICK=0`.
