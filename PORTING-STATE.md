@@ -101124,3 +101124,38 @@ discriminator; no runtime, mitigation, or task behavior changed. The next
 lead is `func_800AE3F0` -> `initPlayerCraftTrailBuffers`, whose source files
 carry prior relocation warnings and therefore requires a fresh collision
 check before any rename.
+
+## Session 2130 (2026-08-21) — classified the next generated-symbol collision
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `32,157` bytes, so this was not a
+maintenance iteration. The required sweep preflight found the next duplicate
+mapping: `main_overlay.txt` named `initPlayerCraftTrailBuffers` at
+`0x800AE3F0`, while `mission_overlay.txt` emitted `func_800AE3F0`. The source
+also preserved s407's warning that relocating this one symbol had previously
+reproduced a byte-identical `playerXwingInit+2068` crash at guest PC
+`0x80011088`.
+
+The mandated no-edit make-ELF/N64Recomp/fixup sequence completed successfully
+and kept the placeholder in the generated prototype, definition, overlay
+entry, and ELF, refuting `H-RegenerationStale`. The only requested source
+change then removed the human mapping from `main_overlay.txt` and renamed the
+single `mission_overlay.txt` entry. The second make-ELF/N64Recomp/fixup/CMake
+sequence completed successfully.
+
+The final bounded table showed one global ELF function named
+`initPlayerCraftTrailBuffers` in `.ovl.mission` at `0x800AE3F0`, size
+`0x1D4`, ending at unchanged boundary `0x800AE5C4`. The generated prototype,
+definition, and overlay entry used the human name; the only generated caller
+at `funcs_30.c:15398` also resolved to it. Symbol-file and fixup diff checks
+were clean. This selects `H-MissionMapping` and finds no static
+boundary/caller conflict, while retaining the s407 relocation warning as a
+runtime-risk record rather than treating it as refuted. No game soak was run:
+the source/ELF/generated boundary table was the work-unit discriminator. No
+runtime, mitigation, or task behavior changed.
+
+The next sweep lead is `func_800C41B0` -> `plotRadarBlipColumn`; its human
+mapping is currently in `main_overlay.txt` while `mission_overlay.txt` still
+has the placeholder, so the next unit must repeat the source/ELF/boundary and
+caller collision check before editing.

@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2129
-(2026-08-21); behavioral and source evidence is current through s2129.
+authoritative for exact commands and probe rows. Maintained in Session 2130
+(2026-08-21); behavioral and source evidence is current through s2130.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -241,6 +241,15 @@ This file is intentionally compact. The s2080–s2108 archive is in
   definition, overlay entry, and three callers all resolving to the human
   name. The full make-ELF/N64Recomp/fixup/CMake pipeline succeeded; no game
   run or runtime behavior changed.
+- The s2130 bounded generated-symbol unit selected `H-MissionMapping` for
+  `0x800AE3F0`: the no-edit regeneration left the placeholder in place, while
+  the prescribed two-line mapping move caused the ELF to emit
+  `initPlayerCraftTrailBuffers` in `.ovl.mission` at the same start, size
+  `0x1D4`, and end boundary `0x800AE5C4`. The generated prototype,
+  definition, overlay entry, and only generated caller all used the human
+  name. The prior s407 live-crash warning remains a runtime-risk record; this
+  static table found no boundary or caller conflict. The full pipeline and
+  diff checks succeeded; no game run or runtime behavior changed.
 
 ## Active backlog
 
@@ -254,11 +263,13 @@ work items.
    the regenerated tree and was skipped. s2129 resolved the next lead,
    `func_800AD380` -> `computeTrackedObjectWorldAnchor`, by moving the human
    mapping to `mission_overlay.txt`; the ELF and generated boundary table
-   selected `H-MissionMapping`. The next lead is
-   `func_800AE3F0` -> `initPlayerCraftTrailBuffers` at `0x800AE3F0`.
-   Its source files contain prior s407/s412 warnings about relocating this
-   symbol, so the next unit must test the section/boundary collision before
-   applying the same edit.
+   selected `H-MissionMapping`. s2130 resolved the next lead,
+   `func_800AE3F0` -> `initPlayerCraftTrailBuffers`, with the same section and
+   unchanged boundary table; its prior s407 relocation warning remains a
+   runtime-risk record. The next lead is `func_800C41B0` ->
+   `plotRadarBlipColumn` at `0x800C41B0`; its human mapping is in
+   `main_overlay.txt` while the mission-overlay source still carries the
+   placeholder, so repeat the collision check before editing.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
@@ -396,10 +407,13 @@ the old divergence impossible in every recipe.
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
 class, dormant slot-dispatch census, and generated-symbol synchronization
-sweep are closed at their stated scopes. M3 resumes only as an idiom-class
-audit or with a new discriminator. M4 accumulator/beam evidence rules out
-the old shade-lane theory but is not pixel ground truth. The remaining
-generated placeholders are semantic holds or intentional non-sync entries.
+sweep are closed at their stated scopes. s2130's static table confirmed the
+`0x800AE3F0` mission mapping despite the old s407 runtime warning; that
+warning remains a reason to validate future relocations, not evidence of a
+static boundary conflict. M3 resumes only as an idiom-class audit or with a
+new discriminator. M4 accumulator/beam evidence rules out the old shade-lane
+theory but is not pixel ground truth. The remaining generated placeholders are
+semantic holds or intentional non-sync entries.
 
 ## Superseded conclusions
 
@@ -475,9 +489,11 @@ unchanged; s2127 and s2128 added coverage-only drain-tick pairs, with s2128's
 repaired control reaching the target route while tick-off died in RT64 before
 it. s2129 then selected the mission-overlay mapping for
 `computeTrackedObjectWorldAnchor` with unchanged generated boundaries. The
-next unit is the bounded generated-symbol sweep for
+`computeTrackedObjectWorldAnchor` with unchanged generated boundaries. s2130
+selected the static mission mapping for
 `func_800AE3F0`/`initPlayerCraftTrailBuffers`, with its prior relocation
-warnings treated as an explicit collision hypothesis.
+warning retained as an explicit runtime-risk record. The next lead is
+`func_800C41B0`/`plotRadarBlipColumn`.
 
 ## Method and safety rules
 
