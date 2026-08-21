@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2121
-(2026-08-21); behavioral and source evidence is current through s2121.
+authoritative for exact commands and probe rows. Maintained in Session 2122
+(2026-08-21); behavioral and source evidence is current through s2122.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -148,21 +148,33 @@ This file is intentionally compact. The s2080–s2108 archive is in
   initial prescribed run was unevaluable because its global 200-hit cap was
   exhausted by boot writes; the fixed same-control run enabled detail logging
   for all eight PC watches after the positive-control threshold.
+- The s2122 port-side key-on census passed the same positive route controls
+  (`2841` LLE tasks, `84` audio dispatches, title `1024 @ 0x00790400`, and
+  hangar `512 @ 0x006AB400`). In hangar phase 10, five entries reached the
+  normal tail five times; each entry took four nonzero divide witnesses with
+  divisor `0xC0`, and none of the eight early-return guard sites fired. Two
+  qualifying slot transitions at `0x800909F4` were `0x65 -> 0x00` and
+  `0x78 -> 0x02`. The first emitted table row is the phase-control row before
+  the first entry; the subsequent event rows are the measured counts. This
+  selects `H-PortKeyOnNormal` for the sampled port route and rejects the
+  port-dead, guard-hit, and invalid-divisor alternatives without authorizing
+  any guard change. The run later hit the existing unaligned `do_rom_read`
+  assertion after target coverage; that terminal crash is unrelated to this
+  contract result.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 port-side key-on contract census.** The s2121 retail oracle passed
-   whole-RDRAM, title, and hangar controls but saw zero executions at all eight
-   key-on early-return PCs. This single-source result parks the retail class
-   as `H-KeyOnRetailDead` at that route; it leaves every port guard in place.
-   The next bounded step is one port run instrumenting all eight entry/guard/
-   normal-tail sites, operand/divisor values, and slot status transitions in a
-   single phase-keyed table. A positive port control with no entries parks the
-   class; guard hits or normal tails select the exact port-only contract to
-   audit. Do not remove or rewrite any key-on guard.
+1. **Generated-symbol renaming sweep.** M5's port census selected
+   `H-PortKeyOnNormal` and leaves all audio guards unchanged. Resume the
+   bounded companion-to-generated symbol sweep with one provable metadata
+   rename per session; the next lead is `func_80001354` -> `runVideoFrameTick`
+   at `0x80001354`, whose companion mapping and generated definition already
+   agree. Check the exact name, boundaries, and callers before editing the
+   TOML. If the name is already synchronized, advance to the next unparked
+   lead rather than reopening parked entries.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -205,6 +217,12 @@ The retail oracle independently observes the same status-table cycle and the
 `0x8009B7EC` writer. It does not execute the port crash labels
 `0x8000B650`/`0x80095D54`; that is a PC-scope boundary, not permission to
 change the port wait or guard behavior.
+
+The s2122 port key-on census is now a normal-path contract at the sampled
+hangar phase: the generated function enters, performs four valid `0xC0`
+divides, and reaches its normal tail with no early-return guard hit. The
+qualified slot transitions are legitimate `musyxRenderVoiceSamples` writes;
+this result does not alter the audio stub or remove any defensive guard.
 
 ### M5 audio and guest gate
 
@@ -331,8 +349,9 @@ paired coverage result added no ABI selection; s2116's four-arm table added
 coverage selection only; s2118 closed the sampled C88=0 contract boundary;
 s2119 supplied retail mixed-writer evidence; s2120's paired port arm selected
 the causal writer and reversed/suppressing gate polarity at the sampled
-route; and s2121 supplied single-source retail zero-hit evidence for the
-eight-site key-on class without changing any guard.
+route; s2121 supplied single-source retail zero-hit evidence for the eight-site
+key-on class; and s2122 supplied the independent port normal-path line without
+changing any guard.
 
 ## Method and safety rules
 

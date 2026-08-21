@@ -100811,3 +100811,43 @@ rewrite. The next work unit is the port-side whole-class census in
 
 Run the phase-keyed port-side eight-site key-on contract census in
 `scratch/agent/NEXT.md`; keep all eight early-return guards unchanged.
+
+## Session 2122 (2026-08-21) — completed the port-side key-on contract census
+
+Added the phase-keyed `s2122` census to the external
+`N64Recomp/fixup_game_funcs.py`, regenerated the MIPS ELF and generated C,
+and built the Debug executable successfully. The diagnostic covered all eight
+`musyxKeyOnVoice` early-return PCs, the normal tail, the four divide operands,
+and five generated audio-slot `+0` stores. Its source mapping was checked
+before regeneration: every divide uses generated `$v0`/`$a0` as numerator and
+divisor, and the slot destinations were `0x800909F4`, `0x80092158`,
+`0x8009235C`, `0x80092470`, and `0x8009250C`.
+
+Ran the single qualified capture
+`s73_post_a_scene/run_mission_keys.sh s2122_keyon_port 30 12` with the opt-in
+audio arm, all logs, PCM sanity, and the census enabled. Positive controls
+fired: `2841` LLE tasks and `84` audio dispatches. The route reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. In hangar phase 10 the
+key-on event rows recorded five entries and five normal-tail returns. Each
+entry took the four nonzero divide paths with numerator values
+`0x9A870000`, `0x8F930000`, `0x90A00000`, and `0x8B9B0000`, each with divisor
+`0xC0`; none of the eight guard sites fired. The slot witness recorded
+legitimate `musyxRenderVoiceSamples` transitions `0x65 -> 0x00` and
+`0x78 -> 0x02` at `0x800909F4`. The first table row was emitted before the
+first entry, so the event rows—not that initialization row—are the aggregate
+classification.
+
+This selects `H-PortKeyOnNormal` for the sampled port route and rejects the
+port-dead, guard-hit, and invalid-divisor alternatives. It rules out neither
+the broader retail/port discrepancy nor any future audio contract question,
+and it authorizes no guard removal. The process later hit the existing
+unaligned `do_rom_read` assertion after target coverage; that terminal crash
+is not evidence against the key-on result. No mitigation or runtime behavior
+change was added. The next work unit is the generated-symbol sweep lead
+`func_80001354` -> `runVideoFrameTick`.
+
+### Next
+
+Resume the generated-symbol renaming sweep in `scratch/agent/NEXT.md` with
+one companion-proven, bounded metadata rename; keep the parked holdout list
+closed.
