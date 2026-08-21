@@ -1,54 +1,69 @@
-# NEXT work unit (s2161) — retail wait-slot count-byte ground truth
+# NEXT work unit (s2162) — S32-address the unsigned PATCH MEM_BU sites
 
 HYPOTHESIS-ID: m5-image-wait-slot-sigsegv
 
 ## Work unit
 
-s2160 selected `H-RouteRegress` and reverted A1 default-on. Unset and
-`ROGUESQ_AUDIO_UCODE=1` both SIGSEGV in `waitForAnyAudioSlot+1060` from
-`menuOverlayInit` at 640 `0x0066A500` (`si_addr=0x400141ad3`, host XOR-3
-of guest `D_80141AD0`). Stub `=0` returns from that wait and reaches
-title/hangar. Do not add a wait/slot guard, retry default-on, move the
-canary, or change `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
+s2161 selected `H-RetailLoadsCount`. Guest `D_80141AD0` is a legitimate
+clamped config byte from `setDisplayMode` `0x8008EA44` and
+`reapplyDisplayMode` `0x8008EB8C`. The port SIGSEGV at
+`waitForAnyAudioSlot+1060` is the s2045 loop PATCH
+`MEM_BU(0X1AD0, 0X80140000)` at `funcs_15.c:7603`: the unsigned KSEG0
+constant zero-extends, so the host address is `rdram+4GB+0x141AD3`
+(s2160 `x0=0x300000000`, `si_addr=0x400141ad3`). Image
+`anyAudioSlotActive` is `path=gate0` and does not load the byte;
+original wait MIPS does not either. Stub evaluates the same PATCH and
+returns (`c=0`).
 
-Ask retail before another port instrument. Guest `func_800668B0`
-(`waitForAnyAudioSlot`) is 0x68 bytes; the jal site is `0x800C5CF4`.
+Do not add a wait/slot guard, retry default-on, move the canary, or
+change `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
+
+Replace the unsigned form with the already-correct
+`MEM_BU(0X1AD0, S32(0X8014 << 16))` in `fixup_game_funcs.py` and the
+live generated files. This is probe addressing, not a skip/allow of a
+guest defect.
 
 ## Competing hypotheses and discriminator
 
-- `H-RetailLoadsCount`: retail executes `0x800668B0` during boot and
-  reads physical `0x141AD0` from that PC (or a jal it makes). The count
-  byte is legitimate; the port crash is translation or walk bounds.
-- `H-RetailNeverLoads`: whole-RDRAM control fires and `0x800668B0`
-  executes, but the `0x141AD0` read watch is zero. The port image path
-  is extra/wrong at this site.
-- `H-RetailWritesThenReads`: retail writes `0x141AD0` from a named PC,
-  then `0x800668B0` reads it. That writer is the ORIGIN candidate.
-- `H-CoverageFailure`: `0x800668B0` never executes (oracle stays short
-  of menuOverlayInit). Nulls are uninterpretable.
+- `H-UnsignedMemBu`: same-build image `ROGUESQ_AUDIO_UCODE=1` reaches
+  wait loop/return probes (and title) after the `S32` fix; stub still
+  reaches title/hangar. The +1060 SIGSEGV was the unsigned PATCH load.
+- `H-StillFaults`: image still SIGSEGVs at wait after the `S32` fix.
+  The unsigned constant was not the (only) faulting load.
+- `H-StubRegress`: stub wait now faults or no longer returns. The
+  `S32` rewrite changed more than host addressing.
+- `H-CoverageFailure`: neither arm reaches wait entry (build/recipe).
+  Nulls are uninterpretable.
 
-Positive control: `--watch-write 0x0:0x800000` must fire (whole-RDRAM
-~1.6M hits in 8 emulated seconds). `--watch-pc 0x800668B0` must print
-at least one exec hit before a `0x141AD0` null is treated as evidence.
+Positive controls in every arm: `[audtask-dispatch] real_ucode=` must
+print; `[m5-postwait] edge=entry site=waitForAnyAudioSlot` must print
+before a missing loop/return is treated as evidence.
 
 ## Exact commands
 
-From the repo root, after confirming `tools/oracle/build/rs64_oracle`
-and the README core/ROM paths exist:
+Live unsigned sites (5):
+- `../N64Recomp/RecompiledFuncs/funcs_15.c` lines 7561, 7603, 7611, 7700
+- `../N64Recomp/RecompiledFuncs/funcs_23.c` line 4590
+- matching strings in `../N64Recomp/fixup_game_funcs.py`
 
-    tools/oracle/build/rs64_oracle \
-      --core ~/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-      --rom  ~/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-      --secs 45 --vi-trace \
-      --watch-write 0x0:0x800000 \
-      --watch-read  0x141AD0:0x141AD4 \
-      --watch-write 0x141AD0:0x141AD4 \
-      --watch-pc    0x800668B0,0x800C5CF4 \
-      --first-watch 0 --pc-hist-watch 1 --pc-hist-watch 2
+Replace `MEM_BU(0X1AD0, 0X80140000)` with
+`MEM_BU(0X1AD0, S32(0X8014 << 16))`. Do not full-regen; edit fixup plus
+the two live files so the next regen keeps the fix.
 
-Arm the whole-RDRAM write first. Physical addresses only. If the
-positive control does not fire, stop; do not interpret the count-byte
-nulls.
+Then one Debug rebuild and a same-build pair from `build/` with the ROM
+present, SIGKILL to stop:
 
-Do not change `get_rsp_microcode`, canary prefill, wait pumps, or
-guest gates in this unit.
+    env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+        ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 \
+        ./RogueSquadron64Recomp
+
+    env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+        ROGUESQ_AUDIO_UCODE=0 ROGUESQ_LOG_ALL=1 \
+        ./RogueSquadron64Recomp
+
+Use the existing `scratch/s73_post_a_scene/run_mission_keys.sh` 30 12
+driver. Compare wait entry/loop/return and whether image reaches title
+`1024 @ 0x00790400`. ORIGIN line required if any remaining skip/allow
+lands.
+
+Table: `scratch/agent/s2161_wait_slot_oracle.txt`.

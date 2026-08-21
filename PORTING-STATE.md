@@ -102557,3 +102557,57 @@ boot-crash.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-wait-slot-sigsegv`.
+
+## Session 2161 (2026-08-21) — attributed wait-slot D_80141AD0 load to setDisplayMode and unsigned PATCH MEM_BU
+
+Retail oracle (Rice, 45s undriven, whole-RDRAM control first) for guest
+`D_80141AD0` / `waitForAnyAudioSlot` (`0x800668B0`) / jal
+`0x800C5CF4`. Logs: `scratch/agent/oracle_s2161_wait_slot.log` and
+`scratch/agent/oracle_s2161_wait_slot_b.log`. Table:
+`scratch/agent/s2161_wait_slot_oracle.txt`.
+
+Positive control: watch 0 whole-RDRAM 10006 hits then removed at 10000
+callbacks in both runs. Run A 2672 VI (~44.5s emulated); run B 2678 VI.
+Both reached 640 `origin=0x0066a500` at ~2.1s (same origin as the s2160
+port crash).
+
+`0x800C5CF4` and `0x800668B0` each executed once
+(`exec-prev` wait ← `0x800c5cf4` ← `0x8000c074`). Wait's jal
+`anyAudioSlotActive` at `0x800668C0` executed once; that callee ran
+three times (`0x800c5930`, `0x800c2db0`, `0x800668c0`). All three
+called `audioStubReturnZero` then took the walk and loaded physical
+`0x141AD0` at `0x8008E5C0` (3 unique) / `0x8008E5D8` (54 unique). Wait
+returned after one loop iter. Count-byte reads 136618 / 136924.
+
+Writes: six hits. Count-byte stores are `setDisplayMode` `0x8008EA44`
+(t=0.4s, 320 boot, caller `mainBootstrapWorker` `0x80000d8c`) and
+`reapplyDisplayMode` `0x8008EB8C` (t=2.0s and 6.6s, caller
+`runVideoFrameTick` `0x8000153c`). Adjacent `0x80141AD1` stores alias
+onto the word-aligned watch. `a1` is `lbu config+0x20`, clamped
+`sltiu < 0x21` else `0x20`. `--post-value-watch` samples=0 because it
+is phase-gated and these writes are pre-title. `--pc-hist-watch` is
+write-only and last-flag-wins (watch 1 did not print).
+
+Selected: `H-RetailLoadsCount`. Also names ORIGIN of the guest byte:
+`setDisplayMode` / `reapplyDisplayMode`. Refuted: `H-CoverageFailure`,
+`H-RetailNeverLoads`. Architecture doc stored-at `0x80151AD0` corrected
+to `0x80141AD0`.
+
+Port crash join (s2160 logs + current-binary `atos`, two sources). Image
+`path=gate0` so original wait MIPS does **not** load the byte; wait
+entry and `slot-ret-caller n=1` then SIGSEGV with no loop probe.
+`si_addr=far=0x400141ad3`, `x0=0x300000000`, `0x300000000+0x100141AD3
+= 0x400141AD3`. `atos waitForAnyAudioSlot+1060` is `funcs_15.c:7603`
+`MEM_BU(0X1AD0, 0X80140000)` (unsigned KSEG0, host `rdram+4GB+0x141AD3`).
+Stub same `gate0` path: loop probe fires `c=0` and wait returns. Live
+unsigned sites: `funcs_15.c:7561,7603,7611,7700` and `funcs_23.c:4590`;
+correct form already exists as `MEM_BU(0X1AD0, S32(0X8014 << 16))`.
+
+ORIGIN: guest byte writer is `setDisplayMode`/`reapplyDisplayMode`
+(legitimate clamped config). Crashing load writer is the s2045 PATCH,
+not a guest store. No wait/slot guard added. No default-on retry.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-wait-slot-sigsegv`.

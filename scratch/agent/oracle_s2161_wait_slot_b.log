@@ -1,0 +1,325 @@
+[core] No version number in 'Core' config section. Setting defaults.
+[core] No version number in 'CoreEvents' config section. Setting defaults.
+[core] No version number in 'Rice-Video' config section. Setting defaults.
+[core] Old parameter config version detected : 0, updating to 1;
+[core] No version number in 'Rsp-HLE' config section. Setting defaults.
+[oracle] attached /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib
+[oracle] attached /opt/homebrew/lib/mupen64plus/mupen64plus-rsp-hle.dylib
+[oracle] running /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 for 45s with 14 watch(es), debugger=1 emulator=0
+[core] No audio plugin attached.  There will be no sound output.
+[core] No input plugin attached.  You won't be able to control the game.
+[oracle-pif-map] type=1 handler=0x105bb29d4 opaque=0x0 existing=-1
+[oracle-pif-map] type=16 handler=0x105bb8fa4 opaque=0x106d0c300 existing=-1
+[core] Failed to set GL_DEPTH_SIZE to 16. (it's 32)
+[watch] write [0x00000000,0x00800000) flags=0x5 idx=0
+[watch] read [0x00141ad0,0x00141ad1) flags=0x3 idx=1
+[watch] write [0x00141ad0,0x00141ad1) flags=0x5 idx=2
+[watch] pc [0x800668b0,0x800668b4) flags=0x9 idx=3
+[watch] pc [0x800c5cf4,0x800c5cf8) flags=0x9 idx=4
+[watch] pc [0x800668c0,0x800668c4) flags=0x9 idx=5
+[watch] pc [0x8008e57c,0x8008e580) flags=0x9 idx=6
+[watch] pc [0x8008e5c0,0x8008e5c4) flags=0x9 idx=7
+[watch] pc [0x8008e5d8,0x8008e5dc) flags=0x9 idx=8
+[watch] pc [0x8008ea14,0x8008ea18) flags=0x9 idx=9
+[watch] pc [0x8008eb5c,0x8008eb60) flags=0x9 idx=10
+[watch] pc [0x8008ea44,0x8008ea48) flags=0x9 idx=11
+[watch] pc [0x8008eb8c,0x8008eb90) flags=0x9 idx=12
+[watch] pc [0x80092120,0x80092124) flags=0x9 idx=13
+[vi] t=   0.4s vi=1      WIDTH 0 -> 320  origin=0x00000280
+[hit] w addr=0x0012d0d0 pc=0x8002b608 prev_pc=0x8002b608 t=0.4s n=1
+[hit] w addr=0x0012d0d4 pc=0x8002b608 prev_pc=0x8002b608 t=0.4s n=2
+[hit] w addr=0x0012d1c8 pc=0x8002b610 prev_pc=0x8002b610 t=0.4s n=3
+[hit] w addr=0x0012d108 pc=0x8002b620 prev_pc=0x8002b620 t=0.4s n=4
+[hit] w addr=0x0012d10c pc=0x8002b620 prev_pc=0x8002b620 t=0.4s n=5
+[hit] w addr=0x0012d110 pc=0x8002b624 prev_pc=0x8002b624 t=0.4s n=6
+[hit] w addr=0x0012d114 pc=0x8002b624 prev_pc=0x8002b624 t=0.4s n=7
+[hit] w addr=0x0012d118 pc=0x8002b628 prev_pc=0x8002b628 t=0.4s n=8
+[hit] w addr=0x0012d11c pc=0x8002b628 prev_pc=0x8002b628 t=0.4s n=9
+[hit] w addr=0x0012d0c8 pc=0x8002b62c prev_pc=0x8002b62c t=0.4s n=10
+[hit] w addr=0x0010d3f0 pc=0x8002b644 prev_pc=0x8002b644 t=0.4s n=11
+[hit] w addr=0x0010d3f4 pc=0x8002b644 prev_pc=0x8002b644 t=0.4s n=12
+[hit] w addr=0x0010d4e8 pc=0x8002b64c prev_pc=0x8002b64c t=0.4s n=13
+[hit] w addr=0x0010d4ec pc=0x8002b64c prev_pc=0x8002b64c t=0.4s n=14
+[hit] w addr=0x0010d428 pc=0x8002b654 prev_pc=0x8002b654 t=0.4s n=15
+[hit] w addr=0x0010d42c pc=0x8002b654 prev_pc=0x8002b654 t=0.4s n=16
+[hit] w addr=0x0010d430 pc=0x8002b65c prev_pc=0x8002b65c t=0.4s n=17
+[hit] w addr=0x0010d434 pc=0x8002b65c prev_pc=0x8002b65c t=0.4s n=18
+[hit] w addr=0x0010d438 pc=0x8002b664 prev_pc=0x8002b664 t=0.4s n=19
+[hit] w addr=0x0010d43c pc=0x8002b664 prev_pc=0x8002b664 t=0.4s n=20
+[hit] w addr=0x0010d4d8 pc=0x8002b670 prev_pc=0x8002b670 t=0.4s n=21
+[hit] w addr=0x0010d4dc pc=0x8002b670 prev_pc=0x8002b670 t=0.4s n=22
+[hit] w addr=0x0010d3f8 pc=0x8002b67c prev_pc=0x8002b67c t=0.4s n=23
+[hit] w addr=0x0010d3fc pc=0x8002b67c prev_pc=0x8002b67c t=0.4s n=24
+[hit] w addr=0x0010d400 pc=0x8002b680 prev_pc=0x8002b680 t=0.4s n=25
+[hit] w addr=0x0010d404 pc=0x8002b680 prev_pc=0x8002b680 t=0.4s n=26
+[hit] w addr=0x0010d408 pc=0x8002b684 prev_pc=0x8002b684 t=0.4s n=27
+[hit] w addr=0x0010d40c pc=0x8002b684 prev_pc=0x8002b684 t=0.4s n=28
+[hit] w addr=0x0010d410 pc=0x8002b688 prev_pc=0x8002b688 t=0.4s n=29
+[hit] w addr=0x0010d414 pc=0x8002b688 prev_pc=0x8002b688 t=0.4s n=30
+[hit] w addr=0x0010d418 pc=0x8002b68c prev_pc=0x8002b68c t=0.4s n=31
+[hit] w addr=0x0010d41c pc=0x8002b68c prev_pc=0x8002b68c t=0.4s n=32
+[hit] w addr=0x0010d420 pc=0x8002b690 prev_pc=0x8002b690 t=0.4s n=33
+[hit] w addr=0x0010d424 pc=0x8002b690 prev_pc=0x8002b690 t=0.4s n=34
+[hit] w addr=0x0010d440 pc=0x8002b694 prev_pc=0x8002b694 t=0.4s n=35
+[hit] w addr=0x0010d444 pc=0x8002b694 prev_pc=0x8002b694 t=0.4s n=36
+[hit] w addr=0x0010d448 pc=0x8002b698 prev_pc=0x8002b698 t=0.4s n=37
+[hit] w addr=0x0010d44c pc=0x8002b698 prev_pc=0x8002b698 t=0.4s n=38
+[hit] w addr=0x0010d450 pc=0x8002b69c prev_pc=0x8002b69c t=0.4s n=39
+[hit] w addr=0x0010d454 pc=0x8002b69c prev_pc=0x8002b69c t=0.4s n=40
+[hit] w addr=0x0010d458 pc=0x8002b6a0 prev_pc=0x8002b6a0 t=0.4s n=41
+[hit] w addr=0x0010d45c pc=0x8002b6a0 prev_pc=0x8002b6a0 t=0.4s n=42
+[hit] w addr=0x0010d460 pc=0x8002b6a4 prev_pc=0x8002b6a4 t=0.4s n=43
+[hit] w addr=0x0010d464 pc=0x8002b6a4 prev_pc=0x8002b6a4 t=0.4s n=44
+[hit] w addr=0x0010d468 pc=0x8002b6a8 prev_pc=0x8002b6a8 t=0.4s n=45
+[hit] w addr=0x0010d46c pc=0x8002b6a8 prev_pc=0x8002b6a8 t=0.4s n=46
+[hit] w addr=0x0010d470 pc=0x8002b6ac prev_pc=0x8002b6ac t=0.4s n=47
+[hit] w addr=0x0010d474 pc=0x8002b6ac prev_pc=0x8002b6ac t=0.4s n=48
+[hit] w addr=0x0010d478 pc=0x8002b6b0 prev_pc=0x8002b6b0 t=0.4s n=49
+[hit] w addr=0x0010d47c pc=0x8002b6b0 prev_pc=0x8002b6b0 t=0.4s n=50
+[hit] w addr=0x0010d480 pc=0x8002b6b4 prev_pc=0x8002b6b4 t=0.4s n=51
+[hit] w addr=0x0010d484 pc=0x8002b6b4 prev_pc=0x8002b6b4 t=0.4s n=52
+[hit] w addr=0x0010d488 pc=0x8002b6b8 prev_pc=0x8002b6b8 t=0.4s n=53
+[hit] w addr=0x0010d48c pc=0x8002b6b8 prev_pc=0x8002b6b8 t=0.4s n=54
+[hit] w addr=0x0010d490 pc=0x8002b6bc prev_pc=0x8002b6bc t=0.4s n=55
+[hit] w addr=0x0010d494 pc=0x8002b6bc prev_pc=0x8002b6bc t=0.4s n=56
+[hit] w addr=0x0010d498 pc=0x8002b6c0 prev_pc=0x8002b6c0 t=0.4s n=57
+[hit] w addr=0x0010d49c pc=0x8002b6c0 prev_pc=0x8002b6c0 t=0.4s n=58
+[hit] w addr=0x0010d4a0 pc=0x8002b6c4 prev_pc=0x8002b6c4 t=0.4s n=59
+[hit] w addr=0x0010d4a4 pc=0x8002b6c4 prev_pc=0x8002b6c4 t=0.4s n=60
+[hit] w addr=0x0010d4a8 pc=0x8002b6c8 prev_pc=0x8002b6c8 t=0.4s n=61
+[hit] w addr=0x0010d4ac pc=0x8002b6c8 prev_pc=0x8002b6c8 t=0.4s n=62
+[hit] w addr=0x0010d4b0 pc=0x8002b6cc prev_pc=0x8002b6cc t=0.4s n=63
+[hit] w addr=0x0010d4b4 pc=0x8002b6cc prev_pc=0x8002b6cc t=0.4s n=64
+[hit] w addr=0x0010d4b8 pc=0x8002b6d0 prev_pc=0x8002b6d0 t=0.4s n=65
+[hit] w addr=0x0010d4bc pc=0x8002b6d0 prev_pc=0x8002b6d0 t=0.4s n=66
+[hit] w addr=0x0010d4c0 pc=0x8002b6d4 prev_pc=0x8002b6d4 t=0.4s n=67
+[hit] w addr=0x0010d4c4 pc=0x8002b6d4 prev_pc=0x8002b6d4 t=0.4s n=68
+[hit] w addr=0x0010d4c8 pc=0x8002b6d8 prev_pc=0x8002b6d8 t=0.4s n=69
+[hit] w addr=0x0010d4cc pc=0x8002b6d8 prev_pc=0x8002b6d8 t=0.4s n=70
+[hit] w addr=0x0010d4d0 pc=0x8002b6dc prev_pc=0x8002b6dc t=0.4s n=71
+[hit] w addr=0x0010d4d4 pc=0x8002b6dc prev_pc=0x8002b6dc t=0.4s n=72
+[hit] w addr=0x0010d4e0 pc=0x8002b6e4 prev_pc=0x8002b6e0 t=0.4s n=73
+[hit] w addr=0x0010d4e4 pc=0x8002b6e4 prev_pc=0x8002b6e4 t=0.4s n=74
+[hit] w addr=0x0010d4e8 pc=0x8002b720 prev_pc=0x8002b720 t=0.4s n=75
+[hit] w addr=0x0010d4f8 pc=0x8002b760 prev_pc=0x8002b760 t=0.4s n=76
+[hit] w addr=0x0010d4ec pc=0x8002b768 prev_pc=0x8002b768 t=0.4s n=77
+[hit] w addr=0x0010d4fc pc=0x8002b780 prev_pc=0x8002b780 t=0.4s n=78
+[hit] w addr=0x0010d500 pc=0x8002b784 prev_pc=0x8002b784 t=0.4s n=79
+[hit] w addr=0x0010d504 pc=0x8002b784 prev_pc=0x8002b784 t=0.4s n=80
+[hit] w addr=0x0010d508 pc=0x8002b788 prev_pc=0x8002b788 t=0.4s n=81
+[hit] w addr=0x0010d50c pc=0x8002b788 prev_pc=0x8002b788 t=0.4s n=82
+[hit] w addr=0x0010d510 pc=0x8002b78c prev_pc=0x8002b78c t=0.4s n=83
+[hit] w addr=0x0010d514 pc=0x8002b78c prev_pc=0x8002b78c t=0.4s n=84
+[hit] w addr=0x0010d518 pc=0x8002b790 prev_pc=0x8002b790 t=0.4s n=85
+[hit] w addr=0x0010d51c pc=0x8002b790 prev_pc=0x8002b790 t=0.4s n=86
+[hit] w addr=0x0010d520 pc=0x8002b794 prev_pc=0x8002b794 t=0.4s n=87
+[hit] w addr=0x0010d524 pc=0x8002b794 prev_pc=0x8002b794 t=0.4s n=88
+[hit] w addr=0x0010d528 pc=0x8002b798 prev_pc=0x8002b798 t=0.4s n=89
+[hit] w addr=0x0010d52c pc=0x8002b798 prev_pc=0x8002b798 t=0.4s n=90
+[hit] w addr=0x0010d530 pc=0x8002b79c prev_pc=0x8002b79c t=0.4s n=91
+[hit] w addr=0x0010d534 pc=0x8002b79c prev_pc=0x8002b79c t=0.4s n=92
+[hit] w addr=0x0010d538 pc=0x8002b7a0 prev_pc=0x8002b7a0 t=0.4s n=93
+[hit] w addr=0x0010d53c pc=0x8002b7a0 prev_pc=0x8002b7a0 t=0.4s n=94
+[hit] w addr=0x0010d540 pc=0x8002b7a4 prev_pc=0x8002b7a4 t=0.4s n=95
+[hit] w addr=0x0010d544 pc=0x8002b7a4 prev_pc=0x8002b7a4 t=0.4s n=96
+[hit] w addr=0x0010d548 pc=0x8002b7a8 prev_pc=0x8002b7a8 t=0.4s n=97
+[hit] w addr=0x0010d54c pc=0x8002b7a8 prev_pc=0x8002b7a8 t=0.4s n=98
+[hit] w addr=0x0010d550 pc=0x8002b7ac prev_pc=0x8002b7ac t=0.4s n=99
+[hit] w addr=0x0010d554 pc=0x8002b7ac prev_pc=0x8002b7ac t=0.4s n=100
+[hit] w addr=0x0010d558 pc=0x8002b7b0 prev_pc=0x8002b7b0 t=0.4s n=101
+[hit] w addr=0x0010d55c pc=0x8002b7b0 prev_pc=0x8002b7b0 t=0.4s n=102
+[hit] w addr=0x0010d560 pc=0x8002b7b4 prev_pc=0x8002b7b4 t=0.4s n=103
+[hit] w addr=0x0010d564 pc=0x8002b7b4 prev_pc=0x8002b7b4 t=0.4s n=104
+[hit] w addr=0x0010d568 pc=0x8002b7b8 prev_pc=0x8002b7b8 t=0.4s n=105
+[hit] w addr=0x0010d56c pc=0x8002b7b8 prev_pc=0x8002b7b8 t=0.4s n=106
+[hit] w addr=0x0010d570 pc=0x8002b7bc prev_pc=0x8002b7bc t=0.4s n=107
+[hit] w addr=0x0010d574 pc=0x8002b7bc prev_pc=0x8002b7bc t=0.4s n=108
+[hit] w addr=0x0010d578 pc=0x8002b7c0 prev_pc=0x8002b7c0 t=0.4s n=109
+[hit] w addr=0x0010d57c pc=0x8002b7c0 prev_pc=0x8002b7c0 t=0.4s n=110
+[hit] w addr=0x0010d4f0 pc=0x8002b7c8 prev_pc=0x8002b7c8 t=0.4s n=111
+[hit] w addr=0x0010d3e0 pc=0x8002b7d0 prev_pc=0x8002b7d0 t=0.4s n=112
+[hit] w addr=0x00130ab8 pc=0x8002bbac prev_pc=0x8002bbac t=0.4s n=113
+[hit] w addr=0x00130aa8 pc=0x8002bbb0 prev_pc=0x8002bbb0 t=0.4s n=114
+[hit] w addr=0x00130aa0 pc=0x8002bd70 prev_pc=0x8002bd6c t=0.4s n=115
+[hit] w addr=0x0012f8f0 pc=0x8002bd54 prev_pc=0x8002bd54 t=0.4s n=116
+[hit] w addr=0x00039188 pc=0x8002bd58 prev_pc=0x8002bd58 t=0.4s n=117
+[hit] w addr=0x0012f8f8 pc=0x8002bd60 prev_pc=0x8002bd5c t=0.4s n=118
+[hit] w addr=0x0010d3d0 pc=0x8002bd54 prev_pc=0x8002bd54 t=0.4s n=119
+[hit] w addr=0x0012f8f0 pc=0x8002bd58 prev_pc=0x8002bd58 t=0.4s n=120
+[hit] w addr=0x0010d3d8 pc=0x8002bd60 prev_pc=0x8002bd5c t=0.4s n=121
+[hit] w addr=0x00039188 pc=0x8002bd70 prev_pc=0x8002bd6c t=0.4s n=122
+[hit] w addr=0x00039190 pc=0x8002bd84 prev_pc=0x8002bd84 t=0.4s n=123
+[hit] w addr=0x0012f900 pc=0x8002bd8c prev_pc=0x8002bd8c t=0.4s n=124
+[hit] w addr=0x00130a84 pc=0x8003326c prev_pc=0x8003326c t=0.4s n=125
+[hit] w addr=0x00130aac pc=0x80033288 prev_pc=0x80033288 t=0.4s n=126
+[hit] w addr=0x00130aa8 pc=0x800332bc prev_pc=0x800332bc t=0.4s n=127
+[hit] w addr=0x00130a2c pc=0x80035554 prev_pc=0x80035554 t=0.4s n=128
+[hit] w addr=0x00130a34 pc=0x80035558 prev_pc=0x80035558 t=0.4s n=129
+[hit] w addr=0x00130a30 pc=0x8003555c prev_pc=0x8003555c t=0.4s n=130
+[hit] w addr=0x00130a28 pc=0x80035560 prev_pc=0x80035560 t=0.4s n=131
+[hit] w addr=0x00130a40 pc=0x80035564 prev_pc=0x80035564 t=0.4s n=132
+[hit] w addr=0x00130a40 pc=0x80035580 prev_pc=0x80035580 t=0.4s n=133
+[hit] w addr=0x00130a10 pc=0x80035124 prev_pc=0x80035124 t=0.4s n=134
+[hit] w addr=0x00130a0c pc=0x80035130 prev_pc=0x80035130 t=0.4s n=135
+[hit] w addr=0x00130a4c pc=0x800355ac prev_pc=0x800355ac t=0.4s n=136
+[hit] w addr=0x000391d0 pc=0x800355e0 prev_pc=0x800355e0 t=0.4s n=137
+[hit] w addr=0x000391dc pc=0x8003570c prev_pc=0x8003570c t=0.4s n=138
+[hit] w addr=0x00130a48 pc=0x80035714 prev_pc=0x80035714 t=0.4s n=139
+[hit] w addr=0x00130a48 pc=0x80035728 prev_pc=0x80035728 t=0.4s n=140
+[hit] w addr=0x00039214 pc=0x80035858 prev_pc=0x80035858 t=0.4s n=141
+[hit] w addr=0x00039210 pc=0x80035860 prev_pc=0x80035860 t=0.4s n=142
+[hit] w addr=0x000391e0 pc=0x8003587c prev_pc=0x8003587c t=0.4s n=143
+[hit] w addr=0x000391e4 pc=0x80035884 prev_pc=0x80035884 t=0.4s n=144
+[hit] w addr=0x000391e8 pc=0x80035890 prev_pc=0x8003588c t=0.4s n=145
+[hit] w addr=0x000391ec pc=0x8003587c prev_pc=0x8003587c t=0.4s n=146
+[hit] w addr=0x000391f0 pc=0x80035884 prev_pc=0x80035884 t=0.4s n=147
+[hit] w addr=0x000391f4 pc=0x80035890 prev_pc=0x8003588c t=0.4s n=148
+[hit] w addr=0x000391f8 pc=0x8003587c prev_pc=0x8003587c t=0.4s n=149
+[hit] w addr=0x000391fc pc=0x80035884 prev_pc=0x80035884 t=0.4s n=150
+[hit] w addr=0x00039200 pc=0x80035890 prev_pc=0x8003588c t=0.4s n=151
+[hit] w addr=0x00039204 pc=0x8003587c prev_pc=0x8003587c t=0.4s n=152
+[hit] w addr=0x00039208 pc=0x80035884 prev_pc=0x80035884 t=0.4s n=153
+[hit] w addr=0x0003920c pc=0x80035890 prev_pc=0x8003588c t=0.4s n=154
+[hit] w addr=0x00130b00 pc=0x80034fd8 prev_pc=0x80034fd4 t=0.4s n=155
+[hit] w addr=0x00130a8c pc=0x80034fe4 prev_pc=0x80034fe4 t=0.4s n=156
+[hit] w addr=0x00130a44 pc=0x80033414 prev_pc=0x80033414 t=0.4s n=157
+[hit] w addr=0x00130a58 pc=0x80033418 prev_pc=0x80033418 t=0.4s n=158
+[hit] w addr=0x00130a5c pc=0x8003341c prev_pc=0x8003341c t=0.4s n=159
+[hit] w addr=0x00130a60 pc=0x80033420 prev_pc=0x80033420 t=0.4s n=160
+[hit] w addr=0x00130a40 pc=0x80033424 prev_pc=0x80033424 t=0.4s n=161
+[hit] w addr=0x00130a3c pc=0x80033428 prev_pc=0x80033428 t=0.4s n=162
+[hit] w addr=0x00130a38 pc=0x80033430 prev_pc=0x8003342c t=0.4s n=163
+[hit] w addr=0x0011a4cc pc=0x800334d8 prev_pc=0x800334d8 t=0.4s n=164
+[hit] w addr=0x00114390 pc=0x8003350c prev_pc=0x8003350c t=0.4s n=165
+[hit] w addr=0x00114388 pc=0x8002bd70 prev_pc=0x8002bd6c t=0.4s n=166
+[hit] w addr=0x00130a14 pc=0x800344e4 prev_pc=0x800344e4 t=0.4s n=167
+[hit] w addr=0x00130a20 pc=0x800344e8 prev_pc=0x800344e8 t=0.4s n=168
+[hit] w addr=0x00130a10 pc=0x800344ec prev_pc=0x800344ec t=0.4s n=169
+[hit] w addr=0x00130a0c pc=0x800344f4 prev_pc=0x800344f0 t=0.4s n=170
+[hit] w addr=0x0011cd38 pc=0x80034524 prev_pc=0x80034524 t=0.4s n=171
+[hit] w addr=0x0011cd28 pc=0x8002bd54 prev_pc=0x8002bd54 t=0.4s n=172
+[hit] w addr=0x00039188 pc=0x8002bd58 prev_pc=0x8002bd58 t=0.4s n=173
+[hit] w addr=0x0011cd30 pc=0x8002bd60 prev_pc=0x8002bd5c t=0.4s n=174
+[hit] w addr=0x00130b00 pc=0x80035014 prev_pc=0x80035014 t=0.4s n=175
+[hit] w addr=0x0012f8dc pc=0x80035030 prev_pc=0x8003502c t=0.4s n=176
+[hit] w addr=0x00130a7c pc=0x8003506c prev_pc=0x80035068 t=0.4s n=177
+[hit] w addr=0x0012f8d8 pc=0x80035074 prev_pc=0x80035074 t=0.4s n=178
+[hit] w addr=0x0012f8d0 pc=0x800350b4 prev_pc=0x800350b4 t=0.4s n=179
+[hit] w addr=0x00130a7c pc=0x800350bc prev_pc=0x800350bc t=0.4s n=180
+[hit] w addr=0x0012f8d4 pc=0x800350c4 prev_pc=0x800350c0 t=0.4s n=181
+[hit] w addr=0x00130a4c pc=0x800331d4 prev_pc=0x800331d4 t=0.4s n=182
+[hit] w addr=0x00130a58 pc=0x800331d8 prev_pc=0x800331d8 t=0.4s n=183
+[hit] w addr=0x00130a5c pc=0x800331dc prev_pc=0x800331dc t=0.4s n=184
+[hit] w addr=0x00130a60 pc=0x800331e0 prev_pc=0x800331e0 t=0.4s n=185
+[hit] w addr=0x00130a48 pc=0x800331e4 prev_pc=0x800331e4 t=0.4s n=186
+[hit] w addr=0x00130a44 pc=0x800331ec prev_pc=0x800331e8 t=0.4s n=187
+[hit] w addr=0x0012f900 pc=0x8003322c prev_pc=0x8003322c t=0.4s n=188
+[hit] w addr=0x0012fa08 pc=0x8002bc30 prev_pc=0x8002bc30 t=0.4s n=189
+[hit] w addr=0x0012f988 pc=0x8002bc34 prev_pc=0x8002bc34 t=0.4s n=190
+[hit] w addr=0x0012f98c pc=0x8002bc34 prev_pc=0x8002bc34 t=0.4s n=191
+[hit] w addr=0x0012f990 pc=0x8002bc38 prev_pc=0x8002bc38 t=0.4s n=192
+[hit] w addr=0x0012f994 pc=0x8002bc38 prev_pc=0x8002bc38 t=0.4s n=193
+[hit] w addr=0x0012f998 pc=0x8002bc3c prev_pc=0x8002bc3c t=0.4s n=194
+[hit] w addr=0x0012f99c pc=0x8002bc3c prev_pc=0x8002bc3c t=0.4s n=195
+[hit] w addr=0x0012f9a0 pc=0x8002bc40 prev_pc=0x8002bc40 t=0.4s n=196
+[hit] w addr=0x0012f9a4 pc=0x8002bc40 prev_pc=0x8002bc40 t=0.4s n=197
+[hit] w addr=0x0012f9a8 pc=0x8002bc44 prev_pc=0x8002bc44 t=0.4s n=198
+[hit] w addr=0x0012f9ac pc=0x8002bc44 prev_pc=0x8002bc44 t=0.4s n=199
+[hit] w addr=0x0012f9b0 pc=0x8002bc48 prev_pc=0x8002bc48 t=0.4s n=200
+[oracle] hit cap 200 reached, counting silently from here
+[oracle] positive-control threshold reached: watch index 0 callbacks=10000; removal rc=0; watch index 1 remains armed
+[hit] w addr=0x00141ad0 pc=0x8008ea44 prev_pc=0x8008ea44 t=0.4s n=10003
+[hit] w addr=0x00141ad0 pc=0x8008ea74 prev_pc=0x8008ea74 t=0.4s n=10005
+[vi] t=   1.4s vi=62     origin=0x006ba280 width=320
+[hit] w addr=0x00141ad0 pc=0x8008eb8c prev_pc=0x8008eb8c t=2.0s n=15302
+[hit] w addr=0x00141ad0 pc=0x8008ebbc prev_pc=0x8008ebbc t=2.0s n=15304
+[vi] t=   2.0s vi=99     WIDTH 320 -> 640  origin=0x0066a500
+[vi] t=   3.0s vi=160    origin=0x0066aa00 width=640
+[vi] t=   4.0s vi=221    origin=0x005d4500 width=640
+[vi] t=   5.1s vi=282    origin=0x0066aa00 width=640
+[vi] t=   6.1s vi=343    origin=0x005d4500 width=640
+[hit] w addr=0x00141ad0 pc=0x8008eb8c prev_pc=0x8008eb8c t=6.6s n=29804
+[hit] w addr=0x00141ad0 pc=0x8008ebbc prev_pc=0x8008ebbc t=6.6s n=29806
+[vi] t=   7.1s vi=403    origin=0x00696100 width=640
+[vi] t=   8.1s vi=464    origin=0x00696600 width=640
+[vi] t=   9.1s vi=525    origin=0x00696100 width=640
+[vi] t=  10.1s vi=586    origin=0x00696600 width=640
+[vi] t=  11.1s vi=647    origin=0x0062bd00 width=640
+[vi] t=  12.2s vi=708    origin=0x00696600 width=640
+[vi] t=  13.2s vi=769    origin=0x00696100 width=640
+[vi] t=  14.2s vi=830    origin=0x0062c200 width=640
+[vi] t=  15.2s vi=891    origin=0x00696100 width=640
+[vi] t=  16.2s vi=952    origin=0x00696600 width=640
+[vi] t=  17.2s vi=1013   origin=0x0062bd00 width=640
+[vi] t=  18.3s vi=1074   origin=0x0062c200 width=640
+[vi] t=  19.3s vi=1134   origin=0x00696600 width=640
+[vi] t=  20.3s vi=1195   origin=0x00696100 width=640
+[vi] t=  21.3s vi=1256   origin=0x0062c200 width=640
+[vi] t=  22.3s vi=1316   origin=0x00696600 width=640
+[vi] t=  23.3s vi=1377   origin=0x0062bd00 width=640
+[vi] t=  24.3s vi=1437   origin=0x00696100 width=640
+[vi] t=  25.3s vi=1498   origin=0x00696600 width=640
+[vi] t=  26.3s vi=1558   origin=0x0062c200 width=640
+[vi] t=  27.3s vi=1619   origin=0x0062bd00 width=640
+[vi] t=  28.4s vi=1680   origin=0x0062c200 width=640
+[vi] t=  29.4s vi=1741   origin=0x00696100 width=640
+[vi] t=  30.4s vi=1802   origin=0x0062c200 width=640
+[vi] t=  31.4s vi=1863   origin=0x0062bd00 width=640
+[vi] t=  32.4s vi=1924   origin=0x00696600 width=640
+[vi] t=  33.4s vi=1985   origin=0x00696100 width=640
+[vi] t=  34.5s vi=2046   origin=0x0062c200 width=640
+[vi] t=  35.5s vi=2107   origin=0x0062bd00 width=640
+[vi] t=  36.5s vi=2168   origin=0x00696600 width=640
+[vi] t=  37.5s vi=2229   origin=0x00696100 width=640
+[vi] t=  38.5s vi=2290   origin=0x0062c200 width=640
+[vi] t=  39.5s vi=2351   origin=0x0062bd00 width=640
+[vi] t=  40.6s vi=2412   origin=0x00696600 width=640
+[vi] t=  41.6s vi=2473   origin=0x00696100 width=640
+[vi] t=  42.6s vi=2533   origin=0x0062bd00 width=640
+[vi] t=  43.6s vi=2594   origin=0x0062c200 width=640
+[vi] t=  44.6s vi=2655   origin=0x00696100 width=640
+[oracle] 45s elapsed, stopping
+[oracle] done: 147002 hit(s) in 45.0s wall, 2678 VI (~44.6s emulated)
+[oracle] post-value watch=2 range=[0x00141ad0,0x00141ad1) samples=0 unique=0 overflow=0
+[oracle] post-value snapshot watch=2 bytes=0 nonzero=0 fnv=0x811c9dc5
+[oracle] post-target-summary pc=0x8008ea44 seen=0 addr=0x00000000 value=0x00000000
+[oracle] post-target-summary pc=0x8008eb8c seen=0 addr=0x00000000 value=0x00000000
+[oracle] post-target-rows pc=0x8008ea44 n=0/16
+[oracle] post-target-rows pc=0x8008eb8c n=0/16
+[oracle] watch write [0x00000000,0x00800000): 10006 hit(s), 0 read(s), 10006 write(s)
+[oracle] watch read [0x00141ad0,0x00141ad1): 136924 hit(s), 136924 read(s), 0 write(s)
+[oracle] watch write [0x00141ad0,0x00141ad1): 6 hit(s), 0 read(s), 6 write(s)
+[oracle] watch pc [0x800668b0,0x800668b4): 1 hit(s), 0 read(s), 0 write(s)
+[oracle] watch pc [0x800c5cf4,0x800c5cf8): 1 hit(s), 0 read(s), 0 write(s)
+[oracle] watch pc [0x800668c0,0x800668c4): 1 hit(s), 0 read(s), 0 write(s)
+[oracle] watch pc [0x8008e57c,0x8008e580): 3 hit(s), 0 read(s), 0 write(s)
+[oracle] watch pc [0x8008e5c0,0x8008e5c4): 6 hit(s), 0 read(s), 0 write(s)
+[oracle] watch pc [0x8008e5d8,0x8008e5dc): 108 hit(s), 0 read(s), 0 write(s)
+[oracle] watch pc [0x8008ea14,0x8008ea18): 1 hit(s), 0 read(s), 0 write(s)
+[oracle] watch pc [0x8008eb5c,0x8008eb60): 2 hit(s), 0 read(s), 0 write(s)
+[oracle] watch pc [0x8008ea44,0x8008ea48): 2 hit(s), 0 read(s), 0 write(s)
+[oracle] watch pc [0x8008eb8c,0x8008eb90): 4 hit(s), 0 read(s), 0 write(s)
+[oracle] watch pc [0x80092120,0x80092124): 3 hit(s), 0 read(s), 0 write(s)
+[oracle] writer-pc watch=2 range=[0x00141ad0,0x00141ad1)
+[oracle] writer-pc pc=0x8008ea44 n=1
+[oracle] writer-pc pc=0x8008ea74 n=1
+[oracle] writer-pc pc=0x8008eb8c n=2
+[oracle] writer-pc pc=0x8008ebbc n=2
+[oracle] execution watch hits: 132
+[oracle] exec-prev pc=0x8008ea14 prev=0x80000d8c n=1
+[oracle] exec-prev pc=0x8008ea44 prev=0x8008ea40 n=1
+[oracle] exec-prev pc=0x8008ea44 prev=0x8008ea44 n=1
+[oracle] exec-prev pc=0x8008e57c prev=0x800c5930 n=1
+[oracle] exec-prev pc=0x80092120 prev=0x8008e5a8 n=3
+[oracle] exec-prev pc=0x8008e5c0 prev=0x8008e5bc n=3
+[oracle] exec-prev pc=0x8008e5c0 prev=0x8008e5c0 n=3
+[oracle] exec-prev pc=0x8008e5d8 prev=0x8008e5d4 n=54
+[oracle] exec-prev pc=0x8008e5d8 prev=0x8008e5d8 n=54
+[oracle] exec-prev pc=0x8008eb5c prev=0x8000153c n=2
+[oracle] exec-prev pc=0x8008eb8c prev=0x8008eb88 n=2
+[oracle] exec-prev pc=0x8008eb8c prev=0x8008eb8c n=2
+[oracle] exec-prev pc=0x8008e57c prev=0x800c2db0 n=1
+[oracle] exec-prev pc=0x800c5cf4 prev=0x8000c074 n=1
+[oracle] exec-prev pc=0x800668b0 prev=0x800c5cf4 n=1
+[oracle] exec-prev pc=0x800668c0 prev=0x8008da44 n=1
+[oracle] exec-prev pc=0x8008e57c prev=0x800668c0 n=1

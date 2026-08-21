@@ -1,0 +1,90 @@
+s2161 retail wait-slot count-byte ground truth
+HYPOTHESIS-ID: m5-image-wait-slot-sigsegv
+logs: scratch/agent/oracle_s2161_wait_slot.log
+      scratch/agent/oracle_s2161_wait_slot_b.log
+s2160 re-read: scratch/s73_post_a_scene/s2160_{default_on,explicit_on,default_off,default_off_b}/run.log
+
+Run A (45s Rice, undriven)
+  --watch-write 0x0:0x800000
+  --watch-read  0x141AD0:0x141AD4
+  --watch-write 0x141AD0:0x141AD4
+  --watch-pc    0x800668B0,0x800C5CF4
+  --first-watch 0 --pc-hist-watch 1 --pc-hist-watch 2
+  (pc-hist-watch is write-only and last-flag-wins; only watch 2 printed)
+
+positive control: watch 0 10006 hits, removed at 10000 callbacks
+done: 146626 hits, 45.0s wall, 2672 VI (~44.5s emulated)
+640 origin=0x0066a500 at t=2.1s vi=99 (same origin as s2160 port crash)
+
+PC
+  0x800C5CF4 menuOverlayInit jal wait : 1  exec-prev 0x8000c074
+  0x800668B0 waitForAnyAudioSlot      : 1  exec-prev 0x800c5cf4
+
+count-byte [0x141AD0,0x141AD4)
+  reads  136618
+  writes 6
+  writer-pc: 0x8008ea44 n=1, 0x8008ea74 n=1, 0x8008eb8c n=2, 0x8008ebbc n=2
+  0x8008EA44 / 0x8008EB8C store 0x80141AD0 (count)
+  0x8008EA74 / 0x8008EBBC store 0x80141AD1 (adjacent; word-aligned watch aliases)
+
+Run B (same recipe, count-byte-only + callee PCs + detail-watch 2)
+positive control: watch 0 10006 hits
+done: 147002 hits, 45.0s wall, 2678 VI (~44.6s emulated)
+640 origin=0x0066a500 at t=2.0s
+
+count-byte [0x141AD0,0x141AD1)  (mupen still reports 0x141AD1 stores as 0x141AD0)
+  reads  136924
+  writes 6  detail:
+    t=0.4s  pc=0x8008ea44 setDisplayMode count store   (320 boot)
+    t=0.4s  pc=0x8008ea74 setDisplayMode +1
+    t=2.0s  pc=0x8008eb8c reapplyDisplayMode count store (640)
+    t=2.0s  pc=0x8008ebbc reapplyDisplayMode +1
+    t=6.6s  pc=0x8008eb8c / 0x8008ebbc again
+  post-value-watch samples=0 (phase-gated; writes are pre-title)
+
+PC hits (delay-slot doubles some exec-prev rows)
+  0x800668B0 wait entry            1  prev=0x800c5cf4
+  0x800C5CF4 menuOverlayInit jal   1  prev=0x8000c074
+  0x800668C0 wait jal anySlot      1  prev=0x8008da44 (tickMusyXIfActive return)
+  0x8008E57C anyAudioSlotActive    3  prev=0x800c5930, 0x800c2db0, 0x800668c0
+  0x8008E5C0 anySlot count lbu     6  (3 unique; walk path)
+  0x8008E5D8 anySlot loop lbu    108  (54 unique)
+  0x80092120 audioStubReturnZero   3  prev=0x8008e5a8  (all 3 calls)
+  0x8008EA14 setDisplayMode        1  prev=0x80000d8c (mainBootstrapWorker)
+  0x8008EB5C reapplyDisplayMode    2  prev=0x8000153c (runVideoFrameTick)
+  0x8008EA44 count store           2
+  0x8008EB8C count store           4
+
+setDisplayMode a1 = lbu config+0x20, sltiu < 0x21, else store 0x20.
+Then jal initAudioSubsystem.
+
+Selection
+  H-CoverageFailure     REFUTED (control + 640 + wait exec 1)
+  H-RetailNeverLoads    REFUTED (136k reads; wait jal loads at 0x8008E5C0)
+  H-RetailLoadsCount    SELECTED (wait jal anyAudioSlotActive; 1 loop iter; returns)
+  H-RetailWritesThenReads SELECTED as ORIGIN naming, not an alternative:
+    writers 0x8008EA44 setDisplayMode, 0x8008EB8C reapplyDisplayMode
+    first write t=0.4s before wait; value is clamped config byte, legitimate on retail
+
+Port crash join (s2160 logs + current-binary atos; two sources)
+  image default_on / explicit_on:
+    [avf-gate] path=gate0 gate=0x00 (anyAudioSlotActive does NOT load the count)
+    wait entry + slot-ret-caller n=1, then SIGSEGV
+    no loop/branch/return m5-postwait
+    si_addr=far=0x400141ad3  x0=0x300000000  esr=0x92000006 si_code=2
+    0x300000000 + 0x100141AD3 = 0x400141AD3
+    unsigned MEM_BU(0X1AD0, 0X80140000) = rdram + 4GB + 0x141AD3
+  stub default_off:
+    same gate0 path; loop probe fires c=0x00000000 (PATCH load returned)
+    wait returns
+  atos waitForAnyAudioSlot+1060 on current Debug = funcs_15.c:7603
+    U32(MEM_BU(0X1AD0, 0X80140000)) argument to s2045 loop probe
+    NOT original MIPS (original wait does not load this byte on gate0)
+  live unsigned sites (must go through fixup):
+    funcs_15.c:7561,7603,7611,7700  waitForAnyAudioSlot PATCH
+    funcs_23.c:4590                  tickAllAudioChannels log
+  already-correct form: MEM_BU(0X1AD0, S32(0X8014 << 16)) in funcs_24.c / funcs_30.c
+
+Do not add a wait/slot guard. Do not retry default-on.
+ORIGIN of the crashing load: s2045 PATCH unsigned KSEG0 MEM_BU, not a guest store.
+ORIGIN of the guest byte: setDisplayMode / reapplyDisplayMode (legitimate).

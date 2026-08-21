@@ -149,7 +149,7 @@ zlib decompressor (embedded v0.99-1.08, per docs/unsorted_thoughts/notes.txt):
 
 | Function | Role |
 |----------|------|
-| `setDisplayMode` (0x8008EA14) | Validates mode<0x21, stores at 0x80151AD0, calls inner setup chain |
+| `setDisplayMode` (0x8008EA14) | Validates mode<0x21, stores at 0x80141AD0, calls inner setup chain |
 | `getViModeType` / `setViModeType` / `getViModePeriod` / `isViModeTypePal` | VI mode getters/setters (already named in splat) |
 
 ### 7. Audio subsystem (Factor 5 / MusyX)
