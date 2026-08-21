@@ -3595,6 +3595,17 @@ of `CURRENT-TRUTH.md` during the s2079 maintenance pass.
   breadcrumb of `beginFrameDLChunk`, so this selects `H-StaleLastGuestPC` at
   source/metadata scope. Prior RT64 `copyToRAM` observations carrying that
   marker remain host-boundary evidence without a causal fill attribution.
+- s2081 added a diagnostic-only RT64 `copyToRAM` witness after the retail
+  whole-RDRAM control passed. The qualified port route reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; the witness emitted 132
+  target-phase rows and visibly fired its own control. It observed
+  `0x8000B650` on repeated host operations, with `0x8000834C` and
+  `0x80007904` on neighboring operations. The phase-keyed
+  `fillSampleStreamRange` source arm emitted zero rows because the current
+  generated function is in `funcs_24.c` while the existing fixup anchor is
+  file-scoped to `funcs_23.c`. This selects `H-WitnessGap`, leaving the
+  stale-PC interpretation single-source and leaving the host boundary
+  unexplained. No runtime behavior changed.
 
 These records supersede the older claims that the route was callback-invalid,
 that all image-arm PCM was zero, that the E50 envelope was proven final PCM,

@@ -99163,3 +99163,57 @@ field, output route, canary, gate, or host behavior change is justified.
 Add the single regeneration-stable, phase-scoped host/guest boundary witness
 specified in `scratch/agent/NEXT.md`, after running its qualified retail
 positive-control command first.
+
+## Session 2081 (2026-08-20) — added the M5 host-boundary witness and exposed the source-join gap
+
+### What ran
+
+Ran the retail oracle first with the required whole-RDRAM positive control and
+the existing PC controls. The control reached its 10,000-write cap; the run
+reached title and hangar, and the requested retail PCs `0x8000B650` and
+`0x80095D54` remained at zero. The port then built once after adding the
+diagnostic-only RT64 `copyToRAM` witness and exporting `submodule-patches/rt64.patch`.
+
+The first port command used the prescribed title gate but omitted
+`ROGUESQ_LLE_FORCE=1`; it stayed at width 640 for the full 180-second phase
+timeout. The corrected forced-LLE title command reproduced the known
+`waitForAnyAudioSlot+1060` crash before width 1024. The final corrected hangar
+capture used the stable forced-LLE eleven-Start schedule, reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and then crashed in the
+existing PI-DMA/read path after the witness had fired.
+
+### Result
+
+The witness printed its same-run control once and 132 target-phase rows. The
+phase/PC counts were:
+
+| phase | width/origin | guest-PC breadcrumb | rows |
+|---:|---|---:|---:|
+| 8 | `1024 / 0x790400` | `0x8000834C` | 1 |
+| 8 | `1024 / 0x790400` | `0x8000B650` | 65 |
+| 10 | `512 / 0x6AB400` | `0x80007904` | 5 |
+| 10 | `512 / 0x6AB400` | `0x8000B650` | 3 |
+| 10 | `512 / 0x6AB400` | `0x8000834C` | 57 |
+| 12 | `512 / 0x6AB400` | `0x8000834C` | 1 |
+
+The existing PCM source and consumer rows also fired in the same run (90 each),
+which is an independent phase instrumentation control. The requested
+`fillSampleStreamRange` source arm produced zero rows: the current generated
+definition is in `funcs_24.c`, while the existing regeneration fixup anchor is
+scoped to `funcs_23.c`. The strict discriminator therefore selects
+**H-WitnessGap**. The repeated host rows carrying `0x8000B650` are single-source
+support for stale shared state, not proof of a causal host copy/readback fault.
+
+### What it rules out
+
+It rules out an absent RT64 boundary call, an absent target-phase transition,
+and an unqualified interpretation of the host marker as a live
+`fillSampleStreamRange` execution row. It does not select H-StaleLastGuestPC
+over H-HostCopyReadback because the source-side join was absent. No wait,
+guard, task field, output route, canary, gate, or host behavior changed.
+
+### Next
+
+Repair the regeneration-stable source-side fixup to match the current
+`funcs_24.c` placement, then repeat the same-run source/host join from the new
+`scratch/agent/NEXT.md`.

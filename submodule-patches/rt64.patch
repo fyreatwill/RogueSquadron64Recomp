@@ -913,10 +913,10 @@ index 6255872..df82c27 100644
  
              return trianglesEnd;
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..dbe946a 100644
+index 873883d..1a2db5c 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
-@@ -16,6 +16,12 @@
+@@ -16,6 +16,68 @@
  
  #include "render/rt64_render_worker.h"
  
@@ -925,11 +925,67 @@ index 873883d..dbe946a 100644
 +
 +// Session 32: phase ordinal for phase-scoped diagnostics (weak, host-provided).
 +extern "C" __attribute__((weak)) uint32_t rs64_phase_ord(void);
++extern "C" uint32_t rs64_vi_committed_width(void);
++extern "C" uint32_t rs64_vi_committed_origin(void);
++extern "C" volatile uint32_t g_rs64_last_guest_pc;
++
++static void rs64_log_m5_host_boundary(uint32_t addressStart, uint32_t dstRowStart,
++                                      uint32_t dstRowEnd, uint32_t dstRowWidth,
++                                      uint8_t siz, uint32_t rowBytes,
++                                      uint32_t bytesToSwap) {
++    static int enabled = -1;
++    if (enabled < 0) {
++        const char *e = std::getenv("ROGUESQ_LOG_M5_HOST_BOUNDARY");
++        const char *all = std::getenv("ROGUESQ_LOG_ALL");
++        enabled = ((e && e[0] && e[0] != '0') ||
++                   (all && all[0] && all[0] != '0')) ? 1 : 0;
++    }
++    if (!enabled) return;
++
++    static bool control_printed = false;
++    if (!control_printed) {
++        fprintf(stderr,
++            "[m5-host-boundary-control] op=copyToRAM addressStart=0x%06X\n",
++            addressStart);
++        fflush(stderr);
++        control_printed = true;
++    }
++
++    const uint32_t width = rs64_vi_committed_width();
++    const uint32_t origin = rs64_vi_committed_origin();
++    const bool phase_allowed =
++        (width == 1024u && origin == 0x00790400u) ||
++        (width == 512u && origin == 0x006AB400u);
++    if (!phase_allowed) return;
++
++    static uint64_t phase_key = UINT64_MAX;
++    static uint32_t phase_n = 0;
++    const uint64_t key = (uint64_t(width) << 32) | origin;
++    if (key != phase_key) {
++        phase_key = key;
++        phase_n = 0;
++    }
++    const uint32_t n = phase_n++;
++    if (n < 64u || (n % 256u) == 0u) {
++        const uint32_t phase = rs64_phase_ord ? rs64_phase_ord() : 0u;
++        const uint32_t guest_pc = (uint32_t)g_rs64_last_guest_pc;
++        fprintf(stderr,
++            "[m5-host-boundary] op=copyToRAM n=%u phase=%u width=%u "
++            "origin=0x%06X guest_pc=0x%08X addressStart=0x%06X "
++            "range=[0x%06X,0x%06X) rows=%u..%u rowWidth=%u rowBytes=%u "
++            "bytes=%u siz=%u\n",
++            n, phase, width, origin, guest_pc, addressStart,
++            addressStart + dstRowStart * rowBytes,
++            addressStart + dstRowEnd * rowBytes, dstRowStart, dstRowEnd,
++            dstRowWidth, rowBytes, bytesToSwap, (unsigned)siz);
++        fflush(stderr);
++    }
++}
 +
  #ifdef __GNUC__
  #define _byteswap_ulong __builtin_bswap32
  #endif
-@@ -91,7 +97,58 @@ namespace RT64 {
+@@ -91,7 +153,58 @@ namespace RT64 {
              dstWords++;
          }
  
@@ -988,7 +1044,7 @@ index 873883d..dbe946a 100644
          return differentPixels;
      }
  
-@@ -143,6 +200,124 @@ namespace RT64 {
+@@ -143,7 +256,128 @@ namespace RT64 {
          uint8_t *dstBytes = dst + dstRowStart * imageRowBytes(dstRowWidth);
          uint32_t *dstWords = reinterpret_cast<uint32_t *>(dstBytes);
          uint32_t bytesToSwap = (dstRowEnd - dstRowStart) * imageRowBytes(dstRowWidth);
@@ -1111,9 +1167,13 @@ index 873883d..dbe946a 100644
 +            }
 +        }
          uint32_t dstFirstWord = dstWords[0];
++        rs64_log_m5_host_boundary(addressStart, dstRowStart, dstRowEnd,
++                                  dstRowWidth, siz, imageRowBytes(dstRowWidth),
++                                  bytesToSwap);
          nativeTarget.copyToRAM(dstRowStart, dstRowEnd, dstRowWidth, siz, dstBytes);
  
-@@ -165,6 +340,79 @@ namespace RT64 {
+         // Write back to RDRAM by swapping every word.
+@@ -165,6 +399,79 @@ namespace RT64 {
              dstWords[0] = dstFirstWord;
          }
  
@@ -1193,6 +1253,13 @@ index 873883d..dbe946a 100644
  #   ifdef DUMP_RAW_RDRAM
          char path[1024];
          snprintf(path, sizeof(path), "dumps/FB_0x%X_W_%d_H_%d_SIZ_%d.rdram", addressStart, dstRowWidth, height, siz);
+@@ -199,4 +506,4 @@ namespace RT64 {
+     uint64_t FramebufferTile::hash() const {
+         return XXH3_64bits(this, sizeof(FramebufferTile));
+     }
+-};
+\ No newline at end of file
++};
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
 index 7d385fa..ac7cba2 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
