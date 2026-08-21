@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2142
-(2026-08-21); behavioral and source evidence is current through s2142.
+authoritative for exact commands and probe rows. Maintained in Session 2143
+(2026-08-21); behavioral and source evidence is current through s2143.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -112,6 +112,18 @@ This file is intentionally compact. The s2080–s2108 archive is in
   warning remains a runtime-risk record; this static table found no
   boundary or caller conflict. The full pipeline succeeded; no game run or
   runtime behavior changed.
+- The s2143 bounded generated-symbol unit selected `H-MissionMapping` for
+  `0x800E71D0`: no-edit regeneration left `func_800E71D0` in place, while
+  the prescribed two-line mapping move caused the ELF to emit
+  `transformCraftAnchorsApplySubFx3` in `.ovl.mission` at the same start,
+  size `0x1C0`, and end boundary `0x800E7390` immediately before unchanged
+  `tickFighterSquadronWithSplinePaths`. The leftover `fake_func_800E71C8`
+  at `0x800E71C8` size `0x8` was unchanged. The generated prototype,
+  definition, overlay entry, and only generated caller
+  (`tickFighterSquadronWithSplinePaths` at `jal 0x800E71D0`) all used the
+  human name. The prior s413 live-crash warning remains a runtime-risk
+  record; this static table found no boundary or caller conflict. The full
+  pipeline succeeded; no game run or runtime behavior changed.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -398,12 +410,11 @@ work items.
 
 1. **Generated-symbol renaming sweep.** The M5 `data_ptr+0x100` boundary is
    closed at the sampled output edge: s2140's independently watched retail
-   destinations agree with s2137's port `field348+0x100` relation. s2142
-   selected `H-MissionMapping` for `func_800C64B0` /
-   `initHangarDisplayItemTimers`. The next lead is `func_800E71D0` ->
-   `transformCraftAnchorsApplySubFx3`; validate it with a no-edit versus
-   two-line symbol-file move and a fresh ELF/generated boundary and caller
-   table.
+   destinations agree with s2137's port `field348+0x100` relation. s2143
+   selected `H-MissionMapping` for `func_800E71D0` /
+   `transformCraftAnchorsApplySubFx3`. The next lead is `func_800EC110` ->
+   `allocObjectPoolNode`; validate it with a no-edit versus two-line
+   symbol-file move and a fresh ELF/generated boundary and caller table.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
@@ -594,10 +605,10 @@ class, dormant slot-dispatch census, and generated-symbol synchronization
 sweep are closed at their stated scopes. s2130's static table confirmed the
 `0x800AE3F0` mission mapping despite the old s407 runtime warning, s2131
 confirmed the `0x800C41B0` mission mapping, s2141 confirmed the
-`0x800BF790` mission mapping, and s2142 confirmed the `0x800C64B0`
-mission mapping, each with unchanged boundaries and callers. Those warnings
-remain reasons to validate future relocations, not evidence of a static
-boundary conflict. M3 resumes only as an idiom-class audit or with a new
+`0x800BF790` mission mapping, s2142 confirmed the `0x800C64B0` mission
+mapping, and s2143 confirmed the `0x800E71D0` mission mapping, each with
+unchanged boundaries and callers. Those warnings remain reasons to
+validate future relocations, not evidence of a static boundary conflict. M3 resumes only as an idiom-class audit or with a new
 discriminator. M4 accumulator/beam evidence rules out the old shade-lane
 theory but is not pixel ground truth. The remaining generated placeholders
 are semantic holds or intentional non-sync entries.
@@ -716,9 +727,12 @@ then selected the static mission mapping for
 boundary, and caller table in the final ELF/generated tree. s2142 selected
 the static mission mapping for
 `func_800C64B0`/`initHangarDisplayItemTimers`, with the same start, size,
-end boundary, and caller table in the final ELF/generated tree. The next
-work unit remains the generated-symbol sweep; no runtime or default-arm
-change follows.
+end boundary, and caller table in the final ELF/generated tree. s2143
+selected the static mission mapping for
+`func_800E71D0`/`transformCraftAnchorsApplySubFx3`, with the same start,
+size `0x1C0`, end boundary `0x800E7390`, and caller table in the final
+ELF/generated tree. The next work unit remains the generated-symbol sweep;
+no runtime or default-arm change follows.
 
 ## Method and safety rules
 
