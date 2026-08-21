@@ -1,0 +1,256 @@
+s2159 A1 named default-blocker census
+HYPOTHESIS-ID: m5-image-arm-default-blockers
+Scope: host-only. No port build, game run, default-arm, canary, task-exit, or
+output-route change. Sources required by NEXT.md:
+  docs/CURRENT-TRUTH.md
+  docs/M5-AUDIO-PLAN.md A1 row (and the A1-adjacent "toggle is opt-in" sentence)
+  src/main/main.cpp get_rsp_microcode M_AUDTASK comment (L1494-1504)
+
+Positive controls (required by NEXT.md; both appear as named rows below)
+  CT-HOST-CONTRACT  CURRENT-TRUTH "does not yet satisfy the host task contract"
+  MAIN-WAIT-HANG    get_rsp_microcode waitForMusyXAudioTaskDone hang comment
+
+Classes
+  closed-by-selected-hypothesis  named keep-opt-in reason; a listed selected
+                                 hypothesis already supplies the discriminator
+  still-open                     named host-task-contract clause with a missing
+                                 measurement (would select H-ContractOpen or
+                                 H-WaitWedgeStillOpen)
+  policy-comment                 instruction, status, stale pointer, or scope
+                                 note that is not itself a host-contract clause
+
+Needle counts (command from NEXT.md)
+  docs/CURRENT-TRUTH.md bytes 18056
+    opt-in 5  default 14  ROGUESQ_AUDIO_UCODE 4
+    host task contract 0  (phrase wraps across L199-200; sentence present)
+    waitForMusyXAudioTaskDone 0  s_use_real_audio_ucode 0  factor5_ucode_b 3
+  docs/M5-AUDIO-PLAN.md bytes 24426
+    opt-in 6  default 11  ROGUESQ_AUDIO_UCODE 8
+    host task contract 0  waitForMusyXAudioTaskDone 2
+    s_use_real_audio_ucode 0  factor5_ucode_b 5
+  src/main/main.cpp bytes 196085
+    opt-in 1  default 11  ROGUESQ_AUDIO_UCODE 2
+    host task contract 0  waitForMusyXAudioTaskDone 1
+    s_use_real_audio_ucode 5  factor5_ucode_b 8
+
+================================================================
+Every keep-opt-in / isolation sentence
+================================================================
+
+ID  source:line     class            role
+--- --------------  ---------------  ----
+
+-- CURRENT-TRUTH.md --
+
+CT-STATUS
+  L23-25  policy-comment
+  "The default audio path is a silent Broke stub. The Factor 5 image arm
+   is opt-in through ROGUESQ_AUDIO_UCODE=1 and is not defaulted on."
+  Status of the env default, not a host-contract reason.
+
+CT-ISOLATOR
+  L42-48  policy-comment
+  s2158 H-IsolatedOnlyByEnv: the only control-flow isolator is
+  get_rsp_microcode's ROGUESQ_AUDIO_UCODE branch. "Do not default the
+  image arm from that table" is s2158's scope note, not a remaining
+  contract clause.
+
+CT-THIS-UNIT
+  L48-52, L107-114, L196  policy-comment
+  This census, plus "Do not move the canary / default the image arm /
+  change osAiGetStatus_recomp / osAiSetNextBuffer_recomp." Work-unit
+  fence, not a reason the arm must stay opt-in after the table.
+
+CT-FORBID-s2134
+  L68  policy-comment
+  Forbidden follow-on of H-RetailMORTDecoderLive is "default-arm change".
+  That hypothesis does not license a flip; it is also not a blocker.
+
+CT-FORBID-s2157
+  L79  policy-comment
+  Same for H-CanaryLogOnly.
+
+CT-FORBID-s2158
+  L80, L266-267  policy-comment
+  Same for H-IsolatedOnlyByEnv: "No AI-status shortcut, task ABI,
+  canary-prefill, wait, guard, or default-arm change follows from
+  H-IsolatedOnlyByEnv."
+
+CT-SCOPE-s2135
+  L187  policy-comment
+  "None of those results default the image arm or rewrite task fields."
+  Scope of s2135-s2140, not a remaining clause.
+
+CT-ASPMAIN
+  L198  policy-comment
+  "The stock aspMain contract is not the game's MusyX contract."
+  A2 reason not to dispatch aspMain. It is not a reason to keep
+  factor5_ucode_b opt-in; it argues for the Factor 5 image.
+
+CT-HOST-CONTRACT   *** POSITIVE CONTROL ***
+  L198-200  closed-by-selected-hypothesis
+  "The opt-in Factor 5 image arm is isolated because its generated task
+   function performs real DMEM activity but does not yet satisfy the
+   host task contract."
+  Parent claim. Constituent A1 clauses are the next four rows; all
+  closed. Real DMEM activity is not a defect (s2113/s2118). Remaining
+  isolation is the env default, not an unsatisfied contract clause.
+
+CT-C88
+  L202  policy-comment
+  "C88 testing selected reversed-or-suppressing polarity at sampled
+   port gate scope; no blanket gate flip is authorized."
+  Guest-gate polarity, not the RSP image default.
+
+-- M5-AUDIO-PLAN.md A1 --
+
+A1-TOGGLE
+  L13, L53-behavior  policy-comment
+  "The toggle is opt-in." / "Default M_AUDTASK returns Broke;
+   ROGUESQ_AUDIO_UCODE=1 selects factor5_ucode_b."
+  Status of the toggle, not a host-contract reason.
+
+A1-EXECUTE
+  L53 guest-contract  closed-by-selected-hypothesis
+  "M_AUDTASK must execute the retail audio task"
+  Closed: s2135 H-ExistingFactor5ConfigMatches (factor5b_rsp.toml is
+  retail aspMainText); s2136 H-RetailTaskMatchesFactor5b; s2137
+  H-PortTaskFieldsMatchRetail; s2140 H-RetailDataPtrOffset100.
+
+A1-SPDP
+  L53 guest-contract  closed-by-selected-hypothesis
+  "and complete its SP/DP contract."
+  Host completion is run_task returning true on RspExitReason::Broke
+  (rsp.cpp:918-925), which fires sp_complete. Closed: s2113/s2118
+  H-TaskExitMapping (generated break 0 / Broke at 0x1328 on the image
+  arm); s2157 H-CanaryLogOnly (completion is Broke alone; canary_ok
+  does not gate writeback or DMA). GFX LLE through the same
+  get_rsp_microcode/run_task dispatcher is the known-good non-audio
+  arm on the qualified route.
+
+A1-MORT
+  L53 guest-contract  closed-by-selected-hypothesis
+  "Task ownership is MusyX-derived; MORT ownership is not established."
+  Closed as a reason to keep the image off: s2135 maps the RSP image
+  to factor5b (MusyX-derived) and maps MORT to the separate CPU speech
+  asset. Not a missing RSP recompile.
+
+A1-KEEP
+  L53 reversible-change  policy-comment
+  "Keep the toggle."
+  Standing instruction pending this census, not an independent clause.
+
+A1-VALIDATE
+  L53 reversible-change  closed-by-selected-hypothesis
+  "First validate both dispatch arms in one build."
+  Closed: s2118 same-build stub vs image, both reached title
+  1024 @ 0x00790400 and hangar 512 @ 0x006AB400.
+
+A1-REACH
+  L53 reversible-change  policy-comment
+  "[audtask-dispatch] line is reachability evidence only."
+  Methodology, not a keep-opt-in reason.
+
+A1-POSCTRL
+  L53 reversible-change  closed-by-selected-hypothesis
+  "The positive control is a known-good non-audio RSP task completing
+   through the same dispatcher, followed by task exit and slot/PCM
+   evidence for the audio arm."
+  Closed:
+    dispatcher  qualified LLE gfx route (CURRENT-TRUTH Current state)
+    task exit   s2113/s2118 H-TaskExitMapping
+    PCM         s2118 hangar stage-2 DMA/PCM identity; s2133
+                H-PortAIQueueMatches
+    slot/wait   s2118 image arm 1780 wait-contract rows at target
+                phases; CURRENT-TRUTH slot-0 0x03->0x00 through
+                0x8009B7EC
+
+A1-TWOSRC
+  L53 phase/rollback  closed-by-selected-hypothesis
+  "no default flip until two-source completion evidence."
+  Closed as a blocker: (1) s2118 same-build stub/image title+hangar
+  with image Broke + PCM identity; (2) independent retail s2136 task
+  fields + s2132 H-RetailAIQueued. Iron-rule two-source is satisfied.
+  The sentence remains a process fence against flipping from a census
+  table (see CT-THIS-UNIT), not an open contract measurement.
+
+-- get_rsp_microcode M_AUDTASK comment (main.cpp:1494-1504) --
+
+MAIN-UNTIL-SOAK
+  L1494-1496  closed-by-selected-hypothesis
+  "gated behind an env var so default behavior is unchanged until a
+   validation soak confirms it's safe."
+  The named validation soak exists: s2118 image arm, title+hangar,
+  break_pc=0x1328, exit=Broke, hangar PCM joins. The remaining "until"
+  is process (do not flip inside this census), not a missing soak.
+
+MAIN-GATE-STALE
+  L1497-1499  policy-comment
+  "audio-enable gate (still forced to 0 by fixup_game_funcs.py)"
+  Contradicted by M5-AUDIO-PLAN.md L36-43 (live =1 stores at
+  initMusyXEngine / setDisplayMode / reapplyDisplayMode). Stale
+  comment, not a keep-opt-in reason.
+
+MAIN-LIVE-EXERCISE
+  L1499-1500  policy-comment
+  "this is a live first exercise of factor5_ucode_b on every VI retrace,
+   not a no-op."
+  Describes the env-true path. Not a reason to keep the default off.
+
+MAIN-WAIT-HANG   *** POSITIVE CONTROL ***
+  L1500-1504  closed-by-selected-hypothesis  (citation: policy-comment)
+  "See M5-AUDIO-PLAN.md §3 crash family #1 before flipping the default:
+   the original incomplete stub caused a boot-time scheduler wedge
+   (waitForMusyXAudioTaskDone spinning on a countdown only real ucode
+   execution decrements) -- this env var reproduces exactly the
+   condition that caused that hang."
+  Split:
+    §3 crash family #1  does not exist in the current M5-AUDIO-PLAN
+                        (no §3, no numbered crash-family list).
+                        Stale pointer. policy-comment.
+    stub-wedge mechanism  "countdown only real ucode decrements" is a
+                        reason the stub is incomplete, i.e. an argument
+                        FOR selecting the image, not for keeping it
+                        opt-in. Historical wait hang was addressed by
+                        the s327 pump; s332 refuted the 2nd-spin loop;
+                        s2125 selected H-PumpIrrelevant on the stub
+                        path. Not a remaining image-arm blocker.
+    "env var reproduces the hang"  REFUTED at the qualified recipe:
+                        s2118 image arm (ROGUESQ_AUDIO_UCODE=1) reached
+                        hangar 512 @ 0x006AB400 at 129.4s with 1780
+                        wait-contract rows and 108 real dispatches.
+                        s2113 independently reached title and hangar
+                        on the image arm. A boot-time
+                        waitForMusyXAudioTaskDone wedge would have
+                        blocked those VIs. s2123/s2125 are not the
+                        closing pair (retail wait / stub pump); s2118
+                        is.
+
+================================================================
+Hypothesis selection
+================================================================
+
+H-PolicyOnly SELECTED
+  Every previously named host-contract reason to keep the arm opt-in
+  is closed by a selected hypothesis. Remaining isolation is
+  get_rsp_microcode's env default plus historical / scope comments.
+
+H-ContractOpen REFUTED
+  No named host-task-contract clause remains unsatisfied. A1-EXECUTE,
+  A1-SPDP, A1-MORT, A1-VALIDATE, A1-POSCTRL, A1-TWOSRC, and
+  CT-HOST-CONTRACT are all closed-by-selected-hypothesis.
+
+H-WaitWedgeStillOpen REFUTED
+  The hang comment is not an untested default-arm risk at boot/title/
+  hangar scope. Env-true is behaviorally the default-on path. s2118
+  and s2113 ran that path to hangar. s2123/s2125 were never the
+  required closer; s2118 is.
+
+H-CoverageFailure REFUTED
+  Both required positive-control sentences are named rows. Every
+  keep-opt-in sentence in the three required sources has a class.
+
+Do not default the image arm from this table. The next unit is an
+explicit A1 default-on change with a same-build env=0 vs unset soak
+and an ORIGIN line. Rollback becomes ROGUESQ_AUDIO_UCODE=0.
+)

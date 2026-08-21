@@ -102451,3 +102451,58 @@ intentional opt-in gate, not a wild value.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-arm-default-blockers`.
+
+## Session 2159 (2026-08-21) — classified image-arm default-blockers as policy-only
+
+HYPOTHESIS-ID: m5-image-arm-default-blockers
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 18,056 bytes, so this was not a
+maintenance iteration. Soak-queue intake was historical 2026-08-18 rows
+already consumed; no new recipes. The prescribed unit was one host-only
+table of every keep-opt-in sentence in `docs/CURRENT-TRUTH.md`,
+`docs/M5-AUDIO-PLAN.md` A1, and the `get_rsp_microcode` M_AUDTASK
+comment. No port build, game run, default-arm, canary, task-exit, or
+output-route change.
+
+Needle counts: CURRENT-TRUTH `opt-in` 5 / `ROGUESQ_AUDIO_UCODE` 4 /
+`factor5_ucode_b` 3; M5-AUDIO-PLAN 6 / 8 / 5 plus
+`waitForMusyXAudioTaskDone` 2; `main.cpp` 1 / 2 / 8 plus
+`waitForMusyXAudioTaskDone` 1 and `s_use_real_audio_ucode` 5. The phrase
+`host task contract` is split across CURRENT-TRUTH L199-200 and is
+present as the required positive-control sentence.
+
+Both required positive-control rows are in the table
+(`scratch/agent/s2159_image_arm_default_blockers.txt`):
+`CT-HOST-CONTRACT` (CURRENT-TRUTH “does not yet satisfy the host task
+contract”) and `MAIN-WAIT-HANG` (`waitForMusyXAudioTaskDone` hang
+comment at `main.cpp:1500-1504`). Every other keep-opt-in sentence in
+the three sources is classified closed-by-selected-hypothesis or
+policy-comment.
+
+Closed host-contract clauses: A1 execute (s2135–s2140), A1 SP/DP
+complete (s2113/s2118 `H-TaskExitMapping` plus s2157 completion on
+`Broke` alone), A1 MORT-ownership (s2135 CPU speech vs factor5b RSP),
+A1 both-arm validate and task-exit+PCM (s2118 same-build stub/image
+title+hangar with hangar PCM identity), A1 two-source completion
+(s2118 plus retail s2132/s2136). The hang comment’s “env var
+reproduces the hang” claim is refuted at boot/title/hangar scope by
+s2118 image-arm hangar `512 @ 0x006AB400` at 129.4s with 1780
+wait-contract rows (s2113 independently reached hangar on the image
+arm). The cited M5-AUDIO-PLAN §3 crash family #1 does not exist.
+
+This selects `H-PolicyOnly` and refutes `H-ContractOpen`,
+`H-WaitWedgeStillOpen`, and `H-CoverageFailure`. Remaining isolation is
+the env default plus historical / scope comments, not an unsatisfied
+host-task contract. No runtime, mitigation, task, wait, guard,
+canary-prefill, or default-arm behavior changed.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery
+was added; this session only classified named keep-opt-in sentences.
+The writer of the live function pointer remains `get_rsp_microcode`
+reading `ROGUESQ_AUDIO_UCODE`; that env default (`musyx_stub_probe`) is
+now a policy leftover, not a named open contract clause.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-default-on`.

@@ -1,73 +1,65 @@
-# NEXT work unit (s2159) — A1 named default-blocker census
+# NEXT work unit (s2160) — A1 default-on flip
 
-HYPOTHESIS-ID: m5-image-arm-default-blockers
+HYPOTHESIS-ID: m5-a1-default-on
 
 ## Work unit
 
-s2158 selected `H-IsolatedOnlyByEnv`: the only control-flow isolator
-that keeps `factor5_ucode_b` opt-in is `get_rsp_microcode`'s
-`ROGUESQ_AUDIO_UCODE` branch. `run_task` always calls that pointer;
-the env-true wrapper never reaches `musyx_stub`. Do not default the
-image arm from that table, move the canary, change canary 10→prefill,
-or change `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
+s2159 selected `H-PolicyOnly`: every named host-contract reason to keep
+`factor5_ucode_b` opt-in is closed by a selected hypothesis. Remaining
+isolation is `get_rsp_microcode`'s env default plus historical comments.
+Do not move the canary, change canary prefill, or change
+`osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
 
-The remaining A1 question is which named reason, if any, still forbids
-flipping `s_use_real_audio_ucode`'s default. Next unit is one host-only
-table of every sentence in `docs/CURRENT-TRUTH.md`,
-`docs/M5-AUDIO-PLAN.md` A1, and the `get_rsp_microcode` M_AUDTASK
-comment that claims a reason the image arm must stay opt-in. Classify
-each as closed-by-selected-hypothesis, still-open, or policy-comment.
-No port build, game run, default-arm, canary, task-exit, or output-route
-change.
+This unit is the explicit A1 default-on flip of `s_use_real_audio_ucode`
+in `src/main/main.cpp:get_rsp_microcode`:
 
-Positive control: the CURRENT-TRUTH sentence that isolation remains
-because the generated task "does not yet satisfy the host task
-contract", plus the `get_rsp_microcode` hang-comment about
-`waitForMusyXAudioTaskDone`. Both must appear as named rows.
+    // after
+    s_use_real_audio_ucode = (e && e[0] == '0') ? 0 : 1;
+
+Unset / empty / any non-`0` value selects `&factor5_ucode_b_probe`.
+`ROGUESQ_AUDIO_UCODE=0` remains the stub rollback. Refresh the stale
+M_AUDTASK comment (dead M5-AUDIO-PLAN §3 crash-family pointer; "gate
+still forced to 0"; "env var reproduces the hang") in the same edit.
+Then one Debug build and a same-build unset vs `=0` title/hangar soak.
+
+ORIGIN: the writer of the live `RspUcodeFunc*` is `get_rsp_microcode`
+reading `ROGUESQ_AUDIO_UCODE`. Default-on selects `factor5_ucode_b`, the
+legitimate retail audio image (s2135/s2136), not a wild value. The
+previous default was a host stub.
 
 ## Competing hypotheses and discriminator
 
-- `H-PolicyOnly`: every previously named host-contract reason to keep
-  the arm opt-in is already closed by a selected hypothesis; remaining
-  isolation is the env default plus a historical comment.
-- `H-ContractOpen`: at least one named host-task-contract clause is
-  still unsatisfied (cite the clause and the missing discriminator).
-- `H-WaitWedgeStillOpen`: the `waitForMusyXAudioTaskDone` hang comment
-  in `get_rsp_microcode` is an untested default-arm risk, not closed by
-  s2123/s2125 sampled wait/pump rows.
-- `H-CoverageFailure`: a named "keep opt-in" sentence has no matching
-  selected hypothesis and no classifiable open discriminator.
+- `H-DefaultMatchesOptIn`: the unset arm matches the s2118 image-arm
+  contract (title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`,
+  `[audtask-dispatch] real_ucode=1`, `break_pc=0x1328`, `exit=Broke`,
+  hangar stage-2 PCM joins). The `=0` arm matches the s2118 stub
+  (`real_ucode=0`, `dma_count=0`, `break_pc=0`).
+- `H-WaitWedgeOnDefault`: the unset (image) arm fails to reach title or
+  hangar and the last live audio site is `waitForMusyXAudioTaskDone`.
+- `H-RouteRegress`: the unset arm misses title or hangar without a
+  wait-wedge signature (different last-guest-pc / crash family).
+- `H-CoverageFailure`: either arm misses the target VI, so the pair
+  cannot select among the first three.
 
-The discriminator is one table: every keep-opt-in sentence, its class,
-and the selected hypothesis or missing measurement it cites.
-All-closed-plus-policy selects `H-PolicyOnly`; one unsatisfied contract
-clause selects `H-ContractOpen`; an unclosed hang-comment risk selects
-`H-WaitWedgeStillOpen`; an unclassifiable sentence selects
-`H-CoverageFailure`. Do not default the image arm from the table.
+Positive control: both arms must print `[audtask-dispatch]` with the
+expected `real_ucode=` value before any target-phase comparison.
 
 ## Exact commands
 
-    python3 - <<'PY'
-    from pathlib import Path
-    files = [
-        Path('docs/CURRENT-TRUTH.md'),
-        Path('docs/M5-AUDIO-PLAN.md'),
-        Path('src/main/main.cpp'),
-    ]
-    needles = [
-        'opt-in', 'default', 'ROGUESQ_AUDIO_UCODE',
-        'host task contract', 'waitForMusyXAudioTaskDone',
-        's_use_real_audio_ucode', 'factor5_ucode_b',
-    ]
-    for p in files:
-        text = p.read_text()
-        print(p, 'bytes', p.stat().st_size)
-        for n in needles:
-            print(' ', n, text.count(n))
-    PY
+After the default-on edit and one Debug build, from the repo root:
 
-Grep those needles in the three files. Classify each keep-opt-in
-sentence. Write `scratch/agent/s2159_image_arm_default_blockers.txt`.
+    env -u ROGUESQ_AUDIO_UCODE \
+      ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+      ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
+      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2160_default_on 30 12
 
-Do not edit `get_rsp_microcode`, `musyx_stub`, `osAiSetNextBuffer_recomp`,
-or the default audio arm.
+    env ROGUESQ_AUDIO_UCODE=0 \
+      ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+      ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
+      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2160_default_off 30 12
+
+Kill with SIGKILL. Compare `[audtask-dispatch] real_ucode=`, `[phase]`
+title/hangar VIs, `break_pc`, and hangar PCM joins.
+
+Do not change `osAiSetNextBuffer_recomp`, canary prefill, wait pumps, or
+guest gates in this unit.

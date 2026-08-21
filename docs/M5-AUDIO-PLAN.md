@@ -183,10 +183,20 @@ explicit control arm.
    `RspUcodeFunc*` is assigned only in `get_rsp_microcode` from
    `ROGUESQ_AUDIO_UCODE`; `run_task` always calls that pointer;
    the env-true wrapper calls `factor5_ucode_b`, not `musyx_stub`.
-   The next incremental unit is one host-only table of every named
-   reason the image arm must stay opt-in. Do not default the image arm
-   or move the canary in that census. Rollback remains leaving the
-   existing RSP dispatch arm opt-in.
+   s2159 selected `H-PolicyOnly`
+   (`scratch/agent/s2159_image_arm_default_blockers.txt`): every
+   named keep-opt-in sentence in CURRENT-TRUTH, this A1 row, and the
+   `get_rsp_microcode` hang comment is closed-by-selected-hypothesis
+   or policy-comment. The A1 execute / SP-complete / MORT-ownership /
+   both-arm-validate / task-exit+PCM / two-source-completion clauses
+   are already selected (s2118, s2132–s2140, s2157). Remaining
+   isolation is the env default plus historical comments, not an
+   unsatisfied host-task contract. The next incremental unit is the
+   explicit A1 default-on flip of `s_use_real_audio_ucode` (unset
+   selects the image; `ROGUESQ_AUDIO_UCODE=0` remains the stub
+   rollback) with a same-build unset vs `=0` soak. Do not move the
+   canary in that unit. Rollback after the flip is
+   `ROGUESQ_AUDIO_UCODE=0`.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.
