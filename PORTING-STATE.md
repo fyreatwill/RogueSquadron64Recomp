@@ -99793,3 +99793,53 @@ changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-sp-queue-consumer-boundary`.
+
+## Session 2096 (2026-08-20) — qualified the audio SP queue and guest consumer
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 33274 bytes, so this was not a
+maintenance iteration. The fixed retail oracle recipe was rebuilt and rerun
+before changing the runtime. Its whole-RDRAM positive control reached 31623
+writes, reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and
+retained the qualified mixed gate rows.
+
+Added a source-preserving SP route table. `rsp.cpp` now exposes the active
+audio return snapshot; `mesgqueue.cpp` carries that arm/phase/ordinal through
+`EventMessageSource::Sp`, external delivery/requeue, and a bounded delivered
+message table. `osRecvMesg` records the actual dequeued message and joins it to
+the matching guest receive row. The existing route rows and queue behavior are
+unchanged. The submodule patch export and Debug build both succeeded.
+
+Ran the default stub control and `ROGUESQ_AUDIO_UCODE=1` treatment concurrently
+from the same driver:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_RETURN=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step5-treatment 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/m5-audio-step5-treatment-driver.log 2>&1 &
+pid_t=$!
+env -u ROGUESQ_AUDIO_UCODE ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_RETURN=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step5-control 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/m5-audio-step5-control-driver.log 2>&1 &
+pid_c=$!
+wait $pid_t; rc_t=$?
+wait $pid_c; rc_c=$?
+printf 'treatment_rc=%s control_rc=%s\n' "$rc_t" "$rc_c"
+```
+
+The control emitted 1016 route ordinals and the treatment emitted 8750. Each
+arm had all six edges—`run-task-return`, `sp-complete-enter`, SP external
+enqueue, `sp-complete-return`, external delivery, and guest receive—with
+1016/1016 and 8750/8750 complete ordinals. A first strict total-order check
+found 20 control ordinals where delivery raced before `sp-complete-return`;
+the corrected source partial order allows that cross-thread race, and then
+found zero missing/duplicate edges or violations in either arm. The treatment
+reached title and hangar, with 271 and 2972 matched guest receives in those
+phases, then crashed in `initVec4TripletFromArgs` (last guest PC
+`0x800AB068`). The control crashed pre-title in MetalFramebuffer code but its
+complete route table is a positive control. This selects `H-RouteRecovered` at
+recipe scope and supersedes the s2095 recipe-level `H-SPRouteQueued` result;
+it rules out the external-queue delivery and guest-consumer boundaries for
+this route. Task ABI, DMA, slot, and PCM interpretation is now admissible, but
+no task, output, gate, wait, guard, queue-policy, or default-dispatch change
+was made.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.

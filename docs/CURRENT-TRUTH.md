@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2095 (2026-08-20);
-behavioral and source evidence is current through s2095.
+for exact commands and probe rows. Maintained in Session 2096 (2026-08-20);
+behavioral and source evidence is current through s2096.
 
 ## Current state
 
@@ -127,6 +127,19 @@ behavioral and source evidence is current through s2095.
   VIs. This selects `H-SPRouteQueued` at post-return scope and moves the next
   discriminator to SP external-queue delivery versus the guest SP consumer;
   no queue, gate, wait, guard, output, or default-dispatch behavior changed.
+- s2096's fixed retail oracle again passed its whole-RDRAM positive control
+  (`31623` writes), reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and retained the qualified gate rows. The same-build
+  source-preserving table found all six route edges for 1016/1016 control
+  ordinals and 8750/8750 treatment ordinals, with zero missing or duplicate
+  edges and zero partial-order violations after allowing external delivery to
+  race `sp-complete-return`. The treatment reached title and hangar, with 271
+  matched guest receives in the title phase and 2972 in the hangar phase; its
+  later crash was in `initVec4TripletFromArgs`, last guest PC `0x800AB068`.
+  The control's unrelated pre-title MetalFramebuffer crash does not invalidate
+  its route positive control. This selects `H-RouteRecovered` at recipe scope
+  and re-admits the image-arm ABI/DMA/slot/PCM table; no task, queue, gate,
+  wait, guard, output, or default-dispatch behavior changed.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -195,17 +208,16 @@ behavioral and source evidence is current through s2095.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 SP queue/guest-consumer boundary.** Retain the audio-return and
-   post-return route table. Add one bounded source-preserving table for the SP
-   external enqueue, game-thread delivery attempt, requeue/full result, and
-   matching guest `osRecvMesg` consumer row. Build the control and
-   `ROGUESQ_AUDIO_UCODE=1` treatment together and retain the retail oracle
-   positive control, target VI gates, and passive probes. A treatment enqueue
-   with no delivery selects the external-queue boundary; delivery with a full
-   or requeued SP queue selects queue capacity/scheduling; successful delivery
-   without a matching guest receive selects the guest SP consumer. The control
-   must show the same ordered queue sequence. No gate, wait, guard, host
-   output, default dispatch, or task ABI change is authorized.
+1. **M5 image-task ABI/DMA/slot/PCM contract.** Retain the route-positive
+   table and use the same-build control plus `ROGUESQ_AUDIO_UCODE=1` treatment
+   to qualify the existing phase-keyed `audtask-abi`, `audtask-dma-row`, slot,
+   and PCM source/consumer rows. A treatment output-overlap DMA with nonzero
+   payload and matched PCM selects the generated output contract; generated
+   DMA with no output overlap or zero payload selects the image staging/ABI
+   boundary; route-complete treatment with a slot/gate divergence selects the
+   guest completion contract. The control must retain its route positive
+   control and target VI gates. No output routing, task-field, gate, wait,
+   guard, queue policy, or default-dispatch change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -283,6 +295,14 @@ and the task-thread SP completion return in order. The treatment still misses
 both target VIs, so the remaining boundary is SP external-queue delivery
 versus guest consumption; task ABI, DMA, slot, and PCM interpretations remain
 gated. No gate or wait change is authorized.
+
+s2096's source-preserving table then shows the external SP enqueue, successful
+delivery, and matching guest receive for every sampled audio ordinal in both
+arms. The treatment reaches both target phases, so the route boundary is
+closed at this scope and the next admissible discriminator is the existing
+ABI/DMA/slot/PCM table. The table still reports `Broke`, canary failure, and
+zero image DMA payload in the treatment; those fields are now eligible for
+interpretation, but no output or task-contract change is authorized.
 
 The s2080 crosswalk separates the generated fill function from the shared
 crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
@@ -442,6 +462,12 @@ The maintenance compaction retains the reasons for the recent reversals here:
   both target VIs. This supersedes the task-thread-boundary possibility at
   that scope and selects `H-SPRouteQueued`; it does not prove that the SP
   external message was delivered to, or consumed by, the guest.
+- The s2095 `H-SPRouteQueued` conclusion was believable because its treatment
+  missed both target VIs while the route table stopped after SP completion.
+  s2096's source-preserving table independently matched enqueue, delivery, and
+  guest receive for every retained ordinal in both arms, and the treatment
+  reached title and hangar. This supersedes the recipe-level route-failure
+  conclusion, but not the unresolved image-task ABI/DMA/slot/PCM contract.
 
 ## Evidence ledger summary
 
@@ -477,11 +503,13 @@ both target VIs. Its same-build return-wrapper A/B recorded 331 control and
 reached a target VI. s2095 then added the post-return route table: the control
 and treatment both showed complete ordered `run_task` and task-thread SP
 completion edges, while the control reached title and hangar and the treatment
-bus-faulted before either target phase. This selects `H-SPRouteQueued` at
-post-return scope and moves the next discriminator to source-preserving SP
-queue delivery and guest consumption; task ABI, DMA, slot, and PCM causality
-remain gated. The chronological ledger is still the source for exact run
-commands, counts, and rejected retries.
+bus-faulted before either target phase. This selected `H-SPRouteQueued` at
+post-return scope. s2096's fixed retail oracle and same-build
+source-preserving route table then qualified the external enqueue, delivery,
+and guest receive edges in both arms, and the treatment reached both target
+phases, selecting `H-RouteRecovered` at recipe scope. The next discriminator
+is the existing image-task ABI/DMA/slot/PCM table. The chronological ledger is
+still the source for exact run commands, counts, and rejected retries.
 The chronological ledger is still the source for exact run commands, counts,
 and rejected retries.
 
