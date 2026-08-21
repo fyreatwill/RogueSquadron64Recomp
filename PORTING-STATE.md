@@ -100706,3 +100706,40 @@ observed at `0x1328`. No corruption mitigation or value skip was added.
 Run the retail ground-truth gate census described in `scratch/agent/NEXT.md`
 under `HYPOTHESIS-ID: m5-guest-gate-ground-truth` before adding any port gate
 instrumentation or changing a `0x800A0F50` writer.
+
+## Session 2119 (2026-08-21) — classified the retail MusyX gate writers
+
+The prescribed retail-oracle census ran with the whole-RDRAM positive control,
+physical watches for `0xA0F50`, `0x14998A`, and `0x14974C`, post-value and PC
+histograms, Rice video, and the eleven verified Start presses. The command
+completed with exit 0 and wrote `scratch/agent/s2119_oracle_gate.log`.
+
+The positive control reached 10000 callbacks before being removed, and the
+run ended with 38511 whole-RDRAM writes. VI tracing reached title
+`1024 @ 0x00790400` at 17.3s and hangar `512 @ 0x006AB400` at 38.4s; it
+continued to 5374 VI in 90.2s wall time. Thus the target watches had valid
+hangar coverage and their nulls would have been interpretable.
+
+Physical `0xA0F50` received 17 writes. Its post-store sample had two values:
+`0x00000000` four times and `0x01000000` twice. The bounded writer-PC samples
+identified `0x8008EB7C` with zero values, `0x8008ED48` with zero values, and
+`0x8008EC88` with nonzero values. The countdown watch at `0x14998A` received
+one write and no post-store sample. The worker-flag watch at `0x14974C`
+received 17824 writes; its post-store samples were
+`0x00010003` (129), `0x00000003` (131), and `0x01010003` (1), with writer
+PCs including `0x800917A8`, `0x800916DC`, `0x80091680`, and `0x800912F8`.
+
+This selects `H-GateMixed` and rejects `H-GateNeverLive`: the target is live,
+has mixed values, and has multiple observed writer PCs. It does not select a
+single causal writer or authorize a store flip. The classification is
+single-source retail evidence; the next same-build port pair must provide the
+independent behavior line. The countdown and worker watches are attribution
+context, not proof of the audio task contract.
+
+ORIGIN: independent retail ground-truth measurement only; no port writer,
+task field, output route, wait, guard, queue, or mitigation changed.
+
+### Next
+
+Run the same-build `ROGUESQ_M5_C88_VALUE=0` versus `1` image-task pair in
+`scratch/agent/NEXT.md` to test only `reapplyDisplayMode` at `0x8008EC88`.

@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2118
-(2026-08-21); behavioral and source evidence is current through s2118.
+authoritative for exact commands and probe rows. Maintained in Session 2119
+(2026-08-21); behavioral and source evidence is current through s2119.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -87,6 +87,16 @@ This file is intentionally compact. The s2080–s2108 archive is in
   boundary. The stub later crashed after hangar in `do_rom_read`; that does
   not erase the already-observed target rows. No output or exit mapping
   change is authorized.
+- The s2119 retail oracle gate census passed its independent whole-RDRAM
+  positive control (`38511` writes), reached title `1024 @ 0x00790400` and
+  hangar `512 @ 0x006AB400`, and recorded `17` writes to physical `0xA0F50`.
+  The target post-store samples contained both `0x00000000` and
+  `0x01000000`; the observed writer-PC samples were `0x8008EB7C` (zero),
+  `0x8008ED48` (zero), and `0x8008EC88` (nonzero). The auxiliary countdown
+  watch at `0x14998A` wrote once; the worker flag at `0x14974C` wrote `17824`
+  times with three nonzero values. This is single-source retail evidence:
+  it rejects `H-GateNeverLive` and selects `H-GateMixed`, but does not yet
+  identify which port writer controls the live task route.
 - The title path is separately selected as `H-InputZero`: title-stage input,
   transform, and DMA payloads were zero. A hangar sample had nonzero input,
   transform, and matching DMA payload, rejecting transform annihilation and
@@ -124,14 +134,15 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 guest-gate ground truth.** The image-task contract is selected at the
-   sampled target boundary. Before changing any `0x800A0F50` writer or
-   consumer, run the retail oracle with a whole-RDRAM positive control plus
-   physical `0xA0F50`, `0x14998A`, and `0x14974C` watches, phase-gated through
-   the hangar. Classify the gate as never-live, writer-specific, or mixed by
-   target hit/value/PC histograms; do not flip a store or remove a guard from
-   this measurement. Preserve task fields, generated DMA, canary, slot, PCM,
-   waits, queues, and default behavior.
+1. **M5 guest-gate writer arm.** The retail oracle selects
+   `H-GateMixed` at the sampled route: `0x8008EC88` is the observed nonzero
+   writer while other observed writer PCs store zero. Use the existing
+   phase-keyed `ROGUESQ_LOG_M5_GATE_CONTRACT` census and a same-build
+   `ROGUESQ_M5_C88_VALUE=0` versus `1` image-task pair to test only the
+   `reapplyDisplayMode` writer. Require title/hangar coverage plus gate value,
+   audio-task exit, slot/status, and PCM rows before interpreting a split.
+   Do not change task fields, output routing, waits, queues, or default
+   behavior.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -209,6 +220,13 @@ provided same-phase stub/image control rows, and the image hangar phase
 supplied the nonzero stage-to-PCM join. The generated `break 0` edge at guest
 PC `0x1328` therefore selects the task-exit mapping at this sampled boundary;
 `output_buff=0` remains an ABI-semantics question and is not a routing fix.
+
+The s2119 retail oracle is independent ground truth for the next gate step,
+but the classification is single-source until matched by port behavior. Its
+whole-RDRAM control fired, the run reached the hangar, and physical
+`0xA0F50` had both zero and nonzero post-store values from multiple writer
+PCs. This selects `H-GateMixed` and authorizes only a named, one-writer port
+arm; it does not authorize a blanket gate flip or any task-contract change.
 
 The s2110 route table was positive in both arms: B40 write/return and the first
 two reapply pairs matched, while only B40=1 reached the later reapply entry in
@@ -290,7 +308,8 @@ The exact commands, counts, failed retries, and session headings remain in
 must not be widened from single-source or single-arm observations. s2115's
 paired coverage result added no ABI selection; s2116's four-arm table added
 coverage selection only; s2118 closes the sampled C88=0 contract boundary and
-advances M5 to guest gate writer/consumer attribution.
+s2119's retail census selects mixed gate writers, advancing M5 to a
+single-writer port arm.
 
 ## Method and safety rules
 

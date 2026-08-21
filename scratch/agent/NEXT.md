@@ -1,46 +1,57 @@
-# NEXT work unit (s2119) — retail ground truth for the MusyX gate
+# NEXT work unit (s2120) — one-writer port arm for the mixed retail gate
 
 HYPOTHESIS-ID: m5-guest-gate-ground-truth
 
 ## Work unit
 
-Run one retail-oracle writer/consumer census before adding or changing any
-port instrumentation for guest gate `0x800A0F50`. The run must first arm the
-whole-RDRAM positive control, then watch physical `0xA0F50`, countdown
-`0x14998A`, and worker flag `0x14974C`, and must reach hangar VI origin
-`0x006AB400`. Do not change generated stores, guards, task fields, output
-routing, waits, queues, or default behavior in this work unit.
+Run one same-build, same-recipe image-task A/B with only the
+`reapplyDisplayMode` gate store varied through `ROGUESQ_M5_C88_VALUE=0` versus
+`1`. Keep `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_SPIN_YIELD=1`, the forced-LLE
+wrapper, task fields, output routing, waits, queues, guards, and defaults
+unchanged. Arm the existing phase-keyed
+`ROGUESQ_LOG_M5_GATE_CONTRACT` census plus all passive audio/PCM breadcrumbs.
+The retail oracle result is the first evidence line; this port pair must
+provide the second.
 
 ## Competing hypotheses and single discriminator
 
-- H-GateNeverLive: the retail gate remains zero through the qualified hangar
-  route; the port's zero gate is expected and no writer arm is justified.
-- H-GateWriterSpecific: retail writes a phase-specific `0`/`1` transition from
-  one or more named init/display writers; a later port arm must isolate one
-  writer and observe its downstream consumer.
-- H-GateMixed: retail has multiple writer PCs or both values at the target
-  address, so a blanket store flip would conflate initialization, failure, or
-  shutdown state with the live audio gate.
+- `H-ReapplyDisplayModeLive`: the retail nonzero writer at `0x8008EC88` is the
+  live port gate writer; C88=1 will preserve gate 1 and change downstream
+  audio-task, slot/status, or PCM rows relative to C88=0.
+- `H-ReapplyWriterNoncausal`: the writer is observed but does not control this
+  route at the tested phase; both arms will reach the same target phases and
+  have the same downstream contract rows.
+- `H-OtherWriter`: another named init/display or failure/shutdown writer later
+  overwrites the byte; the gate census will show that writer's value edge and
+  the C88 pair will not isolate a downstream split.
 
-The single discriminator is the oracle's target-watch hit/value/PC histogram,
-post-store value samples, and countdown/worker-flag watch activity, evaluated
-only after the independent whole-RDRAM watch fires and VI trace reaches
-`512 @ 0x006AB400`. Whole-RDRAM hits plus zero target hits selects
-H-GateNeverLive; a named writer/value transition with a stable downstream
-state selects H-GateWriterSpecific; multiple writer PCs or mixed values
-select H-GateMixed. Missing hangar coverage is a coverage failure, not a null
-gate result.
+The single discriminator is the complete phase-keyed table in both arms:
+title/hangar VI coverage, all seven gate-writer rows and final gate value,
+audio-task dispatch/exit, slot or status transition, and PCM nonzero/source
+rows. C88=1-only downstream activity selects `H-ReapplyDisplayModeLive`;
+identical covered rows reject it and select `H-ReapplyWriterNoncausal`; a
+later named overwrite selects `H-OtherWriter`. If either arm misses the
+target phase or its positive controls, the result is coverage failure and no
+hypothesis is selected.
 
-## Exact command
+## Exact commands
 
-Run from the repository root:
+Build once:
 
-    ORACLE=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/build/rs64_oracle
-    CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
-    ROM=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
-    "$ORACLE" --core "$CORE" --rom "$ROM" --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 90 --vi-trace --watch-write 0x0:0x800000 --watch-write 0xA0F50:0xA0F54 --watch-write 0x14998A:0x14998E --watch-write 0x14974C:0x149750 --post-value-watch 1 --post-value-watch 2 --post-value-watch 3 --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > scratch/agent/s2119_oracle_gate.log 2>&1
+    cmake --build build --config Debug --target RogueSquadron64Recomp
 
-Inspect the positive-control summary, VI trace, target hit/value/PC lines,
-post-value summaries, and the countdown/worker-flag histograms. If the oracle
-does not reach `512 @ 0x006AB400`, record coverage failure and do not classify
-the gate.
+Run both arms concurrently from the repository root:
+
+    env ROGUESQ_SPIN_YIELD=1 GAME_EXTRA_ENV="ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1" zsh scratch/s73_post_a_scene/run_mission_keys.sh s2120_c88_0 30 12 > scratch/agent/s2120_c88_0.launch.log 2>&1 &
+    env ROGUESQ_SPIN_YIELD=1 GAME_EXTRA_ENV="ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1" zsh scratch/s73_post_a_scene/run_mission_keys.sh s2120_c88_1 30 12 > scratch/agent/s2120_c88_1.launch.log 2>&1 &
+    wait
+
+Inspect only phase-gated rows from
+`scratch/s73_post_a_scene/s2120_c88_0/run.log` and
+`scratch/s73_post_a_scene/s2120_c88_1/run.log`: `[phase]`, `[m5-gate]`,
+`[audtask-dispatch]`, task exit/ABI, slot/status, and PCM boundary/sanity
+rows. Do not infer a null from a pre-target crash or a missing positive
+control.
+
+No store change, task-contract change, output-routing change, or mitigation
+is authorized by this work unit.
