@@ -1,6 +1,11 @@
-# NEXT work unit (s2077)
+# NEXT work unit (s2078)
 
 HYPOTHESIS-ID: m5-retail-fill-sample-boundary
+
+## Resume note (s2077 was a partial session)
+s2077 landed `tools/agent/prune-scratch.sh` and the loop.sh hook for it but
+did not run the oracle. The oracle command below is unchanged from s2077's
+NEXT.md; no partial output or artifact exists for this work unit.
 
 ## Work unit
 
@@ -46,7 +51,7 @@ tools/oracle/build/rs64_oracle \
   --watch-pc 0x8000B650,0x800668B0,0x8008DA00,0x8009B62C,0x8009B654,0x8009B3EC,0x8009B44C,0x8008EC88,0x80095D54 \
   --status-poll --pif-trace --vi-trace \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/oracle_s2077_fill_boundary.log 2>&1
+  > scratch/agent/oracle_s2078_fill_boundary.log 2>&1
 ```
 
 Report the whole-RDRAM hit count, PIF/title/hangar controls, each requested

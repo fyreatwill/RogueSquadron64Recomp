@@ -233,6 +233,12 @@ while [ "$n" -lt "$ITER_CAP" ]; do
     exit 2
   fi
 
+  # Scratch retention. probe/regress leave the full emulator trace in
+  # <outdir>/run.log and nothing used to remove them: 202 GB of traces put
+  # the disk at 97% on 2026-08-20. Runs between iterations, so a capture in
+  # flight never has its log compressed out from under it.
+  tools/agent/prune-scratch.sh 2>&1 | tee -a "$AG/loop.log"
+
   n=$((n+1))
   log "iteration $n starting $(date)"
   echo WORKING > "$AG/STATUS"

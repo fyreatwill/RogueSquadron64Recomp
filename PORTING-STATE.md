@@ -99003,3 +99003,33 @@ changed.
 ORIGIN: s2076 added observation-only wait/tick/status-reader probes to the
 regeneration fixup. They read existing gate and status bytes and do not write
 guest memory or alter waits, guards, task fields, or output routing.
+
+## Session 2077 (2026-08-20) — landed scratch log retention script
+
+### Work done
+The primary work unit (retail oracle PC witness for `fillSampleStreamRange`
+boundary) did not run: the session died mid-setup before the oracle command
+was issued. What did land:
+
+- `tools/agent/prune-scratch.sh` — new script that gzips settled `*.log` files
+  older than GZIP_AFTER_DAYS (default 2) and deletes compressed files older
+  than DELETE_AFTER_DAYS (default 21). The compression ratio for these emulator
+  traces is ~13× (measured: 0.54 GB → 0.04 GB). Handles loop.log correctly
+  (excluded from compression because it is held open by `tail -f`).
+- `tools/agent/loop.sh` — calls `prune-scratch.sh` once per iteration between
+  runs, so a capture in flight never has its log compressed out from under it.
+
+### Why it matters
+The scratch tree accumulated 202 GB across 2044 `run.log` files by 2026-08-20
+(disk at 97%). Without this, the next long oracle run risks filling the disk
+and aborting. The script is a prerequisite for reliable continued oracle use.
+
+### No hypotheses tested; no conclusions changed
+No port, guest, or oracle behavior changed. CURRENT-TRUTH backlog item 1
+(M5 Factor 5 image task/exit contract) remains at the same state: the next
+required step is the retail oracle PC witness for the `0x8000B650`
+`fillSampleStreamRange` boundary.
+
+### Next
+Run the oracle from NEXT.md (retail fill/wait/tick/status PC witness for
+the C88=1 crash boundary). See scratch/agent/NEXT.md.
