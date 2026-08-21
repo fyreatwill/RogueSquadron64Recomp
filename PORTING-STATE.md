@@ -99474,3 +99474,38 @@ voice-array base in a run that passes the whole-RDRAM control and reaches title
 and hangar, then watch one dynamically resolved active slot's `+0x34` with a
 writer-PC histogram. See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-voice-output-base-provenance`.
+
+## Session 2088 (2026-08-20) — qualified exact voice-writer destinations after fixing oracle phase gating
+
+Ran the M5 voice-output-base provenance work unit from `scratch/agent/NEXT.md`.
+The first oracle arm passed its whole-RDRAM positive control and later reached
+title and hangar, but source inspection of `tools/oracle/rs64_oracle.c` showed
+that `--post-value-pc` requested PCs were admitted by
+`post_value_requested_index(pc)` before `g_post_value_armed`. Its two
+post-target rows were therefore pre-title samples, despite the run-level VI
+controls; they were unevaluable for the planned discriminator.
+
+Changed only the oracle instrumentation gate so requested post-store PCs are
+sampled after the phase gate, rebuilt with `tools/oracle/build.sh`, and reran
+the same 65-second recipe. The fixed run passed the positive control with
+102,276,129 whole-RDRAM writes, reached title `1024 @ 0x00790400` at 17.3 s
+and hangar `512 @ 0x006AB400` at 38.5 s, and produced one qualified row for
+each requested writer. `0x800921E8` wrote physical
+`0x00171504 = 0xB03910A0`; `0x80090C80` wrote physical
+`0x001747A4 = 0`. Both destinations are in the 8 MiB RDRAM domain. The
+descriptor/zero values agree with the generated roles, while the two
+same-title-phase destinations differ by `0x32A0`, which is `40 mod 0x88`.
+
+This selects `H-WrongSlotBase` at the sampled writer-pair scope and rejects
+`H-InvalidWriter` there; it does not distinguish a retail pointer relocation
+between the rows from a wrong-field interpretation, and it does not justify
+a port mitigation. The pre-gate first arm rules out treating positive
+run-level controls as proof that a requested-PC sample was phase-qualified.
+The next unit is a bounded repeated destination/value table for
+`0x8008F0EC`, `0x80090C80`, and `0x800921E8`, with VI phase and pointer-base
+updates captured in the same run.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-voice-output-base-provenance`.

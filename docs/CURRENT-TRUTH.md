@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2087 (2026-08-20);
-behavioral and source evidence is current through s2087.
+for exact commands and probe rows. Maintained in Session 2088 (2026-08-20);
+behavioral and source evidence is current through s2088.
 
 ## Current state
 
@@ -30,6 +30,16 @@ behavioral and source evidence is current through s2087.
   generated `break 0` after its final DMA write. The source audit does not
   establish whether the destination is output staging, scratch, or an ABI
   mismatch.
+- s2088's fixed retail oracle run passed the whole-RDRAM positive control
+  (`102276129` writes), reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and sampled both exact candidate writers after the
+  phase gate. `0x800921E8` wrote physical `0x00171504 = 0xB03910A0` and
+  `0x80090C80` wrote physical `0x001747A4 = 0`; both destinations are in
+  RDRAM and the values match the generated descriptor/zero roles. Their
+  same-title-phase separation is `0x32A0`, not divisible by the `0x88`
+  voice stride. This selects `H-WrongSlotBase` at the sampled pair scope
+  and rejects `H-InvalidWriter` there, but does not distinguish a relocated
+  retail base from a wrong field interpretation. No runtime behavior changed.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -99,16 +109,17 @@ The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
 1. **M5 voice-output-base provenance.** The caller/callee audit selects
-   `H-CalleePointerContract`: the active port edge constructs the callee's
-   range endpoint from voice-slot `+0x34`, while the exact edge is absent in
-   retail. The generated writer census is complete at the identified static
-   sites (`0x80090C80`, `0x800921E8`), but retail attribution still needs the
-   dynamically allocated voice-array base. Repair or bypass the oracle's
-   pointer-watch stepping side effect, then run one qualified exact-slot
-   writer-PC control. Distinguish a valid output-base writer followed by
-   port-only slot corruption from a scalar/mislabeled field or an invalid
-   writer. No wait, guard, task-field, output-routing, canary, gate, or host
-   behavior change is authorized.
+   `H-CalleePointerContract`, while the corrected exact-writer control now
+   selects `H-WrongSlotBase` at pair scope: the two same-title-phase
+   destinations are both in RDRAM but are not one `base + index*0x88 + 0x34`
+   lattice. Extend the oracle once to retain a phase-keyed table of repeated
+   destination/value samples for both writer PCs plus updates to the pointer
+   entry at `0x801496F8`. A pointer relocation that explains the residue
+   change selects `H-ReallocatedVoiceBase`; no relocation with the same
+   non-lattice destinations selects `H-WrongField`; a common lattice with
+   descriptor-compatible values selects `H-ValidVoiceBase`. No wait, guard,
+   task-field, output-routing, canary, gate, or host behavior change is
+   authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -212,6 +223,15 @@ unrelated song-structure `+0x134` stores (`startSongSequence` and
 pointer-watch post-step arm did not preserve the qualified route, so the
 dynamic base remains open.
 
+s2088's corrected oracle arm is the first qualified exact-writer address/value
+evidence: both candidate PCs fire after title phase entry, both destinations
+are physical RDRAM addresses, and the `0x800921E8` value is a ROM-mapped sample
+descriptor while the `0x80090C80` value is zero. The two destinations differ by
+`0x32A0` (`40 mod 0x88`) in that same phase, so they do not share one observed
+0x88 lattice. This is a writer-pair boundary result, not proof that the retail
+pointer was never reallocated; the next table must capture pointer updates and
+repeated writer destinations together.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -281,6 +301,12 @@ The maintenance compaction retains the reasons for the recent reversals here:
   the 0x88 stride. The generated code resolves that symbol as a pointer entry;
   exact watches instead hit unrelated song-structure `+0x134` stores. The
   dynamic retail allocation must be resolved before any writer attribution.
+- The first s2088 oracle run appeared qualified because its whole-RDRAM
+  control and target VI phases fired, but requested `--post-value-pc` samples
+  bypassed the phase gate in the tool and were taken before title entry. The
+  source audit exposed that `post_value_requested_index(pc)` admitted those
+  rows before `g_post_value_armed`; the fixed arm removed that bypass and
+  produced the qualified pair above.
 
 ## Evidence ledger summary
 
@@ -292,9 +318,10 @@ source crosswalk, s2081 adds the host-boundary witness gap, s2082 repairs the
 generated source anchor, s2084 closes the target-phase reachability gap, and
 s2085 rejects the source/host span join at this scope because all source
 arguments are out of range, s2086 establishes the caller/callee ABI scope
-while leaving the voice-slot writer boundary open, and s2087 identifies the
+while leaving the voice-slot writer boundary open, s2087 identifies the
 static voice writers while rejecting the pointer-table physical watch as a
-valid retail field witness. The chronological ledger is
+valid retail field witness, and s2088 qualifies the exact writer pair but
+finds a non-lattice destination separation. The chronological ledger is
 still the source for exact run commands, counts, and rejected retries.
 
 ## Method and safety rules

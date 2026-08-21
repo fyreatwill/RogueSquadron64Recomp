@@ -420,7 +420,7 @@ static void dbg_update(unsigned int pc)
             if (g_pc_hist_watch == i && (access_flags & M64P_BKP_FLAG_WRITE))
                 count_writer_pc(i, pc);
             if (g_post_value_watch == i && (access_flags & M64P_BKP_FLAG_WRITE) &&
-                (g_post_value_armed || post_value_requested_index(pc) >= 0)) {
+                g_post_value_armed) {
                 int target = post_value_requested_index(pc);
                 int force_target = target >= 0 && !g_post_value_requested_seen[target];
                 int sample_generic = g_post_value_samples < MAX_POST_VALUE_SAMPLES ||
