@@ -1,68 +1,60 @@
-# NEXT work unit (s2089)
+# NEXT work unit (s2090)
 
 HYPOTHESIS-ID: m5-voice-output-base-provenance
 
 ## Work unit
 
-Extend the corrected oracle post-store-PC facility to retain one bounded,
-phase-keyed table of the first 16 `(writer PC, VI, width, origin, physical
-destination, post-store value)` rows for each requested PC. Add the known
-pointer publisher `0x8008F0EC` to the same table, then run one qualified
-retail recipe with the two candidate `+0x34` writers. Do not arm the old
-pointer-address stepping watch, change the port, or add a guest witness.
-
-The table must include `0x8008F0EC`, `0x80090C80`, and `0x800921E8` in one
-run. The whole-RDRAM watch remains the positive control and is removed at
-10,000 callbacks; the second whole-RDRAM watch remains the post-store watch.
-Only rows after the title/hangar phase gate are admissible.
+Perform one bounded generated-source/companion-symbol crosswalk for the
+off-lattice retail writer `0x80090C80`, comparing its computed destination
+base and caller role with the lattice writer `0x800921E8`. This is a source
+semantics audit, not a port change and not a repeat soak. Record the base
+load, index arithmetic, destination field, and caller for both exact stores.
+Use the qualified s2089 oracle table as the retail address/value input, and
+do not add a new runtime witness until this crosswalk chooses a branch.
 
 ## Competing hypotheses and discriminator
 
-- **H-ReallocatedVoiceBase** — the pointer publisher writes a new dynamic base
-  between candidate-writer rows, and each destination satisfies
-  `base + voiceIdx*0x88 + 0x34` under the contemporaneous base.
-- **H-ValidVoiceBase** — the pointer base remains stable and repeated candidate
-  destinations form one `0x88` lattice with descriptor-compatible values.
-- **H-WrongField** — the pointer base remains stable, but one or both exact
-  writer destinations stay off that lattice despite the generated source's
-  `+0x34` labels.
-- **H-ScalarField** — the pointer/destination table has no voice-base relation
-  and the sampled values do not match the generated descriptor/zero roles.
+- **H-VoiceBaseMismatch** — the `0x80090C80` source path is rooted at the
+  `0x801496F8` voice pointer and its generated `+0x34` destination should be
+  on the same `0x88` lattice; the retail off-lattice rows then indicate a
+  source/retail field or index mismatch.
+- **H-AlternateStructure** — `0x80090C80` computes its destination from a
+  different song/channel structure, so its off-lattice destinations are
+  legitimate and the prior voice-array attribution was wrong.
+- **H-ReallocatedVoiceBase** — the source path is voice-rooted, but the
+  contemporaneous pointer/base used by this path is not the sampled
+  `0x801496F8` entry; a source-level alternate publisher or base load must be
+  identified.
+- **H-OracleWriterMismatch** — the generated instruction address or post-store
+  attribution does not correspond to the source store under test; the exact
+  instruction and physical destination calculation must disagree before this
+  branch is admissible.
 
-The discriminator is the single same-run table, gated by the whole-RDRAM
-positive control plus title `1024 @ 0x00790400` and hangar
-`512 @ 0x006AB400`. A pointer update between non-lattice samples that makes
-both samples land on the `0x88` lattice selects H-ReallocatedVoiceBase; a
-stable pointer with a common lattice selects H-ValidVoiceBase; a stable
-pointer with a persistent non-lattice destination selects H-WrongField; and
-absence of both pointer relation and role-compatible values selects
-H-ScalarField. A missing row is unevaluable, not a null result.
+The discriminator is one crosswalk table covering both writers: if
+`0x80090C80` loads `0x801496F8` and forms `base + index*0x88 + 0x34`, select
+H-VoiceBaseMismatch; if it loads the command/channel root at another symbol
+and stores at that structure's `+0x34`, select H-AlternateStructure; if it
+uses a second voice-base publisher, select H-ReallocatedVoiceBase; if neither
+source instruction nor physical address matches the oracle row, select
+H-OracleWriterMismatch. A missing source/companion mapping is unevaluable.
 
 ## Exact commands
 
-First update `tools/oracle/rs64_oracle.c` so requested post-store PCs retain
-the bounded table above, including VI width/origin at the post-store sample;
-`g_post_value_armed` must gate every requested PC. Then build and run:
-
 ```sh
-tools/oracle/build.sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 65 \
-  --watch-write 0x0:0x800000 \
-  --watch-write 0x0:0x800000 \
-  --post-value-watch 1 \
-  --post-value-pc 0x8008F0EC,0x80090C80,0x800921E8 \
-  --watch-pc 0x8009024C:0x80090250 \
-  --watch-pc 0x800902CC:0x800902D0 \
-  --watch-pc 0x800903F0:0x800903F4 \
-  --vi-trace \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s2089_oracle/run.log 2>&1
+rg -ni -C 8 -- "80090c80|800921e8|0x34|801496f8|80149750|voice" \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/main_overlay.txt
+
+rg -n -C 20 -- "0x80090C80|0X80090C80|0x800921E8|0X800921E8" \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c
+
+sed -n '7632,7830p' \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c
+
+rg -ni -C 12 -- "musyxKeyOnVoice|musyxInitVoiceFromSample|801496f8|80149750" \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 ```
 
-Before interpreting the table, require the positive-control threshold, both
-target VI transitions, and at least one post-store row for every requested
-PC. Do not infer a base from a row without its contemporaneous pointer value.
+Before any future instrument build, require the crosswalk to identify the
+writer's base root and field role. Do not rewrite a field, remove a guard, or
+change task/output behavior from this result alone.

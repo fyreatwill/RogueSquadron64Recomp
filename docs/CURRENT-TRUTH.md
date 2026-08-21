@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2088 (2026-08-20);
-behavioral and source evidence is current through s2088.
+for exact commands and probe rows. Maintained in Session 2089 (2026-08-20);
+behavioral and source evidence is current through s2089.
 
 ## Current state
 
@@ -40,6 +40,18 @@ behavioral and source evidence is current through s2088.
   voice stride. This selects `H-WrongSlotBase` at the sampled pair scope
   and rejects `H-InvalidWriter` there, but does not distinguish a relocated
   retail base from a wrong field interpretation. No runtime behavior changed.
+- s2089's phase-keyed retail table passed the whole-RDRAM positive control
+  (`102271482` callbacks), reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and produced rows for all three requested PCs. The
+  pointer publisher `0x8008F0EC` wrote `0x801714D0` at physical
+  `0x001496F8` in both sampled rows, with no observed relocation.
+  `0x800921E8` produced 16 rows on the physical `base + index*0x88 + 0x34`
+  lattice (indices 0 through 8) with descriptor values `0xB03910A0` and
+  `0xB03698D8`; all 16 `0x80090C80` rows were off that lattice, with
+  residues 16 through 120 and zero/control-like values. At this retail-table
+  scope this selects `H-WrongField` over reallocation, a common valid base,
+  or scalar-only roles. It does not explain the off-lattice writer path or
+  authorize a port field rewrite, guard, or output change.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -108,18 +120,18 @@ behavioral and source evidence is current through s2088.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 voice-output-base provenance.** The caller/callee audit selects
-   `H-CalleePointerContract`, while the corrected exact-writer control now
-   selects `H-WrongSlotBase` at pair scope: the two same-title-phase
-   destinations are both in RDRAM but are not one `base + index*0x88 + 0x34`
-   lattice. Extend the oracle once to retain a phase-keyed table of repeated
-   destination/value samples for both writer PCs plus updates to the pointer
-   entry at `0x801496F8`. A pointer relocation that explains the residue
-   change selects `H-ReallocatedVoiceBase`; no relocation with the same
-   non-lattice destinations selects `H-WrongField`; a common lattice with
-   descriptor-compatible values selects `H-ValidVoiceBase`. No wait, guard,
-   task-field, output-routing, canary, gate, or host behavior change is
-   authorized.
+1. **M5 off-lattice writer semantics.** The caller/callee audit selects
+   `H-CalleePointerContract`, and s2089's qualified retail table selects
+   `H-WrongField` at the writer-pair scope: the pointer is stable,
+   `0x800921E8` is descriptor-compatible on the voice lattice, and
+   `0x80090C80` remains off-lattice. Independently resolve the exact retail
+   and generated-source semantics of `0x80090C80`, including caller context
+   and source-field role. A voice-slot caller with the generated `+0x34`
+   store selects a retail/source field mismatch; an alternate
+   structure/field in both source and caller context selects a wrong-writer
+   attribution; a newly observed contemporaneous pointer relocation reopens
+   `H-ReallocatedVoiceBase`. No wait, guard, task-field, output-routing,
+   canary, gate, or host behavior change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -228,9 +240,11 @@ evidence: both candidate PCs fire after title phase entry, both destinations
 are physical RDRAM addresses, and the `0x800921E8` value is a ROM-mapped sample
 descriptor while the `0x80090C80` value is zero. The two destinations differ by
 `0x32A0` (`40 mod 0x88`) in that same phase, so they do not share one observed
-0x88 lattice. This is a writer-pair boundary result, not proof that the retail
-pointer was never reallocated; the next table must capture pointer updates and
-repeated writer destinations together.
+0x88 lattice. s2089's repeated table then captured the pointer publisher and
+showed that the pointer remained `0x801714D0`; the `0x800921E8` samples occupy
+the expected lattice while the `0x80090C80` samples do not. This is still a
+retail/source boundary result, not permission to rewrite the port field or to
+treat the off-lattice writer as corruption.
 
 ### M3, M4, and generated symbols
 
@@ -321,8 +335,11 @@ arguments are out of range, s2086 establishes the caller/callee ABI scope
 while leaving the voice-slot writer boundary open, s2087 identifies the
 static voice writers while rejecting the pointer-table physical watch as a
 valid retail field witness, and s2088 qualifies the exact writer pair but
-finds a non-lattice destination separation. The chronological ledger is
-still the source for exact run commands, counts, and rejected retries.
+finds a non-lattice destination separation. s2089 adds the repeated
+phase-keyed pointer/writer table and selects `H-WrongField` at its qualified
+retail-table scope while leaving the exact off-lattice writer semantics open.
+The chronological ledger is still the source for exact run commands, counts,
+and rejected retries.
 
 ## Method and safety rules
 

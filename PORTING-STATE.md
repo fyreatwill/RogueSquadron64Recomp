@@ -99509,3 +99509,35 @@ updates captured in the same run.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-voice-output-base-provenance`.
+
+## Session 2089 (2026-08-20) — retained phase-keyed retail voice-writer rows
+
+Ran the M5 voice-output-base provenance work unit from `scratch/agent/NEXT.md`.
+Extended `tools/oracle/rs64_oracle.c` so each requested post-store PC retains
+the first 16 phase-gated rows with VI, width, origin, physical destination,
+and post-store value. Included the pointer publisher `0x8008F0EC` with the
+candidate writers `0x80090C80` and `0x800921E8`, rebuilt the oracle, and ran
+the prescribed 65-second Rice recipe.
+
+The run passed the whole-RDRAM positive control with 102,271,482 callbacks,
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and produced
+rows for all three requested PCs. The pointer publisher wrote
+`0x001496F8 = 0x801714D0` at VI 2267 and 3131; no pointer relocation appeared
+in the qualified rows. `0x800921E8` produced 16 rows whose destinations are
+the physical `base + index*0x88 + 0x34` lattice for indices 0 through 8,
+with repeated descriptor values `0xB03910A0` and `0xB03698D8`.
+`0x80090C80` produced 16 rows with zero and nonzero control-like values, but
+every destination was off that lattice (residues 16 through 120 bytes).
+
+At this retail-table scope, the stable pointer plus one descriptor-compatible
+lattice writer and one persistent off-lattice writer selects `H-WrongField`
+over `H-ReallocatedVoiceBase`, `H-ValidVoiceBase`, and `H-ScalarField`. This
+does not explain why the `0x80090C80` path has the off-lattice destinations,
+does not authorize a port guard or field rewrite, and adds no runtime change.
+The next unit must independently resolve the exact retail/source semantics of
+the off-lattice `0x80090C80` writer before this becomes a port-facing conclusion.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-voice-output-base-provenance`.

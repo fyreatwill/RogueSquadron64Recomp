@@ -49,6 +49,9 @@
 #define MAX_POST_VALUE_HIST 64
 #define MAX_POST_VALUE_PCS 512
 #define MAX_POST_VALUE_SAMPLES 256
+#define MAX_POST_VALUE_ROWS_PER_PC 16
+#define VI_ORIGIN_ADDR 0xA4400004u
+#define VI_WIDTH_ADDR  0xA4400008u
 
 static void *g_core;
 static double g_t0;
@@ -102,6 +105,16 @@ static int g_post_value_requested_seen[32];
 static uint32_t g_post_value_requested_value[32];
 static uint32_t g_post_value_requested_addr[32];
 static int g_n_post_value_requested_pc;
+struct post_value_requested_row {
+    long vi;
+    uint32_t width;
+    uint32_t origin;
+    uint32_t addr;
+    uint32_t value;
+};
+static struct post_value_requested_row
+    g_post_value_requested_rows[32][MAX_POST_VALUE_ROWS_PER_PC];
+static int g_n_post_value_requested_rows[32];
 struct post_value_entry {
     uint32_t value;
     long n;
@@ -128,6 +141,7 @@ static uint32_t g_post_snapshot_fnv;
 static unsigned long g_post_snapshot_nonzero;
 static unsigned long g_post_snapshot_bytes;
 static int g_post_snapshot_valid;
+static long g_vis;
 static int g_verbose;
 static int g_watches_armed;
 static int g_positive_watch_removed;
@@ -215,6 +229,31 @@ static void count_post_value(uint32_t pc, uint32_t value)
     } else {
         g_post_value_pc_overflow++;
     }
+}
+
+static void record_post_value_requested_row(int target, uint32_t value)
+{
+    struct post_value_requested_row *row;
+
+    if (target < 0 || target >= g_n_post_value_requested_pc ||
+        g_n_post_value_requested_rows[target] >= MAX_POST_VALUE_ROWS_PER_PC)
+        return;
+    row = &g_post_value_requested_rows[target]
+        [g_n_post_value_requested_rows[target]++];
+    row->vi = g_vis;
+    row->width = pDebugMemRead32(VI_WIDTH_ADDR);
+    row->origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    row->addr = g_post_value_addr & ~3u;
+    row->value = value;
+    if (!g_post_value_requested_seen[target]) {
+        g_post_value_requested_seen[target] = 1;
+        g_post_value_requested_value[target] = value;
+        g_post_value_requested_addr[target] = row->addr;
+    }
+    printf("[post-target-row] pc=0x%08x vi=%ld width=%u origin=0x%08x addr=0x%08x value=0x%08x\n",
+           g_post_value_requested_pc[target], row->vi, row->width,
+           row->origin, row->addr, row->value);
+    fflush(stdout);
 }
 
 static int post_value_pc_seen(uint32_t pc)
@@ -389,15 +428,7 @@ static void dbg_update(unsigned int pc)
         if (g_post_value_pending_target >= 0) {
             int target = g_post_value_pending_target;
             g_post_value_pending_target = -1;
-            if (!g_post_value_requested_seen[target]) {
-                g_post_value_requested_seen[target] = 1;
-                g_post_value_requested_value[target] = value;
-                g_post_value_requested_addr[target] = g_post_value_addr & ~3u;
-                printf("[post-target] pc=0x%08x addr=0x%08x value=0x%08x\n",
-                       g_post_value_requested_pc[target],
-                       g_post_value_requested_addr[target], value);
-                fflush(stdout);
-            }
+            record_post_value_requested_row(target, value);
         }
         pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
         pDebugStep();
@@ -422,7 +453,9 @@ static void dbg_update(unsigned int pc)
             if (g_post_value_watch == i && (access_flags & M64P_BKP_FLAG_WRITE) &&
                 g_post_value_armed) {
                 int target = post_value_requested_index(pc);
-                int force_target = target >= 0 && !g_post_value_requested_seen[target];
+                int force_target = target >= 0 &&
+                    g_n_post_value_requested_rows[target] <
+                    MAX_POST_VALUE_ROWS_PER_PC;
                 int sample_generic = g_post_value_samples < MAX_POST_VALUE_SAMPLES ||
                     (!post_value_pc_seen(pc) && g_n_post_value_pc < MAX_POST_VALUE_PCS);
                 if (force_target || sample_generic) {
@@ -503,9 +536,6 @@ static void dbg_update(unsigned int pc)
  * a menu from a mission in a headless run. Sampled here rather than from a
  * polling thread because the VI callback runs ON the emulator thread, so the
  * read cannot race the CPU that is writing those registers. */
-#define VI_ORIGIN_ADDR 0xA4400004u   /* KSEG1: uncached, no TLB, masks to 0x04400004 */
-#define VI_WIDTH_ADDR  0xA4400008u
-
 /* PIF RAM holds the SI's controller readout: after a 0x01 (read controller)
  * command the button word for pad 1 lands at physical 0x1FC007C4. Reading it
  * answers the one question a headless run cannot otherwise settle - does the
@@ -513,7 +543,6 @@ static void dbg_update(unsigned int pc)
 #define PIF_PAD1_ADDR  0xBFC007C4u
 #define N64_BTN_START  0x00001000u
 
-static long g_vis;
 static int g_vi_trace;
 static int g_vi_poll;
 static int g_status_poll;
@@ -1100,6 +1129,21 @@ int main(int argc, char **argv)
             printf("[oracle] post-target-summary pc=0x%08x seen=%d addr=0x%08x value=0x%08x\n",
                    g_post_value_requested_pc[j], g_post_value_requested_seen[j],
                    g_post_value_requested_addr[j], g_post_value_requested_value[j]);
+        for (j = 0; j < g_n_post_value_requested_pc; j++) {
+            int k;
+            printf("[oracle] post-target-rows pc=0x%08x n=%d/%d\n",
+                   g_post_value_requested_pc[j],
+                   g_n_post_value_requested_rows[j],
+                   MAX_POST_VALUE_ROWS_PER_PC);
+            for (k = 0; k < g_n_post_value_requested_rows[j]; k++)
+                printf("[oracle] post-target-row-final pc=0x%08x vi=%ld width=%u origin=0x%08x addr=0x%08x value=0x%08x\n",
+                       g_post_value_requested_pc[j],
+                       g_post_value_requested_rows[j][k].vi,
+                       g_post_value_requested_rows[j][k].width,
+                       g_post_value_requested_rows[j][k].origin,
+                       g_post_value_requested_rows[j][k].addr,
+                       g_post_value_requested_rows[j][k].value);
+        }
         if (g_post_snapshot_valid)
             printf("[oracle] post-value snapshot bytes=%lu nonzero=%lu fnv=0x%08x\n",
                    g_post_snapshot_bytes, g_post_snapshot_nonzero,
