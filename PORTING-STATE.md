@@ -99078,3 +99078,39 @@ Perform the bounded port crosswalk in `scratch/agent/NEXT.md`: reconcile the
 generated `fillSampleStreamRange` symbol range and its `+336`/`+6464` labels
 with the separate `0x8000B650` last-PC marker and host boundary before any
 further treatment arm.
+
+## Session 2079 (2026-08-20) — compacted current truth and migrated late M5 ledger
+
+### Work done
+
+The maintenance gate found `docs/CURRENT-TRUTH.md` at 63,176 bytes. I did not
+build or run the game. I compacted the truth front matter, migrated the durable
+s2050–s2078 M5 route/audio/retail-PC record into `docs/PROJECT-OVERVIEW.md` §39,
+removed closed generated-symbol work from the active backlog, and rewrote
+`scratch/agent/NEXT.md` for the same pending crosswalk as s2080.
+
+### Result
+
+- `docs/CURRENT-TRUTH.md` now has one monotonic active backlog with M5 first,
+  M3 second, and the hangar artifact third. Its headline is refreshed to
+  distinguish behavioral evidence through s2078 from this s2079 maintenance.
+- The durable recent conclusions remain available in PROJECT-OVERVIEW §39:
+  the qualified LLE route, source/consumer join, status/shutdown boundary,
+  image-task/E50 evidence, mixed retail gate, and independent retail PC null.
+- The next discriminator is unchanged: an exact generated-symbol/offset table
+  for `fillSampleStreamRange` versus the `0x8000B650` marker and host-boundary
+  breadcrumbs. No behavioral conclusion was newly selected because no
+  experiment ran.
+
+### What it rules out
+
+This maintenance pass rules out relying on the former 932-line truth file as
+the compact source of recent history and rules out treating the closed symbol
+sweep as an active backlog item. It does not rule in or rule out any of the
+three s2080 fill-crash hypotheses; that requires the planned source audit.
+
+### Next
+
+Run exactly the source/metadata crosswalk in `scratch/agent/NEXT.md` as s2080.
+Do not add a wait, guard, task-ABI, canary, output-routing, gate, or host
+behavior change until the address table selects a boundary explanation.

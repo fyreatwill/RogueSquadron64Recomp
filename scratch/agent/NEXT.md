@@ -1,4 +1,4 @@
-# NEXT work unit (s2079)
+# NEXT work unit (s2080)
 
 HYPOTHESIS-ID: m5-port-fill-crash-origin
 
@@ -19,16 +19,16 @@ before another C88=1 treatment arm is considered.
   from an unrelated guest-side event; it is not a retail fill contract.
 - **H-HostCopyReadback** — the function label is a host-stack or host-boundary
   context, and existing RT64 copy/readback diagnostics identify the fault while
-  the guest symbol arithmetic remains valid. The crash is port-host-side, not
-  a missing retail call site.
-- **H-SymbolCrosswalkMismatch** — the generated symbol/overlay metadata maps
-  the function or offsets differently from `syms/rogue_squadron.syms.toml`.
-  A contradictory generated range or overlay mapping selects this and requires
+  the guest symbol arithmetic remains valid. The crash is port-host-side, not a
+  missing retail call site.
+- **H-SymbolCrosswalkMismatch** — generated symbol/overlay metadata maps the
+  function or offsets differently from `syms/rogue_squadron.syms.toml`. A
+  contradictory generated range or overlay mapping selects this and requires
   metadata repair before any treatment change.
 
 The discriminator is one exact address table plus the existing crash-family
-and host-boundary breadcrumbs: symbol base, declared size, base+336,
-base+6464, and whether `0x8000B650` lies in that interval. A consistent range
+and host-boundary breadcrumbs: symbol base, declared size, base+336, base+6464,
+base+size, and whether `0x8000B650` lies in that interval. A consistent range
 that excludes `0x8000B650` selects H-StaleLastGuestPC; a matching host
 copy/readback attribution selects H-HostCopyReadback; contradictory generated
 metadata selects H-SymbolCrosswalkMismatch. Do not infer from the retail PC
@@ -47,8 +47,9 @@ printf 'fillSampleStreamRange+6464 = 0x%08X\n' $((0x8008FAAC + 6464))
 printf 'fillSampleStreamRange end = 0x%08X\n' $((0x8008FAAC + 0x500))
 ```
 
-Record the exact symbol base/size, the two offset addresses, the location of
-`0x8000B650` relative to the declared interval, and any independent host
-copy/readback attribution. If the address table selects H-StaleLastGuestPC,
-the next unit after this audit may add one regeneration-stable host/guest
-boundary witness; it may not change a wait, guard, task ABI, or output route.
+Record the exact symbol base/size, the two offset addresses, the end address,
+the location of `0x8000B650` relative to the declared interval, and any
+independent host copy/readback attribution. If the address table selects
+H-StaleLastGuestPC, the following unit may add one regeneration-stable
+host/guest boundary witness; it may not change a wait, guard, task ABI, or
+output route.

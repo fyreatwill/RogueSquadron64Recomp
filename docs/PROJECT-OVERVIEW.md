@@ -3519,3 +3519,79 @@ claims. They do not supersede the active safety rules in `CURRENT-TRUTH.md`:
 retail ground truth precedes instrumentation, every null needs a same-run
 positive control, phase gates are mandatory, and a mitigation needs an
 `ORIGIN:` naming its writer and legitimacy.
+
+## 39. Late M5 route, audio contract, and retail fill boundary (s2050–s2078), migrated in s2079
+
+The chronological ledger in `PORTING-STATE.md` remains authoritative for exact
+commands and probe rows. This section preserves durable conclusions moved out
+of `CURRENT-TRUTH.md` during the s2079 maintenance pass.
+
+### Route qualification and callback boundary
+
+- s2050–s2052 separated route qualification from C88 causality. The common
+  wrapper's spin-yield setting is required for the title handoff, and the
+  previously hangar-capable tuple is `ROGUESQ_LLE_UNGATED=1` plus
+  `ROGUESQ_LLE_SOLO=1`. The accepted route reaches title VI 1024,
+  `menuControllerInput`/`menuInput`, and hangar VI 512; partial flag arms do
+  not provide the full chain.
+- s2053–s2055 replaced the apparent title/hangar callback split with a full
+  source/consumer join. Every target-phase pair matched on guest address,
+  sample count, byte count, full-span FNV, and nonzero-byte count. Title has a
+  bounded nonzero interval followed by zero content; hangar pairs are zero.
+- s2056–s2060 qualified the C88 route boundary and shutdown ordering. The
+  display-mode writer is causal for the raw gate at the observed port scope,
+  focus is not the callback-count explanation, status `0x03` is legitimately
+  reaped to `0x00`, and a later shutdown call 3 returns after that store.
+  These results do not authorize reversing the guest writer or forcing status.
+
+### Image task and retail E50
+
+- s2061 established that the opt-in Factor 5 image arm is not a clean task
+  implementation: it returns `Broke`, changes DMEM, fails the host canary, and
+  emits DMA ranges, while the default stub does none of those things. The
+  image arm nevertheless produced matched nonzero title PCM pairs, so a pure
+  stub-boundary explanation is superseded.
+- s2062–s2065 narrowed the output boundary. Retail writes the broad candidate
+  band with named MusyX code, but the complete phase-keyed port join found
+  zero payload in every image-DMA range and zero payload in all exact
+  task/source/consumer joins at that scope. Generated source proves three
+  image output loops cover the reserved canary span and the natural `break 0`
+  follows the final DMA write; it does not prove that the indirect destination
+  is final output or that the host task ABI is correct.
+- s2068–s2072 independently attributed the exact E50 envelope to retail audio
+  functions and captured one post-store value at each named writer. The
+  values are control/metadata/pointer-like and do not match the port's
+  zero-only image range. This selects a retail-intermediate boundary, not a
+  final-PCM interpretation.
+- s2070's same-route canary A/B left task exit, E50 payload, and PCM unchanged
+  when the canary was disabled. The canary is therefore an observer at this
+  scope. s2073's retail gate watch found a mixed writer contract
+  (`0,1,0,0,1`), authorizing only a writer-specific opt-in gate test.
+
+### Treatment qualification and independent PC boundary
+
+- s2074 attempted the authorized writer-specific treatment with the existing
+  image arm. The control reached title and hangar; the C88-value treatment
+  failed before its writer in two distinct port crash families, so no
+  task/slot/PCM conclusion was drawn from it.
+- s2075 supplied the independent retail slot-table witness: retail reaches
+  repeated `00 -> 01 -> 02 -> 03 -> 00` cycles and executes the legitimate
+  `0x8009B7EC` `03 -> 00` writer, while the named port wait/writer PCs had no
+  hits. s2076 then showed the port treatment wait entered and returned after
+  one loop, with slot 0 still `0x00`, before the later `0x8000B650` marker.
+- s2078 repeated the corrected Rice-oracle route with the whole-RDRAM, PIF,
+  title, hangar, and slot-cycle controls. Requested retail PC counts were
+  `0x8000B650=0`, `0x80095D54=0`, `0x800668B0=4`, `0x8008DA00=11`,
+  `0x8009B62C=3275`, `0x8009B654=659`, `0x8009B3EC=193`,
+  `0x8009B44C=192`, and `0x8008EC88=5`. This selects
+  `H-PortOnlyFillBoundary` at requested-PC scope and refutes a retail shared
+  fill/wait boundary. It does not distinguish stale guest-PC state from a
+  host copy/readback fault; that exact crosswalk is the next work unit.
+
+These records supersede the older claims that the route was callback-invalid,
+that all image-arm PCM was zero, that the E50 envelope was proven final PCM,
+that the retail gate had one uniform value, and that the port treatment wait
+or fill markers were retail call-site contracts. The earlier claims were
+believable because the needed phase joins, independent retail writer/value
+witnesses, or treatment census were absent. No output route, task field,
+canary, wait, guard, or guest behavior changed in these sessions.
