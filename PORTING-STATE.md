@@ -102276,3 +102276,49 @@ ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only classified generated DMEM endpoints. The named
 writers of the canary span are `L_1CDC` / `L_15F8` / `L_1EF0` storing
 the `0xE50` mix buffer; that value is legitimate image working set.
+
+## Session 2155 (2026-08-21) — mapped every image DMEM write span
+
+HYPOTHESIS-ID: m5-image-dmem-write-spans
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `58,914` bytes, so this was not a
+maintenance iteration. Soak-queue intake was historical 2026-08-18 rows
+already consumed; no new recipes. The prescribed unit was one host-only
+table of every generated DMEM write span in
+`build/factor5_ucode/factor5_ucode_b_recompiled.c` (`RSP_MEM` store,
+SQV/SDV/SSV, DMA-read dest+len), reusing the s2154 `L_1328` `break 0` /
+`Broke` and stage-3 `field348+0x100` controls plus the already-classified
+`0xE50..0xFCF` mix writes. No port build, game run, canary-prefill,
+task-exit, default-arm, or output-route change.
+
+The generated image is `82212` bytes, `2610` lines, and contains `L_1328:`.
+Both s2154 controls are live, as are the mix writers `L_1CDC` /
+`L_15F8` (`r28=0xE50`) / `L_1EF0`. Scalar stores are only `0xE48..0xE4F`.
+Named DMEM regions: coeff DMA `0x220..0x31F`, scratch `0x320..0x33F`,
+task header `0x340..0x34F`, desc slots `0x350..0x39F` / `0x3A0..0x3EF`,
+transform `0x3F0..0x56F` and `0x570..0x6EF`, PCM `0x6F0..0x9EF`, temp
+`0x740..0x8BF`, accum `0xC30..0xCAF`, control `0xCB0..0xE47`, mix
+`0xE50..0xFCF`. The `0x8C0` DMA dest is bounded below `0xA40`. Mix
+`0xE50..0xFCF` is continuous; `0xF80..0xFBF` has no unused byte.
+`L_1340` dests `0xAF0` / `0x6F0` / `0xAF0-size` remain task-field
+overflow candidates and were not painted as covering `0xAF0..0xC2F`.
+
+Certain/bounded union is `0x220..0xA3F` and `0xC30..0xFCF` (`3008` of
+`4096` bytes). Unused `>=0x10` holes in `0x000..0xFBF` are
+`0x000..0x21F` (`0x220`) and `0xA40..0xC2F` (`0x1F0`), both inside
+host ucode-data DMA `0x000..0xF7F`. No unused `>=0x10` hole exists
+outside ucode-data.
+
+This selects `H-CanaryOnlyInUcodeData`, co-holds `H-NoReservedGap` at
+the `0xF7F..0xFC0` window, and rejects `H-UnusedGapExists` and
+`H-CoverageFailure`. A relocated host canary has nowhere to live in
+DMEM. Table: `scratch/agent/s2155_image_dmem_write_spans.txt`. No
+runtime, mitigation, task, wait, guard, canary-prefill, or default-arm
+behavior changed.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only classified generated DMEM write spans. The named
+writers of the host canary span remain `L_1CDC` / `L_15F8` / `L_1EF0`
+storing the `0xE50` mix buffer; that value is legitimate image working
+set. Leftover holes are overwritten by host ucode-data DMA at task start
+and cannot witness the runner.

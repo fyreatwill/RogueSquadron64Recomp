@@ -168,11 +168,16 @@ explicit control arm.
    the mix buffer `0xE50..0xFCF` (`span 0x180`, writers `L_1CDC` /
    `L_15F8` / `L_1EF0`). `canary_ok=0` is that working set, not a
    runaway write, and no longer blocks the `break 0`/`Broke` edge as
-   unexplained corruption. The next incremental unit is one host-only
-   table of every generated DMEM write span so a canary re-home names
-   an unused gap or selects `H-NoReservedGap`. Do not default the image
-   arm or move the canary in that census. Rollback remains leaving the
-   existing RSP dispatch arm opt-in.
+   unexplained corruption. s2155 then selected
+   `H-CanaryOnlyInUcodeData`: mix `0xE50..0xFCF` is continuous, the
+   `0xF7F..0xFC0` gap has no unused byte, and the only unused
+   `>=0x10` holes in `0x000..0xFBF` sit inside ucode-data
+   (`0x000..0x21F`, `0xA40..0xC2F`). A relocated host canary has
+   nowhere to live in DMEM. The next incremental unit is one host-only
+   table of every `canary_ok` consumer in `rsp.cpp` (log-only versus
+   exit/writeback/DMA gating). Do not default the image arm or move
+   the canary in that census. Rollback remains leaving the existing
+   RSP dispatch arm opt-in.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.

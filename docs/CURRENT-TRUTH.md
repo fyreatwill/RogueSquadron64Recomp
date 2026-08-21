@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2154
-(2026-08-21); behavioral and source evidence is current through s2154.
+authoritative for exact commands and probe rows. Maintained in Session 2155
+(2026-08-21); behavioral and source evidence is current through s2155.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -26,9 +26,11 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `Broke`. s2154 selected `H-CanaryComputedOnly` for the host canary at
   `0xF80..0xF8F`: that span is inside the generated mix buffer
   `0xE50..0xFCF`, so `canary_ok=0` is the working set, not a runaway
-  write. The s2113 contract witness records the generated completion
-  edge as guest PC `0x1328`, host exit `Broke`, task `output_buff=0`,
-  and the phase-keyed post-DMA/PCM joins.
+  write. s2155 selected `H-CanaryOnlyInUcodeData`: no unused `>=0x10`
+  hole outside ucode-data can host a relocated canary. The s2113
+  contract witness records the generated completion edge as guest PC
+  `0x1328`, host exit `Broke`, task `output_buff=0`, and the
+  phase-keyed post-DMA/PCM joins.
 - The s2135 static MORT boundary census selected
   `H-ExistingFactor5ConfigMatches`: the companion retail `aspMainText` image
   is exactly `factor5b_rsp.toml` ROM `0x09ABE0..0x09BB60`, with companion
@@ -197,6 +199,18 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `H-CanaryHostOnly`, and `H-CoverageFailure`. `canary_ok=0` is that
   mix buffer, not a runaway write. Table:
   `scratch/agent/s2154_image_canary_table.txt`. No canary-prefill,
+  task-exit, default-arm, or output-route change.
+- The s2155 host-only write-span table reused those controls and
+  classified every generated DMEM store, SQV/SDV/SSV, and DMA-read
+  dest+len. Certain/bounded union is `0x220..0xA3F` and
+  `0xC30..0xFCF`. Mix `0xE50..0xFCF` is continuous; `0xF80..0xFBF`
+  has no unused byte. The only unused `>=0x10` holes in `0x000..0xFBF`
+  are `0x000..0x21F` and `0xA40..0xC2F`, both inside host ucode-data
+  DMA `0x000..0xF7F`. This selects `H-CanaryOnlyInUcodeData`, co-holds
+  `H-NoReservedGap` at the `0xF7F..0xFC0` window, and rejects
+  `H-UnusedGapExists` and `H-CoverageFailure`. No unused `>=0x10`
+  hole can host a relocated canary. Table:
+  `scratch/agent/s2155_image_dmem_write_spans.txt`. No canary-prefill,
   task-exit, default-arm, or output-route change.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
@@ -482,15 +496,14 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 A1 image DMEM write-span map.** s2154 selected
-   `H-CanaryComputedOnly`: no `0xF80..0xF8F` immediate; the host canary
-   sits inside the image mix buffer `0xE50..0xFCF` (`span 0x180`).
-   `canary_ok=0` is that working set, not unknown corruption. Next unit
-   is one host-only table of *every* generated DMEM write span
-   (`RSP_MEM` store, SQV/SDV/SSV, DMA-read dest+len) so a future canary
-   re-home names an unused gap or selects `H-NoReservedGap`. No canary
-   prefill, task-exit, default-arm, or output-route change. Do not
-   change `osAiGetStatus_recomp` or `osAiSetNextBuffer_recomp`.
+1. **M5 A1 host canary-effect census.** s2155 selected
+   `H-CanaryOnlyInUcodeData`: no unused `>=0x10` hole in `0x000..0xFBF`
+   outside ucode-data; mix occupies `0xE50..0xFCF` continuously. A
+   relocated host canary has nowhere to live in DMEM. Next unit is one
+   host-only table of every `canary_ok` consumer in `rsp.cpp`: log-only
+   versus exit/writeback/DMA gating. Do not move the canary, default
+   the image arm, or change `osAiGetStatus_recomp` /
+   `osAiSetNextBuffer_recomp`.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
@@ -590,8 +603,12 @@ success PC `0x80029EF4` matched set-next/busy `7983` times and reject
 PC `0x80029EF0` stayed at zero; the generated caller ignores the
 return. s2154 then selected `H-CanaryComputedOnly` for the image-arm
 canary: the generated mix buffer `0xE50..0xFCF` occupies the host
-`0xF80..0xF8F` gap, so `canary_ok=0` is that working set. No AI-status
-shortcut, task ABI, canary-prefill, or default-arm change follows.
+`0xF80..0xF8F` gap, so `canary_ok=0` is that working set. s2155 then
+selected `H-CanaryOnlyInUcodeData`: the certain/bounded write union is
+`0x220..0xA3F` plus `0xC30..0xFCF`, mix `0xE50..0xFCF` is continuous,
+and the only unused `>=0x10` holes in `0x000..0xFBF` sit inside
+ucode-data (`0x000..0x21F`, `0xA40..0xC2F`). No AI-status shortcut,
+task ABI, canary-prefill, or default-arm change follows.
 
 The s2133 same-build port comparison supplied the missing nonzero host-boundary
 line. Both arms reached the target phases with positive controls; the image
@@ -601,7 +618,8 @@ violations. The stub arm remained zero. The `[pcm-sanity]` logger's lifetime
 sampling missed the two transient nonzero callbacks, so its all-zero sampled
 rows are a measurement-coverage limitation, not a silent-PCM result. The
 image `break_pc=0x1328`, `exit=1`, `output_buff=0` remain the task
-boundary; s2154 classifies `canary_ok=0` as the `0xE50` mix buffer.
+boundary; s2154 classifies `canary_ok=0` as the `0xE50` mix buffer,
+and s2155 shows that mix occupies the only candidate gap.
 No host/task/default change is authorized. The s2135 static
 census now identifies the existing RSP image and separate MORT speech asset;
 s2136's retail task-field table selects `H-RetailTaskMatchesFactor5b` at the
@@ -870,8 +888,10 @@ the same covered route: whole-RDRAM `10000`, title `1024`, hangar
 both generated jals ignore v0. s2154 then selected
 `H-CanaryComputedOnly` on the generated image: `L_1328` and stage-3
 `field348+0x100` controls live, no `0xF80..0xFBF` immediate, mix
-buffer `0xE50` span `0x180` writes the host canary. No runtime or
-default-arm change follows.
+buffer `0xE50` span `0x180` writes the host canary. s2155 then
+selected `H-CanaryOnlyInUcodeData`: every generated DMEM write span
+classified, mix `0xE50..0xFCF` continuous, no unused `>=0x10` hole
+outside ucode-data. No runtime or default-arm change follows.
 
 ## Method and safety rules
 

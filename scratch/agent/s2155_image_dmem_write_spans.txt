@@ -1,0 +1,156 @@
+s2155 A1 image DMEM write-span map
+HYPOTHESIS-ID: m5-image-dmem-write-spans
+
+Source: build/factor5_ucode/factor5_ucode_b_recompiled.c
+  bytes 82212  lines 2610  L_1328: True
+Host canary: ucode-data DMA ends 0xF7F; OSTask at 0xFC0; canary 0xF80..0xF8F
+No port build, game run, canary prefill, task-exit, default-arm, or output-route change.
+
+POSITIVE CONTROLS (same file)
+-----------------------------
+L_1328 break 0 / Broke / rs64_audio_image_break(0x1328u): True
+L_1314 stage-3 lw 0x348 / addiu +0x100 / src 0xCB0 / goto L_13B0: True
+L_1CDC ori r9,0xE50: True
+L_169C (L_15F8 setup) ori r28,0xE50: True
+L_1E48 ori r5,0xE50 (dmem->dram src, not a store): True
+L_1EF0 caller ori r6,0xE50: True
+ALL CONTROLS LIVE: True
+
+ADDRESSING
+----------
+SQV dest = rs + imm*16, writes (16-(addr&15)) bytes (16 when 16-aligned).
+SDV dest = rs + imm*8, writes 8 bytes.
+SSV dest = rs + imm*2, writes 2 bytes.
+DMA RD_LEN register is (byte_count-1); span is [dest, dest+len_reg] inclusive.
+DO_DMA_WRITE is dmem->dram and does not store DMEM; listed only as mix-src control.
+
+NAMED WRITE SPANS
+-----------------
+ start    end   size  origin                    label
+0x0220 0x031F 0x0100  DMA dest                  L_1384->L_1418
+       writer=DO_DMA_READ  coeff/table; dest=0x220 len_reg=0xFF
+0x0320 0x033F 0x0020  immediate                 L_146C r1
+       writer=SQV  r1 remains 0x320 from L_169C; SQV 0($1) and 0x10($1)
+0x0320 0x033F 0x0020  immediate                 L_169C
+       writer=SQV  scratch; r1=0x320
+0x0340 0x034F 0x0010  DMA dest                  L_10A8->L_13E8
+       writer=DO_DMA_READ  task header; len_reg=0xF
+0x0350 0x039F 0x0050  DMA dest                  L_10E8->L_1418
+       writer=DO_DMA_READ  desc slot A; r2=0x350 len_reg=0x4F
+0x03A0 0x03EF 0x0050  DMA dest                  L_13A8->L_1418
+       writer=DO_DMA_READ  desc slot B when E49!=0; len_reg=0x4F
+0x03F0 0x056F 0x0180  mix-buffer induction      L_146C/L_15F8 r26
+       writer=SQV  r26=0x3F0; loop until r29=r26+0x180
+0x03F0 0x056F 0x0180  immediate                 L_1A04 r13
+       writer=SQV  0x3F0..0x56F after addiu/SQV -1
+0x03F0 0x056F 0x0180  immediate                 L_1E6C r5
+       writer=SQV  24 * 0x10 from 0x3F0
+0x0570 0x06EF 0x0180  mix-buffer induction      L_146C/L_15F8 r25
+       writer=SQV  r25=0x570; parallel 0x180 walk
+0x0570 0x06EF 0x0180  immediate                 L_1A04 r14
+       writer=SQV  0x570..0x6EF
+0x0570 0x06EF 0x0180  immediate                 L_1E6C r6
+       writer=SQV  24 * 0x10 from 0x570
+0x06F0 0x0737 0x0048  DMA dest                  L_1D68->L_13E8
+       writer=DO_DMA_READ  PCM head; dest=0x6F0 len_reg=0x47
+0x06F0 0x07EF 0x0100  DMA dest                  L_1924->L_13E8
+       writer=DO_DMA_READ  PCM prefix; dest=0x6F0 len_reg=0xFF
+0x06F0 0x09EF 0x0300  immediate                 L_12D0->L_1830/L_18B0
+       writer=SSV  PCM; 24*0x20 from r7=0x6F0 => 0x6F0..0x9EF
+0x0738 0x073F 0x0008  immediate                 L_1EF0 SDV
+       writer=SDV  imm -1 *8; r5=0x740 => 0x738
+0x0740 0x08BF 0x0180  immediate                 L_1D40/L_1D44
+       writer=SQV  zero v0; 6*0x40 from 0x740 => 0x740..0x8BF
+0x0740 0x08BF 0x0180  immediate                 L_1EAC/L_1EB0
+       writer=SQV  in-place; 12*0x20 from r6=0x740
+0x08C0 0x0A3F 0x0180  task-field (bounded)      L_1DD0->L_13E8
+       writer=DO_DMA_READ  dest=0x8C0+r16 with r16<0x180 => dest<0xA40; proven bound (s2154); may start above 0x8C0
+0x08C0 0x0A3F 0x0180  task-field (bounded)      L_1E04->L_13E8
+       writer=DO_DMA_READ  dest=0x8C0, len=r16-1, r16<0x180 => end<0xA40
+0x0C30 0x0CAF 0x0080  immediate + E48 nibble    L_146C SSV
+       writer=SSV  r5=0xC30+((E48-1)&0xF)<<3; 4*SSV=8 bytes inside 0xC30..0xCAF
+0x0CB0 0x0CBF 0x0010  immediate                 L_197C
+       writer=SDV  r13=0xCB0; SDV 0 and 8
+0x0CB0 0x0E47 0x0198  DMA dest                  L_10C4->L_13E8
+       writer=DO_DMA_READ  control block; dest r6=0xCB0 len_reg=0x197; DRAM src=field348+0x100 (early read)
+0x0CC0 0x0E3F 0x0180  mix-buffer induction      L_146C/L_15F8 r27
+       writer=SQV  r27=0xCC0; 0xCC0..0xE3F
+0x0CC0 0x0E3F 0x0180  immediate                 L_1A04 r12
+       writer=SQV  zero 0xCC0..0xE3F; r5=0x18
+0x0E40 0x0E47 0x0008  immediate                 L_1F40
+       writer=SDV  r7=0xE40 after ori 0xE40
+0x0E48 0x0E48 0x0001  immediate                 L_10E8/L_1200
+       writer=RSP_MEM_B  sb frame counter
+0x0E49 0x0E49 0x0001  immediate                 L_10E8/L_1270
+       writer=RSP_MEM_B  sb ping-pong slot
+0x0E4A 0x0E4B 0x0002  immediate                 L_112C/L_11A4
+       writer=RSP_MEM_H_STORE  sh sample-buf base
+0x0E4C 0x0E4F 0x0004  immediate                 L_10D8
+       writer=RSP_MEM_W_STORE  sw task data_ptr copy
+0x0E50 0x0FCF 0x0180  mix-buffer induction      L_146C/L_15F8 r28
+       writer=SQV  CONTROL r28=0xE50; 24 * 0x10; dest=r28-16 after addiu
+0x0E50 0x0FCF 0x0180  mix-buffer induction      L_1CDC/L_1D24
+       writer=SQV  CONTROL; ori r9,0xE50; r5=0xC; SQV 0 and 0x10; addiu 0x20
+0x0E50 0x0FCF 0x0180  mix-buffer induction      L_1EF0/L_1F58
+       writer=SQV  CONTROL; caller r6=0xE50 r9=0x18; addiu 0x10 then SQV -1
+
+TASK-FIELD / OVERFLOW CANDIDATES (not painted into the certain union)
+--------------------------------------------------------------------
+L_1340 DMA dest = caller r6:
+  L_112C: r6 = 0xAF0 - (((lhu 0x40 + lbu 0x3E + 3)&~3)<<1)   dest grows down from 0xAF0
+  L_1174: r6 = 0x6F0
+  L_1194 / L_11D0: r6 = 0xAF0
+  first len = lhu(desc+8)-1; second dest = first+that_len, len=lhu(desc+0xA)-1
+  s2154: a length >= 0x4E0 from base 0xAF0 could enter 0xF80. Overflow candidate,
+  not an observed named completion-path dest. Not treated as covering 0xAF0..0xC2F.
+L_1A40 resampler dest r12 = r8, stride 0x40, count = incoming r6 (task byte):
+  L_11E0: r8=0x6F0, count=lbu 0x3D  (overlaps named PCM 0x6F0..0x9EF)
+  L_11A4: r8=0xAF0-(lbu 0x3C << 6)  dest below 0xAF0; not a fixed size
+L_1E48 DMA WRITE src r5=0xE50 len_reg=0x17F => DMEM *source* 0xE50..0xFCF (read, not store).
+
+UNION OF CERTAIN WRITES (0x000..0xFFF)
+--------------------------------------
+  0x0220..0x0A3F  size 0x0820 (2080 bytes)
+  0x0C30..0x0FCF  size 0x03A0 (928 bytes)
+  total certain bytes: 3008 / 4096
+  Note: 0x08C0..0x0A3F is the L_1DD0/L_1E04 reachability bound
+  (dest < 0xA40), painted so unused holes are "unreachable by named
+  or bounded dests". Filled-certain PCM ends at 0x09EF; 0x09F0..0x0A3F
+  is reachable, not proven filled, and is not treated as unused.
+
+UNUSED HOLES
+------------
+In 0x000..0xFBF (canary-search window):
+  0x0000..0x021F  size 0x0220 (544 bytes)  ucode-data  >=0x10
+  0x0A40..0x0C2F  size 0x01F0 (496 bytes)  ucode-data  >=0x10
+In 0xE50..0xFCF (mix-buffer window):
+  none (continuous)
+In 0xF80..0xFBF (ucode-data end .. OSTask):
+  none
+In 0xFD0..0xFFF (after mix, inside OSTask tail):
+  0x0FD0..0x0FFF  size 0x0030  (OSTask tail; outside 0x000..0xFBF search window)
+
+mix 0xE50..0xFCF continuous: True
+no unused >=1 byte in 0xF80..0xFBF: True
+unused >=0x10 outside ucode-data (0xF80..0xFBF): 0 []
+unused >=0x10 inside ucode-data (0x000..0xF7F): 2
+    0x0000..0x021F size 0x0220
+    0x0A40..0x0C2F size 0x01F0
+
+DISCRIMINATOR
+-------------
+SELECTED: H-CanaryOnlyInUcodeData
+  H-UnusedGapExists: unused >=0x10 in 0x000..0xFBF outside ucode-data
+    => False
+  H-NoReservedGap: continuous 0xE50..0xFCF and no unused >=0x10 in 0xF80..0xFBF
+    => True  (window fact; co-holds with the selected class)
+  H-CanaryOnlyInUcodeData: unused >=0x10 holes exist and all sit in 0x000..0xF7F
+    => True
+  H-CoverageFailure: missing L_1328 / stage-3 / mix 0xE50 controls
+    => False
+
+The two leftover >=0x10 holes (0x000..0x21F and 0xA40..0xC2F) sit inside the
+host ucode-data DMA 0x000..0xF7F, which overwrites them at task start, so they
+cannot witness the runner. The 0xF7F..0xFC0 "reserved gap" is the mix buffer.
+No unused >=0x10 hole exists for a relocated host canary.
+No canary-prefill, task-exit, default-arm, or output-route change.
