@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2075 (2026-08-20).
+for session detail. Reviewed through s2076 (2026-08-20).
 
 ## Current state
 
@@ -182,6 +182,17 @@ for session detail. Reviewed through s2075 (2026-08-20).
   H-RetailWaitCallsiteUnreached at the requested wait-PC scope and refutes a
   retail null for the slot table; it does not authorize a port wait change or
   another gate arm yet.
+- s2076's first C88=1 run entered `waitForAnyAudioSlot` and hit the known
+  pre-loop crash at guest `0x80095D54`; the regenerated census then captured a
+  fixed run with 48 audio-task, 51 input, and 5 host-start controls. It reached
+  phase-4 gate `0x01` with slot 0/1/2 all `0x00`, returned from every tick and
+  any-slot stage after one wait loop with no guard, then recorded 794 phase-6
+  `0x8009B62C` reads of slot 0=`0x00` and no named writer before the later
+  `fillSampleStreamRange+336` crash at `0x8000B650`. This selects
+  H-PortWaitReturnsWithoutRetailSlot, refutes pre-wait failure and slot
+  consumption at this scope, and leaves worker starvation unevaluable. It is
+  single-source port evidence; no wait, gate, task, slot, writer, or guard
+  behavior changed.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -313,11 +324,16 @@ are not active work items.
    VI 640. H-GateArmMissing is selected as a qualification failure; no gate,
    task, slot, or PCM null is admissible from that treatment. s2075 closed the
    independent retail slot-table prerequisite but showed that the named port
-   crash PC is not a retail call site. The next unit must build one phase-gated
-   port census of the treatment-only wait path, joining `waitForAnyAudioSlot`,
-   its dominant slot readers, status writers, and the C88 treatment's first
-   failure. Do not change output routing, reverse a task field, remove the
-   canary reservation, or alter waits/guards.
+   crash PC is not a retail call site. s2076's census saw the C88=1 treatment
+   enter and return from `waitForAnyAudioSlot` after one loop: gate `0x01`,
+   slot 0/1/2 all `0x00`, all tick stages returned, no guard or named writer,
+   and 794 later `0x8009B62C` rows still reading slot 0 as `0x00` before the
+   known `fillSampleStreamRange+336` crash at `0x8000B650`. This selects
+   H-PortWaitReturnsWithoutRetailSlot, refutes pre-wait failure and slot
+   consumption at this scope, and leaves worker starvation unevaluable. The
+   result is single-source port evidence; the next unit must obtain an
+   independent retail PC witness for the fill/wait/tick/status boundary.
+   Do not change output routing, task fields, canary, waits, or guards.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -393,6 +409,16 @@ cycles. Retail `0x8009B7EC` executed three times for the `03 -> 00` edges;
 `0x8009B30C` and the port crash PC `0x80095D54` did not execute. This selects
 H-RetailWaitCallsiteUnreached at the requested wait-PC scope and keeps the
 port-side treatment-only wait path open. No wait or guard behavior changed.
+
+s2076 then ran the regenerated port treatment census. Its live controls were
+48 `[audtask-dispatch]`, 51 `[pad-sdl]`, and 5 `[host-start]`; the phase-4
+wait entered and returned after one loop with gate `0x01`, slot 0/1/2 all
+`0x00`, all six tick stages returned, and no guard. The later phase-6 census
+had 794 `0x8009B62C` rows reading slot 0 as `0x00`, no named writer rows, and
+then the known `fillSampleStreamRange+336` crash at guest `0x8000B650`.
+This selects H-PortWaitReturnsWithoutRetailSlot, refutes pre-wait failure and
+slot consumption at this scope, and leaves worker starvation unevaluable.
+It is single-source port evidence; no guest or host behavior changed.
 
 ### M5 audio and guest gate
 
@@ -721,6 +747,18 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   executed. The retail table is therefore real, but the named wait call site
   is not a retail route boundary; the port treatment-only wait path still
   requires a port census before any gate arm is interpreted.
+- s2076 supersedes the wording that the port treatment-only wait path was
+  still unmeasured after the retail prerequisite. That wording was believable
+  because s2074's treatment died before a complete wait/readers join, and
+  s2075 proved only that the retail table—not the port treatment call site—was
+  real. The regeneration-stable census then observed the treatment's gate,
+  wait entry, all six tick returns, any-slot return, one normal wait loop, and
+  794 later slot-0 reads, all with slot 0 still `0x00` and no named writer
+  row. It selects H-PortWaitReturnsWithoutRetailSlot at port treatment scope,
+  refutes pre-wait failure and slot consumption at that scope, and leaves
+  worker starvation unevaluable because the wait returned and no target route
+  qualified. The later fill-sample crash is a separate downstream boundary;
+  no mitigation or wait/guard change is authorized.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -806,6 +844,15 @@ cycles, and `0x8009B7EC` supplied three observed `03 -> 00` writer edges.
 The requested `0x80095D54` wait PC and `0x8009B30C` writer had zero hits.
 This selects H-RetailWaitCallsiteUnreached at the named-PC scope and leaves
 the port treatment-only wait path open; no port behavior changed.
+s2076 then ran the regeneration-stable port treatment census. The fixed run
+passed the `[audtask-dispatch]`, `[pad-sdl]`, and `[host-start]` controls,
+reached the phase-4 wait, and showed gate `0x01`, slot 0/1/2 all `0x00`, all
+six tick stages returning, a normal one-iteration wait return, and no guard.
+Its 794 phase-6 reader rows at `0x8009B62C` all read slot 0 as `0x00`, with no
+named status-writer rows, before `fillSampleStreamRange+336` crashed at guest
+`0x8000B650`. This selects H-PortWaitReturnsWithoutRetailSlot at the port
+treatment scope and leaves the retail/port boundary as the next independent
+oracle question; no port behavior changed.
 
 ## Method and safety rules
 

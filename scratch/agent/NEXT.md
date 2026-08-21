@@ -1,78 +1,55 @@
-# NEXT work unit (s2076)
+# NEXT work unit (s2077)
 
-HYPOTHESIS-ID: m5-port-treatment-wait-path
+HYPOTHESIS-ID: m5-retail-fill-sample-boundary
 
 ## Work unit
 
-Build one Debug binary containing a single regeneration-stable,
-phase-keyed `wait-contract` census for the existing port treatment path, then
-run the qualified `ROGUESQ_M5_C88_VALUE=1` arm. Do not change the gate store,
-audio task fields, output routing, canary reservation, wait cap, or any guard.
-Join in one table: treatment gate value and phase, entry/exit/guard state of
-`waitForAnyAudioSlot`, the dominant slot readers (`0x8009B62C`,
-`0x8009B654`, `0x8009B3EC`, `0x8009B44C`), slot-0 status, named status-writer
-stores, and the first failure/last guest PC. Existing `[pad-host]`, VI 640,
-`[audtask-dispatch]`, and process-alive rows are the same-run positive
-controls; a wait counter alone is not a control.
-
-The s2075 retail witness established that the real table at `0x154620`
-cycles `00 -> 01 -> 02 -> 03 -> 00` and that retail never executes
-`0x80095D54`. This unit tests whether the port's treatment-only crash enters
-an unrelated wait path, consumes the real slot contract, or fails earlier.
+Ask the independent retail oracle for one phase-qualified PC witness of the
+new boundary exposed by s2076. Do not build the port or change guest/host
+behavior. Use the corrected Rice oracle with a whole-RDRAM write positive
+control, PIF Start tracing, title/hangar VI anchors, status polling, and one
+batched `--watch-pc` set covering the port treatment's later crash PC
+`0x8000B650` (`fillSampleStreamRange`), the wait/tick/status readers, the
+retail wait candidate, and the named status writers.
 
 ## Competing hypotheses and discriminator
 
-- **H-PortTreatmentMisdirectsGate** — C88 treatment enters the port wait while
-  the gate is active or before the legitimate gate/slot transition; the joined
-  row shows gate/phase, wait entry, and a zero or non-retail slot state before
-  the first failure. This selects a gate-to-wait misrouting boundary.
-- **H-PortWaitConsumesRetailSlot** — treatment wait reads the same slot-0
-  status contract and observes a valid transition or named writer before
-  returning/guarding; this selects a port scheduling/completion boundary,
-  not a wrong table or gate value.
-- **H-PortTreatmentFailsBeforeWait** — the treatment has live preflight and
-  audio-task controls but no `wait-contract` entry before its first failure;
-  this selects an earlier render/voice path and rules out the wait as the
-  first treatment boundary.
-- **H-PortWaitStarvesWorker** — treatment enters the wait, slot readers remain
-  active, but no status-zero writer/exit occurs while the worker/VI controls
-  stop; this selects a scheduler/worker handoff boundary after the retail
-  table identity is established.
+- **H-RetailFillBoundary** — qualified retail execution reaches
+  `0x8000B650` and joins one or more wait/tick/status PCs, with a retail slot
+  transition; the port's no-slot treatment result is a scheduler/ABI
+  divergence at a shared audio boundary.
+- **H-PortOnlyFillBoundary** — whole-RDRAM, PIF, title, and hangar controls
+  fire, but retail has no `0x8000B650` hit; the later fill-sample crash is
+  port-only and must not be treated as a retail contract.
+- **H-RetailDistinctVoiceStage** — retail reaches `0x8000B650` but none of
+  the wait/tick/status PCs or slot-table writers join it; the fill routine is
+  a distinct voice-stage contract.
 
-The discriminator is one phase-keyed table containing all of those fields and
-the first-failure edge. Positive controls must fire in the same run. A missing
-wait row without live preflight/audio-task controls is UNEVALUABLE; a guard
-fire is a failure outcome, not completion.
+The discriminator is the same-run PC intersection and phase/slot control
+table. A zero target-PC result without whole-RDRAM, PIF, title, and hangar
+controls is UNEVALUABLE. A retail hit on `0x8000B650` alone is not enough to
+select a shared boundary.
 
-## Exact commands
+## Exact command
 
-Patch the existing fixup instrumentation in one batch, regenerate in the
-required order, and build once:
+Run from the repository root and capture to an absolute path:
 
 ```sh
-(cd ../rogue_squadron64 && python3 tools/make_elf.py)
-(cd ../N64Recomp && build/N64Recomp rogue_squadron.toml)
-python3 ../N64Recomp/fixup_game_funcs.py
-cmake --build build --target RogueSquadron64Recomp
+tools/oracle/build/rs64_oracle \
+  --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom ../rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --rsp /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-rsp-hle.dylib \
+  --input /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-input-sdl.dylib \
+  --secs 65 --hit-cap 10000 \
+  --watch-write 0x0:0x800000 \
+  --watch-pc 0x8000B650,0x800668B0,0x8008DA00,0x8009B62C,0x8009B654,0x8009B3EC,0x8009B44C,0x8008EC88,0x80095D54 \
+  --status-poll --pif-trace --vi-trace \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  > scratch/agent/oracle_s2077_fill_boundary.log 2>&1
 ```
 
-Then run the treatment from the repository root; the driver launches from
-`build/`, captures to an absolute path, and kills the game with SIGKILL:
-
-```sh
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-  ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_SPIN_YIELD=1 \
-  ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 \
-  ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
-  ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 \
-  ROGUESQ_LOG_AUDIOTICK_TRACE=1 \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2076_c88_wait 30 12
-```
-
-Require `[pad-host]`/preflight and `[audtask-dispatch]` controls before
-interpreting any wait or slot null. Expected outcomes are: misdirected gate
-if a treatment wait row precedes a non-retail slot state; retail-like slot
-consumption if the table transition and named writer join; pre-wait failure if
-the first failure precedes every wait row; or worker starvation if wait and
-readers stay live while the status-zero/exit edge is absent. No mitigation is
-authorized from any outcome.
+Report the whole-RDRAM hit count, PIF/title/hangar controls, each requested
+PC hit count and any phase/slot-cycle join. Do not infer from a null without
+the positive controls. No mitigation or treatment rerun is authorized until
+this oracle boundary is classified.

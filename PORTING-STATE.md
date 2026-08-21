@@ -98961,3 +98961,45 @@ census of that treatment-only wait path.
 The preserved oracle log is `scratch/agent/oracle_s2075_wait_slot/run.log`.
 No port build, guest store, task field, output route, canary, wait, guard, or
 default behavior changed.
+
+## Session 2076 (2026-08-20) — censused the C88 treatment wait boundary
+
+The first prescribed C88=1 treatment run used the existing wait census and
+reproduced the old pre-loop fault: it passed live audio-task/input controls,
+entered `waitForAnyAudioSlot`, and crashed at `waitForAnyAudioSlot+336` with
+guest last PC `0x80095D54` before the new slot-reader rows. I preserved that
+incomplete run at `scratch/s73_post_a_scene/s2076_c88_wait_initial/run.log`.
+
+I then added a regeneration-stable, phase-keyed census through
+`../N64Recomp/fixup_game_funcs.py`, regenerated in the required order, and
+rebuilt once. The fixed run is
+`scratch/s73_post_a_scene/s2076_c88_wait/run.log`. It passed the same-run
+controls: 48 `[audtask-dispatch]` rows, 51 `[pad-sdl]` rows, and 5
+`[host-start]` rows. It reached phase 4 at VI width 640, but not the title VI
+1024 anchor. At wait entry the treatment gate was `0x01` and slot 0/1/2 were
+all `0x00`. The census observed `wait-entry`, pre/post tick, all six
+`tickMusyXIfActive` stages, pre/post `anyAudioSlotActive`, and the existing
+postwait trace: one loop iteration, normal wait return, and no guard.
+
+After that return, 794 phase-6 status-reader rows at `0x8009B62C` all read
+slot 0 at `0x80154620` as `0x00`, across origins `0x00696100` and
+`0x0062BD00`. The other three requested readers had zero rows in this run,
+and no named status-writer rows appeared. The run later crashed in the known
+MusyX path at `fillSampleStreamRange+336`, guest last PC `0x8000B650`, with a
+stack through `musyxRenderVoiceSamples`, `musyxMixActiveVoices`,
+`musyxSynthFrame`, and `viRetraceHandlerThread`.
+
+This selects **H-PortWaitReturnsWithoutRetailSlot** at the port treatment
+scope. It refutes **H-PortTreatmentFailsBeforeWait** and
+**H-PortWaitConsumesRetailSlot** at that scope: the wait and its full tick
+chain ran and returned, while no slot transition or named writer joined.
+**H-PortWaitStarvesWorker** remains unevaluable because the wait returned and
+the target route never qualified. The fixed result is single-source port
+evidence; s2075 remains the independent proof that the retail table itself
+cycles `00 -> 01 -> 02 -> 03 -> 00` and that retail does not execute
+`0x80095D54`. No guest/host behavior, wait, guard, gate, or slot behavior
+changed.
+
+ORIGIN: s2076 added observation-only wait/tick/status-reader probes to the
+regeneration fixup. They read existing gate and status bytes and do not write
+guest memory or alter waits, guards, task fields, or output routing.
