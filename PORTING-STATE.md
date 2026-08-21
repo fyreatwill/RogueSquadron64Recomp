@@ -100537,3 +100537,36 @@ corruption mitigation or value skip was added.
 Run the same-build paired target-phase validation described in
 `scratch/agent/NEXT.md` under
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+## Session 2114 (2026-08-21) — reattempted the M5 image-task contract pair
+
+The planned same-build stub/image contract validation was run twice with the
+existing phase-keyed witness and no source or build changes. The first
+concurrent pair reached only the pre-target phases through `640 @
+0x00696100`; both processes then emitted a bus-error crash in
+`cutsceneDispatchSlotsByFlag+8960` with last guest PC `0x8000834c`. There were
+no target-phase M5 contract rows in either log. This is a coverage failure,
+not a null contract result.
+
+The fixed retry made `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, and
+`ROGUESQ_LLE_SOLO=1` explicit in both child environments while retaining
+identical B40/C88, spin-yield, task, wait, PCM, and guard settings. The image
+arm again exited before the 1024 phase. The stub arm remained at `640 @
+0x00696100` without a target row and was terminated with SIGKILL at the
+bounded retry stop. The pre-target phase logger fired, but it is not a
+positive control for the target contract witness.
+
+These attempts do not select or refute `H-TaskExitMapping`, `H-OutputRoute`,
+`H-WritebackLoss`, or `H-NoValidOutput`; they only show that the paired recipe
+did not reach the discriminator. Making the LLE gates explicit did not repair
+that route coverage. No output, exit, DMA, task field, canary, slot, PCM,
+wait, guard, queue, or default behavior changed.
+
+ORIGIN: diagnostic-only rerun; no corruption mitigation or value skip was
+added.
+
+### Next
+
+Run the fresh same-build paired target-phase validation described in
+`scratch/agent/NEXT.md` under
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.

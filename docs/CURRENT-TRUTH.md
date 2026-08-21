@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2113
-(2026-08-21); behavioral and source evidence is current through s2113.
+authoritative for exact commands and probe rows. Maintained in Session 2114
+(2026-08-21); behavioral and source evidence is current through s2114.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -43,6 +43,11 @@ This file is intentionally compact. The s2080–s2108 archive is in
   phase 6; an earlier pair had the inverse pre-target crash. The successful
   image contract result is therefore single-arm evidence, not a cross-run A/B
   conclusion. No output or exit mapping change is authorized.
+- The s2114 paired validation and its explicit-LLE retry both failed before
+  target-phase coverage: the first pair bus-faulted after the 640-wide phase,
+  while the retry's image arm exited pre-target and its stub arm remained at
+  640-wide until SIGKILL. The phase logger fired only pre-target controls, so
+  this adds no contract evidence and does not select any ABI hypothesis.
 - The title path is separately selected as `H-InputZero`: title-stage input,
   transform, and DMA payloads were zero. A hangar sample had nonzero input,
   transform, and matching DMA payload, rejecting transform annihilation and
@@ -81,10 +86,11 @@ The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
 1. **M5 image-task contract.** Complete the phase-keyed stub/image A/B at a
-   target phase, then distinguish the selected `H-TaskExitMapping` result from
-   the remaining `output_buff=0` ABI-semantics question. Preserve generated
-   DMA, task fields, canary, slot, PCM, wait, and queue behavior; no output or
-   exit mapping change is authorized.
+   target phase; s2114's two attempts were coverage failures, not null
+   contract results. Then distinguish the selected `H-TaskExitMapping`
+   result from the remaining `output_buff=0` ABI-semantics question.
+   Preserve generated DMA, task fields, canary, slot, PCM, wait, and queue
+   behavior; no output or exit mapping change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.

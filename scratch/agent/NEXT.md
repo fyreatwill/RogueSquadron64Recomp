@@ -1,17 +1,18 @@
-# NEXT work unit (s2114) — same-run M5 image-task contract validation
+# NEXT work unit (s2115) — same-run M5 image-task contract validation
 
 HYPOTHESIS-ID: m5-audio-image-task-contract
 
 ## Work unit
 
 Run one fresh, same-build paired validation of the default silent audio stub
-and `ROGUESQ_AUDIO_UCODE=1` image arm concurrently. The pair must reach at
-least one target phase (`1024 @ 0x00790400` or `512 @ 0x006AB400`) before any
-contract comparison is used. No new fields or runtime behavior are needed:
-reuse the s2113 phase-keyed contract witness and the existing route, ABI/DMA,
-stage, slot, PCM, wait, queue, and VI controls. Do not change task fields,
-DMA, exit mapping, output routing, canary handling, slots, PCM, waits, guards,
-queues, or default behavior.
+and `ROGUESQ_AUDIO_UCODE=1` image arm concurrently. The s2114 pair and its
+explicit-LLE retry were both pre-target coverage failures, so do not compare
+their empty target tables. The new pair must reach at least one target phase
+(`1024 @ 0x00790400` or `512 @ 0x006AB400`) before any contract comparison is
+used. Reuse the s2113 phase-keyed contract witness and the existing route,
+ABI/DMA, stage, slot, PCM, wait, queue, and VI controls. Do not change task
+fields, DMA, exit mapping, output routing, canary handling, slots, PCM, waits,
+guards, queues, or default behavior.
 
 ## Competing hypotheses and single discriminator
 
@@ -40,8 +41,8 @@ infer a contract result.
 Use the already-built Debug binary. Launch both arms concurrently from the
 repository root:
 
-    env GAME_EXTRA_ENV='ROGUESQ_M5_B40_VALUE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_WAIT_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2114_m5_task_stub_pair 30 12 > scratch/agent/s2114_m5_task_stub_pair_driver.log 2>&1
-    env GAME_EXTRA_ENV='ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_B40_VALUE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_WAIT_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2114_m5_task_image_pair 30 12 > scratch/agent/s2114_m5_task_image_pair_driver.log 2>&1
+    env GAME_EXTRA_ENV='ROGUESQ_M5_B40_VALUE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_WAIT_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2115_m5_task_stub_pair 30 12 > scratch/agent/s2115_m5_task_stub_pair_driver.log 2>&1
+    env GAME_EXTRA_ENV='ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_B40_VALUE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_WAIT_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2115_m5_task_image_pair 30 12 > scratch/agent/s2115_m5_task_image_pair_driver.log 2>&1
 
 If a launched process remains after its driver exits, terminate its process
 group with SIGKILL. Inspect only phase-keyed counts, positive-control rows,
