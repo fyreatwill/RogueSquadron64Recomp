@@ -99975,3 +99975,56 @@ pre/post-DMEM table specified in `scratch/agent/NEXT.md`.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+## Session 2100 (2026-08-20) — measured image-task source through DMA
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 41446 bytes, so this was not a
+maintenance iteration. The independent retail oracle was run before adding
+the instrument. Its whole-RDRAM positive control recorded `39963029` writes,
+the run reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and
+the broad `0x160000..0x1A0000` and `0x1A0000..0x1C0000` windows ended with
+nonzero snapshots. Their breadth still prevented exact task-field attribution.
+
+The image-arm fixup was added to `tools/fixup_factor5_ucode.py`, keyed only to
+`factor5_ucode_b_recompiled.c`, and the host-side stage logger was added to
+`src/main/main.cpp`. The four anchors recorded phase/route ordinal, DMEM
+`0xCC0..0xE3F`, `0x3F0/0x570`, `0x6F0`, `0xCB0`, the descriptor fields, and the
+pre-DMA destination spans. `py_compile`, an idempotent fixup pass, and the
+full CMake build all passed. An attempted direct `factor5b_rsp.toml` regen
+with both available macOS N64Recomp binaries exited `139` before rewriting
+the file; the existing generated output was restored to its clean pre-fixup
+shape and the fixup then produced the final instrumented C.
+
+The first concurrent eleven-Start pair was not admissible for the source
+table: the treatment bus-faulted before title at
+`cutsceneDispatchSlotsByFlag+8960` with last guest PC `0x8000834c`, while the
+control reached title and hangar and supplied `4648` ABI and `4649` DMA rows.
+The control driver then hung in `screencapture`; the known treatment/control
+processes were terminated with SIGKILL. The reduced-capture rerun used
+`PROBES_OVERRIDE='p1:start:0'`. Its treatment reached title at 47.3 seconds
+and hangar at 83.6 seconds, emitted `16595` stage rows, `3218` ABI rows, and
+`3218` DMA rows, then was SIGKILLed while the driver was in a stable-frame
+`screencapture` helper. Its control crashed before the target phase with the
+same `0x8000834c` marker.
+
+The fixed treatment stage table had `3207` distinct target-phase ordinals.
+Title rows were zero through the source, both transform spans, and the
+`0x6F0` writeback; the existing target DMA rows were also zero-payload. This
+selects `H-InputZero` at title scope. At hangar ordinal `3936`, a later stage
+cycle had `310`/`311` nonzero bytes in the `0x3F0`/`0x570` spans, `621` and
+`639` nonzero bytes in `0x6F0`, and the matching DMA ranges independently
+reported payload nonzero counts `621` and `639`. This rejects
+`H-TransformAnnihilation` and `H-RSPWriteLoss` for that hangar sample. The
+`0xCB0` stage remained zero there, and no complete PCM consumer join was
+observed, so the final E50/destination contract remains open. No output
+routing, task-field, canary, gate, wait, guard, queue-policy, or default
+dispatch behavior changed.
+
+The next unit is an exact retail oracle watch of physical
+`0x166A50..0x167350` and `0x178D80..0x178F18`, with the whole-RDRAM positive
+control, target VI trace, writer-PC histograms, and post-store values.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.

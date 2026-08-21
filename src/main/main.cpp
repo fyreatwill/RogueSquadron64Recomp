@@ -353,45 +353,143 @@ static RspExitReason musyx_stub(uint8_t* /*rdram*/, uint32_t /*ucode_addr*/) {
     return RspExitReason::Broke;
 }
 
-static void rs64_log_audio_return(const char* arm, RspExitReason reason) {
+struct Rs64AudioRouteIdentity {
+    bool valid = false;
+    const char* arm = "n/a";
+    uint32_t phase = 0;
+    uint32_t width = 0;
+    uint32_t origin = 0;
+    uint32_t ordinal = 0;
+    uint32_t row = 0;
+};
+
+static thread_local Rs64AudioRouteIdentity g_rs64_audio_identity;
+static std::atomic<uint32_t> g_rs64_audio_ordinal{0};
+static uint32_t g_rs64_audio_phase_key = 0xFFFFFFFFu;
+static uint32_t g_rs64_audio_phase_row = 0;
+
+static bool rs64_audio_probe_enabled() {
     static int enabled = -1;
     if (enabled < 0) {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_AUDIO_RETURN");
-        enabled = ((all && *all && *all != '0') || (own && *own && *own != '0')) ? 1 : 0;
+        enabled = ((all && *all && *all != '0') ||
+                   (own && *own && *own != '0')) ? 1 : 0;
     }
-    if (!enabled) return;
+    return enabled != 0;
+}
 
-    static std::atomic<uint32_t> ordinal{0};
-    static uint32_t phase_key = 0xFFFFFFFFu;
-    static uint32_t phase_row = 0;
+static void rs64_audio_route_prepare(const char* arm) {
+    if (!rs64_audio_probe_enabled()) {
+        g_rs64_audio_identity.valid = false;
+        return;
+    }
     const uint32_t phase = rs64_phase_ord();
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin();
     const uint32_t key = (width << 24) ^ origin;
-    if (key != phase_key) {
-        phase_key = key;
-        phase_row = 0;
+    if (key != g_rs64_audio_phase_key) {
+        g_rs64_audio_phase_key = key;
+        g_rs64_audio_phase_row = 0;
     }
-    const uint32_t global_ordinal = ordinal.fetch_add(1, std::memory_order_relaxed);
-    const uint32_t row = phase_row++;
-    if (row < 256 || (row % 128) == 0) {
+    g_rs64_audio_identity = {
+        true, arm, phase, width, origin,
+        g_rs64_audio_ordinal.fetch_add(1, std::memory_order_relaxed),
+        g_rs64_audio_phase_row++
+    };
+}
+
+static void rs64_audio_hash_dmem(uint32_t addr, uint32_t len,
+                                  uint32_t& fnv, uint32_t& nonzero) {
+    fnv = 2166136261u;
+    nonzero = 0;
+    for (uint32_t i = 0; i < len; ++i) {
+        const uint8_t b = dmem[((addr + i) & 0xFFFu) ^ 3u];
+        fnv = (fnv * 16777619u) ^ b;
+        nonzero += b != 0;
+    }
+}
+
+static void rs64_audio_hash_rdram(const uint8_t* rdram, uint32_t addr,
+                                   uint32_t len, uint32_t& fnv,
+                                   uint32_t& nonzero, bool& valid) {
+    fnv = 2166136261u;
+    nonzero = 0;
+    valid = addr <= 0x800000u - len;
+    if (!valid) return;
+    for (uint32_t i = 0; i < len; ++i) {
+        const uint8_t b = rdram[(addr + i) & 0x7FFFFFu];
+        fnv = (fnv * 16777619u) ^ b;
+        nonzero += b != 0;
+    }
+}
+
+extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
+                                         uint32_t r2, uint32_t field348,
+                                         uint32_t field44, uint32_t dest) {
+    const Rs64AudioRouteIdentity& route = g_rs64_audio_identity;
+    if (!route.valid ||
+        !((route.width == 1024u && route.origin == 0x00790400u) ||
+          (route.width == 512u && route.origin == 0x006AB400u))) return;
+
+    uint32_t dmem_a = 0, dmem_b = 0, len_a = 0, len_b = 0;
+    uint32_t dest_len = 0;
+    switch (stage) {
+    case 0: dmem_a = 0xCC0; len_a = 0x180; break;
+    case 1: dmem_a = 0x3F0; len_a = 0x180; dmem_b = 0x570; len_b = 0x180; break;
+    case 2: dmem_a = 0x6F0; len_a = 0x300; dest_len = 0x300; break;
+    case 3: dmem_a = 0xCB0; len_a = 0x198; dest_len = 0x198; break;
+    default: return;
+    }
+
+    uint32_t fnv_a = 0, nz_a = 0, fnv_b = 0, nz_b = 0;
+    if (len_a) rs64_audio_hash_dmem(dmem_a, len_a, fnv_a, nz_a);
+    if (len_b) rs64_audio_hash_dmem(dmem_b, len_b, fnv_b, nz_b);
+    uint32_t dest_fnv = 2166136261u, dest_nz = 0;
+    bool dest_valid = false;
+    if (dest_len) {
+        rs64_audio_hash_rdram(rdram, dest & 0xFFFFF8u, dest_len,
+                               dest_fnv, dest_nz, dest_valid);
+    }
+    std::fprintf(stderr,
+        "[audtask-image-stage] arm=%s ordinal=%u row=%u phase=%u width=%u"
+        " origin=0x%06X stage=%u r2=0x%03X field348=0x%08X field44=0x%08X"
+        " dest=0x%08X dmem_a=0x%03X len_a=0x%X fnv_a=%08X nz_a=%u"
+        " dmem_b=0x%03X len_b=0x%X fnv_b=%08X nz_b=%u"
+        " dest_valid=%u dest_fnv=%08X dest_nz=%u\n",
+        route.arm, route.ordinal, route.row, route.phase, route.width,
+        route.origin, stage, r2, field348, field44, dest, dmem_a, len_a,
+        fnv_a, nz_a, dmem_b, len_b, fnv_b, nz_b, dest_valid ? 1u : 0u,
+        dest_fnv, dest_nz);
+    std::fflush(stderr);
+}
+
+static void rs64_log_audio_return(const char* arm, RspExitReason reason) {
+    if (!rs64_audio_probe_enabled()) return;
+    if (!g_rs64_audio_identity.valid) rs64_audio_route_prepare(arm);
+    const Rs64AudioRouteIdentity route = g_rs64_audio_identity;
+    if (route.row < 256 || (route.row % 128) == 0) {
         fprintf(stderr,
                 "[audio-return] arm=%s phase=%u width=%u origin=0x%06X ordinal=%u row=%u exit=%d\n",
-                arm, phase, width, origin, global_ordinal, row, (int)reason);
+                arm, route.phase, route.width, route.origin, route.ordinal,
+                route.row, (int)reason);
         fflush(stderr);
     }
-    rs64_audio_route_set(arm, phase, width, origin, global_ordinal, row,
+    rs64_audio_route_set(arm, route.phase, route.width, route.origin,
+                         route.ordinal, route.row,
                          static_cast<int>(reason));
+    g_rs64_audio_identity.valid = false;
 }
 
 static RspExitReason musyx_stub_probe(uint8_t* rdram, uint32_t ucode_addr) {
+    rs64_audio_route_prepare("musyx_stub");
     const RspExitReason reason = musyx_stub(rdram, ucode_addr);
     rs64_log_audio_return("musyx_stub", reason);
     return reason;
 }
 
 static RspExitReason factor5_ucode_b_probe(uint8_t* rdram, uint32_t ucode_addr) {
+    rs64_audio_route_prepare("factor5_ucode_b");
     const RspExitReason reason = factor5_ucode_b(rdram, ucode_addr);
     rs64_log_audio_return("factor5_ucode_b", reason);
     return reason;

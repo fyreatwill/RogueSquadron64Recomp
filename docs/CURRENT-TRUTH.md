@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2099 (2026-08-20);
-behavioral and source evidence is current through s2099.
+for exact commands and probe rows. Maintained in Session 2100 (2026-08-20);
+behavioral and source evidence is current through s2100.
 
 ## Current state
 
@@ -20,16 +20,30 @@ behavioral and source evidence is current through s2099.
   audio path is a silent `Broke` stub; the Factor 5 image arm is opt-in behind
   `ROGUESQ_AUDIO_UCODE=1` and is not defaulted on.
 - The image arm changes DMEM and emits generated DMA writes but returns
-  `Broke`, fails the reserved host canary, and has a zero-payload image-DMA
-  join at the current scope. It still produces matched nonzero title PCM
-  source/consumer pairs in some runs; hangar PCM remains zero. The task ABI,
-  final E50 role, and complete playback contract are unresolved. No output
-  routing, task-field, canary, wait, guard, or guest-gate change is authorized.
+  `Broke` and fails the reserved host canary. Its title-phase image-DMA join
+  is zero-payload, while s2100 observes nonzero `0x6F0` payloads in a hangar
+  task; hangar PCM remains zero. The task ABI, final E50 role, and complete
+  playback contract are unresolved. No output routing, task-field, canary,
+  wait, guard, or guest-gate change is authorized.
 - The generated image writer reaches the host canary span through three
   guest output loops. The only reachable image-side `Broke` edge is the
   generated `break 0` after its final DMA write. The source audit does not
   establish whether the destination is output staging, scratch, or an ABI
   mismatch.
+- s2100's regeneration-stable image-stage table fired in the fixed treatment
+  run: 3207 distinct audio ordinals reached target title/hangar phases, with
+  2135 title-stage rows and 2328 hangar-stage rows. At title, the sampled
+  `0xCC0`, `0x3F0/0x570`, and `0x6F0` spans were zero and the existing DMA
+  rows were zero-payload, selecting `H-InputZero` at title scope. At hangar
+  ordinal 3936, independent stage rows captured nonzero `0xCC0`, transformed
+  `0x3F0/0x570`, and `0x6F0` data; the matching DMA ranges had nonzero
+  payloads (621 and 639 bytes). This refutes `H-TransformAnnihilation` and
+  `H-RSPWriteLoss` for that hangar sample, but leaves the final E50/consumer
+  contract unresolved. The first concurrent control reached title and hangar;
+  a reduced-capture rerun reached no control target phase, so route stability
+  is not a discriminator for the source result. No output routing, task-field,
+  canary, gate, wait, guard, queue-policy, or default-dispatch behavior
+  changed.
 - s2088's fixed retail oracle run passed the whole-RDRAM positive control
   (`102276129` writes), reached title `1024 @ 0x00790400` and hangar
   `512 @ 0x006AB400`, and sampled both exact candidate writers after the
@@ -259,20 +273,19 @@ behavioral and source evidence is current through s2099.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 image-task source/ABI boundary.** `H-ImageStagingZeroPayload` is
-   selected at the qualified title scope: all observed image DMAs are
-   non-overlapping zero-payload transfers despite DMEM mutation and complete
-   SP/guest routing. s2098–s2099 establish the generated source and
-   destination-field formulas but not their runtime contents or contract.
-   The next unit is one regeneration-stable treatment/control capture of
-   pre-`L_19A4` `0xCC0..0xE3F` input, post-transform `0x3F0/0x570`, pre-DMA
-   `0x6F0`, and both destination fields, joined by audio-task ordinal and VI
-   phase. A nonzero input and nonzero pre-DMA transform selects a later DMA
-   snapshot/copy boundary; zero input with zero transform selects a legitimate
-   zero path; nonzero transform with zero payload selects the RSP/DMA capture
-   boundary. The destination fields remain separately classified by their
-   observed values and source task blocks. Do not change output routing, task
-   fields, canary, gate, wait, guard, queue policy, or default dispatch.
+1. **M5 image-task destination/consumer boundary.** `H-InputZero` is selected
+   only at the title scope. s2100's table proves that the treatment can carry
+   nonzero source through the transform into nonzero `0x6F0` DMA payloads in
+   hangar, while the existing PCM consumer join remains incomplete and the
+   final `0xCB0` block is zero in the observed sample. The next unit is one
+   independent retail oracle table for the exact physical destinations seen
+   in that sample (`0x166A50..0x167350` and `0x178D80..0x178F18`), with a
+   whole-RDRAM positive control, title/hangar VI gate, writer-PC histogram,
+   and post-store values. A matching retail writer/value envelope supports a
+   legitimate output/metadata contract; retail writes only to a different
+   envelope support `H-ABI-Destination`; no exact retail hits retain the
+   port-only boundary. Do not change output routing, task fields, canary,
+   gate, wait, guard, queue policy, or default dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -458,6 +471,12 @@ The maintenance compaction retains the reasons for the recent reversals here:
   were zero. s2061/s2070 showed matched nonzero title pairs in the image arm,
   while `Broke`, canary failure, and zero image payload remained. This refutes
   a pure stub or clean-image explanation, not the task ABI hypothesis.
+- The old global zero-payload image-DMA wording was believable because the
+  qualified s2097 title run and s2098–s2099 static/source audits never sampled
+  a nonzero hangar image task. s2100's phase-keyed stage table found a title
+  zero path but also found hangar ordinal 3936 carrying nonzero source,
+  transform, and matching DMA payloads. The zero-payload conclusion is now
+  title-scoped; it does not explain the hangar destination or PCM boundary.
 - The old broad-band image-DMA interpretation was believable because retail
   ownership was known only for `0x166000..0x17A000`. s2063's complete exact
   port join found zero DMA payload and unmatched nonzero PCM pairs; s2068 then
@@ -599,6 +618,20 @@ oracle arm: the whole-RDRAM control and both target VIs were positive, and
 broad physical audio-data windows contained nonzero writes, but their breadth
 prevented exact task-field attribution. The next discriminator is therefore a
 phase-keyed in-port pre/post-DMEM table, not a broader retail watch.
+
+s2100 adds the regeneration-stable image-stage table and a fresh retail oracle
+control. The oracle passed its whole-RDRAM control with `39963029` writes,
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and recorded
+nonzero broad-window snapshots. The first same-build port pair had a positive
+control route but the treatment crashed before title; the fixed reduced-capture
+pair let the treatment reach both target phases and produced `16595` stage
+rows, `3218` ABI rows, and `3218` DMA rows before the driver was SIGKILLed in
+the screenshot helper. Title rows remained zero through the writeback, while
+hangar ordinal 3936 independently showed nonzero source/transform/writeback
+and matching nonzero DMA payload counts. This selects `H-InputZero` only for
+title, rejects transform annihilation and DMA write loss for the sampled
+hangar task, and leaves the exact retail destination/consumer meaning open.
+The next discriminator is an exact retail watch of those physical ranges.
 
 ## Method and safety rules
 

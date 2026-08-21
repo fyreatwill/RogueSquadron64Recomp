@@ -3184,6 +3184,54 @@ if is_main_ucode and M4_STORE_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 22: phase-keyed image-task source/field audit (M5 step 7).
+# This arm is intentionally isolated to factor5_ucode_b: it records the
+# source, transform, writeback, and destination spans without changing the
+# microcode's control flow or DMA arguments.
+# ---------------------------------------------------------------------------
+IMAGE_STAGE_MARKER = "/* fixup: image-stage audit */"
+is_image_ucode = "RspExitReason factor5_ucode_b(" in text
+if is_image_ucode and IMAGE_STAGE_MARKER not in text:
+    decl_anchor = re.compile(r'(#include "librecomp/rsp.hpp"\n)')
+    text, n_decl = decl_anchor.subn(
+        r'\1extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram, '
+        r'uint32_t r2, uint32_t field348, uint32_t field44, uint32_t dest);  '
+        + IMAGE_STAGE_MARKER + "\n",
+        text, count=1)
+
+    def image_stage(pattern, replacement, what):
+        global text
+        text, count = re.subn(pattern, replacement, text, count=1)
+        if count != 1:
+            print(f"fixup_factor5_ucode: FIXUP 22 ANCHOR FAILED ({what}): "
+                  f"expected 1 substitution, made {count}.", file=sys.stderr)
+            sys.exit(1)
+
+    image_stage(
+        re.compile(r"(L_1104:\n)"),
+        r"\1    rs64_audio_image_stage(0, rdram, r2, RSP_MEM_W_LOAD(0X348, 0), 0, 0);  "
+        + IMAGE_STAGE_MARKER + "\n",
+        "pre-transform source")
+    image_stage(
+        re.compile(r"(    r7 = 0 \| 0X6F0;\n)(    goto L_1830;)"),
+        r"\1    rs64_audio_image_stage(1, rdram, r2, RSP_MEM_W_LOAD(0X348, 0), 0, 0);  "
+        + IMAGE_STAGE_MARKER + r"\n\2",
+        "transform output")
+    image_stage(
+        re.compile(r"(    r7 = 0 \| 0X2FF;\n)(    goto L_13B0;)"),
+        r"\1    rs64_audio_image_stage(2, rdram, r2, RSP_MEM_W_LOAD(0X348, 0), "
+        r"RSP_MEM_W_LOAD(0X44, r2), r6);  " + IMAGE_STAGE_MARKER + r"\n\2",
+        "0x6F0 writeback")
+    image_stage(
+        re.compile(r"(    r6 = RSP_ADD32\(r6, 0X100\);\n)(    goto L_13B0;)"),
+        r"\1    rs64_audio_image_stage(3, rdram, r2, RSP_MEM_W_LOAD(0X348, 0), 0, r6);  "
+        + IMAGE_STAGE_MARKER + r"\n\2",
+        "0xCB0 writeback")
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 22 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
@@ -3255,5 +3303,7 @@ if TRIGEN_SOURCE_MARKER in text and TRIGEN_SOURCE_MARKER not in original:
     notes.append("TriGen physical source audit (s719)")
 if M4_Y8000_MARKER in text and M4_Y8000_MARKER not in original:
     notes.append("M4 0x8000-Y emit vs clip-reject census (s1856)")
+if IMAGE_STAGE_MARKER in text and IMAGE_STAGE_MARKER not in original:
+    notes.append("image-task source/field audit (M5 step 7)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)
