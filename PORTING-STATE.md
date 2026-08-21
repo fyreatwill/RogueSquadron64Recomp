@@ -101503,3 +101503,49 @@ shortcut, guard, or default-arm behavior changed.
 
 ORIGIN: no mitigation or game-value machinery was added; this session only
 validated the external decoder across additional retail speech classes.
+
+## Session 2140 (2026-08-21) — observed retail data_ptr offset-100 writes
+
+HYPOTHESIS-ID: m5-retail-dataptr-output-boundary
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `47,491` bytes, so this was not a
+maintenance iteration. The prescribed work unit was one independent retail
+oracle watch; it ran no port build, runtime process, source change, or soak.
+The single run watched both physical destinations from the qualified retail
+task-field census, their surrounding task-buffer ranges, the full retail
+`aspTask` block, and a whole-RDRAM positive control.
+
+The same run passed the independent whole-RDRAM control with `363506` writes
+and the `0x00149470..0x001494B0` task-block control with `41220` writes. The VI
+trace reached title width `1024` (including the stable `0x00790400` origin)
+and hangar width `512` at `0x006AB400`, so target-watch silence would have
+been discriminating. The exact destination table was:
+
+- physical `0x00173C20` for retail `data_ptr=0x80173B20`: `490` writes;
+  post-value samples had `256` rows and primary post-store PC
+  `0x80090CA4`;
+- physical `0x00171DE0` for retail `data_ptr=0x80171CE0`: `1291` writes;
+  post-value samples had `259` rows and primary post-store PC
+  `0x80090CA4`;
+- surrounding range `0x00171CE0..0x00171EE0`: `197106` writes;
+  surrounding range `0x00173B20..0x00173D20`: `115180` writes.
+
+The task-block post-value table retained both observed pointers
+(`0x80173B20` and `0x80171CE0`) alongside fixed fields `0x80099FE0` and
+`0x800A4E00`. Its writer-PC histogram had the ten expected task-field PCs
+`0x80091718` through `0x80091784`, each with `4122` rows. These controls
+independently establish that the task route was live while both exact
+offset-100 destinations were being written.
+
+This selects `H-RetailDataPtrOffset100` and rejects
+`H-RetailDataPtrNoWrite` and `H-RetailDataPtrCoverageFailure` at the covered
+retail route. The exact hits also reject the alternative-offset explanation
+for the observed output relation at this boundary. Together with s2137's
+same-build port row mapping the image destination to `field348+0x100`, this
+provides the required independent retail and port lines. No task-field,
+output-route, audio-arm, host shortcut, guard, or default-arm behavior
+changed. The next work unit is the generated-symbol sweep, whose next lead
+is `func_800BF790` -> `updateHudHealthIndicator`.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only observed the independent retail writer boundary.

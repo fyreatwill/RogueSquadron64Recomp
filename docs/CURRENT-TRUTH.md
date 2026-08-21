@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2139
-(2026-08-21); behavioral and source evidence is current through s2139.
+authoritative for exact commands and probe rows. Maintained in Session 2140
+(2026-08-21); behavioral and source evidence is current through s2140.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -85,9 +85,22 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `H-MORTReferenceMatchesExtended` for the
   sampled rate/type classes and rejects layout/endian failure,
   codec-variant failure, and reference unavailability at those rows. Type 0
-  at both rates and type 4 remain unsampled; the next M5 unit is the
-  independent retail `data_ptr+0x100` write boundary. No audio arm, task ABI,
+  at both rates and type 4 remain unsampled; s2140 separately closed the
+  sampled retail `data_ptr+0x100` output boundary. No audio arm, task ABI,
   output route, host shortcut, guard, or default-arm behavior changed.
+- The s2140 retail oracle watch passed its independent whole-RDRAM positive
+  control with `363506` writes, the task-block route control with `41220`
+  writes, and reached title `1024` plus hangar `512 @ 0x006AB400`. It wrote
+  both exact observed destinations: `0x00173C20` (`data_ptr=0x80173B20`)
+  `490` times and `0x00171DE0` (`data_ptr=0x80171CE0`) `1291` times. The
+  bounded surrounding ranges were active (`115180` and `197106` writes),
+  and the task block retained both source pointers with the expected fixed
+  `0x80099FE0`/`0x800A4E00` fields. Post-store samples at both exact
+  destinations primarily identified writer PC `0x80090CA4`. Together with
+  the s2137 port-side `field348+0x100` row, this supplies independent retail
+  and port lines selecting `H-RetailDataPtrOffset100` at the sampled output
+  boundary. No task-field, output-route, audio-arm, host shortcut, guard, or
+  default-arm change follows.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -372,40 +385,21 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 retail `data_ptr+0x100` destination boundary.** The s2135 static census
-   rejected a new MORT RSP segment, s2136 selected the retail task-field
-   contract, and s2137 selected the matching port image/task boundary plus
-   the generated `field348+0x100` write relation. s2138 and s2139 then
-   validated the independent CPU MORT decoder across the initial type-0 rows
-   and uncovered types `1,2,3,5` at both rates. The next unit is one
-   positive-control-qualified retail oracle watch for the two observed task
-   buffers' physical `data_ptr+0x100` destinations, with writer PCs, post-store
-   values, and title/hangar VI gates. Keep `factor5_ucode_b` opt-in and do not
-   change task fields, output routing, host AI status, guards, or the default
-   arm.
-2. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
-   three consecutive coverage-only results under the same hypothesis; the
-   current renderer boundary supplies no new discriminator. The first sweep
-   lead, `func_80001354` -> `runVideoFrameTick`, is already synchronized in
-   the regenerated tree and was skipped. s2129 resolved the next lead,
-   `func_800AD380` -> `computeTrackedObjectWorldAnchor`, by moving the human
-   mapping to `mission_overlay.txt`; the ELF and generated boundary table
-   selected `H-MissionMapping`. s2130 resolved the next lead,
-   `func_800AE3F0` -> `initPlayerCraftTrailBuffers`, with the same section and
-   unchanged boundary table; its prior s407 relocation warning remains a
-   runtime-risk record. s2131 resolved `func_800C41B0` ->
-   `plotRadarBlipColumn` at `0x800C41B0` with the same section and unchanged
-   boundary/caller table. The next lead is `func_800BF790` ->
-   `updateHudHealthIndicator`.
-3. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
+1. **Generated-symbol renaming sweep.** The M5 `data_ptr+0x100` boundary is
+   closed at the sampled output edge: s2140's independently watched retail
+   destinations agree with s2137's port `field348+0x100` relation. The next
+   lead is `func_800BF790` -> `updateHudHealthIndicator`; validate it with a
+   no-edit versus two-line symbol-file move and a fresh ELF/generated
+   boundary and caller table.
+2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
    comparison; do not repeat the same recipe. Resume only with a genuinely
    new renderer-recovery or ground-truth discriminator.
-4. **M3 crash work.** Only systematic idiom-class audits with a named
+3. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
-5. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+4. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation and consumer-mode H1 by the RT64 census. H3 is unavailable
    because the oracle cannot screenshot the LLE path. Do not repeat the
    `0xD60` scan.
@@ -479,9 +473,9 @@ of the MusyX gate, seeded/decremented the aligned completion countdown, wrote
 nonzero worker status, populated the 16-entry audio-buffer pointer table, and
 executed retail `osAiSetNextBuffer` `8,556` times. This selects
 `H-RetailAIQueued` for the covered retail route and rules out a retail-no-AI
-explanation. It is one independent source: the next M5 unit must compare the
-port stub/image arms at the existing PCM source/consumer and host callback
-boundaries before changing the AI status shortcut, task ABI, or default arm.
+explanation. It is one independent source; the subsequent s2133 port
+comparison supplied the separate PCM source/consumer and host-callback line.
+No AI-status shortcut, task ABI, or default-arm change follows.
 
 The s2133 same-build port comparison supplied the missing nonzero host-boundary
 line. Both arms reached the target phases with positive controls; the image
@@ -498,8 +492,11 @@ covered task boundary. s2137's same-build port table then selects
 `H-PortTaskFieldsMatchRetail`: both arms reached the target phases, the image
 had the expected fixed fields and zero output buffer, its stage-3 destination
 matched `field348+0x100`, and two nonzero stage/PCM joins matched by address,
-length, FNV, and nonzero count. The retail `data_ptr+0x100` write remains an
-independent open edge; the next M5 unit is the retail destination watch.
+length, FNV, and nonzero count. The s2140 retail oracle then passed its
+whole-RDRAM and task-block controls, reached title/hangar, and wrote both
+exact physical `data_ptr+0x100` destinations. This closes the sampled
+retail/port output edge as `H-RetailDataPtrOffset100`; no task-field or
+output-route change follows.
 
 The s2134 retail oracle supplied the independent codec-side boundary. After
 the whole-RDRAM control and title/hangar gates, all seven named voice
@@ -514,9 +511,11 @@ nonzero `data_ptr`/`data_size` co-occurred with zero output-buffer writes.
 The s2137 port comparison established the matching fixed fields and sampled
 `field348+0x100` relation. The s2138/s2139 reference tables now cover type-0
 rows plus types `1,2,3,5` across 8000/16000 Hz with stable nonzero PCM. The
-independent retail dynamic `data_ptr+0x100` write remains open and is the
-next boundary; no runtime or default-arm change follows from the reference
-decode alone.
+s2140 retail oracle then supplied the independent dynamic write line: both
+observed `data_ptr+0x100` destinations were written after the positive
+control and title/hangar gates. Together with s2137's port relation this
+selects `H-RetailDataPtrOffset100` at the sampled boundary; no runtime or
+default-arm change follows from the reference decode or this watch.
 
 ### M5 audio and guest gate
 
@@ -690,12 +689,15 @@ s2137's same-build port table then selected `H-PortTaskFieldsMatchRetail`:
 both arms reached the target phases, the image had the expected fixed fields
 and zero output buffer, its stage-3 destination matched `field348+0x100`, and
 two nonzero stage/PCM joins matched by address, length, FNV, and nonzero count.
-The retail `data_ptr+0x100` write remains an independent open edge. s2138's
+s2140's retail oracle then passed whole-RDRAM/task-block controls, reached
+title/hangar, and wrote both exact `data_ptr+0x100` destinations, selecting
+`H-RetailDataPtrOffset100` with the independent port relation. s2138's
 independent decoder table produced four complete 8000-Hz/type-0 rows, and
 s2139's table produced complete nonzero rows for types `1,2,3,5` at both rates
 with byte-count and waveform checks. This single-source reference evidence
 selects `H-MORTReferenceMatchesExtended` for those sampled classes. The next
-M5 unit is the independent retail `data_ptr+0x100` destination watch.
+work unit is the generated-symbol sweep; no runtime or default-arm change
+follows.
 
 ## Method and safety rules
 
