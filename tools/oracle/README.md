@@ -37,9 +37,9 @@ For a memory watch after the global `--hit-cap` has gone silent,
 shutdown. These are useful when a positive-control watch is intentionally
 first in the list and must be removed without hiding the target attribution.
 `--post-value-watch N` adds a phase-gated, bounded post-store word histogram
-and a final physical-range FNV/nonzero summary; `--post-value-pc` can force a
-post-store sample for selected writer PCs after the title/hangar phase gate
-arms.
+and a final physical-range FNV/nonzero summary; repeat it to sample multiple
+watches in one run. `--post-value-pc` can force a post-store sample for
+selected writer PCs after the title/hangar phase gate arms.
 
 Exit status: 0 = hits, 3 = clean run with zero hits, 1/2 = setup error. The
 VI count is emulated frames, so a run always reports how far the *game* got,

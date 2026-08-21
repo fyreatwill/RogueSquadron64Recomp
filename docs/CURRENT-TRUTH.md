@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2091 (2026-08-20);
-behavioral and source evidence is current through s2091.
+for exact commands and probe rows. Maintained in Session 2092 (2026-08-20);
+behavioral and source evidence is current through s2092.
 
 ## Current state
 
@@ -70,6 +70,27 @@ behavioral and source evidence is current through s2091.
   `H-RetailVoiceArrayDivergence` and `H-OracleWriterMismatch`. The two roots
   are a ground-truth rotation result, not proof of heap corruption or a reason
   to change the port. No runtime behavior changed.
+- s2092's corrected retail oracle table passed the whole-RDRAM positive control
+  (`31543` writes), reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and sampled all three requested target ranges in one
+  phase-gated run. The gate range had 17 writes from five PCs:
+  `0x8008EA34`/`0x8008EB40` once each and
+  `0x8008EB7C`/`0x8008EC88`/`0x8008ED48` five times each. Target-phase
+  post-store rows showed gate values 0 for `0x8008EB7C` and `0x8008ED48`,
+  and 1 for `0x8008EC88` (the raw aligned words were `0x00000000` and
+  `0x01000000`). The countdown range `0x0014998A` had zero writes; the
+  flag range `0x0014974C` had 13281 writes with post-store words
+  `0x00010003` (129), `0x00000003` (131), and `0x01010003` (1).
+  Its phase-gated post-value PC census was led by `0x800917A8` and
+  `0x800916DC` (128 samples each), with one sample each from
+  `0x80091680`, `0x800912F8`, `0x80091928`, `0x8008F20C`, and
+  `0x8008F490`.
+  Generated `funcs_23.c` and `fixup_game_funcs.py` independently map every
+  gate PC to the named `setDisplayMode`, `reapplyDisplayMode`, or
+  `musyxNoopStub` anchor. This selects `H-RetailGateWriterMatch` at the
+  gate/source scope, rejects `H-PortOnlyGateContract` and
+  `H-GeneratedAnchorMismatch` there, and leaves the countdown/flag completion
+  contract unresolved. No gate, RSP, wait, guard, or host behavior changed.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -138,16 +159,17 @@ behavioral and source evidence is current through s2091.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 audio ground truth and regeneration reconciliation.** Run the retail
-   oracle table for physical `0x000A0F50`, `0x0014998A`, and `0x0014974C`,
-   alongside the whole-RDRAM positive control and the qualified title/hangar
-   VI phases. The narrow watches must report storing PCs and values; compare
-   the `0x800A0F50` PCs to the generated `fixup_game_funcs.py` anchors before
-   adding any port probe. A failed positive control or missing target phase is
-   unevaluable; named retail gate/countdown/flag writers select ground-truth
-   reconciliation; target hits with no matching generated anchor select an
-   anchor audit. No gate reversal, RSP dispatch, wait, guard, or host change is
-   authorized.
+1. **M5 opt-in Factor 5 audio-arm validation.** Build one binary and run the
+   default silent-stub control and `ROGUESQ_AUDIO_UCODE=1` treatment from the
+   same eleven-Start driver, concurrently where possible. Phase-gate both at
+   title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; collect direct
+   `M_AUDTASK` dispatch, exit reason, DMEM canary, slot-status transition, and
+   PCM nonzero evidence. A treatment that exits non-`Broke` with an intact
+   canary and valid slot/PCM transition selects the current image arm for the
+   next M5 step. Dispatch with `Broke`, canary failure, or no valid slot/PCM
+   selects an unresolved task ABI/exit boundary. Missing target phases or a
+   treatment-only route failure is unevaluable. No gate reversal, wait, guard,
+   host, or default-dispatch change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -210,6 +232,15 @@ values (`0x0002FFFF`, `0x0001FFFF`, `0xB02F5600`, `0x00000100`, and
 gate is mixed (`0,1,0,0,1` across the requested writers), so only the named
 writer-specific gate arm was authorized. Its port treatment was not route
 qualified and is not admissible for task/PCM interpretation.
+
+s2092's independent retail table now qualifies that boundary at the exact
+`0x800A0F50` address: all five gate PCs match generated `funcs_23.c` and
+`fixup_game_funcs.py` anchors, while the nearby countdown word has no retail
+writes and the worker-flag word has named writers with post-store values
+`0x00000003`, `0x00010003`, and `0x01010003`. Retail therefore confirms the
+gate writer/source mapping but does not yet establish the port's task-exit or
+PCM contract. The next M5 step is the same-build default-stub versus opt-in
+Factor 5 image-arm dispatch comparison; no gate or wait change is authorized.
 
 The s2080 crosswalk separates the generated fill function from the shared
 crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
@@ -375,6 +406,10 @@ that field attribution with `H-AlternateStructure` at generated-source scope.
 s2091's corrected oracle table observes both command-list roots and matches the
 `0x80090C80` destinations to the generated formula, selecting rotating-root
 behavior at retail root scope and closing the source/retail formula join.
+s2092's corrected eleven-Start oracle table qualifies the gate/countdown/flag
+table with post-store values and reconciles all five gate PCs to generated and
+fixup anchors; it leaves the countdown and completion contract open and selects
+the opt-in image-arm A/B as the next M5 unit.
 The chronological ledger is still the source for exact run commands, counts,
 and rejected retries.
 

@@ -1,62 +1,58 @@
-# NEXT work unit (s2092)
+# NEXT work unit (s2093)
 
-HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation
+HYPOTHESIS-ID: m5-audio-arm-validation
 
 ## Work unit
 
-Run one retail-oracle ground-truth table for the MusyX gate byte and its two
-nearby completion-state words before adding or changing any port instrument:
-physical `0x000A0F50` (gate), `0x0014998A` (audio-task countdown), and
-`0x0014974C` (audio worker flag). Keep the whole-RDRAM positive control, Rice
-video plugin, VI trace, and the eleven-Start driver. Use the target-watch
-detail and writer-PC histogram to identify every retail storing PC; do not
-flip a gate, select the real audio ucode, alter a wait, or change a guard.
+Build one binary, then run the default silent-stub control and the opt-in
+Factor 5 image-arm treatment from the same eleven-Start driver. Run both arms
+concurrently where possible. Keep every passive breadcrumb enabled, phase-gate
+the comparison on title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and
+do not change the gate, waits, guards, host routing, or default dispatch.
 
 ## Competing hypotheses and discriminator
 
-- **H-RetailGateWriterMatch** — retail writes the gate byte from the named
-  init/display/shutdown paths, and the countdown/flag words have active retail
-  producers whose PCs can be reconciled with the generated source/fixup
-  anchors.
-- **H-PortOnlyGateContract** — the whole-RDRAM control and target phases pass,
-  but the requested gate/countdown/flag locations have no retail writes or
-  only unrelated PCs; the current port-side gate/wait behavior is not a retail
-  contract at this address scope.
-- **H-GeneratedAnchorMismatch** — retail target writes occur with meaningful
-  PCs, but the generated tree or `fixup_game_funcs.py` lacks the corresponding
-  instruction anchor; this selects an anchor/source audit, not a behavior
-  change.
-- **H-OracleUnevaluable** — the positive control, title phase, or hangar phase
-  is absent. A null in that run is not evidence about the audio contract.
+- **H-ImageArmValid** — the opt-in image arm completes `M_AUDTASK` with a
+  non-`Broke` exit, preserves the DMEM canary, and produces a valid slot
+  transition and nonzero PCM.
+- **H-ImageArmStillABIWrong** — the image arm dispatches and changes DMEM but
+  still exits `Broke` or fails the canary, with no valid slot/PCM contract.
+- **H-StubControlOnly** — the default arm remains silent and the treatment has
+  no distinct dispatch/exit evidence, indicating stale configuration or an
+  unexercised audio path.
+- **H-RouteRegression** — the treatment alone loses a qualified target VI,
+  crashes before it, or changes the route; this is a recipe/interaction
+  failure, not an audio conclusion.
 
-The discriminator is one table of whole-RDRAM callback count, target-watch hit
-counts, storing PCs, and VI-gated target-phase coverage. Positive control plus
-named retail writers matching generated/fixup anchors selects
-H-RetailGateWriterMatch. Positive control plus target-phase nulls selects
-H-PortOnlyGateContract only if the nearby target watches and their controls
-also behave normally. A target hit with no generated anchor selects
-H-GeneratedAnchorMismatch. Missing control or phase coverage selects
-H-OracleUnevaluable and causes no port conclusion.
+The discriminator is one same-build A/B table, phase-keyed by VI: per-arm
+`audtask-dispatch`, `RspExitReason`, DMEM-canary result, slot-status sequence,
+PCM nonzero count, and target-phase coverage. Non-`Broke` plus intact canary
+plus valid slot/PCM selects H-ImageArmValid. Dispatch with `Broke`/canary
+failure and no valid slot/PCM selects H-ImageArmStillABIWrong. Missing target
+phase makes that arm unevaluable; a control-qualified, treatment-only route
+failure selects H-RouteRegression. A missing treatment dispatch with no route
+failure selects H-StubControlOnly only after the env and binary identity are
+verified.
 
-## Exact command
+## Exact commands
+
+Build once:
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 35 --hit-cap 64 \
-  --watch-write 0x0:0x800000 \
-  --watch-write 0xA0F50:0xA0F54 \
-  --watch-write 0x14998A:0x14998C \
-  --watch-write 0x14974C:0x149750 \
-  --first-watch 0 --detail-watch 1 --pc-hist-watch 1 --vi-trace \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start
+cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-Require the whole-RDRAM positive-control threshold, title
-`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and target-watch summaries
-before interpreting any null. If the run is qualified, crosswalk every gate
-watch PC to the generated `funcs_*.c` and `fixup_game_funcs.py` anchor in the
-same iteration; do not build the port until that ground-truth table is
-complete.
+Run the two arms concurrently from the repository root, capturing separate
+driver logs. The existing driver writes each game log under its tag:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step2-treatment 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/m5-audio-step2-treatment-driver.log 2>&1 &
+pid_t=$!
+env -u ROGUESQ_AUDIO_UCODE ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step2-control 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/m5-audio-step2-control-driver.log 2>&1 &
+pid_c=$!
+wait $pid_t; rc_t=$?
+wait $pid_c; rc_c=$?
+printf 'treatment_rc=%s control_rc=%s\n' "$rc_t" "$rc_c"
+```
+
+Inspect only bounded summaries from both `scratch/s73_post_a_scene/m5-audio-step2-*/run.log` files; do not treat a counter-only hit as success. If either arm is unevaluable, record the missing positive control or target phase and do not alter the port.

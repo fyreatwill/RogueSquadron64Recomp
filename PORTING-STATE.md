@@ -99612,3 +99612,55 @@ change was made.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation`.
+
+## Session 2092 (2026-08-20) — reconciled retail M5 audio gate writers
+
+Ran the M5 ground-truth work unit before adding any port instrument. The first
+invocation of the prescribed oracle command passed its whole-RDRAM control with
+`20416` callbacks and reached title `1024 @ 0x00790400`, but it was
+unevaluable because the command stopped at 35 seconds after only six Start
+presses and never reached hangar `512 @ 0x006AB400`. The oracle README identifies
+the required eleven-Start schedule (`6,11,...,56`) and the hangar transition at
+about 38.4 seconds, so I ran the fixed recipe for 70 seconds rather than
+interpreting the null.
+
+The final value-table command was:
+
+```sh
+tools/oracle/build.sh
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 70 --hit-cap 64 --watch-write 0x0:0x800000 --watch-write 0xA0F50:0xA0F54 --watch-write 0x14998A:0x14998C --watch-write 0x14974C:0x149750 --first-watch 0 --detail-watch 1 --pc-hist-watch 1 --post-value-watch 1 --post-value-watch 2 --post-value-watch 3 --post-value-pc 0x8008EA34,0x8008EB40,0x8008EB7C,0x8008EC88,0x8008ED48 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+```
+
+The fixed run used the Rice plugin, the full eleven-Start schedule, and the
+whole-RDRAM watch plus physical watches at `0x000A0F50`, `0x0014998A`, and
+`0x0014974C`. It passed the positive control with `31543` writes, reached title
+`1024 @ 0x00790400` at about 17.3 seconds and hangar `512 @ 0x006AB400` at
+about 38.4 seconds. The final oracle-only instrumentation was extended to
+accept repeated phase-gated `--post-value-watch` options, then rebuilt with
+`tools/oracle/build.sh`; this was required because the prior binary could
+report PCs but only sampled values for one target range.
+
+The final single-run table had 17 gate writes, 0 countdown writes, and 13281
+flag-range writes. Gate writer PCs were `0x8008EA34` (1), `0x8008EB40` (1),
+`0x8008EB7C` (5), `0x8008EC88` (5), and `0x8008ED48` (5). Target-phase
+post-store samples showed `0x8008EB7C` and `0x8008ED48` writing gate 0, and
+`0x8008EC88` writing gate 1; the raw aligned words were respectively
+`0x00000000` and `0x01000000`. The flag post-store words were
+`0x00010003` (129), `0x00000003` (131), and `0x01010003` (1), with dominant
+storing PCs `0x800917A8` and `0x800916DC` plus five one-sample PCs.
+
+The generated `RecompiledFuncs/funcs_23.c` and
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` crosswalk
+maps all five gate PCs to the named `setDisplayMode`, `reapplyDisplayMode`, or
+`musyxNoopStub` functions and their regeneration anchors. This selects
+`H-RetailGateWriterMatch` at gate/source scope, rejects
+`H-PortOnlyGateContract` and `H-GeneratedAnchorMismatch` there, and leaves the
+countdown/worker-flag completion contract unresolved. It rules out a missing
+retail gate writer or generated-anchor mismatch, not the image-task ABI or PCM
+boundary. No gate reversal, RSP dispatch, wait, guard, host, or default behavior
+changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-arm-validation`.
