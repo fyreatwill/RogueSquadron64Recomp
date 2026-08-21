@@ -1,0 +1,122 @@
+s2154 A1 image canary span
+HYPOTHESIS-ID: m5-image-canary-span
+
+Source: build/factor5_ucode/factor5_ucode_b_recompiled.c
+  bytes 82212  lines 2610  L_1328: present
+Host canary (lib/N64ModernRuntime/librecomp/src/rsp.cpp):
+  ucode-data DMA ends 0xF7F; OSTask at 0xFC0; canary 0xF80..0xF8F (size 0x10)
+Census window: generated DMEM addresses / DMA endpoints in 0xF80..0xFBF
+No port build, game run, canary prefill, task-exit, default-arm, or output-route change.
+
+POSITIVE CONTROLS (same file)
+-----------------------------
+L548 L_1328:
+  ori $5, 0x4000; mtc0 SP_STATUS; break 0
+  rs64_audio_image_break(0x1328u); return RspExitReason::Broke
+  switch case 0x1328 -> L_1328
+  LIVE
+
+L533 L_1314 stage-3 DMA (L_13B0 dmem->dram):
+  L535 r6 = RSP_MEM_W_LOAD(0x348, 0)     // lw $6, 0x348($zero)
+  L537 r5 = 0xCB0                        // DMEM src
+  L539 r7 = 0x197                        // len
+  L543 r6 = RSP_ADD32(r6, 0x100)         // addiu $6, $6, 0x100
+  L544 rs64_audio_image_stage(3, ..., dest=r6)
+  L545 goto L_13B0
+  LIVE  (DRAM dest = field348+0x100; DMEM src 0xCB0, not the canary window)
+
+WINDOW IMMEDIATES
+-----------------
+hex literals in 0xF80..0xFBF (code or comments): 0
+RSP_MEM base=0 ops in 0xF80..0xFBF: 0
+Immediate DMEM abs addresses actually used (base=0):
+  0x0342 0x0344 0x0348 0x034C 0x06F0 0x06F4 0x06F8
+  0x0E48 0x0E49 0x0E4A 0x0E4C
+  max 0xE4C  (control/metadata block, below window)
+
+DMA HELPERS
+-----------
+L_13B0 WRITE dmem->dram: SET_DMA_MEM(r5)  DMEM src
+L_13E8 READ  dram->dmem: SET_DMA_MEM(r6)  DMEM dest
+L_1418 READ  dram->dmem: SET_DMA_MEM(r6)  DMEM dest
+
+DMA DMEM endpoints (non-helper gotos). None has dest/src immediate in 0xF80..0xFBF.
+
+  L63  L_13E8 dest r6=0x340  len 0xF     -> 0x340..0x34F
+  L77  L_13E8 dest r6=0xCB0  len 0x197   -> 0xCB0..0xE47  (field348+0x100 READ, early)
+  L111 L_1418 dest r6=r2=0x350 len 0x4F  -> 0x350..0x39F
+  L360 L_13B0 src  r5=0xC30  len 0x7F    -> 0xC30..0xCAF
+  L471 L_13B0 src  r5=0xC30  (computed len from 0xE48 nibble)
+  L505 L_13B0 src  r5=0x6F0  len 0x2FF   -> 0x6F0..0x9EF  STAGE-2 (PCM join)
+  L530 L_13E8 dest r6=0x340  len 0xF     -> 0x340..0x34F
+  L545 L_13B0 src  r5=0xCB0  len 0x197   -> 0xCB0..0xE47  STAGE-3 CONTROL
+  L581 L_13E8 dest = incoming r6 from L_1340
+  L602 L_13E8 dest = incoming r6 + lhu 0x8(desc)
+  L622 L_1418 dest r6=0x220  len 0xFF    -> 0x220..0x31F
+  L644 L_1418 dest r6=0x350|0x3A0 len 0x4F
+  L1510 L_13E8 dest r6=0x6F0 len 0xFF    -> 0x6F0..0x7EF
+  L2164 L_13E8 dest r6=0x6F0 len 0x47    -> 0x6F0..0x737
+  L2238 L_13E8 dest r6=0x8C0+r16         COMPUTED (see bounds)
+  L2253 L_13E8 dest r6=0x8C0  len r16-1  COMPUTED span
+  L2305 L_13B0 src  r5=0xE50  len 0x17F  -> 0xE50..0xFCF  READ through window
+                                        (dmem->dram; does not store DMEM)
+
+L_1340 callers pass DMEM dest r6:
+  L184 dest = 0xAF0 - aligned(task 0x40/0x3E size<<1)  <= 0xAF0
+  L216 dest = 0x6F0
+  L239 dest = 0xAF0
+  L293 dest = 0xAF0
+  All bases below the window. Second L_1340 DMA dest = first+len from
+  descriptor halfword 0x8(r2+0x24). A length >= 0x4E0 from base 0xAF0
+  could enter 0xF80; that is a task-field overflow candidate, not an
+  observed named completion-path dest.
+
+L2238 dest 0x8C0+r16: r16 = (r12-r15)<<1 taken only when
+  r15+0xC0 > r12, which bounds r12-r15 < 0xC0 so r16 < 0x180.
+  dest < 0x8C0+0x180 = 0xA40. Same bound on L2253 span. Origin: task
+  field DMEM[0x6F4] + wrapped sample index. Cannot reach 0xF80.
+
+COMPUTED WRITES THAT DO ENTER 0xF80..0xFBF
+------------------------------------------
+Origin class: fixed mix-buffer base 0xE50, span 0x180, loop induction.
+Not a task-field pointer. Not overflow of a smaller named region: the
+0x180 length is the same size used to DMA that buffer out (L_1E48
+len 0x17F). 0xE50 + 0x180 = 0xFD0, so the buffer is 0xE50..0xFCF and
+includes the host canary 0xF80..0xF8F and the first 16 bytes of OSTask
+(0xFC0..0xFCF).
+
+1. L_1CDC (jal from L_10E0 on the main path that ends at L_1328)
+   ori $9, 0xE50; ori $5, 0xC (12 iters)
+   SQV 0x0($9) and 0x10($9); addiu $9, 0x20
+   SQV impl: address = rs + imm*16  (rsp_vu_impl.hpp:422)
+   writes 0xE50,0xE60,...,0xFC0  (0xE50..0xFCF)
+   iter 9: 0xE50+0x120=0xF70 and 0xF80  <- canary 0xF80..0xF8F
+
+2. L_15F8 mix (r28 = 0xE50 at L1177; 0x180 walk parallel to r26=0x3F0)
+   SQV 0x7F0($28) = SQV imm -1 -> dest r28-16 after addiu 0x10
+   24 stores cover 0xE50..0xFC0 inclusive, including 0xF80
+
+3. L_1EF0 (jal from L_1D68, itself jal from L_12C8 before stages 1-3)
+   caller sets r6=0xE50; r9=0x18
+   addiu $6, 0x10 then SQV 0x7F0($6) = dest r6-16
+   24 stores cover 0xE50..0xFC0 inclusive, including 0xF80
+
+4. L_1E48 DMA WRITE src r5=0xE50 len 0x17F
+   DMEM *source* span 0xE50..0xFCF (reads the canary; does not store it)
+   DRAM dest = (lhu 0x342 << 7 + << 6) + DMEM[0x6F0]
+
+r1=0xFC0 is OSTask (outside 0xF80..0xFBF). Loads 0x30/0x34(r1) =
+task data_ptr/data_size only. Later r1 is rebound to 0x320 / mix temps.
+
+SELECTED: H-CanaryComputedOnly
+  no immediate 0xF80..0xF8F op
+  canary-span stores are computed 0xE50 + n*0x10/0x20
+  origin = fixed mix buffer, not task field, not overflow
+REJECTED: H-CanaryInWorkingSet (no explicit 0xF80..0xF8F endpoint)
+REJECTED: H-CanaryHostOnly (named image ops do write the window)
+REJECTED: H-CoverageFailure (L_1328 break 0 and stage-3 field348+0x100 live)
+
+canary_ok=0 is the 0xE50 mix buffer occupying the host "reserved gap".
+The gap claim is false for this image. Do not treat dirty 0xF80..0xF8F
+as evidence of a runaway write. No canary-prefill, task-exit, default-arm,
+or output-route change in this session.

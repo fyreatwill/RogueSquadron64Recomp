@@ -102230,3 +102230,49 @@ task, wait, guard, or default-arm behavior changed.
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only recorded independent retail reject/success PC
 counts and generated-caller v0 use.
+
+## Session 2154 (2026-08-21) — classified image canary span as 0xE50 mix-buffer writes
+
+HYPOTHESIS-ID: m5-image-canary-span
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `57,423` bytes, so this was not a
+maintenance iteration. Soak-queue intake was historical 2026-08-18 rows
+already consumed; no new recipes. The prescribed unit was one host-only
+generated census of `factor5_ucode_b` DMEM destinations in `0xF80..0xFBF`
+against the host reserved-gap canary at `0xF80..0xF8F`, with same-file
+controls at `L_1328` `break 0`/`Broke` and stage-3
+`lw $6, 0x348($zero)` / `addiu $6, $6, 0x100`. No port build, game run,
+canary-prefill, task-exit, default-arm, or output-route change.
+
+`build/factor5_ucode/factor5_ucode_b_recompiled.c` is `82212` bytes,
+`2610` lines, and contains `L_1328:`. Both controls are live: `L_1328`
+issues `break 0`, calls `rs64_audio_image_break(0x1328u)`, and returns
+`RspExitReason::Broke`; `L_1314` loads DMEM `0x348`, adds `0x100`, and
+DMAs DMEM `0xCB0` / len `0x197` through `L_13B0`. Zero hex literals and
+zero `RSP_MEM` abs ops sit in `0xF80..0xFBF`. Immediate DMEM abs
+addresses are `0x342`/`0x344`/`0x348`/`0x34C`/`0x6F0`/`0x6F4`/`0x6F8`/
+`0xE48`/`0xE49`/`0xE4A`/`0xE4C` (max `0xE4C`). No DMA dest/src
+immediate lands in the window. The `0x8C0+r16` DRAM-to-DMEM dest is
+bounded below `0xA40` by the same-function `0xC0` wrap. `L_1340`
+dests are `<= 0xAF0`.
+
+Computed stores do write the window. Origin is the fixed mix buffer
+`ori $9/$28/$6, 0xE50` with span `0x180` (`0xE50..0xFCF`), not a
+task-field pointer and not overflow of a smaller named region: `L_1CDC`
+(12×`0x20` SQV fill, jal from `L_10E0` on the path to `L_1328`),
+`L_15F8`/`L_1EF0` SQV `imm=-1` walks (`address = rs + imm*16`), and
+`L_1E48` dmem-to-dram *source* `0xE50`/`len 0x17F`. `0xE50+0x180=0xFD0`
+covers host canary `0xF80..0xF8F` and OSTask `0xFC0..0xFCF`. SQV
+addressing is `rsp_vu_impl.hpp:422`.
+
+This selects `H-CanaryComputedOnly` and rejects `H-CanaryInWorkingSet`,
+`H-CanaryHostOnly`, and `H-CoverageFailure`. `canary_ok=0` is the mix
+buffer occupying the host "reserved gap"; the gap claim is false for
+this image. Do not treat dirty `0xF80..0xF8F` as a runaway write. Table:
+`scratch/agent/s2154_image_canary_table.txt`. No runtime, mitigation,
+task, wait, guard, canary-prefill, or default-arm behavior changed.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only classified generated DMEM endpoints. The named
+writers of the canary span are `L_1CDC` / `L_15F8` / `L_1EF0` storing
+the `0xE50` mix buffer; that value is legitimate image working set.

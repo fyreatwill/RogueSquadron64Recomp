@@ -162,12 +162,17 @@ explicit control arm.
    and title/hangar gates). s2153 closed the reject/success half:
    `H-BusyAlwaysClear` at the covered route (reject `0`, success =
    set-next = busy = `7983`; caller ignores v0). Do not change
-   `osAiGetStatus_recomp` or `osAiSetNextBuffer_recomp`. The next
-   incremental unit is the A1 host canary span on the image arm
-   (`canary_ok=0` vs reserved DMEM `0xF80..0xF8F`) that still blocks
-   treating the legitimate `break 0`/`Broke` edge as default-arm
-   completion. Rollback remains leaving the existing RSP dispatch arm
-   opt-in.
+   `osAiGetStatus_recomp` or `osAiSetNextBuffer_recomp`. s2154 selected
+   `H-CanaryComputedOnly` for the image-arm canary: no generated
+   immediate in `0xF80..0xFBF`; the host `0xF80..0xF8F` gap sits inside
+   the mix buffer `0xE50..0xFCF` (`span 0x180`, writers `L_1CDC` /
+   `L_15F8` / `L_1EF0`). `canary_ok=0` is that working set, not a
+   runaway write, and no longer blocks the `break 0`/`Broke` edge as
+   unexplained corruption. The next incremental unit is one host-only
+   table of every generated DMEM write span so a canary re-home names
+   an unused gap or selects `H-NoReservedGap`. Do not default the image
+   arm or move the canary in that census. Rollback remains leaving the
+   existing RSP dispatch arm opt-in.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.

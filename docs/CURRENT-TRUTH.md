@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2153
-(2026-08-21); behavioral and source evidence is current through s2153.
+authoritative for exact commands and probe rows. Maintained in Session 2154
+(2026-08-21); behavioral and source evidence is current through s2154.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -23,9 +23,12 @@ This file is intentionally compact. The s2080–s2108 archive is in
   path is a silent `Broke` stub. The Factor 5 image arm is opt-in through
   `ROGUESQ_AUDIO_UCODE=1` and is not defaulted on.
 - The image arm performs real DMEM work and generated DMA writes, then returns
-  `Broke` and fails the reserved host canary. The s2113 contract witness
-  records the generated completion edge as guest PC `0x1328`, host exit
-  `Broke`, task `output_buff=0`, and the phase-keyed post-DMA/PCM joins.
+  `Broke`. s2154 selected `H-CanaryComputedOnly` for the host canary at
+  `0xF80..0xF8F`: that span is inside the generated mix buffer
+  `0xE50..0xFCF`, so `canary_ok=0` is the working set, not a runaway
+  write. The s2113 contract witness records the generated completion
+  edge as guest PC `0x1328`, host exit `Broke`, task `output_buff=0`,
+  and the phase-keyed post-DMA/PCM joins.
 - The s2135 static MORT boundary census selected
   `H-ExistingFactor5ConfigMatches`: the companion retail `aspMainText` image
   is exactly `factor5b_rsp.toml` ROM `0x09ABE0..0x09BB60`, with companion
@@ -63,7 +66,8 @@ This file is intentionally compact. The s2080–s2108 archive is in
   s2136 retail task-field line, this selects `H-PortTaskFieldsMatchRetail`
   at the sampled port boundary and rejects output-buffer mismatch,
   data-pointer/output-relation mismatch, and coverage-unresolved hypotheses.
-  The image still exits at guest break PC `0x1328` with `canary_ok=0`; no
+  The image still exits at guest break PC `0x1328` with `canary_ok=0`;
+  s2154 attributes that dirty span to mix-buffer `0xE50..0xFCF`. No
   task-field rewrite, output-route change, new RSP config, or default-arm
   change follows.
 - The s2138–s2151 host-only MORT reference tables passed the speech
@@ -180,6 +184,20 @@ This file is intentionally compact. The s2080–s2108 archive is in
   equivalent here; do not change `osAiSetNextBuffer_recomp` (host SDL
   fullness is not the N64 AI FIFO). Table:
   `scratch/agent/s2153_ai_busy_return_table.txt`. No runtime change.
+- The s2154 host-only generated census of `factor5_ucode_b` passed both
+  same-file controls (`L_1328` `break 0`/`Broke`, and stage-3
+  `lw $6, 0x348` / `addiu $6, $6, 0x100` DMA). Zero immediates and zero
+  `RSP_MEM` abs ops sit in `0xF80..0xFBF`; max immediate DMEM abs is
+  `0xE4C`. The window is written by computed stores whose origin is the
+  fixed mix buffer `0xE50` span `0x180` (`L_1CDC` 12×`0x20` SQV fill,
+  `L_15F8`/`L_1EF0` SQV `imm=-1` walks, plus `L_1E48` dmem-to-dram
+  *source* `0xE50`/`len 0x17F`). `0xE50+0x180=0xFD0` covers the host
+  canary `0xF80..0xF8F` and OSTask `0xFC0..0xFCF`. This selects
+  `H-CanaryComputedOnly` and rejects `H-CanaryInWorkingSet`,
+  `H-CanaryHostOnly`, and `H-CoverageFailure`. `canary_ok=0` is that
+  mix buffer, not a runaway write. Table:
+  `scratch/agent/s2154_image_canary_table.txt`. No canary-prefill,
+  task-exit, default-arm, or output-route change.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -464,17 +482,15 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 A1 image canary span.** s2153 closed A13 busy-return polarity at
-   the covered retail route as `H-BusyAlwaysClear`: reject PC `0`,
-   success = set-next = busy = `7983`, and both generated jals ignore
-   v0. Do not change `osAiGetStatus_recomp` or `osAiSetNextBuffer_recomp`.
-   The remaining A1 default-arm blocker is `canary_ok=0` on the
-   legitimate `break 0`/`Broke` edge. Next unit is one host-only
-   generated census of `factor5_ucode_b` DMEM destinations in
-   `0xF80..0xFBF` against the host reserved-gap canary, with the known
-   `0x1328` break and stage-3 `field348+0x100` DMA as same-table
-   controls. No canary-prefill, task-exit, default-arm, or output-route
-   change.
+1. **M5 A1 image DMEM write-span map.** s2154 selected
+   `H-CanaryComputedOnly`: no `0xF80..0xF8F` immediate; the host canary
+   sits inside the image mix buffer `0xE50..0xFCF` (`span 0x180`).
+   `canary_ok=0` is that working set, not unknown corruption. Next unit
+   is one host-only table of *every* generated DMEM write span
+   (`RSP_MEM` store, SQV/SDV/SSV, DMA-read dest+len) so a future canary
+   re-home names an unused gap or selects `H-NoReservedGap`. No canary
+   prefill, task-exit, default-arm, or output-route change. Do not
+   change `osAiGetStatus_recomp` or `osAiSetNextBuffer_recomp`.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
@@ -572,7 +588,10 @@ inside `osAiSetNextBuffer`, not a named `osAiGetStatus` jal. s2153
 then selected `H-BusyAlwaysClear` at the covered title/hangar route:
 success PC `0x80029EF4` matched set-next/busy `7983` times and reject
 PC `0x80029EF0` stayed at zero; the generated caller ignores the
-return. No AI-status shortcut, task ABI, or default-arm change follows.
+return. s2154 then selected `H-CanaryComputedOnly` for the image-arm
+canary: the generated mix buffer `0xE50..0xFCF` occupies the host
+`0xF80..0xF8F` gap, so `canary_ok=0` is that working set. No AI-status
+shortcut, task ABI, canary-prefill, or default-arm change follows.
 
 The s2133 same-build port comparison supplied the missing nonzero host-boundary
 line. Both arms reached the target phases with positive controls; the image
@@ -581,8 +600,9 @@ spans by address, byte count, FNV, and nonzero count, with no ordering
 violations. The stub arm remained zero. The `[pcm-sanity]` logger's lifetime
 sampling missed the two transient nonzero callbacks, so its all-zero sampled
 rows are a measurement-coverage limitation, not a silent-PCM result. The
-image `break_pc=0x1328`, `exit=1`, canary failure, and `output_buff=0` remain
-the task boundary; no host/task/default change is authorized. The s2135 static
+image `break_pc=0x1328`, `exit=1`, `output_buff=0` remain the task
+boundary; s2154 classifies `canary_ok=0` as the `0xE50` mix buffer.
+No host/task/default change is authorized. The s2135 static
 census now identifies the existing RSP image and separate MORT speech asset;
 s2136's retail task-field table selects `H-RetailTaskMatchesFactor5b` at the
 covered task boundary. s2137's same-build port table then selects
@@ -847,8 +867,11 @@ rows for type-0 at 16000 Hz and type 4. s2152 then selected
 absent as a jal target. s2153 then selected `H-BusyAlwaysClear` on
 the same covered route: whole-RDRAM `10000`, title `1024`, hangar
 `512 @ 0x006AB400`, success/set-next/busy `7983`, reject `0`, and
-both generated jals ignore v0. No runtime or default-arm change
-follows.
+both generated jals ignore v0. s2154 then selected
+`H-CanaryComputedOnly` on the generated image: `L_1328` and stage-3
+`field348+0x100` controls live, no `0xF80..0xFBF` immediate, mix
+buffer `0xE50` span `0x180` writes the host canary. No runtime or
+default-arm change follows.
 
 ## Method and safety rules
 
