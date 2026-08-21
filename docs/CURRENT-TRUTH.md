@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2128
-(2026-08-21); behavioral and source evidence is current through s2128.
+authoritative for exact commands and probe rows. Maintained in Session 2129
+(2026-08-21); behavioral and source evidence is current through s2129.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -233,6 +233,14 @@ This file is intentionally compact. The s2080–s2108 archive is in
   consecutive `H-CoverageFailure` result for the drain-tick A/B and selects
   no drain hypothesis. The drain thread is parked; no audio, wait, task,
   renderer, or guard behavior changed.
+- The s2129 bounded generated-symbol unit selected `H-MissionMapping` for
+  `0x800AD380`: removing the duplicate main-overlay claim and naming the
+  mission-overlay entry caused the ELF to emit
+  `computeTrackedObjectWorldAnchor` in `.ovl.mission` at that address with
+  size `0x98`, unchanged boundary `0x800AD418`, and the generated prototype,
+  definition, overlay entry, and three callers all resolving to the human
+  name. The full make-ELF/N64Recomp/fixup/CMake pipeline succeeded; no game
+  run or runtime behavior changed.
 
 ## Active backlog
 
@@ -243,11 +251,14 @@ work items.
    three consecutive coverage-only results under the same hypothesis; the
    current renderer boundary supplies no new discriminator. The first sweep
    lead, `func_80001354` -> `runVideoFrameTick`, is already synchronized in
-   the regenerated tree and is skipped. The next lead is
-   `func_800AD380` -> `computeTrackedObjectWorldAnchor` at `0x800AD380`.
-   Its human name is in `main_overlay.txt`, while the actual address belongs
-   to `.ovl.mission` and `mission_overlay.txt` still carries the placeholder.
-   Resolve that duplicate section mapping and regenerate one symbol only.
+   the regenerated tree and was skipped. s2129 resolved the next lead,
+   `func_800AD380` -> `computeTrackedObjectWorldAnchor`, by moving the human
+   mapping to `mission_overlay.txt`; the ELF and generated boundary table
+   selected `H-MissionMapping`. The next lead is
+   `func_800AE3F0` -> `initPlayerCraftTrailBuffers` at `0x800AE3F0`.
+   Its source files contain prior s407/s412 warnings about relocating this
+   symbol, so the next unit must test the section/boundary collision before
+   applying the same edit.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
@@ -462,8 +473,11 @@ s2125 supplied the phase-repaired target comparison that selected
 `H-PumpIrrelevant` at route scope. The pump, wait, task ABI, and guards remain
 unchanged; s2127 and s2128 added coverage-only drain-tick pairs, with s2128's
 repaired control reaching the target route while tick-off died in RT64 before
-it. The next unit is the bounded generated-symbol sweep, beginning after the
-already-synchronized `runVideoFrameTick` lead.
+it. s2129 then selected the mission-overlay mapping for
+`computeTrackedObjectWorldAnchor` with unchanged generated boundaries. The
+next unit is the bounded generated-symbol sweep for
+`func_800AE3F0`/`initPlayerCraftTrailBuffers`, with its prior relocation
+warnings treated as an explicit collision hypothesis.
 
 ## Method and safety rules
 

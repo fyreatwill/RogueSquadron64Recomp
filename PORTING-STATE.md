@@ -101095,3 +101095,32 @@ The next unit is a renderer-recovery retry using the same phase-gated
 
 ORIGIN: no mitigation or game-value machinery was added; the only treatment
 was the existing environment gate around the authored drain-tick injection.
+
+## Session 2129 (2026-08-21) — repaired mission-overlay symbol mapping
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `31,281` bytes, so this was not a
+maintenance iteration. The required sweep preflight confirmed that
+`main_overlay.txt` named `computeTrackedObjectWorldAnchor` at `0x800AD380`,
+while the address was in the mission-overlay source range and
+`mission_overlay.txt` still emitted `func_800AD380`.
+
+The bounded source edit removed only the misplaced main-overlay entry and
+renamed only the mission-overlay entry. The mandated make-ELF, N64Recomp,
+fixup, and CMake sequence completed successfully. The independent ELF table
+showed `0x800AD380` as global function
+`computeTrackedObjectWorldAnchor`, section `.ovl.mission`, size `0x98`, with
+the adjacent functions unchanged at `0x800AD320` and `0x800AD418`. The
+generated prototype, definition, and `.ovl.mission` overlay entry used the
+human name, and all three generated callers at `0x800ADA20`, `0x800AE33C`,
+and `0x800AE374` resolved to it. Diff checks for both symbol files and the
+fixup script were clean.
+
+This selects `H-MissionMapping`, rules out regeneration staleness for this
+lead, and leaves no boundary/collision evidence at this address. No game soak
+was run because the source/ELF/generated table was the work-unit
+discriminator; no runtime, mitigation, or task behavior changed. The next
+lead is `func_800AE3F0` -> `initPlayerCraftTrailBuffers`, whose source files
+carry prior relocation warnings and therefore requires a fresh collision
+check before any rename.
