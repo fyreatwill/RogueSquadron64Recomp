@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2144
-(2026-08-21); behavioral and source evidence is current through s2144.
+authoritative for exact commands and probe rows. Maintained in Session 2145
+(2026-08-21); behavioral and source evidence is current through s2145.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -136,6 +136,18 @@ This file is intentionally compact. The s2080–s2108 archive is in
   prior s415 live-crash warning remains a runtime-risk record; this static
   table found no boundary or caller conflict. The full pipeline succeeded;
   no game run or runtime behavior changed.
+- The s2145 bounded generated-symbol unit selected `H-MissionMapping` for
+  `0x800EC6F0`: no-edit regeneration left `func_800EC6F0` in place, while
+  the prescribed two-line mapping move caused the ELF to emit
+  `tickCraftMountedAnimationEffect` in `.ovl.mission` at the same start,
+  size `0x538`, and end boundary `0x800ECC28` immediately before unchanged
+  `craftMountedAnimationNpcHandler`. The leftover `fake_func_800EC6EC` at
+  `0x800EC6EC` size `0x4` was unchanged. The generated prototype,
+  definition, overlay entry, and only generated caller
+  (`craftMountedAnimationNpcHandler` at `jal 0x800EC6F0`) all used the
+  human name. The prior s415 live-crash warning remains a runtime-risk
+  record; this static table found no boundary or caller conflict. The full
+  pipeline succeeded; no game run or runtime behavior changed.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -422,10 +434,10 @@ work items.
 
 1. **Generated-symbol renaming sweep.** The M5 `data_ptr+0x100` boundary is
    closed at the sampled output edge: s2140's independently watched retail
-   destinations agree with s2137's port `field348+0x100` relation. s2144
-   selected `H-MissionMapping` for `func_800EC110` /
-   `allocObjectPoolNode`. The next lead is `func_800EC6F0` ->
-   `tickCraftMountedAnimationEffect`; validate it with a no-edit versus
+   destinations agree with s2137's port `field348+0x100` relation. s2145
+   selected `H-MissionMapping` for `func_800EC6F0` /
+   `tickCraftMountedAnimationEffect`. The next lead is `func_800ED150` ->
+   `claimSongSlotForCurrentHandle`; validate it with a no-edit versus
    two-line symbol-file move and a fresh ELF/generated boundary and caller
    table.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
@@ -619,8 +631,9 @@ sweep are closed at their stated scopes. s2130's static table confirmed the
 `0x800AE3F0` mission mapping despite the old s407 runtime warning, s2131
 confirmed the `0x800C41B0` mission mapping, s2141 confirmed the
 `0x800BF790` mission mapping, s2142 confirmed the `0x800C64B0` mission
-mapping, s2143 confirmed the `0x800E71D0` mission mapping, and s2144
-confirmed the `0x800EC110` mission mapping, each with unchanged
+mapping, s2143 confirmed the `0x800E71D0` mission mapping, s2144
+confirmed the `0x800EC110` mission mapping, and s2145 confirmed the
+`0x800EC6F0` mission mapping, each with unchanged
 boundaries and callers. Those warnings remain reasons to validate future
 relocations, not evidence of a static boundary conflict. M3 resumes only as an idiom-class audit or with a new
 discriminator. M4 accumulator/beam evidence rules out the old shade-lane
@@ -748,8 +761,11 @@ size `0x1C0`, end boundary `0x800E7390`, and caller table in the final
 ELF/generated tree. s2144 selected the static mission mapping for
 `func_800EC110`/`allocObjectPoolNode`, with the same start, size `0x278`,
 end boundary `0x800EC388`, and caller table in the final ELF/generated
-tree. The next work unit remains the generated-symbol sweep; no runtime
-or default-arm change follows.
+tree. s2145 selected the static mission mapping for
+`func_800EC6F0`/`tickCraftMountedAnimationEffect`, with the same start,
+size `0x538`, end boundary `0x800ECC28`, and caller table in the final
+ELF/generated tree. The next work unit remains the generated-symbol
+sweep; no runtime or default-arm change follows.
 
 ## Method and safety rules
 
