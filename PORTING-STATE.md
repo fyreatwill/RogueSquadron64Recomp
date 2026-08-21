@@ -102798,3 +102798,52 @@ change.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2166 (2026-08-21) — named retail writer of cutscene $a2+0x50
+
+Rice 45s oracle, no game rebuild. Command from
+`scratch/agent/NEXT.md`. Log:
+`scratch/agent/oracle_s2166_cutscene_a2_50.log`. Table:
+`scratch/s73_post_a_scene/s2166_cutscene_a2_50_writer.txt`.
+
+Positive controls in the same log: `[gpr-ctl] pc=0x8002b608
+v0=0x806f04e7 s1=0x806dd000 flags=0x5`; watch 0 write
+callbacks=10000 removal rc=0 (watch 1 remains armed); `[vi]
+WIDTH 320 -> 640 origin=0x0066a500` at t=2.0s; `[vi]
+origin=0x00696100 width=640` at t=8.1s; 2680 VI (~44.7s
+emulated). Exec `0x800A879C`/`A0`/`A8` n=14288 each.
+
+Watch 1 phys `[0xC7B0C,0xC7B10)`: 5 writes. Writer histogram:
+`pc=0x800078EC` n=4 (`rs_memset` `sb $a1, 0($v0)` loop) and
+`pc=0x800A8144` n=1 (`spawnCutsceneObjectsFromList`
+`sw $v0, 0x50($v1)` after `jal walkMeshdef0List`). Post-value
+samples=0 (phase-gate is title/hangar; this run stayed 640);
+snapshot bytes=4 nonzero=4.
+
+Logged `0x800A879C` `$a2` (43 rows, 16 unique) all in
+`0x800C7ABC..0x800CA5F0`, including sampled slot `0x800C7ABC`
+n=4. At `0x800A87A0` for that slot, `$v0=0x8025A580` (heap)
+at t=10.3s width=640. Sibling store `0x800A80D4` (after
+`instantiateNamedMeshInstance`) did not hit this slot.
+
+This selects `H-RetailWriterNamed` and refutes `H-PreViInit`,
+`H-UnstableSlotBase`, and `H-CoverageFailure`. The ORIGIN of
+the pointer `cutsceneDispatchSlotsByFlag` loads at `$a2+0x50`
+is `spawnCutsceneObjectsFromList` `0x800A8144`. Next
+discriminator is whether the port's store is missing or
+stores 0.
+
+No new soak-queue verdicts to fold (SOAK-RESULTS tail is still
+s1940–s1974). Soak queue empty.
+
+ORIGIN: 0x800A8144 spawnCutsceneObjectsFromList sw $v0, 0x50($v1)
+with $v0 = walkMeshdef0List return. Legitimate on retail (heap
+pointer 0x8025A580 at the sampled slot). rs_memset 0x800078EC is
+the earlier byte-store cover of the same word. No S32 rewrite,
+NULL skip, default-on flip, wait/slot guard, canary, or AI-status
+change.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.
