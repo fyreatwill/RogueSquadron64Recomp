@@ -254,6 +254,8 @@ extern "C" uint32_t rs64_vi_committed_origin() {
 
 extern "C" uint32_t rs64_phase_ord(void);
 
+static std::atomic<uint32_t> g_rs64_m5_b40_route_ordinal{0xFFFFFFFFu};
+
 extern "C" void rs64_m5_b40_route_event(const char* edge, uint32_t pc,
                                          uint32_t b40_stored, uint32_t value,
                                          uint32_t b40_return) {
@@ -276,6 +278,7 @@ extern "C" void rs64_m5_b40_route_event(const char* edge, uint32_t pc,
         phase_row.store(0, std::memory_order_relaxed);
     }
     const uint32_t ordinal = phase_row.fetch_add(1, std::memory_order_relaxed);
+    g_rs64_m5_b40_route_ordinal.store(ordinal, std::memory_order_relaxed);
     if (ordinal >= 512u) return;
 
     if (b40_stored != 0xFFFFFFFFu) {
@@ -297,6 +300,48 @@ extern "C" void rs64_m5_b40_route_event(const char* edge, uint32_t pc,
         (c88 && c88[0] && c88[0] != '0') ? 1u : 0u, ordinal, phase,
         rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu,
         edge ? edge : "?", pc, stored & 0xFFu, value, returned);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_b40_read(uint8_t* /*rdram*/, uint32_t read_pc,
+                                  uint32_t value, uint32_t branch_pc,
+                                  uint32_t branch_taken) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_B40_READ");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin();
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+
+    static std::atomic<uint32_t> phase_key{0xFFFFFFFFu};
+    static std::atomic<uint32_t> phase_row{0};
+    const uint32_t key = (width << 24) ^ origin;
+    uint32_t prior = phase_key.load(std::memory_order_relaxed);
+    if (prior != key && phase_key.compare_exchange_strong(
+            prior, key, std::memory_order_relaxed)) {
+        phase_row.store(0, std::memory_order_relaxed);
+    }
+    const uint32_t row = phase_row.fetch_add(1, std::memory_order_relaxed);
+    if (row >= 4096u) return;
+
+    const char* b40 = std::getenv("ROGUESQ_M5_B40_VALUE");
+    const char* c88 = std::getenv("ROGUESQ_M5_C88_VALUE");
+    std::fprintf(stderr,
+        "[m5-b40-read] arm=%s b40=%u c88=%u row=%u phase=%u width=%u "
+        "origin=0x%06X pc=0x%08X value=0x%02X branch_pc=0x%08X "
+        "branch_dir=%u route_ordinal=%u\n",
+        (b40 && b40[0] && b40[0] != '0') ? "treatment" : "control",
+        (b40 && b40[0] && b40[0] != '0') ? 1u : 0u,
+        (c88 && c88[0] && c88[0] != '0') ? 1u : 0u, row,
+        rs64_phase_ord(), width, origin & 0x00FFFFFFu, read_pc,
+        value & 0xFFu, branch_pc, branch_taken,
+        g_rs64_m5_b40_route_ordinal.load(std::memory_order_relaxed));
     std::fflush(stderr);
 }
 

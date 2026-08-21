@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2110
-(2026-08-20); behavioral and source evidence is current through s2110.
+authoritative for exact commands and probe rows. Maintained in Session 2111
+(2026-08-21); behavioral and source evidence is current through s2111.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -43,25 +43,29 @@ This file is intentionally compact. The s2080–s2108 archive is in
   stored gate 1 and produced no nonzero stage/PCM row. This selects
   `H-C88-ReversedOrSuppressing` at sampled port gate scope, not retail
   polarity or a default behavior change.
-- Retail independently observed the live `0x8008EB40` B40 writer. In s2110's
-  phase-keyed port/host route table, both arms fired B40 write/return and the
+- Retail independently observed the live `0x8008EB40` B40 writer. In the
+  phase-keyed port/host route tables, both arms fired B40 write/return and the
   same early reapply entry/success edges; B40=0 stored 0 while B40=1 stored 1.
-  Treatment alone reached a later reapply entry, title VI `1024 @ 0x00790400`,
-  and hangar VI `512 @ 0x006AB400`; control stopped before title with a bus
-  error. This selects `H-B40-RouteRequired` at the sampled pre-title route
-  admission scope, not the identity of the downstream B40 reader.
+  The s2111 whole-tree census covered 71 generated `lbu` sites. Both arms
+  reached title VI `1024 @ 0x00790400` and hangar VI `512 @ 0x006AB400`. In
+  both target phases the unique read/branch table matched exactly: every
+  observed value was 0, with the same guest PCs, branch PCs, directions, and
+  route ordinals. The phase-7 route origin differed (`0x0062B800` versus
+  `0x00695C00`) and the VI transitions differed only in timing. This refutes
+  `H-B40-Consumer` at the sampled route boundary and selects
+  `H-RecipeVariance`; the phase-7 origin/state writer remains open.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 guest gate semantics: identify the B40 route consumer.** Audit every
-   generated read/branch of the B40 byte and join it to the selected
-   phase-keyed route table. Keep the B40 value arm, explicit C88=0, route
-   controls, ABI/DMA/stage, slot, PCM, and ordering controls. Do not change any
-   gate store, output routing, task field, canary, wait, guard, queue policy,
-   or default dispatch.
+1. **M5 route variance: identify the phase-7 state/origin producer.** Audit
+   the complete argument/state table at the phase-7 reapply entry and its
+   predecessor, preserving the B40 value arm, explicit C88=0, route controls,
+   ABI/DMA/stage, slot, PCM, ordering, and VI controls. Do not change any
+   gate store, branch, dispatch, output routing, task field, canary, wait,
+   guard, or queue policy.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -126,11 +130,14 @@ Their exact destinations come from task-local DMEM fields. Static code does
 not prove the runtime ABI meaning of every field, and no output or task
 contract change is authorized.
 
-The s2110 route table is positive in both arms: B40 write/return and the first
-two reapply pairs match, while only B40=1 reaches the later reapply entry and
-the first title transition. Host VI transition lines independently show the
-same split. The selected boundary is route admission; the specific B40
-reader/branch remains unnamed.
+The s2110 route table was positive in both arms: B40 write/return and the first
+two reapply pairs matched, while only B40=1 reached the later reapply entry in
+that run. s2111's full-target paired run reached the same title/hangar route
+in both arms. Its independent read census matched by guest PC, branch, value,
+and route ordinal; host VI lines also matched phase order with a timing/origin
+variation. The B40-dependent route-admission claim is superseded at the s2111
+recipe scope; the remaining M5 question is the phase-7 state/origin producer,
+not another B40 read-site census.
 
 ### M3, M4, and generated symbols
 
@@ -165,11 +172,13 @@ Detailed history and exact reasons are in `PROJECT-OVERVIEW.md` §§26 and
 - The old “B40 was unreached” interpretation was believable because a shared
   logger saturated on raw-gate rows. The independent B40 witness fires in
   both arms; the remaining issue is route admission.
-- The s2108 “no B40 downstream hypothesis is selected” conclusion was
-  believable because its reduced pair only exposed the first route split.
-  s2110's complete route table shows matching early edges and a treatment-only
-  later reapply/title path, selecting `H-B40-RouteRequired` at that sampled
-  boundary while leaving the downstream reader open.
+- The s2108 “no B40 downstream hypothesis is selected” conclusion and s2110's
+  `H-B40-RouteRequired` result were believable because those reduced pairs
+  lacked a control target-phase route. s2111's same-build pair reached title
+  and hangar in both arms, and its complete generated read/branch table was
+  identical with B40 values already 0 after reapply. Those earlier claims are
+  superseded at the s2111 recipe scope; they remain historical results for
+  their unqualified earlier scopes.
 - `0x8000B650` is a shared last-guest-PC breadcrumb, not evidence that retail
   executes the port's fill/wait function. The generated crosswalk and
   independent retail PC watch establish that scope only.
@@ -179,7 +188,7 @@ Detailed history and exact reasons are in `PROJECT-OVERVIEW.md` §§26 and
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024 and
 spin-yield chain is in §36; the M5 archive through s2047 is in §§37–38; the
 late route/fill boundary is in §39; the s2080–s2108 archive is in §40; and the
-s2110 route result is in §41.
+s2110–s2111 route/read results remain in the ledger and current front matter.
 The exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. The current selected hypotheses are scoped above and
 must not be widened from single-source or single-arm observations.

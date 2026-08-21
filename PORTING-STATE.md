@@ -100292,6 +100292,58 @@ canary, wait, guard, queue, or default-dispatch behavior changed.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-gate-writer-sweep`.
 
+## Session 2111 (2026-08-21) — censused B40 readers at target phases
+
+The planned work unit was the regeneration-stable whole-tree B40 reader and
+branch census. Before adding the port witness, the retail oracle ran with a
+whole-RDRAM positive control and a physical read watch at `0x000A0F50` for
+eight seconds. The control reached 10,000 whole-RDRAM callbacks and the B40
+watch fired 1,731 times, with retail reader PCs including
+`0x800912AC`, `0x80091460`, `0x80091520`, `0x800915D4`, and `0x800917B8`.
+The independent control was positive.
+
+The documented Windows recompiler path was absent on this macOS checkout.
+The available `build/N64Recomp` was tried once as a regeneration check and
+hit the documented unsupported `cache` instruction in `func_8000040C`,
+truncating `funcs.h` and `funcs_0.c`. Preserved snapshots restored both files;
+the census was then applied mechanically to the intact generated output,
+while the fixup source received the durable transform. The repaired generated
+header and file-scope helper definitions were required by the existing newer
+generated files. `python3 -m py_compile` and `git diff --check` passed, and
+the Debug target built successfully. No game behavior was changed.
+
+The single build carried 71 generated `lbu` B40 sites: funcs_21.c (7),
+funcs_22.c (6), funcs_23.c (14), funcs_24.c (7), funcs_25.c (20), and
+funcs_26.c (17). The control and treatment were launched concurrently with
+audio-image mode, `SPIN_YIELD=1`, explicit `C88=0`, B40 values 0 and 1, the
+same route/ABI/DMA/stage/slot/PCM/ordering controls, and the full passive
+breadcrumb set.
+
+Both arms had positive B40 writers, reached title VI `1024 @ 0x00790400`,
+and reached hangar VI `512 @ 0x006AB400`. In the title and hangar target
+phases, both arms produced the same unique read/branch table and the same
+route-ordinal set. Every observed B40 read value was `0x00`; the direct
+branch PCs, directions, and non-branch reader PCs matched, and there were no
+treatment-only reader rows. The read witness was therefore live in both arms;
+this is not a null-result inference. The route sink and host VI transitions
+provide independent port-side lines of evidence, while the oracle provides
+the independent retail coverage control.
+
+The remaining difference was phase-7 route variance: the route origin was
+`0x0062B800` in control versus `0x00695C00` in treatment, while target-phase
+timing differed by only a few seconds. This refutes `H-B40-Consumer` at the
+sampled target route and selects `H-RecipeVariance` over that read-site
+hypothesis. It does not explain the phase-7 origin/state producer or prove
+that all route variance is benign; that producer is the next discriminator.
+It also rules out an unobserved generated direct B40 reader at the sampled
+scope. No gate store, branch, dispatch, output routing, task field, canary,
+wait, guard, queue policy, or default behavior changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-gate-route-variance`.
+
 ## Session 2108 (2026-08-20) — retried reduced-capture B40 gate A/B
 
 The existing generated B40 arm was verified and the target rebuilt. The

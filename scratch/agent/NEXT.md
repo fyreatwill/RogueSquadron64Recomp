@@ -1,66 +1,81 @@
-# NEXT work unit (s2111) — identify the B40 route consumer
+# NEXT work unit (s2112) — trace the phase-7 route/state producer
 
-HYPOTHESIS-ID: m5-audio-gate-writer-sweep
+HYPOTHESIS-ID: m5-audio-gate-route-variance
 
 ## Work unit
 
-Add one regeneration-stable, whole-tree census of every generated read and
-branch using the B40 byte at `0x800A0F50`, and join those rows to the existing
-phase-keyed route table. Record guest PC, read value, branch direction, arm,
-phase/width/origin, and the nearest route ordinal. Keep the B40 value arm,
-explicit C88=0, and all route, ABI/DMA, stage, slot, PCM, and ordering
-controls. This is diagnostic-only: do not alter any store, branch, dispatch,
-output routing, task field, canary, wait, guard, or queue policy. Build all
-diagnostics once, then run both arms concurrently.
+Add one regeneration-stable, phase-keyed census at the phase-7
+`reapplyDisplayMode` entry and its sole caller. At the caller, record the
+call-site edge and all four guest argument registers. At function entry and
+at the route edge, record those arguments, the `a1` gate input, the current
+`0x80141AD0`/`0x8013B038`/`0x80141AD1` state bytes, VI width/origin, arm,
+B40/C88 values, and the existing route ordinal. Record the return edge and
+whether `reapplyAudioConfig` returned nonzero. Use one bounded row table
+joined by call ordinal; do not add a single-field breadcrumb.
+
+Keep B40 value arms, explicit C88=0, route, ABI/DMA, stage, slot, PCM,
+ordering, and VI controls unchanged. This is diagnostic-only: do not change
+any gate store, branch, dispatch, output routing, task field, canary, wait,
+guard, or queue policy. Build all diagnostics once and run both arms
+concurrently.
 
 ## Competing hypotheses and discriminator
 
-- H-B40-Consumer: a named B40 read/branch differs between the matched phase-6
-  route and treatment-only phase-7 reapply entry; that branch admits the route.
-- H-OtherState: all B40 reads/branches match, so another guest state or input
-  activation differs before the missing control edge.
-- H-RecipeVariance: both arms expose the same B40 read/branch sequence and the
-  existing route split is timing variance, not B40-dependent admission.
-- H-UnobservedRead: the census is positive in the treatment but misses a
-  generated or indirect read site; this is an instrument-coverage failure and
-  requires static-site repair, not a runtime conclusion.
+- H-Phase7State: a complete argument/state row differs before or at the
+  phase-7 edge, and that difference explains the phase-7 origin divergence.
+- H-RecipeTiming: the complete rows match and only the VI timing/phase order
+  varies; the phase-7 origin split is ordinary recipe variance.
+- H-B40Indirect: the direct B40 census was complete, but an indirect or
+  non-generated consumer changes route state after the B40 store; the new
+  table differs only after that edge.
+- H-UnobservedCoverage: one arm has a positive entry/control row but the new
+  caller/entry join is missing or cannot be paired, proving an instrumentation
+  coverage failure rather than a state conclusion.
 
-The one paired table of all B40 reads/branches plus route edges is the
-discriminator. A treatment-only read/branch before phase-7 reapply selects
-H-B40-Consumer; identical rows select H-OtherState or H-RecipeVariance only if
-the phase-7 timing and route rows also match; absent rows with a positive
-writer/route control select H-UnobservedRead. Do not interpret target
-stage/PCM rows unless both arms reach title and hangar.
+The paired full row table is the discriminator. A pre-edge argument/state
+difference selects H-Phase7State; identical full rows with only timing
+difference selects H-RecipeTiming; a post-B40-only difference selects
+H-B40Indirect; missing paired rows despite positive entry and VI controls
+select H-UnobservedCoverage. If the table does not split these outcomes, do
+not add more fields in this iteration.
 
 ## Ground-truth prerequisite
 
-The s2107 retail oracle already passed its whole-RDRAM control and observed the
-live B40 and reapply writers. Before adding the reader census, arm the oracle's
-whole-RDRAM positive control and a physical read watch for `0x000A0F50`; only
-then use the port-side generated-site census. A retail null is not evidence
-about the port route because the oracle currently reaches only boot/attract.
+Before adding the route-state witness, rerun the retail oracle's whole-RDRAM
+positive control and physical B40 read watch. The oracle is only a coverage
+control here: it reaches boot/attract, not the port's target route. A null
+retail route result is not evidence about the port.
 
 ## Exact commands
 
-Locate the existing regeneration hook and enumerate every B40 read site before editing:
+Confirm the current call/entry addresses and fixup anchors before editing:
 
-    rg -n -A8 -B4 's2107_b40|0x800A0F50|0x8008EB40|0x8008EB7C|0x8008EC88|reapplyDisplayMode' ../N64Recomp/fixup_game_funcs.py ../N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n -A35 -B12 'RECOMP_FUNC void reapplyDisplayMode|0x8008EB5C|0x8008EB7C|reapplyDisplayMode\(' ../N64Recomp/RecompiledFuncs/funcs_0.c ../N64Recomp/RecompiledFuncs/funcs_23.c
+    rg -n -A12 -B4 's2111 B40 read census|0x800A0F50|reapplyDisplayMode' ../N64Recomp/fixup_game_funcs.py
 
-Add the read/branch census to the existing fixup-generated witness, regenerate
-in the established order, and build once:
+Run the independent retail controls first:
+
+    tools/oracle/build/rs64_oracle --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom ../rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 8 --hit-cap 100 --watch-write 0x0:0x800000 --watch-read 0x000A0F50 --first-watch 1 --detail-watch 1 --pc-hist-watch 1 --vi-trace > scratch/agent/s2112_oracle_b40_control.log 2>&1
+
+Regenerate and build in the established order. On this macOS checkout, do
+not invoke `build/N64Recomp`; it is the known unsupported-cache binary. Use
+the older complete recompiler named in the project instructions when it is
+available; if it is unavailable, stop the regeneration attempt and report
+that environment blocker rather than truncating generated files:
 
     python3 ../rogue_squadron64/tools/make_elf.py
     cd ../N64Recomp
-    ../RogueSquadron64Recomp/build/Debug/N64Recomp.exe rogue_squadron.toml
+    E:/Projects/N64Recomp/Debug/N64Recomp.exe rogue_squadron.toml
     python3 fixup_game_funcs.py
     cd ../RogueSquadron64Recomp
     cmake --build build --config Debug --target RogueSquadron64Recomp
 
 Run both arms concurrently from the repository root, retaining the reduced
-capture recipe and adding only the new read-census log variable:
+capture recipe and all passive breadcrumbs. Add the new route-state log
+variable to both arms:
 
-    env GAME_EXTRA_ENV='ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_B40_VALUE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_B40_WRITER=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_B40_READ=1 ROGUESQ_LOG_SPBOOT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2111_m5_b40_read_control 30 12 > scratch/agent/s2111_m5_b40_read_control_driver.log 2>&1
-    env GAME_EXTRA_ENV='ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_B40_VALUE=1 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_B40_WRITER=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_B40_READ=1 ROGUESQ_LOG_SPBOOT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2111_m5_b40_read_treatment 30 12 > scratch/agent/s2111_m5_b40_read_treatment_driver.log 2>&1
+    env GAME_EXTRA_ENV='ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_B40_VALUE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_B40_WRITER=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_B40_READ=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 ROGUESQ_LOG_SPBOOT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2112_m5_route_state_control 30 12 > scratch/agent/s2112_m5_route_state_control_driver.log 2>&1
+    env GAME_EXTRA_ENV='ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_B40_VALUE=1 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_B40_WRITER=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_B40_READ=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 ROGUESQ_LOG_SPBOOT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2112_m5_route_state_treatment 30 12 > scratch/agent/s2112_m5_route_state_treatment_driver.log 2>&1
 
-Use SIGKILL for any remaining process group. Inspect only phase-keyed counts
-and bounded tails; do not read the run logs whole.
+Kill any remaining game process group with SIGKILL. Inspect only bounded
+phase-keyed counts and tails; never read a full run log.
