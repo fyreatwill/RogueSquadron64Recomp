@@ -1,0 +1,67 @@
+s2163 A1 default-on retry same-build triple (then revert)
+HYPOTHESIS-ID: m5-a1-default-on
+binary: Debug rebuild of get_rsp_microcode invert
+        (unset/empty/non-0 -> factor5_ucode_b; only =0 is stub),
+        then polarity reverted after title/hangar split
+recipe: SPIN_YIELD=1 LLE_UNGATED=1 LLE_SOLO=1 LOG_ALL=1
+driver: scratch/s73_post_a_scene/run_mission_keys.sh 30 12
+logs:   scratch/s73_post_a_scene/s2163_{unset,on,off}{,_b,_c}/run.log
+
+positive controls (every arm printed both)
+- unset:   [audtask-dispatch] real_ucode=1; waitForAnyAudioSlot entry+return
+- =1:      [audtask-dispatch] real_ucode=1; waitForAnyAudioSlot entry+return
+- =0:      [audtask-dispatch] real_ucode=0; waitForAnyAudioSlot entry+return
+
+unset (s2163_unset)
+- wait entry=2 return=2 loop/return c=0x11
+- 640 0x00696100 at 7.5s #383; never 1024
+- SIGBUS si_addr=0x37fff0019 slotDispatcherIter+3092 last-guest-pc=0x80007904
+
+=1 (s2163_on)
+- wait entry=2 return=2 c=0x11
+- 640 0x00696100 at 7.4s #381; never 1024
+- SIGBUS si_addr=0x380000044 cutsceneDispatchSlotsByFlag+8960 last-guest-pc=0x8000834c
+
+=0 (s2163_off)
+- wait entry=2 return=2 c=0x11
+- 640 0x00696100 at 7.2s #371; never 1024
+- SIGBUS si_addr=0x37fff0019 slotDispatcherIter+3092 last-guest-pc=0x80007904
+- first-attempt cinematic SIGBUS is not image-only
+
+unset retry (s2163_unset_b)
+- wait entry=2 return=2 c=0x11; never 1024
+- SIGBUS si_addr=0x380000044 cutsceneDispatchSlotsByFlag+8960 last-guest-pc=0x8000834c
+
+=1 retry (s2163_on_b)
+- wait entry=2 return=2 c=0x11
+- survived 0x00696100; 600s phase timeout still width=640 origin last 0x0062BD00
+- 0 CRASH; 0 spin-yield; 0 title/hangar (rc=5)
+
+=0 retry (s2163_off_b)
+- wait entry=4 return=4 c=0x11 then 0x10
+- title 1024 @ 0x00790400 at 48.9s #2871
+- hangar 512 @ 0x006AB400 at 78.3s #4639
+- post-hangar SIGSEGV do_rom_read last-guest-pc=0x80001b08 (after target rows)
+
+unset after stub hangar (s2163_unset_c)
+- wait entry=2 return=2 c=0x11; real_ucode=1
+- 640 0x00696100 at 7.1s #362; never 1024
+- SIGBUS si_addr=0x380000044 cutsceneDispatchSlotsByFlag+8960 last-guest-pc=0x8000834c
+
+si_addr arithmetic (lead, not closed)
+- 0x380000044 = rdram+0x80000044 (KSEG0 used as unsigned host offset)
+- 0x37fff0019 = rdram+0x7fff0019
+- same class as s2161 unsigned PATCH MEM_BU, different sites
+
+title/hangar this session
+- image unset: 0/3
+- image =1:    0/2
+- stub =0:     1/2 (retry)
+
+selected: H-CinematicRegress (title/hangar); H-DefaultMatchesOptIn (dispatch/wait only)
+refuted: H-StillRegress (as written: =1 also failed title), H-StubRegress, H-CoverageFailure
+polarity reverted. No wait/slot guard. No canary / AI-status change.
+
+ORIGIN: not a mitigation. Dispatch polarity was flipped then reverted.
+The cinematic SIGBUS writers are unattributed; do not skip/allow/guard them
+from this table.

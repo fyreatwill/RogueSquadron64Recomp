@@ -1491,10 +1491,11 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
         return &factor5_gfx_runner;
     case M_AUDTASK:
         g_rs64_audio_break_pc = 0;
-        // Default remains musyx_stub. s2160 default-on (unset and
-        // ROGUESQ_AUDIO_UCODE=1) SIGSEGV'd in waitForAnyAudioSlot+1060 from
-        // menuOverlayInit before title (si_addr=0x400141ad3, guest
-        // 0x80141AD0 XOR-3). =1 still selects the Factor 5 image.
+        // Default remains musyx_stub. s2162 closed the wait SIGSEGV
+        // (S32 MEM_BU). s2163 default-on retry: unset matched =1
+        // (real_ucode=1, wait return) but 0/3 unset and 0/2 =1 reached
+        // title (cinematic SIGBUS or 640 stall); same-build =0 retry
+        // reached title+hangar. Polarity reverted.
         {
             static int s_use_real_audio_ucode = -1;
             if (s_use_real_audio_ucode < 0) {

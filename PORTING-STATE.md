@@ -102661,3 +102661,55 @@ guard. Default-on was not retried this iteration.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-default-on`.
+
+## Session 2163 (2026-08-21) — rejected A1 default-on at 0x00696100 cinematic
+
+Inverted `get_rsp_microcode` so unset/empty/non-`0` selected
+`factor5_ucode_b` and only `ROGUESQ_AUDIO_UCODE=0` remained stub.
+One Debug rebuild, then a same-build unset/`=1`/`=0` triple from
+`build/` with the ROM present (retries `_b`/`_c` after first-attempt
+cinematic SIGBUS):
+
+    env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1" \
+      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2163_unset 30 12
+    env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_AUDIO_UCODE=1" \
+      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2163_on 30 12
+    env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_AUDIO_UCODE=0" \
+      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2163_off 30 12
+
+Positive controls fired in every arm: `[audtask-dispatch] real_ucode=`
+printed (unset/`=1` =1, `=0` =0) and `[m5-postwait] edge=entry
+site=waitForAnyAudioSlot` plus matching return (`c=0x11`; stub retry
+also `c=0x10`). This is not the s2160 `waitForAnyAudioSlot+1060`
+SIGSEGV.
+
+Title/hangar: unset 0/3 and `=1` 0/2. Five image-arm runs died at
+640 `0x00696100` (~7s): SIGBUS `slotDispatcherIter+3092`
+(`si_addr=0x37fff0019` = `rdram+0x7fff0019`) or
+`cutsceneDispatchSlotsByFlag+8960` (`si_addr=0x380000044` =
+`rdram+0x80000044`), except `=1` retry which survived and stalled
+600s still width=640 (rc=5). Stub first-attempt also SIGBUS'd at
+`slotDispatcherIter+3092`; stub retry reached title
+`1024 @ 0x00790400` at 48.9s #2871 and hangar `512 @ 0x006AB400`
+at 78.3s #4639, then post-hangar SIGSEGV `do_rom_read`
+`last-guest-pc=0x80001b08`. Unset after that hangar success still
+SIGBUS'd at `cutsceneDispatchSlotsByFlag+8960`.
+
+Table: `scratch/s73_post_a_scene/s2163_default_on_ab.txt` (copy
+`scratch/agent/s2163_default_on_ab.txt`). No new soak-queue verdicts
+to fold.
+
+This selects `H-CinematicRegress` at title/hangar and
+`H-DefaultMatchesOptIn` at dispatch/wait only. It refutes
+`H-StillRegress` as written (`=1` also failed title),
+`H-StubRegress`, and `H-CoverageFailure`. Default-on polarity was
+reverted and the binary rebuilt.
+
+ORIGIN: not a mitigation. Dispatch polarity was flipped then
+reverted. The cinematic SIGBUS writers are unattributed; no
+skip/allow/guard.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

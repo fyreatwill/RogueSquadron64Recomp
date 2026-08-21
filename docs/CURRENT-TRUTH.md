@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2162
-(2026-08-21); behavioral and source evidence is current through s2162.
+authoritative for exact commands and probe rows. Maintained in Session 2163
+(2026-08-21); behavioral and source evidence is current through s2163.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2162 in §§41–42.
+`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42.
 
 ## Current state
 
@@ -29,7 +29,13 @@ This file is intentionally compact. Archives: s2080–s2108 in
   `waitForAnyAudioSlot` (`c=0x11`/`0x10`) and reach title
   `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Stub `=0` still
   matches that route. The s2160 `waitForAnyAudioSlot+1060` SIGSEGV is
-  closed on the current binary. Default-on retry is the next A1 unit.
+  closed on the current binary. s2163 executed the default-on retry
+  (`scratch/s73_post_a_scene/s2163_default_on_ab.txt`) and selected
+  `H-CinematicRegress`: unset matched `=1` at dispatch/wait
+  (`real_ucode=1`, wait return `c=0x11`) but 0/3 unset and 0/2 `=1`
+  reached title (SIGBUS at `slotDispatcherIter+3092` /
+  `cutsceneDispatchSlotsByFlag+8960`, or a 600s 640 stall);
+  same-build `=0` retry reached title+hangar. Polarity reverted.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. The s2113 contract witness records guest PC `0x1328`,
   host exit `Broke`, task `output_buff=0`, and phase-keyed post-DMA/PCM
@@ -68,7 +74,9 @@ This file is intentionally compact. Archives: s2080–s2108 in
   constant (host `rdram+4GB+0x141AD3`), not original MIPS; the
   crashing image path is `anyAudioSlotActive` `path=gate0`, which
   does not load the byte. s2162 `S32`-addressed those PATCH sites
-  and the image arm now returns from wait. Do not move the canary,
+  and the image arm now returns from wait. s2163 selected
+  `H-CinematicRegress` for the post-wait 0x00696100 cinematic
+  window and reverted default-on. Do not move the canary,
   change canary prefill, add a wait/slot guard, or change
   `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
 
@@ -103,6 +111,7 @@ This file is intentionally compact. Archives: s2080–s2108 in
 | s2160 | `H-RouteRegress` | pre-S32 binary: unset/`=1` SIGSEGV at `waitForAnyAudioSlot+1060` before title; `=0` title+hangar stub contract; not `waitForMusyXAudioTaskDone` | treat pre-fix SIGSEGV as still live; canary / AI-status / wait-slot guard |
 | s2161 | `H-RetailLoadsCount` | retail wait exec 1 from `0x800C5CF4`; jal `anyAudioSlotActive` loads `0x141AD0` at `0x8008E5C0`; writers `setDisplayMode`/`reapplyDisplayMode`; port +1060 is unsigned PATCH `MEM_BU` (`si_addr` = `rdram+4GB+0x141AD3`) | wait/slot guard; leave unsigned `MEM_BU(0X1AD0, 0X80140000)` |
 | s2162 | `H-UnsignedMemBu` | same-build `=1` wait entry/loop/return `c=0x11`/`0x10`, title+hangar, `break_pc=0x1328`; `=0` stub title+hangar; 0 SIGSEGV | wait/slot guard; treat post-hangar `0x80001b08` SIGABRT as the wait-slot defect |
+| s2163 | `H-CinematicRegress` | dispatch/wait: unset=`=1` `real_ucode=1` wait return `c=0x11`; title: unset 0/3 and `=1` 0/2 (SIGBUS `slotDispatcherIter+3092`/`cutsceneDispatchSlotsByFlag+8960` or 640 stall); stub retry title+hangar; polarity reverted | wait/slot guard; default-on flip; treat cinematic SIGBUS as the wait-slot defect |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -129,12 +138,14 @@ static-boundary conflicts.
 The backlog is one monotonic sequence. Closed investigations are not
 active work items.
 
-1. **M5 A1 default-on retry.** s2162 selected `H-UnsignedMemBu` and
-   closed the s2160 image-arm wait SIGSEGV. Same-build `=1` now
-   reaches title and hangar on the qualified recipe. Next unit is
-   flipping `get_rsp_microcode` so unset selects `factor5_ucode_b`
-   (`=0` remains stub) and repeating the same-build unset/`=1`/`=0`
-   title/hangar pair. Do not add a wait/slot guard.
+1. **M5 A1 cinematic window (blocks default-on).** s2163 selected
+   `H-CinematicRegress` and reverted the default-on flip. Unset
+   matched `=1` at dispatch/wait; both failed title at 640
+   `0x00696100` while same-build stub retry reached title+hangar.
+   Next unit is a source census of unsigned KSEG0 `MEM_*` in
+   `slotDispatcherIter` and `cutsceneDispatchSlotsByFlag` (s2162
+   model; `si_addr` 0x380000044 = `rdram+0x80000044`). Do not
+   re-flip default-on or add a wait/slot guard.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the
@@ -221,11 +232,12 @@ execute question: `H-RouteRegress` on the pre-S32 binary. s2161
 closed the wait-slot count-byte ORIGIN question:
 `H-RetailLoadsCount`. s2162 closed the unsigned PATCH addressing
 question: `H-UnsignedMemBu`; image `=1` now reaches title and hangar.
-The A1 execute / SP-complete / MORT-ownership / both-arm-validate /
-task-exit+PCM / two-source-completion clauses remain selected at
-the s2118 C88=0 sampled scope (s2118, s2132–s2140, s2157). Remaining
-isolation is the env default. Default-on retry is the next A1 unit
-on this binary. Do not add a wait/slot guard.
+s2163 then selected `H-CinematicRegress` at the post-wait 640
+`0x00696100` cinematic and reverted default-on. The A1 execute /
+SP-complete / MORT-ownership / both-arm-validate / task-exit+PCM /
+two-source-completion clauses remain selected at the s2118 C88=0
+sampled scope (s2118, s2132–s2140, s2157). Remaining isolation is
+the env default. Do not re-flip default-on or add a wait/slot guard.
 
 The stock `aspMain` contract is not the game's MusyX contract. C88
 testing selected reversed-or-suppressing polarity at sampled port gate
@@ -286,7 +298,13 @@ ledger. Operational reversals:
   s2162 supersedes treating that SIGSEGV as a live image-arm blocker:
   after `S32`-addressing the PATCH, `=1` returns from wait with
   `c=0x11`/`0x10` and reaches title and hangar. `H-RouteRegress`
-  remains true of the pre-fix binary.
+  remains true of the pre-fix binary. s2163 supersedes “default-on
+  retry is the next safe A1 landing on this binary”: that was
+  believable after `H-UnsignedMemBu` wait-return plus s2162 `=1`
+  title+hangar, but the same-build unset/`=1` arms failed title at
+  the 0x00696100 cinematic (SIGBUS or 640 stall) while `=0` retry
+  reached title+hangar. Dispatch/wait still match (`H-DefaultMatchesOptIn`
+  at that scope). Polarity reverted.
 - The old retail voice-field interpretation was believable because a
   pointer entry was treated as a physical array base.
 - The old “B40 was unreached” and s2110 `H-B40-RouteRequired`
@@ -309,16 +327,17 @@ ledger. Operational reversals:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024
 and spin-yield chain is in §36; the M5 archive through s2047 is in
 §§37–38; the late route/fill boundary is in §39; the s2080–s2108 archive
-is in §40; B40 s2110–s2112 is in §41; and the s2113–s2162 contract,
+is in §40; B40 s2110–s2112 is in §41; and the s2113–s2163 contract,
 symbol, MORT, AI, canary, isolator, default-blocker, default-on,
-wait-slot count-byte, and unsigned PATCH archive is in §42.
+wait-slot count-byte, unsigned PATCH, and cinematic-regress archive
+is in §42.
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
 single-source or single-arm observations. No AI-status shortcut, task
 ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`,
-`H-RouteRegress`, `H-RetailLoadsCount`, or `H-UnsignedMemBu`.
-Default-on retry is now the A1 execute step; do not add a wait/slot
+`H-RouteRegress`, `H-RetailLoadsCount`, `H-UnsignedMemBu`, or
+`H-CinematicRegress`. Do not re-flip default-on or add a wait/slot
 guard.
 
 ## Method and safety rules
