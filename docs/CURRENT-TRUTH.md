@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2104 (2026-08-20);
-behavioral and source evidence is current through s2104.
+for exact commands and probe rows. Maintained in Session 2105 (2026-08-20);
+behavioral and source evidence is current through s2105.
 
 ## Current state
 
@@ -21,15 +21,17 @@ behavioral and source evidence is current through s2104.
   `ROGUESQ_AUDIO_UCODE=1` and is not defaulted on.
 - The image arm changes DMEM and emits generated DMA writes but returns
   `Broke` and fails the reserved host canary. Its title-phase image-DMA join
-  is zero-payload, while s2100 observes nonzero `0x6F0` payloads in a hangar
-  task; hangar PCM remains zero. The task ABI, final E50 role, and complete
-  playback contract are unresolved. No output routing, task-field, canary,
-  wait, guard, or guest-gate change is authorized.
+  is zero-payload; s2100 and s2105 observe nonzero `0x6F0` payloads in hangar
+  tasks. In the route-qualified s2105 sample, two stage-2 ranges also match
+  nonzero PCM source and consumer spans exactly. The task exit contract,
+  canary meaning, and complete playback contract remain unresolved. No
+  output routing, task-field, canary, wait, guard, or guest-gate change is
+  authorized.
 - The generated image writer reaches the host canary span through three
   guest output loops. The only reachable image-side `Broke` edge is the
-  generated `break 0` after its final DMA write. The source audit does not
-  establish whether the destination is output staging, scratch, or an ABI
-  mismatch.
+  generated `break 0` after its final DMA write. s2105 identifies the sampled
+  `0x6F0`/`0x300` destinations as PCM-backed at the stage-to-DMA-to-consumer
+  join, but does not establish the contract for the other writeback fields.
 - s2100's regeneration-stable image-stage table fired in the fixed treatment
   run: 3207 distinct audio ordinals reached target title/hangar phases, with
   2135 title-stage rows and 2328 hangar-stage rows. At title, the sampled
@@ -81,6 +83,19 @@ behavioral and source evidence is current through s2104.
   and leaves `H-ImageDestIsPCM` versus `H-ABI-Destination` unevaluable. No
   output routing, task field, canary, gate, wait, guard, queue policy, or
   default dispatch changed.
+- s2105's same-build route-admission pair let both the control and opt-in
+  image arm reach title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400` without crash markers. The treatment's first hangar
+  phase (phase 10) contained exactly two nonzero stage-2 rows:
+  `0x167F50`/`0x300` with 621 nonzero bytes and
+  `0x168250`/`0x300` with 639. The two matching `dmem_to_rdram` ranges had
+  identical DMA/source/consumer FNVs and nonzero counts; the independent PCM
+  source and consumer controls each fired with those same two nonzero rows.
+  All other sampled stage rows were zero, and no ordering violation occurred.
+  The treatment still had `output_buff=0`, `canary_ok=0`, and `exit=1` on its
+  2653 ABI rows. This selects `H-ImageDestIsPCM` at the sampled hangar
+  stage-2 scope and closes the prior route-admission blocker; it does not
+  authorize output/task/canary or default-dispatch changes.
 - s2088's fixed retail oracle run passed the whole-RDRAM positive control
   (`102276129` writes), reached title `1024 @ 0x00790400` and hangar
   `512 @ 0x006AB400`, and sampled both exact candidate writers after the
@@ -310,24 +325,17 @@ behavioral and source evidence is current through s2104.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 corrected nonzero image-stage/PCM boundary.** `H-InputZero` remains
-   title-scoped only. s2100's table and the first s2102 A/B show that a
-   treatment can carry nonzero data through the transform and into hangar
-   stage-2/DMA work, but the first stage-to-PCM join used the wrong byte-order
-   hash and cannot distinguish a match. The corrected final pair validated
-   the stage-to-DMA hash on a zero-payload control and reached both target VIs,
-   but no nonzero corrected stage row occurred before the treatment crash.
-   The next unit is one same-build route-admission pair with
-   `ROGUESQ_LOG_SPBOOT=1`, the corrected join, and the route-positive
-   controls. If both arms reach title and hangar, the existing table is
-   admissible: a corrected nonzero stage-to-DMA row followed by an exact PCM
-   consumer match selects `H-ImageDestIsPCM`, while a corrected nonzero row
-   with no PCM match selects `H-ABI-Destination`/`H-ConsumerDifferentField`.
-   If only the treatment reaches hangar, its stage rows remain single-arm
-   observations and the treatment crash/route boundary becomes the next M5
-   unit; if only the control reaches hangar, classify the control/treatment
-   route split before interpreting audio. Do not change output routing, task
-   fields, canary, gate, wait, guard, queue policy, or default dispatch.
+1. **M5 guest gate semantics, one writer at a time.** s2105 closes the
+   route-admission blocker and selects `H-ImageDestIsPCM` for two nonzero
+   hangar stage-2 ranges, while the opt-in task still returns `Broke` with
+   `output_buff=0` and `canary_ok=0`. The next unit holds
+   `ROGUESQ_AUDIO_UCODE=1` constant in both arms, enables the phase-keyed
+   gate contract table, and compares the default-zero `0x8008EC88`
+   `reapplyDisplayMode` store with exactly one `ROGUESQ_M5_C88_VALUE=1`
+   treatment arm. A paired title/hangar route plus gate writer/consumer
+   transitions and downstream task/slot/PCM rows is the discriminator. Do
+   not change the other `0x800A0F50` writers, output routing, task fields,
+   canary, waits, guards, queue policy, or default dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -388,8 +396,9 @@ The independent post-store witness captured control/metadata/pointer-like
 values (`0x0002FFFF`, `0x0001FFFF`, `0xB02F5600`, `0x00000100`, and
 `0x8019A3D0`) rather than the port's zero-only `0x25E26BC5` class. The retail
 gate is mixed (`0,1,0,0,1` across the requested writers), so only the named
-writer-specific gate arm was authorized. Its port treatment was not route
-qualified and is not admissible for task/PCM interpretation.
+writer-specific gate arm was authorized. s2105 now route-qualifies the port
+image arm and admits its sampled stage/DMA/PCM rows, but does not authorize a
+gate change.
 
 s2092's independent retail table now qualifies that boundary at the exact
 `0x800A0F50` address: all five gate PCs match generated `funcs_23.c` and
@@ -405,13 +414,12 @@ and the task-thread SP completion return in order. The treatment still misses
 both target VIs, so the remaining boundary is SP external-queue delivery
 versus guest consumption; task ABI, DMA, slot, and PCM interpretations remain
 gated. No gate or wait change is authorized.
-
 s2096's source-preserving table then shows the external SP enqueue, successful
 delivery, and matching guest receive for every sampled audio ordinal in both
 arms. The treatment reaches both target phases, so the route boundary is
 closed at this scope and the next admissible discriminator is the existing
 ABI/DMA/slot/PCM table. The table still reports `Broke`, canary failure, and
-zero image DMA payload in the treatment; those fields are now eligible for
+zero image DMA payload in the title-scoped treatment sample; those fields are now eligible for
 interpretation, but no output or task-contract change is authorized.
 
 s2097's corrected same-build A/B (with `ROGUESQ_SPIN_YIELD=1` in both arms)
@@ -425,6 +433,15 @@ not establish whether the zero-filled source is intended staging, scratch, or
 an ABI mismatch, and the treatment has not qualified the exact hangar origin.
 No output, task-field, gate, wait, guard, queue, or default-dispatch change is
 authorized.
+
+s2105's same-build pair reaches both title and hangar in control and treatment.
+The treatment's two nonzero phase-10 stage-2 rows at `0x167F50` and `0x168250`
+match nonzero `dmem_to_rdram` ranges and exact PCM source/consumer spans by
+FNV, byte count, and nonzero count. Later phase-10 and phase-12 stage rows are
+zero; the ABI still reports `output_buff=0`, `canary_ok=0`, and `exit=1`.
+This selects `H-ImageDestIsPCM` for the sampled stage-2 boundary. The next
+unit is the single-site `0x8008EC88` gate arm, with the Factor 5 image arm held
+constant in both A/B processes and the gate contract table enabled.
 
 The s2080 crosswalk separates the generated fill function from the shared
 crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
@@ -610,6 +627,14 @@ The maintenance compaction retains the reasons for the recent reversals here:
   reach both target phases in one pair. The nonzero treatment rows are thus
   single-arm observations; this supersedes only the route-admission
   assumption, not either PCM destination hypothesis.
+- The s2104 route-admission conclusion was believable because its three
+  concurrent attempts split the title/hangar gates between arms, making the
+  first nonzero treatment rows single-arm evidence. s2105 let both arms reach
+  both target VIs and independently matched two nonzero stage-2 DMA ranges to
+  nonzero PCM source and consumer spans. This supersedes only the paired-route
+  blocker and selects `H-ImageDestIsPCM` at that sampled stage-2 scope; it does
+  not supersede the unresolved task-exit, canary, or other writeback-field
+  contracts.
 
 ## Evidence ledger summary
 
@@ -727,6 +752,18 @@ treatment reached title, emitted only zero stage rows, and bus-faulted before
 the hangar gate. This selects route admission as the next discriminator and
 does not select `H-ImageDestIsPCM`, `H-ABI-Destination`, or
 `H-ConsumerDifferentField`.
+
+s2105 rebuilt once and ran the prescribed concurrent pair with the corrected
+join and `ROGUESQ_LOG_SPBOOT=1`. Both arms passed title and hangar route gates.
+The control produced no image-stage rows, as expected for `musyx_stub`. The
+treatment produced 6064 image-stage rows: 3343 in title phase 8, 1731 in the
+first hangar phase 10, and 990 in later phase 12; only two phase-10 rows were
+nonzero. Their stage FNVs (`0x60F910DE`, `0x7B70923A`) and nonzero counts
+(`621`, `639`) matched the corresponding DMA ranges and both PCM boundary
+events exactly. The treatment's 2653 ABI rows all retained `output_buff=0`,
+`canary_ok=0`, and `exit=1`; the join table recorded no ordering violation.
+This selects `H-ImageDestIsPCM` at sampled hangar stage-2 scope and moves the
+next M5 unit to the single-site guest-gate arm. No runtime behavior changed.
 
 ## Method and safety rules
 

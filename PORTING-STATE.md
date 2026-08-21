@@ -99844,7 +99844,6 @@ was made.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
 
-
 ## Session 2098 (2026-08-20) — audited Factor 5 audio writeback source paths
 
 Step 0 measured `docs/CURRENT-TRUTH.md` at 38573 bytes, so this was not a
@@ -100179,3 +100178,36 @@ default dispatch changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+## Session 2105 (2026-08-20) — qualified the nonzero hangar image-to-PCM join
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 50244 bytes, so this was not a
+maintenance iteration. The Debug target rebuilt successfully. The planned
+same-build pair ran concurrently with the qualified `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1` route; the treatment alone
+added `ROGUESQ_AUDIO_UCODE=1`. Both driver logs reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and neither had a crash
+marker.
+
+The control arm produced no image-stage rows, as expected for `musyx_stub`,
+while its route, ABI, and PCM positive controls fired. The treatment produced
+6064 image-stage rows: 3343 in title phase 8, 1731 in the first hangar phase
+10, and 990 in later phase 12. Exactly two phase-10 stage-2 rows were
+nonzero: destination `0x167F50`, length `0x300`, FNV `0x60F910DE`, nonzero
+count 621; and destination `0x168250`, length `0x300`, FNV `0x7B70923A`,
+nonzero count 639. The two corresponding `dmem_to_rdram` ranges had nonzero
+DMA/source/consumer counts and identical FNVs; each also had exact nonzero PCM
+source and consumer boundary rows. The treatment's 2653 ABI rows all retained
+`output_buff=0`, `canary_ok=0`, `exit=1`, and nonzero DMEM change. No image
+join ordering violation was observed.
+
+This selects `H-ImageDestIsPCM` at the sampled hangar stage-2 scope and closes
+the prior route-admission blocker. It rules out `H-ABI-Destination`/
+`H-ConsumerDifferentField` for those two ranges, but does not establish the
+task exit, canary, or other writeback-field contracts. No output routing, task
+field, gate, wait, guard, queue policy, or default dispatch changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-guest-gate`.
