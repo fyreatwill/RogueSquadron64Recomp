@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2106 (2026-08-20);
-behavioral and source evidence is current through s2106.
+for exact commands and probe rows. Maintained in Session 2107 (2026-08-20);
+behavioral and source evidence is current through s2107.
 
 ## Current state
 
@@ -112,6 +112,26 @@ behavioral and source evidence is current through s2106.
   sampled port gate/PCM scope. It does not establish retail polarity or
   authorize changing the shipped gate; the next unit is the named
   `0x8008EB40` `setDisplayMode` writer with C88 held at zero in both arms.
+- s2107's independent retail oracle passed its positive control (10017
+  writes), reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and recorded 17 writes to physical `0x000A0F50`.
+  Its writer histogram included one `0x8008EB40` B40 write, five
+  `0x8008EB7C` writes, five `0x8008EC88` writes, five `0x8008ED48`
+  writes, and one `0x8008EA34` write; B40 is retail-live.
+- s2107 added a regeneration-stable B40 arm and separate writer witness.
+  In both corrected arms it fired at pre-target phase 2
+  (width 320, origin `0x006DD280`, old 0, requested 1), storing 0 in
+  control and 1 in treatment. The shared logger's 512-row budget saturated,
+  so missing later B40 rows were not an unreached result.
+- The first B40 A/B reached title and hangar in both arms, but the control
+  crashed after hangar and produced no comparable phase-10 image-stage rows;
+  treatment had 3506 phase-10 stage rows, five nonzero, with zero
+  destination/PCM payload. The corrected witness attempts then split route
+  admission in opposite directions: one treatment-only reached title/hangar,
+  and one control-only reached title. The B40 downstream table is therefore
+  unevaluable and selects no B40 hypothesis. No gate, output routing,
+  task-field, canary, wait, guard, queue-policy, or default-dispatch behavior
+  changed.
 - s2088's fixed retail oracle run passed the whole-RDRAM positive control
   (`102276129` writes), reached title `1024 @ 0x00790400` and hangar
   `512 @ 0x006AB400`, and sampled both exact candidate writers after the
@@ -341,17 +361,17 @@ behavioral and source evidence is current through s2106.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 guest gate semantics, one writer at a time.** s2106's admissible
-   C88 pair shows that `0x8008EC88` is not a simple “set one to enable valid
-   PCM” arm: `C88=1` changes the consumer branch and suppresses the sampled
-   nonzero stage/PCM rows, while explicit `C88=0` retains them. The next unit
-   must add a regeneration-stable arm for the named `0x8008EB40`
-   `setDisplayMode` success writer, with `ROGUESQ_AUDIO_UCODE=1` and C88
-   explicitly zero in both arms. Compare control `B40=0` with treatment
-   `B40=1` using the same phase-keyed gate, route, ABI/DMA, stage, slot, and
-   PCM controls. Do not change `0x8008EC88`, the other gate writers, output
-   routing, task fields, canary, waits, guards, queue policy, or default
-   dispatch.
+1. **M5 guest gate semantics, B40 route-qualified retry.** s2107 proves that
+   the B40 arm stores the requested 0/1 difference before target phases, but
+   no corrected pair admitted both arms to the downstream discriminator. Run
+   one reduced-capture same-build A/B with the existing B40 witness, C88
+   explicitly zero, and the route/ABI/DMA/stage/slot/PCM controls retained.
+   Remove only the high-volume `ROGUESQ_LOG_AUDIOTICK_TRACE` and
+   `ROGUESQ_LOG_AUDIO_DRAIN` logs to reduce route perturbation. If both arms
+   reach title and hangar, compare target raw gate/branch, stage-to-DMA/PCM,
+   task exit/output/canary, and ordering. Do not change any gate store,
+   output routing, task fields, canary, waits, guards, queue policy, or
+   default dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -472,6 +492,24 @@ gates are positive in both arms. This selects
 the planned C88-required, route-hazard, and irrelevant interpretations. It
 does not establish retail polarity or authorize a default gate change. The
 next unit is the `0x8008EB40` `setDisplayMode` writer arm with C88 held at zero.
+
+s2107's retail oracle independently qualifies B40: the whole-RDRAM control
+fired 10017 writes, both target VI phases fired, and the physical gate range
+recorded one `0x8008EB40` writer among the 17 gate writes. The port's
+regeneration-stable B40 witness then recorded the expected pre-target store
+in both arms: phase 2, width 320, origin `0x006DD280`, old 0, requested 1,
+stored 0 for control and 1 for treatment. The shared phase-keyed gate logger
+was not a valid witness for later sites after its 512-row per-phase budget
+filled with raw-gate rows; this corrects the first attempted null.
+
+The first B40 pair reached both target VIs, but the control crashed after
+hangar before producing comparable phase-10 image-stage rows. The treatment
+had five nonzero stage rows in phase 10, while its destination and PCM
+payloads were zero; that is single-arm downstream evidence. Two corrected
+concurrent attempts with the B40 witness split route admission, one with
+treatment-only target reach and one with control-only target reach. The B40
+downstream discriminator remains unevaluable, and no B40 hypothesis is
+selected. The next unit is a reduced-capture route-qualified B40 pair.
 
 The s2080 crosswalk separates the generated fill function from the shared
 crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
@@ -665,6 +703,13 @@ The maintenance compaction retains the reasons for the recent reversals here:
   blocker and selects `H-ImageDestIsPCM` at that sampled stage-2 scope; it does
   not supersede the unresolved task-exit, canary, or other writeback-field
   contracts.
+- The first s2107 B40 attempt appeared to show no B40 writer in target phase,
+  which was believable because the raw-gate controls visibly fired while the
+  writer row did not. The shared M5 gate logger was capped at 512 rows per
+  phase and those rows were consumed by raw-gate samples; the independent
+  B40 witness then recorded the store in both arms at pre-target phase 2.
+  The missing shared-logger row is superseded as an instrumentation null, not
+  as evidence that B40 was unreached.
 
 ## Evidence ledger summary
 
@@ -808,6 +853,25 @@ nonzero phase-10 stage and PCM rows. This selects
 C88-required, route-hazard, and irrelevant hypotheses. No runtime behavior
 changed; the next unit is a regeneration-stable arm for the `0x8008EB40`
 `setDisplayMode` writer with C88 held at zero.
+
+s2107 first ran the retail oracle with a whole-RDRAM positive control and the
+physical gate range. It recorded 10017 whole-RDRAM writes, both target VI
+phases, 17 gate-range writes, and one retail B40 writer at 0x8008EB40. The
+first same-build B40 pair reached title and hangar in both arms, but the
+control crashed after hangar before a comparable phase-10 image-stage table;
+the treatment had five nonzero phase-10 stage rows and zero destination/PCM
+payload, which is single-arm evidence.
+
+The regeneration-stable B40 arm was then given its own writer witness after
+the shared 512-row gate logger saturated on raw-gate samples. Two corrected
+concurrent attempts recorded phase-2 width-320 stores of requested 1 to
+stored 0/1 in control/treatment, respectively, but route admission split:
+one treatment stopped before title while control reached title, and the
+other let treatment reach title/hangar while control remained pre-title.
+The B40 downstream hypotheses remain unevaluable. The documented Splat split command
+was unavailable and Splat 0.50/0.41.1 rejected the repository's existing
+annotated symbol format; existing split artifacts enabled the fallback
+make_elf -> N64Recomp -> fixup -> CMake pipeline.
 
 ## Method and safety rules
 

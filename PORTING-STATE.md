@@ -100248,6 +100248,45 @@ fields, canary, waits, guards, queue policy, or default dispatch. The next
 unit is a regeneration-stable arm for the named `0x8008EB40` `setDisplayMode`
 writer with C88 held at zero in both arms.
 
+## Session 2107 (2026-08-20) — tested setDisplayMode B40 gate arm
+
+Ground truth ran first. The retail oracle passed its whole-RDRAM positive
+control with 10017 writes, reached title VI 1024 at 0x00790400 and hangar VI
+512 at 0x006AB400, and recorded 17 writes to physical 0x000A0F50. Its writer
+histogram included one B40 store at 0x8008EB40, five stores at 0x8008EB7C,
+five at 0x8008EC88, five at 0x8008ED48, and one at 0x8008EA34. This is
+independent evidence that the named retail B40 site is live.
+
+The documented Splat split command was unavailable. Installing Splat 0.50.0
+and 0.41.1 in a temporary virtual environment reached the repository's
+existing annotated symbol files but both rejected the same annotated
+cinematic_overlay symbol line. I preserved those sources and used the
+existing split artifacts for the required fallback make_elf -> N64Recomp ->
+fixup -> CMake sequence. The B40 value arm was added to fixup_game_funcs.py,
+and the target rebuilt successfully. A separate regeneration-stable B40
+writer witness was added after the first run exposed that the shared
+phase-keyed gate logger's 512-row budget was consumed by raw-gate rows.
+
+The first same-build B40 pair reached title and hangar in both arms. Control
+then produced 36 crash markers after hangar and no comparable phase-10
+image-stage rows; treatment produced 3506 phase-10 stage rows, five nonzero,
+but zero destination and PCM payload. That downstream observation is
+single-arm evidence, not a B40 selection. The corrected witness fired in
+both arms at pre-target phase 2, width 320, origin 0x006DD280, with old=0 and
+requested=1; it stored 0 in control and 1 in treatment. Two corrected
+concurrent attempts then split route admission in opposite directions:
+one treatment stopped before title while control reached title, and one
+treatment reached title/hangar while control remained pre-title. Both were
+SIGKILLed as process groups after the route split.
+
+This advances the investigation by proving the B40 arm is wired and
+independently observing its 0/1 store, while the target gate/stage/PCM
+discriminator remains unevaluable. It rules out neither B40-required,
+overwritten/irrelevant, route-hazard, nor reversed/suppressing behavior.
+The missing shared-logger B40 row is superseded as a budget artifact, not
+treated as proof of an unreached writer. No runtime gate, task, output,
+canary, wait, guard, queue, or default-dispatch behavior changed.
+
 ### Next
 
 See `scratch/agent/NEXT.md`.
