@@ -1,0 +1,45 @@
+s2167 port spawnCutsceneObjectsFromList +0x50 store vs load A/B
+HYPOTHESIS-ID: m5-a1-cinematic-split
+same binary, concurrent arms, 90s SIGKILL
+recipe: SPIN_YIELD=1 LLE_UNGATED=1 LLE_SOLO=1 LOG_ALL=1 LOG_CUTSCENE_A2_50=1
+driver: scratch/s73_post_a_scene/run_mission_keys.sh 30 12
+logs:   scratch/s73_post_a_scene/s2167_on/run.log
+        scratch/s73_post_a_scene/s2167_off/run.log
+
+positive controls (both arms)
+- [cutscene-a2-50-ctl] n=1 and n=2 at t=9.1/9.2
+  site=entry pc=0x800A7C4C phase=6 width=640 origin=0x00696100 a0=0x800B6210
+- VI 640 origin=0x00696100 at ~9.0s (cinematic)
+
+image ROGUESQ_AUDIO_UCODE=1 (s2167_on)
+- store80d4 n=0
+- store8144 n=16 all kseg=1 slot=1 value!=0
+  dest=0x800C7B0C value=0x8025A580 (heap) always=1
+  remaining 15 dests in 0x800C7D84..0x800CA640, values 0x8025A840..0x80223138
+- load879c calls n=4961 printed 422; kseg=0 0; zero 0
+  dest=0x800C7B0C value=0x8025A580 n=305 (always); mismatch vs last store=0
+- lwc87a8 calls n=4950 printed 119; kseg=0 0; zero 0
+  $v0 bases: 0x800CA748 n=49, 0x800CDB58 n=28, 0x800CAE88 n=15,
+             0x800CE028 n=14, 0x800CF158 n=13 (all KSEG0)
+- never 1024 / never hangar
+- SIGBUS t~21.9s si_addr=0x380000030 (rdram+0x80000030)
+  pc-symbol=matchKeywordWithPriority+88 last-guest-pc=0x8000834c
+  last +0x50 load still 0x8025A580 at dest 0x800C7B0C
+
+stub ROGUESQ_AUDIO_UCODE=0 (s2167_off)
+- same store table: store80d4 n=0; store8144 n=16 all kseg=1;
+  dest=0x800C7B0C value=0x8025A580; mismatch=0
+- load879c calls n=11873; lwc87a8 n=11850; kseg=0 0; zero 0
+- title 1024 @ 0x00790400 at 50.6s #2965
+- hangar 512 @ 0x006AB400 at 80.3s #4743
+- 0 CRASH; SIGKILL at 90s cap
+
+selected: H-PortStoreMatchesRetail
+refuted:  H-PortStoreMissing, H-PortStoresZeroOrWild, H-PortStoreOkLoadBad,
+          H-CoverageFailure
+
+Retail s2166 ORIGIN 0x800A8144 stored heap 0x8025A580 at phys 0xC7B0C.
+Port writes and then loads that same word. Cinematic SIGBUS is not this
+store/load. Do not S32-address, NULL-skip, re-flip default-on, or add a
+wait/slot guard. Next: retail $a0/$v0 at matchKeywordWithPriority
+0x800AF2C8/0x800AF2CC (lw $t0, 0x30($v0)).

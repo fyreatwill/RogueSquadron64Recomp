@@ -102847,3 +102847,51 @@ change.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2167 (2026-08-21) — port +0x50 store matches retail heap pointer
+
+Same-build concurrent A/B, 90s SIGKILL. Command from
+`scratch/agent/NEXT.md`. Table:
+`scratch/agent/s2167_port_store_ab.txt`. Logs:
+`scratch/s73_post_a_scene/s2167_{on,off}/run.log`.
+
+Positive controls in both logs: `[cutscene-a2-50-ctl]` n=1
+and n=2 at t=9.1/9.2, `pc=0x800A7C4C` phase=6 width=640
+origin=`0x00696100` a0=`0x800B6210`; VI 640
+`0x00696100` at ~9.0s.
+
+`=1` (s2167_on): store80d4 n=0; store8144 n=16 all
+kseg=1 value!=0; dest `0x800C7B0C` value `0x8025A580`;
+load879c dest `0x800C7B0C` value `0x8025A580` (305 always
+rows) mismatch=0; lwc `$v0` in `{0x800CA748,0x800CAE88,
+0x800CDB58,0x800CE028,0x800CF158}` all KSEG0; never 1024;
+SIGBUS t~21.9s `si_addr=0x380000030`
+pc-symbol=`matchKeywordWithPriority+88`
+last-guest-pc=`0x8000834c`. Last +0x50 load still
+`0x8025A580`.
+
+`=0` (s2167_off): identical store table (16 KSEG0 heap
+pointers, dest `0x800C7B0C` = `0x8025A580`, mismatch=0);
+title `1024 @ 0x00790400` at 50.6s #2965; hangar
+`512 @ 0x006AB400` at 80.3s #4743; 0 CRASH; SIGKILL at
+90s cap.
+
+This selects `H-PortStoreMatchesRetail` and refutes
+`H-PortStoreMissing`, `H-PortStoresZeroOrWild`,
+`H-PortStoreOkLoadBad`, and `H-CoverageFailure`. Two
+sources: retail s2166 writer `0x800A8144` heap
+`0x8025A580` at phys `0xC7B0C`, and this port store/load
+of that same word. Image-arm cinematic SIGBUS is not the
++0x50 word.
+
+No new soak-queue verdicts to fold (SOAK-RESULTS tail is
+still s1940–s1974). Soak queue empty.
+
+ORIGIN: diagnostic-only probe. Retail writer already named
+(s2166 `0x800A8144`). No skip, allow, guard, restore, or
+default-on flip.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

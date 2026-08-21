@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2166
-(2026-08-21); behavioral and source evidence is current through s2166.
+authoritative for exact commands and probe rows. Maintained in Session 2167
+(2026-08-21); behavioral and source evidence is current through s2167.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2166 live here
+`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2167 live here
 until the next archive pass.
 
 ## Current state
@@ -97,9 +97,20 @@ until the next archive pass.
   Same-run `$a2` at `0x800A879C` stays in
   `0x800C7ABC..0x800CA5F0` including the sampled slot;
   loaded word at `0x800A87A0` is heap `0x8025A580`.
-  Do not S32-address by guess, NULL-skip, re-flip
-  default-on, move the canary, add a wait/slot guard, or
-  change `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
+  s2167 selected `H-PortStoreMatchesRetail`
+  (`scratch/agent/s2167_port_store_ab.txt`): same-build
+  `=1`/`=0` both print `[cutscene-a2-50-ctl]` at 640
+  `0x00696100`, store 16 KSEG0 heap pointers at
+  `0x800A8144` (dest `0x800C7B0C` value `0x8025A580`;
+  sibling `0x800A80D4` n=0), and load that same word
+  (0 mismatches). `=1` still SIGBUS later
+  (`matchKeywordWithPriority+88`, `si_addr=0x380000030`,
+  last-guest-pc `0x8000834c`) and never title; `=0`
+  reached title+hangar. The cinematic split is not this
+  +0x50 word. Do not S32-address by guess, NULL-skip,
+  re-flip default-on, move the canary, add a wait/slot
+  guard, or change `osAiGetStatus_recomp` /
+  `osAiSetNextBuffer_recomp`.
 
 ### Selected hypotheses (scoped; do not widen)
 
@@ -136,6 +147,7 @@ until the next archive pass.
 | s2164 | `H-NoSuchSite` | both `RECOMP_FUNC` defs present; `slotDispatcherIter` 47 `MEM_*` (1 already-S32 PATCH, 46 register/stack) and `cutsceneDispatchSlotsByFlag` 146 `MEM_*` (all register/stack); unsigned-KSEG0-constant count 0; atos `+3092`/`+8960` are `MEM_BU(ctx->r17, 0X1A)` / `MEM_W(ctx->r2, 0X44)` | S32-address by guess; default-on flip; wait/slot guard |
 | s2165 | `H-RetailExecsValidPtr` | Rice 45s: `[gpr-ctl]` + watch0 10000 + VI 640 `0x0066a500` then `0x00696100`; exec `0x8003E944` n=54246 `$s1` KSEG0 3/3 logged (`0x80208df4`/`0x80208db8`); `0x800A87A8` n=14256 `$v0` KSEG0 22/22 logged (`0x800ca748`..); producers `0x8003E938`/`0x800A87A0` also KSEG0 `$v0` | NULL skip; S32-address; default-on flip; wait/slot guard |
 | s2166 | `H-RetailWriterNamed` | Rice 45s: watch 1 phys `0xC7B0C` 5 writes; `rs_memset` `0x800078EC` n=4; `spawnCutsceneObjectsFromList` `0x800A8144` `sw $v0, 0x50($v1)` n=1 after `walkMeshdef0List`; `$a2` at `0x800A879C` in `0x800C7ABC..0x800CA5F0` including sampled slot; load word heap `0x8025A580`; snapshot nonzero=4 | NULL skip; S32-address; default-on flip; wait/slot guard |
+| s2167 | `H-PortStoreMatchesRetail` | same-build `=1`/`=0`: ctl n=2 at 640 `0x00696100`; store8144 n=16 all KSEG0; dest `0x800C7B0C` value `0x8025A580`; load of that dest all `0x8025A580` mismatch=0; store80d4 n=0; lwc `$v0` in `{0x800CA748,0x800CAE88,0x800CDB58,0x800CE028,0x800CF158}`; `=1` SIGBUS `matchKeywordWithPriority+88` never title; `=0` title+hangar | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the +0x50 load |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -165,12 +177,12 @@ active work items.
 1. **M5 A1 cinematic window (blocks default-on).** s2163 selected
    `H-CinematicRegress` and reverted the default-on flip. s2164
    selected `H-NoSuchSite`. s2165 selected `H-RetailExecsValidPtr`.
-   s2166 selected `H-RetailWriterNamed`: retail ORIGIN of the
-   cutscene `$a2+0x50` word (phys `0xC7B0C`) is
-   `spawnCutsceneObjectsFromList` `0x800A8144`
-   `sw $v0, 0x50($v1)` after `walkMeshdef0List` (`rs_memset`
-   covers the word first). Next unit is whether the port's
-   `0x800A8144` / `0x800A80D4` store is missing or stores 0.
+   s2166 selected `H-RetailWriterNamed`. s2167 selected
+   `H-PortStoreMatchesRetail`: the port stores and then loads
+   retail's heap pointer `0x8025A580` at dest `0x800C7B0C`.
+   Image-arm SIGBUS is later (`matchKeywordWithPriority`
+   `0x800AF2CC` `lw $t0, 0x30($v0)`, `si_addr=0x380000030`).
+   Next unit is the retail oracle at `0x800AF2C8`/`CC`/`D0`.
    Do not S32-address, NULL-skip, re-flip default-on, or add a
    wait/slot guard.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
@@ -267,7 +279,9 @@ s2165 selected `H-RetailExecsValidPtr`: retail takes those
 loads at 640 with legitimate KSEG0 pointers. s2166 selected
 `H-RetailWriterNamed`: the consumed +0x50 word is stored by
 `spawnCutsceneObjectsFromList` `0x800A8144` after
-`walkMeshdef0List`. The A1 execute /
+`walkMeshdef0List`. s2167 selected
+`H-PortStoreMatchesRetail`: the port writes and reloads
+that same heap pointer. The A1 execute /
 SP-complete / MORT-ownership / both-arm-validate / task-exit+PCM /
 two-source-completion clauses remain selected at the s2118 C88=0
 sampled scope (s2118, s2132–s2140, s2157). Remaining isolation is
@@ -356,6 +370,13 @@ ledger. Operational reversals:
   `spawnCutsceneObjectsFromList` `0x800A8144`
   `sw $v0, 0x50($v1)` after `walkMeshdef0List`, and the
   consumer load at that slot reads heap `0x8025A580`.
+  s2167 supersedes treating the cinematic SIGBUS as a
+  missing, zero, or wild port +0x50 store, or as a load
+  that fails to see that store: same-build `=1`/`=0`
+  both store `0x8025A580` at dest `0x800C7B0C` and load
+  it back (0 mismatches) with `[cutscene-a2-50-ctl]` at
+  640 `0x00696100`. `=1` still dies later in
+  `matchKeywordWithPriority`.
 - The old retail voice-field interpretation was believable because a
   pointer entry was treated as a physical array base.
 - The old “B40 was unreached” and s2110 `H-B40-RouteRequired`
@@ -384,7 +405,8 @@ wait-slot count-byte, unsigned PATCH, and cinematic-regress archive
 is in §42. s2164 is the unsigned-KSEG0 cinematic `MEM_*` census
 (`H-NoSuchSite`). s2165 is the retail GPR census at those PCs
 (`H-RetailExecsValidPtr`). s2166 is the retail writer of
-cutscene `$a2+0x50` (`H-RetailWriterNamed`).
+cutscene `$a2+0x50` (`H-RetailWriterNamed`). s2167 is the
+port store/load of that word (`H-PortStoreMatchesRetail`).
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
@@ -392,7 +414,7 @@ single-source or single-arm observations. No AI-status shortcut, task
 ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`,
 `H-RouteRegress`, `H-RetailLoadsCount`, `H-UnsignedMemBu`,
 `H-CinematicRegress`, `H-NoSuchSite`, `H-RetailExecsValidPtr`,
-or `H-RetailWriterNamed`.
+`H-RetailWriterNamed`, or `H-PortStoreMatchesRetail`.
 Do not re-flip default-on, S32-address by guess, NULL-skip, or
 add a wait/slot guard.
 

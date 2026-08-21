@@ -1,77 +1,65 @@
-# NEXT work unit (s2167) — port store at spawnCutsceneObjectsFromList +0x50
+# NEXT work unit (s2168) — retail $a0/$v0 at matchKeywordWithPriority
 
 HYPOTHESIS-ID: m5-a1-cinematic-split
 
 ## Work unit
 
-s2166 selected `H-RetailWriterNamed`. Table:
-`scratch/s73_post_a_scene/s2166_cutscene_a2_50_writer.txt`.
+s2167 selected `H-PortStoreMatchesRetail`. Table:
+`scratch/agent/s2167_port_store_ab.txt`.
 
-Retail ORIGIN of the pointer `cutsceneDispatchSlotsByFlag` loads at
-`$a2+0x50` is `spawnCutsceneObjectsFromList` `0x800A8144`
-`sw $v0, 0x50($v1)` after `jal walkMeshdef0List`. Sibling store
-`0x800A80D4` (after `instantiateNamedMeshInstance`) did not hit
-phys `0xC7B0C` this run. `rs_memset` `0x800078EC` covers the word
-first (4 `sb`).
+The port writes and reloads retail's heap pointer
+`0x8025A580` at dest `0x800C7B0C`. Image-arm SIGBUS is
+later: `matchKeywordWithPriority+88`, `si_addr=0x380000030`
+(`rdram+0x80000030`), last-guest-pc `0x8000834c`. Guest
+body starts at `0x800AF2C8`:
 
-Ask whether the PORT's store is missing or stores 0 on the
-image-arm cinematic path. Do not S32-address, NULL-skip, re-flip
-default-on, or add a wait/slot guard.
+    lw  $v0, 0x0($a0)
+    lw  $t0, 0x30($v0)    /* host +88 class: unsigned 0x80000030 */
+
+Ask retail whether that path executes at cinematic 640
+`0x00696100` and what `$a0`/`$v0` are. Do not S32-address,
+NULL-skip, re-flip default-on, or add a wait/slot guard.
 
 ## Competing hypotheses and discriminator
 
-- `H-PortStoreMissing`: `spawnCutsceneObjectsFromList` entry fires
-  (positive control) but neither `0x800A8144` nor `0x800A80D4`
-  stores to dest `0x800C7B0C` (or any `$v1` in
-  `0x800C7ABC..0x800CA5F0`) before the 640 `0x00696100` SIGBUS /
-  60s cap.
-- `H-PortStoresZeroOrWild`: a +0x50 store fires at a slot dest with
-  `$v0` 0 or not KSEG0 RDRAM (`0x80000000..0x803FFFFF`).
-- `H-PortStoreOkLoadBad`: a +0x50 store writes a KSEG0 heap pointer
-  into `0x800C7B0C` (or the live `$a2+0x50`), but `0x800A879C` then
-  loads 0 / non-KSEG0 / a different word than the last store.
-- `H-CoverageFailure`: spawn entry never prints, no `[cutscene-a2-50-ctl]`,
-  or the run never reaches VI 640 / `0x00696100`. Null store counts
-  are unevaluable.
+- `H-RetailAlsoWildV0`: `0x800AF2CC` executes at 640
+  `0x00696100` with `$v0` 0 or `0x80000000` (or otherwise
+  not KSEG0 RDRAM `0x80000000..0x803FFFFF`). Port crash
+  matches a retail-wild object header.
+- `H-RetailValidV0`: `0x800AF2CC` executes there with `$v0`
+  in KSEG0 RDRAM and not `0x80000000`. Port `$v0` is the
+  defect; retail takes a legitimate `0x30($v0)`.
+- `H-RetailNeverExec`: lifetime exec at `0x800AF2C8`/`CC`/`D0`
+  is 0 after watch-0 removal while VI 640/`0x00696100` is in
+  the same log. This is not the cinematic path.
+- `H-CoverageFailure`: no `[gpr-ctl]`, watch-0 callbacks !=
+  10000, or the run never reaches VI 640 / `0x00696100`.
 
-Positive control: first `spawnCutsceneObjectsFromList` entry must
-print `[cutscene-a2-50-ctl]` on every arm that reaches cinematic.
-Rate-limit store/load rows (first 20 + every 50); always log a
-store whose dest phys is `0xC7B0C`.
+Positive control: `[gpr-ctl]` plus watch 0 write
+callbacks=10000 and a VI 640 origin `0x00696100` row in the
+same log.
 
-Existing `rs64_probe_submit_gate_store` in `funcs_27.c` is NOT this
-instrument — it only logs phys `0x11A89F`.
+`--watch-pc` prints `$v0/$s1/$a0/$a2`. Discriminator is
+`$v0` at `0x800AF2CC` (post-`lw $v0,0($a0)`). `$a0` at
+`0x800AF2C8` is the producer.
 
 ## Exact commands
 
-Add env-gated rows in
-`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-AND apply the same snippet to
-`RecompiledFuncs/funcs_27.c` (fixup sentinel is already applied;
-do not full-regen unless the sentinel is absent). Sites:
+No game rebuild. Oracle only:
 
-- `spawnCutsceneObjectsFromList` entry
-- `0x800A80D4` `sw $v0, 0x50($v1)` — dest=`$v1+0x50`, value=`$v0`
-- `0x800A8144` `sw $v0, 0x50($v1)` — dest, value
-- `0x800A879C` `lw $v0, 0x50($a2)` — `$a2`, `MEM_W($a2,0x50)` (pre-load GPR is not the word)
-- `0x800A87A8` `lwc1 0x44($v0)` — `$v0`
+    tools/oracle/build/rs64_oracle \
+      --core "$(pwd)/tools/oracle/mupen64plus/libmupen64plus.dylib" \
+      --rom "$(pwd)/rogue_squadron.z64" \
+      --video "$(pwd)/tools/oracle/mupen64plus/mupen64plus-video-rice.dylib" \
+      --secs 45 --hit-cap 64 \
+      --watch-write 0x0:0x800000 \
+      --watch-pc 0x800AF2C8,0x800AF2CC,0x800AF2D0 \
+      --first-watch 0 --vi-trace \
+      > scratch/agent/oracle_s2168_match_keyword.log 2>&1
 
-Env: `ROGUESQ_LOG_CUTSCENE_A2_50=1`. Rebuild once:
+If the binary/plugin paths differ, copy the s2166 command
+from `scratch/s73_post_a_scene/s2166_cutscene_a2_50_writer.txt`
+and only change `--watch-pc` and the log path.
 
-    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-      cmake --build build --target RogueSquadron64Recomp
-
-Then both arms in one iteration (same binary, concurrent):
-
-    env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-        ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_CUTSCENE_A2_50=1 ROGUESQ_LOG_ALL=1 \
-        zsh scratch/s73_post_a_scene/run_mission_keys.sh s2167_on 30 12
-
-    env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-        ROGUESQ_AUDIO_UCODE=0 ROGUESQ_LOG_CUTSCENE_A2_50=1 ROGUESQ_LOG_ALL=1 \
-        zsh scratch/s73_post_a_scene/run_mission_keys.sh s2167_off 30 12
-
-Cap ~90s then SIGKILL. Cinematic SIGBUS is at ~7s; do not wait for
-title. Compare store dest/value vs load `$a2`/word on each arm.
-
-Do not flip `get_rsp_microcode`. Do not skip/allow/guard the load.
+Do not flip `get_rsp_microcode`. Do not skip/allow/guard
+`matchKeywordWithPriority`.
