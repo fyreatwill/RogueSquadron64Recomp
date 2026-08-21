@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2147
-(2026-08-21); behavioral and source evidence is current through s2147.
+authoritative for exact commands and probe rows. Maintained in Session 2148
+(2026-08-21); behavioral and source evidence is current through s2148.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -101,80 +101,29 @@ This file is intentionally compact. The s2080–s2108 archive is in
   and port lines selecting `H-RetailDataPtrOffset100` at the sampled output
   boundary. No task-field, output-route, audio-arm, host shortcut, guard, or
   default-arm change follows.
-- The s2142 bounded generated-symbol unit selected `H-MissionMapping` for
-  `0x800C64B0`: no-edit regeneration left `func_800C64B0` in place, while
+- The s2142–s2147 bounded generated-symbol units selected `H-MissionMapping`
+  for `0x800C64B0`, `0x800E71D0`, `0x800EC110`, `0x800EC6F0`, `0x800ED150`,
+  and `0x800FEF10`. Each two-line move left start, size, end, and callers
+  unchanged; leftover `fake_func_*` bytes immediately before those starts
+  were untouched. Mission-overlay human-versus-placeholder mismatches are
+  exhausted. Prior live-crash warnings remain runtime-risk records, not
+  static-boundary conflicts. No game run or runtime behavior changed.
+- The s2148 bounded generated-symbol unit selected `H-MenuMapping` for
+  `0x800B2630`: no-edit regeneration left `func_800B2630` in place, while
   the prescribed two-line mapping move caused the ELF to emit
-  `initHangarDisplayItemTimers` in `.ovl.mission` at the same start, size
-  `0x11C`, and end boundary `0x800C65CC` immediately before unchanged
-  `tickHangarDisplayItemAnimations`. The generated prototype, definition,
-  overlay entry, and only generated caller (`hangarVehicleDisplayNpcHandler`
-  at `jal 0x800C64B0`) all used the human name. The prior s417 live-crash
-  warning remains a runtime-risk record; this static table found no
-  boundary or caller conflict. The full pipeline succeeded; no game run or
-  runtime behavior changed.
-- The s2143 bounded generated-symbol unit selected `H-MissionMapping` for
-  `0x800E71D0`: no-edit regeneration left `func_800E71D0` in place, while
-  the prescribed two-line mapping move caused the ELF to emit
-  `transformCraftAnchorsApplySubFx3` in `.ovl.mission` at the same start,
-  size `0x1C0`, and end boundary `0x800E7390` immediately before unchanged
-  `tickFighterSquadronWithSplinePaths`. The leftover `fake_func_800E71C8`
-  at `0x800E71C8` size `0x8` was unchanged. The generated prototype,
-  definition, overlay entry, and only generated caller
-  (`tickFighterSquadronWithSplinePaths` at `jal 0x800E71D0`) all used the
-  human name. The prior s413 live-crash warning remains a runtime-risk
-  record; this static table found no boundary or caller conflict. The full
-  pipeline succeeded; no game run or runtime behavior changed.
-- The s2144 bounded generated-symbol unit selected `H-MissionMapping` for
-  `0x800EC110`: no-edit regeneration left `func_800EC110` in place, while
-  the prescribed two-line mapping move caused the ELF to emit
-  `allocObjectPoolNode` in `.ovl.mission` at the same start, size `0x278`,
-  and end boundary `0x800EC388` immediately before unchanged
-  `unlinkAndFreeChildNpcNode`. The leftover `fake_func_800EC10C` at
-  `0x800EC10C` size `0x4` was unchanged. The generated prototype,
-  definition, overlay entry, and only generated caller
-  (`createAndInitObject` at `jal 0x800EC110`) all used the human name. The
-  prior s415 live-crash warning remains a runtime-risk record; this static
-  table found no boundary or caller conflict. The full pipeline succeeded;
-  no game run or runtime behavior changed.
-- The s2145 bounded generated-symbol unit selected `H-MissionMapping` for
-  `0x800EC6F0`: no-edit regeneration left `func_800EC6F0` in place, while
-  the prescribed two-line mapping move caused the ELF to emit
-  `tickCraftMountedAnimationEffect` in `.ovl.mission` at the same start,
-  size `0x538`, and end boundary `0x800ECC28` immediately before unchanged
-  `craftMountedAnimationNpcHandler`. The leftover `fake_func_800EC6EC` at
-  `0x800EC6EC` size `0x4` was unchanged. The generated prototype,
-  definition, overlay entry, and only generated caller
-  (`craftMountedAnimationNpcHandler` at `jal 0x800EC6F0`) all used the
-  human name. The prior s415 live-crash warning remains a runtime-risk
-  record; this static table found no boundary or caller conflict. The full
-  pipeline succeeded; no game run or runtime behavior changed.
-- The s2146 bounded generated-symbol unit selected `H-MissionMapping` for
-  `0x800ED150`: no-edit regeneration left `func_800ED150` in place, while
-  the prescribed two-line mapping move caused the ELF to emit
-  `claimSongSlotForCurrentHandle` in `.ovl.mission` at the same start,
-  size `0xB0`, and end boundary `0x800ED200` immediately before unchanged
-  `tickActiveSongSlots`. The leftover `fake_func_800ED148` at
-  `0x800ED148` size `0x8` was unchanged. The generated prototype,
-  definition, overlay entry, and only generated caller
-  (`tickActiveSongSlots` at `jal 0x800ED150`) all used the human name.
-  The prior s403 live-probe miss remains a runtime-risk record; this
-  static table found no boundary or caller conflict. The full pipeline
-  succeeded; no game run or runtime behavior changed.
-- The s2147 bounded generated-symbol unit selected `H-MissionMapping` for
-  `0x800FEF10`: no-edit regeneration left `func_800FEF10` in place, while
-  the prescribed two-line mapping move caused the ELF to emit
-  `stepObjectOrientationTowardTarget` in `.ovl.mission` at the same start,
-  size `0xEF0`, and end boundary `0x800FFE00` immediately before unchanged
-  `resolveCraftAnimationNodeHandles`. The leftover `fake_func_800FEF04` at
-  `0x800FEF04` size `0xC` was unchanged. The generated prototype,
-  definition, overlay entry, and both generated callers
-  (`updateSplineCraftTransform` and `updatePlayerCraftPhysics` at
-  `jal 0x800FEF10`) all used the human name. The prior s416 live-crash
-  warning remains a runtime-risk record; this static table found no
-  boundary or caller conflict. The full pipeline succeeded and linked
-  `_stepObjectOrientationTowardTarget`; no game run or runtime behavior
-  changed. Mission-overlay human-versus-placeholder mismatches are now
-  exhausted.
+  `buildFormatMessageGlyphBuffer` in `.ovl.menu` at the same start, size
+  `0x468`, and end boundary `0x800B2A98` immediately before unchanged
+  `allocFormatTextElement`. The leftover `fake_func_800B2628` at
+  `0x800B2628` size `0x8` was unchanged. The generated prototype,
+  definition, overlay entry, and all three generated callers
+  (`tickFormatMessageWorker`, `buildScaledFormatTextElement`, and
+  `processAndDisposeFormatMessage` at `jal 0x800B2630`) all used the
+  human name. The host binary exports `_buildFormatMessageGlyphBuffer`
+  and has no leftover `func_800B2630`. The prior s419 live-crash warning
+  remains a runtime-risk record; this static table found no boundary or
+  caller conflict. The full pipeline succeeded; no game run or runtime
+  behavior changed. This is the first remaining menu-overlay instance of
+  the same two-line pattern.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -461,13 +410,14 @@ work items.
 
 1. **Generated-symbol renaming sweep.** The M5 `data_ptr+0x100` boundary is
    closed at the sampled output edge: s2140's independently watched retail
-   destinations agree with s2137's port `field348+0x100` relation. s2147
-   selected `H-MissionMapping` for `func_800FEF10` /
-   `stepObjectOrientationTowardTarget` and exhausted the mission-overlay
-   human-versus-placeholder mismatches. The next lead is `func_800B2630` ->
-   `buildFormatMessageGlyphBuffer`; validate it with a no-edit versus
+   destinations agree with s2137's port `field348+0x100` relation. s2148
+   selected `H-MenuMapping` for `func_800B2630` /
+   `buildFormatMessageGlyphBuffer`. The next lead is `func_800B3824` ->
+   `buildLevelSelectTextTextures`; validate it with a no-edit versus
    two-line symbol-file move and a fresh ELF/generated boundary and caller
-   table. The s419 `m4_known_bad.txt` record is a live-crash warning, not a
+   table. A post-move census found this as the last remaining
+   human-in-main versus placeholder-in-overlay mismatch. The s419
+   `m4_known_bad.txt` record is a live-crash warning, not a
    static-boundary skip.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
@@ -656,17 +606,14 @@ the old divergence impossible in every recipe.
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
 class, dormant slot-dispatch census, and generated-symbol synchronization
-sweep are closed at their stated scopes. s2130's static table confirmed the
-`0x800AE3F0` mission mapping despite the old s407 runtime warning, s2131
-confirmed the `0x800C41B0` mission mapping, s2141 confirmed the
-`0x800BF790` mission mapping, s2142 confirmed the `0x800C64B0` mission
-mapping, s2143 confirmed the `0x800E71D0` mission mapping, s2144
-confirmed the `0x800EC110` mission mapping, s2145 confirmed the
-`0x800EC6F0` mission mapping, s2146 confirmed the
-`0x800ED150` mission mapping, and s2147 confirmed the
-`0x800FEF10` mission mapping, each with unchanged
-boundaries and callers. Those warnings remain reasons to validate future
-relocations, not evidence of a static boundary conflict. M3 resumes only as an idiom-class audit or with a new
+sweep are closed at their stated scopes. s2130–s2147 confirmed the
+mission-overlay mappings at `0x800AE3F0`, `0x800C41B0`, `0x800BF790`,
+`0x800C64B0`, `0x800E71D0`, `0x800EC110`, `0x800EC6F0`, `0x800ED150`,
+and `0x800FEF10`, each with unchanged boundaries and callers.
+s2148 confirmed the menu-overlay mapping at `0x800B2630` /
+`buildFormatMessageGlyphBuffer` the same way. Those warnings remain
+reasons to validate future relocations, not evidence of a static
+boundary conflict. M3 resumes only as an idiom-class audit or with a new
 discriminator. M4 accumulator/beam evidence rules out the old shade-lane
 theory but is not pixel ground truth. The remaining generated placeholders
 are semantic holds or intentional non-sync entries.
@@ -802,9 +749,13 @@ ELF/generated tree. s2147 selected the static mission mapping for
 `func_800FEF10`/`stepObjectOrientationTowardTarget`, with the same start,
 size `0xEF0`, end boundary `0x800FFE00`, and both callers in the final
 ELF/generated tree. Mission-overlay human-versus-placeholder mismatches
-are exhausted; the next work unit is the first remaining menu-overlay
-instance of the same two-line pattern. No runtime or default-arm change
-follows.
+are exhausted. s2148 selected the static menu mapping for
+`func_800B2630`/`buildFormatMessageGlyphBuffer`, with the same start,
+size `0x468`, end boundary `0x800B2A98`, leftover `fake_func_800B2628`
+unchanged, and all three callers in the final ELF/generated tree. The
+next work unit is `func_800B3824`/`buildLevelSelectTextTextures`, the
+last remaining human-in-main versus placeholder-in-overlay mismatch.
+No runtime or default-arm change follows.
 
 ## Method and safety rules
 

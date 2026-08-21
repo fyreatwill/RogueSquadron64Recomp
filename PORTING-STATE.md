@@ -101899,3 +101899,61 @@ is the first remaining menu-overlay instance of the same two-line pattern.
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only moved a generated symbol mapping and compared ELF
 and generated names.
+
+## Session 2148 (2026-08-21) — repaired the format-message glyph-buffer symbol mapping
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `54,750` bytes, so this was not a
+maintenance iteration. The last-15 session-title check was not an all-sweep
+run (s2133–s2140 were M5), so the bounded generated-symbol unit remained
+eligible. Soak-queue intake was historical 2026-08-18 rows already consumed;
+no new recipes. The prescribed unit was a no-edit versus two-line source
+mapping comparison for `func_800B2630` -> `buildFormatMessageGlyphBuffer`;
+no game run, runtime change, audio, task, guard, or mitigation behavior was
+involved.
+
+The no-edit make-ELF/N64Recomp/fixup sequence completed successfully and left
+the placeholder in the generated prototype, definition, overlay entry, and
+ELF. The baseline ELF row was `.ovl.menu`, start `0x800B2630`, size
+`0x468`, ending at unchanged `allocFormatTextElement` `0x800B2A98`;
+`buildFormatMessageGlyphBuffer` was absent from the ELF. The leftover
+`fake_func_800B2628` at `0x800B2628` size `0x8` was unchanged. That refutes
+`H-RegenerationStale` without a boundary conflict. The prescribed two-line
+source move then removed the human mapping from `main_overlay.txt` and
+renamed the single `menu_overlay.txt` entry. The second
+make-ELF/N64Recomp/fixup/CMake sequence completed successfully and linked
+`RogueSquadron64Recomp`; the host binary exports
+`_buildFormatMessageGlyphBuffer` and has no leftover `func_800B2630`.
+
+The treatment table showed one global ELF function named
+`buildFormatMessageGlyphBuffer` in `.ovl.menu` at `0x800B2630`, size
+`0x468`, ending at unchanged `0x800B2A98`. The generated prototype,
+definition, and overlay entry used the human name; all three generated
+callers, inside `tickFormatMessageWorker` at `funcs_30.c:14594`
+(`jal 0x800B2630`), `buildScaledFormatTextElement` at `funcs_30.c:16910`
+(`jal 0x800B2630`), and `processAndDisposeFormatMessage` at
+`funcs_30.c:17133` (`jal 0x800B2630`), also resolved to it. Zero leftover
+`func_800B2630` remained in the generated tree. Adjacent leftover
+`fake_func_800B2628` and `allocFormatTextElement` were unchanged. Baseline
+and treatment rows are in `s2148_baseline_table.txt` and
+`s2148_treatment_table.txt`. This selects `H-MenuMapping` and finds no
+static boundary or caller conflict. The s419 `m4_known_bad.txt` live-crash
+warning (`last-guest-pc=0x800290d4`) remains a runtime-risk record, not
+evidence of a static conflict. No game soak was run: the source/ELF/generated
+boundary table was the work-unit discriminator. No runtime, mitigation, or
+task behavior changed.
+
+A post-move census of human-in-main versus placeholder-in-overlay mismatches
+found one remaining row: `func_800B3824` -> `buildLevelSelectTextTextures`
+at `0x800B3824` size `0x2D8`, ending at unchanged
+`buildScaledFormatTextElement` `0x800B3AFC`, with one generated caller
+inside `initVwingHudAndSlotState` at `jal 0x800B3824`. The next sweep
+lead must repeat the source/ELF/boundary and caller collision check before
+editing. The s419 `m4_known_bad.txt` record for that name is a live-crash
+warning (`last-guest-pc=0x8000b650`), not a static-boundary skip. After that
+row, the two-line overlay-move pattern is exhausted.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only moved a generated symbol mapping and compared ELF
+and generated names.
