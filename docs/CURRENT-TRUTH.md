@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2085 (2026-08-20);
-behavioral and source evidence is current through s2085.
+for exact commands and probe rows. Maintained in Session 2086 (2026-08-20);
+behavioral and source evidence is current through s2086.
 
 ## Current state
 
@@ -50,6 +50,21 @@ behavioral and source evidence is current through s2085.
   `H-SourceArgsAlreadyOutOfRange` at the source-entry scope. It does not say
   whether the values are legitimate ABI arguments or corruption upstream of
   the call, and it authorizes no host or guest mitigation.
+- s2086's first retail recipe was unevaluable because it omitted the video
+  plugin and stayed at 320 VI; the fixed Rice recipe passed the whole-RDRAM
+  control, reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`,
+  and kept both PC watches armed. Retail executed `0x8008FAAC` 68,624 times
+  (exec-prev `0x800902CC` 68,443, `0x8009024C` 162, and `0x8002BEEC` 19),
+  but never executed the exact `0x800903F0` callsite. The generated
+  crosswalk shows that caller derives `a1` from voice-slot `+0x34` plus an
+  aligned sample offset, derives `a2` as an aligned byte extent, and passes
+  `a3` as the slot's `+0x34` base. The callee copies `a1`/`a2` into range
+  endpoints and extent arithmetic and does not load through `a1`; companion
+  symbols identify this as the per-voice resample path into an output buffer.
+  This selects `H-CalleePointerContract` at ABI scope, refuting a scalar/tag
+  relabel and an alternate-register explanation. The exact port-only
+  `0x800903F0` path remains unqualified by retail and its upstream writer is
+  still open; no runtime behavior changed.
 - Retail ground truth independently passes the whole-RDRAM positive control,
   reaches title and hangar, and shows slot-0 status `00 -> 01 -> 02 -> 03 ->
   00`. Exact E50 writes are owned by named retail audio-region functions;
@@ -83,14 +98,15 @@ behavioral and source evidence is current through s2085.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 caller/provenance audit.** The source/host join selected
-   `H-SourceArgsAlreadyOutOfRange`: seven target-phase source entries receive
-   spans outside `[0,0x800000)`. Audit the active `0x800903F0` caller and the
-   callee's generated/MIPS ABI use against a fresh retail ground-truth control.
-   Distinguish a legitimate non-DRAM argument or mislabeled field from a
-   caller-side corruption before adding any new runtime witness. Do not change
-   waits, guards, task fields, output routing, canary handling, gate stores, or
-   host behavior.
+1. **M5 voice-output-base provenance.** The caller/callee audit selects
+   `H-CalleePointerContract`: the active port edge constructs the callee's
+   range endpoint from voice-slot `+0x34`, while the exact edge is absent in
+   retail. Census every generated writer of the voice-slot `+0x34` field and
+   compare it with a fresh retail writer-PC control over the companion voice
+   array. Distinguish a valid output-base writer followed by port-only slot
+   corruption from a scalar/mislabeled field or an invalid writer. No wait,
+   guard, task-field, output-routing, canary, gate, or host behavior change is
+   authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -165,6 +181,15 @@ arguments include values such as `0x6C676672` and `0x77696E67`. s2085's join
 shows all seven source intervals are outside the RDRAM domain and have no
 same-phase host-range intersection; source/host causality is therefore not
 admissible until the caller/callee argument semantics are established.
+s2086's static ABI crosswalk now establishes that `fillSampleStreamRange`
+consumes `a1` as an address/range endpoint and `a2` as an extent: the callee
+uses them in allocator-boundary comparisons and node updates, without a
+direct load through `a1`. `musyxRenderVoiceSamples` constructs `a1` from the
+voice slot's `+0x34` base and an aligned sample offset, and the companion
+mapping describes the path as writing into an output buffer. Retail reaches
+the callee through `0x8009024C`/`0x800902CC` but not the port-active
+`0x800903F0` edge, so the next boundary is the `+0x34` writer rather than the
+callee's parameter labeling.
 
 ### M3, M4, and generated symbols
 
@@ -239,7 +264,8 @@ milestones migrated during this maintenance pass; s2080 adds the fill-function
 source crosswalk, s2081 adds the host-boundary witness gap, s2082 repairs the
 generated source anchor, s2084 closes the target-phase reachability gap, and
 s2085 rejects the source/host span join at this scope because all source
-arguments are out of range. The chronological ledger is
+arguments are out of range, and s2086 establishes the caller/callee ABI scope
+while leaving the voice-slot writer boundary open. The chronological ledger is
 still the source for exact run commands, counts, and rejected retries.
 
 ## Method and safety rules

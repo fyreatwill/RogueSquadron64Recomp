@@ -99379,3 +99379,53 @@ no mitigation or causal host conclusion was added.
 Audit the active caller/callee argument contract against a fresh retail PC
 control before adding any new port witness. See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-caller-argument-provenance`.
+
+## Session 2086 (2026-08-20) — audited fill-range caller/callee ABI against retail
+
+### Work unit
+
+Ran the planned M5 caller/provenance audit without a port build or runtime
+change. The first oracle arm was invalid: its command omitted the video plugin,
+reported `No video plugin attached`, stayed at 320 VI, and produced zero hits
+for both target PC watches. I ran the fixed Rice recipe in the same iteration
+with the whole-RDRAM positive control, the exact `0x800903F0` caller watch, and
+the `0x8008FAAC` callee watch.
+
+The fixed retail run passed the positive control at 10,000 writes, reached
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and ran 3,875 VI in
+65 seconds. The callee watch recorded 68,624 hits with exec-prev callers
+`0x800902CC` = 68,443, `0x8009024C` = 162, and `0x8002BEEC` = 19. The exact
+`0x800903F0` caller watch recorded zero hits despite the valid controls.
+
+### Static crosswalk and result
+
+The generated definition and companion symbols place
+`fillSampleStreamRange` at `0x8008FAAC` with size `0x500`, and
+`musyxRenderVoiceSamples` at `0x8008FFAC`. At the active `0x800903F0` edge,
+the caller sets `a0 = s0 + 0x28`, loads the sample-position value from its
+stack frame into `a1`, aligns and doubles it, then adds `MEM_W(s1, 0x34)` in
+the delay slot. It forms `a2` from the frame/output structure's `+0x48` value
+plus the stack-frame extent, aligns and doubles that value, and loads `a3 =
+MEM_W(s1, 0x34)`. The companion mapping describes this function as the
+per-voice resample/mix kernel feeding an output buffer.
+
+The callee copies `a1` to `t4` and `a2` to `t2`. It uses `t4` and `t4+t2` in
+allocator-block boundary comparisons and writes the resulting ranges into
+stream-block nodes; it uses `a3` as the block discriminator. There is no
+direct load through `a1` in the function body, and the copied `a0` is not used
+by the visible range logic. This is an address/range-endpoint contract, not a
+scalar/tag or alternate-register contract.
+
+The discriminator selects **H-CalleePointerContract** at ABI scope. It rules
+out H-LegitimateNonDramArgs and H-AlternateRegisterContract, while the retail
+null at `0x800903F0` rules out treating that exact port-active edge as a
+retail callsite. Retail callee activity through the other callsites leaves
+the voice-slot `+0x34` writer/copy as the next open boundary. The prior port
+values outside RDRAM remain unexplained; no mitigation was added.
+
+### Next
+
+Census every generated writer of the voice-slot `+0x34` field and compare it
+with a fresh retail writer-PC control over the companion voice array. See
+`scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-voice-output-base-provenance`.
