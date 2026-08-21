@@ -1,53 +1,77 @@
-# NEXT work unit (s2101)
+# NEXT work unit (s2102)
 
 HYPOTHESIS-ID: m5-audio-image-task-contract
 
 ## Work unit
 
-Ask the independent retail oracle whether the exact physical destinations seen
-in s2100's nonzero hangar image task are retail-owned audio output/metadata
-buffers. Watch the whole RDRAM positive control first, then the exact port
-destination spans:
+Add one host-only, regeneration-stable join between the existing image-stage
+rows and the PCM callback. Extend the existing `rs64_audio_image_stage` path
+in `src/main/main.cpp` to retain stage-2 (`0x6F0`) and stage-3 (`0xCB0`)
+records keyed by audio ordinal, row, VI phase, destination, length, FNV, and
+nonzero count. At the existing PCM callback boundary, join every source and
+consumer row against those records and report exact destination/payload
+identity plus event order relative to task completion. This is observation
+only: do not change task fields, DMA arguments, output routing, canary,
+dispatch, waits, queue policy, or default audio behavior.
 
-- `0x166A50..0x167350`: the three nonzero `0x6F0` writebacks from the sampled
-  task (`0x166A50`, `0x166D50`, `0x167050`);
-- `0x178D80..0x178F18`: the sampled `0xCB0` writeback destination.
-
-Keep the run phase-gated by the retail title/hangar VI transitions, collect
-writer-PC histograms and post-store values for both exact watches, and do not
-change the port or add a runtime instrument before this ground-truth result.
+The independent retail ground-truth gate is already satisfied by s2101:
+whole-RDRAM control and both target VIs fired, and neither sampled exact
+destination range had a phase-gated retail write. Do not add another broad
+retail watch before this port join.
 
 ## Competing hypotheses and discriminator
 
-- **H-RetailExactSame** — retail writes the exact physical destination spans
-  in title or hangar, with named PCs and values compatible with the port's
-  observed nonzero `0x6F0`/zero `0xCB0` rows.
-- **H-RetailDifferentEnvelope** — retail audio activity is real, but its
-  writes avoid both exact spans; the port destination contract is not yet
-  qualified by retail.
-- **H-RetailMetadata** — retail hits an exact span, but post-store values and
-  writer ownership identify control/metadata rather than PCM output.
-- **H-PortOnlyDestination** — the port-only exact hit is absent after both
-  target phases, leaving an ABI/field interpretation boundary rather than a
-  retail ownership match.
+- **H-ImageDestIsPCM** — a nonzero stage-2 or stage-3 row matches a PCM
+  consumer by exact RDRAM destination, byte length, FNV, and nonzero count;
+  the task completion event precedes the consumer event. This identifies the
+  image destination as the playback buffer at the sampled scope.
+- **H-Stage3IsPCM** — stage 2 does not match, but stage 3 does. This identifies
+  the final `0xCB0` writeback as the consumer-facing buffer and stage 2 as an
+  intermediate or metadata path.
+- **H-ABI-Destination** — stage rows are nonzero and task/DMA rows remain
+  live, but the PCM source/consumer uses a different address or payload and
+  no exact stage match exists. This selects a task-field/destination
+  interpretation boundary without changing the field.
+- **H-ConsumerBoundary** — an exact stage row exists but no post-task PCM
+  consumer is observed, or the consumer is zero/ordered before the task.
+  This keeps the remaining boundary at callback/queue handoff rather than
+  explaining it as an input or transform loss.
 
-The discriminating table is one oracle run with rows keyed by watch index,
-physical address, VI phase, writer PC, and post-store word. Whole-RDRAM hits
-must be nonzero and the run must reach title `1024 @ 0x00790400` and hangar
-`512 @ 0x006AB400`. Exact hits with matching writer/value envelopes select
-`H-RetailExactSame`; exact hits whose values are control-like select
-`H-RetailMetadata`; zero exact hits after both qualified phases retain
-`H-RetailDifferentEnvelope`/`H-PortOnlyDestination` as the open boundary.
-Do not infer from the broad windows or from a zero before a target phase.
+The discriminating table is one same-build A/B collection with rows keyed by
+arm, ordinal, phase, stage, destination, length, stage FNV/nonzero, callback
+kind, callback RDRAM, callback length, callback FNV/nonzero, and event order.
+The unset-env control must reach title and hangar and fire the existing route
+and PCM positive controls. The treatment must reach both target VIs and emit
+stage rows; otherwise the treatment arm is unevaluable and no ABI conclusion
+is allowed. Report exact matches, stage-only rows, consumer-only rows, and
+ordering violations separately.
 
-## Exact command
+## Build and run
+
+Implement the table in `src/main/main.cpp` and the smallest needed declaration
+or event helper in the existing audio-join code. If generated output needs a
+new callsite, update `tools/fixup_factor5_ucode.py` and run the required
+regeneration order before CMake; do not hand-edit generated output. Build both
+arms together:
 
 ```sh
-tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 70 --hit-cap 64 --watch-write 0x0:0x800000 --watch-write 0x166A50:0x167350 --watch-write 0x178D80:0x178F18 --first-watch 0 --pc-hist-watch 1 --pc-hist-watch 2 --post-value-watch 1 --post-value-watch 2 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/oracle_s2101_exact_destinations.log 2>&1
-rg -n '\[oracle\] (done|post-value snapshot|watch write)|^\[vi\].*(WIDTH|origin=0x006ab|origin=0x007904)' /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/oracle_s2101_exact_destinations.log
+cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-If the exact watches are empty despite the positive control and both target
-VIs, retain the port-only boundary and design the next task/consumer join;
-do not alter output routing, task fields, canary, gate, wait, guard, queue
-policy, or default dispatch.
+Run the qualified control and opt-in treatment concurrently from separate
+shells, using the existing title-to-hangar driver and the reduced screenshot
+probe. Use `PROBES_OVERRIDE='p1:start:0'`, keep
+`ROGUESQ_SPIN_YIELD=1`, and arm `ROGUESQ_LOG_ALL=1`,
+`ROGUESQ_LOG_PCM_SANITY=1`, `ROGUESQ_LOG_PCM_BOUNDARY=1`,
+`ROGUESQ_LOG_WAITFORSLOT_GUARD=1`, `ROGUESQ_LOG_AUDIO_DRAIN=1`, and
+`ROGUESQ_LOG_AUDIOTICK_TRACE=1` in both arms. The control leaves
+`ROGUESQ_AUDIO_UCODE` unset; the treatment sets it to `1`:
+
+```sh
+env GAME_EXTRA_ENV='ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2102_image_join_control 30 12
+env GAME_EXTRA_ENV='ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2102_image_join_treatment 30 12
+```
+
+Capture each run's log under `scratch/agent/` and kill the whole process
+group with SIGKILL if a driver remains after its watchdog. A null is valid
+only with the same-run route positive controls and target VI markers.

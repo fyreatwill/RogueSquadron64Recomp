@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2100 (2026-08-20);
-behavioral and source evidence is current through s2100.
+for exact commands and probe rows. Maintained in Session 2101 (2026-08-20);
+behavioral and source evidence is current through s2101.
 
 ## Current state
 
@@ -44,6 +44,18 @@ behavioral and source evidence is current through s2100.
   is not a discriminator for the source result. No output routing, task-field,
   canary, gate, wait, guard, queue-policy, or default-dispatch behavior
   changed.
+- s2101's retail exact-destination table passed the whole-RDRAM positive
+  control (`12712` writes) and reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`. The ranges `0x166A50..0x167350` and
+  `0x178D80..0x178F18` received `2304` and `408` writes respectively, all
+  attributed to retail PC `0x800078EC` across the lifetime. Both final
+  snapshots were nonzero (`2275/2304` and `20/408` bytes), but the
+  phase-gated post-store samplers recorded zero samples in both target
+  phases. This is a single-source retail result: the exact hits are
+  pre-target initialization, not a qualified retail owner/value envelope for
+  s2100's hangar task. It retains the port-only destination boundary and
+  authorizes no output-routing, task-field, canary, gate, wait, guard, queue,
+  or default-dispatch change.
 - s2088's fixed retail oracle run passed the whole-RDRAM positive control
   (`102276129` writes), reached title `1024 @ 0x00790400` and hangar
   `512 @ 0x006AB400`, and sampled both exact candidate writers after the
@@ -277,15 +289,18 @@ as active work items.
    only at the title scope. s2100's table proves that the treatment can carry
    nonzero source through the transform into nonzero `0x6F0` DMA payloads in
    hangar, while the existing PCM consumer join remains incomplete and the
-   final `0xCB0` block is zero in the observed sample. The next unit is one
-   independent retail oracle table for the exact physical destinations seen
-   in that sample (`0x166A50..0x167350` and `0x178D80..0x178F18`), with a
-   whole-RDRAM positive control, title/hangar VI gate, writer-PC histogram,
-   and post-store values. A matching retail writer/value envelope supports a
-   legitimate output/metadata contract; retail writes only to a different
-   envelope support `H-ABI-Destination`; no exact retail hits retain the
-   port-only boundary. Do not change output routing, task fields, canary,
-   gate, wait, guard, queue policy, or default dispatch.
+   final `0xCB0` block is zero in the observed sample. s2101's single-source
+   retail oracle result found no phase-gated writes to either sampled exact
+   destination range; its lifetime hits were pre-target initialization by
+   `0x800078EC`. The next unit is one bounded port-side stage-to-consumer
+   join for image stages 2/3 and the PCM callback, keyed by task ordinal and
+   VI phase plus exact destination, length, FNV, nonzero count, and event
+   order. An exact post-task stage-to-consumer match selects
+   `H-ImageDestIsPCM`; a nonzero stage with a different callback address or
+   no match selects `H-ABI-Destination`/`H-ConsumerDifferentField`; an exact
+   address with no valid post-task consumer preserves the host callback
+   boundary. Do not change output routing, task fields, canary, gate, wait,
+   guard, queue policy, or default dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -632,6 +647,18 @@ and matching nonzero DMA payload counts. This selects `H-InputZero` only for
 title, rejects transform annihilation and DMA write loss for the sampled
 hangar task, and leaves the exact retail destination/consumer meaning open.
 The next discriminator is an exact retail watch of those physical ranges.
+
+s2101's retail exact-destination table was run twice because the first command
+repeated the singular `--pc-hist-watch` option; the corrected run selected
+watch 1 and the first run selected watch 2. Both runs passed the whole-RDRAM
+positive control and both target VI gates. The exact ranges received 2304 and
+408 writes, respectively, all from retail PC `0x800078EC`, but both
+phase-gated post-store samplers had zero target-phase samples. Final snapshots
+were nonzero, so the ranges are not untouched; the qualified result is that
+their writes precede the title/hangar gate. This is single-source oracle
+evidence, not a complete ABI explanation. The next discriminator is a
+port-side stage-to-consumer join keyed by exact destination and payload
+identity.
 
 ## Method and safety rules
 

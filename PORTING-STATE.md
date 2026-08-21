@@ -100028,3 +100028,46 @@ control, target VI trace, writer-PC histograms, and post-store values.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+## Session 2101 (2026-08-20) — qualified retail timing of image destinations
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 43788 bytes, so this was not a
+maintenance iteration. Per the M5 work unit, the independent retail oracle
+was run before any port instrumentation. The first exact-destination command
+passed the whole-RDRAM positive control with `12712` writes, reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and recorded exact writes
+to both sampled ranges: `2304` writes in `0x166A50..0x167350` and `408` in
+`0x178D80..0x178F18`. Both final snapshots were nonzero (`2288/2304` and
+`20/408` bytes). Its singular `--pc-hist-watch` option was repeated, so only
+watch 2 received the requested writer histogram: PC `0x800078EC`, `408`
+writes. Both phase-gated post-store samplers reported zero samples.
+
+The fixed repeat used one `--pc-hist-watch 1` option, retained both post-value
+watches, and again passed the positive control (`12712` writes), title and
+hangar gates. It reproduced `2304` writes to the first range and `408` to the
+second; watch 1's complete writer histogram was PC `0x800078EC`, `2304`
+writes. The final snapshots were nonzero (`2275/2304` and `20/408` bytes),
+while both phase-gated post-store samplers again reported zero samples. The
+two exact ranges therefore have lifetime retail initialization writes, but no
+qualified title/hangar writer/value envelope in either run. This is
+single-source oracle evidence, not a complete ABI explanation.
+
+The queued-soak tail was also consumed. s1949 and s1950 independently
+reproduced hangar reach followed by the short `filterVoiceSampleBlock+220`
+crash; s1971 was a zero-second `rc=127` launch failure; s1972 held 300
+seconds with 80 frames and no crash; and s1974 reached its 600-second cap with
+`rc=137`. These passive verdicts do not discriminate the image destination
+contract and caused no runtime change.
+
+This selects `H-PortOnlyDestination` at the target-phase scope and rejects
+`H-RetailExactSame` for the sampled hangar contract. It does not distinguish
+the port's ABI field from a different consumer buffer, and it does not prove
+the pre-target retail writer's semantic role. The next discriminator is a
+port-side stage-2/stage-3 to PCM source/consumer join keyed by exact
+destination and payload identity. No runtime behavior, task field, output
+routing, canary, gate, wait, guard, queue policy, or default dispatch changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.
