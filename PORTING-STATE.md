@@ -100636,3 +100636,31 @@ ORIGIN: diagnostic-only four-arm coverage experiment; the observed
 Run the phase-keyed C88=0 stub/image contract A/B described in
 `scratch/agent/NEXT.md` under
 `HYPOTHESIS-ID: m5-image-task-contract`.
+
+## Session 2117 (2026-08-21) — retried C88=0 image-task contract with coverage failure
+
+The planned same-build phase-keyed C88=0 stub/image A/B ran concurrently with
+`B40=0`, `SPIN_YIELD=1`, the existing LLE-forced wrapper, and the batched
+task/PCM/wait controls. The stub control reached title
+`1024 @ 0x00790400` at 49.3s and hangar `512 @ 0x006AB400` at 78.7s. Its
+positive controls fired: 3006 LLE tasks, 87 stub audio dispatches, 2868 ABI,
+DMA, and join rows, 4271 source PCM rows, 4269 consumer rows, and 48 canary
+checks. Its target stub rows correctly showed the silent control contract
+(`dma_count=0`, `canary_ok=1`, `break_pc=0`, `exit=1`).
+
+The image arm also passed its positive controls, with 557 LLE tasks, 48 real
+audio dispatches, and 48 canary checks, but stopped in the pre-target 640-wide
+phase at 7.8s with a bus error in `renderFlatMeshFaceGroup+17288` and last
+guest PC `0x8000e7fc`. It emitted no target ABI, DMA, join, or PCM rows. The
+phase-keyed contract discriminator therefore did not run: this is a coverage
+failure, not a selection among task-exit, output-route, writeback, or invalid
+output hypotheses. No task field, output routing, exit mapping, DMA, canary,
+slot, PCM, wait, guard, queue, or default behavior changed.
+
+ORIGIN: diagnostic-only retry; the pre-target renderer bus error was recorded,
+not mitigated or converted into a value skip.
+
+### Next
+
+Retry the phase-keyed C88=0 stub/image contract A/B described in
+`scratch/agent/NEXT.md` under `HYPOTHESIS-ID: m5-image-task-contract`.

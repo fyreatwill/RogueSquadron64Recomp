@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2116
-(2026-08-21); behavioral and source evidence is current through s2116.
+authoritative for exact commands and probe rows. Maintained in Session 2117
+(2026-08-21); behavioral and source evidence is current through s2117.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -63,6 +63,15 @@ This file is intentionally compact. The s2080–s2108 archive is in
   this selects `H-RouteRecipeFailure` because one stub control missed target
   coverage; it does not select an image C88 hypothesis and reopens the C88=0
   contract A/B.
+- The s2117 prescribed C88=0 contract pair was a coverage failure. The stub
+  control reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`,
+  with 3006 LLE tasks, 87 stub dispatch controls, and target stub rows. The
+  image arm passed its LLE/audio positive controls (557 LLE tasks and 48 real
+  audio dispatches) but stopped in the pre-target 640-wide phase at
+  `renderFlatMeshFaceGroup+17288`, guest PC `0x8000e7fc`, after a bus error.
+  It emitted no target ABI, DMA, join, or PCM rows. This selects no contract
+  hypothesis; absent image rows are coverage failure, not evidence for a
+  destination, writeback, or output-validity claim.
 - The title path is separately selected as `H-InputZero`: title-stage input,
   transform, and DMA payloads were zero. A hangar sample had nonzero input,
   transform, and matching DMA payload, rejecting transform annihilation and
@@ -100,11 +109,13 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 image-task contract.** Run the phase-keyed C88=0 stub/image A/B.
-   s2116 reached target coverage in both C88 image arms and the C88=0 stub
-   arm, while the C88=1 stub control missed it. Compare task ABI, generated
-   DMA, stage/PCM joins, canary, wait, queue, and exit rows at the same target
-   phase; no output or exit mapping change is authorized.
+1. **M5 image-task contract.** Retry the phase-keyed C88=0 stub/image A/B
+   using the same proven LLE/spin route recipe. s2117's stub reached title and
+   hangar, but the image arm crashed at 640 before any target contract row.
+   Treat that arm as coverage failure and do not interpret empty fields.
+   Compare task ABI, generated DMA, stage/PCM joins, canary, wait, queue, and
+   exit rows only when both arms reach the same target phase; no output or
+   exit mapping change is authorized.
    Preserve generated DMA, task fields, canary, slot, PCM, wait, and queue
    behavior; no output or exit mapping change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
