@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2123
-(2026-08-21); behavioral and source evidence is current through s2123.
+authoritative for exact commands and probe rows. Maintained in Session 2124
+(2026-08-21); behavioral and source evidence is current through s2124.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -180,20 +180,32 @@ This file is intentionally compact. The s2080–s2108 archive is in
   select the port pump arm, remove a wait guard, or authorize any runtime
   change; the evidence is an independent retail line plus generated/companion
   instruction mapping.
+- The s2124 same-build port pump A/B was a coverage failure. Pump-on passed
+  the LLE/task controls, reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and at phase 12 emitted the wait contract through
+  `waitForAnyAudioSlot` return plus audio-drain enter/exit. It then hit the
+  existing `do_rom_read` crash family, last guest PC `0x80001B08`.
+  Pump-off reached only 640-wide phases, emitted pre-target post-wait and
+  drain controls, and crashed at the existing `0x8000B650` breadcrumb before
+  title. No target-phase countdown, spin-2, or pump-stall rows were present
+  for pump-off. This selects `H-CoverageFailure`; it does not select a pump
+  hypothesis or authorize a wait/guard change.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 port completion-wait A/B.** The s2123 retail census selected
-   `H-RetailWaitContract` and identified the guest countdown, worker flag,
-   status table, and named wait/service callers. Run one same-build,
-   phase-keyed port census holding the current audio implementation fixed:
-   pump-on versus `ROGUESQ_AUDIO_WAIT_NOPUMP=1`. Compare countdown seed/exit,
-   second-spin activity, worker/status transitions, guard fires, and title /
-   hangar coverage. Do not change a wait or guard until this discriminator is
-   complete.
+1. **M5 port completion-wait A/B with repaired phase coverage.** The s2123
+   retail census selected `H-RetailWaitContract`, but s2124's port pair was
+   `H-CoverageFailure`: pump-on reached the target route while pump-off died
+   at 640 before any target wait rows. Re-run one same-build, phase-keyed
+   pair with `ROGUESQ_SPIN_YIELD=1` in both arms, holding the current audio
+   implementation fixed: pump-on versus `ROGUESQ_AUDIO_WAIT_NOPUMP=1`.
+   Require title and hangar controls in both arms before comparing countdown
+   seed/exit, second-spin activity, worker/status transitions, drain/synth
+   rows, and guard fires. Do not change a wait or guard until this
+   discriminator is complete.
 2. **Generated-symbol renaming sweep.** M5's port census selected
    `H-PortKeyOnNormal` and leaves all audio guards unchanged. Resume the
    bounded companion-to-generated symbol sweep with one provable metadata
@@ -386,7 +398,8 @@ the causal writer and reversed/suppressing gate polarity at the sampled
 route; s2121 supplied single-source retail zero-hit evidence for the eight-site
 key-on class; and s2122 supplied the independent port normal-path line without
 changing any guard. s2123 supplied the independent retail completion-wait
-line and leaves the port pump/guard A/B as the next M5 discriminator.
+line; s2124 supplied the first port pump A/B but failed target coverage,
+leaving the phase-repaired pump/guard A/B as the next M5 discriminator.
 
 ## Method and safety rules
 

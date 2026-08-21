@@ -100901,6 +100901,40 @@ writer, task field, queue, or mitigation changed.
 
 ### Next
 
-Run the phase-keyed port pump A/B in `scratch/agent/NEXT.md`, keeping the
-current audio implementation fixed and comparing the shipped pump-on path
-against `ROGUESQ_AUDIO_WAIT_NOPUMP=1`.
+## Session 2124 (2026-08-21) — ran the port completion-wait pump A/B
+
+The planned M5 same-build A/B built successfully and launched both port arms
+concurrently with the current audio implementation fixed. The control left
+`ROGUESQ_AUDIO_WAIT_NOPUMP` unset; the treatment set
+`ROGUESQ_AUDIO_WAIT_NOPUMP=1`. Both arms carried the existing phase, LLE,
+audio-drain, wait, synth, return, guard, and voice-chain diagnostics.
+
+Pump-on passed the driver controls (`2907` LLE tasks), reached title
+`1024 @ 0x00790400` at 50.4s and hangar `512 @ 0x006AB400` at 80.1s, and
+continued through phase-12 rows. At the target wait, the log recorded
+`wait-entry`, `wait-pre-tick`, `tick-entry`, `wait-post-tick`,
+`wait-pre-any-slot`, `wait-post-any-slot`, `waitForAnyAudioSlot` return, and
+audio-drain enter/exit. It then terminated in the existing `do_rom_read`
+crash family, with last guest PC `0x80001B08`.
+
+Pump-off returned driver code 4 while waiting for the 1024-wide phase. It
+reached only 640-wide phases, where the pre-target post-wait and audio-drain
+controls fired once, but it produced no title/hangar phase, target countdown,
+spin-2, or pump-stall rows. Its terminal crash carried the existing last
+guest-PC breadcrumb `0x8000B650`.
+
+This selects `H-CoverageFailure`: the pump-on arm supplied target wait rows,
+but the pump-off arm never reached a target phase, so the missing pump-off
+rows cannot distinguish a required pump, an irrelevant pump, or a second flag
+owner. The result rules out interpreting this pair as evidence for any wait,
+guard, task-field, or output change. No mitigation or runtime change landed.
+
+ORIGIN: same-build port A/B logs and driver phase gates; no corruption value
+or writer was modified.
+
+### Next
+
+Run the phase-repaired port pump A/B in `scratch/agent/NEXT.md`, keeping the
+current audio implementation fixed and adding `ROGUESQ_SPIN_YIELD=1` to both
+arms before comparing the shipped pump-on path against
+`ROGUESQ_AUDIO_WAIT_NOPUMP=1`.
