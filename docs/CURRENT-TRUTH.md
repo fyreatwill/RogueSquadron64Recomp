@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2094 (2026-08-20);
-behavioral and source evidence is current through s2094.
+for exact commands and probe rows. Maintained in Session 2095 (2026-08-20);
+behavioral and source evidence is current through s2095.
 
 ## Current state
 
@@ -115,6 +115,18 @@ behavioral and source evidence is current through s2094.
   `H-PostTaskRouteBoundary` at return scope, proves the wrapper positive
   control, and leaves task ABI, DMA, slot, PCM, and downstream queue causality
   unevaluable. No runtime behavior changed.
+- s2095's fixed retail oracle again passed its whole-RDRAM positive control
+  (`10000` callbacks before watch removal), reached title `1024 @ 0x00790400`
+  and hangar `512 @ 0x006AB400`, and retained the qualified gate rows. The
+  same-build route table showed complete return → `run-task-return` →
+  `sp-complete-enter` → `sp-complete-return` sequences for both the
+  `musyx_stub` control and the `factor5_ucode_b` treatment. The treatment
+  produced 1107 line-start wrapper rows and 3324 route rows, but no target VI;
+  it bus-faulted in `viRetraceHandlerThread` with last guest PC `0x8000B650`.
+  The control retained the same ordered route sequence and reached both target
+  VIs. This selects `H-SPRouteQueued` at post-return scope and moves the next
+  discriminator to SP external-queue delivery versus the guest SP consumer;
+  no queue, gate, wait, guard, output, or default-dispatch behavior changed.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -183,16 +195,17 @@ behavioral and source evidence is current through s2094.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 post-return completion/queue boundary.** Retain the audio-arm return
-   wrapper and add one bounded runtime route table around `run_task` success,
-   task-thread `sp_complete`, and SP-message enqueue. Build the control and
+1. **M5 SP queue/guest-consumer boundary.** Retain the audio-return and
+   post-return route table. Add one bounded source-preserving table for the SP
+   external enqueue, game-thread delivery attempt, requeue/full result, and
+   matching guest `osRecvMesg` consumer row. Build the control and
    `ROGUESQ_AUDIO_UCODE=1` treatment together and retain the retail oracle
-   positive control, target VI gates, and passive probes. Matching treatment
-   return → `run_task` success → `sp_complete`/enqueue rows select a downstream
-   queue or guest-consumer boundary; a missing post-return row selects the task
-   thread boundary; reaching both target VIs reopens the ABI/slot/PCM table.
-   The control must show the same route sequence as its positive control. No
-   gate, wait, guard, host output, or default dispatch change is authorized.
+   positive control, target VI gates, and passive probes. A treatment enqueue
+   with no delivery selects the external-queue boundary; delivery with a full
+   or requeued SP queue selects queue capacity/scheduling; successful delivery
+   without a matching guest receive selects the guest SP consumer. The control
+   must show the same ordered queue sequence. No gate, wait, guard, host
+   output, default dispatch, or task ABI change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -264,8 +277,12 @@ writes and the worker-flag word has named writers with post-store values
 gate writer/source mapping but does not yet establish the port's task-exit or
 PCM contract. s2094's wrapper proves that both arms return `Broke` in the
 observed pre-target run, but neither concurrent arm reached a target VI; the
-next boundary is the runtime task-completion and SP-message route. No gate or
-wait change is authorized.
+next boundary is the runtime task-completion and SP-message route. s2095's
+same-build route table then proves the control and treatment cross `run_task`
+and the task-thread SP completion return in order. The treatment still misses
+both target VIs, so the remaining boundary is SP external-queue delivery
+versus guest consumption; task ABI, DMA, slot, and PCM interpretations remain
+gated. No gate or wait change is authorized.
 
 The s2080 crosswalk separates the generated fill function from the shared
 crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
@@ -418,6 +435,13 @@ The maintenance compaction retains the reasons for the recent reversals here:
   supersedes only the missing/non-`Broke` return possibility; the downstream
   route failure and all task/PCM interpretations remain open because neither
   arm reached a target VI in s2094.
+- The s2094 `H-PostTaskRouteBoundary` wording was deliberately narrow because
+  the wrapper alone could not prove task-thread completion. s2095's control and
+  treatment route rows both show the wrapper return followed by successful
+  `run_task` return and SP completion return, while only the treatment misses
+  both target VIs. This supersedes the task-thread-boundary possibility at
+  that scope and selects `H-SPRouteQueued`; it does not prove that the SP
+  external message was delivered to, or consumed by, the guest.
 
 ## Evidence ledger summary
 
@@ -450,9 +474,14 @@ therefore unevaluable and the next boundary is the audio-arm return.
 s2094's fixed retail oracle again passed its whole-RDRAM positive control and
 both target VIs. Its same-build return-wrapper A/B recorded 331 control and
 1048 treatment returns, all `RspExitReason::Broke`, but neither port arm
-reached a target VI. This selects `H-PostTaskRouteBoundary` at return scope
-and moves the next discriminator to `run_task` success and SP completion;
-task ABI, DMA, slot, PCM, and queue causality remain unevaluable.
+reached a target VI. s2095 then added the post-return route table: the control
+and treatment both showed complete ordered `run_task` and task-thread SP
+completion edges, while the control reached title and hangar and the treatment
+bus-faulted before either target phase. This selects `H-SPRouteQueued` at
+post-return scope and moves the next discriminator to source-preserving SP
+queue delivery and guest consumption; task ABI, DMA, slot, and PCM causality
+remain gated. The chronological ledger is still the source for exact run
+commands, counts, and rejected retries.
 The chronological ledger is still the source for exact run commands, counts,
 and rejected retries.
 

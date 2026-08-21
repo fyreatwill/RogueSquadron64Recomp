@@ -481,7 +481,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..51eea35 100644
+index 1cb3f6a..fd80611 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -495,7 +495,7 @@ index 1cb3f6a..51eea35 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,330 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,378 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -509,6 +509,54 @@ index 1cb3f6a..51eea35 100644
 +extern "C" uint32_t rs64_phase_ord();
 +extern "C" uint32_t rs64_vi_committed_width();
 +extern "C" uint32_t rs64_vi_committed_origin();
++
++struct AudioRouteContext {
++    bool active = false;
++    const char* arm = nullptr;
++    uint32_t phase = 0;
++    uint32_t width = 0;
++    uint32_t origin = 0;
++    uint32_t ordinal = 0;
++    uint32_t row = 0;
++    int exit_reason = 0;
++};
++
++static thread_local AudioRouteContext g_audio_route_context;
++
++static bool audio_route_log_enabled() {
++    static const bool enabled = [] {
++        const char* all = std::getenv("ROGUESQ_LOG_ALL");
++        const char* specific = std::getenv("ROGUESQ_LOG_AUDIO_RETURN");
++        return (all && *all && *all != '0') ||
++               (specific && *specific && *specific != '0');
++    }();
++    return enabled;
++}
++
++extern "C" void rs64_audio_route_set(const char* arm, uint32_t phase,
++                                       uint32_t width, uint32_t origin,
++                                       uint32_t ordinal, uint32_t row,
++                                       int exit_reason) {
++    if (!audio_route_log_enabled()) {
++        g_audio_route_context.active = false;
++        return;
++    }
++    g_audio_route_context = {
++        true, arm, phase, width, origin, ordinal, row, exit_reason
++    };
++}
++
++extern "C" void rs64_audio_route_log(const char* edge, uint32_t result) {
++    const AudioRouteContext& route = g_audio_route_context;
++    if (!route.active ||
++        (route.row >= 256u && (route.row % 128u) != 0)) return;
++    std::fprintf(stderr,
++                 "[audio-route] edge=%s arm=%s phase=%u width=%u origin=0x%06X"
++                 " ordinal=%u row=%u exit=%d result=%u\n",
++                 edge, route.arm, route.phase, route.width, route.origin,
++                 route.ordinal, route.row, route.exit_reason, result);
++    std::fflush(stderr);
++}
 +
 +struct AudioDmaRange {
 +    uint32_t dram;
@@ -826,7 +874,7 @@ index 1cb3f6a..51eea35 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +370,218 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +418,218 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -1232,7 +1280,7 @@ index 3198be0..730ca54 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..d8da457 100644
+index 149e770..018f2fa 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,6 +8,9 @@
@@ -1245,10 +1293,13 @@ index 149e770..d8da457 100644
  
  #include "blockingconcurrentqueue.h"
  
-@@ -20,6 +23,52 @@
+@@ -20,6 +23,55 @@
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
++extern "C" __attribute__((weak)) void rs64_audio_route_log(const char* edge,
++                                                              uint32_t result);
++
 +namespace {
 +
 +bool event_wiring_log_enabled() {
@@ -1298,7 +1349,7 @@ index 149e770..d8da457 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -140,6 +189,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +192,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -1307,7 +1358,7 @@ index 149e770..d8da457 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -165,6 +216,13 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
+@@ -165,6 +219,13 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
      next_state->mq = mq_;
      next_state->msg = msg;
      next_state->retrace_count = retrace_count;
@@ -1321,7 +1372,7 @@ index 149e770..d8da457 100644
  }
  
  uint64_t total_vis = 0;
-@@ -231,6 +289,17 @@ void vi_thread_func() {
+@@ -231,6 +292,17 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -1339,7 +1390,7 @@ index 149e770..d8da457 100644
                      // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
                      // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
                      ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
-@@ -252,12 +321,14 @@ void vi_thread_func() {
+@@ -252,12 +324,14 @@ void vi_thread_func() {
  void sp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
@@ -1354,6 +1405,31 @@ index 149e770..d8da457 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
+@@ -281,13 +355,23 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+         // pointer's contents (DMA, etc).
+         const uint32_t task_type = task->t.type;
+ 
+-        if (!ultramodern::rsp::run_task(PASS_RDRAM task)) {
++        const bool task_ok = ultramodern::rsp::run_task(PASS_RDRAM task);
++        if (task_type == M_AUDTASK && rs64_audio_route_log != nullptr) {
++            rs64_audio_route_log("run-task-return", task_ok ? 1u : 0u);
++        }
++        if (!task_ok) {
+             fprintf(stderr, "Failed to execute task type: %" PRIu32 "\n", task->t.type);
+             ULTRAMODERN_QUICK_EXIT();
+         }
+ 
+         // Tell the game that the RSP has completed
++        if (task_type == M_AUDTASK && rs64_audio_route_log != nullptr) {
++            rs64_audio_route_log("sp-complete-enter", 1u);
++        }
+         sp_complete();
++        if (task_type == M_AUDTASK && rs64_audio_route_log != nullptr) {
++            rs64_audio_route_log("sp-complete-return", 1u);
++        }
+ 
+         (void)task_type;
+     }
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
 index 9944a02..b9dc1fd 100644
 --- a/ultramodern/src/mesgqueue.cpp

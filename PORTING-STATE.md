@@ -99744,3 +99744,52 @@ gate, wait, guard, output, or default dispatch changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-postreturn-route-state`.
+
+## Session 2095 (2026-08-20) — traced the post-return audio route into SP completion
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 31119 bytes, so this was not a
+maintenance iteration. The fixed retail oracle recipe was rebuilt and rerun
+before adding the runtime table. Its whole-RDRAM positive control reached the
+10000-callback removal threshold and its VI trace reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, with the qualified gate
+writer rows retained.
+
+Added a regeneration-independent audio route join. The existing wrapper in
+`src/main/main.cpp` now passes its phase/VI/ordinal row into a thread-local
+runtime context in `lib/N64ModernRuntime/librecomp/src/rsp.cpp`. The SP task
+thread in `lib/N64ModernRuntime/ultramodern/src/events.cpp` logs
+`run-task-return`, `sp-complete-enter`, and `sp-complete-return` only after the
+previous edge has returned, with `exit`, `result`, arm, ordinal, and phase/VI
+fields. The submodule patch was exported and the Debug target built
+successfully; only the existing deployment-target linker warnings appeared.
+
+Ran the default stub control and `ROGUESQ_AUDIO_UCODE=1` treatment concurrently
+from the same eleven-Start driver:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_RETURN=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step4-treatment 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/m5-audio-step4-treatment-driver.log 2>&1 &
+pid_t=$!
+env -u ROGUESQ_AUDIO_UCODE ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_RETURN=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step4-control 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/m5-audio-step4-control-driver.log 2>&1 &
+pid_c=$!
+wait $pid_t; rc_t=$?
+wait $pid_c; rc_c=$?
+printf 'treatment_rc=%s control_rc=%s\n' "$rc_t" "$rc_c"
+```
+
+The treatment produced 1107 line-start wrapper rows and 3324 route rows,
+all observed route ordinals carrying the complete three-edge sequence with
+`exit=1` and `result=1`. It never reached either target VI and bus-faulted in
+`viRetraceHandlerThread`, with last guest PC `0x8000B650`. The control emitted
+the same ordered route sequence and reached both target VIs (`1024` at 48.2s
+and `512` at 84.4s in its run). The control route is the positive control for
+the new table; the treatment route proves that the task-thread return and SP
+completion return are crossed before its failure. This selects
+`H-SPRouteQueued` at post-return scope, rules out the task-thread boundary at
+this scope, and leaves SP external-queue delivery versus guest consumption
+open. No queue policy, gate, wait, guard, output, or default-dispatch behavior
+changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-sp-queue-consumer-boundary`.

@@ -72,6 +72,10 @@ void rs64_register_overlays();
 extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
+extern "C" void rs64_audio_route_set(const char* arm, uint32_t phase,
+                                       uint32_t width, uint32_t origin,
+                                       uint32_t ordinal, uint32_t row,
+                                       int exit_reason);
 
 // Wrapper: captures rdram into the watchdog global on first call so the
 // hwbp/poll diagnostic threads can attach. Forwards to the real entrypoint.
@@ -377,6 +381,8 @@ static void rs64_log_audio_return(const char* arm, RspExitReason reason) {
                 arm, phase, width, origin, global_ordinal, row, (int)reason);
         fflush(stderr);
     }
+    rs64_audio_route_set(arm, phase, width, origin, global_ordinal, row,
+                         static_cast<int>(reason));
 }
 
 static RspExitReason musyx_stub_probe(uint8_t* rdram, uint32_t ucode_addr) {
