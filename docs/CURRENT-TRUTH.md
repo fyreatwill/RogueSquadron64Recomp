@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2141
-(2026-08-21); behavioral and source evidence is current through s2141.
+authoritative for exact commands and probe rows. Maintained in Session 2142
+(2026-08-21); behavioral and source evidence is current through s2142.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -101,17 +101,17 @@ This file is intentionally compact. The s2080–s2108 archive is in
   and port lines selecting `H-RetailDataPtrOffset100` at the sampled output
   boundary. No task-field, output-route, audio-arm, host shortcut, guard, or
   default-arm change follows.
-- The s2141 bounded generated-symbol unit selected `H-MissionMapping` for
-  `0x800BF790`: no-edit regeneration left `func_800BF790` in place, while
+- The s2142 bounded generated-symbol unit selected `H-MissionMapping` for
+  `0x800C64B0`: no-edit regeneration left `func_800C64B0` in place, while
   the prescribed two-line mapping move caused the ELF to emit
-  `updateHudHealthIndicator` in `.ovl.mission` at the same start, size
-  `0x634`, and end boundary `0x800BFDC4` immediately before unchanged
-  `setHudSecondaryWeaponInfo`. The generated prototype, definition, overlay
-  entry, and only generated caller (`initHudStruct` at `jal 0x800C1200`)
-  all used the human name. The prior s416 live-crash warning remains a
-  runtime-risk record; this static table found no boundary or caller
-  conflict. The full pipeline succeeded; no game run or runtime behavior
-  changed.
+  `initHangarDisplayItemTimers` in `.ovl.mission` at the same start, size
+  `0x11C`, and end boundary `0x800C65CC` immediately before unchanged
+  `tickHangarDisplayItemAnimations`. The generated prototype, definition,
+  overlay entry, and only generated caller (`hangarVehicleDisplayNpcHandler`
+  at `jal 0x800C64B0`) all used the human name. The prior s417 live-crash
+  warning remains a runtime-risk record; this static table found no
+  boundary or caller conflict. The full pipeline succeeded; no game run or
+  runtime behavior changed.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -398,10 +398,10 @@ work items.
 
 1. **Generated-symbol renaming sweep.** The M5 `data_ptr+0x100` boundary is
    closed at the sampled output edge: s2140's independently watched retail
-   destinations agree with s2137's port `field348+0x100` relation. s2141
-   selected `H-MissionMapping` for `func_800BF790` /
-   `updateHudHealthIndicator`. The next lead is `func_800C64B0` ->
-   `initHangarDisplayItemTimers`; validate it with a no-edit versus
+   destinations agree with s2137's port `field348+0x100` relation. s2142
+   selected `H-MissionMapping` for `func_800C64B0` /
+   `initHangarDisplayItemTimers`. The next lead is `func_800E71D0` ->
+   `transformCraftAnchorsApplySubFx3`; validate it with a no-edit versus
    two-line symbol-file move and a fresh ELF/generated boundary and caller
    table.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
@@ -593,13 +593,14 @@ The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
 class, dormant slot-dispatch census, and generated-symbol synchronization
 sweep are closed at their stated scopes. s2130's static table confirmed the
 `0x800AE3F0` mission mapping despite the old s407 runtime warning, s2131
-confirmed the `0x800C41B0` mission mapping, and s2141 confirmed the
-`0x800BF790` mission mapping, each with unchanged boundaries and callers.
-Those warnings remain reasons to validate future relocations, not evidence
-of a static boundary conflict. M3 resumes only as an idiom-class audit or
-with a new discriminator. M4 accumulator/beam evidence rules out the old
-shade-lane theory but is not pixel ground truth. The remaining generated
-placeholders are semantic holds or intentional non-sync entries.
+confirmed the `0x800C41B0` mission mapping, s2141 confirmed the
+`0x800BF790` mission mapping, and s2142 confirmed the `0x800C64B0`
+mission mapping, each with unchanged boundaries and callers. Those warnings
+remain reasons to validate future relocations, not evidence of a static
+boundary conflict. M3 resumes only as an idiom-class audit or with a new
+discriminator. M4 accumulator/beam evidence rules out the old shade-lane
+theory but is not pixel ground truth. The remaining generated placeholders
+are semantic holds or intentional non-sync entries.
 
 ## Superseded conclusions
 
@@ -712,9 +713,12 @@ with byte-count and waveform checks. This single-source reference evidence
 selects `H-MORTReferenceMatchesExtended` for those sampled classes. s2141
 then selected the static mission mapping for
 `func_800BF790`/`updateHudHealthIndicator`, with the same start, size, end
-boundary, and caller table in the final ELF/generated tree. The next work
-unit remains the generated-symbol sweep; no runtime or default-arm change
-follows.
+boundary, and caller table in the final ELF/generated tree. s2142 selected
+the static mission mapping for
+`func_800C64B0`/`initHangarDisplayItemTimers`, with the same start, size,
+end boundary, and caller table in the final ELF/generated tree. The next
+work unit remains the generated-symbol sweep; no runtime or default-arm
+change follows.
 
 ## Method and safety rules
 

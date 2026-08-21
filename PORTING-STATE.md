@@ -101593,3 +101593,49 @@ source/ELF/boundary and caller collision check before editing.
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only moved a generated symbol mapping and compared ELF
 and generated names.
+
+## Session 2142 (2026-08-21) — repaired the hangar-timer symbol mapping
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `48,659` bytes, so this was not a
+maintenance iteration. The last-15 session-title check was not an all-sweep
+run, so the bounded generated-symbol unit remained eligible. Soak-queue
+intake was empty. The prescribed unit was a no-edit versus two-line source
+mapping comparison for `func_800C64B0` -> `initHangarDisplayItemTimers`; no
+game run, runtime change, audio, task, guard, or mitigation behavior was
+involved.
+
+The no-edit make-ELF/N64Recomp/fixup sequence completed successfully and left
+the placeholder in the generated prototype, definition, overlay entry, and
+ELF. The baseline ELF row was `.ovl.mission`, start `0x800C64B0`, size
+`0x11C`, ending at unchanged `tickHangarDisplayItemAnimations` `0x800C65CC`;
+`initHangarDisplayItemTimers` was absent from the ELF. That refutes
+`H-RegenerationStale` without a boundary conflict. The prescribed two-line
+source move then removed the human mapping from `main_overlay.txt` and
+renamed the single `mission_overlay.txt` entry. The second
+make-ELF/N64Recomp/fixup/CMake sequence completed successfully and linked
+`RogueSquadron64Recomp`.
+
+The treatment table showed one global ELF function named
+`initHangarDisplayItemTimers` in `.ovl.mission` at `0x800C64B0`, size
+`0x11C`, ending at unchanged `0x800C65CC`. The generated prototype,
+definition, and overlay entry used the human name; the only generated
+caller, inside `hangarVehicleDisplayNpcHandler` at `funcs_35.c:1423`
+(`jal 0x800C64B0`), also resolved to it. Zero leftover `func_800C64B0`
+remained in the generated tree. Baseline and treatment rows are in
+`s2142_baseline_table.txt` and `s2142_treatment_table.txt`. This selects
+`H-MissionMapping` and finds no static boundary or caller conflict. The s417
+`m4_known_bad.txt` relocation warning remains a runtime-risk record, not
+evidence of a static conflict. No game soak was run: the source/ELF/generated
+boundary table was the work-unit discriminator. No runtime, mitigation, or
+task behavior changed.
+
+The next sweep lead is `func_800E71D0` -> `transformCraftAnchorsApplySubFx3`;
+its human mapping is currently in `main_overlay.txt` while
+`mission_overlay.txt` still has the placeholder, so the next unit must
+repeat the source/ELF/boundary and caller collision check before editing.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only moved a generated symbol mapping and compared ELF
+and generated names.
