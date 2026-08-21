@@ -101549,3 +101549,47 @@ is `func_800BF790` -> `updateHudHealthIndicator`.
 
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only observed the independent retail writer boundary.
+
+## Session 2141 (2026-08-21) — repaired the HUD-health symbol mapping
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `47,595` bytes, so this was not a
+maintenance iteration. The last-15 session-title check was not an all-sweep
+run, so the bounded generated-symbol unit remained eligible. Soak-queue
+intake was empty. The prescribed unit was a no-edit versus two-line source
+mapping comparison for `func_800BF790` -> `updateHudHealthIndicator`; no game
+run, runtime change, audio, task, guard, or mitigation behavior was involved.
+
+The no-edit make-ELF/N64Recomp/fixup sequence completed successfully and left
+the placeholder in the generated prototype, definition, overlay entry, and
+ELF. The baseline ELF row was `.ovl.mission`, start `0x800BF790`, size
+`0x634`, ending at unchanged `setHudSecondaryWeaponInfo` `0x800BFDC4`;
+`updateHudHealthIndicator` was absent from the ELF. That refutes
+`H-RegenerationStale` without a boundary conflict. The prescribed two-line
+source move then removed the human mapping from `main_overlay.txt` and
+renamed the single `mission_overlay.txt` entry. The second
+make-ELF/N64Recomp/fixup/CMake sequence completed successfully.
+
+The treatment table showed one global ELF function named
+`updateHudHealthIndicator` in `.ovl.mission` at `0x800BF790`, size `0x634`,
+ending at unchanged `0x800BFDC4`. The generated prototype, definition, and
+overlay entry used the human name; the only generated caller, inside
+`initHudStruct` at `funcs_33.c:9162` (`jal 0x800C1200`), also resolved to it.
+Zero leftover `func_800BF790` remained in the generated tree. Baseline and
+treatment rows are in `s2141_baseline_table.txt` and
+`s2141_treatment_table.txt`. This selects `H-MissionMapping` and finds no
+static boundary or caller conflict. The s416
+`m4_known_bad.txt` relocation warning remains a runtime-risk record, not
+evidence of a static conflict. No game soak was run: the source/ELF/generated
+boundary table was the work-unit discriminator. No runtime, mitigation, or
+task behavior changed.
+
+The next sweep lead is `func_800C64B0` -> `initHangarDisplayItemTimers`; its
+human mapping is currently in `main_overlay.txt` while `mission_overlay.txt`
+still has the placeholder, so the next unit must repeat the
+source/ELF/boundary and caller collision check before editing.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only moved a generated symbol mapping and compared ELF
+and generated names.
