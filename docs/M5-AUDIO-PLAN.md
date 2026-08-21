@@ -173,11 +173,16 @@ explicit control arm.
    `0xF7F..0xFC0` gap has no unused byte, and the only unused
    `>=0x10` holes in `0x000..0xFBF` sit inside ucode-data
    (`0x000..0x21F`, `0xA40..0xC2F`). A relocated host canary has
-   nowhere to live in DMEM. The next incremental unit is one host-only
-   table of every `canary_ok` consumer in `rsp.cpp` (log-only versus
-   exit/writeback/DMA gating). Do not default the image arm or move
-   the canary in that census. Rollback remains leaving the existing
-   RSP dispatch arm opt-in.
+   nowhere to live in DMEM. s2157 selected `H-CanaryLogOnly`: every
+   `canary_ok` site in `rsp.cpp` is storage or a fprintf/probe field;
+   `run_task` completes on `Broke` alone; DMA recording ignores the
+   flag (`scratch/agent/s2157_canary_host_effect.txt`). `canary_ok=0`
+   no longer blocks the `break 0`/`Broke` edge as a host-side gate.
+   The next incremental unit is one host-only table of every remaining
+   image-arm isolator (`ROGUESQ_AUDIO_UCODE`, `musyx_stub`,
+   `factor5_ucode_b`). Do not default the image arm or move the canary
+   in that census. Rollback remains leaving the existing RSP dispatch
+   arm opt-in.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.

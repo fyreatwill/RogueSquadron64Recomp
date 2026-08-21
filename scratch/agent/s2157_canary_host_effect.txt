@@ -1,0 +1,90 @@
+s2157 A1 host canary-effect census
+HYPOTHESIS-ID: m5-image-canary-host-effect
+
+Source: lib/N64ModernRuntime/librecomp/src/rsp.cpp
+  bytes 39669
+  canary_ok count 7
+  audio_canary_pre 6
+  audio_canary_post 6
+  audio_canary_offset 4
+  ROGUESQ_AUDIO_CANARY_AB 1
+Repo-wide C/C++/header hits: rsp.cpp only (docs excluded).
+AudioDmaProbe has canary_arm (string "on"/"off"), not canary_ok.
+No port build, game run, canary move, canary prefill, task-exit mapping,
+default-arm, or output-route change.
+
+POSITIVE CONTROLS (same file)
+-----------------------------
+Assign from 0xF80 pre/post hash:
+  L723  audio_canary_offset = 0xF80
+  L725  audio_canary_pre = 0
+  L766-767  pre-hash RSP_MEM_BU(0, 0xF80+i) before ucode_func
+  L808  audio_canary_post = 0  (after ucode_func has returned)
+  L814-815  post-hash RSP_MEM_BU(0, 0xF80+i)
+  L913-914  audio_join_register_task(..., audio_canary_pre == audio_canary_post, ...)
+  L595  task.canary_ok = canary_ok
+  ALL ASSIGNMENT SITES LIVE: True
+Read of stored canary_ok:
+  L507  task.canary_ok ? 1 : 0   inside [audtask-join] fprintf
+  READ SITE LIVE: True
+
+IDENTIFIER TABLE
+----------------
+line  symbol                   role                         class
+181   canary_ok                AudioJoinTask field          storage declaration
+500   canary_ok                [audtask-join] format string log/probe field
+507   canary_ok                task.canary_ok ? 1 : 0       READ: log conversion only
+580   canary_ok                audio_join_register_task arg parameter (storage path)
+595   canary_ok                task.canary_ok = canary_ok   ASSIGN field from arg
+723   audio_canary_offset      constexpr 0xF80              canary base address
+725   audio_canary_pre         local = 0                    pre-hash init
+756   ROGUESQ_AUDIO_CANARY_AB  getenv                       prefill A/B INPUT (not a canary_ok read)
+760   audio_canary_arm         "off" vs "on"                prefill label for logs
+762   if (!canary_off)         skip 0xA5 write on odd rows  prefill control; does not read canary_ok
+763   audio_canary_offset      RSP_MEM_BU write 0xA5^...    prefill dest
+766   audio_canary_pre         FNV of 0xF80..0xF8F          PRE hash (before ucode)
+767   audio_canary_offset      RSP_MEM_BU read              PRE hash input
+808   audio_canary_post        local = 0                    POST hash init (after ucode)
+814   audio_canary_post        FNV of 0xF80..0xF8F          POST hash (after ucode)
+815   audio_canary_offset      RSP_MEM_BU read              POST hash input
+840   canary_ok                [audtask-abi] format string  log/probe field
+861   audio_canary_pre/post    fprintf args                 log
+862   audio_canary_pre==post   ? 1 : 0                      log-only inline compare (does not store)
+913   audio_canary_pre==post   register_task argument       ASSIGN source into AudioJoinTask
+
+No other canary_ok / audio_canary_pre / audio_canary_post / audio_canary_offset
+/ ROGUESQ_AUDIO_CANARY_AB hits in *.c *.cpp *.h *.hpp *.inl.
+
+CONTROL-FLOW ORDER IN run_task (L689-925)
+-----------------------------------------
+1. L785-798  arm g_audio_dma_probe from probe_audio && audio_probe_row
+             (phase/env, not canary_ok).
+2. L800      exit_reason = ucode_func(...)   BEFORE any post-hash.
+3. L658-686  rs64_probe_audio_dma_write records if probe != nullptr;
+             no canary_ok test; no skip of DMEM-to-RDRAM DMA.
+4. L805-916  if (probe_audio && audio_probe_row): hash post, fprintf
+             [audtask-abi]/[audtask-dma-row]/[audtask-dma-range], then
+             audio_join_register_task with the pre==post bool.
+5. L918-925  ONLY post-ucode completion branch:
+               if (exit_reason != RspExitReason::Broke) { log; assert; return false; }
+               return true;
+             canary_ok is not in this predicate.
+
+audio_join_register_task / audio_join_report_locked store and print
+canary_ok; they do not branch on it, skip ranges, or change exit.
+
+ROGUESQ_AUDIO_CANARY_AB (L756-768) skips writing the 0xA5 prefill on odd
+image-arm probe rows. That is an input to the hash, not a consumer of
+canary_ok, and it does not change ucode_func, exit_reason, DMA probe
+arming, or the Broke check.
+
+VERDICT
+-------
+H-CanaryLogOnly          SELECTED
+H-CanaryGatesExit        REFUTED  (exit_reason assigned at L800; Broke check at L918 ignores canary_ok)
+H-CanaryGatesWriteback   REFUTED  (DMA probe armed at L785-798; write recorder ignores canary_ok)
+H-CoverageFailure        REFUTED  (0xF80 assign sites live; every read classified as log/storage)
+
+Host-source only (identifier table plus run_task control-flow order).
+Does not default the image arm, move the canary, or change
+osAiGetStatus_recomp / osAiSetNextBuffer_recomp.

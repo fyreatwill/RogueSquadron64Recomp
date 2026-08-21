@@ -30,10 +30,10 @@ stub; the Factor 5 image arm is opt-in (`ROGUESQ_AUDIO_UCODE=1`) and not
 defaulted. Yield stays default-off.
 
 **What is not done:** hangar visuals have geometry/color artifacts. M5 audio
-de-stubbing remains open at the A1 host canary-effect census (`canary_ok=0`
-is the mix buffer; whether that flag gates host completion is untested).
-M3 is limited to idiom-class audits. M4 hangar/512 Y=0x8000 is not live on
-the first hangar capture. See `CURRENT-TRUTH.md`.
+de-stubbing remains open at the A1 image-arm isolator census (`canary_ok=0`
+is mix-buffer and log-only; the image arm is still opt-in). M3 is limited
+to idiom-class audits. M4 hangar/512 Y=0x8000 is not live on the first
+hangar capture. See `CURRENT-TRUTH.md`.
 
 ## 2. How the pipeline fits together
 
@@ -3747,7 +3747,7 @@ differed in timing and later phase count only, selecting `H-RecipeTiming`
 without proving the old divergence impossible in every recipe. Do not reopen
 the B40 read-site census.
 
-## 42. M5 contract, pump/drain, symbol, MORT, AI, and canary archive (s2113–s2155), migrated in s2156
+## 42. M5 contract, pump/drain, symbol, MORT, AI, and canary archive (s2113–s2157), migrated in s2156; s2157 appended
 
 The chronological ledger remains authoritative for exact commands, counts, and
 failed retries. This section preserves the durable selected hypotheses that no
@@ -3844,7 +3844,7 @@ discriminator. No game run or runtime behavior changed.
   `func_*` placeholders are `func_8000040C`, `func_800927B0`,
   `func_80092A54`, `func_80092CF0`, `func_800E9AE0`.
 
-### Retail/port task, MORT, AI, and canary (s2132–s2155)
+### Retail/port task, MORT, AI, and canary (s2132–s2157)
 
 - s2132 retail PCM/AI: whole-RDRAM `33,346` writes, title/hangar, nonzero
   audio-buffer pointer table, aligned countdown and worker writes, `8,556`
@@ -3890,11 +3890,22 @@ discriminator. No game run or runtime behavior changed.
   inside ucode-data DMA `0x000..0xF7F`. Selects
   `H-CanaryOnlyInUcodeData` and co-holds `H-NoReservedGap`. Table:
   `scratch/agent/s2155_image_dmem_write_spans.txt`. A relocated host
-  canary has nowhere to live in DMEM. The remaining A1 question is whether
-  `canary_ok=0` gates host task completion, writeback, or DMA.
+  canary has nowhere to live in DMEM. The remaining A1 question after
+  s2155 was whether `canary_ok=0` gates host task completion, writeback,
+  or DMA.
+- s2157 host canary-effect table: `canary_ok` is declared, assigned from
+  the `0xF80` pre/post hash, and read only as `[audtask-join]` /
+  `[audtask-abi]` fprintf fields. `run_task` assigns `exit_reason` from
+  `ucode_func` before the post-hash and returns on `Broke` alone.
+  `rs64_probe_audio_dma_write` records when the probe pointer is set,
+  independent of `canary_ok`. Selects `H-CanaryLogOnly`; refutes
+  `H-CanaryGatesExit`, `H-CanaryGatesWriteback`, and
+  `H-CoverageFailure`. Table:
+  `scratch/agent/s2157_canary_host_effect.txt`.
 
-These records supersede treating `canary_ok=0` as a runaway write, treating
-named `osAiGetStatus` as a live jal target, treating MORT as a second RSP
-image, and treating leftover `fake_func_*` size `> 0xC` as renameable. They
-do not authorize changing the default audio arm, canary prefill, task ABI,
-output routing, waits, or guards.
+These records supersede treating `canary_ok=0` as a runaway write or as a
+host completion/writeback/DMA gate, treating named `osAiGetStatus` as a
+live jal target, treating MORT as a second RSP image, and treating
+leftover `fake_func_*` size `> 0xC` as renameable. They do not authorize
+changing the default audio arm, canary prefill, task ABI, output routing,
+waits, or guards.

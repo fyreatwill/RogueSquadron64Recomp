@@ -102354,3 +102354,52 @@ added; this session only compacted documentation.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-canary-host-effect`.
+
+## Session 2157 (2026-08-21) — classified image canary_ok as log-only
+
+HYPOTHESIS-ID: m5-image-canary-host-effect
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 16,049 bytes, so this was not a
+maintenance iteration. Soak-queue intake was historical 2026-08-18 rows
+already consumed; no new recipes. The prescribed unit was one host-only
+table of every `canary_ok` / `audio_canary_*` consumer in
+`lib/N64ModernRuntime/librecomp/src/rsp.cpp` (and any direct reader of
+the probe field). No port build, game run, canary move, task-exit
+mapping, default-arm, or output-route change.
+
+`rsp.cpp` is 39,669 bytes. Identifier counts: `canary_ok` 7,
+`audio_canary_pre` 6, `audio_canary_post` 6, `audio_canary_offset` 4,
+`ROGUESQ_AUDIO_CANARY_AB` 1. Repo-wide C/C++/header hits are rsp.cpp
+only. Positive controls live: pre-hash `L766-767` and post-hash
+`L814-815` of `RSP_MEM_BU(0, 0xF80+i)`, assignment
+`audio_canary_pre == audio_canary_post` into `audio_join_register_task`
+(`L913-914`) then `task.canary_ok = canary_ok` (`L595`), and the stored
+read `task.canary_ok ? 1 : 0` in `[audtask-join]` (`L507`). The
+`[audtask-abi]` row prints the same comparison inline (`L862`) without
+storing it.
+
+`run_task` assigns `exit_reason = ucode_func(...)` at `L800` before any
+post-hash. The only post-ucode completion branch is
+`if (exit_reason != RspExitReason::Broke)` at `L918`; `canary_ok` is not
+in that predicate. `g_audio_dma_probe` is armed at `L785-798` from
+phase/env, and `rs64_probe_audio_dma_write` records when the pointer is
+non-null. `ROGUESQ_AUDIO_CANARY_AB` skips the `0xA5` prefill on odd
+image-arm probe rows; that is a hash input, not a `canary_ok` consumer.
+
+This selects `H-CanaryLogOnly` and refutes `H-CanaryGatesExit`,
+`H-CanaryGatesWriteback`, and `H-CoverageFailure`. Table:
+`s2157_canary_host_effect.txt`. Host-source only (identifier table plus
+`run_task` control-flow order). No runtime, mitigation, task, wait,
+guard, canary-prefill, or default-arm behavior changed.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only classified host `canary_ok` consumers. The named
+writer of the `0xF80` span remains the generated mix buffer
+(`L_1CDC` / `L_15F8` / `L_1EF0`); that value is legitimate image working
+set. The flag does not change host completion.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-arm-isolators`.
+

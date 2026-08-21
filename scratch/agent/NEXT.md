@@ -1,64 +1,71 @@
-# NEXT work unit (s2157) — A1 host canary-effect census
+# NEXT work unit (s2158) — A1 image-arm isolator census
 
-HYPOTHESIS-ID: m5-image-canary-host-effect
+HYPOTHESIS-ID: m5-image-arm-isolators
 
 ## Work unit
 
-s2156 was a triggered maintenance iteration (CURRENT-TRUTH 60,162 bytes)
-and did not consume this unit. s2155 selected `H-CanaryOnlyInUcodeData`:
-mix occupies `0xE50..0xFCF` continuously, the `0xF7F..0xFC0` gap has no
-unused byte, and leftover `>=0x10` holes sit only in ucode-data. A
-relocated host canary has nowhere to live in DMEM. Do not move the
-canary, change canary prefill, default the image arm, or change
-`osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
+s2157 selected `H-CanaryLogOnly`: every `canary_ok` site in `rsp.cpp` is
+storage or a fprintf/probe field; `run_task` completes on `Broke` alone;
+DMA recording ignores the flag. Do not move the canary, change canary
+prefill, default the image arm, or change `osAiGetStatus_recomp` /
+`osAiSetNextBuffer_recomp`.
 
-The remaining A1 question is whether `canary_ok=0` (now expected mix)
-changes host task completion, writeback, or DMA, or is log-only.
-Next unit is one host-only table of every `canary_ok` / `audio_canary_*`
-consumer in `lib/N64ModernRuntime/librecomp/src/rsp.cpp` (and any
-direct reader of the probe field). No port build, game run, canary
-move, task-exit mapping, default-arm, or output-route change.
+The remaining A1 question is what still keeps `factor5_ucode_b` opt-in
+now that `canary_ok` is not a host gate. Next unit is one host-only
+table of every `ROGUESQ_AUDIO_UCODE` / `musyx_stub` / `factor5_ucode_b`
+site in `src/main/main.cpp` and `lib/N64ModernRuntime/librecomp/src/rsp.cpp`
+(and any other translation unit that selects the audio ucode). Classify
+each hit as dispatch-arm, probe wrapper, log label, or other
+control-flow. No port build, game run, default-arm, canary, task-exit,
+or output-route change.
 
-Reuse s2154/s2155 same-file image controls only as citations: this
-unit's positive control is a named host site that *assigns*
-`canary_ok` from the `0xF80` pre/post hash, plus a named site that
-*reads* it.
+Positive control: a named site that *assigns* the live audio ucode
+function pointer from `ROGUESQ_AUDIO_UCODE`, plus a named site that
+*calls* that pointer (or `musyx_stub` / `factor5_ucode_b` directly).
 
 ## Competing hypotheses and discriminator
 
-- `H-CanaryLogOnly`: every `canary_ok` read is a fprintf / probe-row
-  field; exit reason, DMA writeback, and task completion do not branch
-  on it.
-- `H-CanaryGatesExit`: a `canary_ok==0` path changes `RspExitReason`
-  or returns early from `run_task`.
-- `H-CanaryGatesWriteback`: a `canary_ok==0` path skips DMEM-to-RDRAM
-  writeback or audio DMA recording.
-- `H-CoverageFailure`: the assignment site at the `0xF80` pre/post
-  hash is missing, or a `canary_ok` read exists outside the table.
+- `H-IsolatedOnlyByEnv`: the only control-flow isolator is the
+  `ROGUESQ_AUDIO_UCODE` branch in `get_rsp_microcode` choosing
+  `factor5_ucode_b_probe` vs `musyx_stub_probe`; `run_task` does not
+  further branch on the arm.
+- `H-IsolatedByRunTask`: `run_task` has a second image-arm branch besides
+  calling the already-selected `ucode_func` (early return, skipped
+  writeback, or forced `Broke`).
+- `H-IsolatedByStubBody`: `musyx_stub` remains reachable on the image
+  path (the env-true arm still calls the stub).
+- `H-CoverageFailure`: the assignment site that reads
+  `ROGUESQ_AUDIO_UCODE` into the live function pointer is missing, or a
+  dispatch site is unclassified.
 
 The discriminator is one table: every assignment and every read of
-`canary_ok` / `audio_canary_post` / `audio_canary_pre`, with
-"log/probe field" versus "control-flow/writeback" classified per
-site. Log-only selects `H-CanaryLogOnly`; an exit-reason or early
-return branch selects `H-CanaryGatesExit`; a skipped DMA/writeback
-branch selects `H-CanaryGatesWriteback`; missing assignment or an
-unclassified read selects `H-CoverageFailure`. Do not treat prior
-`canary_ok=0` rows as this table.
+`ROGUESQ_AUDIO_UCODE`, `musyx_stub`, `musyx_stub_probe`,
+`factor5_ucode_b`, and `factor5_ucode_b_probe`, classified
+dispatch-arm vs probe/log vs other control-flow. Env-only dispatch
+selects `H-IsolatedOnlyByEnv`; a `run_task` arm branch selects
+`H-IsolatedByRunTask`; image-path stub reachability selects
+`H-IsolatedByStubBody`; a missing or unclassified dispatch site
+selects `H-CoverageFailure`. Do not treat prior `canary_ok` rows as
+this table, and do not default the image arm from the table alone.
 
 ## Exact commands
 
     python3 - <<'PY'
     from pathlib import Path
-    p = Path('lib/N64ModernRuntime/librecomp/src/rsp.cpp')
-    text = p.read_text()
-    print('bytes', p.stat().st_size)
-    print('canary_ok assigns', text.count('canary_ok'))
-    print('audio_canary_offset', 'audio_canary_offset' in text)
+    files = [
+        Path('src/main/main.cpp'),
+        Path('lib/N64ModernRuntime/librecomp/src/rsp.cpp'),
+    ]
+    needles = ['ROGUESQ_AUDIO_UCODE', 'musyx_stub', 'factor5_ucode_b']
+    for p in files:
+        text = p.read_text()
+        print(p, 'bytes', p.stat().st_size)
+        for n in needles:
+            print(' ', n, text.count(n))
     PY
 
-Grep `canary_ok`, `audio_canary_pre`, `audio_canary_post`,
-`audio_canary_offset`, and `ROGUESQ_AUDIO_CANARY_AB`. Classify each
-hit. Write `scratch/agent/s2157_canary_host_effect.txt`.
+Grep those needles in `*.c *.cpp *.h *.hpp`. Classify each hit.
+Write `scratch/agent/s2158_image_arm_isolators.txt`.
 
-Do not edit `rsp.cpp` canary prefill, `osAiSetNextBuffer_recomp`, or
-the default audio arm.
+Do not edit `get_rsp_microcode`, `musyx_stub`, `osAiSetNextBuffer_recomp`,
+or the default audio arm.
