@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2086 (2026-08-20);
-behavioral and source evidence is current through s2086.
+for exact commands and probe rows. Maintained in Session 2087 (2026-08-20);
+behavioral and source evidence is current through s2087.
 
 ## Current state
 
@@ -101,12 +101,14 @@ as active work items.
 1. **M5 voice-output-base provenance.** The caller/callee audit selects
    `H-CalleePointerContract`: the active port edge constructs the callee's
    range endpoint from voice-slot `+0x34`, while the exact edge is absent in
-   retail. Census every generated writer of the voice-slot `+0x34` field and
-   compare it with a fresh retail writer-PC control over the companion voice
-   array. Distinguish a valid output-base writer followed by port-only slot
-   corruption from a scalar/mislabeled field or an invalid writer. No wait,
-   guard, task-field, output-routing, canary, gate, or host behavior change is
-   authorized.
+   retail. The generated writer census is complete at the identified static
+   sites (`0x80090C80`, `0x800921E8`), but retail attribution still needs the
+   dynamically allocated voice-array base. Repair or bypass the oracle's
+   pointer-watch stepping side effect, then run one qualified exact-slot
+   writer-PC control. Distinguish a valid output-base writer followed by
+   port-only slot corruption from a scalar/mislabeled field or an invalid
+   writer. No wait, guard, task-field, output-routing, canary, gate, or host
+   behavior change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -191,6 +193,25 @@ the callee through `0x8009024C`/`0x800902CC` but not the port-active
 `0x800903F0` edge, so the next boundary is the `+0x34` writer rather than the
 callee's parameter labeling.
 
+- s2087's static census identifies the two candidate generated voice-array
+  `+0x34` stores: `musyxKeyOnVoice` `0x80090C80` copies source `+0x38`, and
+  `musyxInitVoiceFromSample` `0x800921E8` stores sample-descriptor `+0x4`
+  into `MEM_W[0x801496F8] + voiceIdx*0x88 + 0x34`. The required retail runs
+  passed the whole-RDRAM control and both target VI phases, but the original
+  physical watch used the pointer-table address as if it were the dynamic
+  array base; its exact hits crosswalk to unrelated song-structure `+0x134`
+  stores. The oracle pointer-watch post-step arm then remained at 320 VI and
+  is unevaluable. No voice-base hypothesis is selected and no runtime change
+  is authorized.
+
+The s2087 physical-address correction is durable: `0x801496F8` is a pointer
+entry, and the voice slots are at its dynamically allocated value plus
+`voiceIdx*0x88`. Exact watches at pointer-table-derived addresses hit
+unrelated song-structure `+0x134` stores (`startSongSequence` and
+`advanceSongRegion`); they are not retail voice-slot evidence. The oracle's
+pointer-watch post-step arm did not preserve the qualified route, so the
+dynamic base remains open.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -254,6 +275,12 @@ The maintenance compaction retains the reasons for the recent reversals here:
   reached target phase 12, and recorded seven callsite-to-entry pairs at
   `0x800903F0`; the gap was an over-narrow phase filter, not evidence that the
   function was never called. The host/source causal join is still unresolved.
+- The s2087 assumption that physical `0x1496F8 + voiceIdx*0x88 + 0x34`
+  directly named the retail voice fields was believable because the companion
+  mapping described `0x801496F8` as the voice-array base pointer and supplied
+  the 0x88 stride. The generated code resolves that symbol as a pointer entry;
+  exact watches instead hit unrelated song-structure `+0x134` stores. The
+  dynamic retail allocation must be resolved before any writer attribution.
 
 ## Evidence ledger summary
 
@@ -264,8 +291,10 @@ milestones migrated during this maintenance pass; s2080 adds the fill-function
 source crosswalk, s2081 adds the host-boundary witness gap, s2082 repairs the
 generated source anchor, s2084 closes the target-phase reachability gap, and
 s2085 rejects the source/host span join at this scope because all source
-arguments are out of range, and s2086 establishes the caller/callee ABI scope
-while leaving the voice-slot writer boundary open. The chronological ledger is
+arguments are out of range, s2086 establishes the caller/callee ABI scope
+while leaving the voice-slot writer boundary open, and s2087 identifies the
+static voice writers while rejecting the pointer-table physical watch as a
+valid retail field witness. The chronological ledger is
 still the source for exact run commands, counts, and rejected retries.
 
 ## Method and safety rules

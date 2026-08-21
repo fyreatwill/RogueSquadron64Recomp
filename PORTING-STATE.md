@@ -99429,3 +99429,48 @@ Census every generated writer of the voice-slot `+0x34` field and compare it
 with a fresh retail writer-PC control over the companion voice array. See
 `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-voice-output-base-provenance`.
+
+## Session 2087 (2026-08-20) — censused voice-slot writers and corrected retail watch geometry
+
+Ran the M5 voice-output-base provenance work unit after the required oracle
+ground-truth pass. The initial contiguous retail watch over physical
+`0x14972C..0x14B92C` passed the whole-RDRAM positive control (679,947 writes),
+reached title `1024 @ 0x00790400` at 17.3 s and hangar `512 @ 0x006AB400` at
+38.4 s, and produced a region-level writer histogram. That watch was not a
+`+0x34` witness: the generated code shows `0x801496F8` is the global pointer
+to the dynamically allocated 0x88-stride voice array, not the array base.
+
+The static census found the two candidate generated stores to the actual
+voice-slot field. `musyxKeyOnVoice` stores `s0+0x38` to `s1+0x34` at
+`0x80090C80`; `musyxInitVoiceFromSample` computes
+`MEM_W[0x801496F8] + voiceIdx*0x88` and stores sample-descriptor `+0x4` to
+`+0x34` at `0x800921E8`. The `musyxRenderVoiceSamples` loads from `s1+0x34`
+at its range-fill callsites. The other literal `+0x34` stores in that kernel
+target its separate output/control object `s0`, not the voice array.
+
+As a ground-truth correction, one run watched slot 0's presumed physical
+field and another batched exact watches for slots 1–63. Both passed the
+positive control and both target VI phases; slot 0 was quiet and the batched
+run reported activity in several presumed slots. A follow-up exact watch of
+the presumed slot-9 field recorded retail PCs `0x80094650` and `0x80095568`.
+The static crosswalk shows these write `+0x134` in `startSongSequence` and
+`advanceSongRegion`, proving that the presumed physical slot addresses
+collide with unrelated song structures and cannot identify voice writers.
+
+A pointer watch at physical `0x1496F8` did identify retail writer PC
+`0x8008F0EC`, but the oracle's pointer post-step arm reported
+`0xFFFFFFFF` and the run remained at 320 VI, so it did not reach title or
+hangar and is unevaluable for the voice boundary. This is a tool-path result,
+not evidence that retail's pointer is invalid. The work unit therefore
+selects no H-ValidVoiceBase/H-ScalarField/H-InvalidWriter/H-WrongSlotBase
+hypothesis, adds no runtime witness or mitigation, and moves the boundary to
+obtaining the dynamic retail voice-array base without the oracle's stepping
+side effect.
+
+### Next
+
+Repair or bypass the oracle pointer-watch stepping path, qualify the dynamic
+voice-array base in a run that passes the whole-RDRAM control and reaches title
+and hangar, then watch one dynamically resolved active slot's `+0x34` with a
+writer-PC histogram. See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-voice-output-base-provenance`.
