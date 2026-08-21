@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2098 (2026-08-20);
-behavioral and source evidence is current through s2098.
+for exact commands and probe rows. Maintained in Session 2099 (2026-08-20);
+behavioral and source evidence is current through s2099.
 
 ## Current state
 
@@ -174,6 +174,23 @@ behavioral and source evidence is current through s2098.
   `H-GeneratedOutputSource` at the `0x6F0` source scope, rejects
   `H-ScratchWriter` there, and leaves `H-ABI-Field` open at destination
   contract scope. No runtime behavior changed.
+- s2099's source/field audit completed the upstream chain. The initial task
+  DMAs populate `0x340`, the `0x350/0x3A0` descriptor blocks, `0x6F0`, and
+  `0xCB0`; `L_19A4` reads `0xCC0..0xE3F` from the `0xCB0` load, clears those
+  source blocks in place, and writes transformed data to `0x3F0..0x56F` and
+  `0x570..0x6EF`. `L_1830` then consumes both ranges into the observed
+  `0x6F0..0x9EF` writeback. `L_12E0` takes its DRAM destination from
+  `[r2+0x44]`, while `L_1314` takes its `0xCB0` destination from
+  `[0x348]+0x100`; both fields are loaded from task-local DMEM blocks.
+  Static flow does not establish their runtime values or semantic contract,
+  and vector constants mean a zero source cannot by itself predict a zero
+  transform. The independent retail oracle passed the whole-RDRAM control
+  (`10000` callbacks before removal), reached title `1024 @ 0x00790400` and
+  hangar `512 @ 0x006AB400`, and found nonzero writes in broad physical
+  audio-data windows. Those windows were too broad for exact field
+  attribution, so this retains `H-InputZero` versus `H-RSPWriteLoss` and
+  retains `H-ABI-Destination` at destination-contract scope. No runtime or
+  generated-code behavior changed.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -245,17 +262,17 @@ as active work items.
 1. **M5 image-task source/ABI boundary.** `H-ImageStagingZeroPayload` is
    selected at the qualified title scope: all observed image DMAs are
    non-overlapping zero-payload transfers despite DMEM mutation and complete
-   SP/guest routing. s2098 maps the `0x6F0/0x300` source to a generated
-   transform output and the `0xCB0/0x198` source to a control/metadata
-   writeback, while both DRAM destinations remain task-field-derived. The
-   next unit is a bounded source/field audit of the `0x3F0`/`0x570` transform
-   inputs and the `[r2+0x44]`/`[0x348]+0x100` destination fields, joined to the
-   observed task rows. A nonzero source path that is preserved through
-   `L_1830` would move the boundary to RSP/DMA capture; zero or untouched input
-   paths would select a legitimate zero transform; an output-field path with
-   no established contract would retain the ABI boundary. Do not change
-   output routing, task fields, canary, gate, wait, guard, queue policy, or
-   default dispatch.
+   SP/guest routing. s2098–s2099 establish the generated source and
+   destination-field formulas but not their runtime contents or contract.
+   The next unit is one regeneration-stable treatment/control capture of
+   pre-`L_19A4` `0xCC0..0xE3F` input, post-transform `0x3F0/0x570`, pre-DMA
+   `0x6F0`, and both destination fields, joined by audio-task ordinal and VI
+   phase. A nonzero input and nonzero pre-DMA transform selects a later DMA
+   snapshot/copy boundary; zero input with zero transform selects a legitimate
+   zero path; nonzero transform with zero payload selects the RSP/DMA capture
+   boundary. The destination fields remain separately classified by their
+   observed values and source task blocks. Do not change output routing, task
+   fields, canary, gate, wait, guard, queue policy, or default dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -573,9 +590,15 @@ PCM source/consumer rows were all zero. s2098's source audit found five
 reachable write callsites behind one helper: `L_12E0` generates the observed
 `0x6F0..0x9F0` source from `0x3F0`/`0x570`, while `L_1314` writes the observed
 `0xCB0..0xE48` control block; their destinations are still loaded from DMEM
-task fields. The next unit is the source/field audit of those input and
-destination paths. The chronological ledger is still the source for exact run
+task fields. The next unit is the phase-keyed in-port pre/post-DMEM table.
+The chronological ledger is still the source for exact run
 commands, counts, and rejected retries.
+
+s2099 completes the static source/field audit and adds an independent retail
+oracle arm: the whole-RDRAM control and both target VIs were positive, and
+broad physical audio-data windows contained nonzero writes, but their breadth
+prevented exact task-field attribution. The next discriminator is therefore a
+phase-keyed in-port pre/post-DMEM table, not a broader retail watch.
 
 ## Method and safety rules
 

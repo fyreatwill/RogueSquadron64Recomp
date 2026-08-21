@@ -99932,3 +99932,46 @@ generated-source audit of every reachable `DO_DMA_WRITE` in
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+## Session 2099 (2026-08-20) — audited the image-task input and field boundary
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 39826 bytes, so this was not a
+maintenance iteration. No build or runtime behavior change was made.
+
+The bounded generated-source audit traced the image arm's descriptor and
+writeback chain. The initial task DMAs populate DMEM `0x340`, the
+`0x350/0x3A0` descriptor blocks, `0x6F0`, and `0xCB0`. Before
+`L_1830`, `L_19A4` reads `0xCC0..0xE3F` from the `0xCB0` load, clears
+those 0x180 bytes in place, and produces 0x180-byte spans at `0x3F0` and
+`0x570`. `L_1830` consumes both spans into the observed
+`0x6F0..0x9EF` output. `L_12E0` writes that 0x300-byte span to
+`[r2+0x44]`; `L_1314` writes the 0x198-byte `0xCB0` block to
+`[0x348]+0x100`. The other reachable writebacks are `0xC30` control data
+and `0xE50` output data and do not match the qualified rows.
+
+The independent retail oracle arm was:
+
+```sh
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 70 --hit-cap 64 --watch-write 0x0:0x800000 --watch-write 0x160000:0x1A0000 --watch-write 0x1A0000:0x1C0000 --first-watch 0 --pc-hist-watch 1 --pc-hist-watch 2 --post-value-watch 1 --post-value-watch 2 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/oracle_s2099_m5_fields.log 2>&1
+```
+
+It passed the whole-RDRAM positive control with 10000 callbacks before
+removal, ran for 4175 VI, and reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. The broad physical windows recorded 38176596 and
+1744561 writes, with nonzero final snapshots in both windows. Their breadth
+prevented exact attribution to the two RSP task-local destination fields, so
+the oracle confirms retail audio-memory activity but does not select
+`H-InputZero` versus `H-RSPWriteLoss`. Static source evidence likewise
+leaves the destination contract open; `H-ABI-Destination` remains selected
+at that scope.
+
+This rules out scratch/padding as the `0x6F0` source explanation and rules
+out treating the broad retail window as an exact field witness. It does not
+authorize output routing, task-field, canary, gate, wait, guard, queue-policy,
+or default-dispatch changes. The next unit is the phase-keyed in-port
+pre/post-DMEM table specified in `scratch/agent/NEXT.md`.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.
