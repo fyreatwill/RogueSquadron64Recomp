@@ -101299,3 +101299,48 @@ behavior changed.
 
 ORIGIN: no mitigation or game-value machinery was added; this session only
 captured independent retail execution and phase-gated controls.
+
+## Session 2135 (2026-08-21) — mapped the MORT artifact boundary
+
+HYPOTHESIS-ID: m5-mort-boundary
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `40,960` bytes, so this was not a
+maintenance iteration. The prescribed work unit was a bounded static census;
+it ran no build, port process, runtime instrument, or soak. The source/config
+search covered the `factor5_*.toml` inputs, RSP dispatch, companion symbol/
+decomp files, and subtitle/data-blob references. The ROM scan found the
+speech asset's MORT-prefixed descriptors and the manifest parser then supplied
+the asset boundary.
+
+The existing `factor5b_rsp.toml` maps ROM `0x09ABE0..0x09BB60` (`0xF80`) to
+IMEM PC `0x1080`; the companion yaml labels that image `aspMainText` at RDRAM
+`0x80099FE0`. Its companion `aspMainData` is ROM `0x0A5A00..0x0A5D20`
+(`0x320`) at RDRAM `0x800A4E00`. The generated image reads OSTask
+`data_ptr`/`data_size` from DMEM `0xFC0+0x30/+0x34`, reads task data into
+DMEM `0x340` and `0xCB0`, writes DMEM `0xCB0` to `data_ptr+0x100`, and
+returns `RspExitReason::Broke` at generated break PC `0x1328`. The other
+Factor 5 configs are graphics/resident-overlay inputs; `src/rsp/aspMain.cpp`
+is only a host stub.
+
+The independent companion data line identifies manifest entry `speech` at
+ROM `0x583D90..0x8A1174`, uncompressed size `0x31D3E4`. Its header reports
+`0x222` (`546`) samples and an `0x88C` offset table. All 546 descriptor rows
+begin with the MORT prefix; the fifth-byte type counts are `419/59/36/17/9/6`
+for values `0x00..0x05`, and the observed frequencies are 8000/16000 Hz.
+The named CPU path is `loadSpeechFile` -> `dmaVoiceSampleAndSignal` -> the
+decode/filter functions, with `musyxInitVoiceFromSample` consuming sample
+descriptors. The companion `9E3D0` code/notes identify the MORT decoder's
+CPU-side hand-written PC/table pattern, not a second RSP image.
+
+This selects `H-ExistingFactor5ConfigMatches` at the static source/config
+boundary. It rejects `H-NewMORTRSP-segment` because no unrepresented audio RSP
+image exists, and rejects `H-CPUDecoderOnly` because the existing audio RSP
+image and entry/exit contract are independently identified alongside the
+CPU-side MORT path. `H-MORTBoundaryUnresolved` is rejected for these same
+bounded rows; the remaining open question is the retail runtime meaning of
+the task buffer fields, not the ROM artifact boundary. No runtime dispatch,
+task ABI, wait, guard, or default-arm behavior changed.
+
+ORIGIN: no mitigation or game-value machinery was added; this session only
+recorded static ROM/config/decomp boundaries and the next retail task-buffer
+contract census.

@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2134
-(2026-08-21); behavioral and source evidence is current through s2134.
+authoritative for exact commands and probe rows. Maintained in Session 2135
+(2026-08-21); behavioral and source evidence is current through s2135.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -26,6 +26,16 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `Broke` and fails the reserved host canary. The s2113 contract witness
   records the generated completion edge as guest PC `0x1328`, host exit
   `Broke`, task `output_buff=0`, and the phase-keyed post-DMA/PCM joins.
+- The s2135 static MORT boundary census selected
+  `H-ExistingFactor5ConfigMatches`: the companion retail `aspMainText` image
+  is exactly `factor5b_rsp.toml` ROM `0x09ABE0..0x09BB60`, with companion
+  `aspMainData` at ROM `0x0A5A00..0x0A5D20`. The generated image reads the
+  audio task's `data_ptr`/`data_size`, uses the `data_ptr+0x100` output DMA,
+  and exits through `break` PC `0x1328` as `Broke`. Retail MORT is not a
+  second RSP image: manifest entry `speech` is the uncompressed ROM range
+  `0x583D90..0x8A1174`, containing 546 MORT descriptors consumed by the
+  named CPU voice path. This rejects a new MORT RSP segment at the current
+  source/config boundary; no runtime dispatch or default-arm change follows.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -310,17 +320,15 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 MORT artifact boundary.** Retail ground truth now selects
-   `H-RetailAIQueued` and `H-RetailMORTDecoderLive`: the same qualified run
-   executed all seven named voice decode/filter functions, `musyxSynthFrame`,
-   and `osAiSetNextBuffer` after the whole-RDRAM control and title/hangar
-   gates. The port-side image arm still has the sampled
-   `H-PortAIQueueMatches` boundary, but its `output_buff=0`/`break_pc=0x1328`
-   contract and RSP ROM segment remain unresolved. The next unit is a static
-   MORT artifact-boundary census: map the retail audio RSP task's ROM segment,
-   entry/exit contract, and available MORT sample descriptors against the
-   existing RSPRecomp configs and companion decomp data. Create no runtime
-   dispatch or default-arm change until that table is complete.
+1. **M5 task-buffer contract validation.** The s2135 static census selected
+   `H-ExistingFactor5ConfigMatches`: `factor5b_rsp.toml` already maps the
+   retail `aspMainText`/`aspMainData` pair, while the 546-sample MORT speech
+   asset is consumed by the CPU voice path. The next unit is a retail-grounded
+   task-buffer census: map one qualified `M_AUDTASK`'s `data_ptr`,
+   `data_size`, `output_buff`, and `data_ptr+0x100` input/output ranges, then
+   compare that table with the existing opt-in image arm. No new RSP config,
+   runtime dispatch, task-field rewrite, or default-arm change is authorized
+   until the retail table selects the ABI.
 2. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
    three consecutive coverage-only results under the same hypothesis; the
    current renderer boundary supplies no new discriminator. The first sweep
@@ -429,15 +437,19 @@ violations. The stub arm remained zero. The `[pcm-sanity]` logger's lifetime
 sampling missed the two transient nonzero callbacks, so its all-zero sampled
 rows are a measurement-coverage limitation, not a silent-PCM result. The
 image `break_pc=0x1328`, `exit=1`, canary failure, and `output_buff=0` remain
-the task boundary; no host/task/default change is authorized. The next M5
-unit is the static MORT artifact-boundary census.
+the task boundary; no host/task/default change is authorized. The s2135 static
+census now identifies the existing RSP image and separate MORT speech asset;
+the next M5 unit is the retail-grounded task-buffer contract table.
 
 The s2134 retail oracle supplied the independent codec-side boundary. After
 the whole-RDRAM control and title/hangar gates, all seven named voice
 decode/filter functions executed, as did `musyxSynthFrame` and
 `osAiSetNextBuffer`. This selects `H-RetailMORTDecoderLive` for the covered
-retail route. It does not identify the port RSP ROM segment or task ABI, and
-does not prove that `factor5_ucode_b` is the MORT implementation.
+retail route. The s2135 static census then identified the existing
+`factor5b_rsp.toml` image/task boundary and the separate `speech` asset. It
+does not prove that `factor5_ucode_b` is the MORT decoder or settle the
+runtime meaning of every task field; the next unit is the retail task-buffer
+contract table.
 
 ### M5 audio and guest gate
 
@@ -601,8 +613,12 @@ The s2134 retail oracle then supplied the independent voice-codec line:
 whole-RDRAM control and title/hangar gates passed, all seven named decoder/
 filter PCs executed, and `musyxSynthFrame` plus `osAiSetNextBuffer` executed
 in the same run. This selects `H-RetailMORTDecoderLive` at the covered retail
-route. The next unit is the static MORT artifact-boundary census, not a port
-dispatch change, the parked drain A/B, or the symbol sweep.
+route. The s2135 static source/data census selected
+`H-ExistingFactor5ConfigMatches`: the existing `aspMainText`/`aspMainData`
+pair is the retail audio RSP image, and MORT samples are a separate speech
+asset consumed by CPU voice routines. The next unit is the retail-grounded
+task-buffer contract table, not a new RSP config, port dispatch change, the
+parked drain A/B, or the symbol sweep.
 
 ## Method and safety rules
 

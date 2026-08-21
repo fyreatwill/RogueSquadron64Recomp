@@ -1,68 +1,71 @@
-# NEXT work unit (s2135) — map the MORT artifact boundary
+# NEXT work unit (s2136) — retail task-buffer contract
 
-HYPOTHESIS-ID: m5-mort-boundary
+HYPOTHESIS-ID: m5-task-buffer-contract
 
 ## Work unit
 
-Run one bounded static census to identify the retail audio RSP task's ROM
-segment, entry/exit contract, and MORT sample-descriptor sources before
-creating an artifact or adding a port instrument. Reconcile the existing
-`factor5_*.toml`/`aspMain` inputs, `get_rsp_microcode` routing, generated audio
-symbols, and companion decomp/sample data. This is one source/config mapping
-experiment: do not build the port, change `ROGUESQ_AUDIO_UCODE`, alter task
-fields, remove waits or guards, or default any dispatch arm.
+Run one independent retail-oracle census of the fixed `aspTask` at physical
+`0x149470` before adding or changing any port instrumentation. Capture the
+qualified `M_AUDTASK` writes and the four task-field pairs that can split the
+existing `factor5b_rsp.toml` contract: `ucode`/`ucode_data`, `data_ptr`/
+`data_size`, and `output_buff`/`output_buff_size`. Use the same run's
+whole-RDRAM watch as the positive control, and phase-gate the target samples
+through title and hangar. No build, runtime change, task-field rewrite, new
+RSP config, or default-arm change is in scope.
 
 ## Competing hypotheses and discriminator
 
-- `H-NewMORTRSP-segment`: the retail decoder census corresponds to a distinct
-  audio RSP text/data segment not represented by the current Factor 5/ASP
-  configs. The table will identify a concrete ROM offset/length, RSP text/data
-  load addresses, task entry/exit convention, and MORT descriptor source. This
-  selects a new opt-in MORT RSPRecomp artifact as the next implementation.
-- `H-ExistingFactor5ConfigMatches`: one existing RSP config and binary input
-  maps to the retail audio task's ROM range and task contract, with companion
-  MORT descriptors reachable from the same data path. This selects reuse of
-  that config/input after the table proves the match; it does not by itself
-  authorize renaming `factor5_ucode_b` or changing the default arm.
-- `H-CPUDecoderOnly`: the seven watched functions are CPU-side MORT/voice
-  routines, but no distinct RSP segment or task entry can be tied to them from
-  the current source/config/decomp evidence. This selects a CPU codec/data ABI
-  mapping before any RSP artifact is created.
-- `H-MORTBoundaryUnresolved`: the source/config census finds conflicting or
-  incomplete ROM offsets, descriptor ownership, or task ABI fields. This
-  selects no artifact change and requires a new ground-truth watch that names
-  the missing writer/consumer boundary.
+- `H-RetailTaskMatchesFactor5b`: after a qualified `runMusyXTaskLocked` call,
+  retail writes `aspTask.ucode=0x80099FE0` and `ucode_data=0x800A4E00`; the
+  meaningful buffer is `data_ptr`/`data_size`, with the generated image's
+  `data_ptr+0x100` output convention and `output_buff` unused or zero.
+- `H-RetailOutputBuffContract`: the retail task uses nonzero
+  `output_buff`/`output_buff_size` as the output consumed by AI/voice code;
+  the generated `data_ptr+0x100` write is not the final output contract.
+- `H-RetailCpuMORTBoundary`: the retail MORT descriptor/CPU voice path is
+  live, but no qualified `M_AUDTASK` field transition links it to the
+  factor5b data/output convention; the RSP image is not the MORT boundary to
+  validate next.
+- `H-RetailTaskBoundaryUnresolved`: the oracle run reaches the positive
+  control and task PCs but the fixed task rows are absent, conflicting, or
+  phase-unqualified, so no ABI conclusion is valid.
 
-The discriminating table is one row per candidate RSP input/config and one row
-per MORT descriptor source. Each row must include ROM offset and byte range,
-RSP text/data load addresses, task entry/exit convention, source file/config,
-and the link to the named CPU decoder or sample descriptor. The result selects
-`H-NewMORTRSP-segment` only when one previously unrepresented segment has a
-complete contract; selects `H-ExistingFactor5ConfigMatches` only on an exact
-existing-config match; selects `H-CPUDecoderOnly` when the CPU routines are
-the only mapped boundary; otherwise selects `H-MORTBoundaryUnresolved`.
+The one discriminating table is keyed by `aspTask` field and phase: writer
+PC, post-store value, task ordinal, and whether the value equals the
+factor5b prediction. Select `H-RetailTaskMatchesFactor5b` only when the
+ucode/data image pair and `data_ptr+0x100` convention co-occur with a zero or
+unused output buffer. Select `H-RetailOutputBuffContract` only when the
+nonzero output buffer is the downstream audio buffer. Select
+`H-RetailCpuMORTBoundary` only when the MORT/CPU execution controls pass but
+the task rows show no factor5b output relationship. Otherwise select
+`H-RetailTaskBoundaryUnresolved` and do not change the port.
 
-## Exact commands
+## Exact command
 
     cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-    rg -n -i 'audio|audtask|aspMain|MORT|ucode|microcode|SP_TEXT|SP_DATA|text_start|data_start|rom' \
-      factor5_*.toml src/rsp src/main/main.cpp syms docs \
-      /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-      /Users/williambuckley/Documents/Tools/rogue_squadron64/docs/subtitles \
-      > scratch/agent/mort_s2135_static_refs.txt
-    python3 - <<'PY'
-    from pathlib import Path
-    rom = Path("/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64").read_bytes()
-    needle = b"MORT"
-    for off in range(len(rom)):
-        if rom.startswith(needle, off):
-            print(f"MORT magic rom=0x{off:06X}")
-    PY
-    rg -n 'factor5|aspMain|MORT magic|decodeAndFillVoiceBlock|filterVoiceSampleBlock|musyxSynthFrame|osAiSetNextBuffer' \
-      scratch/agent/mort_s2135_static_refs.txt
+    tools/oracle/build/rs64_oracle \
+      --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+      --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+      --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+      --secs 60 --hit-cap 10000 --vi-trace \
+      --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+      --watch-write 0x0:0x800000 \
+      --watch-rw 0x149470:0x1494B0 \
+      --watch-write 0x149480:0x149484 \
+      --watch-write 0x149488:0x14948C \
+      --watch-write 0x1494A0:0x1494A4 \
+      --watch-write 0x1494A4:0x1494A8 \
+      --watch-write 0x149498:0x14949C \
+      --watch-write 0x14949C:0x1494A0 \
+      --post-value-watch 1 --post-value-watch 2 --post-value-watch 3 \
+      --post-value-watch 4 --post-value-watch 5 --post-value-watch 6 \
+      --post-value-watch 7 --pc-hist-watch 1 \
+      --watch-pc 0x8008E904,0x80091EB0 \
+      --detail-watch 8 --detail-watch 9
 
-Inspect only the bounded reference table and the `MORT magic` rows; do not
-read generated or ledger files wholesale. The work unit ends when exactly one
-of the four hypotheses is selected. If no candidate has a complete ROM/task/
-descriptor row, record `H-MORTBoundaryUnresolved` and do not scaffold a new
-config from guessed offsets.
+Watch indexes are intentional: 0 is whole-RDRAM; 1 is the full `aspTask`
+range; 2/3 are `ucode` and `ucode_data`; 4/5 are `data_ptr` and
+`data_size`; 6/7 are `output_buff` and `output_buff_size`; 8/9 are the two
+execution watches. Inspect the bounded post-value and PC-histogram rows plus
+the VI 1024/title and VI 512/hangar controls. Do not interpret a null from a
+phase the run did not reach.

@@ -16,14 +16,16 @@ The current default is silent, but “audio” is not one missing function:
   MusyX-derived, not stock `aspMain`.
 - The guest has a MusyX engine, voice tables, song sequencer, DMA-batch
   submission, and audio-task completion waits. The voice-compression material
-  identifies MORT as a codec/library boundary inside the MusyX ecosystem; the
-  repository has no MORT RSPRecomp config or completed MORT decoder pass. The
+  identifies MORT as a codec/library boundary inside the MusyX ecosystem. The
   s2134 retail oracle proves that the named voice decode/filter pipeline is
-  live on the qualified retail route, but the port RSP ROM segment and ABI are
-  still unidentified. Do not call `factor5_ucode_b` “the MORT recompile” until
-  that segment and ABI are independently matched. The current working
-  boundary is therefore **retail MORT execution proven; port MORT artifact and
-  task contract unproven**.
+  live on the qualified retail route. The s2135 static census maps the retail
+  RSP image to the existing `factor5b_rsp.toml`/`aspMainText` pair at ROM
+  `0x9ABE0` and maps the separate uncompressed `speech` MORT asset to ROM
+  `0x583D90..0x8A1174`; its 546 descriptors feed the named CPU voice path.
+  Do not call `factor5_ucode_b` “the MORT recompile”: it is the existing audio
+  RSP image, while MORT is a separate CPU-side sample/codec boundary. The
+  remaining task contract question is the retail meaning of the audio task's
+  `data_ptr`, `data_size`, `output_buff`, and `data_ptr+0x100` fields.
 - s2002–s2003 supplied a task/image attribution for the current opt-in arm:
   `0x80099FE0`/`0x800A4E00` are `aspMainTextStart`/`aspMainDataStart` in the
   companion symbol map, and the ROM split labels `0x9ABE0` as `aspMainText`.
@@ -138,14 +140,15 @@ explicit control arm.
 7. **MORT boundary work.** The s2134 retail oracle now satisfies the
    independent codec-side entry condition: all seven named decode/filter
    functions executed after the whole-RDRAM and title/hangar controls, with
-   `musyxSynthFrame` and `osAiSetNextBuffer` in the same run. First map the
-   retail audio RSP task's ROM segment, entry/exit contract, and available MORT
-   sample descriptors against the existing RSPRecomp configs and companion
-   decomp data. Then create the separate MORT artifact/config and validate it
-   against retail sample descriptors. Positive control is a known MORT sample
-   decode with byte-count and waveform checks, followed by the in-game
-   slot/PCM controls. Soak: one controlled voice/sample phase, then hangar;
-   rollback by leaving the MORT dispatch arm opt-in.
+   `musyxSynthFrame` and `osAiSetNextBuffer` in the same run. s2135 mapped the
+   retail RSP image to the existing `factor5b_rsp.toml` pair and mapped MORT
+   to the separate 546-entry `speech` asset consumed by CPU voice routines;
+   no new MORT RSPRecomp config is justified by the static boundary. The next
+   work unit is a retail task-buffer census for `data_ptr`, `data_size`,
+   `output_buff`, and `data_ptr+0x100`, followed only after that table by a
+   known-MORT sample decode with byte-count and waveform checks. Positive
+   control is the oracle whole-RDRAM watch plus a qualified audio-task row;
+   rollback remains leaving the existing RSP dispatch arm opt-in.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.
