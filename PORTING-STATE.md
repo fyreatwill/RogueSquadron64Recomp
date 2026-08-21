@@ -100291,3 +100291,33 @@ canary, wait, guard, queue, or default-dispatch behavior changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-gate-writer-sweep`.
+
+## Session 2108 (2026-08-20) — retried reduced-capture B40 gate A/B
+
+The existing generated B40 arm was verified and the target rebuilt. The
+same-build control/treatment pair used `ROGUESQ_AUDIO_UCODE=1`,
+`ROGUESQ_SPIN_YIELD=1`, explicit `ROGUESQ_M5_C88_VALUE=0`, and removed only
+the two high-volume audio tick/drain logs. The B40 witness was a positive
+control in both arms: phase 2, width 320, origin `0x006DD280`, old 0,
+requested 1, with stored 0 in control and 1 in treatment.
+
+The control remained at width 640 and never reached title before its process
+group was SIGKILLed. Treatment reached title VI 1024 at `0x00790400` and
+hangar VI 512 at `0x006AB400`. In treatment hangar phase 10, the first
+nonzero stage-2 sample contained `0x167F50`/621 and `0x168250`/639; each had
+matching nonzero `dmem_to_rdram` payload and exact PCM source/consumer FNV and
+count. The later `0x8008EC88` writer stored gate 0, and target raw-gate rows
+also read gate 0 with branch 1. Treatment produced 3334 ABI/DMA rows, all
+`exit=1` and `canary_ok=0`, with zero ordering violations. These target rows
+are single-arm evidence because the control had no target phase.
+
+This records a route-admission split, not a valid B40 downstream selection.
+It rules out neither B40-required, later-writer suppression, route hazard, nor
+reversed/suppressing behavior. It does rule out treating the B40 writer as
+unreached in this pair. No output routing, task field, canary, wait, guard,
+queue policy, or default dispatch changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-gate-writer-sweep`.

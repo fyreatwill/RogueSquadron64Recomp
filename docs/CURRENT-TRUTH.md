@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2107 (2026-08-20);
-behavioral and source evidence is current through s2107.
+for exact commands and probe rows. Maintained in Session 2108 (2026-08-20);
+behavioral and source evidence is current through s2108.
 
 ## Current state
 
@@ -132,6 +132,19 @@ behavioral and source evidence is current through s2107.
   unevaluable and selects no B40 hypothesis. No gate, output routing,
   task-field, canary, wait, guard, queue-policy, or default-dispatch behavior
   changed.
+- s2108's reduced-capture B40 pair passed the writer control in both arms:
+  phase 2, width 320, origin `0x006DD280`, old 0, requested 1, stored 0 in
+  control and 1 in treatment. The control then remained at width 640 and
+  never reached title before its process-group SIGKILL; treatment reached
+  title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Treatment's first
+  hangar stage-2 sample had two nonzero rows (`0x167F50`/621 and
+  `0x168250`/639) with matching nonzero PCM source/consumer rows and DMA
+  payloads, but its later EC88 writer stored gate 0 and the raw target gate
+  was 0. Treatment had 3334 ABI/DMA rows, all `exit=1` and `canary_ok=0`,
+  with no ordering violations; control had no target-phase rows. This is a
+  route-admission split and single-source downstream evidence, not an
+  admissible B40 A/B selection. No output, task-field, canary, wait, guard,
+  queue-policy, or default-dispatch behavior changed.
 - s2088's fixed retail oracle run passed the whole-RDRAM positive control
   (`102276129` writes), reached title `1024 @ 0x00790400` and hangar
   `512 @ 0x006AB400`, and sampled both exact candidate writers after the
@@ -361,17 +374,17 @@ behavioral and source evidence is current through s2107.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 guest gate semantics, B40 route-qualified retry.** s2107 proves that
-   the B40 arm stores the requested 0/1 difference before target phases, but
-   no corrected pair admitted both arms to the downstream discriminator. Run
-   one reduced-capture same-build A/B with the existing B40 witness, C88
-   explicitly zero, and the route/ABI/DMA/stage/slot/PCM controls retained.
-   Remove only the high-volume `ROGUESQ_LOG_AUDIOTICK_TRACE` and
-   `ROGUESQ_LOG_AUDIO_DRAIN` logs to reduce route perturbation. If both arms
-   reach title and hangar, compare target raw gate/branch, stage-to-DMA/PCM,
-   task exit/output/canary, and ordering. Do not change any gate store,
-   output routing, task fields, canary, waits, guards, queue policy, or
-   default dispatch.
+1. **M5 guest gate semantics, isolate B40 route admission.** s2108's pair
+   again split before the downstream comparison: B40=0 stopped at width 640,
+   while B40=1 reached title/hangar and its later EC88 writer restored gate
+   0. Use one new same-build A/B that retains the B40 witness and all route,
+   ABI/DMA/stage/slot/PCM controls, but adds a phase-keyed pre-title route
+   table for the B40 call, reapplyDisplayMode entry/success, and the first
+   title transition. The discriminator is whether B40=0 exits the same
+   pre-title chain and whether both arms then reach target phases; do not
+   interpret target rows unless both arms do. Do not change any gate store,
+   output routing, task field, canary, wait, guard, queue policy, or default
+   dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -872,6 +885,13 @@ The B40 downstream hypotheses remain unevaluable. The documented Splat split com
 was unavailable and Splat 0.50/0.41.1 rejected the repository's existing
 annotated symbol format; existing split artifacts enabled the fallback
 make_elf -> N64Recomp -> fixup -> CMake pipeline.
+
+s2108 repeated the B40 arm with reduced capture and explicit C88=0. Both
+writer witnesses fired with stored 0/1, but only treatment reached title and
+hangar. Its phase-10 nonzero stage rows at `0x167F50` and `0x168250` matched
+nonzero DMA and PCM source/consumer rows; the later EC88 writer stored gate 0
+and the target raw gate was 0. The control stopped at width 640, so this is a
+route-admission split, not a paired B40 selection. No runtime behavior changed.
 
 ## Method and safety rules
 
