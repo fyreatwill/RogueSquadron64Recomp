@@ -3615,3 +3615,101 @@ believable because the needed phase joins, independent retail writer/value
 witnesses, treatment census, or exact generated/source crosswalk were absent.
 No output route, task field,
 canary, wait, guard, or guest behavior changed in these sessions.
+
+## 40. M5 image-task and gate boundary archive (s2080–s2108), migrated in s2109
+
+The chronological ledger in `PORTING-STATE.md` remains authoritative for exact
+commands, raw counts, and failed retries. This section preserves the durable
+source/retail joins and the audio-arm decisions that no longer need to occupy
+the compact current-truth file.
+
+### Source and retail boundary (s2080–s2092)
+
+- s2080 crosswalked `fillSampleStreamRange` to
+  `0x8008FAAC..0x8008FFAC`. The `+336` marker is inside that function;
+  `+6464` and `0x8000B650` are outside it, with the latter belonging to the
+  `beginFrameDLChunk` return breadcrumb. This selects stale last-guest-PC at
+  source/metadata scope, without proving a host copy/readback cause.
+- s2081's host `copyToRAM` witness was positive and the route reached title and
+  hangar, but the source witness was anchored to the wrong generated file.
+  s2082 repaired the `funcs_24.c` anchor and showed that the remaining gap was
+  runtime reachability, not a stale fixup.
+- s2084's all-phase table then recorded seven active
+  `0x800903F0` callsite-to-entry pairs in the target phase. s2085 joined their
+  source intervals to host ranges and found all seven arguments outside the
+  RDRAM domain with no same-phase intersection. s2086's generated/companion
+  ABI crosswalk established that the callee treats its arguments as range
+  endpoints and extents; the caller's voice-slot `+0x34` writer remained open.
+- s2087–s2091 corrected the retail physical-watch geometry. The voice-array
+  writer `0x800921E8` uses the dynamic voice-array entry and `0x88` stride,
+  while `0x80090C80` is a command-list writer using a separately published
+  head/count root. Retail observations match the generated command-list
+  formula and show that the roots rotate. The old off-lattice `H-WrongField`
+  interpretation is superseded by alternate-structure/reallocated-root
+  behavior; no port field change is authorized.
+- s2092 independently qualified the retail display gate, countdown, and flag
+  ranges. All five requested gate PCs reconcile to generated and fixup
+  anchors, with a mixed writer contract rather than one uniform value. The
+  exact countdown word had no writes in that run; the flag word has named
+  writers and values `0x00000003`, `0x00010003`, and `0x01010003`. This
+  authorized writer-specific port tests only.
+
+### Image-arm route and task boundary (s2093–s2100)
+
+- s2093–s2096 separated the Factor 5 image-arm route from the default silent
+  stub. The wrapper, task-thread completion, SP external delivery, and guest
+  receive edges all became positive in the corrected same-build route table;
+  the treatment reached both target phases. The remaining question moved to
+  the image-task ABI/DMA/slot/PCM contract, not the callback route.
+- s2097's corrected A/B selected zero staging payload at title scope. The
+  treatment changed DMEM and returned `Broke`, but its phase-keyed DMA and PCM
+  rows had zero payload and its output-buffer field/canary did not indicate a
+  completed host output. This was title-scoped, not a global claim.
+- s2098–s2099 audited the generated writeback chain. One helper has five
+  reachable callsites; the observed `0x6F0..0x9F0` output is generated from
+  transformed `0x3F0`/`0x570` blocks, while the observed `0xCB0..0xE48`
+  range is a control/metadata writeback. Their destinations come from task
+  DMEM fields, and static flow does not assign their final ABI meanings.
+  Retail broad-window writes are positive but too broad for exact field
+  attribution.
+- s2100 added the regeneration-stable stage table. It selected `H-InputZero`
+  for title: sampled input, transform, and DMA payloads were zero. A hangar
+  ordinal independently carried nonzero input, transform, and matching DMA
+  payload, rejecting transform annihilation and DMA write loss for that
+  sample. The image destination and playback contract remain open.
+
+### Stage/PCM join and display-gate tests (s2101–s2108)
+
+- s2101's retail exact-destination watch passed the whole-RDRAM control and
+  both VI gates, but all exact writes preceded the target phases. It is
+  qualified timing evidence, not an ABI explanation. s2102 corrected the
+  stage hash byte order and passed the zero-payload control; its nonzero
+  hangar stage was not paired. s2104's three concurrent attempts split route
+  admission, so its nonzero treatment rows were single-arm only.
+- s2105 closed that route-admission blocker. Both arms reached title and
+  hangar; two nonzero hangar stage-2 rows (`0x167F50`/621 and
+  `0x168250`/639) matched `dmem_to_rdram` payloads and exact PCM source and
+  consumer spans. This selects `H-ImageDestIsPCM` at the sampled stage-2
+  scope, while the image task still returns `Broke`, reports `output_buff=0`,
+  and fails the host canary.
+- s2106 held the image arm constant and tested `0x8008EC88` with explicit
+  C88=0 versus 1. Both arms reached the target phases. C88=0 stored gate 0,
+  took the active consumer path, and produced the exact nonzero PCM join;
+  C88=1 stored gate 1 and produced no nonzero stage/PCM row. This selects
+  reversed-or-suppressing behavior at the sampled port gate scope, without
+  authorizing a default gate change.
+- s2107's retail oracle observed the live `0x8008EB40` B40 writer. The port
+  witness independently recorded the requested B40=1 store as stored 0 in
+  control and 1 in treatment. Its first downstream pair and two corrected
+  attempts split route admission, so no B40 downstream hypothesis was
+  selected. s2108 repeated the reduced-capture pair with C88=0: the B40
+  witness still passed, treatment reached title/hangar and had the known
+  nonzero stage/PCM rows, but control stopped at width 640. This is a
+  pre-title route split, not a paired B40 causal result.
+
+These records supersede the global zero-payload image-DMA wording, the
+single-gate-value assumption, the old voice-field attribution, and the claim
+that the B40 writer was unreached. They do not authorize changing output
+routing, task fields, canary handling, waits, guards, queue policy, or default
+dispatch. The next discriminator is the phase-keyed pre-title B40/reapply
+route table described in `scratch/agent/NEXT.md`.

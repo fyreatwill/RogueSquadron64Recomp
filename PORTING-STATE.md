@@ -100321,3 +100321,24 @@ queue policy, or default dispatch changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-gate-writer-sweep`.
+
+## Session 2109 (2026-08-20) — compacted current truth and migrated recent archive
+
+The maintenance check measured `docs/CURRENT-TRUTH.md` at 61,384 bytes, so
+this iteration performed no build, instrumentation, oracle run, or game soak.
+The file was compacted from 914 lines to 193 lines and 10,651 bytes. Durable
+s2080–s2108 source, retail, image-task, PCM, and B40 conclusions were migrated
+to `docs/PROJECT-OVERVIEW.md` §40. The next B40 route work unit was rewritten
+in `scratch/agent/NEXT.md` with its competing hypotheses and phase-keyed
+discriminator.
+
+This confirms the maintenance trigger and preserves the ledger's exact
+session history in the overview. It rules out no runtime hypothesis and does
+not select a B40 explanation; s2108's pre-title route-admission split remains
+the active discriminator. No source, runtime, gate, task, output, canary,
+wait, guard, queue, or default-dispatch behavior changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-gate-writer-sweep`.
