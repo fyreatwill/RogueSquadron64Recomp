@@ -99843,3 +99843,47 @@ was made.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+## Session 2097 (2026-08-20) — qualified the image task's zero-payload boundary
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 35340 bytes, so this was not a
+maintenance iteration. The fixed retail oracle was rebuilt and rerun before
+interpreting the port. Its whole-RDRAM positive control reached 31679 writes,
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and retained
+the mixed gate-writer rows.
+
+The first copied A/B command was rejected as a recipe failure: it omitted the
+qualified `ROGUESQ_SPIN_YIELD=1` setting, and its control crashed in
+`waitForAnyAudioSlot` before title. The corrected same-build A/B added
+`ROGUESQ_SPIN_YIELD=1` to both arms. Its control retained complete route edges
+for 272 title ordinals and 3018 hangar ordinals. Every retained ordinal had
+the wrapper return, `run-task-return`, `sp-complete-enter`,
+`sp-complete-return`, external SP enqueue, external delivery, and guest
+receive. The treatment retained 266/266 complete title ordinals and reached
+no qualified hangar origin before crashing in `allocAndInitGridCellArray`;
+this does not make its title rows unevaluable.
+
+The treatment title table had 1511 `audtask-dma-row`s and 3046 matching
+`dmem_to_rdram` ranges. All 3046 ranges had `output_overlap=0` and
+`payload_nz=0`. The 1510 ABI rows joined to those target rows all reported
+`output_buff=0`, nonzero DMEM change, `canary_ok=0`, and `exit=1`.
+There were 3224 task joins, including 1523 complete joins; 1537 PCM source
+rows and 1537 PCM consumer rows were present, all with `nz=0`. Target gate and
+slot breadcrumbs fired. The independent DMA-range line and the independent
+PCM source/consumer line agree on a zero-output boundary, while the route
+table supplies the positive control. This selects
+`H-ImageStagingZeroPayload` at title-contract scope and rules out a host
+output-buffer write at that scope. It does not identify whether the zero-filled
+DMEM source is intended staging, scratch, or an ABI mismatch, and it does not
+qualify the treatment's exact hangar origin.
+
+No output routing, task-field, canary, gate, wait, guard, queue-policy, or
+default-dispatch behavior changed. The next work unit is the bounded
+generated-source audit of every reachable `DO_DMA_WRITE` in
+`build/factor5_ucode/factor5_ucode_b_recompiled.c`, joined to the observed
+`0x6F0/0x300` and `0xCB0/0x198` ranges and the `0x340..0xFCF` DMEM change span.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.

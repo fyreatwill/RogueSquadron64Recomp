@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2096 (2026-08-20);
-behavioral and source evidence is current through s2096.
+for exact commands and probe rows. Maintained in Session 2097 (2026-08-20);
+behavioral and source evidence is current through s2097.
 
 ## Current state
 
@@ -140,6 +140,24 @@ behavioral and source evidence is current through s2096.
   its route positive control. This selects `H-RouteRecovered` at recipe scope
   and re-admits the image-arm ABI/DMA/slot/PCM table; no task, queue, gate,
   wait, guard, output, or default-dispatch behavior changed.
+- s2097's fixed retail oracle again passed its whole-RDRAM positive control
+  (`31679` writes), reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and retained the mixed gate writers. The first same-build
+  port launch was not admissible because its control omitted the qualified
+  `ROGUESQ_SPIN_YIELD=1` recipe and stopped before title; the corrected A/B
+  included that setting in both arms. The corrected control had complete route
+  ordinals for title (`272`) and hangar (`3018`), while the treatment had
+  `266/266` complete title ordinals and reached no qualified hangar origin
+  before its later crash. In the treatment title phase, `1511` DMA rows joined
+  to `3046` `dmem_to_rdram` ranges: every range had `output_overlap=0` and
+  `payload_nz=0`; `1510` matched ABI rows all had `output_buff=0`,
+  `canary_ok=0`, `exit=1`, and nonzero DMEM change. The same phase had
+  `3224` task joins, `1523` complete joins, and `1537` source plus `1537`
+  consumer PCM rows, all with `nz=0`. This selects
+  `H-ImageStagingZeroPayload` at title-contract scope and rejects a host
+  output-buffer write at that scope. It leaves the image destination/ABI
+  interpretation and treatment hangar contract open; no output routing, task
+  field, gate, wait, guard, queue policy, or default dispatch changed.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -208,16 +226,20 @@ behavioral and source evidence is current through s2096.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 image-task ABI/DMA/slot/PCM contract.** Retain the route-positive
-   table and use the same-build control plus `ROGUESQ_AUDIO_UCODE=1` treatment
-   to qualify the existing phase-keyed `audtask-abi`, `audtask-dma-row`, slot,
-   and PCM source/consumer rows. A treatment output-overlap DMA with nonzero
-   payload and matched PCM selects the generated output contract; generated
-   DMA with no output overlap or zero payload selects the image staging/ABI
-   boundary; route-complete treatment with a slot/gate divergence selects the
-   guest completion contract. The control must retain its route positive
-   control and target VI gates. No output routing, task-field, gate, wait,
-   guard, queue policy, or default-dispatch change is authorized.
+1. **M5 image-task source/ABI boundary.** `H-ImageStagingZeroPayload` is
+   selected at the qualified title scope: all observed image DMAs are
+   non-overlapping zero-payload transfers despite DMEM mutation and complete
+   SP/guest routing. The next unit is a bounded generated-source audit of every
+   reachable `DO_DMA_WRITE` in `factor5_ucode_b_recompiled.c`, joined to the
+   observed `(dmem,len,dram,payload_fnv,payload_nz)` rows and the final
+   `0x340..0xFCF` DMEM change span. It must identify whether the observed
+   `0x6F0/0x300` and `0xCB0/0x198` writes are output staging, scratch, or an ABI
+   field-derived destination, without changing runtime behavior. A source
+   mapping to the mutated span with nonzero expected input would refute the
+   zero-payload/staging explanation; a mapping to untouched or zero-filled DMEM
+   confirms it; an unresolved register/field path leaves the ABI boundary open.
+   Do not change output routing, task fields, canary, gate, wait, guard, queue
+   policy, or default dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -303,6 +325,18 @@ closed at this scope and the next admissible discriminator is the existing
 ABI/DMA/slot/PCM table. The table still reports `Broke`, canary failure, and
 zero image DMA payload in the treatment; those fields are now eligible for
 interpretation, but no output or task-contract change is authorized.
+
+s2097's corrected same-build A/B (with `ROGUESQ_SPIN_YIELD=1` in both arms)
+retains complete route edges in the control and the treatment title phase.
+The treatment's title-phase image task changes DMEM and returns `Broke`, but
+all observed DMA ranges are `dmem_to_rdram` with zero payload and no output
+overlap; its ABI rows have `output_buff=0` and the canary is unchanged. The
+phase-keyed task joins and PCM source/consumer rows likewise contain only zero
+payload PCM. This selects `H-ImageStagingZeroPayload` at title scope. It does
+not establish whether the zero-filled source is intended staging, scratch, or
+an ABI mismatch, and the treatment has not qualified the exact hangar origin.
+No output, task-field, gate, wait, guard, queue, or default-dispatch change is
+authorized.
 
 The s2080 crosswalk separates the generated fill function from the shared
 crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
@@ -468,6 +502,13 @@ The maintenance compaction retains the reasons for the recent reversals here:
   guest receive for every retained ordinal in both arms, and the treatment
   reached title and hangar. This supersedes the recipe-level route-failure
   conclusion, but not the unresolved image-task ABI/DMA/slot/PCM contract.
+- The first s2097 image-contract A/B was not admissible because the copied
+  driver command omitted the qualified `ROGUESQ_SPIN_YIELD=1` setting; the
+  control crashed in `waitForAnyAudioSlot` before title while the treatment
+  reached title. The corrected same-build run added that environment setting to
+  both arms and restored the control's title/hangar route positive control, so
+  the initial pre-title split is superseded as a recipe defect, not as audio
+  evidence.
 
 ## Evidence ledger summary
 
@@ -508,8 +549,13 @@ post-return scope. s2096's fixed retail oracle and same-build
 source-preserving route table then qualified the external enqueue, delivery,
 and guest receive edges in both arms, and the treatment reached both target
 phases, selecting `H-RouteRecovered` at recipe scope. The next discriminator
-is the existing image-task ABI/DMA/slot/PCM table. The chronological ledger is
-still the source for exact run commands, counts, and rejected retries.
+was the existing image-task ABI/DMA/slot/PCM table. s2097's corrected A/B
+retained the route positive control and selected `H-ImageStagingZeroPayload` at
+title scope: `3046/3046` target DMA ranges had zero output overlap and zero
+nonzero payload, while the treatment's DMEM and task joins were live and its
+PCM source/consumer rows were all zero. The next unit is the bounded generated
+source audit of the reachable DMA-write register paths. The chronological
+ledger is still the source for exact run commands, counts, and rejected retries.
 The chronological ledger is still the source for exact run commands, counts,
 and rejected retries.
 

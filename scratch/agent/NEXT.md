@@ -1,74 +1,51 @@
-# NEXT work unit (s2097)
+# NEXT work unit (s2098)
 
 HYPOTHESIS-ID: m5-audio-image-task-contract
 
 ## Work unit
 
-Use the now-qualified SP route as the positive control and interpret the
-existing phase-keyed image-task contract table in one same-build concurrent
-A/B: `audtask-abi`, `audtask-dma-row` plus every `audtask-dma-range`,
-`audtask-join`/`audtask-join-range`, PCM source/consumer, and the existing
-phase-keyed slot/gate rows. Do not change task fields, output routing, canary,
-gate, wait, guard, queue policy, or default dispatch. The route table must
-retain its partial-order rule: enqueue precedes delivery and guest receive,
-enqueue precedes `sp-complete-return`, and delivery precedes guest receive;
-delivery may race `sp-complete-return`.
+Perform a bounded generated-source audit of every reachable `DO_DMA_WRITE` in
+`build/factor5_ucode/factor5_ucode_b_recompiled.c`. Join each callsite's
+`SET_DMA_MEM`, `SET_DMA_DRAM`, and `DO_DMA_WRITE` register path to the qualified
+s2097 treatment observations: `dmem=0x6F0 len=0x300` and `dmem=0xCB0 len=0x198`,
+zero payload, zero output overlap, and the final DMEM changed span
+`0x340..0xFCF`. This is read-only analysis; do not build or change runtime
+behavior unless the source audit finds a concrete regeneration-independent
+diagnostic gap.
 
 ## Competing hypotheses and discriminator
 
-- **H-ImageOutputContract** — target-phase treatment rows include a
-  `dmem_to_rdram` range with `output_overlap=1` and `payload_nz>0`, and the
-  same audio ordinals have admissible PCM source/consumer joins. The generated
-  image task is writing the host output contract.
-- **H-ImageStagingZeroPayload** — target-phase treatment rows show
-  `dmem_changed>0` and route completion, but every image DMA range has
-  `output_overlap=0` or `payload_nz=0`, with `output_buff=0` and no admissible
-  output/PCM join. The boundary is image staging, destination selection, or
-  task ABI interpretation.
-- **H-GuestCompletionContract** — image DMA/PCM evidence is present, but the
-  phase-keyed slot/gate rows diverge from the control or `audtask-join` has a
-  systematic `complete=0`/post-task consumer split. The remaining contract is
-  guest completion/slot reaping rather than SP queue delivery.
-- **H-ContractQualified** — target-phase treatment retains output/PCM and
-  slot/gate joins with the control, so the image arm's ABI/DMA/slot/PCM fields
-  are qualified for the next incremental audio change.
+- **H-OutputWriter** — the observed DMA writes source bytes from the generated
+  task's mutated output span and their DRAM destinations are the intended
+  output staging range. A nonzero expected source span with a zero host payload
+  would move the boundary to DMA-copy/input semantics.
+- **H-ScratchWriter** — the observed writes source untouched or zero-filled
+  DMEM ranges used for scratch, metadata, or padding, not the generated output
+  loops. A static mapping to those ranges confirms the zero-payload staging
+  boundary.
+- **H-ABI-Field** — the DMA destination or source register path is derived from
+  task/voice fields whose meaning is not the host output contract. A register
+  path that cannot be joined to the observed ranges without an unresolved task
+  field leaves the ABI boundary open.
 
-The discriminator is one table keyed by arm, phase/VI, and audio task ordinal:
-`audtask-abi` exit/canary/DMEM fields → all DMA direction/range overlap and
-payload fields → `audtask-join` source/consumer/complete fields → PCM
-source/consumer hash/count fields → slot/gate rows. The control must retain
-complete route ordinals and the retail oracle must pass its whole-RDRAM
-positive control. Treatment output-overlap plus nonzero payload and matched
-PCM selects `H-ImageOutputContract`; route-complete zero-payload/non-overlap
-selects `H-ImageStagingZeroPayload`; a systematic slot/gate or completion split
-selects `H-GuestCompletionContract`; matched contract rows select
-`H-ContractQualified`. No conclusion is allowed from pre-target rows if an arm
-misses both target VIs.
+The discriminator is one complete callsite table: every reachable write
+callsite, the register/value expressions feeding MEM/DRAM/LEN, the resulting
+DMEM interval, the resulting DRAM interval, whether it intersects
+`0x340..0xFCF`, and whether it matches either observed range. A source mapping
+to a mutated span with nonzero expected input selects `H-OutputWriter`; a
+mapping to untouched or zero-filled DMEM selects `H-ScratchWriter`; an
+unresolved task/voice-field derivation selects `H-ABI-Field`. Do not infer
+from a single callsite or from the zero payload alone.
 
 ## Exact commands
 
-Run the independent ground-truth recipe before interpreting the port table:
-
 ```sh
-tools/oracle/build.sh
-tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 70 --hit-cap 64 --watch-write 0x0:0x800000 --watch-write 0xA0F50:0xA0F54 --watch-write 0x14998A:0x14998C --watch-write 0x14974C:0x149750 --first-watch 0 --detail-watch 1 --pc-hist-watch 1 --post-value-watch 1 --post-value-watch 2 --post-value-watch 3 --post-value-pc 0x8008EA34,0x8008EB40,0x8008EB7C,0x8008EC88,0x8008ED48 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+rg -n 'SET_DMA_MEM|SET_DMA_DRAM|DO_DMA_WRITE' build/factor5_ucode/factor5_ucode_b_recompiled.c
+awk '/SET_DMA_MEM|SET_DMA_DRAM|DO_DMA_WRITE/ { for (i=NR-14; i<=NR+14; ++i) keep[i]=1 } keep[NR] { print NR ":" $0 }' build/factor5_ucode/factor5_ucode_b_recompiled.c
+awk '/^\[audtask-dma-range\]/ { n=""; d=""; l=""; o=""; p=""; for(i=1;i<=NF;i++){if($i~/^n=/)n=$i;if($i~/^dmem=/)d=$i;if($i~/^len=/)l=$i;if($i~/^dram=/)o=$i;if($i~/^payload_nz=/)p=$i} if(n!="") print n,d,l,o,p }' scratch/s73_post_a_scene/m5-audio-step6r3-treatment/run.log | sort | uniq -c
 ```
 
-Build once, then run both arms concurrently from the same driver:
-
-```sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
-env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_RETURN=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step6-treatment 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/m5-audio-step6-treatment-driver.log 2>&1 &
-pid_t=$!
-env -u ROGUESQ_AUDIO_UCODE ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_AUDIO_RETURN=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step6-control 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/m5-audio-step6-control-driver.log 2>&1 &
-pid_c=$!
-wait $pid_t; rc_t=$?
-wait $pid_c; rc_c=$?
-printf 'treatment_rc=%s control_rc=%s\n' "$rc_t" "$rc_c"
-```
-
-Inspect only bounded counts and phase-gated rows from the two `run.log` files:
-target phases/crash markers, complete route ordinals, `audtask-abi`,
-`audtask-dma-range`, `audtask-join`, PCM source/consumer pairs, and slot/gate
-rows. Use `awk` to classify all target-phase treatment DMA ranges and joins in
-one pass; do not infer from a single sampled row.
+Record the full callsite table, the matching/ambiguous rows, and the exact
+reason any register path cannot be resolved. No output routing, task field,
+canary, gate, wait, guard, queue policy, or default dispatch change is
+authorized by this unit.
