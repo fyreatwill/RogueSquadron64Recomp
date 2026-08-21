@@ -1,98 +1,67 @@
-# NEXT work unit (s2083)
+# NEXT work unit (s2085)
 
-HYPOTHESIS-ID: m5-port-fill-crash-origin
+HYPOTHESIS-ID: m5-source-host-span-join
 
 ## Work unit
 
-Add one bounded, regeneration-stable source reachability table around the
-current `fillSampleStreamRange` entry and its four generated callsites in
-`funcs_24.c`. Keep the existing target-phase source row and RT64 host witness
-unchanged. The new entry/callsite rows must be phase-scoped, rate-limited per
-phase, and include edge identity, phase, VI width/origin, target-phase flag,
-guest identity, and raw arguments. This is diagnostic-only: do not change
-task fields, output routing, canary handling, waits, guards, gate stores, or
-host behavior.
+Perform one bounded source/host span join on the qualified s2084 capture.
+Use the existing `[m5-fill-range-source]` rows and `[m5-host-boundary]` rows
+from the same run; do not add another diagnostic field or change the binary.
+Join by target phase, source `a1_dram..a1_dram+a2_count`, host `range`, guest
+identity, and log order. The source row is an observation of the generated
+writer's incoming arguments, not permission to treat those values as
+legitimate or to add a mitigation.
 
 ## Competing hypotheses and discriminator
 
-- **H-NoRuntimeCall** — the host control and host rows fire, but both the four
-  callsite rows and the callee-entry rows remain zero in the qualified route.
-- **H-NonTargetEntry** — callsite and entry rows fire, but every entry is
-  outside the title/hangar target VI pairs; the existing target-phase source
-  filter is therefore correctly quiet at this scope.
-- **H-CallsiteEntryMismatch** — a generated callsite row fires but no matching
-  callee-entry row follows, indicating a dispatch/symbol or generated-call
-  relationship problem.
-- **H-TargetEntry** — a callee-entry row fires with a target VI pair. This
-  reopens the source/host comparison; only then may a host row carrying
-  `0x8000B650` be treated as stale-marker support rather than a witness gap.
+- **H-SourceSpanReachesHost** — at least one target-phase source interval
+  intersects or equals a later/same-phase host `copyToRAM` range, with a
+  compatible guest identity or a documented ordering relationship.
+- **H-HostNoSourceMatch** — target-phase host rows exist, but none has a
+  matching source interval; the host operation is therefore not joined to the
+  observed fill entry at this scope.
+- **H-SourceArgsAlreadyOutOfRange** — the source entry receives an interval
+  outside the 8 MiB RDRAM domain or with an invalid count before any host join;
+  this identifies an upstream/generated-input boundary, but not the writer
+  that produced the value.
 
-The discriminator is one same-run table with the retail whole-RDRAM positive
-control, port host-boundary control, four callsite edges, and the callee entry
-edge. `host_control > 0` and `host_rows > 0` with both source edge sets at
-zero selects H-NoRuntimeCall. Callsite rows without entry rows select
-H-CallsiteEntryMismatch. Entry rows only outside target VI pairs select
-H-NonTargetEntry. Any target-phase entry row selects H-TargetEntry and keeps
-the existing source/host join as the next comparison. A null source result is
-not interpreted without the host control, target VI phases, and the all-phase
-reachability rows being present.
+The discriminator is one post-hoc table from `scratch/agent/s2084_port/run.log`
+that prints every target-phase source interval, every target-phase host range,
+the intersection count, source/host line order, and guest PCs. A valid
+in-RDRAM source interval that intersects a host range selects
+H-SourceSpanReachesHost. Zero intersections with valid source intervals
+selects H-HostNoSourceMatch. Any source interval outside `[0,0x800000)` or
+overflowing that domain selects H-SourceArgsAlreadyOutOfRange. The join is
+not interpreted unless the same run retains the retail whole-RDRAM positive
+control, both target VI phases, the host control, and the source-entry rows.
 
 ## Ground truth and exact commands
 
-Run the retail oracle first, with its whole-RDRAM positive control and the
-existing retail PC controls. Do not treat a new PC null as evidence unless the
-positive control and both title/hangar VI phases are present:
+Do not start a new game or build for this unit. First verify the independent
+controls already captured by s2084:
 
 ```sh
-mkdir -p scratch/agent/s2083_oracle
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --configdir scratch/agent/s2083_oracle \
-  --secs 65 \
-  --watch-write 0x0:0x800000 --hit-cap 10000 \
-  --watch-pc 0x8000B650,0x800668B0,0x8008DA00,0x8009B62C,0x8009B654,0x8009B3EC,0x8009B44C,0x8008EC88,0x80095D54 \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  --vi-trace --vi-poll --pif-trace \
-  > scratch/agent/s2083_oracle/run.log 2>&1
+grep -n -E '\[oracle\] (done|watch write|watch pc)' scratch/agent/s2083_oracle/run.log | tail -20
+grep -n -E '\[vi\].*origin=0x006ab400 width=512|\[vi\].*origin=0x00790400 width=1024' scratch/agent/s2083_oracle/run.log | head -5
+grep -n -E '\[phase\].*vi_width=(1024|512)|\[m5-host-boundary-control\]|\[m5-fill-range-edge\].*target=1|\[m5-fill-range-source\]' scratch/agent/s2084_port/run.log | tail -40
 ```
 
-Before editing or building, verify the current generated definition,
-callsite addresses, source fixup, and unchanged host witness:
+Run the complete same-run join without creating a second instrument:
 
 ```sh
-rg -n -C 5 'fillSampleStreamRange|m5-fill-range-source|ROGUESQ_LOG_FILL_RANGE_ARGS|m5-host-boundary|rs64_phase_ord|rs64_vi_committed' \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c \
-  /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py \
-  lib/rt64/src/hle/rt64_framebuffer.cpp src/main/rt64_render_context.cpp
+perl -ne '
+  if (/\[m5-host-boundary\].*phase=(\d+).*guest_pc=(0x[0-9A-Fa-f]+).*range=\[(0x[0-9A-Fa-f]+),(0x[0-9A-Fa-f]+)\)/) {
+    push @host, { line => $., phase => $1, pc => $2, lo => hex($3), hi => hex($4) };
+  }
+  if (/\[m5-fill-range-source\].*source_n=(\d+).*phase=(\d+).*guest_pc=(0x[0-9A-Fa-f]+).*a1_dram=(0x[0-9A-Fa-f]+).*a2_count=(0x[0-9A-Fa-f]+)/) {
+    my ($n,$phase,$pc,$a1,$count) = ($1,$2,$3,hex($4),hex($5));
+    my $end = $a1 + $count;
+    my @m = grep { $_->{phase} == $phase && $a1 < $_->{hi} && $end > $_->{lo} } @host;
+    my $valid = ($a1 < 0x800000 && $end <= 0x800000) ? 1 : 0;
+    print "source line=$. n=$n phase=$phase pc=$pc span=0x", sprintf("%X",$a1), "..0x", sprintf("%X",$end), "valid=$valid matches=", scalar(@m), " host_lines=", join(",", map { $_->{line} } @m), "\n";
+  }
+' scratch/agent/s2084_port/run.log
 ```
 
-Patch the existing fixup, then regenerate in order and build once:
-
-```sh
-cd /Users/williambuckley/Documents/Tools/rogue_squadron64
-python3 tools/make_elf.py
-cd /Users/williambuckley/Documents/Tools/N64Recomp
-./build/N64Recomp rogue_squadron.toml
-python3 fixup_game_funcs.py
-cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-cmake --build build --config Debug --target RogueSquadron64Recomp
-```
-
-Run one phase-gated capture from the repository root with all source edges and
-the existing host witness in the same binary:
-
-```sh
-env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-  ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 \
-  ROGUESQ_LOG_FILL_RANGE_ARGS=1 PROBE_PHASE_WIDTH=512 \
-  PROBE_PHASE_TIMEOUT=300 PROBE_LEAVE_OK=1 \
-  PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-  zsh tools/probe.sh scratch/agent/s2083_port 120 0.5
-```
-
-The source edge rows must be checked for their positive-control activity
-before interpreting any target-phase null. Preserve the current no-mitigation
-boundary: no wait, guard, task, canary, gate, output, or host change is
+No wait, guard, task, canary, gate, output, or host behavior change is
 authorized.

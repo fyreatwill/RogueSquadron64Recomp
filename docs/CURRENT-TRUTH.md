@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2083 (2026-08-20);
-behavioral and source evidence is current through s2082.
+for exact commands and probe rows. Maintained in Session 2084 (2026-08-20);
+behavioral and source evidence is current through s2084.
 
 ## Current state
 
@@ -30,15 +30,17 @@ behavioral and source evidence is current through s2082.
   generated `break 0` after its final DMA write. The source audit does not
   establish whether the destination is output staging, scratch, or an ABI
   mismatch.
-- s2082's retail run passed the whole-RDRAM positive control, reached title and
+- s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
-  `0x8000B650` and `0x80095D54` stayed at zero. The regeneration-stable
-  fill-range fixup now targets `funcs_24.c` and compiled one source witness;
-  the port capture passed the host control and emitted 133 phase-scoped
-  `copyToRAM` rows, but zero target-phase source rows. The strict discriminator
-  therefore remains `H-WitnessGap`: the source-runtime reachability is open,
-  and the host rows are single-source support for stale shared state, not a
-  causal host-fault conclusion.
+  `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
+  all-phase table fired in the port's target hangar phase: seven
+  `callsite-0x800903F0` rows were followed by seven `entry` rows, while the
+  other three generated callsites stayed quiet. The existing target-only
+  source witness emitted seven rows as well. With the host control, target VI
+  phases, and 132 host rows present, this selects `H-TargetEntry` and closes
+  the source-runtime reachability gap at this scope. The observed source
+  arguments were ASCII-like wild values and the run crashed in `do_rom_read`
+  after the rows; no mitigation or causal host conclusion is authorized.
 - Retail ground truth independently passes the whole-RDRAM positive control,
   reaches title and hangar, and shows slot-0 status `00 -> 01 -> 02 -> 03 ->
   00`. Exact E50 writes are owned by named retail audio-region functions;
@@ -72,14 +74,14 @@ behavioral and source evidence is current through s2082.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 source reachability discriminator.** The regeneration-stable
-   `fillSampleStreamRange` witness is now in the current `funcs_24.c` and is
-   compiled, but its target-phase rows stayed zero while the same-run host
-   control and 133 host rows fired. Add one bounded all-phase entry/callsite
-   table to distinguish no runtime call, a non-target phase at entry, and a
-   callsite/entry mismatch; repeat the source/host join only if target-phase
-   entry rows fire. Do not change waits, guards, task fields, output routing,
-   canary handling, or gate stores.
+1. **M5 source/host join.** Target-phase `fillSampleStreamRange` entry and
+   source rows now fire, so join those rows to the same-run phase-keyed
+   `copyToRAM` witness by source span, host range, guest identity, and order.
+   Distinguish a source span that reaches the host, a host row with no matching
+   source event, and a stale/shared host marker. Keep the retail control and
+   all five source/host edge identities in one capture. Do not change waits,
+   guards, task fields, output routing, canary handling, gate stores, or host
+   behavior.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -148,9 +150,10 @@ crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
 `+336` is in-range, and `+6464` is not. `0x8000B650` is the return breadcrumb
 of `beginFrameDLChunk`, not an instruction in this function. Historical
 RT64 `copyToRAM` failures carrying the same marker remain host-boundary
-observations, not proof that the fill function caused them. s2082's fixup
-report and generated source confirm the source witness is present in
-`funcs_24.c`; its zero target-phase runtime rows leave entry reachability open.
+observations, not proof that the fill function caused them. s2084's table now
+shows a target-phase source entry at the active `0x800903F0` edge; its
+arguments include values such as `0x6C676672` and `0x77696E67`, but the writer
+and legitimacy of those values remain open.
 
 ### M3, M4, and generated symbols
 
@@ -209,6 +212,12 @@ The maintenance compaction retains the reasons for the recent reversals here:
   the target-phase run still produced zero source rows while host controls
   fired. The anchor defect is therefore repaired; source-runtime reachability
   remains a witness gap, not proof that the host operation is causal.
+- The s2082 `H-WitnessGap` conclusion was believable because the target-only
+  source witness stayed silent even though the host control and target VI
+  phases fired. s2084's same-run all-phase table passed the positive controls,
+  reached target phase 12, and recorded seven callsite-to-entry pairs at
+  `0x800903F0`; the gap was an over-narrow phase filter, not evidence that the
+  function was never called. The host/source causal join is still unresolved.
 
 ## Evidence ledger summary
 
@@ -216,10 +225,10 @@ History through s1879 is in PROJECT-OVERVIEW.md §§33–35. The VI-1024 and
 spin-yield chain is in §36; the M5 archive through s2047 is in §§37–38. Section
 39 records the durable s2050–s2078 route, status, audio, gate, and retail-PC
 milestones migrated during this maintenance pass; s2080 adds the fill-function
-source crosswalk, s2081 adds the host-boundary witness gap, and s2082 repairs
-the generated source anchor while leaving runtime reachability open. The
-chronological ledger is still the source for exact run commands, counts, and
-rejected retries.
+source crosswalk, s2081 adds the host-boundary witness gap, s2082 repairs the
+generated source anchor, and s2084 closes the target-phase reachability gap
+while leaving the source/host causal join open. The chronological ledger is
+still the source for exact run commands, counts, and rejected retries.
 
 ## Method and safety rules
 

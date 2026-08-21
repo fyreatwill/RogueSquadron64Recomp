@@ -99302,3 +99302,43 @@ No experiment was run. No M5, M3, or generated-symbol conclusion changed.
 Resume the s2083 M5 work unit: add the bounded all-phase entry/callsite
 reachability table for `fillSampleStreamRange`. See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-port-fill-crash-origin`.
+
+## Session 2084 (2026-08-20) — added all-phase fill-range reachability table
+
+### Work unit
+
+Ran the M5 source reachability discriminator after first running the retail
+oracle. The oracle whole-RDRAM watch hit its 10,000 cap, reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and recorded neighboring
+requested PCs while `0x8000B650` and `0x80095D54` stayed at zero.
+
+The regeneration-stable fixup added one phase-scoped, rate-limited helper at
+the `fillSampleStreamRange` entry and four generated callsite edges. Each row
+records edge identity, edge PC, phase, VI width/origin, target flag, guest PC,
+RA, and raw `a0..a3`. The existing target-only source witness and RT64 host
+witness were left unchanged. Regeneration and the Debug build both passed.
+
+### Result
+
+The single qualified port capture reached title and hangar phases, showed the
+host-boundary control and 132 host rows, then crashed after 32.6 seconds and
+8 frames in `do_rom_read`. In target phase 12, the table emitted seven
+`callsite-0x800903F0` rows and seven matching `entry` rows; the other three
+generated callsites emitted no rows. The unchanged source witness emitted
+seven rows. The source rows carried incoming values including
+`a1_dram=0x6C676672`, `0x77696E67`, and `a3_tag` values in the same ASCII-like
+class; the run's final guest-PC marker was `0x80001B08`.
+
+The strict discriminator selects **H-TargetEntry**. It rules out a blanket
+no-runtime-call explanation and a non-target-only explanation. No
+callsite-to-entry mismatch was observed for the active `0x800903F0` edge;
+the three inactive edges remain unclassified. The target-phase source/host
+causal join is now the next unit. The post-crash `do_rom_read` failure and
+the malformed-looking incoming arguments are observations only; no wait,
+guard, task, output, canary, gate, or host mitigation was added.
+
+### Next
+
+Join the target-phase source intervals to the same-run host `copyToRAM` ranges
+by phase, guest identity, and order. See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-source-host-span-join`.
