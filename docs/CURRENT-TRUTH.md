@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2082 (2026-08-20);
+for exact commands and probe rows. Maintained in Session 2083 (2026-08-20);
 behavioral and source evidence is current through s2082.
 
 ## Current state

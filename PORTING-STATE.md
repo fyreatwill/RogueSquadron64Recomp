@@ -99265,3 +99265,40 @@ host behavior changed.
 Add one bounded all-phase source entry/callsite reachability table, after the
 retail positive control, to separate no runtime call, non-target entry phase,
 and callsite/entry mismatch. Keep `HYPOTHESIS-ID: m5-port-fill-crash-origin`.
+
+## Session 2083 (2026-08-20) — rewrote prune-scratch.sh with citation guard and frame cleanup
+
+### Work unit
+
+Checkpoint close-out. The planned M5 source-reachability work unit (bounded
+all-phase entry/callsite table for `fillSampleStreamRange`) was NOT run.
+The session landed one infrastructure change to `tools/agent/prune-scratch.sh`
+and then died before completing the exit contract.
+
+### Change
+
+`prune-scratch.sh` was rewritten to address two problems found when the
+first automated cleanup ran on 2026-08-20:
+
+1. **Citation guard.** The first sweep deleted 101 scratch logs that are cited
+   by path in `PORTING-STATE.md`, `docs/`, or `CLAUDE.md`. Any artifact whose
+   path appears in those files is now extracted into a keep-list before any
+   removal step and exempted at every age — gzip, delete-log, and delete-frame.
+   The guard uses `grep -rhoE` over the doc tree and `comm -23` set subtraction,
+   so the exemption is automatic and exact.
+
+2. **Frame (PNG/JPG) cleanup.** Frames were the second-largest consumer (51.7 GB
+   across 93,406 files as of 2026-08-20) and had no cleanup path. A third sweep
+   now removes uncited PNG/JPG files older than `FRAMES_AFTER_DAYS` days
+   (default 14). Cited frames are exempt by the same guard.
+
+The reporting line now shows `gzipped=N removed_logs=N removed_frames=N
+kept_cited=N` so each category is visible.
+
+No experiment was run. No M5, M3, or generated-symbol conclusion changed.
+
+### Next
+
+Resume the s2083 M5 work unit: add the bounded all-phase entry/callsite
+reachability table for `fillSampleStreamRange`. See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-port-fill-crash-origin`.
