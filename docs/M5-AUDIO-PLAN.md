@@ -50,7 +50,7 @@ the table; they must not be mistaken for behavior changes.
 
 | ID | File and symbol | Current behavior | Guest contract; ownership | Writer / consumer | Reversible change and same-run positive control | Phase, soak, rollback |
 |---|---|---|---|---|---|---|
-| A1 | `src/main/main.cpp:get_rsp_microcode` → `musyx_stub` | Default `M_AUDTASK` returns `Broke`; `ROGUESQ_AUDIO_UCODE=1` selects `factor5_ucode_b`. | `M_AUDTASK` must execute the retail audio task and complete its SP/DP contract. Task ownership is MusyX-derived; MORT ownership is not established. | Guest `submit_rsp_task` writes an `OSTask`; `librecomp/rsp.cpp:run_task` stages DMEM and calls the selected function. | Keep the toggle. First validate both dispatch arms in one build. The `[audtask-dispatch]` line is reachability evidence only; the positive control is a known-good non-audio RSP task completing through the same dispatcher, followed by task exit and slot/PCM evidence for the audio arm. | Boot through title/menu, VI-gated. Treatment rollback is unset `ROGUESQ_AUDIO_UCODE`; no default flip until two-source completion evidence. |
+| A1 | `src/main/main.cpp:get_rsp_microcode` → `musyx_stub` | Default `M_AUDTASK` returns `Broke`; `ROGUESQ_AUDIO_UCODE=1` selects `factor5_ucode_b`. s2160 default-on (unset and `=1`) SIGSEGV'd in `waitForAnyAudioSlot+1060` before title; polarity reverted. | `M_AUDTASK` must execute the retail audio task and complete its SP/DP contract. Task ownership is MusyX-derived; MORT ownership is not established. | Guest `submit_rsp_task` writes an `OSTask`; `librecomp/rsp.cpp:run_task` stages DMEM and calls the selected function. | Keep the toggle. Both dispatch arms are validated at s2118 C88=0 title/hangar scope. Do not default the image arm while the current recipe SIGSEGVs at `waitForAnyAudioSlot`. | Boot through title/menu, VI-gated. Treatment rollback is unset `ROGUESQ_AUDIO_UCODE`. Next unit is the image-arm wait-slot SIGSEGV, not another default-on attempt. |
 | A2 | `src/rsp/aspMain.cpp:aspMain` | Always returns `Broke`; not selected by the RS64 dispatch table. | Stock `aspMain` has a different task ABI/format and is not the retail implementation. | No live caller in this target. | Do not enable it. Positive control for any future replacement is a known-good stock-ASP task, not an RS64 `M_AUDTASK`. | Out of M5 execution until task format is proven; rollback is deletion of any experimental dispatch arm. |
 | A3 | Guest gate `0x800A0F50`: `initMusyXEngine`, `setDisplayMode`, `reapplyDisplayMode`, `shutdownMusyXEngine`, `musyXNoopStub` | The three init/display tails write `1`; entry/failure/shutdown/no-op paths write `0`. Consumers branch on this byte. | This is the guest’s MusyX enabled/disabled state, not a host audio-device flag. | Writers are the named guest functions; consumers include `tickMusyXIfActive`, `musyxSynthFrame`, `waitForMusyXAudioTaskDone`, and `musyxNoopStub`. | Before flipping any store, compare generated output to the fixup anchor and ask the retail oracle which physical address writers fire and from which PCs. Positive controls in the same oracle run: whole-RDRAM watch plus the narrow target watch; port evidence must show the named writer’s value transition and a downstream task/slot outcome, not a writer counter alone. | Boot/title and hangar `VI 512 origin=0x006AB400`; use the Rice eleven-Start driver. Roll back by regenerating and restoring the exact store semantics, not by adding a second host guard. |
 | A4 | `funcs_23.c:tickMusyXIfActive` | Returns immediately when `0x800A0F50 == 0`; otherwise acquires the Factor 5 mutex, ticks songs/voices, stops synth voices, and releases the mutex. | Guest audio engine scheduling; MusyX-side. It is not evidence that the RSP task completed. | Gate byte is written by A3; consumers are song/voice population and reaping. | Do not bypass this gate in the first RSP experiment. Later, reverse one writer at a time only after A1 task completion and A3 retail writer attribution are known. Positive control is a nonzero voice/slot transition plus a completed task, not entry count alone. | Gate-reversal step must be phase-gated at title and hangar; rollback one store at a time. |
@@ -191,12 +191,15 @@ explicit control arm.
    both-arm-validate / task-exit+PCM / two-source-completion clauses
    are already selected (s2118, s2132–s2140, s2157). Remaining
    isolation is the env default plus historical comments, not an
-   unsatisfied host-task contract. The next incremental unit is the
-   explicit A1 default-on flip of `s_use_real_audio_ucode` (unset
-   selects the image; `ROGUESQ_AUDIO_UCODE=0` remains the stub
-   rollback) with a same-build unset vs `=0` soak. Do not move the
-   canary in that unit. Rollback after the flip is
-   `ROGUESQ_AUDIO_UCODE=0`.
+   unsatisfied host-task contract. s2160 executed the A1 default-on
+   flip and selected `H-RouteRegress`
+   (`scratch/agent/s2160_default_on_ab.txt`): unset and `=1` both
+   SIGSEGV in `waitForAnyAudioSlot+1060` from `menuOverlayInit`
+   (`si_addr=0x400141ad3`); same-build `=0` reached title and hangar
+   with the stub contract. Default polarity was reverted. The next
+   incremental unit is that image-arm wait-slot SIGSEGV, not another
+   default-on attempt. Rollback remains unset
+   `ROGUESQ_AUDIO_UCODE`.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.

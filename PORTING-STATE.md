@@ -102506,3 +102506,54 @@ now a policy leftover, not a named open contract clause.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-default-on`.
+
+## Session 2160 (2026-08-21) — rejected A1 default-on at waitForAnyAudioSlot
+
+The planned A1 default-on flip landed in `get_rsp_microcode` (unset /
+empty / non-`0` selects `factor5_ucode_b`; `ROGUESQ_AUDIO_UCODE=0`
+remains the stub) and the stale M_AUDTASK hang comment was replaced.
+One Debug build then ran the same-build title/hangar pair plus an
+explicit `=1` arm on that binary.
+
+Positive controls fired in every arm: unset printed
+`[audtask-dispatch] real_ucode=1`, explicit `=1` printed `real_ucode=1`,
+and `=0` printed `real_ucode=0`.
+
+Unset (`s2160_default_on`) reached 640 `0x0066A500` at 4.7s and SIGSEGV'd
+in `waitForAnyAudioSlot+1060` from `menuOverlayInit` (`si_addr=0x400141ad3`,
+`last-guest-pc=0x8000834c`) with wait-slot entry and no return. Zero
+`waitForMusyXAudioTaskDone`. Never title 1024.
+
+Explicit `=1` (`s2160_explicit_on`) matched that crash exactly, same
+`si_addr` and symbol, so the fault is the image arm, not unset-versus-`=1`
+getenv disagreement.
+
+`=0` first try (`s2160_default_off`) returned from `waitForAnyAudioSlot`
+and then SIGABRT'd in `vec3Cross` NaN inside `cinematicLoopBody` before
+title (coverage miss). The `=0` retry (`s2160_default_off_b`) reached
+title `1024 @ 0x00790400` at 50.2s and hangar `512 @ 0x006AB400` at
+79.8s with `break_pc=0x0000` (6432), `dma_count=0` (4288),
+`canary_ok=1`, and four wait-slot entry/return pairs. Post-hangar
+SIGABRT (`last-guest-pc=0x80001b08`) is after the target rows.
+
+`si_addr=0x400141ad3` is the host XOR-3 of guest `D_80141AD0` (active
+voice / drain-entry count). Table:
+`scratch/agent/s2160_default_on_ab.txt`.
+
+This selects `H-RouteRegress` and refutes `H-DefaultMatchesOptIn`,
+`H-WaitWedgeOnDefault`, and `H-CoverageFailure`. Default-on polarity
+was reverted; the rebuilt binary is again stub-default. s2118 image
+hangar reach remains valid at its C88=0 sampled scope and is not a
+license to default the arm.
+
+ORIGIN: the writer of the live `RspUcodeFunc*` is `get_rsp_microcode`
+reading `ROGUESQ_AUDIO_UCODE`. Default-on selected the legitimate
+retail Factor 5 image, then SIGSEGV'd in `waitForAnyAudioSlot` on a
+host address that maps to `D_80141AD0`. No wait/slot guard was added.
+The revert restores the previous stub default so unset soaks do not
+boot-crash.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-wait-slot-sigsegv`.

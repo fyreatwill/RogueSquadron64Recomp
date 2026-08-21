@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2159
-(2026-08-21); behavioral and source evidence is current through s2159.
+authoritative for exact commands and probe rows. Maintained in Session 2160
+(2026-08-21); behavioral and source evidence is current through s2160.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2159 in §§41–42.
+`PROJECT-OVERVIEW.md` §40; s2110–s2160 in §§41–42.
 
 ## Current state
 
@@ -22,7 +22,14 @@ This file is intentionally compact. Archives: s2080–s2108 in
 - [`docs/M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md) controls incremental audio
   work. The default audio path is a silent `Broke` stub. The Factor 5
   image arm is opt-in through `ROGUESQ_AUDIO_UCODE=1` and is not defaulted
-  on.
+  on. s2160 selected `H-RouteRegress` for the A1 default-on flip: unset
+  and `=1` both SIGSEGV in `waitForAnyAudioSlot+1060` from
+  `menuOverlayInit` at 640 `0x0066A500` (`si_addr=0x400141ad3`, host
+  XOR-3 of guest `D_80141AD0`). Same-build `=0` reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` with
+  `real_ucode=0`, `dma_count=0`, `break_pc=0`. Default polarity was
+  reverted. Do not retry default-on until that image-arm wait-slot
+  SIGSEGV is explained.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. The s2113 contract witness records guest PC `0x1328`,
   host exit `Broke`, task `output_buff=0`, and phase-keyed post-DMA/PCM
@@ -46,14 +53,16 @@ This file is intentionally compact. Archives: s2080–s2108 in
   canary-prefill skip, not an early return, skipped writeback, or forced
   `Broke`. The env-true wrapper calls `factor5_ucode_b`, not
   `musyx_stub`. s2159 selected `H-PolicyOnly`: every named host-contract
-  reason to keep the arm opt-in is already closed by a selected
-  hypothesis; remaining isolation is the env default plus historical
-  comments (`scratch/agent/s2159_image_arm_default_blockers.txt`). Do
-  not default the image arm from that census table. Next unit is the
-  explicit A1 default-on flip of `s_use_real_audio_ucode` with a
-  same-build `ROGUESQ_AUDIO_UCODE=0` vs unset soak. Do not move the
-  canary, change canary prefill, or change `osAiGetStatus_recomp` /
-  `osAiSetNextBuffer_recomp`.
+  reason to keep the arm opt-in was already closed by a selected
+  hypothesis; remaining isolation was the env default plus historical
+  comments (`scratch/agent/s2159_image_arm_default_blockers.txt`).
+  s2160 then executed that default-on flip and selected
+  `H-RouteRegress` (`scratch/agent/s2160_default_on_ab.txt`). The
+  image arm is still isolated by the env default, now because the
+  current recipe SIGSEGVs at `waitForAnyAudioSlot` before title, not
+  because a host-task contract clause remains unnamed. Do not move
+  the canary, change canary prefill, or change
+  `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
 
 ### Selected hypotheses (scoped; do not widen)
 
@@ -83,6 +92,7 @@ This file is intentionally compact. Archives: s2080–s2108 in
 | s2157 | `H-CanaryLogOnly` | host-source: every `canary_ok` site in `rsp.cpp` is storage or fprintf; `run_task` completes on `Broke` alone | default-arm / canary-prefill change |
 | s2158 | `H-IsolatedOnlyByEnv` | host-source: live `RspUcodeFunc*` assigned only in `get_rsp_microcode` from `ROGUESQ_AUDIO_UCODE`; `run_task` calls that pointer; env-true path never reaches `musyx_stub` | default-arm / canary-prefill change |
 | s2159 | `H-PolicyOnly` | host-source: every named keep-opt-in sentence in CURRENT-TRUTH, M5 A1, and the `get_rsp_microcode` hang comment is closed-by-selected-hypothesis or policy-comment; both required positive-control rows present | flip from the census table; canary / AI-status change |
+| s2160 | `H-RouteRegress` | same-build unset/`=1` SIGSEGV at `waitForAnyAudioSlot+1060` before title; `=0` title+hangar stub contract; not `waitForMusyXAudioTaskDone` | retry default-on; canary / AI-status / wait-slot guard |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -109,12 +119,12 @@ static-boundary conflicts.
 The backlog is one monotonic sequence. Closed investigations are not
 active work items.
 
-1. **M5 A1 default-on flip.** s2159 selected `H-PolicyOnly`. Next unit
-   is the explicit `s_use_real_audio_ucode` default-on change
-   (unset env selects the image; `ROGUESQ_AUDIO_UCODE=0` remains the
-   stub rollback) with a same-build unset vs `=0` title/hangar soak.
-   Do not move the canary or change `osAiGetStatus_recomp` /
-   `osAiSetNextBuffer_recomp`. ORIGIN required.
+1. **M5 image-arm `waitForAnyAudioSlot` SIGSEGV.** s2160 selected
+   `H-RouteRegress` and reverted default-on. Next unit is the boot
+   crash at `waitForAnyAudioSlot+1060` (`si_addr=0x400141ad3`, guest
+   `D_80141AD0`) on `ROGUESQ_AUDIO_UCODE=1`, which stub returns from.
+   Do not add a wait/slot guard and do not retry default-on. ORIGIN
+   required before any skip/allow/restore.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the
@@ -196,11 +206,14 @@ the generated mix buffer. s2157 closes the host-canary *effect* question:
 `run_task` completion, DMEM-to-RDRAM writeback, or DMA recording. s2158
 closes the remaining isolator question: isolation is the env dispatch in
 `get_rsp_microcode` only. s2159 closes the remaining named-blocker
-question: `H-PolicyOnly`. The A1 execute / SP-complete / MORT-ownership
-/ both-arm-validate / task-exit+PCM / two-source-completion clauses are
-already selected (s2118, s2132–s2140, s2157). Remaining isolation is
-the env default plus historical comments, not an unsatisfied host-task
-contract. The next A1 unit is the explicit default-on flip.
+question: `H-PolicyOnly`. s2160 then closed the default-on execute
+question: `H-RouteRegress`. The A1 execute / SP-complete /
+MORT-ownership / both-arm-validate / task-exit+PCM /
+two-source-completion clauses remain selected at the s2118 C88=0
+sampled scope (s2118, s2132–s2140, s2157). Remaining isolation is the
+env default because the current image recipe SIGSEGVs in
+`waitForAnyAudioSlot` before title. Do not treat s2118 hangar reach as
+a license to default the arm.
 
 The stock `aspMain` contract is not the game's MusyX contract. C88
 testing selected reversed-or-suppressing polarity at sampled port gate
@@ -247,7 +260,11 @@ ledger. Operational reversals:
   default), not an unsatisfied contract clause. The
   `waitForMusyXAudioTaskDone` hang comment is a stale pointer to a
   nonexistent M5-AUDIO-PLAN §3 crash family and is refuted as a
-  boot-wedge by s2118 image-arm hangar reach.
+  boot-wedge by s2118 image-arm hangar reach. s2160 supersedes
+  “default-on is the next safe A1 landing”: that was believable after
+  `H-PolicyOnly`, but the same-build unset/`=1` arms SIGSEGV in
+  `waitForAnyAudioSlot` before title on the current recipe while `=0`
+  matches the stub title/hangar contract.
 - The old retail voice-field interpretation was believable because a
   pointer entry was treated as a physical array base.
 - The old “B40 was unreached” and s2110 `H-B40-RouteRequired`
@@ -270,14 +287,16 @@ ledger. Operational reversals:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024
 and spin-yield chain is in §36; the M5 archive through s2047 is in
 §§37–38; the late route/fill boundary is in §39; the s2080–s2108 archive
-is in §40; B40 s2110–s2112 is in §41; and the s2113–s2159 contract,
-symbol, MORT, AI, canary, isolator, and default-blocker archive is in §42.
+is in §40; B40 s2110–s2112 is in §41; and the s2113–s2160 contract,
+symbol, MORT, AI, canary, isolator, default-blocker, and default-on
+archive is in §42.
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
 single-source or single-arm observations. No AI-status shortcut, task
-ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`.
-Do not treat the census as the default-on landing; that is the next unit.
+ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`
+or `H-RouteRegress`. Do not retry the default-on polarity until the
+image-arm wait-slot SIGSEGV is explained.
 
 ## Method and safety rules
 

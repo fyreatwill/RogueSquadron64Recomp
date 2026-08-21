@@ -1491,17 +1491,10 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
         return &factor5_gfx_runner;
     case M_AUDTASK:
         g_rs64_audio_break_pc = 0;
-        // M5-AUDIO-PLAN.md step 2 (s300): dispatch the recompiled MusyX ucode
-        // instead of the stub, gated behind an env var so default behavior is
-        // unchanged until a validation soak confirms it's safe. Step 1 (s300)
-        // found M_AUDTASK submission is NOT suppressed by the guest-side
-        // audio-enable gate (still forced to 0 by fixup_game_funcs.py) -- this
-        // is a live first exercise of factor5_ucode_b on every VI retrace, not
-        // a no-op. See M5-AUDIO-PLAN.md §3 crash family #1 before flipping the
-        // default: the original incomplete stub caused a boot-time scheduler
-        // wedge (waitForMusyXAudioTaskDone spinning on a countdown only real
-        // ucode execution decrements) -- this env var reproduces exactly the
-        // condition that caused that hang.
+        // Default remains musyx_stub. s2160 default-on (unset and
+        // ROGUESQ_AUDIO_UCODE=1) SIGSEGV'd in waitForAnyAudioSlot+1060 from
+        // menuOverlayInit before title (si_addr=0x400141ad3, guest
+        // 0x80141AD0 XOR-3). =1 still selects the Factor 5 image.
         {
             static int s_use_real_audio_ucode = -1;
             if (s_use_real_audio_ucode < 0) {

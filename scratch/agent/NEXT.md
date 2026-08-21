@@ -1,65 +1,54 @@
-# NEXT work unit (s2160) — A1 default-on flip
+# NEXT work unit (s2161) — retail wait-slot count-byte ground truth
 
-HYPOTHESIS-ID: m5-a1-default-on
+HYPOTHESIS-ID: m5-image-wait-slot-sigsegv
 
 ## Work unit
 
-s2159 selected `H-PolicyOnly`: every named host-contract reason to keep
-`factor5_ucode_b` opt-in is closed by a selected hypothesis. Remaining
-isolation is `get_rsp_microcode`'s env default plus historical comments.
-Do not move the canary, change canary prefill, or change
-`osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
+s2160 selected `H-RouteRegress` and reverted A1 default-on. Unset and
+`ROGUESQ_AUDIO_UCODE=1` both SIGSEGV in `waitForAnyAudioSlot+1060` from
+`menuOverlayInit` at 640 `0x0066A500` (`si_addr=0x400141ad3`, host XOR-3
+of guest `D_80141AD0`). Stub `=0` returns from that wait and reaches
+title/hangar. Do not add a wait/slot guard, retry default-on, move the
+canary, or change `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
 
-This unit is the explicit A1 default-on flip of `s_use_real_audio_ucode`
-in `src/main/main.cpp:get_rsp_microcode`:
-
-    // after
-    s_use_real_audio_ucode = (e && e[0] == '0') ? 0 : 1;
-
-Unset / empty / any non-`0` value selects `&factor5_ucode_b_probe`.
-`ROGUESQ_AUDIO_UCODE=0` remains the stub rollback. Refresh the stale
-M_AUDTASK comment (dead M5-AUDIO-PLAN §3 crash-family pointer; "gate
-still forced to 0"; "env var reproduces the hang") in the same edit.
-Then one Debug build and a same-build unset vs `=0` title/hangar soak.
-
-ORIGIN: the writer of the live `RspUcodeFunc*` is `get_rsp_microcode`
-reading `ROGUESQ_AUDIO_UCODE`. Default-on selects `factor5_ucode_b`, the
-legitimate retail audio image (s2135/s2136), not a wild value. The
-previous default was a host stub.
+Ask retail before another port instrument. Guest `func_800668B0`
+(`waitForAnyAudioSlot`) is 0x68 bytes; the jal site is `0x800C5CF4`.
 
 ## Competing hypotheses and discriminator
 
-- `H-DefaultMatchesOptIn`: the unset arm matches the s2118 image-arm
-  contract (title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`,
-  `[audtask-dispatch] real_ucode=1`, `break_pc=0x1328`, `exit=Broke`,
-  hangar stage-2 PCM joins). The `=0` arm matches the s2118 stub
-  (`real_ucode=0`, `dma_count=0`, `break_pc=0`).
-- `H-WaitWedgeOnDefault`: the unset (image) arm fails to reach title or
-  hangar and the last live audio site is `waitForMusyXAudioTaskDone`.
-- `H-RouteRegress`: the unset arm misses title or hangar without a
-  wait-wedge signature (different last-guest-pc / crash family).
-- `H-CoverageFailure`: either arm misses the target VI, so the pair
-  cannot select among the first three.
+- `H-RetailLoadsCount`: retail executes `0x800668B0` during boot and
+  reads physical `0x141AD0` from that PC (or a jal it makes). The count
+  byte is legitimate; the port crash is translation or walk bounds.
+- `H-RetailNeverLoads`: whole-RDRAM control fires and `0x800668B0`
+  executes, but the `0x141AD0` read watch is zero. The port image path
+  is extra/wrong at this site.
+- `H-RetailWritesThenReads`: retail writes `0x141AD0` from a named PC,
+  then `0x800668B0` reads it. That writer is the ORIGIN candidate.
+- `H-CoverageFailure`: `0x800668B0` never executes (oracle stays short
+  of menuOverlayInit). Nulls are uninterpretable.
 
-Positive control: both arms must print `[audtask-dispatch]` with the
-expected `real_ucode=` value before any target-phase comparison.
+Positive control: `--watch-write 0x0:0x800000` must fire (whole-RDRAM
+~1.6M hits in 8 emulated seconds). `--watch-pc 0x800668B0` must print
+at least one exec hit before a `0x141AD0` null is treated as evidence.
 
 ## Exact commands
 
-After the default-on edit and one Debug build, from the repo root:
+From the repo root, after confirming `tools/oracle/build/rs64_oracle`
+and the README core/ROM paths exist:
 
-    env -u ROGUESQ_AUDIO_UCODE \
-      ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-      ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
-      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2160_default_on 30 12
+    tools/oracle/build/rs64_oracle \
+      --core ~/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+      --rom  ~/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+      --secs 45 --vi-trace \
+      --watch-write 0x0:0x800000 \
+      --watch-read  0x141AD0:0x141AD4 \
+      --watch-write 0x141AD0:0x141AD4 \
+      --watch-pc    0x800668B0,0x800C5CF4 \
+      --first-watch 0 --pc-hist-watch 1 --pc-hist-watch 2
 
-    env ROGUESQ_AUDIO_UCODE=0 \
-      ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-      ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
-      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2160_default_off 30 12
+Arm the whole-RDRAM write first. Physical addresses only. If the
+positive control does not fire, stop; do not interpret the count-byte
+nulls.
 
-Kill with SIGKILL. Compare `[audtask-dispatch] real_ucode=`, `[phase]`
-title/hangar VIs, `break_pc`, and hangar PCM joins.
-
-Do not change `osAiSetNextBuffer_recomp`, canary prefill, wait pumps, or
+Do not change `get_rsp_microcode`, canary prefill, wait pumps, or
 guest gates in this unit.
