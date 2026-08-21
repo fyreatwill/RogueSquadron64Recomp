@@ -3232,6 +3232,40 @@ if is_image_ucode and IMAGE_STAGE_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 23: record the guest completion PC for the image-task contract.
+# The only image-side `break 0` is the normal task-completion edge at 0x1328;
+# the host RSP wrapper consumes this TLS witness after the generated function
+# returns and places it beside the task ABI, DMA, canary, and exit fields.
+# ---------------------------------------------------------------------------
+IMAGE_BREAK_MARKER = "/* fixup: image-task break witness */"
+if is_image_ucode and IMAGE_BREAK_MARKER not in text:
+    decl_anchor = re.compile(
+        r'(extern "C" void rs64_audio_image_stage\(uint32_t stage, uint8_t\* rdram, '
+        r'uint32_t r2, uint32_t field348, uint32_t field44, uint32_t dest\);  '
+        r'/\* fixup: image-stage audit \*/\n)'
+    )
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_audio_image_break(uint32_t pc);  ' +
+        IMAGE_BREAK_MARKER + "\n",
+        text, count=1)
+    break_anchor = re.compile(
+        r'(    // break\s+0\n)(    return RspExitReason::Broke;)'
+    )
+    text, n_break = break_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_audio_image_break(0x1328u);  " + IMAGE_BREAK_MARKER +
+        "\n" + m.group(2),
+        text, count=1)
+    if (n_decl, n_break) != (1, 1):
+        print(
+            "fixup_factor5_ucode: FIXUP 23 ANCHOR FAILED "
+            f"(declaration={n_decl}, break={n_break}).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
@@ -3305,5 +3339,7 @@ if M4_Y8000_MARKER in text and M4_Y8000_MARKER not in original:
     notes.append("M4 0x8000-Y emit vs clip-reject census (s1856)")
 if IMAGE_STAGE_MARKER in text and IMAGE_STAGE_MARKER not in original:
     notes.append("image-task source/field audit (M5 step 7)")
+if IMAGE_BREAK_MARKER in text and IMAGE_BREAK_MARKER not in original:
+    notes.append("image-task guest break witness (M5 task contract)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)

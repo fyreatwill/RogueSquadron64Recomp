@@ -100487,3 +100487,53 @@ policy, or default behavior changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+## Session 2113 (2026-08-21) — instrumented the M5 image-task completion contract
+
+The planned M5 work unit was a single-build, phase-keyed contract witness for
+the opt-in Factor 5 image arm, paired with the default silent stub. Before
+instrumenting, the retail oracle positive controls passed: the whole-RDRAM
+physical write watch fired 10000 times and the independent physical
+`0x000A0F50` read watch fired 1746 times from named retail PCs. The diagnostic
+was therefore not allowed to treat an empty target row as a result.
+
+The durable instrumentation is in `tools/fixup_factor5_ucode.py` (Fixup 23),
+with host rows in `src/main/main.cpp` and
+`lib/N64ModernRuntime/librecomp/src/rsp.cpp`; the submodule patch export was
+refreshed. A single Debug build carried dispatch, generated DMA, stage,
+completion, exit, output-buffer, canary, slot, PCM, and ordering fields. Both
+arms emitted positive dispatch/route controls.
+
+The successful image-arm run reached title and hangar. Its target rows were
+phase 8 (`1024 @ 0x00790400`, 1685 rows), phase 10 (`512 @ 0x006AB400`, 1056),
+and phase 12 (`512 @ 0x006AB400`, 536). Every target row recorded generated
+break PC `0x1328`, `RspExitReason::Broke` (`exit=1`), and `output_buff=0` with
+the canary failing. In phase 10, two nonzero stage-2 spans (`nz=621` and
+`639`) matched actual `0x6F0`/`0x300` generated DMA ranges and exact PCM
+source/consumer spans by guest address, byte count, full-span hash, and
+nonzero count. Completion preceded both PCM edges and the image join reported
+no ordering violation. The observed data path rejects `H-WritebackLoss` and
+`H-NoValidOutput` at this sampled boundary and selects `H-TaskExitMapping` for
+the generated `break 0`/host `Broke` edge. `output_buff=0` remains an
+ABI-semantics question; no mapping change was made.
+
+The required same-run A/B was not obtained. In the final paired retry the
+image arm reached both target phases while the stub arm reached title and
+crashed in phase 6 before the hangar; an earlier paired retry had the inverse
+pre-target crash. The image contract conclusion is consequently single-arm
+evidence, not a cross-run A/B conclusion. The target-only logging scope was
+also corrected after the first attempt exposed instrumentation mutex overhead
+in non-target phases; no game behavior changed. No output, exit, DMA, task
+field, canary, slot, PCM, wait, guard, queue, or default-policy change is
+authorized.
+
+ORIGIN: diagnostic-only contract witness; the generated `break 0` writer is
+the image ucode completion edge at guest PC `0x1328`, and the observed
+nonzero stage-2 values are legitimate generated DMA/PCM payloads. No
+corruption mitigation or value skip was added.
+
+### Next
+
+Run the same-build paired target-phase validation described in
+`scratch/agent/NEXT.md` under
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.

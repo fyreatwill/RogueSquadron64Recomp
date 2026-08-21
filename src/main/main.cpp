@@ -378,26 +378,41 @@ static thread_local Rs64AudioRouteIdentity g_rs64_audio_identity;
 static std::atomic<uint32_t> g_rs64_audio_ordinal{0};
 static uint32_t g_rs64_audio_phase_key = 0xFFFFFFFFu;
 static uint32_t g_rs64_audio_phase_row = 0;
+static thread_local uint32_t g_rs64_audio_break_pc = 0;
+
+extern "C" void rs64_audio_image_break(uint32_t pc) {
+    g_rs64_audio_break_pc = pc;
+}
+
+extern "C" uint32_t rs64_audio_image_break_pc() {
+    return g_rs64_audio_break_pc;
+}
 
 static bool rs64_audio_probe_enabled() {
     static int enabled = -1;
     if (enabled < 0) {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_AUDIO_RETURN");
+        const char* contract = std::getenv("ROGUESQ_LOG_M5_TASK_CONTRACT");
         enabled = ((all && *all && *all != '0') ||
-                   (own && *own && *own != '0')) ? 1 : 0;
+                   (own && *own && *own != '0') ||
+                   (contract && *contract && *contract != '0')) ? 1 : 0;
     }
     return enabled != 0;
 }
 
 static void rs64_audio_route_prepare(const char* arm) {
+    g_rs64_audio_identity.valid = false;
     if (!rs64_audio_probe_enabled()) {
-        g_rs64_audio_identity.valid = false;
         return;
     }
     const uint32_t phase = rs64_phase_ord();
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin();
+    const bool target_phase =
+        (width == 1024u && origin == 0x00790400u) ||
+        (width == 512u && origin == 0x006AB400u);
+    if (!target_phase) return;
     const uint32_t key = (width << 24) ^ origin;
     if (key != g_rs64_audio_phase_key) {
         g_rs64_audio_phase_key = key;
@@ -498,6 +513,7 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
 static void rs64_log_audio_return(const char* arm, RspExitReason reason) {
     if (!rs64_audio_probe_enabled()) return;
     if (!g_rs64_audio_identity.valid) rs64_audio_route_prepare(arm);
+    if (!g_rs64_audio_identity.valid) return;
     const Rs64AudioRouteIdentity route = g_rs64_audio_identity;
     if (route.row < 256 || (route.row % 128) == 0) {
         fprintf(stderr,
@@ -522,6 +538,7 @@ static RspExitReason musyx_stub_probe(uint8_t* rdram, uint32_t ucode_addr) {
 }
 
 static RspExitReason factor5_ucode_b_probe(uint8_t* rdram, uint32_t ucode_addr) {
+    g_rs64_audio_break_pc = 0;
     rs64_audio_route_prepare("factor5_ucode_b");
     const RspExitReason reason = factor5_ucode_b(rdram, ucode_addr);
     rs64_log_audio_return("factor5_ucode_b", reason);
@@ -1473,6 +1490,7 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
         s_pending_task_ucode_data_size = (uint32_t)task->t.ucode_data_size;
         return &factor5_gfx_runner;
     case M_AUDTASK:
+        g_rs64_audio_break_pc = 0;
         // M5-AUDIO-PLAN.md step 2 (s300): dispatch the recompiled MusyX ucode
         // instead of the stub, gated behind an env var so default behavior is
         // unchanged until a validation soak confirms it's safe. Step 1 (s300)

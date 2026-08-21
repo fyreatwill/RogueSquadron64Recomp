@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2112
-(2026-08-21); behavioral and source evidence is current through s2112.
+authoritative for exact commands and probe rows. Maintained in Session 2113
+(2026-08-21); behavioral and source evidence is current through s2113.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -23,13 +23,26 @@ This file is intentionally compact. The s2080–s2108 archive is in
   path is a silent `Broke` stub. The Factor 5 image arm is opt-in through
   `ROGUESQ_AUDIO_UCODE=1` and is not defaulted on.
 - The image arm performs real DMEM work and generated DMA writes, then returns
-  `Broke` and fails the reserved host canary. Its complete task-exit,
-  writeback, output-routing, and playback contracts remain unresolved.
+  `Broke` and fails the reserved host canary. The s2113 contract witness
+  records the generated completion edge as guest PC `0x1328`, host exit
+  `Broke`, task `output_buff=0`, and the phase-keyed post-DMA/PCM joins.
 - In the route-qualified hangar sample, stage-2 `0x6F0`/`0x300` rows matched
   nonzero DMA payloads and PCM source/consumer spans exactly. The same scope
   had `output_buff=0`, `canary_ok=0`, and `exit=1`. This selects
   `H-ImageDestIsPCM` only at the sampled stage-2 boundary; it is not
   permission to change the task ABI or output routing.
+- The s2113 image-arm table independently matched two nonzero phase-10
+  stage-2 spans (`nz=621` and `639`) to actual dmem-to-RDRAM DMA ranges and
+  exact PCM source/consumer spans, with completion before both PCM edges and
+  no ordering violation. This rejects `H-WritebackLoss` and `H-NoValidOutput`
+  at that sampled boundary and selects `H-TaskExitMapping` for the legitimate
+  `break 0`/`Broke` edge. `output_buff=0` remains an ABI-semantics question,
+  not evidence of a failed route.
+- The required same-run stub/image A/B did not reach target phases in one
+  pair: the image arm reached title/hangar while the stub arm crashed in
+  phase 6; an earlier pair had the inverse pre-target crash. The successful
+  image contract result is therefore single-arm evidence, not a cross-run A/B
+  conclusion. No output or exit mapping change is authorized.
 - The title path is separately selected as `H-InputZero`: title-stage input,
   transform, and DMA payloads were zero. A hangar sample had nonzero input,
   transform, and matching DMA payload, rejecting transform annihilation and
@@ -67,11 +80,11 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 image-task contract.** Resolve the opt-in Factor 5 image arm's final
-   `Broke`/writeback/output-routing boundary with one phase-keyed task table.
-   Preserve the generated DMA, task fields, canary, slot, PCM, wait, and queue
-   behavior; no output or exit mapping change is authorized until the writer
-   and host consumer are named.
+1. **M5 image-task contract.** Complete the phase-keyed stub/image A/B at a
+   target phase, then distinguish the selected `H-TaskExitMapping` result from
+   the remaining `output_buff=0` ABI-semantics question. Preserve generated
+   DMA, task fields, canary, slot, PCM, wait, and queue behavior; no output or
+   exit mapping change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.

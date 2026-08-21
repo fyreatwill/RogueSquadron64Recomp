@@ -1,70 +1,50 @@
-# NEXT work unit (s2113) — resolve the image-task completion/output contract
+# NEXT work unit (s2114) — same-run M5 image-task contract validation
 
 HYPOTHESIS-ID: m5-audio-image-task-contract
 
 ## Work unit
 
-Add one regeneration-stable, phase-keyed contract table covering the opt-in
-Factor 5 image task from host dispatch through generated final DMA, the
-image-side `break 0`, host task exit/writeback, output-buffer selection, and
-the first slot/PCM consumer. Run the same build with the default silent stub
-and `ROGUESQ_AUDIO_UCODE=1` arms concurrently. Include task ordinal, stage,
-guest source/destination/length, full-span hash/nonzero count, break PC,
-`RspExitReason`, output buffer, canary result, slot status, and PCM join.
-Require a positive dispatch/DMA control in each arm before interpreting any
-null. Do not change task fields, DMA, exit mapping, output routing, canary,
-slot, PCM, waits, guards, queues, or default behavior.
+Run one fresh, same-build paired validation of the default silent audio stub
+and `ROGUESQ_AUDIO_UCODE=1` image arm concurrently. The pair must reach at
+least one target phase (`1024 @ 0x00790400` or `512 @ 0x006AB400`) before any
+contract comparison is used. No new fields or runtime behavior are needed:
+reuse the s2113 phase-keyed contract witness and the existing route, ABI/DMA,
+stage, slot, PCM, wait, queue, and VI controls. Do not change task fields,
+DMA, exit mapping, output routing, canary handling, slots, PCM, waits, guards,
+queues, or default behavior.
 
-## Competing hypotheses and discriminator
+## Competing hypotheses and single discriminator
 
-- H-TaskExitMapping: the generated `break 0` is the legitimate completion
-  edge, and the host `Broke` result is compatible with the valid task output.
-- H-OutputRoute: the image task produces a valid nonzero span, but the host
-  routes or names the output buffer incorrectly before slot/PCM consumption.
-- H-WritebackLoss: the generated task writes a valid span, but host writeback
-  or the task-field destination loses it before the canary/consumer boundary.
-- H-NoValidOutput: the task's final fields or transformed data are invalid or
-  zero at the output boundary, so no host contract change is justified.
+- H-TaskExitMapping: the generated completion edge at guest PC `0x1328` is
+  legitimate, and host `Broke` with `output_buff=0` is compatible with the
+  matched output/PCM data.
+- H-OutputRoute: the image task produces valid data, but the host output field
+  or route names a different buffer than the consumer uses.
+- H-WritebackLoss: generated DMA is valid, but host writeback or task-field
+  handling loses it before the canary/consumer boundary.
+- H-NoValidOutput: the final task data is invalid or zero despite positive
+  dispatch, so no host contract change is justified.
 
-The single joined table is the discriminator. A valid span plus matching
-writeback and a `Broke` exit selects H-TaskExitMapping; valid span plus a
-different output/consumer destination selects H-OutputRoute; valid generated
-DMA followed by failed host writeback selects H-WritebackLoss; and zero or
-invalid final data with positive dispatch selects H-NoValidOutput. Missing
-rows despite positive dispatch/DMA select an instrumentation-coverage defect;
-do not add another field in this iteration.
-
-## Ground-truth prerequisite
-
-Before adding the contract witness, run the retail whole-RDRAM positive
-control and physical `0x000A0F50` read watch. Retail does not reach the port's
-mission route, so only the positive control and named writer/read PCs are
-coverage evidence; a null target-task result is not evidence about the port.
+The discriminator is one phase-keyed stub/image table joined on target phase,
+task ordinal, stage, guest span, full-span hash/nonzero count, break PC, exit,
+output buffer, canary, slot status, and PCM source/consumer span. A same-phase
+valid-span match through DMA and PCM with `Broke` selects H-TaskExitMapping;
+different output/consumer destinations select H-OutputRoute; valid generated
+DMA followed by failed host writeback selects H-WritebackLoss; zero/invalid
+final data selects H-NoValidOutput. If either arm has positive dispatch/DMA
+but no joined target row, classify that as coverage/recipe failure and do not
+infer a contract result.
 
 ## Exact commands
 
-Confirm the existing image-task and host anchors before editing:
+Use the already-built Debug binary. Launch both arms concurrently from the
+repository root:
 
-    rg -n 'ROGUESQ_AUDIO_UCODE|RspExitReason::Broke|output_buff|canary|pcm|audio.*dispatch|break 0' src/main ../N64Recomp/fixup_game_funcs.py ../N64Recomp/RecompiledFuncs/funcs_*.c | head -160
+    env GAME_EXTRA_ENV='ROGUESQ_M5_B40_VALUE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_WAIT_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2114_m5_task_stub_pair 30 12 > scratch/agent/s2114_m5_task_stub_pair_driver.log 2>&1
+    env GAME_EXTRA_ENV='ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_B40_VALUE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_WAIT_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2114_m5_task_image_pair 30 12 > scratch/agent/s2114_m5_task_image_pair_driver.log 2>&1
 
-Run the independent retail controls first:
-
-    tools/oracle/build/rs64_oracle --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom ../rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 8 --hit-cap 100 --watch-write 0x0:0x800000 --watch-read 0x000A0F50 --first-watch 1 --detail-watch 1 --pc-hist-watch 1 --vi-trace > scratch/agent/s2113_oracle_audio_contract.log 2>&1
-
-Keep the durable transform in `fixup_game_funcs.py`. Do not invoke the
-known unsupported `../N64Recomp/build/N64Recomp`; use the older complete
-recompiler only if it exists. If it does not, preserve the intact generated
-tree and apply the new diagnostic transform there without truncating it.
-Build once:
-
-    python3 -m py_compile ../N64Recomp/fixup_game_funcs.py
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-
-Run both arms concurrently from the repository root with the same route,
-ABI/DMA, stage, slot, PCM, ordering, and VI controls:
-
-    env GAME_EXTRA_ENV='ROGUESQ_M5_B40_VALUE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2113_m5_task_stub 30 12 > scratch/agent/s2113_m5_task_stub_driver.log 2>&1
-    env GAME_EXTRA_ENV='ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_B40_VALUE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1' PROBES_OVERRIDE='p1:start:0' zsh scratch/s73_post_a_scene/run_mission_keys.sh s2113_m5_task_image 30 12 > scratch/agent/s2113_m5_task_image_driver.log 2>&1
-
-Kill remaining process groups with SIGKILL. Inspect only phase-keyed counts,
-joined rows, and tails; never read a full run log.
+If a launched process remains after its driver exits, terminate its process
+group with SIGKILL. Inspect only phase-keyed counts, positive-control rows,
+joined contract rows, and log tails; never read a complete run log. The retail
+oracle control from s2113 already passed, so do not add instrumentation or
+rebuild unless the source/build is changed.
