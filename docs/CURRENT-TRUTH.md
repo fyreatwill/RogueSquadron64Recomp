@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2150
-(2026-08-21); behavioral and source evidence is current through s2150.
+authoritative for exact commands and probe rows. Maintained in Session 2151
+(2026-08-21); behavioral and source evidence is current through s2151.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -66,28 +66,20 @@ This file is intentionally compact. The s2080–s2108 archive is in
   The image still exits at guest break PC `0x1328` with `canary_ok=0`; no
   task-field rewrite, output-route change, new RSP config, or default-arm
   change follows.
-- The s2138 host-only MORT census compiled the independent
-  `CMORTDecoder::Decode` reference and passed the speech positive controls:
-  546 descriptors, all `MORT` headers, descriptor-type counts
-  `419/59/36/17/9/6`, and rates `8000:440`/`16000:106`. The mandated rows
-  `0,1,419,545` all decoded to stable nonempty PCM rows, selecting
-  `H-MORTReferenceMatches` only for those four 8000-Hz/type-0 samples. The
-  selection covers neither the 16000-Hz class nor nonzero descriptor types,
-  so the full codec-variant boundary remains open; no audio arm, task ABI,
-  output route, or default-arm change follows.
-- The s2139 host-only MORT census reused those positive controls and decoded
-  indices `4,58,90,104` across descriptor types `1,2,3,5` and both rates.
-  All four rows were complete, signed-16-bit, and nonempty: type 1/8000 had
-  `67200` samples and FNV `0x998CAF3C`, type 2/8000 had `110080` samples and
-  FNV `0x58E9C3D2`, type 3/16000 had `141600` samples and FNV
-  `0xC68F3CAF`, and type 5/16000 had `205760` samples and FNV
-  `0xBF30B582`. This is single-source reference evidence selecting
-  `H-MORTReferenceMatchesExtended` for the
-  sampled rate/type classes and rejects layout/endian failure,
-  codec-variant failure, and reference unavailability at those rows. Type 0
-  at both rates and type 4 remain unsampled; s2140 separately closed the
-  sampled retail `data_ptr+0x100` output boundary. No audio arm, task ABI,
-  output route, host shortcut, guard, or default-arm behavior changed.
+- The s2138–s2151 host-only MORT reference tables passed the speech
+  positive controls (546 descriptors, all `MORT` headers, type counts
+  `419/59/36/17/9/6`, rates `8000:440`/`16000:106`) and now cover every
+  named remaining class. s2138 decoded type-0 at 8000 Hz; s2139 decoded
+  types `1,2,3,5` with both rates present in that four-row table; s2151
+  decoded type-0 at 16000 Hz (indices `93,314`; `35360`/`39360` samples,
+  FNV `0xE07346F9`/`0x9DE7D2DD`) and type 4 (indices `94,95`;
+  `192320`/`182240` samples, FNV `0xA1E31DC3`/`0x926D68B5`). Type 4
+  exists only at 16000 Hz (`9/9`); `(4, 8000)` is not a populated class.
+  This selects `H-MORTRemainingMatches` and closes the remaining-class
+  work. Two extra populated cells (`type 1@16000` n=14,
+  `type 2@16000` n=18) were outside the four-row table; they do not
+  reopen it. No audio arm, task ABI, output route, host shortcut, guard,
+  or default-arm change follows.
 - The s2140 retail oracle watch passed its independent whole-RDRAM positive
   control with `363506` writes, the task-block route control with `41220`
   writes, and reached title `1024` plus hangar `512 @ 0x006AB400`. It wrote
@@ -150,6 +142,14 @@ This file is intentionally compact. The s2080–s2108 archive is in
   sizes are all `0x4`/`0x8`/`0xC`; the ELF sizes swallow following named
   ucode/data until the next function. The leftover class is closed. No
   game run or runtime behavior changed.
+- The s2151 host-only remaining-class table reused those speech controls
+  and decoded the four remaining-class rows without padding already-
+  covered type-0 8000-Hz or type-1/2/3/5 samples. All four rows were
+  complete, signed-16-bit, and nonempty. Combined with s2138/s2139 this
+  covers all six descriptor types and both rates. The leftover
+  `mort_probe.py` warning that selected_rates was `[16000]` only is a
+  script artifact, not an open 16000-Hz class. No game run or runtime
+  behavior changed.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -434,12 +434,14 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 remaining MORT reference classes.** s2138 covered type-0 at
-   8000 Hz; s2139 covered types `1,2,3,5` at both rates. Type 0 at
-   16000 Hz and type 4 remain unsampled. The next unit is one host-only
-   `tools/mort_probe.py` four-row table covering those remaining classes
-   against the independent `CMORTDecoder::Decode` reference. Do not change
-   the audio arm, task ABI, output route, or default dispatch.
+1. **M5 A13 retail AI-status poll.** Named `osAiGetStatus` is absent
+   from `syms/rogue_squadron.syms.toml`; `__osAiDeviceBusy` is at
+   `0x80029F30` and `osAiSetNextBuffer` at `0x80029E80` (live in s2132).
+   The host `osAiGetStatus_recomp` always returns 0. The next unit is one
+   retail-oracle execution census of `__osAiDeviceBusy` with
+   `osAiSetNextBuffer` as the same-run positive control, plus a host-only
+   generated/symbol presence table. Do not change `osAiGetStatus_recomp`,
+   the default audio arm, task ABI, or output routing.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
@@ -566,8 +568,9 @@ runtime meaning of every task field. The s2136 retail task-field census
 selected `H-RetailTaskMatchesFactor5b`: the fixed image/data pair and
 nonzero `data_ptr`/`data_size` co-occurred with zero output-buffer writes.
 The s2137 port comparison established the matching fixed fields and sampled
-`field348+0x100` relation. The s2138/s2139 reference tables now cover type-0
-rows plus types `1,2,3,5` across 8000/16000 Hz with stable nonzero PCM. The
+`field348+0x100` relation. The s2138/s2139/s2151 reference tables now cover
+all six descriptor types and both rates with stable nonempty PCM, including
+type-0 at 16000 Hz and type 4; the remaining-class work is closed. The
 s2140 retail oracle then supplied the independent dynamic write line: both
 observed `data_ptr+0x100` destinations were written after the positive
 control and title/hangar gates. Together with s2137's port relation this
@@ -759,7 +762,10 @@ title/hangar, and wrote both exact `data_ptr+0x100` destinations, selecting
 independent decoder table produced four complete 8000-Hz/type-0 rows, and
 s2139's table produced complete nonzero rows for types `1,2,3,5` at both rates
 with byte-count and waveform checks. This single-source reference evidence
-selects `H-MORTReferenceMatchesExtended` for those sampled classes. s2141
+selects `H-MORTReferenceMatchesExtended` for those sampled classes. s2151
+then decoded type-0 at 16000 Hz and type 4 against the same reference and
+speech controls, selecting `H-MORTRemainingMatches` and closing the
+remaining-class work. s2141
 then selected the static mission mapping for
 `func_800BF790`/`updateHudHealthIndicator`, with the same start, size, end
 boundary, and caller table in the final ELF/generated tree. s2142 selected
@@ -794,8 +800,10 @@ ELF/generated tree. Human-in-main versus placeholder-in-overlay
 mismatches are exhausted. s2150 then selected `H-LeftoverAllHolds` for
 the leftover `fake_func_*` ELF-size-`> 0xC` class: six leftovers, all
 parked or overlapping named ucode/data/rspboot symbols, with matching
-ELF/`funcs.h`/TOML leftover names. That leftover class is closed. No
-runtime or default-arm change follows.
+ELF/`funcs.h`/TOML leftover names. That leftover class is closed. s2151
+then closed the remaining MORT reference classes with complete nonempty
+rows for type-0 at 16000 Hz and type 4. No runtime or default-arm change
+follows.
 
 ## Method and safety rules
 

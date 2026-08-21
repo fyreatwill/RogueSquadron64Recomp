@@ -149,13 +149,19 @@ explicit control arm.
    `data_ptr`/`data_size`, and zero writes to both output-buffer fields. This
    selects `H-RetailTaskMatchesFactor5b` at the task-field boundary. s2137
    then selected the matching port task/DMA boundary, including the sampled
-   `field348+0x100` destination relation. The retail `data_ptr+0x100` write
-   itself remains open. s2138 compiled the named independent MORT decoder and
-   decoded four mandated speech rows, but all were 8000-Hz/type-0; the next
-   unit must cover an uncovered descriptor type and the 16000-Hz class in one
-   reference table. Positive controls are the speech descriptor census and
-   complete decoder rows; rollback remains leaving the existing RSP dispatch
-   arm opt-in.
+   `field348+0x100` destination relation. s2140 closed the sampled retail
+   `data_ptr+0x100` write boundary. s2138 compiled the named independent
+   MORT decoder and decoded four 8000-Hz/type-0 speech rows; s2139 covered
+   types `1,2,3,5` with both rates present; s2151 covered type-0 at 16000 Hz
+   and type 4 (16000-only in the speech table). All six descriptor types and
+   both rates now have at least one complete nonempty reference row. The
+   remaining-class work is closed. The next incremental unit is A13: measure
+   whether retail polls AI status (`__osAiDeviceBusy` at `0x80029F30`) with
+   `osAiSetNextBuffer` as the same-run positive control, before touching
+   `osAiGetStatus_recomp`. Positive controls are the speech descriptor
+   census (now closed) and, for A13, whole-RDRAM plus live
+   `osAiSetNextBuffer` execution through title/hangar; rollback remains
+   leaving the existing RSP dispatch arm opt-in.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.

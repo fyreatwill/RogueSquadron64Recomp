@@ -102067,3 +102067,51 @@ move, regen, or runtime change followed.
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only classified leftover ELF symbols against companion
 comments and generated prototypes.
+
+## Session 2151 (2026-08-21) — closed remaining MORT type-0 16000 Hz and type 4
+
+HYPOTHESIS-ID: m5-mort-sample-contract
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `54,063` bytes, so this was not a
+maintenance iteration. Soak-queue intake was historical 2026-08-18 rows
+already consumed; no new recipes. The prescribed unit was a host-only
+`tools/mort_probe.py` four-row table covering remaining MORT classes
+(type 0 at 16000 Hz and type 4) against the independent
+`CMORTDecoder::Decode` reference already used by s2138/s2139. No game run,
+audio-arm change, task ABI, output route, guard, or default dispatch
+change.
+
+The same-run speech positive controls matched s2138: `546` descriptors, all
+`MORT` headers, type counts `419/59/36/17/9/6`, and rates `8000:440` /
+`16000:106`. The speech table has `42` type-0 16000-Hz rows and `9` type-4
+rows; every type-4 row is 16000 Hz, so `(4, 8000)` is not a populated
+class. The four remaining-class indices were `93,314,94,95` (two type-0
+16000-Hz rows and two type-4 16000-Hz rows) with no padding from already-
+covered type-0 8000-Hz or type-1/2/3/5 samples. That rejects
+`H-MORTRemainingUnavailable`.
+
+The independent decoder produced four complete nonempty signed-16-bit rows:
+
+- index `93` type 0/16000: `35360` samples, `32476` nonzero, FNV
+  `0xE07346F9`, min `-23272`, max `29528`;
+- index `314` type 0/16000: `39360` samples, `37659` nonzero, FNV
+  `0x9DE7D2DD`, min `-22784`, max `32760`;
+- index `94` type 4/16000: `192320` samples, `154915` nonzero, FNV
+  `0xA1E31DC3`, min `-28944`, max `32760`;
+- index `95` type 4/16000: `182240` samples, `142724` nonzero, FNV
+  `0x926D68B5`, min `-32768`, max `32760`.
+
+This selects `H-MORTRemainingMatches` and rejects `H-MORTRemainingMismatch`.
+Combined with s2138 (type-0 8000 Hz) and s2139 (types `1,2,3,5` with both
+rates present), all six descriptor types and both rates now have at least
+one complete reference row. The leftover `mort_probe.py` warning that
+`selected_rates` was `[16000]` only is a script artifact from this four-row
+remaining-class selection, not an open 16000-Hz class. Two extra populated
+cells (`type 1@16000` n=14, `type 2@16000` n=18) were outside the mandated
+four-row table; they do not reopen the remaining-class work. The table is
+in `scratch/agent/s2151_mort/result.log`. No audio arm, task ABI, output
+route, host shortcut, guard, or default-arm behavior changed.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only decoded remaining speech-table classes against the
+independent reference decoder.

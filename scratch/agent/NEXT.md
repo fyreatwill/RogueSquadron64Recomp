@@ -1,86 +1,74 @@
-# NEXT work unit (s2151) — remaining MORT type-0 16000 Hz and type 4
+# NEXT work unit (s2152) — A13 retail AI-status poll
 
-HYPOTHESIS-ID: m5-mort-sample-contract
+HYPOTHESIS-ID: m5-ai-status-poll
 
 ## Work unit
 
-s2150 closed the leftover `fake_func_*` ELF-size-`> 0xC` class as holds.
-Do not re-census leftover `fake_func_*` or invent names for the five
-parked `func_*` holds.
+s2151 closed remaining MORT reference classes (`H-MORTRemainingMatches`).
+Do not re-run `mort_probe.py` or pad extra type-1/2 16000-Hz cells.
 
-The next unit is M5 remaining-codec coverage: one host-only
-`tools/mort_probe.py` four-row table covering descriptor type 0 at
-16000 Hz and descriptor type 4, against the independent
-`CMORTDecoder::Decode` reference already used by s2138/s2139. No game
-run, audio-arm change, task ABI, output route, guard, or default
-dispatch change.
+The next unit is M5 A13: one host-only generated/symbol presence table for
+`osAiGetStatus` / `__osAiDeviceBusy` / `osAiSetNextBuffer`, plus one
+retail-oracle execution census of `__osAiDeviceBusy` with `osAiSetNextBuffer`
+as the same-run positive control. No port build, audio-arm change, task ABI,
+output route, host-shortcut edit, guard, or default dispatch change.
 
 ## Competing hypotheses and discriminator
 
-- `H-MORTRemainingMatches`: the four selected remaining-class rows
-  decode to complete nonempty signed-16-bit PCM with stable byte counts
-  and FNV hashes.
-- `H-MORTRemainingMismatch`: those rows exist in the speech table but
-  fail layout, endian, or codec-variant checks (empty, truncated, or
-  out-of-range samples).
-- `H-MORTRemainingUnavailable`: the speech table does not actually
-  contain type 0 at 16000 Hz or type 4, so the remaining-class claim
-  cannot be tested (would contradict the s2138 type/rate census).
+- `H-BusyIsThePoll`: retail `__osAiDeviceBusy` (`0x80029F30`) executes on
+  the covered title/hangar route in the same run as live `osAiSetNextBuffer`.
+- `H-StatusNeverPolled`: `osAiSetNextBuffer` control fires through hangar
+  and `__osAiDeviceBusy` stays at zero (busy check inlined or unused).
+- `H-GetStatusNamedLive`: the generated tree or TOML contains a named
+  `osAiGetStatus` VRAM/caller, so the host `osAiGetStatus_recomp` is a live
+  jal target (would contradict the current TOML absence).
+- `H-CoverageFailure`: whole-RDRAM control or title/hangar VI gates miss,
+  so a zero `__osAiDeviceBusy` count is unevaluable.
 
-The discriminator is one four-row table that includes at least one type-0
-16000-Hz row and at least one type-4 row, plus the same-run speech
-positive controls (`546` descriptors, all `MORT` headers, type counts
-`419/59/36/17/9/6`, rates `8000:440`/`16000:106`). Complete nonempty
-rows select `H-MORTRemainingMatches`; decoder/range failure selects
-`H-MORTRemainingMismatch`; missing classes after the control census
-selects `H-MORTRemainingUnavailable`.
+The discriminator is one table: TOML/generated presence of the three AI
+symbols, same-run whole-RDRAM write control, title `1024` plus hangar
+`512 @ 0x006AB400`, `osAiSetNextBuffer` execution count, and
+`__osAiDeviceBusy` execution count. Named `osAiGetStatus` presence selects
+`H-GetStatusNamedLive`; live busy-plus-set-next selects `H-BusyIsThePoll`;
+set-next without busy after those gates selects `H-StatusNeverPolled`;
+missing control/gates select `H-CoverageFailure`. Do not treat a silent
+`AI_STATUS_REG` MMIO watch as evidence (the oracle's RDRAM breakpoint path
+is not a positive control for MMIO).
 
 ## Exact commands
 
     python3 - <<'PY'
     from pathlib import Path
-    import collections, struct
-    rom = Path('build/rogue_squadron.z64').read_bytes()
-    off, size = 0x583D90, 0x31D3E4
-    speech = rom[off:off+size]
-    count = int.from_bytes(speech[0:4], 'big')
-    rows = []
-    for i in range(count):
-        packed = int.from_bytes(speech[4+i*4:8+i*4], 'big')
-        rel = packed & 0xFFFFFF
-        dtype = speech[rel+4]
-        rate = int.from_bytes(speech[rel+6:rel+8], 'big')
-        rows.append((i, dtype, rate))
-    need = [(0, 16000), (4, 8000), (4, 16000), (0, 16000)]
-    chosen = []
-    used = set()
-    for want_t, want_r in need:
-        for i, dtype, rate in rows:
-            if i in used:
-                continue
-            if dtype == want_t and rate == want_r:
-                chosen.append(i)
-                used.add(i)
-                break
-    print('count', count)
-    print('types', collections.Counter(r[1] for r in rows))
-    print('rates', collections.Counter(r[2] for r in rows))
-    print('type0_16000', [i for i,t,r in rows if t==0 and r==16000][:8])
-    print('type4', [(i,r) for i,t,r in rows if t==4][:12])
-    print('chosen', chosen)
-    Path('scratch/agent/s2151_mort_indices.txt').write_text(
-        ','.join(str(i) for i in chosen) + '\n')
+    import re
+    roots = [
+        Path('syms/rogue_squadron.syms.toml'),
+        Path('../N64Recomp/RecompiledFuncs/funcs.h'),
+    ]
+    names = ('osAiGetStatus', 'osAiGetLength', '__osAiDeviceBusy', 'osAiSetNextBuffer')
+    for path in roots:
+        text = path.read_text(encoding='utf-8', errors='replace')
+        print(f'=== {path} ===')
+        for name in names:
+            hits = [i+1 for i,line in enumerate(text.splitlines()) if name in line]
+            print(f'  {name}: {len(hits)} lines {hits[:8]}')
     PY
 
-    python3 tools/mort_probe.py \
-      --rom build/rogue_squadron.z64 \
-      --speech-offset 0x583D90 \
-      --speech-size 0x31D3E4 \
-      --indices "$(cat scratch/agent/s2151_mort_indices.txt)" \
-      --reference scratch/agent/s2138_mort/N64-Tools/N64SoundListToolUpdated/N64SoundLibrary/MORTDecoder.cpp \
-      | tee scratch/agent/s2151_mort_result.txt
+    grep -n 'jal 0x80029F30\|jal 0x80029E80\|__osAiDeviceBusy\|osAiGetStatus' \
+      ../N64Recomp/RecompiledFuncs/funcs_*.c \
+      | head -80
 
-If the census cannot fill four remaining-class indices, stop and record
-`H-MORTRemainingUnavailable` rather than padding with already-covered
-type-0 8000-Hz or type-1/2/3/5 rows. Do not run the game or change
-runtime, audio, task, output, guard, or mitigation behavior.
+    tools/oracle/build/rs64_oracle \
+      --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+      --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+      --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+      --secs 70 --hit-cap 64 \
+      --watch-write 0x0:0x800000 \
+      --watch-pc 0x80029E80,0x80029F30 \
+      --first-watch 0 --vi-trace \
+      --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+      > scratch/agent/oracle_s2152_ai_status.log 2>&1
+
+If the first oracle run saturates `--hit-cap` before the PC watches log,
+rerun the same command in this iteration with `--detail-watch` on the two
+PC watches after the whole-RDRAM threshold, following the s2121/s2134
+repair. Do not change `osAiGetStatus_recomp` or default the image arm.
