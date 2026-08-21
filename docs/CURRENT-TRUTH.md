@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2105 (2026-08-20);
-behavioral and source evidence is current through s2105.
+for exact commands and probe rows. Maintained in Session 2106 (2026-08-20);
+behavioral and source evidence is current through s2106.
 
 ## Current state
 
@@ -96,6 +96,22 @@ behavioral and source evidence is current through s2105.
   2653 ABI rows. This selects `H-ImageDestIsPCM` at the sampled hangar
   stage-2 scope and closes the prior route-admission blocker; it does not
   authorize output/task/canary or default-dispatch changes.
+- s2106's first same-build C88 pair was not admissible because the unset
+  control reached title but not hangar while the `C88=1` treatment reached
+  both target phases. The fixed pair made the control's value explicit as
+  `ROGUESQ_M5_C88_VALUE=0`; both arms then reached title and two hangar
+  phases without crash markers. In the first hangar phase, the control's
+  `reapplyDisplayMode` writer stored `0`, the raw consumer gate was `0`, and
+  the consumer branch was `1`; it produced two nonzero stage-2 rows and an
+  exact nonzero PCM source/consumer match at `0x167050` (FNV
+  `0x7B70923A`, 639 bytes). The treatment writer stored `1`, the raw gate
+  was `1`, and gate-1 consumer activity was present, but it produced no
+  nonzero stage row and no nonzero PCM boundary row in that phase. This
+  rejects `H-C88-Required` as phrased, `H-C88-RouteHazard`, and
+  `H-C88-Irrelevant`, and selects `H-C88-ReversedOrSuppressing` at the
+  sampled port gate/PCM scope. It does not establish retail polarity or
+  authorize changing the shipped gate; the next unit is the named
+  `0x8008EB40` `setDisplayMode` writer with C88 held at zero in both arms.
 - s2088's fixed retail oracle run passed the whole-RDRAM positive control
   (`102276129` writes), reached title `1024 @ 0x00790400` and hangar
   `512 @ 0x006AB400`, and sampled both exact candidate writers after the
@@ -325,17 +341,17 @@ behavioral and source evidence is current through s2105.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 guest gate semantics, one writer at a time.** s2105 closes the
-   route-admission blocker and selects `H-ImageDestIsPCM` for two nonzero
-   hangar stage-2 ranges, while the opt-in task still returns `Broke` with
-   `output_buff=0` and `canary_ok=0`. The next unit holds
-   `ROGUESQ_AUDIO_UCODE=1` constant in both arms, enables the phase-keyed
-   gate contract table, and compares the default-zero `0x8008EC88`
-   `reapplyDisplayMode` store with exactly one `ROGUESQ_M5_C88_VALUE=1`
-   treatment arm. A paired title/hangar route plus gate writer/consumer
-   transitions and downstream task/slot/PCM rows is the discriminator. Do
-   not change the other `0x800A0F50` writers, output routing, task fields,
-   canary, waits, guards, queue policy, or default dispatch.
+1. **M5 guest gate semantics, one writer at a time.** s2106's admissible
+   C88 pair shows that `0x8008EC88` is not a simple “set one to enable valid
+   PCM” arm: `C88=1` changes the consumer branch and suppresses the sampled
+   nonzero stage/PCM rows, while explicit `C88=0` retains them. The next unit
+   must add a regeneration-stable arm for the named `0x8008EB40`
+   `setDisplayMode` success writer, with `ROGUESQ_AUDIO_UCODE=1` and C88
+   explicitly zero in both arms. Compare control `B40=0` with treatment
+   `B40=1` using the same phase-keyed gate, route, ABI/DMA, stage, slot, and
+   PCM controls. Do not change `0x8008EC88`, the other gate writers, output
+   routing, task fields, canary, waits, guards, queue policy, or default
+   dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -440,8 +456,22 @@ match nonzero `dmem_to_rdram` ranges and exact PCM source/consumer spans by
 FNV, byte count, and nonzero count. Later phase-10 and phase-12 stage rows are
 zero; the ABI still reports `output_buff=0`, `canary_ok=0`, and `exit=1`.
 This selects `H-ImageDestIsPCM` for the sampled stage-2 boundary. The next
-unit is the single-site `0x8008EC88` gate arm, with the Factor 5 image arm held
-constant in both A/B processes and the gate contract table enabled.
+unit was the single-site `0x8008EC88` gate arm; s2106's result is recorded
+below.
+
+s2106's fixed same-build C88 pair holds the Factor 5 image arm constant and
+uses explicit `C88=0` versus `C88=1` values. Both arms reach title and two
+hangar VI phases without crash markers. In the first hangar phase, `C88=0`
+stores gate `0`, takes the raw-gate branch `1`, and emits two nonzero stage-2
+rows; one exact source/consumer match is at `0x167050`, FNV `0x7B70923A`,
+with 639 nonzero bytes. `C88=1` stores gate `1`, reaches gate-1 consumer
+activity, but emits zero nonzero stage rows and zero nonzero PCM boundary rows.
+The gate writer and branch rows are independently positive, and the route
+gates are positive in both arms. This selects
+`H-C88-ReversedOrSuppressing` at the sampled port gate/PCM scope and rejects
+the planned C88-required, route-hazard, and irrelevant interpretations. It
+does not establish retail polarity or authorize a default gate change. The
+next unit is the `0x8008EB40` `setDisplayMode` writer arm with C88 held at zero.
 
 The s2080 crosswalk separates the generated fill function from the shared
 crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
@@ -764,6 +794,20 @@ events exactly. The treatment's 2653 ABI rows all retained `output_buff=0`,
 `canary_ok=0`, and `exit=1`; the join table recorded no ordering violation.
 This selects `H-ImageDestIsPCM` at sampled hangar stage-2 scope and moves the
 next M5 unit to the single-site guest-gate arm. No runtime behavior changed.
+
+s2106 first ran the prescribed unset-control/C88=1 pair. The control reached
+title but not hangar, so that pair was not admissible; the treatment reached
+both target phases. The fixed explicit-zero/C88=1 pair then let both arms reach
+title and two hangar phases without crash markers. The control's phase-10
+`reapplyDisplayMode` writer stored `0`, its raw gate was `0`, and its two
+nonzero stage-2 rows included an exact PCM source/consumer match at
+`0x167050` with FNV `0x7B70923A` and 639 nonzero bytes. The treatment writer
+stored `1`, its raw gate was `1`, and it had gate-1 consumer rows but zero
+nonzero phase-10 stage and PCM rows. This selects
+`H-C88-ReversedOrSuppressing` at the sampled port scope and rejects the
+C88-required, route-hazard, and irrelevant hypotheses. No runtime behavior
+changed; the next unit is a regeneration-stable arm for the `0x8008EB40`
+`setDisplayMode` writer with C88 held at zero.
 
 ## Method and safety rules
 

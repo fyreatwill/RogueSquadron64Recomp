@@ -100211,3 +100211,44 @@ field, gate, wait, guard, queue policy, or default dispatch changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-guest-gate`.
+
+## Session 2106 (2026-08-20) — tested C88 gate polarity with route-qualified A/B
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 52816 bytes, so this was not a
+maintenance iteration. The Debug target rebuilt successfully. The prescribed
+same-build pair held `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_SPIN_YIELD=1`, the
+LLE qualification, and all gate/task/PCM diagnostics constant. The first
+unset-control/C88=1 pair was not admissible: the control reached title
+`1024 @ 0x00790400` but no hangar phase, while the treatment reached title and
+hangar; neither run had crash, missing-function, or unhandled-jump markers.
+
+The fixed pair made the control value explicit with
+`ROGUESQ_M5_C88_VALUE=0` and reran the same recipe and instrumentation. Both
+arms reached title and two hangar phases without crash markers. The control's
+phase-10 writer row at `0x8008EC88` stored `0`, the raw gate was `0`, and the
+consumer branch was predominantly `1`; the treatment stored `1`, the raw gate
+was `1`, and gate-1 consumer rows were present. This is a positive writer and
+consumer control in both arms, not a writer-only null.
+
+At the first hangar phase, the control had 1927 image-stage rows with exactly
+two nonzero stage-2 rows: `0x166D50`/621 bytes and `0x167050`/639 bytes. The
+`0x167050` row matched both PCM source and consumer rows exactly at FNV
+`0x7B70923A`, with 639 nonzero bytes. The C88=1 treatment had 2142 image-stage
+rows but zero nonzero stage rows and zero nonzero PCM rows in that phase. Both
+arms retained `exit=1`, `output_buff=0`, and no crash marker; their route gates,
+task rows, and PCM controls fired. The independent gate-writer/branch table
+and the stage-to-PCM table therefore select
+`H-C88-ReversedOrSuppressing` at the sampled port scope. They reject
+`H-C88-Required` as phrased, `H-C88-RouteHazard`, and `H-C88-Irrelevant`.
+The result does not establish retail polarity and no runtime behavior changed.
+
+This rules out the first pair's route split as an unset-environment artifact,
+but does not authorize changing the shipped C88 store, output routing, task
+fields, canary, waits, guards, queue policy, or default dispatch. The next
+unit is a regeneration-stable arm for the named `0x8008EB40` `setDisplayMode`
+writer with C88 held at zero in both arms.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-gate-writer-sweep`.
