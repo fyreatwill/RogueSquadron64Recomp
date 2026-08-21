@@ -102115,3 +102115,66 @@ route, host shortcut, guard, or default-arm behavior changed.
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only decoded remaining speech-table classes against the
 independent reference decoder.
+
+## Session 2152 (2026-08-21) — classified retail AI-status poll as in-set-next busy
+
+HYPOTHESIS-ID: m5-ai-status-poll
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `54,481` bytes, so this was not a
+maintenance iteration. Soak-queue intake was historical 2026-08-18 rows
+already consumed; no new recipes. The prescribed unit was one host-only
+generated/symbol presence table for `osAiGetStatus` / `__osAiDeviceBusy` /
+`osAiSetNextBuffer` plus one retail-oracle execution census of
+`__osAiDeviceBusy` with `osAiSetNextBuffer` as the same-run positive
+control. No port build, audio-arm change, task ABI, output route,
+host-shortcut edit, guard, or default dispatch change.
+
+Host-only presence (TOML / `funcs.h` / `recomp_overlays.inl` / companion
+`libultra.txt` / generated jals):
+
+- `osAiGetStatus` and `osAiGetLength` are absent from all four sources.
+  Host `osAiGetStatus_recomp` / `osAiGetLength_recomp` exist in
+  `librecomp/src/ai.cpp` but are not overlay jal targets.
+- `osAiSetNextBuffer` is TOML `0x80029E80` size `0xA4`, overlay
+  `osAiSetNextBuffer_recomp`, and has two generated jals from
+  `runAiAudioStreamPlaybackLoop` (`0x8008EE08`, `0x8008EE84`).
+- `__osAiDeviceBusy` is TOML/companion `0x80029F30` size `0x30` and is in
+  N64Recomp `ignored_funcs`, so it has no generated body, overlay entry,
+  or host `__osAiDeviceBusy_recomp`. Generated C has no `jal 0x80029F30`.
+- The ROM contains exactly one `jal 0x80029F30` encoding (ROM `0x2AADC` =
+  `osAiSetNextBuffer+0x5C` / VRAM `0x80029EDC`) and exactly one
+  `AI_STATUS_REG` (`0xA450000C`) load, at `__osAiDeviceBusy` itself.
+  `osAiSetNextBuffer` then either `jal osVirtualToPhysical` and writes
+  `AI_DRAM_ADDR`/`AI_LEN`, or returns `-1` if busy.
+
+This host table rejects `H-GetStatusNamedLive`.
+
+The retail oracle used the prescribed s2134-style recipe (`--secs 70
+--hit-cap 64 --watch-write 0x0:0x800000 --watch-pc 0x80029E80,0x80029F30
+--first-watch 0 --vi-trace`, Rice, eleven-Start). Hit-cap 64 silenced
+`[hit]` lines; counts and `exec-prev` remained complete, so no
+`--detail-watch` rerun was required. Whole-RDRAM reached the `10000`
+callback threshold and was removed. VI reached title `WIDTH 640 -> 1024`
+at origin `0x00790800` (17.3s, then the `0x00790400`/`0x00790800` pair)
+and hangar `WIDTH 1024 -> 512` at origin `0x006AB400` (38.4s). Both PC
+watches executed `7958` times (exact 1:1). `exec-prev` attributed
+`osAiSetNextBuffer` to `0x8008EE08` (`n=1`), `0x8008EE84` (`n=7956`),
+and `__osDispatchThread` `0x8002BEEC` (`n=1`); `__osAiDeviceBusy` to the
+in-function jal `0x80029EDC` (`n=7957`) and the same dispatcher
+`0x8002BEEC` (`n=1`).
+
+This selects `H-BusyIsThePoll` at the covered retail route and rejects
+`H-StatusNeverPolled` and `H-CoverageFailure`. Combined with the host
+table it also rejects `H-GetStatusNamedLive`. Do not change
+`osAiGetStatus_recomp`; it is not a jal target. The live host shortcut is
+`osAiSetNextBuffer_recomp` skipping the busy check (always queue, return
+`0`). Whether that skip is observationally equivalent or dropped
+FIFO-full backpressure is the next discriminator (reject PC `0x80029EF0`
+versus success PC `0x80029EF4`). Table:
+`scratch/agent/s2152_ai_status_table.txt`. Log:
+`scratch/agent/oracle_s2152_ai_status.log`. No runtime, mitigation, task,
+wait, guard, or default-arm behavior changed.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only recorded generated/symbol presence and
+independent retail execution of the AI-status poll.

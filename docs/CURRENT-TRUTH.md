@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2151
-(2026-08-21); behavioral and source evidence is current through s2151.
+authoritative for exact commands and probe rows. Maintained in Session 2152
+(2026-08-21); behavioral and source evidence is current through s2152.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -150,6 +150,21 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `mort_probe.py` warning that selected_rates was `[16000]` only is a
   script artifact, not an open 16000-Hz class. No game run or runtime
   behavior changed.
+- The s2152 host-only generated/symbol table plus retail-oracle execution
+  census selected `H-BusyIsThePoll` and rejected `H-GetStatusNamedLive`,
+  `H-StatusNeverPolled`, and `H-CoverageFailure`. Named `osAiGetStatus`
+  and `osAiGetLength` are absent from TOML, `funcs.h`, overlays, and the
+  companion libultra map. `__osAiDeviceBusy` is TOML/companion
+  `0x80029F30` but ignored (no generated body). The only ROM
+  `jal 0x80029F30` and the only `AI_STATUS_REG` load sit inside
+  `osAiSetNextBuffer`. The oracle passed whole-RDRAM `10000`, title
+  `1024` (origins `0x00790800`/`0x00790400`), and hangar
+  `512 @ 0x006AB400`, with `osAiSetNextBuffer` and `__osAiDeviceBusy`
+  each executing `7958` times (1:1). Busy callers were in-function jal
+  `0x80029EDC` (`7957`) and `__osDispatchThread` `0x8002BEEC` (`1`).
+  Do not change `osAiGetStatus_recomp`; it is not a jal target. The live
+  host shortcut is `osAiSetNextBuffer_recomp` skipping that busy check.
+  Table: `scratch/agent/s2152_ai_status_table.txt`. No runtime change.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -434,14 +449,17 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 A13 retail AI-status poll.** Named `osAiGetStatus` is absent
-   from `syms/rogue_squadron.syms.toml`; `__osAiDeviceBusy` is at
-   `0x80029F30` and `osAiSetNextBuffer` at `0x80029E80` (live in s2132).
-   The host `osAiGetStatus_recomp` always returns 0. The next unit is one
-   retail-oracle execution census of `__osAiDeviceBusy` with
-   `osAiSetNextBuffer` as the same-run positive control, plus a host-only
-   generated/symbol presence table. Do not change `osAiGetStatus_recomp`,
-   the default audio arm, task ABI, or output routing.
+1. **M5 A13 busy-return polarity.** s2152 closed the presence/execution
+   half: retail polls AI status only via `__osAiDeviceBusy` inside
+   `osAiSetNextBuffer` (1:1 with `7958` executions); named
+   `osAiGetStatus` is not a jal target. Do not change
+   `osAiGetStatus_recomp`. The next unit is one retail-oracle census of
+   the set-next reject PC `0x80029EF0` (`li v0,-1`) versus the success
+   PC `0x80029EF4` (`jal osVirtualToPhysical`), with whole-RDRAM plus
+   `osAiSetNextBuffer`/`__osAiDeviceBusy` as same-run controls. That
+   split decides whether `osAiSetNextBuffer_recomp`'s skipped busy check
+   is observationally equivalent or dropped FIFO-full backpressure. No
+   host-shortcut, default-arm, task ABI, or output-route change.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
@@ -534,7 +552,9 @@ executed retail `osAiSetNextBuffer` `8,556` times. This selects
 `H-RetailAIQueued` for the covered retail route and rules out a retail-no-AI
 explanation. It is one independent source; the subsequent s2133 port
 comparison supplied the separate PCM source/consumer and host-callback line.
-No AI-status shortcut, task ABI, or default-arm change follows.
+s2152 then showed that retail AI-status polling is `__osAiDeviceBusy`
+inside `osAiSetNextBuffer`, not a named `osAiGetStatus` jal. No
+AI-status shortcut, task ABI, or default-arm change follows.
 
 The s2133 same-build port comparison supplied the missing nonzero host-boundary
 line. Both arms reached the target phases with positive controls; the image
@@ -802,8 +822,11 @@ the leftover `fake_func_*` ELF-size-`> 0xC` class: six leftovers, all
 parked or overlapping named ucode/data/rspboot symbols, with matching
 ELF/`funcs.h`/TOML leftover names. That leftover class is closed. s2151
 then closed the remaining MORT reference classes with complete nonempty
-rows for type-0 at 16000 Hz and type 4. No runtime or default-arm change
-follows.
+rows for type-0 at 16000 Hz and type 4. s2152 then selected
+`H-BusyIsThePoll`: whole-RDRAM `10000`, title `1024`, hangar
+`512 @ 0x006AB400`, and 1:1 `7958` executions of
+`osAiSetNextBuffer`/`__osAiDeviceBusy`, with named `osAiGetStatus`
+absent as a jal target. No runtime or default-arm change follows.
 
 ## Method and safety rules
 
