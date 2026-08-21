@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2081 (2026-08-20);
-behavioral and source evidence is current through s2081.
+for exact commands and probe rows. Maintained in Session 2082 (2026-08-20);
+behavioral and source evidence is current through s2082.
 
 ## Current state
 
@@ -30,14 +30,15 @@ behavioral and source evidence is current through s2081.
   generated `break 0` after its final DMA write. The source audit does not
   establish whether the destination is output staging, scratch, or an ABI
   mismatch.
-- s2081's retail run again passed the whole-RDRAM positive control and reached
-  title and hangar. The port witness passed its own control and emitted 132
-  phase-scoped `copyToRAM` rows: the current breadcrumb was `0x8000B650` for
-  65 title rows and 3 hangar rows, while other rows carried `0x8000834C` or
-  `0x80007904`. The requested fill-range source witness emitted zero rows in
-  the current generated tree, so the strict discriminator selects
-  `H-WitnessGap`; the host rows are single-source support for stale shared
-  state, not a causal host-fault conclusion.
+- s2082's retail run passed the whole-RDRAM positive control, reached title and
+  hangar, and again found neighboring requested PCs active while
+  `0x8000B650` and `0x80095D54` stayed at zero. The regeneration-stable
+  fill-range fixup now targets `funcs_24.c` and compiled one source witness;
+  the port capture passed the host control and emitted 133 phase-scoped
+  `copyToRAM` rows, but zero target-phase source rows. The strict discriminator
+  therefore remains `H-WitnessGap`: the source-runtime reachability is open,
+  and the host rows are single-source support for stale shared state, not a
+  causal host-fault conclusion.
 - Retail ground truth independently passes the whole-RDRAM positive control,
   reaches title and hangar, and shows slot-0 status `00 -> 01 -> 02 -> 03 ->
   00`. Exact E50 writes are owned by named retail audio-region functions;
@@ -71,12 +72,14 @@ behavioral and source evidence is current through s2081.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 Factor 5 image task/exit contract.** Repair the regeneration-stable
-   `fillSampleStreamRange` source-side witness so it matches the current
-   generated file placement and emits a phase-scoped source ordinal and guest
-   identity. Repeat the existing RT64 host-boundary capture and join source
-   rows to host rows before interpreting `0x8000B650`; do not change waits,
-   guards, task fields, output routing, canary handling, or gate stores.
+1. **M5 source reachability discriminator.** The regeneration-stable
+   `fillSampleStreamRange` witness is now in the current `funcs_24.c` and is
+   compiled, but its target-phase rows stayed zero while the same-run host
+   control and 133 host rows fired. Add one bounded all-phase entry/callsite
+   table to distinguish no runtime call, a non-target phase at entry, and a
+   callsite/entry mismatch; repeat the source/host join only if target-phase
+   entry rows fire. Do not change waits, guards, task fields, output routing,
+   canary handling, or gate stores.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -145,7 +148,9 @@ crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
 `+336` is in-range, and `+6464` is not. `0x8000B650` is the return breadcrumb
 of `beginFrameDLChunk`, not an instruction in this function. Historical
 RT64 `copyToRAM` failures carrying the same marker remain host-boundary
-observations, not proof that the fill function caused them.
+observations, not proof that the fill function caused them. s2082's fixup
+report and generated source confirm the source witness is present in
+`funcs_24.c`; its zero target-phase runtime rows leave entry reachability open.
 
 ### M3, M4, and generated symbols
 
@@ -197,10 +202,13 @@ The maintenance compaction retains the reasons for the recent reversals here:
   TOML, and companion table shows `+6464` and `0x8000B650` are outside the
   declared function interval, while the marker belongs to a different
   breadcrumbed function. The host copy/readback relationship remains open.
-- The s2081 host-boundary rows do not close the stale-PC question because the
-  same-run fill-range source arm produced no rows. That null is a witness gap,
-  not proof that the host operation is causal; the source arm must be repaired
-  before selecting between stale state and a host boundary fault.
+- The s2081 interpretation that zero source rows were caused by a stale
+  `funcs_23.c` anchor was believable because the generated definition had
+  moved and the fixup report showed no patch. s2082's regeneration report
+  patched `funcs_24.c` x1 and the generated file contains the new witness, but
+  the target-phase run still produced zero source rows while host controls
+  fired. The anchor defect is therefore repaired; source-runtime reachability
+  remains a witness gap, not proof that the host operation is causal.
 
 ## Evidence ledger summary
 
@@ -208,8 +216,10 @@ History through s1879 is in PROJECT-OVERVIEW.md §§33–35. The VI-1024 and
 spin-yield chain is in §36; the M5 archive through s2047 is in §§37–38. Section
 39 records the durable s2050–s2078 route, status, audio, gate, and retail-PC
 milestones migrated during this maintenance pass; s2080 adds the fill-function
-source crosswalk and s2081 adds the host-boundary witness gap. The chronological
-ledger is still the source for exact run commands, counts, and rejected retries.
+source crosswalk, s2081 adds the host-boundary witness gap, and s2082 repairs
+the generated source anchor while leaving runtime reachability open. The
+chronological ledger is still the source for exact run commands, counts, and
+rejected retries.
 
 ## Method and safety rules
 

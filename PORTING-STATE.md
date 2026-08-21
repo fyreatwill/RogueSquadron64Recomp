@@ -99217,3 +99217,51 @@ guard, task field, output route, canary, gate, or host behavior changed.
 Repair the regeneration-stable source-side fixup to match the current
 `funcs_24.c` placement, then repeat the same-run source/host join from the new
 `scratch/agent/NEXT.md`.
+
+## Session 2082 (2026-08-20) — repaired the fill-range source anchor and exposed runtime reachability gap
+
+### What ran
+
+Ran the retail oracle first with the required whole-RDRAM positive control and
+the existing PC controls. The control reached its 10,000-write cap; the run
+reached title `1024` and hangar `512`. Retail neighboring PCs remained active
+while `0x8000B650` and `0x80095D54` each recorded zero hits.
+
+Patched the regeneration-stable `fillSampleStreamRange` fixup from its stale
+`funcs_23.c` scope to the current `funcs_24.c` definition. The source row now
+contains a phase-scoped ordinal, `source_pc=0x8008FAAC`, raw arguments, and the
+current `g_rs64_last_guest_pc`. Regenerated in the required make-ELF,
+N64Recomp, fixup, and CMake order; the generated definition reported one
+source-witness patch and the Debug target built successfully.
+
+Ran one phase-gated port capture with the existing host-boundary witness and
+the repaired source witness enabled together. The route reached title and
+hangar; the host control fired once and the host witness emitted 133
+target-phase rows. The source witness emitted zero target-phase rows. The
+process then crashed after 7 hangar frames at 30.2 seconds in the existing
+`recomp::do_rom_read` PI-DMA path (`+572`), with `last-guest-pc=0x80001B08`.
+
+### Result
+
+The generated tree contains the `fillSampleStreamRange` definition plus four
+generated callsites, so the fixup-placement hypothesis is repaired and the
+source arm is present in the built binary. Because the same run had the
+host-boundary positive control, target VI phases, and 133 host rows but no
+source rows, the strict discriminator selects **H-WitnessGap**. It does not
+select H-StaleLastGuestPC or H-HostCopyReadback: there is still no source event
+to join to a host row.
+
+### What it rules out
+
+It rules out the old explanation that the missing source rows were caused
+solely by the `funcs_23.c` fixup anchor. It also rules out an absent host
+boundary call or absent target-phase transition in this run. The source
+runtime reachability, entry phase values, and callsite-to-entry relationship
+remain unresolved. No wait, guard, task field, output route, canary, gate, or
+host behavior changed.
+
+### Next
+
+Add one bounded all-phase source entry/callsite reachability table, after the
+retail positive control, to separate no runtime call, non-target entry phase,
+and callsite/entry mismatch. Keep `HYPOTHESIS-ID: m5-port-fill-crash-origin`.
