@@ -178,11 +178,15 @@ explicit control arm.
    `run_task` completes on `Broke` alone; DMA recording ignores the
    flag (`scratch/agent/s2157_canary_host_effect.txt`). `canary_ok=0`
    no longer blocks the `break 0`/`Broke` edge as a host-side gate.
-   The next incremental unit is one host-only table of every remaining
-   image-arm isolator (`ROGUESQ_AUDIO_UCODE`, `musyx_stub`,
-   `factor5_ucode_b`). Do not default the image arm or move the canary
-   in that census. Rollback remains leaving the existing RSP dispatch
-   arm opt-in.
+   s2158 selected `H-IsolatedOnlyByEnv`
+   (`scratch/agent/s2158_image_arm_isolators.txt`): the live
+   `RspUcodeFunc*` is assigned only in `get_rsp_microcode` from
+   `ROGUESQ_AUDIO_UCODE`; `run_task` always calls that pointer;
+   the env-true wrapper calls `factor5_ucode_b`, not `musyx_stub`.
+   The next incremental unit is one host-only table of every named
+   reason the image arm must stay opt-in. Do not default the image arm
+   or move the canary in that census. Rollback remains leaving the
+   existing RSP dispatch arm opt-in.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.

@@ -3747,7 +3747,7 @@ differed in timing and later phase count only, selecting `H-RecipeTiming`
 without proving the old divergence impossible in every recipe. Do not reopen
 the B40 read-site census.
 
-## 42. M5 contract, pump/drain, symbol, MORT, AI, and canary archive (s2113–s2157), migrated in s2156; s2157 appended
+## 42. M5 contract, pump/drain, symbol, MORT, AI, canary, and isolator archive (s2113–s2158), migrated in s2156; s2157–s2158 appended
 
 The chronological ledger remains authoritative for exact commands, counts, and
 failed retries. This section preserves the durable selected hypotheses that no
@@ -3844,7 +3844,7 @@ discriminator. No game run or runtime behavior changed.
   `func_*` placeholders are `func_8000040C`, `func_800927B0`,
   `func_80092A54`, `func_80092CF0`, `func_800E9AE0`.
 
-### Retail/port task, MORT, AI, and canary (s2132–s2157)
+### Retail/port task, MORT, AI, canary, and isolator (s2132–s2158)
 
 - s2132 retail PCM/AI: whole-RDRAM `33,346` writes, title/hangar, nonzero
   audio-buffer pointer table, aligned countdown and worker writes, `8,556`
@@ -3902,10 +3902,21 @@ discriminator. No game run or runtime behavior changed.
   `H-CanaryGatesExit`, `H-CanaryGatesWriteback`, and
   `H-CoverageFailure`. Table:
   `scratch/agent/s2157_canary_host_effect.txt`.
+- s2158 image-arm isolator table: 18 needle hits in `main.cpp` and
+  `rsp.cpp` only. Live `RspUcodeFunc*` assignment is
+  `get_rsp_microcode` `getenv("ROGUESQ_AUDIO_UCODE")` returning
+  `&factor5_ucode_b_probe` vs `&musyx_stub_probe`. `run_task` always
+  calls that pointer (`L691`/`L800`) and completes on `Broke`.
+  Env-true wrapper calls `factor5_ucode_b`, not `musyx_stub`. The
+  second getenv in `run_task` is probe-gated log label / optional
+  canary-prefill skip. Selects `H-IsolatedOnlyByEnv`; refutes
+  `H-IsolatedByRunTask`, `H-IsolatedByStubBody`, and
+  `H-CoverageFailure`. Table:
+  `scratch/agent/s2158_image_arm_isolators.txt`.
 
 These records supersede treating `canary_ok=0` as a runaway write or as a
-host completion/writeback/DMA gate, treating named `osAiGetStatus` as a
-live jal target, treating MORT as a second RSP image, and treating
-leftover `fake_func_*` size `> 0xC` as renameable. They do not authorize
-changing the default audio arm, canary prefill, task ABI, output routing,
-waits, or guards.
+host completion/writeback/DMA gate, treating `run_task` as a second
+image-arm isolator, treating named `osAiGetStatus` as a live jal target,
+treating MORT as a second RSP image, and treating leftover `fake_func_*`
+size `> 0xC` as renameable. They do not authorize changing the default
+audio arm, canary prefill, task ABI, output routing, waits, or guards.

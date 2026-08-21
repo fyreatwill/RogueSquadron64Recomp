@@ -102403,3 +102403,51 @@ set. The flag does not change host completion.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-arm-isolators`.
 
+## Session 2158 (2026-08-21) — classified image-arm isolation as env-only dispatch
+
+HYPOTHESIS-ID: m5-image-arm-isolators
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 16,900 bytes, so this was not a
+maintenance iteration. Soak-queue intake was historical 2026-08-18 rows
+already consumed; no new recipes. The prescribed unit was one host-only
+table of every `ROGUESQ_AUDIO_UCODE` / `musyx_stub` / `factor5_ucode_b`
+site in `src/main/main.cpp` and
+`lib/N64ModernRuntime/librecomp/src/rsp.cpp` (and any other TU that
+selects the audio ucode). No port build, game run, default-arm, canary,
+task-exit, or output-route change.
+
+Needle hits: 18 lines, two files only. `main.cpp` counts
+`ROGUESQ_AUDIO_UCODE` 2, `musyx_stub` 6, `factor5_ucode_b` 8.
+`rsp.cpp` counts 1/1/1. Positive controls live: assignment
+`getenv("ROGUESQ_AUDIO_UCODE")` at `main.cpp:1508` into
+`s_use_real_audio_ucode`, env-true return `&factor5_ucode_b_probe`
+(`L1533`) and default return `&musyx_stub_probe` (`L1535`); call of
+that pointer `run_task` `L691` then `L800`
+`exit_reason = ucode_func(...)`. Direct body calls are
+`musyx_stub` at `L535` (stub wrapper) and `factor5_ucode_b` at `L543`
+(image wrapper).
+
+`run_task` always invokes the already-selected pointer. Its second
+`getenv("ROGUESQ_AUDIO_UCODE")` (`L752-755`) is inside `probe_audio`
+and only labels `[audtask-abi]` / DMA rows and optionally skips the
+`0xA5` canary prefill under `ROGUESQ_AUDIO_CANARY_AB`. The only
+post-ucode completion branch is `if (exit_reason != Broke)` at `L918`;
+`audio_image` is not in that predicate. The env-true wrapper calls
+`factor5_ucode_b`, not `musyx_stub`.
+
+This selects `H-IsolatedOnlyByEnv` and refutes `H-IsolatedByRunTask`,
+`H-IsolatedByStubBody`, and `H-CoverageFailure`. Table:
+`s2158_image_arm_isolators.txt`. Host-source only (identifier table plus
+`get_rsp_microcode` / `run_task` control-flow). No runtime, mitigation,
+task, wait, guard, canary-prefill, or default-arm behavior changed.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only classified host audio-ucode isolators. The
+writer of the live function pointer is `get_rsp_microcode` reading
+`ROGUESQ_AUDIO_UCODE`; that env default (`musyx_stub_probe`) is the
+intentional opt-in gate, not a wild value.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-arm-default-blockers`.

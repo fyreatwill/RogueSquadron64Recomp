@@ -1,62 +1,64 @@
-# NEXT work unit (s2158) — A1 image-arm isolator census
+# NEXT work unit (s2159) — A1 named default-blocker census
 
-HYPOTHESIS-ID: m5-image-arm-isolators
+HYPOTHESIS-ID: m5-image-arm-default-blockers
 
 ## Work unit
 
-s2157 selected `H-CanaryLogOnly`: every `canary_ok` site in `rsp.cpp` is
-storage or a fprintf/probe field; `run_task` completes on `Broke` alone;
-DMA recording ignores the flag. Do not move the canary, change canary
-prefill, default the image arm, or change `osAiGetStatus_recomp` /
-`osAiSetNextBuffer_recomp`.
+s2158 selected `H-IsolatedOnlyByEnv`: the only control-flow isolator
+that keeps `factor5_ucode_b` opt-in is `get_rsp_microcode`'s
+`ROGUESQ_AUDIO_UCODE` branch. `run_task` always calls that pointer;
+the env-true wrapper never reaches `musyx_stub`. Do not default the
+image arm from that table, move the canary, change canary 10→prefill,
+or change `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
 
-The remaining A1 question is what still keeps `factor5_ucode_b` opt-in
-now that `canary_ok` is not a host gate. Next unit is one host-only
-table of every `ROGUESQ_AUDIO_UCODE` / `musyx_stub` / `factor5_ucode_b`
-site in `src/main/main.cpp` and `lib/N64ModernRuntime/librecomp/src/rsp.cpp`
-(and any other translation unit that selects the audio ucode). Classify
-each hit as dispatch-arm, probe wrapper, log label, or other
-control-flow. No port build, game run, default-arm, canary, task-exit,
-or output-route change.
+The remaining A1 question is which named reason, if any, still forbids
+flipping `s_use_real_audio_ucode`'s default. Next unit is one host-only
+table of every sentence in `docs/CURRENT-TRUTH.md`,
+`docs/M5-AUDIO-PLAN.md` A1, and the `get_rsp_microcode` M_AUDTASK
+comment that claims a reason the image arm must stay opt-in. Classify
+each as closed-by-selected-hypothesis, still-open, or policy-comment.
+No port build, game run, default-arm, canary, task-exit, or output-route
+change.
 
-Positive control: a named site that *assigns* the live audio ucode
-function pointer from `ROGUESQ_AUDIO_UCODE`, plus a named site that
-*calls* that pointer (or `musyx_stub` / `factor5_ucode_b` directly).
+Positive control: the CURRENT-TRUTH sentence that isolation remains
+because the generated task "does not yet satisfy the host task
+contract", plus the `get_rsp_microcode` hang-comment about
+`waitForMusyXAudioTaskDone`. Both must appear as named rows.
 
 ## Competing hypotheses and discriminator
 
-- `H-IsolatedOnlyByEnv`: the only control-flow isolator is the
-  `ROGUESQ_AUDIO_UCODE` branch in `get_rsp_microcode` choosing
-  `factor5_ucode_b_probe` vs `musyx_stub_probe`; `run_task` does not
-  further branch on the arm.
-- `H-IsolatedByRunTask`: `run_task` has a second image-arm branch besides
-  calling the already-selected `ucode_func` (early return, skipped
-  writeback, or forced `Broke`).
-- `H-IsolatedByStubBody`: `musyx_stub` remains reachable on the image
-  path (the env-true arm still calls the stub).
-- `H-CoverageFailure`: the assignment site that reads
-  `ROGUESQ_AUDIO_UCODE` into the live function pointer is missing, or a
-  dispatch site is unclassified.
+- `H-PolicyOnly`: every previously named host-contract reason to keep
+  the arm opt-in is already closed by a selected hypothesis; remaining
+  isolation is the env default plus a historical comment.
+- `H-ContractOpen`: at least one named host-task-contract clause is
+  still unsatisfied (cite the clause and the missing discriminator).
+- `H-WaitWedgeStillOpen`: the `waitForMusyXAudioTaskDone` hang comment
+  in `get_rsp_microcode` is an untested default-arm risk, not closed by
+  s2123/s2125 sampled wait/pump rows.
+- `H-CoverageFailure`: a named "keep opt-in" sentence has no matching
+  selected hypothesis and no classifiable open discriminator.
 
-The discriminator is one table: every assignment and every read of
-`ROGUESQ_AUDIO_UCODE`, `musyx_stub`, `musyx_stub_probe`,
-`factor5_ucode_b`, and `factor5_ucode_b_probe`, classified
-dispatch-arm vs probe/log vs other control-flow. Env-only dispatch
-selects `H-IsolatedOnlyByEnv`; a `run_task` arm branch selects
-`H-IsolatedByRunTask`; image-path stub reachability selects
-`H-IsolatedByStubBody`; a missing or unclassified dispatch site
-selects `H-CoverageFailure`. Do not treat prior `canary_ok` rows as
-this table, and do not default the image arm from the table alone.
+The discriminator is one table: every keep-opt-in sentence, its class,
+and the selected hypothesis or missing measurement it cites.
+All-closed-plus-policy selects `H-PolicyOnly`; one unsatisfied contract
+clause selects `H-ContractOpen`; an unclosed hang-comment risk selects
+`H-WaitWedgeStillOpen`; an unclassifiable sentence selects
+`H-CoverageFailure`. Do not default the image arm from the table.
 
 ## Exact commands
 
     python3 - <<'PY'
     from pathlib import Path
     files = [
+        Path('docs/CURRENT-TRUTH.md'),
+        Path('docs/M5-AUDIO-PLAN.md'),
         Path('src/main/main.cpp'),
-        Path('lib/N64ModernRuntime/librecomp/src/rsp.cpp'),
     ]
-    needles = ['ROGUESQ_AUDIO_UCODE', 'musyx_stub', 'factor5_ucode_b']
+    needles = [
+        'opt-in', 'default', 'ROGUESQ_AUDIO_UCODE',
+        'host task contract', 'waitForMusyXAudioTaskDone',
+        's_use_real_audio_ucode', 'factor5_ucode_b',
+    ]
     for p in files:
         text = p.read_text()
         print(p, 'bytes', p.stat().st_size)
@@ -64,8 +66,8 @@ this table, and do not default the image arm from the table alone.
             print(' ', n, text.count(n))
     PY
 
-Grep those needles in `*.c *.cpp *.h *.hpp`. Classify each hit.
-Write `scratch/agent/s2158_image_arm_isolators.txt`.
+Grep those needles in the three files. Classify each keep-opt-in
+sentence. Write `scratch/agent/s2159_image_arm_default_blockers.txt`.
 
 Do not edit `get_rsp_microcode`, `musyx_stub`, `osAiSetNextBuffer_recomp`,
 or the default audio arm.

@@ -1,0 +1,104 @@
+s2158 A1 image-arm isolator census
+HYPOTHESIS-ID: m5-image-arm-isolators
+Scope: host-only. No port build, game run, default-arm, canary, task-exit, or
+output-route change. Needles: ROGUESQ_AUDIO_UCODE, musyx_stub, factor5_ucode_b
+in *.c *.cpp *.h *.hpp excluding build/ scratch/ .git/.
+
+Identifier counts
+  src/main/main.cpp (196085 bytes)
+    ROGUESQ_AUDIO_UCODE 2
+    musyx_stub          6
+    factor5_ucode_b     8
+  lib/N64ModernRuntime/librecomp/src/rsp.cpp (39669 bytes)
+    ROGUESQ_AUDIO_UCODE 1
+    musyx_stub          1
+    factor5_ucode_b     1
+  Other TUs: 0 needle hits.
+
+Positive controls (required by NEXT.md)
+  ASSIGN live audio ucode function pointer from ROGUESQ_AUDIO_UCODE:
+    src/main/main.cpp:1508 getenv("ROGUESQ_AUDIO_UCODE")
+    src/main/main.cpp:1509 s_use_real_audio_ucode = (e && e[0] && e[0] != '0')
+    src/main/main.cpp:1533 if (s_use_real_audio_ucode) return &factor5_ucode_b_probe
+    src/main/main.cpp:1535 return &musyx_stub_probe
+  CALL that pointer:
+    librecomp/src/rsp.cpp:691 ucode_func = rsp_callbacks.get_rsp_microcode(task)
+    librecomp/src/rsp.cpp:800 exit_reason = ucode_func(rdram, task->t.ucode)
+  Direct body calls (wrappers, not env assignment):
+    src/main/main.cpp:535 musyx_stub(rdram, ucode_addr)          [stub path]
+    src/main/main.cpp:543 factor5_ucode_b(rdram, ucode_addr)     [image path]
+
+Classes
+  dispatch-arm     assigns or returns the live RspUcodeFunc* from the env
+  probe wrapper    thin wrapper around a body; logs then returns the body's reason
+  log label        string / fprintf / comment; no control-flow
+  other            declaration, definition, direct body call, or probe-gated
+                   getenv that does not choose ucode_func
+
+Every needle hit
+
+file:line  needle(s)                 class            role
+---------  ------------------------  ---------------  ----
+main.cpp:107   factor5_ucode_b       other            extern declaration of generated image function
+main.cpp:363   musyx_stub            other            definition: return Broke; no task work
+main.cpp:533   musyx_stub_probe      probe wrapper    wrapper definition (stub path)
+main.cpp:534   musyx_stub            log label        rs64_audio_route_prepare("musyx_stub")
+main.cpp:535   musyx_stub            other            direct call of stub body
+main.cpp:536   musyx_stub            log label        rs64_log_audio_return("musyx_stub", reason)
+main.cpp:540   factor5_ucode_b_probe probe wrapper    wrapper definition (image path)
+main.cpp:542   factor5_ucode_b       log label        rs64_audio_route_prepare("factor5_ucode_b")
+main.cpp:543   factor5_ucode_b       other            direct call of image body; does NOT call musyx_stub
+main.cpp:544   factor5_ucode_b       log label        rs64_log_audio_return("factor5_ucode_b", reason)
+main.cpp:740   factor5_ucode_b       log label        comment on gfx-path DMEM race; not audio dispatch
+main.cpp:1499  factor5_ucode_b       log label        comment in M_AUDTASK case
+main.cpp:1508  ROGUESQ_AUDIO_UCODE   dispatch-arm     getenv assignment into s_use_real_audio_ucode
+main.cpp:1533  factor5_ucode_b_probe dispatch-arm     env-true return of live function pointer
+main.cpp:1535  musyx_stub_probe      dispatch-arm     default return of live function pointer
+main.cpp:1641  ROGUESQ_AUDIO_UCODE   log label        comment in queue_samples PCM-sanity block
+rsp.cpp:752    ROGUESQ_AUDIO_UCODE   other            probe-gated getenv into audio_image; does not assign ucode_func
+rsp.cpp:755    factor5_ucode_b /
+               musyx_stub            log label        audio_arm string for [audtask-abi]/DMA rows
+
+run_task control-flow vs the arm (H-IsolatedByRunTask test)
+
+  L691-696  get_rsp_microcode; nullptr -> return false. Independent of env.
+  L703-707  OSTask memcpy + ucode_data DMA. Independent of env / selected func.
+  L712-780  if (probe_audio): getenv ROGUESQ_AUDIO_UCODE for labels and for
+            ROGUESQ_AUDIO_CANARY_AB odd-row skip of 0xA5 prefill. Gated on
+            ROGUESQ_LOG_ALL / ROGUESQ_LOG_SPBOOT / ROGUESQ_LOG_M5_TASK_CONTRACT.
+            Not an early return, not skipped writeback, not forced Broke.
+            s2157 already classified canary_ok as log-only.
+  L800      always calls the already-selected ucode_func
+  L918-923  if (exit_reason != Broke) log/assert/return false. Predicate is
+            exit_reason only; audio_image / canary_ok / env are absent.
+  L925      return true
+
+Image-path stub reachability (H-IsolatedByStubBody test)
+
+  env-true  get_rsp_microcode -> factor5_ucode_b_probe -> factor5_ucode_b
+            musyx_stub is not on this call chain
+  env-false get_rsp_microcode -> musyx_stub_probe -> musyx_stub
+            factor5_ucode_b is not on this call chain
+
+Verdict
+
+  H-IsolatedOnlyByEnv     SELECTED
+    The only control-flow isolator that keeps factor5_ucode_b opt-in is
+    get_rsp_microcode's ROGUESQ_AUDIO_UCODE branch (main.cpp:1508-1535).
+    run_task always invokes the pointer that function returned.
+
+  H-IsolatedByRunTask     REFUTED
+    run_task has no second image-arm branch that early-returns, skips
+    writeback, or forces Broke. The second getenv is probe-gated label /
+    optional canary prefill only.
+
+  H-IsolatedByStubBody    REFUTED
+    The env-true wrapper calls factor5_ucode_b, not musyx_stub.
+
+  H-CoverageFailure       REFUTED
+    Assignment site and call site of the live pointer are named above.
+    All 18 needle-hit lines are classified.
+
+Do not default the image arm from this table. The remaining A1 question is
+which named host-task-contract clause, if any, still forbids flipping
+s_use_real_audio_ucode's default, now that isolation is env-dispatch only.

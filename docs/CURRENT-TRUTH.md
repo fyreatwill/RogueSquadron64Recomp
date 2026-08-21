@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2157
-(2026-08-21); behavioral and source evidence is current through s2157.
+authoritative for exact commands and probe rows. Maintained in Session 2158
+(2026-08-21); behavioral and source evidence is current through s2158.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2157 in §§41–42.
+`PROJECT-OVERVIEW.md` §40; s2110–s2158 in §§41–42.
 
 ## Current state
 
@@ -38,10 +38,18 @@ This file is intentionally compact. Archives: s2080–s2108 in
   fprintf/probe field; `run_task` computes `exit_reason` before the
   post-hash and completes on `Broke` alone; DMA recording ignores the
   flag. `canary_ok=0` does not gate host completion, writeback, or DMA.
-  Next unit is one host-only table of every remaining image-arm isolator
-  (`ROGUESQ_AUDIO_UCODE`, `musyx_stub`, `factor5_ucode_b`). Do not move
-  the canary, change canary prefill, default the image arm, or change
-  `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
+  s2158 selected `H-IsolatedOnlyByEnv`: the only control-flow isolator
+  that keeps `factor5_ucode_b` opt-in is `get_rsp_microcode`'s
+  `ROGUESQ_AUDIO_UCODE` branch returning `&factor5_ucode_b_probe` versus
+  `&musyx_stub_probe`. `run_task` always calls that pointer and completes
+  on `Broke`; its second getenv is a probe-gated log label / optional
+  canary-prefill skip, not an early return, skipped writeback, or forced
+  `Broke`. The env-true wrapper calls `factor5_ucode_b`, not
+  `musyx_stub`. Do not default the image arm from that table. Next unit
+  is one host-only table of every named reason the image arm must stay
+  opt-in. Do not move the canary, change canary prefill, default the
+  image arm, or change `osAiGetStatus_recomp` /
+  `osAiSetNextBuffer_recomp`.
 
 ### Selected hypotheses (scoped; do not widen)
 
@@ -69,6 +77,7 @@ This file is intentionally compact. Archives: s2080–s2108 in
 | s2154 | `H-CanaryComputedOnly` | mix `0xE50` span `0x180` writes host `0xF80`; no immediate in `0xF80..0xFBF` | canary-prefill / exit-mapping change |
 | s2155 | `H-CanaryOnlyInUcodeData` | no unused `>=0x10` hole in `0x000..0xFBF` outside ucode-data | relocate the host canary |
 | s2157 | `H-CanaryLogOnly` | host-source: every `canary_ok` site in `rsp.cpp` is storage or fprintf; `run_task` completes on `Broke` alone | default-arm / canary-prefill change |
+| s2158 | `H-IsolatedOnlyByEnv` | host-source: live `RspUcodeFunc*` assigned only in `get_rsp_microcode` from `ROGUESQ_AUDIO_UCODE`; `run_task` calls that pointer; env-true path never reaches `musyx_stub` | default-arm / canary-prefill change |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -95,11 +104,12 @@ static-boundary conflicts.
 The backlog is one monotonic sequence. Closed investigations are not
 active work items.
 
-1. **M5 A1 image-arm isolator census.** s2157 selected `H-CanaryLogOnly`:
-   `canary_ok=0` is log-only and does not gate host completion, writeback,
-   or DMA. Next unit is one host-only table of every remaining isolator
-   that keeps the Factor 5 image arm opt-in (`ROGUESQ_AUDIO_UCODE`,
-   `musyx_stub`, `factor5_ucode_b` in `main.cpp` and `rsp.cpp`). Do not
+1. **M5 A1 remaining default-blockers.** s2158 selected
+   `H-IsolatedOnlyByEnv`: the only remaining isolator is
+   `get_rsp_microcode`'s env branch. Next unit is one host-only table of
+   every named reason the image arm must stay opt-in (CURRENT-TRUTH,
+   M5-AUDIO-PLAN A1, and the `get_rsp_microcode` hang comment), classified
+   closed-by-selected-hypothesis vs still-open vs policy-comment. Do not
    default the image arm, move the canary, or change
    `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
@@ -180,9 +190,10 @@ task fields.
 s2154–s2155 close the host-canary *location* question: `canary_ok=0` is
 the generated mix buffer. s2157 closes the host-canary *effect* question:
 `canary_ok` is a probe field only and does not gate `RspExitReason`,
-`run_task` completion, DMEM-to-RDRAM writeback, or DMA recording. The
-remaining A1 unit is the host isolator that still keeps the image arm
-opt-in.
+`run_task` completion, DMEM-to-RDRAM writeback, or DMA recording. s2158
+closes the remaining isolator question: isolation is the env dispatch in
+`get_rsp_microcode` only. The remaining A1 unit is which named
+host-task-contract clause, if any, still forbids flipping that default.
 
 The stock `aspMain` contract is not the game's MusyX contract. The opt-in
 Factor 5 image arm is isolated because its generated task function
@@ -220,7 +231,10 @@ ledger. Operational reversals:
   change. s2154 further supersedes treating `canary_ok=0` as a runaway
   write: the span is the mix buffer. s2157 supersedes treating that flag
   as a host completion, writeback, or DMA gate: every consumer is a log
-  or storage field.
+  or storage field. s2158 supersedes treating `run_task` as a second
+  image-arm isolator: its `ROGUESQ_AUDIO_UCODE` getenv is a probe-gated
+  log label / optional canary-prefill skip, and the env-true wrapper
+  never calls `musyx_stub`.
 - The old retail voice-field interpretation was believable because a
   pointer entry was treated as a physical array base.
 - The old “B40 was unreached” and s2110 `H-B40-RouteRequired`
@@ -243,14 +257,14 @@ ledger. Operational reversals:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024
 and spin-yield chain is in §36; the M5 archive through s2047 is in
 §§37–38; the late route/fill boundary is in §39; the s2080–s2108 archive
-is in §40; B40 s2110–s2112 is in §41; and the s2113–s2157 contract,
-symbol, MORT, AI, and canary archive is in §42.
+is in §40; B40 s2110–s2112 is in §41; and the s2113–s2158 contract,
+symbol, MORT, AI, canary, and isolator archive is in §42.
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
 single-source or single-arm observations. No AI-status shortcut, task
 ABI, canary-prefill, wait, guard, or default-arm change follows from
-`H-CanaryLogOnly`.
+`H-IsolatedOnlyByEnv`.
 
 ## Method and safety rules
 
