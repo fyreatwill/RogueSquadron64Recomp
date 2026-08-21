@@ -99342,3 +99342,40 @@ guard, task, output, canary, gate, or host mitigation was added.
 Join the target-phase source intervals to the same-run host `copyToRAM` ranges
 by phase, guest identity, and order. See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-source-host-span-join`.
+
+## Session 2085 (2026-08-20) — rejected the source/host span join at the source boundary
+
+### Work unit
+
+Ran the planned post-hoc M5 source/host span join against the existing s2084
+capture. No build, runtime change, or new diagnostic field was used. Before
+the join, the retail oracle controls were checked: the whole-RDRAM positive
+control hit 10,000 times, title and hangar VI records were present, and the
+requested neighboring retail PCs were active while `0x8000B650` and
+`0x80095D54` remained at zero. The port capture contained the host-boundary
+control, both target VI phases, and seven target-phase source rows.
+
+### Result
+
+The join parser compared each target-phase
+`[m5-fill-range-source]` interval against every same-phase
+`[m5-host-boundary]` range. All seven source starts were outside the 8 MiB
+RDRAM domain: `0x6C676672`, `0x77696E67`, `0x6C63745D`, `0x6C676B82`,
+`0x7769738F`, `0x6C677092`, and `0x776978B7`; each computed end remained
+outside the domain, and every row reported `valid=0 matches=0`.
+
+Two independent event sites support the boundary observation: the seven
+callsite rows at `0x800903F0` carry the same raw `a1`/`a2` values as their
+seven callee-entry rows, and the source-row parser independently computes the
+same seven invalid intervals. With all positive controls present, the strict
+discriminator selects **H-SourceArgsAlreadyOutOfRange** at source-entry scope.
+It rules out a valid source interval reaching a same-phase host range and
+leaves the host operation unjoined. It does not establish whether the values
+are legitimate ABI arguments, a mislabeled field, or caller-side corruption;
+no mitigation or causal host conclusion was added.
+
+### Next
+
+Audit the active caller/callee argument contract against a fresh retail PC
+control before adding any new port witness. See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-caller-argument-provenance`.
