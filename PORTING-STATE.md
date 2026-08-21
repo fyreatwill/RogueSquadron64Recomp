@@ -102895,3 +102895,48 @@ default-on flip.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2168 (2026-08-21) — retail matchKeywordWithPriority $v0 is KSEG0 0x800CDB58
+
+Rice 45s oracle, no game rebuild. Command from
+`scratch/agent/NEXT.md`. Log:
+`scratch/agent/oracle_s2168_match_keyword.log`. Table:
+`scratch/s73_post_a_scene/s2168_match_keyword_oracle.txt`.
+
+Positive controls in the same log: `[gpr-ctl] pc=0x8002b608
+v0=0x806f04e7 s1=0x806dd000 flags=0x5`; watch 0 write
+callbacks=10000 removal rc=0; `[vi] WIDTH 320 -> 640
+origin=0x0066a500` at t=2.0s; `[vi] origin=0x00696100
+width=640` at t=8.1s; 2682 VI (~44.7s emulated). Lifetime
+exec `0x800AF2C8`/`CC`/`D0` n=264 each (792 total);
+exec-prev caller of `0x800AF2C8` is always
+`spawnCutsceneEffectsAndCues` `0x800A9248`.
+
+Logged 64 EXEC GPRs (first 64 after watch-0) are all
+width=640 origin=`0x0062c200` (cinematic double-buffer
+sibling of `0x00696100`) at t=14.3–15.3s. At `0x800AF2CC`
+(pre-instruction, so post `lw $v0, 0($a0)`): `$v0=0x800CDB58`
+21/21, KSEG0 RDRAM, not 0, not `0x80000000`. `$a0=0x802231EC`
+(heap) 22/22 at `0x800AF2C8`. Caller `0x800A9244` is
+`lw $a0, 0x50($v0)` — a different +0x50 word than dest
+`0x800C7B0C`. `$v0=0x800CDB58` is also a port s2167 lwc
+`0x800A87A8` base.
+
+This selects `H-RetailValidV0` and refutes
+`H-RetailAlsoWildV0`, `H-RetailNeverExec`, and
+`H-CoverageFailure`. Port SIGBUS `$v0=0x80000000`
+(`si_addr=rdram+0x80000030`) is not a retail-wild header.
+
+No new soak-queue verdicts to fold (SOAK-RESULTS tail is still
+s1940–s1974). Soak queue empty.
+
+ORIGIN: not a mitigation. Oracle GPR census only. Guest
+`0x800AF2CC` `lw $t0, 0x30($v0)` is legitimate on retail.
+No S32 rewrite, NULL skip, default-on flip, skip/allow of
+`matchKeywordWithPriority`, wait/slot guard, canary, or
+AI-status change.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.
