@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2109
-(2026-08-20); behavioral and source evidence is current through s2108.
+authoritative for exact commands and probe rows. Maintained in Session 2110
+(2026-08-20); behavioral and source evidence is current through s2110.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -43,24 +43,25 @@ This file is intentionally compact. The s2080–s2108 archive is in
   stored gate 1 and produced no nonzero stage/PCM row. This selects
   `H-C88-ReversedOrSuppressing` at sampled port gate scope, not retail
   polarity or a default behavior change.
-- Retail independently observed the live `0x8008EB40` B40 writer. The port
-  witness records B40=1 stored as 0 in control and 1 in treatment. s2108's
-  reduced pair split before the downstream comparison: control stopped at
-  width 640, while treatment reached title and hangar. No B40 downstream
-  hypothesis is selected.
+- Retail independently observed the live `0x8008EB40` B40 writer. In s2110's
+  phase-keyed port/host route table, both arms fired B40 write/return and the
+  same early reapply entry/success edges; B40=0 stored 0 while B40=1 stored 1.
+  Treatment alone reached a later reapply entry, title VI `1024 @ 0x00790400`,
+  and hangar VI `512 @ 0x006AB400`; control stopped before title with a bus
+  error. This selects `H-B40-RouteRequired` at the sampled pre-title route
+  admission scope, not the identity of the downstream B40 reader.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 guest gate semantics: isolate B40 route admission.** Add one
-   regeneration-stable, phase-keyed route table around B40, the pre-title
-   `reapplyDisplayMode` entry/success edges, and the first title transition.
-   Retain the B40 value arm, explicit C88=0, route controls, ABI/DMA/stage,
-   slot, PCM, and ordering controls. Do not change any gate store, output
-   routing, task field, canary, wait, guard, queue policy, or default
-   dispatch.
+1. **M5 guest gate semantics: identify the B40 route consumer.** Audit every
+   generated read/branch of the B40 byte and join it to the selected
+   phase-keyed route table. Keep the B40 value arm, explicit C88=0, route
+   controls, ABI/DMA/stage, slot, PCM, and ordering controls. Do not change any
+   gate store, output routing, task field, canary, wait, guard, queue policy,
+   or default dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -84,10 +85,11 @@ table selected `LLE_UNGATED=1, LLE_SOLO=1`: `11` reaches title and hangar,
 port evidence, not an explanation of the audio callback or PCM boundary.
 Menu spin yield is a diagnostic route aid, not a default behavior change.
 
-The route history is preserved in `PROJECT-OVERVIEW.md` §§36–40. s2093–s2096
+The route history is preserved in `PROJECT-OVERVIEW.md` §§36–41. s2093–s2096
 closed the wrapper, task-thread, SP external-delivery, and guest-receive route
 at the qualified recipe scope. The next route question is specifically the
-B40 pre-title split, not a reopening of the SP queue result.
+B40 reader/branch after the selected pre-title split, not a reopening of the SP
+queue result.
 
 ### M5 status and service
 
@@ -124,6 +126,12 @@ Their exact destinations come from task-local DMEM fields. Static code does
 not prove the runtime ABI meaning of every field, and no output or task
 contract change is authorized.
 
+The s2110 route table is positive in both arms: B40 write/return and the first
+two reapply pairs match, while only B40=1 reaches the later reapply entry and
+the first title transition. Host VI transition lines independently show the
+same split. The selected boundary is route admission; the specific B40
+reader/branch remains unnamed.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -157,6 +165,11 @@ Detailed history and exact reasons are in `PROJECT-OVERVIEW.md` §§26 and
 - The old “B40 was unreached” interpretation was believable because a shared
   logger saturated on raw-gate rows. The independent B40 witness fires in
   both arms; the remaining issue is route admission.
+- The s2108 “no B40 downstream hypothesis is selected” conclusion was
+  believable because its reduced pair only exposed the first route split.
+  s2110's complete route table shows matching early edges and a treatment-only
+  later reapply/title path, selecting `H-B40-RouteRequired` at that sampled
+  boundary while leaving the downstream reader open.
 - `0x8000B650` is a shared last-guest-PC breadcrumb, not evidence that retail
   executes the port's fill/wait function. The generated crosswalk and
   independent retail PC watch establish that scope only.
@@ -165,7 +178,8 @@ Detailed history and exact reasons are in `PROJECT-OVERVIEW.md` §§26 and
 
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024 and
 spin-yield chain is in §36; the M5 archive through s2047 is in §§37–38; the
-late route/fill boundary is in §39; and the s2080–s2108 archive is in §40.
+late route/fill boundary is in §39; the s2080–s2108 archive is in §40; and the
+s2110 route result is in §41.
 The exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. The current selected hypotheses are scoped above and
 must not be widened from single-source or single-arm observations.

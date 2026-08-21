@@ -22,6 +22,7 @@ extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial);
 extern "C" uint32_t rs64_e9prov_current_task();
 extern "C" uint32_t rs64_e9prov_current_scope();
 extern "C" int rs64_is_hangar_vi(void);
+extern "C" void rs64_m5_b40_route_title_transition(void);
 
 // Interval-scoped diagnostics (session 25).
 //
@@ -865,6 +866,9 @@ public:
                     // Publish the phase change so RT64-side censuses can scope
                     // themselves to one phase (see rs64_phase_ord below).
                     rs64_bump_phase_ord();
+                    if (w == 1024u && (pvi->VI_ORIGIN_REG & 0x00FFFFFFu) == 0x00790400u) {
+                        rs64_m5_b40_route_title_transition();
+                    }
                 }
             }
 

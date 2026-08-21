@@ -3712,4 +3712,23 @@ single-gate-value assumption, the old voice-field attribution, and the claim
 that the B40 writer was unreached. They do not authorize changing output
 routing, task fields, canary handling, waits, guards, queue policy, or default
 dispatch. The next discriminator is the phase-keyed pre-title B40/reapply
-route table described in `scratch/agent/NEXT.md`.
+route table described in `scratch/agent/NEXT.md`; s2110 completed that table
+and moved the discriminator to the B40 reader/branch census.
+
+## 41. B40 pre-title route boundary (s2110)
+
+s2110 added one regeneration-stable host sink, called from the generated B40
+write/return and reapply entry/success sites, plus the first title VI
+transition. The route rows recorded arm, B40/C88 values, phase ordinal, VI
+width/origin, edge, guest PC, stored B40, and B40 return. The older B40 writer
+witness and host phase markers were retained as independent positive controls.
+
+The control (`B40=0`, `C88=0`) and treatment (`B40=1`, `C88=0`) both reached
+the B40 write/return at phase 2 and the first two reapply entry/success pairs.
+The writer stored 0 versus 1 respectively, while both B40 returns were 0.
+Treatment then reached a phase-7 reapply entry, the first title transition at
+`1024 / 0x00790400`, and hangar `512 / 0x006AB400`; control stopped after
+phase 6 at width 640 and emitted a bus-error crash marker. This selects
+`H-B40-RouteRequired` at the sampled pre-title route-admission boundary. It
+does not identify the B40 reader or authorize changing any gate, task, output,
+wait, guard, queue, or default-dispatch behavior.

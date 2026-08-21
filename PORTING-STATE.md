@@ -100342,3 +100342,46 @@ wait, guard, queue, or default-dispatch behavior changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-gate-writer-sweep`.
+
+## Session 2110 (2026-08-20) — isolated B40 pre-title route admission
+
+The planned work unit was the phase-keyed B40 route table. The first mandated
+CLI invocation failed before recompilation because this macOS tree has
+`build/N64Recomp`, not `build/Debug/N64Recomp.exe`; the corrected invocation
+used `cd ../N64Recomp && ./build/N64Recomp rogue_squadron.toml`. A second fixup
+attempt correctly refused the sentinel-bearing generated tree, so the
+generated `RecompiledFuncs` files were cleared and the documented
+`make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake` order was rerun.
+The clean regeneration and Debug build succeeded.
+
+The regeneration-stable witness logged B40 write/return, reapply entry/success,
+and the first title transition with arm, phase, VI width/origin, B40 stored,
+and B40 return. The control recipe was
+`s2110_m5_b40_route_control`; treatment was
+`s2110_m5_b40_route_treatment`. Both arms used audio image mode, C88=0,
+spin-yield, the reduced capture recipe, and the same passive controls, and
+were launched concurrently.
+
+The B40 writer witness was a positive control in both arms: one row at phase 2,
+width 320, origin `0x006DD280`, requested 1, with stored 0 in control and 1 in
+treatment. The route sink then showed the same B40 return (`0`) and the same
+first two reapply entry/success pairs in both arms. Control emitted six route
+rows total and stopped after phase 6 at width 640; it never emitted a title
+transition or target VI row and its run log contains the explicit bus-error
+marker `si_addr=0x380000044`. Treatment emitted thirteen route rows, reached a
+phase-7 reapply entry, title VI `1024 @ 0x00790400`, and hangar VI
+`512 @ 0x006AB400`; its host phase markers independently show both target
+transitions and its run log has no crash marker. The title route row was unique.
+
+This selects `H-B40-RouteRequired` at the sampled pre-title route-admission
+boundary: B40=1 enables a later route edge that B40=0 does not reach. It rules
+out the B40 writer being unreached and rules out a C88-only explanation for the
+early paired split. It does not identify the downstream B40 reader/branch and
+does not rule out another state/input dependency before the missing later edge;
+that is the next whole-tree read census. No output routing, task field,
+canary, wait, guard, queue policy, or default dispatch changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-gate-writer-sweep`.

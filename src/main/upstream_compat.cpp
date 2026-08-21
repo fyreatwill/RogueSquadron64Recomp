@@ -252,6 +252,62 @@ extern "C" uint32_t rs64_vi_committed_origin() {
     return ultramodern::renderer::get_vi_regs()->VI_ORIGIN_REG;
 }
 
+extern "C" uint32_t rs64_phase_ord(void);
+
+extern "C" void rs64_m5_b40_route_event(const char* edge, uint32_t pc,
+                                         uint32_t b40_stored, uint32_t value,
+                                         uint32_t b40_return) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_B40_ROUTE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+
+    static std::atomic<uint32_t> phase_seen{0xFFFFFFFFu};
+    static std::atomic<uint32_t> phase_row{0};
+    static std::atomic<uint32_t> last_b40_stored{0xFFFFFFFFu};
+    static std::atomic<uint32_t> last_b40_return{0xFFFFFFFFu};
+    const uint32_t phase = rs64_phase_ord();
+    uint32_t prior = phase_seen.load(std::memory_order_relaxed);
+    if (prior != phase && phase_seen.compare_exchange_strong(
+            prior, phase, std::memory_order_relaxed)) {
+        phase_row.store(0, std::memory_order_relaxed);
+    }
+    const uint32_t ordinal = phase_row.fetch_add(1, std::memory_order_relaxed);
+    if (ordinal >= 512u) return;
+
+    if (b40_stored != 0xFFFFFFFFu) {
+        last_b40_stored.store(b40_stored & 0xFFu, std::memory_order_relaxed);
+    }
+    if (b40_return != 0xFFFFFFFFu) {
+        last_b40_return.store(b40_return, std::memory_order_relaxed);
+    }
+    const uint32_t stored = last_b40_stored.load(std::memory_order_relaxed);
+    const uint32_t returned = last_b40_return.load(std::memory_order_relaxed);
+    const char* b40 = std::getenv("ROGUESQ_M5_B40_VALUE");
+    const char* c88 = std::getenv("ROGUESQ_M5_C88_VALUE");
+    const char* arm = (b40 && b40[0] && b40[0] != '0') ? "treatment" : "control";
+    std::fprintf(stderr,
+        "[m5-b40-route] arm=%s b40=%u c88=%u ordinal=%u phase=%u width=%u "
+        "origin=0x%06X edge=%s pc=0x%08X b40_stored=0x%02X value=0x%08X "
+        "b40_return=0x%08X\n",
+        arm, (b40 && b40[0] && b40[0] != '0') ? 1u : 0u,
+        (c88 && c88[0] && c88[0] != '0') ? 1u : 0u, ordinal, phase,
+        rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu,
+        edge ? edge : "?", pc, stored & 0xFFu, value, returned);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_b40_route_title_transition(void) {
+    static std::atomic<bool> seen{false};
+    bool expected = false;
+    if (!seen.compare_exchange_strong(expected, true, std::memory_order_relaxed)) return;
+    rs64_m5_b40_route_event("title-transition", 0u, 0xFFFFFFFFu,
+                            0xFFFFFFFFu, 0xFFFFFFFFu);
+}
+
 extern "C" int rs64_is_hangar_vi(void) {
     ultramodern::renderer::ViRegs *vi = ultramodern::renderer::get_vi_regs();
     if (vi->VI_WIDTH_REG != 512u) return 0;
