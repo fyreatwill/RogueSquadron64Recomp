@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2161
-(2026-08-21); behavioral and source evidence is current through s2161.
+authoritative for exact commands and probe rows. Maintained in Session 2162
+(2026-08-21); behavioral and source evidence is current through s2162.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2161 in §§41–42.
+`PROJECT-OVERVIEW.md` §40; s2110–s2162 in §§41–42.
 
 ## Current state
 
@@ -22,15 +22,14 @@ This file is intentionally compact. Archives: s2080–s2108 in
 - [`docs/M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md) controls incremental audio
   work. The default audio path is a silent `Broke` stub. The Factor 5
   image arm is opt-in through `ROGUESQ_AUDIO_UCODE=1` and is not defaulted
-  on. s2160 selected `H-RouteRegress` for the A1 default-on flip: unset
-  and `=1` both SIGSEGV in `waitForAnyAudioSlot+1060` from
-  `menuOverlayInit` at 640 `0x0066A500` (`si_addr=0x400141ad3`, host
-  XOR-3 of guest `D_80141AD0`). Same-build `=0` reached title
-  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` with
-  `real_ucode=0`, `dma_count=0`, `break_pc=0`. Default polarity was
-  reverted. s2161 named the +1060 load as an unsigned PATCH
-  `MEM_BU`; do not retry default-on until those sites are
-  `S32`-addressed and the image arm is re-checked.
+  on. s2162 selected `H-UnsignedMemBu`
+  (`scratch/s73_post_a_scene/s2162_s32_membu_ab.txt`): replacing the
+  unsigned PATCH `MEM_BU(0X1AD0, 0X80140000)` with
+  `MEM_BU(0X1AD0, S32(0X8014 << 16))` lets same-build `=1` return from
+  `waitForAnyAudioSlot` (`c=0x11`/`0x10`) and reach title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Stub `=0` still
+  matches that route. The s2160 `waitForAnyAudioSlot+1060` SIGSEGV is
+  closed on the current binary. Default-on retry is the next A1 unit.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. The s2113 contract witness records guest PC `0x1328`,
   host exit `Broke`, task `output_buff=0`, and phase-keyed post-DMA/PCM
@@ -64,12 +63,13 @@ This file is intentionally compact. Archives: s2080–s2108 in
   `D_80141AD0` from `setDisplayMode` `0x8008EA44` and
   `reapplyDisplayMode` `0x8008EB8C` (clamped config+0x20), then
   `waitForAnyAudioSlot` jals `anyAudioSlotActive` which loads it.
-  The port SIGSEGV at `waitForAnyAudioSlot+1060` is the s2045 loop
+  The port SIGSEGV at `waitForAnyAudioSlot+1060` was the s2045 loop
   PATCH `MEM_BU(0X1AD0, 0X80140000)` using an unsigned KSEG0
   constant (host `rdram+4GB+0x141AD3`), not original MIPS; the
   crashing image path is `anyAudioSlotActive` `path=gate0`, which
-  does not load the byte. Do not move the canary, change canary
-  prefill, add a wait/slot guard, or change
+  does not load the byte. s2162 `S32`-addressed those PATCH sites
+  and the image arm now returns from wait. Do not move the canary,
+  change canary prefill, add a wait/slot guard, or change
   `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
 
 ### Selected hypotheses (scoped; do not widen)
@@ -100,8 +100,9 @@ This file is intentionally compact. Archives: s2080–s2108 in
 | s2157 | `H-CanaryLogOnly` | host-source: every `canary_ok` site in `rsp.cpp` is storage or fprintf; `run_task` completes on `Broke` alone | default-arm / canary-prefill change |
 | s2158 | `H-IsolatedOnlyByEnv` | host-source: live `RspUcodeFunc*` assigned only in `get_rsp_microcode` from `ROGUESQ_AUDIO_UCODE`; `run_task` calls that pointer; env-true path never reaches `musyx_stub` | default-arm / canary-prefill change |
 | s2159 | `H-PolicyOnly` | host-source: every named keep-opt-in sentence in CURRENT-TRUTH, M5 A1, and the `get_rsp_microcode` hang comment is closed-by-selected-hypothesis or policy-comment; both required positive-control rows present | flip from the census table; canary / AI-status change |
-| s2160 | `H-RouteRegress` | same-build unset/`=1` SIGSEGV at `waitForAnyAudioSlot+1060` before title; `=0` title+hangar stub contract; not `waitForMusyXAudioTaskDone` | retry default-on; canary / AI-status / wait-slot guard |
-| s2161 | `H-RetailLoadsCount` | retail wait exec 1 from `0x800C5CF4`; jal `anyAudioSlotActive` loads `0x141AD0` at `0x8008E5C0`; writers `setDisplayMode`/`reapplyDisplayMode`; port +1060 is unsigned PATCH `MEM_BU` (`si_addr` = `rdram+4GB+0x141AD3`) | wait/slot guard; retry default-on; leave unsigned `MEM_BU(0X1AD0, 0X80140000)` |
+| s2160 | `H-RouteRegress` | pre-S32 binary: unset/`=1` SIGSEGV at `waitForAnyAudioSlot+1060` before title; `=0` title+hangar stub contract; not `waitForMusyXAudioTaskDone` | treat pre-fix SIGSEGV as still live; canary / AI-status / wait-slot guard |
+| s2161 | `H-RetailLoadsCount` | retail wait exec 1 from `0x800C5CF4`; jal `anyAudioSlotActive` loads `0x141AD0` at `0x8008E5C0`; writers `setDisplayMode`/`reapplyDisplayMode`; port +1060 is unsigned PATCH `MEM_BU` (`si_addr` = `rdram+4GB+0x141AD3`) | wait/slot guard; leave unsigned `MEM_BU(0X1AD0, 0X80140000)` |
+| s2162 | `H-UnsignedMemBu` | same-build `=1` wait entry/loop/return `c=0x11`/`0x10`, title+hangar, `break_pc=0x1328`; `=0` stub title+hangar; 0 SIGSEGV | wait/slot guard; treat post-hangar `0x80001b08` SIGABRT as the wait-slot defect |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -128,16 +129,12 @@ static-boundary conflicts.
 The backlog is one monotonic sequence. Closed investigations are not
 active work items.
 
-1. **M5 image-arm `waitForAnyAudioSlot` SIGSEGV.** s2161 selected
-   `H-RetailLoadsCount`. Guest `D_80141AD0` is a legitimate clamped
-   config byte stored by `setDisplayMode`/`reapplyDisplayMode`. The
-   crashing load is the s2045 PATCH `MEM_BU(0X1AD0, 0X80140000)` at
-   `funcs_15.c:7603` (unsigned KSEG0, host `rdram+4GB+0x141AD3`),
-   not original wait MIPS; image `anyAudioSlotActive` is `gate0`.
-   Next unit is replacing those unsigned PATCH loads with
-   `MEM_BU(0X1AD0, S32(0X8014 << 16))` via `fixup_game_funcs.py`
-   and a same-build image/stub check. Do not add a wait/slot guard
-   and do not retry default-on.
+1. **M5 A1 default-on retry.** s2162 selected `H-UnsignedMemBu` and
+   closed the s2160 image-arm wait SIGSEGV. Same-build `=1` now
+   reaches title and hangar on the qualified recipe. Next unit is
+   flipping `get_rsp_microcode` so unset selects `factor5_ucode_b`
+   (`=0` remains stub) and repeating the same-build unset/`=1`/`=0`
+   title/hangar pair. Do not add a wait/slot guard.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the
@@ -219,16 +216,16 @@ the generated mix buffer. s2157 closes the host-canary *effect* question:
 `run_task` completion, DMEM-to-RDRAM writeback, or DMA recording. s2158
 closes the remaining isolator question: isolation is the env dispatch in
 `get_rsp_microcode` only. s2159 closes the remaining named-blocker
-question: `H-PolicyOnly`. s2160 then closed the default-on execute
-question: `H-RouteRegress`. s2161 closed the wait-slot count-byte
-ORIGIN question: `H-RetailLoadsCount`; the port fault at +1060 is
-the unsigned s2045 PATCH `MEM_BU`, not a missing guest write.
+question: `H-PolicyOnly`. s2160 then closed the *first* default-on
+execute question: `H-RouteRegress` on the pre-S32 binary. s2161
+closed the wait-slot count-byte ORIGIN question:
+`H-RetailLoadsCount`. s2162 closed the unsigned PATCH addressing
+question: `H-UnsignedMemBu`; image `=1` now reaches title and hangar.
 The A1 execute / SP-complete / MORT-ownership / both-arm-validate /
 task-exit+PCM / two-source-completion clauses remain selected at
 the s2118 C88=0 sampled scope (s2118, s2132–s2140, s2157). Remaining
-isolation is the env default until the PATCH addressing is fixed
-and the image arm is re-checked. Do not treat s2118 hangar reach as
-a license to default the arm.
+isolation is the env default. Default-on retry is the next A1 unit
+on this binary. Do not add a wait/slot guard.
 
 The stock `aspMain` contract is not the game's MusyX contract. C88
 testing selected reversed-or-suppressing polarity at sampled port gate
@@ -286,6 +283,10 @@ ledger. Operational reversals:
   address matches unsigned PATCH `MEM_BU` arithmetic
   (`rdram+4GB+0x141AD3`), and the crashing image path is `gate0`
   so original wait MIPS does not perform that load.
+  s2162 supersedes treating that SIGSEGV as a live image-arm blocker:
+  after `S32`-addressing the PATCH, `=1` returns from wait with
+  `c=0x11`/`0x10` and reaches title and hangar. `H-RouteRegress`
+  remains true of the pre-fix binary.
 - The old retail voice-field interpretation was believable because a
   pointer entry was treated as a physical array base.
 - The old “B40 was unreached” and s2110 `H-B40-RouteRequired`
@@ -308,17 +309,17 @@ ledger. Operational reversals:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024
 and spin-yield chain is in §36; the M5 archive through s2047 is in
 §§37–38; the late route/fill boundary is in §39; the s2080–s2108 archive
-is in §40; B40 s2110–s2112 is in §41; and the s2113–s2161 contract,
-symbol, MORT, AI, canary, isolator, default-blocker, default-on, and
-wait-slot count-byte archive is in §42.
+is in §40; B40 s2110–s2112 is in §41; and the s2113–s2162 contract,
+symbol, MORT, AI, canary, isolator, default-blocker, default-on,
+wait-slot count-byte, and unsigned PATCH archive is in §42.
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
 single-source or single-arm observations. No AI-status shortcut, task
 ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`,
-`H-RouteRegress`, or `H-RetailLoadsCount`. Do not retry default-on
-until the unsigned PATCH `MEM_BU` sites are corrected and the image
-arm is re-checked.
+`H-RouteRegress`, `H-RetailLoadsCount`, or `H-UnsignedMemBu`.
+Default-on retry is now the A1 execute step; do not add a wait/slot
+guard.
 
 ## Method and safety rules
 

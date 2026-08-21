@@ -1,0 +1,43 @@
+s2162 S32-address unsigned PATCH MEM_BU same-build A/B
+HYPOTHESIS-ID: m5-image-wait-slot-sigsegv
+binary: Debug rebuild after replacing MEM_BU(0X1AD0, 0X80140000)
+        with MEM_BU(0X1AD0, S32(0X8014 << 16)) in
+        ../N64Recomp/RecompiledFuncs/funcs_15.c (4), funcs_23.c (1)
+        and ../N64Recomp/fixup_game_funcs.py (6, regen-safe)
+recipe: SPIN_YIELD=1 LLE_UNGATED=1 LLE_SOLO=1 LOG_ALL=1
+driver: scratch/s73_post_a_scene/run_mission_keys.sh 30 12
+logs:   scratch/s73_post_a_scene/s2162_image/run.log
+        scratch/s73_post_a_scene/s2162_stub/run.log
+
+positive controls
+- =1: [audtask-dispatch] real_ucode=1 (83 printed, last n=5504)
+      [m5-postwait] edge=entry site=waitForAnyAudioSlot n=2
+- =0: [audtask-dispatch] real_ucode=0 (91 printed, last n=6528)
+      [m5-postwait] edge=entry site=waitForAnyAudioSlot n=2
+
+image ROGUESQ_AUDIO_UCODE=1 (s2162_image)
+- waitForAnyAudioSlot entry=2 loop=2 branch=2 return=2
+- loop/return c=0x00000011 then 0x00000010 (guest D_80141AD0)
+- 0 SIGSEGV; 0 waitForAnyAudioSlot+ hits
+- 640 0x0066A500 at 3.1s #109 (s2160 crash origin; now passed)
+- title 1024 @ 0x00790400 at 49.8s #2904
+- hangar 512 @ 0x006AB400 at 78.9s #4654
+- dma_count top 2/3/4 (6107/2438/498); break_pc=0x1328 (11646); canary_ok=0 (9048)
+- post-hangar SIGABRT last-guest-pc=0x80001b08 (after target rows)
+
+stub ROGUESQ_AUDIO_UCODE=0 (s2162_stub)
+- waitForAnyAudioSlot entry=2 loop=2 branch=2 return=2
+- same c=0x11 then 0x10
+- title 1024 @ 0x00790400 at 49.1s #2861
+- hangar 512 @ 0x006AB400 at 78.7s #4637
+- dma_count=0 (6326); break_pc=0x0000 (9489); canary_ok=1 (6326)
+- post-hangar SIGABRT last-guest-pc=0x80001b08 (same as s2160 stub retry)
+
+selected: H-UnsignedMemBu
+refuted: H-StillFaults, H-StubRegress, H-CoverageFailure
+
+ORIGIN: D_80141AD0 writers are setDisplayMode 0x8008EA44 and
+reapplyDisplayMode 0x8008EB8C (legitimate clamped config+0x20).
+The PATCH MEM_BU is a host probe of that byte; S32-addressing is
+host addressing of a legitimate guest load, not a skip/allow of a
+guest defect. No wait/slot guard. No default-on retry this iteration.

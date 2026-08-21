@@ -102611,3 +102611,53 @@ not a guest store. No wait/slot guard added. No default-on retry.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-wait-slot-sigsegv`.
+
+## Session 2162 (2026-08-21) — S32-addressed unsigned PATCH MEM_BU; image arm reaches hangar
+
+Replaced unsigned `MEM_BU(0X1AD0, 0X80140000)` with
+`MEM_BU(0X1AD0, S32(0X8014 << 16))` in
+`../N64Recomp/RecompiledFuncs/funcs_15.c` (lines 7561, 7603, 7611,
+7700), `funcs_23.c` (line 4590), and `../N64Recomp/fixup_game_funcs.py`
+(six matching strings, regen-safe). No full regen. One Debug rebuild,
+then a same-build pair from `build/` with the ROM present:
+
+    env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_AUDIO_UCODE=1" \
+      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2162_image 30 12
+    env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_AUDIO_UCODE=0" \
+      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2162_stub 30 12
+
+Positive controls fired in both arms: `=1` printed
+`[audtask-dispatch] real_ucode=1` (83 lines, last n=5504) and
+`[m5-postwait] edge=entry site=waitForAnyAudioSlot` n=2; `=0` printed
+`real_ucode=0` (91 lines, last n=6528) and the same wait entry n=2.
+
+Image `=1` (`scratch/s73_post_a_scene/s2162_image/run.log`): wait
+entry/loop/branch/return each n=2 with `c=0x11` then `0x10`; zero
+SIGSEGV; 640 `0x0066A500` at 3.1s (the s2160 crash origin) then title
+`1024 @ 0x00790400` at 49.8s #2904 and hangar `512 @ 0x006AB400` at
+78.9s #4654. `break_pc=0x1328` (11646), `dma_count` top 2/3/4,
+`canary_ok=0`. Post-hangar SIGABRT `last-guest-pc=0x80001b08`.
+
+Stub `=0` (`scratch/s73_post_a_scene/s2162_stub/run.log`): same wait
+2/2/2/2 and `c` values; title at 49.1s #2861; hangar at 78.7s #4637;
+`dma_count=0`, `break_pc=0x0000`, `canary_ok=1`; same post-hangar
+SIGABRT `0x80001b08`.
+
+Table: `scratch/s73_post_a_scene/s2162_s32_membu_ab.txt` (copy
+`scratch/agent/s2162_s32_membu_ab.txt`). No new soak-queue verdicts
+to fold.
+
+This selects `H-UnsignedMemBu` and refutes `H-StillFaults`,
+`H-StubRegress`, and `H-CoverageFailure`. The s2160 image-arm wait
+SIGSEGV is closed on this binary.
+
+ORIGIN: `D_80141AD0` writers are `setDisplayMode` `0x8008EA44` and
+`reapplyDisplayMode` `0x8008EB8C` (legitimate clamped config+0x20).
+The PATCH `MEM_BU` is a host probe of that byte; `S32`-addressing is
+host addressing, not a skip/allow of a guest defect. No wait/slot
+guard. Default-on was not retried this iteration.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-default-on`.
