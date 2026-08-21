@@ -100113,3 +100113,31 @@ canary, gate, wait, guard, queue policy, or default dispatch changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+
+## Session 2103 (2026-08-20) — checkpoint close-out: corrected s2102 discrimination attribution
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 47262 bytes, so this was not a
+maintenance iteration. The planned work unit (corrected same-build stage-to-PCM
+A/B pair) did not run in this session.
+
+The prior session (s2102) was committed, but the stop gate's churn guard
+subsequently blocked the iteration because s2102's entry used "rules out"
+instead of a recognized discrimination verb. The guard requires at least one
+discrimination phrase (`selects`, `refutes`, `closes`, `resolves`, or
+`discriminate`) alongside any commit with two or more instrumentation lines.
+
+The s2102 work produced a genuine discrimination. It refutes the logical-vs-host
+FNV byte-order instrument defect: the corrected comparator produced matching FNV
+`0xF59C39C5` on both the stage row and the DMA row for the zero-payload control,
+independently confirming the fix. It also refutes the scope-key decode defect,
+which had mixed phase and width in the first summary. Those are the only
+conclusions admissible from the corrected final pair; the treatment reached title
+and hangar but emitted no nonzero corrected stage row, so no stage-to-PCM
+conclusion is possible. No output routing, task field, canary, gate, wait,
+guard, queue policy, or default dispatch changed in either s2102 or s2103.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.
