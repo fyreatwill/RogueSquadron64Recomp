@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2114
-(2026-08-21); behavioral and source evidence is current through s2114.
+authoritative for exact commands and probe rows. Maintained in Session 2115
+(2026-08-21); behavioral and source evidence is current through s2115.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -48,6 +48,12 @@ This file is intentionally compact. The s2080–s2108 archive is in
   while the retry's image arm exited pre-target and its stub arm remained at
   640-wide until SIGKILL. The phase logger fired only pre-target controls, so
   this adds no contract evidence and does not select any ABI hypothesis.
+- The s2115 pair again split before the contract discriminator: the stub arm
+  reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, while the
+  image arm's positive LLE/audio controls fired (194 LLE tasks, 42 audio
+  dispatches) before a pre-target SIGSEGV in `waitForAnyAudioSlot+1060`, last
+  guest PC `0x8000834c`. This is another coverage failure; no ABI hypothesis
+  is selected.
 - The title path is separately selected as `H-InputZero`: title-stage input,
   transform, and DMA payloads were zero. A hangar sample had nonzero input,
   transform, and matching DMA payload, rejecting transform annihilation and
@@ -86,9 +92,10 @@ The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
 1. **M5 image-task contract.** Complete the phase-keyed stub/image A/B at a
-   target phase; s2114's two attempts were coverage failures, not null
-   contract results. Then distinguish the selected `H-TaskExitMapping`
-   result from the remaining `output_buff=0` ABI-semantics question.
+   target phase. s2114 and s2115 were coverage failures, not null contract
+   results; first run the C88=0/C88=1 coverage contrast in `NEXT.md`, then
+   distinguish the selected `H-TaskExitMapping` result from the remaining
+   `output_buff=0` ABI-semantics question.
    Preserve generated DMA, task fields, canary, slot, PCM, wait, and queue
    behavior; no output or exit mapping change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
@@ -154,6 +161,12 @@ The generated image source/field audit maps `0x6F0..0x9F0` to transformed
 Their exact destinations come from task-local DMEM fields. Static code does
 not prove the runtime ABI meaning of every field, and no output or task
 contract change is authorized.
+
+The s2115 image arm executed positive LLE/audio dispatch controls but died in
+the pre-target `waitForAnyAudioSlot+1060` path; the stub arm reached both
+target phases and produced the expected stub/PCM rows. Because the arms did
+not share a target phase, this run cannot compare task exit, output buffer,
+writeback, canary, or PCM contract fields.
 
 The s2110 route table was positive in both arms: B40 write/return and the first
 two reapply pairs matched, while only B40=1 reached the later reapply entry in
@@ -227,7 +240,8 @@ s2110–s2112 route/read/state results remain in the ledger and current front
 matter.
 The exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. The current selected hypotheses are scoped above and
-must not be widened from single-source or single-arm observations.
+must not be widened from single-source or single-arm observations. s2115's
+paired coverage result adds no ABI selection.
 
 ## Method and safety rules
 

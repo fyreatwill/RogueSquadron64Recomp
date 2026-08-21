@@ -100570,3 +100570,34 @@ added.
 Run the fresh same-build paired target-phase validation described in
 `scratch/agent/NEXT.md` under
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+## Session 2115 (2026-08-21) — retried the M5 image-task contract pair
+
+The planned same-build stub/image validation was run concurrently with the
+existing phase-keyed task, DMA, completion, canary, slot, PCM, wait, queue,
+and VI witness. The stub arm reached the target controls at title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Its target rows were
+present (`audtask-abi`/`audtask-dma-row` count 2203 in phases 8/12), as were
+the return and PCM controls (`audio-return` 272 and `audio-join-pcm` 6360 in
+those phases).
+
+The image arm also passed positive dispatch controls: 194 LLE tasks and 42
+audio dispatch rows were recorded. It reached only the pre-target 640-wide
+phase, then terminated with SIGSEGV at `waitForAnyAudioSlot+1060`; the crash
+reported far `0x400141ad3` and last guest PC `0x8000834c`. It emitted no
+target-phase contract row. The paired discriminator therefore had no
+same-phase image/stub row and cannot select `H-TaskExitMapping`,
+`H-OutputRoute`, `H-WritebackLoss`, or `H-NoValidOutput`. The pre-target
+positive controls prove the image witness was live, but do not repair target
+coverage. No task field, output routing, exit mapping, DMA, canary, slot,
+PCM, wait, guard, queue, or default behavior changed.
+
+ORIGIN: diagnostic-only coverage retry; the `waitForAnyAudioSlot` crash is
+reported as observed route coverage, and no corruption mitigation or value
+skip was added.
+
+### Next
+
+Run the four-arm C88=0/C88=1 coverage contrast described in
+`scratch/agent/NEXT.md` under
+`HYPOTHESIS-ID: m5-image-arm-target-coverage`.
