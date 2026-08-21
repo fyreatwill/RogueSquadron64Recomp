@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2119
-(2026-08-21); behavioral and source evidence is current through s2119.
+authoritative for exact commands and probe rows. Maintained in Session 2120
+(2026-08-21); behavioral and source evidence is current through s2120.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -97,6 +97,15 @@ This file is intentionally compact. The s2080–s2108 archive is in
   times with three nonzero values. This is single-source retail evidence:
   it rejects `H-GateNeverLive` and selects `H-GateMixed`, but does not yet
   identify which port writer controls the live task route.
+- The s2120 same-build retry supplied the independent port line. Both C88 arms
+  reached title and hangar, and both showed the named
+  `reapplyDisplayMode:reapply-success` writer at `0x8008EC88` with final gate
+  0 versus 1. C88=0 produced two nonzero phase-10 stage-2 spans (`nz=621`,
+  `639`) and one exact source/consumer PCM join; C88=1 produced no nonzero
+  stage or phase-10 PCM row. This selects `H-C88-ReversedOrSuppressing` at
+  the sampled route: the named writer is causal, but gate 1 suppresses the
+  observed nonzero image/PCM activity. The first s2120 pair was a coverage
+  failure because its C88=0 arm crashed before title; it is not evidence.
 - The title path is separately selected as `H-InputZero`: title-stage input,
   transform, and DMA payloads were zero. A hangar sample had nonzero input,
   transform, and matching DMA payload, rejecting transform annihilation and
@@ -106,10 +115,11 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `break 0` after the final DMA write. This does not establish the meaning of
   every task-field destination.
 - C88 testing with explicit 0 versus 1 reached both target phases in both
-  arms. C88=0 stored gate 0 and produced the sampled nonzero PCM join; C88=1
-  stored gate 1 and produced no nonzero stage/PCM row. This selects
-  `H-C88-ReversedOrSuppressing` at sampled port gate scope, not retail
-  polarity or a default behavior change.
+  arms in the s2120 retry. C88=0 stored gate 0 and produced the sampled
+  nonzero stage/PCM join; C88=1 stored gate 1 and produced no nonzero
+  stage/PCM row. Together with the retail writer-PC census, this selects
+  `H-C88-ReversedOrSuppressing` at sampled port gate scope, not a default
+  behavior change.
 - Retail independently observed the live `0x8008EB40` B40 writer. In the
   phase-keyed port/host route tables, both arms fired B40 write/return and the
   same early reapply entry/success edges; B40=0 stored 0 while B40=1 stored 1.
@@ -134,15 +144,14 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 guest-gate writer arm.** The retail oracle selects
-   `H-GateMixed` at the sampled route: `0x8008EC88` is the observed nonzero
-   writer while other observed writer PCs store zero. Use the existing
-   phase-keyed `ROGUESQ_LOG_M5_GATE_CONTRACT` census and a same-build
-   `ROGUESQ_M5_C88_VALUE=0` versus `1` image-task pair to test only the
-   `reapplyDisplayMode` writer. Require title/hangar coverage plus gate value,
-   audio-task exit, slot/status, and PCM rows before interpreting a split.
-   Do not change task fields, output routing, waits, queues, or default
-   behavior.
+1. **M5 key-on early-return ground truth.** The gate writer arm is resolved at
+   the sampled route as `H-C88-ReversedOrSuppressing`; no runtime change is
+   authorized. Before touching the eight generated `musyxKeyOnVoice` divide /
+   overflow early-return sites, run one retail oracle census with a whole-RDRAM
+   positive control, hangar VI coverage, and all eight `--watch-pc` addresses.
+   A hit identifies a retail-reached site and its execution predecessor; a
+   covered zero-hit result leaves the class unproven and keeps every guard.
+   Do not remove or rewrite any key-on guard in this step.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -221,12 +230,13 @@ supplied the nonzero stage-to-PCM join. The generated `break 0` edge at guest
 PC `0x1328` therefore selects the task-exit mapping at this sampled boundary;
 `output_buff=0` remains an ABI-semantics question and is not a routing fix.
 
-The s2119 retail oracle is independent ground truth for the next gate step,
-but the classification is single-source until matched by port behavior. Its
-whole-RDRAM control fired, the run reached the hangar, and physical
-`0xA0F50` had both zero and nonzero post-store values from multiple writer
-PCs. This selects `H-GateMixed` and authorizes only a named, one-writer port
-arm; it does not authorize a blanket gate flip or any task-contract change.
+The s2119 retail oracle supplied the independent gate line. Its whole-RDRAM
+control fired, the run reached the hangar, and physical `0xA0F50` had both zero
+and nonzero post-store values from multiple writer PCs. The s2120 paired port
+arm then matched the named `0x8008EC88` writer to final gate 0 versus 1 and to
+the C88=0-only nonzero stage/PCM result. Together these lines select
+`H-C88-ReversedOrSuppressing` at the sampled route. No blanket gate flip or
+task-contract change is authorized.
 
 The s2110 route table was positive in both arms: B40 write/return and the first
 two reapply pairs matched, while only B40=1 reached the later reapply entry in
@@ -307,9 +317,10 @@ The exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. The current selected hypotheses are scoped above and
 must not be widened from single-source or single-arm observations. s2115's
 paired coverage result added no ABI selection; s2116's four-arm table added
-coverage selection only; s2118 closes the sampled C88=0 contract boundary and
-s2119's retail census selects mixed gate writers, advancing M5 to a
-single-writer port arm.
+coverage selection only; s2118 closed the sampled C88=0 contract boundary;
+s2119 supplied retail mixed-writer evidence; and s2120's paired port arm
+selected the causal writer and reversed/suppressing gate polarity at the
+sampled route.
 
 ## Method and safety rules
 

@@ -100743,3 +100743,46 @@ task field, output route, wait, guard, queue, or mitigation changed.
 
 Run the same-build `ROGUESQ_M5_C88_VALUE=0` versus `1` image-task pair in
 `scratch/agent/NEXT.md` to test only `reapplyDisplayMode` at `0x8008EC88`.
+
+## Session 2120 (2026-08-21) — paired the reapplyDisplayMode gate writer
+
+The shared Debug build completed successfully. The first prescribed pair was
+coverage-incomplete: C88=0 reached the positive LLE/audio dispatch controls but
+crashed in phase 4 at `waitForAnyAudioSlot+1060` before title or hangar; C88=1
+reached both target phases. That arm was not interpreted as a hypothesis result.
+
+The complete pair was rerun concurrently from the same build and recipe. Both
+arms passed the positive controls and reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`. The C88=0 arm produced 87 real audio dispatches,
+2871 ABI rows, and the C88=1 arm produced 93 real dispatches and 3414 ABI
+rows. In both arms the generated image task exited at `break 0` (`break_pc=
+0x1328`, `exit=1`) with `output_buff=0` and `canary_ok=0`; no task-contract or
+output-routing change was made.
+
+The phase-keyed gate census showed the same named writer in both arms:
+`reapplyDisplayMode:reapply-success` at guest PC `0x8008EC88` stored gate 0
+for C88=0 and gate 1 for C88=1. The `musyxSynthFrame` raw-gate rows then saw
+the corresponding final values in title and hangar; no later named writer
+overwrote the byte in the sampled target phases.
+
+The independent downstream line split at hangar phase 10. C88=0 had two
+nonzero stage-2 spans (`nz=621` and `639`), with one 768-byte source/consumer
+PCM join matching the stage span by FNV and nonzero count, completion before
+both PCM edges, and no ordering violation. C88=1 had zero nonzero stage rows,
+zero source/consumer matches, and no nonzero phase-10 PCM boundary rows.
+This same-build port evidence, combined with the s2119 retail writer-PC
+census, selects `H-C88-ReversedOrSuppressing`: the `0x8008EC88` writer is
+causal at this sampled route, but gate 1 suppresses the observed nonzero
+image/PCM activity. It rejects `H-ReapplyWriterNoncausal` and
+`H-OtherWriter` at the sampled gate census. The result does not authorize a
+blanket gate flip, task-field change, output-route change, wait change, guard,
+queue change, or default behavior change.
+
+ORIGIN: named guest writer `reapplyDisplayMode` at `0x8008EC88` is the
+legitimate source of the tested gate values; the downstream nonzero spans are
+legitimate generated dmem-to-RDRAM DMA payloads, matched to the PCM consumer.
+No corruption mitigation or value skip was added.
+
+### Next
+
+Run the oracle-first whole-class key-on audit in `scratch/agent/NEXT.md`.
