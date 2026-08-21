@@ -100664,3 +100664,45 @@ not mitigated or converted into a value skip.
 
 Retry the phase-keyed C88=0 stub/image contract A/B described in
 `scratch/agent/NEXT.md` under `HYPOTHESIS-ID: m5-image-task-contract`.
+
+## Session 2118 (2026-08-21) — completed C88=0 image-task contract A/B
+
+The planned same-build phase-keyed C88=0 stub/image A/B ran concurrently with
+`B40=0`, `SPIN_YIELD=1`, the existing LLE-forced wrapper, and the batched
+task/PCM/wait controls. Both drivers completed normally. The stub control
+reached title `1024 @ 0x00790400` at 49.0s and hangar
+`512 @ 0x006AB400` at 115.7s. Its same-phase title controls fired: 2859 LLE
+tasks, 85 stub dispatches, 3589 ABI rows, and 36 wait-contract rows. The
+silent rows showed `dma_count=0`, `canary_ok=1`, `break_pc=0`, and `exit=1`.
+The stub later crashed after hangar in `do_rom_read` with last guest PC
+`0x80007904`; this occurred after the target rows and does not remove their
+coverage.
+
+The image arm reached title `1024 @ 0x00790400` at 48.7s and hangar
+`512 @ 0x006AB400` at 129.4s. Its positive controls fired: 4354 LLE tasks,
+108 real dispatches, 5661 ABI rows, and 1780 wait-contract rows. Its target
+ABI/DMA rows showed `output_buff=0`, `canary_ok=0`, `break_pc=0x1328`, and
+`exit=1`. In hangar phase 10, two stage-2 rows were nonzero (`nz=621` and
+`639`). Their generated `0x6F0`/`0x300` dmem-to-RDRAM ranges matched the PCM
+source and consumer rows by guest span, 768-byte length, full-span FNV, and
+nonzero count. The final image join reported completion before both PCM
+edges, `source_before_consumer=1`, and `ordering_violation=0`.
+
+The independent route/control line (both arms reaching the title and hangar
+VIs, with shared phase-8 ABI controls) and the independent stage/DMA/PCM
+identity line satisfy the discriminator. This selects `H-TaskExitMapping`
+and rejects `H-OutputRoute`, `H-WritebackLoss`, and `H-NoValidOutput` at the
+sampled boundary. `output_buff=0` remains an ABI-semantics question; no task
+field, output routing, exit mapping, DMA, canary, slot, PCM, wait, guard,
+queue, or default behavior changed. The failed post-hangar stub tail is not
+used as evidence for the contract selection.
+
+ORIGIN: diagnostic-only contract validation; the legitimate image writer is
+the generated Factor 5 dmem-to-RDRAM DMA path ending at guest `break 0`,
+observed at `0x1328`. No corruption mitigation or value skip was added.
+
+### Next
+
+Run the retail ground-truth gate census described in `scratch/agent/NEXT.md`
+under `HYPOTHESIS-ID: m5-guest-gate-ground-truth` before adding any port gate
+instrumentation or changing a `0x800A0F50` writer.

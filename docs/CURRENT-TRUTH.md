@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2117
-(2026-08-21); behavioral and source evidence is current through s2117.
+authoritative for exact commands and probe rows. Maintained in Session 2118
+(2026-08-21); behavioral and source evidence is current through s2118.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -72,6 +72,21 @@ This file is intentionally compact. The s2080–s2108 archive is in
   It emitted no target ABI, DMA, join, or PCM rows. This selects no contract
   hypothesis; absent image rows are coverage failure, not evidence for a
   destination, writeback, or output-validity claim.
+- The s2118 prescribed C88=0 pair reached title and hangar in both arms. The
+  stub control passed positive controls with 2859 LLE tasks and 85 stub
+  dispatches; its shared title-phase rows showed the silent contract
+  (`dma_count=0`, `canary_ok=1`, `break_pc=0`, `exit=1`). The image arm passed
+  positive controls with 4354 LLE tasks and 108 real dispatches. In hangar
+  phase 10 it produced two nonzero stage-2 spans (`nz=621` and `639`) whose
+  generated `0x6F0`/`0x300` DMA ranges and PCM source/consumer rows matched by
+  guest span, byte count, full-span hash, and nonzero count; the matched join
+  completed before both PCM edges with no ordering violation. Image rows
+  recorded `output_buff=0`, `canary_ok=0`, `break_pc=0x1328`, and `exit=1`.
+  This same-build target comparison selects `H-TaskExitMapping` and rejects
+  `H-OutputRoute`, `H-WritebackLoss`, and `H-NoValidOutput` at the sampled
+  boundary. The stub later crashed after hangar in `do_rom_read`; that does
+  not erase the already-observed target rows. No output or exit mapping
+  change is authorized.
 - The title path is separately selected as `H-InputZero`: title-stage input,
   transform, and DMA payloads were zero. A hangar sample had nonzero input,
   transform, and matching DMA payload, rejecting transform annihilation and
@@ -109,15 +124,14 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 image-task contract.** Retry the phase-keyed C88=0 stub/image A/B
-   using the same proven LLE/spin route recipe. s2117's stub reached title and
-   hangar, but the image arm crashed at 640 before any target contract row.
-   Treat that arm as coverage failure and do not interpret empty fields.
-   Compare task ABI, generated DMA, stage/PCM joins, canary, wait, queue, and
-   exit rows only when both arms reach the same target phase; no output or
-   exit mapping change is authorized.
-   Preserve generated DMA, task fields, canary, slot, PCM, wait, and queue
-   behavior; no output or exit mapping change is authorized.
+1. **M5 guest-gate ground truth.** The image-task contract is selected at the
+   sampled target boundary. Before changing any `0x800A0F50` writer or
+   consumer, run the retail oracle with a whole-RDRAM positive control plus
+   physical `0xA0F50`, `0x14998A`, and `0x14974C` watches, phase-gated through
+   the hangar. Classify the gate as never-live, writer-specific, or mixed by
+   target hit/value/PC histograms; do not flip a store or remove a guard from
+   this measurement. Preserve task fields, generated DMA, canary, slot, PCM,
+   waits, queues, and default behavior.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -187,8 +201,14 @@ the pre-target `waitForAnyAudioSlot+1060` path; the stub arm reached both
 target phases and produced the expected stub/PCM rows. The s2116 four-arm
 contrast repaired target coverage for both image C88 values and C88=0 stub,
 but not for C88=1 stub. Both image arms emitted target stage/contract rows;
-the next C88=0 pair must compare those rows against the matching stub rows
-before interpreting `output_buff=0`, canary failure, or task exit semantics.
+the C88=0 pair was then compared against the matching stub control before
+interpreting `output_buff=0`, canary failure, or task exit semantics.
+
+The s2118 pair supplied the missing target coverage. The shared title phase
+provided same-phase stub/image control rows, and the image hangar phase
+supplied the nonzero stage-to-PCM join. The generated `break 0` edge at guest
+PC `0x1328` therefore selects the task-exit mapping at this sampled boundary;
+`output_buff=0` remains an ABI-semantics question and is not a routing fix.
 
 The s2110 route table was positive in both arms: B40 write/return and the first
 two reapply pairs matched, while only B40=1 reached the later reapply entry in
@@ -249,6 +269,11 @@ Detailed history and exact reasons are in `PROJECT-OVERVIEW.md` §§26 and
   phase-7 rows matched, both arms reached title and hangar, and independent VI
   traces differed only in timing. This supersedes the producer selection at
   the s2112 paired-recipe scope, not as a universal claim about all recipes.
+- The s2117 “no contract hypothesis selected” result was believable because
+  its image arm stopped in the pre-target 640 phase and emitted no target
+  rows. s2118 reached the shared title control and the image hangar rows,
+  supplying the missing coverage and superseding that result at the current
+  recipe scope.
 - `0x8000B650` is a shared last-guest-PC breadcrumb, not evidence that retail
   executes the port's fill/wait function. The generated crosswalk and
   independent retail PC watch establish that scope only.
@@ -263,8 +288,9 @@ matter.
 The exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. The current selected hypotheses are scoped above and
 must not be widened from single-source or single-arm observations. s2115's
-paired coverage result added no ABI selection; s2116's four-arm table adds
-coverage selection only and reopens the C88=0 contract pair.
+paired coverage result added no ABI selection; s2116's four-arm table added
+coverage selection only; s2118 closes the sampled C88=0 contract boundary and
+advances M5 to guest gate writer/consumer attribution.
 
 ## Method and safety rules
 
