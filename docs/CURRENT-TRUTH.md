@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2102 (2026-08-20);
-behavioral and source evidence is current through s2102.
+for exact commands and probe rows. Maintained in Session 2104 (2026-08-20);
+behavioral and source evidence is current through s2104.
 
 ## Current state
 
@@ -68,6 +68,19 @@ behavioral and source evidence is current through s2102.
   target-phase PCM source/consumer controls fired, but the nonzero
   stage-to-PCM discriminator remains unevaluable. No output routing, task
   field, canary, gate, wait, guard, queue policy, or default dispatch changed.
+- s2104's three same-build attempts did not produce an admissible paired
+  discriminator. The catch-all-log pair had a control reaching title/hangar
+  while treatment stopped at phase 6; the reduced pair had treatment reach
+  hangar with two nonzero stage-only rows (`0x166750`/621 and
+  `0x166A50`/639), but control crashed before title. The fully batched
+  `ROGUESQ_LOG_SPBOOT=1` pair captured the ABI/DMA table, but treatment
+  crashed after title with only zero stage rows while control reached title
+  and later hangar before its driver was SIGKILLed. The nonzero treatment
+  rows had no PCM match and are single-arm observations, not an audio
+  conclusion. This selects route-admission failure as the next discriminator
+  and leaves `H-ImageDestIsPCM` versus `H-ABI-Destination` unevaluable. No
+  output routing, task field, canary, gate, wait, guard, queue policy, or
+  default dispatch changed.
 - s2088's fixed retail oracle run passed the whole-RDRAM positive control
   (`102276129` writes), reached title `1024 @ 0x00790400` and hangar
   `512 @ 0x006AB400`, and sampled both exact candidate writers after the
@@ -304,13 +317,16 @@ as active work items.
    hash and cannot distinguish a match. The corrected final pair validated
    the stage-to-DMA hash on a zero-payload control and reached both target VIs,
    but no nonzero corrected stage row occurred before the treatment crash.
-   The next unit is one same-build A/B collection using the corrected join,
-   with the route positive controls and a phase-gated nonzero hangar stage as
-   the admission condition. A corrected nonzero stage-to-DMA match followed
-   by an exact PCM consumer match selects `H-ImageDestIsPCM`; a corrected
-   nonzero stage-to-DMA match with no PCM match selects
-   `H-ABI-Destination`/`H-ConsumerDifferentField`; no corrected nonzero
-   stage leaves the unit unevaluable. Do not change output routing, task
+   The next unit is one same-build route-admission pair with
+   `ROGUESQ_LOG_SPBOOT=1`, the corrected join, and the route-positive
+   controls. If both arms reach title and hangar, the existing table is
+   admissible: a corrected nonzero stage-to-DMA row followed by an exact PCM
+   consumer match selects `H-ImageDestIsPCM`, while a corrected nonzero row
+   with no PCM match selects `H-ABI-Destination`/`H-ConsumerDifferentField`.
+   If only the treatment reaches hangar, its stage rows remain single-arm
+   observations and the treatment crash/route boundary becomes the next M5
+   unit; if only the control reaches hangar, classify the control/treatment
+   route split before interpreting audio. Do not change output routing, task
    fields, canary, gate, wait, guard, queue policy, or default dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
@@ -587,6 +603,13 @@ The maintenance compaction retains the reasons for the recent reversals here:
   both arms and restored the control's title/hangar route positive control, so
   the initial pre-title split is superseded as a recipe defect, not as audio
   evidence.
+- The s2102 expectation that the corrected nonzero hangar stage would be
+  collectable in the next pair was believable because its final control and
+  treatment both reached title and hangar. s2104's three same-build attempts
+  independently let each arm reach a target phase, but never let both arms
+  reach both target phases in one pair. The nonzero treatment rows are thus
+  single-arm observations; this supersedes only the route-admission
+  assumption, not either PCM destination hypothesis.
 
 ## Evidence ledger summary
 
@@ -683,6 +706,27 @@ hangar. The treatment emitted no nonzero corrected stage row before its later
 crash, although target-phase PCM source/consumer controls fired. The next
 discriminator is one same-build A/B that captures a nonzero corrected hangar
 stage; exact stage-to-PCM identity and post-task ordering remain unevaluable.
+
+The s2102 next-step wording assumed that a corrected nonzero hangar stage
+could be collected under the established route recipe because the final
+s2102 pair reached both target VIs. s2104's three concurrent attempts split
+route admission: each arm reached a target phase in at least one attempt, but
+no single pair reached both title and hangar in both arms. The first nonzero
+corrected hangar rows are therefore not admissible PCM or ABI evidence; route
+admission is now the explicit discriminator.
+
+s2104 rebuilt the existing tree and ran three same-build control/treatment
+attempts. The first catch-all-log pair let the control reach both target VIs
+but the treatment stopped at phase 6. The reduced pair let the treatment
+reach both target VIs and recorded two nonzero corrected hangar stage-2 rows
+(`0x166750`, 621 bytes; `0x166A50`, 639 bytes); both were `stage-only` with
+zero PCM payloads, but the control crashed before title and that pair was not
+admissible. The final `ROGUESQ_LOG_SPBOOT=1` pair captured the ABI/DMA rows:
+the control reached title and hangar before its driver stalled, while the
+treatment reached title, emitted only zero stage rows, and bus-faulted before
+the hangar gate. This selects route admission as the next discriminator and
+does not select `H-ImageDestIsPCM`, `H-ABI-Destination`, or
+`H-ConsumerDifferentField`.
 
 ## Method and safety rules
 

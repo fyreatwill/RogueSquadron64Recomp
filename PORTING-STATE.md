@@ -100141,3 +100141,41 @@ guard, queue policy, or default dispatch changed in either s2102 or s2103.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+## Session 2104 (2026-08-20) — attempted corrected nonzero stage-to-PCM join
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 47262 bytes, so this was not a
+maintenance iteration. The Debug target rebuilt successfully. The planned
+same-build corrected image-stage/PCM A/B was run with the route-positive
+controls, then rerun twice with reduced logging and finally with
+`ROGUESQ_LOG_SPBOOT=1` so the existing ABI/DMA table was also enabled.
+
+The first catch-all-log pair let the control reach title and hangar, but the
+treatment stopped at phase 6 / width 640 before either target phase. The
+reduced pair reversed the route outcome: the control bus-faulted in
+`renderFlatMeshFaceGroup+18148` with last guest PC `0x800114A4`, while the
+treatment reached title and hangar. Its phase-10 hangar ordinal 4024 produced
+two corrected nonzero stage-2 rows: destination `0x166750`, length `0x300`,
+DMA-order FNV `0x60F910DE`, nonzero count 621; and destination `0x166A50`,
+length `0x300`, FNV `0x7B70923A`, nonzero count 639. Both completed as
+`stage-only` rows with no source or consumer PCM match; the target PCM rows
+were zero. That run did not enable the ABI/DMA table, so it was not an
+admissible A/B result.
+
+The final `ROGUESQ_LOG_SPBOOT=1` pair captured the full table. The control
+reached title and hangar before its driver stalled and was killed with
+SIGKILL. The treatment reached title, emitted only zero stage rows, and
+bus-faulted before hangar with last guest PC `0x80007904`; its crash PC was
+outside the guest image path. No single concurrent pair reached both target
+VIs in both arms. This selects route-admission failure as the next
+discriminator and refutes neither `H-ImageDestIsPCM` nor
+`H-ABI-Destination`/`H-ConsumerDifferentField`; the nonzero treatment rows
+remain single-arm observations. The attempts rule out using this recipe's
+partial rows as a PCM conclusion, not the audio hypotheses themselves. No
+output routing, task field, canary, gate, wait, guard, queue policy, or
+default dispatch changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.
