@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2122
-(2026-08-21); behavioral and source evidence is current through s2122.
+authoritative for exact commands and probe rows. Maintained in Session 2123
+(2026-08-21); behavioral and source evidence is current through s2123.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -161,24 +161,51 @@ This file is intentionally compact. The s2080–s2108 archive is in
   any guard change. The run later hit the existing unaligned `do_rom_read`
   assertion after target coverage; that terminal crash is unrelated to this
   contract result.
+- The s2123 retail completion-wait census passed its independent whole-RDRAM
+  control (`40799` writes, with the watch removed at `10000`), reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and continued to `3875`
+  VI. Exact retail writer rows showed `0x80091ECC` seeding the `0x8014998A`
+  halfword to `0x0010` and `0x800916A4` decrementing it; the aligned word
+  had `3086713` reads and `7669` writes. The worker word at `0x14974C` had
+  `22292` reads and `12455` writes, including the retail `0x8008F490`
+  `0x03` writer at hangar VIs `2267` and `3139`. The status range had
+  `48507` reads and `10675` writes; retail `serviceVoicePoolFrame` executed
+  `3324` times and its `0x8009B7EC` byte-store reached `0x154620` at hangar
+  VI `2895`. Independent execution witnesses also recorded
+  `waitForMusyXAudioTaskDone=5`, `shutdownMusyXVoices=3`,
+  `drainAudioAndFinalizeSpeechBuffer=1`, `musyxSynthFrame=3832`, and
+  `waitForAnyAudioSlot=4`. Together with the generated/companion instruction
+  offsets, this selects `H-RetailWaitContract` at the covered retail route
+  and rejects retail-no-wait and pre-target-only explanations. It does not
+  select the port pump arm, remove a wait guard, or authorize any runtime
+  change; the evidence is an independent retail line plus generated/companion
+  instruction mapping.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **Generated-symbol renaming sweep.** M5's port census selected
+1. **M5 port completion-wait A/B.** The s2123 retail census selected
+   `H-RetailWaitContract` and identified the guest countdown, worker flag,
+   status table, and named wait/service callers. Run one same-build,
+   phase-keyed port census holding the current audio implementation fixed:
+   pump-on versus `ROGUESQ_AUDIO_WAIT_NOPUMP=1`. Compare countdown seed/exit,
+   second-spin activity, worker/status transitions, guard fires, and title /
+   hangar coverage. Do not change a wait or guard until this discriminator is
+   complete.
+2. **Generated-symbol renaming sweep.** M5's port census selected
    `H-PortKeyOnNormal` and leaves all audio guards unchanged. Resume the
    bounded companion-to-generated symbol sweep with one provable metadata
-   rename per session; the next lead is `func_80001354` -> `runVideoFrameTick`
-   at `0x80001354`, whose companion mapping and generated definition already
-   agree. Check the exact name, boundaries, and callers before editing the
-   TOML. If the name is already synchronized, advance to the next unparked
-   lead rather than reopening parked entries.
-2. **M3 crash work.** Only systematic idiom-class audits with a named
+   rename per session; the next lead remains `func_80001354` ->
+   `runVideoFrameTick` at `0x80001354` if M5 does not select a pump outcome.
+   Check the exact name, boundaries, and callers before editing the TOML. If
+   the name is already synchronized, advance to the next unparked lead rather
+   than reopening parked entries.
+3. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
-3. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+4. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation and consumer-mode H1 by the RT64 census. H3 is unavailable
    because the oracle cannot screenshot the LLE path. Do not repeat the
    `0xD60` scan.
@@ -223,6 +250,13 @@ hangar phase: the generated function enters, performs four valid `0xC0`
 divides, and reaches its normal tail with no early-return guard hit. The
 qualified slot transitions are legitimate `musyxRenderVoiceSamples` writes;
 this result does not alter the audio stub or remove any defensive guard.
+
+The s2123 retail census independently establishes that the completion-wait
+contract is live on the qualified retail route: the countdown seed/decrement,
+worker/status memory activity, and named wait/service/shutdown execution all
+occur after the positive control and through the hangar phase. The port-side
+pump-on/off comparison is still required; this result is not permission to
+remove the current pump, wait timeout, or status guard.
 
 ### M5 audio and guest gate
 
@@ -351,7 +385,8 @@ s2119 supplied retail mixed-writer evidence; s2120's paired port arm selected
 the causal writer and reversed/suppressing gate polarity at the sampled
 route; s2121 supplied single-source retail zero-hit evidence for the eight-site
 key-on class; and s2122 supplied the independent port normal-path line without
-changing any guard.
+changing any guard. s2123 supplied the independent retail completion-wait
+line and leaves the port pump/guard A/B as the next M5 discriminator.
 
 ## Method and safety rules
 

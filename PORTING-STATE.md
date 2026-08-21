@@ -100851,3 +100851,56 @@ change was added. The next work unit is the generated-symbol sweep lead
 Resume the generated-symbol renaming sweep in `scratch/agent/NEXT.md` with
 one companion-proven, bounded metadata rename; keep the parked holdout list
 closed.
+
+## Session 2123 (2026-08-21) — captured the retail audio completion contract
+
+The planned M5 step-5 ground-truth census ran before any port instrumentation
+or build. The first capture used a word-aligned countdown watch but did not
+request exact-writer post rows, so its broad-word count was not interpreted as
+the countdown field by itself. The fixed capture reran the same recipe with
+post-store sampling for the named retail writer PCs. Both captures used the
+whole-RDRAM positive control, Rice video, and the eleven verified Start
+schedule.
+
+The fixed run passed the positive control at 10,000 callbacks, removed that
+watch, and ended with 40,799 whole-RDRAM writes. VI tracing reached title
+`1024 @ 0x00790400` at 17.3s and hangar `512 @ 0x006AB400` at 38.4s, then
+continued to 3,875 VI. Therefore a null in a target-phase row would have been
+interpretable. The aligned countdown word at physical `0x149988` had
+3,086,713 reads and 7,669 writes; exact-writer post rows showed
+`0x80091ECC` writing the target halfword `0x0010` at VI 2252 and 3123, and
+`0x800916A4` writing the decrementing target halfword (`0xFFFE` in the first
+sampled row) across title-phase rows. The full-word samples preserve the
+neighboring halfword, so the classification relies on the exact instruction
+PC and generated/companion disassembly, not on the composite word value.
+
+The worker-flag word at `0x14974C` had 22,292 reads and 12,455 writes. Exact
+writer rows included `0x8008F490` storing `0x03` at hangar VIs 2267 and 3139;
+`0x80091680` and `0x800912F8` also reached the target word during the title
+phase, with their byte-level meanings established by the generated
+instruction offsets. The status-table range at `0x154620..0x154668` had
+48,507 reads and 10,675 writes. Retail `serviceVoicePoolFrame` executed
+3,324 times and its `0x8009B7EC` byte-store PC reached `0x154620` at hangar
+VI 2895; the post-word remained `0x006E4000`, so it is not treated as a
+whole-word zero. `shutdownMusyXVoices` executed 3 times, while the named
+`waitForMusyXAudioTaskDone`, `drainAudioAndFinalizeSpeechBuffer`,
+`musyxSynthFrame`, and `waitForAnyAudioSlot` witnesses executed 5, 1, 3,832,
+and 4 times respectively. The execution previous-PC rows were consistent
+with their named retail callers.
+
+This selects `H-RetailWaitContract` at the covered retail route and rejects
+`H-RetailNoWaitWords`, `H-RetailPreTargetOnly`, and `H-OracleUnevaluable`.
+The two evidence lines are (1) independent retail memory/PC callbacks and
+(2) the generated/companion instruction mapping that identifies the exact
+halfword/byte offsets. This establishes the guest completion contract but
+does not select the port pump behavior, remove a wait guard, change a task
+ABI, or authorize any mitigation.
+
+ORIGIN: independent retail contract capture; no runtime behavior, guard,
+writer, task field, queue, or mitigation changed.
+
+### Next
+
+Run the phase-keyed port pump A/B in `scratch/agent/NEXT.md`, keeping the
+current audio implementation fixed and comparing the shipped pump-on path
+against `ROGUESQ_AUDIO_WAIT_NOPUMP=1`.
