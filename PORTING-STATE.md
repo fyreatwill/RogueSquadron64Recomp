@@ -100783,6 +100783,31 @@ legitimate source of the tested gate values; the downstream nonzero spans are
 legitimate generated dmem-to-RDRAM DMA payloads, matched to the PCM consumer.
 No corruption mitigation or value skip was added.
 
+## Session 2121 (2026-08-21) — completed the retail key-on early-return census
+
+Ran the prescribed retail-oracle command from `scratch/agent/NEXT.md` with a
+whole-RDRAM write watch, all eight `musyxKeyOnVoice` execution PCs, title/hangar
+VI tracing, and the eleven-Start driver. The first run was not evaluable: the
+global 200-hit cap was consumed by boot writes at 0.6 seconds, before the
+target execution watches could report.
+
+The fixed run kept the same controls and added `--detail-watch 1` through
+`--detail-watch 8`, leaving the positive control at watch index 0. The
+whole-RDRAM control reached its 10,000-callback threshold and was automatically
+removed while the eight PC watches remained armed. The run reached title
+`1024 @ 0x00790400` at 17.3 seconds and hangar `512`, including
+`0x006AB400`, after 38.4 seconds. All eight execution watches reported zero
+hits and the shutdown execution-watch table reported zero total hits and no
+`exec-prev` rows.
+
+This selects `H-KeyOnRetailDead` only as single-source retail evidence at the
+covered route. It rules out “the retail hangar route reaches one of these
+eight exact PCs” for this recipe, but does not prove the port class is dead,
+does not identify a valid divisor contract, and authorizes no guard removal or
+rewrite. The next work unit is the port-side whole-class census in
+`scratch/agent/NEXT.md`.
+
 ### Next
 
-Run the oracle-first whole-class key-on audit in `scratch/agent/NEXT.md`.
+Run the phase-keyed port-side eight-site key-on contract census in
+`scratch/agent/NEXT.md`; keep all eight early-return guards unchanged.

@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2120
-(2026-08-21); behavioral and source evidence is current through s2120.
+authoritative for exact commands and probe rows. Maintained in Session 2121
+(2026-08-21); behavioral and source evidence is current through s2121.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -138,20 +138,31 @@ This file is intentionally compact. The s2080–s2108 archive is in
   Both later recorded `audio_nonzero=0` and function exit `0`. Independent VI
   traces differed in timing and later phase count only, so this pair selects
   `H-RecipeTiming` and does not identify a phase-7 state writer.
+- The s2121 retail oracle census passed its independent whole-RDRAM positive
+  control (`10000` callbacks, then automatic removal), reached title VI
+  `1024 @ 0x00790400`, and reached hangar VI `512` including
+  `0x006AB400`. All eight `musyxKeyOnVoice` execution watches recorded zero
+  hits and the execution-watch table had zero rows. This is single-source
+  retail evidence for `H-KeyOnRetailDead` at the covered route; it does not
+  prove the port class is dead or make any guard-removal change safe. The
+  initial prescribed run was unevaluable because its global 200-hit cap was
+  exhausted by boot writes; the fixed same-control run enabled detail logging
+  for all eight PC watches after the positive-control threshold.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 key-on early-return ground truth.** The gate writer arm is resolved at
-   the sampled route as `H-C88-ReversedOrSuppressing`; no runtime change is
-   authorized. Before touching the eight generated `musyxKeyOnVoice` divide /
-   overflow early-return sites, run one retail oracle census with a whole-RDRAM
-   positive control, hangar VI coverage, and all eight `--watch-pc` addresses.
-   A hit identifies a retail-reached site and its execution predecessor; a
-   covered zero-hit result leaves the class unproven and keeps every guard.
-   Do not remove or rewrite any key-on guard in this step.
+1. **M5 port-side key-on contract census.** The s2121 retail oracle passed
+   whole-RDRAM, title, and hangar controls but saw zero executions at all eight
+   key-on early-return PCs. This single-source result parks the retail class
+   as `H-KeyOnRetailDead` at that route; it leaves every port guard in place.
+   The next bounded step is one port run instrumenting all eight entry/guard/
+   normal-tail sites, operand/divisor values, and slot status transitions in a
+   single phase-keyed table. A positive port control with no entries parks the
+   class; guard hits or normal tails select the exact port-only contract to
+   audit. Do not remove or rewrite any key-on guard.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -318,9 +329,10 @@ The exact commands, counts, failed retries, and session headings remain in
 must not be widened from single-source or single-arm observations. s2115's
 paired coverage result added no ABI selection; s2116's four-arm table added
 coverage selection only; s2118 closed the sampled C88=0 contract boundary;
-s2119 supplied retail mixed-writer evidence; and s2120's paired port arm
-selected the causal writer and reversed/suppressing gate polarity at the
-sampled route.
+s2119 supplied retail mixed-writer evidence; s2120's paired port arm selected
+the causal writer and reversed/suppressing gate polarity at the sampled
+route; and s2121 supplied single-source retail zero-hit evidence for the
+eight-site key-on class without changing any guard.
 
 ## Method and safety rules
 
