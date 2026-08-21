@@ -99114,3 +99114,52 @@ three s2080 fill-crash hypotheses; that requires the planned source audit.
 Run exactly the source/metadata crosswalk in `scratch/agent/NEXT.md` as s2080.
 Do not add a wait, guard, task-ABI, canary, output-routing, gate, or host
 behavior change until the address table selects a boundary explanation.
+
+## Session 2080 (2026-08-20) — crosswalked the fill-range labels against the stale guest-PC marker
+
+### What ran
+
+Performed the bounded source/metadata crosswalk from `scratch/agent/NEXT.md`.
+No build, game run, oracle run, instrument, or runtime behavior changed. The
+inspection covered the symbol TOML, generated symbol/source records, the
+independent companion mapping, the shared last-PC breadcrumb source, and the
+existing RT64 copy/readback crash records.
+
+### Result
+
+The exact table is:
+
+| Item | Address / interval | Classification |
+|---|---:|---|
+| `fillSampleStreamRange` base | `0x8008FAAC` | generated/TOML/companion agree |
+| declared size | `0x500` | high-confidence symbol size |
+| `+336` | `0x8008FBFC` | inside `[0x8008FAAC,0x8008FFAC)` |
+| `+6464` | `0x800913EC` | outside the declared interval |
+| end (`base + size`) | `0x8008FFAC` | exact next generated function boundary |
+| separate last-PC marker | `0x8000B650` | far outside the interval |
+
+The generated definition reaches its epilogue at `0x8008FFA4`, the companion
+source independently maps the same base, and the four callers use the same
+guest address. The separate marker is `beginFrameDLChunk`'s return breadcrumb
+in the shared `g_rs64_last_guest_pc` global. Historical RT64 `copyToRAM`
+failures carrying that marker therefore do not establish a causal
+`fillSampleStreamRange` host-boundary fault.
+
+This selects **H-StaleLastGuestPC** at the requested symbol scope. It rules out
+H-SymbolCrosswalkMismatch and the interpretation that `+6464` and
+`0x8000B650` are guest locations inside `fillSampleStreamRange`. It does not
+yet distinguish stale shared state from a host copy/readback event that
+happens to observe the stale state; that is the next diagnostic boundary.
+
+### What it rules out
+
+It rules out repairing or renaming the generated symbol metadata, treating the
+`+6464` crash label as an in-function guest offset, or treating the shared
+`0x8000B650` marker as a retail fill call-site contract. No wait, guard, task
+field, output route, canary, gate, or host behavior change is justified.
+
+### Next
+
+Add the single regeneration-stable, phase-scoped host/guest boundary witness
+specified in `scratch/agent/NEXT.md`, after running its qualified retail
+positive-control command first.

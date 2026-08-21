@@ -3587,11 +3587,20 @@ of `CURRENT-TRUTH.md` during the s2079 maintenance pass.
   `H-PortOnlyFillBoundary` at requested-PC scope and refutes a retail shared
   fill/wait boundary. It does not distinguish stale guest-PC state from a
   host copy/readback fault; that exact crosswalk is the next work unit.
+- s2080 performed that crosswalk. TOML, generated source, and the independent
+  companion mapping agree on `fillSampleStreamRange = 0x8008FAAC`, size
+  `0x500`, ending at `0x8008FFAC`; `+336` resolves to `0x8008FBFC` inside the
+  function, while `+6464` resolves to `0x800913EC` outside it. The separate
+  marker `0x8000B650` is also outside the interval and is the return
+  breadcrumb of `beginFrameDLChunk`, so this selects `H-StaleLastGuestPC` at
+  source/metadata scope. Prior RT64 `copyToRAM` observations carrying that
+  marker remain host-boundary evidence without a causal fill attribution.
 
 These records supersede the older claims that the route was callback-invalid,
 that all image-arm PCM was zero, that the E50 envelope was proven final PCM,
 that the retail gate had one uniform value, and that the port treatment wait
 or fill markers were retail call-site contracts. The earlier claims were
 believable because the needed phase joins, independent retail writer/value
-witnesses, or treatment census were absent. No output route, task field,
+witnesses, treatment census, or exact generated/source crosswalk were absent.
+No output route, task field,
 canary, wait, guard, or guest behavior changed in these sessions.

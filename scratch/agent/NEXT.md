@@ -1,55 +1,77 @@
-# NEXT work unit (s2080)
+# NEXT work unit (s2081)
 
 HYPOTHESIS-ID: m5-port-fill-crash-origin
 
 ## Work unit
 
-Perform one bounded port crosswalk of the `fillSampleStreamRange` crash label,
-the generated symbol range, and the separate `0x8000B650` last-guest-PC marker.
-This is a source/metadata audit only: do not build, run the game, change task
-fields, output routing, canary handling, waits, guards, gate stores, or host
-behavior. The purpose is to classify the port-only boundary exposed by s2078
-before another C88=1 treatment arm is considered.
+Add one regeneration-stable, phase-scoped host/guest boundary witness at the
+existing RT64 copy/readback boundary. The witness must report the host
+operation, the current `g_rs64_last_guest_pc`, and the active VI phase in one
+joinable row. It is diagnostic-only: do not change task fields, output routing,
+canary handling, waits, guards, gate stores, or host behavior.
 
 ## Competing hypotheses and discriminator
 
-- **H-StaleLastGuestPC** — `0x8000B650` is outside the generated
-  `fillSampleStreamRange` interval, and the `+336`/`+6464` labels resolve to
-  different guest addresses. The port's last-PC breadcrumb is stale or comes
-  from an unrelated guest-side event; it is not a retail fill contract.
-- **H-HostCopyReadback** — the function label is a host-stack or host-boundary
-  context, and existing RT64 copy/readback diagnostics identify the fault while
-  the guest symbol arithmetic remains valid. The crash is port-host-side, not a
-  missing retail call site.
-- **H-SymbolCrosswalkMismatch** — generated symbol/overlay metadata maps the
-  function or offsets differently from `syms/rogue_squadron.syms.toml`. A
-  contradictory generated range or overlay mapping selects this and requires
-  metadata repair before any treatment change.
+- **H-StaleLastGuestPC** — the witness shows a host copy/readback event with
+  `g_rs64_last_guest_pc=0x8000B650`, but no guest execution row for
+  `fillSampleStreamRange` in the same phase/join. This keeps the marker as
+  shared stale state.
+- **H-HostCopyReadback** — the witness shows the host operation immediately
+  follows a phase-valid fill-range call and carries the same joined guest
+  source/operation identity into the fault. This would make the host boundary
+  causal, without authorizing a behavior change.
+- **H-WitnessGap** — the positive control fires but the boundary witness never
+  produces a joinable row, so the instrument cannot distinguish the two. This
+  requires fixing the witness scope, not changing runtime behavior.
 
-The discriminator is one exact address table plus the existing crash-family
-and host-boundary breadcrumbs: symbol base, declared size, base+336, base+6464,
-base+size, and whether `0x8000B650` lies in that interval. A consistent range
-that excludes `0x8000B650` selects H-StaleLastGuestPC; a matching host
-copy/readback attribution selects H-HostCopyReadback; contradictory generated
-metadata selects H-SymbolCrosswalkMismatch. Do not infer from the retail PC
-null again; s2078 already qualified that null with whole-RDRAM, PIF, VI, and
-slot-cycle controls.
+The discriminator is one same-run table with a whole-RDRAM or existing
+copy/readback positive control, phase-keyed fill-range source rows, and
+phase-keyed host-boundary rows joined by guest address and operation ordinal.
+If the host row carries `0x8000B650` without a same-phase fill source, select
+H-StaleLastGuestPC. If it carries a same-phase source/operation join through
+the host boundary, select H-HostCopyReadback. If the positive control fires
+but either side is absent, select H-WitnessGap and redesign before any
+interpretation.
 
-## Exact commands
+## Ground truth and exact commands
 
-Run from the repository root:
+Run the retail oracle first, with its whole-RDRAM positive control and the
+already-qualified title/hangar route. Use the existing PC set as a control;
+do not treat a new null as evidence unless the positive control and VI phases
+are present:
 
 ```sh
-rg -n -C 2 'name = "fillSampleStreamRange"|fillSampleStreamRange|8000B650|last-guest-pc|fillSampleStreamRange\+(336|6464)' \
-  syms docs src lib tools scratch/agent/soak_results PORTING-STATE.md | head -240
-printf 'fillSampleStreamRange+336 = 0x%08X\n' $((0x8008FAAC + 336))
-printf 'fillSampleStreamRange+6464 = 0x%08X\n' $((0x8008FAAC + 6464))
-printf 'fillSampleStreamRange end = 0x%08X\n' $((0x8008FAAC + 0x500))
+mkdir -p scratch/agent/s2081_oracle
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --configdir scratch/agent/s2081_oracle \
+  --secs 65 \
+  --watch-write 0x0:0x800000 --hit-cap 10000 \
+  --watch-pc 0x8000B650,0x800668B0,0x8008DA00,0x8009B62C,0x8009B654,0x8009B3EC,0x8009B44C,0x8008EC88,0x80095D54 \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  --vi-trace --vi-poll --pif-trace \
+  > scratch/agent/s2081_oracle/run.log 2>&1
 ```
 
-Record the exact symbol base/size, the two offset addresses, the end address,
-the location of `0x8000B650` relative to the declared interval, and any
-independent host copy/readback attribution. If the address table selects
-H-StaleLastGuestPC, the following unit may add one regeneration-stable
-host/guest boundary witness; it may not change a wait, guard, task ABI, or
-output route.
+Before editing, locate the existing host boundary and phase helpers:
+
+```sh
+rg -n -C 6 'copyToRAM|g_rs64_last_guest_pc|PROBE_PHASE|vi_width|vi_origin' lib/rt64 src
+```
+
+Add the single witness in that existing host path, build once through the
+normal host-only build, and run one phase-gated capture from `build/` with the
+positive control and witness enabled in the same binary:
+
+```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 \
+  PROBE_KEYS_FROM_PHASE=1 PROBE_KEYS='8:start' \
+  zsh tools/probe.sh scratch/agent/s2081_port 120 0.5
+```
+
+Expected outcomes are the three rows above; no wait, guard, task, canary,
+gate, or output treatment is permitted.

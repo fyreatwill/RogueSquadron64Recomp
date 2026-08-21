@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2079 (2026-08-20);
-behavioral evidence is current through s2078.
+for exact commands and probe rows. Maintained in Session 2080 (2026-08-20);
+behavioral and source evidence is current through s2080.
 
 ## Current state
 
@@ -43,7 +43,16 @@ behavioral evidence is current through s2078.
   `0x80095D54`, while neighboring wait/tick/status PCs were active. This
   selects `H-PortOnlyFillBoundary` at requested-PC scope. It does not say
   whether the port marker is stale guest-PC state or a host copy/readback
-  fault; the next unit is the bounded source/metadata crosswalk in `NEXT.md`.
+  fault; s2080's source/metadata crosswalk resolves the symbol-scope question
+  while leaving the host causal boundary open.
+- s2080's bounded source/metadata crosswalk selects `H-StaleLastGuestPC` at
+  the requested symbol scope. TOML, generated definition, and companion
+  mapping agree that `fillSampleStreamRange` is
+  `[0x8008FAAC,0x8008FFAC)`, with size `0x500`; `+336` is
+  `0x8008FBFC` inside it, while `+6464` is `0x800913EC` outside it and
+  `0x8000B650` is far outside it. The source attribution of `0x8000B650` as
+  `beginFrameDLChunk`'s return breadcrumb explains the shared marker. This
+  does not identify a causal host copy/readback fault.
 - The six-site `bltzal $zero` PIC link-register class, ten-site
   `anyAudioSlotActive` spin census, dormant slot-dispatch census, and the
   generated-symbol synchronization sweep are closed at their stated scopes.
@@ -54,13 +63,11 @@ behavioral evidence is current through s2078.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 Factor 5 image task/exit contract.** First perform the pending bounded
-   port crosswalk: reconcile the generated `fillSampleStreamRange` symbol
-   range and its `+336`/`+6464` labels with the separate `0x8000B650` marker and
-   existing host-boundary breadcrumbs. This is source/metadata only. Depending
-   on the exact table, the next unit may add one regeneration-stable boundary
-   witness; it may not change waits, guards, task fields, output routing,
-   canary handling, or gate stores.
+1. **M5 Factor 5 image task/exit contract.** Add one regeneration-stable,
+   phase-scoped host/guest boundary witness at the existing RT64 copy/readback
+   boundary. It must join the host operation with the current guest-PC
+   breadcrumb and the target phase; it may not change waits, guards, task
+   fields, output routing, canary handling, or gate stores.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -124,6 +131,13 @@ gate is mixed (`0,1,0,0,1` across the requested writers), so only the named
 writer-specific gate arm was authorized. Its port treatment was not route
 qualified and is not admissible for task/PCM interpretation.
 
+The s2080 crosswalk separates the generated fill function from the shared
+crash marker: `fillSampleStreamRange` occupies `0x8008FAAC..0x8008FFAC`,
+`+336` is in-range, and `+6464` is not. `0x8000B650` is the return breadcrumb
+of `beginFrameDLChunk`, not an instruction in this function. Historical
+RT64 `copyToRAM` failures carrying the same marker remain host-boundary
+observations, not proof that the fill function caused them.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -168,14 +182,21 @@ The maintenance compaction retains the reasons for the recent reversals here:
   the `0x8000B650` marker. s2078's independent retail PC null rules out treating
   that marker as a retail shared call site, but leaves the host/guest boundary
   open.
+- The old interpretation of `fillSampleStreamRange+336`/`+6464` and
+  `0x8000B650` as one guest-side function boundary was believable because the
+  crash labels and shared last-PC marker co-occurred. s2080's exact generated,
+  TOML, and companion table shows `+6464` and `0x8000B650` are outside the
+  declared function interval, while the marker belongs to a different
+  breadcrumbed function. The host copy/readback relationship remains open.
 
 ## Evidence ledger summary
 
 History through s1879 is in PROJECT-OVERVIEW.md §§33–35. The VI-1024 and
 spin-yield chain is in §36; the M5 archive through s2047 is in §§37–38. Section
 39 records the durable s2050–s2078 route, status, audio, gate, and retail-PC
-milestones migrated during this maintenance pass. The chronological ledger is
-still the source for exact run commands, counts, and rejected retries.
+milestones migrated during this maintenance pass; s2080 adds the fill-function
+source crosswalk above. The chronological ledger is still the source for exact
+run commands, counts, and rejected retries.
 
 ## Method and safety rules
 
