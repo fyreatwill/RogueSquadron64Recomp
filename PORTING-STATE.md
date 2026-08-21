@@ -100978,3 +100978,42 @@ wait, task field, queue, timeout, guard, or mitigation was modified.
 Run the A10 drain in-loop tick A/B from `scratch/agent/NEXT.md`, keeping the
 current audio implementation and pump fixed while comparing the default
 drain tick against `ROGUESQ_DRAIN_INLOOP_TICK=0`.
+
+## Session 2126 (2026-08-21) — drain in-loop tick A/B remained coverage-limited
+
+HYPOTHESIS-ID: m5-drain-inloop-tick-ab
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 28,294 bytes, so this was not a
+maintenance iteration. The Debug target built successfully. The prescribed
+same-build A/B launched both forced-LLE arms concurrently with
+`ROGUESQ_SPIN_YIELD=1` and the full passive audio/route instrumentation. The
+control left the drain tick at its default; the treatment set
+`ROGUESQ_DRAIN_INLOOP_TICK=0`.
+
+The control passed positive controls: `3613` LLE-task rows and `96`
+audio-dispatch rows. Its phase gate reached title VI `1024 @ 0x00790400` at
+49.3s and hangar VI `512 @ 0x006AB400` at 79.1s. It emitted five
+`[audio-drain-enter]` rows and four clean `[audio-drain-exit]
+iters_this_call=1` rows, including target-phase ordered wait/tick edges. It
+had zero wait-for-slot guard, drain-timeout, and forced-idle rows, then ended
+in the existing `do_rom_read` crash family with last guest PC
+`0x80001B08`, after target coverage.
+
+The treatment also passed its pre-target controls (`549` LLE-task rows and
+`48` audio-dispatch rows) and emitted one pre-target drain entry/exit at
+VI 640, but never reached title or hangar. Its driver hit the 600-second
+phase gate timeout. The required fixed version used the phase-gated
+`tools/probe.sh` wrapper with phase-relative keys and `PROBE_LEAVE_OK=1`; it
+also stayed at VI 640 and died before the target gate with last guest PC
+`0x8000B650`. It emitted `446` LLE-task rows, `46` audio-dispatch rows, one
+pre-target drain entry/exit, and no timeout/forced-idle or wait-for-slot guard
+row. These are coverage failures, not drain semantic evidence.
+
+Under the planned discriminator this selects `H-CoverageFailure`. It does
+not select `H-DrainTickRequired`, `H-DrainTickIrrelevant`, or
+`H-WorkerStatusOwner`; no drain, wait, task-field, status, or guard change is
+authorized. The next unit is a phase-repaired same-build `tools/probe.sh`
+A/B using the exact recipe in `scratch/agent/NEXT.md`.
+
+ORIGIN: no mitigation or game-value machinery was added; the only treatment
+was the existing environment gate around the authored drain-tick injection.

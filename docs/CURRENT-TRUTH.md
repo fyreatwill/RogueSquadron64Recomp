@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2125
-(2026-08-21); behavioral and source evidence is current through s2125.
+authoritative for exact commands and probe rows. Maintained in Session 2126
+(2026-08-21); behavioral and source evidence is current through s2126.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -202,21 +202,33 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `H-PumpIrrelevant` only for route admission/target wait behavior; the
   phase-12 ordered contract is matched, but no direct countdown seed/exit
   row was emitted, so no wait or task semantic change is authorized.
+- The s2126 drain-tick A/B built successfully and supplied positive LLE/audio
+  controls in both arms. The default-tick control reached title VI `1024 @
+  0x00790400` and hangar VI `512 @ 0x006AB400`, with five drain entries and
+  four clean `iters_this_call=1` exits, and no drain timeout, forced-idle, or
+  wait-for-slot guard rows. The `ROGUESQ_DRAIN_INLOOP_TICK=0` arm reached only
+  the pre-target 640-wide phases and timed out at the 600-second gate; a
+  phase-repaired `tools/probe.sh` retry also died at VI 640 with last guest PC
+  `0x8000B650`. This selects `H-CoverageFailure` for s2126 and supplies no
+  evidence for or against the drain contract. No audio, wait, task, or guard
+  behavior changed.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 drain in-loop tick A/B.** The s2125 phase-repaired pump pair
-   selected `H-PumpIrrelevant` only at the sampled route and left the
-   current pump, waits, and guards unchanged. Run the next A10 comparison
-   with `ROGUESQ_SPIN_YIELD=1` in both arms, holding the audio
-   implementation fixed: default drain tick versus
-   `ROGUESQ_DRAIN_INLOOP_TICK=0`. Require title/hangar controls, a named
-   status writer, drain return/iteration, and worker/status transitions in
-   both arms before interpreting a split. A timeout or forced-idle row is
-   failure evidence, not a successful contract.
+1. **M5 drain in-loop tick A/B — phase-repaired retry.** The s2125
+   phase-repaired pump pair selected `H-PumpIrrelevant` only at the sampled
+   route and left the current pump, waits, and guards unchanged. The s2126
+   `run_mission_keys.sh` pair and its `tools/probe.sh` treatment retry both
+   failed treatment coverage at VI 640, so they select no drain hypothesis.
+   Re-run A10 with the phase-gated `tools/probe.sh` recipe in
+   `scratch/agent/NEXT.md`, keeping the audio implementation and pump fixed.
+   Require title/hangar controls, a named status writer, drain
+   return/iteration, and worker/status transitions in both arms before
+   interpreting a split. A timeout, pre-target crash, or forced-idle row is
+   coverage/failure evidence, not a successful contract.
 2. **Generated-symbol renaming sweep.** After the remaining M5 contract
    steps are parked or closed, M5's port census selected
    `H-PortKeyOnNormal` and leaves all audio guards unchanged. Resume the
