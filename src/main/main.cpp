@@ -76,6 +76,17 @@ extern "C" void rs64_audio_route_set(const char* arm, uint32_t phase,
                                        uint32_t width, uint32_t origin,
                                        uint32_t ordinal, uint32_t row,
                                        int exit_reason);
+extern "C" void rs64_audio_join_image_stage(const char* arm,
+                                               uint32_t ordinal, uint32_t row,
+                                               uint32_t phase, uint32_t width,
+                                               uint32_t origin, uint32_t stage,
+                                               uint32_t dest, uint32_t len,
+                                               uint32_t fnv, uint32_t nonzero,
+                                               uint32_t dest_valid);
+extern "C" void rs64_audio_join_image_complete(const char* arm,
+                                                  uint32_t ordinal, uint32_t row,
+                                                  uint32_t phase, uint32_t width,
+                                                  uint32_t origin);
 
 // Wrapper: captures rdram into the watchdog global on first call so the
 // hwbp/poll diagnostic threads can attach. Forwards to the real entrypoint.
@@ -410,6 +421,17 @@ static void rs64_audio_hash_dmem(uint32_t addr, uint32_t len,
     }
 }
 
+static void rs64_audio_hash_dmem_dma(uint32_t addr, uint32_t len,
+                                     uint32_t& fnv, uint32_t& nonzero) {
+    fnv = 2166136261u;
+    nonzero = 0;
+    for (uint32_t i = 0; i < len; ++i) {
+        const uint8_t b = dmem[((addr + (i ^ 3u)) & 0xFFFu) ^ 3u];
+        fnv = (fnv * 16777619u) ^ b;
+        nonzero += b != 0;
+    }
+}
+
 static void rs64_audio_hash_rdram(const uint8_t* rdram, uint32_t addr,
                                    uint32_t len, uint32_t& fnv,
                                    uint32_t& nonzero, bool& valid) {
@@ -451,16 +473,25 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
         rs64_audio_hash_rdram(rdram, dest & 0xFFFFF8u, dest_len,
                                dest_fnv, dest_nz, dest_valid);
     }
+    uint32_t dma_fnv_a = fnv_a, dma_nz_a = nz_a;
+    if (stage >= 2) {
+        rs64_audio_hash_dmem_dma(dmem_a, len_a, dma_fnv_a, dma_nz_a);
+        rs64_audio_join_image_stage(
+            route.arm, route.ordinal, route.row, route.phase, route.width,
+            route.origin, stage, (dest & 0xFFFFF8u) & 0x007FFFFFu, dest_len,
+            dma_fnv_a, dma_nz_a,
+            dest_valid ? 1u : 0u);
+    }
     std::fprintf(stderr,
         "[audtask-image-stage] arm=%s ordinal=%u row=%u phase=%u width=%u"
         " origin=0x%06X stage=%u r2=0x%03X field348=0x%08X field44=0x%08X"
         " dest=0x%08X dmem_a=0x%03X len_a=0x%X fnv_a=%08X nz_a=%u"
         " dmem_b=0x%03X len_b=0x%X fnv_b=%08X nz_b=%u"
-        " dest_valid=%u dest_fnv=%08X dest_nz=%u\n",
+        " dma_fnv_a=%08X dma_nz_a=%u dest_valid=%u dest_fnv=%08X dest_nz=%u\n",
         route.arm, route.ordinal, route.row, route.phase, route.width,
         route.origin, stage, r2, field348, field44, dest, dmem_a, len_a,
-        fnv_a, nz_a, dmem_b, len_b, fnv_b, nz_b, dest_valid ? 1u : 0u,
-        dest_fnv, dest_nz);
+        fnv_a, nz_a, dmem_b, len_b, fnv_b, nz_b, dma_fnv_a, dma_nz_a,
+        dest_valid ? 1u : 0u, dest_fnv, dest_nz);
     std::fflush(stderr);
 }
 
@@ -475,6 +506,8 @@ static void rs64_log_audio_return(const char* arm, RspExitReason reason) {
                 route.row, (int)reason);
         fflush(stderr);
     }
+    rs64_audio_join_image_complete(route.arm, route.ordinal, route.row,
+                                   route.phase, route.width, route.origin);
     rs64_audio_route_set(arm, route.phase, route.width, route.origin,
                          route.ordinal, route.row,
                          static_cast<int>(reason));

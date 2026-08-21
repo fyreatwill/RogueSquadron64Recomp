@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2101 (2026-08-20);
-behavioral and source evidence is current through s2101.
+for exact commands and probe rows. Maintained in Session 2102 (2026-08-20);
+behavioral and source evidence is current through s2102.
 
 ## Current state
 
@@ -56,6 +56,18 @@ behavioral and source evidence is current through s2101.
   s2100's hangar task. It retains the port-only destination boundary and
   authorizes no output-routing, task-field, canary, gate, wait, guard, queue,
   or default-dispatch change.
+- s2102 added a host-only, regeneration-stable stage-2/stage-3 join to the
+  existing PCM source/consumer event stream. The first route-qualified A/B
+  produced two nonzero hangar stage-2 rows (`0x167650`/`0x167950`, nonzero
+  counts `621`/`639`), but its stage FNV was in logical DMEM byte order
+  while DMA/PCM hashes are in host RDRAM byte order; those rows are not
+  admissible for an exact PCM conclusion. The corrected comparator passed a
+  zero-payload stage-to-DMA control (`FNV 0xF59C39C5` on both sides) in the
+  final route-qualified pair, whose treatment reached title and hangar but
+  emitted no nonzero corrected stage row before its later crash. The
+  target-phase PCM source/consumer controls fired, but the nonzero
+  stage-to-PCM discriminator remains unevaluable. No output routing, task
+  field, canary, gate, wait, guard, queue policy, or default dispatch changed.
 - s2088's fixed retail oracle run passed the whole-RDRAM positive control
   (`102276129` writes), reached title `1024 @ 0x00790400` and hangar
   `512 @ 0x006AB400`, and sampled both exact candidate writers after the
@@ -285,22 +297,21 @@ behavioral and source evidence is current through s2101.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 image-task destination/consumer boundary.** `H-InputZero` is selected
-   only at the title scope. s2100's table proves that the treatment can carry
-   nonzero source through the transform into nonzero `0x6F0` DMA payloads in
-   hangar, while the existing PCM consumer join remains incomplete and the
-   final `0xCB0` block is zero in the observed sample. s2101's single-source
-   retail oracle result found no phase-gated writes to either sampled exact
-   destination range; its lifetime hits were pre-target initialization by
-   `0x800078EC`. The next unit is one bounded port-side stage-to-consumer
-   join for image stages 2/3 and the PCM callback, keyed by task ordinal and
-   VI phase plus exact destination, length, FNV, nonzero count, and event
-   order. An exact post-task stage-to-consumer match selects
-   `H-ImageDestIsPCM`; a nonzero stage with a different callback address or
-   no match selects `H-ABI-Destination`/`H-ConsumerDifferentField`; an exact
-   address with no valid post-task consumer preserves the host callback
-   boundary. Do not change output routing, task fields, canary, gate, wait,
-   guard, queue policy, or default dispatch.
+1. **M5 corrected nonzero image-stage/PCM boundary.** `H-InputZero` remains
+   title-scoped only. s2100's table and the first s2102 A/B show that a
+   treatment can carry nonzero data through the transform and into hangar
+   stage-2/DMA work, but the first stage-to-PCM join used the wrong byte-order
+   hash and cannot distinguish a match. The corrected final pair validated
+   the stage-to-DMA hash on a zero-payload control and reached both target VIs,
+   but no nonzero corrected stage row occurred before the treatment crash.
+   The next unit is one same-build A/B collection using the corrected join,
+   with the route positive controls and a phase-gated nonzero hangar stage as
+   the admission condition. A corrected nonzero stage-to-DMA match followed
+   by an exact PCM consumer match selects `H-ImageDestIsPCM`; a corrected
+   nonzero stage-to-DMA match with no PCM match selects
+   `H-ABI-Destination`/`H-ConsumerDifferentField`; no corrected nonzero
+   stage leaves the unit unevaluable. Do not change output routing, task
+   fields, canary, gate, wait, guard, queue policy, or default dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -656,9 +667,22 @@ positive control and both target VI gates. The exact ranges received 2304 and
 phase-gated post-store samplers had zero target-phase samples. Final snapshots
 were nonzero, so the ranges are not untouched; the qualified result is that
 their writes precede the title/hangar gate. This is single-source oracle
-evidence, not a complete ABI explanation. The next discriminator is a
-port-side stage-to-consumer join keyed by exact destination and payload
-identity.
+evidence, not a complete ABI explanation.
+
+s2102's first route-qualified same-build A/B added the host-only image-stage to
+PCM join and recorded `9853` target-stage rows. It also found two nonzero
+hangar stage-2 rows at `0x167650` and `0x167950` with nonzero counts
+`621` and `639`, but the stage FNV used logical DMEM byte order while the
+existing DMA/PCM hashes use host RDRAM byte order. That failed identity arm is
+not evidence for or against an exact PCM consumer match. The scope-key decode
+was also corrected after its first summary mixed phase and width.
+
+The corrected final pair passed the zero-payload stage-to-DMA control with
+FNV `0xF59C39C5` on both stage and DMA rows, and both arms reached title and
+hangar. The treatment emitted no nonzero corrected stage row before its later
+crash, although target-phase PCM source/consumer controls fired. The next
+discriminator is one same-build A/B that captures a nonzero corrected hangar
+stage; exact stage-to-PCM identity and post-task ordering remain unevaluable.
 
 ## Method and safety rules
 

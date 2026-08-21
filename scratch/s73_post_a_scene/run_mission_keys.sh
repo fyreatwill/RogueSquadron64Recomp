@@ -63,7 +63,7 @@ cur_width() {
 
 snap() {
     [[ -n "$WID" ]] || return
-    /usr/sbin/screencapture -x -o -l"$WID" "$OUTDIR/$1.png" 2>/dev/null
+    /opt/homebrew/bin/python3 -c 'import subprocess,sys; subprocess.run(sys.argv[1:], check=False, timeout=5)' -- /usr/sbin/screencapture -x -o -l"$WID" "$OUTDIR/$1.png" 2>/dev/null
 }
 
 print "waiting for VI width 1024 (timeout 600s)"

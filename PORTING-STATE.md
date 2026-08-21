@@ -99844,6 +99844,7 @@ was made.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
 
+
 ## Session 2098 (2026-08-20) — audited Factor 5 audio writeback source paths
 
 Step 0 measured `docs/CURRENT-TRUTH.md` at 38573 bytes, so this was not a
@@ -100066,6 +100067,47 @@ the pre-target retail writer's semantic role. The next discriminator is a
 port-side stage-2/stage-3 to PCM source/consumer join keyed by exact
 destination and payload identity. No runtime behavior, task field, output
 routing, canary, gate, wait, guard, queue policy, or default dispatch changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-task-contract`.
+
+## Session 2102 (2026-08-20) — joined image stages to PCM callbacks
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 45564 bytes, so this was not a
+maintenance iteration. The M5 work unit added a host-only,
+regeneration-stable join for image stages 2 (`0x6F0`) and 3 (`0xCB0`)
+to the existing PCM source/consumer event stream. The build completed, and
+the required submodule patch export was refreshed. No generated output or
+task/output behavior was changed.
+
+The first route-qualified same-build A/B reached title and hangar in both
+arms. The treatment emitted `9853` target image-stage rows and two nonzero
+hangar stage-2 rows at `0x167650` and `0x167950` with nonzero counts
+621 and 639. That result was rejected for exact PCM inference: the stage
+FNV was computed in logical DMEM byte order, while the existing DMA/PCM
+identity used host RDRAM byte order. The initial summary also decoded a
+packed phase/width scope key incorrectly; both instrument defects were
+fixed before the final pair.
+
+The corrected final pair again reached both target VIs. Its stage and DMA
+logs agreed on the zero-payload control FNV `0xF59C39C5`, validating the
+corrected byte-order comparator at that control. The treatment produced no
+nonzero corrected stage row before its later crash, while target-phase PCM
+source and consumer controls fired. Therefore no exact stage-to-PCM match,
+stage-only nonzero result, or ordering conclusion is admissible. The control
+capture helper stalled in `screencapture` in several retries; the affected
+process groups were terminated with SIGKILL, and the helper was then bounded
+with a five-second Python subprocess timeout for the next run. The retries
+with a pre-title crash or without a hangar marker were not used as A/B
+evidence.
+
+This rules out only the initial logical-vs-host FNV and scope-key instrument
+defects. It does not rule out `H-ImageDestIsPCM` or
+`H-ABI-Destination`. The next discriminator is a same-build pair that
+reproduces a corrected nonzero hangar stage. No output routing, task field,
+canary, gate, wait, guard, queue policy, or default dispatch changed.
 
 ### Next
 

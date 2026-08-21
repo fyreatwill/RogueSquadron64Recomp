@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..5bf22df 100644
+index b0d6bef..a693bbc 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -22,7 +22,7 @@ index b0d6bef..5bf22df 100644
  
  #include "rsp_vu.hpp"
  #include "recomp.h"
-@@ -94,6 +95,26 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,6 +95,37 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -45,11 +45,22 @@ index b0d6bef..5bf22df 100644
 +extern "C" void rs64_probe_audio_dma_write(uint8_t* rdram,
 +                                              uint32_t dram_addr, uint32_t len,
 +                                              uint32_t dmem_addr);
++extern "C" void rs64_audio_join_image_stage(const char* arm,
++                                               uint32_t ordinal, uint32_t row,
++                                               uint32_t phase, uint32_t width,
++                                               uint32_t origin, uint32_t stage,
++                                               uint32_t dest, uint32_t len,
++                                               uint32_t fnv, uint32_t nonzero,
++                                               uint32_t dest_valid);
++extern "C" void rs64_audio_join_image_complete(const char* arm,
++                                                  uint32_t ordinal, uint32_t row,
++                                                  uint32_t phase, uint32_t width,
++                                                  uint32_t origin);
 +
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
      rd_len += 1; // Read length is inclusive
      dram_addr &= 0xFFFFF8;
-@@ -101,11 +122,98 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -101,11 +133,98 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
      // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
      // the recompiled ucode running as C — silently skip so it doesn't corrupt
      // DMEM at the masked offset.
@@ -149,7 +160,7 @@ index b0d6bef..5bf22df 100644
      for (uint32_t i = 0; i < rd_len; i++) {
          RSP_MEM_B(i, dmem_addr) = MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000));
      }
-@@ -121,9 +229,11 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -121,9 +240,11 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
@@ -481,7 +492,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..c8b56c8 100644
+index 1cb3f6a..3bbc156 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -495,7 +506,7 @@ index 1cb3f6a..c8b56c8 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,394 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,649 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -644,10 +655,35 @@ index 1cb3f6a..c8b56c8 100644
 +    bool reported = false;
 +};
 +
++struct AudioImageStage {
++    const char* arm;
++    uint32_t ordinal;
++    uint32_t row;
++    uint32_t phase;
++    uint32_t width;
++    uint32_t origin;
++    uint32_t stage;
++    uint32_t dest;
++    uint32_t len;
++    uint32_t fnv;
++    uint32_t nonzero;
++    bool dest_valid;
++    uint64_t stage_event;
++    uint64_t complete_event = 0;
++    int source_pcm = -1;
++    int consumer_pcm = -1;
++    int reported_source_pcm = -2;
++    int reported_consumer_pcm = -2;
++    uint64_t reported_complete_event = 0;
++};
++
 +static std::atomic<uint64_t> g_audio_join_event{1};
 +static std::mutex g_audio_join_mutex;
 +static std::vector<AudioJoinPcm> g_audio_join_pcm;
 +static std::vector<AudioJoinTask> g_audio_join_tasks;
++static std::vector<AudioImageStage> g_audio_image_stages;
++static uint64_t g_audio_image_scope_key = UINT64_MAX;
++static uint32_t g_audio_image_consumer_only = 0;
 +
 +static uint64_t audio_join_next_event() {
 +    return g_audio_join_event.fetch_add(1, std::memory_order_relaxed);
@@ -658,6 +694,234 @@ index 1cb3f6a..c8b56c8 100644
 +    return range.dram == (pcm.rdram & 0x007FFFFFu) &&
 +           range.len == pcm.bytes &&
 +           range.payload_fnv == pcm.fnv && range.payload_nz == pcm.nonzero;
++}
++
++static bool audio_image_match(const AudioImageStage& stage,
++                              const AudioJoinPcm& pcm) {
++    return stage.nonzero != 0 && stage.dest_valid &&
++           pcm.phase == stage.phase &&
++           stage.dest == (pcm.rdram & 0x007FFFFFu) &&
++           stage.len == pcm.bytes && stage.fnv == pcm.fnv &&
++           stage.nonzero == pcm.nonzero;
++}
++
++static void audio_image_report_locked(AudioImageStage& stage) {
++    if (stage.complete_event == 0 && stage.source_pcm < 0 &&
++        stage.consumer_pcm < 0) return;
++    if (stage.reported_complete_event == stage.complete_event &&
++        stage.reported_source_pcm == stage.source_pcm &&
++        stage.reported_consumer_pcm == stage.consumer_pcm) return;
++
++    const AudioJoinPcm* source = stage.source_pcm >= 0 ?
++        &g_audio_join_pcm[stage.source_pcm] : nullptr;
++    const AudioJoinPcm* consumer = stage.consumer_pcm >= 0 ?
++        &g_audio_join_pcm[stage.consumer_pcm] : nullptr;
++    const bool exact_consumer = consumer != nullptr;
++    const bool stage_only = source == nullptr && consumer == nullptr;
++    const bool completion_before_source = source != nullptr &&
++        stage.complete_event != 0 && stage.complete_event < source->event;
++    const bool completion_before_consumer = consumer != nullptr &&
++        stage.complete_event != 0 && stage.complete_event < consumer->event;
++    const bool source_before_consumer = source != nullptr && consumer != nullptr &&
++        source->event < consumer->event;
++    const bool ordering_violation = stage.complete_event != 0 &&
++        (stage.complete_event <= stage.stage_event ||
++         (source != nullptr && !completion_before_source) ||
++         (consumer != nullptr && !completion_before_consumer) ||
++         (source != nullptr && consumer != nullptr && !source_before_consumer));
++
++    const char* classification = stage_only ? "stage-only" :
++        (exact_consumer ? "stage-consumer-match" : "stage-source-only");
++    fprintf(stderr,
++            "[audtask-image-join] arm=%s ordinal=%u row=%u phase=%u"
++            " width=%u origin=0x%06X stage=%u stage_event=%" PRIu64
++            " complete_event=%" PRIu64 " dest=0x%06X len=0x%X"
++            " stage_fnv=%08X stage_nz=%u dest_valid=%u classification=%s"
++            " source_event=%" PRIu64 " source_n=%u source_bytes=%u"
++            " source_fnv=%08X source_nz=%u consumer_event=%" PRIu64
++            " consumer_n=%u consumer_bytes=%u consumer_fnv=%08X"
++            " consumer_nz=%u completion_before_source=%d"
++            " completion_before_consumer=%d source_before_consumer=%d"
++            " ordering_violation=%d\n",
++            stage.arm, stage.ordinal, stage.row, stage.phase, stage.width,
++            stage.origin, stage.stage, stage.stage_event, stage.complete_event,
++            stage.dest, stage.len, stage.fnv, stage.nonzero,
++            stage.dest_valid ? 1u : 0u, classification,
++            source ? source->event : 0, source ? source->n : 0,
++            source ? source->bytes : 0, source ? source->fnv : 0,
++            source ? source->nonzero : 0, consumer ? consumer->event : 0,
++            consumer ? consumer->n : 0, consumer ? consumer->bytes : 0,
++            consumer ? consumer->fnv : 0, consumer ? consumer->nonzero : 0,
++            completion_before_source ? 1 : 0,
++            completion_before_consumer ? 1 : 0,
++            source_before_consumer ? 1 : 0, ordering_violation ? 1 : 0);
++    fflush(stderr);
++    stage.reported_complete_event = stage.complete_event;
++    stage.reported_source_pcm = stage.source_pcm;
++    stage.reported_consumer_pcm = stage.consumer_pcm;
++}
++
++static void audio_image_summary_locked() {
++    if (g_audio_image_scope_key == UINT64_MAX) return;
++    size_t nonzero = 0;
++    size_t source_matches = 0;
++    size_t consumer_matches = 0;
++    size_t stage_only = 0;
++    size_t ordering_violations = 0;
++    for (const AudioImageStage& stage : g_audio_image_stages) {
++        if (stage.nonzero == 0) continue;
++        ++nonzero;
++        if (stage.source_pcm >= 0) ++source_matches;
++        if (stage.consumer_pcm >= 0) ++consumer_matches;
++        if (stage.complete_event != 0 && stage.source_pcm < 0 &&
++            stage.consumer_pcm < 0) ++stage_only;
++        const AudioJoinPcm* source = stage.source_pcm >= 0 ?
++            &g_audio_join_pcm[stage.source_pcm] : nullptr;
++        const AudioJoinPcm* consumer = stage.consumer_pcm >= 0 ?
++            &g_audio_join_pcm[stage.consumer_pcm] : nullptr;
++        if (stage.complete_event != 0 &&
++            (stage.complete_event <= stage.stage_event ||
++             (source && stage.complete_event >= source->event) ||
++             (consumer && stage.complete_event >= consumer->event) ||
++             (source && consumer && source->event >= consumer->event))) {
++            ++ordering_violations;
++        }
++    }
++    const uint32_t phase = static_cast<uint32_t>(g_audio_image_scope_key >> 40);
++    const uint32_t width = static_cast<uint32_t>((g_audio_image_scope_key >> 24) & 0xFFFFu);
++    const uint32_t origin = static_cast<uint32_t>(g_audio_image_scope_key & 0xFFFFFFu);
++    fprintf(stderr,
++            "[audtask-image-summary] phase=%u width=%u origin=0x%06X"
++            " stage_rows=%zu nonzero_stage_rows=%zu source_matches=%zu"
++            " consumer_matches=%zu stage_only=%zu"
++            " consumer_only_observed=%u ordering_violations=%zu\n",
++            phase, width, origin, g_audio_image_stages.size(), nonzero,
++            source_matches, consumer_matches, stage_only,
++            g_audio_image_consumer_only, ordering_violations);
++    fflush(stderr);
++}
++
++static void audio_image_scope_locked(uint32_t phase, uint32_t width,
++                                     uint32_t origin) {
++    const uint64_t key = (static_cast<uint64_t>(phase) << 40) |
++        (static_cast<uint64_t>(width) << 24) | (origin & 0xFFFFFFu);
++    if (key == g_audio_image_scope_key) return;
++    audio_image_summary_locked();
++    g_audio_image_scope_key = key;
++    g_audio_image_stages.clear();
++    g_audio_image_consumer_only = 0;
++}
++
++static void audio_image_match_stage_locked(AudioImageStage& stage) {
++    auto choose = [&](bool source_kind, int& slot) {
++        if (slot >= 0) return;
++        int best = -1;
++        uint64_t best_distance = UINT64_MAX;
++        for (size_t i = 0; i < g_audio_join_pcm.size(); ++i) {
++            const AudioJoinPcm& pcm = g_audio_join_pcm[i];
++            if (pcm.source != source_kind || !audio_image_match(stage, pcm)) continue;
++            const uint64_t distance = pcm.event > stage.stage_event ?
++                pcm.event - stage.stage_event : stage.stage_event - pcm.event;
++            if (distance < best_distance) {
++                best = static_cast<int>(i);
++                best_distance = distance;
++            }
++        }
++        if (best >= 0) slot = best;
++    };
++    choose(true, stage.source_pcm);
++    choose(false, stage.consumer_pcm);
++    audio_image_report_locked(stage);
++}
++
++static void audio_image_match_pcm_locked(size_t pcm_index) {
++    const AudioJoinPcm& pcm = g_audio_join_pcm[pcm_index];
++    int best = -1;
++    uint64_t best_distance = UINT64_MAX;
++    for (size_t i = 0; i < g_audio_image_stages.size(); ++i) {
++        AudioImageStage& stage = g_audio_image_stages[i];
++        int& slot = pcm.source ? stage.source_pcm : stage.consumer_pcm;
++        if (slot >= 0 || !audio_image_match(stage, pcm)) continue;
++        const uint64_t distance = pcm.event > stage.stage_event ?
++            pcm.event - stage.stage_event : stage.stage_event - pcm.event;
++        if (distance < best_distance) {
++            best = static_cast<int>(i);
++            best_distance = distance;
++        }
++    }
++    if (best >= 0) {
++        AudioImageStage& stage = g_audio_image_stages[best];
++        if (pcm.source) stage.source_pcm = static_cast<int>(pcm_index);
++        else stage.consumer_pcm = static_cast<int>(pcm_index);
++        audio_image_report_locked(stage);
++    } else if (!pcm.source && pcm.nonzero != 0 &&
++               !g_audio_image_stages.empty()) {
++        ++g_audio_image_consumer_only;
++        if (g_audio_image_consumer_only <= 40 ||
++            (g_audio_image_consumer_only % 128) == 0) {
++            fprintf(stderr,
++                    "[audtask-image-consumer-only] event=%" PRIu64
++                    " phase=%u width=%u origin=0x%06X n=%u guest=0x%06X"
++                    " bytes=%u fnv=%08X nz=%u\n",
++                    pcm.event, pcm.phase, pcm.width, pcm.origin, pcm.n,
++                    pcm.rdram & 0x007FFFFFu, pcm.bytes, pcm.fnv,
++                    pcm.nonzero);
++            fflush(stderr);
++        }
++    }
++}
++
++extern "C" void rs64_audio_join_image_stage(const char* arm,
++                                               uint32_t ordinal, uint32_t row,
++                                               uint32_t phase, uint32_t width,
++                                               uint32_t origin, uint32_t stage,
++                                               uint32_t dest, uint32_t len,
++                                               uint32_t fnv, uint32_t nonzero,
++                                               uint32_t dest_valid) {
++    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
++    audio_image_scope_locked(phase, width, origin);
++    if ((stage != 2 && stage != 3) || len == 0 ||
++        g_audio_image_stages.size() >= 8192) return;
++    AudioImageStage image{};
++    image.arm = arm;
++    image.ordinal = ordinal;
++    image.row = row;
++    image.phase = phase;
++    image.width = width;
++    image.origin = origin;
++    image.stage = stage;
++    image.dest = dest & 0x007FFFFFu;
++    image.len = len;
++    image.fnv = fnv;
++    image.nonzero = nonzero;
++    image.dest_valid = dest_valid != 0;
++    image.stage_event = audio_join_next_event();
++    g_audio_image_stages.push_back(image);
++    AudioImageStage& registered = g_audio_image_stages.back();
++    audio_image_match_stage_locked(registered);
++    fprintf(stderr,
++            "[audtask-image-stage-row] arm=%s ordinal=%u row=%u phase=%u"
++            " width=%u origin=0x%06X stage=%u event=%" PRIu64
++            " dest=0x%06X len=0x%X fnv=%08X nz=%u dest_valid=%u\n",
++            arm, ordinal, row, phase, width, origin, stage,
++            registered.stage_event, registered.dest, len, fnv, nonzero,
++            registered.dest_valid ? 1u : 0u);
++    fflush(stderr);
++}
++
++extern "C" void rs64_audio_join_image_complete(const char* arm,
++                                                  uint32_t ordinal, uint32_t row,
++                                                  uint32_t phase, uint32_t width,
++                                                  uint32_t origin) {
++    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
++    audio_image_scope_locked(phase, width, origin);
++    const uint64_t complete_event = audio_join_next_event();
++    for (AudioImageStage& stage : g_audio_image_stages) {
++        if (stage.ordinal != ordinal || stage.phase != phase ||
++            stage.row != row || std::strcmp(stage.arm, arm) != 0) continue;
++        stage.complete_event = complete_event;
++        audio_image_report_locked(stage);
++    }
 +}
 +
 +static void audio_join_report_locked(AudioJoinTask& task) {
@@ -814,6 +1078,7 @@ index 1cb3f6a..c8b56c8 100644
 +                                     uint32_t samples, uint32_t bytes,
 +                                     uint32_t fnv, uint32_t nonzero) {
 +    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
++    audio_image_scope_locked(phase, width, origin);
 +    AudioJoinPcm pcm{};
 +    pcm.source = std::strcmp(kind, "source") == 0;
 +    pcm.event = audio_join_next_event();
@@ -834,6 +1099,7 @@ index 1cb3f6a..c8b56c8 100644
 +            kind, pcm.event, n, phase, width, origin, rdram, samples, bytes,
 +            fnv, nonzero);
 +    audio_join_match_pcm_locked(g_audio_join_pcm.size() - 1);
++    audio_image_match_pcm_locked(g_audio_join_pcm.size() - 1);
 +}
 +
 +static bool audio_dma_overlaps(uint32_t dram, uint32_t len, int32_t ptr,
@@ -890,7 +1156,7 @@ index 1cb3f6a..c8b56c8 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +434,218 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +689,218 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
