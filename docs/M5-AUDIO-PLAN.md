@@ -143,12 +143,17 @@ explicit control arm.
    `musyxSynthFrame` and `osAiSetNextBuffer` in the same run. s2135 mapped the
    retail RSP image to the existing `factor5b_rsp.toml` pair and mapped MORT
    to the separate 546-entry `speech` asset consumed by CPU voice routines;
-   no new MORT RSPRecomp config is justified by the static boundary. The next
-   work unit is a retail task-buffer census for `data_ptr`, `data_size`,
-   `output_buff`, and `data_ptr+0x100`, followed only after that table by a
-   known-MORT sample decode with byte-count and waveform checks. Positive
-   control is the oracle whole-RDRAM watch plus a qualified audio-task row;
-   rollback remains leaving the existing RSP dispatch arm opt-in.
+   no new MORT RSPRecomp config is justified by the static boundary. The
+   s2136 retail oracle census passed its whole-RDRAM control, reached title
+   and hangar, observed `ucode=0x80099FE0`, `ucode_data=0x800A4E00`, nonzero
+   `data_ptr`/`data_size`, and zero writes to both output-buffer fields. This
+   selects `H-RetailTaskMatchesFactor5b` at the task-field boundary. The next
+   work unit is a same-build stub/image port ABI and DMA comparison, followed
+   only after that table by a known-MORT sample decode with byte-count and
+   waveform checks. The retail `data_ptr+0x100` write itself was not watched
+   in s2136 and remains open. Positive control is the oracle whole-RDRAM watch
+   plus target-phase port controls; rollback remains leaving the existing RSP
+   dispatch arm opt-in.
 
 No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
 or treat a forced-idle/skip/yield as an explanation.

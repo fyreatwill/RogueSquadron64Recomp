@@ -101344,3 +101344,39 @@ task ABI, wait, guard, or default-arm behavior changed.
 ORIGIN: no mitigation or game-value machinery was added; this session only
 recorded static ROM/config/decomp boundaries and the next retail task-buffer
 contract census.
+
+## Session 2136 (2026-08-21) — established the retail task-field contract
+
+HYPOTHESIS-ID: m5-task-buffer-contract
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `42,054` bytes, so this was not a
+maintenance iteration. The prescribed work unit was one independent
+retail-oracle census; it ran no build, port process, runtime instrument, or
+soak. The oracle ran the retail ROM for 60.2 seconds, reached 3,575 VI
+callbacks, and passed its independent whole-RDRAM positive control with
+`45,200` writes after the `10,000`-callback threshold removed that watch.
+
+The run reached the qualified title transition `WIDTH 640 -> 1024` at
+origin `0x00790400` and the hangar transition `WIDTH 1024 -> 512` at origin
+`0x006AB400`. The full `aspTask` watch at physical `0x149470..0x1494B0`
+recorded `3,520` writes to each of the four watched field pairs. Its bounded
+post-value table supplied 256 samples each for `ucode`, `ucode_data`,
+`data_ptr`, and `data_size`: `ucode=0x80099FE0` at writer PC `0x8009173C`,
+`ucode_data=0x800A4E00` at `0x80091758`, `data_ptr=0x80173B20` or
+`0x80171CE0` at `0x8009177C`, and `data_size=2` or `1` at `0x80091784`.
+The two output-buffer watches had zero samples and zero writes across the
+same run. The execution watches at `0x8008E904` and `0x80091EB0` fired once
+and five times respectively, providing the qualified task-route controls.
+
+This selects `H-RetailTaskMatchesFactor5b` at the task-field boundary and
+rejects `H-RetailOutputBuffContract` and `H-RetailTaskBoundaryUnresolved` for
+the covered retail route. It is an independent retail line combined with
+the s2135 static image mapping; it does not dynamically observe each
+retail `data_ptr+0x100` destination, so that downstream edge remains open
+for the next same-build port comparison. It supplies no evidence for a new
+MORT RSP segment, no output-route or task-field rewrite, and no default-arm
+change. The exact captured output is in
+`scratch/agent/oracle_s2136.log`.
+
+ORIGIN: no mitigation or game-value machinery was added; this session only
+captured independent retail task-field values and phase-qualified controls.

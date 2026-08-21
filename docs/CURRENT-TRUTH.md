@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2135
-(2026-08-21); behavioral and source evidence is current through s2135.
+authoritative for exact commands and probe rows. Maintained in Session 2136
+(2026-08-21); behavioral and source evidence is current through s2136.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -36,6 +36,19 @@ This file is intentionally compact. The s2080–s2108 archive is in
   `0x583D90..0x8A1174`, containing 546 MORT descriptors consumed by the
   named CPU voice path. This rejects a new MORT RSP segment at the current
   source/config boundary; no runtime dispatch or default-arm change follows.
+- The s2136 retail task-buffer census passed its independent whole-RDRAM
+  positive control (`45,200` writes after the threshold), reached title VI
+  `1024 @ 0x00790400` and hangar VI `512 @ 0x006AB400`, and supplied 256
+  post-store samples for each watched task field. The fixed `aspTask` fields
+  were `ucode=0x80099FE0`, `ucode_data=0x800A4E00`, nonzero `data_ptr` values
+  `0x80173B20`/`0x80171CE0`, and `data_size` values `2`/`1`; both
+  `output_buff` fields had zero writes. This selects
+  `H-RetailTaskMatchesFactor5b` at the task-field boundary and rejects
+  `H-RetailOutputBuffContract` and `H-RetailTaskBoundaryUnresolved` for the
+  covered route. The run did not dynamically watch each retail
+  `data_ptr+0x100` destination, so that downstream edge remains an explicit
+  validation item; no port task-field, output-routing, RSP-config, or
+  default-arm change follows.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -321,14 +334,17 @@ The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
 1. **M5 task-buffer contract validation.** The s2135 static census selected
-   `H-ExistingFactor5ConfigMatches`: `factor5b_rsp.toml` already maps the
-   retail `aspMainText`/`aspMainData` pair, while the 546-sample MORT speech
-   asset is consumed by the CPU voice path. The next unit is a retail-grounded
-   task-buffer census: map one qualified `M_AUDTASK`'s `data_ptr`,
-   `data_size`, `output_buff`, and `data_ptr+0x100` input/output ranges, then
-   compare that table with the existing opt-in image arm. No new RSP config,
-   runtime dispatch, task-field rewrite, or default-arm change is authorized
-   until the retail table selects the ABI.
+   `H-ExistingFactor5ConfigMatches`, and s2136's independent retail census
+   selected `H-RetailTaskMatchesFactor5b` at the task-field boundary:
+   `ucode=0x80099FE0`, `ucode_data=0x800A4E00`, nonzero `data_ptr`/`data_size`,
+   and no `output_buff` writes across title and hangar. The next unit is a
+   same-build port A/B of the existing `musyx_stub` and opt-in
+   `factor5_ucode_b` arms, comparing the phase-keyed `[audtask-abi]` and
+   `[audtask-dma-range]` table against that retail row and checking whether
+   the image's `data_ptr+0x100` ranges are the observed PCM boundary. The
+   retail downstream `data_ptr+0x100` edge was not dynamically watched in
+   s2136 and remains open. No task-field rewrite, output-route change, new
+   RSP config, or default-arm change is authorized.
 2. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
    three consecutive coverage-only results under the same hypothesis; the
    current renderer boundary supplies no new discriminator. The first sweep
@@ -439,7 +455,9 @@ rows are a measurement-coverage limitation, not a silent-PCM result. The
 image `break_pc=0x1328`, `exit=1`, canary failure, and `output_buff=0` remain
 the task boundary; no host/task/default change is authorized. The s2135 static
 census now identifies the existing RSP image and separate MORT speech asset;
-the next M5 unit is the retail-grounded task-buffer contract table.
+s2136's retail task-field table selects `H-RetailTaskMatchesFactor5b` at the
+covered task boundary. The next M5 unit is the same-build port stub/image ABI
+and DMA comparison; the retail `data_ptr+0x100` write remains unwatched.
 
 The s2134 retail oracle supplied the independent codec-side boundary. After
 the whole-RDRAM control and title/hangar gates, all seven named voice
@@ -448,8 +466,11 @@ decode/filter functions executed, as did `musyxSynthFrame` and
 retail route. The s2135 static census then identified the existing
 `factor5b_rsp.toml` image/task boundary and the separate `speech` asset. It
 does not prove that `factor5_ucode_b` is the MORT decoder or settle the
-runtime meaning of every task field; the next unit is the retail task-buffer
-contract table.
+runtime meaning of every task field. The s2136 retail task-field census
+selected `H-RetailTaskMatchesFactor5b`: the fixed image/data pair and
+nonzero `data_ptr`/`data_size` co-occurred with zero output-buffer writes.
+The next unit is the phase-keyed same-build port stub/image ABI and DMA table;
+retail `data_ptr+0x100` write observation remains open.
 
 ### M5 audio and guest gate
 
@@ -616,9 +637,12 @@ in the same run. This selects `H-RetailMORTDecoderLive` at the covered retail
 route. The s2135 static source/data census selected
 `H-ExistingFactor5ConfigMatches`: the existing `aspMainText`/`aspMainData`
 pair is the retail audio RSP image, and MORT samples are a separate speech
-asset consumed by CPU voice routines. The next unit is the retail-grounded
-task-buffer contract table, not a new RSP config, port dispatch change, the
-parked drain A/B, or the symbol sweep.
+asset consumed by CPU voice routines. The s2136 retail task-field census
+selected `H-RetailTaskMatchesFactor5b`: the fixed image/data pair and
+nonzero `data_ptr`/`data_size` co-occurred with zero output-buffer writes.
+The next unit is the same-build port stub/image ABI and DMA comparison, not a
+new RSP config, port dispatch change, the parked drain A/B, or the symbol
+sweep. Retail `data_ptr+0x100` write observation remains open.
 
 ## Method and safety rules
 

@@ -1,71 +1,58 @@
-# NEXT work unit (s2136) — retail task-buffer contract
+# NEXT work unit (s2137) — same-build port task ABI comparison
 
-HYPOTHESIS-ID: m5-task-buffer-contract
+HYPOTHESIS-ID: m5-port-task-contract
 
 ## Work unit
 
-Run one independent retail-oracle census of the fixed `aspTask` at physical
-`0x149470` before adding or changing any port instrumentation. Capture the
-qualified `M_AUDTASK` writes and the four task-field pairs that can split the
-existing `factor5b_rsp.toml` contract: `ucode`/`ucode_data`, `data_ptr`/
-`data_size`, and `output_buff`/`output_buff_size`. Use the same run's
-whole-RDRAM watch as the positive control, and phase-gate the target samples
-through title and hangar. No build, runtime change, task-field rewrite, new
-RSP config, or default-arm change is in scope.
+Run one same-build, two-arm port comparison of the existing `musyx_stub`
+control and opt-in `factor5_ucode_b` image arm. Use the phase-keyed existing
+`[audtask-abi]`, `[audtask-dma-range]`, `[pcm-boundary-source]`,
+`[pcm-boundary-consumer]`, and `[audio-return]` witnesses. Both arms must be
+launched in this iteration and both must pass the positive LLE/audio controls
+and reach title VI `1024 @ 0x00790400` plus hangar VI `512 @ 0x006AB400`.
+No task-field rewrite, output-route change, new RSP config, or default-arm
+change is in scope.
 
 ## Competing hypotheses and discriminator
 
-- `H-RetailTaskMatchesFactor5b`: after a qualified `runMusyXTaskLocked` call,
-  retail writes `aspTask.ucode=0x80099FE0` and `ucode_data=0x800A4E00`; the
-  meaningful buffer is `data_ptr`/`data_size`, with the generated image's
-  `data_ptr+0x100` output convention and `output_buff` unused or zero.
-- `H-RetailOutputBuffContract`: the retail task uses nonzero
-  `output_buff`/`output_buff_size` as the output consumed by AI/voice code;
-  the generated `data_ptr+0x100` write is not the final output contract.
-- `H-RetailCpuMORTBoundary`: the retail MORT descriptor/CPU voice path is
-  live, but no qualified `M_AUDTASK` field transition links it to the
-  factor5b data/output convention; the RSP image is not the MORT boundary to
-  validate next.
-- `H-RetailTaskBoundaryUnresolved`: the oracle run reaches the positive
-  control and task PCs but the fixed task rows are absent, conflicting, or
-  phase-unqualified, so no ABI conclusion is valid.
+- `H-PortTaskFieldsMatchRetail`: both arms receive the same task fields as the
+  retail table (`ucode=0x80099FE0`, `ucode_data=0x800A4E00`, nonzero
+  `data_ptr`/`data_size`, zero output buffer); the image's observed DMA range
+  at `data_ptr+0x100` and its phase-keyed PCM source/consumer join are the
+  meaningful output boundary.
+- `H-PortOutputBuffMismatch`: the image arm writes or consumes a nonzero
+  `output_buff` range, or its DMA rows overlap that field, unlike retail's
+  zero-write output-buffer contract.
+- `H-PortDataPtrMismatch`: the image arm has the retail task fields but its
+  source hash, DMA destination, or PCM join does not preserve the
+  `data_ptr+0x100` relationship.
+- `H-PortTaskComparisonUnresolved`: either arm misses a target phase or a
+  positive control, or the phase-keyed rows are absent/conflicting.
 
-The one discriminating table is keyed by `aspTask` field and phase: writer
-PC, post-store value, task ordinal, and whether the value equals the
-factor5b prediction. Select `H-RetailTaskMatchesFactor5b` only when the
-ucode/data image pair and `data_ptr+0x100` convention co-occur with a zero or
-unused output buffer. Select `H-RetailOutputBuffContract` only when the
-nonzero output buffer is the downstream audio buffer. Select
-`H-RetailCpuMORTBoundary` only when the MORT/CPU execution controls pass but
-the task rows show no factor5b output relationship. Otherwise select
-`H-RetailTaskBoundaryUnresolved` and do not change the port.
+The one discriminating table is keyed by arm, target phase, and audio row:
+all task fields, source hash/nonzero count, every dmem-to-RDRAM destination
+and overlap flag, image exit/break PC, and source/consumer PCM address,
+length, hash, and nonzero count. Select the first hypothesis only if both
+arms have target controls and the image rows preserve the retail field
+contract plus `data_ptr+0x100` output relation. Select the output-buffer or
+data-pointer hypothesis only from a same-build image-vs-stub split with the
+corresponding row. Otherwise select the coverage/unresolved hypothesis and
+make no runtime change.
 
-## Exact command
+## Exact commands
 
     cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-    tools/oracle/build/rs64_oracle \
-      --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-      --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-      --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-      --secs 60 --hit-cap 10000 --vi-trace \
-      --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-      --watch-write 0x0:0x800000 \
-      --watch-rw 0x149470:0x1494B0 \
-      --watch-write 0x149480:0x149484 \
-      --watch-write 0x149488:0x14948C \
-      --watch-write 0x1494A0:0x1494A4 \
-      --watch-write 0x1494A4:0x1494A8 \
-      --watch-write 0x149498:0x14949C \
-      --watch-write 0x14949C:0x1494A0 \
-      --post-value-watch 1 --post-value-watch 2 --post-value-watch 3 \
-      --post-value-watch 4 --post-value-watch 5 --post-value-watch 6 \
-      --post-value-watch 7 --pc-hist-watch 1 \
-      --watch-pc 0x8008E904,0x80091EB0 \
-      --detail-watch 8 --detail-watch 9
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    mkdir -p scratch/agent/s2137_stub scratch/agent/s2137_image
+    set +e
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_SP_TASKS=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS="3:start 7:start 11:start" zsh tools/probe.sh scratch/agent/s2137_stub 45 1 > scratch/agent/s2137_stub_driver.log 2>&1 & p_stub=$!
+    env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_SP_TASKS=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS="3:start 7:start 11:start" zsh tools/probe.sh scratch/agent/s2137_image 45 1 > scratch/agent/s2137_image_driver.log 2>&1 & p_image=$!
+    wait $p_stub; rc_stub=$?; wait $p_image; rc_image=$?; echo "stub=$rc_stub image=$rc_image"
 
-Watch indexes are intentional: 0 is whole-RDRAM; 1 is the full `aspTask`
-range; 2/3 are `ucode` and `ucode_data`; 4/5 are `data_ptr` and
-`data_size`; 6/7 are `output_buff` and `output_buff_size`; 8/9 are the two
-execution watches. Inspect the bounded post-value and PC-histogram rows plus
-the VI 1024/title and VI 512/hangar controls. Do not interpret a null from a
-phase the run did not reach.
+Inspect only the bounded target-phase rows, plus the positive-control counts
+and phase transitions:
+
+    grep -hE '\[audtask-abi\]|\[audtask-dma-range\]|\[audio-return\]|\[pcm-boundary-(source|consumer)\]|\[audtask-dispatch\]|\[phase\]' scratch/agent/s2137_stub/run.log scratch/agent/s2137_image/run.log | tail -400
+
+Do not interpret missing rows from an arm that failed to reach both target
+phases as a null result.
