@@ -1,72 +1,63 @@
-# NEXT work unit (s2149) — validate the next generated-symbol mapping
+# NEXT work unit (s2150) — leftover fake_func class census
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Run the bounded static rename unit for `func_800B3824` ->
-`buildLevelSelectTextTextures`. The companion symbol files currently put
-the human name in `main_overlay.txt` and the placeholder in
-`menu_overlay.txt` at the same VRAM address. First run the fresh no-edit
-regeneration as the baseline; then move only those two symbol-file lines so
-the human name is in `menu_overlay.txt`, rerun the same regeneration, and
-compare the complete ELF/generated boundary and caller table. Do not run the
-game or change runtime, audio, task, output, guard, or mitigation behavior.
+The two-line overlay-move class is closed: s2149's post-move census found
+zero remaining human-in-main versus placeholder-in-overlay mismatches.
+Remaining generated `func_*` names are five parked or intentional holds
+(`func_8000040C`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_800E9AE0`) — do not re-census or invent names for those.
 
-The s419 `m4_known_bad.txt` record is a live-crash warning
-(`last-guest-pc=0x8000b650`, isolated alone from the s419 75-name batch),
-not a static boundary conflict. Treat it as a reason to inspect the static
-table, not as permission to skip the mapping. There is no leftover
-`fake_func_*` immediately before this start: `tickFormatMessageWorker`
-ends at `0x800B3824`.
+The next source is leftover `fake_func_*` with ELF size `> 0xC` that are
+not on PROJECT-OVERVIEW's parked list. Run a host-only ELF/companion
+census (no game run, no regen unless a renameable leftover is selected
+and then only after writing the discriminator table). Classify every
+such leftover as renameable, overlapping-named-symbol, parked, or hold.
+If one renameable leftover has a companion human name, unique ELF
+section, and no overlap with a named symbol, that leftover is the next
+mapping unit; if none do, close the leftover class as holds.
 
-A post-s2148 census found this as the last remaining human-in-main versus
-placeholder-in-overlay mismatch. After it, the two-line overlay-move
-pattern is exhausted and the next sweep lead needs a new source.
+Do not run the game or change runtime, audio, task, output, guard, or
+mitigation behavior.
 
 ## Competing hypotheses and discriminator
 
-- `H-MenuMapping`: after the two-line move, the ELF has exactly one
-  `buildLevelSelectTextTextures` in `.ovl.menu` at `0x800B3824`,
-  size `0x2D8`, ending at unchanged `0x800B3AFC`; the generated prototype,
-  definition, overlay entry, and every generated caller use the human name.
-- `H-RegenerationStale`: the no-edit baseline or the moved-source rebuild
-  still leaves `func_800B3824` in the ELF/generated tree, so source mapping
-  changes are not reaching the pipeline.
-- `H-BoundaryCallerConflict`: the move creates a duplicate/section mismatch,
-  changes the `0x800B3AFC` adjacent `buildScaledFormatTextElement` boundary,
-  or leaves any caller unresolved; do not retain the move if this occurs.
+- `H-LeftoverRenameable`: at least one leftover with size `> 0xC` has a
+  companion human name, a unique ELF section, and no overlap with a
+  named symbol; the census names that leftover as the next two-line or
+  one-line mapping unit.
+- `H-LeftoverAllHolds`: every leftover with size `> 0xC` is parked,
+  overlaps a named ELF symbol (including rspboot/ucode/data/BSS), or
+  is an exception/cop0 trap body with no independent companion name.
+- `H-CensusStale`: the ELF leftover list does not match generated
+  `fake_func_*` prototypes, so the leftover class cannot be closed or
+  selected from this tree.
 
-The discriminator is one baseline-versus-treatment table containing ELF
-section/start/size/end, adjacent `buildScaledFormatTextElement` at
-`0x800B3AFC`, generated prototype/definition/overlay-entry names, and the
-generated call-site name (`initVwingHudAndSlotState` at `jal 0x800B3824`).
-A clean treatment row with unchanged boundaries and callers selects
-`H-MenuMapping`; a stale treatment selects `H-RegenerationStale`; any
-duplicate, section, boundary, or caller defect selects
-`H-BoundaryCallerConflict`.
+The discriminator is one leftover table containing name, ELF
+section/start/size/end, overlapping named symbols, parked-list
+membership, and companion-comment/human-name hits. A non-empty
+renameable row selects `H-LeftoverRenameable`; an empty renameable set
+with complete coverage selects `H-LeftoverAllHolds`; a prototype/ELF
+mismatch selects `H-CensusStale`.
 
 ## Exact commands
 
-    cd /Users/williambuckley/Documents/Tools/rogue_squadron64
-    python3 tools/make_elf.py
-    cd /Users/williambuckley/Documents/Tools/N64Recomp
-    ./build/N64Recomp rogue_squadron.toml
-    python3 fixup_game_funcs.py
-    cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-    grep -n 'func_800B3824\|buildLevelSelectTextTextures\|buildScaledFormatTextElement' \
-      /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
-      /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf \
-      > scratch/agent/s2149_baseline_table.txt
     /opt/homebrew/opt/llvm/bin/llvm-nm -S --format=posix \
       /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf \
-      | grep -E 'func_800B3824|buildLevelSelectTextTextures|buildScaledFormatTextElement|tickFormatMessageWorker'
+      > scratch/agent/s2150_elf_syms.txt
+    /opt/homebrew/opt/llvm/bin/llvm-objdump -t \
+      /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf \
+      > scratch/agent/s2150_elf_objdump.txt
+    python3 - <<'PY'
+    # Build one leftover table from the ELF dumps + parked list in
+    # docs/PROJECT-OVERVIEW.md + companion symbol_files comments.
+    # Write scratch/agent/s2150_leftover_table.txt with every fake_func
+    # whose size > 0xC, classified renameable / overlap / parked / hold.
+    PY
 
-Then apply only the prescribed two-line move in
-`/Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/main_overlay.txt`
-and `menu_overlay.txt`, rerun the same five commands, and write the
-treatment table to `scratch/agent/s2149_treatment_table.txt`. Verify the ELF
-row with `/opt/homebrew/opt/llvm/bin/llvm-nm -S --format=posix` plus
-`llvm-objdump -t` on the companion ELF, and the generated callers with the
-same grep query. The work unit is complete only after both baseline and
-treatment tables are compared.
+Compare generated `funcs.h` `fake_func_*` prototypes to the ELF leftover
+names in the same table so `H-CensusStale` is tested in the same pass.
+The work unit is complete when the table selects one of the three
+hypotheses and, if renameable, names the single next mapping lead.

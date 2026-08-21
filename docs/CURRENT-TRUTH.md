@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2148
-(2026-08-21); behavioral and source evidence is current through s2148.
+authoritative for exact commands and probe rows. Maintained in Session 2149
+(2026-08-21); behavioral and source evidence is current through s2149.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -122,8 +122,25 @@ This file is intentionally compact. The s2080–s2108 archive is in
   and has no leftover `func_800B2630`. The prior s419 live-crash warning
   remains a runtime-risk record; this static table found no boundary or
   caller conflict. The full pipeline succeeded; no game run or runtime
-  behavior changed. This is the first remaining menu-overlay instance of
-  the same two-line pattern.
+  behavior changed.
+- The s2149 bounded generated-symbol unit selected `H-MenuMapping` for
+  `0x800B3824`: no-edit regeneration left `func_800B3824` in place, while
+  the prescribed two-line mapping move caused the ELF to emit
+  `buildLevelSelectTextTextures` in `.ovl.menu` at the same start, size
+  `0x2D8`, and end boundary `0x800B3AFC` immediately before unchanged
+  `buildScaledFormatTextElement`. `tickFormatMessageWorker` still ends
+  at this start; there is no leftover `fake_func_*` immediately before
+  it. The generated prototype, definition, overlay entry, and the only
+  generated caller (`initVwingHudAndSlotState` at `jal 0x800B3824`) all
+  used the human name. The host binary exports
+  `_buildLevelSelectTextTextures` and has no leftover `func_800B3824`.
+  Adjacent `.ovl.mission` `tryPlaySpatialSoundWithGates` at `0x800B3A10`
+  was unchanged. The prior s419 live-crash warning
+  (`last-guest-pc=0x8000b650`) remains a runtime-risk record; this static
+  table found no boundary or caller conflict. The full pipeline
+  succeeded; no game run or runtime behavior changed. A post-move census
+  found zero remaining human-in-main versus placeholder-in-overlay
+  mismatches, so that two-line overlay-move class is closed.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -410,15 +427,18 @@ work items.
 
 1. **Generated-symbol renaming sweep.** The M5 `data_ptr+0x100` boundary is
    closed at the sampled output edge: s2140's independently watched retail
-   destinations agree with s2137's port `field348+0x100` relation. s2148
-   selected `H-MenuMapping` for `func_800B2630` /
-   `buildFormatMessageGlyphBuffer`. The next lead is `func_800B3824` ->
-   `buildLevelSelectTextTextures`; validate it with a no-edit versus
-   two-line symbol-file move and a fresh ELF/generated boundary and caller
-   table. A post-move census found this as the last remaining
-   human-in-main versus placeholder-in-overlay mismatch. The s419
-   `m4_known_bad.txt` record is a live-crash warning, not a
-   static-boundary skip.
+   destinations agree with s2137's port `field348+0x100` relation. s2149
+   selected `H-MenuMapping` for `func_800B3824` /
+   `buildLevelSelectTextTextures` and closed the two-line
+   human-in-main versus placeholder-in-overlay class (zero remaining
+   rows). Remaining generated `func_*` names are five parked or
+   intentional holds (`func_8000040C`, `func_800927B0`,
+   `func_80092A54`, `func_80092CF0`, `func_800E9AE0`). The next lead is
+   a leftover-class census of remaining `fake_func_*` with size `> 0xC`
+   that are not on the parked list, checking ELF overlap with named
+   symbols and companion comments, to select one renameable leftover or
+   close that class as holds. Do not invent names for the parked inner
+   kernels.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
@@ -611,12 +631,14 @@ mission-overlay mappings at `0x800AE3F0`, `0x800C41B0`, `0x800BF790`,
 `0x800C64B0`, `0x800E71D0`, `0x800EC110`, `0x800EC6F0`, `0x800ED150`,
 and `0x800FEF10`, each with unchanged boundaries and callers.
 s2148 confirmed the menu-overlay mapping at `0x800B2630` /
-`buildFormatMessageGlyphBuffer` the same way. Those warnings remain
-reasons to validate future relocations, not evidence of a static
-boundary conflict. M3 resumes only as an idiom-class audit or with a new
-discriminator. M4 accumulator/beam evidence rules out the old shade-lane
-theory but is not pixel ground truth. The remaining generated placeholders
-are semantic holds or intentional non-sync entries.
+`buildFormatMessageGlyphBuffer` the same way. s2149 confirmed
+`0x800B3824` / `buildLevelSelectTextTextures` the same way and closed
+the two-line overlay-move class. Those warnings remain reasons to
+validate future relocations, not evidence of a static boundary conflict.
+M3 resumes only as an idiom-class audit or with a new discriminator. M4
+accumulator/beam evidence rules out the old shade-lane theory but is not
+pixel ground truth. The remaining generated `func_*` placeholders are
+semantic holds or intentional non-sync entries.
 
 ## Superseded conclusions
 
@@ -752,10 +774,15 @@ ELF/generated tree. Mission-overlay human-versus-placeholder mismatches
 are exhausted. s2148 selected the static menu mapping for
 `func_800B2630`/`buildFormatMessageGlyphBuffer`, with the same start,
 size `0x468`, end boundary `0x800B2A98`, leftover `fake_func_800B2628`
-unchanged, and all three callers in the final ELF/generated tree. The
-next work unit is `func_800B3824`/`buildLevelSelectTextTextures`, the
-last remaining human-in-main versus placeholder-in-overlay mismatch.
-No runtime or default-arm change follows.
+unchanged, and all three callers in the final ELF/generated tree. s2149
+selected the static menu mapping for
+`func_800B3824`/`buildLevelSelectTextTextures`, with the same start,
+size `0x2D8`, end boundary `0x800B3AFC`, no leftover immediately before
+the start, and the single `initVwingHudAndSlotState` caller in the final
+ELF/generated tree. Human-in-main versus placeholder-in-overlay
+mismatches are exhausted. The next sweep unit is a leftover-class census
+of remaining `fake_func_*` with size `> 0xC`. No runtime or default-arm
+change follows.
 
 ## Method and safety rules
 
