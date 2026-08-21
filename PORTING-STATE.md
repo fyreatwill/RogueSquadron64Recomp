@@ -101465,3 +101465,41 @@ unavailability for the covered rows, not a port MORT failure.
 
 ORIGIN: no mitigation or game-value machinery was added; this session only
 validated the external decoder and sampled retail speech descriptors.
+
+## Session 2139 (2026-08-21) — covered MORT rate and type classes
+
+HYPOTHESIS-ID: m5-mort-sample-contract
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `46,327` bytes, so this was not a
+maintenance iteration. The prescribed work unit was one bounded host-only
+reference comparison; it ran no game build, runtime process, oracle run, or
+soak. The existing `tools/mort_probe.py` harness decoded retail speech
+indices `4,58,90,104` against the independent `CMORTDecoder::Decode`
+reference.
+
+The same run passed the speech positive controls: 546 descriptors, all
+headers beginning with `MORT`, descriptor-type counts `419/59/36/17/9/6`,
+and sample-rate counts `8000:440`/`16000:106`. The selected rows were:
+
+- index 4: descriptor type 1, 8000 Hz, 2845 words, 67200 samples, 134400
+  decoded bytes, 55725 nonzero, FNV `0x998CAF3C`;
+- index 58: descriptor type 2, 8000 Hz, 4141 words, 110080 samples, 220160
+  decoded bytes, 80904 nonzero, FNV `0x58E9C3D2`;
+- index 90: descriptor type 3, 16000 Hz, 6605 words, 141600 samples, 283200
+  decoded bytes, 129475 nonzero, FNV `0xC68F3CAF`;
+- index 104: descriptor type 5, 16000 Hz, 8627 words, 205760 samples, 411520
+  decoded bytes, 169292 nonzero, FNV `0xBF30B582`.
+
+All four rows had valid signed-16-bit extrema and complete first/last-sample
+fields. This is single-source reference evidence selecting
+`H-MORTReferenceMatchesExtended` for the sampled
+descriptor classes and rejects `H-MORTLayoutOrEndianMismatch`,
+`H-MORTCodecVariantMismatch`, and `H-MORTReferenceUnavailable` at those
+rows. It does not cover type 0 at 16000 Hz, type 4, or every descriptor in
+the speech asset, so the result is not a claim of universal codec coverage.
+The next M5 boundary is the independent retail write at each observed
+`data_ptr+0x100` destination. No audio arm, task ABI, output route, host
+shortcut, guard, or default-arm behavior changed.
+
+ORIGIN: no mitigation or game-value machinery was added; this session only
+validated the external decoder across additional retail speech classes.

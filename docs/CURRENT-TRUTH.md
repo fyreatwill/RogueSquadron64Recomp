@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2138
-(2026-08-21); behavioral and source evidence is current through s2138.
+authoritative for exact commands and probe rows. Maintained in Session 2139
+(2026-08-21); behavioral and source evidence is current through s2139.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -75,6 +75,19 @@ This file is intentionally compact. The s2080–s2108 archive is in
   selection covers neither the 16000-Hz class nor nonzero descriptor types,
   so the full codec-variant boundary remains open; no audio arm, task ABI,
   output route, or default-arm change follows.
+- The s2139 host-only MORT census reused those positive controls and decoded
+  indices `4,58,90,104` across descriptor types `1,2,3,5` and both rates.
+  All four rows were complete, signed-16-bit, and nonempty: type 1/8000 had
+  `67200` samples and FNV `0x998CAF3C`, type 2/8000 had `110080` samples and
+  FNV `0x58E9C3D2`, type 3/16000 had `141600` samples and FNV
+  `0xC68F3CAF`, and type 5/16000 had `205760` samples and FNV
+  `0xBF30B582`. This is single-source reference evidence selecting
+  `H-MORTReferenceMatchesExtended` for the
+  sampled rate/type classes and rejects layout/endian failure,
+  codec-variant failure, and reference unavailability at those rows. Type 0
+  at both rates and type 4 remain unsampled; the next M5 unit is the
+  independent retail `data_ptr+0x100` write boundary. No audio arm, task ABI,
+  output route, host shortcut, guard, or default-arm behavior changed.
 - The s2133 same-build stub/image comparison reached title and hangar in both
   arms. In image phase 10, two generated stage rows were nonzero (`nz=621`
   and `639`) and each had exact source/consumer PCM joins with matching FNV,
@@ -359,18 +372,17 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 known-MORT sample decode and PCM validation.** The s2135 static census
+1. **M5 retail `data_ptr+0x100` destination boundary.** The s2135 static census
    rejected a new MORT RSP segment, s2136 selected the retail task-field
    contract, and s2137 selected the matching port image/task boundary plus
-   the generated `field348+0x100` write relation. The next unit is a bounded
-   known-MORT sample decode using the retail `speech` asset and the named
-   CPU-side decoder path, with descriptor identity, decoded byte count,
-   sample rate, nonzero count, and waveform hash/summary compared against a
-   direct reference decode. s2138 decoded the mandated four rows, but all
-   were 8000-Hz/type-0; the next unit must use one same-build reference table
-   covering an uncovered descriptor type and the 16000-Hz class. Keep
-   `factor5_ucode_b` opt-in and do not change task fields, output routing,
-   host AI status, guards, or the default arm.
+   the generated `field348+0x100` write relation. s2138 and s2139 then
+   validated the independent CPU MORT decoder across the initial type-0 rows
+   and uncovered types `1,2,3,5` at both rates. The next unit is one
+   positive-control-qualified retail oracle watch for the two observed task
+   buffers' physical `data_ptr+0x100` destinations, with writer PCs, post-store
+   values, and title/hangar VI gates. Keep `factor5_ucode_b` opt-in and do not
+   change task fields, output routing, host AI status, guards, or the default
+   arm.
 2. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
    three consecutive coverage-only results under the same hypothesis; the
    current renderer boundary supplies no new discriminator. The first sweep
@@ -487,8 +499,7 @@ covered task boundary. s2137's same-build port table then selects
 had the expected fixed fields and zero output buffer, its stage-3 destination
 matched `field348+0x100`, and two nonzero stage/PCM joins matched by address,
 length, FNV, and nonzero count. The retail `data_ptr+0x100` write remains an
-independent open edge; the next M5 unit is the known-MORT sample decode and
-waveform check.
+independent open edge; the next M5 unit is the retail destination watch.
 
 The s2134 retail oracle supplied the independent codec-side boundary. After
 the whole-RDRAM control and title/hangar gates, all seven named voice
@@ -500,8 +511,12 @@ does not prove that `factor5_ucode_b` is the MORT decoder or settle the
 runtime meaning of every task field. The s2136 retail task-field census
 selected `H-RetailTaskMatchesFactor5b`: the fixed image/data pair and
 nonzero `data_ptr`/`data_size` co-occurred with zero output-buffer writes.
-The next unit is the phase-keyed same-build port stub/image ABI and DMA table;
-retail `data_ptr+0x100` write observation remains open.
+The s2137 port comparison established the matching fixed fields and sampled
+`field348+0x100` relation. The s2138/s2139 reference tables now cover type-0
+rows plus types `1,2,3,5` across 8000/16000 Hz with stable nonzero PCM. The
+independent retail dynamic `data_ptr+0x100` write remains open and is the
+next boundary; no runtime or default-arm change follows from the reference
+decode alone.
 
 ### M5 audio and guest gate
 
@@ -676,10 +691,11 @@ both arms reached the target phases, the image had the expected fixed fields
 and zero output buffer, its stage-3 destination matched `field348+0x100`, and
 two nonzero stage/PCM joins matched by address, length, FNV, and nonzero count.
 The retail `data_ptr+0x100` write remains an independent open edge. s2138's
-independent decoder table produced four complete 8000-Hz/type-0 rows with
-nonzero PCM, but did not cover the 16000-Hz or nonzero-type classes. The next
-M5 unit is the coverage-completing reference table with byte-count and
-waveform checks.
+independent decoder table produced four complete 8000-Hz/type-0 rows, and
+s2139's table produced complete nonzero rows for types `1,2,3,5` at both rates
+with byte-count and waveform checks. This single-source reference evidence
+selects `H-MORTReferenceMatchesExtended` for those sampled classes. The next
+M5 unit is the independent retail `data_ptr+0x100` destination watch.
 
 ## Method and safety rules
 
