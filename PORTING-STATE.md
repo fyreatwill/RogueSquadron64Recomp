@@ -101159,3 +101159,34 @@ The next sweep lead is `func_800C41B0` -> `plotRadarBlipColumn`; its human
 mapping is currently in `main_overlay.txt` while `mission_overlay.txt` still
 has the placeholder, so the next unit must repeat the source/ELF/boundary and
 caller collision check before editing.
+
+## Session 2131 (2026-08-21) — repaired the next generated-symbol collision
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `33,312` bytes, so this was not a
+maintenance iteration. The required sweep preflight confirmed that
+`main_overlay.txt` named `plotRadarBlipColumn` at `0x800C41B0` while
+`mission_overlay.txt` still emitted `func_800C41B0`. The last-15 session-title
+check also showed that the recent sessions were not an all-sweep run, so the
+bounded sweep remained eligible after the M5 drain A/B was parked.
+
+The mandated no-edit make-ELF/N64Recomp/fixup sequence completed successfully
+and left the placeholder in the generated prototype, definition, overlay
+entry, and ELF. The no-edit ELF row was `.ovl.mission`, start `0x800C41B0`,
+size `0x1AC`; this refuted `H-RegenerationStale` without showing a boundary
+conflict. The prescribed two-line source move then removed the human mapping
+from `main_overlay.txt` and renamed the single `mission_overlay.txt` entry.
+The second make-ELF/N64Recomp/fixup/CMake sequence completed successfully.
+
+The final bounded table showed one global ELF function named
+`plotRadarBlipColumn` in `.ovl.mission` at `0x800C41B0`, size `0x1AC`, ending
+at `0x800C435C`, immediately before unchanged `plotRadarBlipRow`. The
+generated prototype, definition, and overlay entry used the human name, and
+all four generated call sites resolved to it. Symbol-file and fixup diff checks
+were clean. This selects `H-MissionMapping` and finds no static
+boundary/caller conflict. No game soak was run: the source/ELF/generated
+boundary table was the work-unit discriminator. No runtime, mitigation, or
+task behavior changed.
+
+The next sweep lead is `func_800BF790` -> `updateHudHealthIndicator`.
