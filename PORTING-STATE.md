@@ -100601,3 +100601,38 @@ skip was added.
 Run the four-arm C88=0/C88=1 coverage contrast described in
 `scratch/agent/NEXT.md` under
 `HYPOTHESIS-ID: m5-image-arm-target-coverage`.
+
+## Session 2116 (2026-08-21) — ran the C88 image-arm coverage contrast
+
+The planned same-build four-arm coverage experiment ran concurrently with
+`B40=0`, `SPIN_YIELD=1`, the existing phase-keyed task/PCM/wait witness, and
+explicit `C88=0` or `C88=1`. The C88=0 stub arm reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, with 3830 LLE tasks and
+101 audio-task dispatch controls. The C88=0 image arm reached the same two
+target phases, with 4031 LLE tasks, 103 audio-task dispatch controls, 3479
+image-stage rows in phase 8, and 1605 in phase 12. Its target task rows and
+PCM rows were present.
+
+The C88=1 image arm also reached title and hangar, with 3379 LLE tasks, 95
+audio-task dispatch controls, 3484 image-stage rows in phase 8, and 1179 in
+phase 12. The C88=1 stub control was the only arm that missed target coverage:
+it stopped after the 640-wide phase with 184 LLE tasks and crashed at
+`waitForAnyAudioSlot+1060`, last guest PC `0x80095d54`. No target contract row
+was present for that arm. The same-run positive controls therefore passed for
+both image arms, while their C88 values did not split image-arm admission.
+
+By the discriminator defined in `scratch/agent/NEXT.md`, this selects
+`H-RouteRecipeFailure` because a stub control missed target coverage, while
+refuting `H-C88-RouteDivergence` and `H-ImagePreTargetInvariant` at this
+recipe scope. The C88=0 stub/image pair did reach the target and reopens the
+phase-keyed contract comparison. No task field, output routing, exit mapping,
+DMA, canary, slot, PCM, wait, guard, queue, or default behavior changed.
+
+ORIGIN: diagnostic-only four-arm coverage experiment; the observed
+`waitForAnyAudioSlot` crash was not mitigated or converted into a value skip.
+
+### Next
+
+Run the phase-keyed C88=0 stub/image contract A/B described in
+`scratch/agent/NEXT.md` under
+`HYPOTHESIS-ID: m5-image-task-contract`.

@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2115
-(2026-08-21); behavioral and source evidence is current through s2115.
+authoritative for exact commands and probe rows. Maintained in Session 2116
+(2026-08-21); behavioral and source evidence is current through s2116.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -54,6 +54,15 @@ This file is intentionally compact. The s2080–s2108 archive is in
   dispatches) before a pre-target SIGSEGV in `waitForAnyAudioSlot+1060`, last
   guest PC `0x8000834c`. This is another coverage failure; no ABI hypothesis
   is selected.
+- The s2116 four-arm C88 coverage contrast reached title `1024 @ 0x00790400`
+  and hangar `512 @ 0x006AB400` in both image arms and in the C88=0 stub arm.
+  The C88=1 stub arm alone crashed pre-target at
+  `waitForAnyAudioSlot+1060` with last guest PC `0x80095d54`. Both image arms
+  passed positive LLE/audio controls and emitted target task rows, so C88 did
+  not split image-arm admission in this recipe. Per the planned discriminator
+  this selects `H-RouteRecipeFailure` because one stub control missed target
+  coverage; it does not select an image C88 hypothesis and reopens the C88=0
+  contract A/B.
 - The title path is separately selected as `H-InputZero`: title-stage input,
   transform, and DMA payloads were zero. A hangar sample had nonzero input,
   transform, and matching DMA payload, rejecting transform annihilation and
@@ -91,11 +100,11 @@ This file is intentionally compact. The s2080–s2108 archive is in
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 image-task contract.** Complete the phase-keyed stub/image A/B at a
-   target phase. s2114 and s2115 were coverage failures, not null contract
-   results; first run the C88=0/C88=1 coverage contrast in `NEXT.md`, then
-   distinguish the selected `H-TaskExitMapping` result from the remaining
-   `output_buff=0` ABI-semantics question.
+1. **M5 image-task contract.** Run the phase-keyed C88=0 stub/image A/B.
+   s2116 reached target coverage in both C88 image arms and the C88=0 stub
+   arm, while the C88=1 stub control missed it. Compare task ABI, generated
+   DMA, stage/PCM joins, canary, wait, queue, and exit rows at the same target
+   phase; no output or exit mapping change is authorized.
    Preserve generated DMA, task fields, canary, slot, PCM, wait, and queue
    behavior; no output or exit mapping change is authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
@@ -164,9 +173,11 @@ contract change is authorized.
 
 The s2115 image arm executed positive LLE/audio dispatch controls but died in
 the pre-target `waitForAnyAudioSlot+1060` path; the stub arm reached both
-target phases and produced the expected stub/PCM rows. Because the arms did
-not share a target phase, this run cannot compare task exit, output buffer,
-writeback, canary, or PCM contract fields.
+target phases and produced the expected stub/PCM rows. The s2116 four-arm
+contrast repaired target coverage for both image C88 values and C88=0 stub,
+but not for C88=1 stub. Both image arms emitted target stage/contract rows;
+the next C88=0 pair must compare those rows against the matching stub rows
+before interpreting `output_buff=0`, canary failure, or task exit semantics.
 
 The s2110 route table was positive in both arms: B40 write/return and the first
 two reapply pairs matched, while only B40=1 reached the later reapply entry in
@@ -241,7 +252,8 @@ matter.
 The exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. The current selected hypotheses are scoped above and
 must not be widened from single-source or single-arm observations. s2115's
-paired coverage result adds no ABI selection.
+paired coverage result added no ABI selection; s2116's four-arm table adds
+coverage selection only and reopens the C88=0 contract pair.
 
 ## Method and safety rules
 
