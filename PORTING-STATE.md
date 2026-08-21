@@ -101190,3 +101190,39 @@ boundary table was the work-unit discriminator. No runtime, mitigation, or
 task behavior changed.
 
 The next sweep lead is `func_800BF790` -> `updateHudHealthIndicator`.
+
+## Session 2132 (2026-08-21) — established retail PCM/AI ordering
+
+HYPOTHESIS-ID: m5-pcm-ai-ordering
+
+The strategic M5 priority superseded the symbol-sweep NEXT unit. The required
+ground-truth-first unit used the retail oracle only; no port build, runtime
+code, or new instrument was added. The initial watch set passed its whole-
+RDRAM positive control and reached title `1024` plus hangar `512` at
+`0x006AB400`; it observed `8,528` executions at retail `osAiSetNextBuffer`
+(`0x80029E80`), but its countdown watch at `0x14998A` was unaligned and did
+not sample the halfword store. A PIF-verified retry delivered all eleven
+Start presses (`sym=40`) but remained at 320-wide origin `0x006DD280` for
+75 seconds, so it was coverage-only. A second retry with the oracle's special
+voice-base watch at `0x1496F8` reproduced the same 320-wide coverage failure;
+that watch's debugger single-step hook was removed from the final recipe.
+
+The final corrected oracle capture passed the independent whole-RDRAM
+positive control with `33,346` writes, reached title `1024` and hangar `512`
+at `0x006AB400`, and produced the complete target table: gate
+`0xA0F50` had `17` writes with both zero and one values; aligned countdown
+range `0x149988..0x149990` had `8,874` writes with nonzero post-store values
+from the seed/decrement PCs including `0x80091ECC` and `0x800916A4`; worker
+flag `0x14974C` had `14,439` writes with nonzero status values; the 16-entry
+audio-buffer pointer table had `16` writes and a nonzero final snapshot; and
+`osAiSetNextBuffer` executed `8,556` times, alongside one
+`initAudioSubsystem` execution and five `reapplyAudioConfig` executions.
+
+This selects `H-RetailAIQueued` at the covered retail route: AI buffer
+submission is live and ordered after a live MusyX gate/countdown/worker and
+nonzero pointer-table state. It rules out `H-RetailAIBridgeNotUsed` for that
+route. The result is one independent retail source; it does not prove that
+the port's opt-in image arm produces valid host PCM, does not change
+`osAiGetStatus_recomp`, task output routing, waits, or guards, and does not
+authorize defaulting the image arm. The next unit is the port-side same-build
+stub/image PCM-and-AI boundary comparison using existing phase-gated controls.

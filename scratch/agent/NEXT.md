@@ -1,65 +1,55 @@
-# NEXT work unit (s2132) — classify the next generated-symbol collision
+# NEXT work unit (s2133) — port stub/image PCM and AI boundary
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-pcm-ai-ordering
 
 ## Work unit
 
-Resolve one bounded companion-symbol mapping question for `0x800BF790`.
-The generated tree currently has `func_800BF790`; `main_overlay.txt` calls it
-`updateHudHealthIndicator`, while `mission_overlay.txt` still carries the
-placeholder. Test source ownership, ELF section, generated boundaries, and
-every caller before applying the two-line move.
+Execute M5 plan step 6's port-side same-build comparison now that the retail
+oracle selected `H-RetailAIQueued`. Use the existing phase-gated audio-return,
+PCM-boundary, PCM-sanity, and task-dispatch diagnostics. Build once, then run
+the silent stub and opt-in `factor5_ucode_b` arms concurrently. Do not change
+`osAiGetStatus_recomp`, task output routing, waits, guards, or the default
+audio arm in this unit.
 
 ## Competing hypotheses and discriminator
 
-- `H-MissionMapping`: moving the human name to `mission_overlay.txt` emits
-  `updateHudHealthIndicator` in `.ovl.mission`, preserves the start, size/end
-  boundary, and all callers.
-- `H-RegenerationStale`: the source mapping is already effective and a clean
-  make-ELF/N64Recomp/fixup sequence changes the generated name without editing
-  either symbol line.
-- `H-BoundaryOrCollision`: source ownership or a duplicate/boundary collision
-  is real. Moving the name changes the emitted section, drops the symbol,
-  changes the function boundary, or produces a caller mismatch; leave the
-  placeholder and advance without inventing a name.
+- `H-PortAIQueueMatches`: both arms pass LLE/task positive controls and reach
+  title/hangar; the image arm emits real audio-task return rows, host AI/PCM
+  boundary rows, an exact source/consumer span join, and at least one
+  nonzero `[pcm-sanity]` callback. The stub arm retains the silent contract.
+  This selects the first port-side AI/PCM contract to preserve.
+- `H-PortAIQueueSilent`: the image arm reaches the target and its task/PCM
+  boundary controls fire, but every image `[pcm-sanity]` callback is all-zero
+  or the host consumer has no nonzero join while the task returns. This keeps
+  the host callback/decoder boundary open; it does not authorize an AI-status
+  or routing change.
+- `H-CoverageFailure`: either arm misses the target phase or its positive
+  dispatch control, or the image arm produces no task/PCM rows. This selects
+  no PCM hypothesis; do not interpret nulls.
 
-The discriminator is one table containing source file and section; ELF name,
-section, start, size, and end; generated prototype/definition/overlay entry;
-and every generated caller. Select `H-MissionMapping` only when the human
-symbol is emitted in `.ovl.mission`, the placeholder disappears, no-edit
-boundaries remain unchanged, and all callers resolve to the human name.
-Select `H-RegenerationStale` only if regeneration alone produces that table.
-Any conflict, dropped symbol, changed boundary, or caller mismatch selects
-`H-BoundaryOrCollision` and no rename is landed.
+The discriminator is one table keyed by arm and VI phase/origin: positive
+LLE/audio dispatch counts; `audio-return` exit; `pcm-boundary-source` and
+`pcm-boundary-consumer` address/count/full-span/nonzero joins;
+`pcm-sanity` callback count and all-zero/nonzero counts; and target-phase
+coverage. Select `H-PortAIQueueMatches` only when image nonzero PCM and an
+exact source/consumer join co-occur after the controls. Select
+`H-PortAIQueueSilent` only with target coverage, image task returns, and a
+positive PCM callback control whose content remains zero. Any missing control
+or target phase selects `H-CoverageFailure`.
 
 ## Exact commands
 
     cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-    grep -n '^## Session ' PORTING-STATE.md | tail -15
-    rg -n -C 4 'updateHudHealthIndicator|func_800BF790|800BF790' ../rogue_squadron64/symbol_files ../N64Recomp/RecompiledFuncs/funcs_28.c ../N64Recomp/RecompiledFuncs/funcs.h ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
-
-If the preflight confirms the duplicate, first run the no-edit control:
-
-    cd /Users/williambuckley/Documents/Tools/rogue_squadron64
-    python3 tools/make_elf.py
-    cd /Users/williambuckley/Documents/Tools/N64Recomp
-    ./build/N64Recomp rogue_squadron.toml
-    python3 fixup_game_funcs.py
-
-If the placeholder remains, use `apply_patch` to remove only the
-`updateHudHealthIndicator = 0x800BF790` line from
-`../rogue_squadron64/symbol_files/main_overlay.txt` and change only the
-`func_800BF790 = 0x800BF790` entry in
-`../rogue_squadron64/symbol_files/mission_overlay.txt` to the human name.
-Then rerun the same make-ELF/N64Recomp/fixup sequence and:
-
-    cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    rg -n -C 2 'updateHudHealthIndicator|func_800BF790|0x800BF790' ../N64Recomp/RecompiledFuncs/funcs_28.c ../N64Recomp/RecompiledFuncs/funcs.h ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
-    rg -n -g 'funcs_*.c' '\b(updateHudHealthIndicator|func_800BF790)\b' ../N64Recomp/RecompiledFuncs
-    objdump -t ../rogue_squadron64/build/roguesquadron.elf | rg 'updateHudHealthIndicator|func_800BF790|800bf790'
-    git -C ../rogue_squadron64 diff --check -- symbol_files/main_overlay.txt symbol_files/mission_overlay.txt
-    git -C ../N64Recomp diff --check -- fixup_game_funcs.py
+    env ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5step6_stub 30 12 > scratch/agent/m5step6_stub_driver.log 2>&1 &
+    STUB_PID=$!
+    env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5step6_image 30 12 > scratch/agent/m5step6_image_driver.log 2>&1 &
+    IMAGE_PID=$!
+    wait "$STUB_PID"; STUB_RC=$?
+    wait "$IMAGE_PID"; IMAGE_RC=$?
+    printf 'stub_rc=%s image_rc=%s\n' "$STUB_RC" "$IMAGE_RC"
 
-Do not run a game soak: this work unit is complete when the static
-source/ELF/generated boundary table selects one hypothesis.
+Read `scratch/s73_post_a_scene/m5step6_stub/run.log` and
+`scratch/s73_post_a_scene/m5step6_image/run.log` only with bounded grep/tail.
+The work unit ends when the same-build table selects one hypothesis; do not
+promote any host or task change from a silent/null result.

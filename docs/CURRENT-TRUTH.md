@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2131
-(2026-08-21); behavioral and source evidence is current through s2131.
+authoritative for exact commands and probe rows. Maintained in Session 2132
+(2026-08-21); behavioral and source evidence is current through s2132.
 
 This file is intentionally compact. The s2080–s2108 archive is in
 `PROJECT-OVERVIEW.md` §40.
@@ -258,13 +258,33 @@ This file is intentionally compact. The s2080–s2108 archive is in
   prototype, definition, overlay entry, and all four generated call sites use
   the human name. The full pipeline and diff checks succeeded; no game run or
   runtime behavior changed.
+- The s2132 retail-oracle PCM/AI census passed its independent whole-RDRAM
+  positive control (`33,346` writes), reached title VI `1024` and hangar VI
+  `512 @ 0x006AB400`, and observed nonzero audio-buffer pointer-table state,
+  `8,874` aligned countdown writes, `14,439` worker-flag writes, and `8,556`
+  executions of retail `osAiSetNextBuffer` at `0x80029E80`. The gate watch
+  recorded `17` writes with both zero and one values. This selects
+  `H-RetailAIQueued` at the covered retail route and rejects
+  `H-RetailAIBridgeNotUsed`; it does not prove the port's opt-in image arm
+  produces valid PCM or authorize a host/task change. The initial unaligned
+  countdown watch, the PIF/status-poll coverage-only retry, and the
+  voice-base-watch coverage-only retry are not evidence against the result.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
+1. **M5 PCM/AI ordering.** Retail ground truth now selects
+   `H-RetailAIQueued` at the covered route: the gate, aligned countdown,
+   worker flag, nonzero pointer table, and `osAiSetNextBuffer` all co-occurred
+   after the whole-RDRAM control. The next unit is a same-build port-side
+   stub/image comparison using the existing phase-gated audio-return,
+   PCM-boundary, and PCM-sanity controls. It must compare target-phase
+   coverage, image-task exit, host AI submission, source/consumer span joins,
+   and nonzero PCM before any `osAiGetStatus_recomp`, task routing, or default
+   behavior change.
+2. **Generated-symbol renaming sweep.** The M5 drain A/B is parked after
    three consecutive coverage-only results under the same hypothesis; the
    current renderer boundary supplies no new discriminator. The first sweep
    lead, `func_80001354` -> `runVideoFrameTick`, is already synchronized in
@@ -278,15 +298,15 @@ work items.
    `plotRadarBlipColumn` at `0x800C41B0` with the same section and unchanged
    boundary/caller table. The next lead is `func_800BF790` ->
    `updateHudHealthIndicator`.
-2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
+3. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the target
    comparison; do not repeat the same recipe. Resume only with a genuinely
    new renderer-recovery or ground-truth discriminator.
-3. **M3 crash work.** Only systematic idiom-class audits with a named
+4. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
-4. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+5. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation and consumer-mode H1 by the RT64 census. H3 is unavailable
    because the oracle cannot screenshot the LLE path. Do not repeat the
    `0xD60` scan.
@@ -353,6 +373,16 @@ the pre-target VI-640 renderer barrier. The initial pair was invalid because
 the binary lacked the requested gate, so it was not used as evidence. The
 legacy fixup gate is instrumentation around the existing host tick injection,
 not a drain or game-value change. A10 is parked pending a new discriminator.
+
+The s2132 retail oracle supplied the missing AI-ordering ground truth. After
+the whole-RDRAM control, the route reached title and hangar, wrote both values
+of the MusyX gate, seeded/decremented the aligned completion countdown, wrote
+nonzero worker status, populated the 16-entry audio-buffer pointer table, and
+executed retail `osAiSetNextBuffer` `8,556` times. This selects
+`H-RetailAIQueued` for the covered retail route and rules out a retail-no-AI
+explanation. It is one independent source: the next M5 unit must compare the
+port stub/image arms at the existing PCM source/consumer and host callback
+boundaries before changing the AI status shortcut, task ABI, or default arm.
 
 ### M5 audio and guest gate
 
@@ -503,7 +533,12 @@ selected the static mission mapping for
 warning retained as an explicit runtime-risk record. s2131 selected the
 static mission mapping for `func_800C41B0`/`plotRadarBlipColumn`, with the
 same start, size, end boundary, and caller table in the final ELF/generated
-tree. The next lead is `func_800BF790`/`updateHudHealthIndicator`.
+tree. s2132 supplied a retail-only PCM/AI ordering table: whole-RDRAM control,
+title/hangar VI coverage, nonzero pointer-table state, aligned countdown and
+worker writes, and `8,556` retail `osAiSetNextBuffer` executions co-occurred.
+This selects `H-RetailAIQueued` at the covered retail route; it is not port
+PCM or task-ABI evidence. The next unit is the port stub/image comparison,
+not the parked drain A/B or the symbol sweep.
 
 ## Method and safety rules
 
