@@ -102713,3 +102713,44 @@ skip/allow/guard.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2164 (2026-08-21) — censused unsigned KSEG0 MEM_* in cinematic SIGBUS functions
+
+Grep-enumerated `MEM_BU`/`MEM_W`/`MEM_H` in `slotDispatcherIter`
+(`../N64Recomp/RecompiledFuncs/funcs_8.c:23553-23884`) and
+`cutsceneDispatchSlotsByFlag` (`funcs_27.c:114543-115612`). Definitions
+are `RECOMP_FUNC void`, not `^void`. No rebuild.
+
+Positive control: both definition lines and the MEM_* counts printed in
+the same census output.
+
+`slotDispatcherIter`: 47 `MEM_*` — 1 already-S32 PATCH
+(`MEM_W(S32(0x8013 << 16), 0XBB0)` → `0x80130BB0`), 46 register/stack,
+0 unsigned KSEG0 constants. `cutsceneDispatchSlotsByFlag`: 146 `MEM_*`,
+all register/stack, 0 unsigned KSEG0 constants. lui sites already
+`S32(imm << 16)`.
+
+Existing Debug `atos` (no rebuild): `slotDispatcherIter+3092` decimal
+is `funcs_8.c:23678` `MEM_BU(ctx->r17, 0X1A)` guest `0x8003E944`
+`lbu $v0, 0x1A($s1)`. `cutsceneDispatchSlotsByFlag+8960` decimal is
+`funcs_27.c:115207` `MEM_W(ctx->r2, 0X44)` guest `0x800A87A8`
+`lwc1 $f2, 0x44($v0)`. Both register-base, not source constants.
+`MEM_W` with `$v0==0` arithmetically yields host `rdram+0x80000044`
+(`si_addr=0x380000044` at `rdram=0x300000000`); that identity is not
+an ORIGIN until retail `$v0` is measured.
+
+Table: `scratch/s73_post_a_scene/s2164_unsigned_kseg0_census.txt` (copy
+`scratch/agent/s2164_unsigned_kseg0_census.txt`). No new soak-queue
+verdicts to fold (SOAK-RESULTS tail is still s1940–s1974).
+
+This selects `H-NoSuchSite` and refutes `H-UnsignedKseg0Again` and
+`H-CoverageFailure`. `H-ImageTimingOnly` is vacated (its premise was
+that unsigned KSEG0 sites exist).
+
+ORIGIN: not a mitigation. Census only. No S32 rewrite, default-on
+flip, wait/slot guard, canary, or AI-status change.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

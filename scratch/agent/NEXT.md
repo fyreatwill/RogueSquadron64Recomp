@@ -1,71 +1,81 @@
-# NEXT work unit (s2164) — unsigned KSEG0 MEM_* census in cinematic SIGBUS sites
+# NEXT work unit (s2165) — retail oracle at cinematic SIGBUS PCs
 
 HYPOTHESIS-ID: m5-a1-cinematic-split
 
 ## Work unit
 
-s2163 selected `H-CinematicRegress` and reverted A1 default-on.
-Unset matched `=1` at dispatch/wait (`real_ucode=1`, wait return
-`c=0x11`) but failed title at 640 `0x00696100`; same-build stub
-retry reached title `1024 @ 0x00790400` and hangar
-`512 @ 0x006AB400`. Crash sites: `slotDispatcherIter+3092`
-(`si_addr=0x37fff0019` = `rdram+0x7fff0019`) and
-`cutsceneDispatchSlotsByFlag+8960` (`si_addr=0x380000044` =
-`rdram+0x80000044`). Same unsigned-KSEG0 host-offset class as
-s2161/s2162, different functions.
+s2164 selected `H-NoSuchSite`: neither `slotDispatcherIter` nor
+`cutsceneDispatchSlotsByFlag` contains an unsigned KSEG0 `MEM_*`
+constant. Crash sites (existing Debug `atos`, no rebuild):
 
-Grep-enumerate unsigned KSEG0 `MEM_BU`/`MEM_W`/`MEM_H` in those
-two functions (and only those two). Classify every site: S32-address
-like s2162, or prove dead / not KSEG0. Do not re-flip default-on,
-add a wait/slot guard, or chase a single crash with a new skip.
+- `slotDispatcherIter+3092` → `funcs_8.c:23678`
+  `MEM_BU(ctx->r17, 0X1A)` guest `0x8003E944` `lbu $v0, 0x1A($s1)`
+- `cutsceneDispatchSlotsByFlag+8960` → `funcs_27.c:115207`
+  `MEM_W(ctx->r2, 0X44)` guest `0x800A87A8` `lwc1 $f2, 0x44($v0)`
+  producers `0x800A879C` `lw $v0, 0x50($a2)` then `0x800A87A0`
+  `lw $v0, 0x0($v0)`
 
-Table from s2163: `scratch/s73_post_a_scene/s2163_default_on_ab.txt`.
+Table: `scratch/s73_post_a_scene/s2164_unsigned_kseg0_census.txt`.
+
+Ask the retail oracle whether those PCs execute at VI 640 and what
+`$s1` / `$v0` they hold. Do not S32-address by guess, re-flip
+default-on, or add a wait/slot guard.
+
+`--watch-pc` currently logs pc/prev_pc only. Wire
+`DebugGetCPUDataPtr(M64P_CPU_REG_REG)` so each exec hit also prints
+`$v0` (gpr[2]) and `$s1` (gpr[17]). Then one Rice run.
 
 ## Competing hypotheses and discriminator
 
-- `H-UnsignedKseg0Again`: one or more PATCH `MEM_*` in those
-  functions uses an unsigned KSEG0 constant (e.g. `0x80000044` or
-  `0x7fff0019`). S32-addressing is host addressing of a guest
-  pointer, same ORIGIN shape as s2162. After the S32 change, a
-  same-build `=1`/`=0` pair must reach title (and hangar if the
-  recipe does).
-- `H-NoSuchSite`: neither function contains unsigned KSEG0 `MEM_*`.
-  The `si_addr` lead is refuted at source; do not S32-address by
-  guess. Park and ask the oracle whether retail executes those PCs
-  at VI 640 `0x00696100` and what pointer they load.
-- `H-ImageTimingOnly`: sites exist but are also on the stub path
-  (stub first-attempt also SIGBUS'd). S32-addressing still applies
-  if the idiom is real; do not treat stub's first SIGBUS as proof
-  the idiom is absent.
-- `H-CoverageFailure`: the functions cannot be found in
-  `RecompiledFuncs` / `fixup_game_funcs.py`. Null census is
+- `H-RetailNeverExec`: `--watch-pc` counts stay 0 after the
+  whole-RDRAM control fires and `--vi-trace` shows a 640 row.
+  Retail does not execute these loads in the cinematic window;
+  the port is on a path retail does not take.
+- `H-RetailExecsValidPtr`: the PCs execute at 640 and `$s1` /
+  `$v0` are KSEG0 RDRAM (`0x80000000..0x807FFFFF`, not 0). The
+  port loaded a different pointer; next is writer attribution
+  of that slot/object field, not S32-addressing.
+- `H-RetailExecsNullOrRaw`: the PCs execute and `$v0` is 0 (or
+  `$s1` is non-KSEG0). Retail takes the same load; the port
+  SIGBUS is host `MEM_*` on a guest-null/wild pointer. Name that
+  writer before any skip/allow/guard.
+- `H-CoverageFailure`: whole-RDRAM watch does not fire, or
+  `--vi-trace` never prints a 640 row. Null PC counts are
   unevaluable.
 
-Positive control: the grep must print the function definition line
-and every `MEM_*` hit inside the body. A zero-hit claim requires
-the definition line in the same output.
+Positive control: watch 0 whole-RDRAM must print ~1.6M-class hits
+(or the 10000-callback removal line) in the same log as the PC
+rows and at least one `[vi]` 640 line. A GPR print of `$v0`/`$s1`
+on a synthetic/first exec hit (or on the whole-RDRAM-adjacent
+first `--watch-pc` if a known-live PC is included) must be
+visible before treating `$v0=0` / `$s1=…` as measured.
+
+s2161 undriven Rice 45s reached 640 `origin=0x0066a500`, not
+`0x00696100`. Record whichever 640 origin retail actually
+prints; a missing `0x00696100` is a row, not a reason to
+discard a 640-gated PC table.
 
 ## Exact commands
 
-Find the functions, then bound-grep `MEM_B`/`MEM_H`/`MEM_W` with
-`0x8`/`0x7fff` constants. If S32-addressing, also edit
-`../N64Recomp/fixup_game_funcs.py` (regen-safe) as s2162 did.
+If `DebugGetCPUDataPtr` is not yet called from the exec-hit
+path, add a bounded print of gpr[2] and gpr[17] on
+`M64P_BKP_FLAG_EXEC` hits, rebuild `tools/oracle/build.sh`,
+then:
 
-    grep -n '^void slotDispatcherIter\|^void cutsceneDispatchSlotsByFlag' \
-      ../N64Recomp/RecompiledFuncs/funcs_*.c
+    tools/oracle/build/rs64_oracle \
+      --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+      --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+      --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+      --secs 45 --hit-cap 64 \
+      --watch-write 0x0:0x800000 \
+      --watch-pc 0x8003E944,0x800A87A8,0x800A87A0,0x8003E938 \
+      --first-watch 0 --vi-trace \
+      > scratch/agent/oracle_s2165_cinematic_pcs.log 2>&1
 
-If sites are S32-addressed, one Debug rebuild and a same-build
-`=1`/`=0` title/hangar pair:
+PCs: crash loads plus the two `lw` producers (`0x8003E938`
+`lw $a0, 0($v0)` that becomes `$s1`; `0x800A87A0`
+`lw $v0, 0($v0)`).
 
-    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-      cmake --build build --target RogueSquadron64Recomp -j 8
-
-    env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_AUDIO_UCODE=1" \
-      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2164_image 30 12
-
-    env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_AUDIO_UCODE=0" \
-      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2164_stub 30 12
-
-If no sites, do not rebuild; write the empty-census table and stop.
-Do not flip `get_rsp_microcode`. If an arm SIGSEGVs/SIGBUS at the
-same cinematic window after S32, do not add a guard this iteration.
+Do not rebuild the game. Do not flip `get_rsp_microcode`.
+If an exec hit shows `$v0==0`, do not add a NULL skip this
+iteration — that is ORIGIN work for a later unit.
