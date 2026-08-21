@@ -99575,3 +99575,40 @@ guard, field rewrite, or audio behavior change is authorized.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-command-list-root-provenance`.
+
+## Session 2091 (2026-08-20) — qualified rotating retail command-list roots
+
+Ran the M5 command-list-root provenance work unit against the retail ROM with
+the oracle's whole-RDRAM positive control, physical watches at `0x149750` and
+`0x149760`, and exact PC watches at `0x80091074`, `0x80090C80`, and
+`0x800921E8`. The first invocation omitted `--post-value-watch`, so its exact
+PC counts were valid but its requested post-store rows were unevaluable. The
+second added `--post-value-watch 0`, but that was the removable positive-control
+watch and it was removed at 10,000 callbacks before the target phase. I ran the
+fixed recipe with a duplicate whole-RDRAM watch at index 3 and sampled that
+watch after the phase gate:
+
+```sh
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 65 --hit-cap 64 --watch-write 0x0:0x800000 --watch-write 0x149750:0x149754 --watch-write 0x149760:0x149762 --watch-write 0x0:0x800000 --watch-pc 0x80091074,0x80090C80,0x800921E8 --post-value-watch 3 --post-value-pc 0x80091074,0x80090C80,0x800921E8 --first-watch 0 --pc-hist-watch 0 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+```
+
+The final run passed the positive control with `100291817` whole-RDRAM writes,
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and retained
+16 post-target rows for each requested PC. The `0x80091074` publisher wrote
+both `0x80171CE0` and `0x80173B20` to `0x149750`; the `0x80090C80` rows fit
+`head + count*0xA10 + inner*0x50 + 0x44` under the observed roots, and the
+`0x800921E8` rows remained on the separate voice-array `0x88` lattice with
+descriptor values `0xB03910A0`/`0xB03698D8`. The two independent lines are
+the root-address write watch and the exact-writer destination/formula table.
+
+This selects `H-ReallocatedCommandRoot` at root-stability scope while
+confirming the generated command-list formula at retail/source scope. It
+rejects `H-RetailVoiceArrayDivergence` and `H-OracleWriterMismatch`; the
+observed root rotation is retail ground truth, not proof of heap corruption and
+not permission to change the port. No runtime, generated-code, or submodule
+change was made.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation`.

@@ -1,39 +1,42 @@
-# NEXT work unit (s2091)
+# NEXT work unit (s2092)
 
-HYPOTHESIS-ID: m5-command-list-root-provenance
+HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation
 
 ## Work unit
 
-Run one phase-gated retail-oracle table to qualify the command-list root used
-by `0x80090C80`. Keep the whole-RDRAM positive control, watch the physical
-command-list head and count entries, and retain post-store rows for the root
-publisher `0x80091074`, the off-lattice writer `0x80090C80`, and the voice-array
-writer `0x800921E8`. This is ground-truth attribution only: do not change the
-port, task ABI, output routing, waits, guards, or gates.
+Run one retail-oracle ground-truth table for the MusyX gate byte and its two
+nearby completion-state words before adding or changing any port instrument:
+physical `0x000A0F50` (gate), `0x0014998A` (audio-task countdown), and
+`0x0014974C` (audio worker flag). Keep the whole-RDRAM positive control, Rice
+video plugin, VI trace, and the eleven-Start driver. Use the target-watch
+detail and writer-PC histogram to identify every retail storing PC; do not
+flip a gate, select the real audio ucode, alter a wait, or change a guard.
 
 ## Competing hypotheses and discriminator
 
-- **H-RetailCommandListMatch** — retail `0x80090C80` uses the same command-list
-  contract as generated source: `head + count*0xA10 + inner*0x50 + 0x44`, with
-  head from `0x80149750` and count from `0x80149760`.
-- **H-RetailVoiceArrayDivergence** — retail `0x80090C80` follows the voice
-  array or another root, so its destination does not fit the generated
-  command-list formula even though the exact PC is active.
-- **H-ReallocatedCommandRoot** — the command-list head is republished or
-  relocates contemporaneously with the writer rows; a single stable root is
-  not the right join key.
-- **H-OracleWriterMismatch** — the requested PCs or physical watched stores do
-  not correspond to the source instructions under test.
+- **H-RetailGateWriterMatch** — retail writes the gate byte from the named
+  init/display/shutdown paths, and the countdown/flag words have active retail
+  producers whose PCs can be reconciled with the generated source/fixup
+  anchors.
+- **H-PortOnlyGateContract** — the whole-RDRAM control and target phases pass,
+  but the requested gate/countdown/flag locations have no retail writes or
+  only unrelated PCs; the current port-side gate/wait behavior is not a retail
+  contract at this address scope.
+- **H-GeneratedAnchorMismatch** — retail target writes occur with meaningful
+  PCs, but the generated tree or `fixup_game_funcs.py` lacks the corresponding
+  instruction anchor; this selects an anchor/source audit, not a behavior
+  change.
+- **H-OracleUnevaluable** — the positive control, title phase, or hangar phase
+  is absent. A null in that run is not evidence about the audio contract.
 
-The discriminator is one table joining each phase-gated `0x80091074` root
-store, the contemporaneous `0x80149750`/`0x80149760` values, and each
-`0x80090C80` destination/value. A stable root plus destinations matching
-`head + count*0xA10 + inner*0x50 + 0x44` selects H-RetailCommandListMatch. A
-voice-lattice destination or another stable root selects
-H-RetailVoiceArrayDivergence. Root changes bracketed by writer rows select
-H-ReallocatedCommandRoot. Missing exact-PC rows while the positive control,
-both target VI phases, and the other requested PCs fire is H-OracleWriterMismatch
-or an unevaluable join; do not call it a semantic null.
+The discriminator is one table of whole-RDRAM callback count, target-watch hit
+counts, storing PCs, and VI-gated target-phase coverage. Positive control plus
+named retail writers matching generated/fixup anchors selects
+H-RetailGateWriterMatch. Positive control plus target-phase nulls selects
+H-PortOnlyGateContract only if the nearby target watches and their controls
+also behave normally. A target hit with no generated anchor selects
+H-GeneratedAnchorMismatch. Missing control or phase coverage selects
+H-OracleUnevaluable and causes no port conclusion.
 
 ## Exact command
 
@@ -42,15 +45,18 @@ tools/oracle/build/rs64_oracle \
   --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
   --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
   --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 65 --hit-cap 64 \
+  --secs 35 --hit-cap 64 \
   --watch-write 0x0:0x800000 \
-  --watch-write 0x149750:0x149754 \
-  --watch-write 0x149760:0x149762 \
-  --watch-pc 0x80091074,0x80090C80,0x800921E8 \
-  --post-value-pc 0x80091074,0x80090C80,0x800921E8 \
-  --first-watch 0 --pc-hist-watch 0 --vi-trace \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+  --watch-write 0xA0F50:0xA0F54 \
+  --watch-write 0x14998A:0x14998C \
+  --watch-write 0x14974C:0x149750 \
+  --first-watch 0 --detail-watch 1 --pc-hist-watch 1 --vi-trace \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start
 ```
 
-Require the positive-control hit, title `1024 @ 0x00790400`, hangar `512 @
-0x006AB400`, and rows for the requested PCs before interpreting any null.
+Require the whole-RDRAM positive-control threshold, title
+`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and target-watch summaries
+before interpreting any null. If the run is qualified, crosswalk every gate
+watch PC to the generated `funcs_*.c` and `fixup_game_funcs.py` anchor in the
+same iteration; do not build the port until that ground-truth table is
+complete.

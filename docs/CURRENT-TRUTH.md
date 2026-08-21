@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2090 (2026-08-20);
-behavioral and source evidence is current through s2090.
+for exact commands and probe rows. Maintained in Session 2091 (2026-08-20);
+behavioral and source evidence is current through s2091.
 
 ## Current state
 
@@ -56,8 +56,20 @@ behavioral and source evidence is current through s2090.
   `musyxKeyOnVoice` and forms its destination from the command-list globals
   `0x80149750` (head) and `0x80149760` (count), not from the voice-array
   entry. This selects `H-AlternateStructure` at generated source scope and
-  supersedes the s2089 `H-WrongField` interpretation; the exact retail
-  command-list root still needs independent qualification.
+ supersedes the s2089 `H-WrongField` interpretation; the exact retail
+ command-list root still needs independent qualification.
+- s2091's corrected retail oracle table passed the whole-RDRAM positive control
+  (`100291817` writes), reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and retained rows for all three requested PCs. The
+  command-list publisher `0x80091074` wrote both `0x80171CE0` and
+  `0x80173B20` to physical `0x149750`; the exact `0x80090C80` rows fit
+  `head + count*0xA10 + inner*0x50 + 0x44` under those observed roots, while
+  `0x800921E8` continued to land on the separate `0x88` voice-array lattice.
+  This selects `H-ReallocatedCommandRoot` at root-stability scope and confirms
+  the generated command-list formula at retail/source scope; it rejects
+  `H-RetailVoiceArrayDivergence` and `H-OracleWriterMismatch`. The two roots
+  are a ground-truth rotation result, not proof of heap corruption or a reason
+  to change the port. No runtime behavior changed.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -126,19 +138,16 @@ behavioral and source evidence is current through s2090.
 The backlog is one monotonic sequence. Closed investigations are not retained
 as active work items.
 
-1. **M5 command-list writer provenance.** s2090's generated-source and
-   companion-symbol crosswalk selects `H-AlternateStructure` for
-   `0x80090C80`: its destination is
-   `head + count*0xA10 + inner*0x50 + 0x44`, where head/count are the
-   command-list globals `0x80149750`/`0x80149760`; `0x800921E8` remains the
-   voice-array writer. Qualify that root and formula in one phase-gated retail
-   oracle table with a whole-RDRAM positive control, the command-list pointer
-   publisher, and both exact writer PCs. A contemporaneous command-list root
-   and matching destination selects the retail/source match; a voice-lattice
-   destination selects a retail/source divergence; a root relocation selects
-   reallocation; a PC or address mismatch selects oracle attribution failure.
-   No wait, guard, task-field, output-routing, canary, gate, or host behavior
-   change is authorized.
+1. **M5 audio ground truth and regeneration reconciliation.** Run the retail
+   oracle table for physical `0x000A0F50`, `0x0014998A`, and `0x0014974C`,
+   alongside the whole-RDRAM positive control and the qualified title/hangar
+   VI phases. The narrow watches must report storing PCs and values; compare
+   the `0x800A0F50` PCs to the generated `fixup_game_funcs.py` anchors before
+   adding any port probe. A failed positive control or missing target phase is
+   unevaluable; named retail gate/countdown/flag writers select ground-truth
+   reconciliation; target hits with no matching generated anchor select an
+   anchor audit. No gate reversal, RSP dispatch, wait, guard, or host change is
+   authorized.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -257,8 +266,11 @@ from `musyxBuildVoiceCommandList`, copies its `+0x38`, and stores it at a
 command-list-derived `+0x34`; `musyxInitVoiceFromSample` receives
 `(voiceIdx, sampleDesc, adsrFlag)` from `startStreamedSampleVoice` and
 `soundMacroOpPlaySampleKeymap`, then stores `sampleDesc+0x4` into the dynamic
-voice-array slot. The remaining question is whether the retail
-`0x80090C80` rows follow that command-list formula.
+voice-array slot. s2091 closes the retail/source formula join: the command-list
+publisher wrote roots `0x80171CE0` and `0x80173B20`, and the retained
+`0x80090C80` destinations fit the generated formula under those roots. The
+root rotates across the retail run, but the writer is not a voice-array
+divergence and no port field or audio behavior change is authorized.
 
 ### M3, M4, and generated symbols
 
@@ -359,8 +371,10 @@ valid retail field witness, and s2088 qualifies the exact writer pair but
 finds a non-lattice destination separation. s2089 adds the repeated
 phase-keyed pointer/writer table and initially selects `H-WrongField` at its
 qualified retail-table scope. s2090's source/companion crosswalk supersedes
-that field attribution with `H-AlternateStructure` at generated-source scope
-and leaves the retail command-list-root join open.
+that field attribution with `H-AlternateStructure` at generated-source scope.
+s2091's corrected oracle table observes both command-list roots and matches the
+`0x80090C80` destinations to the generated formula, selecting rotating-root
+behavior at retail root scope and closing the source/retail formula join.
 The chronological ledger is still the source for exact run commands, counts,
 and rejected retries.
 
