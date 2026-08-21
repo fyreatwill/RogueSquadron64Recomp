@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains authoritative
-for exact commands and probe rows. Maintained in Session 2097 (2026-08-20);
-behavioral and source evidence is current through s2097.
+for exact commands and probe rows. Maintained in Session 2098 (2026-08-20);
+behavioral and source evidence is current through s2098.
 
 ## Current state
 
@@ -158,6 +158,22 @@ behavioral and source evidence is current through s2097.
   output-buffer write at that scope. It leaves the image destination/ABI
   interpretation and treatment hangar contract open; no output routing, task
   field, gate, wait, guard, queue policy, or default dispatch changed.
+- s2098's bounded generated-source audit found one shared `DO_DMA_WRITE`
+  helper with five reachable callsites. The observed `0x6F0/0x300` rows map
+  specifically to `L_12E0`: `L_12D0` calls `L_1830`, which writes 24
+  `0x20`-byte transformed blocks from DMEM `0x3F0`/`0x570` into
+  `0x6F0..0x9F0`, before the writeback. This rejects a scratch/padding
+  explanation for that source range, but static code does not prove the
+  transform inputs were nonzero in the observed tasks. The observed
+  `0xCB0/0x198` rows map to `L_1314`, which writes the previously loaded and
+  locally updated `0xCB0..0xE48` control/metadata block. Both exact DRAM
+  destinations still come from DMEM task fields (`[r2+0x44]` and
+  `[0x348]+0x100`), so their intended output/ABI meaning remains unresolved.
+  The other reachable writebacks are `0xC30` variable-length control data and
+  `0xE50/0x180` output data; neither matches the qualified rows. This selects
+  `H-GeneratedOutputSource` at the `0x6F0` source scope, rejects
+  `H-ScratchWriter` there, and leaves `H-ABI-Field` open at destination
+  contract scope. No runtime behavior changed.
 - s2084's retail run passed the whole-RDRAM positive control, reached title and
   hangar, and again found neighboring requested PCs active while
   `0x8000B650` and `0x80095D54` stayed at zero. The new regeneration-stable
@@ -229,17 +245,17 @@ as active work items.
 1. **M5 image-task source/ABI boundary.** `H-ImageStagingZeroPayload` is
    selected at the qualified title scope: all observed image DMAs are
    non-overlapping zero-payload transfers despite DMEM mutation and complete
-   SP/guest routing. The next unit is a bounded generated-source audit of every
-   reachable `DO_DMA_WRITE` in `factor5_ucode_b_recompiled.c`, joined to the
-   observed `(dmem,len,dram,payload_fnv,payload_nz)` rows and the final
-   `0x340..0xFCF` DMEM change span. It must identify whether the observed
-   `0x6F0/0x300` and `0xCB0/0x198` writes are output staging, scratch, or an ABI
-   field-derived destination, without changing runtime behavior. A source
-   mapping to the mutated span with nonzero expected input would refute the
-   zero-payload/staging explanation; a mapping to untouched or zero-filled DMEM
-   confirms it; an unresolved register/field path leaves the ABI boundary open.
-   Do not change output routing, task fields, canary, gate, wait, guard, queue
-   policy, or default dispatch.
+   SP/guest routing. s2098 maps the `0x6F0/0x300` source to a generated
+   transform output and the `0xCB0/0x198` source to a control/metadata
+   writeback, while both DRAM destinations remain task-field-derived. The
+   next unit is a bounded source/field audit of the `0x3F0`/`0x570` transform
+   inputs and the `[r2+0x44]`/`[0x348]+0x100` destination fields, joined to the
+   observed task rows. A nonzero source path that is preserved through
+   `L_1830` would move the boundary to RSP/DMA capture; zero or untouched input
+   paths would select a legitimate zero transform; an output-field path with
+   no established contract would retain the ABI boundary. Do not change
+   output routing, task fields, canary, gate, wait, guard, queue policy, or
+   default dispatch.
 2. **M3 crash work.** Only systematic idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -553,11 +569,13 @@ was the existing image-task ABI/DMA/slot/PCM table. s2097's corrected A/B
 retained the route positive control and selected `H-ImageStagingZeroPayload` at
 title scope: `3046/3046` target DMA ranges had zero output overlap and zero
 nonzero payload, while the treatment's DMEM and task joins were live and its
-PCM source/consumer rows were all zero. The next unit is the bounded generated
-source audit of the reachable DMA-write register paths. The chronological
-ledger is still the source for exact run commands, counts, and rejected retries.
-The chronological ledger is still the source for exact run commands, counts,
-and rejected retries.
+PCM source/consumer rows were all zero. s2098's source audit found five
+reachable write callsites behind one helper: `L_12E0` generates the observed
+`0x6F0..0x9F0` source from `0x3F0`/`0x570`, while `L_1314` writes the observed
+`0xCB0..0xE48` control block; their destinations are still loaded from DMEM
+task fields. The next unit is the source/field audit of those input and
+destination paths. The chronological ledger is still the source for exact run
+commands, counts, and rejected retries.
 
 ## Method and safety rules
 

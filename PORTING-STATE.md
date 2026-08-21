@@ -99844,6 +99844,51 @@ was made.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-task-contract`.
 
+## Session 2098 (2026-08-20) — audited Factor 5 audio writeback source paths
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 38573 bytes, so this was not a
+maintenance iteration. This work unit was read-only; no build or game run was
+needed. The generated source has one `DO_DMA_WRITE` helper at `L_13B0` and
+five direct reachable callsites. The runtime macro makes the encoded length
+inclusive (`wr_len + 1`) and aligns the DRAM address down to eight bytes.
+
+The complete callsite table is:
+
+| caller | DMEM source | DRAM expression | encoded / actual length | DMEM interval | qualified-row match |
+|---|---|---|---:|---|---|
+| `L_123C` | `0xC30` | `MEM[0x348] + (((MEM[0xE48] & 0xF0) - 0x10) << 3)` | `0x7F / 0x80` | `0xC30..0xCB0` | none |
+| `L_12AC` | `0xC30` | `MEM[0x348] + ((r8 & 0xF0) << 3)` after the nibble adjustment | variable `0x08..0x80` | `0xC30..0xCB0` | none |
+| `L_12E0` | `0x6F0` | `MEM[0x44 + r2]` | `0x2FF / 0x300` | `0x6F0..0x9F0` | 1535 rows |
+| `L_1314` | `0xCB0` | `MEM[0x348] + 0x100` | `0x197 / 0x198` | `0xCB0..0xE48` | 1511 rows |
+| `L_1E48` | `0xE50` | `MEM[0x6F0] + 2 * (192 * MEM_HU[0x342])` | `0x17F / 0x180` | `0xE50..0xFD0` | none |
+
+The first independent source line is the `L_12E0` producer chain:
+`L_12D0` passes `0x3F0`, `0x570`, and `0x6F0` to `L_1830`; `L_1830` runs
+24 iterations, writes sixteen halfwords per `0x20`-byte iteration, and
+therefore generates exactly `0x300` bytes in `0x6F0..0x9F0` before the
+writeback. That interval lies inside the observed changed span
+`0x340..0xFCF`, so the `0x6F0` source is a generated transform/output region,
+not scratch or padding. Static code does not establish that its `0x3F0` and
+`0x570` inputs were nonzero in the treatment.
+
+The second independent source line is the `L_1314` path. `L_10C4` first reads
+`0xCB0..0xE48` from `MEM[0x348] + 0x100`; later control code updates the first
+16 bytes at `L_1938`; `L_1314` writes that block back with the same length.
+It is a control/metadata round trip, not the generated `L_1830` output loop.
+The qualified run independently reports 1535 `0x6F0/0x300` rows and 1511
+`0xCB0/0x198` rows; all 3046 have `direction=dmem_to_rdram`,
+`output_overlap=0`, and `payload_nz=0`. The changed span alone therefore
+cannot explain the zero payload.
+
+This selects `H-GeneratedOutputSource` at the `0x6F0` source scope and rejects
+`H-ScratchWriter` there. Both exact DRAM destinations still originate from
+DMEM task fields (`[r2+0x44]` and `[0x348]+0x100`), so `H-ABI-Field` remains
+open for the intended output contract. The result rules out neither a
+legitimately zero transform nor a later RSP/DMA copy failure. No output
+routing, task-field, canary, gate, wait, guard, queue-policy, or
+default-dispatch behavior changed. The next unit is the source/field audit in
+`scratch/agent/NEXT.md`.
+
 ## Session 2097 (2026-08-20) — qualified the image task's zero-payload boundary
 
 Step 0 measured `docs/CURRENT-TRUTH.md` at 35340 bytes, so this was not a
