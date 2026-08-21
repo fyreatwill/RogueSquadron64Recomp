@@ -102754,3 +102754,47 @@ flip, wait/slot guard, canary, or AI-status change.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2165 (2026-08-21) — retail cinematic SIGBUS PCs execute with KSEG0 pointers
+
+Wired `DebugGetCPUDataPtr(M64P_CPU_REG_REG)` so `--watch-pc` EXEC
+hits print `$v0`/`$s1`/`$a0`/`$a2` plus live VI width/origin, and
+the first breakpoint of any kind prints `[gpr-ctl]`. Exec hits log
+past `--hit-cap` (64 printed). Rebuilt `tools/oracle` only; no game
+rebuild.
+
+Rice 45s command from `scratch/agent/NEXT.md`. Log:
+`scratch/agent/oracle_s2165_cinematic_pcs.log`. Table:
+`scratch/s73_post_a_scene/s2165_cinematic_pc_oracle.txt`.
+
+Positive controls in the same log: `[gpr-ctl] pc=0x8002b608
+v0=0x806f04bf s1=0x806dd000 flags=0x5`; watch 0 write
+callbacks=10000 removal rc=0; `[vi] WIDTH 320 -> 640
+origin=0x0066a500` at t=2.0s; `[vi] origin=0x00696100 width=640`
+at t=7.1s (the port cinematic origin). 2674 VI (~44.6s emulated).
+
+Lifetime exec: `0x8003E944` n=54246, `0x800A87A8` n=14256,
+`0x800A87A0` n=14256, `0x8003E938` n=65828 (148586 total). All 64
+logged EXEC lines are width=640 at `0x00696100`/`0x00696600`.
+Crash-site GPRs: `0x8003E944` `$s1` KSEG0 3/3 (`0x80208df4`,
+`0x80208db8`); `0x800A87A8` `$v0` KSEG0 22/22 (`0x800ca748`,
+`0x800cae88`, `0x800cdb58`, `0x800ce028`, `0x800cf158`).
+Producers also KSEG0 `$v0`. Cutscene `$a2` in
+`0x800c7abc..0x800ca5f0`.
+
+This selects `H-RetailExecsValidPtr` and refutes
+`H-RetailNeverExec`, `H-RetailExecsNullOrRaw`, and
+`H-CoverageFailure`. The port SIGBUS is a different loaded
+pointer, not a load retail skips or a retail-null `$v0`/`$s1`.
+
+No new soak-queue verdicts to fold (SOAK-RESULTS tail is still
+s1940–s1974).
+
+ORIGIN: not a mitigation. Oracle GPR census only. No S32 rewrite,
+NULL skip, default-on flip, wait/slot guard, canary, or AI-status
+change.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

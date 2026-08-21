@@ -76,6 +76,7 @@ static void       (*pDebugBreakpointTriggeredBy)(uint32_t *, uint32_t *);
 static int        (*pDebugGetState)(m64p_dbg_state);
 static unsigned int (*pDebugMemRead32)(unsigned int);
 static void (*pDebugMemWrite32)(unsigned int, unsigned int);
+static void *     (*pDebugGetCPUDataPtr)(m64p_dbg_cpu_data);
 
 struct watch {
     uint32_t start, end;
@@ -150,7 +151,28 @@ static int g_verbose;
 static int g_watches_armed;
 static int g_positive_watch_removed;
 static long g_pc_hits;
+static int g_gpr_ctl_printed;
+static long g_exec_logged;
+#define EXEC_LOG_CAP 64
 #define MAX_EXEC_PREV 128
+
+/* GPR file is int64_t[32] (r4300_regs). Print the 32-bit guest view. */
+static uint32_t gpr32(int idx)
+{
+    int64_t *gpr;
+    if (!pDebugGetCPUDataPtr)
+        return 0;
+    gpr = (int64_t *)pDebugGetCPUDataPtr(M64P_CPU_REG_REG);
+    if (!gpr)
+        return 0;
+    return (uint32_t)gpr[idx];
+}
+
+static void print_gpr_fields(void)
+{
+    printf(" v0=0x%08x s1=0x%08x a0=0x%08x a2=0x%08x",
+           gpr32(2), gpr32(17), gpr32(4), gpr32(6));
+}
 struct exec_prev {
     uint32_t pc;
     uint32_t prev;
@@ -451,6 +473,14 @@ static void dbg_update(unsigned int pc)
     pDebugBreakpointTriggeredBy(&flags, &accessed);
     access_flags = flags & (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE);
 
+    if (!g_gpr_ctl_printed) {
+        g_gpr_ctl_printed = 1;
+        printf("[gpr-ctl] pc=0x%08x", pc);
+        print_gpr_fields();
+        printf(" flags=0x%x\n", flags);
+        fflush(stdout);
+    }
+
     g_hits++;
     for (i = 0; i < g_nwatch; i++) {
         if (accessed >= g_watch[i].start && accessed < g_watch[i].end &&
@@ -496,6 +526,12 @@ static void dbg_update(unsigned int pc)
         if (g_first_watch == i && g_watch[i].hits == 1)
             detail_hit = 1;
     }
+    /* Exec hits must print after the whole-RDRAM control fills --hit-cap.
+     * Lifetime counts still go to the exec-prev histogram. */
+    if ((flags & M64P_BKP_FLAG_EXEC) && g_exec_logged < EXEC_LOG_CAP) {
+        detail_hit = 1;
+        g_exec_logged++;
+    }
     if (!g_positive_watch_removed && g_nwatch > 0 && g_watch[0].write_hits == 10000) {
         int rc = pDebugBreakpointCommand(M64P_BKP_CMD_REMOVE_IDX, 0, NULL);
         printf("[oracle] positive-control threshold reached: watch index 0 callbacks=%ld; removal rc=%d; watch index 1 remains armed\n",
@@ -505,11 +541,18 @@ static void dbg_update(unsigned int pc)
     }
     if (g_hits <= g_hit_cap || detail_hit) {
         unsigned int prev = (unsigned int)pDebugGetState(M64P_DBG_PREVIOUS_PC);
-        printf("[hit] %s%s%s addr=0x%08x pc=0x%08x prev_pc=0x%08x t=%.1fs n=%ld\n",
+        printf("[hit] %s%s%s addr=0x%08x pc=0x%08x prev_pc=0x%08x t=%.1fs n=%ld",
                (flags & M64P_BKP_FLAG_WRITE) ? "w" : "",
                (flags & M64P_BKP_FLAG_READ)  ? "r" : "",
                (flags & M64P_BKP_FLAG_EXEC)  ? "x" : "",
                accessed, pc, prev, now_s() - g_t0, g_hits);
+        if (flags & M64P_BKP_FLAG_EXEC) {
+            unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
+            unsigned origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+            print_gpr_fields();
+            printf(" width=%u origin=0x%08x", width, origin);
+        }
+        printf("\n");
         if ((flags & (M64P_BKP_FLAG_WRITE | M64P_BKP_FLAG_READ)) &&
             accessed >= 0x001496F8 && accessed < 0x001496FC) {
             if (flags & M64P_BKP_FLAG_WRITE) {
@@ -899,7 +942,7 @@ static void usage(void)
         "  --watch-write A[:B]   log writes to physical [A,B), e.g. 0x1F3CC0:0x1F3CD0\n"
         "  --watch-read  A[:B]   log reads\n"
         "  --watch-rw    A[:B]   log both\n"
-        "  --watch-pc    A[,B...] watch execution at guest PCs\n"
+        "  --watch-pc    A[,B...] watch execution at guest PCs (prints $v0/$s1/$a0/$a2)\n"
         "  --secs N              run for N seconds (default 120)\n"
         "  --hit-cap N           log at most N hits, then count silently (default 200)\n"
         "  --detail-watch N      always log hits for watch index N\n"
@@ -1054,6 +1097,7 @@ int main(int argc, char **argv)
     SYM(pDebugGetState, "DebugGetState");
     SYM(pDebugMemRead32, "DebugMemRead32");
     SYM(pDebugMemWrite32, "DebugMemWrite32");
+    SYM(pDebugGetCPUDataPtr, "DebugGetCPUDataPtr");
 #undef SYM
 
     /* DataPath must hold mupen64plus.ini or the core has no per-ROM settings

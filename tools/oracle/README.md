@@ -29,7 +29,13 @@ and the oracle refuses to run against it.
 `--watch-pc` also prints a lifetime `exec-prev` histogram: for each
 exec hit, mupen's `PREVIOUS_PC` (the jal site that transferred here;
 `$ra` is prev+8). Use that instead of overlay-aliased VRAM watches
-when attributing a callee.
+when attributing a callee. Each logged exec hit also prints `$v0`
+(gpr[2]), `$s1` (gpr[17]), `$a0` (gpr[4]), and `$a2` (gpr[6]) from
+`DebugGetCPUDataPtr(M64P_CPU_REG_REG)`, plus live VI width/origin.
+The first breakpoint of any kind prints `[gpr-ctl]` so a zero exec
+count still proves the GPR instrument fired. Exec hits log past
+`--hit-cap` (up to 64 printed execs) so a whole-RDRAM positive
+control cannot silence them.
 
 For a memory watch after the global `--hit-cap` has gone silent,
 `--first-watch N` prints the first hit for watch index N and
