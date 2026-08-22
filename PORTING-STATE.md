@@ -103173,3 +103173,52 @@ a different slot).
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2174 (2026-08-22) — failing =1 640-stall keeps first-slot word0 0x800CA748
+
+Analysis-only. Folded queued soak `s2173_image_heap0_fail`
+(SOAK-RESULTS rc=1 188s). Table:
+`scratch/agent/s2174_heap0_fail.txt`. Logs:
+`scratch/s73_post_a_scene/s2173_image_heap0_fail/run.log`,
+`scratch/agent/soak_results/s2173_image_heap0_fail_20260822-092723.log`.
+s2173 always-log already in the binary (dest phys `0x25A580`
+and 87A8 `$v0==0`).
+
+Positive controls (same run): `[heap0-ctl]` n=16 at width=640
+origin=`0x00696100`; `[cutscene-a2-50-ctl]` n=2 at t=7.5;
+store57100 dest=`0x8025A580` value=`0x800CA748`; load87a0
+n>=1; `[phase]` 640 `0x00696100` at 7.4s #378.
+
+Failure: 0 CRASH 0 SIGBUS; 0 VI 1024; 0 VI 512; last `[vi]`
+#10752 origin=`0x0062BD00` width=640 (640-stall class).
+
+First-slot word0: load87a0 dest `0x8025A580` n=366 value
+`0x800CA748` 366/366, zero=0, mismatch=0. Last n=5825 t=28.4.
+lwc87a8 zero_logged=0 (last printed n=5800 dest=`0x800CAE88`).
+load87a0 any-dest zero=0.
+
+Guest cinematic last-n all t=28.4 then silence:
+effectsEntry==effectsRet n=365; load879c n=5825 first-slot
+`+0x50=0x8025A580`; load87a0 n=5825 dest `0x8025A580`
+value=`0x800CA748`. Host VI continues to #10752. Completing
+s2173_on continued 87A0 of that dest through n=14929 t=49.7
+then title+hangar.
+
+This selects `H-StallWord0Intact` and refutes
+`H-ClobberFirstSlot`, `H-LwcZeroOtherDest`, and
+`H-CoverageFailure` on this 640-stall. `H-NoZeroThisRun` as
+written expected title+hangar; this is the stall variant
+with the same zero=0 table. s2171 `H-NullV0At87A8` remains a
+separate intermittent SIGBUS class (not this soak).
+
+ORIGIN: retail writer `0x80057100` (s2172). Diagnostic
+classification; not a mitigation. Do not S32-address,
+NULL-skip, re-flip default-on, skip/allow the lwc, or add a
+wait/slot guard. Next: hang location after last first-slot
+87A0 (`0x800A87A8` / `transformVec3ToNpcLocalWithScale`
+`0x8001DC34` / dispatch return).
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

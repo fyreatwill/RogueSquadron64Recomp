@@ -1,0 +1,66 @@
+s2174 failing =1 heap0 always-log classification
+HYPOTHESIS-ID: m5-a1-cinematic-split
+analysis-only (no rebuild). Soak already ran.
+
+recipe: SPIN_YIELD=1 AUDIO_UCODE=1 LOG_ALL=1 LOG_CUTSCENE_A2_50=1
+driver: scratch/s73_post_a_scene/run_mission_keys.sh 30 12
+watchdog SIGKILL 180s
+logs:   scratch/s73_post_a_scene/s2173_image_heap0_fail/run.log
+        scratch/agent/soak_results/s2173_image_heap0_fail_20260822-092723.log
+        scratch/agent/SOAK-RESULTS.md (rc=1 188s)
+
+positive controls (same run)
+- [heap0-ctl] at width=640 origin=0x00696100 n=16
+- [cutscene-a2-50-ctl] n=2 at t=7.5 width=640 origin=0x00696100
+- [phase] VI 640 origin=0x00696100 at 7.4s #378
+- store57100 dest=0x8025A580 value=0x800CA748 n=1 (t=7.5)
+- load87a0 n>=1
+
+failure class
+- 0 CRASH 0 SIGBUS 0 SIGSEGV
+- 0 VI 1024, 0 VI 512
+- last [phase] is 640 @ 0x00696100
+- last [vi] update_screen #10752 origin=0x0062BD00 width=640
+- FAIL: 640-stall (soak recipe)
+
+first-slot word0 (dest phys 0x25A580)
+- store57100 dest 0x8025A580: n=1 value=0x800CA748 (retail first-slot)
+- load87a0 dest 0x8025A580: n=366, value=0x800CA748 366/366, zero=0, mismatch=0
+- first load n=1 t=7.5; last n=5825 t=28.4 origin=0x00696100
+- lwc87a8 zero_logged=0 (n_max printed=5800 last dest=0x800CAE88)
+- load87a0 any dest zero=0
+
+guest cinematic last-n (all t=28.4, then silence)
+- effectsEntry==effectsRet n=365
+- load879c n=5825 first-slot +0x50=0x8025A580
+- load87a0 n=5825 dest=0x8025A580 value=0x800CA748
+- matchEntry last n=168 t=26.6 (same n as s2171; completing s2170 continues to n=264 t=36.0)
+
+after last heap0 (line 207018, vi #1600)
+- host VI continues to #10752
+- [dpc-pak]/[runner] a few more GFX tasks (#544)
+- 0 further [heap0]/[cutscene-a2-50]/[match-kw-flow]
+- last [audtask-dispatch] n=1024 at vi #1408 (before the stall)
+
+generated stream after last 87A0 (funcs_27.c; $v0=0x800CA748)
+    0x800A87A4 lwc1 $f0, 0x64($a2)
+    0x800A87A8 lwc1 $f2, 0x44($v0)   ; would not print: n=5825 not %50, v0!=0
+    0x800A87AC mul.s
+    0x800A87C0 jal 0x8001DC34        ; transformVec3ToNpcLocalWithScale
+
+compare
+- s2173_on completing =1: load87a0 dest 0x8025A580 933/933 value 0x800CA748
+  through n=14929 t=49.7, then title+hangar, lwc zero_logged=0
+- s2171 SIGBUS t=28.2 at 87A8 $v0=0 after last load879c +0x50=0x8025A580
+  (87A0 result unlogged that run). This soak did not reproduce that SIGBUS.
+
+selected: H-StallWord0Intact
+refuted:  H-ClobberFirstSlot, H-LwcZeroOtherDest, H-CoverageFailure
+          (on this failing 640-stall). H-NoZeroThisRun as written expected
+          title+hangar; this is the stall variant with the same zero=0 table.
+s2171 H-NullV0At87A8 remains a separate intermittent class (not this soak).
+
+Do not S32-address, NULL-skip, re-flip default-on, skip/allow the lwc,
+or add a wait/slot guard. Next: always-log 87A8 after last first-slot 87A0
+plus jal 0x8001DC34 entry/return and cutsceneDispatchSlotsByFlag ret, to
+split hung-at-87A8 / hung-in-transform / dispatch-returned.
