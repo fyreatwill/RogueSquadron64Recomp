@@ -103076,3 +103076,52 @@ a wait/slot guard.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2172 (2026-08-22) — named retail writer of heap object word0
+
+Retail oracle, no game rebuild. Rice 45s. Table:
+`scratch/agent/s2172_heap0_writer.txt`. Log:
+`scratch/agent/oracle_s2172_heap0_writer.log`.
+
+Positive controls in the same log: `[gpr-ctl]`; watch 0
+write callbacks=10000 removal rc=0; `[vi]` 640
+`0x00696100` at t=8.1s vi=459; exec `0x800A87A0` n=14160
+and `0x800A87A8` n=14160; 2669 VI (~44.5s emulated).
+
+Watch 1 phys `[0x25A580, 0x25A584)`: 5 writes.
+writer-pc histogram:
+- `zmemcpy` `0x80018F5C` `sd $t1, 0($t5)` n=4
+  (16-byte aligned copy loop; 4-byte window under one
+  8-byte store, same cover shape as s2166 `rs_memset`)
+- `walkMeshdef0List` `0x80057100` `sw $v0, 0($s7)` n=1
+  after `jal rs_malloc` `0x80001ACC`; `$s7` = malloc
+  return; `$v0` = `hobObjectListItems`+4 (`0x80139020`).
+  Nearby explicit zeros in that function are +4/+8/+A/+B,
+  not +0.
+
+Consumer (logged GPRs are pre-instruction): first slot
+`$a2=0x800C7ABC` at `0x800A87A0` `$v0=0x8025A580`, then
+`0x800A87A8` `$v0=0x800CA748`. Logged 87A8 `$v0` 32/32
+KSEG0 RDRAM in `{0x800CA748,0x800CAE88,0x800CDB58,
+0x800CE028,0x800CF158}`; zero=0; `0x80000000`=0.
+Snapshot watch=1 bytes=4 nonzero=4. First-slot `+0x50`
+is still `0x8025A580` (not heap ASLR).
+
+This selects `H-RetailHeap0NeverZero` and refutes
+`H-RetailStoresZero`, `H-RetailDifferentObj`, and
+`H-CoverageFailure`. Watch-1 payloads were not printed
+(hit-cap 64 consumed by watch 0); "never stores 0" is
+the constructor instruction (pointer from table+4, not
+`$zero`) plus consumer/snapshot, not five printed
+values.
+
+ORIGIN: `0x80057100` `walkMeshdef0List` `sw $v0, 0($s7)`
+with `$v0` = `hobObjectListItems`+4 after `rs_malloc`.
+Legitimate on retail (first-slot word0 `0x800CA748`).
+Not a mitigation. Do not S32-address, NULL-skip, re-flip
+default-on, skip/allow the lwc, or add a wait/slot guard.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.
