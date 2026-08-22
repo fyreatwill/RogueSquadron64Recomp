@@ -103023,3 +103023,56 @@ restore, or default-on flip. Retail `$v0` already named
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2171 (2026-08-22) — failing =1 cinematic is SIGBUS at 0x800A87A8 with $v0=0
+
+Analysis-only of queued soak `s2171_image_cinematic_flow`
+(SOAK-RESULTS rc=1 126s). No rebuild. Table:
+`scratch/agent/s2171_image_cinematic_flow.txt`. Logs:
+`scratch/s73_post_a_scene/s2171_image_cinematic_flow/run.log`
+and
+`scratch/agent/soak_results/s2171_image_cinematic_flow_20260822-084715.log`.
+
+Positive controls in the same run: `[match-kw-flow-ctl]` at
+width=640 origin=`0x00696100` n=40; `[cutscene-a2-50-ctl]`
+n=1,2 t=7.3/7.4; `[phase]` VI 640 `0x00696100` at 7.2s
+#362; `[audtask-dispatch] real_ucode=1`.
+
+Failure: SIGBUS signal 10 at t=28.2.
+`[CRASH] si_addr=0x380000044` pc-symbol
+`cutsceneDispatchSlotsByFlag+9072` `x1=0x800a87a8` `x2=0`
+`x3=0x44` `x8=0x300000000` `x9=0x80000044`. 0 VI 1024,
+0 hangar; last `update_screen` #1600 origin=`0x00696100`.
+Matches s2164 `MEM_W(0, 0x44)` arithmetic.
+
+Flow last-n: `effectsEntry==effectsRet` n=338 t=28.2;
+`matchEntry` n=168 t=26.7 a0=`0x8025FD10` v0=`0x800CA100`;
+`matchRet330` n=50 t=26.7 (same burst); then effects
+n=329–338 with no further matchKeyword. Last line before
+crash: load879c n=5393 `+0x50=0x8025A580` (first slot).
+Generated stream is `lw 0x50($a2)` / `lw 0($v0)` /
+`lwc1 0x44($v0)`; the lwc probe is before `MEM_W` and
+every-50, so `$v0=0` was not printed.
+
+This selects `H-NullV0At87A8` and refutes
+`H-HangInsideMatchKw`, `H-CallerStops`,
+`H-EffectsHang`, and `H-CoverageFailure` on a failing
+`=1` run (s2170 had already refuted them on a completing
+run). `H-CinematicRegress` remains intermittent
+(s2163 0/5 title, s2167 matchKeyword SIGBUS, s2169 stall,
+this 87A8 SIGBUS vs s2162/s2170 title+hangar).
+
+Do not treat heap-object word0 at `0x8025A580` as selected
+ORIGIN: 87A0 result was not logged. Next discriminator is
+the retail writer of phys `0x25A580`.
+
+ORIGIN: not a mitigation. Analysis only. Crash-site `$v0=0`
+is a loaded pointer at `0x800A87A8`; the `+0x50` heap
+pointer was still `0x8025A580`. Do not S32-address,
+NULL-skip, re-flip default-on, skip/allow the lwc, or add
+a wait/slot guard.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

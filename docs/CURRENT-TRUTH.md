@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2170
-(2026-08-22); behavioral and source evidence is current through s2170.
+authoritative for exact commands and probe rows. Maintained in Session 2171
+(2026-08-22); behavioral and source evidence is current through s2171.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2170 live here
+`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2171 live here
 until the next archive pass.
 
 ## Current state
@@ -124,11 +124,22 @@ until the next archive pass.
   `effectsEntry==effectsRet` through n=820; both arms title
   `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The
   s2169 missing n=200 was every-50 rate-limit, not a hang
-  inside the callee. `H-CinematicRegress` remains (s2163
-  0/5 title, s2167 SIGBUS, s2169 stall vs s2162/s2170
-  title+hangar). Do not S32-address by guess, NULL-skip,
-  re-flip default-on, skip/allow `matchKeywordWithPriority`,
-  add a wait/slot guard, or change `osAiGetStatus_recomp` /
+  inside the callee. s2171 selected `H-NullV0At87A8`
+  (`scratch/agent/s2171_image_cinematic_flow.txt`) on the
+  queued failing `=1` soak: flow-ctl n=40 at
+  640/`0x00696100`; `effectsEntry==effectsRet` n=338;
+  `matchEntry` n=168 returned (effectsRet n=328 same t,
+  then effects n=329–338); SIGBUS t=28.2
+  `cutsceneDispatchSlotsByFlag+9072` `si_addr=0x380000044`
+  `x2=0` `x1=0x800a87a8` after load879c n=5393
+  `+0x50=0x8025A580`. The four hang hyps are now refuted
+  on a failing run, not only s2170's completing run.
+  `H-CinematicRegress` remains (s2163 0/5 title, s2167
+  matchKeyword SIGBUS, s2169 stall, s2171 87A8 SIGBUS vs
+  s2162/s2170 title+hangar). Do not S32-address by guess,
+  NULL-skip, re-flip default-on, skip/allow
+  `matchKeywordWithPriority` or the lwc, add a wait/slot
+  guard, or change `osAiGetStatus_recomp` /
   `osAiSetNextBuffer_recomp`.
 
 ### Selected hypotheses (scoped; do not widen)
@@ -170,6 +181,7 @@ until the next archive pass.
 | s2168 | `H-RetailValidV0` | Rice 45s: `[gpr-ctl]` + watch0 10000 + VI 640 `0x00696100`; exec `0x800AF2C8`/`CC`/`D0` n=264 each, prev `0x800A9248`; logged CC `$v0=0x800CDB58` 21/21 KSEG0 not base; `$a0=0x802231EC` 22/22; 0 wild | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow `matchKeywordWithPriority` |
 | s2169 | `H-PortMatchesRetailUntilLater` | same-build `=1`/`=0`: ctl at 640 `0x00696100`; callee `$a0=0x802231EC` `$v0=0x800CDB58` dominant; wild=0; image last logged n=150 t=21.3 then 640-stall; stub n=250 title+hangar | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow `matchKeywordWithPriority`; treat last n=150 as hang-inside |
 | s2170 | `H-NoHangAtN150` | same-build: `[match-kw-flow-ctl]` at 640 `0x00696100`; image `matchEntry` n=150 and n=151 at t=20.7 then n=264 t=36.0; `effectsEntry==effectsRet` n=820; both arms title+hangar; 0 SIGBUS | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow `matchKeywordWithPriority`; treat s2169 missing n=200 as hang-inside |
+| s2171 | `H-NullV0At87A8` | failing `=1` soak: flow-ctl n=40 at 640 `0x00696100`; `effectsEntry==effectsRet` n=338; `matchEntry` n=168 returned then effects n=329–338; SIGBUS t=28.2 `+9072` `si_addr=0x380000044` `x2=0` `x1=0x800a87a8`; last load879c `+0x50=0x8025A580`; lwc probe is before `MEM_W` and every-50 so did not print `$v0=0` | hang-inside / caller-stops / effects-hang; NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow `matchKeywordWithPriority` or the lwc; treat heap+0 as selected ORIGIN |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -205,13 +217,18 @@ active work items.
    match retail-class values; image 640-stalled after logged n=150.
    s2170 selected `H-NoHangAtN150`: that n=150 last-row is not a
    hang inside `matchKeywordWithPriority` (n=151 same timestamp;
-   both arms continue to n=264 and reach title+hangar). Failure
-   modes remain intermittent (`=1` title+hangar in s2162/s2170;
-   SIGBUS in s2167; 640-stall in s2169; s2163 0/5 title). Next
-   unit is a failing `=1` cinematic with the flow probes already
-   in the binary (soak `s2171_image_cinematic_flow`). Do not
-   S32-address, NULL-skip, re-flip default-on, skip/allow the
-   function, or add a wait/slot guard.
+   both arms continue to n=264 and reach title+hangar). s2171
+   selected `H-NullV0At87A8` on a failing `=1` soak: the four
+   hang hyps are refuted there too; SIGBUS is
+   `cutsceneDispatchSlotsByFlag` `0x800A87A8` `lwc1 0x44($v0)`
+   with `$v0=0` after a good first-slot `+0x50=0x8025A580`.
+   Failure modes remain intermittent (`=1` title+hangar in
+   s2162/s2170; matchKeyword SIGBUS in s2167; 640-stall in
+   s2169; 87A8 SIGBUS in s2163/s2171). Next unit is the
+   retail writer of phys `0x25A580` (heap object +0 consumed
+   at `0x800A87A0`). Do not S32-address, NULL-skip, re-flip
+   default-on, skip/allow the function or the lwc, or add a
+   wait/slot guard.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the
@@ -315,13 +332,17 @@ that same heap pointer. s2168 selected
 `H-NoHangAtN150`: image-arm `matchKeywordWithPriority` returns
 and is re-entered past n=150 on a completing cinematic; the
 s2169 640-stall is not a deterministic hang inside that
-function. The A1 execute / SP-complete / MORT-ownership /
-both-arm-validate / task-exit+PCM / two-source-completion
-clauses remain selected at the s2118 C88=0 sampled scope
-(s2118, s2132–s2140, s2157). Remaining isolation is the env
-default. Do not re-flip default-on, S32-address by guess,
-NULL-skip, skip/allow `matchKeywordWithPriority`, or add a
-wait/slot guard.
+function. s2171 selected `H-NullV0At87A8`: a failing `=1`
+cinematic is SIGBUS at `0x800A87A8` with `$v0=0` after a
+good `+0x50` heap pointer, not a hang in matchKeyword or
+`spawnCutsceneEffectsAndCues`. The A1 execute / SP-complete /
+MORT-ownership / both-arm-validate / task-exit+PCM /
+two-source-completion clauses remain selected at the s2118
+C88=0 sampled scope (s2118, s2132–s2140, s2157). Remaining
+isolation is the env default. Do not re-flip default-on,
+S32-address by guess, NULL-skip, skip/allow
+`matchKeywordWithPriority` or the lwc, or add a wait/slot
+guard.
 
 The stock `aspMain` contract is not the game's MusyX contract. C88
 testing selected reversed-or-suppressing polarity at sampled port gate
@@ -430,6 +451,14 @@ ledger. Operational reversals:
   both arms reach title+hangar. `H-CinematicRegress` remains
   as intermittent `=1` cinematic failure, not as a hang at
   n=150.
+  s2171 supersedes treating a failing `=1` cinematic as
+  hang-inside matchKeyword, caller-stop, or effects-hang:
+  same-run flow-ctl at 640/`0x00696100`, `effectsEntry==effectsRet`
+  n=338, and matchEntry n=168 returned before SIGBUS at
+  `0x800A87A8` with `$v0=0` (`si_addr=0x380000044`, matching
+  s2164 `MEM_W(0, 0x44)` arithmetic). The `+0x50` heap
+  pointer was still `0x8025A580`. The four hang hyps are
+  refuted on a failing run, not only s2170's completing run.
 - The old retail voice-field interpretation was believable because a
   pointer entry was treated as a physical array base.
 - The old “B40 was unreached” and s2110 `H-B40-RouteRequired`
@@ -464,6 +493,7 @@ s2168 is the retail `$a0`/`$v0` census at
 `matchKeywordWithPriority` (`H-RetailValidV0`). s2169 is
 the port `$a0`/`$v0` A/B (`H-PortMatchesRetailUntilLater`).
 s2170 is the entry/return flow A/B (`H-NoHangAtN150`).
+s2171 is the failing-`=1` flow classification (`H-NullV0At87A8`).
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
@@ -472,10 +502,11 @@ ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`,
 `H-RouteRegress`, `H-RetailLoadsCount`, `H-UnsignedMemBu`,
 `H-CinematicRegress`, `H-NoSuchSite`, `H-RetailExecsValidPtr`,
 `H-RetailWriterNamed`, `H-PortStoreMatchesRetail`,
-`H-RetailValidV0`, `H-PortMatchesRetailUntilLater`, or
-`H-NoHangAtN150`.
+`H-RetailValidV0`, `H-PortMatchesRetailUntilLater`,
+`H-NoHangAtN150`, or `H-NullV0At87A8`.
 Do not re-flip default-on, S32-address by guess, NULL-skip,
-skip/allow `matchKeywordWithPriority`, or add a wait/slot guard.
+skip/allow `matchKeywordWithPriority` or the lwc, or add a
+wait/slot guard.
 
 ## Method and safety rules
 

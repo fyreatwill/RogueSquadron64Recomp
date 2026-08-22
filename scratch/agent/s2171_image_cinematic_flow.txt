@@ -1,0 +1,72 @@
+s2171 failing =1 cinematic with match-kw-flow probes
+HYPOTHESIS-ID: m5-a1-cinematic-split
+analysis-only (no rebuild). Soak already ran.
+
+recipe: SPIN_YIELD=1 AUDIO_UCODE=1 LOG_ALL=1 LOG_MATCH_KW=1
+driver: scratch/s73_post_a_scene/run_mission_keys.sh 30 12
+watchdog SIGKILL 120s
+logs:   scratch/s73_post_a_scene/s2171_image_cinematic_flow/run.log
+        scratch/agent/soak_results/s2171_image_cinematic_flow_20260822-084715.log
+        scratch/agent/SOAK-RESULTS.md (rc=1 126s)
+
+positive controls (same run)
+- [match-kw-flow-ctl] at width=640 origin=0x00696100 n=40
+- [cutscene-a2-50-ctl] n=1,2 at t=7.3/7.4 origin=0x00696100
+- [phase] VI 640 origin=0x00696100 at 7.2s #362
+- [audtask-dispatch] real_ucode=1 through n=1024
+
+failure
+- SIGBUS signal 10 t=28.2 after last effects n=338 / load879c n=5393
+- [CRASH] si_addr=0x380000044  (rdram 0x300000000 + 0x80000044)
+- pc-symbol=cutsceneDispatchSlotsByFlag+9072
+- x1=0x800a87a8  x2=0  x3=0x44  x8=0x300000000  x9=0x80000044  x10=0x80000000
+- 0 VI 1024, 0 VI 512, last update_screen #1600 origin=0x00696100 width=640
+- last-guest-pc=0x8000834c (shared breadcrumb, not the crashing load)
+
+flow last-n (refutes the four hang hyps)
+- effectsEntry n_max=338 last t=28.2 origin=0x0062BD00
+- effectsRet   n_max=338 last t=28.2 (entry==return through last 10)
+- matchEntry   n_max=168 last t=26.7 origin=0x0062BD00 a0=0x8025FD10 v0=0x800CA100
+- matchRet330  last logged n=50 t=26.7 (same timestamp as matchEntry 161-168;
+  kind is every-50; n=50 at that burst proves a 330-return fired)
+- matchRet358  last logged n=100 t=20.6 (every-50; not a hang)
+- after matchEntry n=168: effectsRet n=328 t=26.7 then effects n=329..338
+  t=27.0..28.2 with 0 further matchKeyword (always-log n>=140 would have
+  shown them). s2170 success continues matchEntry to n=264 t=36.0; this
+  run died first.
+
+cutscene-a2-50 at crash
+- last line before [CRASH]: load879c n=5393 t=28.2
+  base=0x800C7ABC dest=0x800C7B0C value=0x8025A580 kseg=1 slot=1 always=1
+- generated stream (funcs_27.c):
+    0x800A879C lw $v0, 0x50($a2)     ; logged heap 0x8025A580
+    0x800A87A0 lw $v0, 0x0($v0)      ; word at heap+0 into $v0
+    0x800A87A4 lwc1 $f0, 0x64($a2)
+    0x800A87A8 lwc1 $f2, 0x44($v0)   ; probe THEN MEM_W; crash here
+- lwc87a8 probe sits BEFORE MEM_W and is every-50 (always only dest phys
+  0xC7B0C, which is $a2+0x50 not $v0+0x44). last logged lwc n=5350 t=27.9
+  base=0x800CA748 kseg=1. Crashing $v0=0 was incremented then rate-limit
+  skipped, so it never printed. load879c value==0 count=0; lwc kseg=0 count=0.
+- s2170 completing =1: lwc last n=13100 t=48.7 still kseg=1; load879c last
+  still 0x8025A580; 0 CRASH; title+hangar. lwc n=1..20 at t=7.4 already
+  $v0=0x800CA748 (retail-class slot pointer).
+- s2164 arithmetic: MEM_W(0, 0x44) via rdram + (reg+off - 0xFFFFFFFF80000000)
+  yields host rdram+0x80000044 when $v0==0, matching this si_addr.
+- s2165 retail 0x800A87A8 $v0 KSEG0 22/22 (0x800ca748..) never 0.
+
+[match-kw] last n=150 t=20.6 callee v0=0x800CDB58 wild_a0=0 wild_v0=0
+store8144 n=16 all at t=7.4, all kseg=1 (same objects as s2167)
+
+selected: H-NullV0At87A8
+refuted:  H-HangInsideMatchKw, H-CallerStops, H-EffectsHang, H-CoverageFailure
+          (now on a FAILING =1 run, not only s2170's completing run)
+H-CinematicRegress remains as intermittent =1 cinematic failure
+(s2163 0/5 title, s2167 matchKeyword SIGBUS, s2169 640-stall,
+this SIGBUS at 87A8 vs s2162/s2170 title+hangar).
+
+Do not treat "heap object 0x8025A580 word0 is 0" as selected: that is
+the next ORIGIN question (single-run instruction stream; 87A0 result
+was not logged). Do not S32-address, NULL-skip, re-flip default-on,
+skip/allow matchKeywordWithPriority or the lwc, or add a wait/slot guard.
+
+Next: retail writer of phys 0x25A580 (heap object +0 consumed at 0x800A87A0).
