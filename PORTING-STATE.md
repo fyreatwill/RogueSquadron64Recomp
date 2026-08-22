@@ -103222,3 +103222,46 @@ wait/slot guard. Next: hang location after last first-slot
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2175 (2026-08-22) — completing =1 takes 87A8+xform+dispatchRet after last first-slot 87A0
+
+One build, one `ROGUESQ_AUDIO_UCODE=1` run, 180s SIGKILL.
+Table: `scratch/agent/s2175_hang_after_87a0.txt`.
+Log: `scratch/s73_post_a_scene/s2175_on/run.log`.
+Extended s2173 heap0 helper: always-log 87A8 n>=5000 /
+dest=`0x800CA748` / `$v0==0`; dispatch entry `0x800A8420`
+/ return `0x800A89A8`; jal `0x8001DC34` entry/return at
+`0x800A87C0`.
+
+Positive controls (same run): `[heap0-ctl]` n=23 at
+width=640 origin=`0x00696100` including dispatchEntry
+n=8; store57100 dest=`0x8025A580` value=`0x800CA748`;
+load87a0 of that dest n>=1; `[phase]` 640 `0x00696100`
+at 7.3s #376.
+
+Completing cinematic: title `1024 @ 0x00790400` at 48.5s
+#2848; hangar `512 @ 0x006AB400` at 77.7s #4599.
+Last first-slot 87A0 n=14305 t=48.4 dest=`0x8025A580`
+value=`0x800CA748` late=1, then lwc87a8 n=14305 dest
+`0x800CA748`, xformEntry n=14305, xformRet n=14305,
+dispatchRet n=895 (dispatchEntry nmax=895 =
+effectsEntry/Ret). lwc zero_logged=0. Post-hangar
+SIGSEGV last-guest-pc=`0x80001b08` `do_rom_read+572`
+after `[phase]` 640 `@ 0x006A2900` at 136s (outside
+cinematic; not the wait-slot defect).
+
+This selects `H-CompletePathDispatchReturned` and refutes
+`H-CoverageFailure` on this completing run. Hang hyps
+`H-NeverReached87A8` / `H-HungInTransform` /
+`H-TransformReturnedDispatchHung` are not selected
+(wrong run class). Queued soak `s2175_image_hang`.
+
+ORIGIN: s2174 `H-StallWord0Intact`. Diagnostic only; not
+a mitigation. Do not S32-address, NULL-skip, re-flip
+default-on, skip/allow the lwc or transform, or add a
+wait/slot guard.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.
