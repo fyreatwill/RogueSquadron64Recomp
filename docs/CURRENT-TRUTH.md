@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2172
-(2026-08-22); behavioral and source evidence is current through s2172.
+authoritative for exact commands and probe rows. Maintained in Session 2173
+(2026-08-22); behavioral and source evidence is current through s2173.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2172 live here
+`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2173 live here
 until the next archive pass.
 
 ## Current state
@@ -145,11 +145,17 @@ until the next archive pass.
   after `rs_malloc`, `$v0` from `hobObjectListItems`+4.
   Same-run 87A8 `$v0` 32/32 KSEG0 (first-slot word0
   `0x800CA748`); 87A0 first-slot `$v0=0x8025A580`;
-  snapshot nonzero=4; 0 logged zero stores. Port `$v0=0`
-  at 87A8 is not a retail live zero. Do not S32-address
-  by guess, NULL-skip, re-flip default-on, skip/allow
-  `matchKeywordWithPriority` or the lwc, add a wait/slot
-  guard, or change `osAiGetStatus_recomp` /
+  snapshot nonzero=4; 0 logged zero stores. s2173
+  selected `H-PortHeap0MatchesRetail`
+  (`scratch/agent/s2173_heap0_store_ab.txt`): same-build
+  `=1`/`=0` both store dest `0x8025A580` value
+  `0x800CA748` at `0x80057100` and `0x800A87A0` reloads
+  it (933/933 and 317/317, mismatch=0, zero=0). Completing
+  `=1` reached title+hangar with lwc zero_logged=0. Port
+  `$v0=0` at 87A8 is not a missing constructor. Do not
+  S32-address by guess, NULL-skip, re-flip default-on,
+  skip/allow `matchKeywordWithPriority` or the lwc, add
+  a wait/slot guard, or change `osAiGetStatus_recomp` /
   `osAiSetNextBuffer_recomp`.
 
 ### Selected hypotheses (scoped; do not widen)
@@ -193,6 +199,7 @@ until the next archive pass.
 | s2170 | `H-NoHangAtN150` | same-build: `[match-kw-flow-ctl]` at 640 `0x00696100`; image `matchEntry` n=150 and n=151 at t=20.7 then n=264 t=36.0; `effectsEntry==effectsRet` n=820; both arms title+hangar; 0 SIGBUS | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow `matchKeywordWithPriority`; treat s2169 missing n=200 as hang-inside |
 | s2171 | `H-NullV0At87A8` | failing `=1` soak: flow-ctl n=40 at 640 `0x00696100`; `effectsEntry==effectsRet` n=338; `matchEntry` n=168 returned then effects n=329–338; SIGBUS t=28.2 `+9072` `si_addr=0x380000044` `x2=0` `x1=0x800a87a8`; last load879c `+0x50=0x8025A580`; lwc probe is before `MEM_W` and every-50 so did not print `$v0=0` | hang-inside / caller-stops / effects-hang; NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow `matchKeywordWithPriority` or the lwc; treat heap+0 as selected ORIGIN |
 | s2172 | `H-RetailHeap0NeverZero` | Rice 45s: `[gpr-ctl]` + watch0 10000 + VI 640 `0x00696100`; watch 1 phys `0x25A580` 5 writes; `zmemcpy` `0x80018F5C` `sd` n=4; `walkMeshdef0List` `0x80057100` `sw $v0, 0($s7)` n=1 after `rs_malloc`; `$v0` from `hobObjectListItems`+4 (`0x80139020`); exec 87A0/87A8 n=14160; logged 87A8 `$v0` 32/32 KSEG0 `{0x800CA748,0x800CAE88,0x800CDB58,0x800CE028,0x800CF158}` zero=0; first-slot 87A0 `$v0=0x8025A580` `$a2=0x800C7ABC`; snapshot nonzero=4 | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc; treat retail word0 as 0 |
+| s2173 | `H-PortHeap0MatchesRetail` | same-build `=1`/`=0`: ctl at 640 `0x00696100`; store57100 dest `0x8025A580` value `0x800CA748` n=1 both arms; load87a0 of that dest `=1` 933/933 and `=0` 317/317 value `0x800CA748` mismatch=0 zero=0; lwc zero_logged=0; `=1` title+hangar; `=0` still cinematic at 90s concurrent cap | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc; treat constructor as missing |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -229,17 +236,19 @@ active work items.
    `=1` soak: SIGBUS is `cutsceneDispatchSlotsByFlag`
    `0x800A87A8` `lwc1 0x44($v0)` with `$v0=0` after a good
    first-slot `+0x50=0x8025A580`. s2172 selected
-   `H-RetailHeap0NeverZero`: retail writer of phys `0x25A580`
-   is `walkMeshdef0List` `0x80057100` `sw $v0, 0($s7)` after
-   `rs_malloc` (`$v0` = `hobObjectListItems`+4); first-slot
-   word0 is `0x800CA748`; 87A8 `$v0` stays KSEG0. Failure
-   modes remain intermittent (`=1` title+hangar in
-   s2162/s2170; matchKeyword SIGBUS in s2167; 640-stall in
-   s2169; 87A8 SIGBUS in s2163/s2171). Next unit is the port
-   store/load of that word0 (`0x80057100` vs `0x800A87A0`).
-   Do not S32-address, NULL-skip, re-flip default-on,
-   skip/allow the function or the lwc, or add a wait/slot
-   guard.
+   `H-RetailHeap0NeverZero`. s2173 selected
+   `H-PortHeap0MatchesRetail`
+   (`scratch/agent/s2173_heap0_store_ab.txt`): port
+   `0x80057100` stores `0x800CA748` at dest `0x8025A580`
+   and `0x800A87A0` reloads it on both arms; completing
+   `=1` reached title+hangar with lwc zero_logged=0.
+   Failure modes remain intermittent (`=1` title+hangar in
+   s2162/s2170/s2173; matchKeyword SIGBUS in s2167; 640-stall
+   in s2169; 87A8 SIGBUS in s2163/s2171). Next unit is a
+   failing `=1` run with the s2173 always-log (first-slot
+   word0 clobber vs a different slot). Do not S32-address,
+   NULL-skip, re-flip default-on, skip/allow the function
+   or the lwc, or add a wait/slot guard.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the
@@ -351,6 +360,8 @@ good `+0x50` heap pointer, not a hang in matchKeyword or
 is stored by `walkMeshdef0List` `0x80057100` after
 `rs_malloc` from `hobObjectListItems`+4; retail 87A8
 `$v0` stays KSEG0 (`0x800CA748` for the first slot).
+s2173 selected `H-PortHeap0MatchesRetail`: the port
+writes and reloads that same word on both arms.
 The A1 execute / SP-complete / MORT-ownership /
 both-arm-validate / task-exit+PCM / two-source-completion
 clauses remain selected at the s2118 C88=0 sampled scope
@@ -483,6 +494,15 @@ ledger. Operational reversals:
   87A8 `$v0` is KSEG0 `0x800CA748` for the first slot
   (0 zeros). The port 87A8 `$v0=0` is not a retail live
   zero at that word.
+  s2173 supersedes treating the port 87A8 `$v0=0` as a
+  missing, zero, or failed constructor store at
+  `0x80057100`, or as a load of dest `0x8025A580` that
+  fails to see that store: same-build `=1`/`=0` both
+  store `0x800CA748` at dest `0x8025A580` and load it
+  back (0 mismatches) with `[heap0-ctl]` at 640
+  `0x00696100`. Completing `=1` never logs word0=0.
+  `H-CinematicRegress` remains as intermittent `=1`
+  cinematic failure, not as a missing word0 constructor.
 - The old retail voice-field interpretation was believable because a
   pointer entry was treated as a physical array base.
 - The old “B40 was unreached” and s2110 `H-B40-RouteRequired`
@@ -519,7 +539,8 @@ the port `$a0`/`$v0` A/B (`H-PortMatchesRetailUntilLater`).
 s2170 is the entry/return flow A/B (`H-NoHangAtN150`).
 s2171 is the failing-`=1` flow classification (`H-NullV0At87A8`).
 s2172 is the retail writer of heap-object word0
-(`H-RetailHeap0NeverZero`).
+(`H-RetailHeap0NeverZero`). s2173 is the port
+store/load of that word (`H-PortHeap0MatchesRetail`).
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
@@ -529,8 +550,9 @@ ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`,
 `H-CinematicRegress`, `H-NoSuchSite`, `H-RetailExecsValidPtr`,
 `H-RetailWriterNamed`, `H-PortStoreMatchesRetail`,
 `H-RetailValidV0`, `H-PortMatchesRetailUntilLater`,
-`H-NoHangAtN150`, `H-NullV0At87A8`, or
-`H-RetailHeap0NeverZero`.
+`H-NoHangAtN150`, `H-NullV0At87A8`,
+`H-RetailHeap0NeverZero`, or
+`H-PortHeap0MatchesRetail`.
 Do not re-flip default-on, S32-address by guess, NULL-skip,
 skip/allow `matchKeywordWithPriority` or the lwc, or add a
 wait/slot guard.
