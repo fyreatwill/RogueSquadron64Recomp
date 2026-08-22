@@ -102940,3 +102940,86 @@ AI-status change.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2169 (2026-08-21) — port matchKeyword $a0/$v0 matches retail until later
+
+Same-build concurrent A/B, 90s SIGKILL. Command from
+`scratch/agent/NEXT.md`. Table:
+`scratch/agent/s2169_match_kw_ab.txt`. Logs:
+`scratch/s73_post_a_scene/s2169_{on,off}/run.log`.
+Ledgered in s2170 (the prior iteration left the table
+on disk without a PORTING-STATE heading).
+
+Positive controls in both logs: `[match-kw-ctl]` at
+width=640 origin=`0x00696100`; VI 640 `0x00696100`.
+OFF title `1024 @ 0x00790400` at 48.9s #2851.
+
+`=1`: callee `$a0=0x802231EC` `$v0=0x800CDB58` dominant
+(20/23 logged pairs); wild=0; last logged n=150 t=21.3
+then 640-stall (`update_screen` #5248 still
+`0x00696100`); never 1024; 0 SIGBUS.
+
+`=0`: same first-150 pairs, then n=200/250; title at
+48.9s; hangar `512 @ 0x006AB400` at 77.9s.
+
+This selects `H-PortMatchesRetailUntilLater` and refutes
+`H-PortA0Wild`, `H-PortA0OkV0Wild`, and
+`H-CoverageFailure`. Port SIGBUS `$v0=0x80000000` was
+not reproduced. The split is not the header word.
+
+ORIGIN: diagnostic-only probe. Retail `$v0` already
+named (s2168). No skip, allow, guard, restore, or
+default-on flip.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2170 (2026-08-22) — image-arm matchKeyword continues past n=150
+
+Same-build concurrent A/B, 90s SIGKILL. Command from
+`scratch/agent/NEXT.md`. Table:
+`scratch/agent/s2170_match_kw_flow_ab.txt`. Logs:
+`scratch/s73_post_a_scene/s2170_{on,off}/run.log`.
+Queued soak: `scratch/agent/soak_queue/s2171_image_cinematic_flow.sh`.
+
+Positive controls in both logs: `[match-kw-flow-ctl]` at
+width=640 origin=`0x00696100` (effects n=1 t=7.5,
+match n=1 t=11.5); VI 640 `0x00696100` at 7.3s;
+OFF title `1024 @ 0x00790400` at 49.2s #2879.
+
+`=1`: `matchEntry` n=150 and n=151 at t=20.7 (n=150
+returned) then n=264 at t=36.0 origin=`0x00696100`;
+`effectsEntry==effectsRet` through n=820 t=48.7;
+title `1024 @ 0x00790400` at 48.9s #2859; hangar
+`512 @ 0x006AB400` at 78.5s #4631; 0 CRASH 0 SIGBUS
+0 wild_v0. `[match-kw]` continues to n=250 t=35.7
+callee `$v0=0x800CA748`.
+
+`=0`: `matchEntry` n=150 and n=151 at t=20.2 then
+n=264 t=36.1; `effectsEntry==effectsRet` n=804;
+title 49.2s; hangar 78.9s #4645.
+
+This selects `H-NoHangAtN150` and refutes
+`H-HangInsideMatchKw`, `H-CallerStops`,
+`H-EffectsHang`, and `H-CoverageFailure` on this
+completing `=1` run. s2169's missing n=200 was
+every-50 rate-limit (always-log at 640 n>=140 shows
+n=151 at the same timestamp). `H-CinematicRegress`
+remains as intermittent `=1` cinematic failure
+(s2163 0/5 title, s2167 SIGBUS, s2169 stall vs
+s2162/s2170 title+hangar), not as a hang at n=150.
+
+No new soak-queue verdicts to fold (SOAK-RESULTS tail
+is still s1940–s1974). Soak `s2171_image_cinematic_flow`
+enqueued to catch a failing `=1` run with these probes.
+
+ORIGIN: diagnostic-only probe. No skip, allow, guard,
+restore, or default-on flip. Retail `$v0` already named
+(s2168). Do not log `$t0` (iron rule 12).
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

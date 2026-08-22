@@ -1,0 +1,47 @@
+s2170 spawnCutsceneEffectsAndCues entry vs matchKeyword return A/B
+HYPOTHESIS-ID: m5-a1-cinematic-split
+same binary, concurrent arms, 90s SIGKILL
+recipe: SPIN_YIELD=1 LLE_UNGATED=1 LLE_SOLO=1 LOG_ALL=1 LOG_MATCH_KW=1
+driver: scratch/s73_post_a_scene/run_mission_keys.sh 30 12
+logs:   scratch/s73_post_a_scene/s2170_on/run.log
+        scratch/s73_post_a_scene/s2170_off/run.log
+
+positive controls (both arms)
+- [match-kw-flow-ctl] at width=640 origin=0x00696100
+  ON:  effectsEntry/Ret n=1 at t=7.5; matchEntry/Ret358/Ret330 n=1 at t=11.5
+  OFF: same sites n=1 at t=7.5 / t=11.5
+- VI 640 origin=0x00696100 (ON 7.3s #365; OFF 7.3s #367)
+- OFF title 1024 @ 0x00790400 at 49.2s #2879
+- ON  title 1024 @ 0x00790400 at 48.9s #2859 (this run completed cinematic)
+
+image ROGUESQ_AUDIO_UCODE=1 (s2170_on)
+- effectsEntry n_max=820 last t=48.7 width=640 origin=0x0062BD00
+- effectsRet   n_max=820 last t=48.7 (entry==return at sampled 140/150/200/250/500/800/820)
+- matchEntry   n_max=264 last t=36.0 origin=0x00696100 a0=0x8025A580
+- matchRet358  n_max=188 last t=36.0 (zero $v0)
+- matchRet330  last logged n=50 t=26.6 (rate-limit hole n=51..139; not a hang)
+- matchEntry n=150 and n=151 at t=20.7 origin=0x00696100 (n=150 returned)
+- [match-kw] continues to n=250 t=35.7 callee v0=0x800CA748 wild=0
+- hangar 512 @ 0x006AB400 at 78.5s #4631
+- 0 CRASH 0 SIGBUS 0 wild_v0; SIGKILL at 90s; last update_screen #5248 hangar
+
+stub ROGUESQ_AUDIO_UCODE=0 (s2170_off)
+- effectsEntry/Ret n_max=804 last t=49.1 (entry==return)
+- matchEntry n_max=264 last t=36.1; matchRet358 n_max=188 last t=36.1
+- matchEntry n=150 and n=151 at t=20.2
+- hangar 512 @ 0x006AB400 at 78.9s #4645
+- 0 CRASH; SIGKILL at 90s
+
+selected: H-NoHangAtN150
+refuted:  H-HangInsideMatchKw, H-CallerStops, H-EffectsHang, H-CoverageFailure
+(on this completing =1 run; s2169 640-stall after logged n=150 did not reproduce)
+
+s2169 image last logged n=150 was every-50 rate-limit, not proof of a hang:
+this instrument always-logs width=640 n>=140 and shows n=151 at the same
+timestamp. Do not treat s2169's missing n=200 as hang-inside-callee.
+
+Do not S32-address, NULL-skip, re-flip default-on, skip/allow
+matchKeywordWithPriority, or add a wait/slot guard.
+Next: catch a failing =1 cinematic (640-stall or SIGBUS) with these
+flow probes; H-CinematicRegress remains (s2163 0/5 title, s2167 SIGBUS,
+s2169 stall vs s2162/s2170 title+hangar).

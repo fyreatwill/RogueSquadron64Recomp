@@ -1,84 +1,62 @@
-# NEXT work unit (s2169) — port $a0/$v0 at matchKeywordWithPriority
+# NEXT work unit (s2171) — catch a failing =1 cinematic with flow probes
 
 HYPOTHESIS-ID: m5-a1-cinematic-split
 
 ## Work unit
 
-s2168 selected `H-RetailValidV0`. Table:
-`scratch/s73_post_a_scene/s2168_match_keyword_oracle.txt`.
+s2170 selected `H-NoHangAtN150` on a completing `=1` run.
+Table: `scratch/agent/s2170_match_kw_flow_ab.txt`.
+Soak `s2171_image_cinematic_flow` is queued to catch the
+intermittent failure (`H-CinematicRegress` remains:
+s2163 0/5 title, s2167 SIGBUS, s2169 640-stall vs
+s2162/s2170 title+hangar).
 
-Retail executes `matchKeywordWithPriority` at cinematic 640
-with `$a0=0x802231EC` (heap) and post-`lw` `$v0=0x800CDB58`
-(KSEG0 object, not `0x80000000`). Caller is always
-`spawnCutsceneEffectsAndCues` `0x800A9248`:
+If SOAK-RESULTS has a new `s2171_image_cinematic_flow`
+line, THIS iteration is analysis-only (no rebuild):
 
-    0x800A9244  lw  $a0, 0x50($v0)
-    0x800A9248  jal matchKeywordWithPriority
-    0x800AF2C8  lw  $v0, 0x0($a0)
-    0x800AF2CC  lw  $t0, 0x30($v0)   /* port SIGBUS: $v0=0x80000000 */
+- Fail (no 1024, or SIGBUS): read
+  `scratch/s73_post_a_scene/s2171_image_cinematic_flow/run.log`
+  flow last-n. Select among:
+  - `H-HangInsideMatchKw`: matchEntry n has no matching
+    return (entry n = return330+return358 + 1) after the
+    last logged call.
+  - `H-CallerStops`: matchEntry n == returns; further
+    entries stop; effectsEntry==effectsRet.
+  - `H-EffectsHang`: effectsEntry continues (or
+    effectsEntry > effectsRet) while matchEntry stops.
+  - `H-CoverageFailure`: no `[match-kw-flow-ctl]` at
+    width=640 origin=`0x00696100`.
+- Clean (title+hangar): do NOT repeat the same A/B.
+  Offline-split existing captures s2169_on (stall) vs
+  s2170_on (success) for a named pre-t=21 difference
+  (last-guest-pc, audtask count, [CRASH]/SIGBUS,
+  match-kw last n, update_screen origin). That uses
+  logs already on disk.
 
-That caller +0x50 is a *different* word than dest
-`0x800C7B0C` (closed by s2167). Ask the port, same-build
-`ROGUESQ_AUDIO_UCODE=1` vs `=0`, what `$a0` and `$v0` are
-at those PCs in the 640 cinematic. Do not S32-address,
-NULL-skip, re-flip default-on, skip/allow the function, or
-add a wait/slot guard.
+If no soak line yet, run the soak yourself with the
+exact command below. Do not S32-address, NULL-skip,
+re-flip default-on, skip/allow the function, add a
+wait/slot guard, or log `$t0`.
 
 ## Competing hypotheses and discriminator
 
-- `H-PortA0Wild`: image-arm `$a0` at `0x800A9244` /
-  `0x800AF2C8` is 0, `0x80000000`, or not KSEG0 RDRAM;
-  stub `$a0` is retail-class heap. The caller +0x50 load
-  is the split.
-- `H-PortA0OkV0Wild`: both arms have retail-class `$a0`
-  (heap `0x8022xxxx`); image-arm word at `0($a0)` / `$v0`
-  at `0x800AF2CC` is 0 or `0x80000000`; stub `$v0` is
-  `0x800CDB58`-class. The header word is the split.
-- `H-PortMatchesRetailUntilLater`: both arms match retail
-  (`$a0` heap, `$v0` KSEG0 not base) on every logged 640
-  call, including the last row before SIGBUS. Then the
-  `si_addr=0x380000030` attribution is wrong or a later
-  instruction. Unlikely given host +88 = `MEM_W($v0,0x30)`.
-- `H-CoverageFailure`: `[match-kw-ctl]` never fires at
-  640, or `=1` dies before the first call.
-
-Positive control: `[match-kw-ctl]` at width=640 (include
-origin `0x00696100` if present) on **both** arms, plus
-the `=0` arm reaching title.
-
-Discriminator is `$a0` at `0x800AF2C8` and `$v0` at
-`0x800AF2CC` on the image-arm crashing call vs stub.
+Same four as s2170, now on a FAILING `=1` run (the
+completing run already refuted them). Positive control:
+`[match-kw-flow-ctl]` at width=640 origin=`0x00696100`.
 
 ## Exact commands
 
-Diagnostic only. Clone the s2167 dual-edit (live generated
-C + `../N64Recomp/fixup_game_funcs.py`) so the probe
-survives regen. Probe sites:
+Queued recipe (loop may already have run it):
 
-1. `funcs_27.c` after `0x800A9244` `lw $a0, 0x50($v0)`:
-   log caller `$v0` base, dest `base+0x50`, loaded `$a0`.
-2. `funcs_29.c` `matchKeywordWithPriority` after
-   `ctx->r2 = MEM_W(ctx->r4, 0X0)` and **before**
-   `MEM_W(ctx->r2, 0X30)`: log `$a0` and post-lw `$v0`.
-   Rate-limit first 20 then every 50; always log when
-   `$v0` is 0 or `0x80000000`. Env
-   `ROGUESQ_LOG_MATCH_KW` (also `ROGUESQ_LOG_ALL`).
+    zsh scratch/agent/soak_queue/s2171_image_cinematic_flow.sh
 
-Then cmake only (no full regen if the live files were
-patched in lockstep with fixup):
-
-    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
-      cmake --build build --target RogueSquadron64Recomp
-
-Same-build concurrent 90s SIGKILL arms, recipe as s2167:
+If running in-session instead:
 
     GAME_EXTRA_ENV='ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_MATCH_KW=1' \
-      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2169_on 30 12
-    GAME_EXTRA_ENV='ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=0 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_MATCH_KW=1' \
-      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2169_off 30 12
+      zsh scratch/s73_post_a_scene/run_mission_keys.sh s2171_image_cinematic_flow 30 12
 
-Watchdog SIGKILL at 90s. Table to
-`scratch/s73_post_a_scene/s2169_match_kw_ab.txt`.
+Watchdog SIGKILL at 120s. Classify from flow last-n plus
+whether VI 1024/512 appear.
 
 Do not flip `get_rsp_microcode`. Do not skip/allow/guard
-`matchKeywordWithPriority`.
+`matchKeywordWithPriority`. Do not add `$t0`.

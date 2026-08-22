@@ -1,0 +1,60 @@
+s2169 port $a0/$v0 at matchKeywordWithPriority A/B
+HYPOTHESIS-ID: m5-a1-cinematic-split
+same binary, concurrent arms, 90s SIGKILL
+recipe: SPIN_YIELD=1 LLE_UNGATED=1 LLE_SOLO=1 LOG_ALL=1 LOG_MATCH_KW=1
+driver: scratch/s73_post_a_scene/run_mission_keys.sh 30 12
+logs:   scratch/s73_post_a_scene/s2169_on/run.log
+        scratch/s73_post_a_scene/s2169_off/run.log
+
+positive controls (both arms)
+- [match-kw-ctl] at width=640 origin=0x00696100
+  ON: n=1..8 caller9244 and calleeF2CC at t=11.9
+      caller a0=0x802231EC v0_base=0x800C9D4C dest=0x800C9D9C
+      callee a0=0x802231EC v0=0x800CDB58
+  OFF: n=9..16 at t=12.1 origin=0x00696100 (n=1..8 at sibling 0x0062BD00)
+      same a0/v0 as ON
+- VI 640 origin=0x00696100 (ON t=7.7s #379; OFF present)
+- OFF title 1024 @ 0x00790400 at 48.9s #2851
+
+image ROGUESQ_AUDIO_UCODE=1 (s2169_on)
+- [match-kw] n_printed=46 (caller+callee first 20, then 50/100/150)
+- wild_a0=0 wild_v0=0 kseg_a0=0-rows=0 kseg_v0=0-rows=0
+- callee logged pairs:
+    a0=0x802231EC v0=0x800CDB58 n=20
+    a0=0x8025E150 v0=0x800CAE88 n=1 (n=50)
+    a0=0x80260460 v0=0x800CE028 n=1 (n=100)
+    a0=0x80223408 v0=0x800CDB58 n=1 (n=150 t=21.3 origin=0x00696100)
+- last row n=150 t=21.3 site=calleeF2CC a0=0x80223408 v0=0x800CDB58
+  kseg_a0=1 kseg_v0=1 wild_a0=0 wild_v0=0
+- no n=200 (function not called, or <50 more unlogged non-wild calls)
+- never 1024 / never hangar
+- 0 [CRASH] 0 SIGBUS 0 si_addr
+- 640 stall: update_screen #5248 still origin=0x00696100 width=640 at SIGKILL
+
+stub ROGUESQ_AUDIO_UCODE=0 (s2169_off)
+- [match-kw] n_printed=50 (first 20, then 50/100/150/200/250)
+- wild_a0=0 wild_v0=0
+- same first-150 pairs as image, then:
+    n=200 t=33.4 a0=0x8025ADC0 v0=0x800CA748 origin=0x00696100
+    n=250 t=35.8 a0=0x8025A580 v0=0x800CA748 origin=0x00696100
+      (caller dest=0x800C7B0C, the s2167 +0x50 slot)
+- title 1024 @ 0x00790400 at 48.9s #2851
+- hangar 512 @ 0x006AB400 at 77.9s #4588
+- 0 CRASH; SIGKILL at 90s cap
+
+selected: H-PortMatchesRetailUntilLater
+refuted:  H-PortA0Wild, H-PortA0OkV0Wild, H-CoverageFailure
+
+Retail s2168: $a0=0x802231EC $v0=0x800CDB58 at 0x800AF2CC.
+Port both arms match those values on the dominant logged pair
+(20/23 ON, 20/25 OFF). Image-arm cinematic failure this run is
+the s2163 640-stall variant after n=150, not $v0=0x80000000 at
+0x800AF2CC (always-log of wild $v0 never fired). s2167 SIGBUS
+si_addr=0x380000030 was not reproduced.
+
+Do not S32-address, NULL-skip, re-flip default-on, skip/allow
+matchKeywordWithPriority, or add a wait/slot guard.
+Next: same-build spawnCutsceneEffectsAndCues entry vs
+matchKeywordWithPriority return after t=21.3, to split
+hang-inside vs caller-stops. Do not log $t0 until retail
+names it (iron rule 12).
