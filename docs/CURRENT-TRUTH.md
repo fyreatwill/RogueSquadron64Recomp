@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2180
-(2026-08-23); behavioral and source evidence is current through s2180.
+authoritative for exact commands and probe rows. Maintained in Session 2181
+(2026-08-23); behavioral and source evidence is current through s2181.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2180 live here
+`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2181 live here
 until the next archive pass.
 
 ## Current state
@@ -229,6 +229,17 @@ until the next archive pass.
   orthonormalize / f10-not-mem hyps are
   refuted on a failing run. `H-PortF2OrLaterCheck`
   not selected (no `vec3Cross` SIGABRT).
+  s2181 selected
+  `H-PortNoNaNF2OrLater`
+  (`scratch/agent/s2181_vec3_f2.txt`):
+  same-build `=1`/`=0` print f2 (`$a1+4`)
+  and later `NAN_CHECK` operands
+  (`f4`/`f8`/`f0`/`f6`/`f12`/`f14`/`f16`/`f18`)
+  as finite (0 NaN, 0 Inf, `w_mem==w_fpr`);
+  `[vec3-word-ctl]` n=176 at 640/`0x00696100`
+  (16 per site including `site=f2`); both
+  arms title+hangar. Abort class missed;
+  do not conclude port-finite.
   Do
   not S32-address by guess, NULL-skip, re-flip
   default-on, skip/allow `matchKeywordWithPriority`
@@ -237,7 +248,7 @@ until the next archive pass.
   copyToRAM/CIMG writeback guard, or change
   `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
   Do not treat the jal as port-only or retail
-  source as NaN, this pair as proof the abort
+  source as NaN, s2179/s2181 as proof the abort
   cannot be NaN, or last-guest-pc `0x8000834c`
   as the abort site.
 
@@ -290,6 +301,7 @@ until the next archive pass.
 | s2178 | `H-RetailSourceWordFinite` | Rice 45s: `[gpr-ctl]` + watch0 10000 + VI 640 `0x00696100`; logged EXEC n=64 all width=640 origin `0x00696600`; first-cross `w_a2p8` prev=`0x80059F3C` 10/10 finite (`0x3F800000`/`0xBF800000`/`0x3F712770`); extract `w_a1p20` 10/10 finite; 0 NaN 0 Inf; jal `$a1` KSEG0 9/9 dest `$a0=0x80165E40` 9/9 | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; treat retail source as NaN |
 | s2179 | `H-PortNoNaNThisPair` | same-build `=1`/`=0`: `[vec3-word-ctl]` n=32 at 640 `0x00696100` (16 extract + 16 first-cross); extract/first-cross 0 NaN 0 Inf; `w_mem==w_fpr` mismatch=0; cinematic extract `0x3F71276F`/`0x3CFEDCBB`/`±0x3C664945` dest `0x80165E40`; first-cross `0x3F800000`/`0xBF800000`/`0x3F712770` `jal=0x80059F3C`; both arms title+hangar; 0 SIGABRT. Abort class missed; not a port-finite claim | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; treat this pair as port-finite |
 | s2180 | `H-FailingExtractFinite` | failing `=1` soak: ctl n=32 at 640 `0x00696100`; extract/first-cross 0 NaN 0 Inf `w_mem==w_fpr`; dispatchRet n=236; lwc zero_logged=0; first-slot word0 `0x800CA748`; SIGSEGV `copyToRAM` `si_addr=0x11c47a100` last-guest-pc `0x8000834c`; 0 VI 1024; 0 SIGABRT. Extract-already / orthonormalize / f10-not-mem refuted on a failing run. Single-arm (`=1`) | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; copyToRAM/CIMG writeback guard; treat copyToRAM SIGSEGV as vec3Cross abort or guest NaN; treat last-guest-pc `0x8000834c` as the abort site |
+| s2181 | `H-PortNoNaNF2OrLater` | same-build `=1`/`=0`: `[vec3-word-ctl]` n=176 at 640 `0x00696100` (16 per site extract/cross/f2/f4/f8/f0/f6/f12/f14/f16/f18); f2 `$a1+4` and later `NAN_CHECK` operands 0 NaN 0 Inf; `w_mem==w_fpr` mismatch=0; first-cross f2 `0x3F5C68DC` / dispatcher `0x3CFEDCBB`; both arms title+hangar; 0 SIGABRT. Abort class missed; not a port-finite claim | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; copyToRAM/CIMG writeback guard; treat this pair as port-finite |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -383,11 +395,21 @@ active work items.
    `0x8000834c`). Extract-already /
    orthonormalize / f10-not-mem are refuted on
    a failing run. `H-PortF2OrLaterCheck` not
-   selected. Next is the f2 + later `NAN_CHECK`
-   operand rebuild (`0x80019550` `MEM_W($a1,4)`
-   and the remaining `vec3Cross` `NAN_CHECK`
-   pairs). Failure modes remain intermittent
-   (`=1` title+hangar in s2162/s2170/s2173/s2175/s2179;
+   selected.
+   s2181 selected
+   `H-PortNoNaNF2OrLater`
+   (`scratch/agent/s2181_vec3_f2.txt`):
+   same-build `=1`/`=0` f2 (`$a1+4`) and later
+   `NAN_CHECK` operands (`f4`/`f8`/`f0`/`f6`/
+   `f12`/`f14`/`f16`/`f18`) are 0 NaN / 0 Inf
+   (`w_mem==w_fpr`); ctl n=176 at
+   640/`0x00696100` (16 per site including
+   `site=f2`); both arms title+hangar. Abort
+   class missed. Next is consume the queued
+   `=1` soak of this binary
+   (`scratch/agent/soak_queue/s2181_image_vec3_f2.sh`).
+   Failure modes remain intermittent
+   (`=1` title+hangar in s2162/s2170/s2173/s2175/s2179/s2181;
    matchKeyword SIGBUS in s2167; 640-stall in
    s2169/s2174; 87A8 SIGBUS in s2163/s2171; vec3Cross
    NaN abort in s2176; copyToRAM SIGSEGV in s2180).
@@ -396,7 +418,7 @@ active work items.
    extract jal, disable `NAN_CHECK`, add a wait/slot
    guard, or land a copyToRAM/CIMG writeback guard.
    Do not treat the jal as port-only or retail source
-   as NaN, s2179 as port-finite, or last-guest-pc
+   as NaN, s2179/s2181 as port-finite, or last-guest-pc
    `0x8000834c` as the abort site.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
@@ -540,6 +562,12 @@ same words finite (ctl n=32 at
 host SIGSEGV in `copyToRAM`, not `vec3Cross`
 SIGABRT. Extract-already / orthonormalize /
 f10-not-mem are refuted on a failing run.
+s2181 selected `H-PortNoNaNF2OrLater`:
+completing `=1`/`=0` print f2 (`$a1+4`) and
+later `NAN_CHECK` operands finite
+(`w_mem==w_fpr`, ctl n=176 at
+640/`0x00696100` including `site=f2`). Abort
+class missed; not a port-finite claim.
 The A1 execute / SP-complete / MORT-ownership /
 both-arm-validate / task-exit+PCM / two-source-completion
 clauses remain selected at the s2118 C88=0 sampled scope
@@ -550,7 +578,7 @@ or the lwc or transform or extract jal, disable
 `NAN_CHECK`, add a wait/slot guard, or land a
 copyToRAM/CIMG writeback guard.
 Do not treat the jal as port-only or retail source
-as NaN, s2179 as proof the abort cannot be NaN,
+as NaN, s2179/s2181 as proof the abort cannot be NaN,
 or last-guest-pc `0x8000834c` as the abort site.
 
 The stock `aspMain` contract is not the game's MusyX contract. C88
@@ -752,6 +780,15 @@ ledger. Operational reversals:
   extract-already / orthonormalize / f10-not-mem
   hyps were believable while the only 0-NaN
   evidence was s2179's completing pair.
+  s2181 supersedes treating a completing `=1`
+  cinematic as already carrying NaN at f2
+  (`$a1+4`) or a later `NAN_CHECK` operand
+  (`f4`/`f8`/`f0`/`f6`/`f12`/`f14`/`f16`/`f18`):
+  same-build `[vec3-word-ctl]` n=176 at
+  640/`0x00696100` (16 per site including
+  `site=f2`), 0 NaN 0 Inf, `w_mem==w_fpr`,
+  title+hangar on both arms. The s2176 abort
+  class was not in this pair.
 - The old retail voice-field interpretation was believable because a
   pointer entry was treated as a physical array base.
 - The old “B40 was unreached” and s2110 `H-B40-RouteRequired`
@@ -802,7 +839,9 @@ first-cross `$a2+8` (`H-RetailSourceWordFinite`).
 s2179 is the port IEEE A/B of those words
 (`H-PortNoNaNThisPair`). s2180 is the queued
 failing-`=1` soak classification
-(`H-FailingExtractFinite`).
+(`H-FailingExtractFinite`). s2181 is the port
+IEEE A/B of f2 plus later `NAN_CHECK`
+operands (`H-PortNoNaNF2OrLater`).
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
@@ -820,14 +859,15 @@ ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`,
 `H-NaNAbortInVec3Cross`,
 `H-RetailExecsJal8640`,
 `H-RetailSourceWordFinite`,
-`H-PortNoNaNThisPair`, or
-`H-FailingExtractFinite`.
+`H-PortNoNaNThisPair`,
+`H-FailingExtractFinite`, or
+`H-PortNoNaNF2OrLater`.
 Do not re-flip default-on, S32-address by guess, NULL-skip,
 skip/allow `matchKeywordWithPriority` or the lwc or transform or
 extract jal, disable `NAN_CHECK`, add a wait/slot guard, or land a
 copyToRAM/CIMG writeback guard.
 Do not treat the jal as port-only or retail source as NaN,
-s2179 as proof the abort cannot be NaN, or last-guest-pc
+s2179/s2181 as proof the abort cannot be NaN, or last-guest-pc
 `0x8000834c` as the abort site.
 
 ## Method and safety rules

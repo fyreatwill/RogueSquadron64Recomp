@@ -1,0 +1,58 @@
+s2181 port f2 ($a1+4) + later vec3Cross NAN_CHECK operands IEEE A/B
+HYPOTHESIS-ID: m5-a1-cinematic-split
+same binary, concurrent arms, 90s SIGKILL
+recipe: SPIN_YIELD=1 LLE_UNGATED=1 LLE_SOLO=1 LOG_ALL=1 LOG_CUTSCENE_A2_50=1
+driver: scratch/s73_post_a_scene/run_mission_keys.sh 30 12
+logs:   scratch/s73_post_a_scene/s2181_on/run.log
+        scratch/s73_post_a_scene/s2181_off/run.log
+
+IEEE single: NaN iff (w&0x7F800000)==0x7F800000 && (w&0x007FFFFF)!=0
+             Inf iff (w&0x7F800000)==0x7F800000 && (w&0x007FFFFF)==0
+             else finite (includes ±0.0; 0x80000000 is -0.0)
+First-cross tagged by orthonormalizeFrame jal_pc=0x80059F3C
+Kinds: extract / cross(f10) / f2($a1+4) / f4 / f8 / f0 / f6 / f12 / f14 / f16 / f18
+
+positive controls (both arms, same log)
+- [vec3-word-ctl] n=176 at width=640 origin=0x00696100
+  16 rows each site=extract,cross,f2,f4,f8,f0,f6,f12,f14,f16,f18
+- printed w_mem=/w_fpr= on every site including first=1 f2
+- VI 640 origin=0x00696100 at 7.4s (on) / 7.6s (off)
+- f2 first-cross ctl: a0=0x80165E58 a1=0x800B0A30 w_mem=0x3F5C68DC==w_fpr
+  dispatcher f2 w_mem=0x3CFEDCBB (same class as extract)
+
+image ROGUESQ_AUDIO_UCODE=1 (s2181_on)
+- ctl 176/176 at 640/0x00696100; site=f2 n=16 site=f12 n=16
+- extract nmax=7100; f2/f4/f8/f0/f6/f16/f18 nmax=38300; f12/f14 nmax=76600 (two PCs)
+  t_last=89.4 hangar; printed extract 162, f2 786, f12 1552
+- cinematic printed: extract 86, f2/f4/f8/f0/f6/f16/f18 387, f12/f14 765
+- first-cross printed 246; jal=0x80059F3C
+- nan_mem=0 inf_mem=0 nan_fpr=0 inf_fpr=0 mismatch=0 (all 9564 rows)
+- f2 cine hist includes 0x00000000, 0x3C664945, 0x3CFEDCBB (finite)
+- first-cross cine hist: 0xBF800000 n=11, 0x3F800000 n=8, 0x3F712770 n=2
+- extract cine includes 0x3CFEDCBB / 0x3F71276F / ±0x3C664945
+- title 1024 @ 0x00790400 at 49.1s #2876
+- hangar 512 @ 0x006AB400 at 78.3s #4629
+- 0 CRASH 0 SIGABRT 0 SIGBUS 0 SIGSEGV; lwc zero_logged=0; SIGKILL at 90s
+
+stub ROGUESQ_AUDIO_UCODE=0 (s2181_off)
+- ctl 176/176 at 640/0x00696100; site=f2 n=16 site=f12 n=16
+- extract nmax=6600; f2 nmax=36850; f12 nmax=73700; t_last=89.5
+- nan/inf/mismatch=0 (all 9206 rows)
+- first-cross ctl same 0x3F712770 then 0x3F800000; f2 first 0x3F5C68DC then 0x3CFEDCBB
+- title 1024 @ 0x00790400 at 49.5s #2898
+- hangar 512 @ 0x006AB400 at 78.7s #4651
+- 0 CRASH 0 SIGABRT 0 SIGBUS 0 SIGSEGV; lwc zero_logged=0; SIGKILL at 90s
+
+selected: H-PortNoNaNF2OrLater
+refuted on this pair: H-PortF2AlreadyNaN, H-PortLaterCheck,
+  H-CoverageFailure
+not selected: H-AssertNotLoggedNaN (no SIGABRT), H-HostCopyToRamClass
+  (no SIGSEGV), port-finite in general (abort class missed; completing pair)
+
+Retail s2178 ORIGIN extract/first-cross finite. Completing port now also
+prints f2 and every later NAN_CHECK operand as finite (w_mem==w_fpr)
+including first-cross jal 0x80059F3C. Do not conclude the SIGABRT cannot
+be NaN; enqueue a failing =1 soak.
+Do not S32-address, NULL-skip, re-flip default-on, skip/allow the lwc
+or transform or extract jal, disable NAN_CHECK, add a wait/slot guard,
+or land a copyToRAM/CIMG writeback guard.

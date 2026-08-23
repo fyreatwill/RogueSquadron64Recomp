@@ -103541,3 +103541,52 @@ copyToRAM/CIMG writeback guard.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2181 (2026-08-23) — port f2 and later NAN_CHECK operands finite on this completing pair
+
+Same-build concurrent `=1`/`=0`, 90s SIGKILL. Table:
+`scratch/agent/s2181_vec3_f2.txt`. Logs:
+`scratch/s73_post_a_scene/s2181_on/run.log`,
+`scratch/s73_post_a_scene/s2181_off/run.log`.
+Probes in `../N64Recomp/fixup_game_funcs.py` and
+generated `funcs_4.c` / `funcs_13.c` (kind=2 f2 at
+`0x80019550` `$a1+4`; kinds f4/f8/f0/f6 after load;
+f12/f14/f16/f18 before their `NAN_CHECK`).
+Diagnostic only.
+
+Positive controls (both arms, same log):
+`[vec3-word-ctl]` n=176 at 640 `0x00696100`
+(16 per site extract/cross/f2/f4/f8/f0/f6/f12/f14/f16/f18);
+printed `w_mem=`/`w_fpr=` including first=1 f2
+(`jal=0x80059F3C` w=`0x3F5C68DC`) and dispatcher
+f2 `0x3CFEDCBB`.
+
+IEEE: 0 NaN, 0 Inf, `w_mem==w_fpr` mismatch=0 on
+all rows (`=1` 9564, `=0` 9206). Both arms title
+`1024 @ 0x00790400` (~49s) and hangar
+`512 @ 0x006AB400` (~78s). 0 SIGABRT / SIGBUS /
+SIGSEGV / CRASH. lwc zero_logged=0.
+
+This selects `H-PortNoNaNF2OrLater` and refutes
+`H-PortF2AlreadyNaN`, `H-PortLaterCheck`, and
+`H-CoverageFailure` on this completing pair.
+It does not select port-finite in general:
+the s2176 abort class was not observed.
+`H-AssertNotLoggedNaN` and `H-HostCopyToRamClass`
+not selected (no abort / no copyToRAM SIGSEGV).
+
+ORIGIN: not a mitigation. Completing-port f2 and
+later `NAN_CHECK` operands are finite on this pair
+(`w_mem==w_fpr`). Do not disable `NAN_CHECK`,
+S32-address, NULL-skip, re-flip default-on,
+skip/allow the lwc or transform or extract jal,
+add a wait/slot guard, or land a copyToRAM/CIMG
+writeback guard.
+
+Soak enqueued:
+`scratch/agent/soak_queue/s2181_image_vec3_f2.sh`.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.
