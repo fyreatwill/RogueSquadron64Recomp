@@ -104319,3 +104319,56 @@ wild value was skipped, guarded, or rewritten.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-port-vi-context-parity`.
+
+## Session 2204 (2026-08-23) — compared port VI commit tuple to retail context
+
+Ran the required retail ground-truth preflight before adding the port
+instrument. The first command omitted the execution watch while enabling the
+context join: its whole-RDRAM control fired 10,000 writes and both target
+origins appeared, but the context summary was `latched=0 joined=0`. Adding
+`--watch-pc 0x80035500` produced 285 execution hits but still joined zero
+rows because that PC latches too early and all 243 pending rows were replaced.
+The corrected `--watch-pc 0x80035550 --vi-context-table-pc 0x80035550` run
+passed the same 10,000-write control, produced 578 execution hits, and joined
+203 target rows with 277 dropped rows, zero pending, and zero overflow. Its
+rows reproduced the retail tuple: framebuffer `0x00695C00`, mode
+`0x80128DA0`, field origins `0x500`/`0xA00`, candidates
+`0x00696100`/`0x00696600`, and alternating `current_field` 0/1.
+
+Added the env-gated `ROGUESQ_LOG_VI_CONTEXT_PORT` table to the live
+`ViState::update_vi` path, retaining the existing opt-in
+`ROGUESQ_VI_ALTERNATE_FIELDS` behavior. The table carries an eight-row
+all-width positive-control prefix, target-window commit rows, candidate sums,
+selected field/state, guest mode pointer, and bounded summaries. The first
+build/run exposed two harness-scope defects: the 256 row cap was consumed by
+earlier 640 phases before the control reached the target framebuffer, and the
+runner waited for a later `[phase]` origin line that the alternate field path
+does not emit. The fixed version gates rows at target framebuffer
+`0x00695C00` and the runner gates on a committed target row, then was rebuilt
+and rerun with both arms concurrently.
+
+The final control arm collected 185 target rows: field 0 on all rows,
+candidate0 `0x00696100`, candidate1 `0x00696600`, and committed origin only
+`0x00696100`. The alternate arm collected 150 rows: field 0/1 on 75/75
+rows, committed origins `0x00696100`/`0x00696600` on 75/75 rows. Both arms
+printed eight positive-control rows, had zero row overflow, and emitted no
+`[CRASH]` or `[ABORT]` marker. The port rows reported `next_state->state=0`,
+whereas the independent retail context rows reported `state=1`; that state
+word difference did not change the framebuffer/mode candidates or the
+selected committed origin.
+
+This same-build port/retail comparison selects H-PortFieldSelector at the
+qualified target scope. It refutes H-PortStateTuple's predicted candidate
+mismatch and H-PortCommitOrdering's predicted candidate/commit divergence;
+the alternate arm commits exactly the candidate selected by its field. It
+does not authorize making the field knob default-on, adding a guard, rewriting
+a task, or changing audio dispatch. The next unit is a later-phase stability
+A/B of the existing opt-in field selector.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; the only
+runtime change is a bounded diagnostic and guest mode-pointer plumbing.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-vi-field-toggle-stability`.

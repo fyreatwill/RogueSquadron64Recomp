@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2203
-(2026-08-23); behavioral and source evidence is current through s2203.
+authoritative for exact commands and probe rows. Maintained in Session 2204
+(2026-08-23); behavioral and source evidence is current through s2204.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2203's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2204's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -215,6 +215,23 @@ second ledger.
   the fixed scope. Together with s2202's independent post-swap table, it moves
   the open comparison to the port's `ViState` field/frame/mode state. No port
   guard, mitigation, task rewrite, or audio default change was made.
+- s2204's same-build port commit table passed the all-width prefix control in
+  both arms and collected target-window rows with zero overflow: control 185,
+  alternate 150. Both arms had framebuffer `0x00695C00`, guest mode
+  `0x80128DA0`, field origins `0x500`/`0xA00`, and candidates
+  `0x00696100`/`0x00696600`. Control selected field 0 for all 185 rows and
+  committed only `0x00696100`; the opt-in alternate arm selected field 0/1
+  for 75/75 rows and committed the corresponding first/second origins. This
+  selects H-PortFieldSelector at the qualified target scope and refutes
+  H-PortStateTuple's predicted candidate mismatch and H-PortCommitOrdering's
+  predicted candidate/commit divergence. The port logger reports
+  `next_state->state=0`, while retail's context table reports `state=1`; that
+  semantic state-word difference is recorded but does not alter either
+  candidate sum or committed origin. Both arms had eight positive-control rows
+  and no `[CRASH]`/`[ABORT]` marker. The independent retail oracle preflight in
+  this iteration again passed its 10,000-write control and produced 203 joined
+  context rows with both target origins. No default flip, guard, mitigation, or
+  task rewrite was made.
 
 ## Active backlog
 
@@ -244,9 +261,12 @@ work items.
    H-PostSwapStateBase. s2203's fixed-scope retail `__osViNext` join then
    selected H-ContextFramep: the context's frame pointer plus the field
    selected by `VI_CURRENT_REG & 1` exactly produced both target origins.
-   Next, compare that tuple against the port's `ViState` at commit in one
-   bounded baseline/alternation table. Keep the alternation knob opt-in and do
-   not add a port guard, mitigation, task rewrite, or audio default flip.
+   s2204's target-scoped port table selects H-PortFieldSelector: the port has
+   the retail frame/mode candidates and follows the selected field, while the
+   field-0 baseline is the only arm that misses the sibling origin. The next
+   unit is a bounded same-build stability A/B of the existing opt-in field
+   selector across target 640, title 1024, and hangar 512; keep the knob
+   opt-in until that validation completes.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume

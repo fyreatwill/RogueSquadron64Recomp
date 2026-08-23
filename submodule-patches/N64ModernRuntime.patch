@@ -1575,7 +1575,7 @@ index 3198be0..730ca54 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..cfdcc54 100644
+index 149e770..d0b0e44 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,6 +8,9 @@
@@ -1588,7 +1588,7 @@ index 149e770..cfdcc54 100644
  
  #include "blockingconcurrentqueue.h"
  
-@@ -20,6 +23,68 @@
+@@ -20,6 +23,168 @@
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
@@ -1628,6 +1628,106 @@ index 149e770..cfdcc54 100644
 +    return enabled;
 +}
 +
++bool vi_context_port_log_enabled() {
++    static const bool enabled = [] {
++        const char* all = std::getenv("ROGUESQ_LOG_ALL");
++        const char* specific = std::getenv("ROGUESQ_LOG_VI_CONTEXT_PORT");
++        return (all && *all && *all != '0') || (specific && *specific && *specific != '0');
++    }();
++    return enabled;
++}
++
++struct ViContextPortTrace {
++    uint32_t all_width_prefix_rows = 0;
++    uint32_t phase_ordinal = 0;
++    uint32_t rows = 0;
++    uint32_t overflow = 0;
++    uint32_t field_rows[2] = {};
++    uint32_t commit_rows[2] = {};
++    uint32_t candidate0_rows[2] = {};
++    uint32_t candidate1_rows[2] = {};
++    uint32_t summaries = 0;
++};
++
++ViContextPortTrace vi_context_port_trace;
++
++const char* vi_context_port_arm() {
++    return vi_field_alternation_enabled() ? "alternate" : "control";
++}
++
++void log_vi_context_port_summary() {
++    if (!vi_context_port_log_enabled()) return;
++    const ViContextPortTrace& trace = vi_context_port_trace;
++    std::fprintf(stderr,
++        "[vi-context-port-summary] arm=%s rows=%u overflow=%u prefix=%u "
++        "field0=%u field1=%u commit0=%u commit1=%u "
++        "candidate0_first=%u candidate0_second=%u "
++        "candidate1_first=%u candidate1_second=%u\n",
++        vi_context_port_arm(), trace.rows, trace.overflow,
++        trace.all_width_prefix_rows, trace.field_rows[0], trace.field_rows[1],
++        trace.commit_rows[0], trace.commit_rows[1],
++        trace.candidate0_rows[0], trace.candidate0_rows[1],
++        trace.candidate1_rows[0], trace.candidate1_rows[1]);
++    std::fflush(stderr);
++}
++
++void log_vi_context_port_commit(int cur_state, uint32_t selected_field,
++                                uint32_t next_state, uint32_t mode_guest,
++                                uint32_t framebuffer, uint32_t width,
++                                const OSViMode* mode, uint32_t committed_origin) {
++    if (!vi_context_port_log_enabled()) return;
++
++    ViContextPortTrace& trace = vi_context_port_trace;
++    const uint32_t field0_origin = mode->fldRegs[0].origin;
++    const uint32_t field1_origin = mode->fldRegs[1].origin;
++    const uint32_t candidate0 = framebuffer + field0_origin;
++    const uint32_t candidate1 = framebuffer + field1_origin;
++
++    if (trace.all_width_prefix_rows < 8) {
++        const uint32_t prefix = trace.all_width_prefix_rows++;
++        std::fprintf(stderr,
++            "[vi-context-port-control] arm=%s prefix=%u width=%u cur_state=%d "
++            "state=0x%08X framebuffer=0x%08X mode=0x%08X committed=0x%08X\n",
++            vi_context_port_arm(), prefix, width, cur_state, next_state,
++            framebuffer, mode_guest, committed_origin);
++        std::fflush(stderr);
++    }
++
++    if (width != 640 || framebuffer != 0x00695C00u) return;
++
++    const uint32_t phase = trace.phase_ordinal++;
++    if (selected_field < 2) trace.field_rows[selected_field]++;
++    if (committed_origin == 0x00696100u) trace.commit_rows[0]++;
++    if (committed_origin == 0x00696600u) trace.commit_rows[1]++;
++    if (candidate0 == 0x00696100u) trace.candidate0_rows[0]++;
++    if (candidate0 == 0x00696600u) trace.candidate0_rows[1]++;
++    if (candidate1 == 0x00696100u) trace.candidate1_rows[0]++;
++    if (candidate1 == 0x00696600u) trace.candidate1_rows[1]++;
++
++    if (trace.rows < 256) {
++        trace.rows++;
++        std::fprintf(stderr,
++            "[vi-context-port] arm=%s phase=%u cur_state=%d field=%u "
++            "state=0x%08X framebuffer=0x%08X mode=0x%08X "
++            "fld0.origin=0x%08X fld0.yScale=0x%08X "
++            "fld1.origin=0x%08X fld1.yScale=0x%08X "
++            "candidate0=0x%08X candidate1=0x%08X committed=0x%08X\n",
++            vi_context_port_arm(), phase, cur_state, selected_field, next_state,
++            framebuffer, mode_guest, field0_origin, mode->fldRegs[0].yScale,
++            field1_origin, mode->fldRegs[1].yScale, candidate0, candidate1,
++            committed_origin);
++        std::fflush(stderr);
++    } else {
++        trace.overflow++;
++    }
++
++    if ((trace.rows == 64 || trace.rows == 128 || trace.rows == 192 || trace.rows == 256) &&
++        trace.summaries < 4) {
++        trace.summaries++;
++        log_vi_context_port_summary();
++    }
++}
++
 +std::atomic<uint32_t> event_wiring_reg_rows{0};
 +std::atomic<uint32_t> event_wiring_sp_rows{0};
 +std::atomic<uint32_t> event_wiring_dp_rows{0};
@@ -1657,7 +1757,7 @@ index 149e770..cfdcc54 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -30,6 +95,7 @@ struct SpTaskAction {
+@@ -30,6 +195,7 @@ struct SpTaskAction {
  
  struct ScreenUpdateAction {
      ultramodern::renderer::ViRegs regs;
@@ -1665,7 +1765,28 @@ index 149e770..cfdcc54 100644
  };
  
  struct UpdateConfigAction {
-@@ -101,7 +167,16 @@ static struct {
+@@ -39,6 +205,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
+ 
+ struct ViState {
+     const OSViMode* mode;
++    PTR(OSViMode) mode_guest;
+     PTR(void) framebuffer;
+     PTR(OSMesg) mq;
+     OSMesg msg;
+@@ -85,6 +252,12 @@ static struct {
+                 origin = framebuffer;
+             }
+ 
++            log_vi_context_port_commit(
++                cur_state, static_cast<uint32_t>(field), next_state->state,
++                static_cast<uint32_t>(next_state->mode_guest),
++                static_cast<uint32_t>(framebuffer), common_regs->width,
++                next_mode, static_cast<uint32_t>(origin));
++
+             // TODO implement osViFade
+ 
+             // Update VI registers.
+@@ -101,7 +274,16 @@ static struct {
              regs.VI_X_SCALE_REG = common_regs->xScale; // TODO implement osViSetXScale
              regs.VI_Y_SCALE_REG = yScale; // TODO implement osViSetYScale
              regs.VI_STATUS_REG = next_state->control;
@@ -1683,7 +1804,7 @@ index 149e770..cfdcc54 100644
              // Swap VI states.
              cur_state ^= 1;
              *get_next_state() = *get_cur_state();
-@@ -140,6 +215,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +322,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -1692,7 +1813,7 @@ index 149e770..cfdcc54 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -165,6 +242,13 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
+@@ -165,6 +349,13 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
      next_state->mq = mq_;
      next_state->msg = msg;
      next_state->retrace_count = retrace_count;
@@ -1706,7 +1827,7 @@ index 149e770..cfdcc54 100644
  }
  
  uint64_t total_vis = 0;
-@@ -218,7 +302,10 @@ void vi_thread_func() {
+@@ -218,7 +409,10 @@ void vi_thread_func() {
  
          // Queue a screen update for the graphics thread with the current VI register state.
          // Doing this before the VI update is equivalent to updating the screen after the previous frame's scanout finished.
@@ -1718,7 +1839,7 @@ index 149e770..cfdcc54 100644
  
          // Update VI registers and swap VI modes.
          events_context.vi.update_vi();
-@@ -231,6 +318,17 @@ void vi_thread_func() {
+@@ -231,6 +425,17 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -1736,7 +1857,7 @@ index 149e770..cfdcc54 100644
                      // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
                      // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
                      ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
-@@ -252,12 +350,14 @@ void vi_thread_func() {
+@@ -252,12 +457,14 @@ void vi_thread_func() {
  void sp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
@@ -1751,7 +1872,7 @@ index 149e770..cfdcc54 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -281,13 +381,23 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -281,13 +488,23 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
          // pointer's contents (DMA, etc).
          const uint32_t task_type = task->t.type;
  
@@ -1776,7 +1897,7 @@ index 149e770..cfdcc54 100644
  
          (void)task_type;
      }
-@@ -394,6 +504,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -394,6 +611,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
              }
              else if (const auto* screen_update_action = std::get_if<ScreenUpdateAction>(&action)) {
                  events_context.vi.update_screen_regs = screen_update_action->regs;
@@ -1787,6 +1908,22 @@ index 149e770..cfdcc54 100644
                  renderer_context->update_screen();
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
+@@ -456,6 +677,7 @@ static const OSViMode dummy_mode = []() {
+ void set_dummy_vi(bool odd) {
+     ViState* next_state = events_context.vi.get_next_state();
+     next_state->mode = &dummy_mode;
++    next_state->mode_guest = 0;
+     // Set up a dummy framebuffer.
+     next_state->framebuffer = 0x80700000;
+     if (odd) {
+@@ -473,6 +695,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+     OSViMode* mode = TO_PTR(OSViMode, mode_);
+     ViState* next_state = events_context.vi.get_next_state();
+     next_state->mode = mode;
++    next_state->mode_guest = mode_;
+     next_state->control = next_state->mode->comRegs.ctrl;
+ }
+ 
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
 index 9944a02..c05a8b2 100644
 --- a/ultramodern/src/mesgqueue.cpp
