@@ -4011,6 +4011,24 @@ ledger and scratch artifacts named by the sessions.
   out coverage failure, but the global histograms do not compare the two
   640 origins or explain the failing image join.
 
-The next discriminator is a phase-bucketed retail writer-PC census for all six
-named words, preserving the whole-RDRAM positive control and 640 phase trace,
-before another port instrument or any runtime change is considered.
+### Phase-specific retail writer boundary (s2189)
+
+- s2189 added repeatable `--pc-hist-phase ORIGIN` buckets to the retail oracle.
+  The buckets count VI rows and writer PCs only while VI width is 640 and the
+  live origin matches the configured physical origin. The same run preserved
+  the whole-RDRAM positive control (33,011 writes), observed 211 rows at
+  `0x00696100` and 221 at `0x00696600`, and recorded all six target totals
+  `5/1/5/22990/9/1`.
+- The phase matrices were `1/0/0/1203/0/0` writes at `0x00696100` and
+  `4/1/5/8207/5/1` at `0x00696600` for targets
+  `0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC`. Sparse-target
+  writer sets differ by origin; target 4 has 42 and 51 distinct PCs in the
+  two buckets. This selects `H-PhaseSplit` as single-source oracle evidence,
+  with `H-Target4Broad` retained as a scoped secondary observation.
+- The new option and complete parsed shutdown table are documented in
+  `tools/oracle/README.md` and `scratch/agent/s2189_retail_writers_phase.txt`.
+  No port value, branch, mitigation, task rewrite, or audio default changed.
+
+The next discriminator is a phase-gated port writer-parity census for the six
+named words, using the retail phase matrix as ground truth before any runtime
+change is considered.

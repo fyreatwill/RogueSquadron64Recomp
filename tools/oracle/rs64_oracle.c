@@ -46,6 +46,7 @@
 
 #define MAX_WATCHES 64
 #define MAX_WRITER_PCS 128
+#define MAX_PC_HIST_PHASES 16
 #define MAX_POST_VALUE_HIST 64
 #define MAX_POST_VALUE_PCS 512
 #define MAX_POST_VALUE_SAMPLES 256
@@ -94,6 +95,16 @@ struct writer_pc {
 static struct writer_pc g_writer_pc[MAX_WATCHES][MAX_WRITER_PCS];
 static int g_n_writer_pc[MAX_WATCHES];
 static long g_writer_pc_overflow[MAX_WATCHES];
+struct writer_pc_hist {
+    struct writer_pc entries[MAX_WRITER_PCS];
+    int n;
+    long overflow;
+};
+static uint32_t g_pc_hist_phase_origin[MAX_PC_HIST_PHASES];
+static long g_pc_hist_phase_vis[MAX_PC_HIST_PHASES];
+static struct writer_pc_hist
+    g_pc_hist_phase[MAX_PC_HIST_PHASES][MAX_WATCHES];
+static int g_n_pc_hist_phase;
 static int g_nwatch;
 static long g_hits;
 static long g_hit_cap = 200;          /* stop logging after this many, keep running */
@@ -215,6 +226,26 @@ static void count_writer_pc(int watch, uint32_t pc)
         g_n_writer_pc[watch]++;
     } else {
         g_writer_pc_overflow[watch]++;
+    }
+}
+
+static void count_writer_pc_phase(int phase, int watch, uint32_t pc)
+{
+    struct writer_pc_hist *hist = &g_pc_hist_phase[phase][watch];
+    int i;
+
+    for (i = 0; i < hist->n; i++) {
+        if (hist->entries[i].pc == pc) {
+            hist->entries[i].n++;
+            return;
+        }
+    }
+    if (hist->n < MAX_WRITER_PCS) {
+        hist->entries[hist->n].pc = pc;
+        hist->entries[hist->n].n = 1;
+        hist->n++;
+    } else {
+        hist->overflow++;
     }
 }
 
@@ -492,8 +523,19 @@ static void dbg_update(unsigned int pc)
             if (access_flags & M64P_BKP_FLAG_WRITE)
                 g_watch[i].write_hits++;
             if ((g_pc_hist_watch_mask & (UINT64_C(1) << i)) &&
-                (access_flags & M64P_BKP_FLAG_WRITE))
+                (access_flags & M64P_BKP_FLAG_WRITE)) {
                 count_writer_pc(i, pc);
+                if (g_n_pc_hist_phase > 0) {
+                    unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
+                    unsigned origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+                    if (width == 640) {
+                        for (int phase = 0; phase < g_n_pc_hist_phase; phase++) {
+                            if (origin == g_pc_hist_phase_origin[phase])
+                                count_writer_pc_phase(phase, i, pc);
+                        }
+                    }
+                }
+            }
             if ((g_post_value_watch_mask & (UINT64_C(1) << i)) &&
                 (access_flags & M64P_BKP_FLAG_WRITE) &&
                 g_post_value_armed) {
@@ -630,6 +672,17 @@ static void dbg_vi(void)
     }
 
     g_vis++;
+
+    if (g_n_pc_hist_phase > 0) {
+        width = pDebugMemRead32(VI_WIDTH_ADDR);
+        origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+        if (width == 640) {
+            for (int phase = 0; phase < g_n_pc_hist_phase; phase++) {
+                if (origin == g_pc_hist_phase_origin[phase])
+                    g_pc_hist_phase_vis[phase]++;
+            }
+        }
+    }
 
     if (g_debug_write_enabled && !g_debug_write_done) {
         unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
@@ -955,6 +1008,7 @@ static void usage(void)
         "  --detail-watch N      always log hits for watch index N\n"
         "  --first-watch N       log the first hit for watch index N\n"
         "  --pc-hist-watch N     summarize writer PCs for watch index N (repeatable)\n"
+        "  --pc-hist-phase ORIGIN  add a 640-width writer histogram bucket (repeatable)\n"
         "  --post-value-watch N  sample post-store words and final range summary\n"
         "  --post-value-pc A[,B] force one post-store sample for writer PCs\n"
         "  --core PATH           libmupen64plus.dylib built with DEBUGGER=1\n"
@@ -1031,6 +1085,14 @@ int main(int argc, char **argv)
             int watch = atoi(argv[++i]);
             if (watch >= 0 && watch < MAX_WATCHES)
                 g_pc_hist_watch_mask |= UINT64_C(1) << watch;
+        }
+        else if (!strcmp(argv[i], "--pc-hist-phase") && i + 1 < argc) {
+            if (g_n_pc_hist_phase >= MAX_PC_HIST_PHASES) {
+                fprintf(stderr, "[oracle] too many --pc-hist-phase buckets\n");
+                return 2;
+            }
+            g_pc_hist_phase_origin[g_n_pc_hist_phase++] =
+                to_phys((uint32_t)strtoul(argv[++i], NULL, 0));
         }
         else if (!strcmp(argv[i], "--post-value-watch") && i + 1 < argc) {
             int watch = atoi(argv[++i]);
@@ -1230,6 +1292,26 @@ int main(int argc, char **argv)
         printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s), %ld read(s), %ld write(s)\n",
                g_watch[i].label, g_watch[i].start, g_watch[i].end,
                g_watch[i].hits, g_watch[i].read_hits, g_watch[i].write_hits);
+    for (int phase = 0; phase < g_n_pc_hist_phase; phase++) {
+        printf("[oracle] pc-hist-phase origin=0x%08x width=640 vi=%ld\n",
+               g_pc_hist_phase_origin[phase], g_pc_hist_phase_vis[phase]);
+        for (int watch = 0; watch < g_nwatch; watch++) {
+            if (!(g_pc_hist_watch_mask & (UINT64_C(1) << watch)))
+                continue;
+            printf("[oracle] writer-pc-phase origin=0x%08x width=640 watch=%d range=[0x%08x,0x%08x)\n",
+                   g_pc_hist_phase_origin[phase], watch,
+                   g_watch[watch].start, g_watch[watch].end);
+            for (int i = 0; i < g_pc_hist_phase[phase][watch].n; i++)
+                printf("[oracle] writer-pc-phase origin=0x%08x width=640 watch=%d pc=0x%08x n=%ld\n",
+                       g_pc_hist_phase_origin[phase], watch,
+                       g_pc_hist_phase[phase][watch].entries[i].pc,
+                       g_pc_hist_phase[phase][watch].entries[i].n);
+            if (g_pc_hist_phase[phase][watch].overflow)
+                printf("[oracle] writer-pc-phase origin=0x%08x width=640 watch=%d overflow=%ld\n",
+                       g_pc_hist_phase_origin[phase], watch,
+                       g_pc_hist_phase[phase][watch].overflow);
+        }
+    }
     for (int watch = 0; watch < g_nwatch; watch++) {
         if (!(g_pc_hist_watch_mask & (UINT64_C(1) << watch)))
             continue;

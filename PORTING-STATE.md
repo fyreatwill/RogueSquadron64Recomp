@@ -103785,3 +103785,35 @@ mitigation, or audio default changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-writer-census`.
+
+## Session 2189 (2026-08-23) — phase-bucketed retail writer census
+
+Ran the single oracle work unit from `scratch/agent/NEXT.md` without building
+the port. Added repeatable `--pc-hist-phase ORIGIN` support to the oracle and
+rebuilt `tools/oracle/build/rs64_oracle`. Each configured bucket counts VI
+rows only at width 640 and records a separate writer-PC histogram for every
+selected target watch. The complete run and parsed table are
+`scratch/agent/s2189_retail_writers_phase.log` and
+`scratch/agent/s2189_retail_writers_phase.txt`.
+
+The same run passed the whole-RDRAM positive control at 33,011 writes and
+completed with 2,671 VI. It observed 211 rows at origin `0x00696100` and 221
+at `0x00696600`. Target totals for
+`0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC` were
+`5/1/5/22990/9/1`. Phase totals were `1/0/0/1203/0/0` and
+`4/1/5/8207/5/1`; the writer sets therefore split by origin. Target 4 was
+broad in both buckets (42 and 51 unique PCs), so that boundary remains open.
+
+This selects `H-PhaseSplit` at the single-source oracle scope and rules out
+phase-stable writer attribution for the sampled run. It does not explain the
+intermittent image join, authorize a port guard, or justify an audio default
+flip. The next work unit is a phase-gated port writer-parity census using this
+retail matrix as ground truth.
+
+ORIGIN: oracle-only diagnostic option and census; no port value, branch,
+mitigation, task rewrite, or audio default changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-writer-census`.

@@ -1,64 +1,60 @@
-# NEXT work unit (s2189) — phase-bucketed retail writer census
+# NEXT work unit (s2190) — phase-gated port writer-parity census
 
 HYPOTHESIS-ID: m5-a1-retail-writer-census
 
 ## Work unit
 
-Make one bounded oracle-only change: add repeatable phase buckets to the
-writer-PC histogram, keyed by VI width 640 and origin. The existing
-repeatable `--pc-hist-watch` support is already in place. Each configured
-phase bucket must count the same six target watches independently, and the
-shutdown table must print one histogram per phase and target. Do not rebuild
-or instrument the port.
+Use the s2189 retail phase matrix as ground truth and add one batched,
+phase-gated port diagnostic for all six physical target words. The generated
+writer path must report `(target, guest writer PC, VI width, VI origin)` for
+each target write at the two 640 origins. Route the diagnostic through
+`../N64Recomp/fixup_game_funcs.py`; do not hand-edit generated output. This is
+an attribution probe only: no guard, skip, task rewrite, or audio-default
+change is permitted.
 
-Build the oracle once:
-
-```sh
-tools/oracle/build.sh
-```
-
-Then run one same-run table from the repository root. The new option planned
-for this work unit is repeatable `--pc-hist-phase ORIGIN`:
+Before building, enumerate the existing generated sites and the fixup hook:
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 45 --hit-cap 10000 \
-  --watch-write 0x0:0x800000 \
-  --watch-write 0x25A580:0x25A584 \
-  --watch-write 0x0CA748:0x0CA74C \
-  --watch-write 0x0C7B0C:0x0C7B10 \
-  --watch-write 0x165E40:0x165E44 \
-  --watch-write 0x0CDB58:0x0CDB5C \
-  --watch-write 0x2231EC:0x2231F0 \
-  --first-watch 0 \
-  --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3 \
-  --pc-hist-watch 4 --pc-hist-watch 5 --pc-hist-watch 6 \
-  --pc-hist-phase 0x00696100 --pc-hist-phase 0x00696600 \
-  --vi-trace \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s2189_retail_writers_phase.log 2>&1
+rg -n '80018F5C|80018F60|800078EC|800A8144|80057100|25A580|0CA748|0C7B0C|165E40|0CDB58|2231EC' \
+  ../N64Recomp/RecompiledFuncs/funcs_*.c ../N64Recomp/fixup_game_funcs.py
 ```
 
-Parse the whole-RDRAM control, 640 row count at each configured origin,
-six total target counts, and every phase/target histogram into
-`scratch/agent/s2189_retail_writers_phase.txt`. Require both positive
-controls before interpreting any phase bucket.
+Add one rate-limited `ROGUESQ_LOG_M5_WRITER_PARITY=1` table through the fixup
+path, then regenerate/build once:
+
+```sh
+python3 ../N64Recomp/fixup_game_funcs.py
+cmake --build build --config Debug --target RogueSquadron64Recomp
+```
+
+Run one qualified route from the repository root. The existing phase and
+title/hangar controls stay enabled in the same run:
+
+```sh
+export GAME_EXTRA_ENV='ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_CUTSCENE_A2_50=1 ROGUESQ_LOG_M5_WRITER_PARITY=1'
+env GAME_EXTRA_ENV="$GAME_EXTRA_ENV" \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2190_m5_writer_parity 30 12 \
+  > scratch/agent/s2190_m5_writer_parity_driver.log 2>&1
+```
+
+Parse the positive 640 phase control, title `1024` and hangar `512` controls,
+and one complete `target × origin × guest-PC` table into
+`scratch/agent/s2190_m5_writer_parity.txt`. A phase row without any writer
+rows is not a null result until the existing phase control and all six target
+watch paths are visibly active.
 
 ## Competing hypotheses and discriminator
 
-- H-PhaseStable: both 640 origins contain the same writer set for each
-  target; the cinematic phase is not writer-origin-specific.
-- H-PhaseSplit: at least one target's writer PCs differ between
-  `0x00696100` and `0x00696600`; attribution is phase-specific and becomes
-  the next ground-truth discriminator.
-- H-Target4Broad: the sparse targets stabilize but `0x165E40` remains broad
-  in both buckets, so its 123-PC class needs a different boundary.
-- H-PhaseCoverageFailure: whole-RDRAM or 640 controls fail, or configured
-  buckets have no VI rows; no writer conclusion is allowed.
+- H-PortRetailParity: for sparse targets 1/2/3/5/6, the port's writer-PC set
+  at each origin matches the s2189 retail set; target 4 is broad in both.
+- H-PortOriginMismatch: at least one target is written by a different PC or
+  under the opposite origin bucket in the port.
+- H-PortNoTargetWrites: the 640 phase control fires but the batched target
+  table has no rows, locating the port/runtime boundary without authorizing a
+  skip.
+- H-PortCoverageFailure: the 640 or title/hangar controls do not fire, so the
+  run cannot discriminate writer parity.
 
-The discriminator is one same-run table of controls, phase-row counts, and
-per-phase/per-target PC histograms. It selects stable attribution, a
-phase-specific split, a target-4-only boundary, or invalid coverage.
+The discriminator is one same-run table of controls and all six target/origin
+writer sets. It selects parity, an origin-specific mismatch, an active-path
+boundary, or invalid coverage.
