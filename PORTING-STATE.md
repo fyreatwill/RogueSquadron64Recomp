@@ -103910,3 +103910,36 @@ ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-writer-census`.
+
+## Session 2193 (2026-08-23) — isolated route logging categories without second-origin reachability
+
+Ran `zsh scratch/agent/run_s2193_m5_narrow_log_ab.sh` with the already-built
+qualified image/LLE binary in three concurrent arms: quiet, broad logging, and
+the grouped route categories. The writer control fired 31/30/31 times, and
+every arm passed the phase control at 640 origins `0x0066A500` and
+`0x00696100`. None reached 640 origin `0x00696600`; each also produced a
+second `0x00696100` phase later in the run.
+
+At the first origin, target rows in target order
+`0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC` were quiet
+`1/0/2/64/1/1`, broad `1/0/2/65/1/1`, and route `1/0/2/65/1/1`.
+The route arm's optional controls visibly fired: about 8,192 slot-dispatch,
+130 event-wiring, and 266 audio-return rows; SP-task logging had no positive
+rows. All three logs contained 36 crash markers from
+`slotDispatcherIter+3508`; quiet and route ended with guest PC `0x80022160`,
+while broad ended with `0x80007904`.
+
+This selects `H-SecondOriginStillAbsent`, rules out the planned
+`H-NarrowRouteLogBoundary`, and rules out the specific planned form of
+`H-LoggingOnlyThroughput` in which broad logging remains alive. It does not
+isolate the individual route categories or prove that the differing last
+guest PCs share one cause. No guest value, branch, mitigation, task field, or
+audio default changed. Full logs are in
+`scratch/agent/s2193_m5_narrow_log_ab/`.
+
+ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-writer-census`.

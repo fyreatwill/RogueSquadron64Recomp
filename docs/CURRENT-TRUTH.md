@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2192
-(2026-08-23); behavioral and source evidence is current through s2192.
+authoritative for exact commands and probe rows. Maintained in Session 2193
+(2026-08-23); behavioral and source evidence is current through s2193.
 
 The detailed s2164–s2192 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43. This file is the compact
@@ -89,6 +89,16 @@ operational state, not a second ledger.
   logging cadence as a route to the second origin and shows that logging
   changes the failure mode; it does not prove a shared crash boundary or
   authorize a guard, task rewrite, or audio default flip.
+- s2193 isolated the grouped route logging into quiet, broad, and route arms.
+  All three passed the writer control (31/30/31) and the phase control at
+  `0x0066A500` and `0x00696100`, but none reached `0x00696600`. First-origin
+  target rows were quiet `1/0/2/64/1/1`, broad `1/0/2/65/1/1`, and route
+  `1/0/2/65/1/1`; target order is the six physical words listed in s2190.
+  All three emitted crash markers from `slotDispatcherIter+3508`; quiet and
+  route ended with guest PC `0x80022160`, while broad ended with `0x80007904`.
+  This selects `H-SecondOriginStillAbsent`, refutes the planned
+  `H-NarrowRouteLogBoundary` and the specific “broad arm remains live” form of
+  `H-LoggingOnlyThroughput`, and leaves individual category effects unresolved.
 
 ## Active backlog
 
@@ -97,18 +107,16 @@ work items.
 
 1. **M5 A1 recover the second-origin port writer parity census; blocks
    default-on.**
-   s2190 selected H-PortOriginMismatch at port `0x00696100`, and s2191
-   independently selected H-PortSecondOriginAbsent. s2192 refuted the
-   logging-cadence route explanation: both broad-logging and quiet arms
-   passed controls and stopped short of `0x00696600`, but logging changed
-   quiet's later crash into noisy's watchdog-visible live loop. The next
-   discriminator is a three-arm, phase-gated schedule test with the same
-   writer controls: quiet, broad logging, and a narrow route-log arm. If the
-   narrow arm matches quiet's crash, broad logging only changes throughput;
-   if it matches noisy's live loop, a specific high-volume log category is
-   involved; if any arm reaches `0x00696600`, collect its complete six-target
-   table. Do not add a port guard, mitigation, task rewrite, or audio default
-   flip.
+   s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
+   H-PortSecondOriginAbsent, and s2192–s2193 showed that broad and grouped
+   route logging change failure details without reaching `0x00696600`. The
+   next discriminator is a four-arm, phase-gated category-isolation test with
+   the same writer controls: quiet, slot-dispatch only, event-wiring only,
+   and audio-return only. If one category reaches `0x00696600` or remains
+   alive while quiet crashes, that category is a route-boundary candidate; if
+   all four miss the second origin, no individual category explains the
+   grouped result. Do not add a port guard, mitigation, task rewrite, or
+   audio default flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
