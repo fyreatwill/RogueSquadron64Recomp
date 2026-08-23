@@ -1,0 +1,57 @@
+s2179 port extract $a1+0x20 / first-cross $a2+8 / f10 IEEE bits A/B
+HYPOTHESIS-ID: m5-a1-cinematic-split
+same binary, concurrent arms, 90s SIGKILL
+recipe: SPIN_YIELD=1 LLE_UNGATED=1 LLE_SOLO=1 LOG_ALL=1 LOG_CUTSCENE_A2_50=1
+driver: scratch/s73_post_a_scene/run_mission_keys.sh 30 12
+logs:   scratch/s73_post_a_scene/s2179_on/run.log
+        scratch/s73_post_a_scene/s2179_off/run.log
+
+IEEE single: NaN iff (w&0x7F800000)==0x7F800000 && (w&0x007FFFFF)!=0
+             Inf iff (w&0x7F800000)==0x7F800000 && (w&0x007FFFFF)==0
+             else finite (includes ±0.0)
+First-cross tagged by orthonormalizeFrame jal_pc=0x80059F3C
+(recompiler does not write $ra; logged ra=0).
+
+positive controls (both arms, same log)
+- [vec3-word-ctl] n=32 at width=640 origin=0x00696100
+  16 site=extract + 16 site=cross first=1
+- [heap0-ctl] at 640 origin=0x00696100 n=23
+- VI 640 origin=0x00696100 at 7.6s (cinematic)
+- printed w_mem=/w_fpr= on extract and first-cross
+
+image ROGUESQ_AUDIO_UCODE=1 (s2179_on)
+- extract nmax=6350 t=51.0; printed 147; nan_mem=0 inf_mem=0 nan_fpr=0 inf_fpr=0
+  cinematic dest a0=0x80165E40 n=88 and other-caller a0=0x800B0A18 n=13
+  first ctl n=1 t=7.8 a0=0x800B0A18 a1=0x800B1938 w_mem=0x3F71276F (retail other-caller)
+  ctl n=2 a0=0x80165E40 a1=0x800C8A14 w_mem=0x3CFEDCBB (retail dispatcher)
+  cinematic w histogram includes 0x3CFEDCBB, ±0x3C664945, 0x3C4CCCCD, 0x3F71276F
+  w_mem==w_fpr mismatch=0
+- first-cross n printed 315; first ctl n=1 t=7.8 jal=0x80059F3C
+  w_mem=0x3F712770; ctl n=3 dest a0=0x80165DF0 w_mem=0x3F800000
+  cinematic w histogram: 0x3F800000 n=16, 0xBF800000 n=12, 0x3F712770 n=4
+  w_mem==w_fpr mismatch=0
+- cross nmax=35900 t=89.0 (rate-limited; hangar)
+- title 1024 @ 0x00790400 at 51.3s #3000
+- hangar 512 @ 0x006AB400 at 80.6s #4756
+- 0 CRASH 0 SIGABRT 0 SIGBUS; SIGKILL at 90s
+
+stub ROGUESQ_AUDIO_UCODE=0 (s2179_off)
+- extract nmax=7150 t=49.0; printed 163; nan/inf=0; w_mem==w_fpr mismatch=0
+  first ctl same other-caller 0x3F71276F then dispatcher 0x3CFEDCBB
+- first-cross cinematic: 0x3F800000 n=19, 0xBF800000 n=12, 0x3F712770 n=4
+  w_mem==w_fpr mismatch=0
+- cross nmax=38900 t=88.9
+- title 1024 @ 0x00790400 at 49.3s #2876
+- hangar 512 @ 0x006AB400 at 78.6s #4638
+- 0 CRASH 0 SIGABRT 0 SIGBUS; SIGKILL at 90s
+
+selected: H-PortNoNaNThisPair
+refuted on this pair: H-PortExtractAlreadyNaN, H-PortOrthonormalizeMakesNaN,
+  H-PortF10NotMemWord, H-CoverageFailure
+not selected: port-finite in general (abort class missed; completing pair)
+
+Retail s2178 ORIGIN those same words are finite (±1.0 / ~0.942 /
+0x3CFEDCBB). Port completing cinematic writes the same finite class.
+Do not conclude the SIGABRT cannot be NaN; enqueue a failing =1 soak.
+Do not S32-address, NULL-skip, re-flip default-on, skip/allow the lwc
+or transform or extract jal, disable NAN_CHECK, or add a wait/slot guard.

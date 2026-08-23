@@ -103431,3 +103431,56 @@ retail f10 as NaN.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2179 (2026-08-23) — port extract/first-cross words finite on this completing pair
+
+Same-build concurrent `=1`/`=0`, 90s SIGKILL. Table:
+`scratch/agent/s2179_vec3_word_port.txt`. Logs:
+`scratch/s73_post_a_scene/s2179_on/run.log`,
+`scratch/s73_post_a_scene/s2179_off/run.log`.
+Probes in `../N64Recomp/fixup_game_funcs.py`
+(`funcs_13.c` extract `0x80059D48` and
+orthonormalizeFrame jal `0x80059F3C`;
+`funcs_4.c` `vec3Cross` `0x8001954C` before
+`NAN_CHECK`). Diagnostic only.
+
+Positive controls (both arms, same log):
+`[vec3-word-ctl]` n=32 at 640 `0x00696100`
+(16 extract + 16 first-cross); `[heap0-ctl]`
+n=23 at that VI; printed `w_mem=`/`w_fpr=` on
+extract and first-cross (`jal=0x80059F3C`).
+
+IEEE: 0 NaN, 0 Inf on both arms. Extract
+`w_mem==w_fpr` mismatch=0; first-cross
+mismatch=0. Cinematic extract matches retail
+class (`0x3F71276F` other-caller,
+`0x3CFEDCBB` / `±0x3C664945` / `0x3C4CCCCD`
+dispatcher dest `0x80165E40`). First-cross
+matches retail (`0x3F800000`/`0xBF800000`/
+`0x3F712770`). Both arms title
+`1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. 0 SIGABRT / SIGBUS.
+
+This selects `H-PortNoNaNThisPair` and
+refutes `H-PortExtractAlreadyNaN`,
+`H-PortOrthonormalizeMakesNaN`,
+`H-PortF10NotMemWord`, and
+`H-CoverageFailure` on this completing pair.
+It does not select port-finite in general:
+the s2176 abort class was not observed.
+
+ORIGIN: not a mitigation. Completing-port
+source words at extract `$a1+0x20` and
+first-cross `$a2+8`/f10 are the same finite
+class as retail s2178. Do not disable
+`NAN_CHECK`, S32-address, NULL-skip, re-flip
+default-on, skip/allow the lwc or transform
+or extract jal, or add a wait/slot guard.
+
+Soak enqueued:
+`scratch/agent/soak_queue/s2179_image_vec3_word.sh`.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

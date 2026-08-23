@@ -1,18 +1,21 @@
-# NEXT work unit (s2179) — port extract / first-cross word bits vs retail finite
+# NEXT work unit (s2180) — consume s2179 =1 soak; classify abort NaN or add f2
 
 HYPOTHESIS-ID: m5-a1-cinematic-split
 
 ## Work unit
 
-s2178 selected `H-RetailSourceWordFinite`: retail
-cinematic first-cross `w_a2p8` (prev=`0x80059F3C`)
-and extract `w_a1p20` are 10/10 finite (0 NaN).
-The port SIGABRT is `vec3Cross` `NAN_CHECK` f10
-(`funcs_4.c:33371`) from jal `0x800A8640`. Ground
-truth asked: retail input is not NaN.
+s2179 selected `H-PortNoNaNThisPair` on a completing
+same-build pair: extract `$a1+0x20` and first-cross
+`$a2+8`/f10 were 0 NaN / 0 Inf, `w_mem==w_fpr`, both
+arms title+hangar. Abort class missed. Do not conclude
+port-finite. Soak
+`scratch/agent/soak_queue/s2179_image_vec3_word.sh`
+is queued (`=1`, `LOG_ALL=1`, 180s).
 
-Ask the port the same two words, in one build,
-before any `NAN_CHECK` skip/allow.
+Read the new `scratch/agent/SOAK-RESULTS.md` line and
+the soak log. Discriminate with the already-landed
+`[vec3-word]` rows — no rebuild unless the soak is
+another completing 0-NaN run.
 
 Do not S32-address, NULL-skip, re-flip default-on,
 skip/allow the lwc / transform / extract jal,
@@ -22,61 +25,36 @@ disable `NAN_CHECK`, or add a wait/slot guard.
 
 IEEE single: NaN iff `(w & 0x7F800000)==0x7F800000 && (w & 0x007FFFFF)!=0`.
 Join on 640 cinematic (`0x00696100`/`0x00696600`).
-Always-log NaN; rate-limit finite.
+Positive control: `[vec3-word-ctl]` at that VI.
 
-- `H-PortExtractAlreadyNaN`: `[vec3-word-ctl]` fires
-  at 640/`0x00696100`; extract `w_a1p20` is NaN bits
-  (port source already bad before orthonormalize).
-- `H-PortOrthonormalizeMakesNaN`: extract `w_a1p20`
-  finite; first-cross `w_a2p8` / f10.u32l is NaN
-  (orthonormalize rewrote dest+0x14 to NaN).
+- `H-PortExtractAlreadyNaN`: soak aborts (or SIGBUS)
+  and extract `w_a1p20` is NaN before orthonormalize.
+- `H-PortOrthonormalizeMakesNaN`: extract finite;
+  first-cross `w_a2p8` / f10 is NaN.
 - `H-PortF10NotMemWord`: first-cross MEM_W($a2,8)
-  finite but f10.u32l is NaN (reload/FPR split).
-- `H-PortNoNaNThisPair`: both arms complete or
-  640-stall with 0 NaN rows (abort class missed;
-  enqueue soak, do not conclude port-finite).
-
-Positive controls: `[vec3-word-ctl]` at 640
-including origin `0x00696100`; printed `w=` on
-extract and on first-cross (`ra` in
-`{0x80059F3C,0x80059F40}` delay-slot). A NaN
-always-log is the abort-class control.
+  finite but f10.u32l is NaN.
+- `H-PortF2OrLaterCheck`: soak SIGABRTs in
+  `vec3Cross` with 0 NaN on extract and f10 (the
+  aborting line is `NAN_CHECK(f2); NAN_CHECK(f10)`).
+  Then one rebuild: log f2 at `0x80019550`
+  `MEM_W($a1,4)` plus later `NAN_CHECK` operands
+  in `vec3Cross` before each assert.
+- `H-PortNoNaNThisPair` again: soak title+hangar,
+  0 NaN. Still do not conclude port-finite; take
+  the f2 rebuild this iteration (abort class still
+  unobserved with this instrument).
 
 ## Exact commands
 
-One rebuild. Add diagnostic fprintf only (same
-`ROGUESQ_LOG_CUTSCENE_A2_50` / `ROGUESQ_LOG_ALL`
-gate as heap0). Put the insert in
-`tools/fixup_game_funcs.py` if that script still
-owns these sites; otherwise the established
-cinematic-probe pattern is a hand-instrument of
-generated C (do not put load-bearing logic there).
+No build unless the soak is completing/0-NaN.
 
-1. `../N64Recomp/RecompiledFuncs/funcs_13.c` after
-   `0x80059D48` `ctx->f0.u32l = MEM_W(ctx->r5, 0X20);`
-   log site=extract a0/a1/w=f0.u32l ieee.
-2. `../N64Recomp/RecompiledFuncs/funcs_4.c` after
-   `0x8001954C` `ctx->f10.u32l = MEM_W(ctx->r6, 0X8);`
-   and BEFORE `NAN_CHECK(ctx->f2.fl); NAN_CHECK(ctx->f10.fl);`
-   log site=cross a0/a1/a2/ra w_mem=MEM_W($a2,8)
-   w_f10=f10.u32l ieee. First-cross =
-   `ra` in `{0x80059F3C,0x80059F40}`.
-3. Catalog `[vec3-word]` / `[vec3-word-ctl]` in
-   `docs/debug-trace-env-vars.md` on the
-   `ROGUESQ_LOG_CUTSCENE_A2_50` row.
-4. cmake Debug RogueSquadron64Recomp.
-5. Same-build concurrent 90s SIGKILL:
-
-    env ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 \
-      ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_CUTSCENE_A2_50=1 \
-      zsh scratch/s73_post_a_scene/run_mission_keys.sh \
-      s2179_on 30 12
-
-    env ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=0 \
-      ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_CUTSCENE_A2_50=1 \
-      zsh scratch/s73_post_a_scene/run_mission_keys.sh \
-      s2179_off 30 12
-
-Table to `scratch/agent/s2179_vec3_word_port.txt`.
-If neither arm aborts and NaN n=0, enqueue a
-`=1` soak (do not select port-finite).
+1. Read the new SOAK-RESULTS line and
+   `scratch/s73_post_a_scene/s2179_image_vec3_word/run.log`
+   via grep (never cat): `[vec3-word-ctl]`,
+   `nan_mem=1`/`nan_fpr=1`, last extract / first=1,
+   `[CRASH]`/`Assertion failed`/`[phase]` 1024/512.
+2. Table to `scratch/agent/s2180_vec3_word_soak.txt`.
+3. Only if 0 NaN and no abort: add f2 + later
+   `NAN_CHECK` operands in `fixup_game_funcs.py`
+   and the generated C, one rebuild, one `=1` 90s
+   run (plus `=0` concurrent).
