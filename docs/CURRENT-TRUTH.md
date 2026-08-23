@@ -2,10 +2,10 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2187
-(2026-08-23); behavioral and source evidence is current through s2187.
+authoritative for exact commands and probe rows. Maintained in Session 2188
+(2026-08-23); behavioral and source evidence is current through s2188.
 
-The detailed s2164–s2187 chain is archived in
+The detailed s2164–s2188 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43. This file is the compact
 operational state, not a second ledger.
 
@@ -45,19 +45,31 @@ operational state, not a second ledger.
   none overlapped the six named words. The run later crashed in
   `recomp::do_rom_read` after a later 640 phase; this is scoped evidence,
   not an explanation of the intermittent cinematic failure.
+- s2188's corrected single-run retail writer census passed the whole-RDRAM
+  control (33,145 writes), observed seven 640-VI rows at origins
+  `0x00696100`/`0x00696600`, and saw all six named words written: counts
+  `5, 1, 5, 23,124, 9, 1` for the six targets in watch order. Histograms
+  identify narrow writers for targets 1/2/3/5/6 (`0x80018F5C`,
+  `0x80018F60`, `0x800078EC`/`0x800A8144`, `0x800078EC`/`0x80018F60`,
+  `0x80057100`); target 4 has 123 distinct PCs with no overflow. This is
+  single-source oracle evidence that corroborates s2185's target-write
+  result, rules out coverage failure, and does not yet distinguish the two
+  640 origins or explain the failing image join.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 A1 retail writer identity census; blocks default-on.** Run the
-   retail oracle with a whole-RDRAM positive control, six named-word watches,
-   per-target writer-PC histograms, and VI phase trace. Resolve the five
-   writer identities still open after s2185. s2184 and s2187 both show that
-   image joins with positive controls are title/hangar-only, but this does
-   not explain the intermittent cinematic failure. Do not add a port
-   instrument, rebuild, mitigation, or default flip for this work unit.
+1. **M5 A1 phase-specific retail writer census; blocks default-on.** s2188
+   resolves narrow writer sets for five targets and shows 123 writers for
+   `0x165E40`, but its global histograms do not compare the two 640 origins.
+   Add one phase-bucketed oracle histogram table, preserving the
+   whole-RDRAM/640 controls, to test whether target writers change between
+   `0x00696100` and `0x00696600`. s2184 and s2187 both show that image joins
+   with positive controls are title/hangar-only, but this does not explain
+   the intermittent cinematic failure. Do not add a port guard, mitigation,
+   or default flip for this work unit.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -185,7 +197,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024 and
 spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
-s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2187
+s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2188
 pointer, failure, and image-DMA archive is §43. Exact commands, counts,
 failed retries, and session headings remain in `PORTING-STATE.md`.
 

@@ -1,16 +1,24 @@
-# NEXT work unit (s2188) — retail writer identity census
+# NEXT work unit (s2189) — phase-bucketed retail writer census
 
 HYPOTHESIS-ID: m5-a1-retail-writer-census
 
 ## Work unit
 
-Ask the retail oracle which guest PCs write each of the six named physical
-words. Use one run with the whole-RDRAM positive control, all six target
-watches, per-target writer-PC histograms, and VI tracing. This is ground truth
-work; do not rebuild the port or add a port instrument.
+Make one bounded oracle-only change: add repeatable phase buckets to the
+writer-PC histogram, keyed by VI width 640 and origin. The existing
+repeatable `--pc-hist-watch` support is already in place. Each configured
+phase bucket must count the same six target watches independently, and the
+shutdown table must print one histogram per phase and target. Do not rebuild
+or instrument the port.
 
-Exact command from the repository root (capture path has a non-dot final
-component):
+Build the oracle once:
+
+```sh
+tools/oracle/build.sh
+```
+
+Then run one same-run table from the repository root. The new option planned
+for this work unit is repeatable `--pc-hist-phase ORIGIN`:
 
 ```sh
 tools/oracle/build/rs64_oracle \
@@ -28,30 +36,29 @@ tools/oracle/build/rs64_oracle \
   --first-watch 0 \
   --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3 \
   --pc-hist-watch 4 --pc-hist-watch 5 --pc-hist-watch 6 \
+  --pc-hist-phase 0x00696100 --pc-hist-phase 0x00696600 \
   --vi-trace \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s2188_retail_writers.log 2>&1
+  > scratch/agent/s2189_retail_writers_phase.log 2>&1
 ```
 
-Parse the whole-RDRAM removal/control, VI 640 rows at origins
-`0x00696100`/`0x00696600`, each target hit count, and each target's PC
-histogram into `scratch/agent/s2188_retail_writers.txt`. Require both the
-whole-RDRAM and 640 controls before interpreting a target zero.
+Parse the whole-RDRAM control, 640 row count at each configured origin,
+six total target counts, and every phase/target histogram into
+`scratch/agent/s2189_retail_writers_phase.txt`. Require both positive
+controls before interpreting any phase bucket.
 
 ## Competing hypotheses and discriminator
 
-- H-RetailWriterAllNamed: all six target watches have positive writes and
-  their PC histograms identify the remaining writers.
-- H-RetailWriterShared: the targets are written by one shared PC or a small
-  known set, collapsing the five open writer identities.
-- H-RetailWriterPhaseSplit: the writer histogram changes between the two 640
-  origins, so target identity is phase-specific.
-- H-RetailWriterCoverageFailure: the whole-RDRAM or 640 control is absent, or
-  target watches are silent without a valid phase, so no writer conclusion is
-  allowed.
+- H-PhaseStable: both 640 origins contain the same writer set for each
+  target; the cinematic phase is not writer-origin-specific.
+- H-PhaseSplit: at least one target's writer PCs differ between
+  `0x00696100` and `0x00696600`; attribution is phase-specific and becomes
+  the next ground-truth discriminator.
+- H-Target4Broad: the sparse targets stabilize but `0x165E40` remains broad
+  in both buckets, so its 123-PC class needs a different boundary.
+- H-PhaseCoverageFailure: whole-RDRAM or 640 controls fail, or configured
+  buckets have no VI rows; no writer conclusion is allowed.
 
-The discriminator is one same-run table of whole-RDRAM control, VI phase,
-target count, and per-target writer-PC histogram. It selects whether the
-open identities are distinct, shared, phase-specific, or merely uncovered.
-Do not add a port guard, disable `NAN_CHECK`, skip/allow cinematic loads, or
-re-flip the image-arm default.
+The discriminator is one same-run table of controls, phase-row counts, and
+per-phase/per-target PC histograms. It selects stable attribution, a
+phase-specific split, a target-4-only boundary, or invalid coverage.

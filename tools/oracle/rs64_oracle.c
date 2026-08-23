@@ -99,7 +99,7 @@ static long g_hits;
 static long g_hit_cap = 200;          /* stop logging after this many, keep running */
 static unsigned int g_detail_watch_mask;
 static int g_first_watch = -1;
-static int g_pc_hist_watch = -1;
+static uint64_t g_pc_hist_watch_mask;
 static uint64_t g_post_value_watch_mask;
 static uint32_t g_post_value_requested_pc[32];
 static int g_post_value_requested_seen[32];
@@ -491,7 +491,8 @@ static void dbg_update(unsigned int pc)
                 g_watch[i].read_hits++;
             if (access_flags & M64P_BKP_FLAG_WRITE)
                 g_watch[i].write_hits++;
-            if (g_pc_hist_watch == i && (access_flags & M64P_BKP_FLAG_WRITE))
+            if ((g_pc_hist_watch_mask & (UINT64_C(1) << i)) &&
+                (access_flags & M64P_BKP_FLAG_WRITE))
                 count_writer_pc(i, pc);
             if ((g_post_value_watch_mask & (UINT64_C(1) << i)) &&
                 (access_flags & M64P_BKP_FLAG_WRITE) &&
@@ -953,7 +954,7 @@ static void usage(void)
         "  --hit-cap N           log at most N hits, then count silently (default 200)\n"
         "  --detail-watch N      always log hits for watch index N\n"
         "  --first-watch N       log the first hit for watch index N\n"
-        "  --pc-hist-watch N     summarize writer PCs for watch index N\n"
+        "  --pc-hist-watch N     summarize writer PCs for watch index N (repeatable)\n"
         "  --post-value-watch N  sample post-store words and final range summary\n"
         "  --post-value-pc A[,B] force one post-store sample for writer PCs\n"
         "  --core PATH           libmupen64plus.dylib built with DEBUGGER=1\n"
@@ -1026,8 +1027,11 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "--first-watch") && i + 1 < argc)
             g_first_watch = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "--pc-hist-watch") && i + 1 < argc)
-            g_pc_hist_watch = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--pc-hist-watch") && i + 1 < argc) {
+            int watch = atoi(argv[++i]);
+            if (watch >= 0 && watch < MAX_WATCHES)
+                g_pc_hist_watch_mask |= UINT64_C(1) << watch;
+        }
         else if (!strcmp(argv[i], "--post-value-watch") && i + 1 < argc) {
             int watch = atoi(argv[++i]);
             if (watch >= 0 && watch < MAX_WATCHES)
@@ -1226,18 +1230,17 @@ int main(int argc, char **argv)
         printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s), %ld read(s), %ld write(s)\n",
                g_watch[i].label, g_watch[i].start, g_watch[i].end,
                g_watch[i].hits, g_watch[i].read_hits, g_watch[i].write_hits);
-    if (g_pc_hist_watch >= 0 && g_pc_hist_watch < g_nwatch) {
-        int i;
+    for (int watch = 0; watch < g_nwatch; watch++) {
+        if (!(g_pc_hist_watch_mask & (UINT64_C(1) << watch)))
+            continue;
         printf("[oracle] writer-pc watch=%d range=[0x%08x,0x%08x)\n",
-               g_pc_hist_watch, g_watch[g_pc_hist_watch].start,
-               g_watch[g_pc_hist_watch].end);
-        for (i = 0; i < g_n_writer_pc[g_pc_hist_watch]; i++)
+               watch, g_watch[watch].start, g_watch[watch].end);
+        for (int i = 0; i < g_n_writer_pc[watch]; i++)
             printf("[oracle] writer-pc pc=0x%08x n=%ld\n",
-                   g_writer_pc[g_pc_hist_watch][i].pc,
-                   g_writer_pc[g_pc_hist_watch][i].n);
-        if (g_writer_pc_overflow[g_pc_hist_watch])
+                   g_writer_pc[watch][i].pc, g_writer_pc[watch][i].n);
+        if (g_writer_pc_overflow[watch])
             printf("[oracle] writer-pc overflow=%ld\n",
-                   g_writer_pc_overflow[g_pc_hist_watch]);
+                   g_writer_pc_overflow[watch]);
     }
     printf("[oracle] execution watch hits: %ld\n", g_pc_hits);
     for (int i = 0; i < g_n_exec_prev; i++)

@@ -3921,7 +3921,7 @@ treating MORT as a second RSP image, and treating leftover `fake_func_*`
 size `> 0xC` as renameable. They do not authorize changing the default
 audio arm, canary prefill, task ABI, output routing, waits, or guards.
 
-## 43. M5 A1 cinematic window and image-DMA boundary (s2164–s2185)
+## 43. M5 A1 cinematic window and image-DMA boundary (s2164–s2188)
 
 This archive was migrated from `CURRENT-TRUTH.md` during maintenance in
 s2186. It preserves the late A1 chain without keeping every session's
@@ -3973,7 +3973,7 @@ skip, `NAN_CHECK` disable, wait guard, or copyToRAM/CIMG writeback guard is
 authorized by this chain. The exact commands and probe rows remain in the
 ledger and scratch artifacts named by the sessions.
 
-### Image DMA and retail writer boundary (s2183–s2187)
+### Image DMA and retail writer boundary (s2183–s2188)
 
 - s2183's older completing logs had positive controls and zero named-word
   overlap; its failing log had no image rows and selected coverage failure
@@ -4000,6 +4000,17 @@ ledger and scratch artifacts named by the sessions.
   selects `H-AudioDmaTitleHangarOnly` for this run and leaves the retail
   writer identities and intermittent cinematic failure open.
 
-The next discriminator is a retail writer-PC census for all six named words,
-with a whole-RDRAM positive control and phase trace, before another port
-instrument or any runtime change is considered.
+- s2188 first exposed that repeated `--pc-hist-watch` options were scalar,
+  then extended the oracle to collect all requested histograms in one run.
+  The corrected run had a whole-RDRAM positive control (33,145 writes),
+  seven 640 rows at the `0x00696100`/`0x00696600` origins, and target counts
+  `5/1/5/23124/9/1`. Targets 1/2/3/5/6 had narrow writer sets including
+  `0x80018F5C`, `0x80018F60`, `0x800078EC`, `0x800A8144`, and `0x80057100`;
+  target 4 had 123 distinct PCs and no histogram overflow. This is
+  single-source oracle evidence that corroborates s2185's writes and rules
+  out coverage failure, but the global histograms do not compare the two
+  640 origins or explain the failing image join.
+
+The next discriminator is a phase-bucketed retail writer-PC census for all six
+named words, preserving the whole-RDRAM positive control and 640 phase trace,
+before another port instrument or any runtime change is considered.

@@ -103751,3 +103751,37 @@ ORIGIN: diagnostic-only image-DMA census; no guest or host value was changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-writer-census`.
+
+## Session 2188 (2026-08-23) — retail writer-PC census with repeatable histograms
+
+Ran the retail oracle writer census from `scratch/agent/NEXT.md` without
+building the port. The first run completed with both controls and all six
+target counts, but exposed that repeated `--pc-hist-watch` options were
+scalar: only watch 6 produced a histogram. This failed experiment is
+preserved as `scratch/agent/s2188_retail_writers.log`.
+
+Changed the oracle-only front end so `--pc-hist-watch N` is repeatable,
+rebuilt `tools/oracle/build/rs64_oracle`, and reran the same single-run
+recipe. The corrected run is
+`scratch/agent/s2188_retail_writers_fixed.log`; its compact parse is
+`scratch/agent/s2188_retail_writers.txt`. It had 33,145 whole-RDRAM writes,
+seven 640-VI rows at `0x00696100`/`0x00696600`, and target write counts
+`5/1/5/23124/9/1` for
+`0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC`.
+
+The five sparse targets have narrow writer sets: target 1 includes
+`0x80018F5C`, target 2 `0x80018F60`, target 3 `0x800078EC` and
+`0x800A8144`, target 5 `0x800078EC` and `0x80018F60`, and target 6
+`0x80057100`. Target 4 has 123 distinct writer PCs and no histogram
+overflow. The positive controls rule out coverage failure for this run;
+the global histograms do not compare the two 640 origins and do not explain
+the failing image join. The oracle option change is documented in
+`tools/oracle/README.md`.
+
+ORIGIN: oracle-only diagnostic option and census; no port value, branch,
+mitigation, or audio default changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-writer-census`.
