@@ -1,51 +1,46 @@
-# NEXT work unit (s2199) — test VI field alternation
+# NEXT work unit (s2200) — obtain retail target-phase VI field ground truth
 
 HYPOTHESIS-ID: m5-a1-vi-field-alternation
 
 ## Work unit
 
-Add one runtime-gated branch to `ViState::update_vi` that toggles its
-`field` selector after each VI update when
-`ROGUESQ_VI_ALTERNATE_FIELDS=1`; leave the existing behavior unchanged for
-`=0`. Do not add another diagnostic field: reuse the s2198 boundary table and
-the existing caller, writer, and phase controls. Because `lib/N64ModernRuntime`
-is edited, run `./submodule-patches/export.sh` before the single build.
+Run one driven retail-oracle session with Rice, a whole-RDRAM positive-control
+watch, `--vi-trace`, and an execution watch on retail
+`osViGetCurrentField` (`0x80034D90`). Keep the existing target-origin route
+schedule and collect the field return value together with the VI width/origin
+printed on every execution row. Do not build the port or flip the diagnostic
+knob; this is the independent ground-truth step selected by s2199.
 
 ## Competing hypotheses and discriminator
 
-- H-ViFieldNotToggled: the missing `field` writer is the boundary; only the
-  `=1` arm reaches repeated 640 origins `0x00696100` and `0x00696600`, with
-  matching commit and screen rows.
-- H-SecondOriginElsewhere: both arms pass controls but neither reaches
-  `0x00696600`; field selection is not the route boundary.
-- H-FieldCalculationMismatch: `=1` changes VI origins but commits neither
-  expected target (or changes the requested framebuffer unexpectedly).
-- H-CoverageFailure: either arm lacks the caller/writer/first-origin control;
-  reject that arm rather than interpreting its null as evidence.
+- H-RetailFieldAlternates: at width 640 and origins `0x00696100`/
+  `0x00696600`, retail `osViGetCurrentField` returns both 0 and 1, selecting
+  the port field alternation as the correct missing transition.
+- H-RetailField0Target: retail returns only 0 at both target origins, so the
+  port's alternating field is a route-recovery artifact and the target
+  transition is elsewhere.
+- H-RetailFieldWatchCoverage: the whole-RDRAM control fires but the driven
+  run does not reach both target origins or the execution watch does not fire
+  in the target phase; reject the null and redesign the oracle arm.
 
-The single comparison is the phase-gated boundary table in both arms. A
-positive arm must show `[vi-callers-control]`, writer rows, and repeated 640
-rows at both target origins. `=1` producing both target origins while `=0`
-remains first-origin-only selects H-ViFieldNotToggled; positive controls in
-both arms with no second origin selects H-SecondOriginElsewhere; unexpected
-origins or framebuffer values selects H-FieldCalculationMismatch.
+The discriminator is the target-phase matrix
+`(VI origin, osViGetCurrentField v0)` from one oracle run. Accept a conclusion
+only if the whole-RDRAM watch is positive and `--vi-trace` shows repeated 640
+rows at both target origins. The existing source-level result remains
+single-source until this matrix is collected.
 
-## Build and run
+## Exact command
 
 ```sh
-./submodule-patches/export.sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
-
-env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_M5_WRITER_PARITY=1 ROGUESQ_LOG_VI_COMMIT=1 ROGUESQ_VI_ALTERNATE_FIELDS=0" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2199_vi_field_off 30 12 > scratch/agent/s2199_vi_field_off_driver.log 2>&1 &
-off=$!
-env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_M5_WRITER_PARITY=1 ROGUESQ_LOG_VI_COMMIT=1 ROGUESQ_VI_ALTERNATE_FIELDS=1" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2199_vi_field_on 30 12 > scratch/agent/s2199_vi_field_on_driver.log 2>&1 &
-on=$!
-wait "$off"; off_rc=$?
-wait "$on"; on_rc=$?
-printf 'off_rc=%s on_rc=%s\n' "$off_rc" "$on_rc"
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom ./rogue_squadron.z64 \
+  --video /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --rsp /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-rsp-hle.dylib \
+  --secs 45 --watch-write 0x0:0x800000 --watch-pc 0x80034D90 \
+  --hit-cap 10000 --vi-trace \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start \
+  --hold-ms 150 > scratch/agent/s2200_retail_vi_field_target.log 2>&1
 ```
 
-Accept only arms with positive controls and phase-gated boundary rows; do
-not add a guard, mitigation, task rewrite, or audio-default change.
+Do not add a port guard, mitigation, task rewrite, or audio default change.

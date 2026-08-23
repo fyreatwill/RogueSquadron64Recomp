@@ -104111,7 +104111,41 @@ default changed.
 ORIGIN: no mitigation-shaped diff; this was a batched boundary diagnostic
 plus independent retail ground-truth control.
 
+## Session 2199 (2026-08-23) — VI field alternation restored the second target origin
+
+Ran a retail ground-truth preflight before building. The whole-RDRAM physical
+watch fired 10,000 times in 20 seconds, and the retail
+`osViGetCurrentField` execution watch at `0x80034D90` fired 1,199 times and
+returned `v0=0` on the sampled 320-width route. This validates the oracle
+control and establishes only the boot/attract field-0 behavior; it does not
+name the target-phase transition.
+
+Added the runtime-gated `ROGUESQ_VI_ALTERNATE_FIELDS` branch in
+`ViState::update_vi`, exported the submodule patch, and built successfully.
+Ran both `=0` and `=1` arms concurrently with the existing caller, writer,
+phase, and boundary controls. Both arms fired caller control 16 times and
+writer control 29 times and reached the first 640 origin `0x00696100`.
+The `=0` arm filled 64 first-origin commit and screen rows and produced zero
+second-origin rows. The `=1` arm filled 64 rows for both commit origins
+`0x00696100` and `0x00696600`, plus 64 rows for both screen origins; its
+caller table also contained rows at both origins. Neither arm emitted a
+crash marker before the explicit SIGKILL cleanup.
+
+This selects H-ViFieldNotToggled at the qualified port route and rules out
+H-SecondOriginElsewhere and H-CoverageFailure for this A/B. The causal
+interpretation remains single-source port evidence: the independent retail
+preflight corroborates field 0 only on the 320 route. The alternation knob is
+diagnostic and remains default-off; no default flip, guard, mitigation, task
+rewrite, writer filter, or audio change is authorized. Full logs:
+`scratch/s73_post_a_scene/s2199_vi_field_off/run.log` and
+`scratch/s73_post_a_scene/s2199_vi_field_on/run.log`.
+
+ORIGIN: no mitigation-shaped diff; the change is a runtime-gated diagnostic
+experiment and the writer of the alternated value is the host VI state field,
+not a game-memory corruption path.
+
 ### Next
 
 See `scratch/agent/NEXT.md`.
-`HYPOTHESIS-ID: m5-a1-vi-field-alternation`.
+`HYPOTHESIS-ID: m5-a1-vi-field-alternation` remains open pending retail
+target-phase field ground truth.

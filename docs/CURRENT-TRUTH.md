@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2198
-(2026-08-23); behavioral and source evidence is current through s2198.
+authoritative for exact commands and probe rows. Maintained in Session 2199
+(2026-08-23); behavioral and source evidence is current through s2199.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2199's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -160,6 +160,17 @@ second ledger.
   `update_vi` but never assigned in `events.cpp`; H-ViFieldAlternation is a
   new bounded candidate, not yet a landed fix. The logger's atexit summary
   was not reached because the process aborted.
+- s2199 ran the same-built field-alternation A/B after a retail oracle
+  preflight. Both arms passed caller control (16) and writer control (29) and
+  reached `0x00696100`. With `ROGUESQ_VI_ALTERNATE_FIELDS=0`, the port filled
+  64 capped first-origin commit and screen rows and zero second-origin rows.
+  With `=1`, it filled 64 capped commit and screen rows at both
+  `0x00696100` and `0x00696600`, with caller rows at both origins. This selects
+  H-ViFieldNotToggled at the qualified port scope and refutes
+  H-SecondOriginElsewhere and H-CoverageFailure for this A/B. The target-phase
+  causal claim is single-source port evidence: the independent oracle only
+  corroborated retail field 0 on the sampled 320 route. The alternation knob
+  remains diagnostic and default-off.
 
 ## Active backlog
 
@@ -176,12 +187,12 @@ work items.
    scope. s2196 found that `ctx->r31-8` is always `0xFFFFFFF8`; s2197 then
    retained the retail target-origin table and found the port's first-origin
    `(0x8001BE24, 0x0062B800)` pair also occurs in retail at
-   `0x00696600`. s2198 showed that the port commits and consumes only
-   `0x00696100`; a source audit found no writer for `ViState::field`. The
-   next work unit is a runtime-gated field-alternation A/B using the existing
-   boundary table: compare `ROGUESQ_VI_ALTERNATE_FIELDS=0` and `=1` in the
-   same iteration, with controls and both target-origin counts. Do not add a
-   port guard, mitigation, task rewrite, or audio default flip.
+   `0x00696600`. s2198 found that the port commits and consumes only
+   `0x00696100`; s2199's same-built A/B showed that toggling the host
+   `ViState::field` after each VI commit restores repeated commits and screen
+   consumption at both target origins. The next discriminator is retail
+   target-phase field ground truth; keep the alternation knob opt-in and do
+   not add a port guard, mitigation, task rewrite, or audio default flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -322,6 +333,12 @@ remain in the append-only ledger. Operationally:
   `(0x8001BE24, 0x0062B800)`; the earlier non-target argument rows were
   outside the discriminator. The old caller/argument mismatch framing is
   superseded and does not explain the missing port second-origin publication.
+- s2198's H-CoverageFailure selection was believable because its
+  no-alternation port run stopped before a second-origin boundary row and
+  later aborted in PI-DMA. s2199's same-built `=1` arm reaches both origins
+  with positive controls, so that coverage result is superseded as an
+  explanation of the second-origin transition; the remaining question is
+  why retail selects the second field.
 
 ## Evidence ledger summary
 
@@ -330,7 +347,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198's VI-boundary table is recorded in the ledger.
+s2198–s2199's VI-boundary work is recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
