@@ -1,0 +1,50 @@
+s2183 offline image-DMA destination versus cutscene-heap census
+Date: 2026-08-23
+
+Method
+------
+Parsed every [audtask-image-join] and [audtask-dma-range] row in the four
+existing logs named by NEXT.md. For each image join, the half-open interval
+[dest, dest+len) was intersected with a four-byte interval at each named
+physical address:
+
+  heap0       0x25A580
+  slot_word0  0x0CA748
+  slot_plus50 0x0C7B0C
+  vec3_dest   0x165E40
+  match_v0    0x0CDB58
+  match_a0    0x2231EC
+
+Result table
+------------
+
+| log | arm/coverage | image joins | DMA ranges | image phase rows | named-word overlaps |
+|---|---|---:|---:|---|---|
+| `scratch/s73_post_a_scene/s2181_image_vec3_f2/run.log` | `=1`, completing; positive control | 5557 | 5562 | phase 8 / 1024 / `0x790400`: 2933; phase 10 / 512 / `0x6AB400`: 1814; phase 12 / 512 / `0x6AB400`: 810 | 0 |
+| `scratch/s73_post_a_scene/s2181_on/run.log` | `=1`, completing; positive control | 4081 | 4084 | phase 8 / 1024 / `0x790400`: 3408; phase 10 / 512 / `0x6AB400`: 673 | 0 |
+| `scratch/s73_post_a_scene/s2181_off/run.log` | `=0` stub control | 0 | 0 | none | not applicable |
+| `scratch/s73_post_a_scene/s2179_image_vec3_word/run.log` | failing `=1`; reached 640 / `0x00696100`, but no image-DMA positive control | 0 | 0 | none recorded | not classifiable |
+
+The first two logs therefore record image DMA only at the title and hangar
+origins. Their 19 unique `(dest,len)` pairs do not intersect any of the six
+cutscene words. The s2181 f2 log later reaches a 640 VI at `0x006A2900`
+after hangar, but it has no image-join row for that phase. The `=0` zero
+count is the expected stub behavior from the existing PCM/image contract.
+
+Discriminator outcome
+---------------------
+
+- `H-AudioDmaHitsCutscene` is refuted for the two completing `=1` logs with
+  positive controls.
+- `H-AudioDmaElsewhere` is refuted for all recorded image joins in those logs.
+- `H-AudioDmaTitleHangarOnly` is supported at the completing-log scope, but
+  is not selected for all `=1` runs because the failing log has no same-run
+  image-DMA positive control.
+- `H-CoverageFailure` is selected for the failing s2179 log only: its 640
+  phase is present, but its image-DMA instrument is absent. That zero cannot
+  distinguish “no cinematic DMA” from “instrument did not run.”
+
+This is an offline census, not a writer attribution. No guard, skip, or
+writeback mitigation follows. The next discriminating run must capture a
+failing `ROGUESQ_AUDIO_UCODE=1` cinematic with `[audtask-image-join]` count
+greater than zero before classifying its 640-window destinations.
