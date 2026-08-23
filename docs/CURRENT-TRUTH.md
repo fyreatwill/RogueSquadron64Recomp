@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2202
-(2026-08-23); behavioral and source evidence is current through s2202.
+authoritative for exact commands and probe rows. Maintained in Session 2203
+(2026-08-23); behavioral and source evidence is current through s2203.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2202's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2203's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -202,6 +202,19 @@ second ledger.
   H-PostSwapStateBase and refutes post-swap field-descriptor arithmetic and
   join coverage at this scope; it does not identify the later origin
   producer.
+- s2203's retail `__osViNext` context table passed the whole-RDRAM control in
+  both collections. The exact 45-second recipe reached both target origins but
+  overflowed the 256-row cap (256 joined, 171 overflow), so that collection
+  selected H-ContextCoverage. A fixed 10-second retry reached both origins with
+  zero overflow: 192 joined rows, 96 at each origin, 277 dropped non-target
+  joins, and zero pending rows. Every joined row had a valid context and mode,
+  `state=0x0001`, `framep_phys=0x00695C00`, field origins `0x500`/`0xA00`, and
+  `candidate0=0x00696100` or `candidate1=0x00696600` matching its next origin;
+  `current_field` was 0/1 respectively. This single-source retail result
+  selects H-ContextFramep and refutes H-ContextOther and H-ContextCoverage at
+  the fixed scope. Together with s2202's independent post-swap table, it moves
+  the open comparison to the port's `ViState` field/frame/mode state. No port
+  guard, mitigation, task rewrite, or audio default change was made.
 
 ## Active backlog
 
@@ -228,11 +241,12 @@ work items.
    s2202 joined each 640 swap to the following VI callback with both target
    origins covered and zero row overflow. The observed framebuffer base plus
    either active field origin never equaled the next origin, selecting
-   H-PostSwapStateBase and leaving a later VI-context/arbiter producer open.
-   Next, capture `__osViSwapContext` at `0x80035550` and join its selected
-   context/base fields to the following target VI callback. Keep the
-   alternation knob opt-in and do not add a port guard, mitigation, task
-   rewrite, or audio default flip.
+   H-PostSwapStateBase. s2203's fixed-scope retail `__osViNext` join then
+   selected H-ContextFramep: the context's frame pointer plus the field
+   selected by `VI_CURRENT_REG & 1` exactly produced both target origins.
+   Next, compare that tuple against the port's `ViState` at commit in one
+   bounded baseline/alternation table. Keep the alternation knob opt-in and do
+   not add a port guard, mitigation, task rewrite, or audio default flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -399,7 +413,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2202's VI-boundary work is recorded in the ledger.
+s2198–s2203's VI-boundary work is recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

@@ -55,6 +55,9 @@
 #define MAX_MODE_DUMP_ROWS 256
 #define VI_ORIGIN_ADDR 0xA4400004u
 #define VI_WIDTH_ADDR  0xA4400008u
+#define VI_CURRENT_ADDR 0xA4400010u
+#define VI_NEXT_PTR_ADDR 0x80039214u
+#define RDRAM_SIZE 0x00800000u
 #define VI_SWAP_PC 0x80035500u
 
 static void *g_core;
@@ -199,6 +202,32 @@ static long g_post_swap_latched;
 static long g_post_swap_joined;
 static long g_post_swap_dropped;
 static long g_post_swap_overflow;
+static uint32_t g_vi_context_table_pc;
+static int g_vi_context_table_enabled;
+struct vi_context_snapshot {
+    int context_valid;
+    int mode_valid;
+    uint32_t context_ptr;
+    uint32_t state;
+    uint32_t framep_phys;
+    uint32_t mode_ptr;
+    uint32_t current_field;
+    uint32_t fld0_origin;
+    uint32_t fld0_y_scale;
+    uint32_t fld1_origin;
+    uint32_t fld1_y_scale;
+    uint32_t candidate0;
+    uint32_t candidate1;
+};
+struct vi_context_pending {
+    int valid;
+    struct vi_context_snapshot snapshot;
+};
+static struct vi_context_pending g_vi_context_pending;
+static long g_vi_context_latched;
+static long g_vi_context_joined;
+static long g_vi_context_dropped;
+static long g_vi_context_overflow;
 
 static uint32_t debug_rdram_addr(uint32_t physical);
 
@@ -352,6 +381,92 @@ static void latch_post_swap_table(uint32_t pc)
 static int is_post_swap_target_origin(uint32_t origin)
 {
     return origin == 0x00696100u || origin == 0x00696600u;
+}
+
+static int is_valid_rdram_phys(uint32_t physical)
+{
+    return physical < RDRAM_SIZE;
+}
+
+static struct vi_context_snapshot read_vi_context_snapshot(void)
+{
+    struct vi_context_snapshot snapshot;
+    uint32_t context_phys;
+    uint32_t framep;
+    uint32_t mode_phys;
+
+    memset(&snapshot, 0, sizeof(snapshot));
+    snapshot.context_ptr = pDebugMemRead32(VI_NEXT_PTR_ADDR);
+    snapshot.current_field = pDebugMemRead32(VI_CURRENT_ADDR) & 1u;
+    context_phys = snapshot.context_ptr & 0x1FFFFFFFu;
+    if (!is_valid_rdram_phys(context_phys))
+        return snapshot;
+
+    snapshot.context_valid = 1;
+    snapshot.state = pDebugMemRead32(debug_rdram_addr(context_phys)) & 0xFFFFu;
+    framep = pDebugMemRead32(debug_rdram_addr(context_phys + 0x04u));
+    snapshot.framep_phys = framep & 0x1FFFFFFFu;
+    snapshot.mode_ptr = pDebugMemRead32(debug_rdram_addr(context_phys + 0x08u));
+    mode_phys = snapshot.mode_ptr & 0x1FFFFFFFu;
+    if (!is_valid_rdram_phys(mode_phys))
+        return snapshot;
+
+    snapshot.mode_valid = 1;
+    snapshot.fld0_origin =
+        pDebugMemRead32(debug_rdram_addr(mode_phys + 0x28u));
+    snapshot.fld0_y_scale =
+        pDebugMemRead32(debug_rdram_addr(mode_phys + 0x2Cu));
+    snapshot.fld1_origin =
+        pDebugMemRead32(debug_rdram_addr(mode_phys + 0x3Cu));
+    snapshot.fld1_y_scale =
+        pDebugMemRead32(debug_rdram_addr(mode_phys + 0x40u));
+    snapshot.candidate0 = snapshot.framep_phys + snapshot.fld0_origin;
+    snapshot.candidate1 = snapshot.framep_phys + snapshot.fld1_origin;
+    return snapshot;
+}
+
+static void latch_vi_context_table(uint32_t pc)
+{
+    if (!g_vi_context_table_enabled || pc != g_vi_context_table_pc ||
+        pDebugMemRead32(VI_WIDTH_ADDR) != 640)
+        return;
+    if (g_vi_context_pending.valid)
+        g_vi_context_dropped++;
+    g_vi_context_pending.valid = 1;
+    g_vi_context_pending.snapshot = read_vi_context_snapshot();
+    g_vi_context_latched++;
+}
+
+static void join_vi_context_table(uint32_t width, uint32_t origin)
+{
+    struct vi_context_snapshot snapshot;
+
+    if (!g_vi_context_table_enabled || !g_vi_context_pending.valid)
+        return;
+    snapshot = g_vi_context_pending.snapshot;
+    g_vi_context_pending.valid = 0;
+    if (width != 640 || !is_post_swap_target_origin(origin)) {
+        g_vi_context_dropped++;
+        return;
+    }
+    if (g_vi_context_joined >= MAX_MODE_DUMP_ROWS) {
+        g_vi_context_overflow++;
+        return;
+    }
+    printf("[vi-context-row] context_ptr=0x%08x context_valid=%d "
+           "state=0x%04x framep_phys=0x%08x mode_ptr=0x%08x "
+           "mode_valid=%d current_field=%u "
+           "fld0.origin=0x%08x fld0.yScale=0x%08x "
+           "fld1.origin=0x%08x fld1.yScale=0x%08x "
+           "candidate0=0x%08x candidate1=0x%08x next_origin=0x%08x\n",
+           snapshot.context_ptr, snapshot.context_valid, snapshot.state,
+           snapshot.framep_phys, snapshot.mode_ptr, snapshot.mode_valid,
+           snapshot.current_field, snapshot.fld0_origin,
+           snapshot.fld0_y_scale, snapshot.fld1_origin,
+           snapshot.fld1_y_scale, snapshot.candidate0,
+           snapshot.candidate1, origin);
+    fflush(stdout);
+    g_vi_context_joined++;
 }
 
 static void join_post_swap_table(uint32_t width, uint32_t origin)
@@ -689,6 +804,9 @@ static void dbg_update(unsigned int pc)
     if (flags & M64P_BKP_FLAG_EXEC)
         latch_post_swap_table(pc);
 
+    if (flags & M64P_BKP_FLAG_EXEC)
+        latch_vi_context_table(pc);
+
     if (!g_gpr_ctl_printed) {
         g_gpr_ctl_printed = 1;
         printf("[gpr-ctl] pc=0x%08x", pc);
@@ -864,6 +982,12 @@ static void dbg_vi(void)
         width = pDebugMemRead32(VI_WIDTH_ADDR);
         origin = pDebugMemRead32(VI_ORIGIN_ADDR);
         join_post_swap_table(width, origin);
+    }
+
+    if (g_vi_context_table_enabled) {
+        width = pDebugMemRead32(VI_WIDTH_ADDR);
+        origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+        join_vi_context_table(width, origin);
     }
 
     if (g_n_pc_hist_phase > 0) {
@@ -1202,6 +1326,7 @@ static void usage(void)
         "  --pc-phase-log ORIGIN log watched execs only at 640-width VI origin (repeatable)\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
         "  --post-swap-table-pc A join a 640-wide swap at A to the following VI callback\n"
+        "  --vi-context-table-pc A join __osViNext at 640-wide execution A to the following VI callback\n"
         "  --first-watch N       log the first hit for watch index N\n"
         "  --pc-hist-watch N     summarize writer PCs for watch index N (repeatable)\n"
         "  --pc-hist-phase ORIGIN  add a 640-width writer histogram bucket (repeatable)\n"
@@ -1289,6 +1414,10 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--post-swap-table-pc") && i + 1 < argc) {
             g_post_swap_table_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_post_swap_table_enabled = 1;
+        }
+        else if (!strcmp(argv[i], "--vi-context-table-pc") && i + 1 < argc) {
+            g_vi_context_table_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
+            g_vi_context_table_enabled = 1;
         }
         else if (!strcmp(argv[i], "--first-watch") && i + 1 < argc)
             g_first_watch = atoi(argv[++i]);
@@ -1559,6 +1688,13 @@ int main(int argc, char **argv)
                g_post_swap_table_pc, g_post_swap_latched, g_post_swap_joined,
                g_post_swap_pending.valid, g_post_swap_dropped,
                g_post_swap_overflow, MAX_MODE_DUMP_ROWS);
+    if (g_vi_context_table_enabled)
+        printf("[oracle] vi-context-summary pc=0x%08x latched=%ld joined=%ld "
+               "pending=%d dropped=%ld overflow=%ld rows-cap=%d\n",
+               g_vi_context_table_pc, g_vi_context_latched,
+               g_vi_context_joined, g_vi_context_pending.valid,
+               g_vi_context_dropped, g_vi_context_overflow,
+               MAX_MODE_DUMP_ROWS);
     /* Materialise the config so the input mapping is inspectable. Without
      * this nothing is ever written and the key->button mapping the presses
      * rely on is invisible in-memory defaults - i.e. an unverifiable

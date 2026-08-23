@@ -104270,3 +104270,52 @@ wild value was skipped, guarded, or rewritten.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-vi-context-producer`.
+
+## Session 2203 (2026-08-23) — joined retail `__osViNext` context to target origins
+
+Added the bounded `--vi-context-table-pc A` option to
+`tools/oracle/rs64_oracle.c` and documented it in the oracle README. At a
+640-wide execution of `__osViSwapContext` (`0x80035550`), it snapshots the
+retail `__osViNext` pointer, context state, physical frame pointer, mode
+pointer, `VI_CURRENT_REG & 1`, both mode field origin/yScale pairs, and both
+frame-plus-field candidates; the following target 640 VI callback joins the
+row. The table reports latched, joined, pending, dropped, and overflow counts
+with a 256-row cap. No port or runtime behavior changed.
+
+Built with `bash tools/oracle/build.sh`, then ran the exact prescribed
+45-second Rice collection with the whole-RDRAM positive control, mode dump,
+post-swap table, phase logging, VI trace, and seven-start schedule. The
+positive-control threshold fired at 10,000 writes and removed only the control
+watch. Both target origins appeared. This full collection had 895 context
+latches, 256 joined rows, 468 dropped non-target/overwritten rows, and 171
+overflow rows; it therefore selected H-ContextCoverage for that collection
+and could not support a source conclusion under the cap rule.
+
+Retried the same built table with a 10-second wall budget so both target
+origins stayed below the row cap. The positive control again reached 10,000
+writes; the run completed with 10,858 total callbacks and 568 VI callbacks.
+The context summary was 469 latches, 192 joined rows, 277 dropped rows, zero
+pending, and zero overflow. The joined rows split evenly: 96 at
+`0x00696100` and 96 at `0x00696600`. All 192 rows had `context_valid=1`,
+`mode_valid=1`, `state=0x0001`, `framep_phys=0x00695C00`, and mode field
+origins `0x500`/`0xA00`. Every first-origin row had
+`candidate0=0x00696100` and `current_field=0`; every second-origin row had
+`candidate1=0x00696600` and `current_field=1`. The prior s2202 post-swap table
+independently showed that the swap `$a0` base plus either descriptor origin
+did not match, so the two retail measurements move the source boundary from
+post-swap framebuffer arithmetic to the `__osViNext` context tuple.
+
+This fixed-scope retail result selects H-ContextFramep and refutes
+H-ContextOther and H-ContextCoverage for the no-overflow retry. It does not
+authorize changing the port's field behavior; the next unit compares the
+retail tuple with port `ViState` commit rows in baseline and opt-in field
+alternation arms. No guard, mitigation, task rewrite, or audio default change
+was made.
+
+ORIGIN: the only code change is a bounded, retail-only oracle diagnostic; no
+wild value was skipped, guarded, or rewritten.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-port-vi-context-parity`.

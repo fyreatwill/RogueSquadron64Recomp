@@ -54,6 +54,13 @@ caller, physical `$a0`, and the most recently dumped mode descriptor. Rows are
 bounded at 256; the shutdown summary reports latched, joined, pending, dropped,
 and overflow counts.
 
+`--vi-context-table-pc A` performs the same bounded join for the retail
+`__osViNext` context at a watched 640-wide execution PC. It records the
+context state, frame pointer, mode pointer, current field, both mode field
+origins/yScales, and `framep + field.origin` candidates before joining to the
+following target-origin VI callback. The shutdown summary reports latched,
+joined, pending, dropped, and overflow counts.
+
 For a memory watch after the global `--hit-cap` has gone silent,
 `--first-watch N` prints the first hit for watch index N and
 `--pc-hist-watch N` prints a bounded writer-PC histogram for that watch at
