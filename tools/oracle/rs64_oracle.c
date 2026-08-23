@@ -176,6 +176,29 @@ static uint32_t g_mode_dump_pc;
 static int g_mode_dump_enabled;
 static long g_mode_dump_rows;
 static long g_mode_dump_overflow;
+struct mode_descriptor_snapshot {
+    int valid;
+    uint32_t mode_ptr;
+    uint32_t fld0_origin;
+    uint32_t fld0_y_scale;
+    uint32_t fld1_origin;
+    uint32_t fld1_y_scale;
+};
+static struct mode_descriptor_snapshot g_last_mode_descriptor;
+static uint32_t g_post_swap_table_pc;
+static int g_post_swap_table_enabled;
+struct post_swap_pending {
+    int valid;
+    uint32_t pre_origin;
+    uint32_t prev_pc;
+    uint32_t a0_phys;
+    struct mode_descriptor_snapshot mode;
+};
+static struct post_swap_pending g_post_swap_pending;
+static long g_post_swap_latched;
+static long g_post_swap_joined;
+static long g_post_swap_dropped;
+static long g_post_swap_overflow;
 
 static uint32_t debug_rdram_addr(uint32_t physical);
 
@@ -289,15 +312,74 @@ static void dump_mode_descriptor(uint32_t pc)
         g_mode_dump_overflow++;
         return;
     }
+    g_last_mode_descriptor.valid = 1;
+    g_last_mode_descriptor.mode_ptr = mode_ptr;
+    g_last_mode_descriptor.fld0_origin =
+        pDebugMemRead32(debug_rdram_addr(mode_phys + 0x28));
+    g_last_mode_descriptor.fld0_y_scale =
+        pDebugMemRead32(debug_rdram_addr(mode_phys + 0x2C));
+    g_last_mode_descriptor.fld1_origin =
+        pDebugMemRead32(debug_rdram_addr(mode_phys + 0x3C));
+    g_last_mode_descriptor.fld1_y_scale =
+        pDebugMemRead32(debug_rdram_addr(mode_phys + 0x40));
     printf("[mode-dump] pc=0x%08x mode_ptr=0x%08x width=%u "
            "fld0.origin=0x%08x fld0.yScale=0x%08x "
            "fld1.origin=0x%08x fld1.yScale=0x%08x\n",
            pc, mode_ptr, mode_width,
-           pDebugMemRead32(debug_rdram_addr(mode_phys + 0x28)),
-           pDebugMemRead32(debug_rdram_addr(mode_phys + 0x2C)),
-           pDebugMemRead32(debug_rdram_addr(mode_phys + 0x3C)),
-           pDebugMemRead32(debug_rdram_addr(mode_phys + 0x40)));
+           g_last_mode_descriptor.fld0_origin,
+           g_last_mode_descriptor.fld0_y_scale,
+           g_last_mode_descriptor.fld1_origin,
+           g_last_mode_descriptor.fld1_y_scale);
     fflush(stdout);
+}
+
+static void latch_post_swap_table(uint32_t pc)
+{
+    if (!g_post_swap_table_enabled || pc != g_post_swap_table_pc ||
+        pDebugMemRead32(VI_WIDTH_ADDR) != 640)
+        return;
+    if (g_post_swap_pending.valid)
+        g_post_swap_dropped++;
+    g_post_swap_pending.valid = 1;
+    g_post_swap_pending.pre_origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    g_post_swap_pending.prev_pc =
+        (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC);
+    g_post_swap_pending.a0_phys = gpr32(4) & 0x1FFFFFFFu;
+    g_post_swap_pending.mode = g_last_mode_descriptor;
+    g_post_swap_latched++;
+}
+
+static int is_post_swap_target_origin(uint32_t origin)
+{
+    return origin == 0x00696100u || origin == 0x00696600u;
+}
+
+static void join_post_swap_table(uint32_t width, uint32_t origin)
+{
+    struct post_swap_pending pending;
+
+    if (!g_post_swap_table_enabled || !g_post_swap_pending.valid)
+        return;
+    pending = g_post_swap_pending;
+    g_post_swap_pending.valid = 0;
+    if (width != 640 || !is_post_swap_target_origin(origin)) {
+        g_post_swap_dropped++;
+        return;
+    }
+    if (g_post_swap_joined >= MAX_MODE_DUMP_ROWS) {
+        g_post_swap_overflow++;
+        return;
+    }
+    printf("[post-swap-row] pre_origin=0x%08x swap_prev_pc=0x%08x "
+           "a0_phys=0x%08x next_origin=0x%08x mode_valid=%d "
+           "mode_ptr=0x%08x fld0.origin=0x%08x fld0.yScale=0x%08x "
+           "fld1.origin=0x%08x fld1.yScale=0x%08x\n",
+           pending.pre_origin, pending.prev_pc, pending.a0_phys, origin,
+           pending.mode.valid, pending.mode.mode_ptr,
+           pending.mode.fld0_origin, pending.mode.fld0_y_scale,
+           pending.mode.fld1_origin, pending.mode.fld1_y_scale);
+    fflush(stdout);
+    g_post_swap_joined++;
 }
 
 static void count_writer_pc(int watch, uint32_t pc)
@@ -604,6 +686,9 @@ static void dbg_update(unsigned int pc)
         pc == g_mode_dump_pc)
         dump_mode_descriptor(pc);
 
+    if (flags & M64P_BKP_FLAG_EXEC)
+        latch_post_swap_table(pc);
+
     if (!g_gpr_ctl_printed) {
         g_gpr_ctl_printed = 1;
         printf("[gpr-ctl] pc=0x%08x", pc);
@@ -774,6 +859,12 @@ static void dbg_vi(void)
     }
 
     g_vis++;
+
+    if (g_post_swap_table_enabled) {
+        width = pDebugMemRead32(VI_WIDTH_ADDR);
+        origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+        join_post_swap_table(width, origin);
+    }
 
     if (g_n_pc_hist_phase > 0) {
         width = pDebugMemRead32(VI_WIDTH_ADDR);
@@ -1110,6 +1201,7 @@ static void usage(void)
         "  --detail-watch N      always log hits for watch index N\n"
         "  --pc-phase-log ORIGIN log watched execs only at 640-width VI origin (repeatable)\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
+        "  --post-swap-table-pc A join a 640-wide swap at A to the following VI callback\n"
         "  --first-watch N       log the first hit for watch index N\n"
         "  --pc-hist-watch N     summarize writer PCs for watch index N (repeatable)\n"
         "  --pc-hist-phase ORIGIN  add a 640-width writer histogram bucket (repeatable)\n"
@@ -1193,6 +1285,10 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--mode-dump-pc") && i + 1 < argc) {
             g_mode_dump_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_mode_dump_enabled = 1;
+        }
+        else if (!strcmp(argv[i], "--post-swap-table-pc") && i + 1 < argc) {
+            g_post_swap_table_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
+            g_post_swap_table_enabled = 1;
         }
         else if (!strcmp(argv[i], "--first-watch") && i + 1 < argc)
             g_first_watch = atoi(argv[++i]);
@@ -1457,6 +1553,12 @@ int main(int argc, char **argv)
         printf("[oracle] mode-dump-pc=0x%08x width=640 rows=%ld/%d overflow=%ld\n",
                g_mode_dump_pc, g_mode_dump_rows, MAX_MODE_DUMP_ROWS,
                g_mode_dump_overflow);
+    if (g_post_swap_table_enabled)
+        printf("[oracle] post-swap-summary pc=0x%08x latched=%ld joined=%ld "
+               "pending=%d dropped=%ld overflow=%ld rows-cap=%d\n",
+               g_post_swap_table_pc, g_post_swap_latched, g_post_swap_joined,
+               g_post_swap_pending.valid, g_post_swap_dropped,
+               g_post_swap_overflow, MAX_MODE_DUMP_ROWS);
     /* Materialise the config so the input mapping is inspectable. Without
      * this nothing is ever written and the key->button mapping the presses
      * rely on is invisible in-memory defaults - i.e. an unverifiable

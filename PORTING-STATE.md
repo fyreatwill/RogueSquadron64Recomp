@@ -104233,3 +104233,40 @@ wild value was skipped, guarded, or rewritten.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-post-swap-origin-correlation`.
+
+## Session 2202 (2026-08-23) — joined retail swaps to following VI origins
+
+Re-checked `tools/oracle/README.md`, then added the bounded
+`--post-swap-table-pc A` option to `tools/oracle/rs64_oracle.c` and documented
+it in the oracle README. A 640-wide execution at the selected PC latches the
+pre-call VI origin, swap caller, physical `$a0`, and latest dumped mode
+descriptor; the next VI callback emits a row only for target origins
+`0x00696100` or `0x00696600`. The table is capped at 256 rows and reports
+latched, joined, pending, dropped, and overflow counts.
+
+Built with `bash tools/oracle/build.sh`, then ran one 45-second retail Rice
+collection with the whole-RDRAM positive control, `--watch-pc
+0x800352D0,0x80035500`, target phase logging, mode dumps, the new post-swap
+join at `0x80035500`, VI trace, and the seven-start schedule. The positive
+control reached 10,000 writes and was removed; the run observed both target
+origins and completed 2,658 VI callbacks. The watched PCs produced 13 mode
+hits and 1,588 swap hits. The post-swap summary was 414 latches, 86 joined
+rows, 328 dropped rows, zero pending, and zero overflow. Joined rows covered
+71 rows at `0x00696100` and 15 at `0x00696600`.
+
+All joined rows had a valid dumped descriptor with field origins `0x500` and
+`0xA00`. Eighty-five rows used `a0_phys=0x0062B800`, giving candidate sums
+`0x0062BD00` and `0x0062C200`; one row used `0x00790000`, giving
+`0x00790500` and `0x00790A00`. None matched its following target origin.
+This single-source retail table selects H-PostSwapStateBase and refutes
+H-PostSwapFieldDescriptor and H-PostSwapCoverage for this run. It does not
+identify the later VI-context or framebuffer-arbiter producer, so no port
+guard, mitigation, task rewrite, or audio default change was made.
+
+ORIGIN: the only code change is a bounded, retail-only oracle diagnostic; no
+wild value was skipped, guarded, or rewritten.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-vi-context-producer`.

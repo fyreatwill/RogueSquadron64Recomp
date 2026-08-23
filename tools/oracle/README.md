@@ -47,6 +47,12 @@ from changing the driven route while collecting target-phase GPR returns.
 `--mode-dump-pc A` selects a watched execution PC and prints each observed
 640-wide mode descriptor's pointer plus both field origins and yScale values.
 It is bounded to 256 printed rows and is intended for use with `--watch-pc`.
+`--post-swap-table-pc A` latches a 640-wide execution at an already-watched
+PC and joins it to the following VI callback when the new origin is one of the
+two target 640 origins. Each joined row includes the pre-call origin, swap
+caller, physical `$a0`, and the most recently dumped mode descriptor. Rows are
+bounded at 256; the shutdown summary reports latched, joined, pending, dropped,
+and overflow counts.
 
 For a memory watch after the global `--hit-cap` has gone silent,
 `--first-watch N` prints the first hit for watch index N and
