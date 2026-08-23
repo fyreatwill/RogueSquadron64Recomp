@@ -103484,3 +103484,60 @@ Soak enqueued:
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2180 (2026-08-23) — failing =1 soak extract/first-cross finite; crash is copyToRAM SIGSEGV
+
+Consumed queued soak `s2179_image_vec3_word` (no rebuild).
+SOAK-RESULTS `20260823-114813` rc=1 185s. Table:
+`scratch/agent/s2180_vec3_word_soak.txt`. Log:
+`scratch/s73_post_a_scene/s2179_image_vec3_word/run.log`.
+Driver: process gone while waiting for VI 1024.
+
+Positive controls (same log): `[vec3-word-ctl]` n=32
+at 640 `0x00696100` (16 extract + 16 first-cross);
+printed `w_mem=`/`w_fpr=`; `[phase]` 640
+`0x00696100` at 7.5s #376; first-slot 87A0 dest
+`0x8025A580` value `0x800CA748`.
+
+IEEE on this failing `=1` cinematic: extract logged
+67 nmax=2350 t=15.6 dest `a0=0x80165E40` last
+`w_mem=0xBC664945==w_fpr`; first-cross first=1
+logged 193 last n=23950 t=15.5
+`w_mem=0xBE052E04==w_fpr`; all 577 rows mismatch=0
+nan=0 inf=0. Cinematic class matches retail/s2179
+(`0x3CFEDCBB` / `0x3F71276F` / `±1.0` /
+`0x3F712770`). Guest path still live at crash:
+dispatchRet n=236, effectsEntry==effectsRet n=236,
+lwc zero_logged=0, last lwc dest `0x800CA748`.
+
+Crash is not `vec3Cross`: 0 Assertion failed, 0
+SIGABRT, 0 SIGBUS, 0 VI 1024. Host SIGSEGV signal
+11 in `NativeTarget::copyToRAM` during gfx
+`update_screen` (`si_addr=0x11c47a100` si_code=2,
+last-guest-pc `0x8000834c`, last `[vi]` #832
+origin `0x0062BD00` width=640).
+
+This selects `H-FailingExtractFinite` and refutes
+`H-PortExtractAlreadyNaN`,
+`H-PortOrthonormalizeMakesNaN`,
+`H-PortF10NotMemWord`, `H-PortF2OrLaterCheck`,
+and `H-CoverageFailure` on a failing soak (not
+only s2179's completing pair). It does not select
+port-finite or copyToRAM as ORIGIN of
+`H-CinematicRegress` (single-source host SIGSEGV).
+s2176 `vec3Cross` NAN_CHECK abort remains a
+separate intermittent class, still unobserved.
+
+ORIGIN: not a mitigation. Failing-port source
+words at extract `$a1+0x20` and first-cross
+`$a2+8`/f10 are the same finite class as retail
+s2178 and completing s2179. Do not disable
+`NAN_CHECK`, S32-address, NULL-skip, re-flip
+default-on, skip/allow the lwc or transform or
+extract jal, add a wait/slot guard, or land a
+copyToRAM/CIMG writeback guard.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

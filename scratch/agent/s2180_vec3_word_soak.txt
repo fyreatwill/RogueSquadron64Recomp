@@ -1,0 +1,70 @@
+s2180 consume queued =1 soak s2179_image_vec3_word
+HYPOTHESIS-ID: m5-a1-cinematic-split
+no rebuild (soak is not a completing 0-NaN run; crash is not vec3Cross SIGABRT)
+recipe: scratch/agent/soak_queue/done/s2179_image_vec3_word_20260823-114813.sh
+SOAK-RESULTS: 20260823-114813 | s2179_image_vec3_word | rc=1 | 185s
+log: scratch/s73_post_a_scene/s2179_image_vec3_word/run.log
+     scratch/agent/soak_results/s2179_image_vec3_word_20260823-114813.log
+driver: process gone while waiting for VI 1024
+
+IEEE single: NaN iff (w & 0x7F800000)==0x7F800000 && (w & 0x007FFFFF)!=0
+First-cross tagged by orthonormalizeFrame jal_pc=0x80059F3C
+
+positive controls (same log)
+- [vec3-word-ctl] n=32 at width=640 origin=0x00696100
+  16 site=extract + 16 site=cross first=1
+- printed w_mem=/w_fpr= on extract and first-cross
+- [phase] 640 origin=0x00696100 at 7.5s #376
+- first-slot load87a0 dest=0x8025A580 value=0x800CA748
+
+IEEE on failing =1 cinematic
+- extract logged 67, nmax=2350 t=15.6 dest a0=0x80165E40
+  last w_mem=0xBC664945 == w_fpr; nan_mem=0 inf_mem=0 nan_fpr=0 inf_fpr=0
+  ctl n=1 other-caller a0=0x800B0A18 w=0x3F71276F
+  ctl n=2 dispatcher a0=0x80165E40 a1=0x800C8A14 w=0x3CFEDCBB
+  cinematic hist includes 0x3CFEDCBB, 0x3F71276F, ±0x3C664945, 0x3C4CCCCD
+  w_mem==w_fpr mismatch=0
+- first-cross (first=1 jal=0x80059F3C) logged 193
+  last n=23950 t=15.5 w_mem=0xBE052E04 == w_fpr; nan=0 inf=0
+  hist: 0x3F800000 n=11, 0xBF800000 n=8, 0x3F712770 n=2
+  w_mem==w_fpr mismatch=0
+- all [vec3-word] rows 577 mismatch=0 nan=0 inf=0
+  origins 0x00696100 n=310, 0x0062BD00 n=267
+
+guest cinematic still live at crash
+- last first-slot 87A0 n=3761 t=15.6 dest 0x8025A580 value 0x800CA748 zero=0
+- last lwc87a8 dest 0x800CA748 zero_logged=0
+- last xformEntry/Ret then dispatchRet n=236 t=15.6
+- last dispatchEntry printed n=200 (every-50)
+- effectsEntry==effectsRet n=236
+- last [vi] #832 origin=0x0062BD00 width=640
+
+crash (not vec3Cross)
+- 0 Assertion failed, 0 NAN_CHECK log, 0 SIGABRT, 0 SIGBUS
+- 0 width=1024, 0 origin=0x00790400, 0 origin=0x006AB400
+- [CRASH] signal 11 Segmentation fault
+  si_addr=0x11c47a100 si_code=2
+  NativeTarget::copyToRAM +452 <- Framebuffer::copyNativeToRAM
+  <- State::fullSync <- updateScreen (gfx thread)
+  last-guest-pc=0x8000834c
+  vifs decisionN=861
+
+selected: H-FailingExtractFinite
+refuted on this failing soak: H-PortExtractAlreadyNaN,
+  H-PortOrthonormalizeMakesNaN, H-PortF10NotMemWord,
+  H-PortF2OrLaterCheck (no vec3Cross SIGABRT),
+  H-CoverageFailure
+not selected: H-PortNoNaNThisPair (no title+hangar);
+  port-finite; copyToRAM as ORIGIN of H-CinematicRegress
+  (single-source host SIGSEGV; do not add a CIMG/writeback
+  guard)
+
+s2176 vec3Cross NAN_CHECK abort remains a separate
+intermittent class, still unobserved with this instrument.
+Next: log f2 at 0x80019550 MEM_W($a1,4) plus later
+vec3Cross NAN_CHECK operands (one rebuild).
+
+Do not S32-address, NULL-skip, re-flip default-on,
+skip/allow the lwc / transform / extract jal, disable
+NAN_CHECK, add a wait/slot guard, or treat last-guest-pc
+0x8000834c as the abort site.
