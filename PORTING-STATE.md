@@ -103881,3 +103881,32 @@ ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-writer-census`.
+
+## Session 2192 (2026-08-23) — broad logging changed failure mode but not second-origin reachability
+
+Ran the queued same-build logging-cadence A/B with
+`zsh scratch/agent/run_s2192_m5_log_all_ab.sh`, using the qualified image/LLE
+recipe and identical writer controls. The noisy arm set
+`ROGUESQ_LOG_ALL=1`; the quiet arm left it unset. Both arms passed the
+positive writer control and phase control at 640 origins `0x0066A500` and
+`0x00696100`, but neither reached `0x00696600`. Controls were noisy 29 and
+quiet 31.
+
+At `0x00696100`, target row counts in target order
+`0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC` were noisy
+`1/0/2/54/0/1` and quiet `1/0/2/69/1/1`. The quiet arm later crashed with
+36 `[CRASH]` markers in `slotDispatcherIter+3508`, last guest PC
+`0x80022160`; the noisy arm remained alive until the 150-second watchdog
+timeout with no crash marker. This refutes H-LogCadenceBoundary and
+H-PhaseReachableBoth, and rules out H-CoverageFailure for this pair because
+both controls fired. It does not prove a shared `get_function(0)` boundary:
+the two arms diverged into crash versus live-loop outcomes. No writer guard,
+task rewrite, port value, branch, or audio default changed. Full logs and
+writer rows: `scratch/agent/s2192_m5_log_all_ab/`.
+
+ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-writer-census`.

@@ -2,10 +2,10 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2191
-(2026-08-23); behavioral and source evidence is current through s2191.
+authoritative for exact commands and probe rows. Maintained in Session 2192
+(2026-08-23); behavioral and source evidence is current through s2192.
 
-The detailed s2164–s2191 chain is archived in
+The detailed s2164–s2192 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43. This file is the compact
 operational state, not a second ledger.
 
@@ -80,6 +80,15 @@ operational state, not a second ledger.
   were `1/0/2/54/0/1`; all six second-origin cells are uncovered. This selects
   H-PortSecondOriginAbsent, rules out H-PortCoverageFailure for this run, and
   authorizes no writer guard, task rewrite, or audio default flip.
+- s2192's same-build logging-cadence A/B passed the writer control in both
+  arms (noisy 29, quiet 31) and the phase control at `0x0066A500` and
+  `0x00696100`, but neither arm reached `0x00696600`. The quiet arm later
+  crashed in `slotDispatcherIter+3508` with last guest PC `0x80022160`, while
+  the broad-logging arm remained alive until its watchdog timeout. First-origin
+  target rows were noisy `1/0/2/54/0/1` and quiet `1/0/2/69/1/1`. This refutes
+  logging cadence as a route to the second origin and shows that logging
+  changes the failure mode; it does not prove a shared crash boundary or
+  authorize a guard, task rewrite, or audio default flip.
 
 ## Active backlog
 
@@ -89,15 +98,17 @@ work items.
 1. **M5 A1 recover the second-origin port writer parity census; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, and s2191
-   independently selected H-PortSecondOriginAbsent: controls fired, then
-   `get_function(0)` in `slotDispatcherIter` ended the route before
-   `0x00696600`. Run a phase-gated two-arm schedule test that keeps the
-   writer control in both arms while changing only broad `ROGUESQ_LOG_ALL`:
-   if the quiet arm reaches `0x00696600`, logging cadence is the route
-   boundary; if both stop after `0x00696100`, the boundary is independent of
-   that logging; if only one arm loses its controls, reject the pair as
-   coverage failure. Do not add a port guard, mitigation, task rewrite, or
-   audio default flip.
+   independently selected H-PortSecondOriginAbsent. s2192 refuted the
+   logging-cadence route explanation: both broad-logging and quiet arms
+   passed controls and stopped short of `0x00696600`, but logging changed
+   quiet's later crash into noisy's watchdog-visible live loop. The next
+   discriminator is a three-arm, phase-gated schedule test with the same
+   writer controls: quiet, broad logging, and a narrow route-log arm. If the
+   narrow arm matches quiet's crash, broad logging only changes throughput;
+   if it matches noisy's live loop, a specific high-volume log category is
+   involved; if any arm reaches `0x00696600`, collect its complete six-target
+   table. Do not add a port guard, mitigation, task rewrite, or audio default
+   flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -223,6 +234,10 @@ remain in the append-only ledger. Operationally:
   not evidence that the six target writers are absent there. The covered
   `0x00696100` mismatch is independently meaningful because the s2189 retail
   matrix supplies the comparison origin and sparse writer identities.
+- s2192's noisy/quiet A/B is not evidence that broad logging is the route
+  boundary. Both arms missed the second origin with positive controls; the
+  different quiet crash/noisy timeout outcomes identify a logging-sensitive
+  failure mode, not a writer defect or permission to add a mitigation.
 
 ## Evidence ledger summary
 

@@ -4069,3 +4069,22 @@ This selects `H-PortSecondOriginAbsent`: the controls prove the instrument
 and first 640 phase ran, but all six second-origin cells are uncovered. It
 does not establish second-origin parity or explain the route boundary. Full
 table: `scratch/agent/s2191_m5_second_origin.txt`.
+
+### Logging-sensitive second-origin boundary (s2192)
+
+s2192 ran the queued same-build schedule A/B with the qualified image/LLE
+recipe and identical writer controls. The noisy arm set `ROGUESQ_LOG_ALL=1`;
+the quiet arm left it unset. Both arms passed their positive writer controls
+and phase controls at `0x0066A500` and `0x00696100`, and neither observed the
+target `0x00696600` origin. The controls were noisy 29 and quiet 31.
+
+The first-origin target row counts were noisy `1/0/2/54/0/1` and quiet
+`1/0/2/69/1/1` in target order
+`0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC`. The quiet arm
+later crashed in `slotDispatcherIter+3508` with last guest PC `0x80022160`
+and 36 crash markers; the broad-logging arm remained alive until its
+watchdog timeout with no crash marker. This refutes broad logging as a route
+to the second origin, while showing that logging changes the later failure
+mode. It does not establish a shared crash boundary or authorize a writer
+guard, task rewrite, or audio default change. Full logs and the complete
+writer rows are under `scratch/agent/s2192_m5_log_all_ab/`.
