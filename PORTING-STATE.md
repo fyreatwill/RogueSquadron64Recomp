@@ -103370,3 +103370,64 @@ jal as port-only.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2178 (2026-08-23) — retail extract/first-cross source words are finite at cinematic 640
+
+Rice 45s oracle, no game rebuild. Oracle printer now
+emits `a1=`/`s0=` on every GPR row and, on EXEC
+detail, `w_a2p8` at `0x80019548` and `w_a1p20` at
+`0x80059D48`. Table:
+`scratch/agent/s2178_vec3_word.txt`.
+Log: `scratch/agent/oracle_s2178_vec3_word.log`.
+Command from `scratch/agent/NEXT.md` (s2178):
+`--watch-write 0x0:0x800000 --watch-pc
+0x800A8640,0x80059D18,0x80059D48,0x80059F3C,0x80019548
+--first-watch 0 --vi-trace`. Exit 0; 45.0s wall,
+2679 VI (~44.6s emulated).
+
+Positive controls (same log): `[gpr-ctl]`
+pc=`0x8002b608` with printed `a1=`/`s0=`; watch 0
+write callbacks=10000 removal rc=0; `[vi]` WIDTH
+320->640 origin `0x0066a500` at t=2.0s vi=99;
+`[vi]` origin `0x00696100` width=640 at t=7.1s
+vi=403; `a1=` on 64/64 logged EXEC.
+
+Lifetime exec: `0x800A8640` n=6261 (all prev
+`0x800A863C`); `0x80059D18` n=7151 of which
+prev=`0x800A8640` n=6261; `0x80059D48` n=7151
+(all prev `0x80059D44`); `0x80059F3C` n=13041;
+`0x80019548` n=33067 (13041+13040 from
+`0x80059F3C`/`0x80059F54`).
+
+Logged EXEC n=64, all width=640 origin
+`0x00696600` (cap filled on the cinematic pair;
+VI `0x00696100` is the same-log control). Jal
+`$a0=0x80165E40` 9/9; `$a1` KSEG0
+`0x800C898C..0x800CA4B4` 9/9. Extract `w_a1p20`
+10/10 finite (0 NaN, 0 Inf): dispatcher values
+`0x3CFEDCBB`≈0.031, `±0x3C664945`≈±0.014,
+`0x3C4CCCCD`=0.0125. First-cross `w_a2p8`
+prev=`0x80059F3C` 10/10 finite:
+`0x3F800000`=1.0 n=7, `0xBF800000`=-1.0 n=2,
+`0x3F712770`≈0.942 n=1 (other-caller).
+orthonormalizeFrame rewrites dest+0x14 from the
+small extract components to ±1.0 before the
+first cross.
+
+This selects `H-RetailSourceWordFinite` and
+refutes `H-RetailSourceWordNaN` and
+`H-CoverageFailure`. The port `NAN_CHECK` f10
+is not a retail-NaN input.
+
+ORIGIN: not a mitigation. Retail source word at
+extract `$a1+0x20` and first-cross `$a2+8` is
+legitimate finite game data. Do not disable
+`NAN_CHECK`, S32-address, NULL-skip, re-flip
+default-on, skip/allow the lwc or transform or
+extract jal, add a wait/slot guard, or treat
+retail f10 as NaN.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

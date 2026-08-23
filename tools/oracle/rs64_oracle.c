@@ -170,8 +170,8 @@ static uint32_t gpr32(int idx)
 
 static void print_gpr_fields(void)
 {
-    printf(" v0=0x%08x s1=0x%08x a0=0x%08x a2=0x%08x",
-           gpr32(2), gpr32(17), gpr32(4), gpr32(6));
+    printf(" v0=0x%08x s1=0x%08x a0=0x%08x a1=0x%08x a2=0x%08x s0=0x%08x",
+           gpr32(2), gpr32(17), gpr32(4), gpr32(5), gpr32(6), gpr32(16));
 }
 struct exec_prev {
     uint32_t pc;
@@ -551,6 +551,12 @@ static void dbg_update(unsigned int pc)
             unsigned origin = pDebugMemRead32(VI_ORIGIN_ADDR);
             print_gpr_fields();
             printf(" width=%u origin=0x%08x", width, origin);
+            if (pc == 0x80019548u)
+                printf(" w_a2p8=0x%08x",
+                       pDebugMemRead32(debug_rdram_addr((gpr32(6) + 8) & ~3u)));
+            if (pc == 0x80059D48u)
+                printf(" w_a1p20=0x%08x",
+                       pDebugMemRead32(debug_rdram_addr((gpr32(5) + 0x20) & ~3u)));
         }
         printf("\n");
         if ((flags & (M64P_BKP_FLAG_WRITE | M64P_BKP_FLAG_READ)) &&

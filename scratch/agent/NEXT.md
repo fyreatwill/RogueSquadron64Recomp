@@ -1,70 +1,82 @@
-# NEXT work unit (s2178) — retail word bits at extract $a1+0x20 / first-cross $a2+8
+# NEXT work unit (s2179) — port extract / first-cross word bits vs retail finite
 
 HYPOTHESIS-ID: m5-a1-cinematic-split
 
 ## Work unit
 
-s2177 selected `H-RetailExecsJal8640`: retail executes
-`0x800A8640` n=6183 at cinematic 640/`0x00696100`,
-transfers to `extractOrthonormalFrameFromStruct`, and
-`vec3Cross` `0x80019548` n=32795. Dest `$a0=0x80165E40`
-10/10 logged. Oracle did not print `$a1` or memory
-words, so no NaN/finite claim.
+s2178 selected `H-RetailSourceWordFinite`: retail
+cinematic first-cross `w_a2p8` (prev=`0x80059F3C`)
+and extract `w_a1p20` are 10/10 finite (0 NaN).
+The port SIGABRT is `vec3Cross` `NAN_CHECK` f10
+(`funcs_4.c:33371`) from jal `0x800A8640`. Ground
+truth asked: retail input is not NaN.
 
-Ask ground truth before any port instrument or
-`NAN_CHECK` change: is the word retail loads as
-`NAN_CHECK` f10 finite or NaN?
-
-That word is dest+0x14 = source `$a1+0x20` (extract
-`0x80059D48` `lwc1 0x20($a1)` / first orthonormalize
-cross `$a2=dest+0xC`, `$a2+8`).
+Ask the port the same two words, in one build,
+before any `NAN_CHECK` skip/allow.
 
 Do not S32-address, NULL-skip, re-flip default-on,
-skip/allow the lwc / transform / extract jal, disable
-`NAN_CHECK`, or add a wait/slot guard.
+skip/allow the lwc / transform / extract jal,
+disable `NAN_CHECK`, or add a wait/slot guard.
 
 ## Competing hypotheses and discriminator
 
 IEEE single: NaN iff `(w & 0x7F800000)==0x7F800000 && (w & 0x007FFFFF)!=0`.
-Join first-cross rows on prev=`0x80059F3C` at 640 cinematic.
+Join on 640 cinematic (`0x00696100`/`0x00696600`).
+Always-log NaN; rate-limit finite.
 
-- `H-RetailSourceWordFinite`: same-run `[gpr-ctl]`,
-  watch0 10000, VI 640 including `0x00696100`; logged
-  cinematic first-cross `w_a2p8` (and extract
-  `w_a1p20`) are finite (not NaN).
-- `H-RetailSourceWordNaN`: those controls fire; logged
-  cinematic first-cross `w_a2p8` (or extract `w_a1p20`)
-  is NaN bits (retail has no `NAN_CHECK`).
-- `H-CoverageFailure`: missing `[gpr-ctl]`, watch0
-  10000, VI 640/`0x00696100`, or zero printed
-  `w_a2p8`/`w_a1p20` at those PCs.
+- `H-PortExtractAlreadyNaN`: `[vec3-word-ctl]` fires
+  at 640/`0x00696100`; extract `w_a1p20` is NaN bits
+  (port source already bad before orthonormalize).
+- `H-PortOrthonormalizeMakesNaN`: extract `w_a1p20`
+  finite; first-cross `w_a2p8` / f10.u32l is NaN
+  (orthonormalize rewrote dest+0x14 to NaN).
+- `H-PortF10NotMemWord`: first-cross MEM_W($a2,8)
+  finite but f10.u32l is NaN (reload/FPR split).
+- `H-PortNoNaNThisPair`: both arms complete or
+  640-stall with 0 NaN rows (abort class missed;
+  enqueue soak, do not conclude port-finite).
 
-Positive controls: `[gpr-ctl]`; watch 0 write
-callbacks=10000; `[vi]` 640 origin `0x00696100`;
-printed `a1=` field on an EXEC hit.
+Positive controls: `[vec3-word-ctl]` at 640
+including origin `0x00696100`; printed `w=` on
+extract and on first-cross (`ra` in
+`{0x80059F3C,0x80059F40}` delay-slot). A NaN
+always-log is the abort-class control.
 
 ## Exact commands
 
-Oracle rebuild only (no game rebuild). In
-`tools/oracle/rs64_oracle.c` `print_gpr_fields`, also
-print `a1=gpr32(5)` and `s0=gpr32(16)`. On EXEC detail
-print: if `pc==0x80019548` print
-`w_a2p8=pDebugMemRead32(debug_rdram_addr((gpr32(6)+8)&~3u))`;
-if `pc==0x80059D48` print
-`w_a1p20=pDebugMemRead32(debug_rdram_addr((gpr32(5)+0x20)&~3u))`.
-Then `tools/oracle/build.sh` (no core rebuild).
+One rebuild. Add diagnostic fprintf only (same
+`ROGUESQ_LOG_CUTSCENE_A2_50` / `ROGUESQ_LOG_ALL`
+gate as heap0). Put the insert in
+`tools/fixup_game_funcs.py` if that script still
+owns these sites; otherwise the established
+cinematic-probe pattern is a hand-instrument of
+generated C (do not put load-bearing logic there).
 
-    tools/oracle/build/rs64_oracle \
-      --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-      --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-      --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-      --secs 45 --hit-cap 64 \
-      --watch-write 0x0:0x800000 \
-      --watch-pc 0x800A8640,0x80059D18,0x80059D48,0x80059F3C,0x80019548 \
-      --first-watch 0 --vi-trace \
-      > scratch/agent/oracle_s2178_vec3_word.log 2>&1
+1. `../N64Recomp/RecompiledFuncs/funcs_13.c` after
+   `0x80059D48` `ctx->f0.u32l = MEM_W(ctx->r5, 0X20);`
+   log site=extract a0/a1/w=f0.u32l ieee.
+2. `../N64Recomp/RecompiledFuncs/funcs_4.c` after
+   `0x8001954C` `ctx->f10.u32l = MEM_W(ctx->r6, 0X8);`
+   and BEFORE `NAN_CHECK(ctx->f2.fl); NAN_CHECK(ctx->f10.fl);`
+   log site=cross a0/a1/a2/ra w_mem=MEM_W($a2,8)
+   w_f10=f10.u32l ieee. First-cross =
+   `ra` in `{0x80059F3C,0x80059F40}`.
+3. Catalog `[vec3-word]` / `[vec3-word-ctl]` in
+   `docs/debug-trace-env-vars.md` on the
+   `ROGUESQ_LOG_CUTSCENE_A2_50` row.
+4. cmake Debug RogueSquadron64Recomp.
+5. Same-build concurrent 90s SIGKILL:
 
-Table to `scratch/agent/s2178_vec3_word.txt`.
-Classify each logged `w_a2p8` with prev=`0x80059F3C`
-and each `w_a1p20` as finite / Inf / NaN. Also record
-`$a1` at `0x800A8640` / `0x80059D18`.
+    env ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 \
+      ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_CUTSCENE_A2_50=1 \
+      zsh scratch/s73_post_a_scene/run_mission_keys.sh \
+      s2179_on 30 12
+
+    env ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=0 \
+      ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_CUTSCENE_A2_50=1 \
+      zsh scratch/s73_post_a_scene/run_mission_keys.sh \
+      s2179_off 30 12
+
+Table to `scratch/agent/s2179_vec3_word_port.txt`.
+If neither arm aborts and NaN n=0, enqueue a
+`=1` soak (do not select port-finite).

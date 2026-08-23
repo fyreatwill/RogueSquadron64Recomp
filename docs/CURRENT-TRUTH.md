@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2177
-(2026-08-23); behavioral and source evidence is current through s2177.
+authoritative for exact commands and probe rows. Maintained in Session 2178
+(2026-08-23); behavioral and source evidence is current through s2178.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2177 live here
+`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2178 live here
 until the next archive pass.
 
 ## Current state
@@ -188,14 +188,29 @@ until the next archive pass.
   `0x80059F54`). Logged 8640 10/10 at 640
   cinematic (1 at `0x00696100`, 9 at pair
   `0x00696600`); dest `$a0=0x80165E40` 10/10.
-  Oracle does not print FPRs; no NaN/finite
-  claim. Do
+  Oracle did not print FPRs; no NaN/finite
+  claim from that run. s2178 selected
+  `H-RetailSourceWordFinite`
+  (`scratch/agent/s2178_vec3_word.txt`):
+  Rice 45s, same-log `[gpr-ctl]` (now prints
+  `a1=`/`s0=`), watch0 10000, VI 640 including
+  origin `0x00696100`. Logged EXEC n=64 all
+  width=640 origin `0x00696600`. First-cross
+  `w_a2p8` prev=`0x80059F3C` 10/10 finite
+  (`0x3F800000`=1.0 n=7, `0xBF800000`=-1.0
+  n=2, `0x3F712770`≈0.942 n=1). Extract
+  `w_a1p20` 10/10 finite (0 NaN, 0 Inf).
+  Jal `$a1` KSEG0 `0x800C898C..0x800CA4B4`
+  9/9; dest `$a0=0x80165E40` 9/9. The port
+  `NAN_CHECK` f10 is not a retail-NaN input.
+  Do
   not S32-address by guess, NULL-skip, re-flip
   default-on, skip/allow `matchKeywordWithPriority`
   or the lwc or transform or extract jal, disable
   `NAN_CHECK`, add a wait/slot guard, or change
   `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
-  Do not treat the jal as port-only.
+  Do not treat the jal as port-only or retail
+  source as NaN.
 
 ### Selected hypotheses (scoped; do not widen)
 
@@ -243,6 +258,7 @@ until the next archive pass.
 | s2175 | `H-CompletePathDispatchReturned` | completing `=1`: ctl n=23 at 640 `0x00696100` including dispatchEntry n=8; store57100 dest `0x8025A580` value `0x800CA748`; last first-slot 87A0 n=14305 t=48.4 then lwc87a8 n=14305 dest `0x800CA748`, xformEntry/Ret n=14305, dispatchRet n=895 = dispatchEntry nmax; title+hangar; lwc zero_logged=0. Hang hyps not selected (wrong run class) | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc or transform; treat hangar `0x80001b08` SIGSEGV as the cinematic hang |
 | s2176 | `H-NaNAbortInVec3Cross` | failing `=1` soak: ctl n=23 at 640 `0x00696100` including dispatchEntry n=8; store57100 dest `0x8025A580` value `0x800CA748`; last first-slot 87A0 n=5185 t=23.7 dest `0x8025A580` value `0x800CA748` then lwc87a8 n=5185 dest `0x800CA748`, xformEntry/Ret n=5185, dispatchRet n=325; dispatchEntry n=326 t=24.1 then SIGABRT `vec3Cross` `NAN_CHECK` from `0x800A8640` `jal 0x80059D18`; 0 VI 1024; 0 SIGBUS; lwc zero_logged=0. Hang hyps refuted on this soak. Single-arm (`=1`); s2160 `=0` first try also aborted here | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; treat last-guest-pc `0x8000834c` as the abort site; image-arm-exclusive NaN |
 | s2177 | `H-RetailExecsJal8640` | Rice 45s: `[gpr-ctl]` + watch0 10000 + VI 640 `0x00696100`; exec `0x800A8640` n=6183 all prev `0x800A863C`; `0x80059D18` n=7060 of which prev=`0x800A8640` n=6183; `0x80059F10` n=12944; `0x80019548` n=32795 (12943+12943 from `0x80059F3C`/`0x80059F54`); logged 8640 10/10 width=640 origins `{0x00696100,0x00696600}` dest `$a0=0x80165E40` 10/10. No FPR print | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; treat the jal as port-only; NaN/finite from this run |
+| s2178 | `H-RetailSourceWordFinite` | Rice 45s: `[gpr-ctl]` + watch0 10000 + VI 640 `0x00696100`; logged EXEC n=64 all width=640 origin `0x00696600`; first-cross `w_a2p8` prev=`0x80059F3C` 10/10 finite (`0x3F800000`/`0xBF800000`/`0x3F712770`); extract `w_a1p20` 10/10 finite; 0 NaN 0 Inf; jal `$a1` KSEG0 9/9 dest `$a0=0x80165E40` 9/9 | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; treat retail source as NaN |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -308,9 +324,17 @@ active work items.
    executes that jal n=6183 at 640 including origin
    `0x00696100` (`0x80059D18` prev=`0x800A8640` n=6183;
    `0x80019548` n=32795). Dest `$a0=0x80165E40` 10/10
-   logged. Oracle does not print FPRs. Next is retail
-   word bits at `$a1+0x20` / first-cross `$a2+8`
-   (extract copy of dest+0x14 / `NAN_CHECK` f10).
+   logged. s2178 selected
+   `H-RetailSourceWordFinite`
+   (`scratch/agent/s2178_vec3_word.txt`):
+   first-cross `w_a2p8` prev=`0x80059F3C` 10/10
+   finite (`±1.0` / ~0.942); extract `w_a1p20`
+   10/10 finite (0 NaN, 0 Inf). The port
+   `NAN_CHECK` f10 is not a retail-NaN input.
+   Next is the port's same words at extract
+   `0x80059D48` `$a1+0x20` and vec3Cross
+   `0x8001954C` f10 / `$a2+8` before
+   `NAN_CHECK`.
    Failure modes remain intermittent
    (`=1` title+hangar in s2162/s2170/s2173/s2175;
    matchKeyword SIGBUS in s2167; 640-stall in
@@ -319,7 +343,7 @@ active work items.
    re-flip default-on, skip/allow the function, the lwc,
    transform, or extract jal, disable `NAN_CHECK`, or add
    a wait/slot guard. Do not treat the jal as port-only
-   or claim NaN/finite from the FPR-less oracle run.
+   or retail source as NaN.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the
@@ -446,7 +470,10 @@ SIGABRTs in `vec3Cross` `NAN_CHECK` from `0x800A8640`.
 s2177 selected `H-RetailExecsJal8640`: retail executes
 that jal n=6183 at 640/`0x00696100` (`0x80059D18`
 prev=`0x800A8640` n=6183; `0x80019548` n=32795). No
-FPR print; no NaN/finite claim.
+FPR print; no NaN/finite claim from that run.
+s2178 selected `H-RetailSourceWordFinite`:
+logged cinematic first-cross `w_a2p8` and extract
+`w_a1p20` are finite (0 NaN, 0 Inf).
 The A1 execute / SP-complete / MORT-ownership /
 both-arm-validate / task-exit+PCM / two-source-completion
 clauses remain selected at the s2118 C88=0 sampled scope
@@ -455,7 +482,8 @@ env default. Do not re-flip default-on, S32-address by
 guess, NULL-skip, skip/allow `matchKeywordWithPriority`
 or the lwc or transform or extract jal, disable
 `NAN_CHECK`, or add a wait/slot guard.
-Do not treat the jal as port-only.
+Do not treat the jal as port-only or retail source
+as NaN.
 
 The stock `aspMain` contract is not the game's MusyX contract. C88
 testing selected reversed-or-suppressing polarity at sampled port gate
@@ -625,8 +653,17 @@ ledger. Operational reversals:
   `[gpr-ctl]`, whole-RDRAM 10000, and VI 640/
   `0x00696100` sit in the same log as 58982 exec
   hits (`0x800A8640` n=6183, `0x80019548` n=32795).
-  Logged dest `$a0=0x80165E40`. No FPR print; the
-  port NaN is still unattributed.
+  Logged dest `$a0=0x80165E40`. No FPR print from
+  that run; the port NaN is still unattributed.
+  s2178 supersedes treating the port `vec3Cross`
+  NaN as a retail-NaN source word at extract
+  `$a1+0x20` / first-cross `$a2+8`: same-run
+  `[gpr-ctl]`, whole-RDRAM 10000, and VI 640/
+  `0x00696100` sit in the same log as 66671 exec
+  hits; logged cinematic `w_a2p8` (prev=`0x80059F3C`)
+  and `w_a1p20` are 10/10 finite (0 NaN, 0 Inf).
+  The port NaN remains unattributed as a *port*
+  word, not as retail input.
 - The old retail voice-field interpretation was believable because a
   pointer entry was treated as a physical array base.
 - The old “B40 was unreached” and s2110 `H-B40-RouteRequired`
@@ -671,7 +708,9 @@ hang-after-87A0 flow (`H-CompletePathDispatchReturned`).
 s2176 is the failing-`=1` soak classification
 (`H-NaNAbortInVec3Cross`). s2177 is the retail
 exec census of the extract jal / `vec3Cross`
-(`H-RetailExecsJal8640`).
+(`H-RetailExecsJal8640`). s2178 is the retail
+word-bit census at extract `$a1+0x20` /
+first-cross `$a2+8` (`H-RetailSourceWordFinite`).
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
@@ -686,12 +725,13 @@ ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`,
 `H-PortHeap0MatchesRetail`,
 `H-StallWord0Intact`,
 `H-CompletePathDispatchReturned`,
-`H-NaNAbortInVec3Cross`, or
-`H-RetailExecsJal8640`.
+`H-NaNAbortInVec3Cross`,
+`H-RetailExecsJal8640`, or
+`H-RetailSourceWordFinite`.
 Do not re-flip default-on, S32-address by guess, NULL-skip,
 skip/allow `matchKeywordWithPriority` or the lwc or transform or
 extract jal, disable `NAN_CHECK`, or add a wait/slot guard.
-Do not treat the jal as port-only.
+Do not treat the jal as port-only or retail source as NaN.
 
 ## Method and safety rules
 
