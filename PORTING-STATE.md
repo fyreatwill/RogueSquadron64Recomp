@@ -103657,3 +103657,38 @@ words before adding another port instrument.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-writer-census`.
+
+## Session 2185 (2026-08-23) — retail oracle writes all six cinematic words
+
+Ran the exact 45-second Rice oracle command from
+`scratch/agent/NEXT.md`, with the whole-RDRAM positive-control watch,
+six physical-word watches, repeated first-watch and pc-hist requests, and
+the three known producer-PC watches. The run exited 0 after 45.0 seconds,
+recorded 3429975 total hits and 2667 VI callbacks, and reached the 640
+route.
+
+The whole-RDRAM watch fired 63611 times and reached its 10000-hit positive
+control before removal. The six target write counts, in NEXT.md order, were
+5 at 0x25A580, 1 at 0x0CA748, 5 at 0x0C7B0C, 53594 at 0x165E40, 5 at
+0x0CDB58, and 1 at 0x2231EC. VI entered 640 at t=1.9s
+(origin 0x0066A500), then showed the cinematic origins 0x00696600 at
+t=7.0s and 0x00696100 at t=8.0s. The explicit writer-PC watch attributed
+the 0x2231EC write to guest 0x80057100, n=1, at t=8.9s, width 640,
+origin 0x00696600. Known-PC execution controls also fired:
+0x800078EC n=3375905, 0x800A8144 n=17, and 0x80057100 n=132.
+
+This single-source oracle result selects H-RetailWritesNamedWords only for
+target-write existence plus one named writer, and refutes retail-zero, non-cinematic-only, and
+coverage-failure explanations at this scope. The oracle binary emitted no
+per-target pc-hist summary for watches 1–5, so the other five writer
+identities remain open. This does not authorize a copyToRAM/CIMG/DMA guard,
+NAN_CHECK change, cinematic skip, or image-arm default flip. It rules out
+the narrower claim that retail never writes any of the six words; it does
+not explain the port's intermittent cinematic failures.
+
+ORIGIN: diagnostic-only retail oracle watch; no guest or host value was changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-failing-image-join`.

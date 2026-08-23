@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2184
-(2026-08-23); behavioral and source evidence is current through s2184.
+authoritative for exact commands and probe rows. Maintained in Session 2185
+(2026-08-23); behavioral and source evidence is current through s2185.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2184 live here
+`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2185 live here
 until the next archive pass.
 
 ## Current state
@@ -275,7 +275,11 @@ until the next archive pass.
   overlap with the six named words. This
   selects `H-AudioDmaTitleHangarOnly` for that completing image-arm run and
   refutes `H-AudioDmaHitsCutscene`, `H-AudioDmaElsewhere`, and coverage
-  failure at this scope.
+  failure at this scope. s2185's single-source retail oracle supplied the
+  independent positive control: all six named physical words were written; the
+  `0x2231EC` write was attributed to guest `0x80057100` at 640/
+  `0x00696600`. The oracle's per-target histogram output was absent for
+  five watches, so complete six-word writer attribution remains open.
 
 ### Selected hypotheses (scoped; do not widen)
 
@@ -331,6 +335,7 @@ until the next archive pass.
 | s2182 | `H-PortNoNaNThisPair` | queued `=1` soak: n=176 at 640 `0x00696100`; 9312 rows, 0 NaN / 0 Inf, title+hangar; post-hangar abort is unaligned PI DMA, not cinematic | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; copyToRAM/CIMG writeback guard |
 | s2183 | `H-CoverageFailure` | completing logs have positive joins/zero named-word overlap; failing log has 640 but no image rows | no writer or guard claim |
 | s2184 | `H-AudioDmaTitleHangarOnly` | same-run 640 control; 5841 joins only at title/hangar; zero six-word overlap | obtain retail writer ground truth |
+| s2185 | `H-RetailWritesNamedWords` | **single-source** Rice 45s: whole-RDRAM control 63611; target writes at `0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC` = 5/1/5/53594/5/1; `0x2231EC` writer `0x80057100` n=1 at 640 origin `0x00696600`; per-target hist absent for watches 1–5; corroborates the prior retail writer/destination lines at s2172/s2177, but complete attribution is not claimed | no copyToRAM/CIMG/DMA guard; no default flip; obtain a failing image-join control |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -441,7 +446,14 @@ active work items.
    s2184 supplied a 640 control plus 5841 joins; an interval parse found
    zero named-word overlap and every join was
    title/hangar-only, selecting `H-AudioDmaTitleHangarOnly` for that run.
-   Next ask the retail oracle for writer PCs at six physical words.
+   s2185's Rice oracle had whole-RDRAM control 63611, target writes
+   5/1/5/53594/5/1 at the six words, and a same-run
+   `0x80057100` writer for `0x2231EC` during 640 cinematic output.
+   The requested per-target pc-hist summaries were not emitted for watches
+   1–5. This selects `H-RetailWritesNamedWords` only for target-write
+   existence plus the one named writer; it does not authorize a port guard
+   or any default flip. Next obtain a fresh failing image-arm run with
+   positive image joins in the 640 phase before classifying destinations.
    Failure modes remain intermittent
    (`=1` title+hangar in s2162/s2170/s2173/s2175/s2179/s2181;
    matchKeyword SIGBUS in s2167; 640-stall in
@@ -886,6 +898,11 @@ logs had positive controls/zero named-word overlap;
 the failing log had no image rows. s2184 adds a
 same-run 640 control: 5841 joins, zero 640 joins,
 zero named-word overlap, title/hangar-only.
+s2185 is a **single-source** retail writer census: whole-RDRAM 63611; all six target
+watches fired; the `0x2231EC` hit is guest `0x80057100` at 640/
+`0x00696600`. The oracle did not emit per-target histograms for watches
+1–5. This refutes retail-zero, non-cinematic-only, and coverage-failure
+claims at that scope, but leaves five writer identities open.
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
@@ -906,7 +923,8 @@ ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`,
 `H-PortNoNaNThisPair`,
 `H-FailingExtractFinite`, `H-PortNoNaNF2OrLater`,
 `H-CoverageFailure` (image-DMA scope), or
-`H-AudioDmaTitleHangarOnly` (one completing run).
+`H-AudioDmaTitleHangarOnly` (one completing run), or
+`H-RetailWritesNamedWords` (target existence plus one named writer).
 Do not re-flip default-on, S32-address by guess, NULL-skip,
 skip/allow `matchKeywordWithPriority` or the lwc or transform or
 extract jal, disable `NAN_CHECK`, add a wait/slot guard, or land a
