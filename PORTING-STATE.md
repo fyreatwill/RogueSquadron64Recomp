@@ -103817,3 +103817,37 @@ mitigation, task rewrite, or audio default changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-writer-census`.
+
+## Session 2190 (2026-08-23) — port writer parity census at covered 640 origin
+
+Ran the required generated-site census, added the phase-gated
+`ROGUESQ_LOG_M5_WRITER_PARITY` helper through the incremental fixup mode, and
+rebuilt the Debug target successfully. The helper covers every generated
+scalar store plus both words of every generated `SD`, then emits one row per
+target/origin/guest-PC. The run was
+`scratch/s73_post_a_scene/s2190_m5_writer_parity/run.log` from
+`run_mission_keys.sh s2190_m5_writer_parity 30 12`.
+
+Same-run controls were positive: the new helper control fired in the 640
+phase, the existing phase control reached `640 @ 0x00696100`, and the route
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. At the covered
+port origin, target rows were `1/0/2/65/1/1` in s2189 target order
+`0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC`. The unique-PC port rows
+were target 1=`0x80057100`, target 3=`0x800078EC`/`0x800A8144`, target
+5=`0x800078EC`, and target 6=`0x80057100`; target 4 had 65 unique PCs.
+
+Against s2189's independent retail matrix at the same origin (`1/0/0/1203/0/0`,
+target 1 writer `0x80018F5C`), this selects `H-PortOriginMismatch`: the port
+writes target 1 from a different PC and writes targets 3, 5, and 6 where
+retail had no writes. The recipe exited before port origin `0x00696600`, so
+its six cells are uncovered rather than null; the second-origin parity arm
+remains next. This rules out port/retail parity at the covered origin, not the
+audio default, a task rewrite, or a writer mitigation.
+
+ORIGIN: s2189 retail oracle phase matrix plus s2190 port writer attribution;
+diagnostic-only, no guest or host value changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-writer-census`.

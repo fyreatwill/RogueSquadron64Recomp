@@ -2,10 +2,10 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2189
-(2026-08-23); behavioral and source evidence is current through s2189.
+authoritative for exact commands and probe rows. Maintained in Session 2190
+(2026-08-23); behavioral and source evidence is current through s2190.
 
-The detailed s2164–s2189 chain is archived in
+The detailed s2164–s2190 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §§43–44. This file is the compact
 operational state, not a second ledger.
 
@@ -63,19 +63,30 @@ operational state, not a second ledger.
   1–6. The writer sets split by origin, selecting H-PhaseSplit; target 4 is
   broad in both buckets. This is single-source oracle evidence and does not
   authorize a port guard or audio default change.
+- s2190's batched fixup-injected port census passed its own 640 positive
+  control and reached title `1024 @ 0x00790400` plus hangar `512 @
+  0x006AB400`. At the covered port origin `0x00696100`, it observed target
+  unique-PC rows `1/0/2/65/1/1` with sparse writer sets `0x80057100`, absent,
+  `0x800078EC`/`0x800A8144`, broad, `0x800078EC`, and `0x80057100` for
+  targets 1–6. Retail at that origin is `1/0/0/1203/0/0` with target 1
+  writer `0x80018F5C`; the port therefore selects H-PortOriginMismatch at
+  the covered origin. The route exited before port origin `0x00696600`, so
+  those six cells remain uncovered rather than null. This is two-line
+  port/oracle evidence and authorizes no guard, task rewrite, or default flip.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 A1 phase-specific port writer parity census; blocks default-on.**
-   s2189 selected H-PhaseSplit in a same-run retail oracle table: the six
-   target writer matrices differ between `0x00696100` and `0x00696600`, while
-   `0x165E40` remains broad in both. Use those phase-specific retail sets as
-   ground truth for one batched, phase-gated port writer census on the
-   qualified route. Match or mismatch is the next discriminator; do not add
-   a port guard, mitigation, task rewrite, or audio default flip.
+1. **M5 A1 complete the second-origin port writer parity census; blocks
+   default-on.**
+   s2190 selected H-PortOriginMismatch at port `0x00696100`: sparse target
+   1/3/5/6 writers disagree with retail, while target 4 is broad. The
+   qualified recipe exited before `0x00696600`, so run one phase-gated
+   follow-up that reaches that origin and fills the six missing cells against
+   the s2189 retail matrix. Do not add a port guard, mitigation, task rewrite,
+   or audio default flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -197,14 +208,18 @@ remain in the append-only ledger. Operationally:
   the next discriminator. s2187's positive-control run independently
   repeats the title/hangar-only result, but its later PI-DMA crash is not
   evidence about the target cinematic phase.
+- s2190's missing `0x00696600` port cells are a route-coverage limitation,
+  not evidence that the six target writers are absent there. The covered
+  `0x00696100` mismatch is independently meaningful because the s2189 retail
+  matrix supplies the comparison origin and sparse writer identities.
 
 ## Evidence ledger summary
 
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024 and
 spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
-s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2189
-pointer, failure, and image-DMA archive is §§43–44. Exact commands, counts,
+s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2190
+pointer, failure, image-DMA, and writer-parity archive is §§43–44. Exact commands, counts,
 failed retries, and session headings remain in `PORTING-STATE.md`.
 
 Selected hypotheses must not be widened from single-source or single-arm

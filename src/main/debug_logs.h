@@ -119,6 +119,14 @@ inline bool log_filter_voice_audit() {
     return v;
 }
 
+// Phase-gated M5 target-word writer parity census. The generated C probe owns
+// the output; this accessor keeps the category represented in the shared log
+// catalog for host-side callers. ROGUESQ_LOG_M5_WRITER_PARITY=1.
+inline bool log_m5_writer_parity() {
+    static const bool v = env_flag("ROGUESQ_LOG_M5_WRITER_PARITY");
+    return v;
+}
+
 // SP task dispatch (`[sp] osSpTaskStartGo #N kind=GFX ...`,
 // `[trace] DISPATCH slot=N ...`). One line per submitted GFX task.
 // Useful when tracking task scheduling rate. ROGUESQ_LOG_SP_TASKS=1.

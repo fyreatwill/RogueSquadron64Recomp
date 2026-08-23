@@ -3921,7 +3921,7 @@ treating MORT as a second RSP image, and treating leftover `fake_func_*`
 size `> 0xC` as renameable. They do not authorize changing the default
 audio arm, canary prefill, task ABI, output routing, waits, or guards.
 
-## 43. M5 A1 cinematic window and image-DMA boundary (s2164–s2188)
+## 43. M5 A1 cinematic window, image-DMA, and writer boundary (s2164–s2190)
 
 This archive was migrated from `CURRENT-TRUTH.md` during maintenance in
 s2186. It preserves the late A1 chain without keeping every session's
@@ -4032,3 +4032,23 @@ ledger and scratch artifacts named by the sessions.
 The next discriminator is a phase-gated port writer-parity census for the six
 named words, using the retail phase matrix as ground truth before any runtime
 change is considered.
+
+### Phase-specific port writer boundary (s2190)
+
+s2190 added the port side of the writer census through the incremental
+`fixup_game_funcs.py` mode `RS64_S2190_M5_WRITER_PARITY`. The generated helper
+covered every scalar store and both words of every `SD`, filtered to the six
+physical target words and the two 640 origins, and emitted one row per
+target/origin/guest-PC. The Debug build succeeded and the run passed both the
+new helper control and the existing phase control, reaching title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`.
+
+The run covered port origin `0x00696100` and saw unique-PC row counts
+`1/0/2/65/1/1` in target order. Target 1 was written by `0x80057100`, targets
+3 and 5 by `0x800078EC`/`0x800A8144` and `0x800078EC`, and target 6 by
+`0x80057100`; target 4 had 65 PCs. Compared with s2189 retail's
+`1/0/0/1203/0/0` at the same origin and target-1 writer `0x80018F5C`, this
+selects `H-PortOriginMismatch` at the covered origin. The recipe exited before
+port origin `0x00696600`; those cells are uncovered, not null, and remain the
+next work unit. No port value, branch, mitigation, task rewrite, or audio
+default changed. Full table: `scratch/agent/s2190_m5_writer_parity.txt`.

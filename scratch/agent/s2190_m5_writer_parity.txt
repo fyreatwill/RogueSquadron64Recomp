@@ -1,0 +1,65 @@
+# s2190 M5 writer parity census
+
+Run: `scratch/s73_post_a_scene/s2190_m5_writer_parity/run.log`
+Recipe: `run_mission_keys.sh s2190_m5_writer_parity 30 12`
+
+Controls and coverage:
+
+- The build completed successfully.
+- The existing phase control reached 640 at origin `0x00696100` (phase 6,
+  8.9s), then reached title `1024 @ 0x00790400` and hangar `512 @
+  0x006AB400`.
+- The new positive control fired 30 times in the active 640 origin bucket.
+  The repeated controls are one per generated translation unit, proving the
+  fixup-injected helper is live across the generated tree.
+- The driver reached the first two post-title probes, then the game exited
+  before the third. It did not observe the second retail comparison origin
+  `0x00696600`; zero rows for that origin below mean uncovered, not a null.
+- The run emitted 2,495 LLE tasks, 36 crash markers, and no missing-function or
+  unhandled-jump markers. The known late process death is not used to explain
+  the writer rows.
+
+Target order is the s2189 oracle order:
+`0x25A580`, `0x0CA748`, `0x0C7B0C`, `0x165E40`, `0x0CDB58`, `0x2231EC`.
+
+## Port rows
+
+All rows below are at width 640, phase 6, origin `0x00696100`. `rows` is the
+number of emitted unique-PC rows; the PC list is the complete set observed by
+the batched scalar-plus-`SD` probe.
+
+| target | physical word | rows | guest writer PCs |
+|---:|---:|---:|---|
+| 1 | `0x25A580` | 1 | `0x80057100` |
+| 2 | `0x0CA748` | 0 | uncovered at this origin |
+| 3 | `0x0C7B0C` | 2 | `0x800078EC`, `0x800A8144` |
+| 4 | `0x165E40` | 65 | `0x80007714`, `0x80001AE0`, `0x8000348C`, `0x800036A4`, `0x80001FD0`, `0x80001B7C`, `0x800647F4`, `0x80004AC0`, `0x80097524`, `0x800556E8`, `0x8005570C`, `0x80055780`, `0x80001AD0`, `0x800561B0`, `0x800613E4`, `0x80063D2C`, `0x80047E74`, `0x80001AF4`, `0x80043DB4`, `0x800467C0`, `0x80054410`, `0x800457D4`, `0x8003E91C`, `0x800078EC`, `0x800564A8`, `0x80007670`, `0x80004AE8`, `0x80006FE8`, `0x800648E4`, `0x800648FC`, `0x80004D84`, `0x800647E4`, `0x800AEA3C`, `0x800A7C68`, `0x8004811C`, `0x800A95BC`, `0x800AEC54`, `0x800AA0CC`, `0x80059D24`, `0x800A8670`, `0x80044728`, `0x800AA210`, `0x8000A8D4`, `0x80040418`, `0x8006F6BC`, `0x8006FCB0`, `0x800607CC`, `0x8003ED90`, `0x8004C2F8`, `0x8005C878`, `0x80019534`, `0x8001CF94`, `0x80060FD4`, `0x800AEC64`, `0x80059D68`, `0x80019590`, `0x8005F9B0`, `0x800700AC`, `0x80060920`, `0x8003ED8C`, `0x80075A50`, `0x80075748`, `0x800AE5A8`, `0x80006F90`, `0x80006F2C` |
+| 5 | `0x0CDB58` | 1 | `0x800078EC` |
+| 6 | `0x2231EC` | 1 | `0x80057100` |
+
+The unobserved second-origin rows are:
+
+| target | `0x00696600` PCs |
+|---:|---|
+| 1 | uncovered |
+| 2 | uncovered |
+| 3 | uncovered |
+| 4 | uncovered |
+| 5 | uncovered |
+| 6 | uncovered |
+
+## Retail comparison from s2189
+
+At `0x00696100`, retail had target writer counts `1/0/0/1203/0/0` and
+phase-specific sparse writer sets target 1=`0x80018F5C`, target 2 absent,
+target 3 absent, target 5 absent, target 6 absent. At `0x00696600`, retail
+had counts `4/1/5/8207/5/1`, with sparse writers target 1=`0x80018F5C`,
+target 2=`0x80018F60`, target 3=`0x800078EC`/`0x800A8144`,
+target 5=`0x800078EC`/`0x80018F60`, and target 6=`0x80057100`.
+
+The observed port rows at `0x00696100` therefore already mismatch retail:
+target 1 is written by `0x80057100` instead of `0x80018F5C`, and targets 3,
+5, and 6 are active where retail has no writes. This selects
+`H-PortOriginMismatch` at the covered origin. The missing `0x00696600` phase
+prevents a complete two-origin parity claim; it does not erase the covered
+origin mismatch.
