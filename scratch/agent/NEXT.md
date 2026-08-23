@@ -1,53 +1,68 @@
-# NEXT work unit (s2205) — validate opt-in VI field alternation across later phases
+# NEXT work unit (s2206) — isolate the post-target VI logger boundary
 
-HYPOTHESIS-ID: m5-a1-vi-field-toggle-stability
+HYPOTHESIS-ID: m5-a1-vi-toggle-logger-isolation
 
 ## Work unit
 
-Run one same-build concurrent A/B with the qualified silent-audio route:
-control uses `ROGUESQ_VI_ALTERNATE_FIELDS=0` and the alternate arm uses
-`ROGUESQ_VI_ALTERNATE_FIELDS=1`. Common variables are
-`ROGUESQ_AUDIO_UCODE=0`, `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`,
-`ROGUESQ_LLE_SOLO=1`, `ROGUESQ_LOG_PHASE=1`, and
-`ROGUESQ_LOG_VI_CONTEXT_PORT=1`. Create and run a self-contained
-`scratch/agent/run_s2205_vi_toggle_stability_ab.sh` from the repository root.
-It must launch both game instances from `build/`, gate each arm on a target
-640 commit row (`framebuffer=0x00695C00`), then collect until that arm reaches
-title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, exits, or its 180s
-watchdog expires. Kill only with SIGKILL. Report target rows, both later phase
-transitions, `[CRASH]`/`[ABORT]` markers, and each arm's exit/watchdog result.
+Run one same-build concurrent four-arm table with the qualified silent-audio
+route:
 
-The alternation knob stays opt-in during this validation. Do not make it
-default-on, add a port guard, rewrite a task, or change the audio dispatch.
+- `logged-control`: `ROGUESQ_VI_ALTERNATE_FIELDS=0` and
+  `ROGUESQ_LOG_VI_CONTEXT_PORT=1`;
+- `logged-alternate`: `ROGUESQ_VI_ALTERNATE_FIELDS=1` and
+  `ROGUESQ_LOG_VI_CONTEXT_PORT=1`;
+- `quiet-control`: `ROGUESQ_VI_ALTERNATE_FIELDS=0` without the context logger;
+- `quiet-alternate`: `ROGUESQ_VI_ALTERNATE_FIELDS=1` without the context logger.
+
+All four arms use `ROGUESQ_AUDIO_UCODE=0`, `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, and `ROGUESQ_LOG_PHASE=1`.
+Create and run a self-contained
+`scratch/agent/run_s2206_vi_toggle_logger_isolation.sh` from the repository
+root. The runner must launch all four instances from `build/`, require an
+early `640 @ 0x0066A500` phase control in every arm, require a target
+`640 @ 0x00696100` phase in every quiet arm, and require a target committed
+row with `framebuffer=0x00695C00` in every logged arm. Continue each arm until
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, exit, or its 180s
+watchdog expires. Kill only with SIGKILL. Report logged target commit origins,
+quiet target phase origins, later phases, `[CRASH]`/`[ABORT]` markers, and each
+arm's terminal result.
+
+Do not change the VI default, add a port guard, rewrite a task, or change audio
+dispatch. This is a logger-isolation measurement, not a mitigation.
 
 ## Competing hypotheses and discriminator
 
-- H-ViToggleStable: the explained field-selector difference is isolated to
-  the target 640 transition; the alternate arm reaches the second target
-  origin and both arms retain title 1024 and hangar 512 without a new crash
-  family.
-- H-ViToggleRouteRegression: alternation reaches the target origin but changes
-  the later 1024 or 512 route, or increases crash markers versus control.
-- H-ViToggleNonTargetDamage: alternation changes the 320/early-640 state
-  enough that it never reaches the target window, even though the current
-  target-scoped table matches the retail frame/mode tuple.
+- H-ContextLoggerStarvesPostTarget: the capped context logger changes
+  cooperative scheduling or VI publication; quiet arms reach title and hangar
+  while logged arms stall after target 640, with the field toggle still
+  determining the logged commit origin.
+- H-ViToggleLaterEffect: the logger is not the boundary; within each logger
+  state the alternate arm reaches the target but loses a later phase or adds a
+  crash relative to its same-state control.
+- H-PostTargetConsumer: removing the logger does not restore title/hangar;
+  alternate arms can show the sibling target commit/phase, but all arms stop
+  before the later phases, locating the unresolved boundary after VI state
+  selection.
+- H-NonTargetRouteDamage: one or more quiet arms fail the early positive or
+  target phase while its same-build logged counterpart passes, so the current
+  target result is not stable outside the diagnostic path.
 
-The discriminator is one same-build phase table with positive target rows,
-target-origin counts, title and hangar phase counts, crash markers, and exit
-status for both arms. H-ViToggleStable is selected only if the alternate arm
-gets target rows plus both later phases and does not add a crash marker or
-lose the control arm's later phases. H-ViToggleRouteRegression is selected by
-a target-reaching alternate arm with a later-phase loss or new crash marker.
-H-ViToggleNonTargetDamage is selected if the alternate arm's all-width control
-fires but its target rows are absent while the control reaches the target.
-A null is invalid without the per-arm positive-control prefix and target
-phase control in that same log.
+The discriminator is one four-arm table keyed by logger state and field
+selector, with per-arm early/target positive controls, target-origin rows or
+phase origins, title/hangar counts, crash markers, and terminal status.
+H-ContextLoggerStarvesPostTarget requires both quiet arms to reach the later
+phases while both logged arms do not. H-ViToggleLaterEffect requires a
+within-logger-state alternate/control later-phase or crash difference with
+positive controls in both arms. H-PostTargetConsumer requires later-phase loss
+in both logger states despite the alternate target evidence. H-NonTargetRouteDamage
+requires a quiet arm's missing control/target result with its logged counterpart
+positive. A null is invalid without the per-arm controls in that same run.
 
 ## Exact commands
 
 ```sh
 cmake --build build -j8
-zsh scratch/agent/run_s2205_vi_toggle_stability_ab.sh
-rg -n "vi-context-port|\[phase\] vi_width=(640|1024|512)|\[CRASH\]|\[ABORT\]|s2205-summary" \
-  scratch/agent/s2205_vi_toggle_stability_ab/*.log
+zsh scratch/agent/run_s2206_vi_toggle_logger_isolation.sh
+rg -n "vi-context-port|\[phase\] vi_width=(640|1024|512)|\[CRASH\]|\[ABORT\]|s2206-summary" \
+  scratch/agent/s2206_vi_toggle_logger_isolation/*.log
 ```

@@ -104368,7 +104368,39 @@ A/B of the existing opt-in field selector.
 ORIGIN: no wild value or corruption was suppressed or rewritten; the only
 runtime change is a bounded diagnostic and guest mode-pointer plumbing.
 
+## Session 2205 (2026-08-23) — tested VI field alternation through later phases
+
+Built the current checkout with `cmake --build build -j8` and ran a
+self-contained concurrent A/B from `build/` with the silent-audio route:
+control used `ROGUESQ_VI_ALTERNATE_FIELDS=0`, alternate used `=1`, and both
+used `ROGUESQ_AUDIO_UCODE=0`, `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_LOG_PHASE=1`, and
+`ROGUESQ_LOG_VI_CONTEXT_PORT=1`. The runner required the per-arm positive
+prefix and target commit before collecting through the 180-second watchdog;
+completion and timeout kills used SIGKILL.
+
+Both arms passed the context positive control with 8 rows and filled the 256
+row cap. Both committed target origin `0x00696100`; control had
+`target_first=256`, `target_second=0`, while alternate had
+`target_first=128`, `target_second=128`. Each arm showed the early 640 phase
+at `0x0066A500` and the first target phase at `0x00696100`, but neither showed
+a later `1024 @ 0x00790400`, `512 @ 0x006AB400`, or second-origin phase line.
+There were zero `[CRASH]`/`[ABORT]` markers. Both arms ended by the watchdog
+SIGKILL, not by natural exit.
+
+This is single-source port A/B evidence. It refutes
+H-ViToggleNonTargetDamage at the covered target scope because the alternate
+arm reaches the target and commits the sibling origin. It does not select
+H-ViToggleStable or H-ViToggleRouteRegression: the control arm also lost both
+later phases, so the alternate has no within-run later-phase loss relative to
+control. The next discriminator isolates the context logger in a four-arm
+same-run table. No default flip, guard, mitigation, task rewrite, or audio
+dispatch change was made.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+only added and ran a bounded diagnostic harness.
+
 ### Next
 
 See `scratch/agent/NEXT.md`.
-`HYPOTHESIS-ID: m5-a1-vi-field-toggle-stability`.
+`HYPOTHESIS-ID: m5-a1-vi-toggle-logger-isolation`.

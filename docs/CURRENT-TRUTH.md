@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2204
-(2026-08-23); behavioral and source evidence is current through s2204.
+authoritative for exact commands and probe rows. Maintained in Session 2205
+(2026-08-23); behavioral and source evidence is current through s2205.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2204's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2205's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -232,6 +232,20 @@ second ledger.
   this iteration again passed its 10,000-write control and produced 203 joined
   context rows with both target origins. No default flip, guard, mitigation, or
   task rewrite was made.
+- s2205 ran the prescribed same-build concurrent field-selector A/B with the
+  qualified silent-audio route and the port context logger enabled. Both arms
+  passed the positive prefix control (`8` rows), collected the capped `256`
+  context rows, and committed the first target origin `0x00696100`; control
+  committed the sibling origin `0` times and alternate committed it `128`
+  times. Neither arm produced a later `1024 @ 0x00790400` or
+  `512 @ 0x006AB400` phase, and neither emitted `[CRASH]`/`[ABORT]`; both were
+  SIGKILLed by the 180-second watchdog. This single-source port A/B refutes
+  H-ViToggleNonTargetDamage at the covered target scope, but selects none of
+  the three predeclared stability/regression outcomes because the control also
+  lost the later phases. The alternate commit result without a later phase
+  leaves post-target VI presentation/consumption and logger sensitivity open;
+  no default flip, guard, mitigation, task rewrite, or audio dispatch change
+  was made.
 
 ## Active backlog
 
@@ -263,10 +277,14 @@ work items.
    selected by `VI_CURRENT_REG & 1` exactly produced both target origins.
    s2204's target-scoped port table selects H-PortFieldSelector: the port has
    the retail frame/mode candidates and follows the selected field, while the
-   field-0 baseline is the only arm that misses the sibling origin. The next
-   unit is a bounded same-build stability A/B of the existing opt-in field
-   selector across target 640, title 1024, and hangar 512; keep the knob
-   opt-in until that validation completes.
+   field-0 baseline is the only arm that misses the sibling origin. s2205's
+   same-build stability A/B reproduced the target commit split, but both arms
+   stalled before title/hangar under the context logger: control had
+   `target_second=0`, alternate had `target_second=128`, and both had zero
+   later phases and zero crash markers before watchdog SIGKILL. This leaves the
+   predeclared stability/regression discriminator unresolved and makes logger
+   sensitivity a bounded next candidate. The next unit is a same-run four-arm
+   logger-isolation table; keep the field knob opt-in.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
