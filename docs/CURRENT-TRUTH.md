@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2183
-(2026-08-23); behavioral and source evidence is current through s2183.
+authoritative for exact commands and probe rows. Maintained in Session 2184
+(2026-08-23); behavioral and source evidence is current through s2184.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2182 live here
+`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2184 live here
 until the next archive pass.
 
 ## Current state
@@ -269,15 +269,13 @@ until the next archive pass.
   cannot be NaN, last-guest-pc `0x8000834c` as
   the abort site, or last-guest-pc `0x80001b08`
   as the cinematic abort.
-  s2183 selected `H-CoverageFailure` at the image-DMA
-  destination census (`scratch/agent/s2183_audtask_dest_cutscene.txt`):
-  two completing `=1` logs have positive controls (5557 and 4081
-  image joins) and all recorded destinations are title/hangar-only,
-  all recorded destinations are title/hangar-only; the failing s2179 `=1`
-  log reaches 640 but has zero image-DMA rows, so no-DMA is unproven.
-  `H-AudioDmaHitsCutscene` is refuted at the completing-log scope;
-  `H-AudioDmaTitleHangarOnly` remains unselected for all `=1` runs
-  until a failing log has the same positive control. No writer is identified.
+  s2183 selected `H-CoverageFailure` for the older failing log: its 640 phase
+  had no image rows, so no-DMA was unproven. s2184 supplied the
+  control: 5841 joins plus a 640 `0x00696100` phase, zero 640 joins, and zero
+  overlap with the six named words. This
+  selects `H-AudioDmaTitleHangarOnly` for that completing image-arm run and
+  refutes `H-AudioDmaHitsCutscene`, `H-AudioDmaElsewhere`, and coverage
+  failure at this scope.
 
 ### Selected hypotheses (scoped; do not widen)
 
@@ -331,7 +329,8 @@ until the next archive pass.
 | s2181 | `H-PortNoNaNF2OrLater` | same-build `=1`/`=0`: `[vec3-word-ctl]` n=176 at 640 `0x00696100` (16 per site extract/cross/f2/f4/f8/f0/f6/f12/f14/f16/f18); f2 `$a1+4` and later `NAN_CHECK` operands 0 NaN 0 Inf; `w_mem==w_fpr` mismatch=0; first-cross f2 `0x3F5C68DC` / dispatcher `0x3CFEDCBB`; both arms title+hangar; 0 SIGABRT. Abort class missed; not a port-finite claim | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; copyToRAM/CIMG writeback guard; treat this pair as port-finite |
 
 | s2182 | `H-PortNoNaNThisPair` | queued `=1` soak: n=176 at 640 `0x00696100`; 9312 rows, 0 NaN / 0 Inf, title+hangar; post-hangar abort is unaligned PI DMA, not cinematic | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; copyToRAM/CIMG writeback guard |
-| s2183 | `H-CoverageFailure` (image-DMA scope) | offline: completing `=1` logs have image-join positive controls and zero named-word overlap; failing `=1` log has 640 phase but zero image-DMA rows | classify the failing zero as no DMA; select a writer or add a guard |
+| s2183 | `H-CoverageFailure` | completing logs have positive joins/zero named-word overlap; failing log has 640 but no image rows | no writer or guard claim |
+| s2184 | `H-AudioDmaTitleHangarOnly` | same-run 640 control; 5841 joins only at title/hangar; zero six-word overlap | obtain retail writer ground truth |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -437,11 +436,12 @@ active work items.
    `site=f2`); both arms title+hangar. Abort
    class missed. s2182's queued soak later completed title+hangar;
    its post-hangar abort was unaligned PI DMA, not cinematic.
-   s2183's offline image-DMA census found 5557 and 4081 recorded
-   joins on two completing `=1` logs, all title/hangar-only with zero
-   overlap against the six named cutscene words. The failing s2179
-   `=1` log reached 640 `0x00696100` but recorded zero image-DMA rows,
-   selecting `H-CoverageFailure` for that log rather than no-DMA.
+   s2183's two completing logs were title/hangar-only; its failing s2179 log
+   reached 640 but had no image rows, selecting coverage failure only there.
+   s2184 supplied a 640 control plus 5841 joins; an interval parse found
+   zero named-word overlap and every join was
+   title/hangar-only, selecting `H-AudioDmaTitleHangarOnly` for that run.
+   Next ask the retail oracle for writer PCs at six physical words.
    Failure modes remain intermittent
    (`=1` title+hangar in s2162/s2170/s2173/s2175/s2179/s2181;
    matchKeyword SIGBUS in s2167; 640-stall in
@@ -881,11 +881,11 @@ IEEE A/B of f2 plus later `NAN_CHECK`
 operands (`H-PortNoNaNF2OrLater`). s2182 is the
 queued f2 soak (`H-PortNoNaNThisPair`); its
 post-hangar abort is unaligned PI DMA, not cinematic.
-s2183 is the offline image-DMA destination census
-(`H-CoverageFailure` for the failing log): two
-completing `=1` logs have positive controls and
-zero overlap with named cutscene words, while the
-failing log has no image-DMA rows.
+s2183 is the offline image-DMA census: completing
+logs had positive controls/zero named-word overlap;
+the failing log had no image rows. s2184 adds a
+same-run 640 control: 5841 joins, zero 640 joins,
+zero named-word overlap, title/hangar-only.
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
@@ -904,8 +904,9 @@ ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`,
 `H-RetailExecsJal8640`,
 `H-RetailSourceWordFinite`,
 `H-PortNoNaNThisPair`,
-`H-FailingExtractFinite`, `H-PortNoNaNF2OrLater`, or
-`H-CoverageFailure` (image-DMA scope).
+`H-FailingExtractFinite`, `H-PortNoNaNF2OrLater`,
+`H-CoverageFailure` (image-DMA scope), or
+`H-AudioDmaTitleHangarOnly` (one completing run).
 Do not re-flip default-on, S32-address by guess, NULL-skip,
 skip/allow `matchKeywordWithPriority` or the lwc or transform or
 extract jal, disable `NAN_CHECK`, add a wait/slot guard, or land a

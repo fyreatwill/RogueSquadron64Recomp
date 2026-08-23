@@ -1,43 +1,58 @@
-# NEXT work unit (s2184) — instrumented failing image-DMA cinematic run
+# NEXT work unit (s2185) — retail writer census for the six cinematic words
 
-HYPOTHESIS-ID: m5-a1-cinematic-split
+HYPOTHESIS-ID: m5-a1-retail-writer-census
 
 ## Work unit
 
-Run one fresh `ROGUESQ_AUDIO_UCODE=1` soak using the existing
-`ROGUESQ_LOG_ALL=1` audio-task instrumentation, but classify the result only
-if the same log has both the 640 cinematic phase and an image-DMA positive
-control. The s2183 census found two completing logs with title/hangar-only
-joins, while the older failing s2179 log had no image-DMA rows at all.
+Run one 45-second Rice retail-oracle session. The current port run supplied
+the missing image-DMA positive control and selected
+`H-AudioDmaTitleHangarOnly` for that completing image-arm run, so ask the
+independent retail ROM whether it writes any of the six named physical words
+and which guest PCs write them. Do not add a port instrument, rebuild, or land
+a mitigation.
 
-Use the self-contained soak recipe pattern from
-`scratch/agent/soak_queue/done/s2181_image_vec3_f2_20260823-121351.sh`, with a
-new tag `s2184_image_dma_cinematic`, `ROGUESQ_SPIN_YIELD=1`,
-`ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_LOG_ALL=1`, and
-`ROGUESQ_LOG_CUTSCENE_A2_50=1`. Launch through
-`zsh scratch/s73_post_a_scene/run_mission_keys.sh <tag> 30 12`, watchdog for
-180 seconds, and SIGKILL the game and driver. Do not rebuild.
+Exact command from the repository root:
+
+```sh
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --secs 45 --hit-cap 64 --vi-trace \
+  --watch-write 0x0:0x800000 \
+  --watch-write 0x25A580:0x25A584 \
+  --watch-write 0x0CA748:0x0CA74C \
+  --watch-write 0x0C7B0C:0x0C7B10 \
+  --watch-write 0x165E40:0x165E44 \
+  --watch-write 0x0CDB58:0x0CDB5C \
+  --watch-write 0x2231EC:0x2231F0 \
+  --first-watch 0 --first-watch 1 --first-watch 2 --first-watch 3 \
+  --first-watch 4 --first-watch 5 --first-watch 6 \
+  --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3 \
+  --pc-hist-watch 4 --pc-hist-watch 5 --pc-hist-watch 6 \
+  --watch-pc 0x800078EC,0x800A8144,0x80057100 \
+  > scratch/agent/oracle_s2185_cinematic_writer.log 2>&1
+```
+
+Record a compact table in `scratch/agent/s2185_cinematic_writer.txt` with
+the whole-RDRAM control count, each target watch count, target writer-PC
+histogram, and VI transitions. Require the whole-RDRAM watch to fire before
+interpreting any target zero.
 
 ## Competing hypotheses and discriminator
 
-- `H-AudioDmaHitsCutscene`: `[audtask-image-join]` has a positive control and
-  a 640 / `0x00696100` or `0x00696600` row whose `[dest,dest+len)` overlaps
-  one of the six named cutscene physical words.
-- `H-AudioDmaTitleHangarOnly`: positive-control joins exist, but all are
-  1024 / `0x00790400` or 512 / `0x006AB400`, with no 640 image join.
-- `H-AudioDmaElsewhere`: positive-control joins exist at 640, but no interval
-  overlaps a named cutscene word.
-- `H-CoverageFailure`: the run reaches 640 but has zero image joins anywhere;
-  this is an instrumentation/coverage result, not a no-DMA result.
+- `H-RetailWritesNamedWords`: one or more target watches fire with the whole-
+  RDRAM control present; the writer-PC histogram names a legitimate retail
+  producer, and known producer PCs show their live VI width/origin.
+- `H-RetailDoesNotWriteNamedWords`: whole-RDRAM control fires and the retail
+  route reaches 640, but all six target watches remain zero.
+- `H-RetailWritesOnlyNonCinematic`: target watches fire, but the writer
+  histogram and same-run VI transitions place them outside the 640 route.
+- `H-OracleCoverageFailure`: whole-RDRAM control or Rice/640 coverage is
+  absent; classify the run as coverage-only and make no writer claim.
 
-The discriminating measurement is one same-run table of image-join counts by
-`(phase,width,origin)` plus interval overlap against:
-`0x25A580`, `0x0CA748`, `0x0C7B0C`, `0x165E40`, `0x0CDB58`, and `0x2231EC`.
-Require `[audtask-image-join] n>0` as the positive control before selecting
-any destination hypothesis. If the run fails before title/hangar, report
-coverage separately and do not infer a cinematic writer.
-
-Do not S32-address, NULL-skip, re-flip default-on, skip/allow the lwc,
-transform, or extract jal, disable `NAN_CHECK`, or add a copyToRAM/CIMG/DMA
-writeback guard. If an interval overlaps, identify its writer before any
-mitigation.
+The discriminator is one same-run table of whole-RDRAM hits, six target-watch
+hits, target writer-PC histograms, and VI transitions. If target writes occur,
+identify the writer and whether the value is legitimate before proposing any
+port-side change. Do not add a copyToRAM/CIMG/DMA guard, disable `NAN_CHECK`,
+skip/allow the cinematic loads, or re-flip the image arm default.

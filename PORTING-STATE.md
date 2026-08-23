@@ -103621,3 +103621,39 @@ Soak enqueued:
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2184 (2026-08-23) — image DMA is title/hangar-only on a completing image run
+
+Ran the no-build recipe
+`scratch/agent/soak_queue/s2184_image_dma_cinematic.sh` with
+`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_LOG_ALL=1`, and
+`ROGUESQ_LOG_CUTSCENE_A2_50=1`; the recipe launched
+`zsh scratch/s73_post_a_scene/run_mission_keys.sh s2184_image_dma_cinematic 30 12`,
+watched 180 seconds, and SIGKILLed the game and driver. Log:
+`scratch/s73_post_a_scene/s2184_image_dma_cinematic/run.log`.
+
+Positive controls in the same run: one phase transition to 640 at
+`0x00696100` at 7.4s, 5841 `[audtask-image-join]` rows, and 5846
+`[audtask-dma-range]` rows. The independent phase-keyed join census was:
+3210 at phase 8 / `1024 @ 0x00790400`, 1792 at phase 10 / `512 @ 0x006AB400`,
+and 839 at phase 12 / `512 @ 0x006AB400`; zero image joins at width 640,
+origin `0x00696100` or `0x00696600`. A separate Perl interval parse of every
+join found zero overlap with physical `0x25A580`, `0x0CA748`, `0x0C7B0C`,
+`0x165E40`, `0x0CDB58`, or `0x2231EC`.
+
+The run reached title and hangar. Its later crash was the known unaligned PI
+DMA path after the hangar (`last-guest-pc=0x80001b08`); it was not a
+cinematic failure and was not used to classify the image joins. This selects
+`H-AudioDmaTitleHangarOnly` for this completing image-arm run and refutes
+`H-AudioDmaHitsCutscene`, `H-AudioDmaElsewhere`, and s2183's
+`H-CoverageFailure` classification at this same-run scope. It does not
+identify the writer responsible for intermittent cinematic failures.
+
+ORIGIN: diagnostic-only image-DMA census; no guest or host value was changed.
+The next work unit asks the retail oracle for writer PCs at the six physical
+words before adding another port instrument.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-writer-census`.
