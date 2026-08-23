@@ -1,0 +1,77 @@
+s2177 retail oracle exec of dispatcher extract-frame jal / vec3Cross
+HYPOTHESIS-ID: m5-a1-cinematic-split
+Rice 45s, no game rebuild.
+
+command (from scratch/agent/NEXT.md):
+  tools/oracle/build/rs64_oracle \
+    --core .../libmupen64plus.dylib \
+    --rom .../rogue_squadron.z64 \
+    --video .../mupen64plus-video-rice.dylib \
+    --secs 45 --hit-cap 64 \
+    --watch-write 0x0:0x800000 \
+    --watch-pc 0x800A8640,0x80059D18,0x80059F10,0x80019548 \
+    --first-watch 0 --vi-trace
+log: scratch/agent/oracle_s2177_vec3cross_pcs.log
+exit 0; 45.0s wall, 2645 VI (~44.1s emulated)
+
+positive controls (same log)
+- [gpr-ctl] pc=0x8002b608 v0=0x806f04e7 s1=0x806dd000 a0=0x806dd000 a2=0x00023000 flags=0x5
+- watch 0 write callbacks=10000; removal rc=0; watch index 1 remains armed
+- [vi] WIDTH 320 -> 640 origin=0x0066a500 at t=2.4s vi=99
+- [vi] origin=0x00696100 width=640 at t=7.4s vi=403 (port cinematic origin)
+- later 640 origins include the pair 0x00696600 (s2165 cinematic double-buffer)
+
+lifetime
+  done: 68982 hits, 2645 VI
+  write [0x0,0x800000): 10000
+  pc 0x800A8640: 6183
+  pc 0x80059D18: 7060   extractOrthonormalFrameFromStruct
+  pc 0x80059F10: 12944  orthonormalizeFrame
+  pc 0x80019548: 32795  vec3Cross
+  execution watch hits: 58982
+
+exec-prev (jal actually transfers)
+  0x800A8640 prev=0x800A863C n=6183
+  0x80059D18 prev=0x800A8640 n=6183   dispatcher jal
+  0x80059D18 prev=0x800A7064 n=876    other caller
+  0x80059D18 prev=0x800A9160 n=1
+  0x80059F10 prev=0x80059D64 n=7058   extract -> orthonormalize
+  0x80019548 prev=0x80059F3C n=12943  first orthonormalizeFrame cross
+  0x80019548 prev=0x80059F54 n=12943  second orthonormalizeFrame cross
+  (other vec3Cross callers: 0x80042378 n=5252, 0x8001D328 n=1416, ...)
+
+logged EXEC (n=64, all width=640)
+  0x800A8640 n=10  origins 0x00696600=9, 0x00696100=1
+                   dest $a0=0x80165E40 10/10; $v0=0x4 10/10
+                   (v0 is the flag compare immediate from 0x800A862C)
+                   cinematic sample t=10.7 prev=0x800A863C
+                     s1=0x0000000d a0=0x80165e40 a2=0x800ca678
+  0x80059D18 n=12  prev 0x800A8640=10, 0x800A7064=2
+                   cinematic from jal: a0=0x80165e40 a2=0x800ca678
+  0x80059F10 n=12  prev=0x80059D64 12/12
+  0x80019548 n=30  prev 0x80059F3C=12, 0x80059F54=12, 0x80042378=6
+                   cinematic first-cross (prev=0x80059F3C):
+                     a0=0x80165df0 a2=0x80165e4c
+                     ($a2 = dest+0xC; $a2+8 = dest+0x14 = source $a1+0x20)
+
+MIPS (not a new measurement; names the consumed word)
+  jal 0x800A8640: $a0=sp+0x18; delay-slot $a1 += 0x88
+    ($a1 was $s0 + MEM_W($s2, 0x1900) after flag check == 4)
+  extract 0x80059D48: lwc1 $f0, 0x20($a1); swc1 $f0, 0x14($a0)
+  first vec3Cross 0x80059F3C: $a2=dest+0xC; f10 = lwc 0x8($a2) = dest+0x14
+  port SIGABRT is NAN_CHECK(f10) at 0x80019558 (funcs_4.c:33371)
+
+selected: H-RetailExecsJal8640
+refuted:  H-RetailSkipsJal8640, H-CoverageFailure
+
+Oracle does not print FPRs or $a1; no NaN/finite claim and no
+source-pointer claim from this run.
+
+ORIGIN: not a mitigation. Retail executes this jal at cinematic
+640 with dest $a0=0x80165E40. Legitimate path (n=6183).
+Do not S32-address, NULL-skip, re-flip default-on, skip/allow
+the lwc / transform / extract jal, disable NAN_CHECK, or add a
+wait/slot guard. Do not treat the jal as port-only.
+
+Next: retail word bits at $a1+0x20 / first-cross $a2+8
+(oracle currently omits $a1 and memory words).

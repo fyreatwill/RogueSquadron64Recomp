@@ -103318,3 +103318,55 @@ jal, or add a wait/slot guard.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2177 (2026-08-23) — retail executes dispatcher extract-frame jal at cinematic 640
+
+Rice 45s oracle, no game rebuild. Table:
+`scratch/agent/s2177_vec3cross_pcs.txt`.
+Log: `scratch/agent/oracle_s2177_vec3cross_pcs.log`.
+Command from `scratch/agent/NEXT.md` (s2177):
+`--watch-write 0x0:0x800000 --watch-pc
+0x800A8640,0x80059D18,0x80059F10,0x80019548
+--first-watch 0 --vi-trace`. Exit 0; 45.0s wall,
+2645 VI (~44.1s emulated).
+
+Positive controls (same log): `[gpr-ctl]`
+pc=`0x8002b608`; watch 0 write callbacks=10000
+removal rc=0; `[vi]` WIDTH 320->640 origin
+`0x0066a500` at t=2.4s vi=99; `[vi]` origin
+`0x00696100` width=640 at t=7.4s vi=403.
+
+Lifetime exec: `0x800A8640` n=6183 (all prev
+`0x800A863C`); `0x80059D18` n=7060 of which
+prev=`0x800A8640` n=6183 (dispatcher jal
+transfers); `0x80059F10` n=12944 (7058 from
+extract `0x80059D64`); `0x80019548` n=32795
+(12943+12943 from orthonormalizeFrame
+`0x80059F3C`/`0x80059F54`). Other extract
+caller `0x800A7064` n=876 is not the abort site.
+
+Logged EXEC n=64, all width=640. Jal `0x800A8640`
+10/10 cinematic (1 at origin `0x00696100`, 9 at
+pair `0x00696600`); dest `$a0=0x80165E40` 10/10;
+`$v0=0x4` is the flag-compare immediate from
+`0x800A862C`. Cinematic first-cross
+(prev=`0x80059F3C`) `$a2=0x80165E4C` = dest+0xC
+so `$a2+8` = dest+0x14 = extract `$a1+0x20`.
+
+This selects `H-RetailExecsJal8640` and refutes
+`H-RetailSkipsJal8640` and `H-CoverageFailure`.
+Oracle does not print FPRs or `$a1`; no
+NaN/finite claim and no source-pointer claim.
+
+ORIGIN: not a mitigation. Retail executes this jal
+at cinematic 640 with dest `$a0=0x80165E40`
+(n=6183). Legitimate path. Do not disable
+`NAN_CHECK`, S32-address, NULL-skip, re-flip
+default-on, skip/allow the lwc or transform or
+extract jal, add a wait/slot guard, or treat the
+jal as port-only.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.
