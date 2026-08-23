@@ -103943,3 +103943,28 @@ ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-writer-census`.
+
+## Session 2194 (2026-08-23) — individual route logging categories did not recover the second origin
+
+Ran `zsh scratch/agent/run_s2194_m5_log_category_ab.sh` with the qualified
+image/LLE recipe in four concurrent arms: quiet, slot-dispatch only,
+event-wiring only, and audio-return only. The writer control fired 30/29/30/29
+times. Every arm reached 640 origins `0x0066A500` and `0x00696100`, and each
+enabled category emitted positive rows: 8,192 slot-dispatch, 130 event-wiring,
+and 266 audio-return. None reached 640 origin `0x00696600`.
+
+The observed first-origin writer cells were targets 1, 3, 4, 5, and 6 in all
+arms; target 2 remained absent. Each arm emitted a crash marker at
+`slotDispatcherIter+3508` with last guest PC `0x80022160`. This selects
+`H-NoIndividualCategoryBoundary`, rules out the three individual category
+boundary hypotheses and coverage failure, and leaves pairwise logging
+interaction or another source open. No guest value, branch, mitigation, task
+field, or audio default changed. Full logs are in
+`scratch/agent/s2194_m5_log_category_ab/`.
+
+ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-writer-census`.

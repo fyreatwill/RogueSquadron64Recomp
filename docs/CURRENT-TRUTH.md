@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2193
-(2026-08-23); behavioral and source evidence is current through s2193.
+authoritative for exact commands and probe rows. Maintained in Session 2194
+(2026-08-23); behavioral and source evidence is current through s2194.
 
 The detailed s2164–s2192 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43. This file is the compact
@@ -99,6 +99,17 @@ operational state, not a second ledger.
   This selects `H-SecondOriginStillAbsent`, refutes the planned
   `H-NarrowRouteLogBoundary` and the specific “broad arm remains live” form of
   `H-LoggingOnlyThroughput`, and leaves individual category effects unresolved.
+- s2194 isolated the three remaining route log categories into quiet, slot,
+  event, and audio arms. Writer controls fired 30/29/30/29 times; all four
+  arms reached 640 origins `0x0066A500` and `0x00696100`, and each optional
+  category control was positive in its arm (8,192 slot-dispatch, 130
+  event-wiring, and 266 audio-return rows). None reached `0x00696600`.
+  Each arm produced the same `slotDispatcherIter+3508` crash boundary with
+  guest PC `0x80022160`. At the first origin, all arms observed target cells
+  1, 3, 4, 5, and 6; target 2 remained absent. This selects
+  `H-NoIndividualCategoryBoundary`, refutes the slot/event/audio individual
+  boundary hypotheses and coverage failure, and leaves pairwise logging
+  interaction or another source open.
 
 ## Active backlog
 
@@ -108,15 +119,15 @@ work items.
 1. **M5 A1 recover the second-origin port writer parity census; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
-   H-PortSecondOriginAbsent, and s2192–s2193 showed that broad and grouped
-   route logging change failure details without reaching `0x00696600`. The
-   next discriminator is a four-arm, phase-gated category-isolation test with
-   the same writer controls: quiet, slot-dispatch only, event-wiring only,
-   and audio-return only. If one category reaches `0x00696600` or remains
-   alive while quiet crashes, that category is a route-boundary candidate; if
-   all four miss the second origin, no individual category explains the
-   grouped result. Do not add a port guard, mitigation, task rewrite, or
-   audio default flip.
+   H-PortSecondOriginAbsent, and s2192–s2194 showed that broad, grouped, and
+   individual route logging change details without reaching `0x00696600`.
+   The next discriminator is a four-arm, phase-gated pairwise test with the
+   same writer controls: quiet, slot+event, slot+audio, and event+audio. If a
+   pair reaches `0x00696600` or changes the crash boundary while quiet does
+   not, that interaction is a route-boundary candidate; if all pairs miss it,
+   pairwise logging interaction is not sufficient and another source remains
+   open. Do not add a port guard, mitigation, task rewrite, or audio default
+   flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -246,6 +257,11 @@ remain in the append-only ledger. Operationally:
   boundary. Both arms missed the second origin with positive controls; the
   different quiet crash/noisy timeout outcomes identify a logging-sensitive
   failure mode, not a writer defect or permission to add a mitigation.
+- s2194's category-isolation A/B is not evidence that any one optional log
+  category is the route boundary. All four arms passed their controls and
+  first-origin phases, missed the second origin, and converged on the same
+  crash boundary; target-writer sparsity remains an observation, not a reason
+  to guard or rewrite a guest store.
 
 ## Evidence ledger summary
 
