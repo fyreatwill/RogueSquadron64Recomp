@@ -44,6 +44,10 @@ control cannot silence them.
 rows to live 640-width VI origins. This keeps a high-frequency boot watch
 from changing the driven route while collecting target-phase GPR returns.
 
+`--mode-dump-pc A` selects a watched execution PC and prints each observed
+640-wide mode descriptor's pointer plus both field origins and yScale values.
+It is bounded to 256 printed rows and is intended for use with `--watch-pc`.
+
 For a memory watch after the global `--hit-cap` has gone silent,
 `--first-watch N` prints the first hit for watch index N and
 `--pc-hist-watch N` prints a bounded writer-PC histogram for that watch at

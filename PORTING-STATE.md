@@ -104191,3 +104191,45 @@ value is retail's `osViGetCurrentField` return, not a port-side mitigation.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-vi-origin-source`.
+
+## Session 2201 (2026-08-23) — retail mode descriptors do not explain target origins
+
+Added the regeneration-independent oracle option `--mode-dump-pc A` in
+`tools/oracle/rs64_oracle.c`. It filters an already-watched execution PC to
+640-wide descriptors, reads the mode pointer and both field descriptor
+origin/yScale pairs, and caps printed rows at 256. The oracle README now
+documents the option. No port, runtime, audio, or VI alternation code changed.
+
+Built once with `bash tools/oracle/build.sh`, then ran one 45-second retail
+collection from the repository root with the whole-RDRAM positive control,
+`--watch-pc 0x800352D0,0x80035500`, target phase logging for
+`0x00696100,0x00696600`, the new mode dump at `0x800352D0`, VI trace, and the
+existing seven-start schedule. The positive-control watch reached 10,000
+callbacks and was removed while both target 640 origins appeared in the same
+run. The run completed with 2,676 VI events, 13 `osViSetMode` hits, 1,593
+`osViSwapBuffer` hits, and seven mode-dump rows with zero overflow.
+
+Every printed 640 descriptor had `fldRegs[0].origin=0x500` and
+`fldRegs[1].origin=0xA00`; yScale pairs varied between `0x02000800`,
+`0x00000612`, and `0x02000612`. The target-origin swap table retained
+`a0_phys=0x0062B800` at `0x00696100` (36 rows from `0x8001BE24`, 37 from
+`0x80019B14`) and at `0x00696600` (16 rows from `0x8001BE24`). Thus no
+observed 640 mode descriptor supplies either absolute target origin, selecting
+H-SwapBufferSource and refuting H-FieldDescriptorSource at the pre-swap table
+scope. This is not yet a causal post-swap result: the debugger samples the
+current VI origin before `osViSwapBuffer` commits the next state. The next
+probe must join each swap argument to the following VI callback before a port
+change is considered.
+
+This rules out descriptor coverage failure and the specific claim that the
+observed mode field origins directly equal the target origins. It does not
+rule out those fields participating in the following commit with a base or
+state selected after the breakpoint.
+
+ORIGIN: the only code change is a bounded, retail-only oracle diagnostic; no
+wild value was skipped, guarded, or rewritten.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-post-swap-origin-correlation`.

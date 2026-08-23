@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2200
-(2026-08-23); behavioral and source evidence is current through s2200.
+authoritative for exact commands and probe rows. Maintained in Session 2201
+(2026-08-23); behavioral and source evidence is current through s2201.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2200's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2201's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -180,6 +180,18 @@ second ledger.
   H-RetailField0Target. The s2199 port knob remains a route-recovery
   diagnostic, not retail ground truth; the next discriminator is the retail
   mode/field-descriptor or swap-buffer source of the second origin.
+- s2201's single-run retail descriptor/source census passed the whole-RDRAM
+  control (10,000 callbacks, then removal), repeated both target 640 origins,
+  and collected 13 `osViSetMode` executions plus 1,593 `osViSwapBuffer`
+  executions. All seven printed 640-wide descriptors fit the cap and had
+  `fldRegs[0].origin=0x500` and `fldRegs[1].origin=0xA00`; their yScale pairs
+  varied, but no descriptor supplied either absolute target origin. Target
+  swap rows retained `$a0=0x0062B800` at `0x00696100` and `0x00696600`
+  (36 and 16 rows, respectively; the first origin also had 37 rows from the
+  second caller). At the pre-swap observation scope this selects
+  H-SwapBufferSource and refutes H-FieldDescriptorSource, but the row reads
+  the current VI origin before `osViSwapBuffer`; a causal post-swap match is
+  still required before changing the port.
 
 ## Active backlog
 
@@ -200,11 +212,14 @@ work items.
    `0x00696100`; s2199's same-built A/B showed that toggling the host
    `ViState::field` after each VI commit restores repeated commits and screen
    consumption at both target origins. s2200's independent target-phase watch
-   found `osViGetCurrentField` returns only field 0 at both retail origins, so
-   the next discriminator is the retail mode/field-descriptor and
-   swap-buffer source of the second origin. Keep the alternation knob opt-in
-   and do not add a port guard, mitigation, task rewrite, or audio default
-   flip.
+   found `osViGetCurrentField` returns only field 0 at both retail origins.
+   s2201 found all observed 640 mode descriptors use field origins `0x500` and
+   `0xA00`, while same-run target-origin swap rows carry `$a0=0x62B800`.
+   This selects H-SwapBufferSource only for the pre-swap table and leaves the
+   post-swap origin producer open. Next, correlate each target-phase swap
+   argument with the following VI commit and the active mode descriptor.
+   Keep the alternation knob opt-in and do not add a port guard, mitigation,
+   task rewrite, or audio default flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -357,6 +372,11 @@ remain in the append-only ledger. Operationally:
   only `v0=0`. The knob proves that selecting the sibling VI descriptor can
   recover the route; it does not identify the retail writer or selector of
   that sibling descriptor.
+- s2201's descriptor/source result is not a causal proof that swap-buffer
+  arguments select the target origins. The oracle's `VI_ORIGIN` value is
+  sampled at the `osViSwapBuffer` breakpoint before that call's state is
+  committed; the next experiment must join the swap argument to the following
+  VI callback before treating the descriptor mismatch as a port explanation.
 
 ## Evidence ledger summary
 
@@ -365,7 +385,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2200's VI-boundary work is recorded in the ledger.
+s2198–s2201's VI-boundary work is recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

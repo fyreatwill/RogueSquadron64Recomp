@@ -52,6 +52,7 @@
 #define MAX_POST_VALUE_SAMPLES 256
 #define MAX_POST_VALUE_ROWS_PER_PC 16
 #define MAX_VI_SWAP_PHASE_ROWS 256
+#define MAX_MODE_DUMP_ROWS 256
 #define VI_ORIGIN_ADDR 0xA4400004u
 #define VI_WIDTH_ADDR  0xA4400008u
 #define VI_SWAP_PC 0x80035500u
@@ -171,6 +172,12 @@ static long g_exec_logged;
 #define MAX_PC_PHASE_LOG_ORIGINS 8
 static uint32_t g_pc_phase_log_origin[MAX_PC_PHASE_LOG_ORIGINS];
 static int g_n_pc_phase_log_origin;
+static uint32_t g_mode_dump_pc;
+static int g_mode_dump_enabled;
+static long g_mode_dump_rows;
+static long g_mode_dump_overflow;
+
+static uint32_t debug_rdram_addr(uint32_t physical);
 
 /* GPR file is int64_t[32] (r4300_regs). Print the 32-bit guest view. */
 static uint32_t gpr32(int idx)
@@ -267,6 +274,30 @@ static void count_vi_swap_phase(uint32_t origin, uint32_t prev_pc,
     } else {
         g_vi_swap_phase_overflow++;
     }
+}
+
+static void dump_mode_descriptor(uint32_t pc)
+{
+    uint32_t mode_ptr = gpr32(4);
+    uint32_t mode_phys = mode_ptr & 0x1FFFFFFFu;
+    uint32_t mode_width = pDebugMemRead32(debug_rdram_addr(mode_phys + 0x08));
+
+    if (mode_width != 640)
+        return;
+    g_mode_dump_rows++;
+    if (g_mode_dump_rows > MAX_MODE_DUMP_ROWS) {
+        g_mode_dump_overflow++;
+        return;
+    }
+    printf("[mode-dump] pc=0x%08x mode_ptr=0x%08x width=%u "
+           "fld0.origin=0x%08x fld0.yScale=0x%08x "
+           "fld1.origin=0x%08x fld1.yScale=0x%08x\n",
+           pc, mode_ptr, mode_width,
+           pDebugMemRead32(debug_rdram_addr(mode_phys + 0x28)),
+           pDebugMemRead32(debug_rdram_addr(mode_phys + 0x2C)),
+           pDebugMemRead32(debug_rdram_addr(mode_phys + 0x3C)),
+           pDebugMemRead32(debug_rdram_addr(mode_phys + 0x40)));
+    fflush(stdout);
 }
 
 static void count_writer_pc(int watch, uint32_t pc)
@@ -568,6 +599,10 @@ static void dbg_update(unsigned int pc)
                             (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC),
                             gpr32(4) & 0x1FFFFFFFu);
     }
+
+    if ((flags & M64P_BKP_FLAG_EXEC) && g_mode_dump_enabled &&
+        pc == g_mode_dump_pc)
+        dump_mode_descriptor(pc);
 
     if (!g_gpr_ctl_printed) {
         g_gpr_ctl_printed = 1;
@@ -1074,6 +1109,7 @@ static void usage(void)
         "  --hit-cap N           log at most N hits, then count silently (default 200)\n"
         "  --detail-watch N      always log hits for watch index N\n"
         "  --pc-phase-log ORIGIN log watched execs only at 640-width VI origin (repeatable)\n"
+        "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
         "  --first-watch N       log the first hit for watch index N\n"
         "  --pc-hist-watch N     summarize writer PCs for watch index N (repeatable)\n"
         "  --pc-hist-phase ORIGIN  add a 640-width writer histogram bucket (repeatable)\n"
@@ -1153,6 +1189,10 @@ int main(int argc, char **argv)
                  tok && g_n_pc_phase_log_origin < MAX_PC_PHASE_LOG_ORIGINS;
                  tok = strtok_r(NULL, ",", &save))
                 g_pc_phase_log_origin[g_n_pc_phase_log_origin++] = (uint32_t)strtoul(tok, NULL, 0);
+        }
+        else if (!strcmp(argv[i], "--mode-dump-pc") && i + 1 < argc) {
+            g_mode_dump_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
+            g_mode_dump_enabled = 1;
         }
         else if (!strcmp(argv[i], "--first-watch") && i + 1 < argc)
             g_first_watch = atoi(argv[++i]);
@@ -1413,6 +1453,10 @@ int main(int argc, char **argv)
         printf("[oracle] vi-swap-phase origin=0x%08x prev_pc=0x%08x a0_phys=0x%08x n=%ld\n",
                g_vi_swap_phase[i].origin, g_vi_swap_phase[i].prev_pc,
                g_vi_swap_phase[i].a0_phys, g_vi_swap_phase[i].n);
+    if (g_mode_dump_enabled)
+        printf("[oracle] mode-dump-pc=0x%08x width=640 rows=%ld/%d overflow=%ld\n",
+               g_mode_dump_pc, g_mode_dump_rows, MAX_MODE_DUMP_ROWS,
+               g_mode_dump_overflow);
     /* Materialise the config so the input mapping is inspectable. Without
      * this nothing is ever written and the key->button mapping the presses
      * rely on is invisible in-memory defaults - i.e. an unverifiable
