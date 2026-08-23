@@ -4052,3 +4052,20 @@ selects `H-PortOriginMismatch` at the covered origin. The recipe exited before
 port origin `0x00696600`; those cells are uncovered, not null, and remain the
 next work unit. No port value, branch, mitigation, task rewrite, or audio
 default changed. Full table: `scratch/agent/s2190_m5_writer_parity.txt`.
+
+### Second-origin port coverage boundary (s2191)
+
+s2191 reran the writer-parity helper without menu keys, retaining the same
+positive controls. The helper control fired 29 times and the phase gate saw
+640 at `0x0066A500` and `0x00696100`; no `0x00696600` phase was observed.
+At `0x00696100`, the six target row counts were `1/0/2/54/0/1` in target
+order `0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC`. The sparse
+writers were target 1=`0x80057100`, target 3=`0x800078EC`/`0x800A8144`,
+and target 6=`0x80057100`; target 4 remained broad. The game then aborted in
+`get_function(0)` from `slotDispatcherIter` after the first-origin phase,
+with last guest PC `0x80007904`.
+
+This selects `H-PortSecondOriginAbsent`: the controls prove the instrument
+and first 640 phase ran, but all six second-origin cells are uncovered. It
+does not establish second-origin parity or explain the route boundary. Full
+table: `scratch/agent/s2191_m5_second_origin.txt`.

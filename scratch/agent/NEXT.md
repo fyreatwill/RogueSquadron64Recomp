@@ -1,45 +1,47 @@
-# NEXT work unit (s2191) — complete the second-origin port writer census
+# NEXT work unit (s2192) — test logging cadence as the second-origin boundary
 
 HYPOTHESIS-ID: m5-a1-retail-writer-census
 
 ## Work unit
 
-Run the already-built binary with the s2190 writer probe, without menu keys,
-so the passive route can reach the later 640 B-frontend origin
-`0x00696600`. The s2190 positive control and covered-origin rows remain the
-control; do not add a guard, task rewrite, mitigation, or audio-default flip.
+Run the two-arm, phase-gated schedule test from the repo root. The arms use
+the same qualified image/LLE recipe and the same writer probe; the only
+difference is broad `ROGUESQ_LOG_ALL=1` in `noisy` versus unset in `quiet`.
+The helper control must fire in each arm. The watchdog kills each arm with
+SIGKILL after the second-origin phase plus 15 seconds, on a 150-second
+deadline, and exits nonzero if either log contains a crash marker.
 
 Exact command:
 
 ```sh
-zsh scratch/agent/run_s2191_m5_second_origin.sh
+zsh scratch/agent/run_s2192_m5_log_all_ab.sh
 ```
 
-After it exits, parse the complete two-origin table into
-`scratch/agent/s2191_m5_second_origin.txt`:
+Parse both complete tables after the run:
 
 ```sh
-grep -a '\[m5-writer-parity\]' scratch/agent/s2191_m5_second_origin/run.log
-grep -a '\[phase\] vi_width=640' scratch/agent/s2191_m5_second_origin/run.log
+for arm in noisy quiet; do
+  echo "=== $arm ==="
+  grep -a '\[m5-writer-parity-control\]' "scratch/agent/s2192_m5_log_all_ab/$arm.log" | wc -l
+  grep -a '\[phase\] vi_width=640' "scratch/agent/s2192_m5_log_all_ab/$arm.log"
+  grep -a '\[m5-writer-parity\]' "scratch/agent/s2192_m5_log_all_ab/$arm.log"
+done
 ```
-
-The table must include all six targets at both `0x00696100` and
-`0x00696600`, with unique guest PCs and the positive-control count. A missing
-second-origin phase is coverage-limited, not a null.
 
 ## Competing hypotheses and discriminator
 
-- H-PortRetailParitySecond: at `0x00696600`, sparse port PCs match s2189
-  retail: target 1=`0x80018F5C`, target 2=`0x80018F60`, target
-  3=`0x800078EC`/`0x800A8144`, target 5=`0x800078EC`/`0x80018F60`, and
-  target 6=`0x80057100`; target 4 remains broad.
-- H-PortOriginMismatchConfirmed: any sparse PC set differs from retail, or
-  a writer appears under the opposite origin bucket.
-- H-PortSecondOriginAbsent: the route has a positive 640 control but exits or
-  times out before `0x00696600`, leaving the second-origin cells uncovered.
-- H-PortCoverageFailure: the helper control or phase control does not fire,
-  so the run cannot classify writer parity.
+- H-LogCadenceBoundary: quiet reaches `640 @ 0x00696600` while noisy exits
+  after `0x00696100`; broad logging cadence is the route boundary.
+- H-LoggingIndependentBoundary: both arms pass controls and reach the first
+  640 phase but stop before `0x00696600` with the same `get_function(0)` /
+  `slotDispatcherIter` boundary; broad logging is not the discriminator.
+- H-PhaseReachableBoth: both arms reach `0x00696600`; logging is not the
+  boundary and the two complete six-target origin tables select the writer
+  parity result.
+- H-CoverageFailure: either arm lacks its writer-control or 640 phase control;
+  reject the pair rather than treating missing rows as nulls.
 
-The discriminator is one same-run table of all six targets at both 640
-origins. It selects second-origin parity, confirms an origin-specific port
-mismatch, identifies a route boundary, or rejects the run as uncovered.
+The discriminator is one same-iteration table per arm containing positive
+control count, both 640 origins, the crash/last-guest-PC outcome, and all six
+target writer-PC sets at each origin. Do not add a guard, mitigation, task
+rewrite, or audio-default flip.

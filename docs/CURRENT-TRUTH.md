@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2190
-(2026-08-23); behavioral and source evidence is current through s2190.
+authoritative for exact commands and probe rows. Maintained in Session 2191
+(2026-08-23); behavioral and source evidence is current through s2191.
 
-The detailed s2164–s2190 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §§43–44. This file is the compact
+The detailed s2164–s2191 chain is archived in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43. This file is the compact
 operational state, not a second ledger.
 
 ## Current state
@@ -73,20 +73,31 @@ operational state, not a second ledger.
   the covered origin. The route exited before port origin `0x00696600`, so
   those six cells remain uncovered rather than null. This is two-line
   port/oracle evidence and authorizes no guard, task rewrite, or default flip.
+- s2191's same-built no-menu retry passed the writer control (29 records) and
+  the phase control (640 at `0x0066A500` and `0x00696100`), but still produced
+  no `0x00696600` phase. It aborted in `get_function(0)` from
+  `slotDispatcherIter` after the first-origin phase. First-origin target rows
+  were `1/0/2/54/0/1`; all six second-origin cells are uncovered. This selects
+  H-PortSecondOriginAbsent, rules out H-PortCoverageFailure for this run, and
+  authorizes no writer guard, task rewrite, or audio default flip.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 A1 complete the second-origin port writer parity census; blocks
+1. **M5 A1 recover the second-origin port writer parity census; blocks
    default-on.**
-   s2190 selected H-PortOriginMismatch at port `0x00696100`: sparse target
-   1/3/5/6 writers disagree with retail, while target 4 is broad. The
-   qualified recipe exited before `0x00696600`, so run one phase-gated
-   follow-up that reaches that origin and fills the six missing cells against
-   the s2189 retail matrix. Do not add a port guard, mitigation, task rewrite,
-   or audio default flip.
+   s2190 selected H-PortOriginMismatch at port `0x00696100`, and s2191
+   independently selected H-PortSecondOriginAbsent: controls fired, then
+   `get_function(0)` in `slotDispatcherIter` ended the route before
+   `0x00696600`. Run a phase-gated two-arm schedule test that keeps the
+   writer control in both arms while changing only broad `ROGUESQ_LOG_ALL`:
+   if the quiet arm reaches `0x00696600`, logging cadence is the route
+   boundary; if both stop after `0x00696100`, the boundary is independent of
+   that logging; if only one arm loses its controls, reject the pair as
+   coverage failure. Do not add a port guard, mitigation, task rewrite, or
+   audio default flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -218,8 +229,8 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024 and
 spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
-s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2190
-pointer, failure, image-DMA, and writer-parity archive is §§43–44. Exact commands, counts,
+s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2191
+pointer, failure, image-DMA, and writer-parity archive is §43. Exact commands, counts,
 failed retries, and session headings remain in `PORTING-STATE.md`.
 
 Selected hypotheses must not be widened from single-source or single-arm
