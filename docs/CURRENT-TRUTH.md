@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2181
-(2026-08-23); behavioral and source evidence is current through s2181.
+authoritative for exact commands and probe rows. Maintained in Session 2183
+(2026-08-23); behavioral and source evidence is current through s2183.
 
 This file is intentionally compact. Archives: s2080–s2108 in
-`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2181 live here
+`PROJECT-OVERVIEW.md` §40; s2110–s2163 in §§41–42. s2164–s2182 live here
 until the next archive pass.
 
 ## Current state
@@ -240,6 +240,23 @@ until the next archive pass.
   (16 per site including `site=f2`); both
   arms title+hangar. Abort class missed;
   do not conclude port-finite.
+  s2182 selected
+  `H-PortNoNaNThisPair`
+  (`scratch/agent/s2182_vec3_f2_soak.txt`)
+  on the queued `=1` soak: ctl n=176 at
+  640/`0x00696100` (16 per site including
+  `site=f2`); 0 NaN / 0 Inf (`w_mem==w_fpr`,
+  9312 rows; NaN always-prints); title
+  `1024 @ 0x00790400` at 48.9s and hangar
+  `512 @ 0x006AB400` at 78.2s; lwc
+  zero_logged=0; first-slot word0
+  `0x800CA748`. Soak rc=0. Post-hangar
+  SIGABRT at t=137.3 is unaligned PI DMA
+  in `do_rom_read` via `osPiStartDma_recomp`
+  (last-guest-pc `0x80001b08`) after 640
+  `0x006A2900`, not `vec3Cross` and not
+  cinematic. Abort class missed; do not
+  conclude port-finite.
   Do
   not S32-address by guess, NULL-skip, re-flip
   default-on, skip/allow `matchKeywordWithPriority`
@@ -248,9 +265,19 @@ until the next archive pass.
   copyToRAM/CIMG writeback guard, or change
   `osAiGetStatus_recomp` / `osAiSetNextBuffer_recomp`.
   Do not treat the jal as port-only or retail
-  source as NaN, s2179/s2181 as proof the abort
-  cannot be NaN, or last-guest-pc `0x8000834c`
-  as the abort site.
+  source as NaN, s2179/s2181/s2182 as proof the abort
+  cannot be NaN, last-guest-pc `0x8000834c` as
+  the abort site, or last-guest-pc `0x80001b08`
+  as the cinematic abort.
+  s2183 selected `H-CoverageFailure` at the image-DMA
+  destination census (`scratch/agent/s2183_audtask_dest_cutscene.txt`):
+  two completing `=1` logs have positive controls (5557 and 4081
+  image joins) and all recorded destinations are title/hangar-only,
+  all recorded destinations are title/hangar-only; the failing s2179 `=1`
+  log reaches 640 but has zero image-DMA rows, so no-DMA is unproven.
+  `H-AudioDmaHitsCutscene` is refuted at the completing-log scope;
+  `H-AudioDmaTitleHangarOnly` remains unselected for all `=1` runs
+  until a failing log has the same positive control. No writer is identified.
 
 ### Selected hypotheses (scoped; do not widen)
 
@@ -302,6 +329,9 @@ until the next archive pass.
 | s2179 | `H-PortNoNaNThisPair` | same-build `=1`/`=0`: `[vec3-word-ctl]` n=32 at 640 `0x00696100` (16 extract + 16 first-cross); extract/first-cross 0 NaN 0 Inf; `w_mem==w_fpr` mismatch=0; cinematic extract `0x3F71276F`/`0x3CFEDCBB`/`±0x3C664945` dest `0x80165E40`; first-cross `0x3F800000`/`0xBF800000`/`0x3F712770` `jal=0x80059F3C`; both arms title+hangar; 0 SIGABRT. Abort class missed; not a port-finite claim | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; treat this pair as port-finite |
 | s2180 | `H-FailingExtractFinite` | failing `=1` soak: ctl n=32 at 640 `0x00696100`; extract/first-cross 0 NaN 0 Inf `w_mem==w_fpr`; dispatchRet n=236; lwc zero_logged=0; first-slot word0 `0x800CA748`; SIGSEGV `copyToRAM` `si_addr=0x11c47a100` last-guest-pc `0x8000834c`; 0 VI 1024; 0 SIGABRT. Extract-already / orthonormalize / f10-not-mem refuted on a failing run. Single-arm (`=1`) | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; copyToRAM/CIMG writeback guard; treat copyToRAM SIGSEGV as vec3Cross abort or guest NaN; treat last-guest-pc `0x8000834c` as the abort site |
 | s2181 | `H-PortNoNaNF2OrLater` | same-build `=1`/`=0`: `[vec3-word-ctl]` n=176 at 640 `0x00696100` (16 per site extract/cross/f2/f4/f8/f0/f6/f12/f14/f16/f18); f2 `$a1+4` and later `NAN_CHECK` operands 0 NaN 0 Inf; `w_mem==w_fpr` mismatch=0; first-cross f2 `0x3F5C68DC` / dispatcher `0x3CFEDCBB`; both arms title+hangar; 0 SIGABRT. Abort class missed; not a port-finite claim | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; copyToRAM/CIMG writeback guard; treat this pair as port-finite |
+
+| s2182 | `H-PortNoNaNThisPair` | queued `=1` soak: n=176 at 640 `0x00696100`; 9312 rows, 0 NaN / 0 Inf, title+hangar; post-hangar abort is unaligned PI DMA, not cinematic | NULL skip; S32-address; default-on flip; wait/slot guard; skip/allow the lwc, transform, or extract jal; disable `NAN_CHECK`; copyToRAM/CIMG writeback guard |
+| s2183 | `H-CoverageFailure` (image-DMA scope) | offline: completing `=1` logs have image-join positive controls and zero named-word overlap; failing `=1` log has 640 phase but zero image-DMA rows | classify the failing zero as no DMA; select a writer or add a guard |
 
 Coverage-only pairs that selected no ABI hypothesis: s2114–s2117, s2124,
 s2126–s2128, and the first s2120 pair. Absent target rows are coverage
@@ -405,9 +435,13 @@ active work items.
    (`w_mem==w_fpr`); ctl n=176 at
    640/`0x00696100` (16 per site including
    `site=f2`); both arms title+hangar. Abort
-   class missed. Next is consume the queued
-   `=1` soak of this binary
-   (`scratch/agent/soak_queue/s2181_image_vec3_f2.sh`).
+   class missed. s2182's queued soak later completed title+hangar;
+   its post-hangar abort was unaligned PI DMA, not cinematic.
+   s2183's offline image-DMA census found 5557 and 4081 recorded
+   joins on two completing `=1` logs, all title/hangar-only with zero
+   overlap against the six named cutscene words. The failing s2179
+   `=1` log reached 640 `0x00696100` but recorded zero image-DMA rows,
+   selecting `H-CoverageFailure` for that log rather than no-DMA.
    Failure modes remain intermittent
    (`=1` title+hangar in s2162/s2170/s2173/s2175/s2179/s2181;
    matchKeyword SIGBUS in s2167; 640-stall in
@@ -419,7 +453,10 @@ active work items.
    guard, or land a copyToRAM/CIMG writeback guard.
    Do not treat the jal as port-only or retail source
    as NaN, s2179/s2181 as port-finite, or last-guest-pc
-   `0x8000834c` as the abort site.
+   `0x8000834c` as the abort site. Next obtain a fresh failing
+   `ROGUESQ_AUDIO_UCODE=1` image-arm log with
+   `[audtask-image-join]` count > 0 and a phase-gated 640
+   `0x00696100` row before classifying cinematic destinations.
 2. **M5 drain in-loop tick A/B — parked.** The s2125 phase-repaired pump
    pair selected `H-PumpIrrelevant` only at route scope. s2126–s2128 all
    supplied positive controls but failed to put both drain arms in the
@@ -841,7 +878,14 @@ s2179 is the port IEEE A/B of those words
 failing-`=1` soak classification
 (`H-FailingExtractFinite`). s2181 is the port
 IEEE A/B of f2 plus later `NAN_CHECK`
-operands (`H-PortNoNaNF2OrLater`).
+operands (`H-PortNoNaNF2OrLater`). s2182 is the
+queued f2 soak (`H-PortNoNaNThisPair`); its
+post-hangar abort is unaligned PI DMA, not cinematic.
+s2183 is the offline image-DMA destination census
+(`H-CoverageFailure` for the failing log): two
+completing `=1` logs have positive controls and
+zero overlap with named cutscene words, while the
+failing log has no image-DMA rows.
 
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`. Selected hypotheses above must not be widened from
@@ -860,8 +904,8 @@ ABI, canary-prefill, wait, or guard change follows from `H-PolicyOnly`,
 `H-RetailExecsJal8640`,
 `H-RetailSourceWordFinite`,
 `H-PortNoNaNThisPair`,
-`H-FailingExtractFinite`, or
-`H-PortNoNaNF2OrLater`.
+`H-FailingExtractFinite`, `H-PortNoNaNF2OrLater`, or
+`H-CoverageFailure` (image-DMA scope).
 Do not re-flip default-on, S32-address by guess, NULL-skip,
 skip/allow `matchKeywordWithPriority` or the lwc or transform or
 extract jal, disable `NAN_CHECK`, add a wait/slot guard, or land a

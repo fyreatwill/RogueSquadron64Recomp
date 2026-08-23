@@ -102714,6 +102714,37 @@ skip/allow/guard.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
 
+## Session 2183 (2026-08-23) — offline image-DMA destinations miss named cutscene words
+
+Work unit: offline census only; no rebuild and no game run. Parsed every
+`[audtask-image-join]` and `[audtask-dma-range]` row in the two completing
+image-arm logs, the stub control, and the older failing `=1` log. Tested each
+`[dest,dest+len)` interval against physical `0x25A580`, `0x0CA748`,
+`0x0C7B0C`, `0x165E40`, `0x0CDB58`, and `0x2231EC`.
+
+The completing `=1` logs supplied positive controls: 5557 image joins / 5562
+DMA ranges in `scratch/s73_post_a_scene/s2181_image_vec3_f2/run.log`, and 4081
+/ 4084 in `scratch/s73_post_a_scene/s2181_on/run.log`. Their image joins were
+only phase 8 title `1024 @ 0x00790400` and phase 10/12 hangar
+`512 @ 0x006AB400`; 19 unique destination intervals had zero overlap with
+all six named words. The `=0` stub had zero image/DMA rows as expected.
+
+The older failing `=1` log, `scratch/s73_post_a_scene/s2179_image_vec3_word/run.log`,
+does reach 640 `0x00696100` but has zero image-DMA rows. That is a positive
+phase control but not an image-DMA positive control, so it selects
+`H-CoverageFailure` for that log rather than “no cinematic DMA.”
+`H-AudioDmaHitsCutscene` is refuted at the two completing-log scope;
+`H-AudioDmaTitleHangarOnly` remains unselected for all `=1` runs until a
+failing run has image-join rows in the same log. The full table is
+`scratch/agent/s2183_audtask_dest_cutscene.txt`.
+
+This rules out the recorded image-DMA rows as writers of the named cutscene
+words, but does not identify the writer responsible for an intermittent
+cinematic failure. No mitigation was added.
+
+ORIGIN: diagnostic-only offline interval census; no guest or host value was
+changed.
+
 ## Session 2164 (2026-08-21) — censused unsigned KSEG0 MEM_* in cinematic SIGBUS functions
 
 Grep-enumerated `MEM_BU`/`MEM_W`/`MEM_H` in `slotDispatcherIter`

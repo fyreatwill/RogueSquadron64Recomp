@@ -1,60 +1,43 @@
-# NEXT work unit (s2182) — consume queued =1 soak of s2181 f2+later instrument
+# NEXT work unit (s2184) — instrumented failing image-DMA cinematic run
 
 HYPOTHESIS-ID: m5-a1-cinematic-split
 
 ## Work unit
 
-s2181 rebuilt the helper with f2 at `0x80019550`
-`$a1+4` and later `NAN_CHECK` operands
-(`f4`/`f8`/`f0`/`f6`/`f12`/`f14`/`f16`/`f18`).
-Same-build completing `=1`/`=0` selected
-`H-PortNoNaNF2OrLater`: ctl n=176 at
-640/`0x00696100` (16 per site including
-`site=f2`); 0 NaN / 0 Inf / `w_mem==w_fpr`;
-both arms title+hangar. Abort class missed.
-Do not conclude port-finite.
+Run one fresh `ROGUESQ_AUDIO_UCODE=1` soak using the existing
+`ROGUESQ_LOG_ALL=1` audio-task instrumentation, but classify the result only
+if the same log has both the 640 cinematic phase and an image-DMA positive
+control. The s2183 census found two completing logs with title/hangar-only
+joins, while the older failing s2179 log had no image-DMA rows at all.
 
-Consume the queued `=1` soak
-`scratch/agent/soak_queue/s2181_image_vec3_f2.sh`
-(180s SIGKILL, `LOG_ALL=1`). No rebuild.
-Table to `scratch/agent/s2182_vec3_f2_soak.txt`.
-
-Do not S32-address, NULL-skip, re-flip default-on,
-skip/allow the lwc / transform / extract jal,
-disable `NAN_CHECK`, add a wait/slot guard, or
-land a copyToRAM / CIMG writeback guard.
+Use the self-contained soak recipe pattern from
+`scratch/agent/soak_queue/done/s2181_image_vec3_f2_20260823-121351.sh`, with a
+new tag `s2184_image_dma_cinematic`, `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_LOG_ALL=1`, and
+`ROGUESQ_LOG_CUTSCENE_A2_50=1`. Launch through
+`zsh scratch/s73_post_a_scene/run_mission_keys.sh <tag> 30 12`, watchdog for
+180 seconds, and SIGKILL the game and driver. Do not rebuild.
 
 ## Competing hypotheses and discriminator
 
-IEEE single: NaN iff `(w & 0x7F800000)==0x7F800000 && (w & 0x007FFFFF)!=0`.
-Join on 640 cinematic (`0x00696100`/`0x00696600`).
-Positive control: `[vec3-word-ctl]` at that VI, plus
-at least one cinematic row for `site=f2` and each later
-operand kind.
+- `H-AudioDmaHitsCutscene`: `[audtask-image-join]` has a positive control and
+  a 640 / `0x00696100` or `0x00696600` row whose `[dest,dest+len)` overlaps
+  one of the six named cutscene physical words.
+- `H-AudioDmaTitleHangarOnly`: positive-control joins exist, but all are
+  1024 / `0x00790400` or 512 / `0x006AB400`, with no 640 image join.
+- `H-AudioDmaElsewhere`: positive-control joins exist at 640, but no interval
+  overlaps a named cutscene word.
+- `H-CoverageFailure`: the run reaches 640 but has zero image joins anywhere;
+  this is an instrumentation/coverage result, not a no-DMA result.
 
-- `H-PortF2AlreadyNaN`: soak SIGABRTs in `vec3Cross`;
-  f2 (`$a1+4`) is NaN; extract/f10 still finite.
-- `H-PortLaterCheck`: extract/f10/f2 finite; a later
-  `NAN_CHECK` operand (f4/f8/f0/f6 or a mul/sub
-  product) is NaN at abort.
-- `H-AssertNotLoggedNaN`: SIGABRT in `vec3Cross` with
-  0 NaN on every logged operand (missed site or
-  non-IEEE assert).
-- `H-HostCopyToRamClass`: SIGSEGV in `copyToRAM` with
-  0 NaN (reproduces s2180). Do not add a writeback
-  guard; record as a 6th intermittent class.
-- `H-PortNoNaNThisPair` again: title+hangar, 0 NaN.
-  Still do not conclude port-finite.
+The discriminating measurement is one same-run table of image-join counts by
+`(phase,width,origin)` plus interval overlap against:
+`0x25A580`, `0x0CA748`, `0x0C7B0C`, `0x165E40`, `0x0CDB58`, and `0x2231EC`.
+Require `[audtask-image-join] n>0` as the positive control before selecting
+any destination hypothesis. If the run fails before title/hangar, report
+coverage separately and do not infer a cinematic writer.
 
-## Exact commands
-
-1. No rebuild. Read SOAK-RESULTS for
-   `s2181_image_vec3_f2` and the run log under
-   `scratch/s73_post_a_scene/s2181_image_vec3_f2/`
-   (or `scratch/agent/soak_results/`).
-2. If the loop has not yet run the soak, do not
-   babysit a repeat; leave it queued.
-3. Classify: ctl present? per-site cinematic rows?
-   NaN/Inf by site? crash class (SIGABRT/SIGBUS/
-   copyToRAM/640-stall/title+hangar)?
-4. Table to `scratch/agent/s2182_vec3_f2_soak.txt`.
+Do not S32-address, NULL-skip, re-flip default-on, skip/allow the lwc,
+transform, or extract jal, disable `NAN_CHECK`, or add a copyToRAM/CIMG/DMA
+writeback guard. If an interval overlaps, identify its writer before any
+mitigation.
