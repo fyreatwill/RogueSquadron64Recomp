@@ -8,6 +8,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <thread>
 #if !defined(_WIN32)
 #include <dlfcn.h>
@@ -34,6 +35,109 @@
 #include "ultramodern/ultramodern.hpp"
 
 extern "C" uint32_t rs64_phase_ord(void);
+
+namespace {
+
+enum class ViBoundaryEdge : uint32_t {
+    Swap = 0,
+    Commit = 1,
+    Screen = 2,
+};
+
+static bool vi_boundary_log_enabled() {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* specific = std::getenv("ROGUESQ_LOG_VI_COMMIT");
+        return (all && *all && *all != '0') ||
+               (specific && *specific && *specific != '0');
+    }();
+    return enabled;
+}
+
+static std::atomic<uint32_t> g_vi_boundary_ordinal{0};
+static std::atomic<uint32_t> g_vi_boundary_rows[3][2]{};
+static std::atomic<uint32_t> g_vi_boundary_summary_armed{0};
+static std::atomic<uint32_t> g_vi_screen_request{0};
+
+static void vi_boundary_summary() {
+    static const char* edges[] = {"swap", "commit", "screen"};
+    static const uint32_t origins[] = {0x00696100u, 0x00696600u};
+    std::fprintf(stderr, "[vi-boundary-summary] begin\n");
+    for (uint32_t edge = 0; edge < 3; ++edge) {
+        for (uint32_t origin = 0; origin < 2; ++origin) {
+            uint32_t rows = g_vi_boundary_rows[edge][origin].load(std::memory_order_relaxed);
+            if (rows > 64u) rows = 64u;
+            std::fprintf(stderr,
+                "[vi-boundary-summary] edge=%s origin=0x%06X rows=%u cap=64\n",
+                edges[edge], origins[origin], rows);
+        }
+    }
+    std::fprintf(stderr, "[vi-boundary-summary] end\n");
+    std::fflush(stderr);
+}
+
+static bool vi_boundary_target(uint32_t origin, uint32_t* origin_index) {
+    origin &= 0x00FFFFFFu;
+    if (origin == 0x00696100u) {
+        *origin_index = 0;
+        return true;
+    }
+    if (origin == 0x00696600u) {
+        *origin_index = 1;
+        return true;
+    }
+    return false;
+}
+
+}
+
+extern "C" void rs64_vi_boundary_set_screen_request(uint32_t framebuffer) {
+    g_vi_screen_request.store(framebuffer, std::memory_order_relaxed);
+}
+
+extern "C" uint32_t rs64_vi_boundary_screen_request() {
+    return g_vi_screen_request.load(std::memory_order_relaxed);
+}
+
+extern "C" void rs64_vi_boundary_log(const char* edge, uint32_t requested_fb,
+                                      uint32_t committed_origin, uint32_t width) {
+    if (!vi_boundary_log_enabled() || width != 640u) return;
+
+    ViBoundaryEdge edge_id;
+    if (std::strcmp(edge, "swap") == 0) {
+        edge_id = ViBoundaryEdge::Swap;
+    }
+    else if (std::strcmp(edge, "commit") == 0) {
+        edge_id = ViBoundaryEdge::Commit;
+    }
+    else if (std::strcmp(edge, "screen") == 0) {
+        edge_id = ViBoundaryEdge::Screen;
+    }
+    else {
+        return;
+    }
+
+    uint32_t origin_index = 0;
+    const uint32_t origin = committed_origin & 0x00FFFFFFu;
+    if (!vi_boundary_target(origin, &origin_index)) return;
+
+    if (g_vi_boundary_summary_armed.exchange(1, std::memory_order_relaxed) == 0) {
+        std::atexit(vi_boundary_summary);
+    }
+
+    const uint32_t edge_index = static_cast<uint32_t>(edge_id);
+    const uint32_t row = g_vi_boundary_rows[edge_index][origin_index].fetch_add(
+        1, std::memory_order_relaxed);
+    if (row >= 64u) return;
+
+    const uint32_t ordinal = g_vi_boundary_ordinal.fetch_add(1, std::memory_order_relaxed);
+    const uint32_t request = requested_fb & 0x00FFFFFFu;
+    std::fprintf(stderr,
+        "[vi-boundary] edge=%s origin=0x%06X requested_fb=0x%06X "
+        "committed_origin=0x%06X width=%u phase=%u row=%u ordinal=%u\n",
+        edge, origin, request, origin, width, rs64_phase_ord(), row, ordinal);
+    std::fflush(stderr);
+}
 
 extern "C" void __osContRamRead_recomp(uint8_t* /*rdram*/, recomp_context* ctx) {
     _return<s32>(ctx, -1);  // no rumble pak
@@ -101,6 +205,12 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
         const char* own = std::getenv("ROGUESQ_LOG_VI_CALLERS");
         s_log_callers = ((all && *all && *all != '0') ||
                          (own && *own && *own != '0')) ? 1 : 0;
+    }
+    {
+        const auto* vi = ultramodern::renderer::get_vi_regs();
+        rs64_vi_boundary_log("swap", fb,
+                             vi->VI_ORIGIN_REG & 0x00FFFFFFu,
+                             vi->VI_WIDTH_REG);
     }
     if (s_log_callers) {
         struct CallerRow {

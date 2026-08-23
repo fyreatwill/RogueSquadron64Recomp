@@ -104073,3 +104073,45 @@ oracle diagnostic with whole-RDRAM and swap execution positive controls.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-host-vi-commit-boundary`.
+
+## Session 2198 (2026-08-23) — host VI boundary table stopped at first target origin
+
+Ran the independent retail preflight before building the port instrument. The
+whole-RDRAM watch passed with 10,000 writes, the `osViSwapBuffer` execution
+watch at `0x80035500` recorded 1,579 swaps, and VI tracing reached repeated
+640 rows at both `0x00696100` and `0x00696600`. The origin-keyed execution
+rows included the retail-matching `(prev_pc=0x8001BE24,
+a0_phys=0x0062B800)` pair at both origins. Full output:
+`scratch/agent/s2198_retail_vi_ground_truth.log`.
+
+Added one shared, phase-scoped port table across the `osViSwapBuffer` wrapper,
+the post-register `ViState::update_vi` commit, and RT64 `update_screen`. Each
+edge was capped at 64 rows per target origin, with requested framebuffer,
+committed origin, width, phase, row, and ordinal; an atexit summary was added.
+Exported the runtime patch with `./submodule-patches/export.sh` and built
+`RogueSquadron64Recomp` successfully.
+
+Ran the qualified image/LLE recipe with the existing caller, writer, and phase
+controls. The caller control fired 16 times, the writer control fired 29
+times, and the port reached one 640 phase at `0x00696100` but zero phases at
+`0x00696600`. The boundary table filled its cap for first-origin commit,
+screen, and swap rows (64 each), with no second-origin row. The run later
+aborted in the existing unaligned PI-DMA assertion in `recomp::do_rom_read`,
+so the planned joined-edge comparison is coverage-inconclusive and selects
+H-CoverageFailure rather than H-PortViStateCommit or H-PortScreenConsume.
+The atexit summary did not run because the process aborted. Port output:
+`scratch/s73_post_a_scene/s2198_vi_commit/run.log`.
+
+A source check found `ViState::field` is read by `update_vi` but never assigned
+in `events.cpp`. This is a new bounded H-ViFieldAlternation candidate, not a
+landed fix; the next iteration will test it with a runtime-gated A/B using the
+existing table. No guard, mitigation, task rewrite, writer filter, or audio
+default changed.
+
+ORIGIN: no mitigation-shaped diff; this was a batched boundary diagnostic
+plus independent retail ground-truth control.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-vi-field-alternation`.

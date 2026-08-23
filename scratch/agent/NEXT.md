@@ -1,54 +1,51 @@
-# NEXT work unit (s2198) — trace the port VI-state publication boundary
+# NEXT work unit (s2199) — test VI field alternation
 
-HYPOTHESIS-ID: m5-a1-host-vi-commit-boundary
+HYPOTHESIS-ID: m5-a1-vi-field-alternation
 
 ## Work unit
 
-Instrument one bounded, phase-scoped port table across the three host edges:
-`osViSwapBuffer_recomp` call, `ViState::update_vi` committed-register update,
-and RT64 `update_screen`. Key rows by edge, VI origin, requested/committed
-framebuffer, width, and ordinal; retain the existing host caller fields only
-as join keys. The table must show whether the retail-matching pair
-`(prev_pc=0x8001BE24, a0_phys=0x0062B800)` reaches the port's committed
-`0x00696600` state and then `update_screen`.
-
-Before building, add the whole table in one batch: a target-origin swap-call
-row, a `ViState::update_vi` commit row after `regs.VI_ORIGIN_REG` and
-`regs.VI_WIDTH_REG` are assigned, and an `update_screen` consume row. Keep
-each edge bounded to 64 rows per target origin and print a shutdown summary.
-Because `lib/N64ModernRuntime` is edited, run
-`./submodule-patches/export.sh` after the edit and commit the refreshed patch
-in the same iteration.
+Add one runtime-gated branch to `ViState::update_vi` that toggles its
+`field` selector after each VI update when
+`ROGUESQ_VI_ALTERNATE_FIELDS=1`; leave the existing behavior unchanged for
+`=0`. Do not add another diagnostic field: reuse the s2198 boundary table and
+the existing caller, writer, and phase controls. Because `lib/N64ModernRuntime`
+is edited, run `./submodule-patches/export.sh` before the single build.
 
 ## Competing hypotheses and discriminator
 
-- H-PortViStateCommit: the matching swap call occurs, but
-  `ViState::update_vi` never commits `0x00696600`; the boundary is the VI
-  thread's pending-state application.
-- H-PortScreenConsume: `update_vi` commits `0x00696600`, but RT64
-  `update_screen` never consumes it; the boundary is the renderer event.
-- H-PortOriginAliasing: the swap call occurs, but the mode/field calculation
-  commits a different origin or framebuffer than the requested
-  `0x0062B800` pair.
-- H-CoverageFailure: the same-run caller control, writer control, or either
-  target phase is absent; reject the comparison rather than treating a null
-  edge as evidence.
+- H-ViFieldNotToggled: the missing `field` writer is the boundary; only the
+  `=1` arm reaches repeated 640 origins `0x00696100` and `0x00696600`, with
+  matching commit and screen rows.
+- H-SecondOriginElsewhere: both arms pass controls but neither reaches
+  `0x00696600`; field selection is not the route boundary.
+- H-FieldCalculationMismatch: `=1` changes VI origins but commits neither
+  expected target (or changes the requested framebuffer unexpectedly).
+- H-CoverageFailure: either arm lacks the caller/writer/first-origin control;
+  reject that arm rather than interpreting its null as evidence.
 
-The single joined edge table selects: swap present + commit absent selects
-H-PortViStateCommit; commit present + consume absent selects
-H-PortScreenConsume; a wrong committed origin/framebuffer selects
-H-PortOriginAliasing; missing controls selects H-CoverageFailure.
+The single comparison is the phase-gated boundary table in both arms. A
+positive arm must show `[vi-callers-control]`, writer rows, and repeated 640
+rows at both target origins. `=1` producing both target origins while `=0`
+remains first-origin-only selects H-ViFieldNotToggled; positive controls in
+both arms with no second origin selects H-SecondOriginElsewhere; unexpected
+origins or framebuffer values selects H-FieldCalculationMismatch.
 
 ## Build and run
 
 ```sh
 ./submodule-patches/export.sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_M5_WRITER_PARITY=1 ROGUESQ_LOG_VI_COMMIT=1" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2198_vi_commit 30 12
+
+env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_M5_WRITER_PARITY=1 ROGUESQ_LOG_VI_COMMIT=1 ROGUESQ_VI_ALTERNATE_FIELDS=0" \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2199_vi_field_off 30 12 > scratch/agent/s2199_vi_field_off_driver.log 2>&1 &
+off=$!
+env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_M5_WRITER_PARITY=1 ROGUESQ_LOG_VI_COMMIT=1 ROGUESQ_VI_ALTERNATE_FIELDS=1" \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2199_vi_field_on 30 12 > scratch/agent/s2199_vi_field_on_driver.log 2>&1 &
+on=$!
+wait "$off"; off_rc=$?
+wait "$on"; on_rc=$?
+printf 'off_rc=%s on_rc=%s\n' "$off_rc" "$on_rc"
 ```
 
-Accept the run only if `[vi-callers-control]` fires, the writer control is
-positive, and the log reaches repeated 640 rows at both
-`0x00696100` and `0x00696600`. Do not add a guard, mitigation, task rewrite,
-writer filter, or audio-default change.
+Accept only arms with positive controls and phase-gated boundary rows; do
+not add a guard, mitigation, task rewrite, or audio-default change.

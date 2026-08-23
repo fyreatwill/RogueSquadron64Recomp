@@ -2,12 +2,13 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2197
-(2026-08-23); behavioral and source evidence is current through s2197.
+authoritative for exact commands and probe rows. Maintained in Session 2198
+(2026-08-23); behavioral and source evidence is current through s2198.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43. This file is the compact
-operational state, not a second ledger.
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198's exact rows remain in
+the append-only ledger. This file is the compact operational state, not a
+second ledger.
 
 ## Current state
 
@@ -145,6 +146,20 @@ operational state, not a second ledger.
   in s2196. This selects H-RetailPortCallerParity, refutes
   H-PortMissingSecondCaller and H-CoverageFailure at this scope, and moves
   the discriminator past the guest swap call to host VI-state publication.
+- s2198 ran the batched host boundary table after an independent retail
+  preflight. Retail again passed the whole-RDRAM control (10,000 writes), the
+  `0x80035500` execution control (1,579 swaps), and repeated 640 rows at both
+  target origins, including `(prev_pc=0x8001BE24, a0_phys=0x0062B800)` at
+  both. The port passed its caller control (16 rows), writer control (29
+  rows), and first target phase, then produced 64 capped rows each for
+  first-origin commit, screen, and swap edges but no second-origin phase or
+  boundary row. The run later aborted in the existing unaligned PI-DMA
+  assertion, so this run selects H-CoverageFailure for the planned joined
+  edge discriminator rather than treating a second-origin null as a commit
+  or screen boundary. A source audit found `ViState::field` is read by
+  `update_vi` but never assigned in `events.cpp`; H-ViFieldAlternation is a
+  new bounded candidate, not yet a landed fix. The logger's atexit summary
+  was not reached because the process aborted.
 
 ## Active backlog
 
@@ -161,11 +176,12 @@ work items.
    scope. s2196 found that `ctx->r31-8` is always `0xFFFFFFF8`; s2197 then
    retained the retail target-origin table and found the port's first-origin
    `(0x8001BE24, 0x0062B800)` pair also occurs in retail at
-   `0x00696600`. The next work unit must instrument the port's
-   `osViSwapBuffer -> ViState::update_vi -> update_screen` boundary in one
-   phase-scoped table, preserving the existing caller, writer, and phase
-   controls. Do not add a port guard, mitigation, task rewrite, or audio
-   default flip.
+   `0x00696600`. s2198 showed that the port commits and consumes only
+   `0x00696100`; a source audit found no writer for `ViState::field`. The
+   next work unit is a runtime-gated field-alternation A/B using the existing
+   boundary table: compare `ROGUESQ_VI_ALTERNATE_FIELDS=0` and `=1` in the
+   same iteration, with controls and both target-origin counts. Do not add a
+   port guard, mitigation, task rewrite, or audio default flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -313,7 +329,8 @@ History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024 and
 spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
-pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43.
+pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
+s2198's VI-boundary table is recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

@@ -23,6 +23,9 @@ extern "C" uint32_t rs64_e9prov_current_task();
 extern "C" uint32_t rs64_e9prov_current_scope();
 extern "C" int rs64_is_hangar_vi(void);
 extern "C" void rs64_m5_b40_route_title_transition(void);
+extern "C" void rs64_vi_boundary_log(const char* edge, uint32_t requested_fb,
+                                      uint32_t committed_origin, uint32_t width);
+extern "C" uint32_t rs64_vi_boundary_screen_request(void);
 
 // Interval-scoped diagnostics (session 25).
 //
@@ -718,6 +721,12 @@ public:
 
     void update_screen() override {
         if (app) {
+            ultramodern::renderer::ViRegs* boundary_vi =
+                ultramodern::renderer::get_vi_regs();
+            rs64_vi_boundary_log("screen", rs64_vi_boundary_screen_request(),
+                                 boundary_vi->VI_ORIGIN_REG,
+                                 boundary_vi->VI_WIDTH_REG);
+
             // Always log first 4 + every 64th update_screen so we can tell
             // whether VI events are firing at all. The visual-output question
             // depends entirely on this being called regularly.

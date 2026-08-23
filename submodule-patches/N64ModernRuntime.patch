@@ -1575,7 +1575,7 @@ index 3198be0..730ca54 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..018f2fa 100644
+index 149e770..ab9a867 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,6 +8,9 @@
@@ -1588,12 +1588,17 @@ index 149e770..018f2fa 100644
  
  #include "blockingconcurrentqueue.h"
  
-@@ -20,6 +23,55 @@
+@@ -20,6 +23,60 @@
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
 +extern "C" __attribute__((weak)) void rs64_audio_route_log(const char* edge,
 +                                                              uint32_t result);
++extern "C" __attribute__((weak)) void rs64_vi_boundary_log(const char* edge,
++                                                             uint32_t requested_fb,
++                                                             uint32_t committed_origin,
++                                                             uint32_t width);
++extern "C" __attribute__((weak)) void rs64_vi_boundary_set_screen_request(uint32_t framebuffer);
 +
 +namespace {
 +
@@ -1644,7 +1649,29 @@ index 149e770..018f2fa 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -140,6 +192,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -30,6 +87,7 @@ struct SpTaskAction {
+ 
+ struct ScreenUpdateAction {
+     ultramodern::renderer::ViRegs regs;
++    PTR(void) framebuffer;
+ };
+ 
+ struct UpdateConfigAction {
+@@ -101,7 +159,12 @@ static struct {
+             regs.VI_X_SCALE_REG = common_regs->xScale; // TODO implement osViSetXScale
+             regs.VI_Y_SCALE_REG = yScale; // TODO implement osViSetYScale
+             regs.VI_STATUS_REG = next_state->control;
+-            
++
++            if (rs64_vi_boundary_log != nullptr) {
++                rs64_vi_boundary_log("commit", static_cast<uint32_t>(framebuffer),
++                                     static_cast<uint32_t>(origin), common_regs->width);
++            }
++
+             // Swap VI states.
+             cur_state ^= 1;
+             *get_next_state() = *get_cur_state();
+@@ -140,6 +203,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -1653,7 +1680,7 @@ index 149e770..018f2fa 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -165,6 +219,13 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
+@@ -165,6 +230,13 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
      next_state->mq = mq_;
      next_state->msg = msg;
      next_state->retrace_count = retrace_count;
@@ -1667,7 +1694,19 @@ index 149e770..018f2fa 100644
  }
  
  uint64_t total_vis = 0;
-@@ -231,6 +292,17 @@ void vi_thread_func() {
+@@ -218,7 +290,10 @@ void vi_thread_func() {
+ 
+         // Queue a screen update for the graphics thread with the current VI register state.
+         // Doing this before the VI update is equivalent to updating the screen after the previous frame's scanout finished.
+-        events_context.action_queue.enqueue(ScreenUpdateAction{ events_context.vi.regs });
++        events_context.action_queue.enqueue(ScreenUpdateAction{
++            events_context.vi.regs,
++            events_context.vi.get_cur_state()->framebuffer,
++        });
+ 
+         // Update VI registers and swap VI modes.
+         events_context.vi.update_vi();
+@@ -231,6 +306,17 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -1685,7 +1724,7 @@ index 149e770..018f2fa 100644
                      // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
                      // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
                      ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
-@@ -252,12 +324,14 @@ void vi_thread_func() {
+@@ -252,12 +338,14 @@ void vi_thread_func() {
  void sp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
@@ -1700,7 +1739,7 @@ index 149e770..018f2fa 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -281,13 +355,23 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -281,13 +369,23 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
          // pointer's contents (DMA, etc).
          const uint32_t task_type = task->t.type;
  
@@ -1725,6 +1764,17 @@ index 149e770..018f2fa 100644
  
          (void)task_type;
      }
+@@ -394,6 +492,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+             }
+             else if (const auto* screen_update_action = std::get_if<ScreenUpdateAction>(&action)) {
+                 events_context.vi.update_screen_regs = screen_update_action->regs;
++                if (rs64_vi_boundary_set_screen_request != nullptr) {
++                    rs64_vi_boundary_set_screen_request(
++                        static_cast<uint32_t>(screen_update_action->framebuffer));
++                }
+                 renderer_context->update_screen();
+                 display_refresh_rate = renderer_context->get_display_framerate();
+                 resolution_scale = renderer_context->get_resolution_scale();
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
 index 9944a02..c05a8b2 100644
 --- a/ultramodern/src/mesgqueue.cpp
