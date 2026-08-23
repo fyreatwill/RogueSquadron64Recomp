@@ -1,53 +1,61 @@
-# NEXT work unit (s2195) — test pairwise logging interactions
+# NEXT work unit (s2196) — compare osViSwapBuffer caller tables
 
-HYPOTHESIS-ID: m5-a1-retail-writer-census
+HYPOTHESIS-ID: m5-a1-vi-swap-caller-parity
 
 ## Work unit
 
-Run a self-contained four-arm, phase-gated pairwise logging test from the repo
-root. All arms use the same qualified image/LLE recipe and writer control.
-`quiet` leaves optional logs unset; `slot-event` enables
-`ROGUESQ_LOG_SLOT_DISPATCH=1` and `ROGUESQ_LOG_EVENT_WIRING=1`;
-`slot-audio` enables `ROGUESQ_LOG_SLOT_DISPATCH=1` and
-`ROGUESQ_LOG_AUDIO_RETURN=1`; and `event-audio` enables
-`ROGUESQ_LOG_EVENT_WIRING=1` and `ROGUESQ_LOG_AUDIO_RETURN=1`. The watchdog
-kills an arm with SIGKILL after the second-origin phase plus 15 seconds, on a
-180-second deadline, and exits nonzero if an arm logs a crash marker.
-
-Exact command:
+First obtain retail ground truth before adding the port instrument. Run the
+oracle with its whole-RDRAM positive-control watch and `--watch-pc` on the
+retail `osViSwapBuffer` symbol (`0x80035500`), while `--vi-trace` records the
+live width/origin at each execution:
 
 ```sh
-zsh scratch/agent/run_s2195_m5_log_pair_ab.sh
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --secs 45 --hit-cap 10000 \
+  --watch-write 0x0:0x800000 --watch-pc 0x80035500 \
+  --first-watch 0 --vi-trace \
+  > scratch/agent/s2196_retail_vi_swap_callers.log 2>&1
 ```
 
-Parse the complete table after the run:
+The oracle run must show at least 10,000 whole-RDRAM hits, positive
+`osViSwapBuffer` execution rows, and 640 VI rows at both
+`0x00696100` and `0x00696600`. Only then add one gated table to
+`src/main/upstream_compat.cpp:osViSwapBuffer_recomp` and build once:
 
 ```sh
-for arm in quiet slot-event slot-audio event-audio; do
-  echo "=== $arm ==="
-  grep -a '\[m5-writer-parity-control\]' "scratch/agent/s2195_m5_log_pair_ab/$arm.log" | wc -l
-  grep -a '\[phase\] vi_width=640' "scratch/agent/s2195_m5_log_pair_ab/$arm.log"
-  grep -a '\[m5-writer-parity\]' "scratch/agent/s2195_m5_log_pair_ab/$arm.log"
-  grep -a -E '\[(CRASH|ABORT)\]|\[last-guest-pc\]|\[pc-symbol\]' "scratch/agent/s2195_m5_log_pair_ab/$arm.log" | tail -12
-done
+cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
+
+The table is keyed by `ctx->r31 - 8` (the guest caller), framebuffer physical
+argument, and the current host VI width/origin. It must include every caller
+with a positive first-16-call control, then phase-scoped counts for the
+qualified image/LLE recipe. Run the port once with the existing writer and
+phase controls plus `ROGUESQ_LOG_VI_CALLERS=1`; kill it with SIGKILL after the
+first-origin phase or the 180-second watchdog, whichever comes first. Parse
+one table containing the caller/fb rows, `0x0066A500` and `0x00696100` phase
+controls, the six writer rows, and any `0x00696600` phase.
 
 ## Competing hypotheses and discriminator
 
-- H-SlotEventInteraction: `slot-event` reaches `0x00696600` or changes the
-  post-first-origin boundary while `quiet` does not.
-- H-SlotAudioInteraction: the same discriminator selects `slot-audio`.
-- H-EventAudioInteraction: the same discriminator selects `event-audio`.
-- H-NoPairInteraction: all four arms pass controls and the first 640 phase but
-  miss `0x00696600`; pairwise logging interaction is insufficient, so another
-  source remains open.
-- H-CoverageFailure: any arm lacks its writer control or first 640 phase;
-  reject the comparison rather than treating missing rows as nulls.
+- H-RetailPortCallerParity: the retail caller/fb pair(s) observed at
+  `0x00696600` also occur in the port table; the missing phase is downstream
+  of the guest swap call.
+- H-PortMissingSecondCaller: a retail second-origin caller/fb pair is absent
+  from the port table; the guest dispatch/route does not reach that swap.
+- H-PortWrongSwapArgument: the caller exists in both runs, but its port
+  framebuffer argument maps to the first origin or another buffer.
+- H-HostPhaseCommit: caller and framebuffer sequences match, but the port
+  never publishes `0x00696600` through its host VI transition.
+- H-CoverageFailure: either whole-RDRAM/oracle swap controls or the port
+  first-origin controls are absent; reject the comparison as invalid.
 
-The discriminator is one same-iteration table per arm containing positive
-control count, both 640 origins, termination/last-guest-PC outcome, all
-enabled optional-log positive counts, and all six target writer-PC sets at each
-observed origin. A pair outcome selects its named interaction only if controls
-pass and it reaches the second origin or changes the shared boundary; four
-valid misses select H-NoPairInteraction. Do not add a port guard, mitigation,
-task rewrite, or audio-default flip.
+The discriminator is the single retail/port caller-by-fb table, with positive
+controls and phase rows in the same runs. A missing retail second-origin pair
+selects H-PortMissingSecondCaller; a present caller with a wrong port fb
+selects H-PortWrongSwapArgument; matching caller/fb rows with no port phase
+select H-HostPhaseCommit; matching phase evidence selects
+H-RetailPortCallerParity. Do not add a guard, task rewrite, writer filter, or
+audio-default change.

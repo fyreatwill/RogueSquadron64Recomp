@@ -103968,3 +103968,36 @@ ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-writer-census`.
+
+## Session 2195 (2026-08-23) — pairwise route logging still missed the second origin
+
+The prescribed pairwise runner was absent, so I recreated the self-contained
+runner from the immediately preceding category-isolation recipe and ran
+`zsh scratch/agent/run_s2195_m5_log_pair_ab.sh` with four concurrent arms:
+quiet, slot+event, slot+audio, and event+audio. The writer control fired
+29/29/31/30 times. Every arm reached 640 origins `0x0066A500` and
+`0x00696100`; none reached `0x00696600`. The optional controls were positive
+in their enabled arms: 8,192 slot-dispatch rows, 130 event-wiring rows, and
+266/263 audio-return rows.
+
+At `0x00696100`, target row counts in target order
+`0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC` were quiet
+`1/0/2/61/0/1`, slot+event `1/0/2/63/0/1`, slot+audio `1/0/2/64/1/1`,
+and event+audio `1/0/2/62/1/1`. All four logs contained 36 crash markers,
+but the endpoint was not shared: quiet ended at
+`allocAndInitGridCellArray+1280` with guest PC `0x80001C94`, slot+event at
+the Metal barrier path with guest PC `0x8000B650`, and slot+audio plus
+event+audio at `slotDispatcherIter+3508` with guest PC `0x80022160`.
+
+This selects `H-NoPairInteraction` for second-origin reachability and rules
+out the three named pair interactions at that scope. The divergent crash
+endpoints are logging-sensitive failure behavior, not a common route-boundary
+explanation; they do not authorize a guard, task rewrite, or audio default
+flip. Full logs are in `scratch/agent/s2195_m5_log_pair_ab/`.
+
+ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-vi-swap-caller-parity`.

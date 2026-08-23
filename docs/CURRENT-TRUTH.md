@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2194
-(2026-08-23); behavioral and source evidence is current through s2194.
+authoritative for exact commands and probe rows. Maintained in Session 2195
+(2026-08-23); behavioral and source evidence is current through s2195.
 
 The detailed s2164–s2192 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43. This file is the compact
@@ -110,24 +110,37 @@ operational state, not a second ledger.
   `H-NoIndividualCategoryBoundary`, refutes the slot/event/audio individual
   boundary hypotheses and coverage failure, and leaves pairwise logging
   interaction or another source open.
+- s2195 ran the planned pairwise logging A/B after recreating its missing
+  self-contained runner: quiet, slot+event, slot+audio, and event+audio.
+  Writer controls fired 29/29/31/30 times; all four arms reached 640 origins
+  `0x0066A500` and `0x00696100`, and none reached `0x00696600`. Optional
+  controls were positive (8,192 slot, 130 event, and 266/263 audio rows).
+  First-origin target cells were quiet `1/0/2/61/0/1`, slot+event
+  `1/0/2/63/0/1`, slot+audio `1/0/2/64/1/1`, and event+audio
+  `1/0/2/62/1/1`. All arms emitted 36 crash markers, but endpoints diverged:
+  quiet ended at `allocAndInitGridCellArray+1280` / guest `0x80001C94`,
+  slot+event at the Metal barrier path / guest `0x8000B650`, and the two
+  audio pairs at `slotDispatcherIter+3508` / guest `0x80022160`. This selects
+  `H-NoPairInteraction` for second-origin reachability and refutes the three
+  named pair interactions at that scope; the endpoint divergence is not a
+  shared route-boundary explanation.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 A1 recover the second-origin port writer parity census; blocks
+1. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
-   H-PortSecondOriginAbsent, and s2192–s2194 showed that broad, grouped, and
-   individual route logging change details without reaching `0x00696600`.
-   The next discriminator is a four-arm, phase-gated pairwise test with the
-   same writer controls: quiet, slot+event, slot+audio, and event+audio. If a
-   pair reaches `0x00696600` or changes the crash boundary while quiet does
-   not, that interaction is a route-boundary candidate; if all pairs miss it,
-   pairwise logging interaction is not sufficient and another source remains
-   open. Do not add a port guard, mitigation, task rewrite, or audio default
-   flip.
+   H-PortSecondOriginAbsent, and s2192–s2195 showed that broad, grouped,
+   individual, and pairwise route logging do not reach `0x00696600` despite
+   positive controls. s2195's divergent crash endpoints are not a stable
+   route-boundary discriminator, so pairwise logging is closed at this
+   scope. The next work unit must use one whole-call-site transition table,
+   grounded against retail first, to compare which guest callback/caller
+   produces each 640 origin and where the port path stops. Do not add a port
+   guard, mitigation, task rewrite, or audio default flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
