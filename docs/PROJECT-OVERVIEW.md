@@ -3973,7 +3973,7 @@ skip, `NAN_CHECK` disable, wait guard, or copyToRAM/CIMG writeback guard is
 authorized by this chain. The exact commands and probe rows remain in the
 ledger and scratch artifacts named by the sessions.
 
-### Image DMA and retail writer boundary (s2183–s2185)
+### Image DMA and retail writer boundary (s2183–s2187)
 
 - s2183's older completing logs had positive controls and zero named-word
   overlap; its failing log had no image rows and selected coverage failure
@@ -3991,6 +3991,15 @@ ledger and scratch artifacts named by the sessions.
   `H-RetailWritesNamedWords`, single-source for writer attribution and not
   a runtime guard or image-arm default-on result.
 
-The next discriminator is a fresh failing image-arm run with both a
-positive `[audtask-image-join]` control and a phase-gated 640 row. Only
-then can image-DMA intervals be compared with the six named words.
+- s2187 supplied a fresh image-arm run with independent phase and join
+  controls: 6,118 image joins, including the target 640 phase at
+  `0x00696100`, but 3,449 joins at title `1024 @ 0x00790400`, 2,669 at
+  hangar `512 @ 0x006AB400`, and zero at the target 640 phase. Destination
+  intervals overlapped none of the six named physical words. The run later
+  crashed in `recomp::do_rom_read` after entering a later 640 phase. This
+  selects `H-AudioDmaTitleHangarOnly` for this run and leaves the retail
+  writer identities and intermittent cinematic failure open.
+
+The next discriminator is a retail writer-PC census for all six named words,
+with a whole-RDRAM positive control and phase trace, before another port
+instrument or any runtime change is considered.

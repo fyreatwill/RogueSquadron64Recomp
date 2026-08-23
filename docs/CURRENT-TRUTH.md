@@ -2,12 +2,12 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2186
-(2026-08-23); behavioral and source evidence is current through s2185.
+authoritative for exact commands and probe rows. Maintained in Session 2187
+(2026-08-23); behavioral and source evidence is current through s2187.
 
-The detailed s2164–s2185 chain was migrated to
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43 during this maintenance
-pass. This file is the compact operational state, not a second ledger.
+The detailed s2164–s2187 chain is archived in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43. This file is the compact
+operational state, not a second ledger.
 
 ## Current state
 
@@ -39,18 +39,25 @@ pass. This file is the compact operational state, not a second ledger.
   that retail writes all six words, but only named the `0x2231EC` writer;
   five retail writer identities remain open. These results are scoped and
   do not authorize a guard, task rewrite, or default flip.
+- s2187 independently repeated the image-arm census with 6,118 joins and a
+  positive `640 @ 0x00696100` phase. Joins were title/hangar-only (3,449 at
+  `1024 @ 0x00790400`, 2,669 at `512 @ 0x006AB400`, zero at target 640) and
+  none overlapped the six named words. The run later crashed in
+  `recomp::do_rom_read` after a later 640 phase; this is scoped evidence,
+  not an explanation of the intermittent cinematic failure.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 A1 cinematic window; blocks default-on.** Obtain a fresh failing
-   `ROGUESQ_AUDIO_UCODE=1` run with positive `[audtask-image-join]` count and
-   a phase-gated 640 row at origin `0x00696100`. Parse join intervals against
-   physical `0x25A580`, `0x0CA748`, `0x0C7B0C`, `0x165E40`, `0x0CDB58`, and
-   `0x2231EC`. Do not add a port instrument, rebuild, mitigation, or default
-   flip for this work unit.
+1. **M5 A1 retail writer identity census; blocks default-on.** Run the
+   retail oracle with a whole-RDRAM positive control, six named-word watches,
+   per-target writer-PC histograms, and VI phase trace. Resolve the five
+   writer identities still open after s2185. s2184 and s2187 both show that
+   image joins with positive controls are title/hangar-only, but this does
+   not explain the intermittent cinematic failure. Do not add a port
+   instrument, rebuild, mitigation, or default flip for this work unit.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -169,14 +176,16 @@ remain in the append-only ledger. Operationally:
 - s2184's title/hangar-only image-DMA result is a completing-run result, not
   a universal claim. s2185's retail writer run proves target writes exist,
   but incomplete per-target attribution leaves the failing image join as
-  the next discriminator.
+  the next discriminator. s2187's positive-control run independently
+  repeats the title/hangar-only result, but its later PI-DMA crash is not
+  evidence about the target cinematic phase.
 
 ## Evidence ledger summary
 
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024 and
 spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
-s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2185
+s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2187
 pointer, failure, and image-DMA archive is §43. Exact commands, counts,
 failed retries, and session headings remain in `PORTING-STATE.md`.
 

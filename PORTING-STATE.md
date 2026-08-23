@@ -103719,3 +103719,35 @@ ORIGIN: documentation compaction only; no guest or host value was changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-failing-image-join`.
+
+## Session 2187 (2026-08-23) — image joins remain title/hangar-only with controls
+
+Ran the exact image-arm recipe from `scratch/agent/NEXT.md` with
+`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_LOG_ALL=1`,
+`ROGUESQ_LOG_CUTSCENE_A2_50=1`, and
+`ROGUESQ_LOG_AUDTASK_IMAGE_JOIN=1`. No rebuild. The run log is
+`scratch/s73_post_a_scene/s2187_image_cinematic/run.log`; compact parse:
+`scratch/agent/s2187_image_join.txt`.
+
+The same run supplied 131 `[vi] update_screen` rows, 14 `[phase]` rows, and
+6118 `[audtask-image-join]` rows. The target 640 phase
+`0x00696100` was present at 7.4s (#374), so both the VI and image controls
+were positive. The join table was 3449 at title `1024 @ 0x00790400`, 2669
+at hangar `512 @ 0x006AB400`, and zero at 640 `0x00696100`. A Perl parse of
+all half-open `[dest,dest+len)` intervals found zero overlap with physical
+`0x25A580`, `0x0CA748`, `0x0C7B0C`, `0x165E40`, `0x0CDB58`, or `0x2231EC`.
+
+The run reached title and hangar, entered a later 640 phase at
+`0x006A2900`, then crashed with signal 11 in `recomp::do_rom_read`; the
+last guest PC was `0x80001B08`. That terminal PI-DMA crash is not used as a
+target-phase claim. This selects `H-AudioDmaTitleHangarOnly` and refutes
+`H-AudioDmaHitsCutscene` and `H-JoinCoverageFailure` at this same-run scope.
+It does not explain the intermittent cinematic failure or identify retail
+writers.
+
+ORIGIN: diagnostic-only image-DMA census; no guest or host value was changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-writer-census`.
