@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2199
-(2026-08-23); behavioral and source evidence is current through s2199.
+authoritative for exact commands and probe rows. Maintained in Session 2200
+(2026-08-23); behavioral and source evidence is current through s2200.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2199's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2200's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -171,6 +171,15 @@ second ledger.
   causal claim is single-source port evidence: the independent oracle only
   corroborated retail field 0 on the sampled 320 route. The alternation knob
   remains diagnostic and default-off.
+- s2200's phase-gated retail oracle passed the whole-RDRAM positive control
+  (10,000 callbacks, then removal), and its VI trace showed repeated 640 rows
+  at both `0x00696100` and `0x00696600`. The `0x80034D90`
+  `osViGetCurrentField` watch produced 202 target rows at the first origin and
+  213 at the second; every row returned `v0=0`, with zero `v0=1` rows. This
+  independent target-phase result refutes H-RetailFieldAlternates and selects
+  H-RetailField0Target. The s2199 port knob remains a route-recovery
+  diagnostic, not retail ground truth; the next discriminator is the retail
+  mode/field-descriptor or swap-buffer source of the second origin.
 
 ## Active backlog
 
@@ -190,9 +199,12 @@ work items.
    `0x00696600`. s2198 found that the port commits and consumes only
    `0x00696100`; s2199's same-built A/B showed that toggling the host
    `ViState::field` after each VI commit restores repeated commits and screen
-   consumption at both target origins. The next discriminator is retail
-   target-phase field ground truth; keep the alternation knob opt-in and do
-   not add a port guard, mitigation, task rewrite, or audio default flip.
+   consumption at both target origins. s2200's independent target-phase watch
+   found `osViGetCurrentField` returns only field 0 at both retail origins, so
+   the next discriminator is the retail mode/field-descriptor and
+   swap-buffer source of the second origin. Keep the alternation knob opt-in
+   and do not add a port guard, mitigation, task rewrite, or audio default
+   flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -339,6 +351,12 @@ remain in the append-only ledger. Operationally:
   with positive controls, so that coverage result is superseded as an
   explanation of the second-origin transition; the remaining question is
   why retail selects the second field.
+- s2199's H-ViFieldNotToggled result remains a valid port A/B observation, but
+  its causal interpretation as retail field alternation is superseded: s2200
+  sampled `osViGetCurrentField` at both retail target origins and observed
+  only `v0=0`. The knob proves that selecting the sibling VI descriptor can
+  recover the route; it does not identify the retail writer or selector of
+  that sibling descriptor.
 
 ## Evidence ledger summary
 
@@ -347,7 +365,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2199's VI-boundary work is recorded in the ledger.
+s2198–s2200's VI-boundary work is recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

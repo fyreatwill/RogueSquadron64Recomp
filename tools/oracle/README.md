@@ -40,6 +40,10 @@ count still proves the GPR instrument fired. Exec hits log past
 `--hit-cap` (up to 64 printed execs) so a whole-RDRAM positive
 control cannot silence them.
 
+`--pc-phase-log ORIGIN[,ORIGIN...]` phase-gates additional watched-execution
+rows to live 640-width VI origins. This keeps a high-frequency boot watch
+from changing the driven route while collecting target-phase GPR returns.
+
 For a memory watch after the global `--hit-cap` has gone silent,
 `--first-watch N` prints the first hit for watch index N and
 `--pc-hist-watch N` prints a bounded writer-PC histogram for that watch at

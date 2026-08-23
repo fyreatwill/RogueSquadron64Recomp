@@ -168,6 +168,9 @@ static int g_gpr_ctl_printed;
 static long g_exec_logged;
 #define EXEC_LOG_CAP 64
 #define MAX_EXEC_PREV 128
+#define MAX_PC_PHASE_LOG_ORIGINS 8
+static uint32_t g_pc_phase_log_origin[MAX_PC_PHASE_LOG_ORIGINS];
+static int g_n_pc_phase_log_origin;
 
 /* GPR file is int64_t[32] (r4300_regs). Print the 32-bit guest view. */
 static uint32_t gpr32(int idx)
@@ -186,6 +189,26 @@ static void print_gpr_fields(void)
     printf(" v0=0x%08x s1=0x%08x a0=0x%08x a1=0x%08x a2=0x%08x s0=0x%08x",
            gpr32(2), gpr32(17), gpr32(4), gpr32(5), gpr32(6), gpr32(16));
 }
+
+static int pc_phase_log_match(void)
+{
+    unsigned width;
+    unsigned origin;
+    int i;
+
+    if (g_n_pc_phase_log_origin == 0)
+        return 0;
+    width = pDebugMemRead32(VI_WIDTH_ADDR);
+    origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    if (width != 640)
+        return 0;
+    for (i = 0; i < g_n_pc_phase_log_origin; i++) {
+        if (origin == g_pc_phase_log_origin[i])
+            return 1;
+    }
+    return 0;
+}
+
 struct exec_prev {
     uint32_t pc;
     uint32_t prev;
@@ -617,6 +640,8 @@ static void dbg_update(unsigned int pc)
         detail_hit = 1;
         g_exec_logged++;
     }
+    if ((flags & M64P_BKP_FLAG_EXEC) && pc_phase_log_match())
+        detail_hit = 1;
     if (!g_positive_watch_removed && g_nwatch > 0 && g_watch[0].write_hits == 10000) {
         int rc = pDebugBreakpointCommand(M64P_BKP_CMD_REMOVE_IDX, 0, NULL);
         printf("[oracle] positive-control threshold reached: watch index 0 callbacks=%ld; removal rc=%d; watch index 1 remains armed\n",
@@ -1048,6 +1073,7 @@ static void usage(void)
         "  --secs N              run for N seconds (default 120)\n"
         "  --hit-cap N           log at most N hits, then count silently (default 200)\n"
         "  --detail-watch N      always log hits for watch index N\n"
+        "  --pc-phase-log ORIGIN log watched execs only at 640-width VI origin (repeatable)\n"
         "  --first-watch N       log the first hit for watch index N\n"
         "  --pc-hist-watch N     summarize writer PCs for watch index N (repeatable)\n"
         "  --pc-hist-phase ORIGIN  add a 640-width writer histogram bucket (repeatable)\n"
@@ -1120,6 +1146,13 @@ int main(int argc, char **argv)
             int watch = atoi(argv[++i]);
             if (watch >= 0 && watch < MAX_WATCHES)
                 g_detail_watch_mask |= 1u << watch;
+        }
+        else if (!strcmp(argv[i], "--pc-phase-log") && i + 1 < argc) {
+            char *spec = argv[++i], *tok, *save = NULL;
+            for (tok = strtok_r(spec, ",", &save);
+                 tok && g_n_pc_phase_log_origin < MAX_PC_PHASE_LOG_ORIGINS;
+                 tok = strtok_r(NULL, ",", &save))
+                g_pc_phase_log_origin[g_n_pc_phase_log_origin++] = (uint32_t)strtoul(tok, NULL, 0);
         }
         else if (!strcmp(argv[i], "--first-watch") && i + 1 < argc)
             g_first_watch = atoi(argv[++i]);

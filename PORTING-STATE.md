@@ -104149,3 +104149,45 @@ not a game-memory corruption path.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-vi-field-alternation` remains open pending retail
 target-phase field ground truth.
+
+## Session 2200 (2026-08-23) — retail target-phase field watch refuted alternation
+
+Ran the prescribed retail-oracle command with the whole-RDRAM write watch and
+`osViGetCurrentField` execution watch at `0x80034D90`. The first arm used the
+shared `--hit-cap 10000`: the whole-RDRAM watch visibly fired, but the cap was
+consumed during boot, so no target-phase PC rows were logged. Its VI trace did
+reach repeated 640 rows at both target origins, but the field result was
+unusable under the coverage hypothesis.
+
+Retried with `--detail-watch 1` after confirming the oracle's logging rules.
+The positive-control threshold fired and left the PC watch armed, but logging
+every high-frequency boot execution changed the driven route: the run stayed
+on width 320 and produced no target origin. This retry is a logging-interference
+failure, not field evidence.
+
+Added the route-safe `--pc-phase-log ORIGIN[,ORIGIN...]` oracle option and
+rebuilt with `bash tools/oracle/build.sh`. The fixed one-run command kept the
+whole-RDRAM control, phase-gated PC output to 640 origins
+`0x00696100,0x00696600`, the VI trace, and the existing start schedule. The
+positive-control threshold fired at 10,000 callbacks and removed only watch
+index 0. VI trace showed three rows at each target origin. The field watch
+produced 202 target rows at `0x00696100` and 213 at `0x00696600`; all 415 rows
+returned `v0=0x00000000`, with zero `v0=1` rows. The run completed with
+12,671 total callbacks and 2,672 VI events.
+
+This selects H-RetailField0Target and refutes H-RetailFieldAlternates and
+H-RetailFieldWatchCoverage for the fixed run. Together with s2199's
+same-built port A/B, it shows that host `ViState::field` alternation can
+recover the second origin but is not the retail `osViGetCurrentField` source.
+The result does not identify whether the retail origin comes from the mode's
+field descriptors, a swap-buffer producer, or another VI-state transition;
+the next work unit must census those sources in one oracle run. No port guard,
+mitigation, task rewrite, or audio default change was made.
+
+ORIGIN: the only code change is a phase-gated oracle diagnostic; the watched
+value is retail's `osViGetCurrentField` return, not a port-side mitigation.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-vi-origin-source`.
