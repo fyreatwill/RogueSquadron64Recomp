@@ -1,56 +1,54 @@
-# NEXT work unit (s2197) — retain retail swap arguments by VI origin
+# NEXT work unit (s2198) — trace the port VI-state publication boundary
 
-HYPOTHESIS-ID: m5-a1-vi-swap-caller-parity
+HYPOTHESIS-ID: m5-a1-host-vi-commit-boundary
 
 ## Work unit
 
-Extend the independent retail oracle, not the port, with one bounded execution
-table for `osViSwapBuffer` (`0x80035500`). At each execution, when the live VI
-width is 640, accumulate `(VI origin, PREVIOUS_PC, $a0 physical framebuffer)`
-and print the complete bounded table at shutdown. Preserve the existing
-whole-RDRAM positive-control watch, execution watch, and `--vi-trace` in the
-same run.
+Instrument one bounded, phase-scoped port table across the three host edges:
+`osViSwapBuffer_recomp` call, `ViState::update_vi` committed-register update,
+and RT64 `update_screen`. Key rows by edge, VI origin, requested/committed
+framebuffer, width, and ordinal; retain the existing host caller fields only
+as join keys. The table must show whether the retail-matching pair
+`(prev_pc=0x8001BE24, a0_phys=0x0062B800)` reaches the port's committed
+`0x00696600` state and then `update_screen`.
 
-Add the table to `tools/oracle/rs64_oracle.c`, rebuild the oracle, then run:
-
-```sh
-tools/oracle/build.sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 45 --hit-cap 10000 \
-  --watch-write 0x0:0x800000 --watch-pc 0x80035500 \
-  --first-watch 0 --vi-trace \
-  > scratch/agent/s2197_retail_vi_swap_phase_table.log 2>&1
-```
-
-The positive controls must be at least 10,000 whole-RDRAM writes and positive
-`osViSwapBuffer` execution hits. The VI trace must contain repeated 640 rows
-at both `0x00696100` and `0x00696600`; otherwise reject the comparison. Parse
-the new table for both target origins and compare it to s2196's port rows,
-where host symbols recovered the two generated callers but `$r31-8` was
-`0xFFFFFFF8`.
+Before building, add the whole table in one batch: a target-origin swap-call
+row, a `ViState::update_vi` commit row after `regs.VI_ORIGIN_REG` and
+`regs.VI_WIDTH_REG` are assigned, and an `update_screen` consume row. Keep
+each edge bounded to 64 rows per target origin and print a shutdown summary.
+Because `lib/N64ModernRuntime` is edited, run
+`./submodule-patches/export.sh` after the edit and commit the refreshed patch
+in the same iteration.
 
 ## Competing hypotheses and discriminator
 
-- H-RetailPortCallerParity: retail has the same `(prev_pc, a0)` pairs at
-  `0x00696600` that the port already produced at `0x00696100`; the failure is
-  downstream of the guest swap call.
-- H-PortMissingSecondCaller: a retail pair at `0x00696600` is absent from the
-  port table; the guest route does not reach that swap.
-- H-PortWrongSwapArgument: the retail caller exists in both runs, but the
-  port's framebuffer argument is a different physical buffer at the covered
-  phase.
-- H-HostPhaseCommit: the retail target table matches the port caller/argument
-  sequence, but the port never publishes `0x00696600` through its host VI
-  transition.
-- H-CoverageFailure: either same-run positive control or either target VI
-  origin is absent; reject the comparison as invalid.
+- H-PortViStateCommit: the matching swap call occurs, but
+  `ViState::update_vi` never commits `0x00696600`; the boundary is the VI
+  thread's pending-state application.
+- H-PortScreenConsume: `update_vi` commits `0x00696600`, but RT64
+  `update_screen` never consumes it; the boundary is the renderer event.
+- H-PortOriginAliasing: the swap call occurs, but the mode/field calculation
+  commits a different origin or framebuffer than the requested
+  `0x0062B800` pair.
+- H-CoverageFailure: the same-run caller control, writer control, or either
+  target phase is absent; reject the comparison rather than treating a null
+  edge as evidence.
 
-The single origin/caller/framebuffer table is the discriminator. A missing
-retail target pair selects H-PortMissingSecondCaller; a matching caller with a
-different port argument selects H-PortWrongSwapArgument; matching pairs with
-no port second-origin phase select H-HostPhaseCommit; matching target tables
-select H-RetailPortCallerParity. Do not add a port guard, mitigation, task
-rewrite, writer filter, or audio-default change.
+The single joined edge table selects: swap present + commit absent selects
+H-PortViStateCommit; commit present + consume absent selects
+H-PortScreenConsume; a wrong committed origin/framebuffer selects
+H-PortOriginAliasing; missing controls selects H-CoverageFailure.
+
+## Build and run
+
+```sh
+./submodule-patches/export.sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env GAME_EXTRA_ENV="ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_M5_WRITER_PARITY=1 ROGUESQ_LOG_VI_COMMIT=1" \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2198_vi_commit 30 12
+```
+
+Accept the run only if `[vi-callers-control]` fires, the writer control is
+positive, and the log reaches repeated 640 rows at both
+`0x00696100` and `0x00696600`. Do not add a guard, mitigation, task rewrite,
+writer filter, or audio-default change.

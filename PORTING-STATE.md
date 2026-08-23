@@ -104039,3 +104039,37 @@ ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic probe.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-vi-swap-caller-parity`.
+
+## Session 2197 (2026-08-23) — retail target-origin swap table selects caller parity
+
+Added a bounded retail-oracle table for `osViSwapBuffer` `0x80035500`, keyed
+by `(VI origin, PREVIOUS_PC, physical $a0 framebuffer)` while live VI width
+was 640. Rebuilt with `./tools/oracle/build.sh` and ran the prescribed
+45-second Rice collection with a whole-RDRAM watch and the swap execution
+watch. The run passed the positive control with 10,000 writes, recorded 1,171
+swap executions, and reached repeated 640 VI rows at both `0x00696100` and
+`0x00696600`. The table had 9 unique rows and zero overflow.
+
+At `0x00696100`, the target rows were
+`(prev_pc=0x8001BE24, a0_phys=0x0062B800, n=317)` and
+`(prev_pc=0x80019B14, a0_phys=0x0062B800, n=37)`. At `0x00696600`, retail
+had `(prev_pc=0x8001BE24, a0_phys=0x0062B800, n=89)`. The s2196 port table
+already produced that first caller/framebuffer pair at its first origin, so
+the retail and port evidence selects `H-RetailPortCallerParity`. It refutes
+`H-PortMissingSecondCaller` and `H-CoverageFailure` at this scope. The
+missing port second-origin observation is therefore downstream of the guest
+swap call, with host VI-state publication as the next discriminator. The
+earlier s2196 argument mismatch framing was based on non-target bounded
+samples and is superseded by this origin-keyed table.
+
+No port value, branch, mitigation, task rewrite, writer filter, or audio
+default changed. Full oracle output:
+`scratch/agent/s2197_retail_vi_swap_phase_table.log`.
+
+ORIGIN: no mitigation-shaped diff; this was an independent, phase-gated
+oracle diagnostic with whole-RDRAM and swap execution positive controls.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-host-vi-commit-boundary`.

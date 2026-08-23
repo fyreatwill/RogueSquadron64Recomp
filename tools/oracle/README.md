@@ -32,6 +32,9 @@ exec hit, mupen's `PREVIOUS_PC` (the jal site that transferred here;
 when attributing a callee. Each logged exec hit also prints `$v0`
 (gpr[2]), `$s1` (gpr[17]), `$a0` (gpr[4]), and `$a2` (gpr[6]) from
 `DebugGetCPUDataPtr(M64P_CPU_REG_REG)`, plus live VI width/origin.
+When the watched execution is `osViSwapBuffer` (`0x80035500`), the shutdown
+summary also includes a bounded unique table of `(VI origin, PREVIOUS_PC,
+physical $a0 framebuffer)` rows for live width 640.
 The first breakpoint of any kind prints `[gpr-ctl]` so a zero exec
 count still proves the GPR instrument fired. Exec hits log past
 `--hit-cap` (up to 64 printed execs) so a whole-RDRAM positive

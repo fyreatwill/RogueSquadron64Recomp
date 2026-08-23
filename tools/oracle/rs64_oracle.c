@@ -51,8 +51,10 @@
 #define MAX_POST_VALUE_PCS 512
 #define MAX_POST_VALUE_SAMPLES 256
 #define MAX_POST_VALUE_ROWS_PER_PC 16
+#define MAX_VI_SWAP_PHASE_ROWS 256
 #define VI_ORIGIN_ADDR 0xA4400004u
 #define VI_WIDTH_ADDR  0xA4400008u
+#define VI_SWAP_PC 0x80035500u
 
 static void *g_core;
 static double g_t0;
@@ -209,6 +211,39 @@ static void count_exec_prev(uint32_t pc, uint32_t prev)
         return;
     }
     g_exec_prev_overflow++;
+}
+
+struct vi_swap_phase_row {
+    uint32_t origin;
+    uint32_t prev_pc;
+    uint32_t a0_phys;
+    long n;
+};
+static struct vi_swap_phase_row g_vi_swap_phase[MAX_VI_SWAP_PHASE_ROWS];
+static int g_n_vi_swap_phase;
+static long g_vi_swap_phase_overflow;
+
+static void count_vi_swap_phase(uint32_t origin, uint32_t prev_pc,
+                                uint32_t a0_phys)
+{
+    int i;
+    for (i = 0; i < g_n_vi_swap_phase; i++) {
+        if (g_vi_swap_phase[i].origin == origin &&
+            g_vi_swap_phase[i].prev_pc == prev_pc &&
+            g_vi_swap_phase[i].a0_phys == a0_phys) {
+            g_vi_swap_phase[i].n++;
+            return;
+        }
+    }
+    if (g_n_vi_swap_phase < MAX_VI_SWAP_PHASE_ROWS) {
+        g_vi_swap_phase[g_n_vi_swap_phase].origin = origin;
+        g_vi_swap_phase[g_n_vi_swap_phase].prev_pc = prev_pc;
+        g_vi_swap_phase[g_n_vi_swap_phase].a0_phys = a0_phys;
+        g_vi_swap_phase[g_n_vi_swap_phase].n = 1;
+        g_n_vi_swap_phase++;
+    } else {
+        g_vi_swap_phase_overflow++;
+    }
 }
 
 static void count_writer_pc(int watch, uint32_t pc)
@@ -503,6 +538,13 @@ static void dbg_update(unsigned int pc)
 
     pDebugBreakpointTriggeredBy(&flags, &accessed);
     access_flags = flags & (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE);
+
+    if ((flags & M64P_BKP_FLAG_EXEC) && pc == VI_SWAP_PC &&
+        pDebugMemRead32(VI_WIDTH_ADDR) == 640) {
+        count_vi_swap_phase(pDebugMemRead32(VI_ORIGIN_ADDR),
+                            (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC),
+                            gpr32(4) & 0x1FFFFFFFu);
+    }
 
     if (!g_gpr_ctl_printed) {
         g_gpr_ctl_printed = 1;
@@ -1331,6 +1373,13 @@ int main(int argc, char **argv)
     if (g_exec_prev_overflow)
         printf("[oracle] exec-prev overflow=%ld (unique pairs truncated at %d)\n",
                g_exec_prev_overflow, MAX_EXEC_PREV);
+    printf("[oracle] vi-swap-phase rows=%d/%d overflow=%ld pc=0x%08x width=640\n",
+           g_n_vi_swap_phase, MAX_VI_SWAP_PHASE_ROWS,
+           g_vi_swap_phase_overflow, VI_SWAP_PC);
+    for (int i = 0; i < g_n_vi_swap_phase; i++)
+        printf("[oracle] vi-swap-phase origin=0x%08x prev_pc=0x%08x a0_phys=0x%08x n=%ld\n",
+               g_vi_swap_phase[i].origin, g_vi_swap_phase[i].prev_pc,
+               g_vi_swap_phase[i].a0_phys, g_vi_swap_phase[i].n);
     /* Materialise the config so the input mapping is inspectable. Without
      * this nothing is ever written and the key->button mapping the presses
      * rely on is invisible in-memory defaults - i.e. an unverifiable

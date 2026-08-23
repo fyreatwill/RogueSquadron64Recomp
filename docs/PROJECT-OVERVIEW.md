@@ -4088,3 +4088,34 @@ to the second origin, while showing that logging changes the later failure
 mode. It does not establish a shared crash boundary or authorize a writer
 guard, task rewrite, or audio default change. Full logs and the complete
 writer rows are under `scratch/agent/s2192_m5_log_all_ab/`.
+
+### Logging-category and caller boundary (s2193–s2196)
+
+s2193 isolated grouped route logging, s2194 isolated slot/event/audio
+categories, and s2195 tested the three pairwise combinations. Every arm
+passed its positive writer and phase controls at `0x0066A500` and
+`0x00696100`, none reached `0x00696600`, and the endpoint variations were not
+a stable route discriminator. These runs close the named individual and
+pairwise logging hypotheses at their tested scope; they do not authorize a
+writer guard or task rewrite.
+
+s2196's retail oracle run passed its whole-RDRAM and swap controls and reached
+both target origins. Its two execution callers were `0x8001BE24` and
+`0x80019B14`. The port's caller table recovered both host symbols at the first
+origin, but guest `ctx->r31-8` was always `0xFFFFFFF8`; the earlier retail
+argument comparison used only bounded execution samples and was not target-
+origin keyed.
+
+### Retail target-origin swap table (s2197)
+
+s2197 extended the independent oracle with a bounded unique table keyed by
+`(VI origin, PREVIOUS_PC, $a0 physical framebuffer)` at
+`osViSwapBuffer` `0x80035500` while live VI width was 640. The run passed the
+whole-RDRAM positive control with 10,000 writes, recorded 1,171 swap
+executions, and saw repeated 640 rows at both `0x00696100` and `0x00696600`.
+At `0x00696100`, retail produced `(0x8001BE24, 0x0062B800)` and
+`(0x80019B14, 0x0062B800)`; at `0x00696600` it produced
+`(0x8001BE24, 0x0062B800)`. The port already produced that same pair at its
+first origin in s2196. This selects `H-RetailPortCallerParity` and refutes
+missing second-caller and oracle-coverage explanations at this scope. The
+next boundary is host VI-state publication after the guest swap call.

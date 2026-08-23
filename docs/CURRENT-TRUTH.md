@@ -2,10 +2,10 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2196
-(2026-08-23); behavioral and source evidence is current through s2196.
+authoritative for exact commands and probe rows. Maintained in Session 2197
+(2026-08-23); behavioral and source evidence is current through s2197.
 
-The detailed s2164–s2192 chain is archived in
+The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43. This file is the compact
 operational state, not a second ledger.
 
@@ -136,6 +136,15 @@ operational state, not a second ledger.
   `0xFFFFFFF8` in every port row, so it is not a usable guest caller field in
   this recomp; host-symbol mapping is diagnostic fallback only. This exposes
   a caller-contract/argument mismatch, not the missing-second-origin cause.
+- s2197's independent retail swap table passed the whole-RDRAM control
+  (10,000 writes), the swap execution control (1,171 hits), and repeated
+  640-VI rows at both `0x00696100` and `0x00696600`. At the first origin,
+  retail had `(prev_pc=0x8001BE24, a0_phys=0x0062B800)` and
+  `(prev_pc=0x80019B14, a0_phys=0x0062B800)`; at the second it had the first
+  pair. The port already produced that same first pair at its first origin
+  in s2196. This selects H-RetailPortCallerParity, refutes
+  H-PortMissingSecondCaller and H-CoverageFailure at this scope, and moves
+  the discriminator past the guest swap call to host VI-state publication.
 
 ## Active backlog
 
@@ -149,14 +158,14 @@ work items.
    individual, and pairwise route logging do not reach `0x00696600` despite
    positive controls. s2195's divergent crash endpoints are not a stable
    route-boundary discriminator, so pairwise logging is closed at this
-   scope. s2196 found that `ctx->r31-8` is always `0xFFFFFFF8`; host symbols
-   still recover both retail swap callers at the first port origin, but the
-   retail run did not retain target-origin framebuffer arguments beyond its
-   64 printed execution rows. The next work unit must add one oracle-side
-   phase table keyed by `(VI-origin, prev_pc, a0)` while preserving the
-   whole-RDRAM and swap positive controls, then compare it to the existing
-   port table in one qualified run. Do not add a port guard, mitigation, task
-   rewrite, or audio default flip.
+   scope. s2196 found that `ctx->r31-8` is always `0xFFFFFFF8`; s2197 then
+   retained the retail target-origin table and found the port's first-origin
+   `(0x8001BE24, 0x0062B800)` pair also occurs in retail at
+   `0x00696600`. The next work unit must instrument the port's
+   `osViSwapBuffer -> ViState::update_vi -> update_screen` boundary in one
+   phase-scoped table, preserving the existing caller, writer, and phase
+   controls. Do not add a port guard, mitigation, task rewrite, or audio
+   default flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -291,15 +300,22 @@ remain in the append-only ledger. Operationally:
   first-origin phases, missed the second origin, and converged on the same
   crash boundary; target-writer sparsity remains an observation, not a reason
   to guard or rewrite a guest store.
+- s2196's bounded retail execution samples made the target-origin framebuffer
+  arguments look unlike the port's first-origin rows. s2197's same-run
+  origin-keyed table shows the target-origin retail pair is
+  `(0x8001BE24, 0x0062B800)`; the earlier non-target argument rows were
+  outside the discriminator. The old caller/argument mismatch framing is
+  superseded and does not explain the missing port second-origin publication.
 
 ## Evidence ledger summary
 
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35. The VI-1024 and
 spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
-s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2191
-pointer, failure, image-DMA, and writer-parity archive is §43. Exact commands, counts,
-failed retries, and session headings remain in `PORTING-STATE.md`.
+s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
+pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43.
+Exact commands, counts, failed retries, and session headings remain in
+`PORTING-STATE.md`.
 
 Selected hypotheses must not be widened from single-source or single-arm
 observations. In particular, do not re-flip the image default, S32-address
