@@ -103658,36 +103658,6 @@ words before adding another port instrument.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-writer-census`.
 
-## Session 2191 (2026-08-23) — second-origin port writer census remained uncovered
-
-Ran the already-built writer-parity binary with
-`zsh scratch/agent/run_s2191_m5_second_origin.sh`, using the qualified
-image/LLE recipe and no menu keys. The same run passed the positive helper
-control with 29 records and the phase control with 640 rows at
-`0x0066A500` and `0x00696100`. It produced no 640 phase at
-`0x00696600`; after the first-origin phase the game aborted in
-`get_function(0)` from `slotDispatcherIter`, with last guest PC
-`0x80007904`.
-
-At `0x00696100`, target row counts in target order
-`0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC` were
-`1/0/2/54/0/1`. The sparse writers were target 1=`0x80057100`, target
-3=`0x800078EC`/`0x800A8144`, and target 6=`0x80057100`; target 4 was broad.
-All six second-origin cells are uncovered, not null. This selects
-`H-PortSecondOriginAbsent` and rules out `H-PortCoverageFailure` for this
-run because both controls fired. It rules out neither logging cadence nor
-the underlying slot-dispatch route boundary; those are the next discriminator.
-
-No guest or host value, branch, mitigation, task field, or audio default
-changed. Full parsed table: `scratch/agent/s2191_m5_second_origin.txt`.
-
-ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
-
-### Next
-
-See `scratch/agent/NEXT.md`.
-`HYPOTHESIS-ID: m5-a1-retail-writer-census`.
-
 ## Session 2185 (2026-08-23) — retail oracle writes all six cinematic words
 
 Ran the exact 45-second Rice oracle command from
@@ -103876,6 +103846,36 @@ audio default, a task rewrite, or a writer mitigation.
 
 ORIGIN: s2189 retail oracle phase matrix plus s2190 port writer attribution;
 diagnostic-only, no guest or host value changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-writer-census`.
+
+## Session 2191 (2026-08-23) — second-origin port writer census remained uncovered
+
+Ran the already-built writer-parity binary with
+`zsh scratch/agent/run_s2191_m5_second_origin.sh`, using the qualified
+image/LLE recipe and no menu keys. The same run passed the positive helper
+control with 29 records and the phase control with 640 rows at
+`0x0066A500` and `0x00696100`. It produced no 640 phase at
+`0x00696600`; after the first-origin phase the game aborted in
+`get_function(0)` from `slotDispatcherIter`, with last guest PC
+`0x80007904`.
+
+At `0x00696100`, target row counts in target order
+`0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC` were
+`1/0/2/54/0/1`. The sparse writers were target 1=`0x80057100`, target
+3=`0x800078EC`/`0x800A8144`, and target 6=`0x80057100`; target 4 was broad.
+All six second-origin cells are uncovered, not null. This selects
+`H-PortSecondOriginAbsent` and rules out `H-PortCoverageFailure` for this
+run because both controls fired. It rules out neither logging cadence nor
+the underlying slot-dispatch route boundary; those are the next discriminator.
+
+No guest or host value, branch, mitigation, task field, or audio default
+changed. Full parsed table: `scratch/agent/s2191_m5_second_origin.txt`.
+
+ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
 
 ### Next
 
