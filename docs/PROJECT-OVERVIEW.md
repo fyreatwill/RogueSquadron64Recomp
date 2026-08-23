@@ -3920,3 +3920,77 @@ image-arm isolator, treating named `osAiGetStatus` as a live jal target,
 treating MORT as a second RSP image, and treating leftover `fake_func_*`
 size `> 0xC` as renameable. They do not authorize changing the default
 audio arm, canary prefill, task ABI, output routing, waits, or guards.
+
+## 43. M5 A1 cinematic window and image-DMA boundary (s2164–s2185)
+
+This archive was migrated from `CURRENT-TRUTH.md` during maintenance in
+s2186. It preserves the late A1 chain without keeping every session's
+repeated prose in the operational file.
+
+### Cinematic pointer and failure chain (s2164–s2182)
+
+- s2164 censused `slotDispatcherIter` and
+  `cutsceneDispatchSlotsByFlag`: both crash sites are register-base guest
+  loads, not unsigned KSEG0 constants. The bodies contain zero guessed
+  `MEM_*` constants of that class (`H-NoSuchSite`).
+- s2165's Rice run supplied same-log whole-RDRAM and VI-640 controls and
+  showed retail executes both sites with KSEG0 pointers (`H-RetailExecsValidPtr`).
+- s2166 named the retail writer for the cutscene `+0x50` word: `rs_memset`
+  at `0x800078EC` and `spawnCutsceneObjectsFromList` at `0x800A8144`, after
+  `walkMeshdef0List` (`H-RetailWriterNamed`).
+- s2167's same-build `=1`/`=0` pair showed both arms store and reload
+  `0x8025A580` at `0x800C7B0C` with no mismatch (`H-PortStoreMatchesRetail`).
+- s2168's retail census showed `matchKeywordWithPriority` receives
+  `$a0=0x802231EC` and `$v0=0x800CDB58`, both valid KSEG0 heap pointers
+  (`H-RetailValidV0`). s2169 matched those values on both port arms until
+  the later intermittent failure; s2170 showed the n=150 row returns and
+  the caller continues on a completing run (`H-PortMatchesRetailUntilLater`,
+  `H-NoHangAtN150`).
+- s2171 classified a failing `=1` run as SIGBUS at
+  `0x800A87A8` (`lwc1 0x44($v0)`) with `$v0=0` after the valid `+0x50`
+  pointer (`H-NullV0At87A8`). s2172's retail watch named the word-0 writer
+  as `walkMeshdef0List` at `0x80057100` after `rs_malloc`; retail's first
+  slot word is `0x800CA748` (`H-RetailHeap0NeverZero`).
+- s2173 verified the port stores and reloads that same word on both arms.
+  s2174's failing 640-stall kept it intact through the last observed 87A0;
+  s2175's completing run continued through 87A8, transform, dispatch return,
+  title, and hangar (`H-PortHeap0MatchesRetail`, `H-StallWord0Intact`,
+  `H-CompletePathDispatchReturned`).
+- s2176 classified another failing run as `vec3Cross` `NAN_CHECK` at the
+  jal from `0x800A8640`, not a hang. s2177 independently showed retail
+  executes that jal during the 640 cinematic. s2178 showed the sampled
+  retail source words are finite.
+- s2179's completing port pair showed finite extract/first-cross words and
+  matching memory/FPR bits, but missed the abort class. s2180's failing
+  `=1` run also showed those words finite; its crash was host SIGSEGV in
+  `NativeTarget::copyToRAM`, not the `vec3Cross` abort. s2181's completing
+  pair extended the finite check through f2 and later `NAN_CHECK` operands;
+  s2182's queued soak completed title/hangar and later aborted in unaligned
+  PI DMA. These are not proof that the port abort class cannot be NaN.
+
+No NULL skip, guessed S32 address, default flip, function/lwc/transform
+skip, `NAN_CHECK` disable, wait guard, or copyToRAM/CIMG writeback guard is
+authorized by this chain. The exact commands and probe rows remain in the
+ledger and scratch artifacts named by the sessions.
+
+### Image DMA and retail writer boundary (s2183–s2185)
+
+- s2183's older completing logs had positive controls and zero named-word
+  overlap; its failing log had no image rows and selected coverage failure
+  only for that run.
+- s2184 supplied a same-run 640 control and 5,841 image joins. There were
+  zero joins in the 640 `0x00696100` phase and zero overlap with the six
+  named words, so that completing run selected
+  `H-AudioDmaTitleHangarOnly` and refuted cinematic overlap at that scope.
+- s2185's Rice run supplied an independent whole-RDRAM positive control
+  (63,611 writes) and writes to all six physical targets:
+  `0x25A580/0x0CA748/0x0C7B0C/0x165E40/0x0CDB58/0x2231EC` received
+  `5/1/5/53594/5/1` writes. The `0x2231EC` write was attributed to guest
+  `0x80057100` at 640/`0x00696600`. Per-target histograms were absent for
+  watches 1–5, so five writer identities remain open. This is
+  `H-RetailWritesNamedWords`, single-source for writer attribution and not
+  a runtime guard or image-arm default-on result.
+
+The next discriminator is a fresh failing image-arm run with both a
+positive `[audtask-image-join]` control and a phase-gated 640 row. Only
+then can image-DMA intervals be compared with the six named words.

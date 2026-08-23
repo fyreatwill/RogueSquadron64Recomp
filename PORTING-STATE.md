@@ -103692,3 +103692,30 @@ ORIGIN: diagnostic-only retail oracle watch; no guest or host value was changed.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-failing-image-join`.
+
+## Session 2186 (2026-08-23) — compacted current truth and archived late A1 chain
+
+Ran the maintenance gate before selecting a work unit. `wc -c` reported
+61,719 bytes and `wc -l` reported 958 lines for `docs/CURRENT-TRUTH.md`,
+so this was a documentation-only maintenance iteration and no build, game
+run, oracle run, or experiment was performed.
+
+Migrated the durable s2164–s2185 pointer/failure/image-DMA chain to
+`docs/PROJECT-OVERVIEW.md` §43, then replaced duplicated late-session detail
+in `docs/CURRENT-TRUTH.md` with a 209-line operational summary. The active
+backlog is now one monotonic 1–5 sequence, the headline is current through
+s2185, and `NEXT.md` carries the unchanged failing-image-join discriminator
+for s2187. The current-truth file fell to 11,690 bytes, a net reduction of
+749 lines.
+
+This maintenance result rules out no new runtime hypothesis and changes no
+code or runtime behavior. It does establish that the next work unit remains
+the failing image-arm join coverage run, with the same-run positive controls
+and six-word interval table required before any destination conclusion.
+
+ORIGIN: documentation compaction only; no guest or host value was changed.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-failing-image-join`.
