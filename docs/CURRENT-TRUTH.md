@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2195
-(2026-08-23); behavioral and source evidence is current through s2195.
+authoritative for exact commands and probe rows. Maintained in Session 2196
+(2026-08-23); behavioral and source evidence is current through s2196.
 
 The detailed s2164–s2192 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43. This file is the compact
@@ -124,6 +124,18 @@ operational state, not a second ledger.
   `H-NoPairInteraction` for second-origin reachability and refutes the three
   named pair interactions at that scope; the endpoint divergence is not a
   shared route-boundary explanation.
+- s2196's retail oracle caller control passed with 10,000 whole-RDRAM writes,
+  1,173 `osViSwapBuffer` executions, and repeated 640 VI rows at both
+  `0x00696100` and `0x00696600`. The port caller probe passed its first-16
+  control, writer control (29), and first-origin phase, but no second-origin
+  phase appeared before the post-first-origin collection ended. Retail's
+  execution histogram has callers `0x8001BE24` and `0x80019B14`; the port's
+  host-symbol table recovers both corresponding generated callers at the first
+  origin. Port swap arguments there were `0x62B800` plus `0x695C00`, while
+  retail control rows showed `0x805D4000`/`0x8066A000`. `$r31-8` was
+  `0xFFFFFFF8` in every port row, so it is not a usable guest caller field in
+  this recomp; host-symbol mapping is diagnostic fallback only. This exposes
+  a caller-contract/argument mismatch, not the missing-second-origin cause.
 
 ## Active backlog
 
@@ -137,10 +149,14 @@ work items.
    individual, and pairwise route logging do not reach `0x00696600` despite
    positive controls. s2195's divergent crash endpoints are not a stable
    route-boundary discriminator, so pairwise logging is closed at this
-   scope. The next work unit must use one whole-call-site transition table,
-   grounded against retail first, to compare which guest callback/caller
-   produces each 640 origin and where the port path stops. Do not add a port
-   guard, mitigation, task rewrite, or audio default flip.
+   scope. s2196 found that `ctx->r31-8` is always `0xFFFFFFF8`; host symbols
+   still recover both retail swap callers at the first port origin, but the
+   retail run did not retain target-origin framebuffer arguments beyond its
+   64 printed execution rows. The next work unit must add one oracle-side
+   phase table keyed by `(VI-origin, prev_pc, a0)` while preserving the
+   whole-RDRAM and swap positive controls, then compare it to the existing
+   port table in one qualified run. Do not add a port guard, mitigation, task
+   rewrite, or audio default flip.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume

@@ -33,6 +33,8 @@
 #include "librecomp/helpers.hpp"
 #include "ultramodern/ultramodern.hpp"
 
+extern "C" uint32_t rs64_phase_ord(void);
+
 extern "C" void __osContRamRead_recomp(uint8_t* /*rdram*/, recomp_context* ctx) {
     _return<s32>(ctx, -1);  // no rumble pak
 }
@@ -92,6 +94,77 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
     static int s_count = 0;
     int n = ++s_count;
     uint32_t fb = (uint32_t)ctx->r4;
+
+    static int s_log_callers = -1;
+    if (s_log_callers < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_VI_CALLERS");
+        s_log_callers = ((all && *all && *all != '0') ||
+                         (own && *own && *own != '0')) ? 1 : 0;
+    }
+    if (s_log_callers) {
+        struct CallerRow {
+            uint32_t caller;
+            uintptr_t host_ra;
+            uint32_t fb_phys;
+            uint32_t width;
+            uint32_t origin;
+            uint32_t count;
+        };
+        static CallerRow rows[128]{};
+        static uint32_t row_count = 0;
+        const uint32_t caller = static_cast<uint32_t>(ctx->r31 - 8u);
+        const uintptr_t host_ra = reinterpret_cast<uintptr_t>(__builtin_return_address(0));
+        const uintptr_t self_addr = reinterpret_cast<uintptr_t>(&osViSwapBuffer_recomp);
+        const uint32_t guest_pc = static_cast<uint32_t>(g_rs64_last_guest_pc);
+        const uint32_t fb_phys = fb & 0x00FFFFFFu;
+        const auto* vi = ultramodern::renderer::get_vi_regs();
+        const uint32_t width = vi->VI_WIDTH_REG;
+        const uint32_t origin = vi->VI_ORIGIN_REG & 0x00FFFFFFu;
+        const uint32_t phase = rs64_phase_ord();
+        const char* host_symbol = "?";
+#if !defined(_WIN32)
+        Dl_info host_info{};
+        if (dladdr(reinterpret_cast<void*>(host_ra), &host_info) && host_info.dli_sname) {
+            host_symbol = host_info.dli_sname;
+        }
+#endif
+        if (n <= 16) {
+            std::fprintf(stderr,
+                "[vi-callers-control] n=%d caller=0x%08X guest_pc=0x%08X "
+                "host_ra=0x%llX host_symbol=%s self=0x%llX fb=0x%06X width=%u "
+                "origin=0x%06X phase=%u\n",
+                n, caller, guest_pc, (unsigned long long)host_ra, host_symbol,
+                (unsigned long long)self_addr, fb_phys, width, origin, phase);
+            std::fflush(stderr);
+        }
+        if (width == 640u && (origin == 0x00696100u || origin == 0x00696600u)) {
+            uint32_t index = row_count;
+            for (uint32_t i = 0; i < row_count; ++i) {
+                if (rows[i].caller == caller && rows[i].host_ra == host_ra &&
+                    rows[i].fb_phys == fb_phys &&
+                    rows[i].width == width && rows[i].origin == origin) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index == row_count && row_count < 128u) {
+                rows[row_count++] = {caller, host_ra, fb_phys, width, origin, 0u};
+            }
+            if (index < row_count) {
+                const uint32_t count = ++rows[index].count;
+                if (count <= 16u || (count % 128u) == 0u) {
+                    std::fprintf(stderr,
+                        "[vi-callers] phase=%u caller=0x%08X guest_pc=0x%08X "
+                        "host_ra=0x%llX host_symbol=%s fb=0x%06X width=%u "
+                        "origin=0x%06X count=%u\n",
+                        phase, caller, guest_pc, (unsigned long long)host_ra,
+                        host_symbol, fb_phys, width, origin, count);
+                    std::fflush(stderr);
+                }
+            }
+        }
+    }
 
     // EXPERIMENT 2026-05-13: ROGUESQ_FB_REDIRECT_HIRES — if the game asks VI
     // to display a lo-res fb (0x806BA000 / 0x806DD000 are 320×224 buffers,

@@ -104001,3 +104001,41 @@ ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic run.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-vi-swap-caller-parity`.
+
+## Session 2196 (2026-08-23) — caller table exposed invalid recomp `$r31`
+
+Ran the prescribed retail oracle first with a whole-RDRAM watch, execution
+watch on `osViSwapBuffer` `0x80035500`, and VI tracing. The same run passed the
+positive control with 10,000 writes, recorded 1,173 swap executions, and
+reached repeated 640 VI rows at both `0x00696100` and `0x00696600`. Its
+execution histogram had exactly two caller PCs: `0x8001BE24` (n=1060) and
+`0x80019B14` (n=113).
+
+Built the port probe and ran the qualified image/LLE recipe with writer and
+phase controls. The first implementation's 16-call control fired and reached
+the first 640 origin, but every `ctx->r31-8` value was `0xFFFFFFF8`; this is
+the known N64Recomp contract where `jal` does not update guest `$r31`, so the
+guest caller key was invalid. The fixed probe added host return/symbol
+breadcrumbs and was rerun with a 10-second post-first-origin collection
+window. Its controls were positive (16 caller-control rows, 29 writer-control
+rows, and a 640 phase at `0x00696100`), with no `0x00696600` phase.
+
+The host symbols recovered both generated callers corresponding to the retail
+PCs: `bufferArbiterProducerMark` (`0x8001BE24`) and
+`viRetraceHandlerThread` (`0x80019B14`). At the covered port origin the
+caller/framebuffer rows used `0x62B800`, plus `0x695C00` for one caller; the
+retail control rows showed `0x805D4000` and `0x8066A000`. This is a
+caller-contract/argument mismatch observation, not proof of the missing
+second-origin cause because the first oracle run printed only its bounded
+execution samples at target-phase time. It rules out oracle coverage failure,
+port first-origin coverage failure, and the claim that `$r31-8` is a usable
+guest caller discriminator. It does not authorize a guard, task rewrite, or
+audio-default change. Logs: `scratch/agent/s2196_retail_vi_swap_callers.log`
+and `scratch/agent/s2196_port_vi_swap_callers_fixed4.log`.
+
+ORIGIN: no mitigation-shaped diff; this was a phase-gated diagnostic probe.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-vi-swap-caller-parity`.
