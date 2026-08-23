@@ -1,57 +1,52 @@
-# NEXT work unit (s2176) — classify hang after 87A0 on a failing =1
+# NEXT work unit (s2177) — retail exec of dispatcher extract-frame jal
 
 HYPOTHESIS-ID: m5-a1-cinematic-split
 
 ## Work unit
 
-s2175 selected `H-CompletePathDispatchReturned` on a
-completing `=1` run: last first-slot 87A0 n=14305 t=48.4
-is followed by 87A8 dest=`0x800CA748`, transform
-entry+return, and dispatch return, then title+hangar.
-Hang location on a failing cinematic is still open.
-Soak `s2175_image_hang` is queued (same always-log).
+s2176 selected `H-NaNAbortInVec3Cross` on the queued
+failing `=1` soak: last first-slot 87A0 n=5185 t=23.7 is
+followed by 87A8 dest=`0x800CA748`, transform
+entry+return, and dispatch n=325 return; dispatch n=326
+then SIGABRTs in `vec3Cross` `NAN_CHECK` from
+`0x800A8640` `jal 0x80059D18`. Hang hyps are refuted on
+that soak. Do not enqueue `s2175_image_hang` again.
 
-If SOAK-RESULTS has `s2175_image_hang`:
-- rc!=0 and no VI 1024: classify hang location from
-  `scratch/s73_post_a_scene/s2175_image_hang/run.log`
-  (analysis-only, no rebuild).
-- rc=0 title+hangar: another complete; do not enqueue
-  the same recipe again. Next discriminator must be a
-  new failing-run catcher or a guest-side split that
-  appears before t=28 on stalls.
+Ask ground truth before any port instrument or
+`NAN_CHECK` change: does retail execute that jal / the
+`vec3Cross` callee at cinematic 640/`0x00696100`?
 
 Do not S32-address, NULL-skip, re-flip default-on,
-skip/allow the lwc or transform, add a wait/slot guard,
-or log `$t0`.
+skip/allow the lwc / transform / extract jal, disable
+`NAN_CHECK`, add a wait/slot guard, or log `$t0`.
+Oracle does not print FPRs; do not claim NaN/finite
+from this run.
 
 ## Competing hypotheses and discriminator
 
-- `H-NeverReached87A8`: last first-slot 87A0 has no
-  following 87A8 always-log.
-- `H-HungInTransform`: 87A8 fires dest=`0x800CA748`,
-  then jal `0x8001DC34` entry without matching return.
-- `H-TransformReturnedDispatchHung`: transform returns;
-  no `cutsceneDispatchSlotsByFlag` return after that 87A0.
-- `H-DispatchReturned`: dispatch return after last 87A0
-  (parent cinematic tick hung / idle). Completing s2175
-  is this shape through title; a failing soak with this
-  shape is a later hang.
-- s2171 recurrence: SIGBUS at 87A8 with `$v0=0`. Record
-  dest of the preceding 87A0.
+- `H-RetailExecsJal8640`: same-run `[gpr-ctl]`, watch0
+  10000, VI 640 including origin `0x00696100`, and
+  exec `0x800A8640` n>=1 (and `0x80019548` n>=1).
+- `H-RetailSkipsJal8640`: those controls fire;
+  `0x800A8640` exec=0.
+- `H-CoverageFailure`: missing `[gpr-ctl]`, watch0
+  10000, or VI 640/`0x00696100`.
 
-Positive controls: `[heap0-ctl]` at 640/`0x00696100`
-including dispatchEntry; store57100 dest `0x8025A580`
-n>=1; load87a0 n>=1.
+Positive controls: `[gpr-ctl]`; watch 0 write
+callbacks=10000; `[vi]` 640 origin `0x00696100`.
 
 ## Exact commands
 
-No rebuild if the soak log exists. Table to
-`scratch/agent/s2176_hang_after_87a0.txt`.
+No game rebuild. Rice 45s, same recipe as s2172.
 
-    grep -ac '\[heap0-ctl\].*width=640 origin=0x00696100' \
-      scratch/s73_post_a_scene/s2175_image_hang/run.log
-    grep -ac '\[heap0-ctl\].*site=dispatchEntry.*width=640 origin=0x00696100' \
-      scratch/s73_post_a_scene/s2175_image_hang/run.log
+    tools/oracle/build/rs64_oracle \
+      --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+      --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+      --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+      --secs 45 --hit-cap 64 \
+      --watch-write 0x0:0x800000 \
+      --watch-pc 0x800A8640,0x80059D18,0x80059F10,0x80019548 \
+      --first-watch 0 --vi-trace \
+      > scratch/agent/oracle_s2177_vec3cross_pcs.log 2>&1
 
-If the soak did not run, launch the already-queued recipe
-(do not rewrite it) and classify in this iteration.
+Table to `scratch/agent/s2177_vec3cross_pcs.txt`.

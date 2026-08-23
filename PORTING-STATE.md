@@ -103265,3 +103265,56 @@ wait/slot guard.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-cinematic-split`.
+
+## Session 2176 (2026-08-23) — classified failing =1 hang-after-87A0 as vec3Cross NaN abort
+
+Analysis-only of queued soak `s2175_image_hang` (rc=1, 190s).
+Table: `scratch/agent/s2176_hang_after_87a0.txt`.
+Log: `scratch/s73_post_a_scene/s2175_image_hang/run.log`.
+Soak summary:
+`scratch/agent/soak_results/s2175_image_hang_20260822-095639.log`.
+No rebuild.
+
+Positive controls (same run): `[heap0-ctl]` n=23 at
+width=640 origin=`0x00696100` including dispatchEntry
+n=8; store57100 dest=`0x8025A580` value=`0x800CA748`;
+load87a0 of that dest n=325 value=`0x800CA748` (zero=0,
+mismatch=0); `[phase]` 640 `0x00696100` at 7.4s #379.
+
+Failing cinematic: 0 VI 1024, 0 VI 512, last `[vi]`
+#1344 still 640 `@ 0x00696100`. 0 SIGBUS; lwc87a8
+zero_logged=0. Last first-slot 87A0 n=5185 t=23.7 dest
+`0x8025A580` value=`0x800CA748`, then lwc87a8 n=5185
+dest=`0x800CA748`, xformEntry/Ret n=5185, dispatchRet
+n=325. Tick order is effects then dispatch.
+effectsEntry/Ret n=326 t=24.1, then dispatchEntry n=326
+t=24.1 with no matching Ret and no n=326 87A0/87A8/xform.
+SIGABRT signal 6: `Assertion failed: (ctx->f10.fl ==
+ctx->f10.fl), function vec3Cross, file funcs_4.c, line
+33371` (`NAN_CHECK` in `recomp.h`). Stack:
+`vec3Cross` `0x80019548` <- `orthonormalizeFrame`
+`0x80059F10` <- `extractOrthonormalFrameFromStruct`
+`0x80059D18` <- `cutsceneDispatchSlotsByFlag` jal
+`0x800A8640`. last-guest-pc=`0x8000834c` is not the
+abort site.
+
+This selects `H-NaNAbortInVec3Cross` and refutes
+`H-NeverReached87A8`, `H-HungInTransform`,
+`H-TransformReturnedDispatchHung`, `H-CoverageFailure`,
+and s2171 `H-NullV0At87A8` recurrence on this soak.
+`H-DispatchReturned` as a later parent-tick hang is not
+selected (failure is abort inside dispatch n=326).
+Single-arm (`=1`); s2160 `=0` first try also SIGABRT'd
+in `vec3Cross` NaN inside `cinematicLoopBody`, so do not
+claim the NaN is image-arm-exclusive from this soak.
+
+ORIGIN: s2175 `H-CompletePathDispatchReturned`. Diagnostic
+classification of an existing soak; not a mitigation. Do
+not disable `NAN_CHECK`, S32-address, NULL-skip, re-flip
+default-on, skip/allow the lwc or transform or extract
+jal, or add a wait/slot guard.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-cinematic-split`.

@@ -1,0 +1,84 @@
+s2176 hang-after-last-first-slot-87A0 (failing =1 soak)
+HYPOTHESIS-ID: m5-a1-cinematic-split
+
+recipe: queued s2175_image_hang (not rewritten)
+  SPIN_YIELD=1 AUDIO_UCODE=1 LOG_ALL=1 LOG_CUTSCENE_A2_50=1
+  driver: scratch/s73_post_a_scene/run_mission_keys.sh s2175_image_hang 30 12
+  watchdog SIGKILL 180s
+log: scratch/s73_post_a_scene/s2175_image_hang/run.log (201263 lines)
+soak: 20260822-095639 rc=1 190s
+  scratch/agent/soak_results/s2175_image_hang_20260822-095639.log
+analysis-only; no rebuild.
+
+positive controls (same run)
+- [heap0-ctl] at width=640 origin=0x00696100 n=23
+- dispatchEntry ctl at that VI n=8
+- store57100 dest=0x8025A580 value=0x800CA748 n=1 t=7.5
+- load87a0 dest=0x8025A580 n=325 (python 326) value=0x800CA748
+  zero=0 mismatch_vs_800CA748=0
+- [phase] 640 origin=0x00696100 at 7.4s #379
+
+failing cinematic (not a hang after last first-slot 87A0)
+- 0 VI 1024; 0 VI 512
+- last [phase] still 640 @ 0x00696100
+- last [vi] #1344 origin=0x00696100 width=640
+- 0 SIGBUS; lwc87a8 zero_logged=0
+- SIGABRT signal 6 at t=24.1:
+  Assertion failed: (ctx->f10.fl == ctx->f10.fl), function vec3Cross,
+  file funcs_4.c, line 33371.
+  NAN_CHECK(val) assert(val == val) in recomp.h
+- last-guest-pc=0x8000834c is not the abort site (shared breadcrumb)
+- stack: vec3Cross <- orthonormalizeFrame 0x80059F10
+  <- extractOrthonormalFrameFromStruct 0x80059D18
+  <- cutsceneDispatchSlotsByFlag +5580 (host)
+  <- cinematicLoopBody <- mainGameLoop
+- jal in dispatcher: 0x800A8640 jal 0x80059D18
+  delay-slot addiu $a1,$a1,0x88; $a0=sp+0x18
+- vec3Cross 0x80019548: lwc1 $f10, 0x8($a2) then mul.s NAN_CHECK
+  first orthonormalizeFrame cross: $a2 = dest+0xC, so $a2+8 = dest+0x14
+  = extract copy of source $a1+0x20
+
+last first-slot 87A0 then following (t=23.7, origin=0x00696100)
+- load87a0 n=5185 dest=0x8025A580 value=0x800CA748 late=1
+- lwc87a8 n=5185 dest=0x800CA748
+- xformEntry/Ret n=5185 (jal 0x8001DC34)
+- more slots through lwc/xform n=5200 dest=0x800CF158
+- dispatchRet n=325 t=23.7 (entry n=325 same t)
+- tick order is effects THEN dispatch:
+  effectsEntry/Ret n=325 t=23.7, then dispatch n=325
+  effectsEntry/Ret n=326 t=24.1, then dispatchEntry n=326 t=24.1
+- dispatch n=326: entry only; 0 lwc/xform; abort in vec3Cross
+  before 0x800A87A0 (jal is at 0x800A8640)
+
+site nmax / notes
+  store57100      150
+  load87a0       5200
+  lwc87a8        5200  (zero_logged=0)
+  dispatchEntry   326  (no matching Ret)
+  dispatchRet     325
+  xformEntry     5200
+  xformRet       5200  (entry nmax==ret nmax for n=325)
+
+selected: H-NaNAbortInVec3Cross
+  (failing =1 soak: last first-slot 87A0's dispatch n=325
+   takes 87A8 dest=0x800CA748, transform entry+return, and
+   dispatch return; next dispatch n=326 enters and SIGABRTs
+   in vec3Cross NAN_CHECK at jal 0x800A8640)
+refuted on this failing soak:
+  H-NeverReached87A8
+  H-HungInTransform
+  H-TransformReturnedDispatchHung
+  H-CoverageFailure
+  s2171 H-NullV0At87A8 recurrence (0 SIGBUS, lwc zero=0)
+not selected: H-DispatchReturned as a later parent-tick hang
+  (dispatch n=325 did return, but the failure is abort inside
+   dispatch n=326, not idle after return)
+single-arm: this soak is =1 only. s2160 =0 first try also
+  SIGABRT'd in vec3Cross NaN inside cinematicLoopBody (ledger);
+  do not claim the NaN is image-arm-exclusive from this soak.
+
+Do not disable NAN_CHECK, S32-address, NULL-skip, re-flip
+default-on, skip/allow the lwc or transform or extract jal,
+or add a wait/slot guard. Next discriminator is retail exec
+of 0x800A8640 / 0x80019548 at 640/0x00696100 (oracle; no
+FPR claim this step).
