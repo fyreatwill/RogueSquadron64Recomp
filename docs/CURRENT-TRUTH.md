@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2312 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2313 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -17,6 +17,8 @@ retail whole-ring writer/value ground truth; s2311 added a title-phase writer
 census alongside both active 512 target buckets; s2312 added both recurring
 post-title 512 origins and found no phase-attributed writer rows in any of the
 five distinct configured buckets.
+Session 2313 added the two earlier 640 origins and again found no
+phase-attributed writer rows, despite positive callback coverage in both.
 
 The current M5 boundary is task/output contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
@@ -35,10 +37,11 @@ That aggregate/final-snapshot result still selects `H-PortOnlyZeroFill` at
 its capture scope. The s2312 same-run title plus four 512 buckets found all
 five distinct phase buckets empty for the sixteen retail slot writers, while
 the lifetime writer control remained positive and all final slot snapshots
-were nonzero. This selects `H-Retail-Earlier-Or-Unattributed` at capture
-scope. The earlier 640-width origins `0x0066A500` and `0x00696100` remain the
-next ground-truth census. The stage-only row and game-level legitimacy remain
-open. No runtime behavior change is authorized.
+were nonzero. Session 2313 added `0x0066A500:640` and `0x00696100:640`; both
+had positive VI coverage (`18` and `202`) but no phase writer-PC rows. This
+selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
+configured buckets. The stage-only row and game-level legitimacy remain open.
+No runtime behavior change is authorized.
 
 ## Current state
 
@@ -73,10 +76,21 @@ open. No runtime behavior change is authorized.
   buckets and added `0x00656400:512` and `0x00656800:512`. All sixteen
   lifetime slot writers remained positive at `0x800078EC` with `768` writes
   each, but none of the five distinct phase buckets had a writer-PC row; all
-  sixteen final snapshots were nonzero. This selects
-  `H-Retail-Earlier-Or-Unattributed` at capture scope and authorizes no
-  runtime or contract change. The earlier 640-width origins
-  `0x0066A500` and `0x00696100` remain the next ground-truth census.
+  sixteen final snapshots were nonzero.
+- **s2313 — earlier 640-origin retail writer census.** The same-run capture
+  passed whole-RDRAM `10000`, title/hangar VI coverage, ring writes `12288`,
+  all sixteen lifetime writer controls (`768` each), all seven phase callback
+  controls, and all sixteen nonzero final snapshots. The new
+  `0x0066A500:640` and `0x00696100:640` buckets had `18` and `202` VI
+  callbacks, respectively, but no phase writer-PC row; neither supplied the
+  missing publication phase. The complete seven-bucket × seventeen-watch
+  phase matrix was empty for writer PCs. The port's observed pair was
+  `0x168850`/`0x168B50`, with stage FNV/nz `2B9E9631/621` and
+  `6ADD4218/639`, exact source/consumer events `11801/11802` and
+  `11810/11811`, and later zero PCM events `11873/11874` and `11882/11883`;
+  `0x168B50` also had a later zero image-stage event `11820`. This confirms
+  the earlier-origin gap at capture scope and leaves writer attribution and
+  game legitimacy open. No runtime or contract change was authorized.
 - The retail oracle is an independent witness. Its whole-RDRAM, title, hangar,
   width-aware target, and exact-PC controls must pass before a null is read.
   The oracle currently reaches attract/title/hangar, not a mission.
@@ -86,6 +100,20 @@ open. No runtime behavior change is authorized.
   `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2313 — earlier 640-origin retail writer census.** The same-run capture
+  passed whole-RDRAM `10000`, title/hangar VI coverage, ring writes `12288`,
+  all sixteen lifetime writer controls (`768` each), all seven phase callback
+  controls, and all sixteen nonzero final snapshots. The new
+  `0x0066A500:640` and `0x00696100:640` buckets had `18` and `202` VI
+  callbacks, respectively, but no phase writer-PC row; the complete
+  seven-bucket × seventeen-watch phase matrix was empty. The port's observed
+  pair was `0x168850`/`0x168B50`, with stage FNV/nz `2B9E9631/621` and
+  `6ADD4218/639`, exact source/consumer events `11801/11802` and
+  `11810/11811`, and later zero PCM events `11873/11874` and `11882/11883`;
+  `0x168B50` also had later zero image-stage event `11820`. This confirms the
+  earlier-origin gap at capture scope and authorizes no runtime or contract
+  change.
 
 - **s2312 — retail writer earlier-origin gap.** The same-run capture passed
   whole-RDRAM `10000`, title/hangar VI coverage, ring writes `12288`, all
@@ -277,17 +305,16 @@ open. No runtime behavior change is authorized.
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 Step 3g earlier 640-origin retail writer census.** Ask ground truth
-   first, retain the title, both active 512 target buckets, and the two now
-   empty post-title 512 buckets, then add the earlier trace origins
-   `0x0066A500:640` and `0x00696100:640` in the same oracle invocation.
-   Require whole-RDRAM, title/hangar, all sixteen lifetime writer controls,
-   positive callback counts for both new 640 buckets, and nonzero final
-   snapshots. Join every bucket to the actual current port stage pair. A
-   positive writer-PC matrix at `0x0066A500` or `0x00696100` selects that
-   origin; both positive selects shared/alternating publication; both empty
-   leaves the remaining earlier-origin attribution open. No writeback,
-   consumer, writer, slot, gate, guard, address-remap, or default change.
+1. **M5 Step 3h companion 640-origin retail writer census.** Ask ground truth
+   first, retain the completed title, four 512, and two earlier 640 buckets,
+   then add the companion origins `0x0066AA00:640` and `0x00696600:640` in the
+   same oracle invocation. Require whole-RDRAM, title/hangar, all sixteen
+   lifetime writer controls, positive callback counts for both new buckets,
+   and nonzero final snapshots. Join every bucket to the actual current port
+   stage pair. A positive writer-PC matrix at either companion origin selects
+   it; both positive selects shared/alternating publication; both empty leaves
+   writer attribution open. No writeback, consumer, writer, slot, gate,
+   guard, address-remap, or default change.
 2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
    route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
    crash had `route_state=2`, `b40=1`, `key_on=0`; C88=1 was withheld.

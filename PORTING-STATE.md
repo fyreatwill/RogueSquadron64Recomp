@@ -108819,3 +108819,68 @@ phase buckets and recorded the complete lifetime/phase/final table.
 ### Next
 
 Run the earlier 640-origin retail writer census from scratch/agent/NEXT.md.
+
+## Session 2313 (2026-08-24) — earlier 640 origins remain unattributed
+
+HYPOTHESIS-ID: m5-retail-writer-vi-origin.
+
+The planned work unit was a ground-truth-first same-run retail writer census
+adding `0x0066A500:640` and `0x00696100:640` to the existing title, four
+post-title 512 buckets, sixteen slot watches, ring watch, lifetime writer
+histogram, and final snapshot recipe. The preflight found the prior positive
+controls. The launcher syntax check passed, and the capture used the
+qualified image/LLE port recipe through title/hangar and 45-second retention.
+
+The run reported `oracle_rc=0`, `port_rc=137` from the required kill,
+whole-RDRAM threshold `10000`, ring writes `12288`, and a nonzero final ring
+snapshot of `12000/12288`, FNV `BB61E609`. All sixteen slot watches were
+positive lifetime controls, each with `768` writes attributed to retail PC
+`0x800078EC`; all sixteen final snapshots were nonzero:
+
+| watch | physical range | final nonzero / FNV |
+|---:|---|---:|
+| 2 | `0x166450..0x166750` | `744 / 44A56768` |
+| 3 | `0x166750..0x166A50` | `748 / 17DDB9B9` |
+| 4 | `0x166A50..0x166D50` | `755 / F8B2CAD6` |
+| 5 | `0x166D50..0x167050` | `747 / 7326C7D3` |
+| 6 | `0x167050..0x167350` | `747 / 906F9A49` |
+| 7 | `0x167350..0x167650` | `748 / FF221F9B` |
+| 8 | `0x167650..0x167950` | `749 / 20C7EC1B` |
+| 9 | `0x167950..0x167C50` | `750 / E5CF803C` |
+| 10 | `0x167C50..0x167F50` | `753 / E611A9A8` |
+| 11 | `0x167F50..0x168250` | `747 / 80D4A727` |
+| 12 | `0x168250..0x168550` | `759 / 35E36ABE` |
+| 13 | `0x168550..0x168850` | `758 / DD755516` |
+| 14 | `0x168850..0x168B50` | `739 / 7F135544` |
+| 15 | `0x168B50..0x168E50` | `755 / 9225B1C3` |
+| 16 | `0x168E50..0x169150` | `753 / 2EEAB56B` |
+| 17 | `0x169150..0x169450` | `748 / F414189E` |
+
+All seven configured VI buckets had positive callbacks but no
+`writer-pc-phase ... pc=` rows for any of the seventeen watches. Callback
+counts were title `0x00790400:1024=632`, `0x006AB400:512=1526`,
+`0x006AB800:512=2733`, `0x00656400:512=2623`, `0x00656800:512=1415`,
+`0x0066A500:640=18`, and `0x00696100:640=202`. The lifetime writer control
+makes every phase null valid. This selects
+`H-Retail-Earlier-Or-Unattributed` at capture scope, rules out either new
+640-origin hypothesis and the both/alternating hypothesis, and refutes
+coverage invalidity. The repeated `--pc-phase-log-width 0x006AB400:512` is a
+logging-width control, not an eighth origin bucket.
+
+The current port phase-10 pair was `0x168850`/`0x300`/`2B9E9631`/`nz=621`
+and `0x168B50`/`0x300`/`6ADD4218`/`nz=639`. Their stage events were `11736`
+and `11738`, both completing at `11744`; exact source/consumer events were
+`11801/11802` and `11810/11811`. Later zero PCM rows were `11873/11874`
+for `0x168850` and `11882/11883` for `0x168B50`; the latter also had a later
+zero image-stage event `11820`. The port-side zero writer remains callsite
+`0x8008EE84`, writer PC `0`, image-DMA writer kind. The oracle phase matrix
+and the independent port task/output join agree on the capture boundary; no
+runtime behavior, consumer, writer, slot, address, gate, or mitigation change
+was made.
+
+ORIGIN: no mitigation-shaped change; this iteration added two batched oracle
+phase buckets and recorded the complete seven-bucket × seventeen-watch table.
+
+### Next
+
+Run the companion 640-origin retail writer census from scratch/agent/NEXT.md.
