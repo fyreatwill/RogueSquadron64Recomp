@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2261 (2026-08-24); behavioral and source evidence is
-current through s2261, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2261 remain in
+Maintained in Session 2262 (2026-08-24); behavioral and source evidence is
+current through s2262, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2262 remain in
 the append-only ledger.
 
 ## Current state
@@ -112,6 +112,16 @@ the append-only ledger.
   single-arm phase-10 join. The preceding retail oracle passed whole-RDRAM,
   reached hangar, and recorded 12,288 exact PCM-ring and 705,759 task-span
   writes. No runtime or default change follows.
+- s2262 ran the prescribed single reduced-trace silent+C88=`0` control with
+  the same route and PCM logger. It passed startup, one `[missing-func]`, the
+  two observed 640 transitions, title `1024 @ 0x00790400`, and hangar
+  `512 @ 0x006AB400` twice before the known post-target aligned-ROM abort
+  (`last-guest-pc=0x80001B08`). Source and consumer boundary rows both fired:
+  phase 8 had 53/53 rows, phase 10 had 48/48, and phase 12 had 6/6; every
+  payload was `fnv=0xF59C39C5`, `nz=0`. This selects H-SilentPcmAbsent at the
+  measured boundary and qualifies the silent route for a paired output run;
+  it remains single-source port evidence and changes no runtime behavior or
+  default.
 - s2246's two full field348-candidate captures both passed the 640 route and
   one `[missing-func]` control but crashed before title `1024` or hangar `512`:
   the first was `fillSampleStreamRange+8136` with last guest PC
@@ -405,10 +415,12 @@ Closed investigations are not active work items. The sequence is monotonic.
   then produced one exact phase-10 stage/source/consumer match, but its
   same-run silent control failed before title, so the A/B result is
   H-PairRouteInvalid rather than a complete image-versus-silent selection.
-  The next discriminator is a single reduced-trace silent+C88=`0` control
-  with the PCM boundary logger, to qualify the control route before another
-  pair. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer
-  guard.
+  s2262 qualified that silent control: phase-8/10/12 source and consumer rows
+  were present but all-zero, so the silent boundary is a valid route control
+  rather than a route null. The next discriminator is a same-build
+  image+C88=`0` / silent+C88=`0` pair with silent launched first, using only
+  the route identity, B40/route-state, and PCM-boundary logs. Do not promote
+  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -584,6 +596,15 @@ first-640 controls, so the A/B discriminator selects H-PairRouteInvalid; the
 image match is single-arm evidence only. Qualify the silent route next. The
 retail oracle independently passed whole-RDRAM and observed both watched
 spans, but did not join its writes to this port row.
+
+s2262's single reduced-trace silent control passed the startup,
+missing-function, two-640-transition, title, and hangar controls. Its PCM
+source and consumer hooks both fired at phase 8/10/12, with 53/48/6 rows on
+each side and zero payloads throughout (`fnv=0xF59C39C5`, `nz=0`). The run
+ended at the known post-target aligned-ROM abort, so this is a qualified
+silent route and H-SilentPcmAbsent at the measured boundary, still
+single-source port evidence. The next paired run launches silent first and
+image second with the same phase-scoped route and PCM logs.
 
 s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
 At both target origins, `field348 & 0x007FFFFF` was valid but the exact
@@ -873,7 +894,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2260 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2262 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

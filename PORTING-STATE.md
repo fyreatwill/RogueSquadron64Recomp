@@ -106608,3 +106608,44 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2262 (2026-08-24) — qualified the silent PCM control
+
+No new instrumentation was added, so the ground-truth prerequisite was
+satisfied by the existing PCM source/consumer logger and its positive control
+in s2261. Rebuilt the unchanged Debug target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`;
+the build passed.
+
+Ran the prescribed single reduced-trace silent+C88=`0` control with
+`ROGUESQ_LOG_AUDIO_RETURN=1`, `ROGUESQ_LOG_PCM_BOUNDARY=1`,
+`ROGUESQ_LOG_THREAD_RESUME=0`, B40/route-state tracing, the qualified
+spin/LLE route, and the phase gate. The exact driver command is recorded in
+`scratch/agent/NEXT.md`; its driver log is
+`scratch/agent/s2262_silent_c88_0_pcm_single_driver.log` and the 137,060-line
+run log is `scratch/s73_post_a_scene/s2262_silent_c88_0_pcm_single/run.log`.
+
+The run passed startup, one `[missing-func]`, and the two observed 640
+transitions (`0x0066A500` and `0x00696100`). It then reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400` twice. B40 and route-state
+rows fired in phases 8, 10, and 12. The PCM source and consumer hooks both
+fired: phase 8 had 53 source and 53 consumer rows; phase 10 had 48 and 48;
+phase 12 had 6 and 6. Every row was zero payload with
+`fnv=0xF59C39C5`, `nz=0`, on both sides. The process then hit the known
+post-target aligned-ROM abort (`SIGABRT`, `last-guest-pc=0x80001B08`); this
+was after target qualification, not a route failure.
+
+This selects H-SilentPcmAbsent at the measured source/consumer boundary and
+qualifies the silent arm as a control for the next image pair. It rules out
+H-SilentRouteInvalid for this single-arm recipe and rules out a logger-null
+explanation, but it does not identify the image producer/consumer contract or
+authorize any audio default, writeback, or guard change. The evidence remains
+single-source port evidence.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.
