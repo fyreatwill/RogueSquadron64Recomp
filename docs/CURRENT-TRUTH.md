@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2241 (2026-08-24); behavioral and source evidence is
-current through s2241, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2241 remain in
+Maintained in Session 2242 (2026-08-24); behavioral and source evidence is
+current through s2242, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2242 remain in
 the append-only ledger.
 
 ## Current state
@@ -127,6 +127,15 @@ the append-only ledger.
   `fillSampleStreamRange+932` bus error), so they produced zero target
   candidate, stage, DMA, or PCM rows. The port writer hypotheses remain
   unevaluable; no writer, guard, or default conclusion follows.
+- s2242's planned field348 producer census was attempted twice with the
+  unchanged image arm and full instrumentation. Both runs reached only the
+  640 route at `0x00696100`, emitted one missing-function stub, and crashed
+  before the 1024 phase at `fillSampleStreamRange+8136` with
+  `last-guest-pc=0x8000b650`. Both therefore had zero target candidate,
+  image-stage, DMA, and PCM rows. These are invalid captures for all four
+  field348 writer hypotheses; the next unit must first discriminate whether
+  the logging load amplifies this pre-phase image-arm crash. No runtime
+  behavior or default changed.
 - s2232's same-build port A/B reached the target route, title, and hangar in
   both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
   DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
@@ -160,45 +169,45 @@ the append-only ledger.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 image-output contract attribution.** s2232 selected H-ContractGap at
-  single-source port A/B scope, and s2234 independently selected
-  H-RetailTaskOutput at the exact retail watch boundary. s2235's successful
-  retry selected H-PortContractGap, and s2236 selected H-ImageInputZero: the
-  image arm changed DMEM and completed, but the valid `field348` source span,
-  stage-0/1 DMEM inputs, and stage-2/3 generated DMA payloads were all zero.
-  s2237 independently selected H-RetailField348Writer: retail populates both
-  exact source spans. s2238 selects H-PortWriterPayloadZero: the active source
-  spans receive zeroing stores from `rs_memset` at `0x800078EC`, with no
-  nonzero exact-span writer before the zero image stages. s2239 selects
-  H-ExpectedField348Init at the matched source/order scope. s2240's complete
-  annotation identifies the stable init caller as `0x8008F2CC` for both
-  active spans and supplies an outside-span control from `0x800052C4`; the
-  expected nonzero producer remains missing on the port. s2241 completed the
-  static candidate instrument but had no valid target-phase port capture
-  because both attempts failed before the phase gate. The next unit is one
-  qualified retry of that unchanged build and arm, using the candidate table
-  to compare retail's known field348 producer PC range
-  (`0x80090F8C`–`0x80091000`) with port execution and destination/value rows at
-  both active origins. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
-  writeback/consumer guard.
-2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
+1. **M5 image-arm pre-phase crash discriminator.** s2242's two unchanged
+  qualified attempts both stopped at `fillSampleStreamRange+8136` before the
+  1024 phase, so the field348 producer census could not run. The next unit is
+  a same-build A/B: full M5 logging versus the same image arm with all M5
+  logging disabled, run concurrently and judged by the 1024/512 phase
+  markers, missing-function/crash PC, and route controls. A logging-only
+  failure split selects H-LoggingAmplifiedCrash; matching same-PC pre-phase
+  failures select H-ImageArmIntrinsicCrash; divergent outcomes select
+  H-RunNondeterminism and require no writer inference. Do not add a writer
+  guard or promote the image arm.
+2. **M5 image-output contract attribution, blocked on route qualification.**
+  s2232 selected H-ContractGap at single-source port A/B scope, and s2234
+  independently selected H-RetailTaskOutput at the exact retail watch
+  boundary. s2235's successful retry selected H-PortContractGap, and s2236
+  selected H-ImageInputZero: the image arm changed DMEM and completed, but
+  the valid `field348` source span, stage-0/1 DMEM inputs, and stage-2/3
+  generated DMA payloads were all zero. s2237 independently selected
+  H-RetailField348Writer; s2238–s2240 established the legitimate port init
+  clear and the missing nonzero producer boundary. Resume the five-store
+  candidate table only after the pre-phase arm is qualified; do not promote
+  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+3. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
    pointer/dynamic operands or a true branch contract accounts for the two-way
    difference; no key-on return, guard, task-field rewrite, default flip, or
    mitigation follows automatically.
-3. **M5 A1: identify the missing second-origin transition.** Retail's
+4. **M5 A1: identify the missing second-origin transition.** Retail's
    `__osViNext` context uses `framep` plus the selected current field to make
    both target origins. The port has the candidates but its natural field
    publisher is still unknown; all recovery knobs remain diagnostic-only.
-4. **M5 drain in-loop tick A/B; parked.** s2125 selected `H-PumpIrrelevant`
+5. **M5 drain in-loop tick A/B; parked.** s2125 selected `H-PumpIrrelevant`
    only at route scope, while s2126–s2128 failed to place both drain arms in
    the target comparison. Resume only with a new renderer-recovery or
    ground-truth discriminator.
-5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+6. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator. The dormant `slotDispatcherIter+872` class has 7,659
    clean hangar calls in its guarded run; no mitigation is authorized.
-6. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+7. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation and consumer-mode H1 by the RT64 census. H3 is unavailable
    because the oracle cannot screenshot the LLE path; do not repeat the
    `0xD60` scan.
@@ -472,7 +481,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2240 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2242 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

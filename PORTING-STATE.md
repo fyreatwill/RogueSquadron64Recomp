@@ -105361,6 +105361,34 @@ authorized.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
 
+## Session 2242 (2026-08-24) — repeated pre-phase image-arm crash
+
+Ran the planned qualified field348 producer census command with the
+unchanged s2241 Debug binary and full image-arm instrumentation. The first
+attempt reached only the 640 route at `0x00696100`; the harness observed one
+`[missing-func]` stub and the process then crashed at
+`fillSampleStreamRange+8136` with `last-guest-pc=0x8000b650` before the 1024
+phase gate. It produced zero target candidate, image-stage, DMA, and PCM
+rows.
+
+Per the run-failure rule, I launched a clean retry with the same functional
+and logging environment. It reached the same 640 origin, again observed one
+missing-function stub, and again crashed at `fillSampleStreamRange+8136`
+with `last-guest-pc=0x8000b650` before 1024. It likewise produced zero
+target-side rows. The two attempts are invalid for H-PortWriterAbsent,
+H-PortWriterZero, H-PortWriterWrongDestination, and H-PortWriterThenZero;
+they only establish that this arm was reproducibly stopped by the existing
+pre-phase audio crash in this iteration. No field348 writer conclusion or
+runtime change follows.
+
+ORIGIN: observation only; no value was suppressed, rewritten, guarded,
+restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-prephase-crash-discriminator`.
+
 ## Session 2241 (2026-08-24) — enumerated field348 producer stores
 
 Ran the retail oracle before adding the port instrument. The whole-RDRAM
