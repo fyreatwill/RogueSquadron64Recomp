@@ -1,85 +1,71 @@
-# NEXT work unit (s2218) — reconcile retail audio gate and task boundaries
+# NEXT work unit (s2219) — validate the opt-in Factor 5 audio arm
 
-HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation
+HYPOTHESIS-ID: m5-audio-image-arm-validation
 
 ## Work unit
 
-Execute step 1 of `docs/M5-AUDIO-PLAN.md` only. Run the Rice-driven retail
-oracle first, with the whole-RDRAM positive control before the physical watches
-for the MusyX gate (`0xA0F50`), audio countdown/status words (`0x14998A` and
-`0x14974C`), and the known audio-task/AI callsites. Then run one existing port
-boot/title route with the passive M5 diagnostics and silent-audio control. Do
-not edit generated code, change a gate, enable the image arm, or build in this
-unit.
+Execute step 2 of `docs/M5-AUDIO-PLAN.md` only. Use one build and run the
+silent `musyx_stub` control and `ROGUESQ_AUDIO_UCODE=1` treatment from the
+same phase schedule. Keep the arm opt-in; do not flip the guest gate, remove
+wait/slot/voice guards, change task fields, or enable stock `aspMain`.
+
+The prior retail ground-truth run passed its whole-RDRAM control and found
+active `0x14974C` writes, but it did not identify that word's writer or print
+gate store payloads. Those are not reasons to add an instrument before this
+step: the existing arm validation has a complete port-side discriminator.
 
 Competing hypotheses and the single discriminator:
 
-- H-RetailGateWriters: retail writes `0xA0F50` from the named init/display
-  PCs with a legitimate zero-to-one transition; the port's existing
-  `[m5-gate]` rows show the same value contract and downstream task/slot
-  activity.
-- H-RetailAudioCountdown: retail writes `0x14998A` and/or `0x14974C` from
-  identifiable worker/wait PCs during the gated route; those writers, not a
-  decoder change, are the next audio contract boundary.
-- H-RetailTaskBoundary: retail executes the known audio-task/AI callsites in
-  the same title/hangar phase and carries nonzero task fields; a live gate with
-  no task/AI rows selects task admission rather than the RSP image.
-- H-Coverage: the whole-RDRAM control, 640/hangar phase, or watched execution
-  controls are absent, so the narrow nulls are unevaluable and no audio change
-  is authorized.
+- H-ImageExec: the image arm executes the selected Factor 5 image and returns
+  normally; its phase-keyed rows show `real_ucode=1`, a completed RSP task,
+  changed DMEM/output or DMA evidence, and a valid slot transition.
+- H-StubEquivalent: the image arm is still observationally equivalent to the
+  silent stub at this route; dispatch/return may differ, but no valid slot
+  transition or nonzero PCM appears in the treatment.
+- H-ImageRouteRegress: the image arm changes route admission or stability;
+  its positive phase control is present but it stalls, crashes, loses a
+  later phase, or corrupts the existing task/DMEM contract compared with the
+  same-build control.
+- H-Coverage: a positive all-width/phase prefix or the treatment's dispatch
+  rows are absent, so any image-arm null is unevaluable.
 
-The discriminator is one phase-keyed table of retail writer/execution PC,
-physical target, post-store value or watched GPRs, plus the port's existing
-`m5-gate`, audio-task dispatch/return, slot, and PCM rows. H-RetailGateWriters
-requires the whole-RDRAM control and named writer/value transitions;
-H-RetailAudioCountdown requires a positive countdown/status writer; and
-H-RetailTaskBoundary requires both task/AI execution and nonzero task fields.
-Any missing positive control selects H-Coverage. A null without the control is
-not evidence.
+The discriminator is one phase-keyed control/treatment table containing the
+positive prefix, 640/title/hangar phase rows, `audtask-dispatch` and
+`RspExitReason`, host canary status, DMEM/output/DMA rows, slot status
+transitions, and `pcm-sanity` nonzero/all-zero counts. H-ImageExec requires
+the treatment execution/return plus valid output and slot evidence;
+H-StubEquivalent requires matched coverage and no valid output/slot/PCM;
+H-ImageRouteRegress requires matched early coverage with a treatment-only
+route or stability failure; and H-Coverage wins if the same-run controls are
+missing. A dispatch counter alone is not a positive control.
 
 ## Exact commands
 
-Retail ground truth, before any port change:
+Build once from the repository root:
 
-~~~
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --rsp /opt/homebrew/lib/mupen64plus/mupen64plus-rsp-hle.dylib \
-  --input /opt/homebrew/lib/mupen64plus/mupen64plus-input-sdl.dylib \
-  --secs 70 --hit-cap 10000 \
-  --watch-write 0x0:0x800000 \
-  --watch-write 0xA0F50:0xA0F54 \
-  --watch-write 0x14998A:0x14998C \
-  --watch-write 0x14974C:0x149750 \
-  --watch-pc 0x8009173C --watch-pc 0x80091758 --watch-pc 0x80029EF4 \
-  --first-watch 0 --detail-watch 1 --pc-hist-watch 1 \
-  --pc-phase-log 0x0066A500 --pc-phase-log 0x005D4500 \
-  --pc-phase-log 0x0066AA00 --pc-phase-log 0x00696100 \
-  --pc-phase-log 0x00696600 --vi-trace \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  --hold-ms 200 > scratch/agent/s2218_retail_audio_ground_truth.log 2>&1
+~~~sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
 ~~~
 
-Port existing-route control, no build and SIGKILL watchdog:
+Run the existing eleven-Start driver for the treatment, with all passive M5
+diagnostics armed:
 
-~~~
-cd build
-env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
-  ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 \
-  ROGUESQ_LOG_PCM_SANITY=1 ./RogueSquadron64Recomp \
-  > ../scratch/agent/s2218_port_audio_ground_truth.log 2>&1 & p=$!
-for i in {1..30}; do
-  kill -0 "$p" 2>/dev/null || break
-  sleep 1
-done
-kill -9 "$p" 2>/dev/null || true
-wait "$p" 2>/dev/null || true
-cd ..
+~~~sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
+  ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 \
+  ROGUESQ_LOG_AUDIOTICK_TRACE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh \
+  m5-audio-step2 30 12 > scratch/agent/s2219_image_arm.log 2>&1
 ~~~
 
-Inspect only whole-RDRAM count, narrow-watch writer PCs/values, watched task/AI
-rows, 640 and hangar VI rows, `[m5-gate]`, audio dispatch/return, slot and PCM
-controls, and crash/abort markers. Do not add an instrument until the oracle
-control and target writer identities are classified.
+Run the unset-env control from the same built binary and schedule:
+
+~~~sh
+env ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
+  ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 \
+  ROGUESQ_LOG_AUDIOTICK_TRACE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh \
+  m5-audio-step2-control 30 12 > scratch/agent/s2219_stub_control.log 2>&1
+~~~
+
+Use SIGKILL for any watchdog termination. Inspect only the phase-keyed table
+above, plus `[CRASH]`/`[ABORT]` markers and the final phase; do not treat a
+timeout or all-zero PCM as success.

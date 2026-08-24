@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2217
-(2026-08-23); behavioral and source evidence is current through s2216.
+authoritative for exact commands and probe rows. Maintained in Session 2218
+(2026-08-23); behavioral and source evidence is current through s2218.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -381,6 +381,22 @@ second ledger.
   callback versus `total_vis` cadence remains unevaluable, so s2215's cadence
   selection is superseded. The dynamic arms remain diagnostic-only and no VI
   default, audio dispatch, mitigation, or task rewrite changed.
+- s2218 completed M5 plan step 1 with the prescribed Rice-driven retail
+  oracle and silent-audio port control. Retail passed the whole-RDRAM positive
+  control with 31,591 writes, reached both target 640 origins, and executed
+  the three watched task/AI callsites repeatedly at those origins. The gate
+  watch recorded 17 writes to `0x000A0F50` from five PCs
+  (`0x8008EA34`, `0x8008EB40`, `0x8008EB7C`, `0x8008EC88`, and
+  `0x8008ED48`); the existing oracle output did not include store payloads,
+  so the zero-to-one value transition is not independently proven here.
+  `0x0014998A` had zero writes while `0x0014974C` had 13,319 writes. The
+  port reached 640 origins `0x0066A500` and `0x00696100`, produced 53
+  rate-limited `audtask-dispatch` rows all marked `real_ucode=0`, two
+  existing audio-return route rows, and 26 all-zero PCM sanity rows; it was
+  SIGKILLed at 30 seconds before hangar and emitted no crash/abort marker.
+  This completes ground-truth capture and selects the active retail status
+  word as the next M5 boundary, but authorizes no gate flip, image default,
+  task rewrite, or safety-guard change.
 
 ## Active backlog
 
@@ -391,10 +407,15 @@ work items.
    [`M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md) is the required design doc and its
    inventory remains authoritative: the silent `M_AUDTASK` stub is default,
    the Factor 5 image arm is opt-in, and no stock `aspMain` substitution or
-   safety-guard removal is authorized. The next unit is plan step 1:
-   ground-truth/reconciliation for the gate `0x800A0F50`, countdown words
-   `0x8014998A`/`0x8014974C`, and the existing audio-task/AI boundary before
-   adding any new instrument.
+   safety-guard removal is authorized. s2218 completed plan step 1: the Rice
+   oracle passed its whole-RDRAM control, reached both retail target origins,
+   found 17 gate writes from five PCs, found zero `0x8014998A` writes and
+   13,319 `0x8014974C` writes, and saw all three watched task/AI callsites.
+   The silent port control reached `0x0066A500` and `0x00696100`, with
+   rate-limited stub dispatch, audio-return, slot, and PCM controls positive
+   but no hangar phase. The oracle did not expose store payloads or
+   `0x14974C` writer PCs, so those contracts remain open. The next unit is
+   plan step 2: same-build stub versus opt-in Factor 5 image-arm validation.
 2. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
@@ -537,6 +558,17 @@ s2160–s2163 then showed why the policy remains opt-in: the pre-S32 wait fault
 was fixed, but the same-build image arm still has intermittent cinematic
 regressions. The full pointer, heap, transform, NaN, and image-DMA chain is
 archived in `PROJECT-OVERVIEW.md` §43.
+
+s2218's independent Rice oracle passed the whole-RDRAM control, reached both
+retail target 640 origins, and showed five physical writers for 17 gate
+writes at `0x000A0F50`; its existing output did not expose store values. The
+same run saw zero writes to `0x0014998A` and 13,319 writes to
+`0x0014974C`, plus repeated execution of all three watched task/AI
+callsites. The silent port control reached the early and first target 640
+phases, but its rate-limited audio dispatch rows all used `real_ucode=0` and
+its PCM rows were all zero. This completes ground-truth capture only; the
+active status-word writer and the image-arm task/slot/PCM boundary remain the
+next M5 discriminator. No gate flip or image default is authorized.
 
 The stock `aspMain` contract is not the game's MusyX contract. C88 testing
 selected reversed-or-suppressing polarity at sampled port gate scope; no

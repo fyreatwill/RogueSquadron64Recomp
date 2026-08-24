@@ -104521,6 +104521,50 @@ added and ran an opt-in scheduler diagnostic only.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation`.
 
+## Session 2218 (2026-08-23) — reconciled retail audio gate and task boundaries
+
+Ran the prescribed Rice-driven retail oracle before any port change. The
+whole-RDRAM positive-control watch reached 10,000 callbacks, reported 31,591
+total control writes, and removed successfully. Retail reached repeated 640
+rows at both target origins `0x00696100` and `0x00696600`, then reached title
+`1024 / 0x00790400` and hangar `512 / 0x006AB400`. The three configured
+task/AI execution watches fired repeatedly at the early and target origins;
+the two task-context watches produced 700 rows each and the status-success
+watch produced 1,384 rows. Target rows included nonzero task-context fields
+such as `$a0=0x8018DD30`/`0x8018FB70`, `$a1=0x142`, and `$a2=2`.
+
+The physical gate watch recorded 17 writes to `0x000A0F50` from five PCs:
+`0x8008EA34`, `0x8008EB40`, `0x8008EB7C`, `0x8008EC88`, and `0x8008ED48`.
+The existing oracle watch output did not print store payloads, so this run
+does not independently prove a zero-to-one transition. The countdown/status
+watches recorded zero writes to `0x0014998A` and 13,319 writes to
+`0x0014974C`; the latter writer PCs were not exposed by this recipe's output.
+
+Ran the existing silent-audio port control from `build/` under the 30-second
+SIGKILL watchdog, with `ROGUESQ_AUDIO_UCODE=0`, spin yield, ungated solo LLE,
+and the existing all/M5/PCM diagnostics. It reached the positive 640 phases
+`0x0066A500` and `0x00696100`, and no title/hangar phase before the watchdog.
+Its rate-limited `audtask-dispatch` table emitted 53 checkpoints through
+ordinal `n=1664`, all `real_ucode=0`; the existing M5 table produced two
+`audio-return` rows, the slot-return controls fired at the covered sites, and
+26 PCM sanity rows were all-zero. No `[CRASH]` or `[ABORT]` marker appeared.
+
+This completes M5 plan step 1. The retail line rules out missing task/AI
+execution and a live `0x0014998A` writer at this scope, while identifying
+`0x0014974C` as the active status-word boundary. The port line confirms the
+silent stub path and is not evidence about the image arm. The next
+discriminator is the same-build stub versus opt-in Factor 5 image-arm table
+from plan step 2. No gate flip, image default, task rewrite, or safety guard
+changed.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this
+session ran contract-capture controls only.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-arm-validation`.
+
 ## Session 2217 (2026-08-23) — checkpoint close-out; VI cadence parked
 
 No new experiment ran in this session. The previous session (s2216) committed
