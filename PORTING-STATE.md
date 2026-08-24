@@ -108337,3 +108337,30 @@ qualified phase-10 image rows. Require independent whole-RDRAM, title/hangar,
 width-aware target, and port route controls before interpreting any contract
 field; do not repeat the s2291/s2301 sequence tables or change runtime
 behavior.
+
+## Session 2303 (2026-08-24) — compacted current truth and migrated durable M5 history
+
+This was a maintenance iteration, triggered because `wc -c < docs/CURRENT-TRUTH.md`
+reported `60557`, above the 60000-byte gate. No build, run, oracle capture, or
+experiment was performed.
+
+The durable s2263–s2302 route, audio-arm, retail-writer, task/output, and C88
+findings were consolidated into `docs/PROJECT-OVERVIEW.md` §46. The operational
+front matter in `docs/CURRENT-TRUTH.md` was reduced from 910 lines / 60557 bytes
+to 203 lines / 11933 bytes, preserving the current state, latest selected
+hypotheses, durable boundaries, superseded conclusions, safety rules, and one
+monotonic six-item backlog. `scratch/agent/NEXT.md` was rewritten for the next
+work unit, the M5 task→stage→PCM ordinal join, with its four competing
+hypotheses and complete discriminating table.
+
+This rules out only documentation staleness/size as the maintenance problem;
+it does not add behavioral evidence or alter any runtime conclusion. The next
+experiment remains the new M5 Step 3 ordinal join, gated on independent retail
+whole-RDRAM/title/hangar/width-aware controls and the qualified port route.
+
+ORIGIN: no runtime or mitigation-shaped change; this iteration only migrated
+durable documentation and rewrote the next-work-unit contract.
+
+### Next
+
+Run the s2304 M5 task→stage→PCM ordinal join from `scratch/agent/NEXT.md`.

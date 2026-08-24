@@ -4242,3 +4242,106 @@ the measured boundary and supplies the qualified silent arm for the next
 same-build image/output pair. It does not identify the image producer or
 consumer contract and does not authorize an audio default, writeback, or
 guard change.
+
+## 46. M5 route, audio-arm, and retail contract archive (s2263–s2302), migrated in s2303
+
+This section consolidates the operational history that was previously kept in
+`CURRENT-TRUTH.md`. The ledger remains authoritative for exact commands,
+paths, and full tables.
+
+### Qualified image output and route validity (s2263–s2272)
+
+s2263 refreshed the M5 plan and established the route-qualified image/silent
+comparison as the next boundary. s2264's silent-first/image-second pair was
+invalid because the image arm exited before its target window. Isolated
+s2265 and s2267 controls then qualified the image and silent arms through the
+title origin `1024 @ 0x00790400` and hangar origin `512 @ 0x006AB400`, with
+the later known aligned-ROM abort occurring after target qualification.
+
+s2266 and s2269–s2271 exposed route-sensitive paired-run failures, not a
+selected image or PCM defect. s2270's unpaired image rows and s2271's
+stage-only rows were not used as paired conclusions. s2272 corrected a driver
+that could launch the second arm without a hangar gate, then staggered the
+arms only after the silent arm reached hangar. Both arms stayed qualified.
+The image arm produced two nonzero phase-10 rows, each with exact PCM source
+and consumer tuples, source-before-consumer ordering, and no stage-only or
+ordering-violation rows. The rows were
+`(0x168B50,0x300,0x2B9E9631,621)` and
+`(0x168E50,0x300,0x6ADD4218,639)`. This closes the measured output contract
+for those tuples without authorizing a default, writeback, consumer, or
+guard change.
+
+### Key-on and A1 route boundaries (s2278–s2286)
+
+s2278 qualified the port's eight transfer-PC pointer/branch witness after a
+fixed eleven-Start route, but the raw pointer was not a cross-runtime identity.
+s2279's first retail field dump saturated its cap and the paired port route
+was invalid; s2280 removed the retail cap overflow but the port again missed
+the target origin. These remain coverage-invalid for pointer/data versus
+branch-state conclusions. s2281's same-build C88 pair passed port B40 and
+route-state controls but both arms failed in off-target width-640 behavior,
+so no C88 or key-on conclusion followed. s2282's control-first rerun again
+withheld C88=1 because C88=0 never reached hangar.
+
+s2283's four-arm A1 matrix and s2284's corrected two-wave matrix independently
+passed their VI controls but all port arms failed at the same initial
+width-640 route before either target origin. They select route-invalid or
+route-intrinsic behavior at those recipes, not a VI publisher. s2285 and
+s2286 repeated the prerequisite failure with the silent arm; removing the
+high-volume VI-caller logger changed the crash PC but did not restore target
+coverage. These runs do not identify an audio writer or authorize a route
+guard.
+
+### Retail route and audio-arm qualification (s2287–s2290)
+
+s2287's independent retail oracle passed whole-RDRAM, title, and hangar
+controls but did not execute the two exact port crash PCs. s2289 then showed
+that retail does execute the equivalent slot-dispatch route in the initial
+640 phase (`110` iterator, `2` inner, and `5` batch rows), while the exact
+port crash PC stayed absent. This closes the narrow retail-route omission
+hypothesis without identifying the port-side writer or callback state.
+
+s2288's stub-first port run crashed before title/hangar and was therefore
+route-invalid. s2290 corrected the driver with explicit keycode-36 Start
+delivery and a hangar gate. The silent stub reached title/hangar, allowing
+the default image arm to run; the image arm reached the same phases and
+emitted nonzero phase-10 payloads with `nz=621` and `nz=639`. The image arm
+is consequently the qualified default at this tested recipe scope. The
+comparison does not identify a new writer or authorize a mitigation.
+
+### Retail/port task-output contract boundary (s2291–s2301)
+
+s2291 joined one retail metadata publication of destination `0x80166750`
+and length `0x300` to a nonzero port image-stage/DMA tuple, but the retail
+payload-producing writer class differed from the port Factor 5 image-DMA
+edge. This selects `H-RetailDifferentWriter` at that tuple scope.
+
+s2292–s2294 resolved the candidate ring address class without resolving the
+semantic output writer. Retail wrote all 16 exact `0x300` slots from
+`0x166450` through `0x169150`, all from guest PC `0x800078EC`; the port
+qualified two nonzero phase-10 rows. The watched retail PC also ran in the
+hangar phase, but none of those 16 slots was written there. s2295–s2297
+moved the target-phase boundary to the independent task/output span
+`0x141AD0:0x141AF0`: target writers included `0x8008EB8C`, `0x8008EBBC`,
+and `0x80094648`, but short or sentinel-capped captures could not retain a
+complete row table. No writer, consumer, slot, writeback, or address remap
+change was authorized.
+
+s2298–s2301 corrected the phase latch, filtered sentinel values before the
+row cap, and extended the capture. The target writer histogram and sequence
+then retained `48` sentinel rows from `0x80094648`, followed by adjacent
+same-tuple rows from `0x8008EB8C` and `0x8008EBBC` at
+`0x141AD0 = 0x120E0000`; the final fixed run matched writer counts `48/1/1`.
+This selects `H-SharedSequence` at the measured task/output span. It does
+not assign a semantic role to the three PCs or authorize a contract change.
+
+### C88 route discriminator (s2302)
+
+s2302's same-build C88 route fingerprint passed the independent retail
+whole-RDRAM threshold `10,000`, title, hangar, and all-eight transfer-PC
+controls. Port C88=0 reached the initial `640 @ 0x00696100`, emitted positive
+fingerprint rows, settled at `route_state=2`, `b40=1`, `key_on=0`, and then
+bus-crashed at guest PC `0x8000834C` before title or hangar. The required
+hangar gate withheld C88=1. This is `H-CoverageInvalid` for the recipe; it
+does not select a C88 route, pointer/data, branch-state, key-on return, or
+mitigation conclusion.
