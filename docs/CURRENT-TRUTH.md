@@ -5,25 +5,23 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2286 (2026-08-24); behavioral and source evidence is
-current through s2286. This iteration ran the same-build, phase-gated M5
-Step 1 trace-light pair with one retail oracle. Retail passed its whole-RDRAM,
-title, and hangar controls. Removing `ROGUESQ_LOG_VI_CALLERS` did not restore
-the port route: the silent arm reached the off-target
-`640 @ 0x00696100` phase, then bus-crashed at guest PC `0x800547BC`
-(`mat34CrossRowsAndCopyPos+60`) before title or hangar. The image arm was not
-launched. This is H-RouteInvalid at the tested recipe scope; no audio null or
-default change follows.
+Maintained in Session 2287 (2026-08-24); behavioral and source evidence is
+current through s2287. This iteration ran the prescribed retail-oracle
+route-boundary watch. Retail passed the whole-RDRAM threshold at `10,000`
+callbacks and reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. Across the full 180-second run it executed neither
+watched guest PC `0x800547BC` nor `0x80007904`, including the initial
+`640 @ 0x00696100` phase; consequently there were no `exec-prev` rows. The
+oracle wrapper returned `139` during its timed teardown, after both controls
+had passed. Together with s2286's port crash at `0x800547BC`, this selects
+H-PortOnlyBadPath at the tested recipe scope. No audio null, default, guard,
+or writer conclusion follows.
 
-The s2286 pair retained the corrected eleven-Start route
-(`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, and
-`ROGUESQ_SPIN_YIELD=1`) and all bounded M5 task/DMA/service/gate/slot/voice/
-PCM diagnostics except the VI-caller logger. The independent retail oracle
-passed the whole-RDRAM threshold at `10,000` callbacks and reached title and
-hangar. The silent port emitted 48 audio-task dispatch rows and one
-`[missing-func]`, but no B40/route-state or target-phase controls; it crashed
-around 26.2s in the initial off-target 640 route. The image arm was withheld
-by the required silent-hangar gate.
+The s2287 oracle used the corrected eleven-Start route and `--vi-trace`; its
+positive control was reached before the whole-RDRAM watch was removed, and
+the title/hangar rows continued through the run. The exact-PC null is valid
+at this scope, but it does not claim that retail lacks a semantically
+equivalent path at another guest address.
 
 ## Current state
 
@@ -41,6 +39,11 @@ by the required silent-hangar gate.
   Factor 5 image arm is opt-in through `ROGUESQ_AUDIO_UCODE=1`; C88=`1` is
   also a diagnostic behavior arm. Stock `aspMain` is not the game's MusyX /
   Factor 5 contract, and MORT is a separate CPU speech asset.
+- s2287's independent retail route watch passed the whole-RDRAM, title, and
+  hangar controls but recorded no execution of guest PCs `0x800547BC` or
+  `0x80007904` in any phase. The port crash path is therefore port-only at
+  the tested recipe scope; the next M5 unit is the planned default-image
+  qualification, not another exact-PC oracle watch.
 - `docs/M5-AUDIO-PLAN.md` inventories the active audio stubs/traps/gates and
   defines the phase-keyed task→DMA→service→slot→voice→PCM discriminator and
   rollback conditions. The plan refresh in s2231 changed no runtime default.
@@ -141,6 +144,15 @@ by the required silent-hangar gate.
 
 ## Latest evidence
 
+- s2287's retail-only route-boundary run passed the whole-RDRAM positive
+  threshold at 10,000 callbacks, reached title `1024 @ 0x00790400` at about
+  17.3s, and reached hangar `512 @ 0x006AB400` at about 38.4s. The full
+  180-second VI trace included three initial `640 @ 0x00696100` rows and
+  recorded zero hits for both watched PCs `0x800547BC` and `0x80007904`; no
+  `exec-prev` attribution was therefore emitted. The timed oracle teardown
+  returned 139 after the controls had passed. This selects H-PortOnlyBadPath
+  when combined with the prior port-side crash witness and closes this exact
+  PC boundary; it does not identify an audio writer or justify a mitigation.
 - s2284's fixed two-wave driver first gated on one retail oracle's
   whole-RDRAM threshold (`10,000` callbacks), title, and hangar origins. The
   wave-1 control and alternate-field arms then each passed `8`
@@ -382,7 +394,20 @@ by the required silent-hangar gate.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 key-on tuple contract.** Requalify the C88 route with a
+1. **M5 Step 2 default audio arm qualification.** The Step 1 image arm has
+   qualified target-stage/task/DMA/PCM rows in s2268 and s2272, while the
+   silent arm remained independently route-qualified in s2272. Promote
+   `factor5_ucode_b` to the default `M_AUDTASK` arm in one build, retain an
+   explicit `ROGUESQ_AUDIO_UCODE=0` stub escape, and run the stub control first
+   before launching the default-image arm. The discriminator is one
+   phase-keyed table containing dispatch, task fields, DMEM/DMA, image exit,
+   SP completion, service, status/slot, voice/reap, PCM source/consumer, and
+   title/hangar route rows for both arms. Require whole-RDRAM retail control
+   plus a stub-arm title/hangar gate before interpreting the default arm.
+   Roll back the default flip if the image arm fails its task contract,
+   loses the qualified route, or adds a new task/DMEM failure; do not add a
+   guard or writeback workaround.
+2. **M5 key-on tuple contract.** Requalify the C88 route with a
    phase-gated control-first stagger: launch C88=1 only after a C88=0 control
    reaches `512 @ 0x006AB400`, then compare retail fields only if both arms
    reach the hangar. s2281's concurrent pair and s2282's control-first stagger
@@ -391,33 +416,26 @@ Closed investigations are not active work items. The sequence is monotonic.
    this route pair without a new route discriminator. No pointer/data or
    branch-state verdict, key-on return, or mitigation change follows. The
    Step 1 task/output pair remains parked.
-2. **M5 A1 second-origin transition.** Parked after s2283's four-way and
+3. **M5 A1 second-origin transition.** Parked after s2283's four-way and
    s2284's two-wave matrices. Each wave supplied both positive controls in both
    arms but reproduced the initial-640 crash at guest PC `0x80001F88`, so the
    two independent wave results select H-RouteIntrinsic at this recipe scope.
    Do not repeat the four A1 arms without a new route discriminator that can
    restore `0x00696100`/`0x00696600` coverage; no publisher or default follows.
-3. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
+4. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
-4. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator; the dormant `slotDispatcherIter+872` class has
    thousands of clean guarded hangar calls and no authorized mitigation.
-5. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
+6. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
 
-6. **M5 Step 1 retail route boundary.** s2286's trace-light pair still failed
-   before the port title/hangar gates, but at an earlier guest PC
-   (`0x800547BC`) in the initial `640 @ 0x00696100` route. Before another port
-   pair, ask the retail oracle whether it executes guest PCs `0x800547BC` and
-   `0x80007904` in this driven route, recording the live VI phase and
-   `exec-prev` attribution. A passing oracle with neither PC hit makes the
-   port crash path port-only; a passing oracle that executes either PC and
-   reaches title/hangar moves the boundary to port-side data/ABI/route state;
-   a failed oracle control is uninterpretable. Do not interpret any audio
-   null, launch an image arm, or change a default until this ground-truth
-   discriminator is complete.
+The s2287 retail route-boundary discriminator is complete. It passed its
+independent controls and recorded no exact hit for either port crash PC, so
+the port-only result is scoped to this driven recipe. It does not authorize a
+route guard, an audio null interpretation, or a writer change.
 
 Generated-symbol renaming is closed at the useful boundary. The remaining
 placeholder holds are `func_8000040C`, `func_800927B0`, `func_80092A54`,
@@ -466,8 +484,8 @@ default selector, guest `comRegs.vCurrent`, and published current-line bit
 remain zero. Opt-in field/current-register/timing/total-`VI` arms recover the
 split; the natural host publisher and cadence are unidentified. s2283's
 four-way arm matrix did not reach either target origin after positive controls,
-so it adds a route-contended null only. The next discriminator is the two-wave
-matrix in backlog item 2.
+so it adds a route-contended null only. The A1 matrix remains parked until a
+new route discriminator restores target coverage.
 
 ### Key-on, M3, and M4
 
@@ -538,8 +556,9 @@ the append-only ledger. Operationally:
   removing the VI-caller logger moved the port failure earlier, to
   `mat34CrossRowsAndCopyPos+60` / guest PC `0x800547BC` in the initial 640
   route. It does not establish a logger-induced crash, an audio-contract gap,
-  or an image-arm defect; the next boundary is the independent retail PC
-  watch in backlog item 6.
+  or an image-arm defect. s2287's qualified retail oracle then recorded no
+  execution of either exact crash PC, closing that boundary as port-only at
+  the tested recipe scope.
 - s2269's pre-target controls followed by a shared width-640 stall and s2270's
   image-first/silent split are route-invalid observations. They do not make
   the qualified s2268 output tuple disappear or explain the route-load

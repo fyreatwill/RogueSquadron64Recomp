@@ -107624,3 +107624,38 @@ Ask the retail oracle whether it executes guest PCs `0x800547BC` and
 `0x80007904` on the driven route before another port pair. Use the positive
 whole-RDRAM watch, title/hangar VI controls, `--watch-pc` for both PCs, and
 `--pc-phase-log-width 0x00696100:640`; record the `exec-prev` attribution.
+
+## Session 2287 (2026-08-24) — retail route PCs absent in qualified target window
+
+HYPOTHESIS-ID: m5-step1-retail-route-boundary.
+
+The prescribed work unit was one retail-oracle route-boundary run. The driver
+passed `zsh -n`, launched the oracle with the whole-RDRAM watch, watched guest
+PCs `0x800547BC` and `0x80007904`, enabled `--vi-trace`, and phase-gated the
+requested initial `640 @ 0x00696100` route. The oracle reached its positive
+whole-RDRAM threshold at 10,000 callbacks before removing that broad watch.
+It then reached title `1024 @ 0x00790400` at about 17.3s and hangar
+`512 @ 0x006AB400` at about 38.4s, and continued through the 180-second
+window. The timed wrapper returned `139` during teardown after those controls
+had passed.
+
+There were three initial `640 @ 0x00696100` VI rows, but zero hits for either
+watched PC anywhere in the run and therefore no `exec-prev` attribution. The
+prior port witness is a crash at `0x800547BC` in that same off-target phase;
+the independent retail null, with valid controls, selects H-PortOnlyBadPath
+at this recipe scope. It rules out retail execution of these exact guest PCs
+on this driven route, but not an equivalent retail path at another address.
+It also rules out H-RetailLegitimatePath for these PCs and supplies no audio,
+default, guard, or writer conclusion. No runtime was built or changed.
+
+ORIGIN: no mitigation-shaped change; this iteration added only the oracle
+driver `scratch/agent/run_s2287_m5_oracle_route_boundary.sh` and its capture.
+
+### Next
+
+Execute M5 plan Step 2: make `factor5_ucode_b` the default M_AUDTASK arm while
+retaining an explicit `ROGUESQ_AUDIO_UCODE=0` stub escape, then run the stub
+control first and the default-image arm second from one build. Gate all
+interpretation on independent retail controls and the stub arm reaching the
+title and hangar phases; compare the complete phase-keyed task/DMA/service/
+slot/voice/PCM row for both arms.

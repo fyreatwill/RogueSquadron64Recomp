@@ -1,53 +1,95 @@
-# NEXT work unit (s2287) — retail ground-truth route-PC boundary
+# NEXT work unit (s2288) — M5 Step 2 default audio arm qualification
 
-HYPOTHESIS-ID: m5-step1-retail-route-boundary
+HYPOTHESIS-ID: m5-step2-default-audio-arm
 
 ## Work unit
 
-Run one driven retail-oracle route-boundary experiment before another port
-pair. Watch the two guest PCs reported by the s2285/s2286 port failures:
-`0x800547BC` and `0x80007904`. Keep the whole-RDRAM positive control first,
-the eleven-Start schedule, `--vi-trace`, and title/hangar origin controls.
-Phase-gate the watched-PC rows to the port's initial
-`640 @ 0x00696100` route with `--pc-phase-log-width 0x00696100:640` and retain
-the oracle's `exec-prev` attribution. This is an oracle-only experiment: do
-not build, instrument, or change the port runtime.
+Make the Factor 5 audio image the default `M_AUDTASK` dispatch arm while
+retaining an explicit `ROGUESQ_AUDIO_UCODE=0` stub escape. Build once, then
+run both arms from that same executable: launch the stub control first and
+launch the default-image arm only after the stub reaches the title and hangar
+VI phases. This is the first behavior change in the M5 plan; do not add a
+guard, skip, writeback, C88 override, or route workaround.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-PortOnlyBadPath: the retail oracle passes whole-RDRAM, title, and hangar
-  controls but records neither watched PC in the initial 640 phase. The port's
-  `0x800547BC` crash path is then port-only at this recipe scope.
-- H-RetailLegitimatePath: retail passes the controls and executes one or both
-  PCs in the phase, with an `exec-prev` attribution, then reaches title and
-  hangar. The boundary moves from audio/output nulls to port-side route/data/
-  ABI behavior around a path retail actually uses.
-- H-RetailRouteDifferent: retail passes the controls but executes the PCs only
-  in another VI phase or with a different predecessor. The port and retail
-  route identities differ, so another port pair is premature; investigate the
-  route entry/overlay boundary rather than audio.
-- H-OracleInvalid: the whole-RDRAM threshold or either title/hangar control is
-  absent. The PC null or hit is uninterpretable and the experiment must be
-  repaired before any port conclusion.
+- H-DefaultSafe: the default image reaches the same title/hangar route as the
+  stub control, completes its task, and preserves the already qualified
+  image-stage and PCM joins without a new crash or task failure.
+- H-ImageContractGap: both arms reach the target phases, but the default image
+  still lacks a task/DMEM/DMA, service, slot/voice, or PCM source/consumer
+  relation that the complete row requires. Keep the image opt-in and name the
+  missing contract edge.
+- H-DefaultRouteRegression: the stub control reaches title and hangar but the
+  default image loses a route phase or introduces a new task/DMEM failure.
+  Revert the default flip; this is a default-arm regression, not permission
+  to add a mitigation.
+- H-RouteInvalid: the retail positive control or stub title/hangar gate is
+  absent. The default arm is not interpretable and must not be launched or
+  promoted.
 
-The discriminating measurement is one table containing: whole-RDRAM callback
-threshold; title and hangar VI origins; every hit at `0x800547BC` and
-`0x80007904` with live width/origin; and each hit's `exec-prev` caller. A
-positive control is required before using any PC null. No image arm, audio
-default, guard, or writer change follows this oracle result.
+The discriminator is one table per arm, keyed by VI phase and route ordinal:
+`audtask-dispatch → task ABI/source → DMEM change → DMA/readback → image
+exit → SP completion → service entry/return → status/slot → voice/reap →
+PCM source/consumer → title/hangar phase`. The independent retail oracle
+must first pass the whole-RDRAM threshold and title/hangar controls. A stub
+dispatch or an image `Broke` return alone is only a branch control, not a
+successful audio result.
 
 ## Exact commands
 
-1. Create `scratch/agent/run_s2287_m5_oracle_route_boundary.sh` with
-   `apply_patch`. It should run from the repository root, create a capture
-   directory whose final component does not begin with `.`, launch exactly
-   one retail oracle, and use SIGKILL cleanup. Use:
+1. Use `apply_patch` to change `src/main/main.cpp` in the cached
+   `M_AUDTASK` selection block. Preserve the existing `=0` stub arm and make
+   the selection equivalent to:
 
-   `tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 180 --watch-write 0x0:0x800000 --watch-pc 0x800547BC,0x80007904 --pc-phase-log-width 0x00696100:640 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`
+   ```cpp
+   const char* e = getenv("ROGUESQ_AUDIO_UCODE");
+   s_use_real_audio_ucode = !(e && e[0] == '0');
+   ```
 
-2. Check syntax with `zsh -n` and run the script from the repository root.
-3. Summarize only bounded grep/tail output: positive-control threshold,
-   title/hangar VI rows, watched-PC rows, `exec-prev` summaries, and the
-   oracle exit line. If the whole-RDRAM threshold or either target origin is
-   missing, classify the result H-OracleInvalid and do not interpret PC
-   coverage.
+   Update the nearby stale “default remains musyx_stub” wording to describe
+   the new default and the explicit stub escape; do not alter the image
+   implementation or any downstream gate.
+
+2. Build the single comparison executable:
+
+   `cmake --build build --config Debug --target RogueSquadron64Recomp`
+
+3. Use `apply_patch` to create
+   `scratch/agent/run_s2288_m5_audio_default_step2.sh`. It must run from the
+   repository root, check `build/RogueSquadron64Recomp` and the ROM, launch
+   one independent retail oracle using the s2285 eleven-Start recipe and
+   `--watch-write 0x0:0x800000 --vi-trace`, and require the oracle's
+   `positive-control threshold reached: watch index 0 callbacks=10000` plus
+   title `0x00790400`/1024 and hangar `0x006AB400`/512 before interpreting
+   port rows. Arm the common route and bounded M5 diagnostics used by s2285:
+   `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+   `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_M5_C88_VALUE=0`,
+   `ROGUESQ_STUB_MISSING_FUNCS=1`, `ROGUESQ_LOG_PHASE=1`,
+   `ROGUESQ_LOG_AUDIO_RETURN=1`, `ROGUESQ_LOG_M5_TASK_CONTRACT=1`,
+   `ROGUESQ_LOG_PCM_BOUNDARY=1`, `ROGUESQ_LOG_M5_GATE_CONTRACT=1`,
+   `ROGUESQ_LOG_FILTER_VOICE_AUDIT=1`, `ROGUESQ_LOG_M5_B40_ROUTE=1`,
+   `ROGUESQ_LOG_M5_ROUTE_STATE=1`, `PROBE_PHASE_WIDTH=1024`, and
+   `PROBE_KEYS_FROM_PHASE=1`.
+
+   Launch the stub arm with `env ... ROGUESQ_AUDIO_UCODE=0`; after its
+   `vi_width=512 origin=0x006AB400` gate, launch the default arm with
+   `env ...` and no `ROGUESQ_AUDIO_UCODE` variable. Keep both captures,
+   watchdog each arm, SIGKILL every remaining game/oracle process, and exit
+   nonzero when a required gate is absent. Run the arms from `build/` with
+   the ROM present; do not use SIGTERM.
+
+4. Check and run exactly that driver:
+
+   `zsh -n scratch/agent/run_s2288_m5_audio_default_step2.sh`
+
+   `zsh scratch/agent/run_s2288_m5_audio_default_step2.sh`
+
+5. Summarize only bounded driver summaries and marker counts for both arms:
+   retail controls, arm route phases, task ABI/DMA/image rows, audio return,
+   service/gate/slot/voice rows, PCM source/consumer rows, `[missing-func]`,
+   `[CRASH]`, and `[ABORT]`. Do not interpret default-image nulls if either
+   retail controls or the stub title/hangar gate is absent.
+
+No image default promotion is complete until H-DefaultSafe is selected by the
+full table and a later soak is queued with the same passive breadcrumbs.
