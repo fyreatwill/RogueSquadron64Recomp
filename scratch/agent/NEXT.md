@@ -1,72 +1,57 @@
-# NEXT work unit (s2315) — remaining VI-origin retail writer census
+# NEXT work unit (s2316) — gate/task/wait writer contract checkpoint
 
-HYPOTHESIS-ID: m5-retail-writer-vi-origin
+HYPOTHESIS-ID: m5-gate-task-wait-contract
 
 ## Work unit
 
-Ask the retail oracle for ground truth first, retain the completed title,
-four post-title 512, and four 640 buckets, then add the six remaining VI
-origins observed in the same trace:
-
-    --pc-hist-phase 0x00000280:320
-    --pc-hist-phase 0x006BA280:320
-    --pc-hist-phase 0x005D4500:640
-    --pc-hist-phase 0x0062C200:640
-    --pc-hist-phase 0x0062BD00:640
-    --pc-hist-phase 0x00790800:1024
-
-Retain the whole-ring watch, all sixteen `0x300` slot watches, lifetime
-writer histograms, final snapshots, and the actual nonzero port stage pair in
-the same invocation. No runtime behavior, output contract, or mitigation
-change.
+Run the existing ground-truth-first paired checkpoint with no runtime or
+contract change. The retail oracle must run and pass its whole-RDRAM control
+before either port arm starts. It watches the guest gate `0x800A0F50`, the
+task/output span `0x80141AD0:0x80141AF0`, and the wait countdown
+`0x8014998A`, while the port runs silent and Factor 5 image arms from the same
+build with gate/task/slot/PCM traces. Do not rebuild between arms and do not
+change a gate, wait hatch, status store, guard, or default.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-Retail-Remaining-Origin: at least one remaining origin has a positive
-  phase writer-PC row for `0x800078EC`; that origin is a measured publication
-  phase.
-- H-Retail-Shared-Remaining-Origins: two or more remaining origins have
-  positive phase writer-PC rows; retail shares or alternates publication.
-- H-Retail-Earlier-Or-Unattributed: every new bucket has positive VI callbacks
-  but no phase writer-PC rows; the writer is outside all observed buckets or
-  phase attribution remains incomplete.
-- H-CoverageInvalid: whole-RDRAM, title/hangar, any new callback bucket,
-  lifetime writer controls, final snapshots, port title/hangar, or retention
-  fails.
+- H-GateWriter-Selected: the retail oracle records a target-phase write to
+  `0x800A0F50` with a named writer/value transition, and the matching port arm
+  records the gate branch and downstream task/slot progress. This selects the
+  gate contract as the next boundary.
+- H-WaitWriter-Selected: the gate control is positive, but the target-phase
+  transition at `0x8014998A` has a named service/voice worker and the port has
+  the matching wait-field change and return. This selects the wait contract.
+- H-Gate-Wait-Outside-Target: whole-RDRAM, task/output, and route controls are
+  positive, but neither gate nor wait has a target-phase writer hit. This
+  leaves the writer attribution or phase boundary unresolved and authorizes no
+  behavior change.
+- H-CoverageInvalid: any whole-RDRAM, title/hangar, task/output, or port-arm
+  control is absent. No phase null is interpretable.
 
-The discriminator is one complete bucket × slot table: callback count,
-phase writer PC/count, lifetime writer PC/count, final snapshot FNV/nonzero,
-and the actual port stage/source/consumer/later-zero tuple. The lifetime
-writer control must be positive before any phase null is interpreted. Any
-positive remaining bucket selects the corresponding origin hypothesis;
-multiple positives select shared/alternating publication; all empty with
-positive callbacks selects the unattributed hypothesis. No outcome authorizes
-writeback, consumer, writer, slot, gate, guard, address-remap, or default
-changes.
-
-## Ground-truth preflight
-
-Confirm the current same-run controls before editing the launcher. Require
-whole-RDRAM `10000`, title/hangar coverage, all sixteen lifetime slot writer
-controls at `768`, all nine existing phase callback counts, and sixteen
-nonzero final snapshots. The prior run's new buckets were
-`0x0066AA00:640=139` and `0x00696600:640=219`; do not infer stability from
-those counts. Re-scan the VI trace for the six candidate origins before
-arming them.
+The discriminator is one same-run table keyed by arm and phase: oracle gate,
+task/output, and wait writer PCs/values; port gate entry/branch, task dispatch
+and exit, slot transition, PCM source/consumer, and route phase. A positive
+gate row selects H-GateWriter-Selected; a positive wait row with the matching
+worker/return selects H-WaitWriter-Selected; both may be selected if both
+rows independently close. A complete pair of phase nulls selects the
+unresolved-boundary hypothesis only when every positive control passes.
 
 ## Exact commands
 
-1. Add the six `--pc-hist-phase` arguments above to
-   `scratch/agent/run_s2310_m5_per_slot_retail_polarity.sh`, retaining every
-   existing phase argument.
-2. Syntax-check and run one capture:
+1. Syntax-check and run the existing paired checkpoint; it performs the oracle
+   preflight before launching the two port arms:
 
-       zsh -n scratch/agent/run_s2310_m5_per_slot_retail_polarity.sh
-       zsh scratch/agent/run_s2310_m5_per_slot_retail_polarity.sh
+       zsh -n scratch/agent/run_s2276_m5_step1_pair.sh
+       zsh scratch/agent/run_s2276_m5_step1_pair.sh s2316_m5_gate_task_wait_contract
 
-3. Parse the resulting oracle and port logs into the complete bucket × slot
-   table. Report all controls, all fifteen distinct configured buckets, the
-   selected hypothesis, the actual port pair, and its stage/source/consumer/
-   later-zero tuple. Treat the repeated
-   `--pc-phase-log-width 0x006AB400:512` as a logging-width control, not as an
-   additional origin bucket.
+2. Parse only bounded summaries from
+   `scratch/agent/s2316_m5_gate_task_wait_contract/{oracle,silent,image}.log`:
+   whole-RDRAM and title/hangar controls, gate/task/wait oracle hits with
+   writer PCs and target phase, then the paired port markers for task exit,
+   gate/route, slot, PCM, and title/hangar. Record the selected hypothesis
+   and any missing control; do not infer from elapsed time.
+
+3. If the existing script is missing a required marker, stop and classify the
+   run coverage-invalid rather than adding a diagnostic-only field. Any new
+   instrument must be added to a complete gate/task/wait table in one build
+   and one paired run.

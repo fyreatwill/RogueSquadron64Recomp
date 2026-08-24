@@ -53,6 +53,9 @@ ORACLE_ARGS+=(
     --pc-hist-phase 0x00656400:512 --pc-hist-phase 0x00656800:512
     --pc-hist-phase 0x0066A500:640 --pc-hist-phase 0x00696100:640
     --pc-hist-phase 0x0066AA00:640 --pc-hist-phase 0x00696600:640
+    --pc-hist-phase 0x00000280:320 --pc-hist-phase 0x006BA280:320
+    --pc-hist-phase 0x005D4500:640 --pc-hist-phase 0x0062C200:640
+    --pc-hist-phase 0x0062BD00:640 --pc-hist-phase 0x00790800:1024
     --pc-hist-phase 0x00790400:1024
     --post-value-pc 0x800078EC
     --vi-trace --press "$PRESS"

@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2314 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2315 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -19,6 +19,9 @@ post-title 512 origins and found no phase-attributed writer rows in any of the
 five distinct configured buckets.
 Session 2313 added the two earlier 640 origins and again found no
 phase-attributed writer rows, despite positive callback coverage in both.
+Session 2315 added all six remaining VI origins and again found no
+phase-attributed writer rows, despite positive callback coverage in every
+bucket.
 
 The current M5 boundary is task/output contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
@@ -44,7 +47,15 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   `0x00696600:640`; both had positive VI coverage (`139` and `219`) but no
   phase writer-PC rows. This extends `H-Retail-Earlier-Or-Unattributed` at
   capture scope across all nine configured buckets. The stage-only row and
-  game-level legitimacy remain open. No runtime behavior change is authorized.
+  game-level legitimacy remain open. Session 2315 added
+  `0x00000280:320` (`vi=2`), `0x006BA280:320` (`46`),
+  `0x005D4500:640` (`121`), `0x0062C200:640` (`92`),
+  `0x0062BD00:640` (`103`), and `0x00790800:1024` (`631`); all had zero
+  phase writer-PC rows, while the lifetime writer controls and final
+  snapshots stayed positive. This closes the observed VI-origin census and
+  leaves the writer outside the configured phase buckets, or phase
+  attribution incomplete, as the active boundary. No runtime behavior change
+  is authorized.
 
 ## Current state
 
@@ -108,6 +119,23 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   while the second remained stage-only. Later zero-payload rows occurred at
   image-stage events `11904`/`11834` and PCM events `11894/11895`/
   `11978/11979`. No runtime or contract change is authorized.
+- **s2315 — remaining VI-origin retail writer census.** The same-run capture
+  passed whole-RDRAM `10000`, title/hangar VI coverage, ring writes `12288`,
+  all sixteen lifetime writer controls (`768` each at `0x800078EC`), all
+  fifteen configured phase buckets, and all sixteen nonzero final snapshots.
+  The new buckets had callbacks `2`, `46`, `121`, `92`, `103`, and `631` for
+  `0x00000280:320`, `0x006BA280:320`, `0x005D4500:640`,
+  `0x0062C200:640`, `0x0062BD00:640`, and `0x00790800:1024`, respectively;
+  none had a phase writer-PC row. The complete fifteen-bucket × seventeen-
+  watch phase matrix was empty. The current port pair was
+  `0x168E50`/`0x169150`, with stage FNV/nz `2B9E9631/621` and
+  `6ADD4218/639`, stage events `9906/9908`, exact source/consumer events
+  `9961/9962` and `9963/9964`, and later zero image-stage events `15317` and
+  `10105` plus zero PCM source/consumer events `14274/14275` and
+  `10030/10031`. This closes the observed VI-origin census and leaves
+  writer attribution outside the configured buckets, or phase attribution
+  incomplete, as the next M5 boundary. No runtime or contract change is
+  authorized.
 - The retail oracle is an independent witness. Its whole-RDRAM, title, hangar,
   width-aware target, and exact-PC controls must pass before a null is read.
   The oracle currently reaches attract/title/hangar, not a mission.
@@ -117,6 +145,22 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2315 — all remaining VI origins remain unattributed.** The same-run
+  oracle/port capture passed whole-RDRAM `10000`, title/hangar, ring writes
+  `12288`, all sixteen lifetime `0x800078EC` slot-writer controls (`768`
+  each), all fifteen phase callback buckets, and all sixteen nonzero final
+  snapshots. The new origin callback counts were
+  `0x00000280:320=2`, `0x006BA280:320=46`, `0x005D4500:640=121`,
+  `0x0062C200:640=92`, `0x0062BD00:640=103`, and
+  `0x00790800:1024=631`; all fifteen buckets had zero phase writer-PC
+  rows. The port pair was `0x168E50`/`0x169150`, with nonzero stage
+  `2B9E9631/621` and `6ADD4218/639`, exact joins `9961/9962` and
+  `9963/9964`, then later zero image-stage events `15317`/`10105` and zero
+  PCM source/consumer events `14274/14275` and `10030/10031`. This selects
+  `H-Retail-Earlier-Or-Unattributed` at capture scope and authorizes no
+  writeback, consumer, writer, slot, gate, guard, address-remap, or default
+  change.
 
 - **s2314 — companion 640-origin retail writer census.** The same-run capture
   passed whole-RDRAM `10000`, title/hangar VI coverage, ring writes `12288`,
@@ -336,19 +380,18 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 Step 3i remaining VI-origin retail writer census.** Ask ground truth
-   first, retain the completed title, four post-title 512, and four 640 buckets,
-   then add every remaining origin observed in the same VI trace:
-   `0x00000280:320`, `0x006BA280:320`, `0x005D4500:640`,
-   `0x0062C200:640`, `0x0062BD00:640`, and `0x00790800:1024`. Require
-   whole-RDRAM, title/hangar, all sixteen lifetime writer controls, positive
-   callback counts for every new bucket, and nonzero final snapshots. Join
-   every bucket to the actual current port stage pair. A positive writer-PC
-   matrix at any remaining origin selects that origin; multiple positive
-   origins select shared/alternating publication; all empty with positive
-   callbacks leaves writer attribution open. A missing callback or failed
-   control is coverage-invalid. No writeback, consumer, writer, slot, gate,
-   guard, address-remap, or default change.
+1. **M5 gate/task/wait writer contract checkpoint.** Ask ground truth first,
+   with no behavior change. Watch the retail gate `0x800A0F50`, the task/output
+   span `0x80141AD0:0x80141AF0`, and the wait countdown `0x8014998A`, alongside
+   whole-RDRAM, title, hangar, and the qualified target controls. Attribute
+   the writes with the candidate service/voice PCs, then run silent and image
+   port arms from one build with the same gate/task/slot/PCM traces. A
+   phase-gated gate write/value transition with matching port branch selects
+   the gate contract; a target-phase wait-field transition with a named
+   worker and matching port return selects the wait boundary; a positive
+   task/output control with neither selects an unresolved gate/wait writer.
+   A missing whole-RDRAM, route, phase, or task control is coverage-invalid.
+   No gate store, wait hatch, status clear, guard, or default change.
 2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
    route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
    crash had `route_state=2`, `b40=1`, `key_on=0`; C88=1 was withheld.
@@ -381,7 +424,12 @@ its own witness for a null.
 the incremental task→DMA→service→slot→voice→PCM validation sequence. Direct
 service entry/exit, the service gate/loop, slot-0 status sequence, and the
 task/AI boundary are live on the port. Retail independently matches the
-status cycle. MORT speech is separate from Factor 5 RSP audio.
+status cycle. MORT speech is separate from Factor 5 RSP audio. The complete
+s2315 retail census found positive callback coverage but no phase-attributed
+`0x800078EC` writer row in any of fifteen observed VI-origin buckets. This
+does not identify the gate/wait writer; the next boundary is a ground-truth
+writer/value census for `0x800A0F50`, the task/output span, and wait fields
+before any gate or wait change.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
 phase-gated captures show a rotating mixed output contract: s2306 had one

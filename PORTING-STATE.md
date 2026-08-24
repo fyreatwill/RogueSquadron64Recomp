@@ -108959,3 +108959,92 @@ phase buckets and recorded the complete lifetime/phase/final table.
 ### Next
 
 Run the remaining VI-origin retail writer census from scratch/agent/NEXT.md.
+
+## Session 2315 (2026-08-24) — all remaining VI origins remain unattributed
+
+HYPOTHESIS-ID: m5-retail-writer-vi-origin.
+
+The planned work unit was a ground-truth-first same-run retail writer census
+adding the six remaining VI origins to the completed title, four post-title
+512, and four 640 buckets. The preflight run with the prior launcher passed
+whole-RDRAM `10000`, title/hangar VI coverage, ring writes `12288`, all
+sixteen lifetime slot-writer controls, and nonzero final snapshots. The
+candidate-origin rescan was positive before arming the new buckets:
+`0x00000280`, `0x006BA280`, `0x005D4500`, `0x0062BD00`, `0x0062C200`, and
+`0x00790800` all occurred in the VI trace.
+
+The launcher then syntax-checked and ran one batched capture with all fifteen
+distinct `--pc-hist-phase` buckets, the repeated
+`--pc-phase-log-width 0x006AB400:512` control, whole-ring and sixteen slot
+watches, lifetime writer histograms, final snapshots, and the qualified
+image/LLE port. The run reported `oracle_rc=0`, `port_rc=137` from the
+required SIGKILL, `whole_rdram=1`, `title=1`, `hangar=1`, `ring_watch=1`,
+`ring_snapshot=1`, `port_title=1`, `port_hangar=1`, and `retained=1`.
+
+The final retail ring snapshot was `11993/12288` nonzero, FNV `44FD19C3`.
+Every slot had the lifetime writer control `pc=0x800078EC n=768`, and every
+final slot snapshot was nonzero:
+
+| watch | physical range | final nonzero / FNV |
+|---:|---|---:|
+| 2 | `0x166450..0x166750` | `752 / 13257E99` |
+| 3 | `0x166750..0x166A50` | `755 / C06F37C0` |
+| 4 | `0x166A50..0x166D50` | `746 / EF09EE45` |
+| 5 | `0x166D50..0x167050` | `749 / 18246C9B` |
+| 6 | `0x167050..0x167350` | `751 / E31A511D` |
+| 7 | `0x167350..0x167650` | `740 / 19CB57A7` |
+| 8 | `0x167650..0x167950` | `748 / A7CE081A` |
+| 9 | `0x167950..0x167C50` | `751 / FE59D249` |
+| 10 | `0x167C50..0x167F50` | `756 / 38384DCA` |
+| 11 | `0x167F50..0x168250` | `754 / 70538DAF` |
+| 12 | `0x168250..0x168550` | `744 / 04325451` |
+| 13 | `0x168550..0x168850` | `750 / 0AB0C940` |
+| 14 | `0x168850..0x168B50` | `745 / 15FF43D6` |
+| 15 | `0x168B50..0x168E50` | `746 / AB3B2D11` |
+| 16 | `0x168E50..0x169150` | `758 / 758D04C2` |
+| 17 | `0x169150..0x169450` | `748 / 412499AD` |
+
+All fifteen phase buckets had positive VI callbacks but zero
+`writer-pc-phase ... pc=` rows for all seventeen watches:
+
+| VI origin | width | callbacks | phase writer rows |
+|---|---:|---:|---:|
+| `0x006AB400` | 512 | 2730 | 0 |
+| `0x006AB800` | 512 | 1546 | 0 |
+| `0x00656400` | 512 | 1435 | 0 |
+| `0x00656800` | 512 | 2619 | 0 |
+| `0x0066A500` | 640 | 18 | 0 |
+| `0x00696100` | 640 | 211 | 0 |
+| `0x0066AA00` | 640 | 139 | 0 |
+| `0x00696600` | 640 | 221 | 0 |
+| `0x00000280` | 320 | 2 | 0 |
+| `0x006BA280` | 320 | 46 | 0 |
+| `0x005D4500` | 640 | 121 | 0 |
+| `0x0062C200` | 640 | 92 | 0 |
+| `0x0062BD00` | 640 | 103 | 0 |
+| `0x00790800` | 1024 | 631 | 0 |
+| `0x00790400` | 1024 | 631 | 0 |
+
+The lifetime positive control makes every phase null valid. This closes the
+observed VI-origin census and selects `H-Retail-Earlier-Or-Unattributed` at
+capture scope; it rules out a positive writer in any of the fifteen observed
+buckets and shared/alternating publication through those buckets. It does
+not distinguish a writer outside the callback windows from incomplete phase
+attribution, and it does not establish game-level legitimacy.
+
+The current port phase-10 pair was `0x168E50`/`0x300`/`2B9E9631`/`nz=621`
+and `0x169150`/`0x300`/`6ADD4218`/`nz=639`; stage events were `9906` and
+`9908`, both completing at `9914`. Exact source/consumer joins were
+`9961/9962` for `0x168E50` and `9963/9964` for `0x169150`, with matching
+nonzero payloads and source-before-consumer ordering. Later zero image-stage
+rows occurred at event `15317` for `0x168E50` and `10105` for `0x169150`.
+Later zero PCM source/consumer rows were `14274/14275` and `10030/10031`,
+respectively; these were port-side image-DMA writes at callsite
+`0x8008EE84`, writer PC `0`, and do not authorize a writeback or guard.
+
+ORIGIN: no mitigation-shaped change; this iteration only added six batched
+oracle phase buckets and recorded the complete lifetime/phase/final table.
+
+### Next
+
+Run the gate/task/wait writer contract checkpoint from scratch/agent/NEXT.md.
