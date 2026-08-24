@@ -105142,3 +105142,37 @@ rewritten, or guarded.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-keyon-contract`.
+
+## Session 2226 (2026-08-23) — expanded port key-on tuple census cap
+
+Changed the regeneration-safe s2224 key-on census template in
+`../N64Recomp/fixup_game_funcs.py` from 256 to 2048 tuple entries per
+transfer PC, regenerated in the required order, and rebuilt the Debug target
+successfully. No generated game behavior, key-on return, guard, default, task
+field, or audio dispatch behavior was changed.
+
+Ran the prescribed detail arm with the C88/image route enabled. The run passed
+the positive controls: 3,041 LLE tasks, 3,144 image returns, 425 slot rows,
+15,756 transfer rows, and 16 phase-keyed census rows. It reached the first
+target `640 @ 0x00696100`, title `1024 @ 0x00790400`, and hangar
+`512 @ 0x006AB400`; no `640 @ 0x00696600` row appeared. The first-target
+final census row had tuple/overflow pairs by site
+`2048/1638, 2048/1638, 2048/1776, 2048/1775, 258/0, 258/0, 2048/183,
+2048/183`. The title and both hangar phase buckets had zero overflow, with
+final unique counts of 77 and 101/167 respectively across all eight transfer
+sites.
+
+The larger footprint therefore did not lose the first-target or hangar
+buckets, but it did not remove the measurement cap: six first-target rings
+continued to overflow. The process later crashed at a subsequent
+`640 @ 0x006A2900` phase after 137.2 seconds; this is outside the required
+tuple comparison and does not explain the missing second target origin. This
+single-source port result selects `H-TupleCapArtifact`, refutes the
+route-boundary form at the covered first-target/hangar scope, and leaves tuple
+parity unmeasured. No mitigation or runtime behavior change was authorized.
+Log: `scratch/s73_post_a_scene/s2226_keyon_tuple_cap/run.log`.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-keyon-contract`.

@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2225
-(2026-08-23); behavioral and source evidence is current through s2225.
+authoritative for exact commands and probe rows. Maintained in Session 2226
+(2026-08-23); behavioral and source evidence is current through s2226.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2225's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2226's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -484,9 +484,11 @@ second ledger.
   H-PhaseCoverageFailure; it does not authorize a port guard change. The next
   discriminator is a same-phase port transfer/guard/tuple table.
 - s2225's detail/quiet A/B passed controls and reached first target, title,
-  and hangar. Detail: 4,624
-  rows and overflowed its 256-tuple rings; quiet emitted none. This selects
-  H-PortCoverageRecovered; tuple parity remains open.
+  and hangar; s2226's 2048-cap detail arm reached first target and hangar
+  with positive controls, but six of eight first-target rings still overflowed
+  and no second 640 origin appeared. H-PortCoverageRecovered stands; the
+  single-source port result selects the cap-artifact hypothesis and tuple
+  parity remains open.
 
 ## Active backlog
 
@@ -522,9 +524,10 @@ work items.
    hangar-keyed bucket: retail still skips all eight divides, while the
    post-guard transfer tuple sets change completely between both target origins
    and hangar. s2224's detail run bus-error'd before later buckets; s2225's
-   A/B reaches first target, title, and hangar. Detail emits 4,624
-   rows but overflows the 256-tuple cap. H-PortCoverageFailure is superseded
-   here; H-PortCoverageRecovered is selected and tuple parity remains open.
+   A/B reaches first target, title, and hangar, while s2226's 2048-cap arm
+   still overflows six first-target rings and misses the second target origin.
+   H-PortCoverageFailure is superseded here; a single-source port result
+   selects H-TupleCapArtifact and tuple parity remains open.
 2. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
@@ -705,8 +708,9 @@ explicit-width retail range table now covers hangar too: every transfer PC
 fires in all three buckets, every divide PC remains zero, and each transfer
 PC's `$v0/$s1/$a0/$a2` set is disjoint across buckets. The retail branch-state
 shift is therefore selected at the observed scope. s2225's paired port arms
-reach first target, title, and hangar; detail logging is positive but capped.
-Expand the cap before interpreting tuple overlap.
+reach first target, title, and hangar; s2226's 2048-cap detail run removes
+overflow at hangar but not at the first target, and still misses the second
+target origin. Expand the cap again before interpreting tuple overlap.
 
 The stock `aspMain` contract is not the game's MusyX contract. s2220's retail
 payload and downstream port table select the original-value C88 semantics at
@@ -839,8 +843,9 @@ remain in the append-only ledger. Operationally:
   the three-bucket H-RetailBranchStateShift result; no port behavior change
   follows from the retail table alone.
 - s2224's coverage selection was believable because its detail run bus-error'd
-  before later buckets. s2225 reaches all buckets; tuple overflow remains a
-  measurement limit.
+  before later buckets. s2225 reaches all required non-second-origin buckets;
+  s2226's 2048-cap run still overflows six first-target rings, so tuple
+  overflow remains a measurement limit.
 
 ## Evidence ledger summary
 
