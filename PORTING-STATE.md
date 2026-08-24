@@ -104953,6 +104953,38 @@ existing `ROGUESQ_M5_C88_VALUE=1` behavior arm only.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-keyon-contract`.
 
+## Session 2224 (2026-08-23) — measured port key-on transfer state at first target
+
+The s2224 work unit added a regeneration-safe phase-keyed census to the
+existing s2122 key-on instrumentation in the companion `fixup_game_funcs.py`.
+It records bounded `$v0/$s1/$a0/$a2` tuples at all eight post-guard transfer
+PCs, alongside the existing divide, guard, entry, tail, and slot rows. The
+required `make_elf.py -> regen_n64recomp.sh -> fixup_game_funcs.py -> cmake`
+sequence completed successfully; the fixer reported all eight generated
+transfer callsites in `funcs_24.c`.
+
+The qualified image-arm run used `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_M5_C88_VALUE=1`,
+`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LOG_ALL=1`, and both key-on census variables.
+It passed positive entry/tail/slot controls and reached the first target phase
+(`640 @ 0x00696100`). Each of the eight transfer PCs fired 4,078 times and
+each guard count was zero; the four divide PCs at `0x80090CEC`, `0x80090D30`,
+`0x80090D74`, and `0x80090DB8` also fired 4,078 times. Tuple collection was
+positive, with four sites reaching the 256-unique-tuple cap. The process then
+terminated with signal 10 (`Bus error`) in `renderLitMeshFaceGroup+87172`,
+guest PC `0x80008988`, before `0x00696600` or `512 @ 0x006AB400`; the driver
+returned 4 while waiting for the later phase.
+
+This selects H-PortCoverageFailure for the complete three-bucket discriminator
+and rules out H-PortGuardSuppression only for the covered first target. It does
+not establish retail/port tuple parity, identify the crash writer, or authorize
+changing a key-on return, default, task field, or safety guard. The independent
+s2223 Rice matrix remains the comparison ground truth: it reached both target
+origins and hangar, observed all eight transfer PCs, and observed zero watched
+divide PCs. The next unit is a same-build concurrent detail/quiet logging A/B.
+
+ORIGIN: same-build port diagnostic capture plus the independent s2223 Rice
+retail phase matrix; no guest value was suppressed, rewritten, or guarded.
+
 ## Session 2223 (2026-08-23) — classified retail key-on branch state by phase
 
 The required pre-instrument Rice oracle preflight passed the whole-RDRAM

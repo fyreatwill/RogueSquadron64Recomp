@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2223
-(2026-08-23); behavioral and source evidence is current through s2223.
+authoritative for exact commands and probe rows. Maintained in Session 2224
+(2026-08-23); behavioral and source evidence is current through s2224.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2223's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2224's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -517,8 +517,13 @@ work items.
    origins while skipping all eight watched divide PCs. s2223 adds the
    hangar-keyed bucket: retail still skips all eight divides, while the
    post-guard transfer tuple sets change completely between both target origins
-   and hangar. The next M5 unit compares those transfer/guard/tuple classes in
-   the port before changing the early-return class.
+   and hangar. s2224's port table passed entry/tail/slot controls at the first
+   640-byte target: all eight transfer PCs fired 4,078 times, guards were zero,
+   and four divide PCs fired 4,078 times; a bus error in
+   `renderLitMeshFaceGroup` stopped the run before the second target or hangar.
+   This selects H-PortCoverageFailure for this capture and rules out guard
+   suppression only in the covered bucket; tuple parity and any return/default
+   change remain open.
 2. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
@@ -838,7 +843,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2223 VI-boundary, retail-ground-truth, image-arm, C88-gate, and key-on
+s2198–s2224 VI-boundary, retail-ground-truth, image-arm, C88-gate, and key-on
 work is recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
