@@ -1,61 +1,72 @@
-# NEXT work unit (s2321) — phase-keyed active-byte writer/value join
+# NEXT work unit (s2322) — identify the earlier nonzero status writer
 
 HYPOTHESIS-ID: m5-status-writer-ground-truth
 
 ## Work unit
 
-Run one ground-truth-first explicit keycode-36 staged pair using the existing
-stub and Factor 5 image arms. Keep the five active-byte watches and all
-fifteen phase buckets from s2320, but add `--post-value-pc` for every named
-active-byte writer observed there plus the prior known `0x8009B2C4` control.
-This makes the post-store values phase-keyed through the oracle's bounded
-`post-target-row-final` table. Keep the whole-RDRAM/gate/task/wait controls,
-the existing port slot/key-on/descriptor logger, and all task/DMA/PCM
-markers. This is an oracle/launcher change only; make no runtime, slot, wait,
-gate, guard, consumer, address, or default change.
+Add one bounded detail table to the retail oracle's existing
+`--post-value-pc` path. For every requested writer-PC post-store sample,
+record `(writer PC, VI ordinal, live origin/width, aligned watch address,
+aligned value)` before the current target-origin filter. Keep the existing
+`post-target-*` table, all five physical watches, all fifteen phase buckets,
+the whole-RDRAM/gate/task/wait controls, and the explicit keycode-36 stub/image
+pair. This is an oracle instrumentation change only: no port runtime,
+audio, slot, gate, wait, consumer, address, mitigation, or default change.
+
+The existing s2321 oracle capture is the ground-truth prerequisite for this
+instrument: it passed the whole-RDRAM positive control and showed that the
+missing information is writer/value ownership, not lack of phase coverage.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-Retail-Nonzero-Target: a requested active-byte writer produces a row at
-  `origin=0x006AB400 width=512` whose aligned post-store word has top byte
-  `01` or `02`. With the port still at sentinel key-on and no descriptor,
-  this selects a port contract/address mismatch.
-- H-Retail-Zero-Target: named target-phase writers produce only top-byte `00`
-  rows, with no `01/02` target row. The retail stores are housekeeping or
-  reaping, not the missing active transition.
-- H-Retail-Earlier-Nonzero: top-byte `01/02` rows occur only in another
-  observed VI-origin bucket, not in the hangar target bucket; the unresolved
-  boundary is phase/route timing rather than the five-address choice.
-- H-CoverageInvalid: whole-RDRAM, all fifteen phase buckets, title/hangar, or
-  either port arm's task/PCM controls is absent; no value null is evaluable.
+- H-Earlier-Status-Writer: the non-target top-byte `01/02` values are emitted
+  by one of the fourteen requested active-byte writer PCs. The detail table
+  must show the writer PC, physical watch, and phase origin for each value.
+- H-Earlier-Other-Writer: the non-target `01/02` values are emitted by a
+  different writer PC or a different watched word; the requested-PC detail
+  rows contain no such values.
+- H-Target-Status: a detail row at `origin=0x006AB400 width=512` has top byte
+  `01` or `02`, overturning the s2321 target absence.
+- H-CoverageInvalid: the whole-RDRAM threshold, all fifteen phase buckets,
+  title/hangar, or either port arm's task/PCM controls is absent.
 
-The discriminator is one complete table of `post-target-row-final` rows keyed
-by requested writer PC, watch address, phase origin/width, and aligned word.
-Decode the active status as `(value >> 24) & 0xff`; lower-field nonzero values
-do not count as status transitions. Join the result to the port
+The discriminator is one complete `post-value-pc-row` table keyed by
+`(writer PC, origin, width, watch address, value)`. Decode only
+`(value >> 24) & 0xff`; lower-field nonzero values do not count as status.
+Require the same-run positive controls and join the result to the port
 `[slot-alloc]`, `[slot-sb]`, `[init-desc]`, `[keyon-w40]`, task/DMA, and PCM
-markers. Require the whole-RDRAM control, gate/task/wait controls, all fifteen
-phase rows, `[vi-callers]`, title/hangar, and both port hangar phases before
-interpreting any null.
+markers before selecting an outcome.
 
 ## Exact commands
 
-1. Use `apply_patch` to add this single oracle argument after the existing
-   `--post-value-watch` arguments in
-   `scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh`:
+1. Use `apply_patch` in `tools/oracle/rs64_oracle.c` to add an opt-in
+   `--post-value-pc-detail` flag and a bounded detail-row array. In the
+   post-step block that currently calls `record_post_value_requested_sequence`,
+   `record_post_value_requested_class`, and
+   `record_post_value_requested_row`, append one detail row for every
+   `g_post_value_pending_target >= 0` sample using the pending PC, VI, width,
+   origin, aligned address, and post-step value. Do not change the existing
+   target-origin filter or breakpoint/step behavior. At shutdown print one
+   row per detail sample as:
 
-       --post-value-pc 0x8009BBF0,0x8009B170,0x8009B174,0x8009B178,0x8009B214,0x8009B6F8,0x8009B7CC,0x8009B7EC,0x8009B2C4,0x800292E4,0x800298E0,0x80017DB0,0x80015BC8,0x80022B1C
+       [oracle] post-value-pc-row pc=0x%08x vi=%ld width=%u origin=0x%08x addr=0x%08x value=0x%08x
 
-   Preserve every existing watch, phase bucket, and port environment.
+   only when the new flag is present. Add the flag to the usage text.
 
-2. Run:
+2. Build only the oracle front-end and verify syntax:
+
+       ./tools/oracle/build.sh
+       zsh -n scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh
+
+3. Use `apply_patch` to add `--post-value-pc-detail` immediately after the
+   existing `--post-value-pc` argument in
+   `scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh`, then run:
 
        zsh -n scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh
-       zsh scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh s2321_m5_status_writer_phase_value_join
+       zsh scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh s2322_m5_status_writer_value_owner
 
-3. Parse only bounded oracle shutdown rows matching `post-target-row-final`,
-   `post-target-summary`, `post-target-class`, the fifteen `pc-hist-phase`
-   rows, and the watch-write totals, plus the driver gate/arm summary and
-   per-arm slot/task/PCM markers. Report top-byte `01`, `02`, and `00` counts
-   separately for `0x006AB400:512` and all other buckets. Do not change any
-   behavior from a zero-only or missing-writer result.
+4. Parse only the bounded `post-value-pc-row`, `post-target-*`, fifteen
+   `pc-hist-phase`, watch-write, driver-arm, slot/key-on, task/DMA, and PCM
+   rows. Report target versus non-target top-byte `00/01/02` counts and the
+   writer-PC/physical-watch owner of every `01/02` row. Do not change behavior
+   from the result.

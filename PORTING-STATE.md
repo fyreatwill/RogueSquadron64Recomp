@@ -109325,3 +109325,57 @@ Request phase-keyed post-store rows for every named active-byte writer from
 this run, then use the same explicit pair to distinguish target-phase
 `0x01/0x02` status transitions from zero-only stores and earlier nonzero
 stores.
+
+## Session 2321 (2026-08-24) — phase-keyed active-byte writer/value join
+
+HYPOTHESIS-ID: m5-status-writer-ground-truth
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `44,510` bytes, so this was not a
+maintenance iteration. The planned ground-truth-first work unit was the
+phase-keyed active-byte writer/value join. I added the fourteen requested
+writer PCs to `scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh`,
+ran `zsh -n`, and completed one explicit keycode-36 staged pair. No build,
+runtime, audio, slot, gate, wait, address, or default behavior changed.
+
+The oracle positive control reached `10,000` whole-RDRAM writes before the
+target capture. It exited naturally with `10,329` whole-RDRAM writes, title
+and hangar coverage, gate/task/wait `17/108/0`, and all fifteen phase buckets
+positive. The target `0x006AB400:512` bucket had `1,227` VI callbacks. The
+requested writer/value table had target samples from `0x8009B7CC` (`1`,
+value `0x036E4000`), `0x800292E4` (`21`, all top byte `0x00`), and
+`0x80022B1C` (`2`, value `0x3F800000`); no target sample had top byte
+`0x01` or `0x02`.
+
+Across the same requested writer set outside the target bucket, the aligned
+post-store sample counts were `00=46`, `01=3`, `02=3`, `03=2`; target counts
+were `00=21`, `01=0`, `02=0`, `03=1`, `3F=2`. The lifetime watch totals
+were `25/0/87/6/86` for the five physical active-byte candidates. The
+target table therefore selects `H-Retail-Earlier-Nonzero` at capture scope:
+the observed `0x01/0x02` values are outside the target origin, while the
+target values are non-status or zero. It does not establish that those
+earlier values are semantically active-slot status; writer/value ownership
+is the next boundary.
+
+Both port arms supplied positive target-phase controls. Stub counts were
+gate `1024`, task ABI/DMA `1358/1358`, PCM source/consumer `94/94`, and
+zero slot-allocation/slot-byte/descriptor rows. Image counts were gate
+`1024`, task ABI/DMA `1129/1129`, image-stage `4675`, DMA-range `2320`,
+and PCM `88/88`, with the same zero slot/descriptor rows. Each key-on
+trace remained the sentinel `idx=0xFFFFFFFF`, `armed=0`. Both reached
+title/hangar; the launcher SIGKILLed both after the staged retention window.
+
+The independent oracle phase/value table and independent port contract
+table are two evidence lines. This rules out `H-CoverageInvalid` and a
+literal target-phase `0x01/0x02` writer result, but does not authorize a
+slot, gate, wait, consumer, address, mitigation, or default change.
+
+ORIGIN: no mitigation-shaped change; the only diff adds requested
+ground-truth writer-PC arguments to the launcher.
+
+### Next
+
+Add a ground-truth oracle detail table that records `(writer PC, phase
+origin/width, watch address, aligned value)` for every requested active-byte
+store, then rerun the same staged pair. The purpose is to identify which
+earlier-origin writer produces the observed `0x01/0x02` values before any
+port-side contract change is considered.
