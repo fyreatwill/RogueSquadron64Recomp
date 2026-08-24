@@ -1,58 +1,82 @@
-# NEXT work unit (s2231) — write the M5 audio de-stubbing plan
+# NEXT work unit (s2232) — validate the current opt-in image arm
 
-HYPOTHESIS-ID: m5-audio-plan
+HYPOTHESIS-ID: m5-audio-image-contract
 
 ## Work unit
 
-Create `docs/M5-AUDIO-PLAN.md`. Survey every audio stub, trap, gate, early
-return, task-field assumption, and MORT boundary currently in force, then
-turn the inventory into an ordered incremental de-stubbing sequence. Each
-proposed step must name its one behavior change, its positive control, its
-phase-gated validation soak, its expected downstream signal, and its rollback
-condition. Do not change code, flip `ROGUESQ_AUDIO_UCODE`, enable C88 by
-default, or start a soak in this work unit.
+Execute Step 1 of [`docs/M5-AUDIO-PLAN.md`](../../docs/M5-AUDIO-PLAN.md): run
+the existing default-stub and `ROGUESQ_AUDIO_UCODE=1` image arms from the same
+Debug build, concurrently, with the qualified LLE/C88/spin route. Do not
+change code, generated output, guest gates, task fields, waits, guards, or the
+audio default. Do not run an image-only soak.
 
-Competing hypotheses and the discriminating measurement:
+## Competing hypotheses and discriminating measurement
 
-- H-AudioDegeneracy: the silent `M_AUDTASK`/`Broke` path and related gates
-  create the recurring wait, slot, PCM, and voice failures. A one-edge change
-  should produce a new downstream control (service completion, nonzero PCM,
-  or voice-slot progress) without merely changing route reachability.
-- H-ContractGap: the dominant defect is an incomplete MusyX task/DMEM/DMA
-  contract, so de-stubbing a host return alone will not produce valid output;
-  the plan must keep the image arm opt-in until task/output parity is proven.
-- H-MixedPipelines: Factor 5 image audio and CPU-side MORT speech are separate
-  pipelines, so each requires its own positive control and soak; no single
-  audio default can explain both.
-- H-GateArtifact: a current gate or trap, rather than a missing implementation,
-  suppresses legitimate work. This remains unselected unless an inventory row
-  identifies the gate's writer, input, and legitimate retail behavior.
+- **H-AudioDegeneracy:** replacing the silent `M_AUDTASK` return with the
+  Factor 5 image produces a downstream service, slot, voice, or PCM signal
+  beyond route reachability.
+- **H-ContractGap:** the image does real DMEM/DMA work and returns `Broke`, but
+  the task/output ABI is incomplete; downstream joins remain absent or
+  malformed.
+- **H-MixedPipelines:** Factor 5 RSP audio and CPU-side MORT speech are
+  separate; RSP task rows can change without MORT/voice rows, or the reverse.
+- **H-GateArtifact:** a gate suppresses legitimate work. Select this only if
+  the independent retail writer/value row and the matching port gate row both
+  show the same suppressed transition; a guard or route count is not enough.
 
-The discriminator is an inventory-to-soak matrix: for every proposed step,
-record `M_AUDTASK` dispatch/exit, task-field identity, DMA/readback activity,
-service status transition, slot `0x01/0x02/0x00` cycle, PCM source/consumer
-join, voice-array/reaping activity, MORT entry, and route phase. A step is
-supported only if its same-recipe soak passes the whole-RDRAM/route positive
-controls and changes the predicted downstream field; unchanged fields select
-H-ContractGap or H-MixedPipelines, while a new control plus the predicted
-status/PCM/slot change selects H-AudioDegeneracy. A gate is an actionable
-H-GateArtifact candidate only with independent retail writer evidence. A
-route-only change is not a de-stubbing result.
+The discriminator is one phase-keyed A/B table for each arm and phase:
+`M_AUDTASK` dispatch/exit, task fields/source hash, DMEM changes, DMA ranges
+and payload, image completion PC, SP completion, service entry/return, slot
+`01/02/00` cycle and status-`03` reaping, voice-array/reap rows, MORT
+descriptor/decoder rows, PCM source/consumer address/hash/nonzero joins, and
+route phase. The positive controls are the whole-RDRAM/route controls already
+provided by the driver plus nonzero image-DMEM/DMA and SP-completion rows.
+An image `Broke` with no downstream difference selects H-ContractGap rather
+than H-AudioDegeneracy; a new downstream signal selects H-AudioDegeneracy;
+RSP/MORT divergence selects H-MixedPipelines; no gate change is authorized by
+any other outcome.
 
 ## Exact commands
 
-Survey bounded source/doc locations without building or reading large logs:
+Build once, then run both arms concurrently from the same binary. The driver
+phase-gates at VI 1024, sends the qualified keys, and kills the game with
+SIGKILL after its grace window.
 
-~~~sh
-rg -n -i 'M_AUDTASK|AUDIO_UCODE|aspMain|MusyX|MORT|audtask|RspExitReason::Broke|waitForAnyAudioSlot|voice|PCM|audio|DMA' \
-  src lib docs tools | head -400
-rg -n 'real_ucode|audtask-dispatch|audio|M5|PCM|voice|slot|service|image|MORT' \
-  docs/CURRENT-TRUTH.md docs/PROJECT-OVERVIEW.md | head -300
-rg -n 'M_AUDTASK|RspExitReason::Broke|AUDIO_UCODE|MORT|MusyX' \
-  src/main src/rsp lib/N64ModernRuntime lib/rt64 | head -300
-~~~
+```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
 
-Write the new plan with one inventory row per distinct stub/trap/gate and one
-validation recipe per de-stubbing step. If a site is only diagnostic or is
-already opt-in, label it rather than treating it as a default behavior. The
-plan must leave the current default silent path unchanged.
+env GAME_EXTRA_ENV="ROGUESQ_AUDIO_UCODE=0 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1" \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2232_stub 30 12 > scratch/agent/s2232_stub_driver.log 2>&1 &
+P0=$!
+env GAME_EXTRA_ENV="ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1" \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2232_image 30 12 > scratch/agent/s2232_image_driver.log 2>&1 &
+P1=$!
+wait "$P0"; R0=$?
+wait "$P1"; R1=$?
+print "stub_rc=$R0 image_rc=$R1"
+```
+
+Read only bounded summaries from the two run logs; do not `cat` them:
+
+```sh
+for arm in stub image; do
+  log="scratch/s73_post_a_scene/s2232_${arm}/run.log"
+  print "== $arm =="
+  grep -a -c '^\[audtask-dispatch\]' "$log" || true
+  grep -a -c '^\[audtask-abi\]' "$log" || true
+  grep -a -c '^\[audtask-dma-row\]' "$log" || true
+  grep -a -c '^\[audio-route\] edge=run-task-return' "$log" || true
+  grep -a -c '^\[audio-route\] edge=sp-complete-return' "$log" || true
+  grep -a -c '^\[audtask-image-stage\]' "$log" || true
+  grep -a -c '^\[pcm-boundary-source\]' "$log" || true
+  grep -a -c '^\[pcm-boundary-consumer\]' "$log" || true
+  grep -a -c '^\[CRASH\]\|^\[ABORT\]\|Unhandled jump target' "$log" || true
+  grep -a '^\[phase\] vi_width=' "$log" | tail -12
+  grep -a '^\[audio-image-summary\]\|^\[audio-join\]\|^\[m5-gate\]' "$log" | tail -20
+done
+```
+
+If a process dies before the first target phase, classify that arm as route
+failure and do not infer audio ABI from its nulls. Record the same-run control
+counts and exact phase rows in the next ledger entry. No mitigation or default
+flip follows from this work unit.

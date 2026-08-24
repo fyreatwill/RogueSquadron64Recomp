@@ -3,8 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2230 (2026-08-23); behavioral and source evidence is
-current through s2230. The s2198–s2226 archive is §44; s2227–s2230 remain in
+Maintained in Session 2231 (2026-08-23); behavioral and source evidence is
+current through s2230, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2231 remain in
 the append-only ledger.
 
 ## Current state
@@ -22,6 +23,11 @@ the append-only ledger.
   Factor 5 image arm is opt-in through `ROGUESQ_AUDIO_UCODE=1`; C88=`1` is
   also a diagnostic behavior arm. Stock `aspMain` is not the game's MusyX/
   Factor 5 contract, and MORT is a separate CPU speech asset.
+- `docs/M5-AUDIO-PLAN.md` was refreshed in s2231. It inventories 20 active
+  audio stubs/traps/gates/hatches, separates Factor 5 RSP audio from CPU-side
+  MORT, and defines the phase-keyed task→DMA→service→slot→voice→PCM
+  discriminator and rollback conditions. This refresh changed no runtime
+  behavior or default.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. Its host canary is inside the generated mix-buffer span;
   `canary_ok=0` is probe data and does not gate completion, writeback, or DMA.
@@ -49,11 +55,10 @@ the append-only ledger.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 audio de-stubbing plan.** Create [`docs/M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md)
-   with a complete inventory of audio stubs, traps, gates, task paths, and
-   MORT-specific boundaries, then order incremental changes with a phase-gated
-   validation soak for every step. Do not flip the image arm or alter the
-   default before the plan exists.
+1. **M5 audio de-stubbing execution.** Run the plan's Step 1 same-build,
+   phase-gated stub/image validation with all task, DMA, service, slot, voice,
+   MORT, and PCM joins. Do not promote `ROGUESQ_AUDIO_UCODE=1` to the default;
+   the next change requires a complete downstream row.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether

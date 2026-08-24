@@ -105331,3 +105331,32 @@ change enlarged diagnostic storage and the run only recorded values.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-keyon-contract`.
+
+## Session 2231 (2026-08-23) — refreshed M5 audio de-stubbing plan
+
+Performed the required bounded source/doc survey for the M5 planning unit; no
+build, game run, oracle capture, or soak was performed. Refreshed
+`docs/M5-AUDIO-PLAN.md` from its s1998/s2173 stopping point to the current
+tree. The plan now inventories 20 active audio stubs, traps, gates, scheduler
+hatches, host shims, and MORT boundaries, including the generated
+`factor5_ucode_b` completion/DMA edge, `run_task`/SP completion contract,
+ignored SP yield, C88 gate, key-on and pointer guard classes, wait/drain
+hatches, AI/SDL bridge, DMEM serialization, unknown-task fallback, and the
+CPU-side MORT/reference-decoder split. It defines H-AudioDegeneracy,
+H-ContractGap, H-MixedPipelines, and H-GateArtifact with one phase-keyed
+task→DMA→service→slot→voice→MORT→PCM discriminator and rollback criteria for
+each incremental step.
+
+The source survey confirms the default remains the silent `musyx_stub`, stock
+`aspMain` is not a valid RS64 treatment, and the Factor 5 image remains
+opt-in. It also records that the image canary is inside the generated mix
+buffer, so `canary_ok=0` is not a host completion gate; the existing PCM
+sample/byte bridge fix and DMEM lock are retained. These are source-level
+boundaries from this session, not a new runtime behavior claim. No mitigation,
+task rewrite, gate change, guard relaxation, default flip, or MORT RSP pass was
+authorized.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-contract`.
