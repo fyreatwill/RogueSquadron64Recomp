@@ -108408,3 +108408,48 @@ completion.
 
 Run the bounded temporal task→stage→PCM join in `scratch/agent/NEXT.md`, with
 the same independent retail controls and both target origins when present.
+
+## Session 2305 (2026-08-24) — bounded temporal join split stage-only and delayed PCM tuples
+
+HYPOTHESIS-ID: m5-step3-task-stage-ordinal-join.
+
+The planned work unit was one qualified default Factor 5 image-arm capture
+with an independent retail oracle and a complete phase/width/origin/task
+temporal table. The new driver corrected the PCM field association by reading
+`guest=` and normalizing the KSEG0 address to the physical stage destination;
+it also searched the exact payload tuple across a ±64 task-ordinal window and
+the full retained target phase. No runtime or game behavior was changed and no
+build was required because the existing probes already supplied all fields.
+
+The same-run retail oracle passed the whole-RDRAM positive control at `10,000`,
+title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and target writer-PC
+controls `0x8008EB8C`, `0x8008EBBC`, and `0x80094648`. The port reached title
+and hangar. Its complete nonzero phase-10 table had two stage-2 rows, both
+with exact DMA (`2/2`): `0x166450`, length `0x300`, FNV `2B9E9631`, `nz=621`,
+and `0x166750`, length `0x300`, FNV `6ADD4218`, `nz=639`.
+
+The `0x166450` tuple had no exact PCM source or consumer match within ±64 or
+anywhere in the retained phase. The independent native image join reported
+that row as `stage-only`. The `0x166750` tuple matched both PCM endpoints at
+ordinal `12` (`delta=+12`), with source event `6417`, consumer event `6418`,
+DMA-before-source, and source-before-consumer; native joining independently
+reported `stage-consumer-match`. The discriminator selects
+`H-StageUnconsumed` for the observed tuple pair and rules out
+`H-OrdinalWindowTooNarrow` for the first row. It does not establish a
+route-wide writer defect or authorize writeback, consumer, slot, or address
+remap changes.
+
+This also limits the s2304 `0/2` same-ordinal result: its exact rows remain
+valid for that capture, but s2305's corrected guest normalization and
+different observed tuple class show that the gap is not universal across all
+qualified phase-10 rows. One source of evidence is the corrected temporal
+postprocessor; the independent native image-join classifications provide the
+second line.
+
+ORIGIN: no mitigation-shaped change; this iteration added only the
+measurement driver/postprocessor and retained the existing runtime probes.
+
+### Next
+
+Run the s2306 M5 unconsumed-edge recurrence capture from `scratch/agent/NEXT.md`,
+with 45-second post-hangar retention and the same independent controls.
