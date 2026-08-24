@@ -104441,6 +104441,46 @@ only added and ran a bounded diagnostic harness.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.
 
+## Session 2215 (2026-08-23) — tested retrace-parity as natural current-register publisher
+
+Ran the independent Rice retail preflight before changing the port. The
+whole-RDRAM positive-control watch reached 10,000 writes; the execution watch
+reached 566 rows; and the context join completed 468 rows with zero pending,
+dropped, or overflowed rows. Retail again alternated `0x00696100` and
+`0x00696600`, with field 0/1 selecting the corresponding next origin.
+
+Added the opt-in `ROGUESQ_VI_CURRENT_REG_FROM_TOTAL_VIS` arm in
+`lib/N64ModernRuntime/ultramodern/src/events.cpp`. When combined with
+`ROGUESQ_VI_FIELD_FROM_CURRENT_REG=1`, it publishes `total_vis & 1` immediately
+before screen enqueue and suppresses both existing synthetic current-register
+XOR toggles. The default and existing post-commit arm were unchanged. Exported
+the submodule patch and built the full target successfully.
+
+Ran control, post-commit, and retrace-parity arms concurrently from the same
+build for the 60-second watchdog window. All three positive prefixes fired 8
+times, all collected 512 width-640 rows with `overflow=0`, and none emitted a
+`[CRASH]` or `[ABORT]` marker. Control selected field 0 in all rows and
+committed `0x00696100` 136 times / `0x00696600` zero. The post-commit arm
+selected field 0/1 in 256/256 rows and committed the two target origins 68/68.
+The retrace-parity arm also selected 0/1 in 256/256 and committed 68/67. Both
+dynamic arms reproduced retail's origin-to-field mapping at the observed early
+and target origins. Their early-origin counts differed substantially, but the
+run did not record a skipped host VI, so that difference cannot identify the
+cadence source.
+
+This selects H-RetraceParity at the observed mapping/target scope and refutes
+H-FieldState and H-Coverage there. It leaves per-callback versus absolute
+retrace cadence open until a skipped-host-VI row is measured. No default flip,
+mitigation, task rewrite, or audio-dispatch change was made.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+added and ran an opt-in VI parity diagnostic only.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-natural-current-reg-publication`.
+
 ## Session 2214 (2026-08-23) — tested VI current-register publication timing
 
 Ran the independent Rice retail preflight before changing the port. The

@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2214
-(2026-08-23); behavioral and source evidence is current through s2214.
+authoritative for exact commands and probe rows. Maintained in Session 2215
+(2026-08-23); behavioral and source evidence is current through s2215.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -355,6 +355,21 @@ second ledger.
   scope and refutes commit-vs-screen toggle placement as the missing-origin
   discriminator. Natural host-register publication remains open; neither
   diagnostic arm is default-on.
+- s2215's independent Rice retail preflight passed the whole-RDRAM control
+  (10,000 writes), execution control (566 rows), and joined 468 context rows
+  with zero pending/dropped/overflow rows; retail again alternated both target
+  origins with field 0/1. The same-built port table added opt-in
+  `ROGUESQ_VI_CURRENT_REG_FROM_TOTAL_VIS=1`, passed all three prefixes (8),
+  collected 512 width-640 rows per arm with zero overflow, and emitted no
+  crash/abort markers. Control selected field 0 and committed
+  `0x00696100` 136 times / `0x00696600` zero; the existing current-register
+  arm selected 0/1 in 256/256 rows and committed 68/68; the total-vis arm
+  selected 0/1 in 256/256 and committed 68/67. Both dynamic arms reproduced
+  the retail origin-to-field mapping at the early and target origins. This
+  selects H-RetraceParity at the observed mapping/target scope, refutes
+  H-FieldState and H-Coverage there, and leaves callback-vs-absolute cadence
+  unresolved because the run did not record a skipped host VI. The new arm is
+  diagnostic-only and does not authorize a default flip.
 
 ## Active backlog
 
@@ -420,7 +435,11 @@ work items.
    same two-origin split as the existing alternation arm. s2214's before-screen
    timing arm recovers the same target split as the post-commit arm, so timing
    placement is closed at that scope. The missing natural host-register
-   publisher remains open; keep all knobs diagnostic-only.
+   publisher remains open; keep all knobs diagnostic-only. s2215's total-vis
+   arm recovers the same origin-to-field relation and target split as the
+   post-commit arm, but its different early-origin counts do not identify
+   whether `total_vis` or callback ordinal is the natural publisher. The next
+   discriminator must capture skipped-host-VI deltas in the same run.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -615,7 +634,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2212's VI-boundary and retail-ground-truth work is recorded in the
+s2198–s2215 VI-boundary and retail-ground-truth work is recorded in the
 ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
