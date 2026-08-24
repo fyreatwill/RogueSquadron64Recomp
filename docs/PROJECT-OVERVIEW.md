@@ -4165,3 +4165,80 @@ these observations.
 
 Exact rows, commands, and logs remain in `PORTING-STATE.md`; this section
 keeps the durable conclusions that were absent from §43.
+
+## 45. M5 image-output and route boundary archive (s2227–s2262), migrated in s2263
+
+This section preserves the durable conclusions from the sessions after §44;
+the ledger remains authoritative for exact commands, counts, and run paths.
+
+### Key-on tuple and audio-plan boundary (s2227–s2231)
+
+s2227 migrated §44. The expanded s2228–s2229 tuple census reached the useful
+target phases in qualified detail arms with no ring overflow, while a quiet
+arm and an earlier detail attempt stopped at different route points. The
+detail failure was therefore intermittent at that scope, not a demonstrated
+cap defect. s2230 joined the complete port and retail tables by exact
+`(origin,width,PC)` bucket and normalized `$v0/$s1/$a0/$a2`: every common cell
+contained both port-only and retail-only values. This selected a
+bidirectional contract mismatch and rejected coverage/parity explanations;
+it did not authorize a key-on change. s2231 refreshed the M5 audio plan and
+separated Factor 5 RSP audio from CPU-side MORT without changing runtime.
+
+### Image input and independent retail boundary (s2232–s2245)
+
+s2232's same-build stub/image comparison showed real image-arm DMEM changes,
+generated DMA, and completion, but no stage-to-PCM join; the stub had no such
+activity. s2233–s2234's retail oracle passed its whole-RDRAM control and route
+phases, wrote both field348-derived regions and a target-phase task/output
+span, but did not join those writes to a port stage row. s2235–s2236's
+qualified port image arm changed DMEM and completed, yet its field348 source,
+stage input, and generated-DMA payload spans were zero. This selected
+`H-ImageInputZero` at the measured boundary.
+
+s2237 independently found nonzero retail writers for both exact field348
+spans. s2238–s2240 identified the port's legitimate zero-fill setup, including
+static callsite `0x8008F2CC`, and moved the open boundary to the missing
+nonzero producer/order edge. s2241–s2245 added the scalar-store census and
+qualified no-log route controls; pre-target crashes remained intermittent and
+did not select a writer, guard, or default change.
+
+### Image-arm route and stage boundary (s2246–s2259)
+
+s2246–s2247 instrumented image-arm captures failed before target and were
+invalid for field348 hypotheses. s2248–s2249 showed a same-build image-arm
+and C88 route split, including a qualified C88=`0` image arm with a
+hangar-only nonzero stage/source/consumer row. s2250 showed identical target
+route-state rows and only the deliberate B40 difference between C88 arms;
+the earlier split was intermittent, not a selected deterministic C88 edge.
+
+s2251–s2255 produced additional pre-target failures, then a reversed-order
+pair qualified both arms through title and hangar. s2256's identical silent
+pair split under full trace load; s2257 paired full-trace and route-only
+silent arms and selected trace/concurrent load as a route-scope factor.
+s2258's reduced pair failed before target, while s2259's single reduced
+silent control qualified title and hangar. These sessions establish a route
+validity prerequisite for output comparisons, not an image mitigation.
+
+### Qualified output boundary (s2260–s2262)
+
+s2260's fixed image/silent pair added the required audio-return identity gate
+and qualified both arms through title and hangar. The image arm emitted
+target stage rows, including two nonzero hangar rows; the silent arm emitted
+none. The first attempt without the identity gate was a measurement defect.
+
+s2261 added phase-scoped PCM-boundary logging. The image arm produced one
+exact phase-10 stage/source/consumer match with equal destination, length, FNV,
+and nonzero count and valid order, but the silent arm failed before title;
+the pair was route-invalid for comparison. The retail oracle independently
+passed its positive control and target route but did not provide a join to
+that port row.
+
+s2262 ran the reduced-trace silent control alone with the same route and
+logger. It passed startup, the missing-function and two 640 controls, title,
+and hangar twice before the known post-target aligned-ROM abort. PCM source
+and consumer hooks fired `53/48/6` times in phases 8/10/12 on each side; all
+payloads were `fnv=0xF59C39C5`, `nz=0`. This selects `H-SilentPcmAbsent` at
+the measured boundary and supplies the qualified silent arm for the next
+same-build image/output pair. It does not identify the image producer or
+consumer contract and does not authorize an audio default, writeback, or
+guard change.

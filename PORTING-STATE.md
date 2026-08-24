@@ -105960,6 +105960,31 @@ rewritten, guarded, restored, or defaulted.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
 
+## Session 2263 (2026-08-24) — compacted current truth
+
+The required maintenance check reported `61327` bytes for
+`docs/CURRENT-TRUTH.md`, above the `60000`-byte threshold. I did not build,
+run, instrument, or modify runtime/submodule code. The previous truth file
+contained detailed duplicates of the s2227–s2262 ledger; those durable
+conclusions were consolidated into `docs/PROJECT-OVERVIEW.md` §45 and the
+operational file was rewritten around current state, active backlog, durable
+boundaries, superseded conclusions, and safety rules. The file now fits the
+maintenance target and the paired image/output work unit was carried forward
+as s2264 in `scratch/agent/NEXT.md` with its hypotheses and full discriminator.
+
+This maintenance pass showed documentation drift only. It rules out no new
+runtime hypothesis and leaves the M5 image-output contract, writer/order edge,
+and audio default unchanged. The next experiment still requires a qualified
+same-build silent/image pair before interpreting any output null.
+
+ORIGIN: documentation-only maintenance; no value was suppressed, rewritten,
+guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
 ## Session 2247 (2026-08-24) — field348 census retry remained route-invalid
 
 Ran the planned qualified field348 producer census with the existing opt-in
