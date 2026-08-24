@@ -107983,3 +107983,41 @@ task/output span `0x141AD0:0x141AF0`, retaining the whole-RDRAM, title, hangar,
 watched-PC, and exact-slot controls. Classify its writer as pre-target,
 `0x800078EC`, or another target-phase PC before considering any contract
 change.
+
+## Session 2295 (2026-08-24) — target/output span selected other writer PCs
+
+HYPOTHESIS-ID: m5-step3-retail-task-output-writer.
+
+The planned work unit was one oracle-only retail capture for the independent
+task/output span `0x141AD0:0x141AF0`, retaining the whole-RDRAM, title, hangar,
+width-aware target-phase, watched-PC, and exact 16-slot controls. The new
+self-contained driver passed `zsh -n` and ran the retail oracle for its
+natural 120-second window; no port process or runtime code was changed.
+
+The run passed the whole-RDRAM threshold at `10,000`, title
+`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and the positive
+`width=512, origin=0x006AB400` bucket with `1,524` VI rows. Watch 2 had
+`108` lifetime writes and `76` target-gated post-value samples. Its target
+writer histogram contained `0x8008EB8C` (`n=1`), `0x8008EBBC` (`n=1`), and
+`0x80094648` (`n=24`), with no `0x800078EC`. The target-gated post-value
+PC rows were nonzero for each of those three observed PCs; the final
+32-byte snapshot had `26` nonzero bytes and FNV `0xF585F289`. All 16 exact
+candidate-slot watches independently recorded `768` writes.
+
+This selects H-TaskOutputOther at the independent task/output-span scope and
+rules out H-TaskOutputPreTarget, H-TaskOutput078EC, and H-CoverageInvalid for
+this capture. It does not identify which of the three PCs is the semantic
+publisher, whether they form one construction sequence, or whether they are
+distinct housekeeping writes. No writer, writeback, consumer, slot, gate,
+guard, or address-remap behavior changed.
+
+ORIGIN: no mitigation-shaped change; this iteration added only the oracle
+driver and phase writer/post-value measurement. No value was skipped,
+allowed, restored, or rewritten.
+
+### Next
+
+Run one oracle-only capture with the same controls and request post-target
+rows for `0x8008EB8C`, `0x8008EBBC`, and `0x80094648` via
+`--post-value-pc 0x8008EB8C,0x8008EBBC,0x80094648`. Join each observed PC to
+its target address/value rows before considering any contract change.
