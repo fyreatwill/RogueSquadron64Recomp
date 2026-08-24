@@ -107428,3 +107428,41 @@ parameterized C88 environment value were added.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
+
+## Session 2282 (2026-08-24) — phase-gated C88 stagger remained coverage-invalid
+
+HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator.
+
+The planned same-build control-first stagger ran one independent retail oracle and
+launched C88=0 first. The new driver passed zsh -n; no runtime or generated code
+was rebuilt or changed. It armed the established LLE/spin-yield route, phase gate,
+B40, route-state, PCM, audio-return, and key-on probes. C88=1 was launched only
+after the explicit C88=0 hangar-origin line.
+
+The retail arm passed the whole-RDRAM positive control with 1,000,128 writes,
+title and hangar origins, all eight transfer-PC controls with 123,766 hits each,
+and eight field buckets with 27,755 hits each, 1,734–4,960 unique rows, and
+overflow=0. The oracle completed its 100-second run.
+
+The port C88=0 arm reached only the off-target 640 phase at 0x00696100. It
+supplied no title or hangar gate, no B40 or route-state control, and no key-on
+rows, then was SIGKILLed at the 220-second deadline. The launch gate was absent,
+so C88=1 was not launched. The driver recorded port_c88_0_rc=137 and
+port_c88_1_rc=125.
+
+This selects H-CoverageInvalid. The isolated C88=0 arm rules out live overlap
+with a simultaneously running C88=1 process as the sole explanation for this
+route stall, and the retail controls rule out an absent oracle route or saturated
+field census. It does not distinguish H-C88-route from H-RouteLoad, because the
+C88=1 arm lacked its required launch gate, and it supplies no pointer/data or
+branch-state verdict. Together with s2280 and s2281 this is the third consecutive
+no-discriminator result for this hypothesis, so the next unit pivots to the A1
+VI publisher/cadence matrix rather than repeating the C88 route pair. No guest
+or host value was suppressed, rewritten, guarded, restored, or defaulted.
+
+ORIGIN: no mitigation-shaped change; only a phase-gated observation driver was added.
+
+### Next
+
+See scratch/agent/NEXT.md.
+HYPOTHESIS-ID: m5-a1-vi-publisher-cadence.
