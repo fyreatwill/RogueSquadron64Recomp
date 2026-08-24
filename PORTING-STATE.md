@@ -105397,3 +105397,45 @@ capture for the image-stage/PCM physical span.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
+
+## Session 2233 (2026-08-23) — attributed the retail image-output span
+
+Ran the planned M5 image-output ground-truth capture against the retail ROM
+with Rice video, the qualified Start schedule, whole-RDRAM watch first, and
+the physical `0x166000:0x17A000` watch. The first capture completed with the
+whole-RDRAM positive control reaching 10,000 callbacks before removal; it
+reached the driven 640 target, title `1024 @ 0x00790400`, and hangar
+`512 @ 0x006AB400`. The narrow watch recorded `6,685,143` writes, 503
+post-store samples, 64 unique values, and a nonzero final snapshot. Its
+writer histogram was lifetime-aggregate because the command omitted
+`--pc-hist-phase`, so it could not join writers to the target phases.
+The first fixed-command attempt failed before launch because the `--core`
+path was duplicated; no emulator process or evidence was produced by that
+attempt.
+
+Reran the same capture with all five target-origin phase options in one run.
+The corrected run exited 0, passed the same whole-RDRAM threshold, reached
+640, title, and hangar, and recorded `6,665,015` writes to the narrow span.
+It reported `post-value watch=1` with 503 samples, 64 unique values,
+overflow 133, and final snapshot `bytes=81920 nonzero=40645
+fnv=0x00dc57c1`. The width-640 phase buckets were present and positive:
+origin `0x00696100` had 202 VI rows and origin `0x00696600` had 213. The
+requested title/hangar buckets reported zero because this oracle histogram
+implementation only buckets width 640; the lifetime writer list included
+many PCs in the `0x80090...` family but did not identify their title/hangar
+phase. Logs are `scratch/agent/s2233_retail_image_contract.log` and
+`scratch/agent/s2233_retail_image_contract_fixed.log`.
+
+This refutes H-NoTargetRoute and a clean retail no-write result at the broad
+span. It does not select H-RetailImageWritesSame over H-RetailUsesOtherOutput:
+the watch covers many structures, and the fixed phase table cannot bucket the
+1024/512 rows needed to join the writes to the port's image-stage/PCM events.
+The result is independent retail evidence, not authorization for output
+writeback, a gate, a wait, a guard, a default flip, or any mitigation. The
+next unit narrows the watch to the exact PCM ring and `data_ptr+0x100` task
+output and uses post-target rows for selected writers.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-contract`.

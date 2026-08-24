@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2232 (2026-08-23); behavioral and source evidence is
-current through s2232, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2232 remain in
+Maintained in Session 2233 (2026-08-23); behavioral and source evidence is
+current through s2233, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2233 remain in
 the append-only ledger.
 
 ## Current state
@@ -31,6 +31,17 @@ the append-only ledger.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. Its host canary is inside the generated mix-buffer span;
   `canary_ok=0` is probe data and does not gate completion, writeback, or DMA.
+- s2233's fixed retail-oracle capture passed the whole-RDRAM positive control,
+  reached the 640 target, title `1024`, and hangar `512`, and recorded
+  `6,665,015` writes to physical `0x166000:0x17A000`. It sampled 503
+  post-store words, 64 unique values, and a nonzero final span. The 640-only
+  phase buckets had 202 rows at `0x00696100` and 213 at `0x00696600`; title
+  and hangar writer rows remained lifetime-aggregate because the oracle's
+  phase histogram is width-640-only. Retail therefore writes the broad port
+  span, but this run does not join those writes to the port's image-stage/PCM
+  events. H-NoTargetRoute is refuted; H-RetailImageWritesSame versus
+  H-RetailUsesOtherOutput remains open, and no output edge or default change
+  follows.
 - s2232's same-build port A/B reached the target route, title, and hangar in
   both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
   DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
@@ -65,12 +76,14 @@ the append-only ledger.
 Closed investigations are not active work items. The sequence is monotonic.
 
 1. **M5 image-output contract attribution.** s2232 selected H-ContractGap at
-   single-source port A/B scope: the Factor 5 arm runs and completes, but its
-   stage-to-PCM join is absent. Before implementing an output edge, run the
-   retail oracle with the whole-RDRAM positive control plus physical watches
-   over the port's stage/PCM destination span and attribute writer PCs and
-   payloads by target phase. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
-   writeback/consumer guard.
+  single-source port A/B scope: the Factor 5 arm runs and completes, but its
+  stage-to-PCM join is absent. s2233's independent retail run refuted a
+  missing target route and a clean no-write result, but its broad-span writer
+  histogram could not identify the exact PCM ring versus task-data output
+  during title/hangar. Next, watch the exact port PCM ring and the
+  `data_ptr+0x100` task-data span in one retail run, with post-target rows
+  carrying width/origin/value for selected retail writer PCs. Do not promote
+  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -134,8 +147,18 @@ fields match, and both retail and port write `data_ptr+0x100`. The image arm
 is nontrivial but its sampled host output, PCM, and validated slot completion
 were absent in s2219; s2220's C88 result supplies the current downstream
 discriminator. s2232's same-build A/B adds real image completion and DMA, but
-no image-stage to PCM join; the nonzero PCM rows are therefore not yet
-attributable to the image. The image arm remains opt-in.
+  no image-stage to PCM join; the nonzero PCM rows are therefore not yet
+  attributable to the image. The image arm remains opt-in.
+
+s2233's retail oracle passed its whole-RDRAM control, reached the driven 640,
+title, and hangar phases, and wrote the broad `0x166000:0x17A000` span
+`6,665,015` times in the fixed run. Its sampled post-store span was nonzero,
+and the 640-only phase buckets contained 202/213 VI rows for origins
+`0x00696100`/`0x00696600`. Because the oracle's phase histogram does not
+bucket 1024/512 widths, the aggregate writer list cannot distinguish the
+port's image-stage output from other writers in that broad span. This is
+independent retail evidence against H-NoTargetRoute and a clean no-write
+result, not yet evidence for the image output contract.
 
 s2218's Rice oracle passed its whole-RDRAM control, reached both target 640
 origins, and found 17 writes from five PCs to the watched retail gate; its
@@ -265,7 +288,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2232 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2233 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
