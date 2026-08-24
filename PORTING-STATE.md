@@ -108497,3 +108497,46 @@ driver, its postprocessor, and the required 45-second retention.
 ### Next
 
 Run the cross-phase M5 Step 3 attribution capture from `scratch/agent/NEXT.md`.
+
+## Session 2307 (2026-08-24) — cross-phase join selected payload mismatch
+
+HYPOTHESIS-ID: m5-step3-unconsumed-edge-attribution.
+
+The planned work unit was one same-run M5 Step 3 cross-phase attribution
+capture using the qualified default Factor 5 image arm, the independent retail
+oracle, and 45-second post-hangar retention. The first launch reached the
+route gates, but the new postprocessor had an AWK indexing typo and produced no
+table. The exact typo was fixed, the driver was syntax-checked, and the same
+capture recipe was rerun. No runtime or game behavior changed.
+
+The fixed run passed the retail whole-RDRAM positive control at `10,000`,
+title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and all three target
+writer-PC controls. The port reached title and hangar and retained the hangar
+phase for 45 seconds. The cross-phase table retained `1,251` width-512 /
+`0x006AB400` PCM rows and two nonzero phase-10 image-stage rows, both with
+exact DMA: `0x167650`, length `0x300`, FNV `2B9E9631`, `nz=621`, and
+`0x167950`, length `0x300`, FNV `6ADD4218`, `nz=639`.
+
+Neither stage tuple had an exact PCM source or consumer match across the
+retained target phases. The destination summary reported `19` source and
+`19` consumer payload mismatches for `0x167650`, and `20` source and `20`
+consumer mismatches for `0x167950`, with zero exact and one stage-only row per
+destination. An independent raw-log recount found `38` same-destination PCM
+rows for `0x167650` and `40` for `0x167950`; all were `len=0x300`,
+`fnv=F59C39C5`, `nz=0`, while the stage tuples were nonzero. The two lines of
+evidence select `H-PayloadTupleMismatch` for these observed rows and rule out
+`H-CrossPhaseExact` at this capture scope. They do not establish whether the
+zero-payload writer is legitimate, a ring-role mismatch, or a missing image
+publication edge.
+
+This rules out a universal cross-phase delay explanation for the observed
+stage-only rows, but it does not authorize writeback, consumer, slot, gate,
+guard, address-remap, or default changes. The next discriminator is writer
+provenance with independent retail target-range controls.
+
+ORIGIN: no mitigation-shaped change; this iteration added only the
+cross-phase measurement driver/postprocessor and its result artifacts.
+
+### Next
+
+Run the M5 PCM writer-provenance work unit from `scratch/agent/NEXT.md`.

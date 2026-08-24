@@ -1,0 +1,3 @@
+dest	stage_rows	exact_source	exact_consumer	cross_source	cross_consumer	mismatch_source	mismatch_consumer	stage_only_rows
+0x167950	1	0	0	0	0	20	20	1
+0x167650	1	0	0	0	0	19	19	1

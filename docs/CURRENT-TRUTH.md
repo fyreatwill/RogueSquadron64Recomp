@@ -5,12 +5,13 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2306 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2307 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
 temporal join; s2306 extended it to a 45-second recurrence capture with a
-per-destination payload-mismatch summary.
+per-destination payload-mismatch summary; s2307 extended that capture across
+all retained target phases.
 
 The current M5 boundary is task/output contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
@@ -18,15 +19,14 @@ Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
 source and consumer joins. Retail independently reaches both origins and
 supplies a different task/output writer class. The latest C88 route discriminator was
 coverage-invalid before title/hangar, so it provides no C88 or key-on verdict.
-The latest M5 recurrence table passed retail and port route controls and again
-split two nonzero image-stage rows after exact DMA. For the observed pair,
-`0x168550`/`nz=621` has no PCM tuple in its retained phase and is
-`stage-only`; `0x168850`/`nz=639` has source and consumer at ordinal `+12`,
-with correct event ordering. This selects a recurring stage-only edge at the
-first tuple, not a universal delay or a too-narrow ordinal window. The
-per-destination summary also saw zero-payload same-destination PCM calls for
-the consumed tuple; whether the stage-only tuple is consumed across a later
-phase remains open.
+The latest M5 cross-phase table passed retail and port route controls and found
+two nonzero phase-10 image-stage rows after exact DMA. In this capture,
+`0x167650`/`len=0x300`/`fnv=2B9E9631`/`nz=621` and
+`0x167950`/`len=0x300`/`fnv=6ADD4218`/`nz=639` had no exact PCM source or
+consumer tuple across 1,251 retained target-phase PCM rows. Same-destination
+PCM calls existed for both rows, but all had zero payload (`fnv=F59C39C5`,
+`nz=0`), selecting a payload-tuple mismatch at this capture scope rather than
+a cross-phase exact join. The writer/legitimacy boundary remains open.
 
 ## Current state
 
@@ -44,10 +44,12 @@ phase remains open.
   probe data only. Stock `aspMain` is not the game's MusyX/Factor 5 contract,
   and MORT is a separate CPU speech asset.
 - The default image arm is qualified through the same title/hangar route as
-  the stub at the tested recipe scope. The measured output contract is
-  mixed for the observed nonzero tuples: one exact tuple closes through PCM
-  source/consumer and one remains stage-only. No writeback, consumer, writer,
-  slot, gate, guard, address remap, or default change is authorized.
+  the stub at the tested recipe scope. The measured output contract remains
+  capture-dependent: s2306 had one exact source/consumer pair and one
+  stage-only row, while s2307 found two stage rows with same-destination
+  zero-payload PCM mismatches across all retained target phases. No writeback,
+  consumer, writer, slot, gate, guard, address remap, or default change is
+  authorized.
 - The retail oracle is an independent witness. Its whole-RDRAM, title, hangar,
   width-aware target, and exact-PC controls must pass before a null is read.
   The oracle currently reaches attract/title/hangar, not a mission.
@@ -57,6 +59,20 @@ phase remains open.
   `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2307 — cross-phase payload tuple mismatch.** The fixed same-run capture
+  passed retail whole-RDRAM `10,000`, title/hangar, and all three target
+  writer-PC controls, and the port reached title/hangar with 45-second
+  retention. Its two nonzero phase-10 stage rows were
+  `0x167650`/`0x300`/`2B9E9631`/`nz=621` and
+  `0x167950`/`0x300`/`6ADD4218`/`nz=639`. The cross-phase table retained
+  `1,251` width-512/`0x006AB400` PCM rows and found zero exact source or
+  consumer matches for either stage row. An independent raw-log recount found
+  `38` same-destination PCM rows for `0x167650` and `40` for `0x167950`, all
+  `F59C39C5`/`nz=0`; the postprocessor summary independently reported
+  `19/19` and `20/20` source/consumer mismatches. This selects
+  `H-PayloadTupleMismatch` for the observed rows, rules out
+  `H-CrossPhaseExact` at this scope, and does not authorize a contract change.
 
 - **s2306 — recurrence and destination payload summary.** The fixed same-run
   capture passed retail whole-RDRAM `10,000`, title/hangar, and all three
@@ -142,14 +158,15 @@ phase remains open.
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 Step 3 cross-phase attribution.** Use one same-run capture to test
-   whether the recurring stage-only phase-10 tuple has an exact normalized
-   PCM source/consumer tuple in a later width-512 `0x006AB400` phase. Join by
-   global event ordering as well as destination/length/FNV/nonzero tuple, and
-   retain the independent retail writer controls. This distinguishes a
-   cross-phase consumer from a truly unconsumed destination and from a
-   same-destination payload mismatch. Do not change runtime behavior or add
-   writeback/consumer/slot/gate/guard/address-remap machinery.
+1. **M5 Step 3b payload-mismatch writer provenance.** Ask ground truth first,
+   then run one phase-gated same-run port/retail capture that attributes the
+   writer/caller for every same-destination PCM source and consumer row while
+   retaining the image-stage DMA tuple. Compare the port and retail writer
+   classes, payload polarity, and event ordering for the two nonzero stage
+   rows. This distinguishes a legitimate zero-fill PCM writer, a ring/address
+   mismatch, and a missing image-output publication edge. Do not change
+   runtime behavior or add writeback, consumer, slot, gate, guard, or address
+   remap machinery.
 2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
    route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
    crash had `route_state=2`, `b40=1`, `key_on=0`; C88=1 was withheld.
@@ -185,16 +202,15 @@ task/AI boundary are live on the port. Retail independently matches the
 status cycle. MORT speech is separate from Factor 5 RSP audio.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
-phase-gated captures now show a recurring mixed pair: the first nonzero stage
-tuple stays `stage-only` within its phase, while the paired tuple joins to
-source and consumer at ordinal `+12` with source-before-consumer ordering.
-s2306's destination summary also found zero-payload same-destination PCM
-calls for the consumed tuple. The join is intentionally phase-scoped so far;
-cross-phase attribution is the next discriminator. The silent arm's PCM
-boundary is separately qualified but all-zero. Retail writes corresponding
-field spans and a different task/output span. This is a measured contract
-boundary, not permission to add a copyToRAM/CIMG writeback, writer guard, slot
-guard, consumer change, or address remap.
+phase-gated captures show a mixed output contract: s2306 had one stage-only
+row and one source/consumer join at ordinal `+12`, while s2307 found two
+nonzero stage rows with same-destination zero-payload PCM calls and no exact
+join across retained target phases. The image-stage writer is known, but the
+PCM zero-payload writer and legitimacy of its destination/payload are not.
+The silent arm's PCM boundary is separately qualified but all-zero. Retail
+writes corresponding field spans and a different task/output span. This is a
+measured contract boundary, not permission to add a copyToRAM/CIMG writeback,
+writer guard, slot guard, consumer change, or address remap.
 
 ### VI state and second origin
 

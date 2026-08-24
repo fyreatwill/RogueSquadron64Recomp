@@ -1,0 +1,1 @@
+stage_rows=2 phase10_rows=2 phase10_cross_both=0 phase10_stage_only=2 phase10_stage_only_with_mismatch=2 pcm_rows=1251
