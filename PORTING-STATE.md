@@ -106471,3 +106471,38 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2259 (2026-08-24) — qualified the single reduced silent route
+
+Ran the prescribed single reduced-trace silent+C88=`0` control with the
+qualified `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`, and
+`ROGUESQ_LLE_SOLO=1` route. The run used `ROGUESQ_LOG_THREAD_RESUME=0`,
+`ROGUESQ_LOG_M5_B40_ROUTE=1`, `ROGUESQ_LOG_M5_ROUTE_STATE=1`,
+`PROBE_PHASE_WIDTH=1024`, and `PROBE_KEYS_FROM_PHASE=1`; no build, generated
+code, runtime behavior, or default changed. The driver log is
+`scratch/agent/s2259_silent_c88_0_single_driver.log`; the run log is under
+`scratch/s73_post_a_scene/s2259_silent_c88_0_single/`.
+
+The run passed startup, one `[missing-func]`, three 640 route entries, title
+`1024 @ 0x00790400`, and two hangar `512 @ 0x006AB400` transitions. Target
+B40 rows fired at title and both hangar phases; route-state rows fired at
+the target audio-return and exit edges. The driver returned 0 from its own
+completion path, after the game reached the known aligned-ROM
+`recomp::do_rom_read` abort with last guest PC `0x80001B08`; it did not fail
+before the target phases.
+
+The discriminator selects H-ConcurrentLoad at single-arm route scope: the
+single silent recipe is qualified, so the s2258 paired pre-title failure is
+not an intrinsic failure of this reduced route. This does not prove that
+two-process load is the sole cause, does not qualify the image output arm,
+and authorizes no default, writeback, consumer, slot, gate, guard, or task
+change. It is single-source port evidence. The next work unit is the
+same-build reduced image-versus-silent pair.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.

@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2258 (2026-08-24); behavioral and source evidence is
-current through s2258, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2258 remain in
+Maintained in Session 2259 (2026-08-24); behavioral and source evidence is
+current through s2259, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2259 remain in
 the append-only ledger.
 
 ## Current state
@@ -90,6 +90,16 @@ the append-only ledger.
   H-ReducedRouteInstability at reduced-load scope, does not supersede s2257's
   trace-load result, and supplies no image/output attribution or runtime
   default change. It is single-source port evidence.
+- s2259 ran the prescribed single reduced-trace silent+C88=`0` control with
+  the same spin/LLE route. It passed startup, one `[missing-func]`, three 640
+  route entries, title `1024 @ 0x00790400`, and two hangar
+  `512 @ 0x006AB400` transitions; target B40 and route-state rows fired.
+  The driver then stopped at the known aligned-ROM `do_rom_read` abort with
+  last guest PC `0x80001B08`. This selects H-ConcurrentLoad at the
+  single-arm route discriminator and restores a qualified control for a new
+  paired output capture, but does not prove two-process load is the sole
+  cause or attribute image output. It is single-source port evidence; no
+  runtime behavior or default changed.
 - s2246's two full field348-candidate captures both passed the 640 route and
   one `[missing-func]` control but crashed before title `1024` or hangar `512`:
   the first was `fillSampleStreamRange+8136` with last guest PC
@@ -518,6 +528,15 @@ does not prove trace load is sufficient or necessary in general. The next
 unit reduces tracing before repeating image-versus-silent output attribution;
 no runtime behavior or default changes follow.
 
+s2259 then supplied the missing single-arm reduced-trace control. The silent
+arm passed the same startup/640/B40/route-state controls, reached title and
+two hangar transitions, and ended only at the known post-hangar PI-ROM
+alignment abort. This selects H-ConcurrentLoad at the single-arm recipe
+scope and removes an intrinsic single-arm reduced-route failure as the
+explanation for s2258; it does not establish pair-load causality or close
+the image output contract. The next comparison returns to the same-build
+image-versus-silent table.
+
 s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
 At both target origins, `field348 & 0x007FFFFF` was valid but the exact
 `0x180`-byte source span was all zero, and the stage-0/1 DMEM input spans and
@@ -739,6 +758,13 @@ remain in the append-only ledger. Operationally:
   reached title and hangar. This is a single-source same-run route-load result,
   not proof that logging alone caused the crash or authorization for a runtime
   mitigation.
+- s2259 supersedes H-ReducedRouteInstability as an intrinsic explanation for
+  the reduced recipe at single-arm scope: the silent control reached title and
+  hangar with the same positive controls before the known post-hangar abort.
+  The result was believable after s2258 because both reduced-trace arms had
+  failed before target, but the single-arm run shows that pair load or another
+  same-run interaction remains open; it does not authorize an image default,
+  output writeback, consumer, slot, gate, or guard change.
 - s2246–s2247 treated repeated instrumented image-arm failures as a route-
   stability blocker because no same-run target control qualified. s2248's
   concurrent silent-stub arm reached title and hangar while the image arm
