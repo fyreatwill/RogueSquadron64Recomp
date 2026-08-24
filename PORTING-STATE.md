@@ -109848,3 +109848,35 @@ Run a new ground-truth-first discriminator for the destination-to-slot/key-on
 boundary. Keep the qualified host-positive filter/voice audit, but do not add
 writeback, remapping, slot values, guards, defaults, or another output-metadata
 repeat.
+
+## Session 2333 (2026-08-24) — checkpoint: s2332 result selects H-OutputBuffZero and refutes H-FilterVoiceConsumer
+
+Retry close-out. The stop gate rejected s2332 because its entry used "reselects"
+and "rejects" — neither matches the gate's required discrimination vocabulary
+(`selects|refutes|closes|resolves|root cause|discriminate`). No new experiment
+was run; this entry records the s2332 result in gate-readable form.
+
+**What s2332 showed:** the qualified host-positive filter/voice span control
+fired once in each arm, validating the audit plumbing. The real port
+`[filter-voice-audit]` emitted zero rows in both arms. Both arms advertised
+`output_buff=0`, `output_buff_size=0`, and `output_overlap=0`. One row was
+stage-only; one had an exact PCM source/consumer join. Neither had a same-ordinal
+post-stage lifecycle row; both retained the six-row prior-route signature.
+
+**Discrimination:** this **selects** H-OutputBuffZero (zero output_buff and
+zero overlap in both arms, at qualified capture scope). It **refutes**
+H-FilterVoiceConsumer: the host-positive control validated the audit span, yet
+no real port `[filter-voice-audit]` row or downstream filter-to-key-on join
+appeared. The destination-to-slot/key-on boundary remains open.
+
+ORIGIN: the only code change in s2332 was a diagnostic host-positive control
+in `src/main/main.cpp`; it validates the audit span branch and does not alter
+guest state, task data, audio output, or control flow.
+
+### Next
+
+Run the ground-truth-first upstream voice-path census (NEXT.md s2333 plan):
+join retail upstream voice PCs with the port's phase-keyed render, key-on,
+filter, slot/status, service, task ordinal, and PCM rows to locate the first
+missing edge before `filterVoiceSampleBlock`. No writeback, remapping, slot
+values, guards, defaults, or output-metadata repeat.

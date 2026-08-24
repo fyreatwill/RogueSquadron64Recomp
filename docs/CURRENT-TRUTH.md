@@ -5,10 +5,11 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2332 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2333 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The completed work unit was the M5 destination-to-slot/key-on census;
-the next work unit is the new discriminator in `scratch/agent/NEXT.md`.
+to §47. The s2332 result selects H-OutputBuffZero and refutes
+H-FilterVoiceConsumer (qualified host-positive filter control); the next work
+unit is the upstream voice-path census in `scratch/agent/NEXT.md`.
 
 ## Current state
 
