@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2242 (2026-08-24); behavioral and source evidence is
-current through s2242, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2242 remain in
+Maintained in Session 2243 (2026-08-24); behavioral and source evidence is
+current through s2243, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2243 remain in
 the append-only ledger.
 
 ## Current state
@@ -136,6 +136,14 @@ the append-only ledger.
   field348 writer hypotheses; the next unit must first discriminate whether
   the logging load amplifies this pre-phase image-arm crash. No runtime
   behavior or default changed.
+- s2243's same-build concurrent A/B kept the qualified image arm and common
+  startup/640 route controls, but neither arm reached 1024. The full-M5-log
+  arm crashed in RT64 `findTileCopyId` with `last-guest-pc=0x8000834c`, while
+  the no-M5-log arm crashed in `fillSampleStreamRange+8136` with
+  `last-guest-pc=0x8000b650`. The divergent pre-phase PCs select
+  H-RunNondeterminism at this scope: the result does not support a clean
+  logging-only split or same-PC intrinsic-crash claim, and supplies no
+  field348 writer evidence. No runtime behavior or default changed.
 - s2232's same-build port A/B reached the target route, title, and hangar in
   both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
   DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
@@ -169,16 +177,18 @@ the append-only ledger.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 image-arm pre-phase crash discriminator.** s2242's two unchanged
-  qualified attempts both stopped at `fillSampleStreamRange+8136` before the
-  1024 phase, so the field348 producer census could not run. The next unit is
-  a same-build A/B: full M5 logging versus the same image arm with all M5
-  logging disabled, run concurrently and judged by the 1024/512 phase
-  markers, missing-function/crash PC, and route controls. A logging-only
-  failure split selects H-LoggingAmplifiedCrash; matching same-PC pre-phase
-  failures select H-ImageArmIntrinsicCrash; divergent outcomes select
-  H-RunNondeterminism and require no writer inference. Do not add a writer
-  guard or promote the image arm.
+1. **M5 image-arm pre-phase crash discriminator.** s2243's same-build A/B
+  reached the common 640 route in both arms but diverged before 1024:
+  full-M5 logging crashed in RT64 `findTileCopyId` with guest PC
+  `0x8000834c`, while logging-off crashed in `fillSampleStreamRange+8136`
+  with guest PC `0x8000b650`. This selects H-RunNondeterminism and leaves
+  logging contribution unresolved. The next unit is a same-build concurrent
+  two-arm baseline with M5 logging disabled in both arms, judged by the same
+  phase/crash/route table. Matching no-log failures support a stable baseline
+  and make logging the next isolation variable; divergent no-log outcomes
+  confirm baseline nondeterminism; target phases in both arms classify the
+  prior crashes as intermittent. Do not infer field348 writers or promote
+  the image arm from any pre-1024 run.
 2. **M5 image-output contract attribution, blocked on route qualification.**
   s2232 selected H-ContractGap at single-source port A/B scope, and s2234
   independently selected H-RetailTaskOutput at the exact retail watch
@@ -455,6 +465,12 @@ remain in the append-only ledger. Operationally:
   both port-only and retail-only values remain in every common cell. Because
   the tuples include dynamic pointer-shaped operands, this is a contract
   boundary to explain, not authorization for a key-on mitigation.
+- s2242's two same-PC `fillSampleStreamRange+8136` failures made an intrinsic
+  pre-phase image-arm crash plausible because they used the same unchanged
+  logging arm and route. s2243's concurrent A/B instead produced different
+  crash PCs (`findTileCopyId` versus `fillSampleStreamRange+8136`) before the
+  target phase, so that same-PC result is not a general explanation; the
+  logging/nondeterminism boundary remains open.
 - s2232's image-arm PCM activity is not evidence of image-output correctness:
   the same-run image summary recorded zero stage/source and stage/consumer
   matches, while the nonzero PCM rows were consumer-only at the image-join
@@ -481,7 +497,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2242 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2243 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

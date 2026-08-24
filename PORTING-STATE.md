@@ -105389,6 +105389,43 @@ restored, or defaulted.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-prephase-crash-discriminator`.
 
+## Session 2243 (2026-08-24) — compared image-arm logging and no-logging crashes
+
+Ran the planned same-build concurrent A/B with the qualified Factor 5 image
+arm. Both processes used `ROGUESQ_AUDIO_UCODE=1`,
+`ROGUESQ_M5_C88_VALUE=1`, `ROGUESQ_SPIN_YIELD=1`, and the 1024 phase gate.
+Arm A also enabled the full s2242 M5 logging set; arm B left all M5 logging
+disabled. The two driver commands were launched concurrently and returned
+`arm_a=4 arm_b=4`; each driver observed its process disappear while waiting
+for the 1024 phase.
+
+Both captures supplied the common startup and 640 positive controls through
+origin `0x00696100`, but neither supplied title 1024, hangar 512, or any
+target-side field348/image-stage/DMA/PCM rows. No missing-function marker was
+recorded in either capture. Arm A's full-log capture ended in RT64
+`findTileCopyId` and recorded `last-guest-pc=0x8000834c`; arm B's no-log
+capture ended in `fillSampleStreamRange+8136` and recorded
+`last-guest-pc=0x8000b650`. The driver tails and run logs are
+`scratch/agent/s2243_image_crash_logs_on_driver.log`,
+`scratch/agent/s2243_image_crash_logs_off_driver.log`, and the matching
+`scratch/s73_post_a_scene/s2243_image_crash_logs_{on,off}/run.log` captures.
+
+The two pre-phase crash PCs diverge despite the shared route and functional
+environment. This selects H-RunNondeterminism at this scope, rules out a
+clean logging-only failure split and the s2242 same-PC intrinsic-crash claim,
+and leaves the field348 writer hypotheses unevaluable. The next unit is a
+same-build concurrent pair with M5 logging disabled in both arms, as written
+in `scratch/agent/NEXT.md`; it will test whether the no-log baseline itself
+diverges. No runtime behavior, guard, writer, or default changed.
+
+ORIGIN: observation only; no value was suppressed, rewritten, guarded,
+restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-prephase-crash-discriminator`.
+
 ## Session 2241 (2026-08-24) — enumerated field348 producer stores
 
 Ran the retail oracle before adding the port instrument. The whole-RDRAM
