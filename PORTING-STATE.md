@@ -106836,3 +106836,57 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract`.
+
+## Session 2268 (2026-08-24) — paired image/silent output contract qualified
+
+No runtime or instrumentation change was made. Rebuilt the unchanged Debug
+target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`; the
+build passed.
+
+Ran the prescribed image+C88=`0` and silent+C88=`0` arms concurrently with
+`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+phase-gated 1024 logging, and the existing audio-return, PCM-boundary,
+B40/route-state, and image-stage probes. Driver captures are
+`scratch/agent/s2268_image_c88_0_pair_driver.log` and
+`scratch/agent/s2268_silent_c88_0_pair_driver.log`; game logs are
+`scratch/s73_post_a_scene/s2268_image_c88_0_pair/run.log` and
+`scratch/s73_post_a_scene/s2268_silent_c88_0_pair/run.log`.
+
+Both drivers returned `0`. The image arm passed startup, one
+`[missing-func]`, 13 B40 rows, and 25 route-state rows; it reached title
+`1024 @ 0x00790400` at 48.8s and hangar `512 @ 0x006AB400` at 78.4s. The
+silent arm passed startup, one `[missing-func]`, 14 B40 rows, and 28
+route-state rows; it reached title `1024 @ 0x00790400` at 49.2s and hangar
+`512 @ 0x006AB400` at 78.6s. These are positive controls for interpreting the
+target rows; the paired run is not route-invalid.
+
+The image arm's phase-8/10/12 image-stage-row counts were `3464/3105/1918`
+with nonzero counts `0/2/0`. In phase 10, the tuple
+`dest=0x167650 len=0x300 FNV=0x7B70923A nz=639` matched both source and
+consumer records at `0x80167650`, each with `FNV=0x7B70923A nz=639`. The join
+reported `ordering_violation=0`; its source and consumer events followed the
+stage completion event in the recorded event numbering. A second nonzero
+stage row, `dest=0x167350 len=0x300 FNV=0x60F910DE nz=621`, had no source or
+consumer join in this capture. The silent arm emitted no image-stage rows.
+
+Image PCM rows were all-zero in phases 8 and 12; phase 10 contained the
+matching nonzero tuple plus otherwise all-zero rows. Silent phase-8/10/12
+PCM source/consumer rows were present and all
+`FNV=0xF59C39C5 nz=0`. The image driver killed its still-alive process after
+the post-probe grace window. The silent process later hit the known aligned-
+ROM abort at `last-guest-pc=0x80001b08`, after target qualification.
+
+This selects H-CompleteImageOutputContract for at least one measured image
+tuple and rules out H-PairRouteInvalid at this tested scope. It does not show
+that every image-stage row has a PCM counterpart: the second nonzero row is
+still an open completeness/timing question. It does not identify a writer or
+authorize a default, writeback, consumer, slot, gate, or guard change.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-completeness`.

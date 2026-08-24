@@ -5,9 +5,9 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2267 (2026-08-24); behavioral and source evidence is
-current through s2267. This iteration ran one unchanged-build isolated silent
-route qualification; no runtime change was made.
+Maintained in Session 2268 (2026-08-24); behavioral and source evidence is
+current through s2268. This iteration ran one unchanged-build paired
+image/silent output-contract comparison; no runtime change was made.
 
 ## Current state
 
@@ -30,12 +30,12 @@ route qualification; no runtime change was made.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. Its host canary is probe data only; it does not gate
   completion, writeback, or DMA.
-- The image arm has qualified target-stage rows and at least one exact
-  phase-10 stage/source/consumer match in separate single-arm captures. The
-  silent arm is independently qualified through title and hangar: its
-  phase-8/10/12 source and consumer rows are present but all zero. The latest
-  concurrent pair failed before the silent arm reached 1024, so a new
-  same-build comparison is required before interpreting output differences.
+- The image arm has qualified target-stage rows and s2268 observed one exact
+  phase-10 stage/source/consumer match in the same paired run. A second
+  nonzero phase-10 stage row remained unmatched. The silent arm qualified
+  through title and hangar in that pair; its phase-8/10/12 source and
+  consumer rows were present but all zero. The paired output boundary is
+  therefore usable, but the unmatched image row remains open.
 - The port-side `field348` source spans are cleared by the legitimate
   `rs_memset` setup call at static callsite `0x8008F2CC`; retail independently
   writes both corresponding spans with nonzero values. The missing nonzero
@@ -109,6 +109,22 @@ route qualification; no runtime change was made.
   qualification. This selects H-SilentRouteLoadSensitive at the tested scope
   and permits a fresh paired output comparison; it does not identify an
   audio writer or authorize a mitigation.
+- s2268's same-build image+C88=`0` / silent+C88=`0` pair passed startup, one
+  `[missing-func]`, B40/route-state controls, title, and hangar in both arms.
+  The image arm had phase-8/10/12 stage-row counts `3464/3105/1918` and
+  nonzero counts `0/2/0`. In phase 10, one row
+  `(dest=0x167650, len=0x300, FNV=0x7B70923A, nz=639)` matched both source
+  and consumer records at `0x80167650`; the source and consumer also had
+  `FNV=0x7B70923A, nz=639`, and the join reported
+  `ordering_violation=0`. A second nonzero stage row
+  `(dest=0x167350, len=0x300, FNV=0x60F910DE, nz=621)` had no corresponding
+  source/consumer join in the capture. The silent arm had no image-stage
+  rows, and its phase-8/10/12 PCM source/consumer rows were all
+  `FNV=0xF59C39C5, nz=0`. This selects
+  H-CompleteImageOutputContract for at least one measured image tuple, while
+  leaving completeness of the second stage row open. The silent process hit
+  the known post-target aligned-ROM abort; the image driver ended by its
+  watchdog after target qualification.
 - Independent retail oracle work established the whole-RDRAM control, both
   target origins, nonzero writes to both `field348`-derived spans, and the
   retail task/output writer family. It has not yet joined a retail write to a
@@ -118,15 +134,17 @@ route qualification; no runtime change was made.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 image-output contract attribution.** Run the same-build
-   image+C88=`0` / silent+C88=`0` pair after the silent route is requalified,
-   with the qualified spin/LLE route and reduced trace. Require each arm's
-   startup, `[missing-func]`, B40 and route-state controls, title
-   `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400` before interpreting its
-   output rows. Compare stage rows, exact destination/length/FNV/nonzero
-   joins, completion order, and the all-zero silent PCM boundary. Do not
-   promote the image arm or add a writeback, consumer, slot, gate, or guard
-   change.
+1. **M5 image-output contract completeness.** Repeat the same-build
+   image+C88=`0` / silent+C88=`0` pair with the qualified spin/LLE route and
+   reduced trace. Require both arms' startup, `[missing-func]`, B40 and
+   route-state controls, title `1024 @ 0x00790400`, and hangar
+   `512 @ 0x006AB400`. For every phase-10 nonzero image stage row, compare
+   exact destination/length/FNV/nonzero tuples against source and consumer
+   records, and record whether the second s2268 row joins later, remains
+   unmatched, or the route is invalid. A repeat exact match plus a repeat
+   unmatched row selects a mixed contract; a later join selects timing/late
+   delivery; missing controls select route work only. Do not promote the
+   image arm or add a writeback, consumer, slot, gate, or guard change.
 2. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
    difference using a new pointer-versus-branch discriminator. No key-on
    return or mitigation change follows from the existing table.
@@ -168,14 +186,13 @@ AI-status and RSP-image/task-field boundaries: MORT speech is separate, both
 systems write `data_ptr+0x100`, and stock `aspMain` is not a substitute.
 
 The open output boundary is narrower. The image arm changes DMEM, completes,
-and emits generated DMA, but early captures had zero stage inputs. Later
-captures found target stage rows and single-arm nonzero joins; s2265
-independently qualified the image route and observed two nonzero stage rows
-with two source and two consumer matches in phase 10, while its PCM boundary
-remained all-zero. The silent control's matching boundary is qualified and
-all-zero. Retail writes the corresponding field spans and a separate
-task/output span. The next paired run is required to distinguish a complete
-image-stage/PCM contract from a stage-only or mismatched contract.
+and emits generated DMA, but early captures had zero stage inputs. s2268
+qualified both arms in one pair and observed one exact phase-10
+stage/source/consumer tuple with nonzero PCM, plus one nonzero stage row with
+no join. The silent control's matching boundary is qualified and all-zero.
+Retail writes the corresponding field spans and a separate task/output span.
+The next paired run tests whether the unmatched image row is a stable mixed
+contract or a late delivery/route-sensitive observation.
 
 Do not re-flip the image default, force C88, skip or allow
 `matchKeywordWithPriority`, add a wait/slot guard, or land a copyToRAM/CIMG
