@@ -106433,3 +106433,41 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2258 (2026-08-24) — reduced tracing still failed before output phase
+
+Ran the prescribed same-build concurrent image+C88=`0` / silent+C88=`0`
+pair, with the image arm launched first and the silent arm one second later.
+Both used `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LOG_THREAD_RESUME=0`,
+`PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and only the B40 and
+route-state traces in addition to the phase controls. No build, generated
+code, runtime behavior, or default changed. Driver logs are
+`scratch/agent/s2258_image_c88_0_reduced_driver.log` and
+`scratch/agent/s2258_silent_c88_0_reduced_driver.log`; run logs are under
+`scratch/s73_post_a_scene/s2258_image_c88_0_reduced/` and
+`scratch/s73_post_a_scene/s2258_silent_c88_0_reduced/`.
+
+Both arms passed startup, one `[missing-func]`, the initial 640 origin
+`0x0066A500`, the later 640 origin `0x00696100`, and their B40/route-state
+controls. Neither emitted a 1024 title or 512 hangar phase, and neither
+emitted target image-stage rows. Both drivers returned `4`. Each process
+caught SIGBUS at `cutsceneDispatchSlotsByFlag+10804` with
+`si_addr=0x380000044` and last guest PC `0x8000834C`.
+
+The complete same-run table selects H-ReducedRouteInstability at reduced-load
+scope: the reduced recipe remains route-invalid before output attribution in
+both arms. This does not supersede s2257's H-TraceLoad result, because s2257
+had a successful route-only arm under a different same-run trace split; it
+only shows that reducing to the current B40/route-state trace set is not
+sufficient for a valid image comparison. No image/output, writer, consumer,
+slot, gate, guard, or default conclusion follows. The next unit is a single
+reduced-trace silent arm to distinguish two-process load from an intrinsic
+reduced-route failure.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.

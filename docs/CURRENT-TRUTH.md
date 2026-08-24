@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2257 (2026-08-24); behavioral and source evidence is
-current through s2257, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2257 remain in
+Maintained in Session 2258 (2026-08-24); behavioral and source evidence is
+current through s2258, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2258 remain in
 the append-only ledger.
 
 ## Current state
@@ -82,6 +82,14 @@ the append-only ledger.
   for that capture, but is single-source evidence and does not establish
   trace load as the sole cause or qualify image output. The next pair uses
   reduced tracing for image-versus-silent attribution.
+- s2258 ran that reduced-trace image+C88=`0` / silent+C88=`0` pair. Both arms
+  passed startup, one `[missing-func]`, the 640 origins, and B40/route-state
+  controls, but neither reached title `1024` or hangar `512`. Both returned
+  `4` after SIGBUS at `cutsceneDispatchSlotsByFlag+10804` with last guest PC
+  `0x8000834C`; neither produced target image-stage rows. This selects
+  H-ReducedRouteInstability at reduced-load scope, does not supersede s2257's
+  trace-load result, and supplies no image/output attribution or runtime
+  default change. It is single-source port evidence.
 - s2246's two full field348-candidate captures both passed the 640 route and
   one `[missing-func]` control but crashed before title `1024` or hangar `512`:
   the first was `fillSampleStreamRange+8136` with last guest PC
@@ -359,8 +367,12 @@ Closed investigations are not active work items. The sequence is monotonic.
   hangar. This selects H-TraceLoad at route scope for that same-run capture,
   supersedes the identical-arm hypothesis as its only explanation, and is
   single-source port evidence. Reduce trace load before returning to the
-  image/output table. Do not promote
-  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+  image/output table. s2258 then ran the reduced image/silent pair and both
+  arms failed at the same pre-title `cutsceneDispatchSlotsByFlag+10804` SIGBUS
+  after the controls, so reduced tracing alone did not qualify the output
+  table. The next discriminator is a single reduced-trace silent arm, which
+  separates two-process load from an intrinsic reduced-route failure. Do not
+  promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -780,7 +792,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2257 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2258 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
