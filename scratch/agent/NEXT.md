@@ -1,56 +1,69 @@
-# NEXT work unit (s2209) — join retail early origins to `__osViNext`
+# NEXT work unit (s2210) — compare port early VI context to retail
 
 HYPOTHESIS-ID: m5-a1-retail-early-context-parity
 
 ## Work unit
 
-Before building, make one bounded diagnostic change in
-`tools/oracle/rs64_oracle.c`: keep the existing `--vi-context-table-pc`
-instrument and let its context join accept every width-640 origin observed in
-s2208, without changing the post-swap table. The allowlist is
-`0x0066A500`, `0x005D4500`, `0x0066AA00`, `0x00696600`, `0x00696100`,
-`0x0062C200`, and `0x0062BD00`. Raise only the context-row cap from 256 to
-1024 so the one collection cannot confuse coverage with overflow. Build the
-oracle once, then run one 10-second Rice collection with the whole-RDRAM
-positive control and the same verified Start schedule:
+Make one bounded diagnostic change in
+`lib/N64ModernRuntime/ultramodern/src/events.cpp`: in the existing
+`ROGUESQ_LOG_VI_CONTEXT_PORT` path, admit every width-640 commit to the
+existing context-row table instead of filtering to framebuffer
+`0x00695C00`, and raise only that printed row cap from 256 to 512. Preserve
+the existing row fields, positive prefix, field knob, VI state update, and
+target counters. Do not change the default field, audio dispatch, task data,
+or any mitigation. Because this edits `lib/`, export the submodule patch in
+the same iteration.
+
+Before building, record the following competing hypotheses and use the one
+run below to split them:
+
+- H-PortEarlyContextParity: port rows for `0x0066A500` and `0x005D4500`
+  select field 0 and commit candidate 0, while `0x0066AA00` selects field 1
+  and commits candidate 1, matching the retail context table. This moves the
+  open boundary past the early selector.
+- H-PortEarlyContextFixedField: the port's early rows select field 0 for both
+  `0x0066A500` and `0x0066AA00`, or commit the same candidate for both. This
+  identifies a port field-state mismatch before the target transition.
+- H-PortEarlyContextOther: the port has valid rows but its early framebuffer,
+  mode pointer, field origins, or candidate arithmetic differs from retail.
+  This identifies a context-tuple mismatch rather than a selector mismatch.
+- H-PortEarlyContextCoverage: the positive prefix fires, but no bounded
+  width-640 table rows arrive or the 512-row table overflows. This proves only
+  that the port collection is insufficient and does not classify parity.
+
+The discriminator is one table keyed by committed origin: for each observed
+640 origin, count rows by `field`, `framebuffer`, `mode`, `candidate0`,
+`candidate1`, and `committed`, alongside prefix count, summary `rows`, and
+`overflow`. Require at least one prefix row, one width-640 row, and zero
+overflow before classifying. Compare the port rows with s2209's retail rows:
+retail had A500 `field=0/candidate0` 17/17, AA00 `field=1/candidate1` 139/139,
+5D4500 `field=0/candidate0` 121/121, target 696100 field 0 96/96, and target
+696600 field 1 95/95.
+
+## Exact commands
+
+After the bounded edit:
 
 ```sh
-bash tools/oracle/build.sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  --hold-ms 150 --secs 10 --watch-write 0x0:0x800000 \
-  --watch-pc 0x80035550 --vi-context-table-pc 0x80035550 --vi-trace \
-  > scratch/agent/s2209_retail_early_context.log 2>&1
-rg -n "positive-control|^\\[vi\\].*width=640|^\\[vi-context-row\\]|vi-context-summary|\\[oracle\\] done" \
-  scratch/agent/s2209_retail_early_context.log
+./submodule-patches/export.sh
+cmake --build build -j8
+cd build
+env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 \
+  ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 \
+  ROGUESQ_LOG_VI_CONTEXT_PORT=1 ./RogueSquadron64Recomp \
+  > ../scratch/agent/s2210_port_early_context.log 2>&1 &
+pid=$!
+for i in {1..60}; do
+  kill -0 "$pid" 2>/dev/null || break
+  sleep 1
+done
+kill -9 "$pid" 2>/dev/null || true
+wait "$pid" 2>/dev/null || true
+cd ..
 ```
 
-Do not change port VI behavior, the field knob, logger dispatch, task data,
-audio dispatch, or any mitigation.
-
-## Competing hypotheses and discriminator
-
-- H-RetailEarlyContextAlternates: with a positive control and non-overflowing
-  rows, `0x0066A500` joins valid context rows selecting field 0/candidate 0,
-  while `0x0066AA00` joins valid rows selecting field 1/candidate 1. This
-  proves the retail early pair uses the same frame-plus-field context
-  mechanism already established for the target pair.
-- H-RetailEarlyContextFixedField: both early origins join valid rows with the
-  same selected field/candidate, most plausibly field 0. This proves that the
-  legitimate `0x0066AA00` origin is not produced by the target field toggle.
-- H-RetailEarlyContextOther: early rows are valid but their selected
-  candidates, frame pointer, mode, or field relationship does not explain the
-  next origin. This moves the source boundary to another VI producer.
-- H-RetailEarlyContextCoverage: the whole-RDRAM control and 640 phase rows
-  are positive, but early context rows are absent or the 1024-row table
-  overflows. This proves only that the join scope is still insufficient and
-  requires a narrower phase window.
-
-The discriminator is the same-run tuple `(whole-RDRAM hit count, joined-row
-count per 640 origin, context_valid/mode_valid, current_field, and whether
-framep + selected field origin equals next_origin)`. A zero control count
-invalidates every context conclusion. A mixed result that fits none of the
-first three models is recorded as mixed, not promoted to a port explanation.
+Inspect only the positive prefix, `[phase]` width-640 origins, context rows,
+and context summary. Use SIGKILL as shown. If the control is positive and the
+table is non-overflowing, classify exactly one of the first three hypotheses;
+otherwise record H-PortEarlyContextCoverage and design a narrower phase-gated
+collection next.

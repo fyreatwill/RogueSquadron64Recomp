@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2208
-(2026-08-23); behavioral and source evidence is current through s2208.
+authoritative for exact commands and probe rows. Maintained in Session 2209
+(2026-08-23); behavioral and source evidence is current through s2209.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -275,6 +275,17 @@ second ledger.
   the Rice recipe, and establishes that the port's quiet `0x0066AA00` is
   retail-grounded at origin level. The early context/field selector remains
   unidentified.
+- s2209's single-source retail context join passed the whole-RDRAM positive
+  control (10,000 writes), joined 468 rows with zero drops and zero overflow
+  at the 1024-row cap, and covered five observed 640 origins. The early rows
+  split by field: `0x0066A500` was field 0/candidate 0 (17/17),
+  `0x0066AA00` was field 1/candidate 1 (139/139), and `0x005D4500` was field
+  0/candidate 0 (121/121). The target rows independently retained the same
+  relation (`0x00696100`: 96/96 field 0; `0x00696600`: 95/95 field 1).
+  This selects H-RetailEarlyContextAlternates and refutes fixed-field,
+  unexplained-candidate, and coverage forms at this scope. It identifies the
+  retail early selector, not the port's early context tuple; a port census is
+  next.
 
 ## Active backlog
 
@@ -323,8 +334,12 @@ work items.
    classifying either origin. s2208's Rice-driven census passed the control and
    observed both early origins, selecting H-RetailEarlyAA00; it makes the quiet
    port origin legitimate but does not identify its retail context selector.
-   The next unit joins all observed retail 640 origins to `__osViNext`. Keep
-   the field knob and logger diagnostic-only.
+   s2209's context join shows that retail selects field 0 for `0x0066A500` and
+   `0x005D4500`, field 1 for `0x0066AA00`, and the corresponding field for both
+   target origins, with valid frame/mode candidates and no coverage overflow.
+   The next unit records the same all-width-640 context tuple on the port to
+   compare its early selector and framebuffer/mode state. Keep the field knob
+   and logger diagnostic-only.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -497,7 +512,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2208's VI-boundary and retail-ground-truth work is recorded in the
+s2198–s2209's VI-boundary and retail-ground-truth work is recorded in the
 ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.

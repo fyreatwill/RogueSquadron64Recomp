@@ -104441,6 +104441,42 @@ only added and ran a bounded diagnostic harness.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.
 
+## Session 2209 (2026-08-23) — joined retail early origins to VI context
+
+Extended `tools/oracle/rs64_oracle.c` with a separate seven-origin allowlist
+for the `--vi-context-table-pc` join and a separate 1024-row cap; the existing
+post-swap table remained restricted to the two target origins and its 256-row
+cap. Built the oracle once with `bash tools/oracle/build.sh`, then ran the
+10-second Rice recipe from `scratch/agent/NEXT.md` with the whole-RDRAM watch
+first as the positive control.
+
+The control reached 10,000 callbacks and removed successfully. The collection
+completed with 10,566 watched writes, 567 VI callbacks, 468 joined context
+rows, zero dropped rows, zero pending rows, and zero overflow at the 1024-row
+cap. Five allowlisted origins appeared in joined rows. The early context rows
+were `0x0066A500`: 17 rows, all `current_field=0` with `candidate0` equal to
+the next origin; `0x0066AA00`: 139 rows, all `current_field=1` with
+`candidate1` equal to the next origin; and `0x005D4500`: 121 rows, all field 0
+with candidate 0 equal to the next origin. The target rows independently
+matched field selection: `0x00696100` had 96/96 field-0 matches and
+`0x00696600` had 95/95 field-1 matches. All joined rows had
+`context_valid=1` and `mode_valid=1`.
+
+This is single-source retail evidence selecting H-RetailEarlyContextAlternates.
+It refutes H-RetailEarlyContextFixedField, H-RetailEarlyContextOther, and
+H-RetailEarlyContextCoverage at this scope. It identifies the retail early
+frame-plus-field selector but does not prove the port's early tuple or explain
+the missing port transition. No port code, default, mitigation, task, or
+audio dispatch changed.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+only widened an independent retail observation table and increased its cap.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-early-context-parity`.
+
 ## Session 2208 (2026-08-23) — Rice retail trace grounds both early 640 origins
 
 Ran the prescribed Rice-driven retail-oracle census with the verified Start

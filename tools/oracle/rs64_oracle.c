@@ -53,6 +53,7 @@
 #define MAX_POST_VALUE_ROWS_PER_PC 16
 #define MAX_VI_SWAP_PHASE_ROWS 256
 #define MAX_MODE_DUMP_ROWS 256
+#define MAX_VI_CONTEXT_ROWS 1024
 #define VI_ORIGIN_ADDR 0xA4400004u
 #define VI_WIDTH_ADDR  0xA4400008u
 #define VI_CURRENT_ADDR 0xA4400010u
@@ -383,6 +384,14 @@ static int is_post_swap_target_origin(uint32_t origin)
     return origin == 0x00696100u || origin == 0x00696600u;
 }
 
+static int is_vi_context_target_origin(uint32_t origin)
+{
+    return origin == 0x0066A500u || origin == 0x005D4500u ||
+           origin == 0x0066AA00u || origin == 0x00696600u ||
+           origin == 0x00696100u || origin == 0x0062C200u ||
+           origin == 0x0062BD00u;
+}
+
 static int is_valid_rdram_phys(uint32_t physical)
 {
     return physical < RDRAM_SIZE;
@@ -445,11 +454,11 @@ static void join_vi_context_table(uint32_t width, uint32_t origin)
         return;
     snapshot = g_vi_context_pending.snapshot;
     g_vi_context_pending.valid = 0;
-    if (width != 640 || !is_post_swap_target_origin(origin)) {
+    if (width != 640 || !is_vi_context_target_origin(origin)) {
         g_vi_context_dropped++;
         return;
     }
-    if (g_vi_context_joined >= MAX_MODE_DUMP_ROWS) {
+    if (g_vi_context_joined >= MAX_VI_CONTEXT_ROWS) {
         g_vi_context_overflow++;
         return;
     }
@@ -1694,7 +1703,7 @@ int main(int argc, char **argv)
                g_vi_context_table_pc, g_vi_context_latched,
                g_vi_context_joined, g_vi_context_pending.valid,
                g_vi_context_dropped, g_vi_context_overflow,
-               MAX_MODE_DUMP_ROWS);
+               MAX_VI_CONTEXT_ROWS);
     /* Materialise the config so the input mapping is inspectable. Without
      * this nothing is ever written and the key->button mapping the presses
      * rely on is invisible in-memory defaults - i.e. an unverifiable
