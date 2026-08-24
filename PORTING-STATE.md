@@ -107893,3 +107893,48 @@ Run the oracle-only `0x800078EC` target-phase writer-contract discriminator in
 `scratch/agent/NEXT.md`. Keep all independent controls and the 16 exact slot
 watches; compare target-phase writer arguments and post-value rows against
 the two qualified port payload tuples before considering any contract change.
+
+## Session 2293 (2026-08-24) — target-phase retail writer contract remained metadata-only
+
+HYPOTHESIS-ID: m5-step3-retail-port-writer-join.
+
+The planned work unit was one oracle-only retail target-phase writer-contract
+capture. The driver passed `zsh -n` and armed the whole-RDRAM positive control,
+candidate/task-output spans, all 16 exact `0x300` slots, watched PC
+`0x800078EC`, the `512 @ 0x006AB400` phase gate, and post-value sampling. The
+first capture completed, but its summary parser searched for an `[oracle]`
+prefix on `[hit]` rows and misclassified target execution as zero. That
+summary was not used; the parser was fixed and the identical capture was
+rerun to its natural shutdown.
+
+The corrected retail run passed the whole-RDRAM threshold at `10,000`, title
+`1024 @ 0x00790400`, and hangar `512 @ 0x006AB400`. It completed with
+`11,910,782` total watch hits and `6,984` VI. The candidate span recorded
+`861,074` writes, the independent task/output span recorded `108`, and each
+of the 16 exact slots recorded `768` writes. Every lifetime slot writer
+histogram was exclusively guest PC `0x800078EC`, and every final slot
+snapshot was nonzero.
+
+In the target phase, `0x800078EC` executed `1,359,560` times. Sampled rows
+showed tuples such as `v0/a0/s0=0x8065E0A0` with `a2=0x1C`, rather than a
+candidate `0x166xxx` destination. The target post-value summary was
+`n=0/16`, with no exact target-phase slot writer join. This selects
+H-RetailMetadataContract at the measured scope. It refutes
+H-RetailWriterPreTarget as the claim that the watched PC is absent from the
+target phase, and refutes H-RetailWriterTargetPhase for the sampled PC; the
+all-pre-target versus different-target-writer split remains open because a
+phase-bucketed slot writer histogram was not yet armed. H-CoverageInvalid is
+ruled out by the independent controls. No writer, writeback, consumer, slot,
+gate, guard, or address-remap conclusion follows.
+
+ORIGIN: no mitigation-shaped change; this iteration added only
+`scratch/agent/run_s2293_m5_retail_writer_phase_join.sh` and its oracle
+capture, plus a parser correction required to classify the same measurement.
+No runtime, generated function, submodule, writer, or guard behavior changed.
+
+### Next
+
+Run one oracle-only 16-slot target-phase writer-PC table with
+`--pc-hist-phase 0x006AB400`, retaining the s2293 controls. Use the table to
+separate all-pre-target writes from a target-phase `0x800078EC` writer or a
+different target-phase writer before considering any contract change.

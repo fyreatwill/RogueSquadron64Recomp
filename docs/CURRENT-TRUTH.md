@@ -5,8 +5,8 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2292 (2026-08-24); behavioral and source evidence is
-current through s2292. The corrected same-build M5 Step 2 driver explicitly
+Maintained in Session 2293 (2026-08-24); behavioral and source evidence is
+current through s2293. The corrected same-build M5 Step 2 driver explicitly
 sent the eleven process-start Start events to each port window. Retail passed
 the whole-RDRAM threshold at `10,000` callbacks and reached title
 `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The port stub and default
@@ -36,6 +36,21 @@ writer-order join to either row; its final slot snapshots differed and its
 post-value sample counts were zero. This resolves ring rotation at the
 address-class scope and selects H-RetailDifferentWriter/ContractGap, not
 H-RingRotationUnresolved, H-CoverageInvalid, or a mitigation target.
+
+s2293's corrected oracle-only target-phase capture passed the independent
+whole-RDRAM threshold at `10,000`, title `1024 @ 0x00790400`, and hangar
+`512 @ 0x006AB400`. Guest PC `0x800078EC` executed `1,359,560` times in the
+target phase, with sampled tuples pointing into `0x8065E0A0`-class data and
+lengths such as `0x1C`; the target-gated post-value summary was `0/16` and no
+candidate slot had a target-phase writer join. All 16 slots still had `768`
+lifetime writes from `0x800078EC` and nonzero final snapshots. This selects
+H-RetailMetadataContract at the measured scope: it refutes
+H-RetailWriterPreTarget as a claim that the watched PC is absent from the
+target phase, but does not yet distinguish all candidate writes being
+pre-target from a different target-phase writer. It rules out
+H-RetailWriterTargetPhase for the sampled PC and H-CoverageInvalid; no
+writer, writeback, consumer, slot, gate, guard, or address-remap change is
+authorized.
 
 The s2287 oracle used the corrected eleven-Start route and `--vi-trace`; its
 positive control was reached before the whole-RDRAM watch was removed, and
@@ -121,6 +136,15 @@ equivalent path at another guest address.
   the fixed rerun required one recorded keycode-36 delivery and retained all
   controls. No runtime, writer, consumer, slot, gate, guard, or address-remap
   behavior changed.
+- s2293's corrected oracle-only target-phase writer capture passed retail
+  whole-RDRAM at `10,000`, title, and hangar. The watched `0x800078EC`
+  executed `1,359,560` times at `512 @ 0x006AB400`, but its sampled target
+  tuples pointed into `0x8065E0A0`-class data rather than the candidate
+  `0x166xxx` slots. The target post-value table was `0/16`; every slot had
+  `768` lifetime writes from `0x800078EC` and a nonzero final snapshot. This
+  selects H-RetailMetadataContract at the measured scope and leaves the
+  target-phase writer-PC split open. No runtime or mitigation behavior
+  changed.
 - `docs/M5-AUDIO-PLAN.md` inventories the active audio stubs/traps/gates and
   defines the phase-keyed task→DMA→service→slot→voice→PCM discriminator and
   rollback conditions. The plan refresh in s2231 defined the incremental
@@ -509,16 +533,16 @@ equivalent path at another guest address.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 Step 3 retail writer contract follow-up.** s2292 established that
-   retail PC `0x800078EC` writes every candidate ring slot, but the final
-   retail slot snapshots do not match either qualified port payload and the
-   target-gated post-value samples were zero. Run one new oracle-only
-   discriminator with a phase-gated execution watch at `0x800078EC` in the
-   `512 @ 0x006AB400` window, while retaining the whole-RDRAM, task/output,
-   title, hangar, and exact 16-slot write controls. Compare the writer's
-   target-phase `$v0/$s1/$a0/$a2`, exact slot writes, post-value PC samples,
-   and ordering against the two qualified port rows. Do not implement
-   writeback, consumer, slot, gate, guard, or address-remap behavior.
+1. **M5 Step 3 target-phase slot-writer split.** s2293 established that
+   `0x800078EC` executes `1,359,560` times in the hangar target phase, while
+   its 16 candidate slots have only lifetime writer counts and zero
+   target-gated post-value rows. Run one new oracle-only 16-slot table with
+   `--pc-hist-phase 0x006AB400` in addition to the existing whole-RDRAM,
+   task/output, title, hangar, exact-slot, watched-PC, and post-value
+   controls. Classify each slot's target-phase writer count and PC histogram
+   as all-pre-target, `0x800078EC` target writes, or a different target
+   writer. Do not implement writeback, consumer, slot, gate, guard, or
+   address-remap behavior.
 2. **M5 key-on tuple contract.** Requalify the C88 route with a
    phase-gated control-first stagger: launch C88=1 only after a C88=0 control
    reaches `512 @ 0x006AB400`, then compare retail fields only if both arms
@@ -593,8 +617,12 @@ publish the same output pointer and `0x300` length as a port nonzero image
 row, while the port payload is produced by Factor 5 image DMA and joined to a
 PCM source/consumer path. s2292 additionally identifies retail PC
 `0x800078EC` as the writer for all 16 candidate slots, but finds no exact
-target-phase payload/order join. The retail writer contract remains open; this
-is a contract discriminator, not permission to add a writeback or guard.
+target-phase payload/order join. s2293 shows that the same PC executes
+`1,359,560` times in the hangar target phase with tuples pointing into
+`0x8065E0A0`-class data, while its candidate-slot target post-value table is
+`0/16`; its lifetime slot writes remain `768` per slot. The retail writer
+contract remains open pending a target-phase writer-PC histogram; this is a
+contract discriminator, not permission to add a writeback or guard.
 
 Do not flip the image default again, force C88, skip or allow
 `matchKeywordWithPriority`, add a wait/slot guard, or land a copyToRAM/CIMG
