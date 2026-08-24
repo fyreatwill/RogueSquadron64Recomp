@@ -5,11 +5,11 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2279 (2026-08-24); behavioral and source evidence is
-current through s2279. This iteration added an oracle-side key-on field dump
-and ran both the requested pair and a fixed established-route pair. Retail
-controls qualified, but neither port arm supplied the required hangar window;
-no key-on behavior or default changed.
+Maintained in Session 2280 (2026-08-24); behavioral and source evidence is
+current through s2280. This iteration raised the oracle key-on field census
+capacity and reran the established-route pair. Retail controls and all eight
+field buckets qualified without overflow, but the port missed the required
+hangar window; no key-on behavior or default changed.
 
 ## Current state
 
@@ -51,8 +51,12 @@ no key-on behavior or default changed.
   with whole-RDRAM, title, and hangar controls, but its bounded unique-field
   buckets saturated (`hits=17,987`, overflow `14,718`–`15,911` in the fixed
   100-second run) while the port arm missed the required hangar and crashed
-  at off-target `512 @ 0x00690400`. The source/state join is therefore still
-  H-CoverageInvalid; no pointer-versus-branch verdict follows.
+  at off-target `512 @ 0x00690400`. s2280 raised the cap to 32,768 and the
+  retail buckets completed with `hits=16,852` per PC, `1,636`–`3,843` unique
+  rows, and zero overflow; the port reached title but stalled at off-target
+  `640 @ 0x00696100` and never reached `512 @ 0x006AB400`. The source/state
+  join is therefore still H-CoverageInvalid; no pointer-versus-branch verdict
+  follows.
 - The VI second-origin publisher/cadence is open. Field, current-register,
   timing, and total-`VI` arms recover the split, but none is default-on.
 - s2273's first Step 1 pair was route-invalid: the heavy trace reached title
@@ -131,6 +135,13 @@ no key-on behavior or default changed.
   reached title but stopped at off-target `512 @ 0x00690400` with
   `port_rc=138` and no `512 @ 0x006AB400`. This pair is H-CoverageInvalid and
   does not select H-PointerData, H-BranchState, or H-Mixed.
+- s2280 rebuilt the oracle with a 32,768-row per-PC cap. Retail passed the
+  whole-RDRAM, title, hangar, and all-eight-PC controls; each bucket had
+  `16,852` hits, `1,636`–`3,843` rows, and `overflow=0`. The port reached
+  title `1024 @ 0x00790400`, then stalled in off-target `640 @ 0x00696100`
+  until the driver SIGKILLed it, with no target key-on rows. This pair remains
+  H-CoverageInvalid and does not select H-PointerData, H-BranchState, or
+  H-Mixed.
 - s2274's two same-build route attempts failed before the expected hangar
   origin despite positive dispatch/audio/route probes. Removing the three
   high-volume host trace categories changed the failure from a renderer
@@ -274,12 +285,12 @@ no key-on behavior or default changed.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 key-on tuple contract.** Re-run the oracle-side join with a
-   non-saturating field census and the established route driver, then require
-   the port to reach `512 @ 0x006AB400` before comparing
-   `MEM_W($s0+0x60)`, `MEM_BU($s0+0x22)`, and `$s1+0x22` against the port
-   witness. The current evidence is a pointer/data-side lead only; no key-on
-   return or mitigation change follows. The Step 1 task/output pair remains
+1. **M5 key-on tuple contract.** First qualify the port route in a same-build
+   C88=0 versus C88=1 pair using the established eleven-Start driver, then
+   compare retail fields only if the C88=0 arm reaches
+   `512 @ 0x006AB400`. The current evidence is a route-validity failure after
+   the oracle capacity fix; no pointer/data or branch-state verdict, key-on
+   return, or mitigation change follows. The Step 1 task/output pair remains
    parked.
 2. **M5 A1 second-origin transition.** Identify the natural host field
    publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
@@ -347,10 +358,12 @@ Retail executes the alternate key-on transfer path and skips the eight port
 divide PCs. The port has positive normal-tail/slot behavior with no guard
 hits. The exact phase-keyed tuple table is complete and bidirectionally
 different at all common cells. s2278 adds a qualified port pointer/source/
-state witness and retail transfer/selector/denominator controls; the raw
-pointer is not yet a valid cross-runtime identity because retail voice-list
-addresses vary within the phase. The useful next boundary is the oracle-side
-full-word/state join.
+  state witness and retail transfer/selector/denominator controls; the raw
+  pointer is not yet a valid cross-runtime identity because retail voice-list
+  addresses vary within the phase. The useful next boundary is first a
+  same-build C88 route qualification, then the oracle-side full-word/state
+  join. s2280's enlarged retail census is complete at the measured scope, but
+  its port arm supplied no target window.
 
 The `-0x25A4` pointer-chase, six-site PIC, ten-site audio-slot,
 slot-dispatch, two-line overlay-move, and leftover `fake_func_*` size class

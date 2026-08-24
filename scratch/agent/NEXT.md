@@ -1,66 +1,58 @@
-# NEXT work unit (s2280) — complete the retail key-on pointer/state join
+# NEXT work unit (s2281) — qualify the M5 route across C88 arms
 
 HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator
 
 ## Work unit
 
-Raise the oracle's per-PC unique-field capacity from 256 to 32768, rebuild the
-oracle, and run one pair with the established eleven-Start route driver. The
-existing `--pc-field-dump` must remain phase-gated to
-`width=512, origin=0x006AB400`; do not change the port runtime, key-on return,
-divide guards, slot stores, audio default, or route gates. This is a capacity
-fix for the measured saturation, not a new field or a behavior arm.
-
-s2279 result to carry forward: the oracle field dump fired at all eight PCs and
-retail passed the whole-RDRAM, title, and hangar controls, but every 256-row
-bucket saturated (`hits=17,987`, overflow `14,718`–`15,911`) while the fixed
-port route stopped at off-target `512 @ 0x00690400`. s2278's qualified port
-row remains `raw_ptr=0x801772F0`, `source_word=0x00C0053F`, selector `0`, and
-state `0x6F5F`; the next capture must first qualify the port hangar before any
-retail field comparison is interpreted.
+Run one same-build, concurrent C88=0 versus C88=1 port pair using the
+established eleven-Start route, while retaining the oracle whole-RDRAM,
+title/hangar, and eight-PC controls. Parameterize the existing driver (or make
+one self-contained pair driver) so the two port processes differ only in
+`ROGUESQ_M5_C88_VALUE`; do not change the runtime, key-on return, divide
+guards, slot stores, audio default, or LLE route gates. Keep the existing
+`PROBE_PHASE_WIDTH=1024` / `PROBE_KEYS_FROM_PHASE=1` phase controls and SIGKILL
+deadlines. The enlarged oracle binary is already built; rebuild only if the
+driver change requires it.
 
 ## Competing hypotheses and discriminating measurement
 
-- **H-PointerData:** retail and port selector/state words agree, while the
-  pointed source word or normalized pointer/data identity differs. This
-  selects a pointer/data contract boundary.
-- **H-BranchState:** the source word and normalized pointer/data agree, while
-  selector or destination state differs. This selects a branch-state
-  publisher/predicate boundary.
-- **H-Mixed:** both source/pointer and branch fields differ in the same
-  qualified cells. Split the two inputs with a follow-up capture; no behavior
-  change is authorized.
-- **H-CoverageInvalid:** the oracle whole-RDRAM control, both retail phase
-  gates, the port title/hangar controls, any of the eight field buckets, or
-  the no-overflow condition is absent. The comparison is unevaluable.
+- **H-C88-route:** only one C88 value reaches the target route. If C88=1
+  reaches `512 @ 0x006AB400` while C88=0 stalls, the disabled-audio field is a
+  route antecedent; if C88=0 reaches and C88=1 stalls, the enabled arm changes
+  route behavior. Do not infer key-on fields from the non-qualifying arm.
+- **H-RouteLoad:** both C88 arms have the same route outcome (both qualify or
+  both stall at the same phase). C88 is not the discriminator at this scope;
+  if both qualify, use the C88=0 target window for the retail join, otherwise
+  keep the route investigation open.
+- **H-CoverageInvalid:** the oracle control, title/hangar gate, or either port
+  arm is absent, or the C88=0 arm does not reach the hangar. This outcome
+  invalidates the key-on comparison regardless of any nonzero rows.
 
-The one discriminating table is keyed by
-`phase,origin,width,transfer_pc,normalized_tuple` and has
-`port_or_retail,raw_pointer,source_word,source_byte,branch_selector,branch_state,count,overflow,whole_rdram_control,title_gate,hangar_gate`.
-Absolute heap pointers must not be treated as identity until the pointed words
-and their offset from the voice-list base are compared.
+The single comparison table is keyed by `arm(C88), phase, origin, width` and
+contains `title_gate, hangar_gate, last_phase, timeout_or_crash,
+keyon_rows_by_PC, b40_route_control, route_state_control`. Accept a key-on
+comparison only when the oracle has whole-RDRAM >=10,000 writes and all eight
+retail buckets have `overflow=0`, while the C88=0 port arm reaches
+`512 @ 0x006AB400`. A C88 route split selects H-C88-route; equal outcomes
+select H-RouteLoad; any missing gate selects H-CoverageInvalid.
 
 ## Exact commands
 
-First change `MAX_PC_FIELD_DUMP_ROWS` from `256` to `32768` in
-`tools/oracle/rs64_oracle.c` and rebuild the oracle:
+1. Use `apply_patch` to parameterize the existing port launch in
+   `scratch/agent/run_s2278_m5_keyon_pointer_branch.sh` (replace the literal
+   `ROGUESQ_M5_C88_VALUE=0` with a per-arm value), then create one
+   `scratch/agent/run_s2281_m5_c88_route_pair.sh` that launches both C88 arms
+   concurrently, launches the existing oracle once, enforces the two
+   deadlines, SIGKILLs both port processes, and prints the complete comparison
+   table. The two port logs must use distinct paths.
+2. Run the new pair driver from the repository root:
 
 ```sh
-tools/oracle/build.sh
+zsh scratch/agent/run_s2281_m5_c88_route_pair.sh s2281_m5_c88_route_pair
 ```
 
-Then launch both arms from the repo root using the established route driver;
-it already supplies the eight transfer PCs, the oracle positive control, the
-hangar phase gate, and the port witness:
-
-```sh
-zsh scratch/agent/run_s2278_m5_keyon_pointer_branch.sh s2280_m5_keyon_pointer_branch_capacity
-```
-
-Accept the comparison only if the whole-RDRAM watch reaches 10,000 writes,
-retail reaches title and hangar, the port reaches title and
-`512 @ 0x006AB400`, all eight port rows and all eight retail field buckets
-fire, and no bucket overflows. If any route gate or bucket fails, select
-H-CoverageInvalid and do not infer H-PointerData, H-BranchState, or H-Mixed.
-If qualified, compare normalized pointer/data identity against selector/state;
-keep any remaining field-join limitation explicitly single-source.
+3. Summarize gate counts with `grep -c`/`grep -n` and inspect only tails or
+   bounded summaries; do not infer from a missing row without its positive
+   controls. If C88=0 reaches hangar, then use the qualified phase-10 rows for
+   the next oracle source/state join; otherwise leave the key-on comparison
+   unevaluable and make no behavior change.

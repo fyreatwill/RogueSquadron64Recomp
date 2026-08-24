@@ -107193,6 +107193,38 @@ Use the M5 key-on pointer-versus-branch discriminator in
 `scratch/agent/NEXT.md` before building or changing the census.
 `HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
 
+## Session 2280 (2026-08-24) — enlarged retail key-on census remained route-invalid
+
+HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator.
+
+The planned capacity fix changed only `MAX_PC_FIELD_DUMP_ROWS` in
+`tools/oracle/rs64_oracle.c` from 256 to 32768, then rebuilt the oracle with
+`tools/oracle/build.sh`. The established eleven-Start route pair ran with the
+existing phase gate `width=512, origin=0x006AB400`; no port runtime behavior,
+key-on return, divide guard, slot store, audio default, or route gate changed.
+
+The retail arm passed the whole-RDRAM positive control with 1,001,944 writes,
+reached title and hangar, and fired all eight transfer-PC controls 123,993
+times each. Every enlarged field bucket was non-saturated: 16,852 hits per
+PC, 1,636–3,843 unique rows, and `overflow=0`.
+
+The port arm reached title `1024 @ 0x00790400`, then remained in the off-target
+`640 @ 0x00696100` phase until the driver SIGKILLed it at its deadline. It
+never reached `512 @ 0x006AB400` and emitted no target key-on rows. This
+selects H-CoverageInvalid. It rules out the prior oracle-capacity explanation
+and confirms the retail field census is usable, but it does not select
+H-PointerData, H-BranchState, or H-Mixed. The next discriminator is a same-build
+C88=0 versus C88=1 route qualification; compare retail fields only after the
+C88=0 arm reaches the hangar gate.
+
+ORIGIN: no guest or host value was suppressed, rewritten, guarded, restored,
+or defaulted; the only source change was the observation table capacity.
+
+### Next
+
+Run the C88 route qualification described in `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
+
 ## Session 2276 (2026-08-24) — M5 Step 1 pair remained route-invalid after oracle control
 
 The M5 priority kept the Step 1 validation ahead of the stale key-on NEXT for
