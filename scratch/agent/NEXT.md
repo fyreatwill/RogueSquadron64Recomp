@@ -1,60 +1,61 @@
-# NEXT work unit (s2292) — M5 Step 3 all-ring-slot retail payload attribution
+# NEXT work unit (s2293) — M5 retail 0x800078EC target-phase writer contract
 
 HYPOTHESIS-ID: m5-step3-retail-port-writer-join
 
 ## Work unit
 
-Run one ground-truth-plus-port comparison that splits the candidate span into
-all observed `0x300` Factor 5 ring slots. Keep the independent whole-RDRAM,
-task/output, title, hangar, and explicit-Start controls. Arm bounded writer-PC
-and post-value summaries for every slot from `0x166450` through `0x169150`;
-run the unchanged default image route and do not implement a writer,
-writeback, consumer, slot, gate, guard, or address remap.
+Run one oracle-only writer-contract capture. Watch retail execution at guest PC
+`0x800078EC`, phase-gated to `512 @ 0x006AB400`, while retaining the independent
+whole-RDRAM, task/output, title, hangar, and exact 16-slot write controls from
+s2292. Add the bounded post-value-PC sample for `0x800078EC` and the same
+per-slot writer/post-value summaries. Do not launch a port arm and do not
+implement a writer, writeback, consumer, slot, gate, guard, or address remap.
+The two qualified port comparison rows are
+`0x168850/0x300/0x2B9E9631/nz=621` and
+`0x168B50/0x300/0x6ADD4218/nz=639`.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-RetailPayloadWriterMatch: one exact ring-slot watch records post-target
-  retail stores with a writer PC, `0x300` span, nonzero payload, and ordering
-  that match a port nonzero phase-10 image-stage/DMA row. This selects the
-  shared payload contract edge.
-- H-RetailMetadataOnly: the exact slot watches remain active, but retail rows
-  are pointer/length metadata or otherwise do not supply the port payload
-  tuple. This selects the remaining retail-to-port contract gap, not a guard or
-  writeback fix.
-- H-RingRotationUnresolved: the broad candidate watch and all controls pass,
-  but no single pre-armed ring slot overlaps the port's nonzero row. This
-  proves only that the ring address is dynamic at this recipe scope and keeps
-  the payload writer open.
-- H-CoverageInvalid: any whole-RDRAM, retail title/hangar, or port
-  title/hangar/Start control is absent; no narrow null is interpretable.
+- H-RetailWriterTargetPhase: `0x800078EC` executes in the target 512 phase and
+  its GPR tuple plus post-value row identifies a nonzero store to one of the
+  two qualified port slots. This selects a shared target-phase writer edge.
+- H-RetailWriterPreTarget: the whole-RDRAM and title/hangar controls pass, but
+  `0x800078EC` has no target-phase execution or post-value sample; all exact
+  slot writes are pre-target. This selects a pre-target staging writer, not a
+  target payload producer.
+- H-RetailMetadataContract: target-phase execution occurs, but its
+  `$v0/$s1/$a0/$a2` and slot rows identify pointer/length or metadata activity
+  without a nonzero payload/order match to either port tuple. This retains the
+  retail/port contract gap without authorizing a mitigation.
+- H-CoverageInvalid: the whole-RDRAM threshold, retail title/hangar, or the
+  target-phase control is absent; no writer null is interpretable.
 
-The discriminator is one table keyed by `(slot, phase, origin, retail writer
-PC, destination, length, post-value/polarity, port DMA FNV/nonzero,
-source-before-consumer, completion ordering)`. A matching exact slot selects
-H-RetailPayloadWriterMatch; active controls plus metadata-only rows select
-H-RetailMetadataOnly; active controls with no slot overlap select
-H-RingRotationUnresolved; missing controls select H-CoverageInvalid.
+The discriminator is one table keyed by `(target-phase exec PC, VI origin,
+$v0/$s1/$a0/$a2, slot, writer PC, post-value sample, destination, length,
+payload polarity/FNV, ordering)`. A target-phase nonzero exact-slot join
+selects H-RetailWriterTargetPhase; controls plus no target writer select
+H-RetailWriterPreTarget; target writer/metadata rows without a payload join
+select H-RetailMetadataContract; missing controls select H-CoverageInvalid.
 
 ## Exact commands
 
-1. Build once:
-
-   `cmake --build build --config Debug --target RogueSquadron64Recomp`
-
-2. Create the self-contained driver
-   `scratch/agent/run_s2292_m5_all_ring_writer_join.sh`. It must launch the
-   retail oracle first, use watch index 0 for `0x0:0x800000`, index 1 for
+1. Create the self-contained driver
+   `scratch/agent/run_s2293_m5_retail_writer_phase_join.sh`. It must run from
+   the repo root, launch the retail oracle with Rice video and the eleven
+   `start` presses, use watch index 0 for `0x0:0x800000`, index 1 for
    `0x166000:0x16A000`, index 2 for `0x141AD0:0x141AF0`, and indexes 3–18 for
-   `0x300` windows beginning at `0x166450` and increasing by `0x300` through
-   `0x169150`. It must retain the oracle shutdown summaries, gate the port on
-   explicit keycode-36 Start delivery plus title/hangar VI rows, and SIGKILL
-   every remaining process in cleanup.
+   the same 16 `0x300` windows beginning at `0x166450` through `0x169150`.
+   Arm `--watch-pc 0x800078EC`,
+   `--pc-phase-log-width 0x006AB400:512`,
+   `--post-value-pc 0x800078EC`, `--pc-hist-watch 3` through `18`, and
+   `--post-value-watch 3` through `18`. Gate interpretation on the positive
+   control threshold `10000` plus retail title/hangar; retain the natural
+   oracle shutdown summary.
+2. Check and run exactly that driver:
 
-3. Check and run exactly that driver:
+   `zsh -n scratch/agent/run_s2293_m5_retail_writer_phase_join.sh`
 
-   `zsh -n scratch/agent/run_s2292_m5_all_ring_writer_join.sh`
+   `zsh scratch/agent/run_s2293_m5_retail_writer_phase_join.sh`
 
-   `zsh scratch/agent/run_s2292_m5_all_ring_writer_join.sh`
-
-If either side misses a positive control, record H-CoverageInvalid and do not
-interpret any ring-slot null. No runtime behavior change is authorized.
+If any independent control is absent, record H-CoverageInvalid and do not
+interpret target-phase writer or post-value nulls.

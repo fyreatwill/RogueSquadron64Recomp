@@ -5,8 +5,8 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2291 (2026-08-24); behavioral and source evidence is
-current through s2291. The corrected same-build M5 Step 2 driver explicitly
+Maintained in Session 2292 (2026-08-24); behavioral and source evidence is
+current through s2292. The corrected same-build M5 Step 2 driver explicitly
 sent the eleven process-start Start events to each port window. Retail passed
 the whole-RDRAM threshold at `10,000` callbacks and reached title
 `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The port stub and default
@@ -23,6 +23,19 @@ writer class was CPU metadata construction while the port row was Factor 5
 image DMA with its own payload and source/consumer ordering. This selects
 H-RetailDifferentWriter at the measured contract scope, not an address-class
 null or a mitigation target.
+
+s2292's fixed all-ring-slot capture passed the independent retail
+whole-RDRAM/title/hangar controls and the port's title/hangar plus explicit
+keycode-36 Start control. All 16 `0x300` slots from `0x166450` through
+`0x169150` recorded `768` retail writes, every slot's writer histogram was
+guest PC `0x800078EC`, and every final slot snapshot was nonzero. The
+qualified port produced two unique nonzero phase-10 rows at
+`0x168850/FNV 0x2B9E9631/nz=621` and
+`0x168B50/FNV 0x6ADD4218/nz=639`. Retail supplied no exact payload-FNV or
+writer-order join to either row; its final slot snapshots differed and its
+post-value sample counts were zero. This resolves ring rotation at the
+address-class scope and selects H-RetailDifferentWriter/ContractGap, not
+H-RingRotationUnresolved, H-CoverageInvalid, or a mitigation target.
 
 The s2287 oracle used the corrected eleven-Start route and `--vi-trace`; its
 positive control was reached before the whole-RDRAM watch was removed, and
@@ -94,6 +107,20 @@ equivalent path at another guest address.
   This selects H-RetailDifferentWriter at the sampled tuple scope and rules
   out H-RetailDifferentAddressClass and H-CoverageInvalid. No runtime change,
   writeback, consumer, guard, or address remap is authorized.
+- s2292's fixed all-ring table passed retail whole-RDRAM at `10,000`, retail
+  title/hangar, and port title/hangar with four explicit keycode-36 deliveries
+  before the known post-target port crash. The retail candidate span had
+  `880,070` writes; each of the 16 exact `0x300` slots had `768` writes,
+  all attributed to PC `0x800078EC`, with nonzero final snapshots. The port
+  had two unique nonzero phase-10 rows: `(0x168850,0x300,0x2B9E9631,621)` and
+  `(0x168B50,0x300,0x6ADD4218,639)`. No exact retail payload or ordering join
+  was observed, so this closes the ring-rotation alternative but leaves the
+  retail/port payload contract gap open. The first attempt was discarded
+  because its new gate incorrectly required all eleven scheduled Start
+  deliveries even though the port had already reached both target phases;
+  the fixed rerun required one recorded keycode-36 delivery and retained all
+  controls. No runtime, writer, consumer, slot, gate, guard, or address-remap
+  behavior changed.
 - `docs/M5-AUDIO-PLAN.md` inventories the active audio stubs/traps/gates and
   defines the phase-keyed task→DMA→service→slot→voice→PCM discriminator and
   rollback conditions. The plan refresh in s2231 defined the incremental
@@ -482,17 +509,16 @@ equivalent path at another guest address.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 Step 3 exact retail payload-writer attribution.** The s2291 oracle
-   joined one retail pointer/length metadata tuple to the port destination,
-   but did not observe a retail payload store for the exact nonzero DMA row.
-   Run one all-ring-slot table: keep the whole-RDRAM, task/output, title,
-   hangar, and explicit-Start controls, and arm bounded writer-PC/post-value
-   buckets for every `0x300` candidate slot from `0x166450` through
-   `0x169150` within `0x166000:0x16A000`. Select H-RetailPayloadWriterMatch
-   only if one exact slot supplies retail writer PC, `0x300` span, nonzero
-   payload, and ordering evidence matching a port nonzero row; otherwise
-   select H-RetailMetadataOnly/ContractGap. Do not implement writeback,
-   consumer, slot, gate, guard, or address-remap behavior.
+1. **M5 Step 3 retail writer contract follow-up.** s2292 established that
+   retail PC `0x800078EC` writes every candidate ring slot, but the final
+   retail slot snapshots do not match either qualified port payload and the
+   target-gated post-value samples were zero. Run one new oracle-only
+   discriminator with a phase-gated execution watch at `0x800078EC` in the
+   `512 @ 0x006AB400` window, while retaining the whole-RDRAM, task/output,
+   title, hangar, and exact 16-slot write controls. Compare the writer's
+   target-phase `$v0/$s1/$a0/$a2`, exact slot writes, post-value PC samples,
+   and ordering against the two qualified port rows. Do not implement
+   writeback, consumer, slot, gate, guard, or address-remap behavior.
 2. **M5 key-on tuple contract.** Requalify the C88 route with a
    phase-gated control-first stagger: launch C88=1 only after a C88=0 control
    reaches `512 @ 0x006AB400`, then compare retail fields only if both arms
@@ -565,9 +591,10 @@ gate, or guard change.
 s2291 adds a retail/port writer-class boundary: retail metadata writes can
 publish the same output pointer and `0x300` length as a port nonzero image
 row, while the port payload is produced by Factor 5 image DMA and joined to a
-PCM source/consumer path. The exact retail payload writer for every ring slot
-remains open; this is a contract discriminator, not permission to add a
-writeback or guard.
+PCM source/consumer path. s2292 additionally identifies retail PC
+`0x800078EC` as the writer for all 16 candidate slots, but finds no exact
+target-phase payload/order join. The retail writer contract remains open; this
+is a contract discriminator, not permission to add a writeback or guard.
 
 Do not flip the image default again, force C88, skip or allow
 `matchKeywordWithPriority`, add a wait/slot guard, or land a copyToRAM/CIMG

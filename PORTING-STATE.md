@@ -107837,3 +107837,59 @@ Run the s2292 all-ring-slot retail payload attribution unit in
 and explicit-Start controls; classify exact slot writer-PC/post-value rows
 against the port's nonzero phase-10 DMA rows before considering any contract
 change.
+
+## Session 2292 (2026-08-24) — M5 all-ring table closed rotation, retained writer gap
+
+HYPOTHESIS-ID: m5-step3-retail-port-writer-join.
+
+The planned work unit was one ground-truth retail plus unchanged default-port
+comparison covering all 16 observed `0x300` ring slots. The unchanged target
+built successfully with
+`cmake --build build --config Debug --target RogueSquadron64Recomp`, and the
+new driver passed `zsh -n`. A ground-truth preflight accepted the candidate
+watch layout and reached the required retail phases, with the whole-RDRAM
+positive control firing; it was used only to verify the physical slot table.
+
+The first comparison attempt was discarded as measurement-invalid: the port
+reached title `1024 @ 0x00790400` at 13.8s and hangar
+`512 @ 0x006AB400` at 26.0s, but the new gate incorrectly required all eleven
+scheduled keycode-36 deliveries before accepting a target. The port then hit
+the known post-target crash at 43.3s after eight deliveries. The fixed driver
+required one recorded keycode-36 delivery plus both target VI rows and was
+rerun in this iteration; no runtime or probe code changed.
+
+The fixed retail oracle passed the whole-RDRAM threshold at `10,000`, title,
+and hangar, then ran to its natural 120-second completion: `890,178` total
+watch hits and `880,070` writes in `0x166000:0x16A000`. The independent
+task/output span `0x141AD0:0x141AF0` recorded `108` writes. Every exact ring
+slot from `0x166450` through `0x169150` recorded `768` writes. Each slot's
+writer histogram was exclusively guest PC `0x800078EC` with `768` hits, and
+each final `0x300` snapshot was nonzero. These are positive retail writer and
+payload controls, not nulls.
+
+The port arm received four explicit keycode-36 deliveries before the driver
+accepted its title/hangar controls, reached both target phases, and later
+ended with the known post-target crash (`port_rc=137`). Its unique nonzero
+phase-10 image rows were `(dest=0x168850, len=0x300,
+FNV=0x2B9E9631, nz=621)` and `(dest=0x168B50, len=0x300,
+FNV=0x6ADD4218, nz=639)`. The retail final snapshots had different FNVs;
+the target-gated post-value sample counts were zero, so no exact retail
+payload-FNV or writer-order join was observed. This closes
+H-RingRotationUnresolved at the address-class scope and selects
+H-RetailDifferentWriter/ContractGap, consistent with s2291's independent
+metadata-versus-Factor-5 writer-class boundary. It rules out
+H-CoverageInvalid and does not identify a mitigation, writer replacement,
+writeback, consumer, slot, gate, guard, or address-remap action.
+
+ORIGIN: no mitigation-shaped change; this iteration added only the ignored
+diagnostic driver `scratch/agent/run_s2292_m5_all_ring_writer_join.sh` and
+captures. The initial over-strict gate was corrected before the result was
+used. No runtime, generated function, submodule, writer, or guard behavior
+changed.
+
+### Next
+
+Run the oracle-only `0x800078EC` target-phase writer-contract discriminator in
+`scratch/agent/NEXT.md`. Keep all independent controls and the 16 exact slot
+watches; compare target-phase writer arguments and post-value rows against
+the two qualified port payload tuples before considering any contract change.
