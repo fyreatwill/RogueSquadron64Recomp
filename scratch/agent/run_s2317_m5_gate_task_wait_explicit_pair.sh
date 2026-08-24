@@ -68,8 +68,15 @@ env "$ORACLE" \
     --watch-write 0xA0F50:0xA0F54 \
     --watch-write 0x141AD0:0x141AF0 \
     --watch-write 0x1498A:0x1498B \
-    --first-watch 1 --first-watch 2 --first-watch 3 \
-    --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3 \
+    --watch-write 0x154620:0x154621 \
+    --watch-write 0x155848:0x155849 \
+    --watch-write 0x156A70:0x156A71 \
+    --watch-write 0x157C98:0x157C99 \
+    --watch-write 0x158EC0:0x158EC1 \
+    --first-watch 1 --first-watch 2 --first-watch 3 --first-watch 4 \
+    --first-watch 5 --first-watch 6 --first-watch 7 --first-watch 8 \
+    --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3 --pc-hist-watch 4 \
+    --pc-hist-watch 5 --pc-hist-watch 6 --pc-hist-watch 7 --pc-hist-watch 8 \
     --pc-hist-phase 0x00790400:1024 \
     --pc-hist-phase 0x006AB400:512 \
     --pc-hist-phase 0x006AB800:512 \
@@ -86,6 +93,8 @@ env "$ORACLE" \
     --pc-hist-phase 0x0062BD00:640 \
     --pc-hist-phase 0x00790800:1024 \
     --post-value-watch 1 --post-value-watch 2 --post-value-watch 3 \
+    --post-value-watch 4 --post-value-watch 5 --post-value-watch 6 \
+    --post-value-watch 7 --post-value-watch 8 \
     --vi-trace \
     --press "$PRESS" \
     > "$OUT/oracle.log" 2>&1 &

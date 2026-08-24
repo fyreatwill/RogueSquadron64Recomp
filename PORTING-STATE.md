@@ -109267,3 +109267,61 @@ phase/caller diagnostic and recorded the paired ground-truth/port result.
 Extend the oracle with physical watches for the five active bytes rooted at
 `0x80154620` with stride `0x1228`, then repeat the explicit staged pair as
 specified in scratch/agent/NEXT.md.
+
+## Session 2320 (2026-08-24) — active-byte ground truth is zero-only after arming
+
+HYPOTHESIS-ID: m5-status-writer-ground-truth
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at `41,184` bytes, so this was not a
+maintenance iteration. The planned work unit was the independent retail
+active-byte writer census. Ground truth was read first from the oracle
+contract. I extended `scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh`
+with physical watches for `0x154620`, `0x155848`, `0x156A70`, `0x157C98`, and
+`0x158EC0`, and extended the writer/post-value watch lists through index 8.
+`zsh -n` passed; no build or runtime behavior change was made.
+
+The same-run retail oracle exited naturally after 120.1 seconds with
+`10329` whole-RDRAM writes, title `632`, hangar `967`, gate `17`, task/output
+`108`, wait `0`, and all fifteen phase buckets positive: `632/967/1611/1483/839`
+for the five 1024/512 origins, `18/210/139/219` for the four 640 origins,
+`2/46` for the two 320 origins, and `121/92/101/633` for the remaining
+640/1024 origins. The five active-byte lifetime write counts were
+`25/0/87/6/86` for slots 0 through 4. Target-phase writer histograms named
+`0x8009BBF0`, `0x8009B170`, `0x8009B174`, `0x8009B178`, and `0x8009B214` for
+slot 0, `0x800292E4` for slot 2, and `0x80022B1C` for slot 4. Slot 3 had two
+post-value samples attributed to `0x80017DB0` but no phase-histogram row; slot
+1 had no target evidence.
+
+The post-value samples taken after title/hangar arming were 24/0/49/2/3 for
+slots 0 through 4. Every sampled aligned word had status top byte `0x00`
+(the lower fields varied); no `0x01` or `0x02` status sample appeared. This
+is a phase/value limitation of the current generic post-value table, not a
+claim that every pre-arm store was zero. It rules out the prior literal
+`H-Retail-Status-Elsewhere` no-write hypothesis, but it does not yet select
+whether the named target-phase stores are zero-only housekeeping or whether a
+nonzero transition is being lost at the phase/value join.
+
+Both port arms passed the route controls and reached title/hangar. The stub
+had gate `1024`, B40 route `14`, route-state `28`, PCM source/consumer `90/90`,
+zero slot-allocation/slot-byte/descriptor rows, and one key-on row with
+`idx=0xFFFFFFFF`, `armed=0`. The image had gate `1024`, B40 route `13`,
+route-state `25`, image-stage `4642`, DMA-range `2308`, PCM `88/88`, the same
+zero slot/descriptor rows, and the same sentinel key-on. The stub ended in its
+existing post-hangar crash; the image was SIGKILLed by the launcher after
+retention. Both terminal outcomes followed valid target phases.
+
+The independent oracle table and independent port table are the two evidence
+lines. Together they select `H-Retail-Zero-Only-After-Arming` at capture
+scope, leave the phase-keyed writer/value join open, and rule out
+`H-CoverageInvalid`. No gate, wait, status, slot, consumer, address, default,
+or mitigation change was authorized.
+
+ORIGIN: no mitigation-shaped change; this iteration only added the five
+ground-truth watches and recorded their bounded writer/value result.
+
+### Next
+
+Request phase-keyed post-store rows for every named active-byte writer from
+this run, then use the same explicit pair to distinguish target-phase
+`0x01/0x02` status transitions from zero-only stores and earlier nonzero
+stores.

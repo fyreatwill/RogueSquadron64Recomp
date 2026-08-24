@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2319 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2320 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -37,6 +37,14 @@ oracle again passed all fifteen buckets and found no wait-field writer. Task,
 DMA, image-stage, and PCM controls stayed positive, but no valid port
 `01/02/00` slot transition or descriptor row appeared; the only key-on row
 had `idx=0xFFFFFFFF` and `armed=0`.
+Session 2320 added physical watches for the five active-byte candidates. The
+same-run oracle passed whole-RDRAM (`10329`), title/hangar, gate/task (`17`/
+`108`), wait (`0`), and all fifteen phase buckets. Retail wrote four of the
+five watched locations after arming, including named target-phase writers,
+but every sampled status top byte was `00`; no `01/02` transition was
+observed. Both port arms again reached hangar with no slot/descriptor row and
+the sentinel key-on. This selects a zero-only retail status result at the
+capture scope, while the phase-keyed writer/value join remains open.
 
 The current M5 boundary is task/output and slot-contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
@@ -208,6 +216,21 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   capture scope and leaves independent retail active-byte writer attribution
   as the next boundary. No runtime, gate, wait, status, slot, consumer, or
   default change was authorized.
+- **s2320 — active-byte ground truth is zero-only after phase arming.** The
+  same-run oracle passed whole-RDRAM `10329`, gate/task/wait `17/108/0`, title,
+  hangar, and all fifteen phase buckets. The five watches recorded lifetime
+  writes `25/0/87/6/86` for slots `0..4`; target-phase writer rows named
+  `0x8009BBF0` and its `0x8009B170/174/178/214` family for slot 0,
+  `0x800292E4` for slot 2, and `0x80022B1C` for slot 4. Slot 3 had two
+  post-value samples from `0x80017DB0` but no phase-histogram row; slot 1 had
+  none. Across all post-value samples after title/hangar, the aligned words'
+  status top byte was `00` (lower fields varied), with no `01/02` sample.
+  Both port arms reached title/hangar with task/PCM controls; neither emitted
+  slot allocation, slot-byte, or descriptor rows, and each key-on row stayed
+  at `idx=0xFFFFFFFF`, `armed=0`. This selects
+  `H-Retail-Zero-Only-After-Arming` at capture scope, rules out the prior
+  retail-active-byte null, and leaves the phase-keyed value join and port
+  address/contract boundary open. No runtime or audio behavior changed.
 - The retail oracle is an independent witness. Its whole-RDRAM, title, hangar,
   width-aware target, and exact-PC controls must pass before a null is read.
   The oracle currently reaches attract/title/hangar, not a mission.
@@ -217,6 +240,23 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2320 — retail active-byte writes are zero-only in the armed capture.**
+  The oracle exited naturally after `10329` whole-RDRAM writes and passed
+  title `632`, hangar `967`, gate `17`, task/output `108`, wait `0`, and all
+  fifteen phase buckets. The five active-byte watches recorded `25/0/87/6/86`
+  lifetime writes. In the `0x006AB400:512` target bucket, named writer rows
+  appeared for slots 0, 2, and 4; slot 3 supplied two post-value samples
+  through `0x80017DB0` without a phase-histogram row, and slot 1 was empty.
+  Every post-value sample after the title/hangar arm had status top byte
+  `00`, despite varied lower word fields; no `01/02` status transition was
+  observed. The port stub/image arms reached title/hangar with gate `1024`,
+  PCM `90/90` and `88/88`, and `4643` image-stage rows in the image arm;
+  neither had slot allocation, slot-byte, or descriptor rows, and both had
+  the sentinel key-on. This rules out `H-Retail-Status-Elsewhere` as a
+  literal no-write result, does not establish a valid retail `01/02/00`
+  transition at this phase/value join, and authorizes no slot or contract
+  change.
 
 - **s2318 — earlier-origin gate/task writers are present.** The valid PTY
   rerun passed the independent oracle controls: whole-RDRAM `10125`, title
@@ -485,18 +525,23 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 independent slot active-byte writer census after task-only progress.**
-   Extend the oracle in the existing explicit keycode-36 pair with physical
-   watches for the five active bytes rooted at `0x80154620` with stride
-   `0x1228`: `0x154620`, `0x155848`, `0x156A70`, `0x157C98`, and `0x158EC0`.
-   Keep all fifteen phase buckets, the whole-RDRAM/gate/task/wait controls,
-   and the existing port slot/key-on/descriptor table. A retail writer/value
-   row showing `01/02/00` in a target bucket while the port remains sentinel
-   selects `H-Port-Contract-Or-Address`; no retail active-byte write with
-   positive lifetime and target controls selects `H-Retail-Status-Elsewhere`;
-   matching port and retail transitions select `H-Slot-Transition`; missing
-   controls or either hangar phase selects `H-CoverageInvalid`. No runtime or
-   slot behavior change.
+1. **M5 phase-keyed active-byte writer/value join.** Keep the five physical
+   watches and the existing explicit keycode-36 staged pair, but request
+   post-store rows for every named active-byte writer seen in s2320:
+   `0x8009BBF0`, `0x8009B170`, `0x8009B174`, `0x8009B178`, `0x8009B214`,
+   `0x8009B6F8`, `0x8009B7CC`, `0x8009B7EC`, `0x800292E4`, `0x800298E0`,
+   `0x80017DB0`, `0x80015BC8`, and `0x80022B1C`, plus the prior known
+   `0x8009B2C4` control. Keep all fifteen phase buckets and the whole-
+   RDRAM/gate/task/wait controls. Decode the top byte of each aligned
+   post-store word, not lower-field nonzero values, and join it to the port
+   slot/key-on/descriptor/task/PCM table.
+   `H-Retail-Nonzero-Target` is selected by a target-bucket row with top byte
+   `01` or `02`; `H-Retail-Zero-Target` by named target writers with only
+   top-byte `00` and no `01/02` row; `H-Retail-Earlier-Nonzero` by `01/02`
+   rows only outside `0x006AB400:512`; `H-Port-Contract-Or-Address` requires
+   a retail `01/02/00` sequence while the port remains sentinel; missing
+   controls selects `H-CoverageInvalid`. No runtime, slot, wait, gate,
+   consumer, address, or default change.
 2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
    route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
    crash had `route_state=2`, `b40=1`, `key_on=0`; C88=1 was withheld.
@@ -538,9 +583,12 @@ both port arms crashed before hangar and its port contract logging was not
 enabled. The s2317/s2318 repaired pair restored both port hangar phases. s2318
 found earlier-origin retail gate/task writers, including the shared
 `0x8008EC88` writer class, but no wait-field writer. s2319 found task/DMEM/
-DMA/PCM progress without a valid port slot transition; the next boundary is
-independent retail active-byte writer attribution. No gate, wait, status,
-slot, or default change is authorized.
+DMA/PCM progress without a valid port slot transition; s2320 found lifetime
+and target-phase writes to four of five candidate active bytes, but all
+sampled status top bytes were zero and the port remained at its sentinel
+key-on with no slot/descriptor rows. The next boundary is a phase-keyed
+writer/value join; no gate, wait, status, slot, or default change is
+authorized.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
 phase-gated captures show a rotating mixed output contract: s2306 had one
