@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2213
-(2026-08-23); behavioral and source evidence is current through s2213.
+authoritative for exact commands and probe rows. Maintained in Session 2214
+(2026-08-23); behavioral and source evidence is current through s2214.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -342,6 +342,19 @@ second ledger.
   Because the arm synthetically toggles the host register, natural
   retail-to-port publication timing remains open; no default, mitigation,
   task rewrite, or audio-dispatch change was made.
+- s2214's independent Rice retail preflight passed the whole-RDRAM control
+  (10,000 writes), execution control (554 rows), and joined 456 context rows
+  with zero pending/dropped/overflowed rows; retail again alternated the two
+  target origins with field 0/1. The same-built port timing table passed its
+  prefix control in all three arms (`8`), collected 512 width-640 rows with
+  `overflow=0`, and emitted no crash/abort markers. Control selected field 0
+  in all rows and committed `0x00696100` 136 times / `0x00696600` zero times.
+  Both the post-commit current-register arm and the before-screen arm selected
+  field 0/1 in 256/256 rows and committed both target origins (68/68 and
+  67/68). This selects H-TogglePlacementIrrelevant at the qualified target
+  scope and refutes commit-vs-screen toggle placement as the missing-origin
+  discriminator. Natural host-register publication remains open; neither
+  diagnostic arm is default-on.
 
 ## Active backlog
 
@@ -404,9 +417,10 @@ work items.
    publishes a changing value to `VI_V_CURRENT_LINE_REG`. s2213's retail and
    port tables show that the retail current-field bit tracks both target
    origins and that an opt-in host-current-register selector recovers the
-   same two-origin split as the existing alternation arm. The next unit tests
-   whether the recovery depends on toggling that register after the VI commit
-   or at the screen-publication edge. Keep all knobs diagnostic-only.
+   same two-origin split as the existing alternation arm. s2214's before-screen
+   timing arm recovers the same target split as the post-commit arm, so timing
+   placement is closed at that scope. The missing natural host-register
+   publisher remains open; keep all knobs diagnostic-only.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -499,8 +513,10 @@ permission to enable the knob by default. s2212 shows the guest mode
 host assignment that publishes a changing current-line value. s2213's
 independent retail context rows show the hardware current-field bit is the
  field selector for both target origins, while the opt-in port arm recovers
- that relation by toggling the host register. Publication timing remains an
- open boundary; the recovery arm is not default-on.
+ that relation by toggling the host register. s2214's before-screen timing arm
+ recovers the same target split as the post-commit arm, so placement is closed
+ at that scope; the missing natural host-register publisher remains open. Both
+ recovery arms are not default-on.
 
 ### M3, M4, and generated symbols
 

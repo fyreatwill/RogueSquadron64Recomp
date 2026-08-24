@@ -104441,6 +104441,49 @@ only added and ran a bounded diagnostic harness.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.
 
+## Session 2214 (2026-08-23) — tested VI current-register publication timing
+
+Ran the independent Rice retail preflight before changing the port. The
+whole-RDRAM positive-control watch reached 10,000 writes; the execution watch
+reached 554 rows; and the context join completed 456 rows with zero pending,
+dropped, or overflowed rows. Retail alternated the two target origins and
+continued to associate field 0 with `0x00696100` and field 1 with
+`0x00696600`.
+
+Added the opt-in `ROGUESQ_VI_CURRENT_REG_TOGGLE_BEFORE_SCREEN` arm in
+`lib/N64ModernRuntime/ultramodern/src/events.cpp`. The control was unchanged;
+the existing `ROGUESQ_VI_FIELD_FROM_CURRENT_REG=1` arm still toggles the host
+register after commit; the new `current-reg-screen` arm toggles it once before
+screen enqueue and does not also toggle it after commit. Exported the
+submodule patch and built the full target successfully.
+
+Ran control, post-commit, and before-screen arms concurrently from the same
+build for the 60-second watchdog window. All three positive prefixes fired 8
+times, all collected 512 width-640 rows with `overflow=0`, and none emitted a
+`[CRASH]` or `[ABORT]` marker. Control selected field 0 in all rows and
+committed `0x00696100` 136 times / `0x00696600` zero times. The post-commit arm
+selected field 0/1 in 256/256 rows and committed the target origins 68/68
+times. The before-screen arm selected field 0/1 in 256/256 rows and committed
+the target origins 67/68 times. Both dynamic arms therefore recover the same
+target relation; their small early-origin distribution difference did not
+change the target table, and neither timing arm reached a later title or
+hangar phase before the watchdog.
+
+This selects H-TogglePlacementIrrelevant at the qualified target scope and
+refutes H-CommitToggle and H-ScreenToggle as explanations for the missing
+second target commit. The independent retail preflight supplies the separate
+ground-truth line for the alternating target relation; the port A/B supplies
+the timing comparison. Natural host-register publication remains open. No
+default flip, mitigation, task rewrite, or audio-dispatch change was made.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+added and ran an opt-in VI timing diagnostic only.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-natural-current-reg-publication`.
+
 ## Session 2213 (2026-08-23) — tested host VI current-register selector
 
 Ran the independent Rice retail preflight before changing the port. The
