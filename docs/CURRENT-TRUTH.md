@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2310 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2311 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -13,7 +13,8 @@ temporal join; s2306 extended it to a 45-second recurrence capture with a
 per-destination payload-mismatch summary; s2307 extended that capture across
 all retained target phases; s2308 added phase-scoped writer provenance and
 discovered that the nonzero ring slots rotate between captures; s2309 added
-retail whole-ring writer/value ground truth.
+retail whole-ring writer/value ground truth; s2311 added a title-phase writer
+census alongside both active 512 target buckets.
 
 The current M5 boundary is task/output contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
@@ -29,12 +30,14 @@ and consumer events, then a same-destination image-DMA rewrite to
 watch wrote all `0x3000` bytes and its final snapshot had `12026` nonzero
 bytes, forcing at least `506` nonzero bytes in the observed `0x168850` slot.
 That aggregate/final-snapshot result still selects `H-PortOnlyZeroFill` at
-its capture scope, but s2310's corrected per-slot capture found no retail
-writer in either active 512 target origin. The target-phase result is
-`H-SlotRoleTimeSkew`: retail lifetime writers and nonzero final slot data do
-not temporally join the port's stage→PCM→zero sequence. The stage-only row
-and game-level legitimacy remain open. No runtime behavior change is
-authorized.
+its capture scope. The s2311 same-run title plus dual-512 census found all
+three phase buckets empty for the sixteen retail slot writers, while the
+lifetime writer control remained positive and all final slot snapshots were
+nonzero. The VI trace exposes recurring post-title candidates
+`0x00656400` and `0x00656800` (both width 512); target-phase polarity remains
+`H-SlotRoleTimeSkew` and the finer result is `H-RetailOtherPhase`. The
+stage-only row and game-level legitimacy remain open. No runtime behavior
+change is authorized.
 
 ## Current state
 
@@ -65,6 +68,13 @@ authorized.
   `H-SlotRoleTimeSkew` is selected for target-phase polarity. No writeback,
   consumer, writer, slot, gate, guard, address remap, or default change is
   authorized.
+- The s2311 retail writer census added title `0x00790400:1024` to the two
+  active 512 buckets. All sixteen lifetime slot writers remained positive at
+  `0x800078EC` with `768` writes each, but title and both 512 buckets had no
+  writer-PC rows; all sixteen final snapshots were nonzero. The VI trace's
+  recurring post-title candidates are `0x00656400:512` and
+  `0x00656800:512`. This selects `H-RetailOtherPhase` at capture scope and
+  authorizes no runtime or contract change.
 - The retail oracle is an independent witness. Its whole-RDRAM, title, hangar,
   width-aware target, and exact-PC controls must pass before a null is read.
   The oracle currently reaches attract/title/hangar, not a mission.
@@ -74,6 +84,22 @@ authorized.
   `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2311 — retail writer other-phase result.** The same-run capture passed
+  whole-RDRAM `10000`, title/hangar VI coverage, ring writes `12288`, all
+  sixteen lifetime writer controls (`768` each), title/target phase callback
+  controls (`632`/`2735`/`1536`), port title/hangar, and 45-second retention.
+  The `0x00790400:1024`, `0x006AB400:512`, and `0x006AB800:512` writer-PC
+  buckets were all empty; all sixteen final slot snapshots were nonzero.
+  The VI trace showed recurring post-title 512 origins `0x00656400` and
+  `0x00656800` (25 and 44 callbacks in the retained trace), so this selects
+  `H-RetailOtherPhase` and leaves the two-origin split for the next census.
+  The current port pair was `0x169150`/`0x166450`, both `len=0x300`, with
+  stage FNV/nz `2B9E9631/621` and `6ADD4218/639`. Each had an exact source
+  and consumer match at events `9704/9705` and `9706/9707`, followed by
+  zero-payload source/consumer rows at `9776/9777` and `9778/9779` and
+  later zero image-stage rows at `9781` and `9788`. No contract, writer,
+  slot, consumer, or mitigation change was authorized.
 
 - **s2310 — per-slot retail polarity and dual-512 phase control.** The
   initial capture passed whole-RDRAM, title/hangar, ring-wide, all sixteen
@@ -231,16 +257,17 @@ authorized.
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 Step 3e retail writer VI-origin census.** Ask ground truth first,
-   retain all sixteen slot watches plus both active 512 phase buckets, and
-   add one title bucket `0x00790400:1024` in the same oracle invocation.
+1. **M5 Step 3f retail writer other-VI-origin census.** Ask ground truth
+   first, retain the title bucket plus both active 512 target buckets, and
+   add `0x00656400:512` and `0x00656800:512` in the same oracle invocation.
    Require whole-RDRAM, title/hangar, all sixteen lifetime writer controls,
-   active phase buckets, and nonzero final snapshots. Join the title/512
-   writer counts to the actual current port stage pair. If title writes are
-   positive while both 512 buckets stay zero, select pre-target retail
-   publication; if all three phase buckets are zero, identify the missing
-   VI origin from the trace before changing the instrument. No writeback,
-   consumer, writer, slot, gate, guard, address-remap, or default change.
+   active phase buckets, and nonzero final snapshots. Join every bucket to
+   the actual current port stage pair. A positive `0x00656400` bucket selects
+   that origin; a positive `0x00656800` bucket selects that origin; both
+   positive selects a shared or alternating phase; all five empty keeps the
+   remaining VI-origin gap open for the trace's earlier origins. No
+   writeback, consumer, writer, slot, gate, guard, address-remap, or default
+   change.
 2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
    route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
    crash had `route_state=2`, `b40=1`, `key_on=0`; C88=1 was withheld.

@@ -50,6 +50,7 @@ ORACLE_ARGS+=(
     --watch-write 0x141AD0:0x141AF0 --hit-cap 200
     --watch-pc 0x800078EC --pc-phase-log-width 0x006AB400:512
     --pc-hist-phase 0x006AB400:512 --pc-hist-phase 0x006AB800:512
+    --pc-hist-phase 0x00790400:1024
     --post-value-pc 0x800078EC
     --vi-trace --press "$PRESS"
 )

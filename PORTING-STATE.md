@@ -108685,3 +108685,71 @@ and generated the joined slot tables.
 ### Next
 
 Run the retail writer VI-origin census from scratch/agent/NEXT.md.
+
+## Session 2311 (2026-08-24) — retail writer other-VI-origin census
+
+HYPOTHESIS-ID: m5-retail-writer-vi-origin.
+
+The planned work unit was a ground-truth-first same-run retail census adding
+the title phase bucket `0x00790400:1024` to the two active 512 buckets. The
+preflight found the prior whole-RDRAM, ring-wide, dual-512, lifetime-writer,
+and final-snapshot controls. I added only the title `--pc-hist-phase`
+argument, `zsh -n` passed, and ran the launcher once with the qualified port
+recipe. The harness reported `oracle_rc=0`, `port_rc=137` from the required
+kill, whole-RDRAM/title/hangar/ring/snapshot controls all passed, port title
+and hangar were observed, and the 45-second retention completed.
+
+The oracle reached the whole-RDRAM positive-control threshold at `10000`,
+completed `22396` whole-RDRAM writes and `12288` ring writes, and attributed
+all sixteen lifetime slot watches to retail PC `0x800078EC` with `768` writes
+each. The three phase callback controls were positive: title
+`0x00790400:1024` had `632` callbacks, `0x006AB400:512` had `2735`, and
+`0x006AB800:512` had `1536`. None of those phase buckets emitted a
+`writer-pc-phase ... pc=` row. All sixteen final snapshots were nonzero:
+
+| watch | physical range | lifetime writer | title | 0x006AB400 | 0x006AB800 | final nonzero / FNV |
+|---:|---|---|---:|---:|---:|---|
+| 2 | `0x166450..0x166750` | `0x800078EC/768` | 0 | 0 | 0 | `755 / F4E98DC1` |
+| 3 | `0x166750..0x166A50` | `0x800078EC/768` | 0 | 0 | 0 | `745 / 1340B13B` |
+| 4 | `0x166A50..0x166D50` | `0x800078EC/768` | 0 | 0 | 0 | `749 / 18246C9B` |
+| 5 | `0x166D50..0x167050` | `0x800078EC/768` | 0 | 0 | 0 | `751 / E31A511D` |
+| 6 | `0x167050..0x167350` | `0x800078EC/768` | 0 | 0 | 0 | `740 / 19CB57A7` |
+| 7 | `0x167350..0x167650` | `0x800078EC/768` | 0 | 0 | 0 | `748 / A7CE081A` |
+| 8 | `0x167650..0x167950` | `0x800078EC/768` | 0 | 0 | 0 | `751 / FE59D249` |
+| 9 | `0x167950..0x167C50` | `0x800078EC/768` | 0 | 0 | 0 | `756 / 38384DCA` |
+| 10 | `0x167C50..0x167F50` | `0x800078EC/768` | 0 | 0 | 0 | `754 / 70538DAF` |
+| 11 | `0x167F50..0x168250` | `0x800078EC/768` | 0 | 0 | 0 | `744 / 04325451` |
+| 12 | `0x168250..0x168550` | `0x800078EC/768` | 0 | 0 | 0 | `750 / 0AB0C940` |
+| 13 | `0x168550..0x168850` | `0x800078EC/768` | 0 | 0 | 0 | `736 / 5CD5E5A7` |
+| 14 | `0x168850..0x168B50` | `0x800078EC/768` | 0 | 0 | 0 | `747 / D8163B5D` |
+| 15 | `0x168B50..0x168E50` | `0x800078EC/768` | 0 | 0 | 0 | `760 / 21E846C8` |
+| 16 | `0x168E50..0x169150` | `0x800078EC/768` | 0 | 0 | 0 | `754 / 8A452390` |
+| 17 | `0x169150..0x169450` | `0x800078EC/768` | 0 | 0 | 0 | `753 / 793483DD` |
+
+The same run's VI trace showed recurring post-title width-512 origins
+`0x00656400` (`25` callbacks) and `0x00656800` (`44` callbacks), in addition
+to the two already armed target origins. These are the next candidate phase
+buckets; this run did not attribute the lifetime slot writes between them.
+
+The current port nonzero phase-10 pair was `0x169150` with
+`FNV=2B9E9631`, `nz=621`, and `0x166450` with `FNV=6ADD4218`, `nz=639`.
+The stage events were `9613` and `9615`, both completing at `9621`. The first
+had exact source/consumer events `9704/9705`; the second had `9706/9707`.
+Each later had zero-payload source/consumer rows (`9776/9777` and
+`9778/9779`) and later zero image-stage rows (`9781` and `9788`), with the
+port-side writer attribution at callsite `0x8008EE84`, writer PC `0`, and
+image-DMA writer kind. This independently joins the actual port pair while
+the retail phase result remains a writer-origin question.
+
+This selects `H-RetailOtherPhase` at the measured capture scope and rules out
+`H-RetailTitlePhase`, `H-RetailTargetPhaseReappears`, and coverage invalidity.
+It does not distinguish `0x00656400` from `0x00656800`, and it does not prove
+game-level publication intent. No runtime, consumer, writer, slot, address,
+or mitigation change was made.
+
+ORIGIN: no mitigation-shaped change; this iteration added one batched oracle
+phase bucket and recorded the complete slot × phase table.
+
+### Next
+
+Run the retail writer other-VI-origin census from scratch/agent/NEXT.md.
