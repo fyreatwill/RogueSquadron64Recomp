@@ -167,6 +167,9 @@ static int g_post_value_pending_watch = -1;
 static int g_post_value_armed;
 static uint32_t g_post_value_addr;
 static uint32_t g_post_value_pc_addr;
+static long g_post_value_pending_vi;
+static uint32_t g_post_value_pending_width;
+static uint32_t g_post_value_pending_origin;
 static long g_vis;
 static int g_verbose;
 static int g_watches_armed;
@@ -728,22 +731,20 @@ static void count_post_value(int watch, uint32_t pc, uint32_t value)
     }
 }
 
-static void record_post_value_requested_row(int target, uint32_t value)
+static void record_post_value_requested_row(int target, uint32_t value,
+                                            long vi, uint32_t width,
+                                            uint32_t origin)
 {
     struct post_value_requested_row *row;
-    uint32_t width;
-    uint32_t origin;
 
     if (target < 0 || target >= g_n_post_value_requested_pc ||
         g_n_post_value_requested_rows[target] >= MAX_POST_VALUE_ROWS_PER_PC)
         return;
-    width = pDebugMemRead32(VI_WIDTH_ADDR);
-    origin = pDebugMemRead32(VI_ORIGIN_ADDR);
     if (width != 512 || origin != 0x006AB400)
         return;
     row = &g_post_value_requested_rows[target]
         [g_n_post_value_requested_rows[target]++];
-    row->vi = g_vis;
+    row->vi = vi;
     row->width = width;
     row->origin = origin;
     row->addr = g_post_value_addr & ~3u;
@@ -936,7 +937,10 @@ static void dbg_update(unsigned int pc)
         if (g_post_value_pending_target >= 0) {
             int target = g_post_value_pending_target;
             g_post_value_pending_target = -1;
-            record_post_value_requested_row(target, value);
+            record_post_value_requested_row(target, value,
+                                             g_post_value_pending_vi,
+                                             g_post_value_pending_width,
+                                             g_post_value_pending_origin);
         }
         pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
         pDebugStep();
@@ -1013,6 +1017,9 @@ static void dbg_update(unsigned int pc)
                     g_post_value_pending_watch = i;
                     g_post_value_addr = accessed;
                     g_post_value_pc_addr = pc;
+                    g_post_value_pending_vi = g_vis;
+                    g_post_value_pending_width = pDebugMemRead32(VI_WIDTH_ADDR);
+                    g_post_value_pending_origin = pDebugMemRead32(VI_ORIGIN_ADDR);
                 }
             }
         }

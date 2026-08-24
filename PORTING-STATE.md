@@ -108104,3 +108104,43 @@ Latch `(g_vis, VI width, VI origin)` at the memory-breakpoint callback before
 the post-store debugger step, carry it into the existing requested-PC row, and
 run one capture with the same independent controls. Interpret the joined rows
 only if the target writer histogram and row table are populated.
+
+## Session 2298 (2026-08-24) — pre-step phase latch still hit sentinel cap
+
+HYPOTHESIS-ID: m5-step3-retail-task-output-writer.
+
+The planned work unit was one oracle-only retail capture using the s2297
+whole-RDRAM, title/hangar, width-aware target, watched-PC, independent
+task/output, and all 16 exact ring-slot controls. Ground truth was checked
+before the instrument rebuild. The bounded oracle change latched `(g_vis, VI
+width, VI origin)` at the memory-breakpoint callback before the delayed
+post-store step, passed those fields to `record_post_value_requested_row()`,
+and filtered on the latched phase. The oracle rebuilt successfully, the new
+driver passed `zsh -n`, and no port or runtime code changed.
+
+The capture returned `oracle_rc=0` after the natural 120-second run. It passed
+the whole-RDRAM positive control at `10,000`, title
+`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and the width-aware target
+bucket with `1,515` VI rows. The independent task/output span recorded `76`
+lifetime post-value samples. Its target-phase writer histogram contained only
+`0x80094648` (`n=24`); EB8C and EBBC had no target-phase writer hits. The
+pre-step row table retained `16/16` rows for `0x80094648`, all at target VI
+`2278` and all with value `0x7F7F7F7F`; EB8C and EBBC retained `0/16` rows.
+The exact ring-slot watches continued to provide their positive `768`-write
+controls.
+
+This selects H-TargetRowsInsufficient at the capture scope: the pre-step latch
+restored target-phase attribution, but the bounded requested-row table was
+still consumed by sentinel rows. It rules out neither shared construction nor
+distinct housekeeping. No writer, writeback, consumer, slot, gate, guard, or
+address-remap behavior changed.
+
+ORIGIN: no mitigation-shaped change; the oracle-only phase latch changed
+measurement attribution and did not skip, allow, restore, or rewrite a game
+value.
+
+### Next
+
+Filter `0x7F7F7F7F` before the per-PC requested-row cap, then rerun the same
+retail controls to expose any non-sentinel target tuples without changing
+runtime behavior.
