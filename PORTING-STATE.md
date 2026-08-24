@@ -105361,6 +105361,69 @@ authorized.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
 
+## Session 2240 (2026-08-23) — annotated all rs_memset callsites
+
+Ran the retail oracle before changing the port instrument. The command watched
+whole RDRAM plus `rs_memset` at `0x800078E0` for 65 seconds with the driven
+Rice route. The whole-RDRAM positive control reached 10,000 callbacks; retail
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; the execution
+watch recorded 29,551 `rs_memset` executions. Its caller histogram included
+the target-relevant sites `0x800619C0`, `0x80061B08`, `0x80062CF8`,
+`0x80063984`, `0x800639C4`, and `0x800C825C`. Capture:
+`scratch/agent/oracle_s2240_rs_memset.log`.
+
+The incremental fixup added a thread-local static `jal` callsite setter before
+each generated direct `rs_memset(rdram, ctx)` call and added the field to the
+existing phase-gated host attestation. Its complete-set check enumerated and
+patched 88/88 calls across 25 generated files. The Debug target rebuilt
+successfully. The instrumentation preserved the existing `$ra`, derived
+callsite, and `guest_pc` fields; no game value or default was changed.
+
+The first qualified port attempt used:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_FIELD348_WRITER=1 ROGUESQ_LOG_M5_FIELD348_MEMSET=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2240_field348_callsites 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2240_field348_callsites_driver.log 2>&1
+```
+
+It exited before the phase gate in the known intermittent
+`fillSampleStreamRange+8136` crash window (`last-guest-pc=0x8000B650`), with no
+target rows. I did not treat that as a null; the unchanged build and arm were
+rerun as `s2240_field348_callsites_retry`.
+
+The retry reached title and hangar and later stopped in the known post-hangar
+PI-alignment abort. Same-run controls were 1,024 bounded memset rows, 1,036
+field348 scalar-writer rows, 17,095 image-stage rows, 3,844 image-DMA rows,
+and 105 source plus 105 consumer PCM rows. The attestation table was:
+
+```text
+title:  phase=8  width=1024 origin=0x00790400 span=1
+        dst=0x80178C80 fill=0 len=0x298
+        static_callsite=0x8008F2CC, row before first matching stage
+hangar: phase=10 width=512  origin=0x006AB400 span=2
+        dst=0x801797B0 fill=0 len=0x298
+        static_callsite=0x8008F2CC, row before first stage using that source
+controls: outside-span rows in both phases from static_callsite=0x800052C4
+```
+
+There were no missing static callsites. The existing scalar writer table still
+showed only zero stores from `rs_memset` (`0x800078EC`) at the active source
+before the image stages. This selects H-InitCallsite plus H-MissedProducer at
+the measured source/order scope and refutes H-CallsiteInstrumentGap. Together
+with the independent s2237 retail writer audit, this moves the open boundary
+from caller identity to the missing nonzero producer. It rules out a repeated
+same-source post-stage clear at this scope, but it does not authorize a
+writeback, consumer, task, or default change.
+
+ORIGIN: the writer is the generated guest `rs_memset` body at `0x800078E0`,
+called from static `jal 0x8008F2CC`; its zero fill is a legitimate setup clear
+at the matched source/order scope. No value was suppressed, rewritten,
+guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-contract`.
+
 ## Session 2232 (2026-08-23) — validated the opt-in Factor 5 image arm
 
 Ran the planned M5 Step 1 validation: one successful Debug build, followed by

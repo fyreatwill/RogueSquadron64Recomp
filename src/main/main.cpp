@@ -139,6 +139,11 @@ extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *last
 // `extern` in recomp.h so any RECOMP_FUNC translation unit can write it by
 // name; defined once here.
 extern "C" volatile uint32_t g_rs64_last_guest_pc = 0;
+static thread_local uint32_t g_rs64_m5_field348_static_callsite = 0;
+
+extern "C" void rs64_m5_field348_set_callsite(uint32_t callsite) {
+    g_rs64_m5_field348_static_callsite = callsite;
+}
 
 static bool rs64_filter_voice_guest_span_ok(uint32_t base, uint32_t span) {
     const uint32_t segment = base & 0xE0000000u;
@@ -553,6 +558,9 @@ extern "C" void rs64_m5_field348_memset(uint32_t dst, uint32_t fill,
     }();
     if (!enabled) return;
 
+    const uint32_t static_callsite = g_rs64_m5_field348_static_callsite;
+    g_rs64_m5_field348_static_callsite = 0;
+
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     if (!((width == 1024u && origin == 0x00790400u) ||
@@ -579,20 +587,22 @@ extern "C" void rs64_m5_field348_memset(uint32_t dst, uint32_t fill,
         std::fprintf(stderr,
             "[field348-memset-control] ordinal=%llu row=%u phase=%u "
             "width=%u origin=0x%06X dst=0x%08X phys=0x%06X fill=0x%02X "
-            "len=0x%X span=0 ra=0x%08X callsite=0x%08X guest_pc=0x%08X\n",
+            "len=0x%X span=0 ra=0x%08X callsite=0x%08X static_callsite=0x%08X "
+            "guest_pc=0x%08X\n",
             static_cast<unsigned long long>(ordinal), row, rs64_phase_ord(),
             width, origin, dst, phys, fill & 0xFFu, len, ra, callsite,
-            guest_pc);
+            static_callsite, guest_pc);
         std::fflush(stderr);
     }
     if (row >= 512u) return;
     std::fprintf(stderr,
         "[field348-memset] ordinal=%llu row=%u phase=%u width=%u "
         "origin=0x%06X dst=0x%08X phys=0x%06X fill=0x%02X len=0x%X "
-        "span=%u ra=0x%08X callsite=0x%08X guest_pc=0x%08X\n",
+        "span=%u ra=0x%08X callsite=0x%08X static_callsite=0x%08X "
+        "guest_pc=0x%08X\n",
         static_cast<unsigned long long>(ordinal), row, rs64_phase_ord(),
         width, origin, dst, phys, fill & 0xFFu, len, span, ra, callsite,
-        guest_pc);
+        static_callsite, guest_pc);
     std::fflush(stderr);
 }
 
