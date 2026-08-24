@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2325 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2326 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -113,7 +113,28 @@ voice/filter, or key-on rows. This selects `H-Destination-Role-Skew` at
 capture scope, rules out a uniform image-stage-only result, and leaves the
 destination-to-slot/key-on contract open. No runtime behavior changed.
 
-The current M5 boundary is destination-role to slot-contract work. The qualified default
+Session 2326 ran the corrected ground-truth-first destination-to-slot/key-on
+table. The retail oracle passed whole-RDRAM (`1341192` writes), title/hangar,
+gate/task/status watches (`17/108/25`), wait (`0`), and the three named task
+writers (`0x8008EB8C`, `0x8008EBBC`, `0x80094648`). Both port arms reached
+title and hangar; VI-caller and audio-task ABI controls were positive in both.
+The image arm's target phase had two nonzero stage rows at
+`0x166750`/`0x300`/`60F910DE`/`nz=621` and
+`0x166A50`/`0x300`/`7B70923A`/`nz=639`; both were stage-only with source and
+consumer events `0/0`. The signed event table found zero post-stage
+slot-allocation, slot-byte, slot-store, key-on, descriptor, or M5 key-on rows
+for either destination. It did find pre-stage rows shared by both destinations:
+five `slot-sb` stores, one sentinel `keyon-w40` row (`idx=0xFFFFFFFF`,
+`armed=0`), and nineteen M5 key-on rows. Raw marker recount agrees with the
+table. The filter/voice probe emitted no positive control, so this run does
+not establish a filter/voice null. This selects
+`H-Missing-Descriptor-Contract` at this capture scope, with the ordering
+boundary still open: pre-stage lifecycle rows may belong to the same task or
+to an earlier tick. No runtime, audio, gate, wait, slot, writeback, consumer,
+address, mitigation, or default behavior changed.
+
+The current M5 boundary is task-ordinal ownership of the destination-to-slot
+contract. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
 `512 @ 0x006AB400`; measured nonzero phase-10 slots have exact source and
 consumer joins in some captures. Retail independently reaches both origins
@@ -692,12 +713,13 @@ Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
 1. **M5 destination-to-slot/key-on contract — active.** s2325 established
-   live image execution and a real target-phase role split: one rotating
-   destination is stage-only while another has an exact PCM source/consumer
-   join. Neither port arm emitted slot, descriptor, voice, or key-on rows.
-   The next unit must join each destination to slot allocation/byte,
-   descriptor, voice/filter, and key-on rows by phase and event order. Do not
-   add writeback, guards, slot values, or defaults.
+   a capture-dependent destination split. s2326's corrected signed event table
+   found two nonzero stage-only destinations and no post-stage slot,
+   descriptor, or key-on rows, while five slot stores and nineteen M5 key-on
+   rows occurred before both image-stage rows. The next unit must add one
+   task-ordinal event join that distinguishes same-task pre-stage lifecycle
+   from an earlier tick and from missing post-stage consumption. Do not add
+   writeback, guards, slot values, or defaults.
 2. **M5 task/output contract — closed at the current discriminator.** s2325
    supersedes the undifferentiated task/output gap with
    `H-Destination-Role-Skew`; revisit only if the destination-to-slot table
@@ -761,6 +783,15 @@ transition. s2325 splits the rotating target destinations into one stage-only
 row and one exact source/consumer row, but still finds no port slot/descriptor/
 voice/key-on row. No gate, wait, status, slot, writeback, or default change is
 authorized.
+
+s2326 adds the first signed pre/post destination-to-slot table. Its two target
+destinations are both stage-only in this capture. Their shared pre-stage rows
+include five `musyxRenderVoiceSamples` slot stores and one unarmed sentinel
+key-on row; no corresponding post-stage row exists. Because the filter/voice
+probe's positive control did not fire, voice/filter absence remains
+unqualified. The result selects `H-Missing-Descriptor-Contract` only for the
+observed capture and leaves same-task ownership of the pre-stage rows open.
+The next discriminator is a task-ordinal join, not a writeback or guard.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
 phase-gated captures show a rotating mixed output contract: s2306 had one

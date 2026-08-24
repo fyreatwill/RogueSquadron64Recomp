@@ -109569,3 +109569,46 @@ Build one ground-truth-first table joining each rotating image destination to
 slot allocation/byte, descriptor, voice/filter, and key-on rows. Use the same
 retail controls and both eleven-Start port arms. Do not change port behavior
 from the result.
+
+## Session 2326 (2026-08-24) — M5 destination-to-slot table selects pre-stage contract gap
+
+Ran the s2326 ground-truth-first destination-to-slot/key-on work unit. The
+first launcher invocation reached the oracle and both port hangar phases, but
+its new postprocessor stopped on an integer-to-string `TypeError`; no result
+was accepted from that invocation. Fixed the parser and reran the exact same
+oracle and eleven-Start stub/image recipe. The corrected run passed the retail
+oracle controls: whole-RDRAM `1,341,192` writes, target ring `1,331,042`,
+task/output `108`, gate `17`, status `25`, wait `0`, title/hangar origin
+coverage, and target writer PCs `0x8008EB8C`, `0x8008EBBC`, and
+`0x80094648`. Both port arms reached title and hangar; VI-caller controls
+were `16` and task-ABI controls were `1173`/`1159` for stub/image.
+
+The image target table retained two nonzero phase-10 rows from audio ordinal
+`706`, row `0`: destination `0x166750`, length `0x300`, FNV `60F910DE`,
+`nz=621`, image stage event `6391`; and destination `0x166A50`, length
+`0x300`, FNV `7B70923A`, `nz=639`, image stage event `6393`. Both joined as
+`stage-only`, with PCM source and consumer events `0/0`. For both destinations
+the signed post-stage window had zero slot allocation, slot-byte, slot-store,
+key-on, descriptor, and M5 key-on rows. The shared pre-stage window had five
+`musyxRenderVoiceSamples` `slot-sb` stores, one `keyon-w40` row with
+`idx=0xFFFFFFFF` and `armed=0`, and nineteen M5 key-on rows. A raw marker
+recount independently agreed with the table. The filter/voice probe emitted
+no positive control, so filter/voice absence is not evidence from this run.
+
+This selects `H-Missing-Descriptor-Contract` at this capture scope, but only
+for the post-stage boundary. It does not distinguish whether the pre-stage
+rows belong to audio ordinal `706` or an earlier tick; that is the next
+discriminator. It rules out a same-capture post-stage slot/key-on lifecycle
+for these two destinations and does not overturn s2325's capture-dependent
+destination split. No runtime, audio, gate, wait, slot, writeback, consumer,
+address, mitigation, or default behavior changed.
+
+ORIGIN: no mitigation-shaped change; this iteration added the launcher and
+signed pre/post table extraction only.
+
+### Next
+
+Add one host event join stamping the audio-task ordinal/row onto image-stage,
+PCM, slot-store, descriptor, and key-on rows. Run the retail controls first,
+then stub and image arms on the same eleven-Start route. Same-task pre rows,
+earlier-tick rows, and missing post-consumer rows must be separate outcomes.
