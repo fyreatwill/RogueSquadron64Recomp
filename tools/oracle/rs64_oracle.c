@@ -1467,8 +1467,8 @@ static void *vi_poller(void *arg)
                 unsigned word = pDebugMemRead32(0xA0000000u | addr);
                 unsigned status = (word >> 24) & 0xFFu;
                 if (status != last_status[i]) {
-                    printf("[oracle-status-poll] t=%6.1fs slot=%d addr=0x%08x word=0x%08x top=0x%02x low=0x%02x\n",
-                           t, i, addr, word, status, word & 0xFFu);
+                    printf("[oracle-status-poll] t=%6.1fs vi=%ld width=%u origin=0x%08x slot=%d addr=0x%08x word=0x%08x top=0x%02x low=0x%02x\n",
+                           t, g_vis, width, origin, i, addr, word, status, word & 0xFFu);
                     fflush(stdout);
                     last_status[i] = status;
                 }

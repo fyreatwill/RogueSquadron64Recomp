@@ -109421,3 +109421,55 @@ Add VI ordinal and sampled origin/width to the existing oracle
 table. Determine whether target word `0x00154620` returns from `01/02` to
 `00`, or whether another status-table word owns the lifecycle. Do not change
 port behavior from the result.
+
+## Session 2323 (2026-08-24) — closed the retail target status lifecycle
+
+Ran the s2323 work unit: added `vi=g_vis`, sampled VI width, and sampled VI
+origin to the oracle's existing change-only `--status-poll` rows; added
+`--status-poll` to the explicit keycode-36 staged stub/image launcher; rebuilt
+the oracle; passed launcher syntax; and ran
+`zsh scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh
+s2323_m5_status_cycle`. No port runtime or audio behavior changed.
+
+The same-run oracle positive control reached `10,000` whole-RDRAM callbacks
+and exited with `10,329` writes after `120.2s`; title/hangar, gate/task/wait
+(`17/108/0`), and all fifteen phase buckets were positive. The status poll
+emitted `1,469` change rows, including `13` rows for target word
+`0x00154620`: `00 -> 01 -> 02 -> 03 -> 00`, repeated three times. The
+phase-keyed target samples were at width `512` across the observed `512`
+origins. The bounded detail table emitted `78` rows with no overflow, `24`
+for the target word. Its three `01` stores were by `0x8009B214`, three `02`
+stores by `0x8009B6F8`, three `03` stores by `0x8009B7CC`, and three later
+zero stores by `0x8009B7EC`; the independent target histogram named the
+nonzero writer family. Only two of the 78 detail tuples had an exact
+`(VI,origin,width,address)` status-poll key because the asynchronous poll
+usually sampled one VI after the store; the repeated phase-keyed sequence and
+writer-detail rows are separate positive lines of evidence, not an exact
+event-level zeroing join.
+
+The other stable status words were initial-zero, `00 -> 01`, or `00 -> 0x80` /
+other values without a lifecycle. Polled words 16/17 produced `717/716`
+high-entropy changes, with only `22/25` top-byte `02` rows and `27/31`
+top-byte `00` rows among hundreds of other top bytes, so they did not supply
+a competing status lifecycle. This selects `H-Status-Cycle` at capture
+scope, refutes `H-Status-Sticky` and `H-Status-Other-Word` at capture scope,
+and closes retail status/zeroing semantics.
+
+Both port arms reached title and hangar. The stub arm had gate `1024`, task
+ABI/DMA rows `1440/1440`, PCM source/consumer `91/91`, and zero image-stage,
+slot-allocation, slot-byte, and descriptor rows. The image arm had gate
+`1024`, task ABI/DMA `1142/1142`, DMA-range `2319`, image-stage `4658`, and
+PCM source/consumer `88/88`; its slot-allocation, slot-byte, and descriptor
+rows were also zero. Both key-on rows remained `idx=0xFFFFFFFF`, `armed=0`.
+The stub then hit its existing post-hangar crash (`rc=139`); the image arm
+was retained and terminated by the recipe (`rc=137`). These outcomes do not
+alter the qualified route or authorize a port-side slot/key-on change.
+
+ORIGIN: no mitigation-shaped change; the diff is oracle instrumentation and
+launcher wiring only.
+
+### Next
+
+The retail lifecycle is closed. Keep the M5 key-on tuple boundary parked until
+a genuinely new route discriminator restores `512 @ 0x006AB400`; do not repeat
+the status capture, explicit keycode-36 schedule, or failed C88/A1 matrices.

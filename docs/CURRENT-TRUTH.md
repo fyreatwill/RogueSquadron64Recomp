@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2322 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2323 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -67,6 +67,19 @@ target phase histogram named those same PCs. Both port arms reached hangar
 with task/PCM controls, while slot allocation/byte/descriptor rows stayed
 zero and key-on remained the sentinel. This selects target status presence
 at capture scope and leaves status semantics/zeroing open.
+Session 2323 added VI ordinal and sampled origin/width to the status poll and
+ran the same staged pair with both status polling and writer detail enabled.
+The oracle passed whole-RDRAM `10329`, title/hangar, gate/task/wait `17/108/0`,
+all fifteen phase buckets, and `25` writes to `0x00154620`. The target word's
+status poll showed three repeated `01 -> 02 -> 03 -> 00` cycles; detail rows
+independently named `0x8009B214`/`0x8009B6F8` for `01/02` and
+`0x8009B7CC`/`0x8009B7EC` for the later `03/00` stores. No competing word
+showed a stable lifecycle; the two noisy tail words were high-entropy data.
+This selects `H-Status-Cycle` at capture scope and closes the retail status
+lifecycle boundary. Both port arms still reached hangar with task/PCM
+controls but zero slot/descriptor rows and sentinel key-on rows. No runtime,
+audio, gate, wait, slot, consumer, address, mitigation, or default behavior
+changed.
 
 The current M5 boundary is task/output and slot-contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
@@ -283,6 +296,21 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   `idx=0xFFFFFFFF`, `armed=0`. Both port processes then hit their existing
   post-hangar crash path. No runtime, audio, slot, gate, wait, consumer,
   address, mitigation, or default change was made.
+- **s2323 — target status lifecycle.** The same-run oracle passed whole-RDRAM
+  `10329`, title/hangar, gate/task/wait `17/108/0`, and all fifteen phase
+  buckets. Its new status rows recorded `1469` status changes, including three
+  target `0x00154620` cycles `01 -> 02 -> 03 -> 00` at width `512`; the target
+  detail table had `24` rows and named `0x8009B214`, `0x8009B6F8`,
+  `0x8009B7CC`, and `0x8009B7EC`. The other stable words were initial-zero,
+  `00 -> 01`, or non-status values; slots 16/17 produced `717/716` noisy
+  changes with hundreds of other top-byte values. This selects
+  `H-Status-Cycle`, refutes `H-Status-Sticky` and
+  `H-Status-Other-Word` at capture scope, and closes retail status/zeroing.
+  Stub/image port arms reached hangar with gate `1024`, task ABI/DMA
+  `1440/1440` and `1142/1142`, image-stage `4658`, PCM `91/91` and `88/88`,
+  but slot allocation/byte/descriptor remained zero and key-on stayed at
+  `idx=0xFFFFFFFF`, `armed=0`. The arms then hit the existing post-hangar
+  crash/retention outcomes. No behavior change was authorized.
 - The retail oracle is an independent witness. Its whole-RDRAM, title, hangar,
   width-aware target, and exact-PC controls must pass before a null is read.
   The oracle currently reaches attract/title/hangar, not a mission.
@@ -601,29 +629,19 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 target status lifecycle / zeroing writer.** Add VI ordinal and
-   current origin/width to the existing `--status-poll` change rows, then
-   rerun the same explicit keycode-36 staged pair with
-   `--post-value-pc-detail`, all five physical watches, fifteen phase
-   buckets, whole-RDRAM/gate/task/wait controls, and port slot/key-on/
-   descriptor/task/PCM markers. `H-Status-Cycle` is selected if the target
-   word `0x00154620` shows a phase-keyed `01/02` state followed by `00` and
-   the detail table names the corresponding writer; `H-Status-Sticky` if the
-   target state never returns to zero; `H-Status-Other-Word` if another
-   status-table word supplies the lifecycle; missing controls selects
-   `H-CoverageInvalid`. Do not change runtime, audio, slot, wait, gate,
-   consumer, address, mitigation, or default behavior.
-2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
-   route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
-   crash had `route_state=2`, `b40=1`, `key_on=0`; C88=1 was withheld.
-3. **M5 A1 second-origin transition — parked.** Resume only with a new
+1. **M5 key-on tuple contract — parked.** Retail status/zeroing is now
+   independently closed, but the port still has no slot/descriptor/key-on
+   transition. Resume only with a genuinely new route discriminator that
+   restores `512 @ 0x006AB400`; do not repeat the status capture or the
+   failed C88/A1 route matrices.
+2. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not
    repeat the failed four-arm/two-wave matrix.
-4. **M5 drain in-loop tick A/B — parked.** Resume only with a new renderer
+3. **M5 drain in-loop tick A/B — parked.** Resume only with a new renderer
    or ground-truth discriminator that places both arms in one target window.
-5. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
+4. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator; do not chase a single recurring crash.
-6. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer
+5. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer
    mode H1 are refuted. H3 is unavailable because the oracle cannot
    screenshot the LLE path; do not repeat the capped `0xD60` scan.
 
@@ -644,8 +662,11 @@ its own witness for a null.
 `docs/M5-AUDIO-PLAN.md` inventories the active audio stubs, traps, gates, and
 the incremental task→DMA→service→slot→voice→PCM validation sequence. Direct
 service entry/exit, the service gate/loop, and the task/AI boundary are live
-on the port; the slot-0 status sequence is not yet closed by a valid
-`01/02/00` transition. Retail independently matches the status cycle. MORT
+on the port. Retail now independently matches a complete slot-0
+`01/02/03/00` status cycle at `0x00154620`, with nonzero stores by
+`0x8009B214`/`0x8009B6F8` and later `03/00` stores named by detail rows.
+The port still has no valid slot/descriptor/key-on transition, so this closes
+retail lifecycle semantics but not the port key-on contract. MORT
 speech is separate from Factor 5 RSP audio. The complete
 s2315 retail census found positive callback coverage but no phase-attributed
 `0x800078EC` writer row in any of fifteen observed VI-origin buckets. The
@@ -663,8 +684,10 @@ earlier-origin samples included `01=3` and `02=3`. The next boundary is
 s2322's detail join then found target top-byte counts `00=30`, `01=3`,
 `02=2`, with all five target nonzero-status rows at `0x00154620` owned by
 `0x8009B214`/`0x8009B6F8`; the independent target histogram named both.
-The next boundary is a phase-keyed zeroing/lifecycle join, not writer
-ownership. No gate, wait, status, slot, or default change is authorized.
+s2323's phase-keyed status poll then recorded three complete target cycles and
+the detail table named `0x8009B7CC`/`0x8009B7EC` for the `03/00` tail. The next
+boundary is the port key-on tuple, not retail status ownership. No gate, wait,
+status, slot, or default change is authorized.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
 phase-gated captures show a rotating mixed output contract: s2306 had one
@@ -750,6 +773,11 @@ but are superseded at their measured scopes:
   two unmeasured post-title origins. s2312 measured both with positive VI
   controls and no phase writer rows, so that selection is superseded by
   `H-Retail-Earlier-Or-Unattributed`; the earlier 640-origin gap remains open.
+- s2322's open status-lifecycle boundary was believable because its detail
+  table established target `01/02` ownership but not a return to zero. The
+  s2323 status poll observed three target `01 -> 02 -> 03 -> 00` cycles and
+  the detail table named the later `03/00` writer pair, so retail lifecycle
+  semantics are now closed; the port-side slot/key-on gap remains separate.
 
 ## Evidence and safety rules
 
