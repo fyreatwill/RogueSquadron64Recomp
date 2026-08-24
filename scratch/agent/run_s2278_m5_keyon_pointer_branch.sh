@@ -4,6 +4,7 @@ set -u
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BUILD="$ROOT/build"
 TAG=${1:-s2278_m5_keyon_pointer_branch}
+C88_VALUE=${2:-0}
 OUT="$ROOT/scratch/agent/$TAG"
 ORACLE_CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 ORACLE_ROM=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
@@ -36,7 +37,7 @@ oracle_pid=$!
         ROGUESQ_LLE_UNGATED=1 \
         ROGUESQ_LLE_SOLO=1 \
         ROGUESQ_SPIN_YIELD=1 \
-        ROGUESQ_M5_C88_VALUE=0 \
+        ROGUESQ_M5_C88_VALUE=$C88_VALUE \
         ROGUESQ_STUB_MISSING_FUNCS=1 \
         ROGUESQ_LOG_M5_KEYON_CENSUS=1 \
         ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1 \

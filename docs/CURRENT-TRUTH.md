@@ -5,11 +5,11 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2280 (2026-08-24); behavioral and source evidence is
-current through s2280. This iteration raised the oracle key-on field census
-capacity and reran the established-route pair. Retail controls and all eight
-field buckets qualified without overflow, but the port missed the required
-hangar window; no key-on behavior or default changed.
+Maintained in Session 2281 (2026-08-24); behavioral and source evidence is
+current through s2281. This iteration ran a same-build C88=0 versus C88=1
+route pair. Retail controls and all eight field buckets qualified without
+overflow, but both port arms missed the required hangar window; no key-on
+behavior or default changed.
 
 ## Current state
 
@@ -56,7 +56,12 @@ hangar window; no key-on behavior or default changed.
   rows, and zero overflow; the port reached title but stalled at off-target
   `640 @ 0x00696100` and never reached `512 @ 0x006AB400`. The source/state
   join is therefore still H-CoverageInvalid; no pointer-versus-branch verdict
-  follows.
+  follows. s2281's same-build C88 pair independently passed the port B40 and
+  route-state controls in both arms. C88=0 reached title, then crashed during
+  off-target `640 @ 0x00696100` at guest PC `0x8000B650`; C88=1 crashed in
+  the same off-target phase before title, also at `0x8000B650`. Neither arm
+  reached the hangar or emitted target key-on rows, so the C88 result is
+  H-CoverageInvalid rather than H-C88-route or H-RouteLoad.
 - The VI second-origin publisher/cadence is open. Field, current-register,
   timing, and total-`VI` arms recover the split, but none is default-on.
 - s2273's first Step 1 pair was route-invalid: the heavy trace reached title
@@ -107,6 +112,17 @@ hangar window; no key-on behavior or default changed.
 
 ## Latest evidence
 
+- s2281's same-build C88=0/C88=1 route pair ran with one independent retail
+  oracle. Retail passed the whole-RDRAM control with 998,960 writes, title
+  and hangar origins, all eight transfer-PC controls, and eight field buckets
+  with `overflow=0` (`27,256` hits each, `1,729`–`4,958` rows). Both port
+  arms passed positive B40/route-state controls and one `[missing-func]`.
+  C88=0 reached title but returned to off-target `640 @ 0x00696100` and
+  crashed at guest PC `0x8000B650`; C88=1 crashed in that off-target phase
+  before title, also at `0x8000B650`. Neither reached
+  `512 @ 0x006AB400`, so this selects H-CoverageInvalid and supplies no
+  pointer/data or branch-state verdict. No runtime behavior or default
+  changed.
 - s2276's fresh oracle-plus-pair run passed the retail whole-RDRAM and hangar
   controls. The silent port arm reached title and then crashed in
   `slotDispatcherIter+3508` after an off-target 640 transition; the image arm
@@ -285,13 +301,13 @@ hangar window; no key-on behavior or default changed.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 key-on tuple contract.** First qualify the port route in a same-build
-   C88=0 versus C88=1 pair using the established eleven-Start driver, then
-   compare retail fields only if the C88=0 arm reaches
-   `512 @ 0x006AB400`. The current evidence is a route-validity failure after
-   the oracle capacity fix; no pointer/data or branch-state verdict, key-on
-   return, or mitigation change follows. The Step 1 task/output pair remains
-   parked.
+1. **M5 key-on tuple contract.** Requalify the C88 route with a
+   phase-gated control-first stagger: launch C88=1 only after a C88=0 control
+   reaches `512 @ 0x006AB400`, then compare retail fields only if both arms
+   reach the hangar. s2281's concurrent pair passed retail and port probe
+   controls but both arms missed the hangar, so the result is
+   H-CoverageInvalid; no pointer/data or branch-state verdict, key-on return,
+   or mitigation change follows. The Step 1 task/output pair remains parked.
 2. **M5 A1 second-origin transition.** Identify the natural host field
    publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
    remain opt-in.
@@ -361,9 +377,9 @@ different at all common cells. s2278 adds a qualified port pointer/source/
   state witness and retail transfer/selector/denominator controls; the raw
   pointer is not yet a valid cross-runtime identity because retail voice-list
   addresses vary within the phase. The useful next boundary is first a
-  same-build C88 route qualification, then the oracle-side full-word/state
+  phase-gated C88 route qualification, then the oracle-side full-word/state
   join. s2280's enlarged retail census is complete at the measured scope, but
-  its port arm supplied no target window.
+  s2281's C88=0 and C88=1 port arms both supplied no target window.
 
 The `-0x25A4` pointer-chase, six-site PIC, ten-site audio-slot,
 slot-dispatch, two-line overlay-move, and leftover `fake_func_*` size class

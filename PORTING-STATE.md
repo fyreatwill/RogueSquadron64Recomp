@@ -107391,3 +107391,40 @@ driver option.
 Raise the oracle census capacity and rerun the route-qualified join described
 in `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
+
+## Session 2281 (2026-08-24) — C88 route pair remained coverage-invalid
+
+HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator.
+
+The planned same-build C88=0 versus C88=1 route pair ran with one independent
+retail oracle. I parameterized the existing C88 launch script and added
+`scratch/agent/run_s2281_m5_c88_route_pair.sh`; both scripts passed `zsh -n`.
+No runtime or generated code was rebuilt or changed. Both port arms used the
+same LLE, spin-yield, missing-function, phase-gate, B40, route-state, and
+key-on probe settings; only `ROGUESQ_M5_C88_VALUE` differed.
+
+The retail arm passed the whole-RDRAM positive control with 998,960 writes,
+title and hangar origins, all eight transfer-PC controls with 123,620 hits
+each, and eight non-saturated field buckets with 27,256 hits each,
+1,729–4,958 rows, and `overflow=0`. Both port arms passed their independent
+B40 and route-state controls and one `[missing-func]`. C88=0 reached title
+`1024 @ 0x00790400`, then returned to off-target `640 @ 0x00696100` and
+crashed at guest PC `0x8000B650`; C88=1 crashed in the same off-target 640
+phase before title, also at `0x8000B650`. Neither arm reached
+`512 @ 0x006AB400`; C88=0 emitted no key-on rows, and C88=1 emitted only
+off-target rows.
+
+This selects H-CoverageInvalid. It rules out an absent retail positive
+control, an absent retail transfer path, and dead B40/route probes, but it
+does not distinguish H-C88-route from H-RouteLoad and supplies no pointer/data
+or branch-state verdict. The next unit is a phase-gated control-first stagger
+that delays C88=1 until C88=0 reaches the hangar. No guest or host value was
+suppressed, rewritten, guarded, restored, or defaulted.
+
+ORIGIN: no mitigation-shaped change; only observation scripts and the
+parameterized C88 environment value were added.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
