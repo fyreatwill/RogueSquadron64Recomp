@@ -106119,3 +106119,42 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2250 (2026-08-24) — audited the C88 route boundary
+
+Ran the planned same-build concurrent three-arm audit from
+`scratch/s73_post_a_scene/run_mission_keys.sh` with image+C88=`1`,
+image+C88=`0`, and silent stub+C88=`1`. All arms used the same spin-yield,
+phase-gate, B40 route/state/read, task-contract, and PCM-boundary settings.
+The run logs are under `scratch/s73_post_a_scene/s2250_*` and the driver
+tails are under `scratch/agent/s2250_*_driver.log`.
+
+All three arms passed the 640 origin `0x00696100` and one `[missing-func]`
+control. Both image arms reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. The silent arm died before title in
+`fillSampleStreamRange+8136` with last guest PC `0x8000B650`, so it supplied
+the common controls but no target route rows. The image+C88=`1` driver
+returned `0` after a later `updateHangarBayScene+76432` crash with last guest
+PC `0x800AC8C0`; image+C88=`0` returned `0` after the known aligned-ROM
+`do_rom_read` crash with last guest PC `0x80001B08`.
+
+The first phase-keyed image-arm difference was the expected
+`reapply-success` B40 store at phase 4, width 640, origin `0x0066A500`,
+PC `0x8008EC88`: C88=`1` stored `0x01`, while C88=`0` stored `0x00`.
+The same arm difference repeated at the second 640 origin and target phases.
+After normalizing arm/C88 labels, all target-phase route-state rows matched.
+Target B40 reads later reflected the stored byte (`0x01` versus `0x00`), but
+both image arms continued through title and hangar. This selects the forced
+B40 write as the first observable C88 boundary and rules out an unexplained
+downstream route divergence at the measured scope. It also rules out the
+planned early-boundary hypothesis. The different post-hangar crash windows
+do not identify the later task/output edge; this remains single-source port
+evidence and changes no runtime behavior or default.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.

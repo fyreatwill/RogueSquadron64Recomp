@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2249 (2026-08-24); behavioral and source evidence is
-current through s2249, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2249 remain in
+Maintained in Session 2250 (2026-08-24); behavioral and source evidence is
+current through s2250, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2250 remain in
 the append-only ledger.
 
 ## Current state
@@ -68,6 +68,29 @@ the append-only ledger.
   selects H-C88ImageInteraction at route scope and H-ImageQualifies only for
   C88=`0`; the join is single-source port evidence and does not authorize a
   default flip or writeback guard.
+- s2250's route audit adds the next boundary. Both image arms reached the
+  title and hangar in one same-build run, with identical target route-state
+  rows. The only C88-keyed route differences were the intentional B40 store
+  at `0x8008EC88` and the resulting B40 read values; the C88=`1` arm did not
+  fail at the logged route boundary. The silent control still died pre-title,
+  so it does not distinguish image-arm task/output behavior. The open
+  question is now the first phase-keyed divergence in task contract,
+  image-stage/DMA payload, or PCM source/consumer rows after the route
+  boundary.
+- s2250's same-build three-arm route audit passed the common 640 origin and
+  `[missing-func]` control in all arms. Both image arms reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; the silent arm crashed
+  before title in `fillSampleStreamRange+8136` at guest PC `0x8000B650`.
+  The normalized target-phase route-state rows were identical between the
+  image arms. Their first keyed difference was the deliberate
+  `reapply-success` B40 store at `pc=0x8008EC88`: C88=`1` stored `0x01` and
+  C88=`0` stored `0x00`; target B40 reads reflected that byte, but neither
+  route diverged. The image arms later ended in different post-hangar crash
+  windows (`updateHangarBayScene+76432`/`0x800AC8C0` and the known
+  `do_rom_read`/`0x80001B08`). This is single-source port evidence that
+  closes the unexplained route-edge hypothesis at this scope; it does not
+  explain the earlier intermittent C88 split or identify the later task/output
+  edge.
 - s2233's fixed retail-oracle capture passed the whole-RDRAM positive control,
   reached the 640 target, title `1024`, and hangar `512`, and recorded
   `6,665,015` writes to physical `0x166000:0x17A000`. It sampled 503
@@ -243,11 +266,11 @@ Closed investigations are not active work items. The sequence is monotonic.
   selected H-C88ImageInteraction: image+C88=`1` failed before title, while
   image+C88=`0` and stub+C88=`1` reached both targets. The C88=`0` image arm
   also supplied a hangar-only nonzero stage/source/consumer join, but title
-  remained all-zero and the join is single-source. The next unit is a
-  same-build three-arm audit with the existing `m5-b40-route`,
-  `m5-route-state`, and `m5-b40-read` traces, plus the common task controls,
-  to locate the first C88-dependent edge. Do not promote
-  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+  remained all-zero and the join is single-source. s2250 found only the
+  expected forced B40 byte difference and identical target route-state rows;
+  the next unit must compare the first post-route task/image-stage/PCM edge
+  in the two image arms. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
+  writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -557,6 +580,14 @@ remain in the append-only ledger. Operationally:
   blanket failure. Its single hangar output join does not overturn the
   title/all-zero result or identify a writer; those earlier nulls remain
   valid at their measured phase/task scopes.
+- s2250 supersedes the deterministic route interpretation of s2249's C88
+  split: both image arms passed the 640, title, and hangar route controls, and
+  their normalized target route-state rows matched. The prior split was
+  believable because s2249 had the same startup/640 controls and a clean
+  C88=`1` pre-title failure while both controls reached the targets; s2250
+  shows that the failure is intermittent at route scope. The B40 store/read
+  difference is the intended C88 behavior, not an unexplained downstream
+  route edge, and no runtime change follows.
 - s2232's image-arm PCM activity is not evidence of image-output correctness:
   the same-run image summary recorded zero stage/source and stage/consumer
   matches, while the nonzero PCM rows were consumer-only at the image-join
@@ -583,7 +614,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2249 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2250 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
