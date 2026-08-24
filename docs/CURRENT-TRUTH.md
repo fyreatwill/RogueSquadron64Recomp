@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2309 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2310 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -28,9 +28,13 @@ and consumer events, then a same-destination image-DMA rewrite to
 `F59C39C5`/`nz=0`; the second remained stage-only. Retail's whole-ring
 watch wrote all `0x3000` bytes and its final snapshot had `12026` nonzero
 bytes, forcing at least `506` nonzero bytes in the observed `0x168850` slot.
-This selects `H-PortOnlyZeroFill` at the capture scope and refutes slot
-rotation for that physical pair; semantic game legitimacy and the
-stage-only second row remain open. No runtime behavior change is authorized.
+That aggregate/final-snapshot result still selects `H-PortOnlyZeroFill` at
+its capture scope, but s2310's corrected per-slot capture found no retail
+writer in either active 512 target origin. The target-phase result is
+`H-SlotRoleTimeSkew`: retail lifetime writers and nonzero final slot data do
+not temporally join the port's stage→PCM→zero sequence. The stage-only row
+and game-level legitimacy remain open. No runtime behavior change is
+authorized.
 
 ## Current state
 
@@ -52,12 +56,15 @@ stage-only second row remain open. No runtime behavior change is authorized.
   capture-dependent: s2306 had one exact source/consumer pair and one
   stage-only row, s2307 found two fixed-address payload mismatches, s2308
   found a rotated pair with exact nonzero publication followed by later
-  image-DMA zero writes, and s2309 independently showed that retail's same
-  ring has nonzero final data at the observed port slot. The image-stage and
-  port-side zero writers are known; `H-PortOnlyZeroFill` is selected for the
-  observed pair, while game-level legitimacy and the stage-only row remain
-  open. No writeback, consumer, writer, slot, gate, guard, address remap, or
-  default change is authorized.
+  image-DMA zero writes, and s2309 independently showed aggregate retail
+  nonzero final data. In s2310 the current port pair was
+  `0x166750`/`0x166A50`; both were stage-only and later zero-filled by
+  image-DMA, while retail's lifetime slot writers were outside both
+  `0x006AB400:512` and `0x006AB800:512` phase buckets. Thus
+  `H-PortOnlyZeroFill` remains an aggregate/final-snapshot result, and
+  `H-SlotRoleTimeSkew` is selected for target-phase polarity. No writeback,
+  consumer, writer, slot, gate, guard, address remap, or default change is
+  authorized.
 - The retail oracle is an independent witness. Its whole-RDRAM, title, hangar,
   width-aware target, and exact-PC controls must pass before a null is read.
   The oracle currently reaches attract/title/hangar, not a mission.
@@ -68,9 +75,29 @@ stage-only second row remain open. No runtime behavior change is authorized.
 
 ## Latest evidence
 
+- **s2310 — per-slot retail polarity and dual-512 phase control.** The
+  initial capture passed whole-RDRAM, title/hangar, ring-wide, all sixteen
+  slot watches, port title/hangar, and 45-second retention, but its single
+  `0x006AB400:512` writer bucket had no entries. The fixed rerun added
+  `0x006AB800:512` in the same recipe. Both phase buckets were active
+  (`1535` and `2720` VI callbacks), and the lifetime positive control
+  attributed all sixteen `768`-byte slot watches (`768` writes each) to
+  retail PC `0x800078EC`; neither 512 bucket contained a writer entry.
+  The corrected run's current port pair was `0x166750`/`0x166A50`, with
+  stage events `9740/9742`, FNV/nz `60F910DE/621` and
+  `7B70923A/639`, respectively. Both were stage-only in the port join;
+  later zero rows were events `9882/9884`, writer kind image-DMA, PC `0`,
+  callsite `0x8008EE84`. Retail final snapshots for those exact slots were
+  nonzero (`750/768`), FNV `E5CF803C`, and `753/768`, FNV
+  `E611A9A8`. This selects `H-SlotRoleTimeSkew` for target-phase
+  polarity, rules out a target-phase retail zero conclusion, and does not
+  prove target-phase retail nonzero publication because its phase writer arm
+  was a valid zero. No contract change or mitigation is authorized.
+
 - **s2309 — retail whole-ring polarity.** The required oracle preflight and
   same-run capture passed the whole-RDRAM positive control, title/hangar VI
-  origins, ring watch, phase writer histogram, and final ring snapshot; the
+  origins, ring watch, an active phase bucket, the lifetime ring writer, and
+  the final ring snapshot; the
   port reached title/hangar and retained 45 seconds. The port's current
   phase-10 pair was `0x168850` (`60F910DE`, `nz=621`) and `0x168B50`
   (`7B70923A`, `nz=639`). The first had exact source/consumer events
@@ -80,7 +107,8 @@ stage-only second row remain open. No runtime behavior change is authorized.
   `0x166450..0x169450` through `0x800078EC`; its final ring snapshot had
   `12288` bytes and `12026` nonzero. A `0x300` target slot leaves at most
   `11520` nonzero bytes outside itself, so at least `506` bytes of the exact
-  `0x168850` slot were nonzero. This selects `H-PortOnlyZeroFill` and
+  `0x168850` slot were nonzero. This selects aggregate `H-PortOnlyZeroFill`
+  and
   refutes slot rotation for the observed pair. The result does not prove
   game intent and authorizes no writeback or mitigation.
 
@@ -203,15 +231,16 @@ stage-only second row remain open. No runtime behavior change is authorized.
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 Step 3d per-slot retail polarity.** Ask ground truth first, then run
-   one phase-gated same-run port/retail capture with all 16 `0x300` PCM-slot
-   watches and post-value summaries armed in one oracle invocation. Discover
-   the current nonzero port stage pair from the port log and join it to the
-   per-slot retail writer/value table. Require whole-RDRAM, title/hangar,
-   ring-wide, and per-slot positive controls before reading a null. Resolve
-   whether the retail target slot itself is nonzero at the corresponding
-   phase; do not add writeback, consumer, slot, gate, guard, or address-remap
-   machinery.
+1. **M5 Step 3e retail writer VI-origin census.** Ask ground truth first,
+   retain all sixteen slot watches plus both active 512 phase buckets, and
+   add one title bucket `0x00790400:1024` in the same oracle invocation.
+   Require whole-RDRAM, title/hangar, all sixteen lifetime writer controls,
+   active phase buckets, and nonzero final snapshots. Join the title/512
+   writer counts to the actual current port stage pair. If title writes are
+   positive while both 512 buckets stay zero, select pre-target retail
+   publication; if all three phase buckets are zero, identify the missing
+   VI origin from the trace before changing the instrument. No writeback,
+   consumer, writer, slot, gate, guard, address-remap, or default change.
 2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
    route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
    crash had `route_state=2`, `b40=1`, `key_on=0`; C88=1 was withheld.
@@ -308,6 +337,12 @@ but are superseded at their measured scopes:
 - s2308's port-only zero-fill observation as evidence of retail-normal
   polarity; s2309's independent whole-ring snapshot shows nonzero data in
   the observed physical slot at the same capture scope.
+- s2309's claim that its phase writer histogram proved retail target-phase
+  polarity. Its log had active phase VI coverage but no
+  `writer-pc-phase ... pc=` rows; only the lifetime ring writer was
+  positive. s2310's corrected dual-512 run reproduced that distinction. The
+  s2309 aggregate whole-ring/final-snapshot evidence remains valid, but it
+  cannot establish target-phase publication.
 
 ## Evidence and safety rules
 

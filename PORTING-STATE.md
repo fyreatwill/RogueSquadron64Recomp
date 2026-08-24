@@ -108643,3 +108643,45 @@ ground truth.
 ### Next
 
 Run the per-slot retail polarity work unit from `scratch/agent/NEXT.md`.
+
+## Session 2310 (2026-08-24) — retail slot writers miss both 512 target phases
+
+HYPOTHESIS-ID: m5-per-slot-retail-polarity.
+
+The planned work unit was a ground-truth-first, same-recipe capture with the
+whole-RDRAM positive control, whole PCM ring, all sixteen 0x300 slot watches,
+lifetime writer histograms, post-value snapshots, and the qualified port
+image arm. The first capture passed the title/hangar and retention gates, but
+its single 0x006AB400:512 phase writer bucket had no PC entries. I preserved
+that run and ran the fixed version in this iteration with both 0x006AB400:512
+and 0x006AB800:512 buckets, so the alternate 512 origin was an in-run control
+rather than a cross-run comparison.
+
+The corrected oracle passed the whole-RDRAM threshold at 10000, title and
+hangar VI origins, ring writes of 12288 bytes, all sixteen slot watches at
+768 writes each, port title/hangar, and 45-second port retention. The
+lifetime writer histogram attributed every slot to retail PC 0x800078EC.
+Both phase buckets were active, with 1535 and 2720 VI callbacks, but neither
+contained a writer entry. Final snapshots were nonzero for all sixteen
+slots; the current port pair was 0x166750 and 0x166A50, whose retail
+snapshots were 750/768 (FNV E5CF803C) and 753/768 (FNV E611A9A8).
+
+The port's current stage rows were event 9740 at 0x166750 with FNV 60F910DE
+and nz=621, and event 9742 at 0x166A50 with FNV 7B70923A and nz=639. Both
+were stage-only in the phase-10 task join. Later rows at those destinations
+were zero-payload image-DMA writes at events 9882 and 9884, with writer_pc=0
+and callsite 0x8008EE84. This selects H-SlotRoleTimeSkew for target-phase
+polarity: the retail lifetime writers and final nonzero values do not join
+the port stage-to-PCM-to-zero sequence. It rules out interpreting the
+target-phase retail result as a shared zero contract, but it does not prove
+that the retail final nonzero values were published in the target phase.
+The aggregate H-PortOnlyZeroFill result remains limited to its final-ring
+capture scope. No runtime behavior or mitigation was changed.
+
+ORIGIN: no mitigation-shaped change; this iteration added the batched
+per-slot oracle launcher, corrected it with the alternate 512 phase bucket,
+and generated the joined slot tables.
+
+### Next
+
+Run the retail writer VI-origin census from scratch/agent/NEXT.md.
