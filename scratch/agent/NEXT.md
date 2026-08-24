@@ -1,61 +1,63 @@
-# NEXT work unit (s2235) — join retail task output to the port image stage
+# NEXT work unit (s2236) — audit Factor 5 image input ingress
 
 HYPOTHESIS-ID: m5-audio-image-contract
 
 ## Work unit
 
-Run one qualified port image-arm capture using the existing generated
-instrumentation. Keep the default silent arm unchanged. Phase-gate the driven
-route at title `1024` and retain the first-target/hangar rows. Join, per audio
-task ordinal and phase, the image-stage rows, `data_ptr+0x100`/DMA ranges,
-image completion, host writeback, and PCM source/consumer rows against the
-selected retail task-output writer/destination rows from s2234. This is a
-measurement-only run; no task-field rewrite, writeback, consumer guard,
-audio default, gate, wait, slot, or voice change is authorized.
+Add one host-side diagnostic field to the existing `rs64_audio_image_stage`
+probe in `src/main/main.cpp`: hash the `0x180`-byte RDRAM span addressed by
+`field348 & 0x007FFFFF`, and print its FNV/nonzero/valid values beside the
+existing stage-0/1 DMEM input spans and stage-2/3 output spans. This is a
+measurement-only change. Keep the silent default, the opt-in image arm, task
+fields, DMA arguments, completion behavior, gate, wait, slot, and consumer
+unchanged.
 
 ## Competing hypotheses and discriminating measurement
 
-- **H-PortTaskOutputMatch:** the image arm's stage/DMA output reaches the same
-  task-output span represented by the retail post-target rows, with matching
-  destination/range and completion ordering; the exact PCM ring is populated
-  by a later consumer or separate writer.
-- **H-PortImageDirectPCM:** an image stage or its immediate DMA/host boundary
-  joins directly to the exact PCM ring and its PCM source/consumer hash; the
-  retail task-output rows are control data rather than the image output edge.
-- **H-PortContractGap:** image DMEM/DMA/break/SP controls are positive, but
-  neither stage→task-output nor stage→PCM joins for the same ordinal close;
-  the missing edge remains in the image/output contract.
-- **H-PortNoTargetRoute:** the image run fails to reach the required phases or
-  lacks a same-run positive control, making all narrow nulls unevaluable.
+- **H-ImageIngressMissing:** the `field348` RDRAM source span is nonzero but
+  the stage-0/1 DMEM spans (`0xCC0`, `0x3F0`, `0x570`) are zero; the missing
+  edge is the image input load or its address/endianness contract.
+- **H-ImageInputZero:** both the `field348` RDRAM span and the stage-0/1 DMEM
+  spans are zero; the image task receives no usable source data, so the zero
+  stage-2/3 outputs are an upstream task/input contract issue.
+- **H-ImageTransformLoss:** the `field348` span and at least one stage-0/1
+  DMEM span are nonzero, but stage-2/3 output DMEM/DMA spans remain zero; the
+  loss is inside the generated image transform or output-buffer path.
+- **H-ImageNoTargetRoute:** the run lacks the title/hangar phases or the
+  image ABI/DMA/break controls, so the narrow input/output nulls are not
+  evaluable.
 
-The discriminator is one phase-keyed table with rows keyed by
-`(audio ordinal, phase, width, origin)` and carrying: task fields and source
-hash; DMEM change; every nonzero DMA range; image stages 0–3 and their
-destination/field values; image break PC and SP completion; host writeback
-range/hash; PCM source and consumer address/count/hash; and route phase.
-Compare stage/DMA/writeback ranges with retail's selected post-target rows at
-`0x171F70:0x173DB4`, and compare PCM rows with the exact retail ring
-`0x166450:0x169450`. The positive controls are nonzero image ABI/DMEM/DMA
-rows, `break_pc=0x1328`, SP completion, PCM boundary rows, and all three route
-phases. A task-output join selects H-PortTaskOutputMatch; an ordinal/hash
-stage-to-PCM join selects H-PortImageDirectPCM; positive task controls with
-both joins absent selects H-PortContractGap; missing controls selects
-H-PortNoTargetRoute.
+The discriminator is one phase-keyed table keyed by `(phase, width, origin,
+audio ordinal, stage)` carrying `field348` address/hash/nonzero/valid,
+stage-0/1 DMEM hashes/nonzero values, stage-2/3 DMA/output hashes/nonzero
+values, and completion ordering. H-ImageIngressMissing is selected by
+nonzero field348 with zero stage-0/1 DMEM; H-ImageInputZero by zero at both
+boundaries; H-ImageTransformLoss by nonzero input and zero output; missing
+route controls select H-ImageNoTargetRoute. Positive controls in the same run
+are the title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, nonzero ABI
+DMEM-change rows, DMA rows with `break_pc=0x1328`, and PCM boundary rows.
 
-## Exact command
+## Exact commands
 
-No build is required: use the current build carrying the image-stage, ABI,
-DMA, host-boundary, and PCM-boundary witnesses. Run from the repository root
-with the route driver; `env` keeps the permission prefix match intact.
+Before building, edit only `src/main/main.cpp` with `apply_patch`: in
+`rs64_audio_image_stage`, compute the masked `field348` RDRAM hash with the
+existing `rs64_audio_hash_rdram` helper and add `field348_fnv`,
+`field348_nz`, and `field348_valid` to the existing
+`[audtask-image-stage]` line. Then build once and run one capture:
 
 ```sh
-env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2235_image_join 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2235_image_join_driver.log 2>&1
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2236_image_input 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2236_image_input_driver.log 2>&1
 ```
 
-Read only bounded result rows:
+Read only bounded rows after the run:
 
 ```sh
-log=scratch/s73_post_a_scene/s2235_image_join/run.log
-grep -a -n -E '\[audtask-(abi|dma-row|dma-range|image-stage|image-stage-row|image-join|image-summary|image-consumer-only)|\[pcm-boundary-(source|consumer)|\[m5-host-boundary|\[sp\].*complete|\[phase\]' "$log" | tail -240
-grep -a -n -E 'CRASH|UnhandledJump|last phase|lle tasks|exit=|--- done ---' scratch/agent/s2235_image_join_driver.log | tail -80
+log=scratch/s73_post_a_scene/s2236_image_input/run.log
+rg -a '\[audtask-image-stage\].*(phase=8|phase=10)' "$log" | tail -160
+rg -a '\[audtask-image-summary\]|\[audtask-abi\]|\[audtask-dma-row\]|\[pcm-boundary-(source|consumer)|\[phase\]' "$log" | tail -240
+rg -a 'CRASH|UnhandledJump|last phase|lle tasks|exit=|--- done ---' scratch/agent/s2236_image_input_driver.log | tail -80
 ```
+
+No audio default flip, writeback/consumer guard, task-field rewrite, or
+mitigation is authorized by any outcome.

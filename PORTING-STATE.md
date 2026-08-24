@@ -105476,3 +105476,51 @@ changed; this iteration only added independent retail watch coverage.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
+
+## Session 2235 (2026-08-23) — joined port image stages to retail output boundary
+
+Ran the planned qualified port image-arm capture with the existing generated
+ABI/DMA/image-stage/PCM-boundary instrumentation:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2235_image_join 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2235_image_join_driver.log 2>&1
+```
+
+The first attempt exited with code 4 before the 1024 phase. Its terminal
+marker was a Bus error in `fillSampleStreamRange+932`; it supplied no target
+phase control and was not used as a null result. Per the failed-experiment
+contract, reran the same batched capture with a fresh tag:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2235_image_join_retry 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2235_image_join_retry_driver.log 2>&1
+```
+
+The retry reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`;
+the driver exited 0 after the game process was gone during the post-probe
+crash window. It recorded 2,753
+`audtask-abi` rows, all with nonzero DMEM changes; 2,753 DMA rows, all with
+`break_pc=0x1328`; and 6,057 image-stage rows. The phase summaries were:
+
+```text
+phase=8  width=1024 origin=0x790400 stage_rows=3422 nonzero_stage_rows=0 source_matches=0 consumer_matches=0 consumer_only_observed=10
+phase=10 width=512  origin=0x6AB400 stage_rows=1912 nonzero_stage_rows=0 source_matches=0 consumer_matches=0 consumer_only_observed=0
+```
+
+Every image-stage output row had `nz=0`. No stage destination overlapped the
+retail-selected task-output span `0x171F70:0x173DB4` in either target phase.
+The PCM boundary controls still fired, including 19 sampled nonzero source
+and 19 sampled nonzero consumer rows in the title phase, but zero image
+ordinal/hash joins occurred. This selects H-PortContractGap at this scope:
+the image arm runs and completes, but its sampled output payloads are zero and
+neither the retail task-output edge nor the exact PCM source/consumer edge is
+closed. It rules out H-PortNoTargetRoute for the successful retry and does not
+authorize a task-field rewrite, writeback guard, consumer guard, audio default,
+or other runtime change.
+
+ORIGIN: no value was suppressed, rewritten, guarded, restored, or otherwise
+changed; this iteration only retried and joined existing diagnostic rows.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-contract`.

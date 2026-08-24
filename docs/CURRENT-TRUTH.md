@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2234 (2026-08-23); behavioral and source evidence is
-current through s2234, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2234 remain in
+Maintained in Session 2235 (2026-08-23); behavioral and source evidence is
+current through s2235, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2235 remain in
 the append-only ledger.
 
 ## Current state
@@ -52,6 +52,15 @@ the append-only ledger.
   `0x80091170`/`0x80091204` writer set. This selects H-RetailTaskOutput and
   rejects a target-phase direct-PCM write at this scope; it is single-source
   retail evidence and still needs a port-side image-stage join.
+- s2235's first port image-arm capture crashed in `fillSampleStreamRange+932`
+  before the 1024 phase. A fresh retry reached title `1024 @ 0x00790400`
+  and hangar `512 @ 0x006AB400`, with 2,753 ABI rows, 2,753 DMA rows, and
+  6,057 image-stage rows. Every ABI/DMA row changed DMEM and broke at
+  `0x1328`; both target summaries had zero nonzero stage rows, zero exact
+  source/consumer joins, and zero stage-destination overlap with retail's
+  `0x171F70:0x173DB4` task-output span. Sampled PCM source/consumer controls
+  were nonzero at title, but no image ordinal/hash joined them. This selects
+  H-PortContractGap at the measured scope; the image arm remains opt-in.
 - s2232's same-build port A/B reached the target route, title, and hangar in
   both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
   DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
@@ -86,14 +95,14 @@ the append-only ledger.
 Closed investigations are not active work items. The sequence is monotonic.
 
 1. **M5 image-output contract attribution.** s2232 selected H-ContractGap at
-  single-source port A/B scope: the Factor 5 arm runs and completes, but its
-  stage-to-PCM join is absent. s2233's independent broad-span retail run
-  refuted a missing target route and a clean no-write result. s2234's exact
-  capture selected H-RetailTaskOutput: post-target writes hit the
-  `data_ptr+0x100` task-output span, while the exact PCM ring had no
-  post-target sample despite a nonzero final snapshot. The next unit is one
-  phase-keyed port run that joins the selected retail writer/destination rows
-  to image-stage, DMA, and PCM source/consumer rows. Do not promote
+  single-source port A/B scope, and s2234 independently selected
+  H-RetailTaskOutput at the exact retail watch boundary. s2235's successful
+  retry selected H-PortContractGap: the image arm changed DMEM and completed,
+  but its output DMEM/DMA payloads were zero, its stage destinations missed
+  the retail task-output span, and no stage/source or stage/consumer join
+  closed. The next unit is one phase-keyed input-source audit of the image
+  arm: hash the `field348` RDRAM input span beside the existing stage-0/1
+  DMEM spans and stage-2/3 output spans. Do not promote
   `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
@@ -162,7 +171,11 @@ discriminator. s2232's same-build A/B adds real image completion and DMA, but
   attributable to the image. s2234's independent retail capture adds
   exact-span attribution: the task-output watch had 303 post-target samples
   and 62 values, while the exact PCM-ring watch had zero post-target samples
-  and a nonzero final snapshot. The image arm remains opt-in.
+  and a nonzero final snapshot. s2235's port join adds 2,753 completed image
+  tasks and 6,057 stage rows, all with zero output payload bytes in the two
+  target summaries; the stage destinations never overlap the selected retail
+  task-output span, and no exact stage/PCM join occurs. The arm remains
+  opt-in pending the input-source audit.
 
 s2233's retail oracle passed its whole-RDRAM control, reached the driven 640,
 title, and hangar phases, and wrote the broad `0x166000:0x17A000` span
@@ -309,13 +322,18 @@ remain in the append-only ledger. Operationally:
   exact PCM ring does not. The final PCM snapshot and lifetime write count do
   not establish its target-phase writer, and the result remains single-source
   until joined to the port image-stage rows.
+- s2235's first capture was a pre-target `fillSampleStreamRange+932` crash;
+  the fresh retry reached both target phases and supplied the positive controls
+  and joins. The first attempt is therefore a failed run, not a selected null;
+  the retry rules out H-PortNoTargetRoute for its covered scope and selects
+  H-PortContractGap instead.
 
 ## Evidence ledger summary
 
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2234 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2235 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
