@@ -5,10 +5,11 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2278 (2026-08-24); behavioral and source evidence is
-current through s2278. This iteration added a regeneration-safe key-on
-pointer/branch witness and completed a qualified hangar port run plus
-independent retail PC/GPR controls. No key-on behavior or default changed.
+Maintained in Session 2279 (2026-08-24); behavioral and source evidence is
+current through s2279. This iteration added an oracle-side key-on field dump
+and ran both the requested pair and a fixed established-route pair. Retail
+controls qualified, but neither port arm supplied the required hangar window;
+no key-on behavior or default changed.
 
 ## Current state
 
@@ -46,12 +47,12 @@ independent retail PC/GPR controls. No key-on behavior or default changed.
   show both port-only and retail-only values in every common cell. s2278's
   qualified port witness fired once at all eight transfer PCs with
   `raw_ptr=0x801772F0`, `source_word=0x00C0053F`, selector `0`, and state
-  `0x6F5F`. Retail independently hit all eight PCs in hangar and showed
-  denominator `$a0=0xC0` plus caller selector `$v0=0` on matching rows, but
-  its voice-list pointers vary across rows and the oracle has not yet joined
-  the full source word and destination state to the same transfer row. This
-  selects a pointer/data-side lead at the tested scope, not a complete
-  pointer-versus-branch verdict.
+  `0x6F5F`. s2279's oracle field dump independently fired at all eight PCs
+  with whole-RDRAM, title, and hangar controls, but its bounded unique-field
+  buckets saturated (`hits=17,987`, overflow `14,718`–`15,911` in the fixed
+  100-second run) while the port arm missed the required hangar and crashed
+  at off-target `512 @ 0x00690400`. The source/state join is therefore still
+  H-CoverageInvalid; no pointer-versus-branch verdict follows.
 - The VI second-origin publisher/cadence is open. Field, current-register,
   timing, and total-`VI` arms recover the split, but none is default-on.
 - s2273's first Step 1 pair was route-invalid: the heavy trace reached title
@@ -122,6 +123,14 @@ independent retail PC/GPR controls. No key-on behavior or default changed.
   The target rows agree on the `0xC0` denominator and zero caller selector,
   while raw pointers and the port pointed-to word differ; full retail
   source-word/state joining remains open.
+- s2279's new oracle-side `--pc-field-dump` passed the positive-control,
+  title, hangar, and all-eight-PC controls in the requested retail run. Its
+  256-row per-PC unique tuple cap saturated every bucket, so the printed
+  pointed words and branch fields cannot be treated as a complete table. The
+  requested port driver died before title; the fixed established-route driver
+  reached title but stopped at off-target `512 @ 0x00690400` with
+  `port_rc=138` and no `512 @ 0x006AB400`. This pair is H-CoverageInvalid and
+  does not select H-PointerData, H-BranchState, or H-Mixed.
 - s2274's two same-build route attempts failed before the expected hangar
   origin despite positive dispatch/audio/route probes. Removing the three
   high-volume host trace categories changed the failure from a renderer
@@ -265,11 +274,13 @@ independent retail PC/GPR controls. No key-on behavior or default changed.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 key-on tuple contract.** Complete the oracle-side join for
-   `MEM_W($s0+0x60)` and `$s1+0x22` at the same qualified transfer rows, then
-   compare normalized pointer/data against the new port witness. The current
-   evidence is a pointer/data-side lead only; no key-on return or mitigation
-   change follows. The Step 1 task/output pair remains parked.
+1. **M5 key-on tuple contract.** Re-run the oracle-side join with a
+   non-saturating field census and the established route driver, then require
+   the port to reach `512 @ 0x006AB400` before comparing
+   `MEM_W($s0+0x60)`, `MEM_BU($s0+0x22)`, and `$s1+0x22` against the port
+   witness. The current evidence is a pointer/data-side lead only; no key-on
+   return or mitigation change follows. The Step 1 task/output pair remains
+   parked.
 2. **M5 A1 second-origin transition.** Identify the natural host field
    publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
    remain opt-in.

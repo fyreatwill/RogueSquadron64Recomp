@@ -107318,8 +107318,44 @@ ORIGIN: no guest writer, host writer, value, guard, skip, restore, default, or
 route behavior changed; this session added observation-only diagnostics and
 driver/oracle commands.
 
+## Session 2279 (2026-08-24) — oracle key-on field join remained coverage-invalid
+
+HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator.
+
+Ground truth was established before interpreting the new instrument. I added
+`--pc-field-dump` to `tools/oracle/rs64_oracle.c`; at each requested transfer
+PC it records live `$s0`, `$s1`, `MEM_W($s0+0x60)`, `MEM_BU($s0+0x22)`, `$v0`,
+and `MEM_HU($s1+0x22)` under the explicit `width=512,
+origin=0x006AB400` gate. Each PC has a bounded unique-row table with hit and
+overflow summaries. The oracle rebuilt successfully.
+
+The requested pair's retail arm passed the whole-RDRAM positive control,
+reached title and hangar, and fired all eight transfer PCs. The port arm died
+at the off-target `640 @ 0x00696100` route before title/hangar. The retail
+field table had 11,854 target-phase hits per PC and saturated all eight
+256-row buckets, with overflow from 8,615 to 9,659; this is not a complete
+source/state table.
+
+I then ran the fixed established eleven-Start route with the same oracle
+instrument. Retail again passed the whole-RDRAM, title, hangar, and all-eight-PC
+controls. The port reached title `1024 @ 0x00790400`, but stopped at
+off-target `512 @ 0x00690400` and crashed (`port_rc=138`, 36 crash markers),
+without `512 @ 0x006AB400`. The longer retail run had 17,987 target-phase
+hits per PC and overflow from 14,718 to 15,911. No runtime behavior, key-on
+return, divide guard, slot store, audio default, or route gate changed.
+
+This selects H-CoverageInvalid for the measurement. It rules out an absent
+retail transfer path and an absent oracle positive control, but it does not
+select H-PointerData, H-BranchState, or H-Mixed and supplies no mitigation
+authorization. The bounded oracle capacity and the port route must be fixed
+before the retail source/state join can be interpreted.
+
+ORIGIN: no guest or host value was suppressed, rewritten, guarded, restored,
+or defaulted; this session added observation-only oracle diagnostics and a
+driver option.
+
 ### Next
 
-Complete the oracle-side full-word/state join described in
-`scratch/agent/NEXT.md`.
+Raise the oracle census capacity and rerun the route-qualified join described
+in `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.

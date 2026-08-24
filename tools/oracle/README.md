@@ -44,6 +44,11 @@ control cannot silence them.
 rows to live 640-width VI origins. This keeps a high-frequency boot watch
 from changing the driven route while collecting target-phase GPR returns.
 
+`--pc-field-dump A[,B...]` records a bounded unique table at the selected
+execution PCs, phase-gated by `--pc-phase-log` or `--pc-phase-log-width`. Each
+row includes `$s0`, `$s1`, `MEM_W($s0+0x60)`, `MEM_BU($s0+0x22)`, `$v0`, and
+`MEM_HU($s1+0x22)`, with per-PC hit and overflow summaries at shutdown.
+
 `--watch-pc-range START:END` arms one execution breakpoint across a half-open
 guest-PC range. It is useful when the per-PC watch list would exceed the
 debugger's breakpoint capacity; each hit still reports its exact PC and GPR

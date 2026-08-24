@@ -54,6 +54,8 @@
 #define MAX_VI_SWAP_PHASE_ROWS 256
 #define MAX_MODE_DUMP_ROWS 256
 #define MAX_VI_CONTEXT_ROWS 1024
+#define MAX_PC_FIELD_DUMP_PCS 32
+#define MAX_PC_FIELD_DUMP_ROWS 256
 #define VI_ORIGIN_ADDR 0xA4400004u
 #define VI_WIDTH_ADDR  0xA4400008u
 #define VI_CURRENT_ADDR 0xA4400010u
@@ -234,6 +236,25 @@ static long g_vi_context_latched;
 static long g_vi_context_joined;
 static long g_vi_context_dropped;
 static long g_vi_context_overflow;
+struct pc_field_dump_row {
+    uint32_t s0;
+    uint32_t s1;
+    uint32_t source_word;
+    uint32_t source_byte;
+    uint32_t branch_selector;
+    uint32_t branch_state;
+    long n;
+};
+struct pc_field_dump_bucket {
+    uint32_t pc;
+    struct pc_field_dump_row rows[MAX_PC_FIELD_DUMP_ROWS];
+    int n_rows;
+    long hits;
+    long overflow;
+};
+static struct pc_field_dump_bucket
+    g_pc_field_dump[MAX_PC_FIELD_DUMP_PCS];
+static int g_n_pc_field_dump;
 
 static uint32_t debug_rdram_addr(uint32_t physical);
 static uint32_t to_phys(uint32_t a);
@@ -272,6 +293,100 @@ static int pc_phase_log_match(void)
             return 1;
     }
     return 0;
+}
+
+static uint32_t debug_mem_u8(uint32_t guest)
+{
+    uint32_t aligned = guest & ~3u;
+    uint32_t value = pDebugMemRead32(debug_rdram_addr(aligned));
+    unsigned shift = 24u - ((guest & 3u) * 8u);
+    return (value >> shift) & 0xFFu;
+}
+
+static uint32_t debug_mem_u16(uint32_t guest)
+{
+    uint32_t aligned = guest & ~3u;
+    uint32_t value = pDebugMemRead32(debug_rdram_addr(aligned));
+    unsigned shift = (guest & 2u) ? 0u : 16u;
+    return (value >> shift) & 0xFFFFu;
+}
+
+static int pc_field_dump_index(uint32_t pc)
+{
+    int i;
+    for (i = 0; i < g_n_pc_field_dump; i++) {
+        if (g_pc_field_dump[i].pc == pc)
+            return i;
+    }
+    return -1;
+}
+
+static void dump_pc_field(uint32_t pc)
+{
+    struct pc_field_dump_bucket *bucket;
+    struct pc_field_dump_row row;
+    int index;
+    int i;
+
+    if (!pc_phase_log_match())
+        return;
+    index = pc_field_dump_index(pc);
+    if (index < 0)
+        return;
+    bucket = &g_pc_field_dump[index];
+    bucket->hits++;
+    row.s0 = gpr32(16);
+    row.s1 = gpr32(17);
+    row.source_word = pDebugMemRead32(debug_rdram_addr((row.s0 + 0x60u) & ~3u));
+    row.source_byte = debug_mem_u8(row.s0 + 0x22u);
+    row.branch_selector = gpr32(2);
+    row.branch_state = debug_mem_u16(row.s1 + 0x22u);
+    for (i = 0; i < bucket->n_rows; i++) {
+        if (bucket->rows[i].s0 == row.s0 &&
+            bucket->rows[i].s1 == row.s1 &&
+            bucket->rows[i].source_word == row.source_word &&
+            bucket->rows[i].source_byte == row.source_byte &&
+            bucket->rows[i].branch_selector == row.branch_selector &&
+            bucket->rows[i].branch_state == row.branch_state) {
+            bucket->rows[i].n++;
+            return;
+        }
+    }
+    if (bucket->n_rows >= MAX_PC_FIELD_DUMP_ROWS) {
+        bucket->overflow++;
+        return;
+    }
+    row.n = 1;
+    bucket->rows[bucket->n_rows++] = row;
+    printf("[pc-field-dump] pc=0x%08x width=%u origin=0x%08x "
+           "s0=0x%08x s1=0x%08x source_word=0x%08x "
+           "source_byte=0x%02x branch_selector=0x%08x "
+           "branch_state=0x%04x n=1\n",
+           pc, pDebugMemRead32(VI_WIDTH_ADDR),
+           pDebugMemRead32(VI_ORIGIN_ADDR), row.s0, row.s1,
+           row.source_word, row.source_byte, row.branch_selector,
+           row.branch_state);
+    fflush(stdout);
+}
+
+static void add_pc_field_dump_pcs(const char *arg)
+{
+    char *copy = strdup(arg);
+    char *tok, *save = NULL;
+    if (!copy)
+        exit(1);
+    for (tok = strtok_r(copy, ",", &save); tok;
+         tok = strtok_r(NULL, ",", &save)) {
+        unsigned int pc;
+        if (g_n_pc_field_dump >= MAX_PC_FIELD_DUMP_PCS ||
+            sscanf(tok, "%x", &pc) != 1) {
+            fprintf(stderr, "[oracle] bad --pc-field-dump '%s'\n", tok);
+            free(copy);
+            exit(2);
+        }
+        g_pc_field_dump[g_n_pc_field_dump++].pc = pc;
+    }
+    free(copy);
 }
 
 static void add_pc_phase_log_width(char *spec)
@@ -830,6 +945,9 @@ static void dbg_update(unsigned int pc)
                             (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC),
                             gpr32(4) & 0x1FFFFFFFu);
     }
+
+    if (flags & M64P_BKP_FLAG_EXEC)
+        dump_pc_field(pc);
 
     if ((flags & M64P_BKP_FLAG_EXEC) && g_mode_dump_enabled &&
         pc == g_mode_dump_pc)
@@ -1390,6 +1508,7 @@ static void usage(void)
         "  --detail-watch N      always log hits for watch index N\n"
         "  --pc-phase-log ORIGIN log watched execs only at 640-width VI origin (repeatable)\n"
         "  --pc-phase-log-width ORIGIN:WIDTH log watched execs at an explicit VI bucket\n"
+        "  --pc-field-dump A[,B...] dump phase-gated $s0/$s1 and pointed fields\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
         "  --post-swap-table-pc A join a 640-wide swap at A to the following VI callback\n"
         "  --vi-context-table-pc A join __osViNext at 640-wide execution A to the following VI callback\n"
@@ -1480,6 +1599,8 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "--pc-phase-log-width") && i + 1 < argc)
             add_pc_phase_log_width(argv[++i]);
+        else if (!strcmp(argv[i], "--pc-field-dump") && i + 1 < argc)
+            add_pc_field_dump_pcs(argv[++i]);
         else if (!strcmp(argv[i], "--mode-dump-pc") && i + 1 < argc) {
             g_mode_dump_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_mode_dump_enabled = 1;
@@ -1738,6 +1859,21 @@ int main(int argc, char **argv)
         if (g_writer_pc_overflow[watch])
             printf("[oracle] writer-pc overflow=%ld\n",
                    g_writer_pc_overflow[watch]);
+    }
+    for (int i = 0; i < g_n_pc_field_dump; i++) {
+        struct pc_field_dump_bucket *bucket = &g_pc_field_dump[i];
+        printf("[oracle] pc-field-summary pc=0x%08x rows=%d/%d hits=%ld overflow=%ld\n",
+               bucket->pc, bucket->n_rows, MAX_PC_FIELD_DUMP_ROWS,
+               bucket->hits, bucket->overflow);
+        for (int j = 0; j < bucket->n_rows; j++)
+            printf("[oracle] pc-field-row pc=0x%08x s0=0x%08x s1=0x%08x "
+                   "source_word=0x%08x branch_selector=0x%08x "
+                   "source_byte=0x%02x branch_state=0x%04x n=%ld\n",
+                   bucket->pc, bucket->rows[j].s0, bucket->rows[j].s1,
+                   bucket->rows[j].source_word,
+                   bucket->rows[j].branch_selector,
+                   bucket->rows[j].source_byte,
+                   bucket->rows[j].branch_state, bucket->rows[j].n);
     }
     printf("[oracle] execution watch hits: %ld\n", g_pc_hits);
     for (int i = 0; i < g_n_exec_prev; i++)

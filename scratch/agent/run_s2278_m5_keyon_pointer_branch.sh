@@ -23,7 +23,9 @@ tools/oracle/build/rs64_oracle \
     --core "$ORACLE_CORE" --rom "$ORACLE_ROM" --secs 100 \
     --video "$ORACLE_VIDEO" --press "$PRESS" --hold-ms 150 \
     --watch-write 0x0:0x800000 --watch-pc "$PCS" \
-    --pc-phase-log 0x006AB400 --vi-trace > "$OUT/retail.log" 2>&1 &
+    --pc-phase-log 0x006AB400 \
+    --pc-field-dump "$PCS" --pc-phase-log-width 0x006AB400:512 \
+    --vi-trace > "$OUT/retail.log" 2>&1 &
 oracle_pid=$!
 
 (
@@ -80,7 +82,7 @@ wait "$port_pid" 2>/dev/null
 port_rc=$?
 print "oracle_rc=$oracle_rc port_rc=$port_rc oracle_killed=$oracle_killed port_killed=$port_killed" >> "$OUT/driver.log"
 
-print "--- controls ---" >> "$OUT/driver.log"
+print -- "--- controls ---" >> "$OUT/driver.log"
 print "retail_whole_rdram=$(grep -a -c 'watch write \[0x00000000,0x00800000): 10000 hit' "$OUT/retail.log" || true)" >> "$OUT/driver.log"
 print "retail_title=$(grep -a -c 'origin=0x00790400 width=1024' "$OUT/retail.log" || true)" >> "$OUT/driver.log"
 print "retail_hangar=$(grep -a -c 'origin=0x006ab400 width=512' "$OUT/retail.log" || true)" >> "$OUT/driver.log"
