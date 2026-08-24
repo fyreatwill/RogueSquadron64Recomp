@@ -105198,3 +105198,37 @@ changed. The dirty `lib/` submodules were left untouched.
 The maintenance result rules out neither tuple-parity hypothesis; it only
 removes stale operational duplication. Post-maintenance size and line-count
 checks are recorded with this commit.
+
+## Session 2228 (2026-08-23) — expanded key-on census to 8192 entries
+
+Changed the regeneration-safe s2224 key-on census template in
+`../N64Recomp/fixup_game_funcs.py` from 2048 to 8192 tuple entries per
+transfer PC and changed the matching overflow limit. Regenerated in the
+required make-elf, N64Recomp, fixup, and CMake order; the Debug target built
+successfully. No generated game behavior, key-on return, guard, default, task
+field, or audio dispatch behavior changed.
+
+Ran the prescribed detail arm with C88/image/LLE/spin controls. Positive
+controls fired: 599 LLE tasks, 49 audio-task dispatches, 128 key-on event/slot
+rows, and 10,331 transfer rows. The run reached the first target
+`640 @ 0x00696100`; its two control rows showed entry/normal-tail/slot
+activity, and all eight transfer sites had zero overflow with unique tuple
+counts `928/928, 906/906, 88/88, 520/520` across paired sites. It did not
+reach title or hangar. The process exited with driver code 4 after a Bus error
+at `fillSampleStreamRange+8136`, with last guest PC `0x8000B650`.
+
+The 8192 cap therefore removes the observed first-target ring cap, but this
+run cannot compare all three phase buckets or retail tuple sets. It does not
+select tuple parity, tuple mismatch, or a clean expanded-route boundary; the
+crash-versus-cap/trace relationship remains open for the next three-arm
+phase-keyed test. This is single-source port evidence; s2223 remains the
+independent retail baseline. No mitigation or runtime behavior change was
+authorized. Log: `scratch/s73_post_a_scene/s2228_keyon_tuple_cap/run.log`.
+
+ORIGIN: no game value was suppressed, rewritten, guarded, or restored; the
+change enlarged diagnostic storage and the run only recorded values.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-keyon-contract`.

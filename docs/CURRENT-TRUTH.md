@@ -3,8 +3,8 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2227 (2026-08-23); behavioral and source evidence is
-current through s2226. The s2198–s2226 archive is §44.
+Maintained in Session 2228 (2026-08-23); behavioral and source evidence is
+current through s2228. The s2198–s2226 archive is §44.
 
 ## Current state
 
@@ -43,10 +43,11 @@ current through s2226. The s2198–s2226 archive is §44.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 key-on tuple contract.** Expand the regeneration-safe port census
-   ring from 2048 to 8192 entries per transfer PC, then compare one complete
-   phase-keyed table against s2223's retail table. This is the next work unit
-   in [`scratch/agent/NEXT.md`](../scratch/agent/NEXT.md). No key-on return,
+1. **M5 key-on tuple contract.** Isolate the early
+   `fillSampleStreamRange+8136` crash seen by the first 8192-entry census
+   arm, then complete the phase-keyed comparison against s2223's retail
+   table. The next three-arm discriminator is in
+   [`scratch/agent/NEXT.md`](../scratch/agent/NEXT.md). No key-on return,
    guard, task-field rewrite, default flip, or mitigation follows from the
    comparison automatically.
 2. **M5 A1: identify the missing second-origin transition.** Retail's
@@ -144,7 +145,15 @@ origins and hangar, all eight divide PCs at zero, and phase-specific disjoint
 tuple sets. s2225 showed the detail logger itself fires and reaches first
 target, title, and hangar. s2226 expanded the port rings to 2048: hangar and
 title had zero overflow, but six first-target rings remained capped and the
-second target origin was absent. Expand the cap before interpreting parity.
+second target origin was absent. s2228's 8192 result is recorded next.
+s2228 regenerated the template and build with 8192 entries. Its detail arm
+passed positive controls (599 LLE tasks, 49 audio dispatches, 128 key-on
+events/slot rows, and 10,331 transfer rows) and reached the first target with
+zero overflow at all sites sampled (`928/928, 906/906, 88/88, 520/520`
+unique tuples across paired sites). It then crashed before title or hangar at
+`fillSampleStreamRange+8136`, so the cap removed the first-target overflow but
+the parity discriminator is incomplete. This is single-source port evidence;
+the crash's cause and the later phase buckets remain open.
 
 ### M3, M4, and generated symbols
 
