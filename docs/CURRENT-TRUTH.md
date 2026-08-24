@@ -5,11 +5,10 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2275 (2026-08-24); behavioral and source evidence is
-current through s2275. This iteration built the unchanged target and ran one
-single silent Step 1 control. It reached title, stayed alive in an off-target
-640 phase, and missed the expected hangar origin until the watchdog SIGKILL;
-no runtime change was made.
+Maintained in Session 2276 (2026-08-24); behavioral and source evidence is
+current through s2276. This iteration ran the retail oracle control and a
+same-build silent/image Step 1 pair. The oracle qualified, but both port arms
+missed the required hangar route; no runtime change was made.
 
 ## Current state
 
@@ -75,9 +74,23 @@ no runtime change was made.
   `[CRASH]` or `[ABORT]` marker. This selects H-RouteStall at the tested
   scope; audio/output nulls remain uninterpretable and the image arm remains
   unlaunched.
+- s2276's retail oracle passed its whole-RDRAM control with 10,125 writes and
+  repeatedly reached the retail hangar origin `0x006AB400`. The silent port
+  arm reached title `1024 @ 0x00790400`, then crashed in
+  `slotDispatcherIter+3508` at guest PC `0x80007904` after an off-target
+  `640 @ 0x00696100`; it had 72 dispatches, 266 audio-return rows, and 51/51
+  phase-8 PCM source/consumer controls. The image arm emitted 48 dispatches
+  and one `[missing-func]` but stalled in the initial 640 route before title,
+  with no target-phase audio rows. Both arms missed `512 @ 0x006AB400`, so
+  the pair selects H-RouteInvalid and leaves audio/output nulls unevaluable.
 
 ## Latest evidence
 
+- s2276's fresh oracle-plus-pair run passed the retail whole-RDRAM and hangar
+  controls. The silent port arm reached title and then crashed in
+  `slotDispatcherIter+3508` after an off-target 640 transition; the image arm
+  failed in the initial 640 route. Neither arm reached the required hangar
+  origin, so this is H-RouteInvalid and supplies no audio/output null.
 - s2274's two same-build route attempts failed before the expected hangar
   origin despite positive dispatch/audio/route probes. Removing the three
   high-volume host trace categories changed the failure from a renderer
@@ -329,6 +342,10 @@ the append-only ledger. Operationally:
   off-target 640 phase and was killed by the route watcher, so its PCM and
   audio nulls do not overturn the qualified s2268/s2272 output evidence or
   identify an audio writer.
+- s2276's Step 1 pair is the same route-invalid class with an independent
+  oracle control: the silent arm supplied target-adjacent audio/PCM controls
+  before a route crash, while the image arm failed earlier. It does not make
+  the image arm intrinsically defective or explain any audio null.
 - s2269's pre-target controls followed by a shared width-640 stall and s2270's
   image-first/silent split are route-invalid observations. They do not make
   the qualified s2268 output tuple disappear or explain the route-load

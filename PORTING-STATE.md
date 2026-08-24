@@ -107192,3 +107192,40 @@ guarded, restored, or defaulted.
 Use the M5 key-on pointer-versus-branch discriminator in
 `scratch/agent/NEXT.md` before building or changing the census.
 `HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
+
+## Session 2276 (2026-08-24) — M5 Step 1 pair remained route-invalid after oracle control
+
+The M5 priority kept the Step 1 validation ahead of the stale key-on NEXT for
+this iteration. I added the bounded driver
+`scratch/agent/run_s2276_m5_step1_pair.sh`, which first ran the retail oracle
+with a whole-RDRAM positive control and the existing title/hangar route, then
+ran the silent and image arms from the unchanged Debug build. The first two
+driver attempts stopped on shell defects (an old oracle-summary matcher and
+zsh `$!` interpolation); both were fixed before the game result was accepted.
+
+The oracle control passed with 10,125 whole-RDRAM writes and repeated retail
+`0x006ab400` hangar origins. The silent port arm reached title
+`1024 @ 0x00790400`, then crashed in `slotDispatcherIter+3508` at guest PC
+`0x80007904` after an off-target `640 @ 0x00696100`; it produced 72 audio-task
+dispatch rows, 266 audio-return rows, and 51/51 phase-8 PCM source/consumer
+controls. The image arm produced 48 dispatch rows and one `[missing-func]`,
+but stalled in the initial 640 route before title and produced no target-phase
+audio rows. Both arms missed `512 @ 0x006AB400` and were SIGKILLed at their
+180-second phase deadlines.
+
+This selects H-RouteInvalid for the tested pair and rules out interpreting
+audio/output nulls as H-AudioDegeneracy or H-ContractGap. The independent
+oracle control proves the retail route and the port dispatch/PCM rows prove
+the probes were live, but neither port arm entered the required comparison
+window. After the repeated Step 1 route failures, the next work unit pivots
+to the M5 key-on pointer-versus-branch discriminator. No guest, host, task,
+slot, wait, guard, or default behavior changed.
+
+ORIGIN: observation and driver-only diagnostics; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+Use the M5 key-on pointer-versus-branch discriminator in
+`scratch/agent/NEXT.md` before building or changing the census.
+`HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
