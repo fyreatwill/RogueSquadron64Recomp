@@ -106799,3 +106799,40 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-silent-route-qualification`.
+
+## Session 2267 (2026-08-24) — isolated silent route qualified through hangar
+
+No new instrumentation or runtime change was made. Rebuilt the unchanged
+Debug target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`;
+the build passed.
+
+Ran the prescribed silent+C88=`0` arm alone with the qualified spin/LLE route
+and reduced trace. The driver capture is
+`scratch/agent/s2267_silent_c88_0_isolated_route_driver.log`; the game log is
+`scratch/s73_post_a_scene/s2267_silent_c88_0_isolated_route/run.log`.
+
+The arm passed startup, one `[missing-func]`, 14 B40 rows, and 28 route-state
+rows. It reached title `1024 @ 0x00790400` at 49.4s and hangar
+`512 @ 0x006AB400` at 78.9s and 115.4s. Phase-8/10/12 PCM source and
+consumer rows were `53/48/5` on each side; every row had
+`FNV=0xF59C39C5`, `nz=0`. These controls are positive because the same run
+also emitted the title and hangar VI transitions and the B40/route-state
+records.
+
+The process later hit the known aligned-ROM abort at
+`last-guest-pc=0x80001b08`, after target qualification; the driver completed
+its post-probe window and reported `CRASH: 36`. This is not the pre-1024
+`MetalFramebuffer` failure from the s2266 pair. The isolated result selects
+H-SilentRouteLoadSensitive at the tested scope against the earlier paired
+failure, and permits a fresh same-build image/silent output comparison. It
+does not identify an audio writer, promote the silent PCM values, or authorize
+a default, writeback, consumer, slot, gate, or guard change.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract`.
