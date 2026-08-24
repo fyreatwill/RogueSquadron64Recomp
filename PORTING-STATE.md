@@ -107726,3 +107726,56 @@ port arm must explicitly inject the eleven-Start route because s2288 launched
 the executable directly without a host key injector. Gate the default arm on
 the stub reaching title and hangar; do not add a callback guard, skip,
 writeback, C88 override, or route workaround.
+
+## Session 2290 (2026-08-24) — explicit Start route requalified M5 default arm
+
+HYPOTHESIS-ID: m5-step2-route-requalification.
+
+The prescribed work unit was one corrected same-build M5 Step 2
+stub-first/default-second comparison. The unchanged tree built successfully
+with `cmake --build build --config Debug --target RogueSquadron64Recomp`, and
+the driver passed `zsh -n`. An initial driver attempt was invalid because its
+key worker waited for a title marker before sending any input; it was fixed in
+the same iteration before interpreting a result. The final driver explicitly
+sent the established eleven process-start Start events to each port window
+using keycode 36, rather than relying on `PROBE_KEYS_FROM_PHASE` in a directly
+launched executable.
+
+The independent retail oracle passed the whole-RDRAM positive control at
+10,000 callbacks and reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. The port logs independently showed SDL Return events and
+host Start edges in both arms. The stub reached title once and hangar twice;
+only then did the driver launch the default image arm. The default reached the
+same title once and hangar twice before the retention window ended.
+
+The stub/default counter table was:
+
+| arm | dispatch | task ABI | DMA rows | DMA ranges | image stages | audio return | audio route | gate | PCM source/consumer |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| stub | 59 | 1273 | 1273 | 0 | 0 | 519 | 2271 | 1024 | 89/89 |
+| default | 56 | 1102 | 1102 | 2227 | 4470 | 518 | 2241 | 1024 | 88/88 |
+
+The default target window included nonzero phase-10 image payloads with
+`nz=621` and `nz=639`; the stub produced no image-stage rows. Both arms had
+one `[missing-func]` marker and 36 crash-marker lines, but their terminal
+crashes occurred after title/hangar qualification: the stub ended at the
+known aligned-ROM path with last guest PC `0x80001B08`, and the default ended
+in `updateHangarBayScene+76424` with last guest PC `0x800AC8C0`. There were no
+abort markers. This selects H-PortStubRouteRestored and H-DefaultSafe at the
+tested recipe scope. It rules out H-PortCallbackStateGap and
+H-RouteControlInvalid for the explicitly driven recipe; it does not identify a
+new writer or authorize a mitigation.
+
+ORIGIN: no mitigation-shaped change; this iteration added only the
+phase-gated driver `scratch/agent/run_s2290_m5_stub_route_requal.sh` and its
+captures. The existing default selection and explicit stub escape were not
+changed.
+
+### Next
+
+Use the newly qualified default route for M5 Step 3: join one independent
+retail writer span to one nonzero phase-10 port image-stage/DMA tuple. Require
+whole-RDRAM, title, and hangar controls before interpreting a writer or
+consumer null. Compare writer PC, destination span, byte count, payload
+polarity, and completion ordering; do not land a writeback or guard from a
+mismatch.
