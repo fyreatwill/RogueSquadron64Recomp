@@ -1,44 +1,44 @@
-# NEXT work unit (s2213) — test the host VI current-register selector
+# NEXT work unit (s2214) — distinguish host VI current-register publication timing
 
 HYPOTHESIS-ID: m5-a1-port-current-reg-selector
 
 ## Work unit
 
-Run the retail context-table preflight first, then make one opt-in diagnostic
-arm in `lib/N64ModernRuntime/ultramodern/src/events.cpp`. The arm should use
-`regs.VI_V_CURRENT_LINE_REG & 1` as the `ViState::update_vi` field selector
-and toggle that host register after each VI commit. Keep the existing
-`ROGUESQ_VI_ALTERNATE_FIELDS=1` arm unchanged as a comparison; the new arm is
-not a default change and is not a mitigation.
+Run the Rice-driven retail context preflight first, then add one opt-in
+diagnostic timing arm to `lib/N64ModernRuntime/ultramodern/src/events.cpp`.
+Keep `ROGUESQ_VI_FIELD_FROM_CURRENT_REG=1` as the existing post-commit toggle
+arm. Add `ROGUESQ_VI_CURRENT_REG_TOGGLE_BEFORE_SCREEN=1` so the same host
+register is toggled immediately before the VI thread enqueues its
+`ScreenUpdateAction`; the new arm must not change the default or the existing
+post-commit arm. Export the submodule patch and build once, then run control,
+post-commit, and before-screen arms concurrently from that binary.
 
 Competing hypotheses and the single discriminator:
 
-- H-CurrentRegIsTheSelector: the independent retail context table shows
-  `VI_CURRENT_REG & 1` alternating with the next origin, and the new port arm
-  selects field 0/1 from the register and commits both early/target origins.
-- H-CurrentRegPortContractMissing: retail alternates, but the port current-reg
-  arm does not reproduce the existing alternate arm's selected-field/current-
-  line/commit relationship. The missing work is the host VI register contract,
-  not the mode descriptor or a guest writer.
-- H-CurrentRegRecoveryOnly: the new arm and the existing field-alternation arm
-  produce the same two-origin recovery, but the synthetic host toggle cannot
-  identify retail provenance. This closes the port recovery path while leaving
-  the retail-to-port current-register publication boundary open.
-- H-CurrentRegCoverage: the oracle positive control fires, but the context join
-  or one or more port arms lacks a positive prefix, a width-640 row, or has
-  row overflow. The run is unevaluable and selects no source hypothesis.
+- H-CommitToggle: the register must advance after `update_vi()` commits. The
+  existing post-commit arm keeps the two target commits, while the
+  before-screen arm changes the selected-field/committed-origin relationship.
+- H-ScreenToggle: the register value must be advanced at screen publication.
+  The before-screen arm preserves the retail target relation while the
+  post-commit arm does not.
+- H-TogglePlacementIrrelevant: both dynamic arms select field 0/1 and commit
+  both target origins with the same bounded table; this closes timing as the
+  discriminator but leaves the natural host publication source open.
+- H-Coverage: the oracle control or any port arm lacks its positive prefix,
+  width-640 rows, or zero-overflow table, so the comparison is unevaluable.
 
 The one table is keyed by arm and committed 640 origin and records selected
-field, pre-commit `VI_V_CURRENT_LINE_REG & 1`, commit count, candidate 0/1,
-and the bounded context rows. Require the oracle whole-RDRAM control, at least
-one joined retail context row at each target origin, one port prefix row, one
-width-640 row per arm, and zero port overflow before classifying. Compare the
-new arm with the existing alternate arm and with retail's
-`current_field=0`/`1` context rows. Do not enable either field arm by default.
+field, current-line bit, commit count, candidate 0/1, phase origins, and
+bounded context rows. Require the oracle whole-RDRAM control, joined retail
+rows at both target origins with zero drops/overflow, one port prefix per arm,
+512 width-640 rows per arm, and zero port overflow before classifying. Do not
+enable either field arm by default. A matching pair of dynamic arms selects
+H-TogglePlacementIrrelevant; only a stable divergence selects a timing
+hypothesis.
 
 ## Exact commands
 
-Retail ground truth, before the port edit/build:
+Retail ground truth, before the port edit:
 
 ```sh
 tools/oracle/build/rs64_oracle \
@@ -52,31 +52,31 @@ tools/oracle/build/rs64_oracle \
   --pc-phase-log 0x0066A500 --pc-phase-log 0x005D4500 \
   --pc-phase-log 0x0066AA00 --pc-phase-log 0x00696100 \
   --pc-phase-log 0x00696600 --vi-trace \
-  --press 6:start --hold-ms 200 > scratch/agent/s2213_retail_current_reg.log 2>&1
+  --press 6:start --hold-ms 200 > scratch/agent/s2214_retail_vi_reg_timing.log 2>&1
 ```
 
-Then add the env-gated arm, export, build once, and run all three arms from
-the same build concurrently:
+After adding the env-gated arm and exporting the patch, build once and run
+all three arms concurrently:
 
 ```sh
 ./submodule-patches/export.sh
 cmake --build build -j8
 cd build
-env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 \
-  ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 \
-  ROGUESQ_LOG_VI_CONTEXT_PORT=1 ROGUESQ_VI_ALTERNATE_FIELDS=0 \
-  ROGUESQ_VI_FIELD_FROM_CURRENT_REG=0 ./RogueSquadron64Recomp \
-  > ../scratch/agent/s2213_port_current_reg_control.log 2>&1 & p0=$!
-env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 \
-  ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 \
-  ROGUESQ_LOG_VI_CONTEXT_PORT=1 ROGUESQ_VI_ALTERNATE_FIELDS=1 \
-  ROGUESQ_VI_FIELD_FROM_CURRENT_REG=0 ./RogueSquadron64Recomp \
-  > ../scratch/agent/s2213_port_current_reg_alternate.log 2>&1 & p1=$!
-env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 \
-  ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 \
-  ROGUESQ_LOG_VI_CONTEXT_PORT=1 ROGUESQ_VI_ALTERNATE_FIELDS=0 \
-  ROGUESQ_VI_FIELD_FROM_CURRENT_REG=1 ./RogueSquadron64Recomp \
-  > ../scratch/agent/s2213_port_current_reg_selector.log 2>&1 & p2=$!
+env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
+  ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_VI_CONTEXT_PORT=1 \
+  ROGUESQ_VI_ALTERNATE_FIELDS=0 ROGUESQ_VI_FIELD_FROM_CURRENT_REG=0 \
+  ROGUESQ_VI_CURRENT_REG_TOGGLE_BEFORE_SCREEN=0 ./RogueSquadron64Recomp \
+  > ../scratch/agent/s2214_port_vi_reg_timing_control.log 2>&1 & p0=$!
+env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
+  ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_VI_CONTEXT_PORT=1 \
+  ROGUESQ_VI_ALTERNATE_FIELDS=0 ROGUESQ_VI_FIELD_FROM_CURRENT_REG=1 \
+  ROGUESQ_VI_CURRENT_REG_TOGGLE_BEFORE_SCREEN=0 ./RogueSquadron64Recomp \
+  > ../scratch/agent/s2214_port_vi_reg_timing_commit.log 2>&1 & p1=$!
+env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
+  ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_VI_CONTEXT_PORT=1 \
+  ROGUESQ_VI_ALTERNATE_FIELDS=0 ROGUESQ_VI_FIELD_FROM_CURRENT_REG=1 \
+  ROGUESQ_VI_CURRENT_REG_TOGGLE_BEFORE_SCREEN=1 ./RogueSquadron64Recomp \
+  > ../scratch/agent/s2214_port_vi_reg_timing_screen.log 2>&1 & p2=$!
 for i in {1..60}; do
   alive=0
   for p in "$p0" "$p1" "$p2"; do
@@ -86,11 +86,12 @@ for i in {1..60}; do
   sleep 1
 done
 kill -9 "$p0" "$p1" "$p2" 2>/dev/null || true
-wait "$p0" "$p1" "$p2" 2>/dev/null || true
+wait "$p0" "$p1" 2>/dev/null || true
+wait "$p1" 2>/dev/null || true
+wait "$p2" 2>/dev/null || true
 cd ..
 ```
 
-Inspect only the oracle positive-control/context summary and the three port
-prefixes, `[phase]` origin rows, context summaries, selected field/current
-line bits, commit origins, and overflow/crash markers. If all controls pass
-and all three tables are non-overflowing, classify exactly one hypothesis.
+Inspect only the oracle control/context summary and the three port prefixes,
+`[phase]` origin rows, `[vi-context-port]` selected field/current-line bits,
+commit origins, summaries, overflow, and crash markers.

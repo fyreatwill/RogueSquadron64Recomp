@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2212
-(2026-08-23); behavioral and source evidence is current through s2212.
+authoritative for exact commands and probe rows. Maintained in Session 2213
+(2026-08-23); behavioral and source evidence is current through s2213.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -326,6 +326,22 @@ second ledger.
   zero initialization, so the next source candidate is host current-register
   publication/selection. No default, mitigation, task rewrite, or
   audio-dispatch change was made.
+- s2213's independent Rice retail preflight passed the whole-RDRAM control
+  (10,000 writes), joined 465 context rows with zero drops/overflow, and
+  showed the retail current-field bit matched the next origin: 94 field-0
+  rows at `0x00696100`, 94 field-1 rows at `0x00696600`, 139 field-1 rows at
+  `0x0066AA00`, and zero target mismatches. The same-built port A/B table
+  passed its prefix control in all arms (`8`), collected 512 width-640 rows
+  with `overflow=0`, and emitted no crash/abort markers. Control selected
+  field 0 in all rows and committed `0x00696100` 135 times / `0x00696600`
+  zero times; the existing alternate selected field 0/1 in 256/256 rows and
+  committed the two target origins 68/68 times; the new current-register arm
+  selected field 0/1 in 256/256 rows and committed them 67/68 times. This
+  selects H-CurrentRegIsTheSelector at the qualified port-recovery scope and
+  refutes H-CurrentRegPortContractMissing and H-CurrentRegCoverage there.
+  Because the arm synthetically toggles the host register, natural
+  retail-to-port publication timing remains open; no default, mitigation,
+  task rewrite, or audio-dispatch change was made.
 
 ## Active backlog
 
@@ -385,10 +401,12 @@ work items.
    qualified port rows. s2212 independently showed the guest mode's
    `comRegs.vCurrent & 1` is also fixed at zero in the same table, ruling out
    that mode field as the omitted source. A source audit finds the port never
-   publishes a changing value to `VI_V_CURRENT_LINE_REG`; the next unit is an
-   opt-in current-register-driven field-selector arm, compared with the
-   field-0 control and existing field alternation arm. Keep all knobs
-   diagnostic-only.
+   publishes a changing value to `VI_V_CURRENT_LINE_REG`. s2213's retail and
+   port tables show that the retail current-field bit tracks both target
+   origins and that an opt-in host-current-register selector recovers the
+   same two-origin split as the existing alternation arm. The next unit tests
+   whether the recovery depends on toggling that register after the VI commit
+   or at the screen-publication edge. Keep all knobs diagnostic-only.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -478,8 +496,11 @@ also fixed at zero in the qualified port rows, so it is not that missing
 source. The legitimate field-one producer remains open; this is not
 permission to enable the knob by default. s2212 shows the guest mode
 `comRegs.vCurrent & 1` is also fixed at zero, and the source audit finds no
-host assignment that publishes a changing current-line value. The next arm
-tests current-register-driven selection without changing the default.
+host assignment that publishes a changing current-line value. s2213's
+independent retail context rows show the hardware current-field bit is the
+ field selector for both target origins, while the opt-in port arm recovers
+ that relation by toggling the host register. Publication timing remains an
+ open boundary; the recovery arm is not default-on.
 
 ### M3, M4, and generated symbols
 

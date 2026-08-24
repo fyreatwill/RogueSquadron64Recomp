@@ -1575,7 +1575,7 @@ index 3198be0..730ca54 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..dac13b1 100644
+index 149e770..32c4e5e 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,6 +8,9 @@
@@ -1588,7 +1588,7 @@ index 149e770..dac13b1 100644
  
  #include "blockingconcurrentqueue.h"
  
-@@ -20,6 +23,212 @@
+@@ -20,6 +23,221 @@
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
@@ -1628,6 +1628,14 @@ index 149e770..dac13b1 100644
 +    return enabled;
 +}
 +
++bool vi_field_from_current_reg_enabled() {
++    static const bool enabled = [] {
++        const char* value = std::getenv("ROGUESQ_VI_FIELD_FROM_CURRENT_REG");
++        return value && *value && *value != '0';
++    }();
++    return enabled;
++}
++
 +bool vi_context_port_log_enabled() {
 +    static const bool enabled = [] {
 +        const char* all = std::getenv("ROGUESQ_LOG_ALL");
@@ -1654,6 +1662,7 @@ index 149e770..dac13b1 100644
 +ViContextPortTrace vi_context_port_trace;
 +
 +const char* vi_context_port_arm() {
++    if (vi_field_from_current_reg_enabled()) return "current-reg";
 +    return vi_field_alternation_enabled() ? "alternate" : "control";
 +}
 +
@@ -1801,7 +1810,7 @@ index 149e770..dac13b1 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -30,6 +239,7 @@ struct SpTaskAction {
+@@ -30,6 +248,7 @@ struct SpTaskAction {
  
  struct ScreenUpdateAction {
      ultramodern::renderer::ViRegs regs;
@@ -1809,7 +1818,7 @@ index 149e770..dac13b1 100644
  };
  
  struct UpdateConfigAction {
-@@ -39,6 +249,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
+@@ -39,6 +258,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
  
  struct ViState {
      const OSViMode* mode;
@@ -1817,12 +1826,24 @@ index 149e770..dac13b1 100644
      PTR(void) framebuffer;
      PTR(OSMesg) mq;
      OSMesg msg;
-@@ -85,6 +296,13 @@ static struct {
+@@ -69,7 +289,10 @@ static struct {
+             ViState* next_state = get_next_state();
+             const OSViMode* next_mode = next_state->mode;
+             const OSViCommonRegs* common_regs = &next_mode->comRegs;
+-            const OSViFieldRegs* field_regs = &next_mode->fldRegs[field];
++            const uint32_t selected_field = vi_field_from_current_reg_enabled()
++                ? (regs.VI_V_CURRENT_LINE_REG & 1u)
++                : static_cast<uint32_t>(field);
++            const OSViFieldRegs* field_regs = &next_mode->fldRegs[selected_field];
+             PTR(void) framebuffer = osVirtualToPhysical(next_state->framebuffer);
+             PTR(void) origin = framebuffer + field_regs->origin;
+ 
+@@ -85,6 +308,13 @@ static struct {
                  origin = framebuffer;
              }
  
 +            log_vi_context_port_commit(
-+                cur_state, static_cast<uint32_t>(field), next_state->state,
++                cur_state, selected_field, next_state->state,
 +                static_cast<uint32_t>(next_state->mode_guest),
 +                static_cast<uint32_t>(framebuffer), common_regs->width,
 +                next_mode, static_cast<uint32_t>(origin),
@@ -1831,7 +1852,7 @@ index 149e770..dac13b1 100644
              // TODO implement osViFade
  
              // Update VI registers.
-@@ -101,7 +319,16 @@ static struct {
+@@ -101,7 +331,19 @@ static struct {
              regs.VI_X_SCALE_REG = common_regs->xScale; // TODO implement osViSetXScale
              regs.VI_Y_SCALE_REG = yScale; // TODO implement osViSetYScale
              regs.VI_STATUS_REG = next_state->control;
@@ -1845,11 +1866,14 @@ index 149e770..dac13b1 100644
 +            if (vi_field_alternation_enabled()) {
 +                field ^= 1;
 +            }
++            if (vi_field_from_current_reg_enabled()) {
++                regs.VI_V_CURRENT_LINE_REG ^= 1u;
++            }
 +
              // Swap VI states.
              cur_state ^= 1;
              *get_next_state() = *get_cur_state();
-@@ -140,6 +367,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +382,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -1858,7 +1882,7 @@ index 149e770..dac13b1 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -165,6 +394,13 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
+@@ -165,6 +409,13 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
      next_state->mq = mq_;
      next_state->msg = msg;
      next_state->retrace_count = retrace_count;
@@ -1872,7 +1896,7 @@ index 149e770..dac13b1 100644
  }
  
  uint64_t total_vis = 0;
-@@ -218,7 +454,10 @@ void vi_thread_func() {
+@@ -218,7 +469,10 @@ void vi_thread_func() {
  
          // Queue a screen update for the graphics thread with the current VI register state.
          // Doing this before the VI update is equivalent to updating the screen after the previous frame's scanout finished.
@@ -1884,7 +1908,7 @@ index 149e770..dac13b1 100644
  
          // Update VI registers and swap VI modes.
          events_context.vi.update_vi();
-@@ -231,6 +470,17 @@ void vi_thread_func() {
+@@ -231,6 +485,17 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -1902,7 +1926,7 @@ index 149e770..dac13b1 100644
                      // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
                      // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
                      ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
-@@ -252,12 +502,14 @@ void vi_thread_func() {
+@@ -252,12 +517,14 @@ void vi_thread_func() {
  void sp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
@@ -1917,7 +1941,7 @@ index 149e770..dac13b1 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -281,13 +533,23 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -281,13 +548,23 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
          // pointer's contents (DMA, etc).
          const uint32_t task_type = task->t.type;
  
@@ -1942,7 +1966,7 @@ index 149e770..dac13b1 100644
  
          (void)task_type;
      }
-@@ -394,6 +656,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -394,6 +671,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
              }
              else if (const auto* screen_update_action = std::get_if<ScreenUpdateAction>(&action)) {
                  events_context.vi.update_screen_regs = screen_update_action->regs;
@@ -1953,7 +1977,7 @@ index 149e770..dac13b1 100644
                  renderer_context->update_screen();
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
-@@ -456,6 +722,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +737,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -1961,7 +1985,7 @@ index 149e770..dac13b1 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -473,6 +740,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +755,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;

@@ -104441,6 +104441,45 @@ only added and ran a bounded diagnostic harness.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.
 
+## Session 2213 (2026-08-23) — tested host VI current-register selector
+
+Ran the independent Rice retail preflight before changing the port. The
+whole-RDRAM positive-control watch reached 10,000 writes and the VI context
+join completed with 465 rows, zero dropped/pending rows, and zero overflow.
+Retail current-field selection matched the next origin in the sampled target
+rows: 94 field-0 rows at `0x00696100`, 94 field-1 rows at `0x00696600`, with
+zero target mismatches. The early table also showed 139 field-1 rows at
+`0x0066AA00`.
+
+Added the opt-in `ROGUESQ_VI_FIELD_FROM_CURRENT_REG` arm in
+`lib/N64ModernRuntime/ultramodern/src/events.cpp`. It selects the VI field
+from `VI_V_CURRENT_LINE_REG & 1` and toggles that host register after each VI
+commit; the existing field-alternation arm and default behavior were left
+unchanged. Exported the submodule patch and built the full target
+successfully.
+
+Ran control, existing alternate, and current-register arms concurrently from
+the same build for the 60-second watchdog window. All three positive prefixes
+fired 8 times, all collected 512 width-640 rows with `overflow=0`, and none
+emitted a `[CRASH]` or `[ABORT]` marker. Control selected field 0 in all rows
+and committed `0x00696100` 135 times / `0x00696600` zero times. Alternate
+selected field 0/1 in 256/256 rows and committed the target origins 68/68
+times. Current-register selected field 0/1 in 256/256 rows and committed the
+target origins 67/68 times. Its phase trace reached `0x00696600`; the
+control did not. This selects H-CurrentRegIsTheSelector at the qualified
+port-recovery scope and refutes H-CurrentRegPortContractMissing and
+H-CurrentRegCoverage there. Because the arm synthetically toggles the host
+register, natural retail-to-port publication timing remains open; no default,
+mitigation, task rewrite, or audio-dispatch change was made.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this
+session added and ran an opt-in VI diagnostic arm only.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-port-current-reg-selector`.
+
 ## Session 2212 (2026-08-23) — tested guest mode `vCurrent` as VI field source
 
 Ran the independent Rice retail preflight before changing the port. The
