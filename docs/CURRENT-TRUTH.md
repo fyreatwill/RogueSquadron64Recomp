@@ -5,9 +5,10 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2268 (2026-08-24); behavioral and source evidence is
-current through s2268. This iteration ran one unchanged-build paired
-image/silent output-contract comparison; no runtime change was made.
+Maintained in Session 2269 (2026-08-24); behavioral and source evidence is
+current through s2269. This iteration ran one unchanged-build paired
+image/silent output-contract comparison; both arms were route-invalid and no
+runtime change was made.
 
 ## Current state
 
@@ -125,6 +126,12 @@ image/silent output-contract comparison; no runtime change was made.
   leaving completeness of the second stage row open. The silent process hit
   the known post-target aligned-ROM abort; the image driver ended by its
   watchdog after target qualification.
+- s2269's same-build pair passed the pre-target controls in both arms—one
+  `[missing-func]`, six B40 rows, and ten route-state rows each—but both arms
+  stalled at the final width-640 phase and returned the prescribed phase-1024
+  timeout. Neither arm reached title/hangar or emitted target image-stage or
+  phase-gated PCM rows. This selects H-PairRouteInvalid for this capture and
+  does not reinterpret the qualified s2268 output tuple.
 - Independent retail oracle work established the whole-RDRAM control, both
   target origins, nonzero writes to both `field348`-derived spans, and the
   retail task/output writer family. It has not yet joined a retail write to a
@@ -143,8 +150,11 @@ Closed investigations are not active work items. The sequence is monotonic.
    records, and record whether the second s2268 row joins later, remains
    unmatched, or the route is invalid. A repeat exact match plus a repeat
    unmatched row selects a mixed contract; a later join selects timing/late
-   delivery; missing controls select route work only. Do not promote the
-   image arm or add a writeback, consumer, slot, gate, or guard change.
+   delivery; missing controls select route work only. s2269 is a route-invalid
+   capture: both arms stopped at width 640 despite passing pre-target
+   controls. First re-establish both 1024/title/hangar controls; only then
+   compare target rows. Do not promote the image arm or add a writeback,
+   consumer, slot, gate, or guard change.
 2. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
    difference using a new pointer-versus-branch discriminator. No key-on
    return or mitigation change follows from the existing table.
@@ -239,6 +249,9 @@ the append-only ledger. Operationally:
 - s2228's detail-ring crash and s2242–s2259's image/pair crash splits are
   intermittent route-load observations, not selected intrinsic image or
   writer defects. s2254 and s2259 provide qualified controls.
+- s2269's pre-target controls followed by a shared width-640 stall are another
+  route-invalid observation. They do not make the qualified s2268 output
+  tuple disappear or explain the route-load sensitivity.
 - s2260's first pair was measurement-invalid because the route identity gate
   was absent; s2261's pair was route-invalid because the silent arm failed
   before title. s2262 supplies the missing qualified silent control, without

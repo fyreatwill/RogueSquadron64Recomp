@@ -106890,3 +106890,43 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-completeness`.
+
+## Session 2269 (2026-08-24) — paired image/silent output run was route-invalid
+
+No runtime or instrumentation change was made. Rebuilt the unchanged Debug
+target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`; the
+build passed.
+
+Ran the prescribed image+C88=`0` and silent+C88=`0` arms concurrently with
+`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+phase-gated 1024 logging, and the existing audio-return, PCM-boundary,
+B40/route-state, and image-stage probes. Driver captures are
+`scratch/agent/s2269_image_c88_0_pair_driver.log` and
+`scratch/agent/s2269_silent_c88_0_pair_driver.log`; game logs are
+`scratch/s73_post_a_scene/s2269_image_c88_0_pair/run.log` and
+`scratch/s73_post_a_scene/s2269_silent_c88_0_pair/run.log`.
+
+Both drivers returned `5`, the recipe's phase-1024 timeout. Both arms passed
+startup, emitted one `[missing-func]`, six B40 rows, and ten route-state rows.
+The image arm's final phase was width 640 at origin `0x00696100` after the
+width-2 transition at 8.0s; the silent arm reached the same width-640 phase
+after its width-2 transition at 7.9s. Neither arm emitted a 1024 transition,
+title/hangar phase, image-stage row, or phase-gated PCM row. The logs continued
+to show the same 640 framebuffer and `pair=0` full-sync decision until the
+driver killed each process at timeout.
+
+The positive controls prove this was a live pre-target route, but the missing
+target phase makes all image-output hypotheses untestable in this pair. This
+selects H-PairRouteInvalid for this capture and rules out treating its absent
+target rows as evidence for H-MixedContractStable, H-LateDelivery, or
+H-NonrepeatableStage. It does not overturn s2268's qualified pair or identify
+the cause of the route sensitivity.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-completeness`.
