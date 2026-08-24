@@ -4119,3 +4119,49 @@ At `0x00696100`, retail produced `(0x8001BE24, 0x0062B800)` and
 first origin in s2196. This selects `H-RetailPortCallerParity` and refutes
 missing second-caller and oracle-coverage explanations at this scope. The
 next boundary is host VI-state publication after the guest swap call.
+
+## 44. VI field, image-arm, and key-on contract boundary (s2198–s2226), migrated in s2227
+
+The s2198–s2216 VI work moved the missing-origin question from guest swap
+callers to host VI state. s2198's joined port table had positive commit and
+screen controls at the first origin but no second-origin row; s2199's same-
+built field-alternation arm restored both target origins. Independent Rice
+oracle runs then established that retail reaches both origins and that its
+current-field bit selects the corresponding field. Retail's `__osViNext`
+context join showed `framep` plus the selected field origin produces the next
+origin. The port has matching frame/mode candidates, but its default field,
+guest `comRegs.vCurrent`, and published current-line bit are all fixed at
+zero. Opt-in current-register, timing, and total-`VI` diagnostic arms recover
+the target split; the natural host publisher/cadence remains unidentified.
+No VI knob is default-on.
+
+s2218–s2220 completed the first three M5 boundary steps. The Rice oracle
+passed its whole-RDRAM control, reached both target origins, and identified
+five writers for 17 writes to the retail status gate, while the existing
+capture did not expose all payloads or the active writer for the other status
+word. The image arm executes real Factor 5 DMEM work and records DMA, but the
+s2219 same-built A/B found no validated host output, slot completion, or PCM
+join at that scope. s2220 independently matched the existing `0x8008EC88`
+display-mode writer's retail payload and showed that C88=`1` enables service,
+slot completion, and nonzero PCM controls while forced zero does not. The
+image and C88 behavior remain opt-in; the silent `M_AUDTASK` stub remains the
+default and stock `aspMain` is not a substitute for the game's Factor 5/MORT
+contract.
+
+s2221–s2226 bounded the key-on discrepancy without changing game behavior.
+Retail reaches the key-on boundary and hangar but skips all eight watched
+divide PCs; a range witness shows the corresponding post-guard transfer path
+executes in both target origins and hangar. The phase-keyed retail transfer
+sets for `$v0/$s1/$a0/$a2` are disjoint across those buckets, selecting a
+branch-state shift rather than coverage failure. The port has a positive
+normal-tail/slot census at four divide sites with divisor `0xC0`, no guard
+hits, and `0x02 -> 0x00` slot transitions. The regeneration-safe port tuple
+census reached first target, title, and hangar, but a 2048-entry ring still
+overflowed six first-target transfer-PC buckets and missed the second target
+origin. Tuple parity is therefore unmeasured; the next bounded work unit is
+to expand that diagnostic cap to 8192 and compare the complete phase-keyed
+table. No return, guard, task field, default, or mitigation is authorized by
+these observations.
+
+Exact rows, commands, and logs remain in `PORTING-STATE.md`; this section
+keeps the durable conclusions that were absent from §43.

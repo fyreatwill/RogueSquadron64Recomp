@@ -1,4 +1,4 @@
-# NEXT work unit (s2227) — finish expanding the port key-on tuple census
+# NEXT work unit (s2228) — finish expanding the port key-on tuple census
 
 HYPOTHESIS-ID: m5-audio-keyon-contract
 
@@ -58,7 +58,7 @@ detail toggle fires and s2226 proved the expanded footprint reaches target and
 hangar buckets:
 
 ~~~sh
-env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2227_keyon_tuple_cap 30 12 > scratch/agent/s2227_keyon_tuple_cap_driver.log 2>&1
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2228_keyon_tuple_cap 30 12 > scratch/agent/s2228_keyon_tuple_cap_driver.log 2>&1
 ~~~
 
 Use the resulting `[m5-keyon-table]` rows and phase-keyed transfer tuples only

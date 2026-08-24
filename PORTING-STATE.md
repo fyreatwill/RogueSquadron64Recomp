@@ -105176,3 +105176,25 @@ Log: `scratch/s73_post_a_scene/s2226_keyon_tuple_cap/run.log`.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-keyon-contract`.
+
+## Session 2227 (2026-08-23) — compacted operational truth and migrated s2198–s2226 archive
+
+The maintenance gate measured `docs/CURRENT-TRUTH.md` at 60,420 bytes, above
+the 60,000-byte threshold. Per the iteration contract, this session ran no
+game experiment, build, oracle capture, or soak. It compacted CURRENT-TRUTH
+from 888 lines into a bounded operational summary, refreshed the headline to
+s2227, removed repeated session prose and closed backlog items, and renumbered
+the active backlog as one monotonic sequence.
+
+Durable s2198–s2226 conclusions were migrated into new
+`docs/PROJECT-OVERVIEW.md` §44: the VI field/context boundary, opt-in image
+and C88 audio evidence, and the retail/port key-on branch and tuple boundary.
+The next work unit remains the 8192-entry regeneration-safe tuple-cap census;
+it was carried forward to s2228 in `scratch/agent/NEXT.md` with its competing
+hypotheses and phase-keyed discriminator unchanged. No runtime behavior,
+audio default, VI knob, key-on return, guard, task field, or mitigation
+changed. The dirty `lib/` submodules were left untouched.
+
+The maintenance result rules out neither tuple-parity hypothesis; it only
+removes stale operational duplication. Post-maintenance size and line-count
+checks are recorded with this commit.
