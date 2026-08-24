@@ -106394,3 +106394,42 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2257 (2026-08-24) — separated trace load from silent-route instability
+
+Ran the prescribed same-build concurrent silent+C88=`0` / silent+C88=`0`
+pair with the fully traced arm launched first and the route-only arm launched
+one second later. Both used the qualified `ROGUESQ_SPIN_YIELD=1` route,
+`ROGUESQ_LOG_THREAD_RESUME=0`, `PROBE_PHASE_WIDTH=1024`, and
+`PROBE_KEYS_FROM_PHASE=1`. The full arm also enabled task-contract,
+host-boundary, and PCM-boundary traces; the route-only arm retained the B40
+and route-state controls. No build, generated code, runtime behavior, or
+default changed. Driver logs are
+`scratch/agent/s2257_full_silent_c88_0_driver.log` and
+`scratch/agent/s2257_route_silent_c88_0_driver.log`; run logs are under
+`scratch/s73_post_a_scene/s2257_full_silent_c88_0/` and
+`scratch/s73_post_a_scene/s2257_route_silent_c88_0/`.
+
+Both arms passed startup, one `[missing-func]`, the 640 origins, and their
+B40/route-state controls. The fully traced arm returned 4 and crashed before
+title during `MetalFramebuffer` construction; its last guest PC was
+`0x8000B650` and it had no 1024 or 512 phase. The route-only arm returned 0,
+reached title `1024 @ 0x00790400` at about 48 seconds, reached hangar
+`512 @ 0x006AB400` twice at about 78 and 114 seconds, and then hit the known
+post-hangar `recomp::do_rom_read` abort with last guest PC `0x80001B08`.
+
+The complete same-run table selects H-TraceLoad at route scope: the arm with
+the larger trace load failed before target while the reduced arm qualified
+title and hangar under matching positive controls. This is single-source port
+evidence. It supersedes H-IdenticalArmNondeterminism as the only explanation
+for s2256's split, but does not show that trace load is the sole cause or
+identify an image/output edge. The next work unit reduces tracing before an
+image-versus-silent output comparison.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.

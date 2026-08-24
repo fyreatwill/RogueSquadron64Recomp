@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2256 (2026-08-24); behavioral and source evidence is
-current through s2256, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2256 remain in
+Maintained in Session 2257 (2026-08-24); behavioral and source evidence is
+current through s2257, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2257 remain in
 the append-only ledger.
 
 ## Current state
@@ -71,6 +71,17 @@ the append-only ledger.
   common silent-route failure under these controls, but does not qualify an
   image/output comparison. The next route discriminator pairs a fully traced
   silent arm with a route-only silent arm in the same run.
+- s2257 paired those identical silent arms with different trace loads. Both
+  passed startup, one `[missing-func]`, the 640 origins, and B40/route-state
+  controls. The fully traced arm crashed before title at host
+  `MetalFramebuffer` construction with last guest PC `0x8000B650`; the
+  route-only arm reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400` twice before the known post-hangar PI-ROM abort at guest
+  PC `0x80001B08`. This same-run port table selects H-TraceLoad at route
+  scope and supersedes H-IdenticalArmNondeterminism as the only explanation
+  for that capture, but is single-source evidence and does not establish
+  trace load as the sole cause or qualify image output. The next pair uses
+  reduced tracing for image-versus-silent attribution.
 - s2246's two full field348-candidate captures both passed the 640 route and
   one `[missing-func]` control but crashed before title `1024` or hangar `512`:
   the first was `fillSampleStreamRange+8136` with last guest PC
@@ -342,9 +353,13 @@ Closed investigations are not active work items. The sequence is monotonic.
   crash identities and no target rows. s2256's identical silent/silent pair
   split: arm A reached title and hangar, while arm B timed out at 640 after
   the same early controls. This selects H-IdenticalArmNondeterminism for the
-  capture but does not qualify the image/output table. The next checkpoint
-  pairs a fully traced silent arm with a route-only silent arm to test whether
-  trace load is the discriminator. Do not promote
+  capture but does not qualify the image/output table. s2257 paired a fully
+  traced silent arm with a route-only silent arm: both passed the same
+  startup/640/B40 controls, but only the route-only arm reached title and
+  hangar. This selects H-TraceLoad at route scope for that same-run capture,
+  supersedes the identical-arm hypothesis as its only explanation, and is
+  single-source port evidence. Reduce trace load before returning to the
+  image/output table. Do not promote
   `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
@@ -479,6 +494,17 @@ single-source port evidence: the route split does not authorize an image
 writeback, consumer, slot, gate, task, guard, or default change. The next
 unit tests full trace load against route-only tracing with identical silent
 arms.
+
+s2257 ran that route-load discriminator. Both arms passed startup, one
+`[missing-func]`, 640, and B40/route-state controls. The fully traced arm
+crashed before title during `MetalFramebuffer` construction with last guest PC
+`0x8000B650`; the route-only arm reached title and two hangar transitions
+before the known post-hangar PI-ROM abort at `0x80001B08`. This selects
+H-TraceLoad at route scope for the same-run port capture and supersedes
+H-IdenticalArmNondeterminism as the sole explanation of s2256's split, but it
+does not prove trace load is sufficient or necessary in general. The next
+unit reduces tracing before repeating image-versus-silent output attribution;
+no runtime behavior or default changes follow.
 
 s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
 At both target origins, `field348 & 0x007FFFFF` was valid but the exact
@@ -695,6 +721,12 @@ remain in the append-only ledger. Operationally:
   reached title and hangar before independently hitting the same known
   post-hangar PI-DMA alignment abort. The shared abort does not explain the
   earlier pre-phase split and does not authorize a PI or image mitigation.
+- s2257 refines and supersedes s2256's H-IdenticalArmNondeterminism as the
+  only explanation for that capture: under the same startup/640/B40 controls,
+  the full-trace silent arm failed before title while the route-only silent arm
+  reached title and hangar. This is a single-source same-run route-load result,
+  not proof that logging alone caused the crash or authorization for a runtime
+  mitigation.
 - s2246–s2247 treated repeated instrumented image-arm failures as a route-
   stability blocker because no same-run target control qualified. s2248's
   concurrent silent-stub arm reached title and hangar while the image arm
@@ -748,7 +780,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2256 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2257 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
