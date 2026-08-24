@@ -1,50 +1,61 @@
-# NEXT work unit (s2319) — M5 slot/status transition census
+# NEXT work unit (s2320) — independent slot active-byte writer census
 
-HYPOTHESIS-ID: m5-slot-status-transition-census
+HYPOTHESIS-ID: m5-status-writer-ground-truth
 
 ## Work unit
 
-Run one same-build, ground-truth-first explicit keycode-36 staged pair with
-the existing stub and Factor 5 image arms. Add the existing
-`ROGUESQ_LOG_VI_CALLERS=1` table to the launcher so slot allocation, slot-byte
-writes, key-on, and descriptor initialization are recorded. Retain the
-all-fifteen-bucket oracle gate/task/wait table and every current task, gate,
-route, image-stage, and PCM marker. Make no runtime, gate, wait, slot, guard,
-consumer, or default change.
+Run one ground-truth-first explicit keycode-36 staged pair using the existing
+stub and Factor 5 image arms. Extend the retail oracle with five physical
+active-byte watches for the five-slot table rooted at `0x80154620` with
+stride `0x1228`: `0x154620`, `0x155848`, `0x156A70`, `0x157C98`, and
+`0x158EC0`. Keep the all-fifteen phase buckets, whole-RDRAM/gate/task/wait
+controls, and the existing port slot/key-on/descriptor logger from s2319.
+This is an oracle/launcher change only; make no runtime, slot, wait, gate,
+guard, consumer, or default change.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-Slot-Transition: the image arm reaches a valid slot `01/02/00` transition
-  with a named writer and matching task/PCM ordering; the stub remains the
-  no-DMEM/no-slot control.
-- H-Task-Only: oracle and port task/DMEM/DMA/PCM controls are positive, but no
-  valid port slot transition or descriptor/key-on sequence occurs.
-- H-Gate-Branch: the two port arms diverge in the gate/route table before slot
-  work, identifying the gate branch as the remaining arm-specific boundary.
-- H-CoverageInvalid: whole-RDRAM, all-fifteen oracle phase buckets, title,
-  hangar, or either arm's contract controls are absent.
+- H-Port-Contract-Or-Address: retail writes one or more active bytes in a
+  target phase with a named PC and values including `01/02/00`, while the port
+  remains at the sentinel key-on row and has no slot-byte/descriptor row. The
+  missing edge is a port contract/address mismatch, not a route null.
+- H-Retail-Status-Elsewhere: whole-RDRAM, lifetime, target-phase, and port
+  controls are positive, but none of the five independent active-byte watches
+  has a writer/value row. The retail status writer is elsewhere or outside
+  this active-byte ring.
+- H-Slot-Transition: retail and port both show named, phase-aligned active
+  byte/status transitions with downstream task/PCM ordering.
+- H-CoverageInvalid: whole-RDRAM, all fifteen phase buckets, title/hangar, or
+  either port arm’s task/PCM controls is absent; no slot null is evaluable.
 
-The discriminator is one phase-keyed table per arm containing slot allocation,
-slot-byte writes (especially new values `01`, `02`, and `00`), key-on and
-descriptor rows, task/DMA/service rows, PCM source/consumer joins, gate/route
-markers, and the independent oracle gate/task/wait writer/value table. A
-named slot transition with downstream ordering selects H-Slot-Transition;
-positive task/PCM without it selects H-Task-Only; an arm-specific gate/route
-divergence selects H-Gate-Branch. Any missing positive control is
-H-CoverageInvalid and makes nulls unevaluable.
+The discriminator is one table per active-byte watch and arm containing
+phase, writer PC, post-value, and `01/02/00` counts, joined to the port
+`[slot-alloc]`, `[slot-sb]`, `[init-desc]`, `[keyon-w40]`, task/DMA, and
+PCM markers. The whole-RDRAM watch, existing gate/task/wait watches, and
+`[vi-callers]` control must be positive in the same capture.
 
 ## Exact commands
 
-1. Use `apply_patch` to add `ROGUESQ_LOG_VI_CALLERS=1` to the `COMMON` array in
-   `scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh`. Do not remove
-   any existing env var or oracle phase/watch flag.
+1. Use `apply_patch` to add these five oracle watches after the existing wait
+   watch in `scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh`:
+
+       --watch-write 0x154620:0x154621 \
+       --watch-write 0x155848:0x155849 \
+       --watch-write 0x156A70:0x156A71 \
+       --watch-write 0x157C98:0x157C99 \
+       --watch-write 0x158EC0:0x158EC1
+
+   Extend `--first-watch`, `--pc-hist-watch`, and `--post-value-watch` to
+   include watch indexes `4` through `8`. Do not remove any existing watch or
+   phase bucket.
+
 2. Run:
 
        zsh -n scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh
-       zsh scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh s2319_m5_slot_status_transition_census
+       zsh scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh s2320_m5_status_writer_ground_truth
 
-3. Parse only bounded oracle shutdown rows and the launcher driver summary plus
-   per-arm phase/slot/task/PCM marker counts. Require whole-RDRAM `10000+`,
-   all fifteen positive oracle buckets, title/hangar coverage, and both port
-   hangar phases before interpreting any slot null. Do not change behavior from
-   a null result.
+3. Parse only bounded oracle shutdown rows, the driver gate/arm summary, all
+   fifteen phase rows, the five new watch tables, and per-arm phase/slot/
+   task/PCM marker counts. Require whole-RDRAM `10000+`, fifteen positive
+   buckets, title/hangar, and both port hangar phases before interpreting a
+   null. Do not change behavior from any null result.

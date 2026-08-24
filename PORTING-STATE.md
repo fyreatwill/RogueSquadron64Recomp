@@ -109210,3 +109210,60 @@ Add the existing `ROGUESQ_LOG_VI_CALLERS=1` slot/key-on/descriptor table to
 the explicit keycode-36 staged pair. Keep the all-fifteen oracle buckets and
 the task/gate/route/PCM markers, then distinguish a valid image slot
 `01/02/00` transition from task-only progress.
+
+## Session 2319 (2026-08-24) — task-only progress without a valid slot transition
+
+HYPOTHESIS-ID: m5-slot-status-transition-census.
+
+The planned work unit was the ground-truth-first slot/status transition
+census. I added `ROGUESQ_LOG_VI_CALLERS=1` to
+`scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh`, preserving all
+existing oracle watches, fifteen phase buckets, explicit keycode-36 inputs,
+and task/gate/route/image/PCM markers. `zsh -n` passed. No build or runtime
+source change was made.
+
+The same-run retail oracle exited naturally (`oracle_rc=0`) and passed the
+independent controls: whole-RDRAM `10125` writes, gate watch `17`, task/output
+watch `108`, wait watch `0`, title `632`, hangar `964`, and all fifteen phase
+buckets. The bucket counts were `632` at `0x00790400:1024`, `964` at
+`0x006AB400:512`, `1598` at `0x006AB800:512`, `1488` at
+`0x00656400:512`, `853` at `0x00656800:512`, `18` at `0x0066A500:640`,
+`197` at `0x00696100:640`, `139` at `0x0066AA00:640`, `214` at
+`0x00696600:640`, `2` at `0x00000280:320`, `46` at `0x006BA280:320`,
+`121` at `0x005D4500:640`, `96` at `0x0062C200:640`, `113` at
+`0x0062BD00:640`, and `632` at `0x00790800:1024`. The bounded value table
+again had six gate samples, 76 task/output samples, and no wait sample; the
+earlier-origin gate/task writer PCs remained present.
+
+Both port arms passed the route gate and reached title/hangar. The silent arm
+had `[m5-gate]=1024`, `[m5-b40-route]=14`, `[m5-route-state]=28`,
+`[audtask-abi]=1302`, `[audtask-dma-row]=1302`, and PCM source/consumer
+`89/89`. The image arm had `[m5-gate]=1024`, `[m5-b40-route]=13`,
+`[m5-route-state]=25`, `[audtask-abi]=1138`, `[audtask-dma-row]=1138`,
+`[audtask-dma-range]=2320`, `[audtask-image-stage]=4673`, and PCM
+source/consumer `88/88`. The `[vi-callers-control]` positive control fired
+`16` times in each arm. Neither arm emitted `[slot-alloc]`, `[slot-sb]`, or
+`[init-desc]`; each emitted one `[keyon-w40]` row with
+`idx=0xFFFFFFFF` and `armed=0`. The silent process crashed after hangar and
+the image process was SIGKILLed after retention; both target phases preceded
+those terminal outcomes.
+
+The independent oracle control/table and the independent port task/DMA/PCM
+table are the two evidence lines. Together they select `H-Task-Only` at this
+capture scope: task, image-DMA, service, route, and PCM controls are live, but
+no valid port `01/02/00` slot transition or descriptor row is observed. This
+rules out `H-CoverageInvalid` and gives no target-phase gate/route divergence
+for `H-Gate-Branch`. It does not establish a game-level absence of slot
+writes, because the oracle did not yet watch the five active-byte locations.
+
+No gate, wait, status, slot, consumer, address, default, or mitigation
+change was authorized.
+
+ORIGIN: no mitigation-shaped change; this iteration only enabled the existing
+phase/caller diagnostic and recorded the paired ground-truth/port result.
+
+### Next
+
+Extend the oracle with physical watches for the five active bytes rooted at
+`0x80154620` with stride `0x1228`, then repeat the explicit staged pair as
+specified in scratch/agent/NEXT.md.
