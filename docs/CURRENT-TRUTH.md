@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2211
-(2026-08-23); behavioral and source evidence is current through s2211.
+authoritative for exact commands and probe rows. Maintained in Session 2212
+(2026-08-23); behavioral and source evidence is current through s2212.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -310,6 +310,22 @@ second ledger.
   scope. The current-line register is not the missing field-one producer;
   the next discriminator is the guest mode's `comRegs.vCurrent`. No default,
   mitigation, task rewrite, or audio-dispatch change was made.
+- s2212's independent Rice retail preflight again passed the whole-RDRAM
+  positive control (10,000 writes, successful removal), reached early and
+  target 640 origins, and observed the watched `osViGetCurrentField` entry
+  with `v0=0` on the sampled rows. The same-built port mode census added
+  `mode->comRegs.vCurrent & 1` to the existing table. Its prefix control fired
+  8 times; the bounded table collected 512 width-640 rows with `overflow=0`.
+  The mode bit was zero in every bucket, including 140 rows at
+  `0x0066A500`, 124 at `0x005D4500`, 130 at target `0x00696100`, and 118
+  other 640 rows; the current-line bit was also zero and no second-origin
+  commit appeared. This selects H-PortModeVCurrentFixed and refutes
+  H-PortModeVCurrentCarriesField, H-PortModeVCurrentDecoupled, and
+  H-PortModeVCurrentCoverage at the qualified scope. A source audit also
+  finds no assignment to `VI_V_CURRENT_LINE_REG` in `events.cpp` after its
+  zero initialization, so the next source candidate is host current-register
+  publication/selection. No default, mitigation, task rewrite, or
+  audio-dispatch change was made.
 
 ## Active backlog
 
@@ -365,7 +381,14 @@ work items.
    every observed 640 row, including both early mode contexts, and therefore
    never commits `0x0066AA00`. The next unit identifies whether the port's
    host VI current-field register supplies an omitted alternation source or is
-   itself fixed at zero. Keep the field knob and logger diagnostic-only.
+   itself fixed at zero. s2211 showed that register is fixed at zero in the
+   qualified port rows. s2212 independently showed the guest mode's
+   `comRegs.vCurrent & 1` is also fixed at zero in the same table, ruling out
+   that mode field as the omitted source. A source audit finds the port never
+   publishes a changing value to `VI_V_CURRENT_LINE_REG`; the next unit is an
+   opt-in current-register-driven field-selector arm, compared with the
+   field-0 control and existing field alternation arm. Keep all knobs
+   diagnostic-only.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -453,7 +476,10 @@ default field 0 is used across the early 640 contexts, unlike retail's
 field-1 `0x0066AA00` context. s2211 shows the RT64-facing current-line bit is
 also fixed at zero in the qualified port rows, so it is not that missing
 source. The legitimate field-one producer remains open; this is not
-permission to enable the knob by default.
+permission to enable the knob by default. s2212 shows the guest mode
+`comRegs.vCurrent & 1` is also fixed at zero, and the source audit finds no
+host assignment that publishes a changing current-line value. The next arm
+tests current-register-driven selection without changing the default.
 
 ### M3, M4, and generated symbols
 
@@ -539,6 +565,11 @@ remain in the append-only ledger. Operationally:
   independent Rice trace observes both origins in the retail sequence, so the
   origin substitution alone is not evidence of route damage. The port-versus-
   retail early context tuple remains open.
+- s2212's H-PortModeVCurrentCarriesField hypothesis was plausible because the
+  port context table had not yet recorded the guest mode's `vCurrent` field.
+  The same-run positive-controlled census collected 512 rows with zero
+  overflow and found that bit fixed at zero in every origin bucket, so the
+  mode descriptor is not the missing field-one source at this scope.
 
 ## Evidence ledger summary
 
@@ -547,7 +578,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2209's VI-boundary and retail-ground-truth work is recorded in the
+s2198–s2212's VI-boundary and retail-ground-truth work is recorded in the
 ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.

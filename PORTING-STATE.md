@@ -104441,6 +104441,43 @@ only added and ran a bounded diagnostic harness.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.
 
+## Session 2212 (2026-08-23) — tested guest mode `vCurrent` as VI field source
+
+Ran the independent Rice retail preflight before changing the port. The
+whole-RDRAM positive-control watch reached 10,000 writes and was removed
+successfully. The watched VI-field function reached early and target 640
+origins, including `0x0066A500`, `0x0066AA00`, `0x00696100`, and
+`0x00696600`; the sampled entry rows printed `v0=0`.
+
+Extended the existing `ROGUESQ_LOG_VI_CONTEXT_PORT` table in
+`lib/N64ModernRuntime/ultramodern/src/events.cpp` with
+`mode->comRegs.vCurrent & 1` for every width-640 row and per-origin/bit
+summary counters. Exported the submodule patch and built the full target
+successfully. The qualified 60-second port run used silent audio, spin yield,
+ungated solo LLE, phase logging, and the port context logger; the SIGKILL
+watchdog ended it with no `[CRASH]` or `[ABORT]` marker.
+
+The positive prefix fired 8 times. The table collected 512 width-640 rows
+with summary `overflow=0`; all rows selected field 0. The new mode bit was
+zero in all rows: 140 at `0x0066A500`, 124 at `0x005D4500`, 130 at target
+`0x00696100`, and 118 other 640 rows. The existing current-line bit was also
+zero in every bucket. The port committed `0x00696100` 130 times and
+`0x00696600` zero times, while both candidate sums were present. This selects
+H-PortModeVCurrentFixed and refutes H-PortModeVCurrentCarriesField,
+H-PortModeVCurrentDecoupled, and H-PortModeVCurrentCoverage at the qualified
+scope. A source audit found no assignment to `VI_V_CURRENT_LINE_REG` in
+`events.cpp` after zero initialization; the next source candidate is host
+current-register publication/selection. No default field, audio dispatch,
+task data, guard, mitigation, or task rewrite changed.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+only added a bounded diagnostic field and its phase-scoped summary.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-port-current-reg-selector`.
+
 ## Session 2211 (2026-08-23) — measured the port VI current-line source
 
 Ran the independent retail preflight before changing the port. The whole-RDRAM
