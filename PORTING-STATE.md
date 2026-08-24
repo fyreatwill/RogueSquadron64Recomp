@@ -108294,3 +108294,46 @@ s2280–s2282 C88 pair as-is. The next capture must phase-gate a C88=0 control a
 and compare the retail tuple fields only if both arms qualify. No pointer/data,
 branch-state, key-on return, or mitigation conclusion is authorized on a
 route-invalid pair.
+
+## Session 2302 (2026-08-24) — C88 route fingerprint remained coverage-invalid
+
+HYPOTHESIS-ID: m5-keyon-new-route-discriminator.
+
+The planned work unit was one same-build C88 route discriminator. Before the
+build, the independent retail log passed the required positive-control
+threshold, title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and the
+existing eight-PC field-dump controls. The new diagnostic-only fingerprint
+was phase-keyed by VI origin and bounded to the first four plus every 64th
+snapshot; it recorded B40, route-state, unique key-on-row counts, and the last
+guest PC. The generated key-on hook was mirrored in the fixup script; no game
+value, branch, return, or guard was changed.
+
+The Debug build succeeded. The retail oracle independently reached the
+whole-RDRAM threshold at `10,000`, recorded title and hangar controls, and
+reported `220,656` eight-PC transfer-control hits. The port C88=0 arm reached
+the initial target `640 @ 0x00696100` and emitted positive fingerprint rows.
+After the route activity settled, its phase table had
+`route_state_count=2`, `b40_count=1`, and `key_on_count=0`; it then bus-crashed
+at guest PC `0x8000834C` before title or hangar. The driver withheld C88=1
+because the required `512 @ 0x006AB400` gate was absent. The arm×phase table
+therefore selects H-CoverageInvalid at recipe scope. It does not select
+H-C88RouteLoad, H-InputPhase, or H-RouteIntrinsic, and it provides no
+pointer/data, branch-state, key-on return, audio, writer, or mitigation
+conclusion.
+
+This is two independent lines of evidence for coverage validity: the retail
+oracle controls and the port's VI phase plus route-fingerprint controls. The
+fingerprint's own emission is an instrument control, not a semantic result.
+
+ORIGIN: no mitigation-shaped change; the fingerprint and gated driver are
+measurement-only, and the generated hook only counts an already-emitted
+unique key-on census row.
+
+### Next
+
+Park the C88 key-on comparison again. Resume M5 Step 3 with a new bounded
+oracle-plus-port task/output writer/source/consumer discriminator around the
+qualified phase-10 image rows. Require independent whole-RDRAM, title/hangar,
+width-aware target, and port route controls before interpreting any contract
+field; do not repeat the s2291/s2301 sequence tables or change runtime
+behavior.

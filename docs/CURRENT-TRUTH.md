@@ -5,8 +5,16 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2301 (2026-08-24); behavioral and source evidence is
-current through s2301. The M5 target-phase sequence capture passed the
+Maintained in Session 2302 (2026-08-24); behavioral and source evidence is
+current through s2302. The new same-build M5 C88 route discriminator passed
+the independent retail whole-RDRAM/title/hangar controls and the port
+fingerprint positive control, but C88=0 crashed in the initial
+`640 @ 0x00696100` phase at guest PC `0x8000834C`, with no title, hangar, or
+key-on rows. C88=1 was withheld by the phase gate. This selects
+H-CoverageInvalid at recipe scope and supplies no C88 route, pointer/data,
+branch-state, key-on return, or mitigation conclusion.
+
+s2301's M5 target-phase sequence capture passed the
 whole-RDRAM, title, hangar, and width-aware target controls. Its fixed
 180-second same-eleven-Start run retained all 50 requested-PC samples and
 matched writer counts `1/1/48`; EB8C and EBBC were adjacent same-tuple rows,
@@ -153,6 +161,14 @@ equivalent path at another guest address.
   result. C88=`1` remains a diagnostic behavior arm.
   Stock `aspMain` is not the game's MusyX / Factor 5 contract, and MORT is a
   separate CPU speech asset.
+- s2302's same-build C88 route discriminator passed retail whole-RDRAM at
+  `10,000`, title/hangar origins, and 220,656 independent transfer-PC control
+  hits. The port fingerprint emitted 18 bounded rows in the initial target
+  phase; its route counts settled at `route_state=2`, `b40=1`,
+  `key_on=0`, then the port bus-crashed at guest PC `0x8000834C` before title
+  or hangar. The C88=1 arm was not launched. This is H-CoverageInvalid for
+  the recipe and does not authorize a C88, route, audio, writer, or guard
+  change.
 - s2287's independent retail route watch passed the whole-RDRAM, title, and
   hangar controls but recorded no execution of guest PCs `0x800547BC` or
   `0x80007904` in any phase. s2288's stub control then reproduced the latter
@@ -350,6 +366,16 @@ equivalent path at another guest address.
 
 ## Latest evidence
 
+- s2302's same-build C88 route discriminator passed the retail oracle's
+  whole-RDRAM threshold at `10,000`, title `1024 @ 0x00790400`, hangar
+  `512 @ 0x006AB400`, and all-eight-PC controls (`220,656` hits). The port
+  C88=0 arm reached the initial target `640 @ 0x00696100`; its bounded
+  fingerprint emitted positive phase rows and settled at
+  `route_state_count=2`, `b40_count=1`, `key_on_count=0`, then bus-crashed
+  at guest PC `0x8000834C` with no title/hangar transition. The C88=1 arm
+  was withheld by the required hangar gate. This selects H-CoverageInvalid
+  at recipe scope and leaves the C88 route and key-on contract unevaluable.
+  No game behavior or mitigation changed.
 - s2301's fixed oracle-only target sequence capture passed the independent
   whole-RDRAM threshold at `10,000`, title `1024 @ 0x00790400`, hangar
   `512 @ 0x006AB400`, and the width-aware target bucket with `1,530` VI
@@ -662,28 +688,32 @@ equivalent path at another guest address.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 key-on tuple contract.** Requalify the C88 route with a
-   phase-gated control-first stagger: launch C88=1 only after a C88=0 control
-   reaches `512 @ 0x006AB400`, then compare retail fields only if both arms
-   reach the hangar. s2281's concurrent pair and s2282's control-first stagger
-   both remained coverage-invalid; s2282 never launched C88=1. After the
-   three consecutive no-discriminator attempts s2280–s2282, do not repeat
-   this route pair without a new route discriminator. No pointer/data or
-   branch-state verdict, key-on return, or mitigation change follows. The
-   Step 1 task/output pair remains parked.
-2. **M5 A1 second-origin transition.** Parked after s2283's four-way and
+1. **M5 Step 3 task/output contract boundary.** Design the next bounded
+   oracle-plus-port writer/source/consumer join around the already-qualified
+   phase-10 image rows, using a new discriminator rather than repeating the
+   s2291/s2301 retail sequence tables. Require independent whole-RDRAM,
+   title/hangar, width-aware target, and port route controls before any
+   contract interpretation. No writeback, consumer, writer, slot, gate,
+   guard, or address-remap change is authorized.
+2. **M5 key-on tuple contract.** Parked after the new s2302 route
+   discriminator: retail controls passed, but C88=0 crashed in the initial
+   `640 @ 0x00696100` phase with `route_state=2`, `b40=1`, and `key_on=0`, so
+   C88=1 was withheld. Do not repeat the C88 pair without another genuinely
+   new route discriminator that restores `512 @ 0x006AB400`; no pointer/data,
+   branch-state, key-on return, or mitigation conclusion follows.
+3. **M5 A1 second-origin transition.** Parked after s2283's four-way and
    s2284's two-wave matrices. Each wave supplied both positive controls in both
    arms but reproduced the initial-640 crash at guest PC `0x80001F88`, so the
    two independent wave results select H-RouteIntrinsic at this recipe scope.
    Do not repeat the four A1 arms without a new route discriminator that can
    restore `0x00696100`/`0x00696600` coverage; no publisher or default follows.
-3. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
+4. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
-4. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator; the dormant `slotDispatcherIter+872` class has
    thousands of clean guarded hangar calls and no authorized mitigation.
-5. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
+6. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
 

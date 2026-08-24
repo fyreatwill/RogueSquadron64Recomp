@@ -23,6 +23,10 @@ extern "C" uint32_t rs64_e9prov_current_task();
 extern "C" uint32_t rs64_e9prov_current_scope();
 extern "C" int rs64_is_hangar_vi(void);
 extern "C" void rs64_m5_b40_route_title_transition(void);
+extern "C" void rs64_m5_route_fingerprint_phase(uint32_t width,
+                                                  uint32_t origin);
+extern "C" void rs64_m5_route_fingerprint_snapshot(uint32_t width,
+                                                     uint32_t origin);
 extern "C" void rs64_vi_boundary_log(const char* edge, uint32_t requested_fb,
                                       uint32_t committed_origin, uint32_t width);
 extern "C" uint32_t rs64_vi_boundary_screen_request(void);
@@ -874,11 +878,13 @@ public:
                     s_last_width = w;
                     // Publish the phase change so RT64-side censuses can scope
                     // themselves to one phase (see rs64_phase_ord below).
+                    rs64_m5_route_fingerprint_phase(w, pvi->VI_ORIGIN_REG);
                     rs64_bump_phase_ord();
                     if (w == 1024u && (pvi->VI_ORIGIN_REG & 0x00FFFFFFu) == 0x00790400u) {
                         rs64_m5_b40_route_title_transition();
                     }
                 }
+                rs64_m5_route_fingerprint_snapshot(w, pvi->VI_ORIGIN_REG);
             }
 
             if (s_n <= 4 || (s_n & 63) == 0) {

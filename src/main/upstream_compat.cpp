@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <thread>
+#include <mutex>
 #if !defined(_WIN32)
 #include <dlfcn.h>
 #endif
@@ -437,6 +438,131 @@ extern "C" uint32_t rs64_vi_committed_origin() {
 
 extern "C" uint32_t rs64_phase_ord(void);
 
+namespace {
+
+static bool rs64_m5_route_fingerprint_enabled() {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_C88_ROUTE_FINGERPRINT");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    return enabled;
+}
+
+static std::mutex g_rs64_m5_route_fingerprint_mutex;
+static uint32_t g_rs64_m5_route_fingerprint_phase = 0xFFFFFFFFu;
+static uint32_t g_rs64_m5_route_fingerprint_width = 0;
+static uint32_t g_rs64_m5_route_fingerprint_origin = 0;
+static uint32_t g_rs64_m5_route_fingerprint_b40 = 0;
+static uint32_t g_rs64_m5_route_fingerprint_route = 0;
+static uint32_t g_rs64_m5_route_fingerprint_keyon = 0;
+static uint32_t g_rs64_m5_route_fingerprint_last_pc = 0;
+static uint32_t g_rs64_m5_route_fingerprint_snapshots = 0;
+
+static bool rs64_m5_route_fingerprint_target(uint32_t width, uint32_t origin) {
+    origin &= 0x00FFFFFFu;
+    return (width == 640u && (origin == 0x00696100u || origin == 0x00696600u)) ||
+           (width == 1024u && origin == 0x00790400u) ||
+           (width == 512u && origin == 0x006AB400u);
+}
+
+static void rs64_m5_route_fingerprint_reset_locked(uint32_t phase,
+                                                    uint32_t width,
+                                                    uint32_t origin) {
+    g_rs64_m5_route_fingerprint_phase = phase;
+    g_rs64_m5_route_fingerprint_width = width;
+    g_rs64_m5_route_fingerprint_origin = origin & 0x00FFFFFFu;
+    g_rs64_m5_route_fingerprint_b40 = 0;
+    g_rs64_m5_route_fingerprint_route = 0;
+    g_rs64_m5_route_fingerprint_keyon = 0;
+    g_rs64_m5_route_fingerprint_last_pc = 0;
+    g_rs64_m5_route_fingerprint_snapshots = 0;
+}
+
+static void rs64_m5_route_fingerprint_emit_locked(const char* edge) {
+    const char* c88 = std::getenv("ROGUESQ_M5_C88_VALUE");
+    const unsigned c88_value = (c88 && c88[0] && c88[0] != '0') ? 1u : 0u;
+    std::fprintf(stderr,
+        "[m5-route-fingerprint] edge=%s arm=c88_%u c88=%u phase=%u width=%u "
+        "origin=0x%06X route_state_count=%u b40_count=%u key_on_count=%u "
+        "last_guest_pc=0x%08X snapshot=%u\n",
+        edge, c88_value, c88_value, g_rs64_m5_route_fingerprint_phase,
+        g_rs64_m5_route_fingerprint_width, g_rs64_m5_route_fingerprint_origin,
+        g_rs64_m5_route_fingerprint_route, g_rs64_m5_route_fingerprint_b40,
+        g_rs64_m5_route_fingerprint_keyon,
+        g_rs64_m5_route_fingerprint_last_pc,
+        g_rs64_m5_route_fingerprint_snapshots);
+    std::fflush(stderr);
+}
+
+static void rs64_m5_route_fingerprint_note_locked(unsigned kind, uint32_t pc) {
+    const uint32_t phase = rs64_phase_ord();
+    if (g_rs64_m5_route_fingerprint_phase != phase) {
+        rs64_m5_route_fingerprint_reset_locked(
+            phase, rs64_vi_committed_width(), rs64_vi_committed_origin());
+    }
+    if (kind == 1u) {
+        ++g_rs64_m5_route_fingerprint_b40;
+    } else if (kind == 2u) {
+        ++g_rs64_m5_route_fingerprint_route;
+    } else if (kind == 3u) {
+        ++g_rs64_m5_route_fingerprint_keyon;
+    }
+    if (pc != 0u && pc != 0xFFFFFFFFu) {
+        g_rs64_m5_route_fingerprint_last_pc = pc;
+    } else if (g_rs64_last_guest_pc != 0u) {
+        g_rs64_m5_route_fingerprint_last_pc =
+            static_cast<uint32_t>(g_rs64_last_guest_pc);
+    }
+}
+
+static void rs64_m5_route_fingerprint_note(unsigned kind, uint32_t pc) {
+    if (!rs64_m5_route_fingerprint_enabled()) return;
+    std::lock_guard<std::mutex> lock(g_rs64_m5_route_fingerprint_mutex);
+    rs64_m5_route_fingerprint_note_locked(kind, pc);
+}
+
+}
+
+extern "C" void rs64_m5_route_fingerprint_phase(uint32_t width,
+                                                   uint32_t origin) {
+    if (!rs64_m5_route_fingerprint_enabled()) return;
+    std::lock_guard<std::mutex> lock(g_rs64_m5_route_fingerprint_mutex);
+    const uint32_t phase = rs64_phase_ord();
+    if (g_rs64_m5_route_fingerprint_phase == phase) {
+        if (rs64_m5_route_fingerprint_target(
+                g_rs64_m5_route_fingerprint_width,
+                g_rs64_m5_route_fingerprint_origin)) {
+            rs64_m5_route_fingerprint_emit_locked("phase-exit");
+        }
+    }
+    rs64_m5_route_fingerprint_reset_locked(phase + 1u, width, origin);
+}
+
+extern "C" void rs64_m5_route_fingerprint_snapshot(uint32_t width,
+                                                      uint32_t origin) {
+    if (!rs64_m5_route_fingerprint_enabled()) return;
+    std::lock_guard<std::mutex> lock(g_rs64_m5_route_fingerprint_mutex);
+    const uint32_t phase = rs64_phase_ord();
+    if (g_rs64_m5_route_fingerprint_phase != phase) {
+        rs64_m5_route_fingerprint_reset_locked(phase, width, origin);
+    }
+    g_rs64_m5_route_fingerprint_width = width;
+    g_rs64_m5_route_fingerprint_origin = origin & 0x00FFFFFFu;
+    g_rs64_m5_route_fingerprint_last_pc =
+        static_cast<uint32_t>(g_rs64_last_guest_pc);
+    const uint32_t snapshot = g_rs64_m5_route_fingerprint_snapshots++;
+    if (rs64_m5_route_fingerprint_target(width, origin) &&
+        (snapshot < 4u || (snapshot % 64u) == 0u)) {
+        rs64_m5_route_fingerprint_emit_locked("snapshot");
+    }
+}
+
+extern "C" void rs64_m5_route_fingerprint_keyon(uint32_t site) {
+    rs64_m5_route_fingerprint_note(3u, site);
+}
+
 static std::atomic<uint32_t> g_rs64_m5_b40_route_ordinal{0xFFFFFFFFu};
 
 extern "C" void rs64_m5_b40_route_event(const char* edge, uint32_t pc,
@@ -449,6 +575,8 @@ extern "C" void rs64_m5_b40_route_event(const char* edge, uint32_t pc,
                (own && own[0] && own[0] != '0');
     }();
     if (!enabled) return;
+
+    rs64_m5_route_fingerprint_note(1u, pc);
 
     static std::atomic<uint32_t> phase_seen{0xFFFFFFFFu};
     static std::atomic<uint32_t> phase_row{0};
@@ -504,6 +632,7 @@ static void rs64_m5_route_state_log(uint8_t* rdram, const char* edge,
                                      uint32_t audio_nonzero,
                                      uint32_t function_nonzero) {
     const uint32_t phase = rs64_phase_ord();
+    rs64_m5_route_fingerprint_note(2u, pc);
     const uint32_t limit = phase == 7u ? 512u : 16u;
     if (call_ordinal >= limit) return;
 
