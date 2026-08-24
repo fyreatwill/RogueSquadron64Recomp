@@ -1,63 +1,61 @@
-# NEXT work unit (s2234) — exact retail PCM/task-output attribution
+# NEXT work unit (s2235) — join retail task output to the port image stage
 
 HYPOTHESIS-ID: m5-audio-image-contract
 
 ## Work unit
 
-Run one retail-oracle capture with Rice video and the qualified Start schedule.
-Arm the whole-RDRAM positive control first, then watch the exact PCM ring from
-the port logs and the `data_ptr+0x100` task-data output span. Request
-post-target rows for the recurring retail writer PCs found in s2233. Do not
-change runtime code, generated output, task fields, gates, waits, guards, the
-audio default, or the port image arm.
+Run one qualified port image-arm capture using the existing generated
+instrumentation. Keep the default silent arm unchanged. Phase-gate the driven
+route at title `1024` and retain the first-target/hangar rows. Join, per audio
+task ordinal and phase, the image-stage rows, `data_ptr+0x100`/DMA ranges,
+image completion, host writeback, and PCM source/consumer rows against the
+selected retail task-output writer/destination rows from s2234. This is a
+measurement-only run; no task-field rewrite, writeback, consumer guard,
+audio default, gate, wait, slot, or voice change is authorized.
 
 ## Competing hypotheses and discriminating measurement
 
-- **H-RetailPCMDirect:** the retail game writes the exact PCM ring during the
-  title/hangar gate, with nonzero post-target values and writer PCs that can
-  be joined to the port's image/PCM boundary.
-- **H-RetailTaskOutput:** retail writes the task-data output span but not the
-  exact PCM ring in the target phase; the missing edge is between image output
-  and the consumer ring.
-- **H-RetailOtherOutput:** neither exact watch has a target-phase output row;
-  the broad-span writes in s2233 came from unrelated structures or consumers.
-- **H-NoTargetRoute:** the oracle does not reach the driven 640 target, title
-  `1024`, and hangar `512`, so a narrow null is unevaluable.
+- **H-PortTaskOutputMatch:** the image arm's stage/DMA output reaches the same
+  task-output span represented by the retail post-target rows, with matching
+  destination/range and completion ordering; the exact PCM ring is populated
+  by a later consumer or separate writer.
+- **H-PortImageDirectPCM:** an image stage or its immediate DMA/host boundary
+  joins directly to the exact PCM ring and its PCM source/consumer hash; the
+  retail task-output rows are control data rather than the image output edge.
+- **H-PortContractGap:** image DMEM/DMA/break/SP controls are positive, but
+  neither stage→task-output nor stage→PCM joins for the same ordinal close;
+  the missing edge remains in the image/output contract.
+- **H-PortNoTargetRoute:** the image run fails to reach the required phases or
+  lacks a same-run positive control, making all narrow nulls unevaluable.
 
-The discriminator is one run containing watch 0 over all RDRAM and both exact
-watches. Watch 0 must reach its 10,000-callback positive-control threshold and
-be removed before the other watches are interpreted. The run must reach
-`640 @ 0x00696100`/`0x00696600`, title `1024 @ 0x00790400`, and hangar
-`512 @ 0x006AB400`. A nonzero target-phase row on the PCM-ring watch selects
-H-RetailPCMDirect; task-span-only rows select H-RetailTaskOutput; no exact
-target-phase row selects H-RetailOtherOutput. Failure to reach the route
-selects H-NoTargetRoute. No runtime change follows from any null.
+The discriminator is one phase-keyed table with rows keyed by
+`(audio ordinal, phase, width, origin)` and carrying: task fields and source
+hash; DMEM change; every nonzero DMA range; image stages 0–3 and their
+destination/field values; image break PC and SP completion; host writeback
+range/hash; PCM source and consumer address/count/hash; and route phase.
+Compare stage/DMA/writeback ranges with retail's selected post-target rows at
+`0x171F70:0x173DB4`, and compare PCM rows with the exact retail ring
+`0x166450:0x169450`. The positive controls are nonzero image ABI/DMEM/DMA
+rows, `break_pc=0x1328`, SP completion, PCM boundary rows, and all three route
+phases. A task-output join selects H-PortTaskOutputMatch; an ordinal/hash
+stage-to-PCM join selects H-PortImageDirectPCM; positive task controls with
+both joins absent selects H-PortContractGap; missing controls selects
+H-PortNoTargetRoute.
 
 ## Exact command
 
-Run from the repository root; the oracle drives retail and exits after the
-capture. The first watch is deliberately whole RDRAM.
+No build is required: use the current build carrying the image-stage, ABI,
+DMA, host-boundary, and PCM-boundary witnesses. Run from the repository root
+with the route driver; `env` keeps the permission prefix match intact.
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 75 --hit-cap 200 --vi-trace \
-  --watch-write 0x0:0x800000 \
-  --watch-write 0x166450:0x169450 \
-  --watch-write 0x171F70:0x173DB4 \
-  --first-watch 0 --pc-hist-watch 1 --pc-hist-watch 2 \
-  --post-value-watch 1 --post-value-watch 2 \
-  --post-value-pc 0x80090f8c,0x80090fc0,0x80090fdc,0x80091000,0x80091078,0x800910ec,0x800910f8,0x8009114c,0x80091168,0x80091170,0x80091204 \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s2234_retail_exact_output.log 2>&1
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2235_image_join 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2235_image_join_driver.log 2>&1
 ```
 
-Read only bounded results:
+Read only bounded result rows:
 
 ```sh
-log=scratch/agent/s2234_retail_exact_output.log
-grep -a -n -E 'positive-control threshold|^\[oracle\] done:|watch write |post-target-row-final|post-target-summary|post-value watch=|writer-pc watch=' "$log" | tail -160
-grep -a -n -E '^\[vi\].*WIDTH 320 -> 640|^\[vi\].*WIDTH 640 -> 1024|^\[vi\].*WIDTH 1024 -> 512' "$log"
+log=scratch/s73_post_a_scene/s2235_image_join/run.log
+grep -a -n -E '\[audtask-(abi|dma-row|dma-range|image-stage|image-stage-row|image-join|image-summary|image-consumer-only)|\[pcm-boundary-(source|consumer)|\[m5-host-boundary|\[sp\].*complete|\[phase\]' "$log" | tail -240
+grep -a -n -E 'CRASH|UnhandledJump|last phase|lle tasks|exit=|--- done ---' scratch/agent/s2235_image_join_driver.log | tail -80
 ```

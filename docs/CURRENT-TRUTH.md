@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2233 (2026-08-23); behavioral and source evidence is
-current through s2233, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2233 remain in
+Maintained in Session 2234 (2026-08-23); behavioral and source evidence is
+current through s2234, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2234 remain in
 the append-only ledger.
 
 ## Current state
@@ -42,6 +42,16 @@ the append-only ledger.
   events. H-NoTargetRoute is refuted; H-RetailImageWritesSame versus
   H-RetailUsesOtherOutput remains open, and no output edge or default change
   follows.
+- s2234's narrower retail-oracle capture again passed the whole-RDRAM control,
+  reached both 640 target origins, title `1024 @ 0x00790400`, and hangar
+  `512 @ 0x006AB400`. The exact PCM ring `0x166450:0x169450` had `12,288`
+  writes and a nonzero final snapshot (`12025` nonzero bytes), but zero
+  post-target samples. The task-output span `0x171F70:0x173DB4` had `303`
+  post-target samples, `62` values, and target-phase rows from the selected
+  `0x80091078`/`0x800910EC`/`0x800910F8`/`0x8009114C`/`0x80091168`/
+  `0x80091170`/`0x80091204` writer set. This selects H-RetailTaskOutput and
+  rejects a target-phase direct-PCM write at this scope; it is single-source
+  retail evidence and still needs a port-side image-stage join.
 - s2232's same-build port A/B reached the target route, title, and hangar in
   both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
   DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
@@ -77,12 +87,13 @@ Closed investigations are not active work items. The sequence is monotonic.
 
 1. **M5 image-output contract attribution.** s2232 selected H-ContractGap at
   single-source port A/B scope: the Factor 5 arm runs and completes, but its
-  stage-to-PCM join is absent. s2233's independent retail run refuted a
-  missing target route and a clean no-write result, but its broad-span writer
-  histogram could not identify the exact PCM ring versus task-data output
-  during title/hangar. Next, watch the exact port PCM ring and the
-  `data_ptr+0x100` task-data span in one retail run, with post-target rows
-  carrying width/origin/value for selected retail writer PCs. Do not promote
+  stage-to-PCM join is absent. s2233's independent broad-span retail run
+  refuted a missing target route and a clean no-write result. s2234's exact
+  capture selected H-RetailTaskOutput: post-target writes hit the
+  `data_ptr+0x100` task-output span, while the exact PCM ring had no
+  post-target sample despite a nonzero final snapshot. The next unit is one
+  phase-keyed port run that joins the selected retail writer/destination rows
+  to image-stage, DMA, and PCM source/consumer rows. Do not promote
   `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
@@ -148,7 +159,10 @@ is nontrivial but its sampled host output, PCM, and validated slot completion
 were absent in s2219; s2220's C88 result supplies the current downstream
 discriminator. s2232's same-build A/B adds real image completion and DMA, but
   no image-stage to PCM join; the nonzero PCM rows are therefore not yet
-  attributable to the image. The image arm remains opt-in.
+  attributable to the image. s2234's independent retail capture adds
+  exact-span attribution: the task-output watch had 303 post-target samples
+  and 62 values, while the exact PCM-ring watch had zero post-target samples
+  and a nonzero final snapshot. The image arm remains opt-in.
 
 s2233's retail oracle passed its whole-RDRAM control, reached the driven 640,
 title, and hangar phases, and wrote the broad `0x166000:0x17A000` span
@@ -159,6 +173,14 @@ bucket 1024/512 widths, the aggregate writer list cannot distinguish the
 port's image-stage output from other writers in that broad span. This is
 independent retail evidence against H-NoTargetRoute and a clean no-write
 result, not yet evidence for the image output contract.
+
+s2234's narrower retail oracle passed the same whole-RDRAM control and route
+phases. It recorded 12,288 writes to `0x166450:0x169450`, with no post-target
+samples but a nonzero final snapshot, and 303 post-target samples / 62 values
+in `0x171F70:0x173DB4`. The selected post-target writer set included the
+`0x80091078` through `0x80091204` task/output PCs. This is a single-source
+retail selection of H-RetailTaskOutput over H-RetailPCMDirect at the measured
+target boundary; it does not yet identify the port image-stage consumer.
 
 s2218's Rice oracle passed its whole-RDRAM control, reached both target 640
 origins, and found 17 writes from five PCs to the watched retail gate; its
@@ -282,13 +304,18 @@ remain in the append-only ledger. Operationally:
   matches, while the nonzero PCM rows were consumer-only at the image-join
   boundary. The arm remains useful evidence of DMEM/DMA and completion, but
   no output writeback, gate, or default flip follows.
+- s2234 supersedes the unresolved broad-span retail attribution only at the
+  exact-watch scope: the task-output span has target-phase writes, while the
+  exact PCM ring does not. The final PCM snapshot and lifetime write count do
+  not establish its target-phase writer, and the result remains single-source
+  until joined to the port image-stage rows.
 
 ## Evidence ledger summary
 
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2233 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2234 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

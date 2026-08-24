@@ -105439,3 +105439,40 @@ output and uses post-target rows for selected writers.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
+
+## Session 2234 (2026-08-23) — narrowed retail image-output attribution
+
+Ran the planned retail-oracle capture with Rice video, the qualified Start
+schedule, the whole-RDRAM positive-control watch first, the exact PCM ring
+watch `0x166450:0x169450`, and the `data_ptr+0x100` task-output watch
+`0x171F70:0x173DB4`. No build, runtime, generated output, task field, audio
+arm, gate, wait, guard, or oracle code changed.
+
+The run exited 0 after 75 seconds. The whole-RDRAM watch reached its 10,000
+callback positive-control threshold and was removed successfully. The VI
+trace reached the two required 640 origins (`0x00696100` and `0x00696600`),
+title `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400`. The exact PCM ring
+recorded `12,288` writes, all from writer PC `0x800078EC`; its post-value
+sample count was zero, but its final snapshot was nonzero (`12025` nonzero
+bytes). The task-output watch recorded `905,598` writes and had `303`
+post-target samples, `62` unique post-target values, and no overflow. The
+selected post-target writer rows included PCs `0x80091078`, `0x800910EC`,
+`0x800910F8`, `0x8009114C`, `0x80091168`, `0x80091170`, and `0x80091204`,
+with width/origin/address/value fields.
+
+This selects H-RetailTaskOutput at the exact-watch target boundary: the
+task-output span has target-phase writes while the exact PCM ring has no
+post-target sample. It refutes H-NoTargetRoute and H-RetailPCMDirect for
+this covered phase, and it does not select H-RetailOtherOutput because a
+target-phase row exists in the task-output span. The final PCM snapshot and
+lifetime ring writes do not prove that the PCM ring is target-phase output;
+the result is single-source retail evidence until the selected retail rows
+are joined to the port's image-stage, DMA, and PCM source/consumer rows.
+
+ORIGIN: no value was suppressed, rewritten, guarded, restored, or otherwise
+changed; this iteration only added independent retail watch coverage.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-contract`.
