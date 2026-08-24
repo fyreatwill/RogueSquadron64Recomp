@@ -4346,7 +4346,7 @@ hangar gate withheld C88=1. This is `H-CoverageInvalid` for the recipe; it
 does not select a C88 route, pointer/data, branch-state, key-on return, or
 mitigation conclusion.
 
-## 47. M5 metadata, status, and destination-boundary archive (s2304–s2329), migrated in s2330
+## 47. M5 metadata, status, and destination-boundary archive (s2304–s2331), migrated in s2330
 
 This section consolidates the post-§46 operational history. Exact commands,
 counts, paths, and probe tables remain in `PORTING-STATE.md`; `CURRENT-TRUTH.md`
@@ -4395,7 +4395,16 @@ slot/key-on pre-events to the prior route, not the target image task. s2328's
 corrected drain-tick A/B qualified both image arms with identical normalized
 target lifecycle rows and retained the same prior-route signature. s2329 then
 joined nonzero target stages to PCM and found two exact source/consumer pairs,
-but no same-ordinal post-stage slot, descriptor, or key-on row. The current
-discriminator is task output metadata (`data_ptr`, `data_size`, `output_buff`,
-`output_buff_size`) and every generated DMA overlap; no behavior change is
-authorized by these observations.
+but no same-ordinal post-stage slot, descriptor, or key-on row.
+
+s2331's corrected ground-truth-first table qualified the retail whole-RDRAM,
+destination-window, status, title/hangar, and named-PC controls, then qualified
+both sequential port arms through hangar. It retained `895` phase-10 target
+stage rows and two nonzero rows. Both advertised `output_buff=0` and
+`output_buff_size=0`; all five generated DMA ranges for each selected task had
+`output_overlap=0`. One row was stage-only and one had an exact PCM
+source/consumer join. Neither had a post-stage lifecycle row; both retained
+the six-row prior-route signature. This selects `H-OutputBuffZero` at capture
+scope, leaves the destination-to-slot/key-on boundary open, and authorizes no
+behavior change. The filter/voice null remains unevaluable without its
+positive control.

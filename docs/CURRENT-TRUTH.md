@@ -5,10 +5,10 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2330 (2026-08-24), a triggered maintenance iteration.
-The file was compacted after exceeding the 60,000-byte threshold; durable
-s2304–s2329 history moved to §47. The next work unit is the M5 task-output
-metadata join in `scratch/agent/NEXT.md`.
+Maintained in Session 2331 (2026-08-24). The file was compacted in s2330
+after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
+to §47. The completed work unit was the M5 task-output metadata join; the next
+work unit is the destination-to-slot/key-on census in `scratch/agent/NEXT.md`.
 
 ## Current state
 
@@ -29,8 +29,10 @@ metadata join in `scratch/agent/NEXT.md`.
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur, but the
   port has no valid same-ordinal slot, descriptor, voice/filter, or key-on
-  transition. No writeback, address remap, consumer, slot, guard, or default
-  change is authorized.
+  transition. The s2331 capture had zero `output_buff`/size and zero
+  output-overlap on both nonzero target stages, with one exact PCM
+  source/consumer join and no post-stage lifecycle row. No writeback, address
+  remap, consumer, slot, guard, or default change is authorized.
 - The independent retail oracle is the witness for game-side memory claims.
   Whole-RDRAM, title/hangar, gate/task/status, target-window, and named-PC
   controls must pass before a retail null is interpreted. It reaches attract,
@@ -40,6 +42,21 @@ metadata join in `scratch/agent/NEXT.md`.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2331 — output metadata is absent at capture scope.** The corrected
+  ground-truth-first oracle passed whole-RDRAM `32387920`, physical
+  destination-window `32377773`, task/output/gate/status/wait `108/17/22/0`,
+  title/hangar, and the named writer-PC controls. The sequential same-build
+  stub/image arms both reached hangar and retained task/DMA/guest-receive/PCM
+  controls. The phase-10 image table had `895` stage rows and two nonzero
+  rows: both advertised `output_buff=0`, `output_buff_size=0`, and all five
+  generated DMA ranges had `output_overlap=0`; one row had an exact PCM
+  source/consumer join, neither had a post-stage lifecycle row, and both had
+  the prior six-row lifecycle signature. This selects `H-OutputBuffZero` at
+  capture scope and leaves the destination-to-slot/key-on boundary open.
+  The filter/voice positive control remained absent and unevaluable. The
+  initial concurrent launcher was invalid because its two arms did not both
+  reach hangar; the final sequential driver is the qualified result.
 
 - **s2329 — metadata boundary remains open.** The corrected same-run oracle
   passed whole-RDRAM `32351889`, physical destination-window writes
@@ -84,20 +101,17 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 task/output metadata contract — next.** Join every qualified nonzero
-   image stage to task ABI metadata, every generated DMA range, image
-   completion, PCM source/consumer, host-boundary, and lifecycle row. Use the
-   exact competing hypotheses and command in `scratch/agent/NEXT.md`; do not
-   add writeback, address remapping, slot values, guards, or defaults.
-3. **M5 destination-to-slot/key-on contract — open after #2.** The latest
-   result has exact PCM joins but only prior-route lifecycle rows. The missing
-   post-ordinal consumer remains unassigned.
-4. **M5 A1 second-origin transition — parked.** Resume only with a new
+2. **M5 destination-to-slot/key-on contract — next.** The s2331 metadata
+   join selected zero advertised output-buffer metadata and no DMA output
+   overlap at capture scope, but the missing post-ordinal consumer remains
+   unassigned. Resume with a new ground-truth-first discriminator; do not add
+   writeback, address remapping, slot values, guards, or defaults.
+3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
-5. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
+4. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator; do not chase a single recurring crash.
-6. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer
+5. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer
    mode H1 are refuted. H3 is unavailable because the oracle cannot screenshot
    the LLE path; do not repeat the capped `0xD60` scan.
 
@@ -120,9 +134,12 @@ on the port. Retail independently matches a complete slot-0 status cycle at
 `0x00154620`; this does not establish the port key-on contract. The image arm
 changes DMEM, completes, emits generated DMA, and can publish a nonzero PCM
 join. Its target destinations and stage/consumer polarity rotate by capture.
-The six lifecycle rows observed before target output are assigned to the prior
-audio ordinal. A missing same-ordinal slot/descriptor/key-on consumer is the
-active boundary. Filter/voice absence is not a qualified null.
+The s2331 metadata table found zero `output_buff`/size and zero output overlap
+on every generated range for both nonzero target stages; one stage had an exact
+PCM source/consumer join. The six lifecycle rows observed before target output
+are assigned to the prior audio ordinal, and no post-stage lifecycle row was
+present. A missing same-ordinal slot/descriptor/key-on consumer is the active
+boundary. Filter/voice absence is not a qualified null.
 
 ### VI state and second origin
 

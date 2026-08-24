@@ -109764,3 +109764,43 @@ behavior was modified.
 Run the ground-truth-first s2331 M5 task-output metadata contract join from
 `scratch/agent/NEXT.md`, with the retail oracle preflight and both silent/image
 arms in one build/run.
+
+## Session 2331 (2026-08-24) — M5 task metadata selects zero output-buffer contract
+
+The first concurrent launcher was not a qualified experiment: the image arm
+reached title but not hangar and the silent arm stayed on the attract origin,
+so no port null was interpreted. Direct PID key posts did not drive both
+windows under concurrent macOS focus contention. The fixed driver used the
+validated sequential eleven-Start schedule while keeping both arms on the same
+build and the same batched instrumentation. Intermediate parser checks caught
+and fixed bare-hex FNV parsing, task-range scoping, lifecycle-column indexing,
+and integer-valued PCM counts before the final table was accepted.
+
+The final 75-second retail oracle passed whole-RDRAM `32387920`, physical
+destination-window `0x00165000:0x0016B000` writes `32377773`, task/output `108`,
+gate `17`, wait `0`, status `22`, title/hangar origins, and the named writer-PC
+controls. Both sequential port arms reached hangar with positive VI, task ABI,
+DMA, guest-receive SP, and PCM source/consumer controls. The image log had
+`895` phase-10 target stage rows and two nonzero rows. For both rows,
+`output_buff=0`, `output_buff_size=0`, and all five generated DMA ranges had
+`output_overlap=0`; one row was `stage-only`, the other had an exact PCM
+source/consumer join. Neither row had a post-stage lifecycle event; both
+retained the six-row prior-route signature. The filter/voice positive control
+was absent, so that null remains unevaluable.
+
+This selects `H-OutputBuffZero` at capture scope and rules out a nonzero
+advertised output-buffer or output-overlap role for these target stages. It
+does not explain the missing same-ordinal slot/key-on consumer, and it does
+not authorize writeback, address remapping, slot/default changes, or guards.
+The next work unit is a complete destination-to-slot/key-on lifecycle census
+with a qualified filter/voice positive control.
+
+ORIGIN: this session added only the regeneration-safe join driver and derived
+tables. The retail destination writes are legitimate observed game activity;
+no mitigation or behavior change was added.
+
+### Next
+
+Run the s2332 ground-truth-first destination-to-slot/key-on contract census
+from `scratch/agent/NEXT.md`, retaining the task/output metadata fields and
+making the filter/voice control positive before interpreting its null.
