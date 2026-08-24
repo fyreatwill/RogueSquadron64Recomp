@@ -52,6 +52,7 @@
 #define MAX_POST_VALUE_SAMPLES 256
 #define MAX_POST_VALUE_ROWS_PER_PC 16
 #define MAX_POST_VALUE_SEQUENCE_ROWS 256
+#define MAX_POST_VALUE_PC_DETAIL_ROWS 512
 #define MAX_VI_SWAP_PHASE_ROWS 256
 #define MAX_MODE_DUMP_ROWS 256
 #define MAX_VI_CONTEXT_ROWS 1024
@@ -164,6 +165,19 @@ struct post_value_requested_class {
 };
 static struct post_value_requested_class
     g_post_value_requested_classes[32][2];
+struct post_value_pc_detail_row {
+    uint32_t pc;
+    long vi;
+    uint32_t width;
+    uint32_t origin;
+    uint32_t addr;
+    uint32_t value;
+};
+static struct post_value_pc_detail_row
+    g_post_value_pc_detail_rows[MAX_POST_VALUE_PC_DETAIL_ROWS];
+static int g_n_post_value_pc_detail_rows;
+static long g_post_value_pc_detail_overflow;
+static int g_post_value_pc_detail;
 struct post_value_entry {
     uint32_t value;
     long n;
@@ -815,6 +829,27 @@ static void record_post_value_requested_sequence(int target, uint32_t value,
     g_n_post_value_requested_sequence++;
 }
 
+static void record_post_value_pc_detail(uint32_t pc, uint32_t value,
+                                        long vi, uint32_t width,
+                                        uint32_t origin)
+{
+    struct post_value_pc_detail_row *row;
+
+    if (!g_post_value_pc_detail)
+        return;
+    if (g_n_post_value_pc_detail_rows >= MAX_POST_VALUE_PC_DETAIL_ROWS) {
+        g_post_value_pc_detail_overflow++;
+        return;
+    }
+    row = &g_post_value_pc_detail_rows[g_n_post_value_pc_detail_rows++];
+    row->pc = pc;
+    row->vi = vi;
+    row->width = width;
+    row->origin = origin;
+    row->addr = g_post_value_addr & ~3u;
+    row->value = value;
+}
+
 static void record_post_value_requested_class(int target, uint32_t value,
                                                long vi, uint32_t width,
                                                uint32_t origin)
@@ -1020,6 +1055,10 @@ static void dbg_update(unsigned int pc)
         if (g_post_value_pending_target >= 0) {
             int target = g_post_value_pending_target;
             g_post_value_pending_target = -1;
+            record_post_value_pc_detail(g_post_value_pc_addr, value,
+                                        g_post_value_pending_vi,
+                                        g_post_value_pending_width,
+                                        g_post_value_pending_origin);
             record_post_value_requested_sequence(target, value,
                                                  g_post_value_pending_vi,
                                                  g_post_value_pending_width,
@@ -1618,6 +1657,7 @@ static void usage(void)
         "  --pc-hist-phase ORIGIN[:WIDTH]  add a writer histogram bucket (default WIDTH=640)\n"
         "  --post-value-watch N  sample post-store words and final range summary\n"
         "  --post-value-pc A[,B] force one post-store sample for writer PCs\n"
+        "  --post-value-pc-detail  print every requested-writer post-store tuple\n"
         "  --core PATH           libmupen64plus.dylib built with DEBUGGER=1\n"
         "  --rsp PATH            RSP plugin (default homebrew mupen64plus-rsp-hle)\n"
         "  --datadir PATH        dir holding mupen64plus.ini (default homebrew share dir)\n"
@@ -1748,6 +1788,8 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "--post-value-pc") && i + 1 < argc)
             add_post_value_pcs(argv[++i]);
+        else if (!strcmp(argv[i], "--post-value-pc-detail"))
+            g_post_value_pc_detail = 1;
         else if (!strcmp(argv[i], "--watch-write") && i + 1 < argc)
             add_watch(argv[++i], M64P_BKP_FLAG_WRITE, "write");
         else if (!strcmp(argv[i], "--watch-read") && i + 1 < argc)
@@ -1968,6 +2010,19 @@ int main(int argc, char **argv)
                    g_post_value_requested_sequence[j].addr,
                    g_post_value_requested_sequence[j].value,
                    g_post_value_requested_sequence[j].sentinel ? "sentinel" : "non-sentinel");
+    }
+    if (g_post_value_pc_detail) {
+        for (int i = 0; i < g_n_post_value_pc_detail_rows; i++)
+            printf("[oracle] post-value-pc-row pc=0x%08x vi=%ld width=%u origin=0x%08x addr=0x%08x value=0x%08x\n",
+                   g_post_value_pc_detail_rows[i].pc,
+                   g_post_value_pc_detail_rows[i].vi,
+                   g_post_value_pc_detail_rows[i].width,
+                   g_post_value_pc_detail_rows[i].origin,
+                   g_post_value_pc_detail_rows[i].addr,
+                   g_post_value_pc_detail_rows[i].value);
+        if (g_post_value_pc_detail_overflow)
+            printf("[oracle] post-value-pc-detail-overflow n=%ld\n",
+                   g_post_value_pc_detail_overflow);
     }
     for (int i = 0; i < g_nwatch; i++)
         printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s), %ld read(s), %ld write(s)\n",

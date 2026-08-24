@@ -96,6 +96,7 @@ env "$ORACLE" \
     --post-value-watch 4 --post-value-watch 5 --post-value-watch 6 \
     --post-value-watch 7 --post-value-watch 8 \
     --post-value-pc 0x8009BBF0,0x8009B170,0x8009B174,0x8009B178,0x8009B214,0x8009B6F8,0x8009B7CC,0x8009B7EC,0x8009B2C4,0x800292E4,0x800298E0,0x80017DB0,0x80015BC8,0x80022B1C \
+    --post-value-pc-detail \
     --vi-trace \
     --press "$PRESS" \
     > "$OUT/oracle.log" 2>&1 &

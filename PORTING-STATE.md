@@ -109379,3 +109379,45 @@ origin/width, watch address, aligned value)` for every requested active-byte
 store, then rerun the same staged pair. The purpose is to identify which
 earlier-origin writer produces the observed `0x01/0x02` values before any
 port-side contract change is considered.
+
+## Session 2322 (2026-08-24) — target status writer/value ownership
+
+Ran the s2322 work unit: added opt-in `--post-value-pc-detail` collection to
+the retail oracle, recording every requested-writer post-store tuple before
+the legacy target-origin filter; added the flag to the explicit keycode-36
+stub/image launcher; rebuilt the oracle and passed launcher syntax/diff
+checks. The same staged run completed with `rc=0`, and its oracle positive
+control reached `10,000` whole-RDRAM writes before the final `10,329`; title,
+hangar, gate/task/wait (`17/108/0`), and all fifteen phase buckets were
+positive.
+
+The detail table emitted `78` bounded rows with no overflow. In target
+`0x006AB400:512`, top-byte counts were `00=30`, `01=3`, `02=2`; outside the
+target, counts were `00=37`, `01=0`, `02=1`, `03=3`, `3F=2`. Every target
+`01/02` row was the aligned physical word `0x00154620`: `0x8009B214`
+produced three `01` rows and `0x8009B6F8` produced two `02` rows. The
+existing independent target phase histogram also named `0x8009B214` (`n=3`)
+and `0x8009B6F8` (`n=2`) on that watch. This selects `H-Target-Status` at
+capture scope and refutes the s2321 target-absence / earlier-only result;
+it does not prove a complete slot `01/02/00` lifecycle or the semantic role
+of the word.
+
+The stub arm had gate `1024`, task ABI/DMA `1432/1433`, PCM source/consumer
+`91/91`, and zero image-stage, slot-allocation, slot-byte, and descriptor
+rows. The image arm had gate `1024`, task ABI/DMA `1116/1116`, image-stage
+`4574`, DMA-range `2271`, and PCM source/consumer `88/88`, with the same zero
+slot/descriptor rows. Both key-on rows remained `idx=0xFFFFFFFF`, `armed=0`;
+both arms reached hangar and then hit their existing post-hangar crash paths.
+No runtime, audio, gate, wait, slot, consumer, address, mitigation, or
+default behavior changed.
+
+ORIGIN: no mitigation-shaped change; the diff is oracle instrumentation and
+launcher wiring only.
+
+### Next
+
+Add VI ordinal and sampled origin/width to the existing oracle
+`--status-poll` change rows, then rerun the same staged pair with the detail
+table. Determine whether target word `0x00154620` returns from `01/02` to
+`00`, or whether another status-table word owns the lifecycle. Do not change
+port behavior from the result.

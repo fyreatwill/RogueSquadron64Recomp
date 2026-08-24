@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2321 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2322 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -56,7 +56,17 @@ from those writers outside the target bucket had `00=46`, `01=3`, `02=3`,
 zero slot/descriptor rows and sentinel key-on rows. This selects
 `H-Retail-Earlier-Nonzero` at capture scope; it does not establish that the
 earlier `01/02` values are active-slot status. Writer/value ownership is the
-next boundary.
+prior boundary; target status semantics and zeroing are now the next boundary.
+Session 2322 added an opt-in bounded detail table to that same oracle path.
+The valid capture produced `78` requested-writer rows: target
+`0x006AB400:512` had `35` rows with top-byte counts `00=30`, `01=3`,
+`02=2`; the other origins had `43` rows with `00=37`, `01=0`, `02=1`,
+`03=3`, and `3F=2`. All five target `01/02` rows were at physical
+`0x00154620`, written by `0x8009B214` or `0x8009B6F8`; the independent
+target phase histogram named those same PCs. Both port arms reached hangar
+with task/PCM controls, while slot allocation/byte/descriptor rows stayed
+zero and key-on remained the sentinel. This selects target status presence
+at capture scope and leaves status semantics/zeroing open.
 
 The current M5 boundary is task/output and slot-contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
@@ -258,6 +268,21 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   writer/value ownership and game-level status meaning open. No runtime,
   audio, slot, gate, wait, consumer, address, mitigation, or default change
   was made.
+- **s2322 — target status writer/value ownership.** The same-run oracle
+  passed whole-RDRAM `10329`, title/hangar, gate/task/wait `17/108/0`, and
+  all fifteen phase buckets. The new detail table recorded `78` requested-
+  writer samples. In the target `0x006AB400:512` bucket, top-byte counts were
+  `00=30`, `01=3`, `02=2`; outside it they were `00=37`, `01=0`, `02=1`,
+  `03=3`, `3F=2`. The five target `01/02` rows all addressed
+  `0x00154620` and were owned by `0x8009B214`/`0x8009B6F8`; the target
+  phase histogram independently recorded those writers. This refutes the
+  s2321 target-absence result and the narrower earlier-only selection at
+  this capture scope, but does not prove that the word is a complete slot
+  lifecycle. Stub and image both reached hangar with task/PCM controls;
+  slot allocation/byte/descriptor stayed zero and key-on remained
+  `idx=0xFFFFFFFF`, `armed=0`. Both port processes then hit their existing
+  post-hangar crash path. No runtime, audio, slot, gate, wait, consumer,
+  address, mitigation, or default change was made.
 - The retail oracle is an independent witness. Its whole-RDRAM, title, hangar,
   width-aware target, and exact-PC controls must pass before a null is read.
   The oracle currently reaches attract/title/hangar, not a mission.
@@ -267,6 +292,18 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2322 — target status is present and named.** The oracle positive control
+  reached `10,000` whole-RDRAM writes and the same run exited with `10329`
+  writes, title/hangar coverage, gate/task/wait `17/108/0`, and all fifteen
+  phase buckets positive. The detail table produced `78` requested-writer
+  rows. Target `0x006AB400:512` had top-byte counts `00=30`, `01=3`,
+  `02=2`; non-target rows had `00=37`, `01=0`, `02=1`, `03=3`, `3F=2`.
+  Every target `01/02` row was the physical word `0x00154620`, owned by
+  `0x8009B214` or `0x8009B6F8`; the independent target histogram named both
+  PCs. Stub/image port controls reached hangar, but both had zero slot/
+  descriptor rows and sentinel key-on rows. This selects
+  `H-Target-Status` at capture scope and leaves zeroing/slot semantics open.
 
 - **s2321 — phase-keyed active-byte writer/value join.** The oracle positive
   control reached `10,000` whole-RDRAM writes and the same run exited with
@@ -564,18 +601,18 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 writer-PC/value ownership for earlier nonzero status.** Extend the
-   independent oracle's requested-writer table so each row records
-   `(writer PC, phase origin/width, watch address, aligned value)` for the
-   fourteen active-byte PCs used in s2321. Rerun the same explicit
-   keycode-36 staged pair with all five physical watches, fifteen phase
+1. **M5 target status lifecycle / zeroing writer.** Add VI ordinal and
+   current origin/width to the existing `--status-poll` change rows, then
+   rerun the same explicit keycode-36 staged pair with
+   `--post-value-pc-detail`, all five physical watches, fifteen phase
    buckets, whole-RDRAM/gate/task/wait controls, and port slot/key-on/
-   descriptor/task/PCM markers. `H-Earlier-Status-Writer` is selected when
-   the `01/02` values are attributed to the named active-byte writers;
-   `H-Earlier-Other-Writer` when they are attributed to another PC or watch;
-   `H-Target-Status` when a target row appears; missing controls selects
-   `H-CoverageInvalid`. No runtime, slot, wait, gate, consumer, address,
-   mitigation, or default change.
+   descriptor/task/PCM markers. `H-Status-Cycle` is selected if the target
+   word `0x00154620` shows a phase-keyed `01/02` state followed by `00` and
+   the detail table names the corresponding writer; `H-Status-Sticky` if the
+   target state never returns to zero; `H-Status-Other-Word` if another
+   status-table word supplies the lifecycle; missing controls selects
+   `H-CoverageInvalid`. Do not change runtime, audio, slot, wait, gate,
+   consumer, address, mitigation, or default behavior.
 2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
    route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
    crash had `route_state=2`, `b40=1`, `key_on=0`; C88=1 was withheld.
@@ -623,8 +660,11 @@ sampled status top bytes were zero and the port remained at its sentinel
 key-on with no slot/descriptor rows. s2321 phase-keyed the named writers and
 found target top-byte counts `00=21`, `01=0`, `02=0`, `03=1`, `3F=2`, while
 earlier-origin samples included `01=3` and `02=3`. The next boundary is
-writer-PC/value ownership and game-level status meaning; no gate, wait,
-status, slot, or default change is authorized.
+s2322's detail join then found target top-byte counts `00=30`, `01=3`,
+`02=2`, with all five target nonzero-status rows at `0x00154620` owned by
+`0x8009B214`/`0x8009B6F8`; the independent target histogram named both.
+The next boundary is a phase-keyed zeroing/lifecycle join, not writer
+ownership. No gate, wait, status, slot, or default change is authorized.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
 phase-gated captures show a rotating mixed output contract: s2306 had one
@@ -684,6 +724,13 @@ but are superseded at their measured scopes:
   `00`, but s2321's requested-writer table found `01/02` values outside the
   target bucket. The narrower target-phase zero result remains valid; the
   broad zero-only conclusion is superseded by `H-Retail-Earlier-Nonzero`.
+- s2321's target-phase absence and `H-Retail-Earlier-Nonzero` selection. It
+  was believable because that valid run had `24` target rows with no `01/02`
+  values and `54` earlier-origin rows containing them. s2322's same-recipe
+  capture recorded five target `01/02` rows at `0x00154620`, owned by
+  `0x8009B214`/`0x8009B6F8`, with an independent target phase histogram for
+  the same writers. The new target-presence result does not establish a
+  complete `01/02/00` slot lifecycle.
 - s2304's two-row `0/2` same-ordinal PCM gap as a route-wide output result;
   s2305's corrected guest-address normalization and independent native join
   found one `+12` source/consumer pair in a different observed tuple class.
