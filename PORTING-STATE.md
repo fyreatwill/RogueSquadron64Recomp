@@ -106275,3 +106275,44 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-step1-route-qualification`.
+
+## Session 2254 (2026-08-24) — qualified the reversed image/stub route pair
+
+Ran the prescribed same-build concurrent pair with silent+C88=`0` launched
+first and image+C88=`0` one second later. Both arms used
+`ROGUESQ_LOG_THREAD_RESUME=0`, `ROGUESQ_SPIN_YIELD=1`, the B40
+route/state/read, task-contract, host-boundary, and PCM-boundary traces, with
+`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`. Driver logs are
+`scratch/agent/s2254_stub_c88_0_driver.log` and
+`scratch/agent/s2254_image_c88_0_driver.log`; run logs are under
+`scratch/s73_post_a_scene/s2254_stub_c88_0/` and
+`scratch/s73_post_a_scene/s2254_image_c88_0/`.
+
+The reversed-order pair passed startup, one `[missing-func]` control, the 640
+route, title `1024 @ 0x00790400`, and two hangar `512 @ 0x006AB400`
+transitions in both arms. Both then terminated in the known aligned-ROM abort
+window with last guest PC `0x80001B08`. Phase-8/12 B40 and route-state rows
+matched across arms.
+
+The silent arm had 1,726 title and 499 hangar task-join rows, all with
+`dma_count=0`, `dmem_changed=0`, and no image-stage rows. The image arm had
+3,488/875 task-join rows and 3,282/837 image joins at title/hangar; its target
+image joins were all `classification=stage-only`, and every target
+field348/stage-DMEM/generated-DMA/destination payload summary was zero. Its
+task rows still showed nonzero DMEM changes and PCM source/consumer matches.
+The positive route controls therefore qualify the contract table, while the
+target image output remains unjoined and zero at this boundary.
+
+This selects H-BothQualify for the reversed-order capture and supersedes
+s2253's image-arm route blocker at this scope. It rules out a deterministic
+launch-order/shared route failure in this capture, but does not identify the
+image-output writer, consumer, or ordering edge. The next unit returns to the
+phase-keyed image-output contract comparison.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.

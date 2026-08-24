@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2253 (2026-08-24); behavioral and source evidence is
-current through s2253, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2253 remain in
+Maintained in Session 2254 (2026-08-24); behavioral and source evidence is
+current through s2254, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2254 remain in
 the append-only ledger.
 
 ## Current state
@@ -40,6 +40,19 @@ the append-only ledger.
   payload summaries. This selects an image-arm route-stability blocker at
   route scope, not an output-contract result; this is single-source port
   evidence and the image arm remains opt-in.
+- s2254 reversed that pair's launch order, with silent+C88=`0` first and
+  image+C88=`0` one second later. Both arms again passed startup, one
+  `[missing-func]`, the 640 route, title `1024 @ 0x00790400`, and two hangar
+  `512 @ 0x006AB400` transitions before the known aligned-ROM abort. Their
+  phase-8/12 B40 and route-state rows matched. The image arm had 3,282/837
+  image joins at title/hangar, all `stage-only`, with zero field348, DMEM,
+  generated-DMA, and destination payload nonzero summaries; its task joins
+  still showed DMEM change and PCM source/consumer activity. The stub had no
+  image rows and zero-change task joins. This selects H-BothQualify for the
+  reversed-order capture, superseding s2253's route-qualification blocker at
+  this scope but not identifying the output edge. It is single-source port
+  evidence; the image arm remains opt-in and no default, writeback, consumer,
+  slot, gate, guard, or task behavior changed.
 - s2246's two full field348-candidate captures both passed the 640 route and
   one `[missing-func]` control but crashed before title `1024` or hangar `512`:
   the first was `fillSampleStreamRange+8136` with last guest PC
@@ -304,10 +317,11 @@ Closed investigations are not active work items. The sequence is monotonic.
   pre-target crash identities. s2253 paired image+C88=`0` with a silent
   C88=`0` control: the silent arm qualified title/hangar, while the image arm
   again failed before stable title, with all target image joins still
-  `stage-only` and zero payload summaries. This selects an image-arm route
-  blocker at this scope and leaves the output boundary unevaluable. The next
-  checkpoint reverses the image/stub launch order to test launch-order/shared
-  instability before another output attribution attempt. Do not promote
+  `stage-only` and zero payload summaries. s2254 reversed that image/stub
+  launch order and both arms qualified through title and hangar, so the blocker
+  is intermittent at this scope rather than a selected intrinsic image-arm
+  failure. The next checkpoint returns to the output attribution table. Do
+  not promote
   `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
@@ -412,6 +426,17 @@ slot, gate, guard, or writeback change. The next unit reverses the arm launch
 order to test whether the split is launch-order/shared rather than image-arm
 specific. This is single-source port evidence, not an independent retail
 writer or output-contract line.
+
+s2254 reversed that launch order: silent+C88=`0` first, image+C88=`0` second.
+Both arms passed the startup, `[missing-func]`, 640, title `1024`, and hangar
+`512` controls, then hit the known aligned-ROM abort. The target B40 and route-
+state rows matched. Image target joins numbered 3,282 at title and 837 at
+hangar, all `stage-only`; field348, stage DMEM, generated-DMA, and destination
+payload summaries were zero. The image task joins nevertheless showed changed
+DMEM and PCM source/consumer matches, while the stub task joins had zero DMEM
+change and no image rows. This selects H-BothQualify for this reversed-order
+capture and supersedes the s2253 route blocker at this scope, but it is still
+single-source port evidence and does not identify the output edge.
 
 s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
 At both target origins, `field348 & 0x007FFFFF` was valid but the exact
@@ -648,6 +673,13 @@ remain in the append-only ledger. Operationally:
   shows that the failure is intermittent at route scope. The B40 store/read
   difference is the intended C88 behavior, not an unexplained downstream
   route edge, and no runtime change follows.
+- s2253's image-arm route blocker was believable because the image arm failed
+  before stable title while the silent control reached title and hangar under
+  the same startup/640 controls. s2254 reversed their launch order and both
+  arms qualified through title and hangar with matched target route-state/B40
+  rows. This supersedes the blocker as a deterministic image-arm explanation
+  at that scope; the target image joins remain a separate output-contract
+  question, and no runtime change follows.
 - s2232's image-arm PCM activity is not evidence of image-output correctness:
   the same-run image summary recorded zero stage/source and stage/consumer
   matches, while the nonzero PCM rows were consumer-only at the image-join
@@ -674,7 +706,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2253 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2254 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
