@@ -105665,3 +105665,49 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
+
+## Session 2239 (2026-08-23) — audited rs_memset field348 clear order
+
+Ran the planned phase-gated `rs_memset` entry attestation after s2238's
+scalar-store audit. The incremental fixup added the hook to generated
+`funcs_2.c`, and the Debug target rebuilt successfully. The first run used
+the exact `ROGUESQ_LOG_ALL=1` recipe but remained at the 640 attract origin
+for more than two minutes with no target phase; it was killed with SIGKILL
+and treated as a recipe/logging failure, not as a null result. A rerun kept
+the same image arm, route, phase gate, and existing controls but enabled the
+needed categories explicitly:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_FIELD348_WRITER=1 ROGUESQ_LOG_M5_FIELD348_MEMSET=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2239_field348_memset_fixed 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2239_field348_memset_fixed_driver.log 2>&1
+```
+
+The fixed run reached title `1024 @ 0x00790400` at 48.7 seconds and hangar
+`512 @ 0x006AB400` at 78.8 seconds. Positive controls were two explicit
+outside-span `rs_memset` rows, two scalar-writer controls, 3,555
+`[audtask-dma-row]` rows, 15,754 image-stage rows, and 6,553 PCM rows. The
+bulk hook logged 1,024 bounded target rows. At title, the exact source
+`0x80178C80` was cleared once with fill `0`, length `0x298` before the first
+image-stage row using `field348=0x80178C80`. At hangar, the exact source
+`0x801797B0` was cleared once with the same fill and length; the preceding
+stage row still used the prior source `0x80178C80`, and the first stage row
+using `0x801797B0` came afterward. No second overlapping `rs_memset` call was
+observed. The existing scalar hook independently showed the corresponding
+byte stores from guest PC `0x800078EC`, all zero at the active source scope.
+
+This selects H-ExpectedField348Init at the matched source/order boundary and
+keeps the two source origins separate. It rules out a same-source
+post-producer bulk clear in this run; the earlier stage/other-span ordering
+does not select H-WrongClearAfterProducer. The hook's `$ra` was zero and its
+`guest_pc` was the stale `0x80001C94` on every bounded row, so caller identity
+was not measured; the next probe must annotate all generated `rs_memset`
+callsites. The independent s2237 retail-oracle writer audit still supplies
+the second line that both physical source spans are legitimately populated on
+retail. No runtime behavior or default changed.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-contract`.

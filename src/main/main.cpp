@@ -542,6 +542,60 @@ extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
     }
 }
 
+extern "C" void rs64_m5_field348_memset(uint32_t dst, uint32_t fill,
+                                           uint32_t len, uint32_t ra,
+                                           uint32_t guest_pc) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_FIELD348_MEMSET");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+
+    const uint32_t phys = dst & 0x007FFFFFu;
+    const uint64_t end = static_cast<uint64_t>(phys) + len;
+    const bool overlap_1 = len != 0u && phys < 0x178E00u && end > 0x178C80u;
+    const bool overlap_2 = len != 0u && phys < 0x179930u && end > 0x1797B0u;
+    const uint32_t span = overlap_1 ? 1u : (overlap_2 ? 2u : 0u);
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+
+    static std::mutex mutex;
+    static uint64_t call_ordinal = 0;
+    static uint32_t phase_rows[2] = {};
+    static bool control_seen[2] = {};
+    std::lock_guard<std::mutex> lock(mutex);
+
+    const uint64_t ordinal = call_ordinal++;
+    const uint32_t row = phase_rows[slot]++;
+    const uint32_t callsite = ra >= 8u ? ra - 8u : 0u;
+    if (span == 0u && !control_seen[slot]) {
+        control_seen[slot] = true;
+        std::fprintf(stderr,
+            "[field348-memset-control] ordinal=%llu row=%u phase=%u "
+            "width=%u origin=0x%06X dst=0x%08X phys=0x%06X fill=0x%02X "
+            "len=0x%X span=0 ra=0x%08X callsite=0x%08X guest_pc=0x%08X\n",
+            static_cast<unsigned long long>(ordinal), row, rs64_phase_ord(),
+            width, origin, dst, phys, fill & 0xFFu, len, ra, callsite,
+            guest_pc);
+        std::fflush(stderr);
+    }
+    if (row >= 512u) return;
+    std::fprintf(stderr,
+        "[field348-memset] ordinal=%llu row=%u phase=%u width=%u "
+        "origin=0x%06X dst=0x%08X phys=0x%06X fill=0x%02X len=0x%X "
+        "span=%u ra=0x%08X callsite=0x%08X guest_pc=0x%08X\n",
+        static_cast<unsigned long long>(ordinal), row, rs64_phase_ord(),
+        width, origin, dst, phys, fill & 0xFFu, len, span, ra, callsite,
+        guest_pc);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
                                          uint32_t r2, uint32_t field348,
                                          uint32_t field44, uint32_t dest) {

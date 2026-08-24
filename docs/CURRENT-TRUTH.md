@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2238 (2026-08-23); behavioral and source evidence is
-current through s2238, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2238 remain in
+Maintained in Session 2239 (2026-08-23); behavioral and source evidence is
+current through s2239, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2239 remain in
 the append-only ledger.
 
 ## Current state
@@ -92,6 +92,16 @@ the append-only ledger.
   field348 source. This selects H-PortWriterPayloadZero at the exact active
   source scope, with origin-keyed behavior retained; H-PortNoField348Writer,
   H-PortWriterThenZero, and H-PortWriterInstrumentGap are not selected.
+- s2239's phase-gated `rs_memset` entry attestation passed two explicit
+  outside-span controls and reached title and hangar. The title source
+  `0x178C80` and hangar source `0x1797B0` each received one zero-fill
+  `len=0x298` clear before the first image-stage row using that same source;
+  no second overlapping bulk clear was observed. The earlier hangar stage
+  row used the previous origin's span, so it is not a same-source
+  post-producer clear. This selects H-ExpectedField348Init at the matched
+  source/order scope and keeps the analysis origin-keyed. Generated direct
+  calls expose `$ra=0` and stale `guest_pc=0x80001C94`, so the caller identity
+  split remains unevaluable until callsites are annotated.
 - s2232's same-build port A/B reached the target route, title, and hangar in
   both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
   DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
@@ -134,10 +144,12 @@ Closed investigations are not active work items. The sequence is monotonic.
   s2237 independently selected H-RetailField348Writer: retail populates both
   exact source spans. s2238 selects H-PortWriterPayloadZero: the active source
   spans receive zeroing stores from `rs_memset` at `0x800078EC`, with no
-  nonzero exact-span writer before the zero image stages. The next unit is a
-  phase-gated `rs_memset` caller/argument/order audit to distinguish expected
-  initialization from a port-side wrong-clear or missed producer edge. Do not
-  promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+  nonzero exact-span writer before the zero image stages. s2239 selects
+  H-ExpectedField348Init at the matched source/order scope; its generated
+  direct calls expose no usable caller identity. The next unit is an
+  all-callsite `rs_memset` annotation to distinguish legitimate initialization
+  from a wrong phase/span caller or a missed producer edge. Do not promote
+  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -239,6 +251,21 @@ field348/DMEM/generated-DMA payloads, while nonzero stores to the inactive
 other span occurred only in hangar. This is a two-source boundary with the
 retail writer audit, but the port-side attribution itself is single-source;
 the next discriminator is the `rs_memset` callsite arguments and ordering.
+
+s2239's bulk-entry hook supplied that second view. It passed two explicit
+outside-span controls and logged 1,024 bounded target rows, with one exact
+title call at `0x80178C80`, fill `0`, length `0x298`, and one exact hangar call
+at `0x801797B0`, fill `0`, length `0x298`. The title exact call preceded the
+first matching stage row. At hangar, the first stage row still used the
+previous span `0x80178C80`; the first row using `0x801797B0` followed the
+bulk clear. Existing controls in that run included 3,555 audio ABI rows,
+15,754 image-stage rows, 6,553 PCM rows, and two scalar-writer controls.
+The entry hook and scalar writer independently identify the legitimate
+`rs_memset` zero writer at this scope; the prior s2237 retail-oracle writer
+audit is the independent ground-truth line. Because generated direct C calls
+leave `ctx->r31` at zero and the last-guest-PC breadcrumb at `0x80001C94`,
+caller identity was not selected. No runtime behavior or default changes
+follow.
 
 s2233's retail oracle passed its whole-RDRAM control, reached the driven 640,
 title, and hangar phases, and wrote the broad `0x166000:0x17A000` span
@@ -401,7 +428,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2238 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2239 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
