@@ -25,13 +25,13 @@ star flare, Factor 5 logo, title-like 1024 (`0x00790400`), and hangar 512
 `L_800C5930` and `menuControllerInput` `L_800B8050` (s1942, s1949), with
 `ROGUESQ_LLE_UNGATED=1` and `ROGUESQ_LLE_SOLO=1`. Overlay dispatch is fixed
 enough for mission entry and post-sec2 outdoor presentation. The war-room
-floor band defect (s12–s48) is fixed. Default audio is the silent `Broke`
-stub; the Factor 5 image arm is opt-in (`ROGUESQ_AUDIO_UCODE=1`) and not
-defaulted. Yield stays default-off.
+floor band defect (s12–s48) is fixed. The qualified M5 audio path is the
+Factor 5 image arm; `ROGUESQ_AUDIO_UCODE=0` selects the silent `Broke` stub as
+its control. Yield stays default-off.
 
 **What is not done:** hangar visuals have geometry/color artifacts. M5 audio
-de-stubbing remains open at the A1 image-arm isolator census (`canary_ok=0`
-is mix-buffer and log-only; the image arm is still opt-in). M3 is limited
+de-stubbing remains open at the task-output metadata and destination-to-slot
+boundary; the image arm is qualified but not fully de-stubbed. M3 is limited
 to idiom-class audits. M4 hangar/512 Y=0x8000 is not live on the first
 hangar capture. See `CURRENT-TRUTH.md`.
 
@@ -4345,3 +4345,57 @@ bus-crashed at guest PC `0x8000834C` before title or hangar. The required
 hangar gate withheld C88=1. This is `H-CoverageInvalid` for the recipe; it
 does not select a C88 route, pointer/data, branch-state, key-on return, or
 mitigation conclusion.
+
+## 47. M5 metadata, status, and destination-boundary archive (s2304–s2329), migrated in s2330
+
+This section consolidates the post-§46 operational history. Exact commands,
+counts, paths, and probe tables remain in `PORTING-STATE.md`; `CURRENT-TRUTH.md`
+contains only the live boundary and next discriminator.
+
+s2304–s2306 established that the image arm's nonzero stage rows can rotate and
+that temporal joining matters: a same-ordinal stage-only result was followed
+by a later capture with an exact PCM source/consumer join. s2307 found fixed
+address payload mismatches, while s2308 observed a rotated nonzero pair with
+exact source/consumer publication followed by same-destination image-DMA zero
+writes. s2309's independent whole-ring retail snapshot showed nonzero data in
+the corresponding physical slot, so the port zero-fill observation was not a
+retail polarity result. These captures authorize no writeback, address remap,
+consumer, slot, or guard change.
+
+s2310–s2315 expanded the retail writer census across fifteen VI-origin
+buckets. The lifetime `0x800078EC` writer and all final ring snapshots were
+positive, but no configured target-phase bucket contained a phase-attributed
+writer row. The remaining retail boundary is writer attribution outside the
+configured buckets or incomplete phase attribution; the census is closed at
+that scope.
+
+s2316 was route-invalid because the port gate/task logging was omitted and the
+arms missed hangar. s2317–s2319 repaired the explicit keycode-36 schedule and
+qualified both silent and image arms through title/hangar with positive gate,
+task/DMA, guest-receive, and PCM controls. The port still had no valid
+slot-allocation, descriptor, or key-on transition; the only key-on row was the
+unarmed `0xFFFFFFFF` sentinel. Retail gate/task writers appeared at an earlier
+origin and the wait field had no writer row.
+
+s2320–s2323 independently resolved the retail status word at physical
+`0x00154620`: target-phase writes by `0x8009B214`/`0x8009B6F8` produce repeated
+`01 -> 02 -> 03 -> 00` cycles, with the later tail named as
+`0x8009B7CC`/`0x8009B7EC`. This closes retail status semantics, not the port
+slot/key-on contract.
+
+s2324–s2326 ran same-build silent/image controls. The image arm performs real
+DMEM work, returns `Broke`, emits generated DMA and nonzero stage payloads,
+and sometimes joins PCM; the silent arm supplies the control. No arm emitted
+slot, descriptor, voice/filter, or valid key-on rows. s2325's stage-only versus
+PCM destination split was capture-dependent, and s2326's pre-stage lifecycle
+rows lacked a same-task owner.
+
+s2327 joined lifecycle rows to audio ordinals and assigned the six observed
+slot/key-on pre-events to the prior route, not the target image task. s2328's
+corrected drain-tick A/B qualified both image arms with identical normalized
+target lifecycle rows and retained the same prior-route signature. s2329 then
+joined nonzero target stages to PCM and found two exact source/consumer pairs,
+but no same-ordinal post-stage slot, descriptor, or key-on row. The current
+discriminator is task output metadata (`data_ptr`, `data_size`, `output_buff`,
+`output_buff_size`) and every generated DMA overlap; no behavior change is
+authorized by these observations.

@@ -109739,3 +109739,28 @@ Discriminate the image task's advertised output metadata from its generated
 destination/PCM roles. Keep the same qualified route and independent retail
 watch, and do not repeat the destination-role census without joining
 `data_ptr`, `output_buff`, every DMA range, image completion, and PCM events.
+
+## Session 2330 (2026-08-24) — maintenance-compacted current truth
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at `63,299`
+bytes, above the `60,000`-byte threshold, so no build, run, soak, or runtime
+experiment was performed. Durable s2304–s2329 evidence was consolidated into
+`docs/PROJECT-OVERVIEW.md` §47. `CURRENT-TRUTH.md` was reduced from 956 lines
+to 188 lines and refreshed to Session 2330, retaining the qualified route,
+latest M5 boundary, active backlog, durable boundaries, superseded conclusions,
+and safety rules. `scratch/agent/NEXT.md` now points to the same metadata join
+as s2331 while retaining its competing hypotheses and discriminating table.
+
+This maintenance work rules out no new runtime hypothesis: it changed only
+documentation placement and the next-work-unit label. It preserves the open
+`H-EarlierTickOnly`/task-output-metadata boundary and authorizes no behavior
+change.
+
+ORIGIN: documentation-only maintenance; no runtime value, writer, or game
+behavior was modified.
+
+### Next
+
+Run the ground-truth-first s2331 M5 task-output metadata contract join from
+`scratch/agent/NEXT.md`, with the retail oracle preflight and both silent/image
+arms in one build/run.

@@ -1,4 +1,4 @@
-# NEXT work unit (s2330) — M5 task output-metadata contract join
+# NEXT work unit (s2331) — M5 task output-metadata contract join
 
 HYPOTHESIS-ID: m5-output-metadata-contract
 
@@ -42,7 +42,7 @@ stays unevaluable without its positive control.
 
 ## Exact commands
 
-Create `scratch/agent/run_s2330_m5_output_metadata_join.sh` with a retail
+Create `scratch/agent/run_s2331_m5_output_metadata_join.sh` with a retail
 oracle preflight first. Keep the whole-RDRAM positive control, the
 `0x00165000:0x0016B000` physical destination watch, task/output/gate/wait/
 status watches, title/hangar origins, named task/output writer PCs, and the
@@ -53,5 +53,5 @@ source/consumer rows in both arms. Use SIGKILL cleanup and leave the
 filter/voice null unevaluable.
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh -n scratch/agent/run_s2330_m5_output_metadata_join.sh
-    zsh scratch/agent/run_s2330_m5_output_metadata_join.sh s2330_m5_output_metadata_join
+    zsh -n scratch/agent/run_s2331_m5_output_metadata_join.sh
+    zsh scratch/agent/run_s2331_m5_output_metadata_join.sh s2331_m5_output_metadata_join
