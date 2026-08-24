@@ -461,6 +461,87 @@ static void rs64_audio_hash_rdram(const uint8_t* rdram, uint32_t addr,
     }
 }
 
+extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
+                                          uint32_t addr, uint32_t value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_FIELD348_WRITER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+
+    const uint32_t width_n = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width_n == 1024u && origin == 0x00790400u) ||
+          (width_n == 512u && origin == 0x006AB400u))) return;
+
+    const uint32_t phys = addr & 0x007FFFFFu;
+    const uint32_t len = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);
+    const uint32_t value_mask = len == 1u ? 0xFFu : (len == 2u ? 0xFFFFu : 0xFFFFFFFFu);
+    const uint32_t logged_value = value & value_mask;
+    uint32_t value_fnv = 2166136261u;
+    uint32_t value_nz = 0;
+    for (uint32_t i = 0; i < len; ++i) {
+        const uint32_t shift = (len - 1u - i) * 8u;
+        const uint8_t b = static_cast<uint8_t>((logged_value >> shift) & 0xFFu);
+        value_fnv = (value_fnv * 16777619u) ^ b;
+        value_nz += b != 0;
+    }
+
+    static std::mutex mutex;
+    static uint64_t store_ordinal = 0;
+    static uint32_t control_phase_key[2] = {0xFFFFFFFFu, 0xFFFFFFFFu};
+    static uint32_t total[2] = {0, 0};
+    static uint32_t printed[2] = {0, 0};
+    static uint32_t unique_n[2] = {0, 0};
+    static uint32_t unique_pc[2][64] = {};
+    static const uint32_t spans[2] = {0x178C80u, 0x1797B0u};
+    std::lock_guard<std::mutex> lock(mutex);
+
+    const uint64_t ordinal = store_ordinal++;
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t phase_key = (width_n << 24) ^ origin;
+    const uint32_t phase_slot = width_n == 1024u ? 0u : 1u;
+    const bool overlaps_field348 =
+        (phys < spans[0] + 0x180u && phys + len > spans[0]) ||
+        (phys < spans[1] + 0x180u && phys + len > spans[1]);
+    if (control_phase_key[phase_slot] != phase_key &&
+        !overlaps_field348) {
+        control_phase_key[phase_slot] = phase_key;
+        std::fprintf(stderr,
+            "[field348-writer-control] ordinal=%llu phase=%u width=%u "
+            "origin=0x%06X phys=0x%06X len=%u pc=0x%08X value=0x%08X\n",
+            static_cast<unsigned long long>(ordinal), phase, width_n, origin,
+            phys, len, pc, logged_value);
+        std::fflush(stderr);
+    }
+
+    for (uint32_t i = 0; i < 2u; ++i) {
+        if (phys >= spans[i] + 0x180u || phys + len <= spans[i]) continue;
+        ++total[i];
+        bool new_pc = true;
+        for (uint32_t j = 0; j < unique_n[i]; ++j) {
+            if (unique_pc[i][j] == pc) {
+                new_pc = false;
+                break;
+            }
+        }
+        if (new_pc && unique_n[i] < 64u) unique_pc[i][unique_n[i]++] = pc;
+        if (printed[i] < 512u || (new_pc && unique_n[i] <= 64u)) {
+            std::fprintf(stderr,
+                "[field348-writer] ordinal=%llu phase=%u width=%u "
+                "origin=0x%06X span=%u phys=0x%06X len=%u pc=0x%08X "
+                "value=0x%08X value_fnv=%08X value_nz=%u total=%u unique=%u\n",
+                static_cast<unsigned long long>(ordinal), phase, width_n, origin,
+                i + 1u, phys, len, pc, logged_value, value_fnv, value_nz,
+                total[i], unique_n[i]);
+            std::fflush(stderr);
+            ++printed[i];
+        }
+    }
+}
+
 extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
                                          uint32_t r2, uint32_t field348,
                                          uint32_t field44, uint32_t dest) {

@@ -105613,3 +105613,55 @@ changed; this iteration only observed the retail ROM with the oracle.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
+
+## Session 2238 (2026-08-23) — audited port field348 source writers
+
+Ran the planned port-side writer/order audit after s2237's independent retail
+oracle capture. The initial incremental fixup attempt failed because
+`funcs_12.c` has no scalar-store helper; the fixup was corrected to skip files
+with no such sites, preserve the duplicate-anchor assertion, and then patched
+45 generated files. The host hook was added to `src/main/main.cpp`, and the
+full Debug target rebuilt successfully.
+
+The qualified image-arm run was:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2238_field348_writer 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2238_field348_writer_driver.log 2>&1
+```
+
+The run reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`
+before the known post-hangar crash window. Positive controls in the same run
+were 3,308 `[audtask-abi]` rows, 3,308 DMA rows, 13,677 image-stage rows,
+105 source PCM rows, 105 consumer PCM rows, and two
+`[field348-writer-control]` rows outside both watched spans at physical
+`0x1496F4`.
+
+The phase/source table was:
+
+```text
+phase 8, field348 0x80178C80 / physical 0x178C80:
+  384 byte stores, writer PC 0x800078EC (rs_memset), all value_nz=0
+phase 10/12, field348 0x801797B0 / physical 0x1797B0:
+  512 byte stores across the two 512-origin phases, writer PC 0x800078EC,
+  all value_nz=0
+phase 12, inactive physical 0x178C80:
+  136 bounded rows, 83 nonzero; these were not the active field348 source
+```
+
+Every target image-stage row had `field348_nz=0`, `nz_a=0`, and
+`dma_nz_a=0`. The stage/store ordering rows show the selected source was
+already zero when the image arm sampled it; the zeroing writer is a real,
+legitimate `rs_memset` operation, but no nonzero port writer was observed for
+the active source spans. This selects H-PortWriterPayloadZero at the exact
+active-source scope, retains origin-keyed behavior, and rules out
+H-PortNoField348Writer, H-PortWriterThenZero, and H-PortWriterInstrumentGap at
+this measurement boundary. The nonzero stores to the inactive span do not
+support a writeback or consumer mitigation.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-contract`.
