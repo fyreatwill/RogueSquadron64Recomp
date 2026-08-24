@@ -105893,3 +105893,39 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
+
+## Session 2244 (2026-08-24) — repeated no-log image-arm baseline A/B
+
+Ran the planned same-build concurrent baseline with the qualified image arm,
+M5 logging disabled in both arms, and the unchanged route controls:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2244_image_crash_nolog_a 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2244_image_crash_nolog_a_driver.log 2>&1 &
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2244_image_crash_nolog_b 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2244_image_crash_nolog_b_driver.log 2>&1 &
+```
+
+Both arms passed the common startup and exact 640 route control at
+`0x00696100`, and each emitted one `[missing-func]` marker. Arm A recorded
+557 LLE/runner task rows and 760 service entries, then crashed before 1024 at
+`fillSampleStreamRange+8136` with `last-guest-pc=0x8000b650`; its driver
+reported process-gone while waiting for the target phase. Arm B recorded
+1,163 LLE/runner task rows and 2,074 service entries, reached title
+`1024 @ 0x00790400` at 49.7 seconds, and had no crash marker. It was killed
+with SIGKILL while the driver was still active, before a hangar marker could
+be collected; no 512/hangar conclusion follows.
+
+The no-log arms therefore diverged under identical functional configuration,
+selecting H-BaselineNondeterminism at the measured pre-phase scope. This
+rules out a logging-only explanation for s2243's split, but does not yet
+classify the no-log recipe as stable or qualify both arms for the field348
+producer census. No field348 writer, image-output contract, runtime guard, or
+default change follows. The next unit repeats the no-log A/B and allows the
+surviving arm through hangar so the route-completion branch is measurable.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-prephase-crash-discriminator`.
