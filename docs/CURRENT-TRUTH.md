@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2218
-(2026-08-23); behavioral and source evidence is current through s2218.
+authoritative for exact commands and probe rows. Maintained in Session 2219
+(2026-08-23); behavioral and source evidence is current through s2219.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2219's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -397,6 +397,26 @@ second ledger.
   This completes ground-truth capture and selects the active retail status
   word as the next M5 boundary, but authorizes no gate flip, image default,
   task rewrite, or safety-guard change.
+- s2219 completed M5 plan step 2 with the same-built concurrent silent-stub
+  and opt-in Factor 5 image arms. Both arms passed the positive prefix and
+  reached title `1024 / 0x00790400` plus a `512 / 0x006AB400` phase. The
+  image arm emitted 114 rate-limited dispatch rows through ordinal 9472,
+  returned `exit=1` (`Broke`), and produced 4,539 ABI/DMA rows with
+  `dmem_changed` in the 1,590–1,600 range and DMA counts 2–5. Its image
+  stage generated five sampled nonzero internal rows, but all 9,475 sampled
+  host destination rows were `dest_nz=0` and all 9,475 image joins were
+  `classification=stage-only`. Every sampled `audio-join-pcm` source and
+  consumer row had `nz=0`, and all 62 rate-limited PCM sanity rows were
+  all-zero. The stub arm emitted 78 dispatch rows through ordinal 4864,
+  had no DMA and `dmem_changed=0`, and its canary stayed intact. Wait and
+  slot-return controls were positive in both arms; the available slot-write
+  rows differed, but no independent `0x03 -> 0x00` completion sequence was
+  captured. The image run reached title and hangar with no crash/abort; the
+  control also reached hangar before a later `do_rom_read` crash. This
+  single-source port A/B selects H-StubEquivalent at the game-visible
+  output/slot/PCM scope, refutes H-Coverage and treatment-only
+  H-ImageRouteRegress, and proves that the image arm executes nontrivially.
+  No default, task field, gate, or safety guard changed.
 
 ## Active backlog
 
@@ -414,8 +434,11 @@ work items.
    The silent port control reached `0x0066A500` and `0x00696100`, with
    rate-limited stub dispatch, audio-return, slot, and PCM controls positive
    but no hangar phase. The oracle did not expose store payloads or
-   `0x14974C` writer PCs, so those contracts remain open. The next unit is
-   plan step 2: same-build stub versus opt-in Factor 5 image-arm validation.
+   `0x14974C` writer PCs, so those contracts remain open. s2219 completed
+   plan step 2: the image arm executes and changes DMEM, but sampled host
+   output, PCM, and validated slot completion remain absent while the route
+   reaches title/hangar. The next unit is plan step 3, starting with the
+   existing `reapplyDisplayMode` gate writer at `0x8008EC88`.
 2. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
@@ -570,6 +593,16 @@ its PCM rows were all zero. This completes ground-truth capture only; the
 active status-word writer and the image-arm task/slot/PCM boundary remain the
 next M5 discriminator. No gate flip or image default is authorized.
 
+s2219's image-arm A/B shows a nontrivial Factor 5 execution boundary: the
+image changes DMEM and records DMA, and a few internal stage buffers become
+nonzero. The sampled host destinations and PCM source/consumer spans remain
+zero, every image join is stage-only, and the available port slot-write rows
+do not independently establish the retail `0x03 -> 0x00` completion cycle.
+Treat this as H-StubEquivalent at the game-visible output/slot/PCM scope, not
+as proof that the image function is a no-op. The next discriminator is the
+existing single-writer C88 gate arm; keep it opt-in and hold the image arm
+constant.
+
 The stock `aspMain` contract is not the game's MusyX contract. C88 testing
 selected reversed-or-suppressing polarity at sampled port gate scope; no
 blanket gate flip is authorized.
@@ -695,8 +728,8 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2216 VI-boundary and retail-ground-truth work is recorded in the
-ledger.
+s2198–s2219 VI-boundary, retail-ground-truth, and image-arm work is recorded
+in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

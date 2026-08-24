@@ -1,71 +1,82 @@
-# NEXT work unit (s2219) — validate the opt-in Factor 5 audio arm
+# NEXT work unit (s2219) — test the existing C88 gate writer arm
 
-HYPOTHESIS-ID: m5-audio-image-arm-validation
+HYPOTHESIS-ID: m5-audio-gate-writer-site
 
 ## Work unit
 
-Execute step 2 of `docs/M5-AUDIO-PLAN.md` only. Use one build and run the
-silent `musyx_stub` control and `ROGUESQ_AUDIO_UCODE=1` treatment from the
-same phase schedule. Keep the arm opt-in; do not flip the guest gate, remove
-wait/slot/voice guards, change task fields, or enable stock `aspMain`.
-
-The prior retail ground-truth run passed its whole-RDRAM control and found
-active `0x14974C` writes, but it did not identify that word's writer or print
-gate store payloads. Those are not reasons to add an instrument before this
-step: the existing arm validation has a complete port-side discriminator.
+Execute M5 plan step 3 for exactly one writer: `reapplyDisplayMode`'s gate
+store at guest `0x8008EC88`. Ask the retail oracle for the store payload and
+writer attribution first. Only after its whole-RDRAM control is positive, run
+one same-build port A/B with the Factor 5 image arm held constant and the
+existing `ROGUESQ_M5_C88_VALUE=1` behavior arm versus the default forced-zero
+control. Do not change any other gate writer, consumer, task field, default,
+or safety guard.
 
 Competing hypotheses and the single discriminator:
 
-- H-ImageExec: the image arm executes the selected Factor 5 image and returns
-  normally; its phase-keyed rows show `real_ucode=1`, a completed RSP task,
-  changed DMEM/output or DMA evidence, and a valid slot transition.
-- H-StubEquivalent: the image arm is still observationally equivalent to the
-  silent stub at this route; dispatch/return may differ, but no valid slot
-  transition or nonzero PCM appears in the treatment.
-- H-ImageRouteRegress: the image arm changes route admission or stability;
-  its positive phase control is present but it stalls, crashes, loses a
-  later phase, or corrupts the existing task/DMEM contract compared with the
-  same-build control.
-- H-Coverage: a positive all-width/phase prefix or the treatment's dispatch
-  rows are absent, so any image-arm null is unevaluable.
+- H-C88RetailOne: retail writes `1` at this site in the target route and the
+  port's original-value arm changes the gate contract; the arm should show a
+  phase-keyed gate transition plus a downstream task/slot/PCM difference.
+- H-C88RetailZero: retail writes `0` at this site in the covered target
+  route; the port's forced-zero control matches retail and the A/B has no
+  downstream difference.
+- H-C88NotCausal: retail and port payloads match, but this writer is not the
+  missing boundary; task exit, validated slot completion, and PCM remain
+  matched between arms.
+- H-C88RouteRegress: changing only this writer alters route admission or
+  stability while the positive prefix is present, without establishing a
+  valid audio result.
 
-The discriminator is one phase-keyed control/treatment table containing the
-positive prefix, 640/title/hangar phase rows, `audtask-dispatch` and
-`RspExitReason`, host canary status, DMEM/output/DMA rows, slot status
-transitions, and `pcm-sanity` nonzero/all-zero counts. H-ImageExec requires
-the treatment execution/return plus valid output and slot evidence;
-H-StubEquivalent requires matched coverage and no valid output/slot/PCM;
-H-ImageRouteRegress requires matched early coverage with a treatment-only
-route or stability failure; and H-Coverage wins if the same-run controls are
-missing. A dispatch counter alone is not a positive control.
+The discriminator is one joined table containing the oracle whole-RDRAM
+control, gate writer PC and post-store value, port gate rows at the writer
+site, positive 640/title/hangar phases, image-arm `real_ucode`/exit rows,
+nonzero PCM joins, and an independently validated slot-status transition.
+Missing whole-RDRAM or phase controls makes the comparison unevaluable;
+writer counts alone do not select a hypothesis.
 
-## Exact commands
+## Ground-truth command — run before any port build or new instrumentation
 
-Build once from the repository root:
+~~~sh
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --secs 60 --vi-trace \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  --watch-write 0x0:0x800000 \
+  --watch-write 0xA0F50:0xA0F51 \
+  --pc-hist-watch 1 --post-value-watch 1 \
+  --post-value-pc 0x8008EA34,0x8008EB40,0x8008EB7C,0x8008EC88,0x8008ED48 \
+  > scratch/agent/s2220_retail_c88.log 2>&1
+~~~
+
+The whole-RDRAM watch must reach its positive-control threshold and the Rice
+trace must reach both target 640 origins and the hangar before a zero payload
+or missing writer is interpreted.
+
+## Port build and same-build A/B
 
 ~~~sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
 ~~~
 
-Run the existing eleven-Start driver for the treatment, with all passive M5
-diagnostics armed:
+Run both arms concurrently, holding the image arm constant and arming all
+passive M5 diagnostics:
 
 ~~~sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LOG_ALL=1 \
+  ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 \
+  ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-c88-on 30 12 \
+  > scratch/agent/s2220_c88_on.log 2>&1
+
 env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
   ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 \
-  ROGUESQ_LOG_AUDIOTICK_TRACE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh \
-  m5-audio-step2 30 12 > scratch/agent/s2219_image_arm.log 2>&1
+  ROGUESQ_LOG_AUDIOTICK_TRACE=1 \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-c88-control 30 12 \
+  > scratch/agent/s2220_c88_control.log 2>&1
 ~~~
 
-Run the unset-env control from the same built binary and schedule:
-
-~~~sh
-env ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
-  ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 \
-  ROGUESQ_LOG_AUDIOTICK_TRACE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh \
-  m5-audio-step2-control 30 12 > scratch/agent/s2219_stub_control.log 2>&1
-~~~
-
-Use SIGKILL for any watchdog termination. Inspect only the phase-keyed table
-above, plus `[CRASH]`/`[ABORT]` markers and the final phase; do not treat a
-timeout or all-zero PCM as success.
+Use SIGKILL for watchdog cleanup. Do not promote `ROGUESQ_M5_C88_VALUE=1`
+based on a route or dispatch change without the oracle payload and valid
+slot/PCM evidence.

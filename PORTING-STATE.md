@@ -104862,3 +104862,42 @@ only ran a ground-truth census.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.
+
+## Session 2219 (2026-08-23) — validated opt-in Factor 5 image-arm output boundary
+
+Built `RogueSquadron64Recomp` once and ran the prescribed silent-stub control
+and `ROGUESQ_AUDIO_UCODE=1` Factor 5 image arm concurrently from the same
+`run_mission_keys.sh` schedule, with `ROGUESQ_LOG_ALL`, PCM, wait-slot,
+audio-drain, and audio-tick diagnostics enabled. The positive phase prefix
+was present in both arms. The image arm reached title `1024 / 0x00790400`
+and hangar `512 / 0x006AB400` without a crash or abort; the stub control also
+reached those title/hangar phases before a later `recomp::do_rom_read` crash.
+
+The image arm produced 114 rate-limited `[audtask-dispatch]` rows through
+ordinal 9472, all `real_ucode=1`, and returned `exit=1` (`Broke`). Its 4,539
+ABI/DMA rows showed `dmem_changed` between 1,590 and 1,600 with DMA counts
+2–5. Five sampled internal image-stage rows had nonzero DMEM data, proving
+the selected image executes nontrivially. However, all 9,475 sampled host
+destination rows had `dest_nz=0`, all 9,475 image joins were
+`classification=stage-only`, every sampled PCM source/consumer row had
+`nz=0`, and all 62 rate-limited PCM sanity rows were all-zero. The stub's 78
+dispatch rows were all `real_ucode=0`; its 2,703 ABI/DMA rows had no DMA,
+`dmem_changed=0`, and an intact canary. Wait and slot-return controls were
+positive in both arms, but no independent `0x03 -> 0x00` slot completion
+sequence was captured.
+
+This single-source port A/B selects H-StubEquivalent at the game-visible
+output/slot/PCM scope, refutes H-Coverage and treatment-only
+H-ImageRouteRegress, and rules out treating the image function as a pure
+no-op. It does not authorize a default flip, task-field rewrite, gate change,
+slot guard, or PCM mitigation. Detailed logs are in
+`scratch/s73_post_a_scene/m5-audio-step2/` and
+`scratch/s73_post_a_scene/m5-audio-step2-control/`.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this was an
+opt-in diagnostic A/B only.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-gate-writer-site`.
