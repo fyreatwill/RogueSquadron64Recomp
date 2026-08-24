@@ -75,10 +75,10 @@ For a memory watch after the global `--hit-cap` has gone silent,
 `--first-watch N` prints the first hit for watch index N and
 `--pc-hist-watch N` prints a bounded writer-PC histogram for that watch at
 shutdown; repeat the option to collect multiple watch histograms in one run.
-`--pc-hist-phase ORIGIN` adds a repeatable 640-width phase bucket keyed by VI
-origin. It prints the matching VI-row count and one writer-PC histogram per
-selected watch at shutdown, allowing origin buckets to be compared in the same
-run.
+`--pc-hist-phase ORIGIN[:WIDTH]` adds a repeatable phase bucket keyed by VI
+origin and width (default width is 640). It prints the matching VI-row count
+and one writer-PC histogram per selected watch at shutdown, allowing origin
+buckets to be compared in the same run.
 These are useful when a positive-control watch is intentionally
 first in the list and must be removed without hiding the target attribution.
 `--post-value-watch N` adds a phase-gated, bounded post-store word histogram

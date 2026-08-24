@@ -107938,3 +107938,48 @@ Run one oracle-only 16-slot target-phase writer-PC table with
 `--pc-hist-phase 0x006AB400`, retaining the s2293 controls. Use the table to
 separate all-pre-target writes from a target-phase `0x800078EC` writer or a
 different target-phase writer before considering any contract change.
+
+## Session 2294 (2026-08-24) — target-phase candidate slots were pre-target-only
+
+HYPOTHESIS-ID: m5-step3-retail-task-output-writer.
+
+The planned work unit was one oracle-only retail target-phase writer-PC
+histogram across all 16 candidate slots. The first driver invocation was not
+interpretable: its shell continuation contained a literal `+`, and the
+existing oracle `--pc-hist-phase` implementation was hard-coded to 640-wide
+VI rows even though the target hangar is 512-wide. Its raw capture did pass
+the route controls and reached the watched PC, but its phase bucket reported
+`width=640 vi=0`; that run was discarded as a verdict.
+
+The bounded fix added `ORIGIN[:WIDTH]` support to the oracle while preserving
+the 640 default, rebuilt `tools/oracle/build/rs64_oracle`, corrected the
+driver, and reran the same capture. The valid run passed the whole-RDRAM
+positive control at `10,000`, title `1024 @ 0x00790400`, and hangar
+`512 @ 0x006AB400`; it recorded `11,908,996` watch hits and `6,956` VI. The
+width-512 phase bucket positively recorded `929` VI rows. Guest PC
+`0x800078EC` executed `1,540,923` times in the target phase, while each of
+the 16 exact `0x300` slot histograms was empty and each target-gated
+post-value sample count was zero. The candidate span had `859,344` writes,
+the task/output span had `108`, and every exact slot had `768` lifetime
+writes, exclusively from `0x800078EC`; every final slot snapshot was
+nonzero.
+
+This selects H-AllCandidateWritesPreTarget at the candidate-slot address
+scope: the watched PC is active in the hangar but does not write those slots
+there. It rules out H-TargetWriter078EC, H-TargetWriterOther, and
+H-CoverageInvalid for this table. It does not identify the actual target-phase
+task/output writer, so that contract edge is the next discriminator. No
+runtime, generated function, submodule, writer, writeback, consumer, slot,
+gate, guard, or address-remap behavior changed.
+
+ORIGIN: no mitigation-shaped change; the oracle instrument was extended only
+to make the required 512-wide phase bucket valid, and the driver was added to
+run the table. No value was skipped, allowed, restored, or rewritten.
+
+### Next
+
+Run one oracle-only target-phase writer-PC histogram for the independent
+task/output span `0x141AD0:0x141AF0`, retaining the whole-RDRAM, title, hangar,
+watched-PC, and exact-slot controls. Classify its writer as pre-target,
+`0x800078EC`, or another target-phase PC before considering any contract
+change.

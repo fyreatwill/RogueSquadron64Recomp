@@ -110,6 +110,7 @@ struct writer_pc_hist {
     long overflow;
 };
 static uint32_t g_pc_hist_phase_origin[MAX_PC_HIST_PHASES];
+static uint32_t g_pc_hist_phase_width[MAX_PC_HIST_PHASES];
 static long g_pc_hist_phase_vis[MAX_PC_HIST_PHASES];
 static struct writer_pc_hist
     g_pc_hist_phase[MAX_PC_HIST_PHASES][MAX_WATCHES];
@@ -983,11 +984,10 @@ static void dbg_update(unsigned int pc)
                 if (g_n_pc_hist_phase > 0) {
                     unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
                     unsigned origin = pDebugMemRead32(VI_ORIGIN_ADDR);
-                    if (width == 640) {
-                        for (int phase = 0; phase < g_n_pc_hist_phase; phase++) {
-                            if (origin == g_pc_hist_phase_origin[phase])
-                                count_writer_pc_phase(phase, i, pc);
-                        }
+                    for (int phase = 0; phase < g_n_pc_hist_phase; phase++) {
+                        if (width == g_pc_hist_phase_width[phase] &&
+                            origin == g_pc_hist_phase_origin[phase])
+                            count_writer_pc_phase(phase, i, pc);
                     }
                 }
             }
@@ -1145,11 +1145,10 @@ static void dbg_vi(void)
     if (g_n_pc_hist_phase > 0) {
         width = pDebugMemRead32(VI_WIDTH_ADDR);
         origin = pDebugMemRead32(VI_ORIGIN_ADDR);
-        if (width == 640) {
-            for (int phase = 0; phase < g_n_pc_hist_phase; phase++) {
-                if (origin == g_pc_hist_phase_origin[phase])
-                    g_pc_hist_phase_vis[phase]++;
-            }
+        for (int phase = 0; phase < g_n_pc_hist_phase; phase++) {
+            if (width == g_pc_hist_phase_width[phase] &&
+                origin == g_pc_hist_phase_origin[phase])
+                g_pc_hist_phase_vis[phase]++;
         }
     }
 
@@ -1514,7 +1513,7 @@ static void usage(void)
         "  --vi-context-table-pc A join __osViNext at 640-wide execution A to the following VI callback\n"
         "  --first-watch N       log the first hit for watch index N\n"
         "  --pc-hist-watch N     summarize writer PCs for watch index N (repeatable)\n"
-        "  --pc-hist-phase ORIGIN  add a 640-width writer histogram bucket (repeatable)\n"
+        "  --pc-hist-phase ORIGIN[:WIDTH]  add a writer histogram bucket (default WIDTH=640)\n"
         "  --post-value-watch N  sample post-store words and final range summary\n"
         "  --post-value-pc A[,B] force one post-store sample for writer PCs\n"
         "  --core PATH           libmupen64plus.dylib built with DEBUGGER=1\n"
@@ -1621,12 +1620,24 @@ int main(int argc, char **argv)
                 g_pc_hist_watch_mask |= UINT64_C(1) << watch;
         }
         else if (!strcmp(argv[i], "--pc-hist-phase") && i + 1 < argc) {
+            char *spec = argv[++i];
+            char *colon = strchr(spec, ':');
+            uint32_t width = 640;
             if (g_n_pc_hist_phase >= MAX_PC_HIST_PHASES) {
                 fprintf(stderr, "[oracle] too many --pc-hist-phase buckets\n");
                 return 2;
             }
+            if (colon) {
+                *colon = 0;
+                width = (uint32_t)strtoul(colon + 1, NULL, 0);
+                if (width == 0) {
+                    fprintf(stderr, "[oracle] bad --pc-hist-phase width\n");
+                    return 2;
+                }
+            }
             g_pc_hist_phase_origin[g_n_pc_hist_phase++] =
-                to_phys((uint32_t)strtoul(argv[++i], NULL, 0));
+                to_phys((uint32_t)strtoul(spec, NULL, 0));
+            g_pc_hist_phase_width[g_n_pc_hist_phase - 1] = width;
         }
         else if (!strcmp(argv[i], "--post-value-watch") && i + 1 < argc) {
             int watch = atoi(argv[++i]);
@@ -1829,22 +1840,23 @@ int main(int argc, char **argv)
                g_watch[i].label, g_watch[i].start, g_watch[i].end,
                g_watch[i].hits, g_watch[i].read_hits, g_watch[i].write_hits);
     for (int phase = 0; phase < g_n_pc_hist_phase; phase++) {
-        printf("[oracle] pc-hist-phase origin=0x%08x width=640 vi=%ld\n",
-               g_pc_hist_phase_origin[phase], g_pc_hist_phase_vis[phase]);
+        printf("[oracle] pc-hist-phase origin=0x%08x width=%u vi=%ld\n",
+               g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase],
+               g_pc_hist_phase_vis[phase]);
         for (int watch = 0; watch < g_nwatch; watch++) {
             if (!(g_pc_hist_watch_mask & (UINT64_C(1) << watch)))
                 continue;
-            printf("[oracle] writer-pc-phase origin=0x%08x width=640 watch=%d range=[0x%08x,0x%08x)\n",
-                   g_pc_hist_phase_origin[phase], watch,
+            printf("[oracle] writer-pc-phase origin=0x%08x width=%u watch=%d range=[0x%08x,0x%08x)\n",
+                   g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase], watch,
                    g_watch[watch].start, g_watch[watch].end);
             for (int i = 0; i < g_pc_hist_phase[phase][watch].n; i++)
-                printf("[oracle] writer-pc-phase origin=0x%08x width=640 watch=%d pc=0x%08x n=%ld\n",
-                       g_pc_hist_phase_origin[phase], watch,
+                printf("[oracle] writer-pc-phase origin=0x%08x width=%u watch=%d pc=0x%08x n=%ld\n",
+                       g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase], watch,
                        g_pc_hist_phase[phase][watch].entries[i].pc,
                        g_pc_hist_phase[phase][watch].entries[i].n);
             if (g_pc_hist_phase[phase][watch].overflow)
-                printf("[oracle] writer-pc-phase origin=0x%08x width=640 watch=%d overflow=%ld\n",
-                       g_pc_hist_phase_origin[phase], watch,
+                printf("[oracle] writer-pc-phase origin=0x%08x width=%u watch=%d overflow=%ld\n",
+                       g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase], watch,
                        g_pc_hist_phase[phase][watch].overflow);
         }
     }
