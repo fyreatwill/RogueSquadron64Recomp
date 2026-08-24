@@ -1,67 +1,63 @@
-# NEXT work unit (s2301) — M5 target-phase construction-order join
+# NEXT work unit (s2302) — M5 key-on route discriminator
 
-HYPOTHESIS-ID: m5-step3-retail-task-output-writer
+HYPOTHESIS-ID: m5-keyon-new-route-discriminator
 
 ## Work unit
 
-Ask the retail ground truth from the fixed s2300 capture first: whole-RDRAM,
-title, hangar, and the width-512 target controls are positive; the target
-bucket has `1,541` VI rows; and the three requested-PC class totals join their
-writer histogram exactly (`1`, `1`, and `24`). Then make one bounded
-oracle-only instrument change: retain every target-phase post-step sample for
-`0x8008EB8C`, `0x8008EBBC`, and `0x80094648` in one ordinal sequence table with
-`(ordinal,PC,VI,address,value,class)`. Preserve the existing class table,
-filtered rows, lifetime sampler, writer histogram, watches, and controls.
-Rebuild once and run one retail capture with the same eleven Start events. Do
-not launch a port arm and do not implement a writer, writeback, consumer,
-slot, gate, guard, or address remap.
+Resume the parked M5 key-on tuple contract only through one new route
+discriminator. Do not repeat the s2280–s2282 C88 pair as-is. Build one
+same-iteration capture containing the retail oracle controls and both port C88
+arms, but gate the C88=1 launch on a new port route fingerprint collected
+from C88=0. The fingerprint must include every phase transition from the
+initial 640 route through title and hangar, the existing B40/route-state
+controls, and the first key-on census row; it must be phase-keyed by VI origin,
+not elapsed time. Launch C88=1 only after C88=0 has supplied the fingerprint
+and reached `512 @ 0x006AB400`. Compare retail tuple fields only if both arms
+reach the same hangar window. No pointer/data, branch-state, key-on return,
+or mitigation conclusion is authorized on a route-invalid result.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-SharedSequence: EB8C and EBBC appear at the same VI/address/value tuple
-  in adjacent sequence ordinals, while all 94648 sentinel events are outside
-  that pair.
-- H-DuplicatePublication: EB8C and EBBC publish the same tuple in separate
-  non-adjacent events or at different VI/address/value tuples, without a
-  94648 event interleaved between them.
-- H-94648InterleavedHousekeeping: at least one 94648 sentinel event is
-  ordinally between the EB8C and EBBC tuple events.
-- H-CoverageInvalid: whole-RDRAM/title/hangar or target-bucket controls fail,
-  or any requested-PC sequence count differs from its target writer count.
+- H-C88RouteLoad: C88 changes the port route fingerprint before the first
+  target origin; the two arms diverge in phase or state after identical B40,
+  route-state, input, and title controls.
+- H-InputPhase: the prior failures are launch-phase sensitivity; the new
+  phase-keyed C88=0 fingerprint reaches the target and permits a qualified
+  C88=1 arm, while the route fingerprint remains otherwise equivalent.
+- H-RouteIntrinsic: both arms still stop at the same initial-640 route after
+  the positive controls, so C88 is not selected as the route discriminator.
+- H-CoverageInvalid: retail whole-RDRAM/title/hangar controls, the port
+  fingerprint controls, or the required common target window fail.
 
-The discriminator is the complete, ordinally ordered target table joined to
-the target writer histogram. Count every post-step sample, not only the first
-or last tuple and not only non-sentinel rows. Make no contract change in any
-case.
+The discriminator is the complete same-build table keyed by arm and VI phase:
+`arm,origin,width,route-state-count,B40-count,key-on-count,last-guest-PC`.
+Every possible table outcome selects one hypothesis above; it is not a
+single breadcrumb or a post-hoc field addition.
 
 ## Exact commands
 
-1. Ground-truth checkpoint before rebuilding the instrument:
+1. Ask ground truth before adding the route instrument:
 
-   `grep -a -E 'positive-control threshold|origin=0x00790400 width=1024|origin=0x006ab400 width=512|pc-hist-phase|writer-pc-phase origin=0x006ab400 width=512 watch=2|post-target-class' scratch/agent/s2300_m5_target_value_class/oracle.log | tail -80`
+   `grep -a -E 'positive-control threshold|origin=0x00790400 width=1024|origin=0x006ab400 width=512|pc-field-dump|m5-keyon-pointer-branch' scratch/agent/s2282_m5_c88_staggered_route/retail.log | tail -80`
 
-2. In `tools/oracle/rs64_oracle.c`, add the bounded target sequence recorder
-   at the existing delayed post-step requested-PC path. Use the pre-step
-   latched `g_post_value_pending_vi`, `g_post_value_pending_width`, and
-   `g_post_value_pending_origin`; record only width 512/origin `0x006AB400`,
-   classify `0x7F7F7F7F` as sentinel, and append one row per requested-PC
-   sample. Emit the complete bounded sequence at shutdown. Preserve the
-   current class and legacy row output. Build with:
+   The retail whole-RDRAM threshold, title, hangar, and eight-PC controls
+   must be present. If they are not, repair the oracle recipe before building.
 
-   `tools/oracle/build.sh`
+2. In the existing port route probe, add one bounded phase-keyed fingerprint
+   table for both C88 arms and one new driver that launches C88=1 only after
+   the C88=0 fingerprint reaches the target. Keep the existing B40, route,
+   key-on, input, and independent retail controls. Do not change game logic.
 
-3. Create
-   `scratch/agent/run_s2301_m5_target_sequence_join.sh` from the s2300
-   driver, changing only the output directory/name, sequence-table summary,
-   and classification. Keep all watches, controls, Start presses, and the
-   three `--post-value-pc` PCs.
+3. Build once if the probe is in generated/runtime code:
 
-4. Check and run exactly that driver:
+   `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-   `zsh -n scratch/agent/run_s2301_m5_target_sequence_join.sh`
+4. Check and run the single new driver:
 
-   `zsh scratch/agent/run_s2301_m5_target_sequence_join.sh`
+   `zsh -n scratch/agent/run_s2302_m5_c88_route_discriminator.sh`
 
-The whole-RDRAM threshold, title, hangar, and positive width-512 target bucket
-must all be present before interpreting sequence order. No runtime or
-mitigation behavior is authorized by this measurement.
+   `zsh scratch/agent/run_s2302_m5_c88_route_discriminator.sh`
+
+Kill every process with SIGKILL from the driver. Report the complete arm × VI
+phase table before interpreting the tuple fields. No runtime behavior or
+mitigation is authorized by this work unit.

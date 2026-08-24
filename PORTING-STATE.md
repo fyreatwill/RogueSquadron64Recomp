@@ -108242,3 +108242,55 @@ target writer histogram, then use adjacency/interleaving of the EB8C/EBBC
 same-value tuple and the 94648 sentinel events to select shared sequence,
 duplicate publication, or interleaved housekeeping. Preserve the class, row,
 lifetime, and independent controls; do not change runtime behavior.
+
+## Session 2301 (2026-08-24) — target-phase sequence selected shared construction
+
+HYPOTHESIS-ID: m5-step3-retail-task-output-writer.
+
+The planned work unit was one oracle-only retail capture adding a bounded
+ordinal sequence table for every target-phase post-step sample from requested
+PCs `0x8008EB8C`, `0x8008EBBC`, and `0x80094648`. The required pre-build
+ground-truth checkpoint passed the whole-RDRAM threshold at 10,000, title and
+hangar controls, a width-aware target bucket with 1,541 VI rows, and the
+existing target writer histogram `1/1/24`.
+
+The rebuilt oracle retained a global bounded sequence of
+`(ordinal,PC,VI,address,value,class)` rows while preserving the existing
+class, filtered-row, lifetime, and writer-histogram tables. The first
+120-second same-eleven-Start driver passed the independent controls but had no
+target-phase writer rows or requested-PC sequence rows. It was coverage
+invalid, not a semantic null: the generic sampler still saw 76 pre-target
+writes, and the target VI bucket had one positive row. The fixed driver kept
+the same watches and eleven Start events and extended only the oracle window
+to 180 seconds.
+
+The fixed run returned `oracle_rc=0` and passed the whole-RDRAM threshold at
+10,000, title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and the
+width-aware target bucket with 1,530 VI rows. The sequence retained 50 rows
+with zero overflow. Its independent count join was exact: EB8C `1/1`, EBBC
+`1/1`, and 94648 `48/48`. Sequence rows 1–24 were 94648 sentinel writes at
+VI 2280, rows 25–26 were adjacent EB8C/EBBC writes of the same tuple
+`(VI=3026,address=0x00141AD0,value=0x120E0000)`, and rows 27–50 were 94648
+sentinel writes at VI 3116. The sequence table and the writer histogram are
+independent evidence for the same ordering result.
+
+This selects H-SharedSequence at the measured task/output span and refutes
+H-DuplicatePublication, H-94648InterleavedHousekeeping, and H-CoverageInvalid
+for the qualified 180-second recipe. The shorter run remains a route/coverage
+sensitivity observation. The result does not assign a semantic role to any
+writer and authorizes no writeback, consumer, slot, gate, guard, or
+address-remap change.
+
+ORIGIN: no mitigation-shaped change; the oracle sequence accumulator and
+driver are measurement-only and do not skip, allow, restore, or rewrite a
+game value.
+
+### Next
+
+The construction-order discriminator is closed. Resume the parked M5 key-on
+tuple contract only with a new route discriminator: do not repeat the
+s2280–s2282 C88 pair as-is. The next capture must phase-gate a C88=0 control at
+`512 @ 0x006AB400`, restore a common port target window before launching C88=1,
+and compare the retail tuple fields only if both arms qualify. No pointer/data,
+branch-state, key-on return, or mitigation conclusion is authorized on a
+route-invalid pair.

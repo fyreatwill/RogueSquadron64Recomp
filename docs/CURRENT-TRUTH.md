@@ -5,15 +5,15 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2300 (2026-08-24); behavioral and source evidence is
-current through s2300. The corrected same-build M5 Step 2 driver explicitly
-sent the eleven process-start Start events to each port window. Retail passed
-the whole-RDRAM threshold at `10,000` callbacks and reached title
-`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The port stub and default
-image arms both reached title and hangar; the default emitted the expected
-image-stage/DMA rows, including nonzero phase-10 payloads. This selects
-H-PortStubRouteRestored and H-DefaultSafe at the tested recipe scope. The
-later arm crashes were post-target known failures, not route-gate failures.
+Maintained in Session 2301 (2026-08-24); behavioral and source evidence is
+current through s2301. The M5 target-phase sequence capture passed the
+whole-RDRAM, title, hangar, and width-aware target controls. Its fixed
+180-second same-eleven-Start run retained all 50 requested-PC samples and
+matched writer counts `1/1/48`; EB8C and EBBC were adjacent same-tuple rows,
+with all 94648 sentinel rows outside that pair. This selects
+H-SharedSequence at the measured task/output span. A shorter 120-second
+attempt passed route controls but had no target writer rows, so it was treated
+as coverage-invalid rather than interpreted.
 
 s2291's final same-build M5 Step 3 capture passed independent retail
 whole-RDRAM/title/hangar controls and the port's explicit-Start/title/hangar
@@ -350,18 +350,17 @@ equivalent path at another guest address.
 
 ## Latest evidence
 
-- s2300's fixed oracle-only target value-class capture passed the independent
+- s2301's fixed oracle-only target sequence capture passed the independent
   whole-RDRAM threshold at `10,000`, title `1024 @ 0x00790400`, hangar
-  `512 @ 0x006AB400`, and the width-aware target bucket with `1,541` VI
-  rows. EB8C and EBBC each recorded one target-phase non-sentinel sample at
-  `(VI=3064,address=0x141AD0,value=0x120E0000)`; 94648 recorded 24
-  target-phase sentinel samples at VI `3154` and no non-sentinel sample.
-  Class totals exactly matched the target writer histogram for all three PCs.
-  This selects H-OtherOrSharedConstruction at the measured scope and leaves
-  the construction order and semantic roles open. The first same-build
-  attempt added an unnecessary pre-step phase gate, passed controls but
-  recorded no target writer rows; it was discarded as a measurement defect
-  and the fixed rerun restored the established armed-path scheduling.
+  `512 @ 0x006AB400`, and the width-aware target bucket with `1,530` VI
+  rows. The complete sequence retained 50 rows: 94648 emitted 48 sentinel
+  rows, then EB8C and EBBC emitted adjacent rows at `VI=3026,address=0x141AD0,
+  value=0x120E0000`; the independent target writer histogram matched `48/1/1`.
+  The first 120-second same-build attempt passed the controls but recorded no
+  target writers; the extended fixed run restored target coverage. This
+  selects H-SharedSequence and closes the construction-order discriminator at
+  this span. No writer, writeback, consumer, slot, gate, guard, or
+  address-remap behavior changed.
 - s2299's corrected oracle-only non-sentinel capture passed the independent
   whole-RDRAM, title, hangar, and width-aware target-bucket controls, recording
   `942` target VI rows. Its target-phase writer histogram contained only
@@ -663,22 +662,7 @@ equivalent path at another guest address.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 Step 3 target/output construction-order join.** s2300 selected
-   H-OtherOrSharedConstruction: EB8C and EBBC both published the same
-   non-sentinel target tuple, while 94648 published only sentinel values.
-   Add one bounded oracle-only target sequence table that retains every
-   post-step sample for the three requested PCs as an ordinal
-   `(ordinal,PC,VI,address,value,class)` row, and verify each PC's sequence
-   count against its target writer histogram. H-SharedSequence is selected
-   when EB8C/EBBC form one adjacent or same-VI construction sequence and
-   94648 is a separate sentinel-only run; H-DuplicatePublication is selected
-   when EB8C and EBBC publish the same tuple in separate repeated events;
-   H-94648InterleavedHousekeeping is selected when sentinel writes interleave
-   with the EB8C/EBBC tuple; H-CoverageInvalid is selected if any sequence
-   count fails its writer join or controls fail. Preserve the existing class,
-   row, lifetime, and control tables. Do not implement writeback, consumer,
-   slot, gate, guard, or address-remap behavior.
-2. **M5 key-on tuple contract.** Requalify the C88 route with a
+1. **M5 key-on tuple contract.** Requalify the C88 route with a
    phase-gated control-first stagger: launch C88=1 only after a C88=0 control
    reaches `512 @ 0x006AB400`, then compare retail fields only if both arms
    reach the hangar. s2281's concurrent pair and s2282's control-first stagger
@@ -687,19 +671,19 @@ Closed investigations are not active work items. The sequence is monotonic.
    this route pair without a new route discriminator. No pointer/data or
    branch-state verdict, key-on return, or mitigation change follows. The
    Step 1 task/output pair remains parked.
-3. **M5 A1 second-origin transition.** Parked after s2283's four-way and
+2. **M5 A1 second-origin transition.** Parked after s2283's four-way and
    s2284's two-wave matrices. Each wave supplied both positive controls in both
    arms but reproduced the initial-640 crash at guest PC `0x80001F88`, so the
    two independent wave results select H-RouteIntrinsic at this recipe scope.
    Do not repeat the four A1 arms without a new route discriminator that can
    restore `0x00696100`/`0x00696600` coverage; no publisher or default follows.
-4. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
+3. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
-5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+4. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator; the dormant `slotDispatcherIter+872` class has
    thousands of clean guarded hangar calls and no authorized mitigation.
-6. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
+5. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
 
@@ -767,7 +751,11 @@ observation, but its bounded table is still filled by `0x7F7F7F7F` rows from
 s2299 filtered that sentinel before the row cap and still retained no target
 rows for any of the three PCs; its independent target-phase writer histogram
 again contained only `0x80094648` (`n=24`). This is a contract discriminator,
-not permission to add a writeback or guard.
+not permission to add a writeback or guard. s2301's fixed sequence capture
+then retained every target-phase sample and matched the independent writer
+histogram: 94648's 48 sentinel rows were outside the adjacent EB8C/EBBC
+same-tuple pair. This selects H-SharedSequence at the measured span; it does
+not assign a semantic role or authorize a contract change.
 
 Do not flip the image default again, force C88, skip or allow
 `matchKeywordWithPriority`, add a wait/slot guard, or land a copyToRAM/CIMG

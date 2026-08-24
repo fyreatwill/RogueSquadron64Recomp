@@ -51,6 +51,7 @@
 #define MAX_POST_VALUE_PCS 512
 #define MAX_POST_VALUE_SAMPLES 256
 #define MAX_POST_VALUE_ROWS_PER_PC 16
+#define MAX_POST_VALUE_SEQUENCE_ROWS 256
 #define MAX_VI_SWAP_PHASE_ROWS 256
 #define MAX_MODE_DUMP_ROWS 256
 #define MAX_VI_CONTEXT_ROWS 1024
@@ -137,6 +138,19 @@ struct post_value_requested_row {
 static struct post_value_requested_row
     g_post_value_requested_rows[32][MAX_POST_VALUE_ROWS_PER_PC];
 static int g_n_post_value_requested_rows[32];
+struct post_value_requested_sequence_row {
+    long ordinal;
+    uint32_t pc;
+    long vi;
+    uint32_t addr;
+    uint32_t value;
+    int sentinel;
+};
+static struct post_value_requested_sequence_row
+    g_post_value_requested_sequence[MAX_POST_VALUE_SEQUENCE_ROWS];
+static int g_n_post_value_requested_sequence;
+static long g_post_value_requested_sequence_count[32];
+static long g_post_value_requested_sequence_overflow;
 struct post_value_requested_tuple {
     long vi;
     uint32_t addr;
@@ -776,6 +790,31 @@ static void record_post_value_requested_row(int target, uint32_t value,
     fflush(stdout);
 }
 
+static void record_post_value_requested_sequence(int target, uint32_t value,
+                                                 long vi, uint32_t width,
+                                                 uint32_t origin)
+{
+    struct post_value_requested_sequence_row *row;
+
+    if (target < 0 || target >= g_n_post_value_requested_pc)
+        return;
+    if (width != 512 || origin != 0x006AB400)
+        return;
+    g_post_value_requested_sequence_count[target]++;
+    if (g_n_post_value_requested_sequence >= MAX_POST_VALUE_SEQUENCE_ROWS) {
+        g_post_value_requested_sequence_overflow++;
+        return;
+    }
+    row = &g_post_value_requested_sequence[g_n_post_value_requested_sequence];
+    row->ordinal = g_n_post_value_requested_sequence + 1;
+    row->pc = g_post_value_requested_pc[target];
+    row->vi = vi;
+    row->addr = g_post_value_addr & ~3u;
+    row->value = value;
+    row->sentinel = value == 0x7F7F7F7F;
+    g_n_post_value_requested_sequence++;
+}
+
 static void record_post_value_requested_class(int target, uint32_t value,
                                                long vi, uint32_t width,
                                                uint32_t origin)
@@ -981,6 +1020,10 @@ static void dbg_update(unsigned int pc)
         if (g_post_value_pending_target >= 0) {
             int target = g_post_value_pending_target;
             g_post_value_pending_target = -1;
+            record_post_value_requested_sequence(target, value,
+                                                 g_post_value_pending_vi,
+                                                 g_post_value_pending_width,
+                                                 g_post_value_pending_origin);
             record_post_value_requested_class(target, value,
                                               g_post_value_pending_vi,
                                               g_post_value_pending_width,
@@ -1909,6 +1952,22 @@ int main(int argc, char **argv)
                        g_post_value_requested_rows[j][k].addr,
                        g_post_value_requested_rows[j][k].value);
         }
+        printf("[oracle] post-target-sequence n=%d/%d overflow=%ld\n",
+               g_n_post_value_requested_sequence,
+               MAX_POST_VALUE_SEQUENCE_ROWS,
+               g_post_value_requested_sequence_overflow);
+        for (int j = 0; j < g_n_post_value_requested_pc; j++)
+            printf("[oracle] post-target-sequence-count pc=0x%08x seen=%ld\n",
+                   g_post_value_requested_pc[j],
+                   g_post_value_requested_sequence_count[j]);
+        for (int j = 0; j < g_n_post_value_requested_sequence; j++)
+            printf("[oracle] post-target-sequence-row ordinal=%ld pc=0x%08x vi=%ld addr=0x%08x value=0x%08x class=%s\n",
+                   g_post_value_requested_sequence[j].ordinal,
+                   g_post_value_requested_sequence[j].pc,
+                   g_post_value_requested_sequence[j].vi,
+                   g_post_value_requested_sequence[j].addr,
+                   g_post_value_requested_sequence[j].value,
+                   g_post_value_requested_sequence[j].sentinel ? "sentinel" : "non-sentinel");
     }
     for (int i = 0; i < g_nwatch; i++)
         printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s), %ld read(s), %ld write(s)\n",
