@@ -104441,6 +104441,33 @@ only added and ran a bounded diagnostic harness.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.
 
+## Session 2208 (2026-08-23) — Rice retail trace grounds both early 640 origins
+
+Ran the prescribed Rice-driven retail-oracle census with the verified Start
+schedule, `--vi-trace`, and the whole-RDRAM positive-control watch. The control
+reached 10,000 callbacks, removed successfully, and left the phase watch
+armed. The run completed with 7,162 total VI callbacks and 10000 whole-RDRAM
+writes.
+
+The trace entered width 640 at `0x0066A500`, then observed
+`0x005D4500`, `0x0066AA00`, repeated `0x00696600`/`0x00696100` target origins,
+and later reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`.
+Both `0x0066A500` and `0x0066AA00` therefore occur in the driven retail route.
+This independent result selects H-RetailEarlyAA00, refutes the exclusive
+H-RetailEarlyA500 explanation and the Rice-recipe form of H-RetailTraceCoverage,
+and makes the port's quiet `0x0066AA00` legitimate at origin level. It does
+not identify the early retail context/field selector or explain the port's
+missing sibling transition. The next unit extends the existing retail
+`__osViNext` context join to all observed 640 origins.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+only ran a ground-truth retail census.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-early-context-parity`.
+
 ## Session 2207 (2026-08-23) — undriven retail oracle did not reach early 640
 
 Ran the prescribed independent retail-oracle census with the whole-RDRAM

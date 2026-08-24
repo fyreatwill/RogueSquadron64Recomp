@@ -1,49 +1,56 @@
-# NEXT work unit (s2208) — drive retail through the early 640 phase
+# NEXT work unit (s2209) — join retail early origins to `__osViNext`
 
-HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth
+HYPOTHESIS-ID: m5-a1-retail-early-context-parity
 
 ## Work unit
 
-Run one independent retail-oracle phase census using the documented Rice
-video plugin and verified Start schedule. Keep the mandatory whole-RDRAM
-positive control and `--vi-trace` in the same run. The previous undriven
-recipe stopped at boot 320, so this is a coverage repair, not a port change.
+Before building, make one bounded diagnostic change in
+`tools/oracle/rs64_oracle.c`: keep the existing `--vi-context-table-pc`
+instrument and let its context join accept every width-640 origin observed in
+s2208, without changing the post-swap table. The allowlist is
+`0x0066A500`, `0x005D4500`, `0x0066AA00`, `0x00696600`, `0x00696100`,
+`0x0062C200`, and `0x0062BD00`. Raise only the context-row cap from 256 to
+1024 so the one collection cannot confuse coverage with overflow. Build the
+oracle once, then run one 10-second Rice collection with the whole-RDRAM
+positive control and the same verified Start schedule:
 
 ```sh
+bash tools/oracle/build.sh
 tools/oracle/build/rs64_oracle \
   --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib \
   --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
   --video /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-video-rice.dylib \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  --hold-ms 150 --secs 120 --watch-write 0x0:0x800000 --vi-trace \
-  > scratch/agent/s2208_retail_early_origin_rice.log 2>&1
+  --hold-ms 150 --secs 10 --watch-write 0x0:0x800000 \
+  --watch-pc 0x80035550 --vi-context-table-pc 0x80035550 --vi-trace \
+  > scratch/agent/s2209_retail_early_context.log 2>&1
+rg -n "positive-control|^\\[vi\\].*width=640|^\\[vi-context-row\\]|vi-context-summary|\\[oracle\\] done" \
+  scratch/agent/s2209_retail_early_context.log
 ```
 
-Record the positive-control count, every `width=640` origin, and whether
-`0x0066A500` and/or `0x0066AA00` occurs. Do not build a new instrument,
-change the VI default, add a port guard, rewrite a task, or change audio
-dispatch.
+Do not change port VI behavior, the field knob, logger dispatch, task data,
+audio dispatch, or any mitigation.
 
 ## Competing hypotheses and discriminator
 
-- H-RetailEarlyA500: the driven retail trace reaches width 640 and includes
-  `0x0066A500` but never `0x0066AA00`; the port's quiet `0x0066AA00` is not a
-  retail-grounded early phase.
-- H-RetailEarlyAA00: the driven retail trace includes `0x0066AA00` (with or
-  without `0x0066A500`); the port's quiet origin is retail-grounded and the
-  discrepancy remains a route-selection question.
-- H-RetailOther640: the positive-control run reaches width 640, but neither
-  named early origin occurs; the driver reaches a different retail phase and
-  the schedule needs a narrower phase discriminator.
-- H-RetailTraceCoverage: the positive control passes but no width-640 row
-  occurs; Rice/input driving still did not reach the comparable route.
+- H-RetailEarlyContextAlternates: with a positive control and non-overflowing
+  rows, `0x0066A500` joins valid context rows selecting field 0/candidate 0,
+  while `0x0066AA00` joins valid rows selecting field 1/candidate 1. This
+  proves the retail early pair uses the same frame-plus-field context
+  mechanism already established for the target pair.
+- H-RetailEarlyContextFixedField: both early origins join valid rows with the
+  same selected field/candidate, most plausibly field 0. This proves that the
+  legitimate `0x0066AA00` origin is not produced by the target field toggle.
+- H-RetailEarlyContextOther: early rows are valid but their selected
+  candidates, frame pointer, mode, or field relationship does not explain the
+  next origin. This moves the source boundary to another VI producer.
+- H-RetailEarlyContextCoverage: the whole-RDRAM control and 640 phase rows
+  are positive, but early context rows are absent or the 1024-row table
+  overflows. This proves only that the join scope is still insufficient and
+  requires a narrower phase window.
 
-The discriminator is the same-run pair `(whole-RDRAM hit count, 640-origin
-set)`. A zero whole-RDRAM count invalidates every phase conclusion.
-
-## Exact commands
-
-```sh
-rg -n "^\\[vi\\]|positive-control|\\[oracle\\] done|vi-swap-phase|0x0066A500|0x0066AA00" \
-  scratch/agent/s2208_retail_early_origin_rice.log
-```
+The discriminator is the same-run tuple `(whole-RDRAM hit count, joined-row
+count per 640 origin, context_valid/mode_valid, current_field, and whether
+framep + selected field origin equals next_origin)`. A zero control count
+invalidates every context conclusion. A mixed result that fits none of the
+first three models is recorded as mixed, not promoted to a port explanation.

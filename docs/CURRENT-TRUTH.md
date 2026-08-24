@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2207
-(2026-08-23); behavioral and source evidence is current through s2207.
+authoritative for exact commands and probe rows. Maintained in Session 2208
+(2026-08-23); behavioral and source evidence is current through s2208.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -253,13 +253,12 @@ second ledger.
   `0x00696100` (151 rows); logged alternate passed the early control, committed
   `0x00696100` (75) and `0x00696600` (75), and emitted the sibling phase. Quiet
   control passed the early control and emitted `0x00696100`; quiet alternate
-  instead emitted `0x0066AA00` at the early phase (not the required
-  `0x0066A500`) before later emitting `0x00696100`. This single-source port
-  A/B selects H-NonTargetRouteDamage at the early-control scope because the
-  quiet alternate lost its logged counterpart's positive prefix; it does not
-  distinguish the post-target consumer because no arm reached title/hangar
-  and the quiet alternate lacked the required early control. No default flip,
-  guard, mitigation, task rewrite, or audio dispatch change was made.
+  instead emitted `0x0066AA00` before later emitting `0x00696100`. This was a
+  provisional early-prefix observation, not a corruption finding: s2208's
+  independent retail trace shows that `0x0066AA00` is a legitimate early
+  origin. The post-target consumer remains unresolved because no arm reached
+  title/hangar. No default flip, guard, mitigation, task rewrite, or audio
+  dispatch change was made.
 - s2207's independent retail-oracle census passed the whole-RDRAM positive
   control with 10,000 writes and successful watch removal, but the undriven
   dummy-video recipe produced only the boot `320 @ 0x006DD280` row and zero
@@ -267,6 +266,15 @@ second ledger.
   observed. This selects H-RetailTraceCoverage for that recipe only; it is
   not evidence about retail's early-origin set. The next census must use the
   documented Rice video plugin and Start schedule.
+- s2208's Rice-driven retail census passed the whole-RDRAM positive control
+  (10,000 writes, successful removal) and reached width 640. Its early trace
+  included `0x0066A500`, `0x005D4500`, and `0x0066AA00`, followed by repeated
+  `0x00696600`/`0x00696100` target origins; it later reached title and hangar
+  as well. This independent result selects H-RetailEarlyAA00, refutes
+  H-RetailEarlyA500 as an exclusive explanation and H-RetailTraceCoverage for
+  the Rice recipe, and establishes that the port's quiet `0x0066AA00` is
+  retail-grounded at origin level. The early context/field selector remains
+  unidentified.
 
 ## Active backlog
 
@@ -307,13 +315,16 @@ work items.
    sensitivity a bounded next candidate. s2206's four-arm logger isolation
    then found that the quiet field-1 arm takes early origin `0x0066AA00`
    rather than the logged/other-arm positive prefix `0x0066A500`, while all
-   arms still stall before title/hangar. This selects H-NonTargetRouteDamage
-   only at the early-prefix scope; the result is single-source port evidence
-   and is not a mitigation or a post-target explanation. s2207's undriven
+   arms still stall before title/hangar. This was a provisional early-prefix
+   observation, not a corruption finding: s2208's independent retail trace
+   shows that `0x0066AA00` is legitimate. s2207's undriven
    retail census passed its whole-RDRAM control but never reached a 640 phase,
    so it selected H-RetailTraceCoverage for that recipe rather than
-   classifying either origin. The next unit is a Rice-driven retail-oracle
-   early-origin census. Keep the field knob and logger diagnostic-only.
+   classifying either origin. s2208's Rice-driven census passed the control and
+   observed both early origins, selecting H-RetailEarlyAA00; it makes the quiet
+   port origin legitimate but does not identify its retail context selector.
+   The next unit joins all observed retail 640 origins to `__osViNext`. Keep
+   the field knob and logger diagnostic-only.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -472,6 +483,12 @@ remain in the append-only ledger. Operationally:
   state; s2202's joined rows now show that the swap framebuffer plus either
   active field origin does not produce the following target origin. The
   remaining source is the later VI context/arbiter producer.
+- s2206's H-NonTargetRouteDamage selection was believable because the quiet
+  field-1 port arm emitted `0x0066AA00` instead of the logged arms'
+  `0x0066A500`, and the required early control was absent in that arm. s2208's
+  independent Rice trace observes both origins in the retail sequence, so the
+  origin substitution alone is not evidence of route damage. The port-versus-
+  retail early context tuple remains open.
 
 ## Evidence ledger summary
 
@@ -480,7 +497,8 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2203's VI-boundary work is recorded in the ledger.
+s2198–s2208's VI-boundary and retail-ground-truth work is recorded in the
+ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
