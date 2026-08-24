@@ -104901,3 +104901,54 @@ opt-in diagnostic A/B only.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-gate-writer-site`.
+
+## Session 2220 (2026-08-23) — matched retail C88 gate writer to audio output
+
+Ran the required ground-truth command before the port build. The Rice retail
+oracle passed the whole-RDRAM positive control with 10,017 writes and removed
+that watch successfully; the narrow `0x000A0F50` watch remained armed. The VI
+trace reached both target 640 origins (`0x00696600` and `0x00696100`), title
+1024, and hangar 512. The narrow watch recorded 17 writes from five PCs,
+including five at `0x8008EC88`. Its post-value samples at that PC were both
+`0x01000000`; the sampled `0x8008EB7C` and `0x8008ED48` values were zero.
+This is independent retail payload/writer evidence, with the whole-RDRAM and
+target-phase controls positive.
+
+Built `RogueSquadron64Recomp` once and ran the existing C88-on and forced-zero
+arms concurrently from the same mission-key schedule. Both arms reached the
+positive title 1024 prefix and the first target 640 phase without a crash or
+abort. The C88-on arm recorded two `0x8008EC88` writer rows with gate `0x01`,
+then reached hangar `512 @ 0x006AB400` at 79.8s and again at 140.2s. It had
+the service-status sequence `0x00 -> 0x01 -> 0x02 -> 0x03 -> 0x00`,
+slot-return rows with `gate=0x01 s1=0x01 v0=0 path=walk`, and 19 nonzero
+source plus 19 nonzero consumer PCM joins (`nz=384` or `576`). Its 5,258
+ABI rows all returned image `exit=1` (`Broke`) and its rate-limited dispatch
+rows all reported `real_ucode=1`.
+
+The forced-zero arm recorded one C88 writer row with gate `0x00`, stopped at
+its first target 640 phase `0x00696100`, produced no service-status rows,
+only `gate=0x00 s1=0x00 v0=1 path=gate0` slot-return rows, and all 3,070
+PCM joins were zero. Its 1,521 ABI rows also returned `exit=1` and its
+rate-limited dispatch rows also reported `real_ucode=1`. The different image
+dispatch/ABI counts are therefore route exposure, not an image treatment
+change. Both processes were SIGKILLed by the wrapper after their grace
+windows; neither log contained `[CRASH]` or `[ABORT]`.
+
+The joined oracle/port table selects H-C88RetailOne at the covered route. It
+refutes H-C88RetailZero (retail writes nonzero), H-C88NotCausal (gate, route,
+service, slot-return, and PCM differ), and H-C88RouteRegress (the treatment
+has validated service/slot/PCM output rather than only a route change). This
+does not establish that the Factor 5 image is a complete audio implementation
+or authorize a blanket default change; the C88 original-value arm remains
+opt-in and no generated store, consumer, task field, guard, or mitigation was
+changed. Logs: `scratch/agent/s2220_retail_c88.log`,
+`scratch/s73_post_a_scene/m5-audio-c88-on/run.log`, and
+`scratch/s73_post_a_scene/m5-audio-c88-control/run.log`.
+
+ORIGIN: no wild value was suppressed or rewritten; this session exercised the
+existing `ROGUESQ_M5_C88_VALUE=1` behavior arm only.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-keyon-contract`.

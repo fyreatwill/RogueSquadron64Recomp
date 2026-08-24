@@ -1,38 +1,35 @@
-# NEXT work unit (s2219) — test the existing C88 gate writer arm
+# NEXT work unit (s2221) — audit the key-on divide/return class
 
-HYPOTHESIS-ID: m5-audio-gate-writer-site
+HYPOTHESIS-ID: m5-audio-keyon-contract
 
 ## Work unit
 
-Execute M5 plan step 3 for exactly one writer: `reapplyDisplayMode`'s gate
-store at guest `0x8008EC88`. Ask the retail oracle for the store payload and
-writer attribution first. Only after its whole-RDRAM control is positive, run
-one same-build port A/B with the Factor 5 image arm held constant and the
-existing `ROGUESQ_M5_C88_VALUE=1` behavior arm versus the default forced-zero
-control. Do not change any other gate writer, consumer, task field, default,
-or safety guard.
+Execute M5 plan step 4 as one bounded census of the existing eight
+`musyxKeyOnVoice` divide/overflow return sites. Keep the C88 `=1` behavior arm
+and Factor 5 image arm constant; do not remove or rewrite a return in this
+iteration. Use the already-generated `ROGUESQ_LOG_M5_KEYON_CENSUS` table and
+the named slot probes, with the retail oracle's whole-RDRAM positive control
+and target-phase coverage captured before interpreting any null.
 
 Competing hypotheses and the single discriminator:
 
-- H-C88RetailOne: retail writes `1` at this site in the target route and the
-  port's original-value arm changes the gate contract; the arm should show a
-  phase-keyed gate transition plus a downstream task/slot/PCM difference.
-- H-C88RetailZero: retail writes `0` at this site in the covered target
-  route; the port's forced-zero control matches retail and the A/B has no
-  downstream difference.
-- H-C88NotCausal: retail and port payloads match, but this writer is not the
-  missing boundary; task exit, validated slot completion, and PCM remain
-  matched between arms.
-- H-C88RouteRegress: changing only this writer alters route admission or
-  stability while the positive prefix is present, without establishing a
-  valid audio result.
+- H-KeyOnValidNormal: the C88-enabled route supplies valid key-on inputs;
+  divide witnesses have nonzero/in-range operands, the normal tail runs, and
+  the named slot writer shows `0x02 -> 0x00` after the key-on chain.
+- H-KeyOnGuardNeeded: at least one divide site sees an invalid divisor or
+  pointer/range, and the current early return is exercised; normal-tail and
+  terminal-slot evidence remains absent for that record.
+- H-KeyOnRouteOnly: C88 reaches hangar and nonzero PCM, but key-on entries do
+  not causally produce the observed slot/PCM transitions; the census remains
+  phase-mismatched or all key-on records are outside the target window.
+- H-KeyOnCoverageFailure: the positive phase and key-on controls do not cover
+  hangar, so no return-site conclusion is evaluable.
 
-The discriminator is one joined table containing the oracle whole-RDRAM
-control, gate writer PC and post-store value, port gate rows at the writer
-site, positive 640/title/hangar phases, image-arm `real_ucode`/exit rows,
-nonzero PCM joins, and an independently validated slot-status transition.
-Missing whole-RDRAM or phase controls makes the comparison unevaluable;
-writer counts alone do not select a hypothesis.
+The discriminator is one phase-keyed table joining oracle whole-RDRAM and
+Rice target-phase controls, port key-on entry/divide-witness/guard/normal-tail
+rows for all eight sites, valid operand/range fields, named slot transitions,
+hangar phase, and nonzero PCM joins. Do not promote a guard removal from an
+entry count or a slot writer count alone.
 
 ## Ground-truth command — run before any port build or new instrumentation
 
@@ -41,42 +38,42 @@ tools/oracle/build/rs64_oracle \
   --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
   --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
   --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 60 --vi-trace \
+  --secs 60 --vi-trace --status-poll \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
   --watch-write 0x0:0x800000 \
-  --watch-write 0xA0F50:0xA0F51 \
-  --pc-hist-watch 1 --post-value-watch 1 \
-  --post-value-pc 0x8008EA34,0x8008EB40,0x8008EB7C,0x8008EC88,0x8008ED48 \
-  > scratch/agent/s2220_retail_c88.log 2>&1
+  --watch-pc 0x80090A3C,0x80090CEC,0x80090D04,0x80090D30,0x80090D48,0x80090D74,0x80090D8C,0x80090DB8,0x80090DD0,0x80090DE8 \
+  --hit-cap 200 \
+  > scratch/agent/s2221_retail_keyon.log 2>&1
 ~~~
 
 The whole-RDRAM watch must reach its positive-control threshold and the Rice
-trace must reach both target 640 origins and the hangar before a zero payload
-or missing writer is interpreted.
+trace must reach both target 640 origins and hangar before a zero key-on or
+missing execution is interpreted. If a new oracle watch is needed for a
+specific operand, add it only after this preflight and keep the whole-RDRAM
+control in the same run.
 
-## Port build and same-build A/B
+## Port build and census
 
 ~~~sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
 ~~~
 
-Run both arms concurrently, holding the image arm constant and arming all
-passive M5 diagnostics:
+Run the C88-enabled arm from the existing mission-key schedule, holding the
+image arm constant and arming all passive M5 diagnostics plus the existing
+key-on census:
 
 ~~~sh
 env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LOG_ALL=1 \
   ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 \
   ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-c88-on 30 12 \
-  > scratch/agent/s2220_c88_on.log 2>&1
-
-env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
-  ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 \
-  ROGUESQ_LOG_AUDIOTICK_TRACE=1 \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-c88-control 30 12 \
-  > scratch/agent/s2220_c88_control.log 2>&1
+  ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_VI_CALLERS=1 \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-keyon-census 30 12 \
+  > scratch/agent/s2221_keyon_census.log 2>&1
 ~~~
 
-Use SIGKILL for watchdog cleanup. Do not promote `ROGUESQ_M5_C88_VALUE=1`
-based on a route or dispatch change without the oracle payload and valid
-slot/PCM evidence.
+Use SIGKILL for watchdog cleanup. Expected outcomes: H-KeyOnValidNormal
+requires divide witnesses with valid operands, normal-tail rows, and named
+slot/PCM transitions in hangar; H-KeyOnGuardNeeded requires a concrete invalid
+operand at a named site; H-KeyOnRouteOnly or H-KeyOnCoverageFailure leaves the
+key-on class parked and changes no generated behavior. No default, gate,
+task-field, safety-guard, or key-on return change is authorized by this unit.

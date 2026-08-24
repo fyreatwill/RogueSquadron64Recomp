@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2219
-(2026-08-23); behavioral and source evidence is current through s2219.
+authoritative for exact commands and probe rows. Maintained in Session 2220
+(2026-08-23); behavioral and source evidence is current through s2220.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2219's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2220's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -417,6 +417,23 @@ second ledger.
   output/slot/PCM scope, refutes H-Coverage and treatment-only
   H-ImageRouteRegress, and proves that the image arm executes nontrivially.
   No default, task field, gate, or safety guard changed.
+- s2220 completed M5 plan step 3 for the existing `reapplyDisplayMode` writer
+  at `0x8008EC88`. The independent Rice oracle passed the whole-RDRAM positive
+  control with 10,017 writes, reached both target 640 origins and hangar, and
+  sampled two C88 post-store values as `0x01000000`; its writer histogram saw
+  five C88 writes and zero-valued samples from the two other sampled writers.
+  The same build held the Factor 5 image arm constant: C88 `=1` recorded gate
+  `0x01`, reached title and hangar, completed `0x03 -> 0x00` service-status
+  cycles, reached slot-return `gate=1/s1=1/v0=0`, and produced 19 nonzero PCM
+  source and 19 nonzero PCM consumer joins. The forced-zero control recorded
+  gate `0x00`, stopped after its first target 640 phase, had no service-status
+  rows, stayed at slot-return `gate=0/s1=0/v0=1`, and all 3,070 PCM joins
+  were zero. Both image arms dispatched `real_ucode=1` and returned `exit=1`
+  (`Broke`); neither emitted a crash/abort marker. This two-line
+  oracle/port result selects H-C88RetailOne at the covered route, refutes
+  H-C88RetailZero, H-C88NotCausal, and H-C88RouteRegress there, and leaves
+  the C88 behavior arm opt-in; no default, other writer, task field, guard,
+  or mitigation changed.
 
 ## Active backlog
 
@@ -437,8 +454,11 @@ work items.
    `0x14974C` writer PCs, so those contracts remain open. s2219 completed
    plan step 2: the image arm executes and changes DMEM, but sampled host
    output, PCM, and validated slot completion remain absent while the route
-   reaches title/hangar. The next unit is plan step 3, starting with the
-   existing `reapplyDisplayMode` gate writer at `0x8008EC88`.
+   reaches title/hangar. s2220 completed plan step 3 at
+   `reapplyDisplayMode` `0x8008EC88`: retail payload and port gate polarity
+   match, and the C88 `=1` arm has downstream service, slot, and nonzero-PCM
+   controls that the forced-zero arm lacks. Keep this behavior opt-in while
+   the next unit audits the existing eight key-on divide/return sites.
 2. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
@@ -599,13 +619,14 @@ nonzero. The sampled host destinations and PCM source/consumer spans remain
 zero, every image join is stage-only, and the available port slot-write rows
 do not independently establish the retail `0x03 -> 0x00` completion cycle.
 Treat this as H-StubEquivalent at the game-visible output/slot/PCM scope, not
-as proof that the image function is a no-op. The next discriminator is the
-existing single-writer C88 gate arm; keep it opt-in and hold the image arm
-constant.
+as proof that the image function is a no-op. s2220 now selects the original-
+value semantics of the existing single-writer C88 gate arm at the covered
+route. Keep the C88 arm opt-in and hold the image arm constant while auditing
+key-on inputs.
 
-The stock `aspMain` contract is not the game's MusyX contract. C88 testing
-selected reversed-or-suppressing polarity at sampled port gate scope; no
-blanket gate flip is authorized.
+The stock `aspMain` contract is not the game's MusyX contract. s2220's retail
+payload and downstream port table select the original-value C88 semantics at
+the covered route, but no blanket gate flip or default promotion was landed.
 
 The port's `ViState::field` is host-side state used by `update_vi`; in the
 default arm the only visible assignment is initialization at zero, while the
@@ -728,8 +749,8 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2219 VI-boundary, retail-ground-truth, and image-arm work is recorded
-in the ledger.
+s2198–s2220 VI-boundary, retail-ground-truth, image-arm, and C88-gate work is
+recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
