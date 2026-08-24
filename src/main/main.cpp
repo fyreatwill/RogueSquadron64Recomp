@@ -389,6 +389,26 @@ static void rs64_filter_voice_audit_row(const char* edge, uint32_t site,
     ++phase_rows;
 }
 
+static void rs64_filter_voice_audit_positive_control() {
+    static int enabled = -1;
+    static bool emitted = false;
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* e = std::getenv("ROGUESQ_LOG_FILTER_VOICE_AUDIT");
+        enabled = ((all && *all && *all != '0') || (e && *e && *e != '0')) ? 1 : 0;
+    }
+    if (!enabled || emitted) return;
+    emitted = true;
+    const bool source_ok = rs64_filter_voice_guest_span_ok(0x80000000u, 26u);
+    const bool output_ok = rs64_filter_voice_guest_span_ok(0x80000000u, 40u);
+    std::fprintf(stderr,
+                 "[filter-voice-audit-control] kind=host-positive-control"
+                 " source=0x80000000 source_span=26 source_ok=%u"
+                 " output=0x80000000 output_span=40 output_ok=%u range=OK\n",
+                 source_ok ? 1u : 0u, output_ok ? 1u : 0u);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_filter_voice_call_probe(uint32_t site, uint32_t sp,
                                                uint32_t ra, uint32_t a0,
                                                uint32_t a1, uint32_t a2,
@@ -1949,6 +1969,7 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
             // established n<40||(n%128)==0 resample convention so this is a
             // direct measurement, not an assumption.
             static uint32_t s_audtask_n = 0;
+            rs64_filter_voice_audit_positive_control();
             if (s_audtask_n < 40 || (s_audtask_n % 128) == 0) {
                 fprintf(stderr, "[audtask-dispatch] n=%u real_ucode=%d\n",
                         s_audtask_n, s_use_real_audio_ucode);

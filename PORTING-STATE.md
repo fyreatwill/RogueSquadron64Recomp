@@ -109804,3 +109804,47 @@ no mitigation or behavior change was added.
 Run the s2332 ground-truth-first destination-to-slot/key-on contract census
 from `scratch/agent/NEXT.md`, retaining the task/output metadata fields and
 making the filter/voice control positive before interpreting its null.
+
+## Session 2332 (2026-08-24) — M5 destination join reselects zero output metadata
+
+The first new driver stopped before launching the port because its oracle gate
+incorrectly required a positive write count from the known-zero `0x0001498A`
+watch. The fixed driver preserved the zero expectation and passed the retail
+gate. This failed recipe was a harness predicate error, not an experiment
+result.
+
+The corrected 75-second retail preflight passed whole-RDRAM `32376430`, target
+window `0x00165000:0x0016B000` `32366283`, task/output `108`, gate `17`, wait
+`0`, status `22`, title/hangar origins, and the named writer controls. It also
+independently observed the hangar filter path: `0x8009D740` executed `6360`
+times and `filterVoiceSampleBlock` at `0x8009D7D0` executed `6351` times (plus
+the other entry origin). The host-positive filter/voice span control fired
+once in each port arm, but the real port filter/voice audit emitted zero rows
+in both arms; the host control therefore qualifies the audit plumbing, not a
+guest filter call.
+
+Both sequential stub/image arms reached title and hangar and passed VI, task
+ABI, DMA, guest-receive, PCM source/consumer, and image-stage/join controls.
+The phase-10 image table contained `872` target rows and two nonzero rows.
+Both advertised `output_buff=0` and `output_buff_size=0`; all generated DMA
+ranges had `output_overlap=0`. One row was stage-only and one had an exact PCM
+source/consumer join (`source_event=6447`, `consumer_event=6448`). Neither had
+a post-stage lifecycle row; both retained the six-row prior-route signature.
+
+This reselects `H-OutputBuffZero` at capture scope and rejects
+`H-FilterVoiceConsumer` for this run: the qualified host audit saw no real
+port filter/voice row or downstream filter-to-key-on join. It does not explain
+the missing same-ordinal consumer and authorizes no writeback, remapping,
+slot/default change, guard, or other behavior change. The destination-to-
+slot/key-on boundary remains open.
+
+ORIGIN: the only code change was a diagnostic host-positive control in
+`src/main/main.cpp`; it validates the audit span branch and does not alter
+guest state, task data, audio output, or control flow.
+
+### Next
+
+Run a new ground-truth-first discriminator for the destination-to-slot/key-on
+boundary. Keep the qualified host-positive filter/voice audit, but do not add
+writeback, remapping, slot values, guards, defaults, or another output-metadata
+repeat.

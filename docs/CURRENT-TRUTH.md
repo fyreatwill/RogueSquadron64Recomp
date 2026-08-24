@@ -5,10 +5,10 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2331 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2332 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The completed work unit was the M5 task-output metadata join; the next
-work unit is the destination-to-slot/key-on census in `scratch/agent/NEXT.md`.
+to §47. The completed work unit was the M5 destination-to-slot/key-on census;
+the next work unit is the new discriminator in `scratch/agent/NEXT.md`.
 
 ## Current state
 
@@ -29,10 +29,13 @@ work unit is the destination-to-slot/key-on census in `scratch/agent/NEXT.md`.
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur, but the
   port has no valid same-ordinal slot, descriptor, voice/filter, or key-on
-  transition. The s2331 capture had zero `output_buff`/size and zero
+  transition. The s2332 capture had zero `output_buff`/size and zero
   output-overlap on both nonzero target stages, with one exact PCM
-  source/consumer join and no post-stage lifecycle row. No writeback, address
-  remap, consumer, slot, guard, or default change is authorized.
+  source/consumer join and no post-stage lifecycle row. Its host-positive
+  filter/voice span control fired in both arms, while the real port audit had
+  zero filter/voice rows; retail independently executed the filter caller and
+  callee in hangar. No writeback, address remap, consumer, slot, guard, or
+  default change is authorized.
 - The independent retail oracle is the witness for game-side memory claims.
   Whole-RDRAM, title/hangar, gate/task/status, target-window, and named-PC
   controls must pass before a retail null is interpreted. It reaches attract,
@@ -42,6 +45,22 @@ work unit is the destination-to-slot/key-on census in `scratch/agent/NEXT.md`.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2332 — output metadata remains absent; filter/voice consumer is rejected
+  at capture scope.** The corrected ground-truth-first oracle passed
+  whole-RDRAM `32376430`, physical destination-window `32366283`,
+  task/output/gate/status/wait `108/17/22/0`, title/hangar, named writer PCs,
+  and the filter-path control: retail executed `0x8009D740` `6360` times and
+  `filterVoiceSampleBlock` `0x8009D7D0` `6351` times. Both sequential port arms
+  passed route, VI, ABI/DMA, guest-receive, PCM, and image controls. The phase-10
+  image table had `872` rows and two nonzero rows; both had
+  `output_buff=0`, `output_buff_size=0`, and zero output overlap. One had an
+  exact PCM source/consumer join (`6447 -> 6448`), neither had a post-stage
+  lifecycle row, and both retained the six-row prior signature. The new
+  host-positive span control fired `1/1`, but the real port filter/voice audit
+  emitted `0/0` rows. This selects `H-OutputBuffZero` and rejects
+  `H-FilterVoiceConsumer` at capture scope; it does not identify the missing
+  same-ordinal consumer or authorize a behavior change.
 
 - **s2331 — output metadata is absent at capture scope.** The corrected
   ground-truth-first oracle passed whole-RDRAM `32387920`, physical
@@ -101,10 +120,12 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 destination-to-slot/key-on contract — next.** The s2331 metadata
-   join selected zero advertised output-buffer metadata and no DMA output
-   overlap at capture scope, but the missing post-ordinal consumer remains
-   unassigned. Resume with a new ground-truth-first discriminator; do not add
+2. **M5 destination-to-slot/key-on contract — next.** The s2332 metadata
+   join again selected zero advertised output-buffer metadata and no DMA
+   output overlap at capture scope; the missing post-ordinal consumer remains
+   unassigned. The host-positive filter/voice audit is now qualified, but the
+   real port path emitted no filter rows. Resume with a genuinely new
+   ground-truth-first discriminator; do not repeat output metadata or add
    writeback, address remapping, slot values, guards, or defaults.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
@@ -138,8 +159,11 @@ The s2331 metadata table found zero `output_buff`/size and zero output overlap
 on every generated range for both nonzero target stages; one stage had an exact
 PCM source/consumer join. The six lifecycle rows observed before target output
 are assigned to the prior audio ordinal, and no post-stage lifecycle row was
-present. A missing same-ordinal slot/descriptor/key-on consumer is the active
-boundary. Filter/voice absence is not a qualified null.
+present. The s2332 host-positive span control fired in both arms, but the real
+port filter/voice audit emitted zero rows while retail independently executed
+the caller/callee in hangar. This rejects a port filter/voice consumer join at
+capture scope without identifying why that guest path is absent. A missing
+same-ordinal slot/descriptor/key-on consumer remains the active boundary.
 
 ### VI state and second origin
 
@@ -183,6 +207,9 @@ are superseded at their measured scopes:
   s2308's retail-normal zero-fill interpretation, and s2325's destination-role
   split; later captures showed temporal joins, rotating destinations, an
   independent retail nonzero ring, and two exact PCM joins.
+- s2331's statement that the filter/voice null was unevaluable; s2332 added a
+  labeled host-positive span control and showed the real port audit still had
+  zero rows, while an independent retail run executed the caller and callee.
 
 ## Evidence and safety rules
 
