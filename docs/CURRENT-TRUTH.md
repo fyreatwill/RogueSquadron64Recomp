@@ -3,8 +3,8 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2250 (2026-08-24); behavioral and source evidence is
-current through s2250, with the M5 plan refresh recorded in s2231. The
+Maintained in Session 2251 (2026-08-24); behavioral and source evidence is
+current through s2251, with the M5 plan refresh recorded in s2231. The
 s2198–s2226 archive is §44; s2227–s2250 remain in
 the append-only ledger.
 
@@ -91,6 +91,17 @@ the append-only ledger.
   closes the unexplained route-edge hypothesis at this scope; it does not
   explain the earlier intermittent C88 split or identify the later task/output
   edge.
+- s2251's prescribed concurrent image+C88=`1`/image+C88=`0` audit was
+  route-invalid in both arms: each passed startup, one `[missing-func]`, and
+  the 640 origin, then died before title. C88=`1` bus-aborted in
+  `cutsceneDispatchSlotsByFlag` with guest breadcrumb `0x8000834C`; C88=`0`
+  hit RT64 `findTileCopyId`'s `height > 0` assertion with the same breadcrumb.
+  The fixed retry with high-volume thread-resume logging disabled again lost
+  C88=`1` in `fillSampleStreamRange+8320` / guest `0x8000B650`, while C88=`0`
+  reached title and hangar and recorded 3,715 task joins, 67 host-boundary
+  rows, and 3,522 PCM rows at title. These are route-stability observations,
+  not a valid two-arm post-route comparison; no task, image-payload, or PCM
+  hypothesis is selected and no default or runtime behavior changes.
 - s2233's fixed retail-oracle capture passed the whole-RDRAM positive control,
   reached the 640 target, title `1024`, and hangar `512`, and recorded
   `6,665,015` writes to physical `0x166000:0x17A000`. It sampled 503
@@ -267,10 +278,12 @@ Closed investigations are not active work items. The sequence is monotonic.
   image+C88=`0` and stub+C88=`1` reached both targets. The C88=`0` image arm
   also supplied a hangar-only nonzero stage/source/consumer join, but title
   remained all-zero and the join is single-source. s2250 found only the
-  expected forced B40 byte difference and identical target route-state rows;
-  the next unit must compare the first post-route task/image-stage/PCM edge
-  in the two image arms. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
-  writeback/consumer guard.
+  expected forced B40 byte difference and identical target route-state rows.
+  s2251 did not qualify that comparison: both original arms died before
+  title, and a reduced-logging retry qualified only C88=`0`. The next unit
+  reverses the controlled arm launch order to test route contention versus a
+  C88-intrinsic failure before comparing post-route output. Do not promote
+  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether

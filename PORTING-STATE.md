@@ -106158,3 +106158,39 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2251 (2026-08-24) — audited the first post-route C88 task/output edge
+
+Ran the planned same-build concurrent two-arm post-route audit with
+image+C88=`1` and image+C88=`0`. Both arms used the qualified LLE/spin-yield
+route, startup/`[missing-func]`/640 controls, B40 route/state/read traces, and
+task/image-host/PCM boundary traces. The logs are under
+`scratch/s73_post_a_scene/s2251_image_c88_*`; driver tails are under
+`scratch/agent/s2251_image_c88_*_driver.log`.
+
+The original concurrent capture was route-invalid in both arms. Each passed
+startup, one `[missing-func]`, and the 640 origin `0x00696100`, then died
+before title. C88=`1` bus-aborted in `cutsceneDispatchSlotsByFlag` with
+last guest PC `0x8000834C`; C88=`0` hit RT64 `findTileCopyId`'s
+`height > 0` assertion with the same last guest PC. Neither arm emitted
+target-phase task, image-stage, or PCM rows.
+
+Per the failed-run rule, reran the same concurrent arms with only the
+high-volume thread-resume trace disabled. C88=`1` again died before title in
+`fillSampleStreamRange+8320` with last guest PC `0x8000B650`. C88=`0` reached
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; its title scope had
+3,715 `audtask-join` rows, 67 `[m5-host-boundary]` rows, and 3,522
+`audio-join-pcm` rows. The two arms therefore did not qualify the planned
+same-run post-route table. This result does not select H-C88TaskContract,
+H-C88ImagePayload, H-C88PCMConsumer, or H-C88RouteOnlyIntermittency; it
+selects only a route-stability/launch-order measurement blocker. The next
+probe reverses the controlled launch order before interpreting any target
+output difference.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.
