@@ -1,64 +1,60 @@
-# NEXT work unit (s2283) — A1 VI publisher/cadence matrix
+# NEXT work unit (s2284) — A1 two-wave route-contention discriminator
 
 HYPOTHESIS-ID: m5-a1-vi-publisher-cadence
 
 ## Work unit
 
-Run one same-build, phase-gated four-arm matrix using the existing VI context and
-parity-scheduler diagnostics. Keep all runtime defaults unchanged. The arms are:
-"control" with no VI behavior arm, "alternate-field" with
-ROGUESQ_VI_ALTERNATE_FIELDS=1, "current-reg-screen" with
-ROGUESQ_VI_FIELD_FROM_CURRENT_REG=1 ROGUESQ_VI_CURRENT_REG_TOGGLE_BEFORE_SCREEN=1,
-and "retrace-parity" with
-ROGUESQ_VI_FIELD_FROM_CURRENT_REG=1 ROGUESQ_VI_CURRENT_REG_FROM_TOTAL_VIS=1.
-Run the four port arms and one retail oracle in the same iteration. Stop each
-port arm only after it has supplied the positive all-width VI-context control
-and either the first target origin 0x00696100 or the second-origin target
-0x00696600; retain 15 seconds after the first second-origin row. Kill every
-remaining process with SIGKILL.
+Run one same-build, phase-gated two-wave matrix using the existing VI context
+and parity-scheduler diagnostics. Keep all runtime defaults unchanged. Launch
+the control and alternate-field arms concurrently in wave 1. After both wave-1
+processes terminate, launch current-reg-screen and retrace-parity concurrently
+in wave 2. Keep one independent retail oracle running across both waves. Stop
+each port arm only after its positive all-width controls and either target
+origin `0x00696100` or `0x00696600`; retain 15 seconds after the first
+`0x00696600` row. Kill every remaining process with SIGKILL.
+
+The four-way s2283 run is not a publisher result: all four arms passed their
+positive controls but crashed at guest PC `0x80001F88` in the initial 640 phase.
+This wave split is the new route discriminator for that failure.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-CallbackPublisher: the natural publisher is callback/field cadence. The
-  control or alternate-field arm supplies the only stable 0x00696600 rows, and
-  their selected field tracks callback ordinal parity rather than total_vis & 1.
-- H-TotalViPublisher: the natural publisher is total-VI/retrace parity. Only
-  retrace-parity supplies the second-origin rows, with selected_field equal to
-  total_vis & 1 and stable origin/field mapping.
-- H-ScreenTiming: the missing boundary is the screen-enqueue timing edge. Only
-  current-reg-screen changes second-origin reachability; its rows differ from
-  retrace-parity at equal callback ordinal and show the decisive
-  skipped_vi/delta relationship.
-- H-NoPublisher: none of the arms reaches the second-origin target after
-  passing its positive control, so the current host publisher/cadence remains
-  unobserved and the next probe must move to the host VI callback/queue boundary.
+- H-FourArmContention: the four-way process load caused the s2283 abort. At
+  least one two-arm wave reaches a target origin after both positive controls;
+  the target rows then make the A1 publisher comparison interpretable.
+- H-RouteIntrinsic: both two-arm waves reproduce the initial-640 abort after
+  both positive controls, so the current A1 route remains invalid and the
+  publisher question stays parked.
+- H-ArmSpecificRoute: exactly one wave reaches the target window, selecting a
+  behavior-arm or wave-specific route sensitivity that must be isolated before
+  publisher inference.
+- H-NoPublisher: both waves qualify target rows, but neither callback/field
+  relation predicts the observed second-origin rows; retain the publisher as
+  unobserved rather than changing a default.
 
-The single discriminating table is keyed by
-arm, callback_ordinal, total_vis, delta, callback_parity, total_parity,
-selected_field, current_line, committed_origin, skipped_vi. Require every arm
-to have its [vi-context-port-control] and [vi-parity-scheduler-control]
-positive rows before interpreting a second-origin null. Select the publisher
-only when one arm's second-origin rows are reproducible and its parity/timing
-relation predicts the other arms' rows; otherwise retain H-NoPublisher.
-The same-run retail oracle must pass whole-RDRAM >=10,000 writes and show both
-target 640 origins under the driven Rice route.
+The single discriminating table is keyed by wave, arm, callback ordinal,
+total_vis, delta, callback parity, total parity, selected field, current line,
+committed origin, and skipped-VI count. Require every arm to have its
+`[vi-context-port-control]` and `[vi-parity-scheduler-control]` rows before
+interpreting any target-origin null. A publisher is not selected unless a
+target-qualified wave supplies reproducible second-origin rows whose parity or
+timing relation predicts the other target-qualified arm. The retail oracle must
+pass whole-RDRAM `>=10,000` writes and show both title and hangar origins.
 
 ## Exact commands
 
-1. Create scratch/agent/run_s2283_m5_vi_publisher_matrix.sh with apply_patch.
-   Base its process/watchdog structure on
-   scratch/agent/run_s2205_vi_toggle_stability_ab.sh. Use one oracle command
-   with --watch-write 0x0:0x800000 --vi-trace,
-   --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib, and
-   the established eleven-Start --press schedule. Each port arm must set
-   ROGUESQ_AUDIO_UCODE=0, ROGUESQ_SPIN_YIELD=1,
-   ROGUESQ_LLE_UNGATED=1, ROGUESQ_LLE_SOLO=1,
-   ROGUESQ_LOG_PHASE=1, ROGUESQ_LOG_VI_CONTEXT_PORT=1,
-   ROGUESQ_LOG_VI_PARITY_SCHEDULER=1, and
-   ROGUESQ_LOG_VI_TRANSITION=1, plus its one behavior-arm setting.
+1. Create `scratch/agent/run_s2284_m5_vi_publisher_two_wave.sh` with
+   `apply_patch`. Base its process/watchdog structure on
+   `scratch/agent/run_s2283_m5_vi_publisher_matrix.sh`. Use the same oracle
+   command with `--watch-write 0x0:0x800000`, `--vi-trace`, the Rice video
+   plugin, and the established eleven-Start `--press` schedule. Each port arm
+   must set `ROGUESQ_AUDIO_UCODE=0`, `ROGUESQ_SPIN_YIELD=1`,
+   `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_LOG_PHASE=1`,
+   `ROGUESQ_LOG_VI_CONTEXT_PORT=1`, `ROGUESQ_LOG_VI_PARITY_SCHEDULER=1`,
+   and `ROGUESQ_LOG_VI_TRANSITION=1`, plus exactly its behavior-arm setting.
 2. Run from the repository root:
-   zsh scratch/agent/run_s2283_m5_vi_publisher_matrix.sh s2283_m5_vi_publisher_matrix
-3. Summarize, with bounded grep/tail only, the retail positive control and
-   each arm's control rows, first/second-origin rows, table tuples, terminal
-   phase, and crash/timeout. Do not change any VI behavior default or infer a
-   publisher from an arm that lacks its positive controls.
+   `zsh scratch/agent/run_s2284_m5_vi_publisher_two_wave.sh s2284_m5_vi_publisher_two_wave`
+3. Summarize with bounded `grep`/`tail` only: retail positive controls, each
+   arm's two runtime controls, target-origin rows, parity tuples, terminal
+   phase, and crash/timeout. Do not infer a publisher from an arm or wave that
+   lacks its positive controls.

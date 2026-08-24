@@ -5,11 +5,13 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2282 (2026-08-24); behavioral and source evidence is
-current through s2282. This iteration ran a phase-gated, control-first C88
-route pair. Retail controls and all eight field buckets qualified without
-overflow, but C88=0 missed the required hangar window at off-target 640, so
-C88=1 was not launched; no key-on behavior or default changed.
+Maintained in Session 2283 (2026-08-24); behavioral and source evidence is
+current through s2283. This iteration ran the corrected same-build, phase-gated
+four-arm A1 VI matrix with one retail oracle. Retail passed its whole-RDRAM,
+title, and hangar controls. All four port arms passed both runtime positive
+controls but crashed at guest PC `0x80001F88` in the initial 640 phase before
+either target origin; the matrix is H-RouteInvalid and no VI publisher or
+default changed.
 
 ## Current state
 
@@ -68,6 +70,13 @@ C88=1 was not launched; no key-on behavior or default changed.
   the no-fourth-attempt rule.
 - The VI second-origin publisher/cadence is open. Field, current-register,
   timing, and total-`VI` arms recover the split, but none is default-on.
+  s2283's corrected four-arm matrix supplied `8` all-width
+  `[vi-context-port-control]` and `8` `[vi-parity-scheduler-control]` rows per
+  arm, then all four arms crashed at guest PC `0x80001F88` before
+  `0x00696100` or `0x00696600`. Retail independently passed its whole-RDRAM
+  positive control and reached title and hangar. The port second-origin null
+  is therefore route-invalid, not evidence for H-NoPublisher; the initial
+  driver attempt with literal `$!` PIDs is discarded.
 - s2273's first Step 1 pair was route-invalid: the heavy trace reached title
   and the first 640 target before `findOrCreateMaterial` crashed at guest PC
   `0x8000E29C` with one `[missing-func]`, 11 B40 rows, and 20 route-state
@@ -116,6 +125,18 @@ C88=1 was not launched; no key-on behavior or default changed.
 
 ## Latest evidence
 
+- s2283's corrected same-build four-arm A1 matrix ran one independent retail
+  oracle plus control, alternate-field, current-reg-screen, and retrace-parity
+  port arms. Retail passed the whole-RDRAM positive control with `10,000`
+  writes and reached title `0x00790400`/1024 and hangar `0x006AB400`/512. Each
+  port arm passed `8` VI-context and `8` parity-scheduler all-width controls
+  and recorded roughly `50` initial 640 rows, but recorded zero
+  `0x00696100`/`0x00696600` target rows and crashed at guest PC
+  `0x80001F88` before title or hangar. This selects H-RouteInvalid for the
+  four-way concurrent recipe and supplies no publisher/cadence verdict. The
+  first run of the driver was invalid because its zsh associative-array PID
+  assignment stored the literal `$!`; the corrected rerun is the only result
+  used here.
 - s2282's phase-gated control-first driver ran one independent retail oracle
   and launched C88=1 only after a C88=0 hangar gate. Retail passed the
   whole-RDRAM positive control with 1,000,128 writes, title and hangar
@@ -325,9 +346,14 @@ Closed investigations are not active work items. The sequence is monotonic.
    this route pair without a new route discriminator. No pointer/data or
    branch-state verdict, key-on return, or mitigation change follows. The
    Step 1 task/output pair remains parked.
-2. **M5 A1 second-origin transition.** Identify the natural host field
-   publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
-   remain opt-in.
+2. **M5 A1 second-origin transition.** First run a same-build two-wave route
+   discriminator with one retail oracle: launch control plus alternate-field
+   concurrently, then current-reg-screen plus retrace-parity concurrently.
+   Require both positive controls and target-origin rows in each wave before
+   interpreting publisher cadence. This tests whether s2283's four-way
+   initial-640 crash was process contention; if both waves remain targetless,
+   park A1 as route-invalid rather than infer H-NoPublisher. Diagnostic
+   recovery arms remain opt-in.
 3. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
@@ -383,7 +409,10 @@ Retail's `__osViNext` context uses `framep` plus the selected field to produce
 the next origin. The port has matching framebuffer/mode candidates, but its
 default selector, guest `comRegs.vCurrent`, and published current-line bit
 remain zero. Opt-in field/current-register/timing/total-`VI` arms recover the
-split; the natural host publisher and cadence are unidentified.
+split; the natural host publisher and cadence are unidentified. s2283's
+four-way arm matrix did not reach either target origin after positive controls,
+so it adds a route-contended null only. The next discriminator is the two-wave
+matrix in backlog item 2.
 
 ### Key-on, M3, and M4
 
@@ -424,6 +453,11 @@ the append-only ledger. Operationally:
 - s2228's detail-ring crash and s2242–s2259's image/pair crash splits are
   intermittent route-load observations, not selected intrinsic image or
   writer defects. s2254 and s2259 provide qualified controls.
+- s2283's four-arm A1 matrix is a route-invalid observation: all four port
+  processes reached the same initial 640 region and aborted before the target
+  origins, while retail independently reached title and hangar. It does not
+  make any VI publisher arm intrinsically defective or support H-NoPublisher;
+  the next two-wave run tests the contention explanation.
 - s2271's order-swapped pair made arm-specific paired-route sensitivity look
   plausible because the image arm qualified when second while the silent arm
   failed to reach hangar when first. s2272's phase-gated stagger kept the

@@ -107466,3 +107466,41 @@ ORIGIN: no mitigation-shaped change; only a phase-gated observation driver was a
 
 See scratch/agent/NEXT.md.
 HYPOTHESIS-ID: m5-a1-vi-publisher-cadence.
+
+## Session 2283 (2026-08-24) — four-arm VI publisher matrix remained route-invalid
+
+HYPOTHESIS-ID: m5-a1-vi-publisher-cadence.
+
+The planned same-build, phase-gated A1 matrix ran one independent retail oracle
+and four concurrent port arms: control, alternate-field, current-reg-screen,
+and retrace-parity. The driver was first found invalid because its zsh
+associative-array PID assignment stored literal `$!`; that run was discarded.
+The fixed driver passed `zsh -n`, captured real PIDs, and reran the same matrix
+before any conclusion was recorded. No runtime or generated code was rebuilt
+or changed.
+
+The retail arm passed the whole-RDRAM positive control with `10,000` writes,
+and its VI trace reached title `0x00790400` at width 1024 and hangar
+`0x006AB400` at width 512. Every port arm passed `8`
+`[vi-context-port-control]` rows and `8` `[vi-parity-scheduler-control]` rows,
+then recorded about 50 initial width-640 rows but zero committed target rows
+at `0x00696100` or `0x00696600`. All four arms aborted in the initial 640
+route at guest PC `0x80001F88`, with no title or hangar phase; the fixed
+driver reported status 134 for each arm.
+
+This selects H-RouteInvalid for the four-way concurrent recipe. The independent
+retail controls rule out an absent oracle route, and the port control rows rule
+out an absent VI diagnostic path. The four port failures are one runtime-side
+route observation, so they do not distinguish callback, total-VI, or
+screen-timing publisher hypotheses and do not support H-NoPublisher. The next
+unit splits the four arms into two concurrent waves to test whether four-way
+process contention caused the initial-640 abort.
+
+ORIGIN: no guest or host value was suppressed, rewritten, guarded, restored,
+or defaulted; this session added one observation-only driver and corrected its
+PID bookkeeping before the valid rerun.
+
+### Next
+
+Run the two-wave route-contention discriminator in `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-vi-publisher-cadence`.
