@@ -106758,3 +106758,44 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract`.
+
+## Session 2266 (2026-08-24) — paired image/silent output run was route-invalid
+
+No new instrumentation or runtime change was made. Rebuilt the unchanged
+Debug target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`;
+the build passed.
+
+Ran the prescribed same-build image+C88=`0` and silent+C88=`0` pair with the
+qualified spin/LLE route and reduced trace. Driver captures are
+`scratch/agent/s2266_image_c88_0_pair_image_first_driver.log` and
+`scratch/agent/s2266_silent_c88_0_pair_silent_second_driver.log`; game logs
+are under `scratch/s73_post_a_scene/` with the corresponding run names.
+
+The image-first arm passed startup, one `[missing-func]`, 14 B40 rows, and 28
+route-state rows. It reached title `1024 @ 0x00790400` at 48.5s and hangar
+`512 @ 0x006AB400` at 77.7s and 114.1s. Its phase-8/10/12
+`[audtask-image-stage-row]` counts were `3477/2170/978`, with nonzero counts
+`0/2/0`. In phase 10, one tuple `(dest=0x168250, len=0x300,
+FNV=0x7B70923A)` appeared first as `stage-source-only` and then as
+`stage-consumer-match`, with source event `8751` and consumer event `8752`.
+This is one observed tuple with two join records, not two independent
+matches. The image arm later hit the known aligned-ROM abort at
+`last-guest-pc=0x80001b08` after target qualification.
+
+The silent-second arm passed startup controls and one `[missing-func]`, but
+crashed in `MetalFramebuffer` at `last-guest-pc=0x8000b650` during the
+640-width route, before any 1024 phase. Therefore this pair selects
+H-PairRouteInvalid. The image rows are single-arm observations only: the run
+does not select H-CompleteImageOutputContract,
+H-ImageStageWithoutPcmContract, or H-ImageTupleOrOrderingMismatch, and it
+does not authorize a default, writeback, consumer, slot, gate, or guard
+change. The next discriminator is isolated silent-arm route qualification.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-silent-route-qualification`.

@@ -1,42 +1,44 @@
-# NEXT work unit (s2266) — paired image/silent output contract
+# NEXT work unit (s2267) — isolated silent-route qualification
 
-HYPOTHESIS-ID: m5-image-output-contract
+HYPOTHESIS-ID: m5-silent-route-qualification
 
 ## Work unit
 
-Run both arms from the same unchanged build, concurrently: image+C88=`0` and
-silent+C88=`0`. Keep the qualified `ROGUESQ_SPIN_YIELD=1`,
-`ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1` route, plus only the
-existing audio-return, PCM-boundary, B40/route-state, and phase loggers. Do
-not add task-contract, ABI, DMA, host-boundary, or thread-resume tracing. Do
-not promote the image arm or add a writeback, consumer, slot, gate, or guard
-change.
+Run the silent+C88=`0` arm alone from the unchanged Debug build, using the
+qualified `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`, and
+`ROGUESQ_LLE_SOLO=1` route plus only the existing audio-return,
+PCM-boundary, B40/route-state, and phase loggers. This tests whether the
+s2266 silent-arm `MetalFramebuffer` failure is intrinsic to the isolated
+silent route or sensitive to the paired run. Do not add instrumentation,
+change a default, or interpret silent output nulls as an audio-contract
+result.
 
 ## Competing hypotheses and discriminating measurement
 
-- **H-CompleteImageOutputContract:** both arms qualify through title and
-  hangar; image stage rows, exact source/consumer tuples, and completion order
-  agree at the target boundary, with the image arm's nonzero rows separated
-  from the silent arm's all-zero PCM control.
-- **H-ImageStageWithoutPcmContract:** both arms qualify, but image stage rows
-  are nonzero while PCM source/consumer rows remain all-zero or fail to join;
-  this selects a stage-only boundary and does not authorize a consumer fix.
-- **H-ImageTupleOrOrderingMismatch:** both arms qualify, but image
-  destination/length/FNV/nonzero tuples or completion order disagree between
-  stage, source, and consumer rows; this selects a contract mismatch rather
-  than a route failure.
-- **H-PairRouteInvalid:** either arm misses startup, `[missing-func]`, its B40
-  or route-state controls, title `1024 @ 0x00790400`, or hangar
-  `512 @ 0x006AB400`; no output null or mismatch is interpretable for that
-  pair and the route remains the next discriminator.
+- **H-SilentIntrinsicPreTargetCrash:** the isolated silent arm repeats a
+  pre-1024 crash in `MetalFramebuffer`, especially at
+  `last-guest-pc=0x8000b650`. This makes the s2266 pair failure intrinsic to
+  the silent route at the tested scope.
+- **H-SilentRouteLoadSensitive:** the isolated silent arm passes the startup
+  controls and reaches title and hangar, while the s2266 paired silent arm
+  failed before 1024. This selects route-load/pair sensitivity and permits a
+  fresh same-build image/silent output comparison; it does not identify an
+  audio writer or authorize a mitigation.
+- **H-SilentPreTargetStall:** the isolated arm remains alive but never reaches
+  title `1024 @ 0x00790400` within the driver watchdog, with no crash marker.
+  This selects a silent-route stall rather than the observed renderer crash.
+- **H-SilentPartialTarget:** the isolated arm reaches 1024 but not hangar
+  `512 @ 0x006AB400`, or lacks a required control. This keeps the pair
+  comparison invalid and selects a narrower route boundary for the next
+  discriminator.
 
-The complete discriminating table is per arm:
+The discriminating table is
 `(startup, missing_func, 640_origins, title, hangar, phase, width, origin,
-stage_rows, nonzero_stage_rows, source_rows, consumer_rows, exact_matches,
-destination, length, FNV, completion_order, driver_outcome, crash_or_timeout,
-crash_pc, last_guest_pc)`. Positive controls are startup, one
-`[missing-func]`, B40 rows, route-state rows, and the phase logger in both
-arms. Interpret image/PCM rows only after both arms qualify.
+pcm_source_rows, pcm_consumer_rows, pcm_fnv, pcm_nz, driver_outcome,
+crash_or_timeout, crash_pc, last_guest_pc)`. Positive controls are startup,
+one `[missing-func]`, B40 rows, route-state rows, and phase transitions. Only
+the outcome that reaches both title and hangar can permit the next paired
+output run; all pre-target outcomes prohibit interpreting PCM or image nulls.
 
 ## Build
 
@@ -47,14 +49,10 @@ cmake --build build --config Debug --target RogueSquadron64Recomp -j2
 ## Run
 
 ```sh
-env ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_THREAD_RESUME=0 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2266_image_c88_0_pair_image_first 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2266_image_c88_0_pair_image_first_driver.log 2>&1 &
-env -u ROGUESQ_AUDIO_UCODE ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_THREAD_RESUME=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2266_silent_c88_0_pair_silent_second 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2266_silent_c88_0_pair_silent_second_driver.log 2>&1 &
-wait
+env ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_THREAD_RESUME=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2267_silent_c88_0_isolated_route 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2267_silent_c88_0_isolated_route_driver.log 2>&1
 ```
 
-Record each arm's driver outcome, controls, phase transitions, exact target
-rows, and crash/last-guest-PC fields. A pair with both target-qualified arms
-selects one of the three output-contract hypotheses; a pre-target failure in
-either arm selects H-PairRouteInvalid. The s2265 isolated qualification is
-single-source route evidence, so do not treat this pair as a runtime default
-change without the required independent comparison.
+Record the driver outcome, controls, phase transitions, title/hangar
+qualification, crash or timeout fields, and target PCM rows. A qualified
+isolated arm permits a new paired output contract run; a pre-target failure
+selects route work only.

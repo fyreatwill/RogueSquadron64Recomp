@@ -5,9 +5,9 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2265 (2026-08-24); behavioral and source evidence is
-current through s2265. This iteration ran one unchanged-build isolated image
-route qualification; no runtime change was made.
+Maintained in Session 2266 (2026-08-24); behavioral and source evidence is
+current through s2266. This iteration ran one unchanged-build paired
+image/silent output qualification; no runtime change was made.
 
 ## Current state
 
@@ -33,7 +33,8 @@ route qualification; no runtime change was made.
 - The image arm has qualified target-stage rows and at least one exact
   phase-10 stage/source/consumer match in separate single-arm captures. The
   silent arm has a qualified route whose phase-8/10/12 source and consumer
-  rows are present but all zero. A valid same-build comparison is still open.
+  rows are present but all zero, but the latest concurrent pair failed before
+  the silent arm reached 1024. A valid same-build comparison is still open.
 - The port-side `field348` source spans are cleared by the legitimate
   `rs_memset` setup call at static callsite `0x8008F2CC`; retail independently
   writes both corresponding spans with nonzero values. The missing nonzero
@@ -86,6 +87,18 @@ route qualification; no runtime change was made.
   the known aligned-ROM abort at `last-guest-pc=0x80001b08`, after target
   qualification. This selects the paired output contract comparison; it
   does not promote the image arm or authorize a guard.
+- s2266's image-first pair arm passed startup, one `[missing-func]`, 14 B40
+  rows, and 28 route-state rows; it reached title `1024 @ 0x00790400` at
+  48.5s and hangar `512 @ 0x006AB400` at 77.7s and 114.1s. Its phase-8/10/12
+  image-stage-row counts were `3477/2170/978`, with nonzero counts
+  `0/2/0`. In phase 10, the tuple `(dest=0x168250, len=0x300,
+  FNV=0x7B70923A)` appeared first as source-only and then as a
+  stage-consumer match, with source event `8751` and consumer event `8752`;
+  this is one observed tuple with two join records, not two independent
+  matches. The silent arm passed startup controls and one `[missing-func]`,
+  but crashed in `MetalFramebuffer` at `last-guest-pc=0x8000b650` during
+  the 640-width route, before any 1024 phase. The pair therefore selects
+  H-PairRouteInvalid and does not interpret image/PCM output differences.
 - Independent retail oracle work established the whole-RDRAM control, both
   target origins, nonzero writes to both `field348`-derived spans, and the
   retail task/output writer family. It has not yet joined a retail write to a
@@ -95,27 +108,37 @@ route qualification; no runtime change was made.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 image-output contract attribution.** Run the same-build
-   image+C88=`0` / silent+C88=`0` pair with the qualified spin/LLE route and
-   reduced trace. Require each arm's startup, `[missing-func]`, B40 and
-   route-state controls, title `1024 @ 0x00790400`, and hangar
-   `512 @ 0x006AB400` before interpreting its output rows. Compare stage rows,
-   exact destination/length/FNV/nonzero joins, completion order, and the
-   all-zero silent PCM boundary. Do not promote the image arm or add a
-   writeback, consumer, slot, gate, or guard change.
-2. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
+1. **M5 silent-route qualification.** Run the silent+C88=`0` arm alone from
+   the unchanged build with the qualified spin/LLE route and reduced trace.
+   Require startup, `[missing-func]`, B40/route-state controls, title
+   `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400`. A repeat of the
+   640-width `MetalFramebuffer` crash selects an intrinsic silent-route
+   failure; target qualification selects a pair/concurrency-sensitive route
+   failure and permits a fresh paired output comparison. Do not interpret
+   output nulls from this arm as a contract result and do not change a
+   default or add a guard.
+2. **M5 image-output contract attribution.** Run the same-build
+   image+C88=`0` / silent+C88=`0` pair after the silent route is requalified,
+   with the qualified spin/LLE route and reduced trace. Require each arm's
+   startup, `[missing-func]`, B40 and route-state controls, title
+   `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400` before interpreting its
+   output rows. Compare stage rows, exact destination/length/FNV/nonzero
+   joins, completion order, and the all-zero silent PCM boundary. Do not
+   promote the image arm or add a writeback, consumer, slot, gate, or guard
+   change.
+3. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
    difference using a new pointer-versus-branch discriminator. No key-on
    return or mitigation change follows from the existing table.
-3. **M5 A1 second-origin transition.** Identify the natural host field
+4. **M5 A1 second-origin transition.** Identify the natural host field
    publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
    remain opt-in.
-4. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
+5. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
-5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+6. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator; the dormant `slotDispatcherIter+872` class has
    thousands of clean guarded hangar calls and no authorized mitigation.
-6. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
+7. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
 
