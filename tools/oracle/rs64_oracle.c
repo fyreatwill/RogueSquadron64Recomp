@@ -737,10 +737,13 @@ static void record_post_value_requested_row(int target, uint32_t value,
 {
     struct post_value_requested_row *row;
 
-    if (target < 0 || target >= g_n_post_value_requested_pc ||
-        g_n_post_value_requested_rows[target] >= MAX_POST_VALUE_ROWS_PER_PC)
+    if (target < 0 || target >= g_n_post_value_requested_pc)
         return;
     if (width != 512 || origin != 0x006AB400)
+        return;
+    if (value == 0x7F7F7F7F)
+        return;
+    if (g_n_post_value_requested_rows[target] >= MAX_POST_VALUE_ROWS_PER_PC)
         return;
     row = &g_post_value_requested_rows[target]
         [g_n_post_value_requested_rows[target]++];

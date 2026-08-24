@@ -5,8 +5,8 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2298 (2026-08-24); behavioral and source evidence is
-current through s2298. The corrected same-build M5 Step 2 driver explicitly
+Maintained in Session 2299 (2026-08-24); behavioral and source evidence is
+current through s2299. The corrected same-build M5 Step 2 driver explicitly
 sent the eleven process-start Start events to each port window. Retail passed
 the whole-RDRAM threshold at `10,000` callbacks and reached title
 `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The port stub and default
@@ -23,6 +23,18 @@ writer class was CPU metadata construction while the port row was Factor 5
 image DMA with its own payload and source/consumer ordering. This selects
 H-RetailDifferentWriter at the measured contract scope, not an address-class
 null or a mitigation target.
+
+s2299's corrected oracle-only non-sentinel capture passed the independent
+whole-RDRAM threshold at `10,000`, title `1024 @ 0x00790400`, hangar
+`512 @ 0x006AB400`, and the width-aware target bucket with `942` VI rows.
+The target-phase writer histogram again contained only `0x80094648` (`n=24`),
+but filtering `0x7F7F7F7F` before the per-PC cap retained `0/16` rows for
+`0x8008EB8C`, `0x8008EBBC`, and `0x80094648`. The lifetime sampler still had
+`76` samples: `72` sentinel, one `0x120F0000`, and three `0x120E0000`.
+This selects H-TargetRowsInsufficient at the measured capture scope and
+rules out the sentinel cap as the sole explanation for the empty target row
+table. It does not assign a target writer role or authorize a contract
+change.
 
 s2296's corrected oracle-only task/output role capture passed the independent
 whole-RDRAM threshold at `10,000`, title `1024 @ 0x00790400`, hangar
@@ -338,6 +350,15 @@ equivalent path at another guest address.
 
 ## Latest evidence
 
+- s2299's corrected oracle-only non-sentinel capture passed the independent
+  whole-RDRAM, title, hangar, and width-aware target-bucket controls, recording
+  `942` target VI rows. Its target-phase writer histogram contained only
+  `0x80094648` (`n=24`), while filtering `0x7F7F7F7F` before the requested-row
+  cap retained `0/16` rows for all three requested PCs. The lifetime sampler
+  recorded `76` samples: `72` sentinel, one `0x120F0000`, and three
+  `0x120E0000`. This selects H-TargetRowsInsufficient at capture scope and
+  rules out the sentinel cap as the sole explanation; no writer, writeback,
+  consumer, slot, gate, guard, or address-remap behavior changed.
 - s2298's corrected oracle-only pre-step phase-latched capture passed the
   independent whole-RDRAM, title, hangar, and width-aware target-bucket
   controls, recording `1,515` target VI rows. Its target-phase writer
@@ -630,18 +651,21 @@ equivalent path at another guest address.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 Step 3 target/output construction-sequence join.** s2298's
-   pre-step phase latch passed all independent controls and found target-phase
-   writer `0x80094648` (`n=24`), but its 16-row table was consumed entirely by
-   target sentinel value `0x7F7F7F7F`; EB8C and EBBC had no target-phase hits.
-   Make one bounded oracle-only change that retains up to 16 non-sentinel
-   target rows per requested PC, then rerun the same exact-slot and
-   task/output controls. Select a distinct `0x80094648` construction if it
-   yields unique non-sentinel tuples, EB8C/EBBC housekeeping if exactly one
-   of them yields a non-sentinel tuple while 94648 remains sentinel-only, or
-   H-TargetRowsInsufficient if the controls or filtered target table remain
-   empty. Do not implement writeback, consumer, slot, gate, guard, or address
-   remap behavior.
+1. **M5 Step 3 target/output construction-sequence join.** s2299's
+   non-sentinel filter passed the independent controls but retained no target
+   rows for any requested PC; the target-phase writer histogram still had
+   `0x80094648` (`n=24`). Use one bounded oracle-only value-class table to
+   count every pre-step-latched target post-store value for EB8C, EBBC, and
+   94648, including sentinel and non-sentinel classes plus first/last
+   `(VI,address,value)` tuples. Select H-94648SentinelOnly when 94648 is
+   target-sentinel-only and EB8C/EBBC have no target samples;
+   H-94648TargetPublication when 94648 has a non-sentinel target value and
+   neither other PC does; H-OtherOrSharedConstruction when EB8C or EBBC has
+   a target value, with the complete table distinguishing one-PC housekeeping
+   from an overlapping sequence; and H-CoverageInvalid when controls fail or
+   target writer hits have no corresponding post-step samples. Do not
+   implement writeback, consumer, slot, gate, guard, or address remap
+   behavior.
 2. **M5 key-on tuple contract.** Requalify the C88 route with a
    phase-gated control-first stagger: launch C88=1 only after a C88=0 control
    reaches `512 @ 0x006AB400`, then compare retail fields only if both arms
@@ -728,7 +752,10 @@ target bucket but no target-phase writer rows, so it leaves the construction
 join unresolved. s2298's pre-step phase latch restores the target writer
 observation, but its bounded table is still filled by `0x7F7F7F7F` rows from
 `0x80094648`; EB8C and EBBC remain absent from the target-phase histogram.
-This is a contract discriminator, not permission to add a writeback or guard.
+s2299 filtered that sentinel before the row cap and still retained no target
+rows for any of the three PCs; its independent target-phase writer histogram
+again contained only `0x80094648` (`n=24`). This is a contract discriminator,
+not permission to add a writeback or guard.
 
 Do not flip the image default again, force C88, skip or allow
 `matchKeywordWithPriority`, add a wait/slot guard, or land a copyToRAM/CIMG

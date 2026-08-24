@@ -108144,3 +108144,50 @@ value.
 Filter `0x7F7F7F7F` before the per-PC requested-row cap, then rerun the same
 retail controls to expose any non-sentinel target tuples without changing
 runtime behavior.
+
+## Session 2299 (2026-08-24) — filtered target rows remained empty
+
+HYPOTHESIS-ID: m5-step3-retail-task-output-writer.
+
+The planned work unit was one oracle-only retail capture after the s2298
+pre-step phase-latched row table had filled on `0x7F7F7F7F` sentinels. Ground
+truth was checked first: s2298 had passed the whole-RDRAM threshold at 10,000,
+title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and a width-512 target
+bucket with 1,515 VI rows. The competing outcomes were a non-sentinel
+94648 publication, EB8C/EBBC housekeeping, shared construction, or an empty
+filtered table with no role conclusion.
+
+The oracle change moved the sentinel check ahead of the per-PC 16-row cap in
+`record_post_value_requested_row()`. The oracle rebuilt with
+`tools/oracle/build.sh`; the new driver passed `zsh -n`, retained all prior
+watches and eleven Start events, and launched no port arm. The 120-second run
+returned `oracle_rc=0` after 11,904,108 callbacks and 6,930 VI callbacks.
+
+Independent controls passed again: the whole-RDRAM watch reached 10,000,
+title and hangar origins fired, and the width-aware target bucket recorded
+942 VI rows. The target-phase writer histogram contained only
+`0x80094648` (`n=24`). The filtered requested-row table retained `0/16` rows
+for `0x8008EB8C`, `0x8008EBBC`, and `0x80094648`. The lifetime post-value
+sampler independently recorded 76 samples: 72 sentinel, one `0x120F0000`,
+and three `0x120E0000`; its writer-PC counts were 72 for 94648 and 2 each
+for EB8C and EBBC.
+
+This selects H-TargetRowsInsufficient at the measured capture scope. It
+rules out the sentinel-consuming 16-row cap as the sole explanation for the
+empty target table and confirms that no requested PC produced a retained
+non-sentinel target row in this run. It does not assign a semantic role to
+94648, EB8C, or EBBC, and it authorizes no writer, writeback, consumer, slot,
+gate, guard, or address-remap change. The next discriminator is a bounded
+phase-latched target post-step value-class table that retains sentinel and
+non-sentinel counts for all three PCs.
+
+ORIGIN: no mitigation-shaped change; this was an oracle-only measurement
+filter and did not skip, allow, restore, or rewrite a game value.
+
+### Next
+
+Add the phase-latched target post-step value-class table for EB8C, EBBC, and
+94648, then rerun the same eleven-Start retail controls once. Use its complete
+`(PC, phase, address, value class, first/last tuple)` table to distinguish a
+94648 sentinel-only writer from a target non-sentinel publication or a shared
+construction sequence. Do not change runtime behavior.
