@@ -1,64 +1,78 @@
-# NEXT work unit (s2309) — dynamic-ring zero-fill ground truth
+# NEXT work unit (s2310) — per-slot retail polarity
 
-HYPOTHESIS-ID: m5-dynamic-zero-fill-retail-provenance
+HYPOTHESIS-ID: m5-per-slot-retail-polarity
 
 ## Work unit
 
 Ask the retail oracle for ground truth first, then run one phase-gated
-same-run port/retail capture using the existing PCM writer provenance. Keep
-the whole-ring port table and discover the current nonzero image-stage
-destinations from the port log; do not assume `0x167650`/`0x167950` or any
-other fixed pair. Arm the oracle's whole PCM ring (`0x166450..0x169450`) as
-the phase writer/post-value watch so the retail result covers whichever slots
-the port selects. Keep the title/hangar gates, 45-second retention, positive
-controls, and SIGKILL cleanup. No runtime behavior or mitigation change.
+same-run port/retail capture with the existing writer hooks. Keep the
+whole-RDRAM control first, retain the whole-ring watch, and add all 16
+`0x300` PCM-slot watches as one batched oracle arm. Collect a phase writer
+histogram and final post-value snapshot for every slot. Discover the current
+nonzero port stage pair from the port log; do not assume the previous
+`0x168850`/`0x168B50` pair. Join the exact port stage/source/consumer/later
+zero row to the corresponding retail slot summary. No runtime behavior or
+mitigation change.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-StableImageDmaZeroFill: the later zero PCM rows are a normal repeated
-  image-DMA output for rotating ring slots. Retail's ring-wide phase writer
-  and post-value summaries show the same slot activity and zero/nonzero
-  polarity as the port's exact stage→PCM→zero sequence.
-- H-PortOnlyZeroFill: the port image arm emits the later zero rows, but retail
-  does not write the dynamically selected slots with the same zero polarity or
-  ordering. This points to a port-side contract divergence, not a generic
-  silence writer.
-- H-SlotRotation: the apparent overwrite is only a slot-selection artifact.
-  The dynamic port stage destination, PCM destination, and retail writer
-  bucket do not remain the same physical ring role across the joined rows.
-- H-CoverageInvalid: the whole-RDRAM control, title/hangar origins, ring-wide
-  writer control, or port title/hangar/retention gate fails.
+- H-RetailNonzeroSameSlot: retail writes the dynamically selected physical
+  slot with nonzero final data in the target phase. The port's later
+  image-DMA zero is a port-side output-contract divergence, not a harmless
+  ring-role rotation.
+- H-RetailZeroSameSlot: retail's corresponding slot is zero after its writer
+  sequence. The port zero-fill polarity is shared and remains a candidate
+  legitimate contract edge, despite the aggregate ring result.
+- H-SlotRoleTimeSkew: retail writes the physical slot, but its per-slot writer
+  sequence/VI and final value do not join the port's stage→PCM→zero sequence;
+  the whole-ring comparison was insufficient because the animated ring role
+  changed between observations.
+- H-CoverageInvalid: the whole-RDRAM control, title/hangar gates, ring-wide
+  watch, any per-slot writer control, or the port 45-second retention gate
+  fails.
 
-The discriminator is one complete table keyed by dynamically discovered
-destination, with port stage event/FNV/nz, first exact PCM source/consumer
-event/FNV/nz, first later zero PCM event, image-DMA writer sequence/class, and
-the retail ring-wide writer PC/count/post-value FNV/nz for the same physical
-slot. A positive control must pass in the same run before any null is read.
-The outcome must select one hypothesis at this capture scope; it must not
-authorize writeback, a writer guard, slot guard, consumer change, address
-remap, or a default change.
+The discriminator is one table keyed by dynamic physical destination:
+port stage event/FNV/nz, exact source and consumer event/FNV/nz, first later
+zero event and writer provenance, retail per-slot phase writer PC/count,
+post-value zero/nonzero counts, final snapshot FNV/nonzero, and the VI phase
+bucket. The same-run positive controls must pass before any null is read.
+Possible outcomes select one hypothesis at this capture scope; none
+authorizes writeback, consumer, slot, gate, guard, address-remap, or default
+changes.
+
+## Ground-truth preflight
+
+Confirm the prior whole-ring control and the physical slot geometry before
+arming the expanded watch set:
+
+`rg -n 'positive-control threshold reached|watch write \[0x00166450|post-value snapshot watch=1|writer-pc-phase origin=0x006ab400 width=512 watch=1|writer-pc pc=0x800078ec' scratch/agent/s2309_m5_dynamic_zero_fill/oracle.log | tail -20`
+
+The new oracle argument list must put these watches in this order:
+
+`--watch-write 0x0:0x800000`
+
+`--watch-write 0x166450:0x169450`
+
+`--watch-write 0x166450:0x166750 --watch-write 0x166750:0x166A50 --watch-write 0x166A50:0x166D50 --watch-write 0x166D50:0x167050 --watch-write 0x167050:0x167350 --watch-write 0x167350:0x167650 --watch-write 0x167650:0x167950 --watch-write 0x167950:0x167C50 --watch-write 0x167C50:0x167F50 --watch-write 0x167F50:0x168250 --watch-write 0x168250:0x168550 --watch-write 0x168550:0x168850 --watch-write 0x168850:0x168B50 --watch-write 0x168B50:0x168E50 --watch-write 0x168E50:0x169150 --watch-write 0x169150:0x169450`
+
+Use `--pc-hist-phase 0x006AB400:512`, `--pc-hist-watch 1` through
+`--pc-hist-watch 17`, and `--post-value-watch 1` through
+`--post-value-watch 17`, plus the existing `--watch-pc 0x800078EC`,
+`--pc-phase-log-width 0x006AB400:512`, `--vi-trace`, and eleven-Start press
+schedule. Require whole-RDRAM `10,000`, title/hangar origins, ring writes,
+at least one per-slot writer histogram, and a nonzero final snapshot before
+interpreting a slot null.
 
 ## Exact commands
 
-1. Ground-truth preflight and ring-wide recipe check:
+1. Create `scratch/agent/run_s2310_m5_per_slot_retail_polarity.sh` with the
+   batched oracle arguments and the qualified port environment from s2309.
+2. Syntax-check and run one capture:
 
-   `grep -a -E 'positive-control threshold|watch write \[0x00166000|watch write \[0x00167650|watch write \[0x00167950|origin=0x00790400 width=1024|origin=0x006ab400 width=512|writer-pc-phase origin=0x006ab400 width=512' scratch/agent/s2308_m5_pcm_writer_provenance/oracle.log | tail -100`
+   `zsh -n scratch/agent/run_s2310_m5_per_slot_retail_polarity.sh`
 
-   The new oracle recipe must include `--watch-write 0x0:0x800000`,
-   `--watch-write 0x166450:0x169450`, `--pc-hist-watch 1`,
-   `--pc-hist-phase 0x006AB400:512`, and `--post-value-watch 1`, with the
-   ring watch after the whole-RDRAM control. Require whole-RDRAM `10,000`,
-   both VI origins, and a nonzero ring-wide writer/post-value control before
-   adding or interpreting any port row.
+   `zsh scratch/agent/run_s2310_m5_per_slot_retail_polarity.sh`
 
-2. Reuse the qualified build and existing writer hooks; if the driver needs
-   changes, create `scratch/agent/run_s2309_m5_dynamic_zero_fill.sh`, then:
-
-   `zsh -n scratch/agent/run_s2309_m5_dynamic_zero_fill.sh`
-
-   `zsh scratch/agent/run_s2309_m5_dynamic_zero_fill.sh`
-
-3. Report the dynamic-slot table, the retail ring-wide writer/post-value
-   summaries, all positive controls, and the selected hypothesis. Do not
-   treat a fixed-slot null as evidence when the port's nonzero stage pair has
-   rotated.
+3. Report the complete dynamic-slot table, all positive controls, and the
+   selected hypothesis. If the port's nonzero pair rotates again, use its
+   actual physical destinations from that run; do not read a fixed-slot null.

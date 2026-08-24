@@ -108592,3 +108592,54 @@ postprocessing.
 
 Run the M5 dynamic-ring zero-fill ground-truth work unit from
 `scratch/agent/NEXT.md`.
+
+## Session 2309 (2026-08-24) — retail whole-ring polarity split the zero-fill hypotheses
+
+HYPOTHESIS-ID: m5-dynamic-zero-fill-retail-provenance.
+
+The planned work unit was one ground-truth-first, phase-gated M5 capture
+using the existing Factor 5 image arm, retail oracle, whole-RDRAM positive
+control, whole PCM-ring watch, and 45-second post-hangar retention. The
+retail-only preflight passed the whole-RDRAM callback threshold at `10,000`,
+title and hangar origins, a ring writer histogram, and a nonzero final ring
+snapshot. No runtime code or mitigation was built or changed; the new
+driver was syntax-checked and used the existing writer hooks.
+
+The paired run passed `oracle_controls=1`, `retail_writer=1`,
+`ring_watch=1`, `ring_snapshot=1`, `port_title=1`, `port_hangar=1`, and
+`retained=1`; the expected port SIGKILL returned `port_rc=137` and the
+oracle exited cleanly. The port's current phase-10 nonzero stage rows were
+`0x168850`, length `0x300`, FNV `60F910DE`, `nz=621`, and `0x168B50`,
+length `0x300`, FNV `7B70923A`, `nz=639`. The first had exact source and
+consumer events `10804/10805`, then same-destination zero rows beginning at
+event `10881`. Those rows carried `FNV=F59C39C5`, `nz=0`, and identified the
+last writer as image-DMA with `writer_pc=0`, callsite `0x8008EE84`, and
+sequence `1196`. The second row remained stage-only (`0/0` exact source and
+consumer joins).
+
+The independent retail oracle's phase-10 whole-ring watch covered
+`0x166450..0x169450`, recorded `12288` writes, and attributed them to
+`0x800078EC`. Its final ring snapshot was `12288` bytes with `12026`
+nonzero bytes (`FNV=1F21AF35`). The observed target slot is `0x300=768`
+bytes, so all bytes outside that slot can contribute at most `11520`
+nonzero bytes; therefore at least `506` bytes of the exact `0x168850` slot
+were nonzero. The port-side row and retail whole-ring snapshot are two
+independent lines of evidence. This selects `H-PortOnlyZeroFill` at the
+observed capture scope and refutes `H-SlotRotation` for that physical pair.
+It does not establish game intent for the zero writer, explain the separate
+stage-only row, or authorize writeback, consumer, slot, gate, guard,
+address-remap, or default changes.
+
+The prior s2308 interpretation that the port zero-fill observation could be
+retail-normal is superseded at this measured polarity scope; s2308 did not
+have a retail watch covering the dynamically selected slot. The next work
+unit expands the oracle to all 16 per-slot post-value summaries so the exact
+slot polarity and writer sequence can be joined directly.
+
+ORIGIN: no mitigation-shaped change; this iteration added only the
+phase-scoped capture driver and postprocessing for independent writer/value
+ground truth.
+
+### Next
+
+Run the per-slot retail polarity work unit from `scratch/agent/NEXT.md`.
