@@ -361,10 +361,8 @@ static thread_local uint32_t s_pending_task_ucode_data_size = 0;
 
 // Rogue Squadron uses Factor5's MusyX audio ucode, NOT stock aspMain. Running
 // aspMain on MusyX-formatted task data produces garbage or hangs the audio
-// thread (no shared format). Until MusyX has a real recomp pass (see
-// project_audio_musyx.md), stub all audio tasks: return Broke immediately so
-// the game thinks the task completed, sp_complete() fires, and play continues.
-// Cost: no audio. Trade-off: keeps the rest of the game responsive.
+// thread (no shared format). The Factor 5 image is the default arm; the stub
+// remains available through ROGUESQ_AUDIO_UCODE=0.
 static RspExitReason musyx_stub(uint8_t* /*rdram*/, uint32_t /*ucode_addr*/) {
     return RspExitReason::Broke;
 }
@@ -1708,16 +1706,13 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
         return &factor5_gfx_runner;
     case M_AUDTASK:
         g_rs64_audio_break_pc = 0;
-        // Default remains musyx_stub. s2162 closed the wait SIGSEGV
-        // (S32 MEM_BU). s2163 default-on retry: unset matched =1
-        // (real_ucode=1, wait return) but 0/3 unset and 0/2 =1 reached
-        // title (cinematic SIGBUS or 640 stall); same-build =0 retry
-        // reached title+hangar. Polarity reverted.
+        // The image arm is default; set ROGUESQ_AUDIO_UCODE=0 for the stub
+        // control used by the incremental audio qualification steps.
         {
             static int s_use_real_audio_ucode = -1;
             if (s_use_real_audio_ucode < 0) {
                 const char* e = getenv("ROGUESQ_AUDIO_UCODE");
-                s_use_real_audio_ucode = (e && e[0] && e[0] != '0') ? 1 : 0;
+                s_use_real_audio_ucode = !(e && e[0] == '0');
             }
             // s300: ground-truth counter for whether M_AUDTASK is ever
             // dispatched at all (step 1's source trace found the gate byte

@@ -5,17 +5,17 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2287 (2026-08-24); behavioral and source evidence is
-current through s2287. This iteration ran the prescribed retail-oracle
-route-boundary watch. Retail passed the whole-RDRAM threshold at `10,000`
-callbacks and reached title `1024 @ 0x00790400` and hangar
-`512 @ 0x006AB400`. Across the full 180-second run it executed neither
-watched guest PC `0x800547BC` nor `0x80007904`, including the initial
-`640 @ 0x00696100` phase; consequently there were no `exec-prev` rows. The
-oracle wrapper returned `139` during its timed teardown, after both controls
-had passed. Together with s2286's port crash at `0x800547BC`, this selects
-H-PortOnlyBadPath at the tested recipe scope. No audio null, default, guard,
-or writer conclusion follows.
+Maintained in Session 2288 (2026-08-24); behavioral and source evidence is
+current through s2288. This iteration made the Factor 5 audio image the
+default `M_AUDTASK` arm while retaining `ROGUESQ_AUDIO_UCODE=0` as the stub
+escape, then ran the prescribed retail-gated Step 2 driver. Retail passed
+the whole-RDRAM threshold at `10,000` callbacks and reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The stub control produced
+48 audio-task dispatches but exited before either title or hangar, with one
+missing-function marker and a crash at `slotDispatcherIter+3508` / guest PC
+`0x80007904`; the default arm was correctly not launched. This selects
+H-RouteInvalid at the tested recipe scope. No default-image, audio-contract,
+writer, or mitigation conclusion follows.
 
 The s2287 oracle used the corrected eleven-Start route and `--vi-trace`; its
 positive control was reached before the whole-RDRAM watch was removed, and
@@ -35,18 +35,22 @@ equivalent path at another guest address.
 - Product multi-header freelist restore is on. Garbage-CIMG and wrap-drop
   mitigations are off. Any future mitigation must name the writer, state
   whether the value is legitimate, and include an `ORIGIN:` line.
-- M5 audio remains defaulted to the silent `M_AUDTASK` `Broke` stub. The
-  Factor 5 image arm is opt-in through `ROGUESQ_AUDIO_UCODE=1`; C88=`1` is
-  also a diagnostic behavior arm. Stock `aspMain` is not the game's MusyX /
-  Factor 5 contract, and MORT is a separate CPU speech asset.
+- M5 audio now defaults to the Factor 5 image arm; `ROGUESQ_AUDIO_UCODE=0`
+  selects the silent `M_AUDTASK` `Broke` stub for controls. The default flip
+  is not qualified: s2288's stub-first gate failed before title/hangar, so the
+  image arm was not launched. C88=`1` remains a diagnostic behavior arm.
+  Stock `aspMain` is not the game's MusyX / Factor 5 contract, and MORT is a
+  separate CPU speech asset.
 - s2287's independent retail route watch passed the whole-RDRAM, title, and
   hangar controls but recorded no execution of guest PCs `0x800547BC` or
-  `0x80007904` in any phase. The port crash path is therefore port-only at
-  the tested recipe scope; the next M5 unit is the planned default-image
-  qualification, not another exact-PC oracle watch.
+  `0x80007904` in any phase. s2288's stub control then reproduced the latter
+  port-side crash before the target route, so the Step 2 pair is route-invalid
+  and needs a new route discriminator before the default arm can be tested.
 - `docs/M5-AUDIO-PLAN.md` inventories the active audio stubs/traps/gates and
   defines the phase-keyed task→DMA→service→slot→voice→PCM discriminator and
-  rollback conditions. The plan refresh in s2231 changed no runtime default.
+  rollback conditions. The plan refresh in s2231 defined the incremental
+  contract; s2288 changed the runtime selection but did not qualify the
+  promotion.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. Its host canary is probe data only; it does not gate
   completion, writeback, or DMA.
@@ -55,7 +59,8 @@ equivalent path at another guest address.
   phase-10 matches in a phase-gated staggered pair. The silent arm qualified
   through title and hangar in s2272; its phase-8/10/12 source and consumer
   rows were present but all zero. The measured output contract is complete
-  for the observed nonzero rows; the image arm remains opt-in.
+  for the observed nonzero rows; the image arm's default promotion remains
+  unqualified because s2288 did not enter the target window.
 - The port-side `field348` source spans are cleared by the legitimate
   `rs_memset` setup call at static callsite `0x8008F2CC`; retail independently
   writes both corresponding spans with nonzero values. The missing nonzero
@@ -144,6 +149,16 @@ equivalent path at another guest address.
 
 ## Latest evidence
 
+- s2288's same-build Step 2 driver passed the independent retail controls:
+  whole-RDRAM threshold `10,000`, title `1024 @ 0x00790400`, and hangar
+  `512 @ 0x006AB400`. The explicit stub arm emitted 48 `[audtask-dispatch]`
+  rows, one `[missing-func]`, and 36 crash-marker lines, terminating at
+  `slotDispatcherIter+3508` / guest PC `0x80007904` before any title or
+  hangar phase. It emitted zero task ABI, DMA, image-stage, audio-return,
+  service/gate/slot/voice, or PCM source/consumer rows. The driver therefore
+  withheld the default arm. This selects H-RouteInvalid for the recipe and
+  leaves H-DefaultSafe, H-ImageContractGap, and H-DefaultRouteRegression
+  untested; no default or mitigation conclusion follows.
 - s2287's retail-only route-boundary run passed the whole-RDRAM positive
   threshold at 10,000 callbacks, reached title `1024 @ 0x00790400` at about
   17.3s, and reached hangar `512 @ 0x006AB400` at about 38.4s. The full
@@ -394,19 +409,15 @@ equivalent path at another guest address.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 Step 2 default audio arm qualification.** The Step 1 image arm has
-   qualified target-stage/task/DMA/PCM rows in s2268 and s2272, while the
-   silent arm remained independently route-qualified in s2272. Promote
-   `factor5_ucode_b` to the default `M_AUDTASK` arm in one build, retain an
-   explicit `ROGUESQ_AUDIO_UCODE=0` stub escape, and run the stub control first
-   before launching the default-image arm. The discriminator is one
-   phase-keyed table containing dispatch, task fields, DMEM/DMA, image exit,
-   SP completion, service, status/slot, voice/reap, PCM source/consumer, and
-   title/hangar route rows for both arms. Require whole-RDRAM retail control
-   plus a stub-arm title/hangar gate before interpreting the default arm.
-   Roll back the default flip if the image arm fails its task contract,
-   loses the qualified route, or adds a new task/DMEM failure; do not add a
-   guard or writeback workaround.
+1. **M5 Step 2 route requalification before default-arm comparison.** The
+   default selection and explicit `ROGUESQ_AUDIO_UCODE=0` escape are now in
+   one built binary, but s2288's independent retail controls passed while the
+   stub-first control crashed at `0x80007904` before title/hangar. Design one
+   new route discriminator before repeating the pair; it must explain or
+   restore the stub gate, not add a guard, skip, writeback, C88 override, or
+   route workaround. Only after the stub reaches title and hangar may the
+   default arm be launched and the complete phase-keyed task/DMA/service/
+   slot/voice/PCM table be interpreted.
 2. **M5 key-on tuple contract.** Requalify the C88 route with a
    phase-gated control-first stagger: launch C88=1 only after a C88=0 control
    reaches `512 @ 0x006AB400`, then compare retail fields only if both arms
@@ -434,8 +445,9 @@ Closed investigations are not active work items. The sequence is monotonic.
 
 The s2287 retail route-boundary discriminator is complete. It passed its
 independent controls and recorded no exact hit for either port crash PC, so
-the port-only result is scoped to this driven recipe. It does not authorize a
-route guard, an audio null interpretation, or a writer change.
+the port-only result is scoped to that driven recipe. s2288's stub-first Step 2
+attempt remains route-invalid and does not authorize a route guard, an audio
+null interpretation, a default promotion, or a writer change.
 
 Generated-symbol renaming is closed at the useful boundary. The remaining
 placeholder holds are `func_8000040C`, `func_800927B0`, `func_80092A54`,
@@ -469,10 +481,10 @@ nonzero tuples, with source-before-consumer ordering and no stage-only rows.
 The silent control's independently qualified PCM boundary remains all-zero.
 Retail writes the corresponding field spans and a separate task/output span.
 This closes output-contract completeness at the measured scope without
-promoting the image arm or authorizing a writeback, consumer, slot, gate, or
-guard change.
+authorizing a writeback, consumer, slot, gate, or guard change. The s2288
+default-selection flip is not itself evidence that the image arm is safe.
 
-Do not re-flip the image default, force C88, skip or allow
+Do not flip the image default again, force C88, skip or allow
 `matchKeywordWithPriority`, add a wait/slot guard, or land a copyToRAM/CIMG
 writeback guard. Do not treat last-guest-PC `0x8000834c` as the abort site.
 

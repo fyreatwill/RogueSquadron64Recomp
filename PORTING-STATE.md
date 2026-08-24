@@ -107659,3 +107659,33 @@ control first and the default-image arm second from one build. Gate all
 interpretation on independent retail controls and the stub arm reaching the
 title and hangar phases; compare the complete phase-keyed task/DMA/service/
 slot/voice/PCM row for both arms.
+
+## Session 2288 (2026-08-24) — M5 Step 2 stub gate failed before default comparison
+
+HYPOTHESIS-ID: m5-step2-default-audio-arm.
+
+The prescribed work unit made `factor5_ucode_b` the default `M_AUDTASK` arm,
+retained `ROGUESQ_AUDIO_UCODE=0` as the explicit stub escape, built one
+executable, and ran the stub-first/default-second driver. The independent
+retail oracle passed the whole-RDRAM positive control at 10,000 callbacks and
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` before the
+port gate was evaluated.
+
+The stub arm supplied the branch positive control with 48
+`[audtask-dispatch]` rows, but it produced no title or hangar phase. It had
+zero task ABI, DMA, image-stage, audio-return, service/gate/slot/voice, or PCM
+source/consumer rows, one `[missing-func]`, and a crash at
+`slotDispatcherIter+3508` / guest PC `0x80007904` (`[CRASH]` marker count 36,
+`[ABORT]` count 0). The driver withheld the default arm as required. This
+selects H-RouteInvalid at this recipe scope; H-DefaultSafe,
+H-ImageContractGap, and H-DefaultRouteRegression were not tested. The run
+does not identify an audio writer, image contract gap, or mitigation.
+
+ORIGIN: no mitigation-shaped change; the source change only flips the
+M_AUDTASK selection polarity and preserves the explicit stub escape.
+
+### Next
+
+Design a new route discriminator for the s2288 stub-first failure before
+repeating the default comparison. The current default flip is unqualified;
+do not add a guard, skip, writeback, C88 override, or route workaround.
