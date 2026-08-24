@@ -5,20 +5,31 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2284 (2026-08-24); behavioral and source evidence is
-current through s2284. This iteration ran the corrected same-build,
-phase-gated two-wave A1 VI matrix with one retail oracle. Retail passed its
-whole-RDRAM, title, and hangar controls. Both wave-1 arms and both wave-2 arms
-passed both runtime positive controls but crashed at guest PC `0x80001F88` in
-the initial 640 phase before either target origin; the two-wave result selects
-H-RouteIntrinsic at the tested scope and no VI publisher or default changed.
+Maintained in Session 2285 (2026-08-24); behavioral and source evidence is
+current through s2285. This iteration ran the corrected same-build,
+phase-gated M5 Step 1 pair with one retail oracle. Retail passed its
+whole-RDRAM, title, and hangar controls. The silent port arm reached title,
+then crashed on the off-target return to `640 @ 0x00696100` at
+`slotDispatcherIter+3508` / guest PC `0x80007904` before hangar, so the image
+arm was not launched. This selects H-RouteInvalid for the pair; no audio
+default changed.
+
+The s2285 pair used one gated retail oracle and the corrected
+eleven-Start route (`ROGUESQ_LLE_FORCE=1` plus the qualified LLE settings).
+Retail passed the whole-RDRAM threshold at `10,000` callbacks and reached
+title and hangar. The silent port arm reached title, emitted task/DMEM/DMA,
+SP/service, gate, and PCM controls, then crashed on the off-target return to
+`640 @ 0x00696100` at `slotDispatcherIter+3508` / guest PC `0x80007904`.
+It never reached hangar, so the image arm was not launched. This selects
+H-RouteInvalid for the pair; no audio-contract null or default change follows.
 
 ## Current state
 
 - Overlay dispatch is fixed enough for mission entry and post-sec2 outdoor
   presentation. The original boot/menu overlay explanation is closed.
 - The qualified route reaches title `1024 @ 0x00790400` and hangar
-  `512 @ 0x006AB400` with `ROGUESQ_SPIN_YIELD=1`,
+  `512 @ 0x006AB400` with `ROGUESQ_LLE_FORCE=1`,
+  `ROGUESQ_SPIN_YIELD=1`,
   `ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1`. Spin yield is
   environment-gated and default-off.
 - Product multi-header freelist restore is on. Garbage-CIMG and wrap-drop
@@ -140,6 +151,14 @@ H-RouteIntrinsic at the tested scope and no VI publisher or default changed.
   controls; the gated rerun is the only result used here. This selects
   H-RouteIntrinsic for the two-wave recipe and supplies no VI publisher
   verdict.
+- s2285's gated M5 Step 1 driver passed the independent retail whole-RDRAM,
+  title, and hangar controls. The corrected silent port arm reached title
+  `1024 @ 0x00790400`, with `64` dispatch rows, `1,020` task ABI and DMA rows,
+  `262` audio-return rows, `512` gate rows, and `52/52` PCM source/consumer
+  rows, then crashed in the off-target `640 @ 0x00696100` return at
+  `slotDispatcherIter+3508` / guest PC `0x80007904`. It had no hangar phase,
+  so the image arm was correctly withheld. This is H-RouteInvalid and does
+  not interpret any downstream audio null or promote the image arm.
 - s2283's corrected same-build four-arm A1 matrix ran one independent retail
   oracle plus control, alternate-field, current-reg-screen, and retrace-parity
   port arms. Retail passed the whole-RDRAM positive control with `10,000`
@@ -377,14 +396,19 @@ Closed investigations are not active work items. The sequence is monotonic.
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
 
-6. **M5 Step 1 full audio-contract row.** With A1 route work parked, run one
-   new same-build silent/image pair using the established route and the full
-   plan row: task dispatch/fields/source, DMEM/DMA, image exit/SP completion,
-   service, slot/status/reap, MORT class, PCM source/consumer, and title/hangar
-   phases. Gate on an independent retail whole-RDRAM/title/hangar control and
-   both port route controls. A route-invalid result is not an audio null; a
-   qualified image-only downstream edge selects the missing contract boundary
-   without flipping the image default.
+6. **M5 Step 1 full audio-contract row.** s2285's oracle-gated, corrected
+   route still crashed before hangar after positive pre-target task/service/
+   PCM controls, so the pair is H-RouteInvalid and the image arm was not
+   launched. Run one new same-build trace-light route discriminator before
+   interpreting the full plan row: keep task/DMEM/DMA, audio-return/SP,
+   gate, slot-dispatch/link, voice/MORT, PCM, B40, route-state, and phase
+   diagnostics, but remove the high-volume `ROGUESQ_LOG_VI_CALLERS` arm that
+   was present in s2285. Gate on the independent retail whole-RDRAM/title/
+   hangar controls and launch image only after silent reaches
+   `512 @ 0x006AB400`. A trace-light route that still fails at the same
+   off-target 640 crash selects H-RouteIntrinsic; a route that reaches hangar
+   permits the paired audio-contract comparison. No audio null is valid before
+   both target phases, and no default or guard change follows either result.
 
 Generated-symbol renaming is closed at the useful boundary. The remaining
 placeholder holds are `func_8000040C`, `func_800927B0`, `func_80092A54`,

@@ -107547,3 +107547,46 @@ Run the M5 Step 1 full audio-contract row in `scratch/agent/NEXT.md` using a
 new same-build silent/image pair and the established route. A1 remains parked
 until a new route discriminator restores target-origin coverage.
 `HYPOTHESIS-ID: m5-step1-audio-contract`.
+
+## Session 2285 (2026-08-24) — M5 Step 1 pair remained route-invalid before hangar
+
+HYPOTHESIS-ID: m5-step1-audio-contract.
+
+The planned M5 Step 1 same-build silent/image contract pair was run with one
+independent retail oracle and the phase-gated silent-first/image-after-hangar
+gate. The first invocation of the new driver omitted `ROGUESQ_LLE_FORCE=1`;
+source inspection of `send_dl` showed that this setting is required for the
+pre-hangar attribution LLE path, so that invocation was SIGKILLed and not used
+as evidence. The driver was corrected and rerun with `ROGUESQ_LLE_FORCE=1`,
+`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_M5_C88_VALUE=0`, and the eleven-Start schedule.
+
+The gated retail oracle passed the whole-RDRAM positive threshold at 10,000
+callbacks and reached title `0x00790400`/1024 and hangar `0x006AB400`/512.
+The silent port arm reached title `0x00790400`/1024 and supplied the same-run
+positive diagnostic rows: 64 `[audtask-dispatch]`, 1,020
+`[audtask-abi]`, 1,020 `[audtask-dma-row]`, 262 `[audio-return]`, 786 each
+`[audio-route]` and `[audio-sp-route]`, 512 `[m5-gate]`, and 52 each
+`[pcm-boundary-source]` and `[pcm-boundary-consumer]`. It then returned to the
+off-target `640 @ 0x00696100` phase and crashed with `[CRASH]` at
+`slotDispatcherIter+3508`, guest PC `0x80007904`, before
+`512 @ 0x006AB400`. The route had 11 B40 and 20 route-state rows, but no
+hangar route control. The pair gate therefore withheld the image arm.
+
+This selects H-RouteInvalid for the tested recipe. The positive dispatch,
+task, service, gate, and PCM counters prove that those instruments fired in
+the pre-target title window, but the missing hangar is not an audio null.
+H-AudioDegeneracy, H-ContractGap, and H-MixedPipelines remain unevaluated;
+there was no qualified image arm or common target-phase comparison. No
+runtime, generated code, default, guard, or writer behavior changed. The
+observation-only driver is `scratch/agent/run_s2285_m5_step1_contract_pair.sh`.
+
+ORIGIN: no mitigation-shaped change; the only source edit was an observation
+driver, and the LLE-force correction was an existing route environment arm.
+
+### Next
+
+Run the trace-light M5 Step 1 route discriminator in `scratch/agent/NEXT.md`.
+Remove `ROGUESQ_LOG_VI_CALLERS=1` while retaining bounded slot-dispatch/link,
+voice/MORT, task/DMA/SP, PCM, gate, B40, route-state, and phase diagnostics.
+`HYPOTHESIS-ID: m5-step1-route-requalification`.

@@ -1,62 +1,66 @@
-# NEXT work unit (s2285) — M5 Step 1 full audio-contract pair
+# NEXT work unit (s2286) — M5 Step 1 trace-light route discriminator
 
-HYPOTHESIS-ID: m5-step1-audio-contract
+HYPOTHESIS-ID: m5-step1-route-requalification
 
 ## Work unit
 
-Run one same-build, phase-gated silent/image validation pair for the complete
-M5 Step 1 row. Keep the runtime default unchanged: the silent arm uses
-`ROGUESQ_AUDIO_UCODE=0`, and the Factor 5 image arm uses
-`ROGUESQ_AUDIO_UCODE=1`. Use the qualified route settings
-`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`,
-`ROGUESQ_LLE_SOLO=1`, `ROGUESQ_M5_C88_VALUE=0`, and the eleven-Start schedule.
-Start the silent arm first and launch the image arm only after the silent arm
-reaches `512 @ 0x006AB400`; this is the route-qualified stagger, not a live
-overlap test. Keep one independently gated retail oracle for the entire pair.
+Run one same-build, phase-gated silent/image pair using the corrected
+eleven-Start route: `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`,
+`ROGUESQ_LLE_SOLO=1`, `ROGUESQ_SPIN_YIELD=1`, and
+`ROGUESQ_M5_C88_VALUE=0`. Keep the independent retail oracle and launch the
+image arm only after the silent arm reaches `512 @ 0x006AB400`.
 
-The row must contain, per arm and phase: `M_AUDTASK` dispatch and exit, task
-fields/source hash, DMEM change and DMA/readback ranges, image completion and
-SP completion, service entry/return, status `01/02/00` and status-`03` reaping,
-voice-array/reap activity, MORT descriptor class, PCM source/consumer joins,
-and route phase. Do not flip a default or change a guard from this run.
+Use the existing task/DMEM/DMA, audio-return/SP, gate, bounded
+slot-dispatch/link, voice/MORT, PCM, B40, route-state, and phase diagnostics,
+but remove `ROGUESQ_LOG_VI_CALLERS=1` from the s2285 recipe. That is the route
+discriminator: s2285 reached title but crashed in the off-target 640 return
+with the high-volume VI-caller arm enabled. Do not change runtime code,
+defaults, guards, or audio dispatch.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-AudioDegeneracy: both arms qualify the route, and the real image task
-  produces a new downstream service, slot, voice/reap, or PCM edge that the
-  silent stub lacks. This selects an audio-disabled degenerate-path effect.
-- H-ContractGap: the image arm shows real DMEM/DMA work, completion, and SP
-  delivery, but a task/output/service/slot/PCM join remains absent or mismatched.
-  This selects the missing contract edge and keeps the image opt-in.
-- H-MixedPipelines: RSP image rows close while MORT descriptor/voice/PCM rows
-  remain an independent CPU-side pipeline, so no global audio-default change
-  follows from the RSP result.
-- H-RouteInvalid: the oracle, port controls, or either target phase is absent;
-  all audio nulls from that arm are unevaluable and the pair must be rerun with
-  a route fix rather than interpreted.
+- H-LoggerPerturbation: removing the high-volume VI-caller trace restores the
+  qualified route. The silent arm reaches hangar and the gated image arm also
+  reaches hangar, allowing the complete Step 1 row to be compared.
+- H-RouteIntrinsic: the trace-light arm still reaches title, returns to
+  `640 @ 0x00696100`, and crashes at `slotDispatcherIter+3508` / guest PC
+  `0x80007904` before hangar. This selects route failure at this scope and
+  leaves all downstream audio nulls unevaluable.
+- H-AudioContract: both arms reach the target phase and the image arm adds a
+  task/output/service/slot/voice/MORT/PCM edge while the silent arm remains
+  the control. This selects the missing audio contract boundary without
+  promoting the image arm.
+- H-RouteInvalid: the oracle positive control, port route controls, or either
+  target phase is absent. Do not interpret any downstream null from that arm.
 
-The single discriminating table is keyed by `(arm, phase, task_seq)` plus task
-field tuple/hash, DMEM hash/nonzero count, DMA ranges, image exit, SP-complete
-edge, service return, slot/status transition, voice/reap event, MORT class, and
-PCM source/consumer tuple. A result selects among the hypotheses only when the
-retail whole-RDRAM control is at least `10,000` writes, the oracle reaches both
-title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and both port arms pass
-their route controls and reach the target phase. A `Broke` return or a branch
-counter by itself is not a positive control.
+The discriminating measurement is one phase-keyed table per arm containing
+task dispatch/fields/source, DMEM change and DMA ranges, image exit and SP
+completion, service entry/return, gate, slot/status/reap, bounded slot/link
+rows, voice/MORT rows, PCM source/consumer joins, and title/hangar route. A
+result is interpretable only if the oracle passes the whole-RDRAM threshold at
+10,000 writes and reaches both title and hangar, both port arms pass B40 and
+route-state controls, and both reach `512 @ 0x006AB400`. Branch counters are
+not positive controls.
 
 ## Exact commands
 
-1. Create `scratch/agent/run_s2285_m5_step1_contract_pair.sh` with
-   `apply_patch`. Base its process/watchdog and silent-first/image-after-hangar
-   gate on the corrected s2272 driver. Gate the oracle before launching the
-   port arm, as in s2284. Arm the existing task, DMA, image-stage, service,
-   slot/voice, MORT, PCM-boundary, B40, route-state, and phase diagnostics in
-   one build; do not add a one-off generated-file probe.
+1. Create `scratch/agent/run_s2286_m5_step1_trace_light_pair.sh` with
+   `apply_patch`, based on the corrected s2285 driver. Keep its oracle gate,
+   silent-first hangar gate, SIGKILL watchdogs, and bounded summary. In the
+   common port environment retain:
+   `ROGUESQ_LOG_M5_TASK_CONTRACT=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`,
+   `ROGUESQ_LOG_PCM_BOUNDARY=1`, `ROGUESQ_LOG_M5_GATE_CONTRACT=1`,
+   `ROGUESQ_LOG_SLOT_DISPATCH=1`, `ROGUESQ_LOG_SLOT_LINK=1`,
+   `ROGUESQ_LOG_FILTER_VOICE_AUDIT=1`, `ROGUESQ_LOG_M5_B40_ROUTE=1`,
+   `ROGUESQ_LOG_M5_ROUTE_STATE=1`, `ROGUESQ_LOG_PHASE=1`,
+   `PROBE_PHASE_WIDTH=1024`, and `PROBE_KEYS_FROM_PHASE=1`; do not set
+   `ROGUESQ_LOG_VI_CALLERS`.
 2. Check syntax:
-   `zsh -n scratch/agent/run_s2285_m5_step1_contract_pair.sh`
+   `zsh -n scratch/agent/run_s2286_m5_step1_trace_light_pair.sh`
 3. Run from the repository root:
-   `zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2285_m5_step1_contract_pair`
-4. Summarize with bounded `grep`/`tail` only: oracle positive controls, both
-   port route controls, title/hangar gates, task/DMA/SP/service/slot/voice/MORT/
-   PCM rows by phase, and terminal crash/timeout. Do not interpret a missing
-   downstream row from an arm that lacks its route gate.
+   `zsh scratch/agent/run_s2286_m5_step1_trace_light_pair.sh s2286_m5_step1_trace_light_pair`
+4. Summarize with bounded `grep`/`tail` only: oracle whole-RDRAM/title/hangar
+   controls, both port route controls, silent/image title/hangar gates, the
+   per-phase task/DMA/SP/service/slot/voice/MORT/PCM rows, and terminal crash
+   or timeout. If the silent hangar gate is absent, do not launch or interpret
+   the image arm.
