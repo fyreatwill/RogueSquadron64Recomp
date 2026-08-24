@@ -107779,3 +107779,61 @@ whole-RDRAM, title, and hangar controls before interpreting a writer or
 consumer null. Compare writer PC, destination span, byte count, payload
 polarity, and completion ordering; do not land a writeback or guard from a
 mismatch.
+
+## Session 2291 (2026-08-24) — M5 Step 3 selected retail/port writer-class difference
+
+HYPOTHESIS-ID: m5-step3-retail-port-writer-join.
+
+The planned work unit was one retail-oracle plus unchanged default-port writer
+join. The unchanged tree built successfully with
+`cmake --build build --config Debug --target RogueSquadron64Recomp`, and the
+driver passed `zsh -n`. The first capture was discarded because the driver
+used an unescaped `^[phase]` gate regex and falsely reported missing port
+controls even though the log contained title and hangar. The corrected
+capture reached both controls, but was measurement-incomplete because it
+SIGKILLed the oracle before its shutdown writer summaries. The final fixed
+capture retained the oracle to its natural 120-second completion and forced
+post-target samples for every top candidate writer PC. Only the final fixed
+capture is used below.
+
+The independent retail oracle passed the whole-RDRAM positive control at
+10,000 callbacks, title `1024 @ 0x00790400`, and hangar
+`512 @ 0x006AB400`. The port default image arm received explicit process-start
+keycode-36 Start delivery and independently reached title and hangar. The
+oracle recorded `882,417` writes in candidate span
+`0x166000:0x16A000`, `293` post-target candidate samples, and `76`
+post-target writes in the independent task/output watch
+`0x141AD0:0x141AF0`, so neither the candidate watch nor its output control was
+silent.
+
+The port's first qualified nonzero phase-10 row was
+`dest=0x166450 len=0x300 FNV=0x60F910DE nz=621`; the second was
+`dest=0x166750 len=0x300 FNV=0x7B70923A nz=639`. The latter had exact source
+and consumer matches, `source_before_consumer=1`, completion before both, and
+`ordering_violation=0`. In the independent retail rows, guest PC
+`0x80029E8C` published pointer `0x80166750` into the metadata table and
+`0x80029E98` published length `0x300`; `0x80029EA0` also published the same
+destination-pointer class. Thus one retail metadata tuple agrees on the
+physical destination and byte count, but the retail writer is CPU metadata
+construction while the port payload is produced by Factor 5 image DMA and
+joined to its PCM source/consumer path. This selects
+H-RetailDifferentWriter at the measured contract scope and rules out
+H-RetailDifferentAddressClass and H-CoverageInvalid. It does not prove the
+retail payload store for every rotating slot, and it authorizes no writeback,
+consumer, guard, slot, gate, or address-remap change.
+
+The next unit is an all-ring-slot table: arm bounded `0x300` windows from
+`0x166450` through `0x169150` in one oracle run to distinguish a retail
+payload writer from metadata-only construction or address rotation.
+
+ORIGIN: no mitigation-shaped change; this iteration added only
+`scratch/agent/run_s2291_m5_writer_join.sh` and its ground-truth capture. No
+runtime, generated function, submodule, writer, or guard behavior changed.
+
+### Next
+
+Run the s2292 all-ring-slot retail payload attribution unit in
+`scratch/agent/NEXT.md`. Preserve the whole-RDRAM, task/output, title, hangar,
+and explicit-Start controls; classify exact slot writer-PC/post-value rows
+against the port's nonzero phase-10 DMA rows before considering any contract
+change.
