@@ -109473,3 +109473,51 @@ launcher wiring only.
 The retail lifecycle is closed. Keep the M5 key-on tuple boundary parked until
 a genuinely new route discriminator restores `512 @ 0x006AB400`; do not repeat
 the status capture, explicit keycode-36 schedule, or failed C88/A1 matrices.
+
+## Session 2324 (2026-08-24) — M5 stub/image contract checkpoint
+
+Ran the s2324 work unit after replacing the parked key-on NEXT with the M5
+Step 1 same-build contract checkpoint. Passed launcher syntax with
+`zsh -n scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh`, then ran
+`zsh scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh
+s2324_m5_audio_step1`. No source rebuild, runtime change, audio-default flip,
+guard change, writeback, or slot/key-on change was made.
+
+The retail oracle was started first and passed its positive control at `10,000`
+whole-RDRAM callbacks, finishing with `10,329` writes. It reached title and
+hangar, all fifteen phase buckets, gate/task/status watches `17/108/25`, and
+reported zero writes to the wait field. Target-phase writer rows independently
+named the retail gate family (`0x8008EB7C`, `0x8008EC88`), task/output family
+(`0x80094648`, `0x8008EB8C`, `0x8008EBBC`), and status writers at
+`0x00154620`; this is the independent ground-truth line.
+
+Both port arms reached title and hangar. The stub produced task ABI/DMA rows
+`1442/1442`, `520` successful `Broke` returns, no image DMA/stage rows, and
+PCM source/consumer `91/91`; every sampled PCM payload was zero. The image
+produced task ABI/DMA rows `1155/1155`, `2368` DMA-range rows, `2367` joined
+image-stage rows, and `518` successful `0x1328`/`Broke` returns with DMEM
+changes. Its stage table recorded two nonzero target rows: destination
+`0x167C50`, FNV `60F910DE`, `nz=621` (stage-only), and destination
+`0x167F50`, FNV `7B70923A`, `nz=639`; the latter had matching nonzero PCM
+source and consumer rows. The remaining sampled image PCM rows were zero.
+Neither arm emitted slot allocation, slot-byte, descriptor, or voice/filter
+rows; both had positive gate, route, task-return, and SP-completion controls.
+The stub later hit its existing post-hangar crash (`rc=139`); the image arm
+was retained and killed by the recipe (`rc=137`).
+
+This selects live Factor 5 image-RSP progress over the silent stub at capture
+scope, while leaving the downstream task/output-to-slot contract as the active
+boundary. It rules out `H-CoverageInvalid` and a claim that the image arm is a
+pure `Broke` no-op. It does not establish stable output publication, service
+reaping, MORT ownership, or a port key-on transition, and does not authorize
+a writeback or default change.
+
+ORIGIN: no mitigation-shaped change; this iteration used the existing
+phase-scoped task/DMA/image-stage/PCM diagnostics and launcher only.
+
+### Next
+
+Build one ground-truth-first table joining retail task/output writers to the
+port's rotating image-stage destinations, with both stub and image arms in one
+run. Classify exact shared-output joins, stage-only rows, destination-role
+skew, or invalid coverage. Do not change port behavior from the result.
