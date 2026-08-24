@@ -1,51 +1,49 @@
-# NEXT work unit (s2245) — repeat no-log baseline through hangar
+# NEXT work unit (s2246) — five-store field348 producer census
 
-HYPOTHESIS-ID: m5-image-prephase-crash-discriminator
+HYPOTHESIS-ID: m5-image-output-contract-attribution
 
 ## Work unit
 
-Run one same-build concurrent two-arm baseline with the qualified image arm
-and M5 logging disabled in both processes. Let both drivers continue through
-the title/hangar route; do not stop the surviving arm merely because it has
-reached title. Use the same functional environment, phase gate, and route
-controls as s2244. This is one repeat of the selected baseline-nondeterminism
-test, not field348 instrumentation.
+Run one qualified port capture with the existing image arm and the complete
+field348 producer instrumentation from s2241. The s2245 no-log A/B qualified
+both arms through title and hangar, so this capture is now allowed to collect
+the five scalar-store candidate table. Do not change the image arm, writeback,
+consumer, or runtime defaults.
 
 ## Competing hypotheses and discriminator
 
-- **H-RepeatedBaselineSplit:** both arms pass 640 but split again, with one
-  pre-phase crash and the other reaching title or hangar. This supports
-  baseline nondeterminism and keeps field348 inference parked.
-- **H-NoLogStablePrePhase:** both arms pass 640 and fail before 1024 at the
-  same crash PC/guest PC. This makes a stable no-log baseline plausible and
-  selects a logging-enabled A/B as the next isolation variable.
-- **H-NoLogTargetQualification:** both arms pass 640, reach title
-  `1024 @ 0x00790400`, and reach hangar `512 @ 0x006AB400`. This classifies
-  the prior failures as intermittent and permits the five-store field348
-  producer census to resume.
-- **H-RouteControlInvalid:** either arm lacks the common startup/640 controls
-  or has a different functional environment. The A/B selects no crash
-  explanation.
+- **H-PortWriterPopulates:** after the active `rs_memset` initialization and
+  before the matching image-stage row, one or more of the five annotated
+  stores writes nonzero bytes into the active `field348` span. This identifies
+  the port producer and its ordering edge.
+- **H-PortWriterZero:** the five-store rows cover the active span and occur in
+  the expected interval, but all values are zero. This confirms the producer
+  path is present while selecting a zero-payload/value-boundary explanation.
+- **H-PortWriterWrongDestination:** a nonzero candidate fires, but its guest
+  or physical destination does not match the active `field348` span, or it
+  occurs only after the image-stage row. This selects destination/order
+  mismatch rather than an absent producer.
+- **H-PortWriterAbsent:** the qualified controls fire but no candidate store
+  reaches either active span before its image-stage rows. This selects a
+  missing producer or an instrument-coverage gap; the static 5/5 annotation
+  control must be present before treating it as evidence.
 
 The discriminating table is keyed by
-`(arm,640_control,title_control,hangar_control,driver_termination,crash_pc,last_guest_pc)`.
-Positive controls are the common startup markers, one `[missing-func]` marker,
-and the exact 640 route marker. Do not infer field348 writers from an arm that
-misses the 640 control or from a run killed before its phase table is fixed.
+`(phase,width,origin,field348_span,store_pc,store_ordinal,dst_guest,dst_physical,value,nonzero_bytes,store_before_stage,stage_rows)`,
+with separate title and hangar rows. Positive controls are the common startup
+markers, one `[missing-func]` marker, the exact 640 route marker, title
+`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and the two outside-span
+writer controls. A run that misses 640 or either target phase is route-invalid
+and cannot select a writer hypothesis.
 
 ## Run
 
 ```sh
-env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2245_image_crash_nolog_a 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2245_image_crash_nolog_a_driver.log 2>&1 &
-pid_a=$!
-env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2245_image_crash_nolog_b 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2245_image_crash_nolog_b_driver.log 2>&1 &
-pid_b=$!
-wait "$pid_a"; rc_a=$?
-wait "$pid_b"; rc_b=$?
-printf 'arm_a=%s arm_b=%s\n' "$rc_a" "$rc_b"
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_FIELD348_WRITER=1 ROGUESQ_LOG_M5_FIELD348_MEMSET=1 ROGUESQ_LOG_M5_FIELD348_CANDIDATES=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2246_field348_producers 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2246_field348_producers_driver.log 2>&1
 ```
 
-Compare only bounded driver tails and exact phase/crash/control counts from
-the two `run.log` files. If a driver or game remains alive after the route
-table is determined, terminate the identified process group with SIGKILL;
-never use SIGTERM. Record forced termination separately from a driver exit.
+Compare the bounded driver tail and exact phase/control counts with
+`scratch/s73_post_a_scene/s2246_field348_producers/run.log`. If the game or
+driver remains alive after the route table is fixed, terminate the identified
+process group with SIGKILL and record forced termination separately from a
+driver exit.

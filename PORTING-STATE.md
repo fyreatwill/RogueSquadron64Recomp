@@ -105929,3 +105929,33 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-prephase-crash-discriminator`.
+
+## Session 2245 (2026-08-24) — qualified no-log image-arm baseline A/B
+
+Ran the planned same-build concurrent two-arm baseline with the qualified
+image arm, M5 logging disabled in both arms, and the unchanged functional
+environment and phase-gated route controls. Both drivers exited with
+`arm_a=0 arm_b=0`. Each arm passed the common startup controls, emitted one
+`[missing-func]` marker, and passed the exact 640 route control. Each reached
+title `1024 @ 0x00790400` once and hangar `512 @ 0x006AB400` twice before the
+driver completed: arm A at 50.4/79.5/118.9 seconds and arm B at
+49.3/79.0/118.4 seconds for the listed phases.
+
+Both games then hit the same known post-hangar abort in
+`recomp::do_rom_read`: the aligned-ROM assertion at `pi.cpp:86`, with one
+`[CRASH] caught signal 6` and `last-guest-pc=0x80001b08` per run. The exact
+phase/control table therefore selects H-NoLogTargetQualification over the
+prior baseline-split and stable-prephase-failure hypotheses. It rules out a
+route-qualification blocker for the five-store field348 producer census at
+this scope; it does not explain the unaligned PI DMA abort and does not make
+any image-output, writer, guard, or default change.
+
+Captures: `scratch/s73_post_a_scene/s2245_image_crash_nolog_{a,b}/run.log`.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.

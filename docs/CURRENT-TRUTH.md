@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2244 (2026-08-24); behavioral and source evidence is
-current through s2244, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2244 remain in
+Maintained in Session 2245 (2026-08-24); behavioral and source evidence is
+current through s2245, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2245 remain in
 the append-only ledger.
 
 ## Current state
@@ -153,6 +153,13 @@ the append-only ledger.
   evidence; driver completion is not a comparison because arm B was
   terminated after title qualification. No runtime behavior or default
   changed.
+- s2245 repeated the same-build no-log A/B and both arms passed startup, the
+  640 route, title `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400` twice.
+  Each then hit the same known aligned-ROM assertion in `recomp::do_rom_read`
+  with `last-guest-pc=0x80001b08`. This selects H-NoLogTargetQualification
+  and removes the route-qualification blocker for the five-store field348
+  producer census; the post-hangar PI-DMA abort remains a separate open
+  defect. No runtime behavior or default changed.
 - s2232's same-build port A/B reached the target route, title, and hangar in
   both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
   DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
@@ -186,49 +193,40 @@ the append-only ledger.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 image-arm pre-phase crash discriminator.** s2244's same-build A/B
-  with M5 logging disabled in both arms passed the common 640 route but
-  diverged: arm A crashed in `fillSampleStreamRange+8136` with guest PC
-  `0x8000b650`, while arm B reached title `1024 @ 0x00790400`; neither arm
-  supplied a completed hangar comparison. This selects
-  H-BaselineNondeterminism at the measured scope and blocks field348 inference.
-  The next unit is a repeat same-build no-log A/B allowed to run through the
-  title/hangar route, with the same phase/crash/control table. A repeated
-  split supports baseline nondeterminism; matching pre-phase crashes make a
-  stable no-log baseline plausible and restore logging as the next isolation
-  variable; both arms reaching hangar permit the field348 census to resume.
-2. **M5 image-output contract attribution, blocked on route qualification.**
-  s2232 selected H-ContractGap at single-source port A/B scope, and s2234
-  independently selected H-RetailTaskOutput at the exact retail watch
-  boundary. s2235's successful retry selected H-PortContractGap, and s2236
-  selected H-ImageInputZero: the image arm changed DMEM and completed, but
-  the valid `field348` source span, stage-0/1 DMEM inputs, and stage-2/3
-  generated DMA payloads were all zero. s2237 independently selected
-  H-RetailField348Writer; s2238–s2240 established the legitimate port init
-  clear and the missing nonzero producer boundary. Resume the five-store
-  candidate table only after the pre-phase arm is qualified; do not promote
-  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
-3. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
+1. **M5 image-output contract attribution.** s2232 selected H-ContractGap at
+  single-source port A/B scope, and s2234 independently selected
+  H-RetailTaskOutput at the exact retail watch boundary. s2235's successful
+  retry selected H-PortContractGap, and s2236 selected H-ImageInputZero: the
+  image arm changed DMEM and completed, but the valid `field348` source span,
+  stage-0/1 DMEM inputs, and stage-2/3 generated DMA payloads were all zero.
+  s2237 independently selected H-RetailField348Writer; s2238–s2240
+  established the legitimate port init clear and the missing nonzero
+  producer boundary. s2245 now qualifies both no-log arms through title and
+  hangar, selecting H-NoLogTargetQualification and allowing the five-store
+  candidate table to resume. The next unit is the full field348 producer
+  census with the existing image arm and all writer/callsite/stage controls;
+  do not promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
    pointer/dynamic operands or a true branch contract accounts for the two-way
    difference; no key-on return, guard, task-field rewrite, default flip, or
    mitigation follows automatically.
-4. **M5 A1: identify the missing second-origin transition.** Retail's
-   `__osViNext` context uses `framep` plus the selected current field to make
-   both target origins. The port has the candidates but its natural field
-   publisher is still unknown; all recovery knobs remain diagnostic-only.
-5. **M5 drain in-loop tick A/B; parked.** s2125 selected `H-PumpIrrelevant`
-   only at route scope, while s2126–s2128 failed to place both drain arms in
-   the target comparison. Resume only with a new renderer-recovery or
-   ground-truth discriminator.
-6. **M3 crash work.** Resume only as a systematic idiom-class audit with a
-   named discriminator. The dormant `slotDispatcherIter+872` class has 7,659
-   clean hangar calls in its guarded run; no mitigation is authorized.
-7. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
-   attestation and consumer-mode H1 by the RT64 census. H3 is unavailable
-   because the oracle cannot screenshot the LLE path; do not repeat the
-   `0xD60` scan.
+3. **M5 A1: identify the missing second-origin transition.** Retail's
+  `__osViNext` context uses `framep` plus the selected current field to make
+  both target origins. The port has the candidates but its natural field
+  publisher is still unknown; all recovery knobs remain diagnostic-only.
+4. **M5 drain in-loop tick A/B; parked.** s2125 selected `H-PumpIrrelevant`
+  only at route scope, while s2126–s2128 failed to place both drain arms in
+  the target comparison. Resume only with a new renderer-recovery or
+  ground-truth discriminator.
+5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+  named discriminator. The dormant `slotDispatcherIter+872` class has 7,659
+  clean hangar calls in its guarded run; no mitigation is authorized.
+6. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+  attestation and consumer-mode H1 by the RT64 census. H3 is unavailable
+  because the oracle cannot screenshot the LLE path; do not repeat the
+  `0xD60` scan.
 
 Generated-symbol renaming is closed at the useful boundary: the remaining
 names are the five parked/intentional holds
@@ -337,6 +335,13 @@ row. Outside-span controls used `0x800052C4` in both phases. The port-side
 static caller and the independent s2237 retail writer audit together move the
 open boundary from caller identity to the missing nonzero producer; this
 remains diagnostic-only evidence.
+
+s2245's same-build no-log A/B independently qualified both arms through title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400` twice, with the common
+startup/640/missing-function controls present. Each then hit the same known
+post-hangar aligned-ROM assertion with `last-guest-pc=0x80001b08`. This removes
+the pre-phase route blocker for the five-store producer census, while leaving
+the PI-DMA abort outside the image writer attribution question.
 
 s2233's retail oracle passed its whole-RDRAM control, reached the driven 640,
 title, and hangar phases, and wrote the broad `0x166000:0x17A000` span
@@ -485,6 +490,10 @@ remain in the append-only ledger. Operationally:
   while the other reached title 1024. This rules out a logging-only
   explanation at this scope, but the forced termination before hangar leaves
   route completion open.
+- s2245 supersedes s2244's incomplete route qualification: both no-log arms
+  reached title and hangar before independently hitting the same known
+  post-hangar PI-DMA alignment abort. The shared abort does not explain the
+  earlier pre-phase split and does not authorize a PI or image mitigation.
 - s2232's image-arm PCM activity is not evidence of image-output correctness:
   the same-run image summary recorded zero stage/source and stage/consumer
   matches, while the nonzero PCM rows were consumer-only at the image-join
@@ -511,7 +520,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2244 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2245 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
