@@ -106720,3 +106720,41 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-route-stability`.
+
+## Session 2265 (2026-08-24) — qualified the isolated image route
+
+No new instrumentation was added; the existing audio-return, PCM-boundary,
+B40/route-state, and phase loggers had positive controls in this run. Rebuilt
+the unchanged Debug target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`;
+the build passed.
+
+Ran the prescribed isolated image+C88=`0` reduced-trace recipe with the
+qualified spin/LLE route. The driver capture is
+`scratch/agent/s2265_image_c88_0_isolated_route_driver.log`; the game log is
+`scratch/s73_post_a_scene/s2265_image_c88_0_isolated_route/run.log`.
+
+The arm passed startup, one `[missing-func]`, 14 B40 rows, and 28 route-state
+rows. It reached title `1024 @ 0x00790400` at 48.8s and hangar
+`512 @ 0x006AB400` at 78.1s and 114.9s. Phase-8 image rows were `3463` with
+zero nonzero rows. Phase 10 had `1935` rows, including 2 nonzero rows, and
+the image summary reported 2 source and 2 consumer matches. Phase 12 had 935
+image rows and zero nonzero rows. PCM source/consumer rows fired in phases 8,
+10, and 12 and remained `fnv=0xF59C39C5`, `nz=0`. The process later hit the
+known aligned-ROM abort in the PI worker; the last guest PC was
+`0x80001b08`.
+
+This selects H-ImageIsolatedQualifies: the previous paired image failure was
+a route-validity/concurrency observation at the tested scope, so a paired
+output comparison is now permitted. It rules out neither a complete image
+output contract nor a stage-only/PCM mismatch. It does not promote the image
+arm, change a default, or authorize a writeback, consumer, slot, gate, or
+guard mitigation.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract`.

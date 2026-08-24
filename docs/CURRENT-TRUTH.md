@@ -5,9 +5,9 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2264 (2026-08-24); behavioral and source evidence is
-current through s2264. This iteration ran one unchanged-build paired route
-comparison; no runtime change was made.
+Maintained in Session 2265 (2026-08-24); behavioral and source evidence is
+current through s2265. This iteration ran one unchanged-build isolated image
+route qualification; no runtime change was made.
 
 ## Current state
 
@@ -74,7 +74,18 @@ comparison; no runtime change was made.
   `fnv=0xF59C39C5`, `nz=0`. The image-second arm passed startup controls but
   exited before its first 1024 phase and produced no audio/PCM rows, with
   the crash in `MetalFramebuffer` (`last-guest-pc=0x8000b650`). This pair
-  selects route-stability work only; it does not compare image output.
+   selects route-stability work only; it does not compare image output.
+- s2265's single-source isolated image+C88=`0` reduced-trace run passed
+  startup, one `[missing-func]`, 14 B40 rows, and 28 route-state rows. It
+  reached title `1024 @ 0x00790400` at 48.8s and hangar
+  `512 @ 0x006AB400` at 78.1s and 114.9s, so the image arm is qualified for
+  a paired output run. Phase 8 had `3463/0` image stage rows/nonzero rows;
+  phase 10 had `1935/2`, with 2 source and 2 consumer matches; phase 12 had
+  935 stage rows and no nonzero rows. PCM source/consumer rows fired in all
+  target phases and remained `fnv=0xF59C39C5`, `nz=0`. The process later hit
+  the known aligned-ROM abort at `last-guest-pc=0x80001b08`, after target
+  qualification. This selects the paired output contract comparison; it
+  does not promote the image arm or authorize a guard.
 - Independent retail oracle work established the whole-RDRAM control, both
   target origins, nonzero writes to both `field348`-derived spans, and the
   retail task/output writer family. It has not yet joined a retail write to a
@@ -84,34 +95,27 @@ comparison; no runtime change was made.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 image-route stability.** Run one isolated image+C88=`0` reduced-trace
-   recipe with the same qualified spin/LLE route and phase gate. Require
-   startup, `[missing-func]`, both 640 transitions, title
-   `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400` before interpreting
-   image/PCM rows. This separates an image arm that can qualify when not
-   paired from an intrinsic pre-target failure; do not change the image
-   default or add a guard. If it qualifies, return to the paired output
-   contract comparison; if it fails before 1024, keep the pair blocked on
-   route stability.
-2. **M5 image-output contract attribution.** Repeat the same-build
-   image+C88=`0` / silent+C88=`0` pair only after the image route is
-   qualified. Compare stage rows and exact destination/length/FNV/nonzero
-   joins, completion order, and the all-zero silent PCM boundary. Do not
-   promote the image arm or add a writeback, consumer, slot, gate, or guard
-   change.
-3. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
+1. **M5 image-output contract attribution.** Run the same-build
+   image+C88=`0` / silent+C88=`0` pair with the qualified spin/LLE route and
+   reduced trace. Require each arm's startup, `[missing-func]`, B40 and
+   route-state controls, title `1024 @ 0x00790400`, and hangar
+   `512 @ 0x006AB400` before interpreting its output rows. Compare stage rows,
+   exact destination/length/FNV/nonzero joins, completion order, and the
+   all-zero silent PCM boundary. Do not promote the image arm or add a
+   writeback, consumer, slot, gate, or guard change.
+2. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
    difference using a new pointer-versus-branch discriminator. No key-on
    return or mitigation change follows from the existing table.
-4. **M5 A1 second-origin transition.** Identify the natural host field
+3. **M5 A1 second-origin transition.** Identify the natural host field
    publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
    remain opt-in.
-5. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
+4. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
-6. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator; the dormant `slotDispatcherIter+872` class has
    thousands of clean guarded hangar calls and no authorized mitigation.
-7. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
+6. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
 
@@ -141,11 +145,13 @@ systems write `data_ptr+0x100`, and stock `aspMain` is not a substitute.
 
 The open output boundary is narrower. The image arm changes DMEM, completes,
 and emits generated DMA, but early captures had zero stage inputs. Later
-captures found target stage rows and a single-arm nonzero join; the silent
-control's matching boundary is now qualified but all-zero. Retail writes the
-corresponding field spans and a separate task/output span. The next paired
-run is required to distinguish a complete image-stage/PCM contract from a
-stage-only or mismatched contract.
+captures found target stage rows and single-arm nonzero joins; s2265
+independently qualified the image route and observed two nonzero stage rows
+with two source and two consumer matches in phase 10, while its PCM boundary
+remained all-zero. The silent control's matching boundary is qualified and
+all-zero. Retail writes the corresponding field spans and a separate
+task/output span. The next paired run is required to distinguish a complete
+image-stage/PCM contract from a stage-only or mismatched contract.
 
 Do not re-flip the image default, force C88, skip or allow
 `matchKeywordWithPriority`, add a wait/slot guard, or land a copyToRAM/CIMG
