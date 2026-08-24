@@ -105959,3 +105959,39 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2246 (2026-08-24) — field348 producer census stopped by pre-phase crashes
+
+Ran the planned qualified field348 producer census with the existing opt-in
+image arm and all five-store, memset, writer, task-contract, host-boundary,
+and PCM instrumentation:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_FIELD348_WRITER=1 ROGUESQ_LOG_M5_FIELD348_MEMSET=1 ROGUESQ_LOG_M5_FIELD348_CANDIDATES=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2246_field348_producers 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2246_field348_producers_driver.log 2>&1
+```
+
+The first arm passed the 640 route at origin `0x00696100` and emitted one
+`[missing-func]` marker, then crashed before title or hangar in
+`fillSampleStreamRange+8136` with last guest PC `0x800547bc`. The identical
+retry `s2246_field348_producers_retry` again passed 640 and one
+`[missing-func]`, then crashed in the same function before 1024 with last
+guest PC `0x8000b650`. Both captures therefore had zero target-phase
+field348-candidate rows and cannot select H-PortWriterPopulates,
+H-PortWriterZero, H-PortWriterWrongDestination, or H-PortWriterAbsent.
+
+As the required fixed control, ran the same image arm with the M5 census
+logging removed. It also passed 640 and one `[missing-func]` marker but died
+before 1024, this time in `RT64::NativeTarget::copyToRAM` with last guest PC
+`0x8000b650`. This does not support a clean five-store-logging-only
+explanation, but it also does not qualify the route or explain the pre-phase
+crash. The planned producer experiment was not completed; the next unit is a
+fresh full census retry with the same discriminator. No runtime behavior or
+default changed.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.

@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2245 (2026-08-24); behavioral and source evidence is
-current through s2245, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2245 remain in
+Maintained in Session 2246 (2026-08-24); behavioral and source evidence is
+current through s2246, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2246 remain in
 the append-only ledger.
 
 ## Current state
@@ -31,6 +31,15 @@ the append-only ledger.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. Its host canary is inside the generated mix-buffer span;
   `canary_ok=0` is probe data and does not gate completion, writeback, or DMA.
+- s2246's two full field348-candidate captures both passed the 640 route and
+  one `[missing-func]` control but crashed before title `1024` or hangar `512`:
+  the first was `fillSampleStreamRange+8136` with last guest PC
+  `0x800547BC`, and the retry was the same function with `0x8000B650`. A
+  same-image arm with M5 census logging removed also passed 640 but crashed
+  in `RT64::NativeTarget::copyToRAM` with last guest PC `0x8000B650`. These
+  route-invalid captures select pre-phase nondeterminism as a measurement
+  blocker only; they select no field348 writer hypothesis and change no
+  runtime behavior or default.
 - s2233's fixed retail-oracle capture passed the whole-RDRAM positive control,
   reached the 640 target, title `1024`, and hangar `512`, and recorded
   `6,665,015` writes to physical `0x166000:0x17A000`. It sampled 503
@@ -201,11 +210,13 @@ Closed investigations are not active work items. The sequence is monotonic.
   stage-0/1 DMEM inputs, and stage-2/3 generated DMA payloads were all zero.
   s2237 independently selected H-RetailField348Writer; s2238–s2240
   established the legitimate port init clear and the missing nonzero
-  producer boundary. s2245 now qualifies both no-log arms through title and
-  hangar, selecting H-NoLogTargetQualification and allowing the five-store
-  candidate table to resume. The next unit is the full field348 producer
-  census with the existing image arm and all writer/callsite/stage controls;
-  do not promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+  producer boundary. s2245 qualified both no-log arms through title and
+  hangar, but s2246's instrumented and low-logging attempts were route-invalid
+  before either target. The next unit is one more full field348 producer
+  census attempt with the existing image arm and all writer/callsite/stage
+  controls; a target-reaching run is required before any writer hypothesis
+  can be selected. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
+  writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -520,7 +531,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2245 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2246 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
