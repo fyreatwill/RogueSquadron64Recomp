@@ -108064,3 +108064,43 @@ post-value row collection with a target-phase-only or ordered
 `(writer PC, address, value, VI)` table. Avoid title sentinel saturation so
 the 48 target-phase `0x80094648` writes can be joined with the two shared
 `0x141AD0 = 0x120E0000` rows before considering any contract change.
+
+## Session 2297 (2026-08-24) — target-only row table remained unpopulated
+
+HYPOTHESIS-ID: m5-step3-retail-task-output-writer.
+
+The planned work unit was one oracle-only retail capture using the s2296
+whole-RDRAM, title/hangar, width-aware target, watched-PC, independent
+task/output, and all 16 exact ring-slot controls. Ground truth was checked
+before the instrument rebuild. The bounded oracle change made
+`record_post_value_requested_row()` retain rows only when its live VI state was
+`width=512, origin=0x006AB400`; the build completed, the new driver passed
+`zsh -n`, and no port or runtime code changed.
+
+The capture returned `oracle_rc=0` after the natural 120-second run. It passed
+the whole-RDRAM positive control at `10,000`, title
+`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and the width-aware target
+bucket with `925` VI rows. The generic task/output post-value sampler recorded
+`76` lifetime samples, but its target-phase writer histogram had no PC entries
+and the target-only bounded row table retained `0/16` rows for each of
+`0x8008EB8C`, `0x8008EBBC`, and `0x80094648`. The exact ring-slot watches
+continued to provide their `768`-write controls.
+
+This selects H-TargetRowsInsufficient at the capture scope: the target phase
+and generic sampler were live, but this run supplied no target-phase writer
+tuple to join. It rules out neither shared construction nor distinct
+housekeeping. The live post-step VI read is a plausible measurement boundary,
+so the next probe will latch phase metadata at the pre-store breakpoint and
+carry it into the delayed value sample. No writer, writeback, consumer, slot,
+gate, guard, or address-remap behavior changed.
+
+ORIGIN: no mitigation-shaped change; the oracle filter only discarded rows
+outside the requested target phase after sampling, and did not skip, allow,
+restore, or rewrite a game value.
+
+### Next
+
+Latch `(g_vis, VI width, VI origin)` at the memory-breakpoint callback before
+the post-store debugger step, carry it into the existing requested-PC row, and
+run one capture with the same independent controls. Interpret the joined rows
+only if the target writer histogram and row table are populated.

@@ -5,8 +5,8 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2296 (2026-08-24); behavioral and source evidence is
-current through s2296. The corrected same-build M5 Step 2 driver explicitly
+Maintained in Session 2297 (2026-08-24); behavioral and source evidence is
+current through s2297. The corrected same-build M5 Step 2 driver explicitly
 sent the eleven process-start Start events to each port window. Retail passed
 the whole-RDRAM threshold at `10,000` callbacks and reached title
 `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The port stub and default
@@ -38,6 +38,16 @@ single-PC semantic-writer hypothesis; it does not assign the role of
 `0x80094648` or distinguish duplicate publication from one construction
 sequence. No writer, writeback, consumer, slot, gate, guard, or address-remap
 change is authorized.
+
+s2297's target-only post-value capture passed the independent whole-RDRAM
+threshold at `10,000`, title `1024 @ 0x00790400`, hangar
+`512 @ 0x006AB400`, and the width-aware target bucket with `925` VI rows.
+The target-phase writer histogram for `0x141AD0:0x141AF0` was empty in this
+capture, and the target-only bounded row table retained `0/16` rows for each
+of `0x8008EB8C`, `0x8008EBBC`, and `0x80094648`, although the lifetime
+post-value sampler still recorded `76` samples. This selects
+H-TargetRowsInsufficient at capture scope; it does not assign any writer role
+or authorize a contract change.
 
 s2292's fixed all-ring-slot capture passed the independent retail
 whole-RDRAM/title/hangar controls and the port's title/hangar plus explicit
@@ -204,6 +214,15 @@ equivalent path at another guest address.
   bounded row table was consumed by title-phase `0x7F7F7F7F` rows. This
   selects H-TaskOutputSharedOrMulti and leaves the three-PC construction
   sequence open. No runtime or mitigation behavior changed.
+- s2297's corrected oracle-only target-only row capture passed the independent
+  whole-RDRAM, title, hangar, and width-aware target-bucket controls. The
+  target bucket had `925` VI rows, but the independent task/output span had no
+  target-phase writer-PC entries in this capture and the target-only row table
+  retained `0/16` rows for all three requested PCs. Its generic lifetime
+  post-value sampler still had `76` samples, proving the sampler ran without
+  proving target-phase attribution. This selects H-TargetRowsInsufficient at
+  capture scope; no writer, writeback, consumer, slot, gate, guard, or
+  address-remap behavior changed.
 - `docs/M5-AUDIO-PLAN.md` inventories the active audio stubs/traps/gates and
   defines the phase-keyed task→DMA→service→slot→voice→PCM discriminator and
   rollback conditions. The plan refresh in s2231 defined the incremental
@@ -592,16 +611,17 @@ equivalent path at another guest address.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 Step 3 target/output construction-sequence join.** s2296 refutes
-   the single-PC role hypotheses because `0x8008EB8C` and `0x8008EBBC` both
-   publish the same non-sentinel target tuple, while `0x80094648` has `48`
-   target-phase writes but no free bounded row slots. Run one oracle-only
-   capture with the same route, exact-slot, and task/output controls, but
-   use a target-phase-only post-value row table or an equivalent ordered
-   `(writer PC, address, value, VI)` sequence so all three PCs can be joined
-   without title sentinel saturation. Classify one shared construction
-   sequence versus distinct housekeeping writes. Do not implement writeback,
-   consumer, slot, gate, guard, or address-remap behavior.
+1. **M5 Step 3 target/output construction-sequence join.** s2296 showed two
+   shared non-sentinel rows but title sentinels consumed the `0x80094648`
+   table. s2297's target-only filter passed the whole-RDRAM/title/hangar and
+   width-aware target-bucket controls but captured no target-phase writer rows
+   at all; its live VI read occurs after the post-store debugger step. Make one
+   bounded oracle change that latches `(vi,width,origin)` at the write
+   breakpoint and carries that pre-step phase into the post-step value row.
+   Re-run the same exact-slot and task/output controls, then classify shared
+   construction versus distinct `0x80094648` or EB8C/EBBC housekeeping only if
+   the target-phase writer and row tables are populated. Do not implement
+   writeback, consumer, slot, gate, guard, or address-remap behavior.
 2. **M5 key-on tuple contract.** Requalify the C88 route with a
    phase-gated control-first stagger: launch C88=1 only after a C88=0 control
    reaches `512 @ 0x006AB400`, then compare retail fields only if both arms
@@ -683,8 +703,10 @@ in the hangar phase; s2295 identifies a different target-phase writer class
 for the independent task/output span, but does not yet join those three PCs
 to a semantic output role. s2296 joins two of them to the same non-sentinel
 target tuple and leaves the third's target values unobserved because of the
-bounded title-sentinel table. This is a contract discriminator, not
-permission to add a writeback or guard.
+bounded title-sentinel table. s2297's target-only rerun had the independent
+target bucket but no target-phase writer rows, so it leaves the construction
+join unresolved and motivates latching the pre-step phase metadata. This is a
+contract discriminator, not permission to add a writeback or guard.
 
 Do not flip the image default again, force C88, skip or allow
 `matchKeywordWithPriority`, add a wait/slot guard, or land a copyToRAM/CIMG

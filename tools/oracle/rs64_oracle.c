@@ -731,15 +731,21 @@ static void count_post_value(int watch, uint32_t pc, uint32_t value)
 static void record_post_value_requested_row(int target, uint32_t value)
 {
     struct post_value_requested_row *row;
+    uint32_t width;
+    uint32_t origin;
 
     if (target < 0 || target >= g_n_post_value_requested_pc ||
         g_n_post_value_requested_rows[target] >= MAX_POST_VALUE_ROWS_PER_PC)
         return;
+    width = pDebugMemRead32(VI_WIDTH_ADDR);
+    origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    if (width != 512 || origin != 0x006AB400)
+        return;
     row = &g_post_value_requested_rows[target]
         [g_n_post_value_requested_rows[target]++];
     row->vi = g_vis;
-    row->width = pDebugMemRead32(VI_WIDTH_ADDR);
-    row->origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    row->width = width;
+    row->origin = origin;
     row->addr = g_post_value_addr & ~3u;
     row->value = value;
     if (!g_post_value_requested_seen[target]) {
