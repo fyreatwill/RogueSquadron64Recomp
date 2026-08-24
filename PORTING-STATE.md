@@ -106977,3 +106977,47 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-completeness`.
+
+## Session 2271 (2026-08-24) — order-swapped pair selected arm-specific route sensitivity
+
+No runtime or instrumentation change was made. Rebuilt the unchanged Debug
+target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`; the
+build passed.
+
+Ran the prescribed silent+C88=`0` arm first and image+C88=`0` arm second as a
+same-build pair, with `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`,
+`ROGUESQ_LLE_SOLO=1`, phase-gated 1024 logging, and the existing
+audio-return, PCM-boundary, B40/route-state, and image-stage probes. Driver
+captures are `scratch/agent/s2271_silent_first_c88_0_pair_driver.log` and
+`scratch/agent/s2271_image_second_c88_0_pair_driver.log`; game logs are
+`scratch/s73_post_a_scene/s2271_silent_first_c88_0_pair/run.log` and
+`scratch/s73_post_a_scene/s2271_image_second_c88_0_pair/run.log`.
+
+Both driver commands returned zero. Both arms passed one `[missing-func]`, 14
+B40 rows, and 28 route-state rows. The silent arm reached
+`1024 @ 0x00790400` at 50.7s and 95.5s but never reached the
+`512 @ 0x006AB400` hangar phase; its log ended with signal 10 in
+`initSampleStreamBlockCache+1284`, last guest PC `0x80001C94`. The image arm
+reached `1024 @ 0x00790400` at 50.6s and `512 @ 0x006AB400` at 80.3s and
+131.1s, then ended at the known post-target abort with last guest PC
+`0x80001B08`.
+
+The image arm emitted two nonzero phase-10 image rows:
+`(0x168850,0x300,0x60F910DE,621)` and
+`(0x168B50,0x300,0x7B70923A,639)`. Both joined as `stage-only` with no
+source or consumer record. The silent arm had no hangar target window. Along
+with s2270's opposite launch order—image qualified first while silent failed
+before 1024—this shows image qualification in both positions and silent-arm
+failure to qualify hangar in both positions. It selects
+H-SilentArmPairRouteSensitive at the tested scope and rules out using these
+unpaired image rows to classify the output contract. It does not authorize a
+writeback, consumer, slot, gate, or guard change.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-completeness`.
