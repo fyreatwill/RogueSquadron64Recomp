@@ -106316,3 +106316,40 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2255 (2026-08-24) — retried image/stub output pair but route was invalid
+
+Ran the prescribed same-build concurrent pair with silent+C88=`0` launched
+first and image+C88=`0` one second later. The workspace uses the existing Debug
+binary at `build/RogueSquadron64Recomp` and ROM at `build/rogue_squadron.z64`
+(the Windows-style `build/Debug` paths are absent here). Both arms used
+`ROGUESQ_LOG_THREAD_RESUME=0`, `ROGUESQ_SPIN_YIELD=1`, the B40
+route/state/read, task-contract, host-boundary, and PCM-boundary traces, with
+`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`. Driver logs are
+`scratch/agent/s2255_stub_c88_0_driver.log` and
+`scratch/agent/s2255_image_c88_0_driver.log`; run logs are under
+`scratch/s73_post_a_scene/s2255_stub_c88_0/` and
+`scratch/s73_post_a_scene/s2255_image_c88_0/`.
+
+Both arms passed startup, one `[missing-func]`, the 640 route at
+`0x00696100`, and the B40/route-state controls. Neither reached title
+`1024` or hangar `512`, so the output-contract table was invalid. The silent
+arm returned with SIGSEGV at guest PC `0x8000B650`; the image arm returned
+with SIGBUS at guest PC `0x8000834C`. Neither log contained target-phase
+image, task/output, or PCM rows. The distinct crash identities are a
+route-validity result under matching early controls, not evidence for an
+image-input, image-stage, consumer-order, writer, or default hypothesis.
+
+This selects H-RouteInvalidAgain for this capture. It does not overturn
+s2254's qualified image/stub pair; together they show the route failure is
+intermittent at this scope. The next unit is an identical silent/silent
+route-control pair under the same trace load, to test whether the invalid
+route is reproducible without the image arm.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.

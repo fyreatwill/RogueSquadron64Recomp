@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2254 (2026-08-24); behavioral and source evidence is
-current through s2254, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2254 remain in
+Maintained in Session 2255 (2026-08-24); behavioral and source evidence is
+current through s2255, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2255 remain in
 the append-only ledger.
 
 ## Current state
@@ -53,6 +53,14 @@ the append-only ledger.
   this scope but not identifying the output edge. It is single-source port
   evidence; the image arm remains opt-in and no default, writeback, consumer,
   slot, gate, guard, or task behavior changed.
+- s2255 repeated the silent-first/image-second pair with the same phase-keyed
+  output traces. Both arms passed startup, one `[missing-func]`, and the 640
+  origin, but neither reached title `1024` or hangar `512`: the silent arm
+  died with SIGSEGV at guest PC `0x8000B650`, and the image arm died with
+  SIGBUS at guest PC `0x8000834C`. There were no target-phase output rows.
+  The distinct pre-target crashes select H-RouteInvalidAgain for this capture,
+  not an image-output hypothesis; s2254's qualifying capture remains valid and
+  shows the route failure is intermittent at this scope.
 - s2246's two full field348-candidate captures both passed the 640 route and
   one `[missing-func]` control but crashed before title `1024` or hangar `512`:
   the first was `fillSampleStreamRange+8136` with last guest PC
@@ -320,8 +328,10 @@ Closed investigations are not active work items. The sequence is monotonic.
   `stage-only` and zero payload summaries. s2254 reversed that image/stub
   launch order and both arms qualified through title and hangar, so the blocker
   is intermittent at this scope rather than a selected intrinsic image-arm
-  failure. The next checkpoint returns to the output attribution table. Do
-  not promote
+  failure. s2255 then failed both arms before title with distinct pre-target
+  crash identities and no target rows, so the next checkpoint first runs an
+  identical silent/silent route control under the same trace load. Do not
+  promote
   `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
@@ -437,6 +447,14 @@ DMEM and PCM source/consumer matches, while the stub task joins had zero DMEM
 change and no image rows. This selects H-BothQualify for this reversed-order
 capture and supersedes the s2253 route blocker at this scope, but it is still
 single-source port evidence and does not identify the output edge.
+
+s2255 repeated that launch order and did not qualify either arm. The silent
+arm reached the 640 origin and then crashed at guest PC `0x8000B650`; the
+image arm reached the same 640 route and then crashed at `0x8000834C`. Both
+had the startup and `[missing-func]` controls but zero title, hangar, and
+target-output rows. This is a route-validity result only; it does not
+supersede s2254's qualified output table or identify a writer, consumer, or
+ordering edge.
 
 s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
 At both target origins, `field348 & 0x007FFFFF` was valid but the exact
@@ -706,7 +724,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2254 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2255 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
