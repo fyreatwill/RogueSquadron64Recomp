@@ -109612,3 +109612,45 @@ Add one host event join stamping the audio-task ordinal/row onto image-stage,
 PCM, slot-store, descriptor, and key-on rows. Run the retail controls first,
 then stub and image arms on the same eleven-Start route. Same-task pre rows,
 earlier-tick rows, and missing post-consumer rows must be separate outcomes.
+
+## Session 2327 (2026-08-24) — M5 task-ordinal join selects earlier-tick lifecycle
+
+The required retail oracle was run before the instrument. Its bounded 75-second
+capture passed the whole-RDRAM positive control (`537360` writes), target output
+(`526946`), task span (`108`), gate (`17`), status (`23`), wait (`0`), title and
+hangar VI origins, and all three named target writer-PC controls. The first
+launcher attempt stopped before the oracle because its core path was mistyped;
+the corrected launcher was rerun immediately. Its first two captures exposed
+an instrumentation-only null: the SP route snapshot was thread-local while
+SP receive and generated lifecycle calls ran on different host threads. A
+process-shared mutex-protected last-route snapshot fixed that plumbing issue;
+no game behavior or audio dispatch changed.
+
+The final same-build stub/image run used the eleven-Start route and SIGKILL
+cleanup. Both arms reached title and hangar with positive VI and task-ABI
+controls. The image arm's target phase had two nonzero stage rows for ordinal
+`705`: `0x166A50` was stage-only, while `0x166D50` had PCM source/consumer
+events `6456/6457`. The task-ordinal table had zero same-ordinal slot-store,
+key-on, or descriptor events. Six active lifecycle events appeared instead
+at signed stage deltas `-10..-3`: five `slot-sb` and one `keyon-w40`, all from
+prior route ordinal `704` in phase 8. The stub arm independently emitted the
+same active prior-route shape with ordinal `703` and no image-stage rows.
+The result selects `H-PreEvents-EarlierTick` at this capture scope and rules
+out same-task ownership of the pre-stage rows. The filter/voice positive
+control was absent in both arms, so that null remains unevaluable. The join
+is diagnostic-only; no writeback, guard, slot value, default, or mitigation
+was added.
+
+ORIGIN: no mitigation-shaped change; the process-shared route snapshot and
+generated event stamps are attribution diagnostics only.
+
+### Next
+
+Follow `docs/M5-AUDIO-PLAN.md` with a bounded `ROGUESQ_DRAIN_INLOOP_TICK=1`
+versus `=0` A/B in one build. Keep the retail oracle controls, eleven-Start
+route, task/DMA/image/PCM joins, and lifecycle ordinal table. Select
+`H-DrainRequired` if disabling the injected drain tick removes the positive
+task/PCM/slot signal or changes the qualified hangar route; select
+`H-DrainRedundant` if both arms retain the same phase-gated contract; select
+`H-CoverageInvalid` if the oracle or either port arm misses its controls.
+Do not promote a default or change a slot, guard, writeback, or gate.

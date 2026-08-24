@@ -492,7 +492,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..c7f27e6 100644
+index 1cb3f6a..ad98f7e 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -506,7 +506,7 @@ index 1cb3f6a..c7f27e6 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,682 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,701 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -937,6 +937,25 @@ index 1cb3f6a..c7f27e6 100644
 +    }
 +}
 +
++extern "C" uint64_t rs64_audio_join_m5_event(
++    const char* kind, uint32_t site, uint32_t active, const char* arm,
++    uint32_t phase, uint32_t width, uint32_t origin, uint32_t ordinal,
++    uint32_t row, uint32_t idx, uint32_t dest, uint32_t value0,
++    uint32_t value1, uint32_t value2, uint32_t value3) {
++    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
++    const uint64_t event = audio_join_next_event();
++    fprintf(stderr,
++            "[m5-audio-event] kind=%s event=%" PRIu64
++            " active=%u arm=%s phase=%u width=%u origin=0x%06X"
++            " ordinal=%u row=%u site=0x%08X idx=%u dest=0x%08X"
++            " value0=0x%08X value1=0x%08X value2=0x%08X value3=0x%08X\n",
++            kind ? kind : "n/a", event, active, arm ? arm : "n/a", phase,
++            width, origin, ordinal, row, site, idx, dest, value0, value1,
++            value2, value3);
++    fflush(stderr);
++    return event;
++}
++
 +static void audio_join_report_locked(AudioJoinTask& task) {
 +    size_t sources = 0;
 +    size_t consumers = 0;
@@ -1189,7 +1208,7 @@ index 1cb3f6a..c7f27e6 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +722,225 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +741,225 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -2183,10 +2202,10 @@ index 149e770..89c25df 100644
  }
  
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..c05a8b2 100644
+index 9944a02..c1a96c3 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
-@@ -1,18 +1,181 @@
+@@ -1,18 +1,208 @@
  #include <bitset>
  #include <thread>
 +#include <cstdio>
@@ -2310,16 +2329,18 @@ index 9944a02..c05a8b2 100644
      bool requeue_if_blocked;
 +    int source = -1;
 +    AudioRouteMessage audio;
- };
- 
++};
++
 +struct AudioSpDelivery {
 +    PTR(OSMesgQueue) mq;
 +    OSMesg msg;
 +    AudioRouteMessage audio;
-+};
-+
+ };
+ 
 +static std::deque<AudioSpDelivery> g_audio_sp_deliveries;
 +static thread_local OSMesg g_last_received_message = NULLPTR;
++static AudioRouteMessage g_current_audio_route;
++static std::mutex g_current_audio_route_mutex;
 +
 +static bool audio_sp_row_enabled(const AudioRouteMessage& audio) {
 +    return audio.active && (audio.row < 256u || (audio.row % 128u) == 0);
@@ -2359,16 +2380,41 @@ index 9944a02..c05a8b2 100644
 +static void log_audio_sp_receive(PTR(OSMesgQueue) mq, OSMesg msg) {
 +    for (auto it = g_audio_sp_deliveries.begin(); it != g_audio_sp_deliveries.end(); ++it) {
 +        if (it->mq != mq || it->msg != msg) continue;
++        {
++            std::lock_guard<std::mutex> lock(g_current_audio_route_mutex);
++            g_current_audio_route = it->audio;
++        }
 +        log_audio_sp_route("guest-receive", it->audio, mq, msg, -1, -1, -1, -1, 1);
 +        g_audio_sp_deliveries.erase(it);
 +        return;
 +    }
++    // Keep the last matched SP route across unrelated game-queue receives so
++    // game-side audio lifecycle stores can be attributed after the SP edge.
++}
++
++extern "C" bool rs64_audio_current_route_snapshot(
++    uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
++    uint32_t* row, int* exit_reason, const char** arm) {
++    AudioRouteMessage route;
++    {
++        std::lock_guard<std::mutex> lock(g_current_audio_route_mutex);
++        route = g_current_audio_route;
++    }
++    if (!route.active) return false;
++    if (phase) *phase = route.phase;
++    if (width) *width = route.width;
++    if (origin) *origin = route.origin;
++    if (ordinal) *ordinal = route.ordinal;
++    if (row) *row = route.row;
++    if (exit_reason) *exit_reason = route.exit_reason;
++    if (arm) *arm = route.arm;
++    return true;
 +}
 +
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -28,7 +191,19 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -28,7 +218,19 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
  }
  
  void ultramodern::enqueue_external_message_src(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, EventMessageSource src) {
@@ -2389,7 +2435,7 @@ index 9944a02..c05a8b2 100644
  }
  
  void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, bool requeue_if_blocked) {
-@@ -37,33 +212,64 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
+@@ -37,33 +239,64 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block);
  
@@ -2458,7 +2504,7 @@ index 9944a02..c05a8b2 100644
      }
  }
  
-@@ -90,6 +296,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +323,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -2468,7 +2514,7 @@ index 9944a02..c05a8b2 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +315,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +342,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -2483,7 +2529,7 @@ index 9944a02..c05a8b2 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +346,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +373,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -2494,7 +2540,7 @@ index 9944a02..c05a8b2 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +366,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +393,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -2509,7 +2555,7 @@ index 9944a02..c05a8b2 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -161,6 +388,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -161,6 +415,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
  }
  
  extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -2517,7 +2563,7 @@ index 9944a02..c05a8b2 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      bool jam = false;
      
-@@ -183,6 +411,7 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,6 +438,7 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -2525,7 +2571,7 @@ index 9944a02..c05a8b2 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      bool jam = true;
      
-@@ -205,15 +434,28 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,15 +461,28 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {

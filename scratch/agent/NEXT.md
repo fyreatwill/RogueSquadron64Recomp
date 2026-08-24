@@ -1,52 +1,47 @@
-# NEXT work unit (s2327) — M5 task-ordinal pre/post lifecycle join
+# NEXT work unit (s2328) — M5 drain-tick de-stubbing A/B
 
-HYPOTHESIS-ID: m5-task-ordinal-prepost-join
+HYPOTHESIS-ID: m5-drain-tick-destub-ab
 
 ## Work unit
 
-Add one host event join that stamps the existing audio-task ordinal/row onto
-the existing slot-store, key-on, descriptor, and image-stage records. Run the
-retail oracle first with the s2326 whole-RDRAM, title/hangar, gate/task/status,
-wait, and task-writer controls, then run stub and image arms on the same
-eleven-Start route. Produce one table for every target task and destination
-with signed deltas from task start, image stage, audio completion, PCM source,
-PCM consumer, and slot/key-on/descriptor events. Do not change behavior.
+Execute the next bounded step in `docs/M5-AUDIO-PLAN.md`: compare the
+existing in-loop `tickMusyXIfActive` injection with `ROGUESQ_DRAIN_INLOOP_TICK=0`
+in one build, retaining the qualified image route and the silent control. This
+is an A/B experiment only; do not promote a default or alter a slot, guard,
+writeback, or gate.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-PreEvents-SameTask: the five pre-stage slot stores and the sentinel/key-on
-  rows belong to the same audio task as the two image destinations. A task
-  ordinal join will place them under the target task and show the lifecycle
-  before image stage, with no missing post-stage edge.
-- H-PreEvents-EarlierTick: the pre-stage rows belong to an earlier task or VI
-  tick. The target task has image stage and PCM progress but no slot,
-  descriptor, or key-on contract events in its own ordinal window.
-- H-PostConsumer-Missing: the pre-stage rows belong to the target task, but a
-  valid image completion/PCM publication is followed by no downstream slot or
-  key-on event. This selects a missing post-stage consumer edge rather than an
-  attribution error.
-- H-CoverageInvalid: the oracle controls, both hangar phases, or the event
-  stamp controls are absent; no lifecycle conclusion is admissible.
+- H-DrainRequired: the injected drain tick supplies the observed audio/slot
+  progress. Turning it off removes a positive task/PCM/slot signal or loses
+  the qualified title/hangar route.
+- H-DrainRedundant: the injection is not required for the real task contract.
+  Both tick arms retain title/hangar, task/DMA/image/PCM controls, and the same
+  ordinal lifecycle table.
+- H-DrainChangesOrdering: the injection preserves the route but moves the
+  lifecycle relative to task start/stage/PCM. The signed ordinal table changes
+  while route controls remain positive.
+- H-CoverageInvalid: the retail oracle, either tick arm, or the required phase
+  controls fail; no de-stubbing conclusion is admissible.
 
-The discriminator is one table keyed by `(arm, phase, width, origin, audio
-ordinal, task row, destination, stage event, completion event, PCM source and
-consumer events, slot index/status, descriptor pointer, key-on tuple)` with
-signed event deltas. Same-task pre rows select H-PreEvents-SameTask; rows
-outside the task ordinal select H-PreEvents-EarlierTick; a same-task image/
-PCM row with no later lifecycle selects H-PostConsumer-Missing; missing
-positive controls select H-CoverageInvalid.
+The discriminator is one phase-gated table keyed by `(tick arm, audio ordinal,
+row, stage event, completion event, PCM source/consumer, slot/key-on/descriptor
+event, signed delta to task begin and image stage)`, with both tick arms from
+the same binary and the existing stub/image controls retained.
 
 ## Exact commands
 
-Before adding the host event stamp, run the independent oracle controls and
-confirm the target phase is covered. Then regenerate in the required order,
-build one binary carrying all event stamps, and run:
+First create the self-contained launcher
+`scratch/agent/run_s2328_m5_drain_tick_ab.sh`, with two image arms that pass
+`ROGUESQ_DRAIN_INLOOP_TICK=1` and `=0`, the existing eleven-Start schedule,
+SIGKILL cleanup, and the oracle gate. Then run:
 
-    zsh -n scratch/agent/run_s2327_m5_task_ordinal_prepost_join.sh
-    zsh scratch/agent/run_s2327_m5_task_ordinal_prepost_join.sh s2327_m5_task_ordinal_prepost_join
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    zsh -n scratch/agent/run_s2328_m5_drain_tick_ab.sh
+    zsh scratch/agent/run_s2328_m5_drain_tick_ab.sh s2328_m5_drain_tick_ab
 
-The launcher must retain `ROGUESQ_LOG_VI_CALLERS=1`, the M5 key-on census,
-audio-task ABI/DMA/PCM controls, and the filter/voice control row. A filter or
-voice null is invalid unless its positive control fires in the same arm. Use
-SIGKILL for every cleanup and do not add writeback, guards, slot values, or
-defaults.
+Require the oracle whole-RDRAM positive control, title/hangar VI transitions,
+`[vi-callers-control]`, `[audtask-abi]`, image-stage/DMA, PCM source/consumer,
+`[audio-sp-route] edge=guest-receive`, and the lifecycle join control in both
+tick arms. Use SIGKILL for every cleanup. Do not interpret a filter/voice null
+without its same-arm positive control.

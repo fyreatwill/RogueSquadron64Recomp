@@ -87,6 +87,14 @@ extern "C" void rs64_audio_join_image_complete(const char* arm,
                                                   uint32_t ordinal, uint32_t row,
                                                   uint32_t phase, uint32_t width,
                                                   uint32_t origin);
+extern "C" bool rs64_audio_current_route_snapshot(
+    uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
+    uint32_t* row, int* exit_reason, const char** arm);
+extern "C" uint64_t rs64_audio_join_m5_event(
+    const char* kind, uint32_t site, uint32_t active, const char* arm,
+    uint32_t phase, uint32_t width, uint32_t origin, uint32_t ordinal,
+    uint32_t row, uint32_t idx, uint32_t dest, uint32_t value0,
+    uint32_t value1, uint32_t value2, uint32_t value3);
 
 // Wrapper: captures rdram into the watchdog global on first call so the
 // hwbp/poll diagnostic threads can attach. Forwards to the real entrypoint.
@@ -556,6 +564,62 @@ static bool rs64_audio_probe_enabled() {
                    (contract && *contract && *contract != '0')) ? 1 : 0;
     }
     return enabled != 0;
+}
+
+extern "C" void rs64_m5_audio_event(const char* kind, uint32_t site,
+                                      uint32_t idx, uint32_t dest,
+                                      uint32_t value0, uint32_t value1,
+                                      uint32_t value2, uint32_t value3) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* contract = std::getenv("ROGUESQ_LOG_M5_TASK_CONTRACT");
+        return (all && all[0] && all[0] != '0') ||
+               (contract && contract[0] && contract[0] != '0');
+    }();
+    if (!enabled) return;
+
+    const uint32_t vi_phase = rs64_phase_ord();
+    const uint32_t vi_width = rs64_vi_committed_width();
+    const uint32_t vi_origin = rs64_vi_committed_origin();
+    if (!((vi_width == 1024u && vi_origin == 0x00790400u) ||
+          (vi_width == 512u && vi_origin == 0x006AB400u))) return;
+
+    uint32_t phase = vi_phase;
+    uint32_t width = vi_width;
+    uint32_t origin = vi_origin;
+    uint32_t ordinal = 0xFFFFFFFFu;
+    uint32_t row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        &phase, &width, &origin, &ordinal, &row, &exit_reason, &arm);
+    if (!active) {
+        phase = vi_phase;
+        width = vi_width;
+        origin = vi_origin;
+        arm = "n/a";
+    }
+
+    static std::mutex mutex;
+    static uint32_t event_count[2] = {};
+    static uint32_t control_key[2] = {0xFFFFFFFFu, 0xFFFFFFFFu};
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (width << 24) ^ origin;
+    if (control_key[slot] != key) {
+        control_key[slot] = key;
+        std::fprintf(stderr,
+            "[m5-audio-join-control] phase=%u width=%u origin=0x%06X "
+            "active=%u arm=%s ordinal=%u row=%u\n",
+            phase, width, origin, active ? 1u : 0u, arm ? arm : "n/a",
+            ordinal, row);
+        std::fflush(stderr);
+    }
+    if (event_count[slot] >= 4096u) return;
+    ++event_count[slot];
+    rs64_audio_join_m5_event(
+        kind, site, active ? 1u : 0u, arm, phase, width, origin, ordinal,
+        row, idx, dest, value0, value1, value2, value3);
 }
 
 static void rs64_audio_route_prepare(const char* arm) {

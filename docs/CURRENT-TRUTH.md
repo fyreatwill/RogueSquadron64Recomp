@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2326 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2327 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -133,8 +133,28 @@ boundary still open: pre-stage lifecycle rows may belong to the same task or
 to an earlier tick. No runtime, audio, gate, wait, slot, writeback, consumer,
 address, mitigation, or default behavior changed.
 
-The current M5 boundary is task-ordinal ownership of the destination-to-slot
-contract. The qualified default
+Session 2327 ran the ground-truth-first task-ordinal pre/post join with the
+required stub and image arms. The retail oracle independently passed whole-
+RDRAM (`537360` writes), title/hangar VI coverage, task/output (`108`) and
+gate (`17`) watches, wait (`0`), status (`23`), and the three target writer-PC
+controls. Both port arms reached title and hangar with positive VI and task
+controls. The image arm's target phase contained two nonzero stage rows for
+audio ordinal `705`, at `0x166A50` (stage-only) and `0x166D50` (PCM source /
+consumer `6456/6457`). Its signed table contained zero same-ordinal slot,
+key-on, or descriptor rows. Instead, six active lifecycle events (five
+`slot-sb`, one `keyon-w40`) occurred at deltas `-10..-3` before the target
+stage and were stamped with the prior route ordinal `704` in phase 8; the
+stub arm independently showed the same shape with prior ordinal `703` and no
+target image rows. The task-ordinal table therefore selects
+`H-PreEvents-EarlierTick` at this capture scope and rules out same-task
+ownership of those pre-stage rows. This is a two-arm replication from one
+instrumentation source; the filter/voice positive control remained absent in
+both arms, so that null remains unevaluable. The route snapshot needed to be
+made process-shared because SP receive and lifecycle calls run on different
+host threads; this was diagnostic-only and changed no game behavior.
+
+The current M5 boundary is the destination-to-slot consumer after task-ordinal
+ownership. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
 `512 @ 0x006AB400`; measured nonzero phase-10 slots have exact source and
 consumer joins in some captures. Retail independently reaches both origins
@@ -404,47 +424,6 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   silent stub, but its downstream slot/key-on contract is still missing. No
   runtime or default change was authorized.
 
-- **s2322 — target status is present and named.** The oracle positive control
-  reached `10,000` whole-RDRAM writes and the same run exited with `10329`
-  writes, title/hangar coverage, gate/task/wait `17/108/0`, and all fifteen
-  phase buckets positive. The detail table produced `78` requested-writer
-  rows. Target `0x006AB400:512` had top-byte counts `00=30`, `01=3`,
-  `02=2`; non-target rows had `00=37`, `01=0`, `02=1`, `03=3`, `3F=2`.
-  Every target `01/02` row was the physical word `0x00154620`, owned by
-  `0x8009B214` or `0x8009B6F8`; the independent target histogram named both
-  PCs. Stub/image port controls reached hangar, but both had zero slot/
-  descriptor rows and sentinel key-on rows. This selects
-  `H-Target-Status` at capture scope and leaves zeroing/slot semantics open.
-
-- **s2321 — phase-keyed active-byte writer/value join.** The oracle positive
-  control reached `10,000` whole-RDRAM writes and the same run exited with
-  `10329` writes, title/hangar coverage, gate/task/wait `17/108/0`, and all
-  fifteen phase buckets positive. The requested writer set produced `24`
-  target-bucket samples at `0x006AB400:512`: top bytes `00=21`, `01=0`,
-  `02=0`, `03=1`, `3F=2`. Its `54` non-target samples were `00=46`,
-  `01=3`, `02=3`, `03=2`. The port stub/image arms had task/PCM controls
-  (`1358/1358`, `94/94`; `1129/1129`, `88/88`) and image DMA/image-stage
-  controls (`2320`/`4675`), but zero slot/descriptor rows and sentinel
-  key-on rows. This selects `H-Retail-Earlier-Nonzero` at capture scope;
-  it does not prove the earlier nonzero values are active-slot status.
-
-- **s2320 — retail active-byte writes are zero-only in the armed capture.**
-  The oracle exited naturally after `10329` whole-RDRAM writes and passed
-  title `632`, hangar `967`, gate `17`, task/output `108`, wait `0`, and all
-  fifteen phase buckets. The five active-byte watches recorded `25/0/87/6/86`
-  lifetime writes. In the `0x006AB400:512` target bucket, named writer rows
-  appeared for slots 0, 2, and 4; slot 3 supplied two post-value samples
-  through `0x80017DB0` without a phase-histogram row, and slot 1 was empty.
-  Every post-value sample after the title/hangar arm had status top byte
-  `00`, despite varied lower word fields; no `01/02` status transition was
-  observed. The port stub/image arms reached title/hangar with gate `1024`,
-  PCM `90/90` and `88/88`, and `4643` image-stage rows in the image arm;
-  neither had slot allocation, slot-byte, or descriptor rows, and both had
-  the sentinel key-on. This rules out `H-Retail-Status-Elsewhere` as a
-  literal no-write result, does not establish a valid retail `01/02/00`
-  transition at this phase/value join, and authorizes no slot or contract
-  change.
-
 - **s2318 — earlier-origin gate/task writers are present.** The valid PTY
   rerun passed the independent oracle controls: whole-RDRAM `10125`, title
   `633`, hangar `979`, gate `17`, task/output `108`, wait `0`, and all fifteen
@@ -712,23 +691,26 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 destination-to-slot/key-on contract — active.** s2325 established
-   a capture-dependent destination split. s2326's corrected signed event table
-   found two nonzero stage-only destinations and no post-stage slot,
-   descriptor, or key-on rows, while five slot stores and nineteen M5 key-on
-   rows occurred before both image-stage rows. The next unit must add one
-   task-ordinal event join that distinguishes same-task pre-stage lifecycle
-   from an earlier tick and from missing post-stage consumption. Do not add
-   writeback, guards, slot values, or defaults.
-2. **M5 task/output contract — closed at the current discriminator.** s2325
+1. **M5 audio de-stubbing — active.** `docs/M5-AUDIO-PLAN.md` is the design
+   gate and inventories the live stubs, traps, gates, and validation sequence.
+   s2327 selected `H-PreEvents-EarlierTick`: the image task and PCM contract
+   are live, but the observed slot/key-on rows belong to the prior audio route.
+   The next behavior experiment must be the plan's bounded drain-tick A/B,
+   with both tick arms in one build and no default, slot, guard, or writeback
+   change. The image arm remains the qualified default; do not promote any
+   additional audio behavior from this result alone.
+2. **M5 destination-to-slot/key-on contract — pending after the de-stub A/B.**
+   s2327 closes the same-task-versus-earlier-tick ordering question for this
+   capture, but the destination-to-slot consumer remains absent. Preserve the
+   task/PCM table and revisit only with a new discriminator after the M5
+   de-stubbing step. Do not add writeback, guards, slot values, or defaults.
+3. **M5 task/output contract — closed at the current discriminator.** s2325
    supersedes the undifferentiated task/output gap with
    `H-Destination-Role-Skew`; revisit only if the destination-to-slot table
    cannot classify the split. Retail status/zeroing is independently closed.
-3. **M5 A1 second-origin transition — parked.** Resume only with a new
+4. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not
    repeat the failed four-arm/two-wave matrix.
-4. **M5 drain in-loop tick A/B — parked.** Resume only with a new renderer
-   or ground-truth discriminator that places both arms in one target window.
 5. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator; do not chase a single recurring crash.
 6. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer
@@ -791,7 +773,9 @@ key-on row; no corresponding post-stage row exists. Because the filter/voice
 probe's positive control did not fire, voice/filter absence remains
 unqualified. The result selects `H-Missing-Descriptor-Contract` only for the
 observed capture and leaves same-task ownership of the pre-stage rows open.
-The next discriminator is a task-ordinal join, not a writeback or guard.
+s2327's task-ordinal join assigns those rows to the prior audio route, not the
+target task; the remaining question is the missing post-ordinal
+destination-to-slot consumer, not a writeback or guard.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
 phase-gated captures show a rotating mixed output contract: s2306 had one
