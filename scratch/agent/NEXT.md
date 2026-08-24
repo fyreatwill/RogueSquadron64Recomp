@@ -1,43 +1,40 @@
-# NEXT work unit (s2272) — phase-gated staggered paired route
+# NEXT work unit (s2273) — key-on pointer-versus-branch discriminator
 
-HYPOTHESIS-ID: m5-image-output-contract-completeness
+HYPOTHESIS-ID: m5-keyon-tuple-contract
 
 ## Work unit
 
-Run one same-build pair with the silent+C88=`0` arm launched first and the
-image+C88=`0` arm launched only after the silent run log records its first
-`[phase] vi_width=512` transition. Keep
-`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, the
-reduced trace, and the existing phase/audio/image probes. The second process
-still overlaps the first after the phase gate; the gate is the VI transition,
-not elapsed time.
+Use the existing phase-keyed M5 key-on census in one qualified port run. Keep
+the shipped behavior unchanged and enable the bounded transfer-tuple detail
+arm. Compare the port rows against the already-established independent retail
+table at every common `(origin,width,transfer-PC)` bucket. Do not change a
+key-on return, divide guard, task field, slot gate, or default.
 
 ## Competing hypotheses and discriminating measurement
 
-- **H-InitialPairContention:** silent records its first 512 phase before the
-  image process starts and remains target-qualified afterward. This shows the
-  immediate-launch silent failure was caused by initial paired workload
-  contention; compare only target windows after both arms overlap.
-- **H-SilentArmPairRoute:** silent fails before recording 512 while no image
-  process has started. This selects an arm-specific route failure under the
-  silent arm's paired recipe and leaves output completeness open.
-- **H-LivePairContention:** silent records 512 before image launch but then
-  loses target progress after image starts. This selects contention during
-  overlap and leaves the image rows unpaired unless both arms later qualify.
-- **H-CompleteStaggeredTarget:** both arms qualify through title
-  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Compare every phase-10
-  nonzero image-stage tuple against exact source/consumer tuples through the
-  overlapping target window; otherwise keep the output contract open.
+- **H-PointerOperands:** the branch/transfer signature overlaps retail, but
+  the dynamic `$v0/$s1/$a0/$a2` pointer tuple sets do not. This selects a
+  descriptor/voice-data contract difference.
+- **H-BranchState:** the pointer tuple sets overlap after bucket alignment,
+  but the entry/tail/guard/transfer-PC/slot branch signature differs. This
+  selects a control-flow or branch-state difference without authorizing a
+  control-flow change.
+- **H-Both:** both pointer tuples and branch signatures are disjoint in the
+  same common cells. This selects a combined contract boundary and requires a
+  narrower writer/descriptor discriminator next.
+- **H-CensusInvalid:** a positive route control is missing, a tuple bucket
+  overflows, or no common target cell is populated. This rejects all null
+  comparisons as coverage failure and sends the next step to census coverage.
 
-The discriminating table is
-`(silent_first_512_before_image_start, silent_later_512, image_start_event,
-arm, startup, missing_func, B40_rows, route_state_rows, title, hangar,
-phase, width, origin, image_stage_tuple, stage_nz, source_tuple,
-consumer_tuple, classification, completion_event, source_event,
-consumer_event, ordering_violation, pcm_fnv, pcm_nz, driver_outcome,
-crash_or_timeout, crash_pc, last_guest_pc)`. Positive controls are startup,
-one `[missing-func]`, B40 rows, route-state rows, and the 1024/title/hangar
-transitions in each arm.
+The single discriminating table is
+`(origin,width,transfer_pc,entry_path,tail_path,guard_path,slot_state,
+v0,s1,a0,a2,port_present,retail_present,pointer_overlap,branch_overlap,
+overflow,missing_func,b40_rows,route_state_rows,title,hangar,crash_pc,
+last_guest_pc)`. A positive control is one `[missing-func]`, 14 B40 rows, 28
+route-state rows, title `1024 @ 0x00790400`, and hangar
+`512 @ 0x006AB400`. The measurement selects H-PointerOperands when branch
+overlap is nonzero and pointer overlap is zero; H-BranchState when the reverse
+holds; H-Both when both are zero with no overflow; otherwise H-CensusInvalid.
 
 ## Build
 
@@ -48,19 +45,10 @@ cmake --build build --config Debug --target RogueSquadron64Recomp -j2
 ## Run
 
 ```sh
-env -u ROGUESQ_AUDIO_UCODE ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_THREAD_RESUME=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2272_silent_phase_gated_pair 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2272_silent_phase_gated_pair_driver.log 2>&1 &
-silent_pid=$!
-while kill -0 "$silent_pid" 2>/dev/null && ! grep -q '\[phase\] vi_width=512' /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/s73_post_a_scene/s2272_silent_phase_gated_pair/run.log; do sleep 1; done
-env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_THREAD_RESUME=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2272_image_after_silent_512_pair 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2272_image_after_silent_512_pair_driver.log 2>&1 &
-image_pid=$!
-wait "$silent_pid"
-silent_rc=$?
-wait "$image_pid"
-image_rc=$?
-printf 'silent_rc=%s image_rc=%s\n' "$silent_rc" "$image_rc"
+env ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_THREAD_RESUME=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2273_keyon_pointer_branch 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2273_keyon_pointer_branch_driver.log 2>&1
 ```
 
-Record the image-start event relative to the silent first-512 line, all
-positive controls, both target qualifications, and every phase-10 nonzero
-image tuple plus exact source/consumer join. Do not promote the image arm or
-add a writeback, consumer, slot, gate, or guard change.
+Read only the bounded key-on table/transfer rows and driver summary from
+`scratch/s73_post_a_scene/s2273_keyon_pointer_branch/run.log`; retain the
+positive controls and the full common-cell overlap table in the next ledger
+entry. No mitigation or key-on behavior change follows from this run.

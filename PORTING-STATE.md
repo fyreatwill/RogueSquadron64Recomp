@@ -107021,3 +107021,60 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-completeness`.
+
+## Session 2272 (2026-08-24) — phase-gated stagger closed image joins
+
+No runtime or instrumentation change was made. Rebuilt the unchanged Debug
+target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`; the
+build passed.
+
+The first copy of the prescribed driver was measurement-invalid: its compound
+`while` condition fell through when the silent process died before 512 and
+launched the image arm without a phase confirmation. The silent log had no
+`vi_width=512` row and ended in `slotDispatcherIter+3508`; that continuation
+was discarded. The fixed same-build driver stopped the image launch unless it
+first observed the explicit line
+`silent_first_512=observed; launching image`.
+
+The corrected run used the existing reduced trace, C88=`0`,
+`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+phase-gated 1024 logging, and the audio-return, PCM-boundary, B40/route-state,
+and image-stage probes. Captures are
+`scratch/agent/s2272_fixed_silent_gate_driver.log` and
+`scratch/agent/s2272_fixed_image_after_gate_driver.log`; game logs are
+`scratch/s73_post_a_scene/s2272_fixed_silent_gate/run.log` and
+`scratch/s73_post_a_scene/s2272_fixed_image_after_gate/run.log`.
+
+The gate was positive: the silent arm reached its first hangar
+`512 @ 0x006AB400` before the image arm launched. Both arms passed one
+`[missing-func]`, 14 B40 rows, and 28 route-state rows. The silent arm reached
+title `1024 @ 0x00790400` at 48.5s and hangar at 77.4s and 114.0s. The image
+arm reached title at 49.5s and hangar at 78.8s and 115.4s. The silent arm
+remained target-qualified after image launch, selecting H-InitialPairContention
+at this recipe scope and refuting live overlap as the explanation for the
+earlier silent failure.
+
+The image phase-10 summary had 1970 stage rows, two nonzero rows, two source
+matches, two consumer matches, zero stage-only rows, and zero ordering
+violations. The rows were `(0x168B50,0x300,0x2B9E9631,621)` and
+`(0x168E50,0x300,0x6ADD4218,639)`. Each had an exact source and consumer
+tuple, with source before consumer. The silent PCM source/consumer rows were
+53/53 in phase 8, 48/48 in phase 10, and 6/6 in phase 12, all
+`FNV=0xF59C39C5, nz=0`; the image phase-10 PCM rows included the two matching
+nonzero image hashes. Both game processes ended at the known post-target abort
+with last guest PC `0x80001B08`.
+
+This selects H-CompleteStaggeredTarget at the measured scope and closes the
+previously unmatched image row. It supersedes s2271's intrinsic arm-specific
+route interpretation at this recipe scope, while retaining initial
+pre-target paired contention as the route explanation. It rules out a need for
+a writeback, consumer, slot, gate, guard, or image-default change.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-keyon-tuple-contract`.

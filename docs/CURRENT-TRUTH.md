@@ -5,11 +5,11 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2271 (2026-08-24); behavioral and source evidence is
-current through s2271. This iteration ran one unchanged-build silent-first /
-image-second output-contract pair; both arms reached title, but only the
-image arm reached hangar, so the target rows remained unpaired and no runtime
-change was made.
+Maintained in Session 2272 (2026-08-24); behavioral and source evidence is
+current through s2272. This iteration ran an unchanged-build phase-gated
+silent-first/image-second pair; both arms reached title and hangar, and two
+nonzero image rows closed exact source/consumer joins. No runtime change was
+made.
 
 ## Current state
 
@@ -32,12 +32,12 @@ change was made.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. Its host canary is probe data only; it does not gate
   completion, writeback, or DMA.
-- The image arm has qualified target-stage rows and s2268 observed one exact
-  phase-10 stage/source/consumer match in the same paired run. A second
-  nonzero phase-10 stage row remained unmatched. The silent arm qualified
-  through title and hangar in that pair; its phase-8/10/12 source and
-  consumer rows were present but all zero. The paired output boundary is
-  therefore usable, but the unmatched image row remains open.
+- The image arm has qualified target-stage rows. s2268 observed one exact
+  phase-10 stage/source/consumer match, and s2272 observed two more exact
+  phase-10 matches in a phase-gated staggered pair. The silent arm qualified
+  through title and hangar in s2272; its phase-8/10/12 source and consumer
+  rows were present but all zero. The measured output contract is complete
+  for the observed nonzero rows; the image arm remains opt-in.
 - The port-side `field348` source spans are cleared by the legitimate
   `rs_memset` setup call at static callsite `0x8008F2CC`; retail independently
   writes both corresponding spans with nonzero values. The missing nonzero
@@ -161,6 +161,25 @@ change was made.
   while the silent arm fails to qualify hangar in both launch positions;
   this selects arm-specific paired-route sensitivity at the tested scope,
   not a pure launch-order explanation, and leaves the output contract open.
+- s2272 first exposed a driver defect: when the silent arm died before 512, the
+  shell's compound gate also fell through and launched the image arm without a
+  512 confirmation. That continuation was discarded. The corrected driver
+  launched the image arm only after emitting
+  `silent_first_512=observed; launching image`. Both arms passed startup,
+  one `[missing-func]`, 14 B40 rows, and 28 route-state rows. The silent arm
+  reached title `1024 @ 0x00790400` at 48.5s and hangar
+  `512 @ 0x006AB400` at 77.4s and 114.0s. The image arm reached title at
+  49.5s and hangar at 78.8s and 115.4s. The silent arm remained qualified
+  after image launch, selecting H-InitialPairContention at this recipe scope
+  and refuting live overlap as the reason for the earlier silent failure.
+  The image phase-10 summary had 1970 stage rows, two nonzero rows, two source
+  matches, two consumer matches, zero stage-only rows, and zero ordering
+  violations. The rows were `(0x168B50,0x300,0x2B9E9631,621)` and
+  `(0x168E50,0x300,0x6ADD4218,639)`; each had exact source and consumer
+  tuples with `source_before_consumer=1`. This selects
+  H-CompleteStaggeredTarget at the measured scope and closes the previously
+  unmatched image row. Both processes ended at the known post-target abort
+  with last guest PC `0x80001B08`; no runtime change was made.
 - Independent retail oracle work established the whole-RDRAM control, both
   target origins, nonzero writes to both `field348`-derived spans, and the
   retail task/output writer family. It has not yet joined a retail write to a
@@ -170,34 +189,19 @@ change was made.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 image-output contract completeness after arm-specific paired-route
-   sensitivity.** Run one same-build pair with the silent arm launched first,
-   but launch the image arm only after the silent run log records its first
-   `vi_width=512` phase. This phase-gated stagger tests whether the concurrent
-   image workload is what prevents the silent arm from reaching hangar in
-   both immediate-launch pairs. Require both arms' startup,
-   `[missing-func]`, B40 and route-state controls, title `1024 @ 0x00790400`,
-   and hangar `512 @ 0x006AB400`. If silent reaches 512 before image starts
-   and remains target-qualified, select initial paired contention and compare
-   only the subsequently overlapping target windows. If silent fails before
-   512 before image starts, select an arm-specific route defect and leave
-   output completeness open. If both arms qualify after the stagger, compare
-   every phase-10 nonzero image row against exact source/consumer tuples; do
-   not promote the image arm or add a writeback, consumer, slot, gate, or
-   guard change.
-2. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
+1. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
    difference using a new pointer-versus-branch discriminator. No key-on
    return or mitigation change follows from the existing table.
-3. **M5 A1 second-origin transition.** Identify the natural host field
+2. **M5 A1 second-origin transition.** Identify the natural host field
    publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
    remain opt-in.
-4. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
+3. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
-5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+4. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator; the dormant `slotDispatcherIter+872` class has
    thousands of clean guarded hangar calls and no authorized mitigation.
-6. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
+5. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
 
@@ -225,17 +229,16 @@ status cycle and reaches the target route. s2132–s2140 close the sampled
 AI-status and RSP-image/task-field boundaries: MORT speech is separate, both
 systems write `data_ptr+0x100`, and stock `aspMain` is not a substitute.
 
-The open output boundary is narrower. The image arm changes DMEM, completes,
-and emits generated DMA, but early captures had zero stage inputs. s2268
-qualified both arms in one pair and observed one exact phase-10
-stage/source/consumer tuple with nonzero PCM, plus one nonzero stage row with
-no join. s2271 qualified only the image arm through hangar in the
-order-swapped pair; its two nonzero phase-10 rows were stage-only and cannot
-be compared against the silent control because that arm had no hangar window.
-The silent control's independently qualified matching boundary remains
-all-zero. Retail writes the corresponding field spans and a separate
-task/output span. The next phase-gated stagger tests whether paired workload
-contention is the reason the silent arm misses the target window.
+The measured output boundary is now complete for the observed nonzero rows.
+The image arm changes DMEM, completes, and emits generated DMA. s2268
+qualified one exact nonzero phase-10 stage/source/consumer tuple; s2272's
+phase-gated stagger qualified both arms and produced two additional exact
+nonzero tuples, with source-before-consumer ordering and no stage-only rows.
+The silent control's independently qualified PCM boundary remains all-zero.
+Retail writes the corresponding field spans and a separate task/output span.
+This closes output-contract completeness at the measured scope without
+promoting the image arm or authorizing a writeback, consumer, slot, gate, or
+guard change.
 
 Do not re-flip the image default, force C88, skip or allow
 `matchKeywordWithPriority`, add a wait/slot guard, or land a copyToRAM/CIMG
@@ -282,10 +285,13 @@ the append-only ledger. Operationally:
 - s2228's detail-ring crash and s2242–s2259's image/pair crash splits are
   intermittent route-load observations, not selected intrinsic image or
   writer defects. s2254 and s2259 provide qualified controls.
-- s2271's order-swapped pair does not support a pure launch-order explanation:
-  the image arm qualified when second, while the silent arm failed to reach
-  hangar when first. This is an arm-specific paired-route result at the tested
-  scope, not an image-output or writer explanation.
+- s2271's order-swapped pair made arm-specific paired-route sensitivity look
+  plausible because the image arm qualified when second while the silent arm
+  failed to reach hangar when first. s2272's phase-gated stagger kept the
+  silent arm qualified after the image launch and closed both image joins, so
+  the earlier result is superseded as an intrinsic arm defect; initial
+  pre-target paired contention remains the selected route explanation at this
+  recipe scope.
 - s2269's pre-target controls followed by a shared width-640 stall and s2270's
   image-first/silent split are route-invalid observations. They do not make
   the qualified s2268 output tuple disappear or explain the route-load
