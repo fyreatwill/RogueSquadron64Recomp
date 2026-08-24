@@ -104953,6 +104953,50 @@ existing `ROGUESQ_M5_C88_VALUE=1` behavior arm only.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-keyon-contract`.
 
+## Session 2229 (2026-08-23) — isolated the expanded key-on census crash
+
+Used the already-built 8192-entry generated census from s2228. No generated
+game behavior, key-on return, guard, default, task field, audio dispatch, or
+runtime source changed. Ran three phase-gated arms concurrently with the same
+C88/image/LLE/spin controls: 8192 detail tuple capture, 8192 quiet tuple
+capture disabled, and the 2048 detail reference.
+
+All three drivers completed with `rc=0` and their positive controls fired. The
+8192 detail arm recorded 4,239 LLE tasks and 113 audio-task dispatches, then
+reached `640 @ 0x00696100`, `1024 @ 0x00790400`, and `512 @ 0x006AB400`.
+Its 22 table rows and 24,655 transfer rows had zero overflow at all eight
+sites. The final phase rows had 3,406/3,405/3,501/3,501/246/246/2,230/2,230,
+75 at every site, and 141 at every site respectively for the 640, 1024, and
+512 tuple rings; no crash was reported. The 2048 detail arm independently
+reached all three phases with 3,299 LLE tasks, 97 audio dispatches, 24,214
+transfer rows, and zero overflow.
+
+The 8192 quiet arm also passed controls (4,717 LLE tasks, 119 audio
+dispatches) but reached only the 640 and 1024 phases; it did not reach the 512
+phase and did not crash. This is not the prescribed trace-overhead split: the
+detail arm survived to hangar while the quiet arm did not. Together with the
+s2228 detail crash at `fillSampleStreamRange+8136`, the result makes that
+crash intermittent under the expanded census, not a demonstrated cap or
+tuple-trace boundary. The 8192 detail arm now supplies a complete
+zero-overflow port table for the next retail tuple comparison.
+H-TraceOverhead, H-CapFootprint, and H-IntermittentFillRange were not
+selected; H-TupleParityReady was selected. This is two-source-in-run port
+evidence (driver summaries plus phase/table rows), with s2223 remaining the
+independent retail baseline.
+
+No mitigation or runtime behavior change was authorized. Logs:
+`scratch/s73_post_a_scene/s2229_8192_detail/run.log`,
+`scratch/s73_post_a_scene/s2229_8192_quiet/run.log`, and
+`scratch/s73_post_a_scene/s2229_2048_detail/run.log`.
+
+ORIGIN: no game value was suppressed, rewritten, guarded, or restored; this
+iteration only reran diagnostic arms against the existing generated build.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-keyon-contract`.
+
 ## Session 2224 (2026-08-23) — measured port key-on transfer state at first target
 
 The s2224 work unit added a regeneration-safe phase-keyed census to the

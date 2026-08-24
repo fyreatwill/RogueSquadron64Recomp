@@ -1,66 +1,102 @@
-# NEXT work unit (s2229) — isolate the 8192-entry census early crash
+# NEXT work unit (s2230) — compare common key-on tuple sets with retail
 
 HYPOTHESIS-ID: m5-audio-keyon-contract
 
 ## Work unit
 
-Use the already-built 8192-entry binary to run three phase-gated arms in one
-iteration: 8192 with tuple-row logging, 8192 with tuple capture disabled, and
-the existing 2048 detail reference. This isolates the first run's early
-`fillSampleStreamRange+8136` crash before attempting another parity claim.
-Do not change generated game behavior, key-on returns, guards, defaults, task
-fields, or audio dispatch.
+Use the existing s2223 retail oracle log and the s2229 8192-detail port log to
+compare normalized `($v0,$s1,$a0,$a2)` tuple-set membership for the common
+retail and port buckets `0x00696100:640` and `0x006AB400:512`, at all eight
+transfer PCs. Include the positive-control and phase-hit checks in the same
+result table. Do not compare the port-only title bucket or infer the missing
+second 640 origin from this run. Do not change generated game behavior,
+key-on returns, guards, defaults, task fields, audio dispatch, or oracle code.
 
 Competing hypotheses and the single discriminator:
 
-- H-TraceOverhead: only the 8192 detail arm loses the later phases; per-row
-  transfer logging is the trigger, while 8192 quiet and 2048 detail reach the
-  later buckets.
-- H-CapFootprint: both 8192 arms fail before the later buckets while 2048
-  detail reaches them; the enlarged capture storage changes execution or
-  memory behavior.
-- H-IntermittentFillRange: all three arms show the same crash/phase boundary,
-  so this run does not tie the failure to the census cap.
-- H-TupleParityReady: 8192 detail reaches all three buckets with zero
-  overflow, permitting the planned retail-set comparison.
+- H-ParityMatch: the port tuple sets equal retail in both common buckets, per
+  transfer PC; the remaining issue is route/phase coverage.
+- H-PortOperandMismatch: one or more port-only tuples remain after
+  normalization in a common bucket, identifying an operand-contract split.
+- H-RetailOperandMismatch: one or more retail-only tuples remain while the
+  port rows are internally complete, identifying a port-side missing branch or
+  source value rather than a census-cap artifact.
+- H-JoinOrCoverageMismatch: differences disappear when rows are keyed by the
+  exact `(origin,width,PC)` bucket, or one side lacks a positive phase row; the
+  tuple comparison is not valid and must not drive a runtime change.
 
-The discriminator is one table across all three arms: process outcome and
-crash symbol, positive-control counts, and presence of phase-keyed rows at
-`0x00696100:640`, `0x00790400:1024`, and `0x006AB400:512`. A later-bucket
-survivor only in the 8192 quiet arm selects H-TraceOverhead; survival only in
-the 2048 detail arm selects H-CapFootprint; identical early failure selects
-H-IntermittentFillRange; all three buckets with zero overflow in 8192 detail
-selects H-TupleParityReady and authorizes the retail-set comparison. A null
-without the positive controls is invalid.
+The discriminator is one 2-bucket × 8-PC table containing, for each exact
+bucket and transfer PC: retail hit count, port transfer count, retail unique
+tuple count, port unique tuple count, set intersection, retail-only count, and
+port-only count. The retail log is valid only if its whole-RDRAM control is
+10,000 writes and both common phase rows are present; the port log is valid
+only if its driver reports nonzero LLE/audio controls and its table rows show
+zero overflow. Equal sets select H-ParityMatch; port-only values select
+H-PortOperandMismatch; retail-only values select H-RetailOperandMismatch; a
+missing control or bucket selects H-JoinOrCoverageMismatch. No null without
+the controls is usable.
 
 ## Exact commands
 
-Verify the built generated helper and the s2228 result:
+Verify the independent retail control and the selected port result:
 
 ~~~sh
-rg -n -C 2 'tuples\[8\]\[8192\]|>= 8192ul|tuple_overflow' ../N64Recomp/fixup_game_funcs.py ../N64Recomp/RecompiledFuncs/funcs_24.c
-grep -a -E '\[m5-keyon-table\]|\[CRASH\]' scratch/s73_post_a_scene/s2228_keyon_tuple_cap/run.log | tail -12
+rg -n '\[oracle\] watch write.*10000|\[oracle\] done:|width=640 origin=0x00696100|width=512 origin=0x006ab400' scratch/agent/s2223_retail_keyon_guard_table.log | tail -20
+tail -45 scratch/agent/s2229_8192_detail_driver.log
+rg -n '\[m5-keyon-table\].*(width=640|width=512)' scratch/s73_post_a_scene/s2229_8192_detail/run.log | tail -12
 ~~~
 
-Run all arms from the repository root with the same positive-control recipe.
-They use separate tags/logs and are phase-compared, not stopwatch-compared:
+Normalize and compare the two common buckets without reading whole logs:
 
 ~~~sh
-(
-  env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2229_8192_detail 30 12 > scratch/agent/s2229_8192_detail_driver.log 2>&1
-) & p1=$!
-(
-  env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=0 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2229_8192_quiet 30 12 > scratch/agent/s2229_8192_quiet_driver.log 2>&1
-) & p2=$!
-(
-  env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2229_2048_detail 30 12 > scratch/agent/s2229_2048_detail_driver.log 2>&1
-) & p3=$!
-wait "$p1"; r1=$?
-wait "$p2"; r2=$?
-wait "$p3"; r3=$?
-printf 'arm_rc detail8192=%s quiet8192=%s detail2048=%s\n' "$r1" "$r2" "$r3"
+tmpdir=$(mktemp -d /tmp/rs64-keyon-tuples.XXXXXX)
+awk '
+  /\[hit\]/ {
+    pc=""; origin=""; width=""; v0=""; s1=""; a0=""; a2=""
+    for (i=1;i<=NF;i++) {
+      if ($i ~ /^pc=/) pc=tolower(substr($i,4))
+      if ($i ~ /^origin=/) origin=tolower(substr($i,8))
+      if ($i ~ /^width=/) width=substr($i,7)
+      if ($i ~ /^v0=/) v0=tolower(substr($i,4))
+      if ($i ~ /^s1=/) s1=tolower(substr($i,4))
+      if ($i ~ /^a0=/) a0=tolower(substr($i,4))
+      if ($i ~ /^a2=/) a2=tolower(substr($i,4))
+    }
+    if (origin=="0x00696100" && width==640) b="first640"
+    else if (origin=="0x006ab400" && width==512) b="hangar512"
+    else next
+    if (pc ~ /^0x80090(cf0|d08|d34|d4c|d78|d90|dbc|dd4)$/)
+      print b "|" pc "|" v0 "|" s1 "|" a0 "|" a2
+  }
+' scratch/agent/s2223_retail_keyon_guard_table.log | sort -u > "$tmpdir/retail.set"
+awk '
+  /\[m5-keyon-transfer\]/ {
+    site=""; origin=""; width=""; v0=""; s1=""; a0=""; a2=""
+    for (i=1;i<=NF;i++) {
+      if ($i ~ /^site=/) site=tolower(substr($i,6))
+      if ($i ~ /^origin=/) origin=tolower(substr($i,8))
+      if ($i ~ /^width=/) width=substr($i,7)
+      if ($i ~ /^v0=/) v0=tolower(substr($i,4))
+      if ($i ~ /^s1=/) s1=tolower(substr($i,4))
+      if ($i ~ /^a0=/) a0=tolower(substr($i,4))
+      if ($i ~ /^a2=/) a2=tolower(substr($i,4))
+    }
+    if (origin=="0x696100" && width==640) b="first640"
+    else if (origin=="0x6ab400" && width==512) b="hangar512"
+    else next
+    print b "|" site "|" v0 "|" s1 "|" a0 "|" a2
+  }
+' scratch/s73_post_a_scene/s2229_8192_detail/run.log | sort -u > "$tmpdir/port.set"
+for b in first640 hangar512; do
+  for pc in 0x80090cf0 0x80090d08 0x80090d34 0x80090d4c 0x80090d78 0x80090d90 0x80090dbc 0x80090dd4; do
+    r="$tmpdir/r.$b.$pc"; p="$tmpdir/p.$b.$pc"
+    rg "^$b\\|$pc\\|" "$tmpdir/retail.set" | sort -u > "$r"
+    rg "^$b\\|$pc\\|" "$tmpdir/port.set" | sort -u > "$p"
+    printf '%s %s retail=%s port=%s both=%s retail_only=%s port_only=%s\n' "$b" "$pc" "$(wc -l < "$r")" "$(wc -l < "$p")" "$(comm -12 "$r" "$p" | wc -l)" "$(comm -23 "$r" "$p" | wc -l)" "$(comm -13 "$r" "$p" | wc -l)"
+  done
+done
 ~~~
 
-Use the resulting `[m5-keyon-table]` rows and phase-keyed transfer tuples only
-after each arm's positive controls are present. Do not compare stopwatch
-timestamps or promote the cap change into runtime behavior.
+Keep any rerun phase-gated and use SIGKILL if a recipe needs stopping. A
+missing control or a port-only title/retail-only second-origin row is a
+coverage result, not permission to alter the key-on path.

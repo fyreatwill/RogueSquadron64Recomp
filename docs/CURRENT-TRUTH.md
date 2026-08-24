@@ -3,8 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2228 (2026-08-23); behavioral and source evidence is
-current through s2228. The s2198–s2226 archive is §44.
+Maintained in Session 2229 (2026-08-23); behavioral and source evidence is
+current through s2229. The s2198–s2226 archive is §44; s2227–s2229 remain in
+the append-only ledger.
 
 ## Current state
 
@@ -32,8 +33,8 @@ current through s2228. The s2198–s2226 archive is §44.
   watched divide PCs, and executes the alternate post-guard transfer path.
   The phase-keyed `$v0/$s1/$a0/$a2` tuple sets differ across both target
   origins and hangar. The port has positive normal-tail/slot behavior at four
-  sites, but its 2048-entry first-target tuple rings still overflow six sites;
-  tuple parity is not measured.
+  sites. s2229's 8192 detail arm reached first-target, title, and hangar with
+  zero tuple overflow at every site; tuple parity is not yet measured.
 - The port's `ViState::field` is fixed at zero by default. Opt-in field,
   current-register, timing, and total-`VI` arms recover the two-origin target
   split, but the natural host publisher/cadence is unidentified. No such
@@ -43,13 +44,11 @@ current through s2228. The s2198–s2226 archive is §44.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 key-on tuple contract.** Isolate the early
-   `fillSampleStreamRange+8136` crash seen by the first 8192-entry census
-   arm, then complete the phase-keyed comparison against s2223's retail
-   table. The next three-arm discriminator is in
-   [`scratch/agent/NEXT.md`](../scratch/agent/NEXT.md). No key-on return,
-   guard, task-field rewrite, default flip, or mitigation follows from the
-   comparison automatically.
+1. **M5 key-on tuple contract.** Compare the complete zero-overflow 8192
+   port table from s2229 against s2223's retail phase-keyed rows. The next
+   discriminator is in [`scratch/agent/NEXT.md`](../scratch/agent/NEXT.md).
+   No key-on return, guard, task-field rewrite, default flip, or mitigation
+   follows from the comparison automatically.
 2. **M5 A1: identify the missing second-origin transition.** Retail's
    `__osViNext` context uses `framep` plus the selected current field to make
    both target origins. The port has the candidates but its natural field
@@ -145,15 +144,17 @@ origins and hangar, all eight divide PCs at zero, and phase-specific disjoint
 tuple sets. s2225 showed the detail logger itself fires and reaches first
 target, title, and hangar. s2226 expanded the port rings to 2048: hangar and
 title had zero overflow, but six first-target rings remained capped and the
-second target origin was absent. s2228's 8192 result is recorded next.
-s2228 regenerated the template and build with 8192 entries. Its detail arm
-passed positive controls (599 LLE tasks, 49 audio dispatches, 128 key-on
-events/slot rows, and 10,331 transfer rows) and reached the first target with
-zero overflow at all sites sampled (`928/928, 906/906, 88/88, 520/520`
-unique tuples across paired sites). It then crashed before title or hangar at
-`fillSampleStreamRange+8136`, so the cap removed the first-target overflow but
-the parity discriminator is incomplete. This is single-source port evidence;
-the crash's cause and the later phase buckets remain open.
+second target origin was absent. s2228's 8192 detail arm passed positive
+controls (599 LLE tasks, 49 audio dispatches, 128 key-on events/slot rows, and
+10,331 transfer rows) and reached the first target with zero overflow, then
+crashed before title or hangar at `fillSampleStreamRange+8136`. s2229 reran
+three arms: 8192 detail reached all three sampled port phases with 22 table
+rows, 24,655 transfer rows, and zero overflow; 2048 detail independently did
+the same, while 8192 quiet reached only 640 and 1024. The expanded detail
+crash is therefore intermittent rather than a demonstrated cap or trace
+boundary, and the complete 8192 table is ready for the retail-set comparison.
+This remains single-source port evidence; s2223 is the independent retail
+baseline.
 
 ### M3, M4, and generated symbols
 
@@ -201,14 +202,21 @@ remain in the append-only ledger. Operationally:
   show the alternate path and its phase-specific tuples; no key-on return
   change follows. s2224's coverage selection is superseded by s2225–s2226;
   the remaining cap artifact is a measurement limit, not a runtime defect.
+- s2228's early `fillSampleStreamRange+8136` crash was initially consistent
+  with the enlarged census footprint. s2229's same-built 8192 detail arm
+  reached first target, title, and hangar with zero overflow, while a quiet
+  8192 arm stopped at title and a 2048 detail arm reached hangar. The crash is
+  thus intermittent at this scope; the cap/trace explanations are not
+  selected, and no runtime change follows.
 
 ## Evidence ledger summary
 
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Exact commands, counts, failed retries, and
-session headings remain in `PORTING-STATE.md`.
+§43; and s2198–s2226 is §44. Sessions s2227–s2229 remain in the ledger.
+Exact commands, counts, failed retries, and session headings remain in
+`PORTING-STATE.md`.
 
 Selected hypotheses must not be widened from single-source or single-arm
 observations. Do not re-flip the image default, guess S32 addressing, NULL-
