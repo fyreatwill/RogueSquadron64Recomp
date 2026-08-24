@@ -104521,6 +104521,31 @@ added and ran an opt-in scheduler diagnostic only.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation`.
 
+## Session 2217 (2026-08-23) — checkpoint close-out; VI cadence parked
+
+No new experiment ran in this session. The previous session (s2216) committed
+the opt-in `ROGUESQ_LOG_VI_PARITY_SCHEDULER` diagnostic, exported the submodule
+patch, ran control/current-register/total-vis arms for 60 seconds each, and
+collected 512 width-640 rows per arm with zero overflow and no crash or abort
+markers. Every arm's summary row recorded `skipped=0` and `max_delta=1`.
+
+That single-source port result selects H-NoSkippedVI for the measured scope.
+Because no host VI was skipped in any arm, callback ordinal and absolute
+`total_vis` cadence cannot be distinguished at this scope; s2215's
+H-RetraceParity cadence selection is superseded. The cadence question is parked
+pending a genuinely new discriminator. The M5 audio ground-truth reconciliation
+(plan step 1, oracle-first) remains the next active work unit.
+
+No code, default, mitigation, task, or audio-dispatch change was made.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this is a
+checkpoint close-out entry only.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation`.
+
 ## Session 2214 (2026-08-23) — tested VI current-register publication timing
 
 Ran the independent Rice retail preflight before changing the port. The

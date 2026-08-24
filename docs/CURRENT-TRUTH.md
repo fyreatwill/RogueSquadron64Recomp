@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2216
+authoritative for exact commands and probe rows. Maintained in Session 2217
 (2026-08-23); behavioral and source evidence is current through s2216.
 
 The detailed s2164–s2197 chain is archived in

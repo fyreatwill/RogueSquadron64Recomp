@@ -1,4 +1,4 @@
-# NEXT work unit (s2217) — reconcile retail audio gate and task boundaries
+# NEXT work unit (s2218) — reconcile retail audio gate and task boundaries
 
 HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation
 
@@ -59,7 +59,7 @@ tools/oracle/build/rs64_oracle \
   --pc-phase-log 0x0066AA00 --pc-phase-log 0x00696100 \
   --pc-phase-log 0x00696600 --vi-trace \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  --hold-ms 200 > scratch/agent/s2217_retail_audio_ground_truth.log 2>&1
+  --hold-ms 200 > scratch/agent/s2218_retail_audio_ground_truth.log 2>&1
 ~~~
 
 Port existing-route control, no build and SIGKILL watchdog:
@@ -69,7 +69,7 @@ cd build
 env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
   ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 \
   ROGUESQ_LOG_PCM_SANITY=1 ./RogueSquadron64Recomp \
-  > ../scratch/agent/s2217_port_audio_ground_truth.log 2>&1 & p=$!
+  > ../scratch/agent/s2218_port_audio_ground_truth.log 2>&1 & p=$!
 for i in {1..30}; do
   kill -0 "$p" 2>/dev/null || break
   sleep 1
