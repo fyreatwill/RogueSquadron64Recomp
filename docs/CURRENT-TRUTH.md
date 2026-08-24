@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2231 (2026-08-23); behavioral and source evidence is
-current through s2230, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2231 remain in
+Maintained in Session 2232 (2026-08-23); behavioral and source evidence is
+current through s2232, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2232 remain in
 the append-only ledger.
 
 ## Current state
@@ -31,6 +31,15 @@ the append-only ledger.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. Its host canary is inside the generated mix-buffer span;
   `canary_ok=0` is probe data and does not gate completion, writeback, or DMA.
+- s2232's same-build port A/B reached the target route, title, and hangar in
+  both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
+  DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
+  DMEM changes, 3,302 nonzero-DMA rows, and `break_pc=0x1328`, plus SP
+  completion. The image summary still had zero stage/source or stage/consumer
+  matches: title had 3,582 stage rows and 13 consumer-only observations; the
+  19 nonzero PCM source rows and 19 nonzero consumer rows were not joined to
+  an image stage. This is a provisional, single-source port selection of
+  H-ContractGap, not proof that the image output is correct.
 - s2220 matched the retail payload/polarity of `reapplyDisplayMode` at
   `0x8008EC88`: C88=`1` reaches service, slot completion, and nonzero PCM
   controls; forced zero does not. Keep this opt-in pending the remaining M5
@@ -55,10 +64,13 @@ the append-only ledger.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 audio de-stubbing execution.** Run the plan's Step 1 same-build,
-   phase-gated stub/image validation with all task, DMA, service, slot, voice,
-   MORT, and PCM joins. Do not promote `ROGUESQ_AUDIO_UCODE=1` to the default;
-   the next change requires a complete downstream row.
+1. **M5 image-output contract attribution.** s2232 selected H-ContractGap at
+   single-source port A/B scope: the Factor 5 arm runs and completes, but its
+   stage-to-PCM join is absent. Before implementing an output edge, run the
+   retail oracle with the whole-RDRAM positive control plus physical watches
+   over the port's stage/PCM destination span and attribute writer PCs and
+   payloads by target phase. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
+   writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -121,7 +133,9 @@ s2135–s2140 close the sampled RSP-image/task/output edge:
 fields match, and both retail and port write `data_ptr+0x100`. The image arm
 is nontrivial but its sampled host output, PCM, and validated slot completion
 were absent in s2219; s2220's C88 result supplies the current downstream
-discriminator. The image arm remains opt-in.
+discriminator. s2232's same-build A/B adds real image completion and DMA, but
+no image-stage to PCM join; the nonzero PCM rows are therefore not yet
+attributable to the image. The image arm remains opt-in.
 
 s2218's Rice oracle passed its whole-RDRAM control, reached both target 640
 origins, and found 17 writes from five PCs to the watched retail gate; its
@@ -240,13 +254,18 @@ remain in the append-only ledger. Operationally:
   both port-only and retail-only values remain in every common cell. Because
   the tuples include dynamic pointer-shaped operands, this is a contract
   boundary to explain, not authorization for a key-on mitigation.
+- s2232's image-arm PCM activity is not evidence of image-output correctness:
+  the same-run image summary recorded zero stage/source and stage/consumer
+  matches, while the nonzero PCM rows were consumer-only at the image-join
+  boundary. The arm remains useful evidence of DMEM/DMA and completion, but
+  no output writeback, gate, or default flip follows.
 
 ## Evidence ledger summary
 
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2230 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2232 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

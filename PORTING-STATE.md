@@ -105360,3 +105360,40 @@ authorized.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
+
+## Session 2232 (2026-08-23) — validated the opt-in Factor 5 image arm
+
+Ran the planned M5 Step 1 validation: one successful Debug build, followed by
+the default `musyx_stub` and `ROGUESQ_AUDIO_UCODE=1` `factor5_ucode_b` arms
+concurrently with `ROGUESQ_M5_C88_VALUE=1`, `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1`. Both driver processes
+reached the 640 target, title `1024 @ 0x00790400`, and hangar
+`512 @ 0x006AB400`; both had route, task, SP-completion, slot/voice, and PCM
+positive controls. The run logs are
+`scratch/s73_post_a_scene/s2232_stub/run.log` and
+`scratch/s73_post_a_scene/s2232_image/run.log`.
+
+The stub arm recorded 3,366 `audtask-abi` rows: `changed=0` on all rows,
+`break_pc=0x0000` on all rows, zero DMA rows, and zero nonzero PCM source or
+consumer rows. The image arm recorded 3,302 ABI rows: all had DMEM changes,
+`break_pc=0x1328`, and nonzero DMA rows; it also recorded 13,855 image-stage
+rows and SP completion. Its phase summaries still had zero image-stage to
+PCM source/consumer matches: title had 3,582 stage rows and 13 consumer-only
+observations, while 19 PCM source rows and 19 nonzero consumer rows were
+nonzero. The stage rows were therefore not a joined proof of image output.
+This is single-source port A/B evidence and provisionally selects
+H-ContractGap; it does not authorize a default flip, output writeback, gate,
+wait, slot, voice, or guard change. `canary_ok=0` remained probe data inside
+the generated mix span.
+
+Both arms later terminated at the same host assertion in
+`librecomp/pi.cpp:86` (`physical_addr & 1` in `do_rom_read`), with last guest
+PC `0x80001B08`; the shared post-route termination provides no A/B distinction
+and was not treated as an image result. No mitigation or runtime behavior was
+changed. The next unit is a retail-oracle whole-RDRAM-controlled writer/value
+capture for the image-stage/PCM physical span.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-contract`.
