@@ -109693,3 +109693,49 @@ promoted.
 Advance the M5 destination-to-slot/key-on boundary with a new ground-truth-
 first destination-role table. Keep the qualified image route and silent
 control, and do not repeat the stale-toggle or task-ordinal-only experiment.
+
+## Session 2329 (2026-08-24) — M5 destination-role join selects earlier-tick-only
+
+The first s2329 launcher stopped at the oracle gate before either port arm: the
+new destination watch was positive, but the named task/output PC histogram had
+been requested for watch 1 instead of watch 2. No port null was taken from that
+run. The fixed launcher added the missing `--pc-hist-watch 2` and corrected two
+post-processing defects: it retained prior lifecycle rows across the phase
+boundary and counted the table columns correctly.
+
+The corrected 75-second retail oracle passed whole-RDRAM `32351889`, physical
+destination-window `0x00165000:0x0016B000` writes `32341742`, task/output `108`,
+gate `17`, wait `0`, status `22`, title/hangar origins, and all three named
+writer-PC controls. Its target destination watch had `128` phase writer PCs;
+the selected task/output PCs remained positive in the independent histogram.
+Both port arms reached title and hangar with no `[CRASH]` or `[ABORT]`. The
+silent/image task ABI-DMA controls were `1144/1144` and `1139/1139`, guest
+receive SP routes `749/767`, PCM source/consumer `88/88` in both arms, and
+image-stage/image-join counts `2323/2327` in the image arm. The filter/voice
+positive control was absent in both arms, so that null remains unevaluable.
+
+The target phase-10 table retained `913` stage rows and two nonzero rows. In
+this capture both destinations, `0x169150` (`60F910DE`, `nz=621`) and
+`0x166450` (`7B70923A`, `nz=639`), ended as `stage-consumer-match`, with exact
+source/consumer events `6420/6421` and `6429/6430`. Neither had a same-ordinal
+post-stage slot, key-on, or descriptor event. Each had the same six prior-route
+events (`slot-sb` ×5 and sentinel `keyon-w40`) at signed deltas before the
+stage; the prior events belonged to the preceding phase/ordinal. The
+independent physical watch proves retail activity in the destination window,
+but its bounded selected-PC detail produced no exact address rows, so it does
+not establish per-destination retail polarity. This selects
+`H-EarlierTickOnly` at capture scope, shows that the s2325 role split is not
+stable across captures, and leaves the destination-to-slot/key-on contract
+open. No runtime behavior, default, gate, slot, writeback, guard, or address
+mapping changed.
+
+ORIGIN: this session added only a ground-truth watch and regeneration-safe
+post-processing; the retail destination writer is legitimate observed game
+activity, and no mitigation was added.
+
+### Next
+
+Discriminate the image task's advertised output metadata from its generated
+destination/PCM roles. Keep the same qualified route and independent retail
+watch, and do not repeat the destination-role census without joining
+`data_ptr`, `output_buff`, every DMA range, image completion, and PCM events.

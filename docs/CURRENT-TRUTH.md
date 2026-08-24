@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2328 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2329 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -157,6 +157,24 @@ Session 2328 first caught a stale drain A/B because the launcher env var was
 absent from generated `funcs_30.c`. After applying the existing s1993 fixup
 gate, the oracle and both image tick arms qualified; their normalized target
 lifecycle tables matched, selecting `H-DrainRedundant` at capture scope.
+
+Session 2329 first stopped at its oracle gate because the new destination watch
+was positive but the named task/output PC histogram had been requested for the
+wrong watch index. The corrected run passed whole-RDRAM `32351889`, physical
+`0x00165000:0x0016B000` writes `32341742`, task/output `108`, gate `17`, wait
+`0`, status `22`, title/hangar, and all three named writer-PC controls. Both
+port arms reached hangar with task ABI/DMA, guest-receive SP, and PCM
+source/consumer controls; the image arm had `2323` image-stage and `2327`
+image-join rows. Its target table retained `913` rows and two nonzero
+destinations, `0x169150` (`60F910DE`, `nz=621`) and `0x166450` (`7B70923A`,
+`nz=639`), both `stage-consumer-match` with source/consumer events
+`6420/6421` and `6429/6430`. No same-ordinal post-stage lifecycle row existed;
+each target had the six prior-route `slot-sb`/sentinel-key-on signature across
+the preceding phase. This selects `H-EarlierTickOnly` at capture scope and
+shows that the s2325 destination-role split is capture-dependent. Retail
+physical-window activity is independently established, but the bounded
+selected-PC detail supplied no exact per-destination retail rows. The
+filter/voice positive control remained absent, so that null is unevaluable.
 
 The current M5 boundary is the destination-to-slot consumer after task-ordinal
 ownership. The qualified default
@@ -398,6 +416,26 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2329 — destination-role table selects earlier-tick-only at capture
+  scope.** The first launcher was oracle-gate-invalid because its named PC
+  histogram used watch 1 instead of task/output watch 2; no port arm ran. The
+  fixed same-build recipe passed retail whole-RDRAM `32351889`, destination
+  window `0x00165000:0x0016B000` writes `32341742`, task/output/gate/status/wait
+  `108/17/22/0`, title/hangar, and the named writer PCs. Both port arms had
+  title/hangar, VI and ABI/DMA controls, guest-receive SP routes, and PCM
+  source/consumer `88/88`; image-stage/image-join were `2323/2327`. The image
+  target table had `913` rows and two nonzero destinations:
+  `0x169150`/`60F910DE`/`nz=621` and `0x166450`/`7B70923A`/`nz=639`. Both were
+  `stage-consumer-match`, with exact source/consumer `6420/6421` and
+  `6429/6430`, and neither had a same-ordinal post-stage lifecycle row. Each
+  had six prior-route lifecycle rows at signed pre-stage deltas. This selects
+  `H-EarlierTickOnly` at capture scope and makes the s2325 role split
+  capture-dependent rather than stable. Retail physical-window activity was
+  positive, but selected-PC post-value detail had no exact destination rows;
+  retail per-destination polarity therefore remains open. Filter/voice
+  absence remains unevaluable because its positive control did not fire. No
+  runtime behavior changed.
 
 - **s2325 — rotating image destinations split stage-only from exact PCM.** The
   same-run retail oracle passed whole-RDRAM `1346640`, title/hangar,
@@ -704,14 +742,17 @@ sequence; #1 is the next work unit.
    arms qualified with identical normalized target lifecycle rows. The gate
    remains default-on; the image arm remains the qualified default.
 2. **M5 destination-to-slot/key-on contract — active.** The corrected drain
-   A/B does not explain the missing post-ordinal slot consumer: both image
-   arms still have zero same-ordinal slot/key-on/descriptor rows. Use a new
-   destination-role discriminator; do not add writeback, guards, slot values,
-   or defaults.
-3. **M5 task/output contract — closed at the current discriminator.** s2325
-   supersedes the undifferentiated task/output gap with
-   `H-Destination-Role-Skew`; revisit only if the destination-to-slot table
-   cannot classify the split. Retail status/zeroing is independently closed.
+   A/B does not explain the missing post-ordinal slot consumer. s2329 found
+   both nonzero destinations consumed by the PCM join in one capture, while
+   the prior-route lifecycle remained six rows and no same-ordinal slot,
+   key-on, or descriptor row appeared. The next discriminator is the task's
+   `data_ptr`/`output_buff`/DMA metadata contract; do not add writeback,
+   guards, slot values, or defaults.
+3. **M5 task/output role split — capture-dependent, not route-wide closed.**
+   s2325 found one stage-only and one exact PCM destination; s2329 found two
+   exact PCM destinations under the same qualified route. Retail status/zeroing
+   is independently closed, but per-destination retail polarity remains
+   unjoined.
 4. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not
    repeat the failed four-arm/two-wave matrix.
@@ -784,7 +825,16 @@ drain-tick A/B independently gated the existing injection (`en=1` versus
 `en=0`); both image arms retained title/hangar, task/DMA/image/PCM and guest
 receive controls, with two target rows, zero same-ordinal lifecycle rows, and
 the same prior-route lifecycle signature. This selects `H-DrainRedundant` at
-capture scope and leaves the destination-role boundary open.
+capture scope and leaves the destination-role boundary open. s2329's
+ground-truth-first table retained the same qualified route and found two
+nonzero target destinations, both with exact source/consumer joins, while the
+six lifecycle rows remained on the preceding phase/ordinal. The retail oracle
+independently wrote the physical `0x00165000:0x0016B000` window and supplied
+128 target-phase writer PCs, but no exact selected-PC destination rows. This
+selects `H-EarlierTickOnly` at capture scope, makes destination polarity
+capture-dependent, and leaves the task metadata/output contract open. The
+filter/voice positive control was absent again, so its null remains
+unevaluable.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
 phase-gated captures show a rotating mixed output contract: s2306 had one
@@ -880,7 +930,10 @@ but are superseded at their measured scopes:
   destination-polarity table. s2325's same-run target table found one
   stage-only destination and a different destination with exact source and
   consumer events, so the active conclusion is the narrower
-  `H-Destination-Role-Skew` at capture scope.
+  `H-Destination-Role-Skew` at capture scope. s2329's corrected ground-truth
+  table found two exact source/consumer destinations in the same qualified
+  route, so the role split is not a stable route-wide polarity; s2325 remains
+  valid only for its own capture.
 
 ## Evidence and safety rules
 
