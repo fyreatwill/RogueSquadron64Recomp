@@ -1,66 +1,53 @@
-# NEXT work unit (s2286) — M5 Step 1 trace-light route discriminator
+# NEXT work unit (s2287) — retail ground-truth route-PC boundary
 
-HYPOTHESIS-ID: m5-step1-route-requalification
+HYPOTHESIS-ID: m5-step1-retail-route-boundary
 
 ## Work unit
 
-Run one same-build, phase-gated silent/image pair using the corrected
-eleven-Start route: `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`,
-`ROGUESQ_LLE_SOLO=1`, `ROGUESQ_SPIN_YIELD=1`, and
-`ROGUESQ_M5_C88_VALUE=0`. Keep the independent retail oracle and launch the
-image arm only after the silent arm reaches `512 @ 0x006AB400`.
-
-Use the existing task/DMEM/DMA, audio-return/SP, gate, bounded
-slot-dispatch/link, voice/MORT, PCM, B40, route-state, and phase diagnostics,
-but remove `ROGUESQ_LOG_VI_CALLERS=1` from the s2285 recipe. That is the route
-discriminator: s2285 reached title but crashed in the off-target 640 return
-with the high-volume VI-caller arm enabled. Do not change runtime code,
-defaults, guards, or audio dispatch.
+Run one driven retail-oracle route-boundary experiment before another port
+pair. Watch the two guest PCs reported by the s2285/s2286 port failures:
+`0x800547BC` and `0x80007904`. Keep the whole-RDRAM positive control first,
+the eleven-Start schedule, `--vi-trace`, and title/hangar origin controls.
+Phase-gate the watched-PC rows to the port's initial
+`640 @ 0x00696100` route with `--pc-phase-log-width 0x00696100:640` and retain
+the oracle's `exec-prev` attribution. This is an oracle-only experiment: do
+not build, instrument, or change the port runtime.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-LoggerPerturbation: removing the high-volume VI-caller trace restores the
-  qualified route. The silent arm reaches hangar and the gated image arm also
-  reaches hangar, allowing the complete Step 1 row to be compared.
-- H-RouteIntrinsic: the trace-light arm still reaches title, returns to
-  `640 @ 0x00696100`, and crashes at `slotDispatcherIter+3508` / guest PC
-  `0x80007904` before hangar. This selects route failure at this scope and
-  leaves all downstream audio nulls unevaluable.
-- H-AudioContract: both arms reach the target phase and the image arm adds a
-  task/output/service/slot/voice/MORT/PCM edge while the silent arm remains
-  the control. This selects the missing audio contract boundary without
-  promoting the image arm.
-- H-RouteInvalid: the oracle positive control, port route controls, or either
-  target phase is absent. Do not interpret any downstream null from that arm.
+- H-PortOnlyBadPath: the retail oracle passes whole-RDRAM, title, and hangar
+  controls but records neither watched PC in the initial 640 phase. The port's
+  `0x800547BC` crash path is then port-only at this recipe scope.
+- H-RetailLegitimatePath: retail passes the controls and executes one or both
+  PCs in the phase, with an `exec-prev` attribution, then reaches title and
+  hangar. The boundary moves from audio/output nulls to port-side route/data/
+  ABI behavior around a path retail actually uses.
+- H-RetailRouteDifferent: retail passes the controls but executes the PCs only
+  in another VI phase or with a different predecessor. The port and retail
+  route identities differ, so another port pair is premature; investigate the
+  route entry/overlay boundary rather than audio.
+- H-OracleInvalid: the whole-RDRAM threshold or either title/hangar control is
+  absent. The PC null or hit is uninterpretable and the experiment must be
+  repaired before any port conclusion.
 
-The discriminating measurement is one phase-keyed table per arm containing
-task dispatch/fields/source, DMEM change and DMA ranges, image exit and SP
-completion, service entry/return, gate, slot/status/reap, bounded slot/link
-rows, voice/MORT rows, PCM source/consumer joins, and title/hangar route. A
-result is interpretable only if the oracle passes the whole-RDRAM threshold at
-10,000 writes and reaches both title and hangar, both port arms pass B40 and
-route-state controls, and both reach `512 @ 0x006AB400`. Branch counters are
-not positive controls.
+The discriminating measurement is one table containing: whole-RDRAM callback
+threshold; title and hangar VI origins; every hit at `0x800547BC` and
+`0x80007904` with live width/origin; and each hit's `exec-prev` caller. A
+positive control is required before using any PC null. No image arm, audio
+default, guard, or writer change follows this oracle result.
 
 ## Exact commands
 
-1. Create `scratch/agent/run_s2286_m5_step1_trace_light_pair.sh` with
-   `apply_patch`, based on the corrected s2285 driver. Keep its oracle gate,
-   silent-first hangar gate, SIGKILL watchdogs, and bounded summary. In the
-   common port environment retain:
-   `ROGUESQ_LOG_M5_TASK_CONTRACT=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`,
-   `ROGUESQ_LOG_PCM_BOUNDARY=1`, `ROGUESQ_LOG_M5_GATE_CONTRACT=1`,
-   `ROGUESQ_LOG_SLOT_DISPATCH=1`, `ROGUESQ_LOG_SLOT_LINK=1`,
-   `ROGUESQ_LOG_FILTER_VOICE_AUDIT=1`, `ROGUESQ_LOG_M5_B40_ROUTE=1`,
-   `ROGUESQ_LOG_M5_ROUTE_STATE=1`, `ROGUESQ_LOG_PHASE=1`,
-   `PROBE_PHASE_WIDTH=1024`, and `PROBE_KEYS_FROM_PHASE=1`; do not set
-   `ROGUESQ_LOG_VI_CALLERS`.
-2. Check syntax:
-   `zsh -n scratch/agent/run_s2286_m5_step1_trace_light_pair.sh`
-3. Run from the repository root:
-   `zsh scratch/agent/run_s2286_m5_step1_trace_light_pair.sh s2286_m5_step1_trace_light_pair`
-4. Summarize with bounded `grep`/`tail` only: oracle whole-RDRAM/title/hangar
-   controls, both port route controls, silent/image title/hangar gates, the
-   per-phase task/DMA/SP/service/slot/voice/MORT/PCM rows, and terminal crash
-   or timeout. If the silent hangar gate is absent, do not launch or interpret
-   the image arm.
+1. Create `scratch/agent/run_s2287_m5_oracle_route_boundary.sh` with
+   `apply_patch`. It should run from the repository root, create a capture
+   directory whose final component does not begin with `.`, launch exactly
+   one retail oracle, and use SIGKILL cleanup. Use:
+
+   `tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 180 --watch-write 0x0:0x800000 --watch-pc 0x800547BC,0x80007904 --pc-phase-log-width 0x00696100:640 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`
+
+2. Check syntax with `zsh -n` and run the script from the repository root.
+3. Summarize only bounded grep/tail output: positive-control threshold,
+   title/hangar VI rows, watched-PC rows, `exec-prev` summaries, and the
+   oracle exit line. If the whole-RDRAM threshold or either target origin is
+   missing, classify the result H-OracleInvalid and do not interpret PC
+   coverage.

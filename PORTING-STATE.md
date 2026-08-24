@@ -107590,3 +107590,37 @@ Run the trace-light M5 Step 1 route discriminator in `scratch/agent/NEXT.md`.
 Remove `ROGUESQ_LOG_VI_CALLERS=1` while retaining bounded slot-dispatch/link,
 voice/MORT, task/DMA/SP, PCM, gate, B40, route-state, and phase diagnostics.
 `HYPOTHESIS-ID: m5-step1-route-requalification`.
+
+## Session 2286 (2026-08-24) — M5 Step 1 trace-light route still invalid
+
+HYPOTHESIS-ID: m5-step1-route-requalification.
+
+The planned same-build, phase-gated M5 Step 1 trace-light pair was run with
+one independent retail oracle. The port route retained
+`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+`ROGUESQ_SPIN_YIELD=1`, and `ROGUESQ_M5_C88_VALUE=0`; it removed only
+`ROGUESQ_LOG_VI_CALLERS=1` from the s2285 recipe. The oracle gate passed the
+whole-RDRAM positive threshold at 10,000 callbacks and reached title
+`0x00790400`/1024 and hangar `0x006AB400`/512.
+
+The silent port arm produced 48 `[audtask-dispatch]` rows and one
+`[missing-func]` row, then reached the off-target `640 @ 0x00696100` phase.
+It bus-crashed around 26.2s with host symbol
+`mat34CrossRowsAndCopyPos+60` and last guest PC `0x800547BC`. It produced no
+B40 or route-state controls and no title/hangar target phase. The required
+silent-hangar gate therefore withheld the image arm. The high-volume
+VI-caller logger was not the missing route discriminator; removing it moved
+the failure earlier, but does not prove logger causality. This is
+H-RouteInvalid at the tested recipe scope. Audio-task, service, gate, slot,
+voice, MORT, and PCM nulls are not interpretable, and no runtime/default/
+guard/writer behavior changed.
+
+ORIGIN: no mitigation-shaped change; this iteration added only the
+observation driver `scratch/agent/run_s2286_m5_step1_trace_light_pair.sh`.
+
+### Next
+
+Ask the retail oracle whether it executes guest PCs `0x800547BC` and
+`0x80007904` on the driven route before another port pair. Use the positive
+whole-RDRAM watch, title/hangar VI controls, `--watch-pc` for both PCs, and
+`--pc-phase-log-width 0x00696100:640`; record the `exec-prev` attribution.
