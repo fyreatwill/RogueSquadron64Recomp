@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2240 (2026-08-23); behavioral and source evidence is
-current through s2240, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2240 remain in
+Maintained in Session 2241 (2026-08-24); behavioral and source evidence is
+current through s2241, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2241 remain in
 the append-only ledger.
 
 ## Current state
@@ -118,6 +118,15 @@ the append-only ledger.
   `fillSampleStreamRange+8136` window and is not evidence. The retry later hit
   the known post-hangar PI-alignment abort; no runtime behavior or default
   changed.
+- s2241's retail oracle passed the whole-RDRAM positive control, reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, wrote both exact source
+  spans, and executed the known producer range. The incremental fixup
+  enumerated and annotated all 5 scalar stores in `0x80090F8C`–`0x80091000`,
+  and the Debug build passed. Two unchanged qualified port attempts died
+  before the 1024 phase (one missing-function/abort run at 640, one
+  `fillSampleStreamRange+932` bus error), so they produced zero target
+  candidate, stage, DMA, or PCM rows. The port writer hypotheses remain
+  unevaluable; no writer, guard, or default conclusion follows.
 - s2232's same-build port A/B reached the target route, title, and hangar in
   both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
   DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
@@ -164,8 +173,11 @@ Closed investigations are not active work items. The sequence is monotonic.
   H-ExpectedField348Init at the matched source/order scope. s2240's complete
   annotation identifies the stable init caller as `0x8008F2CC` for both
   active spans and supplies an outside-span control from `0x800052C4`; the
-  expected nonzero producer remains missing on the port. The next unit is a
-  single table comparing retail's known field348 producer PC range
+  expected nonzero producer remains missing on the port. s2241 completed the
+  static candidate instrument but had no valid target-phase port capture
+  because both attempts failed before the phase gate. The next unit is one
+  qualified retry of that unchanged build and arm, using the candidate table
+  to compare retail's known field348 producer PC range
   (`0x80090F8C`–`0x80091000`) with port execution and destination/value rows at
   both active origins. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
   writeback/consumer guard.

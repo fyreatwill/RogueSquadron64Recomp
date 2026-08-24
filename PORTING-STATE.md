@@ -105361,6 +105361,60 @@ authorized.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
 
+## Session 2241 (2026-08-24) — enumerated field348 producer stores
+
+Ran the retail oracle before adding the port instrument. The whole-RDRAM
+positive control reached 10,000 callbacks; the exact source watches recorded
+13,892 writes at physical `0x178C80:0x178E00` and 1,058 at
+`0x1797B0:0x179930`; the producer-range execution watch recorded 617,128
+hits; and VI reached title `1024 @ 0x00790400` plus hangar
+`512 @ 0x006AB400`. This independently confirms that the five-store producer
+range selected in `0x80090F8C`–`0x80091000` executes on retail and that both
+source spans are populated there.
+
+The incremental fixup mode was initially refused by the normal sentinel
+guard, because the generated tree already contained the s2240 additive
+patches. I added a separate regeneration-safe s2241 mode. It enumerated the
+range before editing, required exactly these five scalar stores:
+`0x80090F8C` (B), `0x80090FC0` (W), `0x80090FDC` (H), `0x80090FE8` (H), and
+`0x80091000` (W), then annotated all 5/5 with static store PC, live address,
+and live value arguments. The host census records phase, origin, route
+ordinal/row, writer/store PCs, guest/physical destination, width/value,
+nonzero-byte count, span, and store ordinal. The Debug target rebuilt
+successfully.
+
+The first qualified port command was:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_FIELD348_WRITER=1 ROGUESQ_LOG_M5_FIELD348_MEMSET=1 ROGUESQ_LOG_M5_FIELD348_CANDIDATES=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2241_field348_producers 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2241_field348_producers_driver.log 2>&1
+```
+
+It never reached the 1024 phase. The harness saw one missing-function event,
+stayed at a 640 origin, and ended in the existing abort path; the run had zero
+candidate, image-stage, DMA, or PCM rows. Per the recipe, the unchanged build
+and arm were retried once:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_FIELD348_WRITER=1 ROGUESQ_LOG_M5_FIELD348_MEMSET=1 ROGUESQ_LOG_M5_FIELD348_CANDIDATES=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2241_field348_producers_retry 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2241_field348_producers_retry_driver.log 2>&1
+```
+
+The retry also failed before the phase gate with a bus error at
+`fillSampleStreamRange+932` (`last-guest-pc=0x8000834c`), again yielding zero
+target candidate/stage/DMA/PCM rows. These are two invalid route attempts, not
+evidence for H-PortWriterAbsent, H-PortWriterZero, H-PortWriterWrongDestination,
+or H-PortWriterThenZero. The static 5/5 coverage and successful build rule
+out a partial source enumeration, but the runtime writer hypotheses remain
+open and no mitigation or default change follows.
+
+ORIGIN: the new calls observe the generated guest stores in the known retail
+producer range; their values and destinations remain untouched. No value was
+suppressed, rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-contract`.
+
 ## Session 2240 (2026-08-23) — annotated all rs_memset callsites
 
 Ran the retail oracle before changing the port instrument. The command watched

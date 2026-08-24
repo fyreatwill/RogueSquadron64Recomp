@@ -547,6 +547,72 @@ extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
     }
 }
 
+extern "C" void rs64_m5_field348_candidate_store(uint32_t writer_pc,
+                                                     char width,
+                                                     uint32_t store_pc,
+                                                     uint32_t addr,
+                                                     uint32_t value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_FIELD348_CANDIDATES");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+
+    const uint32_t width_n = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width_n == 1024u && origin == 0x00790400u) ||
+          (width_n == 512u && origin == 0x006AB400u))) return;
+
+    const uint32_t phys = addr & 0x007FFFFFu;
+    const uint32_t len = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);
+    const uint32_t value_mask = len == 1u ? 0xFFu :
+                                (len == 2u ? 0xFFFFu : 0xFFFFFFFFu);
+    const uint32_t logged_value = value & value_mask;
+    uint32_t value_nz = 0;
+    for (uint32_t i = 0; i < len; ++i) {
+        const uint32_t shift = (len - 1u - i) * 8u;
+        value_nz += ((logged_value >> shift) & 0xFFu) != 0;
+    }
+
+    const uint32_t span =
+        (phys < 0x178E00u && phys + len > 0x178C80u) ? 1u :
+        ((phys < 0x179930u && phys + len > 0x1797B0u) ? 2u : 0u);
+    const uint32_t route_ordinal = g_rs64_audio_identity.valid ?
+        g_rs64_audio_identity.ordinal : 0xFFFFFFFFu;
+    const uint32_t route_row = g_rs64_audio_identity.valid ?
+        g_rs64_audio_identity.row : 0xFFFFFFFFu;
+
+    static std::mutex mutex;
+    static uint64_t store_ordinal = 0;
+    static uint32_t phase_row[2] = {};
+    static bool cap_reported[2] = {};
+    std::lock_guard<std::mutex> lock(mutex);
+
+    const uint64_t ordinal = store_ordinal++;
+    const uint32_t slot = width_n == 1024u ? 0u : 1u;
+    const uint32_t row = phase_row[slot]++;
+    if (row < 65536u) {
+        std::fprintf(stderr,
+            "[field348-candidate] ordinal=%llu row=%u phase=%u width=%u "
+            "origin=0x%06X route_ordinal=%u route_row=%u "
+            "writer_pc=0x%08X store_pc=0x%08X width_code=%c "
+            "addr=0x%08X phys=0x%06X len=%u value=0x%08X value_nz=%u "
+            "span=%u\n",
+            static_cast<unsigned long long>(ordinal), row, rs64_phase_ord(),
+            width_n, origin, route_ordinal, route_row, writer_pc, store_pc,
+            width, addr, phys, len, logged_value, value_nz, span);
+        std::fflush(stderr);
+    } else if (!cap_reported[slot]) {
+        cap_reported[slot] = true;
+        std::fprintf(stderr,
+            "[field348-candidate-cap] width=%u origin=0x%06X row=%u "
+            "cap=65536\n", width_n, origin, row);
+        std::fflush(stderr);
+    }
+}
+
 extern "C" void rs64_m5_field348_memset(uint32_t dst, uint32_t fill,
                                            uint32_t len, uint32_t ra,
                                            uint32_t guest_pc) {
