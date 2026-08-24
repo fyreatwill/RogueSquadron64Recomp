@@ -109048,3 +109048,45 @@ oracle phase buckets and recorded the complete lifetime/phase/final table.
 ### Next
 
 Run the gate/task/wait writer contract checkpoint from scratch/agent/NEXT.md.
+
+## Session 2316 (2026-08-24) — gate/task/wait checkpoint was route-invalid
+
+HYPOTHESIS-ID: m5-gate-task-wait-contract.
+
+The planned work unit was the ground-truth-first gate/task/wait writer
+checkpoint. `zsh -n scratch/agent/run_s2276_m5_step1_pair.sh` passed, and the
+existing paired launcher ran the retail oracle before the two port arms. The
+oracle controls were positive: whole-RDRAM had `10125` writes, title and
+hangar VI origins were present, gate `0x000A0F50` had `17` writes, and the
+task/output span `0x00141AD0:0x00141AF0` had `108` writes. The wait field
+`0x0001498A` had `0` writes. This makes the oracle null at the wait field
+valid, but does not identify a writer PC/value transition because the
+existing launcher only records aggregate watch totals.
+
+Both port arms reached one title phase and missed the required
+`vi_width=512 origin=0x006AB400` phase. Silent and image each ended in the
+same existing crash family: `slotDispatcherIter+3508`, guest PC
+`0x80022160`, with `[CRASH]=36`, `[ABORT]=0`, and one `[missing-func]`.
+The launcher’s port marker table reported zero `[m5-gate]`, route, and
+contract markers, but it did not set `ROGUESQ_LOG_M5_TASK_CONTRACT` or
+`ROGUESQ_LOG_M5_GATE_CONTRACT`; those zeros are therefore unusable as port
+nulls. The image arm did provide positive `[audtask-dispatch]=76` and
+`[audtask-image-stage-row]=3057` controls, while the silent arm provided
+`[audtask-dispatch]=75`; both had `51` PCM source and `51` PCM consumer
+markers.
+
+This selects `H-CoverageInvalid`: the independent oracle controls passed,
+but neither port arm reached the target phase and the required port contract
+logging was absent. It rules out no gate writer, wait writer, status store,
+slot transition, or audio contract. No runtime, gate, wait, status, slot,
+consumer, or mitigation change was made.
+
+ORIGIN: no mitigation-shaped change; this iteration only ran the existing
+ground-truth checkpoint and recorded its route failure.
+
+### Next
+
+Use the explicit keycode-36 input schedule from the qualified s2290 route,
+retain the oracle gate/task/wait watches, and enable the complete port
+task/gate/slot/PCM table in one same-build staged pair. Do not reuse the
+s2276 launcher’s incomplete contract env list or infer from its zero markers.
