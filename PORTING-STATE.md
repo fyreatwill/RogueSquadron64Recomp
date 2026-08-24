@@ -106930,3 +106930,50 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-completeness`.
+
+## Session 2270 (2026-08-24) — paired image/silent output run was route-invalid
+
+No runtime or instrumentation change was made. Rebuilt the unchanged Debug
+target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`; the
+build passed.
+
+Ran the prescribed image+C88=`0` and silent+C88=`0` arms concurrently with
+`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+phase-gated 1024 logging, and the existing audio-return, PCM-boundary,
+B40/route-state, and image-stage probes. Driver captures are
+`scratch/agent/s2270_image_c88_0_pair_driver.log` and
+`scratch/agent/s2270_silent_c88_0_pair_driver.log`; game logs are
+`scratch/s73_post_a_scene/s2270_image_c88_0_pair/run.log` and
+`scratch/s73_post_a_scene/s2270_silent_c88_0_pair/run.log`.
+
+The pair shell returned `image_rc=0 silent_rc=5`. The image driver reached
+1024 at `0x00790400` at 49.2s, reached hangar 512 at `0x006AB400` at 78.5s
+and 115.1s, and later reported `CRASH: 36` at a width-640 transition. It
+passed one `[missing-func]`, 14 B40 rows, and 28 route-state rows. Its
+single-source unpaired phase-10 image rows were
+`(0x168550,0x300,0x60F910DE,621)` and
+`(0x168850,0x300,0x7B70923A,639)`; both later received exact source and
+consumer matches with `ordering_violation=0`.
+
+The silent driver passed one `[missing-func]`, six B40 rows, and ten
+route-state rows, but timed out waiting for 1024. Its run log stopped after
+width-640 phases at 3.0s and 7.6s, with no title/hangar phase, target
+image-stage row, or phase-gated PCM row. The driver timeout and the silent
+run's missing 1024 transition are independent evidence for the same
+pre-target route failure. Because the silent arm never entered the target
+window, the image-only joins cannot classify the paired output contract.
+
+This selects H-PairRouteInvalid for the capture and rules out treating the
+image-only rows as evidence for H-MixedContractStable or H-LateDelivery. It
+does not overturn s2268's qualified pair or authorize a writeback, consumer,
+slot, gate, or guard change. The next probe swaps launch order to test whether
+the route failure is order-sensitive.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-completeness`.
