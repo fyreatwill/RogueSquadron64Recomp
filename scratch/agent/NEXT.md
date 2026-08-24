@@ -1,66 +1,63 @@
-# NEXT work unit (s2289) — M5 Step 2 route requalification before default comparison
+# NEXT work unit (s2290) — same-build stub route requalification after retail slot-route match
 
 HYPOTHESIS-ID: m5-step2-route-requalification
 
 ## Work unit
 
-Design and run one new route discriminator for the s2288 stub-first failure
-before attempting the default-image arm again. The current binary already
-defaults to the Factor 5 image and retains `ROGUESQ_AUDIO_UCODE=0`; do not
-change that selection or add a guard, skip, writeback, C88 override, or route
-workaround. The new arm must test a concrete route explanation and restore the
-stub title/hangar gate, otherwise the default arm remains untested.
+Build the unchanged current tree once, then run one stub-first/default-second
+comparison using the established eleven-Start port route plus the full
+phase-keyed route/audio table. The s2289 oracle proved that retail executes
+the equivalent slot-dispatch route at initial `640 @ 0x00696100`; s2288's
+port arm was launched directly without a host key injector and crashed in
+`slotDispatcherIter+3508` / guest PC `0x80007904`. The new driver must inject
+the same Start scancodes into the port window rather than assuming that
+`PROBE_KEYS_FROM_PHASE` drives a directly launched executable. Do not change
+runtime audio selection or add a guard, skip, writeback, C88 override, or
+route workaround.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-RouteCause-A: the route failure follows the selected tested input/trace
-  arm; restoring the specified missing route input produces the stub
-  title/hangar gate without changing game logic.
-- H-RouteCause-B: the route failure is independent of that input/trace arm and
-  reproduces at the same guest PC; the current route remains invalid and the
-  default arm must stay unlaunched.
-- H-DefaultSafe: only if the stub gate is first restored, the default image
-  reaches the same title/hangar route, and the full task/DMEM/DMA/service/
-  slot/voice/PCM table remains complete.
-- H-RouteInvalid: retail controls or the stub title/hangar gate is absent; no
-  default-arm null or promotion is interpretable.
+- H-PortStubRouteRestored: with the established input route explicitly
+  driven, the stub control reaches title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`; the driver then launches the default image and its
+  complete task/DMA/service/slot/voice/PCM row can be compared.
+- H-PortCallbackStateGap: the driven stub still reaches the initial 640 route
+  but dies at `0x80007904` or another missing-function/callback boundary before
+  title/hangar; the retail-equivalent route does not by itself restore the
+  port's callback/list state, so the default arm remains unlaunched.
+- H-RouteControlInvalid: the independent retail whole-RDRAM/title/hangar
+  controls or the port's input/VI route control is absent; all audio nulls are
+  unevaluable and the run must not launch or interpret the default arm.
+- H-DefaultSafe: only if H-PortStubRouteRestored is selected and the default
+  arm reaches the same title/hangar phases with the complete table
+  `dispatch → task ABI/source → DMEM/DMA → image exit → SP completion →
+  service → status/slot → voice/reap → PCM source/consumer`.
 
-The discriminator is a same-build route matrix keyed by VI phase and route
-ordinal, with the selected route input/trace arm and the s2288 stub control:
-`audtask-dispatch → route phase → guest crash PC/terminal → title/hangar gate`.
-The independent retail oracle must first pass the whole-RDRAM threshold and
-title/hangar controls. If the stub gate is restored, launch the default arm
-and collect the complete table: task ABI/source, DMEM/DMA, image exit, SP
-completion, service, status/slot, voice/reap, PCM source/consumer, and
-title/hangar phase. A dispatch or `Broke` return alone is only a branch
-control, not a successful audio result.
+The discriminator is one same-build, phase-gated driver matrix: independent
+retail positive control first; port stub with explicit Start scancodes; then
+default image only after the stub hangar gate. For each arm retain initial-640
+route ordinal, guest terminal/missing-function marker, title/hangar phase,
+and every M5 task/output row. A `Broke` return or audio dispatch alone is only
+a branch control. A missing stub gate vetoes all default-arm interpretation.
 
 ## Exact commands
 
-1. Ask ground truth for the chosen route discriminator and write the complete
-   competing-hypothesis table above into this file before adding an instrument.
-
-2. Build the single comparison executable only after the discriminator is
-   specified:
+1. Build once:
 
    `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-3. Create one self-contained driver with the same retail controls and the
-   chosen route matrix. It must launch the stub control first, launch the
-   default arm only after `vi_width=512 origin=0x006AB400`, keep both captures,
-   watchdog each arm, SIGKILL every remaining game/oracle process, and exit
-   nonzero when a required gate is absent. Run from `build/` with the ROM
-   present; do not use SIGTERM.
+2. Create the self-contained driver
+   `scratch/agent/run_s2290_m5_stub_route_requal.sh`. It must launch the
+   oracle and port arms itself, inject Start scancode 40 on the port route,
+   gate on VI transitions, retain all captures, SIGKILL every remaining
+   process in cleanup, and exit nonzero when a required control is absent.
 
-4. Check and run exactly that driver:
+3. Check and run exactly that driver:
 
-   `zsh -n scratch/agent/<driver>.sh`
+   `zsh -n scratch/agent/run_s2290_m5_stub_route_requal.sh`
 
-   `zsh scratch/agent/<driver>.sh`
+   `zsh scratch/agent/run_s2290_m5_stub_route_requal.sh`
 
-5. Summarize only bounded driver summaries and marker counts. If either retail
-   controls or the stub title/hangar gate is absent, classify H-RouteInvalid
-   and do not interpret default-image nulls.
-
-No image default promotion is complete until H-DefaultSafe is selected by the
-full table and a later soak is queued with the same passive breadcrumbs.
+If the stub title/hangar gate is absent, classify H-PortCallbackStateGap or
+H-RouteControlInvalid from the measured terminal/control row and do not launch
+the default arm. No default promotion follows from this work unit alone.

@@ -107689,3 +107689,40 @@ M_AUDTASK selection polarity and preserves the explicit stub escape.
 Design a new route discriminator for the s2288 stub-first failure before
 repeating the default comparison. The current default flip is unqualified;
 do not add a guard, skip, writeback, C88 override, or route workaround.
+
+## Session 2289 (2026-08-24) — retail slot-dispatch route matched at initial 640
+
+HYPOTHESIS-ID: m5-step2-route-requalification.
+
+The prescribed work unit was one independent retail-oracle route
+discriminator, run before any port build or default-arm comparison. The driver
+passed `zsh -n` and launched the retail ROM with the whole-RDRAM positive watch,
+eleven-Start input schedule, `--vi-trace`, and phase-gated execution watches
+for `slotDispatcherIter` (`0x8003E8DC`), `slotDispatcherInner`
+(`0x8003EA4C`), `cinematicSlotBatchDispatch` (`0x800A70E4`),
+`setupNpcUpdateFunctions` (`0x800653B4`), and the known port marker
+`0x80007904`.
+
+The oracle passed the whole-RDRAM control at 10,000 callbacks and reached
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. In the initial
+`640 @ 0x00696100` phase it recorded 110 `slotDispatcherIter` hits, 2
+`slotDispatcherInner` hits, and 5 `cinematicSlotBatchDispatch` hits. Final
+watch totals were 3,244, 314, and 177 respectively; the slot-dispatch watch
+had 17 nonzero `exec-prev` rows, while `0x80007904` had zero hits. This
+selects H-RetailEquivalentSlotRoute at the tested recipe scope and rules out
+H-RetailDifferentSlotRoute. It shows that retail enters the equivalent route,
+but it does not identify the port-side callback/list writer, overlay edge, or
+any legitimate mitigation. The default-image arm was not launched.
+
+ORIGIN: no mitigation-shaped change; this iteration added only the
+ground-truth driver `scratch/agent/run_s2289_m5_retail_slot_route.sh` and its
+oracle capture.
+
+### Next
+
+Build the unchanged binary once and run one new stub-first/default-second
+driver with the now-selected retail-equivalent slot-route hypothesis. The
+port arm must explicitly inject the eleven-Start route because s2288 launched
+the executable directly without a host key injector. Gate the default arm on
+the stub reaching title and hangar; do not add a callback guard, skip,
+writeback, C88 override, or route workaround.
