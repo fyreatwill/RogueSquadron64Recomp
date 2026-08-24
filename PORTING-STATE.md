@@ -109090,3 +109090,56 @@ Use the explicit keycode-36 input schedule from the qualified s2290 route,
 retain the oracle gate/task/wait watches, and enable the complete port
 task/gate/slot/PCM table in one same-build staged pair. Do not reuse the
 s2276 launcher’s incomplete contract env list or infer from its zero markers.
+
+## Session 2317 (2026-08-24) — repaired gate/task/wait table selects outside-target boundary
+
+HYPOTHESIS-ID: m5-gate-task-wait-contract.
+
+The planned work unit was a ground-truth-first gate/task/wait writer
+checkpoint with the qualified explicit keycode-36 route. I added
+`scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh`, carrying the
+eleven `start` presses from s2290, the complete port task/gate/PCM logging
+set, and one batched oracle table for gate, task/output, and wait values and
+writer PCs. `zsh -n` passed. No build or runtime source change was made.
+
+The same-run retail oracle passed every control and exited naturally:
+whole-RDRAM `10125` writes, title `633` VI callbacks at
+`0x00790400:1024`, hangar `973` callbacks at `0x006AB400:512`, gate-watch
+`0x000A0F50` `17` writes, and task/output watch
+`0x00141AD0:0x00141AF0` `108` writes. The wait watch `0x0001498A` had zero
+writes. The bounded value table had six gate samples (`0x00000000` four
+times and `0x01000000` twice), 76 task/output samples, and zero wait
+samples. The title phase had no gate writer PC and task/output writer
+`0x80094648 n=24`; the hangar phase had no writer PC for any of the three
+watches. The oracle shutdown reported `rc=0`, so the positive controls and
+nulls are not termination artifacts.
+
+Both port arms passed the repaired route gate: each reached one title and two
+hangar phase rows. The silent arm supplied `[m5-gate]=1024`,
+`[m5-b40-route]=14`, `[m5-route-state]=28`, task ABI/DMA rows `1307`, and
+PCM source/consumer `89/89`. The image arm supplied `[m5-gate]=1024`,
+`[m5-b40-route]=13`, `[m5-route-state]=25`, task ABI/DMA rows `1080`,
+image-stage rows `4408`, and PCM source/consumer `88/88`. Both later exited
+with the existing crash marker after reaching hangar; this does not alter
+the route or contract result.
+
+The two independent lines are the retail oracle’s positive/value/phase table
+and the port arms’ positive route/contract markers. Together they select
+`H-Gate-Wait-Outside-Target` at this capture scope: the observed title and
+hangar buckets contain no retail gate or wait writer row, while port gate,
+route, task, and PCM activity is live. This rules out a target-phase oracle
+gate writer and target-phase wait writer in these two buckets. It does not
+distinguish an earlier observed VI origin from incomplete phase attribution,
+and the title-only task writer remains a separate boundary. No gate store,
+wait hatch, status clear, slot guard, consumer change, or mitigation was
+authorized.
+
+ORIGIN: no mitigation-shaped change; the iteration only added the dedicated
+launcher and recorded the batched ground-truth/port comparison.
+
+### Next
+
+Expand the s2317 oracle phase table to all fifteen observed VI origins and
+repeat the same explicit-route staged pair. Use the new all-origin result to
+distinguish an earlier-origin gate/task/wait writer from incomplete phase
+attribution.

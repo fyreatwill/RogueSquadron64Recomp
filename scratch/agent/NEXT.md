@@ -1,62 +1,70 @@
-# NEXT work unit (s2317) — explicit-route gate/task/wait writer table
+# NEXT work unit (s2318) — all-origin gate/task/wait writer census
 
-HYPOTHESIS-ID: m5-gate-task-wait-contract
+HYPOTHESIS-ID: m5-gate-task-wait-origin-census
 
 ## Work unit
 
-Run one repaired, ground-truth-first gate/task/wait checkpoint. Create a
-dedicated launcher from the explicit keycode-36 route schedule in
-`scratch/agent/run_s2290_m5_stub_route_requal.sh`; do not reuse the s2276
-launcher’s incomplete port contract env list. Preserve the retail oracle
-preflight and add writer-PC/value attribution for gate, task/output, and wait
-watches. Enable the complete port task/gate/slot/PCM table, then run silent
-and image arms from the same build, staging image after silent reaches hangar.
-No runtime, gate, wait, status, slot, consumer, or default change.
+Run one repaired, ground-truth-first gate/task/wait checkpoint using the
+explicit keycode-36 staged route from s2317. Expand the oracle’s phase table
+from title/hangar to all fifteen observed VI origins, while retaining the
+whole-RDRAM, gate, task/output, wait, first-value, PC-histogram, and
+post-value controls. Keep both port arms in the same launcher and preserve
+the complete task/gate/slot/PCM marker set. No runtime, gate, wait, status,
+slot, consumer, or default change.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-GateWriter-Selected: oracle gate watch `0x000A0F50` has a target-phase
-  writer PC/value row, and the matching port arm reaches the gate contract
-  branch and downstream task/slot progress.
-- H-WaitWriter-Selected: gate and task controls pass, and oracle wait watch
-  `0x0001498A` has a target-phase service/voice writer PC/value transition
-  with the matching port wait-field change and return.
-- H-Gate-Wait-Outside-Target: whole-RDRAM, title/hangar, task/output, route,
-  and port contract controls pass, but neither gate nor wait has a target-
-  phase writer row. This leaves writer attribution or phase boundaries open.
+- H-Earlier-Origin: a gate, task, or wait writer appears in one of the
+  thirteen previously observed non-title/hangar origins, with a matching
+  oracle value/PC and port branch or return marker.
+- H-Phase-Attribution-Gap: whole-RDRAM, gate/task controls, all fifteen VI
+  buckets, and both port hangar phases pass, but no gate or wait writer PC
+  appears in any bucket. The writer is outside the callback windows or the
+  phase join is incomplete.
+- H-Task-Only: task/output retains a writer row while gate and wait remain
+  null across all buckets, preserving a task boundary without selecting a
+  gate/wait writer.
 - H-CoverageInvalid: any whole-RDRAM, title, hangar, task/output, route, or
-  complete port-table control is absent. No phase null is interpretable.
+  complete port-table control is absent.
 
-The discriminator is one same-run table keyed by oracle watch and port arm:
-oracle aggregate hits, `--first-watch` PC/value, `--pc-hist-watch` writer
-PCs, and `--pc-hist-phase 0x00790400:1024` plus
-`0x006AB400:512`; port gate/task/slot/PCM markers and title/hangar phases.
-A positive gate row plus matching port branch selects H-GateWriter-Selected;
-a positive wait row plus matching worker/return selects H-WaitWriter-Selected;
-task/output positive with both phase writer nulls selects the unresolved
-boundary. Any missing positive control selects H-CoverageInvalid.
+The discriminator is one same-run table keyed by all fifteen oracle phase
+buckets and watches 1–3: callback count, writer-PC histogram, first/value
+rows, and post-value samples, joined with each port arm’s gate/route/task/
+PCM markers. A positive earlier-origin writer with a matching port transition
+selects H-Earlier-Origin. Positive controls with no gate/wait row in all
+fifteen buckets select H-Phase-Attribution-Gap; task-only rows select
+H-Task-Only. Any missing control is H-CoverageInvalid.
 
 ## Exact commands
 
-1. Add the dedicated launcher with `apply_patch`, based on the s2290 explicit
-   key schedule and the s2285 oracle/arm structure. Its oracle command must
-   retain `--watch-write 0x0:0x800000`, `--watch-write 0xA0F50:0xA0F54`,
-   `--watch-write 0x141AD0:0x141AF0`, and `--watch-write 0x1498A:0x1498B`,
-   and add `--first-watch 1 --first-watch 2 --first-watch 3`,
-   `--pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3`,
-   `--pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512`, and
-   bounded `--post-value-watch 1 --post-value-watch 2 --post-value-watch 3`
-   rows. Its port `COMMON` list must
-   include `ROGUESQ_LOG_PHASE=1`, `ROGUESQ_LOG_M5_TASK_CONTRACT=1`,
-   `ROGUESQ_LOG_M5_GATE_CONTRACT=1`, `ROGUESQ_LOG_FILTER_VOICE_AUDIT=1`,
-   `ROGUESQ_LOG_AUDIO_RETURN=1`, `ROGUESQ_LOG_PCM_BOUNDARY=1`,
-   `ROGUESQ_LOG_M5_B40_ROUTE=1`, and `ROGUESQ_LOG_M5_ROUTE_STATE=1`.
-2. Syntax-check and run it once, without rebuilding:
+1. Use `apply_patch` to modify
+   `scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh` by adding
+   these repeatable oracle flags alongside its existing two phase flags:
+
+       --pc-hist-phase 0x006AB800:512
+       --pc-hist-phase 0x00656400:512
+       --pc-hist-phase 0x00656800:512
+       --pc-hist-phase 0x0066A500:640
+       --pc-hist-phase 0x00696100:640
+       --pc-hist-phase 0x0066AA00:640
+       --pc-hist-phase 0x00696600:640
+       --pc-hist-phase 0x00000280:320
+       --pc-hist-phase 0x006BA280:320
+       --pc-hist-phase 0x005D4500:640
+       --pc-hist-phase 0x0062C200:640
+       --pc-hist-phase 0x0062BD00:640
+       --pc-hist-phase 0x00790800:1024
+
+   The existing `0x00790400:1024` and `0x006AB400:512` flags complete
+   the fifteen-bucket table. Do not remove the oracle positive control or
+   any existing watch/value flag.
+2. Syntax-check and run without rebuilding:
 
        zsh -n scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh
-       zsh scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh s2317_m5_gate_task_wait_explicit_pair
+       zsh scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh s2318_m5_gate_task_wait_origin_census
 
-3. Parse only bounded oracle shutdown summaries and the launcher’s driver
-   summary plus phase/contract marker counts. If the repaired launcher still
-   lacks a required marker or either arm misses hangar, classify the run
-   coverage-invalid; do not add another field or infer from elapsed time.
+3. Parse only bounded oracle shutdown summaries and the launcher driver
+   summary plus per-arm phase/contract marker counts. Require whole-RDRAM
+   `10000+`, title/hangar coverage, task/output writes, and both port hangar
+   phases before interpreting any phase null. Do not change behavior from a
+   null result.
