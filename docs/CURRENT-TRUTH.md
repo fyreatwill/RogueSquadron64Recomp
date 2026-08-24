@@ -3,8 +3,8 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2229 (2026-08-23); behavioral and source evidence is
-current through s2229. The s2198–s2226 archive is §44; s2227–s2229 remain in
+Maintained in Session 2230 (2026-08-23); behavioral and source evidence is
+current through s2230. The s2198–s2226 archive is §44; s2227–s2230 remain in
 the append-only ledger.
 
 ## Current state
@@ -34,7 +34,12 @@ the append-only ledger.
   The phase-keyed `$v0/$s1/$a0/$a2` tuple sets differ across both target
   origins and hangar. The port has positive normal-tail/slot behavior at four
   sites. s2229's 8192 detail arm reached first-target, title, and hangar with
-  zero tuple overflow at every site; tuple parity is not yet measured.
+  zero tuple overflow at every site.
+  s2230's exact common-bucket comparison found both port-only and retail-only
+  tuple values at all eight transfer PCs in both `640 @ 0x00696100` and
+  `512 @ 0x006AB400`; both phase rows and all controls were present, so this is
+  a bidirectional operand-set mismatch, not a join/coverage null. No key-on
+  behavior change follows.
 - The port's `ViState::field` is fixed at zero by default. Opt-in field,
   current-register, timing, and total-`VI` arms recover the two-origin target
   split, but the natural host publisher/cadence is unidentified. No such
@@ -44,23 +49,29 @@ the append-only ledger.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 key-on tuple contract.** Compare the complete zero-overflow 8192
-   port table from s2229 against s2223's retail phase-keyed rows. The next
-   discriminator is in [`scratch/agent/NEXT.md`](../scratch/agent/NEXT.md).
-   No key-on return, guard, task-field rewrite, default flip, or mitigation
-   follows from the comparison automatically.
-2. **M5 A1: identify the missing second-origin transition.** Retail's
+1. **M5 audio de-stubbing plan.** Create [`docs/M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md)
+   with a complete inventory of audio stubs, traps, gates, task paths, and
+   MORT-specific boundaries, then order incremental changes with a phase-gated
+   validation soak for every step. Do not flip the image arm or alter the
+   default before the plan exists.
+2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
+   exact tuple parity in both directions: port-only and retail-only sets occur
+   at every transfer PC in both buckets. The next useful question is whether
+   pointer/dynamic operands or a true branch contract accounts for the two-way
+   difference; no key-on return, guard, task-field rewrite, default flip, or
+   mitigation follows automatically.
+3. **M5 A1: identify the missing second-origin transition.** Retail's
    `__osViNext` context uses `framep` plus the selected current field to make
    both target origins. The port has the candidates but its natural field
    publisher is still unknown; all recovery knobs remain diagnostic-only.
-3. **M5 drain in-loop tick A/B; parked.** s2125 selected `H-PumpIrrelevant`
+4. **M5 drain in-loop tick A/B; parked.** s2125 selected `H-PumpIrrelevant`
    only at route scope, while s2126–s2128 failed to place both drain arms in
    the target comparison. Resume only with a new renderer-recovery or
    ground-truth discriminator.
-4. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator. The dormant `slotDispatcherIter+872` class has 7,659
    clean hangar calls in its guarded run; no mitigation is authorized.
-5. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+6. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation and consumer-mode H1 by the RT64 census. H3 is unavailable
    because the oracle cannot screenshot the LLE path; do not repeat the
    `0xD60` scan.
@@ -154,7 +165,18 @@ the same, while 8192 quiet reached only 640 and 1024. The expanded detail
 crash is therefore intermittent rather than a demonstrated cap or trace
 boundary, and the complete 8192 table is ready for the retail-set comparison.
 This remains single-source port evidence; s2223 is the independent retail
-baseline.
+baseline. s2230 joined those sources by exact `(origin,width,PC)` bucket and
+compared normalized `$v0/$s1/$a0/$a2` sets. The retail control was 10,000
+whole-RDRAM writes; both common retail rows were present. The port had
+nonzero LLE, audio-dispatch, key-on/slot, and transfer controls, 22 table
+rows, and zero overflow. At all 16 bucket/PC cells the intersection was
+smaller than both side-specific sets: first-target retail/port unique counts
+were `842/3997`, `842/3996`, `858/4170`, `858/4170`, `178/246`, `178/246`,
+`564/2635`, `564/2635`; hangar counts were `1347/142`, `1347/142`,
+`1251/142`, `1251/142`, `484/142`, `484/142`, `926/142`, `926/142`.
+Thus both directional mismatch hypotheses fire, while exact-bucket coverage
+failure and parity do not. This is a two-source comparison, not permission
+to rewrite the key-on path.
 
 ### M3, M4, and generated symbols
 
@@ -208,13 +230,18 @@ remain in the append-only ledger. Operationally:
   8192 arm stopped at title and a 2048 detail arm reached hangar. The crash is
   thus intermittent at this scope; the cap/trace explanations are not
   selected, and no runtime change follows.
+- s2229's `H-TupleParityReady` was only readiness for the comparison. s2230's
+  valid exact-bucket table supersedes any expectation of equal raw tuple sets:
+  both port-only and retail-only values remain in every common cell. Because
+  the tuples include dynamic pointer-shaped operands, this is a contract
+  boundary to explain, not authorization for a key-on mitigation.
 
 ## Evidence ledger summary
 
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2229 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2230 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

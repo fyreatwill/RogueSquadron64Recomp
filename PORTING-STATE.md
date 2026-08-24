@@ -104953,6 +104953,61 @@ existing `ROGUESQ_M5_C88_VALUE=1` behavior arm only.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-keyon-contract`.
 
+## Session 2230 (2026-08-23) — compared retail and port key-on tuple sets
+
+Ran the s2230 work unit against the existing s2223 retail oracle capture and
+the complete s2229 8192-detail port capture. No build, source, generated
+function, runtime behavior, key-on return, guard, default, task field, audio
+dispatch, or oracle code changed.
+
+The retail capture passed its independent controls: 8,521,972 watched hits,
+including the required 10,000 whole-RDRAM writes, and it contains both common
+phase buckets. The port capture passed its positive controls: 4,239 LLE tasks,
+113 audio-task dispatches, 128 key-on/slot rows, 24,655 transfer rows, 22
+phase/table rows, and zero tuple overflow at all eight sites. It contains
+`640 @ 0x00696100` and `512 @ 0x006AB400`; the port's shorter origin spelling
+`0x696100` was normalized to the retail spelling before comparison.
+
+The exact discriminator table is below. `R-hit` is the raw retail `[hit]`
+count, `P-xfer` is the raw port transfer-row count, `R-u/P-u` are unique
+`($v0,$s1,$a0,$a2)` tuples, `both` is their intersection, and `R-only/P-only`
+are the two set differences.
+
+| bucket | transfer PC | R-hit | P-xfer | R-u | P-u | both | R-only | P-only |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| first640 | 0x80090CF0 | 2449 | 3997 | 842 | 3997 | 145 | 697 | 3852 |
+| first640 | 0x80090D08 | 2449 | 3996 | 842 | 3996 | 145 | 697 | 3851 |
+| first640 | 0x80090D34 | 2449 | 4170 | 858 | 4170 | 131 | 727 | 4039 |
+| first640 | 0x80090D4C | 2449 | 4170 | 858 | 4170 | 131 | 727 | 4039 |
+| first640 | 0x80090D78 | 2449 | 246 | 178 | 246 | 46 | 132 | 200 |
+| first640 | 0x80090D90 | 2449 | 246 | 178 | 246 | 46 | 132 | 200 |
+| first640 | 0x80090DBC | 2449 | 2635 | 564 | 2635 | 168 | 396 | 2467 |
+| first640 | 0x80090DD4 | 2449 | 2635 | 564 | 2635 | 168 | 396 | 2467 |
+| hangar512 | 0x80090CF0 | 6245 | 245 | 1347 | 142 | 59 | 1288 | 83 |
+| hangar512 | 0x80090D08 | 6245 | 245 | 1347 | 142 | 59 | 1288 | 83 |
+| hangar512 | 0x80090D34 | 6245 | 245 | 1251 | 142 | 59 | 1192 | 83 |
+| hangar512 | 0x80090D4C | 6245 | 245 | 1251 | 142 | 59 | 1192 | 83 |
+| hangar512 | 0x80090D78 | 6245 | 245 | 484 | 142 | 62 | 422 | 80 |
+| hangar512 | 0x80090D90 | 6245 | 245 | 484 | 142 | 62 | 422 | 80 |
+| hangar512 | 0x80090DBC | 6245 | 245 | 926 | 142 | 59 | 867 | 83 |
+| hangar512 | 0x80090DD4 | 6245 | 245 | 926 | 142 | 59 | 867 | 83 |
+
+The valid exact-bucket comparison rejects H-ParityMatch and H-JoinOrCoverageMismatch.
+It produces both port-only and retail-only tuples in every cell, so the two
+directional operand-mismatch hypotheses both fire rather than selecting one
+direction exclusively. This is a contract boundary, not a key-on fix: the
+tuples include pointer-shaped/dynamic operands, and no value was suppressed,
+rewritten, guarded, or restored.
+
+ORIGIN: no game value was suppressed, rewritten, guarded, or restored; this
+iteration only joined existing independent captures and compared their tuple
+sets.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-plan`.
+
 ## Session 2229 (2026-08-23) — isolated the expanded key-on census crash
 
 Used the already-built 8192-entry generated census from s2228. No generated
