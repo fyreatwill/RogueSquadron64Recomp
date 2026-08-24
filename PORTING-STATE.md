@@ -106194,3 +106194,39 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2252 (2026-08-24) — reversed the C88 arm launch order
+
+Ran the prescribed same-build concurrent route-stability A/B with
+image+C88=`0` launched first and image+C88=`1` launched one second later.
+Both arms used `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_LOG_THREAD_RESUME=0`, the B40 route/state/read traces, task/image-
+host/PCM boundary traces, and the phase gate at title width 1024. The driver
+logs are `scratch/agent/s2252_order0_first_driver.log` and
+`scratch/agent/s2252_order1_second_driver.log`; run logs are under
+`scratch/s73_post_a_scene/s2252_order0_first/` and
+`scratch/s73_post_a_scene/s2252_order1_second/`.
+
+Both arms passed startup, emitted one `[missing-func]` control, and reached
+the 640 route at origin `0x00696100`. Neither reached title `1024` or hangar
+`512`, so both driver processes returned `4` while waiting for the target
+phase. The first-launched C88=`0` arm crashed in
+`slotDispatcherIter+3508` with last guest PC `0x80007904`. The second-
+launched C88=`1` arm crashed in `fillSampleStreamRange+8136` with last guest
+PC `0x8000B650`. Both therefore emitted zero target-phase task, image-stage,
+image-DMA, and PCM rows.
+
+The reversed order did not qualify either arm and produced different
+pre-target crash identities. This selects only a route-stability measurement
+blocker at this scope; it selects no C88-intrinsic, task-contract,
+image-payload, or PCM-consumer hypothesis and supplies no post-route A/B
+comparison. The next unit pairs the known-qualified image+C88=`0` route with
+a silent C88=`0` control under the existing full output traces.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.

@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2251 (2026-08-24); behavioral and source evidence is
-current through s2251, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2251 remain in
+Maintained in Session 2252 (2026-08-24); behavioral and source evidence is
+current through s2252, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2252 remain in
 the append-only ledger.
 
 ## Current state
@@ -102,6 +102,16 @@ the append-only ledger.
   rows, and 3,522 PCM rows at title. These are route-stability observations,
   not a valid two-arm post-route comparison; no task, image-payload, or PCM
   hypothesis is selected and no default or runtime behavior changes.
+- s2252's prescribed reversed-order concurrent image+C88=`0`/image+C88=`1`
+  audit passed startup, one `[missing-func]`, and the 640 origin in both
+  arms, but neither reached title `1024` or hangar `512`. The first-launched
+  C88=`0` arm crashed in `slotDispatcherIter+3508` with last guest PC
+  `0x80007904`; the second-launched C88=`1` arm crashed in
+  `fillSampleStreamRange+8136` with last guest PC `0x8000B650`. The differing
+  pre-target crashes select only a route-stability blocker at this scope:
+  launch-order reversal did not qualify either arm, so it selects no C88,
+  task-contract, image-payload, or PCM-consumer hypothesis and supplies no
+  target-phase rows.
 - s2233's fixed retail-oracle capture passed the whole-RDRAM positive control,
   reached the 640 target, title `1024`, and hangar `512`, and recorded
   `6,665,015` writes to physical `0x166000:0x17A000`. It sampled 503
@@ -280,10 +290,13 @@ Closed investigations are not active work items. The sequence is monotonic.
   remained all-zero and the join is single-source. s2250 found only the
   expected forced B40 byte difference and identical target route-state rows.
   s2251 did not qualify that comparison: both original arms died before
-  title, and a reduced-logging retry qualified only C88=`0`. The next unit
-  reverses the controlled arm launch order to test route contention versus a
-  C88-intrinsic failure before comparing post-route output. Do not promote
-  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+  title, and a reduced-logging retry qualified only C88=`0`. s2252 reversed
+  the launch order, but both image arms again died before title with distinct
+  pre-target crash identities. The next bounded test pairs the known-
+  qualified image+C88=`0` arm with a silent C88=`0` control under the existing
+  full task/image/PCM traces; only a two-arm target-qualified table can move
+  the output boundary. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
+  writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -365,6 +378,14 @@ title and hangar. The image arm therefore remains opt-in, and its field348
 writer/output table is still unevaluable. The next discriminator is whether
 C88 changes the image arm's pre-target fate; no image writeback, slot, gate,
 or default change follows.
+
+s2252's reversed-order image-only pair did not reach the target boundary in
+either arm: C88=`0` first failed in `slotDispatcherIter+3508` and C88=`1`
+second failed in `fillSampleStreamRange+8136`, after both passed the 640
+control. Because the two arm-specific pre-phase crashes differ and neither
+has target rows, this is not evidence about task fields, image payload, or
+PCM consumption. The next discriminator uses the known-qualified C88=`0`
+image arm against a silent C88=`0` control under the same output traces.
 
 s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
 At both target origins, `field348 & 0x007FFFFF` was valid but the exact
