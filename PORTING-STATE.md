@@ -104404,3 +104404,39 @@ only added and ran a bounded diagnostic harness.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-vi-toggle-logger-isolation`.
+
+## Session 2206 (2026-08-23) — isolated VI logger and field-selector arms
+
+Built the current checkout with `cmake --build build -j8`; the build completed
+successfully. The prescribed runner was absent and the checkout used
+`build/RogueSquadron64Recomp` plus a repository-root ROM, so this iteration
+added `scratch/agent/run_s2206_vi_toggle_logger_isolation.sh`. It stages the
+ROM into `build/` only when absent, launches all four arms concurrently, and
+uses SIGKILL for completion/watchdog termination.
+
+The four arms were logged-control, logged-alternate, quiet-control, and
+quiet-alternate under the qualified silent-audio/LLE route. Logged control
+passed the early `640 @ 0x0066A500` control and produced 151 target commit rows
+at `0x00696100` and none at `0x00696600`. Logged alternate passed the same
+early control and produced 75 commits at `0x00696100` plus 75 at
+`0x00696600`; its phase trace reached the sibling origin. Quiet control passed
+the early control and reached target phase `0x00696100`. Quiet alternate did
+not pass the required early control: its phase was `640 @ 0x0066AA00`, then it
+reached `0x00696100`.
+
+All four arms ran to the 180-second watchdog, emitted no `[CRASH]` or
+`[ABORT]` marker, and reached neither title `1024 @ 0x00790400` nor hangar
+`512 @ 0x006AB400`. This is single-source port A/B evidence. It selects
+H-NonTargetRouteDamage at the early-control scope because quiet alternate lost
+its logged counterpart's positive prefix. It does not select a post-target
+consumer explanation: no arm reached a later phase, and quiet alternate lacked
+the required prefix control. The result rules out neither the field-selector
+effect at the logged target nor the later presentation boundary.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+only added and ran a bounded diagnostic harness.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.

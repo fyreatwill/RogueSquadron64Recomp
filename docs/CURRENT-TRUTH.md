@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2205
-(2026-08-23); behavioral and source evidence is current through s2205.
+authoritative for exact commands and probe rows. Maintained in Session 2206
+(2026-08-23); behavioral and source evidence is current through s2206.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2205's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -246,6 +246,20 @@ second ledger.
   leaves post-target VI presentation/consumption and logger sensitivity open;
   no default flip, guard, mitigation, task rewrite, or audio dispatch change
   was made.
+- s2206 ran the prescribed same-build concurrent logger-isolation table with
+  logged/quiet × field-0/field-1 arms. All arms ran to the 180-second watchdog
+  with zero `[CRASH]`/`[ABORT]` markers and zero title/hangar phases. The
+  logged control passed the early `640 @ 0x0066A500` and committed only
+  `0x00696100` (151 rows); logged alternate passed the early control, committed
+  `0x00696100` (75) and `0x00696600` (75), and emitted the sibling phase. Quiet
+  control passed the early control and emitted `0x00696100`; quiet alternate
+  instead emitted `0x0066AA00` at the early phase (not the required
+  `0x0066A500`) before later emitting `0x00696100`. This single-source port
+  A/B selects H-NonTargetRouteDamage at the early-control scope because the
+  quiet alternate lost its logged counterpart's positive prefix; it does not
+  distinguish the post-target consumer because no arm reached title/hangar
+  and the quiet alternate lacked the required early control. No default flip,
+  guard, mitigation, task rewrite, or audio dispatch change was made.
 
 ## Active backlog
 
@@ -283,8 +297,15 @@ work items.
    `target_second=0`, alternate had `target_second=128`, and both had zero
    later phases and zero crash markers before watchdog SIGKILL. This leaves the
    predeclared stability/regression discriminator unresolved and makes logger
-   sensitivity a bounded next candidate. The next unit is a same-run four-arm
-   logger-isolation table; keep the field knob opt-in.
+   sensitivity a bounded next candidate. s2206's four-arm logger isolation
+   then found that the quiet field-1 arm takes early origin `0x0066AA00`
+   rather than the logged/other-arm positive prefix `0x0066A500`, while all
+   arms still stall before title/hangar. This selects H-NonTargetRouteDamage
+   only at the early-prefix scope; the result is single-source port evidence
+   and is not a mitigation or a post-target explanation. The next unit is an
+   independent retail-oracle early-origin census with a whole-RDRAM positive
+   control, to determine whether `0x0066AA00` is a legitimate retail phase or
+   a port/logger route variant. Keep the field knob and logger diagnostic-only.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
