@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2247 (2026-08-24); behavioral and source evidence is
-current through s2247, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2247 remain in
+Maintained in Session 2248 (2026-08-24); behavioral and source evidence is
+current through s2248, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2248 remain in
 the append-only ledger.
 
 ## Current state
@@ -49,6 +49,14 @@ the append-only ledger.
   sites do not support a census-logging-only explanation and select only a
   route-stability blocker; no field348 writer hypothesis or runtime default
   follows.
+- s2248's same-build image/stub route comparison passed the common startup,
+  640 origin `0x00696100`, and one `[missing-func]` control in both arms. The
+  image arm again died before title in `fillSampleStreamRange+8136` with last
+  guest PC `0x8000B650` and zero target rows; the silent stub reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` before the known
+  post-hangar aligned-ROM abort. This selects H-ImageArmSpecific at route
+  scope and rejects shared pre-phase nondeterminism as the sole explanation,
+  but it does not identify a field348 writer or output edge.
 - s2233's fixed retail-oracle capture passed the whole-RDRAM positive control,
   reached the 640 target, title `1024`, and hangar `512`, and recorded
   `6,665,015` writes to physical `0x166000:0x17A000`. It sampled 503
@@ -220,14 +228,14 @@ Closed investigations are not active work items. The sequence is monotonic.
   s2237 independently selected H-RetailField348Writer; s2238–s2240
   established the legitimate port init clear and the missing nonzero
   producer boundary. s2245 qualified both no-log arms through title and
-  hangar, but s2246 and s2247's instrumented/low-logging attempts were
-  route-invalid before either target. The next unit is a same-build,
-  phase-gated image-arm versus silent-stub route comparison with common
-  census logging: a target-reaching image arm resumes the five-store
-  attribution table, while an image/stub split selects an image-arm route
-  defect and two divergent pre-target crashes select shared route
-  nondeterminism. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
-  writeback/consumer guard.
+  hangar, and s2248 selected an image-arm-specific pre-title failure while
+  the stub arm qualified through both targets. The next unit is a same-build,
+  phase-gated three-arm interaction test: image+C88=`1`, image+C88=`0`, and
+  stub+C88=`1`, all with the common census. If both image arms fail while
+  the stub qualifies, the defect is intrinsic to the opt-in image route; if
+  only image+C88=`1` fails, C88/image interaction is selected; divergent
+  image-arm outcomes select remaining image-route nondeterminism. Do not
+  promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -300,6 +308,15 @@ discriminator. s2232's same-build A/B adds real image completion and DMA, but
   target summaries; the stage destinations never overlap the selected retail
   task-output span, and no exact stage/PCM join occurs. The arm remains
   opt-in pending the source-writer audit.
+
+s2248's same-build route gate separates that output question from a new
+pre-target blocker: the image arm (`ROGUESQ_AUDIO_UCODE=1`, C88=`1`) passed
+the 640 controls but crashed in `fillSampleStreamRange+8136` at guest PC
+`0x8000B650`, while the silent stub with the same C88 and logging reached both
+title and hangar. The image arm therefore remains opt-in, and its field348
+writer/output table is still unevaluable. The next discriminator is whether
+C88 changes the image arm's pre-target fate; no image writeback, slot, gate,
+or default change follows.
 
 s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
 At both target origins, `field348 & 0x007FFFFF` was valid but the exact
@@ -516,6 +533,12 @@ remain in the append-only ledger. Operationally:
   reached title and hangar before independently hitting the same known
   post-hangar PI-DMA alignment abort. The shared abort does not explain the
   earlier pre-phase split and does not authorize a PI or image mitigation.
+- s2246–s2247 treated repeated instrumented image-arm failures as a route-
+  stability blocker because no same-run target control qualified. s2248's
+  concurrent silent-stub arm reached title and hangar while the image arm
+  reproduced the pre-title failure, so shared nondeterminism is no longer the
+  sole explanation at this scope. This refines the blocker to the image route
+  without identifying its writer or authorizing a mitigation.
 - s2232's image-arm PCM activity is not evidence of image-output correctness:
   the same-run image summary recorded zero stage/source and stage/consumer
   matches, while the nonzero PCM rows were consumer-only at the image-join

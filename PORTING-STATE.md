@@ -106034,3 +106034,49 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2248 (2026-08-24) — concurrent image/stub route discriminator
+
+Built the existing target with `cmake --build build --target
+RogueSquadron64Recomp -j2` and placed the known ROM at `build/rogue_squadron.z64`.
+Ran the planned same-build concurrent A/B with identical route, census, and
+phase controls:
+
+```sh
+(
+  env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_FIELD348_WRITER=1 ROGUESQ_LOG_M5_FIELD348_MEMSET=1 ROGUESQ_LOG_M5_FIELD348_CANDIDATES=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2248_image_census_ab 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2248_image_census_ab_driver.log 2>&1 &
+  p_img=$!
+  env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_FIELD348_WRITER=1 ROGUESQ_LOG_M5_FIELD348_MEMSET=1 ROGUESQ_LOG_M5_FIELD348_CANDIDATES=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2248_stub_control_ab 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2248_stub_control_ab_driver.log 2>&1 &
+  p_stub=$!
+  wait "$p_img"; r_img=$?
+  wait "$p_stub"; r_stub=$?
+  print "image_rc=$r_img stub_rc=$r_stub"
+)
+```
+
+The image arm passed startup, the 640 route at origin `0x00696100`, and one
+`[missing-func]` control, but died before title or hangar. Its sole crash was
+`fillSampleStreamRange+8136` with last guest PC `0x8000b650`; it produced zero
+target-phase field348, image-stage, and image-DMA rows. The driver returned
+`image_rc=4` because the game process died while waiting for width 1024.
+
+The stub arm passed the same startup, 640, and `[missing-func]` controls,
+then reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` twice.
+It recorded 17,065 field348-candidate rows, 138 host-boundary rows, 6,949
+audio-join PCM rows, and 212 PCM-boundary rows before the known post-hangar
+aligned-ROM assertion (`last-guest-pc=0x80001b08`); the driver returned
+`stub_rc=0` after its own completion and SIGKILL cleanup.
+
+This same-build comparison selects H-ImageArmSpecific at the measured route
+scope and rejects shared pre-phase nondeterminism as the sole explanation:
+the stub qualifies through both target phases while the image arm does not.
+It does not identify the image writer/output contract because the image arm
+has no target rows, and it changes no runtime behavior or default.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.
