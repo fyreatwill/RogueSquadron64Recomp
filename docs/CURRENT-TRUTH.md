@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2248 (2026-08-24); behavioral and source evidence is
-current through s2248, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2248 remain in
+Maintained in Session 2249 (2026-08-24); behavioral and source evidence is
+current through s2249, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2249 remain in
 the append-only ledger.
 
 ## Current state
@@ -57,6 +57,17 @@ the append-only ledger.
   post-hangar aligned-ROM abort. This selects H-ImageArmSpecific at route
   scope and rejects shared pre-phase nondeterminism as the sole explanation,
   but it does not identify a field348 writer or output edge.
+- s2249's same-build three-arm split passed the common startup, 640 origin,
+  and `[missing-func]` control in image+C88=`1`, image+C88=`0`, and stub+C88=`1`.
+  The image+C88=`1` arm died before title with last guest PC `0x8000B650`;
+  image+C88=`0` and the stub reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`. The qualified image arm's title summary had 3,457
+  stage rows and zero nonzero rows; its hangar phase-10 summary had 2,032
+  stage rows, two nonzero rows, and one stage/source/consumer match at
+  `dest=0x167F50`, `len=0x300`, hash `0x60F910DE`, 621 nonzero bytes. This
+  selects H-C88ImageInteraction at route scope and H-ImageQualifies only for
+  C88=`0`; the join is single-source port evidence and does not authorize a
+  default flip or writeback guard.
 - s2233's fixed retail-oracle capture passed the whole-RDRAM positive control,
   reached the 640 target, title `1024`, and hangar `512`, and recorded
   `6,665,015` writes to physical `0x166000:0x17A000`. It sampled 503
@@ -228,14 +239,15 @@ Closed investigations are not active work items. The sequence is monotonic.
   s2237 independently selected H-RetailField348Writer; s2238–s2240
   established the legitimate port init clear and the missing nonzero
   producer boundary. s2245 qualified both no-log arms through title and
-  hangar, and s2248 selected an image-arm-specific pre-title failure while
-  the stub arm qualified through both targets. The next unit is a same-build,
-  phase-gated three-arm interaction test: image+C88=`1`, image+C88=`0`, and
-  stub+C88=`1`, all with the common census. If both image arms fail while
-  the stub qualifies, the defect is intrinsic to the opt-in image route; if
-  only image+C88=`1` fails, C88/image interaction is selected; divergent
-  image-arm outcomes select remaining image-route nondeterminism. Do not
-  promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+  hangar, s2248 selected an image-arm-specific pre-title failure, and s2249
+  selected H-C88ImageInteraction: image+C88=`1` failed before title, while
+  image+C88=`0` and stub+C88=`1` reached both targets. The C88=`0` image arm
+  also supplied a hangar-only nonzero stage/source/consumer join, but title
+  remained all-zero and the join is single-source. The next unit is a
+  same-build three-arm audit with the existing `m5-b40-route`,
+  `m5-route-state`, and `m5-b40-read` traces, plus the common task controls,
+  to locate the first C88-dependent edge. Do not promote
+  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -539,6 +551,12 @@ remain in the append-only ledger. Operationally:
   reproduced the pre-title failure, so shared nondeterminism is no longer the
   sole explanation at this scope. This refines the blocker to the image route
   without identifying its writer or authorizing a mitigation.
+- s2249 refines s2248's image-route blocker: the same-build C88=`0` image arm
+  reached both target phases while C88=`1` failed before title, so the route
+  split selects a C88/image interaction rather than an image-arm-only
+  blanket failure. Its single hangar output join does not overturn the
+  title/all-zero result or identify a writer; those earlier nulls remain
+  valid at their measured phase/task scopes.
 - s2232's image-arm PCM activity is not evidence of image-output correctness:
   the same-run image summary recorded zero stage/source and stage/consumer
   matches, while the nonzero PCM rows were consumer-only at the image-join
@@ -565,7 +583,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2246 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2249 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

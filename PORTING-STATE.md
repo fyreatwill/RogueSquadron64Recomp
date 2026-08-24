@@ -106080,3 +106080,42 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2249 (2026-08-24) — split C88/image route and output contract
+
+Ran the planned same-build concurrent three-arm test with identical startup,
+route, census, and phase controls: image+C88=`1`, image+C88=`0`, and the
+silent stub+C88=`1` control. All three passed startup, the one
+`[missing-func]` control, and the 640 target at origin `0x00696100`.
+
+The image+C88=`1` arm exited while waiting for title (`rc=4`) with one
+SIGSEGV and last guest PC `0x8000B650`; it produced zero title/hangar
+field348, image-stage, or image-DMA rows. The image+C88=`0` arm reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400` twice, then hit the known
+post-hangar aligned-ROM failure (`last-guest-pc=0x80001B08`). It recorded
+3,073 ABI/DMA rows, all image exits at `break_pc=0x1328`, and 6,467 image
+stage rows. Its title summary had 3,457 stage rows with zero nonzero rows;
+its hangar phase-10 summary had 2,032 stage rows, two nonzero rows, and one
+source and one consumer match. The matched row was `dest=0x167F50`,
+`len=0x300`, hash `0x60F910DE`, with 621 nonzero bytes. This is a
+single-source port output join, not writer or default authorization. The
+stub arm reached the same title/hangar phases and the same known
+post-hangar failure, with 3,255 ABI/DMA rows, zero image-DMA changes, and no
+image-stage rows.
+
+The two independent controls are route qualification (the C88=`0` image and
+stub both reach both targets while C88=`1` image does not) and the phase-keyed
+task/output table (the qualified image arm has a hangar-only nonzero
+stage/source/consumer join). This selects H-C88ImageInteraction at route
+scope, selects H-ImageQualifies only for the C88=`0` arm, and rejects
+H-ImageIntrinsic as a blanket explanation. It does not identify why C88
+changes the image arm's pre-title fate, close the title output gap, or permit
+promoting the image/default or adding a writeback guard.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.
