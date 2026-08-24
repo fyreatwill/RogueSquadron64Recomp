@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2260 (2026-08-24); behavioral and source evidence is
-current through s2260, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2260 remain in
+Maintained in Session 2261 (2026-08-24); behavioral and source evidence is
+current through s2261, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2261 remain in
 the append-only ledger.
 
 ## Current state
@@ -31,28 +31,12 @@ the append-only ledger.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. Its host canary is inside the generated mix-buffer span;
   `canary_ok=0` is probe data and does not gate completion, writeback, or DMA.
-- s2253's same-build image+C88=`0` versus silent+C88=`0` comparison passed
-  startup, one `[missing-func]`, 640, and the 1024 phase in both arms. The
-  silent arm reached stable title and two 512 hangar transitions before the
-  known aligned-ROM abort; the image arm failed before stable title in
-  `recomp::do_rom_read+608` with last guest PC `0x80001C94`. Its target image
-  joins were all `stage-only` with zero field348, DMEM, DMA, and destination
-  payload summaries. This selects an image-arm route-stability blocker at
-  route scope, not an output-contract result; this is single-source port
-  evidence and the image arm remains opt-in.
-- s2254 reversed that pair's launch order, with silent+C88=`0` first and
-  image+C88=`0` one second later. Both arms again passed startup, one
-  `[missing-func]`, the 640 route, title `1024 @ 0x00790400`, and two hangar
-  `512 @ 0x006AB400` transitions before the known aligned-ROM abort. Their
-  phase-8/12 B40 and route-state rows matched. The image arm had 3,282/837
-  image joins at title/hangar, all `stage-only`, with zero field348, DMEM,
-  generated-DMA, and destination payload nonzero summaries; its task joins
-  still showed DMEM change and PCM source/consumer activity. The stub had no
-  image rows and zero-change task joins. This selects H-BothQualify for the
-  reversed-order capture, superseding s2253's route-qualification blocker at
-  this scope but not identifying the output edge. It is single-source port
-  evidence; the image arm remains opt-in and no default, writeback, consumer,
-  slot, gate, guard, or task behavior changed.
+- s2253 failed the image arm before title while the silent arm qualified;
+  s2254 reversed launch order and qualified both arms through hangar, with
+  image joins still stage-only. Together they established route intermittency
+  and left the image output edge open; later captures supersede their detailed
+  route outcomes. The image arm remains opt-in and no default or guard change
+  follows.
 - s2255 repeated the silent-first/image-second pair with the same phase-keyed
   output traces. Both arms passed startup, one `[missing-func]`, and the 640
   origin, but neither reached title `1024` or hangar `512`: the silent arm
@@ -117,6 +101,17 @@ the append-only ledger.
   selects H-ImageStageIngressPresent at stage-presence scope, single-source
   port evidence; source/consumer attribution remains open. No runtime or
   default changed.
+- s2261 repeated the image-first same-build C88=`0` pair with both route and
+  PCM-boundary logging. The image arm qualified title and hangar, with phase
+  8/10/12 stage rows `3222/1790/815`; phase 10 had two nonzero rows and one
+  `dest=0x168B50`, `len=0x300`, `fnv=0x6ADD4218`, `nz=639` row that reached
+  `stage-consumer-match` with equal source/consumer payloads and valid order.
+  The silent arm passed startup, `[missing-func]`, and first 640, then died
+  before title at `copyToRAM`/guest `0x8000B650` with no target rows. The A/B
+  table selects H-PairRouteInvalid, while the image arm has a qualified
+  single-arm phase-10 join. The preceding retail oracle passed whole-RDRAM,
+  reached hangar, and recorded 12,288 exact PCM-ring and 705,759 task-span
+  writes. No runtime or default change follows.
 - s2246's two full field348-candidate captures both passed the 640 route and
   one `[missing-func]` control but crashed before title `1024` or hangar `512`:
   the first was `fillSampleStreamRange+8136` with last guest PC
@@ -406,10 +401,14 @@ Closed investigations are not active work items. The sequence is monotonic.
   title and 2,201 first-hangar stage rows, all stage-only, with two nonzero
   hangar rows, while the silent arm emitted none. This selects
   H-ImageStageIngressPresent at stage-presence scope, single-source port
-  evidence, and leaves source/consumer attribution open. The next
-  discriminator adds `ROGUESQ_LOG_PCM_BOUNDARY=1` to the same audio-return
-  pair while keeping task-contract/ABI/DMA and host-boundary tracing off. Do
-  not promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+  evidence, and leaves source/consumer attribution open. s2261's image arm
+  then produced one exact phase-10 stage/source/consumer match, but its
+  same-run silent control failed before title, so the A/B result is
+  H-PairRouteInvalid rather than a complete image-versus-silent selection.
+  The next discriminator is a single reduced-trace silent+C88=`0` control
+  with the PCM boundary logger, to qualify the control route before another
+  pair. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer
+  guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -577,6 +576,14 @@ stage-presence scope, single-source port evidence; it does not identify a
 PCM source/consumer join or authorize a default, writeback, consumer, slot,
 gate, guard, or task change. The next unit adds only phase-scoped PCM-boundary
 logging to the same audio-return pair.
+
+s2261's image-first pair added the PCM logger and found one phase-10
+stage/source/consumer match with equal destination payload and valid order.
+The silent arm failed before title after the startup, missing-function, and
+first-640 controls, so the A/B discriminator selects H-PairRouteInvalid; the
+image match is single-arm evidence only. Qualify the silent route next. The
+retail oracle independently passed whole-RDRAM and observed both watched
+spans, but did not join its writes to this port row.
 
 s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
 At both target origins, `field348 & 0x007FFFFF` was valid but the exact

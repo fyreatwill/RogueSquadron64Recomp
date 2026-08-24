@@ -106558,3 +106558,53 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2261 (2026-08-24) — image stage reached a PCM join but silent control failed
+
+Before building, ran the independent retail oracle with the required whole-RDRAM
+positive control and the exact PCM/task-output spans. The 65-second Rice run
+reached the hangar and recorded 728,047 whole-RDRAM writes, 12,288 writes to
+`0x166450:0x169450`, and 705,759 writes to `0x171F70:0x173DB4`. This is
+independent ground truth that both watched regions are active on the driven
+route; it does not join those retail writes to the port image-stage rows.
+
+Rebuilt the unchanged Debug target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`.
+Ran the prescribed same-build image+C88=`0` / silent+C88=`0` pair, image
+first, with `ROGUESQ_LOG_AUDIO_RETURN=1` and
+`ROGUESQ_LOG_PCM_BOUNDARY=1`; task-contract/ABI/DMA, host-boundary,
+B40-read, and thread-resume tracing remained off. Driver logs are
+`scratch/agent/s2261_image_c88_0_pcm_driver.log` and
+`scratch/agent/s2261_silent_c88_0_pcm_driver.log`; run logs are under
+`scratch/s73_post_a_scene/s2261_image_c88_0_pcm/` and
+`scratch/s73_post_a_scene/s2261_silent_c88_0_pcm/`.
+
+The image arm passed startup, one `[missing-func]`, the 640 route, title
+`1024 @ 0x00790400`, and hangar `512 @ 0x006AB400` twice. Its image-stage
+counts were phase 8=`3222`, phase 10=`1790`, and phase 12=`815`; phase 10 had
+two nonzero rows. At `dest=0x168B50`, `len=0x300`,
+`stage_fnv=0x6ADD4218`, `stage_nz=639`, the row first classified
+`stage-source-only` and then `stage-consumer-match`. Source and consumer both
+reported `bytes=768`, the same FNV and nonzero count, completion preceded both,
+source preceded consumer, and `ordering_violation=0`. Phase-10 source and
+consumer row counts were 1104 and 1103, with one nonzero row; title and the
+second hangar phase had no nonzero PCM rows.
+
+The silent arm passed startup, one `[missing-func]`, and the first 640 origin
+`0x00696100`, then died before title in the known `copyToRAM` crash with last
+guest PC `0x8000B650`. It emitted no target PCM or image-stage rows. The
+complete same-run discriminator therefore selects H-PairRouteInvalid for the
+image-versus-silent comparison. The image arm independently supplies a
+qualified single-arm H-StagePcmJoin at phase 10, but this does not prove the
+image arm is a valid default or explain the silent route failure. It rules out
+only the stronger claim that every image-stage row is disconnected from the
+PCM boundary; it does not authorize writeback, consumer, slot, gate, guard,
+task, or default changes.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.
