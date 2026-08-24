@@ -104441,6 +104441,41 @@ only added and ran a bounded diagnostic harness.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.
 
+## Session 2211 (2026-08-23) — measured the port VI current-line source
+
+Ran the independent retail preflight before changing the port. The whole-RDRAM
+positive-control watch reached 10,000 writes and the watched
+`osViGetCurrentField` execution reached all five relevant 640 origins. Its
+`v0` was `0` at every early and target origin, including `0x0066AA00` and
+`0x00696600`.
+
+Extended `ROGUESQ_LOG_VI_CONTEXT_PORT` in
+`lib/N64ModernRuntime/ultramodern/src/events.cpp` with the low bit of the
+port's `VI_V_CURRENT_LINE_REG` for each width-640 row and per-origin summary
+counters. Exported the submodule patch and built `RogueSquadron64Recomp`
+successfully. The qualified 60-second run used silent audio, spin yield,
+ungated solo LLE, phase logging, and the port context logger; it was ended by
+the SIGKILL watchdog with no crash or abort marker.
+
+The positive prefix fired 8 times. The table collected 512 width-640 rows with
+zero overflow; all 512 selected field 0. The current-line bit was zero in all
+rows: 127 at `0x0066A500`, 128 at `0x005D4500`, 135 at target
+`0x00696100`, and 122 other 640 rows. No bit-1 row or `0x00696600` commit
+appeared. This selects H-PortCurrentRegFixed and refutes
+H-PortCurrentRegAlternates, H-PortCurrentRegDecoupled, and
+H-PortCurrentRegCoverage at the qualified scope. It rules out the
+RT64-facing current-line register as the missing field-one producer; the
+guest mode `comRegs.vCurrent` is the next discriminator. No default field,
+audio dispatch, task data, guard, mitigation, or task rewrite changed.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+only added a bounded diagnostic field and its phase-scoped summary.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-port-mode-vcurrent-source`.
+
 ## Session 2210 (2026-08-23) — compared port early VI context to retail
 
 Expanded the existing `ROGUESQ_LOG_VI_CONTEXT_PORT` table in

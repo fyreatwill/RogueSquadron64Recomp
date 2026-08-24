@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2210
-(2026-08-23); behavioral and source evidence is current through s2210.
+authoritative for exact commands and probe rows. Maintained in Session 2211
+(2026-08-23); behavioral and source evidence is current through s2211.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -296,6 +296,20 @@ second ledger.
   H-PortEarlyContextParity and H-PortEarlyContextCoverage there, and moves
   the open question to the host VI field source. No default, mitigation, task,
   or audio-dispatch change was made.
+- s2211's independent retail preflight passed the whole-RDRAM positive control
+  (10,000 writes), reached all five relevant 640 origins, and observed
+  `osViGetCurrentField` return `v0=0` at every early and target origin,
+  including `0x0066AA00` and `0x00696600`. The same-built port table passed its
+  prefix control (8 rows), collected 512 width-640 rows with zero overflow,
+  and selected field 0 in all rows. Its `VI_V_CURRENT_LINE_REG & 1` was zero
+  in every observed bucket: 127 rows at `0x0066A500`, 128 at
+  `0x005D4500`, 135 at target `0x00696100`, and 122 other 640 rows; no bit-1
+  row or `0x00696600` commit appeared. This selects
+  H-PortCurrentRegFixed and refutes H-PortCurrentRegAlternates,
+  H-PortCurrentRegDecoupled, and H-PortCurrentRegCoverage at the qualified
+  scope. The current-line register is not the missing field-one producer;
+  the next discriminator is the guest mode's `comRegs.vCurrent`. No default,
+  mitigation, task rewrite, or audio-dispatch change was made.
 
 ## Active backlog
 
@@ -436,8 +450,10 @@ The port's `ViState::field` is host-side state used by `update_vi`; in the
 default arm the only visible assignment is initialization at zero, while the
 field alternation knob toggles it after each VI commit. s2210 shows that this
 default field 0 is used across the early 640 contexts, unlike retail's
-field-1 `0x0066AA00` context. The missing legitimate source of that field
-selection remains open; this is not permission to enable the knob by default.
+field-1 `0x0066AA00` context. s2211 shows the RT64-facing current-line bit is
+also fixed at zero in the qualified port rows, so it is not that missing
+source. The legitimate field-one producer remains open; this is not
+permission to enable the knob by default.
 
 ### M3, M4, and generated symbols
 
