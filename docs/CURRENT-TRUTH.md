@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2221
-(2026-08-23); behavioral and source evidence is current through s2221.
+authoritative for exact commands and probe rows. Maintained in Session 2222
+(2026-08-23); behavioral and source evidence is current through s2222.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2221's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2222's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -456,6 +456,19 @@ second ledger.
   it does not establish retail interior-site parity or a key-on-to-hangar-
   PCM causal join. No key-on return, default, task field, or safety guard
   changed.
+- s2222 broadened the independent Rice retail witness after the oracle's
+  64-watch cap rejected the original per-instruction list. The range execution
+  watch passed the whole-RDRAM control (10,000 callbacks, removal `rc=0`),
+  reached both target 640 origins and five 512 hangar rows, and produced a
+  target matrix with 140 observed PCs per origin: 2,464 hits at `0x00696100`
+  and 2,710 at `0x00696600` for each observed PC. All eight previously watched
+  interior divide PCs remained absent, but all eight corresponding post-guard
+  interior PCs and the rest of the interior path executed. This selects
+  H-RetailExecutesAlternateInterior and refutes H-PCWatchCoverage,
+  H-RetailSkipsInterior, and the boundary-only H-PortOnlyInterior form at the
+  target scope. The run does not classify the skipped branch conditions or
+  provide a hangar-keyed range histogram; no key-on return or default change is
+  authorized.
 
 ## Active backlog
 
@@ -485,7 +498,10 @@ work items.
    0x00` slot transitions. Retail independently reaches both target origins
    and hangar but executes only the key-on entry/tail PCs, not the eight
    watched interior divide PCs. Keep this behavior opt-in while the
-   retail/port site discrepancy remains open; broaden the retail PC witness
+   retail/port site discrepancy remains open. s2222's range witness shows that
+   retail traverses the alternate post-guard interior path at both target
+   origins while skipping all eight watched divide PCs, so the next M5 unit must
+   classify the eight retail branch conditions, including a hangar-keyed sample,
    before changing the early-return class.
 2. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
@@ -658,6 +674,11 @@ Four sites divide by `0xC0` with no key-on guard hit; four have no entries.
 Retail's same-run whole-RDRAM/VI-controlled oracle executes the function
 boundary but none of the eight interior PCs. The next discriminator is a
 range-PC retail witness; no key-on return is authorized to change before it.
+s2222 supplied that range witness: retail executes 140 interior PCs per target
+origin, including the eight post-guard PCs corresponding to the skipped divides,
+while still recording no hit at any of the eight divide PCs. This closes the
+range-coverage question but leaves the branch-condition and hangar-specific
+operand question open; no key-on return is authorized to change yet.
 
 The stock `aspMain` contract is not the game's MusyX contract. s2220's retail
 payload and downstream port table select the original-value C88 semantics at
@@ -776,6 +797,13 @@ remain in the append-only ledger. Operationally:
   every delta is 1, so no skipped host VI distinguishes the two cadence
   sources. The mapping result remains valid, but the cadence selection is
   superseded and no publisher has been identified.
+- s2221's narrow retail PC census was deliberately non-classifying: it proved
+  boundary execution and a null at eight selected interior addresses, but did
+  not expose alternate interior paths or operands. s2222's independent range
+  watch passes the positive control and target-phase controls, and observes the
+  eight corresponding post-guard PCs at both target origins. The old
+  coverage-only reading is superseded; the remaining question is which retail
+  branch conditions skip the divides and whether the same path holds in hangar.
 
 ## Evidence ledger summary
 
@@ -784,7 +812,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2221 VI-boundary, retail-ground-truth, image-arm, C88-gate, and key-on
+s2198–s2222 VI-boundary, retail-ground-truth, image-arm, C88-gate, and key-on
 work is recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.

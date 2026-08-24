@@ -1321,6 +1321,36 @@ static void add_pc_watches(const char *arg)
     free(copy);
 }
 
+static void add_pc_range_watch(const char *arg)
+{
+    char *copy = strdup(arg), *colon;
+    uint32_t start, end;
+    if (!copy) exit(2);
+    colon = strchr(copy, ':');
+    if (!colon) {
+        fprintf(stderr, "[oracle] bad PC range '%s' (want START:END, END exclusive)\n", arg);
+        free(copy);
+        exit(2);
+    }
+    *colon++ = 0;
+    start = (uint32_t)strtoul(copy, NULL, 0);
+    end = (uint32_t)strtoul(colon, NULL, 0);
+    free(copy);
+    if (end <= start) {
+        fprintf(stderr, "[oracle] bad PC range '%s' (want START:END, END exclusive)\n", arg);
+        exit(2);
+    }
+    if (g_nwatch >= MAX_WATCHES) {
+        fprintf(stderr, "[oracle] too many watches\n");
+        exit(2);
+    }
+    g_watch[g_nwatch].start = start;
+    g_watch[g_nwatch].end = end;
+    g_watch[g_nwatch].flags = M64P_BKP_FLAG_EXEC;
+    g_watch[g_nwatch].label = "pc-range";
+    g_nwatch++;
+}
+
 static void usage(void)
 {
     fprintf(stderr,
@@ -1329,6 +1359,7 @@ static void usage(void)
         "  --watch-read  A[:B]   log reads\n"
         "  --watch-rw    A[:B]   log both\n"
         "  --watch-pc    A[,B...] watch execution at guest PCs (prints $v0/$s1/$a0/$a2)\n"
+        "  --watch-pc-range A:B watch execution across a guest PC range\n"
         "  --secs N              run for N seconds (default 120)\n"
         "  --hit-cap N           log at most N hits, then count silently (default 200)\n"
         "  --detail-watch N      always log hits for watch index N\n"
@@ -1458,6 +1489,8 @@ int main(int argc, char **argv)
             add_watch(argv[++i], M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE, "rw");
         else if (!strcmp(argv[i], "--watch-pc") && i + 1 < argc)
             add_pc_watches(argv[++i]);
+        else if (!strcmp(argv[i], "--watch-pc-range") && i + 1 < argc)
+            add_pc_range_watch(argv[++i]);
         else if (!strcmp(argv[i], "--hold-ms") && i + 1 < argc)    g_hold_ms = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--input") && i + 1 < argc)      inputpath = argv[++i];
         else if (!strcmp(argv[i], "--press") && i + 1 < argc) {

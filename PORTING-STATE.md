@@ -104990,6 +104990,39 @@ default, task field, or safety guard was changed. Logs:
 `scratch/agent/s2221_retail_keyon.log` and
 `scratch/s73_post_a_scene/m5-audio-keyon-census/run.log`.
 
+## Session 2222 (2026-08-23) — broadened retail key-on range witness
+
+The prescribed per-instruction `--watch-pc` command failed before emulation with
+`[oracle] too many watches`: the 0x80090A3C–0x80090E04 span contains more than
+the oracle's 64-watch capacity once the whole-RDRAM positive control is armed.
+The first `zsh tools/oracle/build.sh` retry also failed because the script is
+Bash-specific; rebuilding with `bash tools/oracle/build.sh` succeeded. Added a
+single range-valued execution watch, rebuilt the oracle, and reran the same
+Rice-driven 60-second retail recipe.
+
+The corrected run passed the whole-RDRAM positive control at 10,000 callbacks
+and removed it with `rc=0`; the range watch remained armed and recorded
+8,512,479 execution hits. VI trace reached repeated width-640 rows at both
+target origins (`0x00696100` and `0x00696600`) and five width-512 hangar rows
+at `0x006AB400`. The target-phase range matrix had 140 distinct PCs per
+origin: each observed PC occurred 2,464 times at `0x00696100` and 2,710 times
+at `0x00696600`.
+
+All eight previously watched interior divide PCs remained absent at both
+target origins: `0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`,
+`0x80090D74`, `0x80090D8C`, `0x80090DB8`, and `0x80090DD0`. The range did,
+however, observe the eight corresponding post-guard interior PCs
+`0x80090CF0`, `0x80090D08`, `0x80090D34`, `0x80090D4C`, `0x80090D78`,
+`0x80090D90`, `0x80090DBC`, and `0x80090DD4`, plus the rest of the interior
+path. The range and phase controls are therefore positive and usable: this
+refutes H-PCWatchCoverage, H-RetailSkipsInterior, and the boundary-only form
+of H-PortOnlyInterior, while selecting H-RetailExecutesAlternateInterior at
+the target scope. It does not yet classify the skipped instructions' branch
+conditions, and the hangar VI rows are phase coverage rather than a
+hangar-keyed range histogram. No port build, key-on return, default, task
+field, gate, or safety guard changed. Log:
+`scratch/agent/s2222_retail_keyon_range.log`.
+
 ### Next
 
 See `scratch/agent/NEXT.md`.

@@ -44,6 +44,11 @@ control cannot silence them.
 rows to live 640-width VI origins. This keeps a high-frequency boot watch
 from changing the driven route while collecting target-phase GPR returns.
 
+`--watch-pc-range START:END` arms one execution breakpoint across a half-open
+guest-PC range. It is useful when the per-PC watch list would exceed the
+debugger's breakpoint capacity; each hit still reports its exact PC and GPR
+fields.
+
 `--mode-dump-pc A` selects a watched execution PC and prints each observed
 640-wide mode descriptor's pointer plus both field origins and yScale values.
 It is bounded to 256 printed rows and is intended for use with `--watch-pc`.
