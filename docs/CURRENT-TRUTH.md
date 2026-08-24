@@ -5,7 +5,7 @@ history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
 Maintained in Session 2251 (2026-08-24); behavioral and source evidence is
 current through s2251, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2250 remain in
+s2198–s2226 archive is §44; s2227–s2251 remain in
 the append-only ledger.
 
 ## Current state
@@ -627,7 +627,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2250 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2251 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
