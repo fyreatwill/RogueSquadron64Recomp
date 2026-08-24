@@ -104440,3 +104440,27 @@ only added and ran a bounded diagnostic harness.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.
+
+## Session 2207 (2026-08-23) — undriven retail oracle did not reach early 640
+
+Ran the prescribed independent retail-oracle census with the whole-RDRAM
+positive control and `--vi-trace` for 45 seconds. The control reached its
+10,000-hit threshold, was removed successfully, and the remaining watch stayed
+armed. The trace produced only the boot `320 @ 0x006DD280` row after the
+initial mode row; it produced zero width-640 rows, zero `0x0066A500` rows, and
+zero `0x0066AA00` rows. The oracle completed with `10000` writes and `2699`
+VI callbacks.
+
+This is single-source retail evidence selecting H-RetailTraceCoverage for the
+undriven dummy-video recipe. It rules out no retail early-origin hypothesis:
+the run never entered the phase being compared. The next unit uses the
+documented Rice video plugin and verified Start schedule. No port code, VI
+default, task, mitigation, or audio dispatch changed.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+only ran a ground-truth census.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.

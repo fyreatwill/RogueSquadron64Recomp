@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2206
-(2026-08-23); behavioral and source evidence is current through s2206.
+authoritative for exact commands and probe rows. Maintained in Session 2207
+(2026-08-23); behavioral and source evidence is current through s2207.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -260,6 +260,13 @@ second ledger.
   distinguish the post-target consumer because no arm reached title/hangar
   and the quiet alternate lacked the required early control. No default flip,
   guard, mitigation, task rewrite, or audio dispatch change was made.
+- s2207's independent retail-oracle census passed the whole-RDRAM positive
+  control with 10,000 writes and successful watch removal, but the undriven
+  dummy-video recipe produced only the boot `320 @ 0x006DD280` row and zero
+  width-640 rows in 45 seconds. Neither `0x0066A500` nor `0x0066AA00` was
+  observed. This selects H-RetailTraceCoverage for that recipe only; it is
+  not evidence about retail's early-origin set. The next census must use the
+  documented Rice video plugin and Start schedule.
 
 ## Active backlog
 
@@ -302,10 +309,11 @@ work items.
    rather than the logged/other-arm positive prefix `0x0066A500`, while all
    arms still stall before title/hangar. This selects H-NonTargetRouteDamage
    only at the early-prefix scope; the result is single-source port evidence
-   and is not a mitigation or a post-target explanation. The next unit is an
-   independent retail-oracle early-origin census with a whole-RDRAM positive
-   control, to determine whether `0x0066AA00` is a legitimate retail phase or
-   a port/logger route variant. Keep the field knob and logger diagnostic-only.
+   and is not a mitigation or a post-target explanation. s2207's undriven
+   retail census passed its whole-RDRAM control but never reached a 640 phase,
+   so it selected H-RetailTraceCoverage for that recipe rather than
+   classifying either origin. The next unit is a Rice-driven retail-oracle
+   early-origin census. Keep the field knob and logger diagnostic-only.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
