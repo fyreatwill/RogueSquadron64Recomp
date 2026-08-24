@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2235 (2026-08-23); behavioral and source evidence is
-current through s2235, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2235 remain in
+Maintained in Session 2236 (2026-08-23); behavioral and source evidence is
+current through s2236, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2236 remain in
 the append-only ledger.
 
 ## Current state
@@ -61,6 +61,15 @@ the append-only ledger.
   `0x171F70:0x173DB4` task-output span. Sampled PCM source/consumer controls
   were nonzero at title, but no image ordinal/hash joined them. This selects
   H-PortContractGap at the measured scope; the image arm remains opt-in.
+- s2236's batched image-ingress audit reached both target phases with 3,531
+  ABI rows, all with nonzero DMEM changes and `break_pc=0x1328`, 3,531 DMA
+  rows, 12,505 target-stage rows, and 204 PCM-boundary controls. The two
+  observed `field348` source addresses (`0x80178C80` and `0x801797B0`) were
+  valid but their masked `0x180`-byte RDRAM spans were all zero
+  (`field348_fnv=25E26BC5`, `field348_nz=0`); stage-0/1 DMEM and stage-2/3
+  generated DMA payloads were also all zero. This selects H-ImageInputZero at
+  the measured port boundary, single-source evidence; no runtime default or
+  contract behavior changes.
 - s2232's same-build port A/B reached the target route, title, and hangar in
   both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
   DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
@@ -97,13 +106,14 @@ Closed investigations are not active work items. The sequence is monotonic.
 1. **M5 image-output contract attribution.** s2232 selected H-ContractGap at
   single-source port A/B scope, and s2234 independently selected
   H-RetailTaskOutput at the exact retail watch boundary. s2235's successful
-  retry selected H-PortContractGap: the image arm changed DMEM and completed,
-  but its output DMEM/DMA payloads were zero, its stage destinations missed
-  the retail task-output span, and no stage/source or stage/consumer join
-  closed. The next unit is one phase-keyed input-source audit of the image
-  arm: hash the `field348` RDRAM input span beside the existing stage-0/1
-  DMEM spans and stage-2/3 output spans. Do not promote
-  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+  retry selected H-PortContractGap, and s2236 selected H-ImageInputZero: the
+  image arm changed DMEM and completed, but the valid `field348` source span,
+  stage-0/1 DMEM inputs, and stage-2/3 generated DMA payloads were all zero.
+  The next unit is one retail-oracle writer audit for the two exact masked
+  `field348` source spans, with a same-run whole-RDRAM positive control, to
+  determine whether retail populates those spans and whether the two origins
+  differ. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer
+  guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -175,7 +185,14 @@ discriminator. s2232's same-build A/B adds real image completion and DMA, but
   tasks and 6,057 stage rows, all with zero output payload bytes in the two
   target summaries; the stage destinations never overlap the selected retail
   task-output span, and no exact stage/PCM join occurs. The arm remains
-  opt-in pending the input-source audit.
+  opt-in pending the source-writer audit.
+
+s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
+At both target origins, `field348 & 0x007FFFFF` was valid but the exact
+`0x180`-byte source span was all zero, and the stage-0/1 DMEM input spans and
+stage-2/3 generated DMA payloads were all zero. This selects H-ImageInputZero
+over H-ImageIngressMissing and H-ImageTransformLoss at the measured port
+boundary; it is one-source port evidence and does not identify the writer.
 
 s2233's retail oracle passed its whole-RDRAM control, reached the driven 640,
 title, and hangar phases, and wrote the broad `0x166000:0x17A000` span
@@ -333,7 +350,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2235 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2236 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

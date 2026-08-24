@@ -105520,6 +105520,41 @@ or other runtime change.
 ORIGIN: no value was suppressed, rewritten, guarded, restored, or otherwise
 changed; this iteration only retried and joined existing diagnostic rows.
 
+## Session 2236 (2026-08-23) — audited Factor 5 image input ingress
+
+Ran the planned single-build image-arm capture after adding `field348` source
+hashing to `rs64_audio_image_stage`:
+
+```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2236_image_input 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2236_image_input_driver.log 2>&1
+```
+
+The build succeeded. The capture reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`; it completed with driver exit 0, `UnhandledJump: 0`,
+and the target controls fired before the process ended during the later probe
+window. It recorded 3,531 ABI rows, all with nonzero DMEM changes and
+`break_pc=0x1328`, 3,531 matching DMA rows, 12,505 target-phase image-stage
+rows, and 204 target PCM-boundary rows. The image summaries were:
+
+```text
+phase=8  width=1024 origin=0x790400 stage_rows=3529 nonzero_stage_rows=0 source_matches=0 consumer_matches=0
+phase=10 width=512 origin=0x6AB400 stage_rows=2686 nonzero_stage_rows=0 source_matches=0 consumer_matches=0
+```
+
+The `field348` source was valid at both observed addresses (`0x80178C80` and
+`0x801797B0`), but its masked `0x180`-byte RDRAM span was all zero in every
+target-stage row (`field348_fnv=25E26BC5`, `field348_nz=0`). Stage-0/1 DMEM
+inputs were likewise all zero; stage-2/3 generated DMA payloads were all zero
+(`dma_nz=0`). This selects H-ImageInputZero at the measured port boundary and
+rules out H-ImageIngressMissing and H-ImageTransformLoss for this run. The
+image arm remains opt-in; no task field, writeback, consumer, gate, wait,
+slot, or default behavior changed.
+
+ORIGIN: no value was suppressed, rewritten, guarded, restored, or otherwise
+changed; this iteration only added source hashing and observed the existing
+image arm.
+
 ### Next
 
 See `scratch/agent/NEXT.md`.
