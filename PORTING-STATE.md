@@ -106230,3 +106230,48 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2253 (2026-08-24) — qualified the image/stub C88=0 route split
+
+Ran the prescribed same-build concurrent comparison with image+C88=`0`
+launched first and the silent stub+C88=`0` arm launched one second later.
+Both arms used `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LOG_THREAD_RESUME=0`, the
+B40 route/state/read, task-contract, host-boundary, PCM-boundary, and image
+stage traces, with `PROBE_PHASE_WIDTH=1024` and
+`PROBE_KEYS_FROM_PHASE=1`. Driver logs are
+`scratch/agent/s2253_image_c88_0_driver.log` and
+`scratch/agent/s2253_stub_c88_0_driver.log`; run logs are under
+`scratch/s73_post_a_scene/s2253_image_c88_0/` and
+`scratch/s73_post_a_scene/s2253_stub_c88_0/`.
+
+Both arms passed startup, emitted one `[missing-func]` control, and reached
+the 640 route and the 1024 phase. The image arm did not reach the driver's
+stable-title gate: it terminated at 76.6 seconds in
+`recomp::do_rom_read+608` with a bus error and last guest PC
+`0x80001C94`. Its 1024 target rows included 1,369 DMA rows, 6,214 image
+stage rows, and 2,984 image joins; every image join was `stage-only`, and
+the field348, DMEM, generated-DMA, and destination payload summaries were
+zero. It therefore supplies no valid output-contract comparison.
+
+The silent arm reached stable title and two 512 hangar transitions. Its
+termination was the known aligned-ROM assertion in `recomp::do_rom_read`,
+with last guest PC `0x80001B08`, after the hangar route. This arm supplied
+the route positive control and is not evidence of the image output edge.
+
+The complete same-run table selects `H-ImageArmRouteInstability` at route
+scope: the silent control qualified while image+C88=`0` failed before stable
+title. It does not select H-ImageOutputContractGap, H-ImagePayloadJoin, or
+H-SharedRouteInstability, because the image arm had no valid title/hangar
+comparison and the silent arm completed the target route. The image arm's
+zero payload rows remain unevaluable behind this route blocker; no default,
+writeback, consumer, slot, gate, or guard behavior changed.
+This is single-source port evidence; it is not an independent retail writer
+or output-contract line.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-step1-route-qualification`.

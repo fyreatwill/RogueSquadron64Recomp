@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2252 (2026-08-24); behavioral and source evidence is
-current through s2252, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2252 remain in
+Maintained in Session 2253 (2026-08-24); behavioral and source evidence is
+current through s2253, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2253 remain in
 the append-only ledger.
 
 ## Current state
@@ -31,6 +31,15 @@ the append-only ledger.
 - The image arm performs real DMEM work and generated DMA writes, then
   returns `Broke`. Its host canary is inside the generated mix-buffer span;
   `canary_ok=0` is probe data and does not gate completion, writeback, or DMA.
+- s2253's same-build image+C88=`0` versus silent+C88=`0` comparison passed
+  startup, one `[missing-func]`, 640, and the 1024 phase in both arms. The
+  silent arm reached stable title and two 512 hangar transitions before the
+  known aligned-ROM abort; the image arm failed before stable title in
+  `recomp::do_rom_read+608` with last guest PC `0x80001C94`. Its target image
+  joins were all `stage-only` with zero field348, DMEM, DMA, and destination
+  payload summaries. This selects an image-arm route-stability blocker at
+  route scope, not an output-contract result; this is single-source port
+  evidence and the image arm remains opt-in.
 - s2246's two full field348-candidate captures both passed the 640 route and
   one `[missing-func]` control but crashed before title `1024` or hangar `512`:
   the first was `fillSampleStreamRange+8136` with last guest PC
@@ -292,11 +301,14 @@ Closed investigations are not active work items. The sequence is monotonic.
   s2251 did not qualify that comparison: both original arms died before
   title, and a reduced-logging retry qualified only C88=`0`. s2252 reversed
   the launch order, but both image arms again died before title with distinct
-  pre-target crash identities. The next bounded test pairs the known-
-  qualified image+C88=`0` arm with a silent C88=`0` control under the existing
-  full task/image/PCM traces; only a two-arm target-qualified table can move
-  the output boundary. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
-  writeback/consumer guard.
+  pre-target crash identities. s2253 paired image+C88=`0` with a silent
+  C88=`0` control: the silent arm qualified title/hangar, while the image arm
+  again failed before stable title, with all target image joins still
+  `stage-only` and zero payload summaries. This selects an image-arm route
+  blocker at this scope and leaves the output boundary unevaluable. The next
+  checkpoint reverses the image/stub launch order to test launch-order/shared
+  instability before another output attribution attempt. Do not promote
+  `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -386,6 +398,20 @@ control. Because the two arm-specific pre-phase crashes differ and neither
 has target rows, this is not evidence about task fields, image payload, or
 PCM consumption. The next discriminator uses the known-qualified C88=`0`
 image arm against a silent C88=`0` control under the same output traces.
+
+s2253's same-build image+C88=`0`/silent-C88=`0` comparison passed the common
+startup, `[missing-func]`, 640, and 1024 controls in both arms. The silent
+arm reached stable title and two 512 hangar transitions before the known
+aligned-ROM abort at guest PC `0x80001B08`; the image arm failed before stable
+title in `recomp::do_rom_read+608` at guest PC `0x80001C94`. The image arm's
+1024 rows had 1,369 DMA rows, 6,214 image-stage rows, and 2,984 joins, all
+`stage-only` with zero source, DMEM, generated-DMA, and destination payload
+bytes. This selects H-ImageArmRouteInstability at route scope and leaves the
+image output contract unevaluable; it does not authorize a default, output,
+slot, gate, guard, or writeback change. The next unit reverses the arm launch
+order to test whether the split is launch-order/shared rather than image-arm
+specific. This is single-source port evidence, not an independent retail
+writer or output-contract line.
 
 s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
 At both target origins, `field348 & 0x007FFFFF` was valid but the exact
@@ -648,7 +674,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2251 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2253 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 
