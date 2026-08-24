@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2220
-(2026-08-23); behavioral and source evidence is current through s2220.
+authoritative for exact commands and probe rows. Maintained in Session 2221
+(2026-08-23); behavioral and source evidence is current through s2221.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2220's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2221's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -434,6 +434,28 @@ second ledger.
   H-C88RetailZero, H-C88NotCausal, and H-C88RouteRegress there, and leaves
   the C88 behavior arm opt-in; no default, other writer, task field, guard,
   or mitigation changed.
+- s2221 ran M5 plan step 4's key-on census without removing any early return.
+  The Rice retail oracle passed the whole-RDRAM positive control with 10,000
+  writes and successful watch removal, reached both target 640 origins and
+  the 512 hangar phase, and executed the entry/tail PCs `0x80090A3C` and
+  `0x80090DE8` 61,178 times each. It executed none of the eight interior
+  divide PCs (`0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`,
+  `0x80090D74`, `0x80090D8C`, `0x80090DB8`, `0x80090DD0`). This is
+  independent phase coverage, but it does not expose retail operands or
+  explain the interior-PC nulls. The same-built C88=`1` Factor 5 image arm
+  reached title and hangar with 2,650 LLE tasks, no crash/abort, and positive
+  key-on controls. In hangar phases 10/12, four sites (`0x80090CEC`,
+  `0x80090D30`, `0x80090D74`, `0x80090DB8`) repeatedly divided with divisor
+  `0xC0` and zero guard hits; the other four sites had no entries. The census
+  recorded normal-tail counts up to 12,191 and slot transitions `0x01 ->
+  0x02` and `0x02 -> 0x00` (35/39 in phase 10; 50/35 in phase 12). The
+  hangar PCM joins were all zero, while the earlier target-640 PCM positive
+  control had six nonzero sanity rows at `0x0062BD00` and three at
+  `0x00696100`. The single-source port result selects H-KeyOnValidNormal
+  for the covered key-on/slot contract and refutes H-KeyOnGuardNeeded there;
+  it does not establish retail interior-site parity or a key-on-to-hangar-
+  PCM causal join. No key-on return, default, task field, or safety guard
+  changed.
 
 ## Active backlog
 
@@ -458,7 +480,13 @@ work items.
    `reapplyDisplayMode` `0x8008EC88`: retail payload and port gate polarity
    match, and the C88 `=1` arm has downstream service, slot, and nonzero-PCM
    controls that the forced-zero arm lacks. Keep this behavior opt-in while
-   the next unit audits the existing eight key-on divide/return sites.
+   s2221's port key-on census is positive at four of eight sites: each uses
+   divisor `0xC0`, has zero key-on guard hits, normal-tail rows, and `0x02 ->
+   0x00` slot transitions. Retail independently reaches both target origins
+   and hangar but executes only the key-on entry/tail PCs, not the eight
+   watched interior divide PCs. Keep this behavior opt-in while the
+   retail/port site discrepancy remains open; broaden the retail PC witness
+   before changing the early-return class.
 2. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
@@ -621,8 +649,15 @@ do not independently establish the retail `0x03 -> 0x00` completion cycle.
 Treat this as H-StubEquivalent at the game-visible output/slot/PCM scope, not
 as proof that the image function is a no-op. s2220 now selects the original-
 value semantics of the existing single-writer C88 gate arm at the covered
-route. Keep the C88 arm opt-in and hold the image arm constant while auditing
-key-on inputs.
+route. Keep the C88 arm opt-in and hold the image arm constant while the
+retail/port key-on site discrepancy is resolved.
+
+s2221's port key-on census is a positive normal-tail/slot result at the
+covered hangar scope, not proof that all eight early-return sites are valid.
+Four sites divide by `0xC0` with no key-on guard hit; four have no entries.
+Retail's same-run whole-RDRAM/VI-controlled oracle executes the function
+boundary but none of the eight interior PCs. The next discriminator is a
+range-PC retail witness; no key-on return is authorized to change before it.
 
 The stock `aspMain` contract is not the game's MusyX contract. s2220's retail
 payload and downstream port table select the original-value C88 semantics at
@@ -749,8 +784,8 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2220 VI-boundary, retail-ground-truth, image-arm, and C88-gate work is
-recorded in the ledger.
+s2198–s2221 VI-boundary, retail-ground-truth, image-arm, C88-gate, and key-on
+work is recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

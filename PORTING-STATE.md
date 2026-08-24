@@ -104952,3 +104952,45 @@ existing `ROGUESQ_M5_C88_VALUE=1` behavior arm only.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-keyon-contract`.
+
+## Session 2221 (2026-08-23) — audited key-on divide contracts
+
+Ran the required retail ground-truth command before the port build. The Rice
+oracle passed the whole-RDRAM positive control with 10,000 writes and watch
+removal `rc=0`, then reached both target 640 origins (`0x00696100` and
+`0x00696600`) and the 512 hangar phase. The key-on entry and tail PCs
+`0x80090A3C` and `0x80090DE8` each executed 61,178 times. None of the eight
+interior divide PCs (`0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`,
+`0x80090D74`, `0x80090D8C`, `0x80090DB8`, `0x80090DD0`) executed. The whole-
+RDRAM and VI controls make this a valid coverage result; the oracle does not
+record operands, so the interior-PC nulls are not classified as invalid
+inputs. The run completed 3,580 VI callbacks with no oracle crash marker.
+
+Built `RogueSquadron64Recomp` once and ran the C88=`1`, Factor 5 image-arm
+recipe with the batched M5/key-on diagnostics. The wrapper reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; the process produced 2,650
+LLE tasks, no `[CRASH]`/`[ABORT]`, and was SIGKILLed by the wrapper after its
+grace window. The port key-on census ran in hangar phases 10/12. Four of the
+eight sites (`0x80090CEC`, `0x80090D30`, `0x80090D74`, `0x80090DB8`) recorded
+repeated divides with divisor `0xC0`; all observed key-on guard counters were
+zero. The other four sites had no entries. Normal-tail counts reached 12,191
+and the named slot writer recorded `0x01 -> 0x02` and `0x02 -> 0x00`:
+phase-10 counts were 35/39 and phase-12 counts were 50/35. This is positive
+normal-tail plus terminal-slot evidence, not an entry-count-only result.
+
+The phase-keyed PCM table recorded six nonzero sanity rows at target-640
+origin `0x0062BD00` and three at `0x00696100`; all 3,199 hangar
+`audio-join-pcm` rows were zero. The image arm therefore supplied a PCM
+positive control before the key-on hangar window, but this run did not join a
+key-on record to nonzero hangar PCM. The port census selects
+H-KeyOnValidNormal for the covered key-on/slot contract and refutes
+H-KeyOnGuardNeeded at the observed sites. It does not establish retail
+interior-site parity or a key-on-to-hangar-PCM causal join, so no early return,
+default, task field, or safety guard was changed. Logs:
+`scratch/agent/s2221_retail_keyon.log` and
+`scratch/s73_post_a_scene/m5-audio-keyon-census/run.log`.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-keyon-contract`.
