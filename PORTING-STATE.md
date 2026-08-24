@@ -107229,3 +107229,41 @@ rewritten, guarded, restored, or defaulted.
 Use the M5 key-on pointer-versus-branch discriminator in
 `scratch/agent/NEXT.md` before building or changing the census.
 `HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
+
+## Session 2277 (2026-08-24) — M5 Step 0 oracle qualified but port route failed
+
+The M5 plan's Step 0 ground-truth checkpoint ran with no runtime or generated
+code change. I added and ran
+`zsh scratch/agent/run_s2277_m5_step0_ground_truth.sh
+s2277_m5_step0_ground_truth`. The retail arm used the whole-RDRAM positive
+control, the `0x800A0F50` gate watch, the task-field watch at physical
+`0x141AD0..0x141AEF`, the status/wait watch, audio execution PCs, VI trace,
+and the existing Start schedule. The oracle completed with rc=0, 21,519
+whole-RDRAM writes, 17 gate writes, 108 task-field writes, and repeated
+`512 @ 0x006AB400` hangar origins. The whole-RDRAM positive control reached
+its 10,000-callback threshold before the narrow watches were interpreted.
+
+The unchanged silent port control ran from `build/` with the existing route,
+audio-return, PCM, gate, slot, and SP controls. Its `[audtask-dispatch]`
+positive control fired 47 times, but it crashed before title/hangar at guest
+PC `0x8000B650` after off-target `640 @ 0x00696100`. It produced zero
+`[audio-return]`, `[audio-sp-route]`, `[sp]`, and phase-gated PCM rows, with no
+`1024 @ 0x00790400` or `512 @ 0x006AB400` phase. The driver observed the crash
+and did not need a deadline kill; no other process remained.
+
+This selects H-PortControlMissing for Step 0. It proves the retail ground
+truth and the dispatch probe, but the port route is not qualified for any
+audio/output null, so it rules out treating this run as evidence for
+H-AudioDegeneracy, H-ContractGap, or H-MixedPipelines. The Step 1
+stub/image comparison remains parked. The next work unit returns to the
+M5 key-on pointer-versus-branch discriminator; it must run its own retail
+positive control before adding the witness.
+
+ORIGIN: observation and driver-only diagnostics; no guest or host value was
+suppressed, rewritten, guarded, restored, or defaulted.
+
+### Next
+
+Use the M5 key-on pointer-versus-branch discriminator in
+`scratch/agent/NEXT.md` before building or changing the census.
+`HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
