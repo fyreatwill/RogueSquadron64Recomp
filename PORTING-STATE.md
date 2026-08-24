@@ -108191,3 +108191,54 @@ Add the phase-latched target post-step value-class table for EB8C, EBBC, and
 `(PC, phase, address, value class, first/last tuple)` table to distinguish a
 94648 sentinel-only writer from a target non-sentinel publication or a shared
 construction sequence. Do not change runtime behavior.
+
+## Session 2300 (2026-08-24) — target value classes selected shared construction
+
+HYPOTHESIS-ID: m5-step3-retail-task-output-writer.
+
+The planned work unit was one oracle-only retail capture adding a bounded
+sentinel/non-sentinel post-step value-class table for requested PCs
+`0x8008EB8C`, `0x8008EBBC`, and `0x80094648`. Ground truth was checked before
+the rebuild: the s2299 capture had passed the whole-RDRAM threshold at 10,000,
+title and hangar, a width-512 target bucket with 942 VI rows, and a target
+writer histogram containing 24 hits at `0x80094648`.
+
+The first build/run added an unnecessary pre-step width/origin scheduling gate.
+It passed the whole-RDRAM, title, hangar, and target-bucket controls but its
+writer histogram and class table were empty. This was a measurement defect,
+not a semantic result. The gate was removed, target scheduling was restored to
+the established armed path, and the oracle was rebuilt and rerun with the
+same eleven Start events and watches.
+
+The fixed run returned `oracle_rc=0` after 120.1 seconds and passed the
+whole-RDRAM threshold at 10,000, title `1024 @ 0x00790400`, hangar
+`512 @ 0x006AB400`, and the width-aware target bucket with 1,541 VI rows.
+The target writer/class joins were exact: EB8C `1/1` non-sentinel at
+`VI=3064,address=0x00141AD0,value=0x120E0000`; EBBC had the same `1/1`
+tuple; and 94648 had `24/24` sentinel samples, first at
+`VI=3154,address=0x00141AD8` and last at `VI=3154,address=0x00141AEC`, all
+`0x7F7F7F7F`, with zero non-sentinel samples. The legacy lifetime sampler
+also recorded 76 samples, independently confirming that the delayed
+post-step sampler remained active.
+
+This selects H-OtherOrSharedConstruction at the measured task/output span,
+and refutes H-94648SentinelOnly and H-94648TargetPublication at this scope.
+It does not distinguish duplicate publication from one shared construction
+sequence or assign a semantic writer role. It rules out a coverage failure
+because each requested-PC class total matched its target-phase writer count.
+No writer, writeback, consumer, slot, gate, guard, or address-remap behavior
+changed.
+
+ORIGIN: no mitigation-shaped change; the oracle-only class accumulator and
+driver changed measurement only and did not skip, allow, restore, or rewrite
+a game value.
+
+### Next
+
+Add one bounded oracle-only ordinal sequence table for every target-phase
+post-step sample from the three requested PCs, retaining
+`(ordinal,PC,VI,address,value,class)`. Verify each sequence count against the
+target writer histogram, then use adjacency/interleaving of the EB8C/EBBC
+same-value tuple and the 94648 sentinel events to select shared sequence,
+duplicate publication, or interleaved housekeeping. Preserve the class, row,
+lifetime, and independent controls; do not change runtime behavior.

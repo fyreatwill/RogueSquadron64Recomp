@@ -137,6 +137,19 @@ struct post_value_requested_row {
 static struct post_value_requested_row
     g_post_value_requested_rows[32][MAX_POST_VALUE_ROWS_PER_PC];
 static int g_n_post_value_requested_rows[32];
+struct post_value_requested_tuple {
+    long vi;
+    uint32_t addr;
+    uint32_t value;
+    int valid;
+};
+struct post_value_requested_class {
+    long samples;
+    struct post_value_requested_tuple first;
+    struct post_value_requested_tuple last;
+};
+static struct post_value_requested_class
+    g_post_value_requested_classes[32][2];
 struct post_value_entry {
     uint32_t value;
     long n;
@@ -763,6 +776,34 @@ static void record_post_value_requested_row(int target, uint32_t value,
     fflush(stdout);
 }
 
+static void record_post_value_requested_class(int target, uint32_t value,
+                                               long vi, uint32_t width,
+                                               uint32_t origin)
+{
+    struct post_value_requested_class *stats;
+    uint32_t addr;
+    int class_index;
+
+    if (target < 0 || target >= g_n_post_value_requested_pc)
+        return;
+    if (width != 512 || origin != 0x006AB400)
+        return;
+    class_index = value == 0x7F7F7F7F ? 0 : 1;
+    stats = &g_post_value_requested_classes[target][class_index];
+    addr = g_post_value_addr & ~3u;
+    stats->samples++;
+    if (!stats->first.valid) {
+        stats->first.vi = vi;
+        stats->first.addr = addr;
+        stats->first.value = value;
+        stats->first.valid = 1;
+    }
+    stats->last.vi = vi;
+    stats->last.addr = addr;
+    stats->last.value = value;
+    stats->last.valid = 1;
+}
+
 static int post_value_pc_seen(int watch, uint32_t pc)
 {
     struct post_value_stats *stats;
@@ -940,6 +981,10 @@ static void dbg_update(unsigned int pc)
         if (g_post_value_pending_target >= 0) {
             int target = g_post_value_pending_target;
             g_post_value_pending_target = -1;
+            record_post_value_requested_class(target, value,
+                                              g_post_value_pending_vi,
+                                              g_post_value_pending_width,
+                                              g_post_value_pending_origin);
             record_post_value_requested_row(target, value,
                                              g_post_value_pending_vi,
                                              g_post_value_pending_width,
@@ -1008,9 +1053,7 @@ static void dbg_update(unsigned int pc)
                 (access_flags & M64P_BKP_FLAG_WRITE) &&
                 g_post_value_armed) {
                 int target = post_value_requested_index(pc);
-                int force_target = target >= 0 &&
-                    g_n_post_value_requested_rows[target] <
-                    MAX_POST_VALUE_ROWS_PER_PC;
+                int force_target = target >= 0;
                 int sample_generic = g_post_value_stats[i].samples < MAX_POST_VALUE_SAMPLES ||
                     (!post_value_pc_seen(i, pc) &&
                      g_post_value_stats[i].n_pc < MAX_POST_VALUE_PCS);
@@ -1836,6 +1879,22 @@ int main(int argc, char **argv)
             printf("[oracle] post-target-summary pc=0x%08x seen=%d addr=0x%08x value=0x%08x\n",
                    g_post_value_requested_pc[j], g_post_value_requested_seen[j],
                    g_post_value_requested_addr[j], g_post_value_requested_value[j]);
+        for (int j = 0; j < g_n_post_value_requested_pc; j++) {
+            const char *class_name;
+            for (int k = 0; k < 2; k++) {
+                struct post_value_requested_class *stats =
+                    &g_post_value_requested_classes[j][k];
+                class_name = k == 0 ? "sentinel" : "non-sentinel";
+                printf("[oracle] post-target-class pc=0x%08x class=%s samples=%ld "
+                       "first_valid=%d first_vi=%ld first_addr=0x%08x "
+                       "first_value=0x%08x last_valid=%d last_vi=%ld "
+                       "last_addr=0x%08x last_value=0x%08x\n",
+                       g_post_value_requested_pc[j], class_name, stats->samples,
+                       stats->first.valid, stats->first.vi, stats->first.addr,
+                       stats->first.value, stats->last.valid, stats->last.vi,
+                       stats->last.addr, stats->last.value);
+            }
+        }
         for (int j = 0; j < g_n_post_value_requested_pc; j++) {
             printf("[oracle] post-target-rows pc=0x%08x n=%d/%d\n",
                    g_post_value_requested_pc[j],

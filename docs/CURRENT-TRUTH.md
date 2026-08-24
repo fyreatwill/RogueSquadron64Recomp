@@ -5,8 +5,8 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2299 (2026-08-24); behavioral and source evidence is
-current through s2299. The corrected same-build M5 Step 2 driver explicitly
+Maintained in Session 2300 (2026-08-24); behavioral and source evidence is
+current through s2300. The corrected same-build M5 Step 2 driver explicitly
 sent the eleven process-start Start events to each port window. Retail passed
 the whole-RDRAM threshold at `10,000` callbacks and reached title
 `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The port stub and default
@@ -350,6 +350,18 @@ equivalent path at another guest address.
 
 ## Latest evidence
 
+- s2300's fixed oracle-only target value-class capture passed the independent
+  whole-RDRAM threshold at `10,000`, title `1024 @ 0x00790400`, hangar
+  `512 @ 0x006AB400`, and the width-aware target bucket with `1,541` VI
+  rows. EB8C and EBBC each recorded one target-phase non-sentinel sample at
+  `(VI=3064,address=0x141AD0,value=0x120E0000)`; 94648 recorded 24
+  target-phase sentinel samples at VI `3154` and no non-sentinel sample.
+  Class totals exactly matched the target writer histogram for all three PCs.
+  This selects H-OtherOrSharedConstruction at the measured scope and leaves
+  the construction order and semantic roles open. The first same-build
+  attempt added an unnecessary pre-step phase gate, passed controls but
+  recorded no target writer rows; it was discarded as a measurement defect
+  and the fixed rerun restored the established armed-path scheduling.
 - s2299's corrected oracle-only non-sentinel capture passed the independent
   whole-RDRAM, title, hangar, and width-aware target-bucket controls, recording
   `942` target VI rows. Its target-phase writer histogram contained only
@@ -651,21 +663,21 @@ equivalent path at another guest address.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 Step 3 target/output construction-sequence join.** s2299's
-   non-sentinel filter passed the independent controls but retained no target
-   rows for any requested PC; the target-phase writer histogram still had
-   `0x80094648` (`n=24`). Use one bounded oracle-only value-class table to
-   count every pre-step-latched target post-store value for EB8C, EBBC, and
-   94648, including sentinel and non-sentinel classes plus first/last
-   `(VI,address,value)` tuples. Select H-94648SentinelOnly when 94648 is
-   target-sentinel-only and EB8C/EBBC have no target samples;
-   H-94648TargetPublication when 94648 has a non-sentinel target value and
-   neither other PC does; H-OtherOrSharedConstruction when EB8C or EBBC has
-   a target value, with the complete table distinguishing one-PC housekeeping
-   from an overlapping sequence; and H-CoverageInvalid when controls fail or
-   target writer hits have no corresponding post-step samples. Do not
-   implement writeback, consumer, slot, gate, guard, or address remap
-   behavior.
+1. **M5 Step 3 target/output construction-order join.** s2300 selected
+   H-OtherOrSharedConstruction: EB8C and EBBC both published the same
+   non-sentinel target tuple, while 94648 published only sentinel values.
+   Add one bounded oracle-only target sequence table that retains every
+   post-step sample for the three requested PCs as an ordinal
+   `(ordinal,PC,VI,address,value,class)` row, and verify each PC's sequence
+   count against its target writer histogram. H-SharedSequence is selected
+   when EB8C/EBBC form one adjacent or same-VI construction sequence and
+   94648 is a separate sentinel-only run; H-DuplicatePublication is selected
+   when EB8C and EBBC publish the same tuple in separate repeated events;
+   H-94648InterleavedHousekeeping is selected when sentinel writes interleave
+   with the EB8C/EBBC tuple; H-CoverageInvalid is selected if any sequence
+   count fails its writer join or controls fail. Preserve the existing class,
+   row, lifetime, and control tables. Do not implement writeback, consumer,
+   slot, gate, guard, or address-remap behavior.
 2. **M5 key-on tuple contract.** Requalify the C88 route with a
    phase-gated control-first stagger: launch C88=1 only after a C88=0 control
    reaches `512 @ 0x006AB400`, then compare retail fields only if both arms
