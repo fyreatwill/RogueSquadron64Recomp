@@ -174,7 +174,12 @@ static long g_exec_logged;
 #define EXEC_LOG_CAP 64
 #define MAX_EXEC_PREV 128
 #define MAX_PC_PHASE_LOG_ORIGINS 8
-static uint32_t g_pc_phase_log_origin[MAX_PC_PHASE_LOG_ORIGINS];
+struct pc_phase_log_bucket {
+    uint32_t origin;
+    uint32_t width;
+};
+static struct pc_phase_log_bucket
+    g_pc_phase_log[MAX_PC_PHASE_LOG_ORIGINS];
 static int g_n_pc_phase_log_origin;
 static uint32_t g_mode_dump_pc;
 static int g_mode_dump_enabled;
@@ -231,6 +236,7 @@ static long g_vi_context_dropped;
 static long g_vi_context_overflow;
 
 static uint32_t debug_rdram_addr(uint32_t physical);
+static uint32_t to_phys(uint32_t a);
 
 /* GPR file is int64_t[32] (r4300_regs). Print the 32-bit guest view. */
 static uint32_t gpr32(int idx)
@@ -260,13 +266,32 @@ static int pc_phase_log_match(void)
         return 0;
     width = pDebugMemRead32(VI_WIDTH_ADDR);
     origin = pDebugMemRead32(VI_ORIGIN_ADDR);
-    if (width != 640)
-        return 0;
     for (i = 0; i < g_n_pc_phase_log_origin; i++) {
-        if (origin == g_pc_phase_log_origin[i])
+        if (width == g_pc_phase_log[i].width &&
+            origin == g_pc_phase_log[i].origin)
             return 1;
     }
     return 0;
+}
+
+static void add_pc_phase_log_width(char *spec)
+{
+    char *colon = strchr(spec, ':');
+    if (!colon || colon == spec || !colon[1]) {
+        fprintf(stderr, "[oracle] bad --pc-phase-log-width '%s' (want ORIGIN:WIDTH)\n",
+                spec);
+        exit(2);
+    }
+    *colon = 0;
+    if (g_n_pc_phase_log_origin >= MAX_PC_PHASE_LOG_ORIGINS) {
+        fprintf(stderr, "[oracle] too many phase-log buckets\n");
+        exit(2);
+    }
+    g_pc_phase_log[g_n_pc_phase_log_origin].origin =
+        to_phys((uint32_t)strtoul(spec, NULL, 0));
+    g_pc_phase_log[g_n_pc_phase_log_origin].width =
+        (uint32_t)strtoul(colon + 1, NULL, 0);
+    g_n_pc_phase_log_origin++;
 }
 
 struct exec_prev {
@@ -1364,6 +1389,7 @@ static void usage(void)
         "  --hit-cap N           log at most N hits, then count silently (default 200)\n"
         "  --detail-watch N      always log hits for watch index N\n"
         "  --pc-phase-log ORIGIN log watched execs only at 640-width VI origin (repeatable)\n"
+        "  --pc-phase-log-width ORIGIN:WIDTH log watched execs at an explicit VI bucket\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
         "  --post-swap-table-pc A join a 640-wide swap at A to the following VI callback\n"
         "  --vi-context-table-pc A join __osViNext at 640-wide execution A to the following VI callback\n"
@@ -1445,8 +1471,15 @@ int main(int argc, char **argv)
             for (tok = strtok_r(spec, ",", &save);
                  tok && g_n_pc_phase_log_origin < MAX_PC_PHASE_LOG_ORIGINS;
                  tok = strtok_r(NULL, ",", &save))
-                g_pc_phase_log_origin[g_n_pc_phase_log_origin++] = (uint32_t)strtoul(tok, NULL, 0);
+            {
+                g_pc_phase_log[g_n_pc_phase_log_origin].origin =
+                    to_phys((uint32_t)strtoul(tok, NULL, 0));
+                g_pc_phase_log[g_n_pc_phase_log_origin].width = 640;
+                g_n_pc_phase_log_origin++;
+            }
         }
+        else if (!strcmp(argv[i], "--pc-phase-log-width") && i + 1 < argc)
+            add_pc_phase_log_width(argv[++i]);
         else if (!strcmp(argv[i], "--mode-dump-pc") && i + 1 < argc) {
             g_mode_dump_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_mode_dump_enabled = 1;

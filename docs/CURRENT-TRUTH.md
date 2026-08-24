@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2222
-(2026-08-23); behavioral and source evidence is current through s2222.
+authoritative for exact commands and probe rows. Maintained in Session 2223
+(2026-08-23); behavioral and source evidence is current through s2223.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2222's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2223's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -469,6 +469,20 @@ second ledger.
   target scope. The run does not classify the skipped branch conditions or
   provide a hangar-keyed range histogram; no key-on return or default change is
   authorized.
+- s2223 added the explicit `--pc-phase-log-width ORIGIN:WIDTH` oracle bucket,
+  preserving the existing 640-only `--pc-phase-log` behavior. The Rice run
+  passed the whole-RDRAM positive control (`10,000`, removal `rc=0`), reached
+  repeated target 640 rows at `0x00696100`/`0x00696600`, and reached six
+  `512 @ 0x006AB400` rows. In one phase-keyed range matrix, all eight retail
+  post-guard transfer PCs executed `2,449` times at `0x00696100`, `2,725`
+  times at `0x00696600`, and `6,245` times at hangar; all eight watched divide
+  PCs stayed at zero in every bucket. The transfer `$v0/$s1/$a0/$a2` tuple
+  sets were phase-specific and pairwise disjoint for every transfer PC, with
+  per-PC unique-set counts of `178–858` at the first target, `244–902` at the
+  second, and `484–1,347` at hangar. This single-source retail table selects
+  H-RetailBranchStateShift and refutes H-RetailHangarDivides and
+  H-PhaseCoverageFailure; it does not authorize a port guard change. The next
+  discriminator is a same-phase port transfer/guard/tuple table.
 
 ## Active backlog
 
@@ -500,9 +514,11 @@ work items.
    watched interior divide PCs. Keep this behavior opt-in while the
    retail/port site discrepancy remains open. s2222's range witness shows that
    retail traverses the alternate post-guard interior path at both target
-   origins while skipping all eight watched divide PCs, so the next M5 unit must
-   classify the eight retail branch conditions, including a hangar-keyed sample,
-   before changing the early-return class.
+   origins while skipping all eight watched divide PCs. s2223 adds the
+   hangar-keyed bucket: retail still skips all eight divides, while the
+   post-guard transfer tuple sets change completely between both target origins
+   and hangar. The next M5 unit compares those transfer/guard/tuple classes in
+   the port before changing the early-return class.
 2. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
@@ -678,7 +694,11 @@ s2222 supplied that range witness: retail executes 140 interior PCs per target
 origin, including the eight post-guard PCs corresponding to the skipped divides,
 while still recording no hit at any of the eight divide PCs. This closes the
 range-coverage question but leaves the branch-condition and hangar-specific
-operand question open; no key-on return is authorized to change yet.
+operand question open; no key-on return is authorized to change yet. s2223's
+explicit-width retail range table now covers hangar too: every transfer PC
+fires in all three buckets, every divide PC remains zero, and each transfer
+PC's `$v0/$s1/$a0/$a2` set is disjoint across buckets. The retail branch-state
+shift is therefore selected at the observed scope; port parity remains open.
 
 The stock `aspMain` contract is not the game's MusyX contract. s2220's retail
 payload and downstream port table select the original-value C88 semantics at
@@ -804,6 +824,12 @@ remain in the append-only ledger. Operationally:
   eight corresponding post-guard PCs at both target origins. The old
   coverage-only reading is superseded; the remaining question is which retail
   branch conditions skip the divides and whether the same path holds in hangar.
+- s2222's target-only H-RetailExecutesAlternateInterior selection was correct
+  for its covered origins but incomplete as a phase contract: s2223's explicit
+  width bucket shows the same zero-divide/transfer path in hangar, with
+  phase-specific register tuples. The old target-only scope is superseded by
+  the three-bucket H-RetailBranchStateShift result; no port behavior change
+  follows from the retail table alone.
 
 ## Evidence ledger summary
 
@@ -812,7 +838,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2222 VI-boundary, retail-ground-truth, image-arm, C88-gate, and key-on
+s2198–s2223 VI-boundary, retail-ground-truth, image-arm, C88-gate, and key-on
 work is recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.

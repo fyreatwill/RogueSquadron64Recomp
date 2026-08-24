@@ -1,68 +1,61 @@
-# NEXT work unit (s2223) — phase-keyed retail key-on guard table
+# NEXT work unit (s2224) — compare port key-on transfer state by phase
 
 HYPOTHESIS-ID: m5-audio-keyon-contract
 
 ## Work unit
 
-Extend the oracle's range-PC phase logger so it accepts an explicit
-`ORIGIN:WIDTH` bucket, then run one Rice-driven retail census with the existing
-whole-RDRAM positive control, the two target 640 buckets, and a new
-`0x006AB400:512` hangar bucket. Keep the range watch over
-`0x80090A3C:0x80090E04`; summarize the eight transfer PCs immediately before
-the skipped divide spans and the eight previously watched divide PCs, including
-`$v0/$s1/$a0/$a2` at each transfer PC. Do not build the port or remove/change a
-key-on return in this unit.
+Extend the existing s2122 key-on census in
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` with a
+diagnostic-only table for the eight post-guard transfer PCs
+`0x80090CF0`, `0x80090D08`, `0x80090D34`, `0x80090D4C`, `0x80090D78`,
+`0x80090D90`, `0x80090DBC`, and `0x80090DD4`. Record the same
+`$v0/$s1/$a0/$a2` tuple as the retail oracle, plus per-site divide and guard
+counts, keyed to 640 origins `0x00696100`/`0x00696600` and hangar
+`512 @ 0x006AB400`. Keep every existing key-on divide guard and early return
+unchanged. Build once, run one qualified image-arm capture, and compare the
+port table with s2223's retail matrix.
 
 Competing hypotheses and the single discriminator:
 
-- H-RetailPhaseInvariantGuard: all eight divide PCs remain zero at both target
-  origins and hangar, while all eight transfer PCs execute; their register
-  tuples stay equivalent across phases. The port's four observed divides are a
-  port/retail contract difference.
-- H-RetailHangarDivides: at least one of the eight divide PCs executes in the
-  512 hangar bucket. The target-only null was not the hangar contract.
-- H-RetailBranchStateShift: retail still skips every divide in all buckets, but
-  one or more transfer-PC register tuples change between target and hangar.
-  The next comparison is the branch-tested state, not a missing PC watch.
-- H-PhaseCoverageFailure: the new hangar range bucket is empty despite a
-  positive whole-RDRAM control and a positive `512 @ 0x006AB400` VI row; no
-  branch or operand conclusion is allowed.
+- H-PortRetailLike: all eight transfer PCs execute in the covered port phase
+  buckets, divide and guard counts remain zero, and the port tuple sets follow
+  the retail phase split. The existing early-return class is not the cause.
+- H-PortGuardSuppression: one or more port guard rows are positive and the
+  corresponding transfer PC is absent in a bucket. The current guard/return
+  machinery suppresses a retail alternate path.
+- H-PortTupleStateMismatch: transfer rows are present with zero guards and
+  divides, but the port tuple sets do not match retail's phase-specific state.
+  The next work is the branch-tested voice/slot state, not guard removal.
+- H-PortCoverageFailure: positive normal-tail, slot, and phase controls fire,
+  but target/hangar transfer rows are absent. No branch conclusion is allowed.
 
-The discriminator is one phase-keyed matrix: for each of the three phase
-buckets, counts for the eight transfer PCs and eight divide PCs, plus the
-transfer-PC `$v0/$s1/$a0/$a2` value sets. A nonzero hangar divide selects
-H-RetailHangarDivides; zero divides with invariant tuples select
-H-RetailPhaseInvariantGuard; zero divides with changed tuples select
-H-RetailBranchStateShift; missing controls select H-PhaseCoverageFailure.
+The discriminator is one phase-keyed matrix with eight transfer counts, eight
+divide counts, eight guard counts, and bounded `$v0/$s1/$a0/$a2` tuple sets for
+each of the three buckets. Positive controls must include the existing audio
+dispatch/normal-tail/slot rows and both target plus hangar VI phases. A guard
+hit selects H-PortGuardSuppression; zero guards/divides with retail-like
+tuples selects H-PortRetailLike; zero guards/divides with changed tuples
+selects H-PortTupleStateMismatch; missing controls selects
+H-PortCoverageFailure.
 
 ## Exact commands
 
-1. Add `--pc-phase-log-width ORIGIN:WIDTH` to `tools/oracle/rs64_oracle.c`,
-   preserving the existing 640-only `--pc-phase-log` behavior and making the
-   new bucket print the same range-PC rows. Build with:
+1. Add the transfer-site table to the existing regeneration-safe s2122 block,
+   then regenerate in the required order:
 
 ~~~sh
-bash tools/oracle/build.sh
+cd /Users/williambuckley/Documents/Tools/rogue_squadron64 && python3 tools/make_elf.py
+zsh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/agent/regen_n64recomp.sh
+python3 /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py
+cmake --build /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build --config Debug --target RogueSquadron64Recomp
 ~~~
 
-2. Run from the repository root:
+2. Run the one qualified port capture from the repository root:
 
 ~~~sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 60 --vi-trace --status-poll \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  --watch-write 0x0:0x800000 \
-  --watch-pc-range 0x80090A3C:0x80090E04 \
-  --pc-phase-log 0x00696100 --pc-phase-log 0x00696600 \
-  --pc-phase-log-width 0x006AB400:512 --hit-cap 25 \
-  > scratch/agent/s2223_retail_keyon_guard_table.log 2>&1
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2224_port_keyon_transfer 30 12 > scratch/agent/s2224_port_keyon_transfer_driver.log 2>&1
 ~~~
 
-Required controls: `positive-control threshold reached`, whole-RDRAM writes at
-least 10,000 with removal `rc=0`, repeated 640 rows at both target origins,
-and a `512 @ 0x006AB400` row. Use `rg '^\\[hit\\]'` plus an awk phase matrix;
-do not infer branch semantics from counts without the transfer-PC register
-tuples.
+Use the port log's positive controls first, then an awk matrix over the three
+phase keys. Do not infer a branch or authorize a return change from counts
+without the transfer tuple sets.

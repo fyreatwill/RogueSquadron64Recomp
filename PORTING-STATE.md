@@ -104953,6 +104953,53 @@ existing `ROGUESQ_M5_C88_VALUE=1` behavior arm only.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-keyon-contract`.
 
+## Session 2223 (2026-08-23) — classified retail key-on branch state by phase
+
+The required pre-instrument Rice oracle preflight passed the whole-RDRAM
+positive control at 10,000 callbacks with removal `rc=0`, reached both target
+640 origins, and reached hangar `512 @ 0x006AB400`. Added the regeneration-free
+oracle option `--pc-phase-log-width ORIGIN:WIDTH`; existing
+`--pc-phase-log` remains a 640-only origin list. The first build failed on the
+helper's forward use of `to_phys`; adding its static declaration fixed the
+build, and `bash tools/oracle/build.sh` then completed.
+
+The single 60-second Rice census used the whole-RDRAM control, the range watch
+`0x80090A3C:0x80090E04`, target buckets `0x00696100:640` and
+`0x00696600:640`, and the new hangar bucket `0x006AB400:512`. The control
+reached 10,000 writes and removed with `rc=0`; the run completed 3,576 VI
+callbacks and emitted 8,511,972 range execution hits. The range log had positive
+phase rows at both target origins and six hangar rows.
+
+The phase matrix was:
+
+| bucket | each of 8 transfer PCs | each of 8 divide PCs |
+|---|---:|---:|
+| `0x00696100:640` | 2,449 | 0 |
+| `0x00696600:640` | 2,725 | 0 |
+| `0x006AB400:512` | 6,245 | 0 |
+
+The transfer PCs were `0x80090CF0`, `0x80090D08`, `0x80090D34`,
+`0x80090D4C`, `0x80090D78`, `0x80090D90`, `0x80090DBC`, and `0x80090DD4`;
+the divide PCs were `0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`,
+`0x80090D74`, `0x80090D8C`, `0x80090DB8`, and `0x80090DD0`. Per transfer PC,
+the unique `$v0/$s1/$a0/$a2` tuple counts were `178–858`, `244–902`, and
+`484–1,347` in the three buckets respectively; pairwise tuple-set overlap was
+zero for every transfer PC. This is single-source retail evidence, with the
+same-run positive control and phase controls making the null divide rows
+usable. It selects `H-RetailBranchStateShift`, refutes
+`H-RetailHangarDivides` and `H-PhaseCoverageFailure`, and leaves the port
+branch/operand contract open. No port build, key-on return, default, task
+field, guard, or mitigation changed. Log:
+`scratch/agent/s2223_retail_keyon_guard_table.log`.
+
+ORIGIN: no game value was suppressed or rewritten; the new oracle bucket and
+range rows are diagnostic-only.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-keyon-contract`.
+
 ## Session 2221 (2026-08-23) — audited key-on divide contracts
 
 Ran the required retail ground-truth command before the port build. The Rice
