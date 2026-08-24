@@ -104441,6 +104441,38 @@ only added and ran a bounded diagnostic harness.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-retail-early-origin-ground-truth`.
 
+## Session 2210 (2026-08-23) — compared port early VI context to retail
+
+Expanded the existing `ROGUESQ_LOG_VI_CONTEXT_PORT` table in
+`lib/N64ModernRuntime/ultramodern/src/events.cpp` to admit every width-640
+framebuffer and raised its printed row cap from 256 to 512. Exported the
+submodule patch and built the full target successfully. Ran one 60-second
+qualified control with `ROGUESQ_AUDIO_UCODE=0`, spin yield, ungated solo LLE,
+phase logging, and the port context logger; the watchdog ended it with
+SIGKILL.
+
+The logger's positive prefix fired 8 times. The run produced 512 width-640
+context rows with zero overflow and two phase rows, `0x0066A500` at 4.0s and
+`0x00696100` at 8.5s. All 512 rows selected field 0. The early rows committed
+candidate 0 for `0x0066A500` and `0x005D4500`; no `0x0066AA00` commit appeared.
+The target rows committed `0x00696100`; there were no crash or abort markers.
+
+Together with s2209's independent retail context table—field 0 for
+`0x0066A500`/`0x005D4500` and field 1 for `0x0066AA00`—this selects
+H-PortEarlyContextFixedField at the qualified port scope. It refutes
+H-PortEarlyContextParity and H-PortEarlyContextCoverage there. It does not
+identify the legitimate source that should select the port's field 1 and does
+not authorize enabling the field knob, a guard, a mitigation, a task rewrite,
+or an audio change.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+only widened an existing diagnostic table and changed its print cap.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-a1-port-vi-field-source`.
+
 ## Session 2209 (2026-08-23) — joined retail early origins to VI context
 
 Extended `tools/oracle/rs64_oracle.c` with a separate seven-origin allowlist

@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2209
-(2026-08-23); behavioral and source evidence is current through s2209.
+authoritative for exact commands and probe rows. Maintained in Session 2210
+(2026-08-23); behavioral and source evidence is current through s2210.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -286,6 +286,16 @@ second ledger.
   unexplained-candidate, and coverage forms at this scope. It identifies the
   retail early selector, not the port's early context tuple; a port census is
   next.
+- s2210's bounded port context census passed its positive prefix (8 rows),
+  admitted 512 width-640 rows with zero overflow, and observed early
+  `0x0066A500` and `0x005D4500` rows plus target `0x00696100` rows. Every row
+  selected field 0. The port's early contexts produced candidate 0 and
+  committed `0x0066A500`/`0x005D4500`; no `0x0066AA00` commit appeared. In
+  combination with s2209's independent retail table, this selects
+  H-PortEarlyContextFixedField at the qualified control scope, refutes
+  H-PortEarlyContextParity and H-PortEarlyContextCoverage there, and moves
+  the open question to the host VI field source. No default, mitigation, task,
+  or audio-dispatch change was made.
 
 ## Active backlog
 
@@ -337,9 +347,11 @@ work items.
    s2209's context join shows that retail selects field 0 for `0x0066A500` and
    `0x005D4500`, field 1 for `0x0066AA00`, and the corresponding field for both
    target origins, with valid frame/mode candidates and no coverage overflow.
-   The next unit records the same all-width-640 context tuple on the port to
-   compare its early selector and framebuffer/mode state. Keep the field knob
-   and logger diagnostic-only.
+   s2210's all-width port table shows the qualified default selects field 0 for
+   every observed 640 row, including both early mode contexts, and therefore
+   never commits `0x0066AA00`. The next unit identifies whether the port's
+   host VI current-field register supplies an omitted alternation source or is
+   itself fixed at zero. Keep the field knob and logger diagnostic-only.
 2. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
@@ -419,6 +431,13 @@ archived in `PROJECT-OVERVIEW.md` §43.
 The stock `aspMain` contract is not the game's MusyX contract. C88 testing
 selected reversed-or-suppressing polarity at sampled port gate scope; no
 blanket gate flip is authorized.
+
+The port's `ViState::field` is host-side state used by `update_vi`; in the
+default arm the only visible assignment is initialization at zero, while the
+field alternation knob toggles it after each VI commit. s2210 shows that this
+default field 0 is used across the early 640 contexts, unlike retail's
+field-1 `0x0066AA00` context. The missing legitimate source of that field
+selection remains open; this is not permission to enable the knob by default.
 
 ### M3, M4, and generated symbols
 

@@ -1,44 +1,45 @@
-# NEXT work unit (s2210) — compare port early VI context to retail
+# NEXT work unit (s2211) — identify the port VI field source
 
-HYPOTHESIS-ID: m5-a1-retail-early-context-parity
+HYPOTHESIS-ID: m5-a1-port-vi-field-source
 
 ## Work unit
 
 Make one bounded diagnostic change in
-`lib/N64ModernRuntime/ultramodern/src/events.cpp`: in the existing
-`ROGUESQ_LOG_VI_CONTEXT_PORT` path, admit every width-640 commit to the
-existing context-row table instead of filtering to framebuffer
-`0x00695C00`, and raise only that printed row cap from 256 to 512. Preserve
-the existing row fields, positive prefix, field knob, VI state update, and
+`lib/N64ModernRuntime/ultramodern/src/events.cpp`: extend the existing
+`ROGUESQ_LOG_VI_CONTEXT_PORT` table with the port's
+`VI_V_CURRENT_LINE_REG & 1` value for every width-640 row, and add its
+per-origin/current-bit counts to the existing summary. Preserve the current
+row fields, 512-row cap, positive prefix, field knob, VI-state update, and
 target counters. Do not change the default field, audio dispatch, task data,
 or any mitigation. Because this edits `lib/`, export the submodule patch in
 the same iteration.
 
-Before building, record the following competing hypotheses and use the one
-run below to split them:
+Before building, use these competing hypotheses and the one table below to
+split them:
 
-- H-PortEarlyContextParity: port rows for `0x0066A500` and `0x005D4500`
-  select field 0 and commit candidate 0, while `0x0066AA00` selects field 1
-  and commits candidate 1, matching the retail context table. This moves the
-  open boundary past the early selector.
-- H-PortEarlyContextFixedField: the port's early rows select field 0 for both
-  `0x0066A500` and `0x0066AA00`, or commit the same candidate for both. This
-  identifies a port field-state mismatch before the target transition.
-- H-PortEarlyContextOther: the port has valid rows but its early framebuffer,
-  mode pointer, field origins, or candidate arithmetic differs from retail.
-  This identifies a context-tuple mismatch rather than a selector mismatch.
-- H-PortEarlyContextCoverage: the positive prefix fires, but no bounded
-  width-640 table rows arrive or the 512-row table overflows. This proves only
-  that the port collection is insufficient and does not classify parity.
+- H-PortCurrentRegAlternates: the port current-line bit follows the retail
+  selector (`0` for `0x0066A500`/`0x005D4500`, `1` for the
+  `0x0066AA00` context), but the port's selected field remains 0. This proves
+  the host current-field source exists but is not wired into `ViState::field`.
+- H-PortCurrentRegFixed: the current-line bit remains 0 with selected field 0
+  across the early and target rows. This proves the host VI state does not
+  publish a field-1 source at this route scope; the missing producer is below
+  the guest context table.
+- H-PortCurrentRegDecoupled: the current-line bit is nonzero or alternates in
+  a pattern that does not match the observed origins, while mode/framebuffer
+  candidates remain valid. This identifies a VI timing/state cadence mismatch
+  rather than a simple missing propagation from the current-line bit.
+- H-PortCurrentRegCoverage: the positive prefix fires but no bounded 640 table
+  rows arrive or the 512-row table overflows. This proves only that the source
+  collection is insufficient and does not classify field behavior.
 
-The discriminator is one table keyed by committed origin: for each observed
-640 origin, count rows by `field`, `framebuffer`, `mode`, `candidate0`,
-`candidate1`, and `committed`, alongside prefix count, summary `rows`, and
-`overflow`. Require at least one prefix row, one width-640 row, and zero
-overflow before classifying. Compare the port rows with s2209's retail rows:
-retail had A500 `field=0/candidate0` 17/17, AA00 `field=1/candidate1` 139/139,
-5D4500 `field=0/candidate0` 121/121, target 696100 field 0 96/96, and target
-696600 field 1 95/95.
+The discriminator is one table keyed by observed 640 framebuffer/mode and
+committed origin, counting selected `field`, `VI_V_CURRENT_LINE_REG & 1`,
+field origins, candidates, and committed origin, alongside prefix, row, and
+overflow counts. Require at least one prefix row, one width-640 row, and zero
+overflow before classifying. Compare the port rows with s2209's independent
+retail context table: field 0 at `0x0066A500`/`0x005D4500`, field 1 at
+`0x0066AA00`, field 0 at `0x00696100`, and field 1 at `0x00696600`.
 
 ## Exact commands
 
@@ -51,7 +52,7 @@ cd build
 env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 \
   ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 \
   ROGUESQ_LOG_VI_CONTEXT_PORT=1 ./RogueSquadron64Recomp \
-  > ../scratch/agent/s2210_port_early_context.log 2>&1 &
+  > ../scratch/agent/s2211_port_vi_field_source.log 2>&1 &
 pid=$!
 for i in {1..60}; do
   kill -0 "$pid" 2>/dev/null || break
@@ -63,7 +64,7 @@ cd ..
 ```
 
 Inspect only the positive prefix, `[phase]` width-640 origins, context rows,
-and context summary. Use SIGKILL as shown. If the control is positive and the
-table is non-overflowing, classify exactly one of the first three hypotheses;
-otherwise record H-PortEarlyContextCoverage and design a narrower phase-gated
-collection next.
+and context summaries. If the controls pass and the table is non-overflowing,
+classify exactly one of the first three hypotheses. If not, record
+H-PortCurrentRegCoverage and design a narrower phase-gated collection next.
+Keep the field knob diagnostic-only.

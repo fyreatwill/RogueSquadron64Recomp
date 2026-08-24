@@ -1575,7 +1575,7 @@ index 3198be0..730ca54 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..d0b0e44 100644
+index 149e770..0b5e3d5 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,6 +8,9 @@
@@ -1693,7 +1693,7 @@ index 149e770..d0b0e44 100644
 +        std::fflush(stderr);
 +    }
 +
-+    if (width != 640 || framebuffer != 0x00695C00u) return;
++    if (width != 640) return;
 +
 +    const uint32_t phase = trace.phase_ordinal++;
 +    if (selected_field < 2) trace.field_rows[selected_field]++;
@@ -1704,7 +1704,7 @@ index 149e770..d0b0e44 100644
 +    if (candidate1 == 0x00696100u) trace.candidate1_rows[0]++;
 +    if (candidate1 == 0x00696600u) trace.candidate1_rows[1]++;
 +
-+    if (trace.rows < 256) {
++    if (trace.rows < 512) {
 +        trace.rows++;
 +        std::fprintf(stderr,
 +            "[vi-context-port] arm=%s phase=%u cur_state=%d field=%u "
@@ -1721,8 +1721,8 @@ index 149e770..d0b0e44 100644
 +        trace.overflow++;
 +    }
 +
-+    if ((trace.rows == 64 || trace.rows == 128 || trace.rows == 192 || trace.rows == 256) &&
-+        trace.summaries < 4) {
++    if ((trace.rows == 64 || trace.rows == 128 || trace.rows == 192 ||
++         trace.rows == 256 || trace.rows == 512) && trace.summaries < 5) {
 +        trace.summaries++;
 +        log_vi_context_port_summary();
 +    }
