@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2327 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2328 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -152,6 +152,11 @@ instrumentation source; the filter/voice positive control remained absent in
 both arms, so that null remains unevaluable. The route snapshot needed to be
 made process-shared because SP receive and lifecycle calls run on different
 host threads; this was diagnostic-only and changed no game behavior.
+
+Session 2328 first caught a stale drain A/B because the launcher env var was
+absent from generated `funcs_30.c`. After applying the existing s1993 fixup
+gate, the oracle and both image tick arms qualified; their normalized target
+lifecycle tables matched, selecting `H-DrainRedundant` at capture scope.
 
 The current M5 boundary is the destination-to-slot consumer after task-ordinal
 ownership. The qualified default
@@ -695,15 +700,14 @@ sequence; #1 is the next work unit.
    gate and inventories the live stubs, traps, gates, and validation sequence.
    s2327 selected `H-PreEvents-EarlierTick`: the image task and PCM contract
    are live, but the observed slot/key-on rows belong to the prior audio route.
-   The next behavior experiment must be the plan's bounded drain-tick A/B,
-   with both tick arms in one build and no default, slot, guard, or writeback
-   change. The image arm remains the qualified default; do not promote any
-   additional audio behavior from this result alone.
-2. **M5 destination-to-slot/key-on contract — pending after the de-stub A/B.**
-   s2327 closes the same-task-versus-earlier-tick ordering question for this
-   capture, but the destination-to-slot consumer remains absent. Preserve the
-   task/PCM table and revisit only with a new discriminator after the M5
-   de-stubbing step. Do not add writeback, guards, slot values, or defaults.
+   s2328's corrected A/B applied the existing s1993 gate and found both image
+   arms qualified with identical normalized target lifecycle rows. The gate
+   remains default-on; the image arm remains the qualified default.
+2. **M5 destination-to-slot/key-on contract — active.** The corrected drain
+   A/B does not explain the missing post-ordinal slot consumer: both image
+   arms still have zero same-ordinal slot/key-on/descriptor rows. Use a new
+   destination-role discriminator; do not add writeback, guards, slot values,
+   or defaults.
 3. **M5 task/output contract — closed at the current discriminator.** s2325
    supersedes the undifferentiated task/output gap with
    `H-Destination-Role-Skew`; revisit only if the destination-to-slot table
@@ -775,7 +779,12 @@ unqualified. The result selects `H-Missing-Descriptor-Contract` only for the
 observed capture and leaves same-task ownership of the pre-stage rows open.
 s2327's task-ordinal join assigns those rows to the prior audio route, not the
 target task; the remaining question is the missing post-ordinal
-destination-to-slot consumer, not a writeback or guard.
+destination-to-slot consumer, not a writeback or guard. s2328's corrected
+drain-tick A/B independently gated the existing injection (`en=1` versus
+`en=0`); both image arms retained title/hangar, task/DMA/image/PCM and guest
+receive controls, with two target rows, zero same-ordinal lifecycle rows, and
+the same prior-route lifecycle signature. This selects `H-DrainRedundant` at
+capture scope and leaves the destination-role boundary open.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
 phase-gated captures show a rotating mixed output contract: s2306 had one

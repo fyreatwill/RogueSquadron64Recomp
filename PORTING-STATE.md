@@ -109654,3 +109654,42 @@ task/PCM/slot signal or changes the qualified hangar route; select
 `H-DrainRedundant` if both arms retain the same phase-gated contract; select
 `H-CoverageInvalid` if the oracle or either port arm misses its controls.
 Do not promote a default or change a slot, guard, writeback, or gate.
+
+## Session 2328 (2026-08-24) — M5 drain-tick A/B selects redundancy
+
+The first launcher run was invalidated by the boring control check: it set
+`ROGUESQ_DRAIN_INLOOP_TICK`, but generated `funcs_30.c` contained no s1993
+gate, so its provisional ordering result was not evidence. The existing
+`fixup_game_funcs.py` incremental path was applied with
+`RS64_S1993_DRAIN_INLOOP_GATE=1`, the Debug target was rebuilt, and the
+launcher was rerun with the gate marker enabled.
+
+The corrected 75-second retail oracle passed: whole-RDRAM `537391` writes,
+target output `527243`, task span `108`, gate `17`, status `23`, wait `0`,
+title/hangar origins, and all three target writer-PC controls. The same-build
+port recipe used the eleven-Start schedule and SIGKILL cleanup. The silent
+control and both image arms reached title and hangar without `[CRASH]` or
+`[ABORT]`. The image tick-on and tick-off arms both had positive VI `16`,
+image-stage `2`, PCM source/consumer `88/88`, guest-receive SP route (`771`
+and `751`), task ABI (`1139` and `1124`), and join control `1`. The independent
+gate rows were `en=1` and `en=0`, respectively.
+
+The phase-10 hangar table had two nonzero rows in each image arm. Both had
+zero same-ordinal lifecycle events before or after the image stage. The
+prior-route lifecycle signature matched in both arms:
+`slot-sb,slot-sb,slot-sb,slot-sb,keyon-w40,slot-sb`; destination addresses and
+audio ordinals rotated, so the comparison normalized those identity fields.
+This selects `H-DrainRedundant` at capture scope and rules out the injected
+drain tick as the explanation for the missing post-ordinal slot/key-on
+consumer. The filter/voice positive control remained absent and its null is
+unevaluable. No default, slot, guard, writeback, or gate behavior was changed.
+
+ORIGIN: the s1993 gate controls the existing s1976 host-injected
+`tickMusyXIfActive`; default behavior remains enabled, and no mitigation was
+promoted.
+
+### Next
+
+Advance the M5 destination-to-slot/key-on boundary with a new ground-truth-
+first destination-role table. Keep the qualified image route and silent
+control, and do not repeat the stale-toggle or task-ordinal-only experiment.
