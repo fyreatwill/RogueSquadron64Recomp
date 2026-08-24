@@ -109143,3 +109143,70 @@ Expand the s2317 oracle phase table to all fifteen observed VI origins and
 repeat the same explicit-route staged pair. Use the new all-origin result to
 distinguish an earlier-origin gate/task/wait writer from incomplete phase
 attribution.
+
+## Session 2318 (2026-08-24) — all-origin gate/task/wait census selects earlier writers
+
+HYPOTHESIS-ID: m5-gate-task-wait-origin-census.
+
+The planned work unit was the all-origin ground-truth-first gate/task/wait
+writer census. I added the thirteen previously observed VI origins to
+`scratch/agent/run_s2317_m5_gate_task_wait_explicit_pair.sh`, leaving the
+existing title/hangar buckets, whole-RDRAM control, gate/task/wait watches,
+value controls, and both port arms unchanged. `zsh -n` passed and no build or
+runtime source change was made.
+
+The first direct invocation was invalid as a port capture: the command session
+interrupted the still-running stub before hangar, leaving only the oracle
+positive control and a title port phase. I killed the orphaned oracle and stub
+with SIGKILL. A detached retry also stopped at `oracle_start` without a
+completion record. The fixed live-PTY rerun completed the launcher and is the
+valid result below.
+
+The valid same-run retail oracle exited naturally (`oracle_rc=0`) with
+whole-RDRAM `10125` writes, title `633`, hangar `979`, gate-watch
+`0x000A0F50` `17`, task/output watch `0x00141AD0:0x00141AF0` `108`, and wait
+watch `0x0001498A` `0`. Its bounded values were six gate samples (four
+`0x00000000`, two `0x01000000`), 76 task/output samples, and zero wait
+samples. All fifteen configured phase buckets were positive:
+`0x00790400:1024=633`, `0x006AB400:512=979`, `0x006AB800:512=1600`,
+`0x00656400:512=1473`, `0x00656800:512=851`, `0x0066A500:640=18`,
+`0x00696100:640=197`, `0x0066AA00:640=139`, `0x00696600:640=214`,
+`0x00000280:320=2`, `0x006BA280:320=46`, `0x005D4500:640=121`,
+`0x0062C200:640=96`, `0x0062BD00:640=113`, and
+`0x00790800:1024=633` VI callbacks.
+
+The phase writer table supplied the discriminating result. Gate watch 1 had
+earlier-origin rows at `0x006AB800:512` from PCs `0x8008EB7C` and
+`0x8008EC88`, and at `0x00696100:640` from the same two PCs; task watch 2
+had earlier-origin rows at `0x006AB800` from `0x8008EB8C`, `0x8008EBBC`, and
+`0x80094648`, and at `0x00696100` from `0x8008EB8C` and `0x8008EBBC`.
+The wait watch had no phase writer PC and no post-value sample. The title and
+hangar gate/task rows were also positive (`0x8008ED48` for gate and
+`0x80094648` for task), so the earlier rows are not an empty-bucket artifact.
+
+The independent port table passed the route controls in both arms: silent
+reached title once and hangar twice with `[m5-gate]=1024`,
+`[m5-b40-route]=14`, `[m5-route-state]=28`, and PCM source/consumer `89/89`;
+image reached title once and hangar twice with `[m5-gate]=1024`,
+`[m5-b40-route]=13`, `[m5-route-state]=25`, `4698` image-stage rows, and PCM
+source/consumer `88/88`. The silent arm later emitted its existing crash marker
+after hangar; the image arm was SIGKILLed by the launcher after its 15-second
+retention. Both target phases were observed before those terminal outcomes.
+
+The oracle phase/writer table and the independent port route/task/PCM table
+together select `H-Earlier-Origin` at capture scope. This rules out
+`H-CoverageInvalid`, `H-Phase-Attribution-Gap`, and `H-Task-Only` for the
+measured table. It does not prove that the earlier retail gate/task values are
+the same semantic contract as the port slots, and it leaves slot/status
+progress and writer legitimacy open. No gate store, wait hatch, status clear,
+slot guard, consumer change, address remap, or default change was made.
+
+ORIGIN: no mitigation-shaped change; this iteration only expanded the
+ground-truth phase table and recorded the fixed valid rerun.
+
+### Next
+
+Add the existing `ROGUESQ_LOG_VI_CALLERS=1` slot/key-on/descriptor table to
+the explicit keycode-36 staged pair. Keep the all-fifteen oracle buckets and
+the task/gate/route/PCM markers, then distinguish a valid image slot
+`01/02/00` transition from task-only progress.

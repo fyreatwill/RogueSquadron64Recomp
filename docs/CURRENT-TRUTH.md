@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2317 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2318 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -27,8 +27,12 @@ controls passed, but both port arms crashed before the required hangar phase.
 Session 2317 repaired the route with the explicit keycode-36 schedule and
 added the full gate/task/wait oracle attribution table; both port arms reached
 hangar, while retail showed no target-phase gate or wait writer row.
+Session 2318 expanded that table to all fifteen observed VI origins. The
+oracle had positive coverage in every bucket, found earlier-origin gate and
+task writers, and still found no wait-field writer; both port arms again
+reached title and hangar with the complete contract markers.
 
-The current M5 boundary is task/output contract work. The qualified default
+The current M5 boundary is task/output and slot-contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
 `512 @ 0x006AB400`; measured nonzero phase-10 slots have exact source and
 consumer joins in some captures. Retail independently reaches both origins
@@ -171,6 +175,21 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   origin from incomplete phase attribution. Both port processes later exited
   with the existing crash marker after reaching hangar; no runtime or
   contract change was made.
+- **s2318 — all-origin gate/task/wait census selects an earlier writer.** The
+  first direct run was coverage-invalid because the command session interrupted
+  the still-running stub before hangar; the fixed PTY rerun passed the same
+  controls. Retail exited naturally with whole-RDRAM `10125`, title `633`,
+  hangar `979`, gate-watch `17`, task/output-watch `108`, wait-watch `0`, and
+  fifteen positive phase buckets. Gate writer PCs appeared at earlier origins,
+  including `0x006AB800:512` with `0x8008EB7C` and `0x8008EC88`; task writers
+  also appeared there (`0x8008EB8C`, `0x8008EBBC`, and `0x80094648`). The wait
+  watch had no writer PC or post-value sample. Both port arms reached title and
+  hangar: silent `[m5-gate]=1024`, `[m5-b40-route]=14`, PCM `89/89`, and
+  image `[m5-gate]=1024`, `[m5-b40-route]=13`, image-stage `4698`, PCM
+  `88/88`. This selects `H-Earlier-Origin` at capture scope, rules out
+  `H-Phase-Attribution-Gap` and `H-Task-Only`, and leaves writer legitimacy
+  and slot/status progress open. No gate, wait, status, slot, consumer,
+  address, or default change was authorized.
 - The retail oracle is an independent witness. Its whole-RDRAM, title, hangar,
   width-aware target, and exact-PC controls must pass before a null is read.
   The oracle currently reaches attract/title/hangar, not a mission.
@@ -180,6 +199,17 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2318 — earlier-origin gate/task writers are present.** The valid PTY
+  rerun passed the independent oracle controls: whole-RDRAM `10125`, title
+  `633`, hangar `979`, gate `17`, task/output `108`, wait `0`, and all fifteen
+  phase buckets positive. Gate writer PCs occurred at earlier origins,
+  including `0x006AB800:512` (`0x8008EB7C`, `0x8008EC88`), and task writer PCs
+  occurred there as well (`0x8008EB8C`, `0x8008EBBC`, `0x80094648`); no wait
+  writer or post-value sample occurred. Stub and image both reached title and
+  hangar with `[m5-gate]` `1024` and PCM joins `89/89` and `88/88`; the image
+  also emitted `4698` image-stage rows. This selects `H-Earlier-Origin` at
+  capture scope and leaves slot/status progress and writer legitimacy open.
 
 - **s2316 — gate/task/wait capture was coverage-invalid.** The oracle
   completed with whole-RDRAM `10125` writes, title/hangar VI coverage, gate
@@ -424,16 +454,17 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 gate/task/wait writer-origin census — all observed VI buckets.**
-   s2317 repaired route coverage and found no gate or wait writer in title or
-   hangar, but its table covered only those two buckets. Repeat the same
-   explicit keycode-36 staged pair after expanding the oracle phase table to
-   all fifteen observed origins. A gate/task/wait writer in an earlier bucket
-   with a matching port value/branch selects `H-Earlier-Origin`; positive
-   whole/lifetime controls with no writer row in any bucket selects
-   `H-Phase-Attribution-Gap`; task-only rows with gate/wait nulls preserve the
-   unresolved task boundary. Missing controls or either port hangar phase is
-   `H-CoverageInvalid`. No gate store, wait hatch, status clear, guard, or
+1. **M5 slot/status transition census after the earlier-origin result.**
+   s2318 found earlier-origin retail gate/task writers, but no wait-field
+   writer, and left slot/status progress unmeasured on the port. Add the
+   existing `ROGUESQ_LOG_VI_CALLERS=1` slot/key-on/descriptor table to the
+   explicit keycode-36 staged pair. Keep the all-fifteen-bucket oracle table
+   and every current task/gate/PCM marker. Image slot `01/02/00` progress with
+   a named writer and matching task/PCM ordering selects `H-Slot-Transition`;
+   positive task/DMEM/DMA/PCM controls with no valid slot transition select
+   `H-Task-Only`; a gate/route divergence before slot work selects
+   `H-Gate-Branch`; missing oracle controls or either port hangar phase is
+   `H-CoverageInvalid`. No slot clear, wait hatch, gate change, guard, or
    default change.
 2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
    route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
@@ -472,9 +503,11 @@ s2315 retail census found positive callback coverage but no phase-attributed
 `0x800078EC` writer row in any of fifteen observed VI-origin buckets. The
 s2316 ground-truth gate/task/wait checkpoint passed its oracle controls, but
 both port arms crashed before hangar and its port contract logging was not
-enabled. The next boundary remains a complete writer/value census for
-`0x800A0F50`, the task/output span, and wait fields after route coverage is
-restored; no gate or wait change is authorized.
+enabled. The s2317/s2318 repaired pair restored both port hangar phases. s2318
+found earlier-origin retail gate/task writers, including the shared
+`0x8008EC88` writer class, but no wait-field writer; the next boundary is the
+port slot/status/key-on transition table. No gate, wait, status, slot, or
+default change is authorized.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
 phase-gated captures show a rotating mixed output contract: s2306 had one

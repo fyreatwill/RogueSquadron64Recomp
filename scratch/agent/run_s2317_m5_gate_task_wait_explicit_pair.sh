@@ -71,6 +71,19 @@ env "$ORACLE" \
     --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3 \
     --pc-hist-phase 0x00790400:1024 \
     --pc-hist-phase 0x006AB400:512 \
+    --pc-hist-phase 0x006AB800:512 \
+    --pc-hist-phase 0x00656400:512 \
+    --pc-hist-phase 0x00656800:512 \
+    --pc-hist-phase 0x0066A500:640 \
+    --pc-hist-phase 0x00696100:640 \
+    --pc-hist-phase 0x0066AA00:640 \
+    --pc-hist-phase 0x00696600:640 \
+    --pc-hist-phase 0x00000280:320 \
+    --pc-hist-phase 0x006BA280:320 \
+    --pc-hist-phase 0x005D4500:640 \
+    --pc-hist-phase 0x0062C200:640 \
+    --pc-hist-phase 0x0062BD00:640 \
+    --pc-hist-phase 0x00790800:1024 \
     --post-value-watch 1 --post-value-watch 2 --post-value-watch 3 \
     --vi-trace \
     --press "$PRESS" \
