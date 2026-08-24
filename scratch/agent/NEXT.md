@@ -1,44 +1,40 @@
-# NEXT work unit (s2264) — pair qualified silent control with image arm
+# NEXT work unit (s2265) — isolate the image route after paired failure
 
-HYPOTHESIS-ID: m5-image-output-contract-attribution
+HYPOTHESIS-ID: m5-image-route-stability
 
 ## Work unit
 
-Run one same-build, two-arm reduced-trace pair with the silent+C88=`0` arm
-launched first and the image+C88=`0` arm launched second. Keep
+Run one isolated image+C88=`0` reduced-trace recipe. Keep
 `ROGUESQ_LOG_AUDIO_RETURN=1`, `ROGUESQ_LOG_PCM_BOUNDARY=1`, B40/route-state
 tracing, the phase gate, and the qualified spin/LLE route. Use no
-task-contract, ABI, DMA, host-boundary, or thread-resume tracing. This is one
-output-contract comparison; do not change the image default or add a guard.
+task-contract, ABI, DMA, host-boundary, or thread-resume tracing. This is a
+route-stability discriminator after s2264's image-second arm died before
+1024; do not change the image default or add a guard.
 
 ## Competing hypotheses and discriminator
 
-- **H-BothArmsQualified:** both arms pass startup, one `[missing-func]`, the
-  two 640 transitions, title `1024 @ 0x00790400`, and hangar
-  `512 @ 0x006AB400`, so their phase-keyed output rows are comparable.
-- **H-PairRouteInvalid:** either arm fails before both target phases. Its
-  output nulls are unevaluable and the pair selects only a route-stability
-  work unit.
-- **H-ImageStagePayloadJoin:** the qualified image arm has target stage rows
-  with nonzero payloads that match PCM source and consumer rows by
-  destination, length, FNV, nonzero count, completion, and valid order; the
-  qualified silent arm retains the all-zero PCM boundary established in
-  s2262.
-- **H-ImageContractGap:** both arms qualify, but image stage rows remain zero,
-  stage-only, or fail the exact PCM source/consumer join while the silent arm
-  stays all-zero. This selects the measured contract gap only, not a writer or
-  runtime fix.
+- **H-ImageIsolatedQualifies:** the isolated image arm passes startup, one
+  `[missing-func]`, both 640 transitions, title `1024 @ 0x00790400`, and
+  hangar `512 @ 0x006AB400`; the paired failure is a route-load/concurrency
+  observation and the output pair can be retried.
+- **H-ImageIntrinsicPreTargetFailure:** the isolated image arm exits before
+  1024 with no target PCM rows; the image route itself remains unqualified,
+  so no output null is interpretable.
+- **H-ImageIntermittentRoute:** the isolated arm reaches startup controls but
+  dies before the target boundary without a stable intrinsic signature; this
+  keeps route stability open and requires a new discriminator rather than a
+  mitigation.
 
 The discriminating table is
-`(arm, startup, missing_func, 640_origins, title, hangar, phase, width,
-origin, stage_rows, nonzero_stage_rows, pcm_source_rows,
-pcm_consumer_rows, nonzero_source_rows, nonzero_consumer_rows,
-stage/PCM dest+len+fnv+nz, completion_before, source_before_consumer,
-ordering_violation, driver_outcome, crash_or_timeout)`. Any missing target
-phase selects H-PairRouteInvalid before interpreting output. Positive controls
-are per-arm startup/missing-function/route/B40 rows, image-stage logging in
-the image arm, and source/consumer logging with all-zero payloads in the
-silent arm.
+`(startup, missing_func, 640_origins, title, hangar, phase, width, origin,
+image_stage_rows, pcm_source_rows, pcm_consumer_rows, nonzero_rows,
+driver_outcome, crash_or_timeout, crash_pc, last_guest_pc)`. Reaching both
+target phases selects H-ImageIsolatedQualifies; an exit before 1024 with the
+startup controls selects H-ImageIntrinsicPreTargetFailure only if the same
+pre-target signature is present, otherwise H-ImageIntermittentRoute. Positive
+controls are startup, one `[missing-func]`, B40 rows, route-state rows, and
+the phase logger itself; target image/PCM rows are interpreted only after
+qualification.
 
 ## Build
 
@@ -48,17 +44,13 @@ cmake --build build --config Debug --target RogueSquadron64Recomp -j2
 
 ## Run
 
-Launch the silent arm first, then the image arm in the same shell so both
-arms use the same executable:
-
 ```sh
-env ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_THREAD_RESUME=0 ROGUESQ_AUDIO_UCODE=0 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2264_silent_c88_0_pcm_pair_silent_first 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2264_silent_c88_0_pcm_pair_silent_first_driver.log 2>&1 &
-env ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_THREAD_RESUME=0 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2264_image_c88_0_pcm_pair_image_second 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2264_image_c88_0_pcm_pair_image_second_driver.log 2>&1 &
-wait
+env ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_THREAD_RESUME=0 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_B40_ROUTE=1 ROGUESQ_LOG_M5_ROUTE_STATE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2265_image_c88_0_isolated_route 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2265_image_c88_0_isolated_route_driver.log 2>&1
 ```
 
-Record both driver outcomes, all target phase transitions, per-arm B40 and
-route-state controls, and phase-8/10/12 stage plus PCM rows. A qualified pair
-selects the next output-contract boundary; a route-invalid arm selects only a
-new route-stability work unit. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
-writeback/consumer guard based on this pair alone.
+Record the driver outcome, all phase transitions, B40 and route-state controls,
+the crash PC/last guest PC if pre-target, and phase-8/10/12 image plus PCM rows
+only if the route qualifies. A qualified isolated arm selects a repeat paired
+output comparison; a pre-target exit selects route stability only. Do not
+promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard based on this
+run.

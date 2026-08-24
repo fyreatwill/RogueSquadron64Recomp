@@ -5,9 +5,9 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2263 (2026-08-24); behavioral and source evidence is
-current through s2262. This was a maintenance pass only: no build, run, or
-runtime change was made.
+Maintained in Session 2264 (2026-08-24); behavioral and source evidence is
+current through s2264. This iteration ran one unchanged-build paired route
+comparison; no runtime change was made.
 
 ## Current state
 
@@ -67,6 +67,14 @@ runtime change was made.
   abort, after title and hangar qualification. This is single-source port
   evidence for H-SilentPcmAbsent and makes the silent arm usable in the next
   paired output run.
+- s2264's same-build pair was route-invalid for output attribution. The
+  silent-first arm passed startup, one `[missing-func]`, both 640 controls,
+  title `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400` twice; its phase
+  8/10/12 PCM source and consumer rows all remained
+  `fnv=0xF59C39C5`, `nz=0`. The image-second arm passed startup controls but
+  exited before its first 1024 phase and produced no audio/PCM rows, with
+  the crash in `MetalFramebuffer` (`last-guest-pc=0x8000b650`). This pair
+  selects route-stability work only; it does not compare image output.
 - Independent retail oracle work established the whole-RDRAM control, both
   target origins, nonzero writes to both `field348`-derived spans, and the
   retail task/output writer family. It has not yet joined a retail write to a
@@ -76,27 +84,34 @@ runtime change was made.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 image-output contract attribution.** Run the same-build reduced-trace
-   image+C88=`0` / silent+C88=`0` pair in the next iteration, silent first,
-   with only route identity, B40/route-state, and PCM-boundary logging. The
-   pair must pass startup, `[missing-func]`, both 640 transitions, title, and
-   hangar before output rows are interpreted. Compare stage rows and exact
-   destination/length/FNV/nonzero joins, completion order, and the all-zero
-   silent PCM boundary. Do not promote the image arm or add a writeback,
-   consumer, slot, gate, or guard change.
-2. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
+1. **M5 image-route stability.** Run one isolated image+C88=`0` reduced-trace
+   recipe with the same qualified spin/LLE route and phase gate. Require
+   startup, `[missing-func]`, both 640 transitions, title
+   `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400` before interpreting
+   image/PCM rows. This separates an image arm that can qualify when not
+   paired from an intrinsic pre-target failure; do not change the image
+   default or add a guard. If it qualifies, return to the paired output
+   contract comparison; if it fails before 1024, keep the pair blocked on
+   route stability.
+2. **M5 image-output contract attribution.** Repeat the same-build
+   image+C88=`0` / silent+C88=`0` pair only after the image route is
+   qualified. Compare stage rows and exact destination/length/FNV/nonzero
+   joins, completion order, and the all-zero silent PCM boundary. Do not
+   promote the image arm or add a writeback, consumer, slot, gate, or guard
+   change.
+3. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
    difference using a new pointer-versus-branch discriminator. No key-on
    return or mitigation change follows from the existing table.
-3. **M5 A1 second-origin transition.** Identify the natural host field
+4. **M5 A1 second-origin transition.** Identify the natural host field
    publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
    remain opt-in.
-4. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
+5. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
-5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+6. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator; the dormant `slotDispatcherIter+872` class has
    thousands of clean guarded hangar calls and no authorized mitigation.
-6. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
+7. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
 

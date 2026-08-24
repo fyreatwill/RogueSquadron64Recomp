@@ -106674,3 +106674,49 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2264 (2026-08-24) — paired output run was route-invalid
+
+No new instrumentation was added; the ground-truth prerequisite was
+satisfied by the existing B40/route-state and PCM source/consumer loggers,
+with their positive controls established in the preceding qualified runs.
+Rebuilt the unchanged Debug target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`;
+the build passed.
+
+Ran the prescribed same-build reduced-trace pair, silent+C88=`0` first and
+image+C88=`0` second, with `ROGUESQ_LOG_AUDIO_RETURN=1`,
+`ROGUESQ_LOG_PCM_BOUNDARY=1`, the B40/route-state loggers, phase gate, and
+qualified spin/LLE route. Driver logs are
+`scratch/agent/s2264_silent_c88_0_pcm_pair_silent_first_driver.log` and
+`scratch/agent/s2264_image_c88_0_pcm_pair_image_second_driver.log`; run logs
+are under `scratch/s73_post_a_scene/` with the corresponding tags.
+
+The silent arm passed startup, one `[missing-func]`, both 640 controls, title
+`1024 @ 0x00790400` at 51.1 seconds, and hangar
+`512 @ 0x006AB400` twice at 80.1 and 116.6 seconds. Its positive controls
+fired: 14 B40 rows and 28 route-state rows. PCM source/consumer rows fired in
+phases 8, 10, and 12; the observed counts were source/consumer `1736/1737`,
+`1093/1093`, and `652/652`, respectively, and every row had
+`fnv=0xF59C39C5`, `nz=0`. The process later crashed after target qualification
+in the ROM-read worker at `last-guest-pc=0x80001b08`.
+
+The image arm passed startup, one `[missing-func]`, 6 B40 rows, and 10
+route-state rows, but exited while waiting for its first 1024-wide phase. It
+produced no audio-return or PCM rows. Its crash was in
+`MetalFramebuffer::MetalFramebuffer` with `last-guest-pc=0x8000b650`.
+
+This selects H-PairRouteInvalid: the silent control was qualified, but the
+image arm was not, so no image-stage/PCM comparison is valid. It rules out
+neither an image output contract gap nor an intrinsic image producer defect;
+it selects an isolated image-route stability check first. It also rules out
+using the paired run to promote the image arm or add a writeback, consumer,
+slot, gate, or guard change.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-route-stability`.
