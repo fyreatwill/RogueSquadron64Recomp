@@ -108364,3 +108364,47 @@ durable documentation and rewrote the next-work-unit contract.
 ### Next
 
 Run the s2304 M5 task→stage→PCM ordinal join from `scratch/agent/NEXT.md`.
+
+## Session 2304 (2026-08-24) — task-stage ordinal join found a same-ordinal PCM gap
+
+HYPOTHESIS-ID: m5-step3-task-stage-ordinal-join.
+
+The planned work unit was one qualified default Factor 5 image-arm capture
+with an independent retail oracle and a complete phase/width/origin/task
+ordinal table joining image-stage rows, DMA ranges, and both PCM endpoints.
+The Debug build succeeded. The first driver pass exposed two harness/parser
+defects: the driver killed the oracle before its end-of-run writer histogram,
+and DMA-range records inherit phase/width/origin from the preceding task row
+while `dram=` is an inclusive range. Both were fixed before the qualifying
+capture was interpreted; no game value, branch, guard, writeback, or default
+was changed.
+
+The fixed capture passed the independent retail whole-RDRAM positive control
+at `10,000`, title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and the
+target writer controls `0x8008EB8C`, `0x8008EBBC`, and `0x80094648`. The port
+also reached title and hangar. Its complete nonzero table contained two
+phase-10/hangar stage-2 rows at task ordinal `0`, destinations
+`0x168E50`/`0x169150`, length `0x300`, and nonzero counts `621`/`639`.
+Both rows had exact same-ordinal DMA matches (`2/2`), but neither had an
+exact same-ordinal PCM source or consumer match (`0/2`, ordering `NA`). The
+independent native image join reported both nonzero rows as `stage-only`.
+The discriminator therefore selects H-TaskStageOutputGap at this measured
+route/slot scope.
+
+This rules out coverage failure and missing generated DMA for these two rows.
+It does not prove that every qualified image route has the same gap: an
+earlier qualified capture matched a different nonzero slot class, and this
+iteration did not change or repair that route behavior. It also does not
+identify a writer defect or authorize writeback/consumer/slot mitigation.
+The next probe must distinguish delayed PCM publication from an unconsumed
+stage output by matching the exact payload tuple across a bounded ordinal
+window.
+
+ORIGIN: no mitigation-shaped change; the driver and postprocessor are
+measurement-only, and the only fixes corrected record association and oracle
+completion.
+
+### Next
+
+Run the bounded temporal task→stage→PCM join in `scratch/agent/NEXT.md`, with
+the same independent retail controls and both target origins when present.

@@ -5,17 +5,21 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2303 (2026-08-24). This was a maintenance iteration:
-the file exceeded the 60,000-byte gate, so durable s2263–s2302 history was
-migrated to §46, closed detail was pruned, and the active backlog was
-renumbered into one sequence. No build, run, or experiment was performed.
+Maintained in Session 2304 (2026-08-24). Session 2303 was the maintenance
+iteration that migrated durable s2263–s2302 history to §46, pruned closed
+detail, and renumbered the active backlog. Session 2304 then ran the M5
+task→stage→PCM ordinal join.
 
 The current M5 boundary is task/output contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
-`512 @ 0x006AB400`; its measured nonzero phase-10 rows have exact source and
-consumer joins. Retail independently reaches both origins and supplies a
-different task/output writer class. The latest C88 route discriminator was
+`512 @ 0x006AB400`; a prior measured nonzero phase-10 slot class had exact
+source and consumer joins. Retail independently reaches both origins and
+supplies a different task/output writer class. The latest C88 route discriminator was
 coverage-invalid before title/hangar, so it provides no C88 or key-on verdict.
+The latest M5 ordinal table passed retail and port route controls, matched
+both nonzero image-stage rows to same-ordinal DMA, but matched neither to a
+same-ordinal PCM source or consumer; the native join independently classified
+both as `stage-only`.
 
 ## Current state
 
@@ -53,6 +57,15 @@ coverage-invalid before title/hangar, so it provides no C88 or key-on verdict.
   `0x8000834C` before title/hangar. The required hangar gate withheld C88=1.
   This is `H-CoverageInvalid` at recipe scope; it does not select a C88 route,
   pointer/data, branch-state, key-on return, or mitigation.
+- **s2304 — task→stage→PCM ordinal join.** The fixed capture passed retail
+  whole-RDRAM `10,000`, title/hangar, and target writer-PC controls, and the
+  port reached title/hangar. Its complete nonzero phase-10/hangar table had
+  two image-stage rows (`0x168E50`/`0x169150`, `0x300`, `nz=621/639`). Both
+  matched exact same-ordinal DMA tuples; neither matched a same-ordinal PCM
+  source or consumer (`2/2`, `0/2`, ordering `NA`). Native image joining
+  independently reported both as `stage-only`. This selects
+  `H-TaskStageOutputGap` at this route/slot scope, not a universal writer or
+  consumer defect.
 - **s2301 — task/output sequence.** The fixed retail capture passed whole-RDRAM
   `10,000`, title, hangar, and `1,530` width-aware target VI rows. The retained
   sequence had `48` sentinel rows from `0x80094648`, then adjacent same-tuple
@@ -96,10 +109,11 @@ coverage-invalid before title/hangar, so it provides no C88 or key-on verdict.
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 Step 3 task/output contract boundary.** Run the new task→stage→PCM
-   ordinal join in `scratch/agent/NEXT.md`, with independent retail controls,
-   the qualified default image arm, and both target origins when present. Use
-   a complete table, not a row-count counter. No runtime or mitigation change.
+1. **M5 Step 3 delayed-vs-unconsumed output boundary.** Run the bounded
+   temporal task→stage→PCM join in `scratch/agent/NEXT.md` to match each
+   nonzero stage payload across a phase-scoped ordinal window. Keep the
+   independent retail controls, qualified default image arm, both origins
+   when present, and no runtime or mitigation change.
 2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
    route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
    crash had `route_state=2`, `b40=1`, `key_on=0`; C88=1 was withheld.
@@ -134,13 +148,15 @@ service entry/exit, the service gate/loop, slot-0 status sequence, and the
 task/AI boundary are live on the port. Retail independently matches the
 status cycle. MORT speech is separate from Factor 5 RSP audio.
 
-The image arm changes DMEM, completes, and emits generated DMA. Qualified
-phase-gated runs observed exact nonzero stage/source/consumer joins with
-source-before-consumer ordering; the silent arm's PCM boundary is separately
-qualified but all-zero. Retail writes corresponding field spans and a
-different task/output span. This is a measured contract boundary, not
-permission to add a copyToRAM/CIMG writeback, writer guard, slot guard, or
-consumer change.
+The image arm changes DMEM, completes, and emits generated DMA. A prior
+qualified phase-gated capture observed exact nonzero stage/source/consumer
+joins with source-before-consumer ordering; s2304's complete table instead
+observed two nonzero hangar stage rows with exact DMA but no same-ordinal PCM
+endpoints, independently classified as `stage-only`. The silent arm's PCM
+boundary is separately qualified but all-zero. Retail writes corresponding
+field spans and a different task/output span. This is a measured contract
+boundary, not permission to add a copyToRAM/CIMG writeback, writer guard, slot
+guard, consumer change, or address remap.
 
 ### VI state and second origin
 
