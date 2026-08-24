@@ -105106,3 +105106,39 @@ field, gate, or safety guard changed. Log:
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-keyon-contract`.
+
+## Session 2225 (2026-08-23) — cleared the key-on census coverage boundary
+
+Ran the planned same-build concurrent port A/B with the existing native
+`build/RogueSquadron64Recomp` binary; no rebuild or generated-function change
+was made. Both arms used `ROGUESQ_AUDIO_UCODE=1`,
+`ROGUESQ_M5_C88_VALUE=1`, `ROGUESQ_SPIN_YIELD=1`, and
+`ROGUESQ_LOG_M5_KEYON_CENSUS=1`. The detail arm set
+`ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1`; the quiet arm set it to `0`.
+
+Both arms passed the entry/tail/slot controls and reached the first target
+`640 @ 0x00696100`, title `1024 @ 0x00790400`, and hangar
+`512 @ 0x006AB400`. Each produced 21 phase-keyed `[m5-keyon-table]` rows,
+including positive four-site divide counts with zero guards in the target and
+hangar buckets. Neither run emitted `[CRASH]` or `[ABORT]`; both remained alive
+through the 30-second grace window and were ended by the runner's SIGKILL.
+
+The detail arm's positive transfer control emitted 4,624
+`[m5-keyon-transfer]` rows. Its 256-entry per-site tuple rings overflowed in
+the high-volume first-target bucket. The quiet arm emitted zero transfer rows,
+confirming that the A/B knob differed as intended. The full phase matrix
+refutes `H-TransferLogOverhead`, `H-ExistingRouteBoundary`, and
+`H-PortCoverageFailure` for this paired capture, selecting
+`H-PortCoverageRecovered`. It does not establish tuple parity because the
+detail cap overflowed; no key-on return, default, guard, task field, or
+mitigation changed. Logs:
+`scratch/s73_post_a_scene/s2225_keyon_detail/run.log` and
+`scratch/s73_post_a_scene/s2225_keyon_quiet/run.log`.
+
+ORIGIN: same-built port diagnostic A/B; no guest value was suppressed,
+rewritten, or guarded.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-keyon-contract`.

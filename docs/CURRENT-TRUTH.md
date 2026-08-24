@@ -2,11 +2,11 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2224
-(2026-08-23); behavioral and source evidence is current through s2224.
+authoritative for exact commands and probe rows. Maintained in Session 2225
+(2026-08-23); behavioral and source evidence is current through s2225.
 
 The detailed s2164–s2197 chain is archived in
-[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2224's exact rows remain in
+[`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2225's exact rows remain in
 the append-only ledger. This file is the compact operational state, not a
 second ledger.
 
@@ -483,6 +483,10 @@ second ledger.
   H-RetailBranchStateShift and refutes H-RetailHangarDivides and
   H-PhaseCoverageFailure; it does not authorize a port guard change. The next
   discriminator is a same-phase port transfer/guard/tuple table.
+- s2225's detail/quiet A/B passed controls and reached first target, title,
+  and hangar. Detail: 4,624
+  rows and overflowed its 256-tuple rings; quiet emitted none. This selects
+  H-PortCoverageRecovered; tuple parity remains open.
 
 ## Active backlog
 
@@ -517,13 +521,10 @@ work items.
    origins while skipping all eight watched divide PCs. s2223 adds the
    hangar-keyed bucket: retail still skips all eight divides, while the
    post-guard transfer tuple sets change completely between both target origins
-   and hangar. s2224's port table passed entry/tail/slot controls at the first
-   640-byte target: all eight transfer PCs fired 4,078 times, guards were zero,
-   and four divide PCs fired 4,078 times; a bus error in
-   `renderLitMeshFaceGroup` stopped the run before the second target or hangar.
-   This selects H-PortCoverageFailure for this capture and rules out guard
-   suppression only in the covered bucket; tuple parity and any return/default
-   change remain open.
+   and hangar. s2224's detail run bus-error'd before later buckets; s2225's
+   A/B reaches first target, title, and hangar. Detail emits 4,624
+   rows but overflows the 256-tuple cap. H-PortCoverageFailure is superseded
+   here; H-PortCoverageRecovered is selected and tuple parity remains open.
 2. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
@@ -703,7 +704,9 @@ operand question open; no key-on return is authorized to change yet. s2223's
 explicit-width retail range table now covers hangar too: every transfer PC
 fires in all three buckets, every divide PC remains zero, and each transfer
 PC's `$v0/$s1/$a0/$a2` set is disjoint across buckets. The retail branch-state
-shift is therefore selected at the observed scope; port parity remains open.
+shift is therefore selected at the observed scope. s2225's paired port arms
+reach first target, title, and hangar; detail logging is positive but capped.
+Expand the cap before interpreting tuple overlap.
 
 The stock `aspMain` contract is not the game's MusyX contract. s2220's retail
 payload and downstream port table select the original-value C88 semantics at
@@ -835,6 +838,9 @@ remain in the append-only ledger. Operationally:
   phase-specific register tuples. The old target-only scope is superseded by
   the three-bucket H-RetailBranchStateShift result; no port behavior change
   follows from the retail table alone.
+- s2224's coverage selection was believable because its detail run bus-error'd
+  before later buckets. s2225 reaches all buckets; tuple overflow remains a
+  measurement limit.
 
 ## Evidence ledger summary
 
@@ -843,7 +849,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2224 VI-boundary, retail-ground-truth, image-arm, C88-gate, and key-on
+s2198–s2225 VI-boundary, retail-ground-truth, image-arm, C88-gate, and key-on
 work is recorded in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
