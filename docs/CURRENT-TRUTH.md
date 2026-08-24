@@ -5,10 +5,10 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2277 (2026-08-24); behavioral and source evidence is
-current through s2277. This iteration ran the M5 Step 0 retail oracle and an
-unchanged silent port control. The oracle qualified, but the port control
-crashed before title/hangar; no runtime change was made.
+Maintained in Session 2278 (2026-08-24); behavioral and source evidence is
+current through s2278. This iteration added a regeneration-safe key-on
+pointer/branch witness and completed a qualified hangar port run plus
+independent retail PC/GPR controls. No key-on behavior or default changed.
 
 ## Current state
 
@@ -43,8 +43,15 @@ crashed before title/hangar; no runtime change was made.
   producer/order boundary remains diagnostic-only and does not authorize a
   writer guard or task rewrite.
 - The M5 key-on comparison is open: exact `(origin,width,PC)` tuple buckets
-  show both port-only and retail-only values in every common cell. This is a
-  contract boundary, not permission to change the key-on path.
+  show both port-only and retail-only values in every common cell. s2278's
+  qualified port witness fired once at all eight transfer PCs with
+  `raw_ptr=0x801772F0`, `source_word=0x00C0053F`, selector `0`, and state
+  `0x6F5F`. Retail independently hit all eight PCs in hangar and showed
+  denominator `$a0=0xC0` plus caller selector `$v0=0` on matching rows, but
+  its voice-list pointers vary across rows and the oracle has not yet joined
+  the full source word and destination state to the same transfer row. This
+  selects a pointer/data-side lead at the tested scope, not a complete
+  pointer-versus-branch verdict.
 - The VI second-origin publisher/cadence is open. Field, current-register,
   timing, and total-`VI` arms recover the split, but none is default-on.
 - s2273's first Step 1 pair was route-invalid: the heavy trace reached title
@@ -104,6 +111,17 @@ crashed before title/hangar; no runtime change was made.
   but the unchanged port arm crashed before title and hangar. Its dispatch
   count is a positive instrument control only; the missing SP/audio/PCM rows
   are route-invalid nulls and do not identify an audio writer.
+- s2278's first paired driver was route-invalid: retail passed the whole-RDRAM
+  control and title/hangar gates, while the port reached title but crashed at
+  an off-target `512 @ 0x00690400` before the hangar. The fixed established
+  eleven-Start route then reached port title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`; B40/route-state/input controls fired, all eight new
+  pointer/branch rows fired, and the later known aligned-ROM abort occurred
+  only after target qualification. A corrected retail detail run again passed
+  the whole-RDRAM control, title/hangar gates, and all eight transfer PCs.
+  The target rows agree on the `0xC0` denominator and zero caller selector,
+  while raw pointers and the port pointed-to word differ; full retail
+  source-word/state joining remains open.
 - s2274's two same-build route attempts failed before the expected hangar
   origin despite positive dispatch/audio/route probes. Removing the three
   high-volume host trace categories changed the failure from a renderer
@@ -247,10 +265,11 @@ crashed before title/hangar; no runtime change was made.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
-   difference using a new pointer-versus-branch discriminator. No key-on
-   return or mitigation change follows from the existing table. The Step 1
-   task/output pair remains parked until a qualified port route exists.
+1. **M5 key-on tuple contract.** Complete the oracle-side join for
+   `MEM_W($s0+0x60)` and `$s1+0x22` at the same qualified transfer rows, then
+   compare normalized pointer/data against the new port witness. The current
+   evidence is a pointer/data-side lead only; no key-on return or mitigation
+   change follows. The Step 1 task/output pair remains parked.
 2. **M5 A1 second-origin transition.** Identify the natural host field
    publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
    remain opt-in.
@@ -316,8 +335,11 @@ split; the natural host publisher and cadence are unidentified.
 Retail executes the alternate key-on transfer path and skips the eight port
 divide PCs. The port has positive normal-tail/slot behavior with no guard
 hits. The exact phase-keyed tuple table is complete and bidirectionally
-different at all common cells; dynamic pointer operands versus branch state
-remain the useful discriminator.
+different at all common cells. s2278 adds a qualified port pointer/source/
+state witness and retail transfer/selector/denominator controls; the raw
+pointer is not yet a valid cross-runtime identity because retail voice-list
+addresses vary within the phase. The useful next boundary is the oracle-side
+full-word/state join.
 
 The `-0x25A4` pointer-chase, six-site PIC, ten-site audio-slot,
 slot-dispatch, two-line overlay-move, and leftover `fake_func_*` size class

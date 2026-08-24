@@ -107267,3 +107267,59 @@ suppressed, rewritten, guarded, restored, or defaulted.
 Use the M5 key-on pointer-versus-branch discriminator in
 `scratch/agent/NEXT.md` before building or changing the census.
 `HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
+
+## Session 2278 (2026-08-24) — key-on pointer/branch witness selected a data-side lead
+
+HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator.
+
+Ground truth ran before the new witness. The corrected retail oracle recipe
+passed the whole-RDRAM positive control with 10,000 writes, reached title
+`1024 @ 0x00790400`, reached hangar `512 @ 0x006AB400`, and hit all eight
+post-guard transfer PCs. The first oracle invocation phase-gated only 640
+origins and therefore supplied no target rows; it was discarded and rerun
+with `--pc-phase-log-width 0x006AB400:512` plus explicit detail watches.
+
+The regeneration-safe census was added to
+`../N64Recomp/fixup_game_funcs.py`, regenerated with `make_elf.py`,
+`N64Recomp`, and `fixup_game_funcs.py`, and the Debug target built
+successfully. The new `[m5-keyon-pointer-branch]` helper records the existing
+`(v0,s1,a0,a2)` tuple plus `s0`, `MEM_W(s0+0x60)`, `MEM_BU(s0+0x22)`, and
+`MEM_HU(s1+0x22)` at all eight transfer sites. No key-on return, divide guard,
+slot store, audio default, or route gate changed.
+
+The first paired driver was route-invalid: retail qualified, while the port
+reached title and then crashed at an off-target `512 @ 0x00690400` before the
+required hangar. The fixed established eleven-Start route was then run with
+the same Debug build. It reached port title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`; B40, route-state, and host-input controls fired, and the
+later known aligned-ROM abort occurred only after target qualification. The
+port emitted exactly one deduplicated pointer/branch row at each of the eight
+sites, with `raw_ptr=0x801772F0`, `source_word=0x00C0053F`,
+`branch_selector=0`, and `branch_state=0x6F5F`; there was no witness overflow.
+
+The detailed retail oracle independently emitted all eight transfer PCs in
+the hangar bucket. Matching caller rows showed denominator `$a0=0xC0` and
+selector `$v0=0`; retail voice-list pointers varied across rows rather than
+forming one absolute identity. The port and retail controls therefore agree
+on the denominator and zero selector while the observed pointer/data side
+differs. This selects a pointer/data-side lead at the tested scope, but not a
+complete H-PointerMismatch verdict: the oracle still needs to print and join
+the full `$s0+0x60` source word and `$s1+0x22` destination state at the same
+transfer row. The exact pointer is not yet comparable across runtimes without
+normalizing the voice-list base.
+
+What this rules out: H-CoverageInvalid for the fixed route, an absent port
+transfer path, an absent retail transfer path, and a zero-denominator
+explanation in the qualified hangar cell. It does not rule out H-BranchState,
+H-Mixed, or allocator-layout effects, and it authorizes no key-on or audio
+mitigation.
+
+ORIGIN: no guest writer, host writer, value, guard, skip, restore, default, or
+route behavior changed; this session added observation-only diagnostics and
+driver/oracle commands.
+
+### Next
+
+Complete the oracle-side full-word/state join described in
+`scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
