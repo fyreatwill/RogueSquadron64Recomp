@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2259 (2026-08-24); behavioral and source evidence is
-current through s2259, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2259 remain in
+Maintained in Session 2260 (2026-08-24); behavioral and source evidence is
+current through s2260, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2260 remain in
 the append-only ledger.
 
 ## Current state
@@ -100,6 +100,23 @@ the append-only ledger.
   paired output capture, but does not prove two-process load is the sole
   cause or attribute image output. It is single-source port evidence; no
   runtime behavior or default changed.
+- s2260's first same-build image/silent pair reproduced the target route in
+  both arms, but omitted `ROGUESQ_LOG_AUDIO_RETURN=1`; the audio route
+  identity was therefore disabled and its zero stage-row result is
+  measurement-invalid for output attribution. The fixed repeat added only
+  that route-identity gate and kept task-contract/ABI/DMA/PCM tracing off.
+  Both arms passed startup, one `[missing-func]`, title
+  `1024 @ 0x00790400`, and two hangar `512 @ 0x006AB400` transitions. The
+  image arm produced 3,448 title stage rows and 2,201 first-hangar stage
+  rows; all were stage-only, with zero nonzero title rows and two nonzero
+  hangar rows (`dest=0x168E50`/`0x169150`, `len=0x300`,
+  `fnv=0x60F910DE`/`0x7B70923A`, `nz=621`/`639`). The silent arm produced
+  zero target stage rows. The image arm ended at the known aligned-ROM
+  abort and the silent arm at the known post-hangar
+  `updateHangarBayScene+76432` crash, both after target qualification. This
+  selects H-ImageStageIngressPresent at stage-presence scope, single-source
+  port evidence; source/consumer attribution remains open. No runtime or
+  default changed.
 - s2246's two full field348-candidate captures both passed the 640 route and
   one `[missing-func]` control but crashed before title `1024` or hangar `512`:
   the first was `fillSampleStreamRange+8136` with last guest PC
@@ -380,9 +397,19 @@ Closed investigations are not active work items. The sequence is monotonic.
   image/output table. s2258 then ran the reduced image/silent pair and both
   arms failed at the same pre-title `cutsceneDispatchSlotsByFlag+10804` SIGBUS
   after the controls, so reduced tracing alone did not qualify the output
-  table. The next discriminator is a single reduced-trace silent arm, which
-  separates two-process load from an intrinsic reduced-route failure. Do not
-  promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
+  table. s2259 qualified the single reduced silent control through title and
+  two hangar transitions, separating pair-load instability from an intrinsic
+  single-arm reduced-route failure. s2260's first pair omitted the
+  `ROGUESQ_LOG_AUDIO_RETURN=1` route-identity gate, so its zero stage rows are
+  measurement-invalid. The fixed pair added only that gate: both arms
+  qualified title and two hangar transitions; the image arm emitted 3,448
+  title and 2,201 first-hangar stage rows, all stage-only, with two nonzero
+  hangar rows, while the silent arm emitted none. This selects
+  H-ImageStageIngressPresent at stage-presence scope, single-source port
+  evidence, and leaves source/consumer attribution open. The next
+  discriminator adds `ROGUESQ_LOG_PCM_BOUNDARY=1` to the same audio-return
+  pair while keeping task-contract/ABI/DMA and host-boundary tracing off. Do
+  not promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -536,6 +563,20 @@ scope and removes an intrinsic single-arm reduced-route failure as the
 explanation for s2258; it does not establish pair-load causality or close
 the image output contract. The next comparison returns to the same-build
 image-versus-silent table.
+
+s2260's first image-versus-silent pair reached the target route but omitted
+`ROGUESQ_LOG_AUDIO_RETURN=1`. The route identity was therefore disabled, so
+its zero image-stage rows were a gate failure in the measurement, not output
+evidence. The fixed repeat added that gate without task-contract/ABI/DMA/PCM
+tracing. Both arms reached title and two hangar transitions with the positive
+controls. The image arm emitted 3,448 title and 2,201 first-hangar stage rows;
+all were stage-only, title had zero nonzero rows, and hangar had two nonzero
+rows (`dest=0x168E50`/`0x169150`, `len=0x300`, `nz=621`/`639`). The silent arm
+emitted no target stage rows. This selects H-ImageStageIngressPresent at
+stage-presence scope, single-source port evidence; it does not identify a
+PCM source/consumer join or authorize a default, writeback, consumer, slot,
+gate, guard, or task change. The next unit adds only phase-scoped PCM-boundary
+logging to the same audio-return pair.
 
 s2236's port source audit passed the target-route, ABI, DMA, and PCM controls.
 At both target origins, `field348 & 0x007FFFFF` was valid but the exact
@@ -765,6 +806,13 @@ remain in the append-only ledger. Operationally:
   failed before target, but the single-arm run shows that pair load or another
   same-run interaction remains open; it does not authorize an image default,
   output writeback, consumer, slot, gate, or guard change.
+- s2260's first pair appeared to reproduce the prior image-stage null, but the
+  source gate showed that `ROGUESQ_LOG_AUDIO_RETURN` was absent and the route
+  identity never armed; the null was therefore a measurement defect. The
+  fixed repeat qualified both arms and produced image-stage rows in the image
+  arm but none in the silent arm, superseding the invalid null only at
+  stage-presence scope. The stage rows were still stage-only, so no
+  source/consumer, writeback, or default conclusion follows.
 - s2246–s2247 treated repeated instrumented image-arm failures as a route-
   stability blocker because no same-run target control qualified. s2248's
   concurrent silent-stub arm reached title and hangar while the image arm
@@ -818,7 +866,7 @@ remain in the append-only ledger. Operationally:
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2258 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2260 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

@@ -106506,3 +106506,55 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2260 (2026-08-24) — qualified image-stage ingress with the route gate
+
+Ran the prescribed same-build concurrent image+C88=`0` / silent+C88=`0`
+pair with the image arm first, then the silent arm one second later. The
+first attempt used the reduced B40/route-state trace set but omitted
+`ROGUESQ_LOG_AUDIO_RETURN=1`. Both arms reached the target route, but the
+source gate showed that the audio route identity was disabled, so its zero
+image-stage rows were measurement-invalid rather than an output null.
+
+The unchanged Debug target rebuilt successfully with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`.
+The invalid-attribution driver logs were
+`scratch/agent/s2260_image_c88_0_reduced_driver.log` and
+`scratch/agent/s2260_silent_c88_0_reduced_driver.log`; the fixed driver logs
+were `scratch/agent/s2260_image_c88_0_audio_return_driver.log` and
+`scratch/agent/s2260_silent_c88_0_audio_return_driver.log`.
+
+The fixed repeat added only `ROGUESQ_LOG_AUDIO_RETURN=1` and kept
+task-contract/ABI/DMA/PCM and host-boundary tracing off. The image and silent
+arms each passed startup, one `[missing-func]`, title
+`1024 @ 0x00790400`, and two hangar `512 @ 0x006AB400` transitions. The image
+driver later ended at the known aligned-ROM `do_rom_read` abort with
+last-guest-pc `0x80001B08`; the silent driver ended at the known post-hangar
+`updateHangarBayScene+76432` crash with last-guest-pc `0x800AC8C0`. Both
+terminal events occurred after target qualification.
+
+The valid image arm emitted 3,448 target stage rows at title phase 8 and
+2,201 at first hangar phase 10. All rows were `stage-only`; title had zero
+nonzero rows, while hangar had two nonzero rows:
+`dest=0x168E50`, `len=0x300`, `stage_fnv=0x60F910DE`, `stage_nz=621`, and
+`dest=0x169150`, `len=0x300`, `stage_fnv=0x7B70923A`, `stage_nz=639`.
+The silent arm emitted zero target image-stage rows. The full same-run table
+therefore selects H-ImageStageIngressPresent at stage-presence scope: the
+image arm reaches the stage hook and the silent control does not. It does not
+identify a PCM source/consumer join, writeback edge, or legitimate/default
+behavior change. This is single-source port evidence; the route controls and
+the independent retail writer line remain separate evidence.
+
+This rules out only the stage-presence null at the measured target scope. It
+does not rule out a stage-to-PCM contract gap, and it does not authorize a
+writeback, consumer, slot, gate, guard, or default change. The next unit adds
+only `ROGUESQ_LOG_PCM_BOUNDARY=1` to the same `ROGUESQ_LOG_AUDIO_RETURN=1`
+pair to test exact destination/length/FNV/order joins.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.
