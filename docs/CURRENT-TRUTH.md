@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2236 (2026-08-23); behavioral and source evidence is
-current through s2236, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2236 remain in
+Maintained in Session 2237 (2026-08-23); behavioral and source evidence is
+current through s2237, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2237 remain in
 the append-only ledger.
 
 ## Current state
@@ -70,6 +70,15 @@ the append-only ledger.
   generated DMA payloads were also all zero. This selects H-ImageInputZero at
   the measured port boundary, single-source evidence; no runtime default or
   contract behavior changes.
+- s2237's retail-oracle writer audit passed the whole-RDRAM positive control
+  (`10000` callbacks), reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and showed writes to both exact source spans: `13,824`
+  writes at `0x178C80:0x178E00` and `1,058` at `0x1797B0:0x179930`.
+  Post-store samples were nonzero in both spans, with snapshots of 71 and 82
+  nonzero bytes (`fnv=0x56048946` and `0xBD529643`) and writer-PC
+  histograms. This selects H-RetailField348Writer over the no-writer and
+  one-origin hypotheses at this scope; it is independent retail evidence and
+  does not yet identify the port-side writer or ordering edge.
 - s2232's same-build port A/B reached the target route, title, and hangar in
   both arms. The stub produced 3,366 ABI rows with zero DMEM changes, zero
   DMA rows, and `break_pc=0`; the image produced 3,302 ABI rows, all with
@@ -109,11 +118,11 @@ Closed investigations are not active work items. The sequence is monotonic.
   retry selected H-PortContractGap, and s2236 selected H-ImageInputZero: the
   image arm changed DMEM and completed, but the valid `field348` source span,
   stage-0/1 DMEM inputs, and stage-2/3 generated DMA payloads were all zero.
-  The next unit is one retail-oracle writer audit for the two exact masked
-  `field348` source spans, with a same-run whole-RDRAM positive control, to
-  determine whether retail populates those spans and whether the two origins
-  differ. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a writeback/consumer
-  guard.
+  s2237 independently selected H-RetailField348Writer: retail populates both
+  exact source spans. The next unit is one phase-gated port writer audit for
+  those spans, joining guest-store PC/order/value data to the existing image
+  stage rows. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
+  writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur
    at every transfer PC in both buckets. The next useful question is whether
@@ -193,6 +202,18 @@ At both target origins, `field348 & 0x007FFFFF` was valid but the exact
 stage-2/3 generated DMA payloads were all zero. This selects H-ImageInputZero
 over H-ImageIngressMissing and H-ImageTransformLoss at the measured port
 boundary; it is one-source port evidence and does not identify the writer.
+
+s2237's retail oracle independently passed its whole-RDRAM control and both
+target route transitions. The exact physical spans corresponding to the two
+port `field348` values were both written: `0x178C80:0x178E00` had `13,824`
+writes and `0x1797B0:0x179930` had `1,058`; their post-value samples and final
+snapshots were nonzero. Writer-PC histograms were present for both spans,
+including `0x800078EC` in each and the `0x80090F8C`–`0x80091000` task/output
+family in the first. This selects H-RetailField348Writer over
+H-RetailNoField348Writer and H-RetailField348OriginSplit at the exact-watch
+scope.
+It remains single-source retail evidence until joined to a port-side writer
+and ordering table.
 
 s2233's retail oracle passed its whole-RDRAM control, reached the driven 640,
 title, and hangar phases, and wrote the broad `0x166000:0x17A000` span
@@ -344,13 +365,18 @@ remain in the append-only ledger. Operationally:
   and joins. The first attempt is therefore a failed run, not a selected null;
   the retry rules out H-PortNoTargetRoute for its covered scope and selects
   H-PortContractGap instead.
+- s2237 supersedes the exact-span retail no-writer and one-origin hypotheses:
+  both `field348`-derived physical spans had writes, nonzero post-store
+  samples, and writer-PC rows under the same whole-RDRAM and route controls.
+  This does not supersede s2236's port-side zero-source observation; it moves
+  the open boundary to a port writer/order comparison.
 
 ## Evidence ledger summary
 
 History through s1879 is in `PROJECT-OVERVIEW.md` §§33–35; s1880–s1949 is
 §36; M5 archives through s2047 are §§37–38; the late route/fill boundary is
 §39; s2080–s2108 is §40; B40 is §41; s2113–s2158 is §42; s2164–s2197 is
-§43; and s2198–s2226 is §44. Sessions s2227–s2236 remain in the ledger.
+§43; and s2198–s2226 is §44. Sessions s2227–s2237 remain in the ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
 

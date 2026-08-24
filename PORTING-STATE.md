@@ -105559,3 +105559,57 @@ image arm.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-audio-image-contract`.
+
+## Session 2237 (2026-08-23) — audited retail field348 source writers
+
+Ran the planned retail-oracle capture without a port build or runtime change:
+
+```sh
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --secs 180 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  --vi-trace \
+  --watch-write 0x0:0x800000 \
+  --watch-write 0x178C80:0x178E00 \
+  --watch-write 0x1797B0:0x179930 \
+  --first-watch 0 \
+  --pc-hist-watch 1 --pc-hist-watch 2 \
+  --post-value-watch 1 --post-value-watch 2 \
+  > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2237_retail_field348_oracle.log 2>&1
+```
+
+The run exited 0. The whole-RDRAM positive control reached 10,000 callbacks
+and was removed. The VI trace reached title `1024 @ 0x00790400` at the
+640-to-1024 transition and hangar `512 @ 0x006AB400` after the 1024-to-512
+transition. Both exact physical spans corresponding to the port's observed
+`field348` values were written:
+
+```text
+watch 1 0x178C80:0x178E00  writes=13824  post_samples=267 unique=64 overflow=53  snapshot_nonzero=71  fnv=0x56048946
+watch 2 0x1797B0:0x179930  writes=1058   post_samples=256 unique=64 overflow=120 snapshot_nonzero=82  fnv=0xBD529643
+```
+
+Writer-PC histograms fired for both spans. Watch 1 included
+`0x800078EC` (`384` stores) and the `0x80090F8C`–`0x80091000` family
+(`426` each for the principal rows); watch 2 included `0x800078EC`
+(`768` stores), `0x80007670` (`172`), and the `0x8001E2C0`/`0x8001FA*`
+family. The post-value PC control for watch 2 had 256 samples, 189 nonzero.
+
+This selects H-RetailField348Writer over H-RetailNoField348Writer and
+H-RetailField348OriginSplit at the exact-watch scope, and rules out
+H-RetailNoTargetRoute for this run. It does not explain why the port sees
+zero in the same source spans: the next work unit is a phase-gated port
+writer/order audit joined to the existing image-stage rows. This is
+single-source retail evidence; no port default, task field, writeback, or
+consumer behavior changed.
+
+ORIGIN: no value was suppressed, rewritten, guarded, restored, or otherwise
+changed; this iteration only observed the retail ROM with the oracle.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-image-contract`.
