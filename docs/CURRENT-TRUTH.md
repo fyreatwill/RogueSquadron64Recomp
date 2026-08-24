@@ -3,9 +3,9 @@
 Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the append-only
 ledger remains authoritative for exact commands, counts, and probe rows.
-Maintained in Session 2246 (2026-08-24); behavioral and source evidence is
-current through s2246, with the M5 plan refresh recorded in s2231. The
-s2198–s2226 archive is §44; s2227–s2246 remain in
+Maintained in Session 2247 (2026-08-24); behavioral and source evidence is
+current through s2247, with the M5 plan refresh recorded in s2231. The
+s2198–s2226 archive is §44; s2227–s2247 remain in
 the append-only ledger.
 
 ## Current state
@@ -40,6 +40,15 @@ the append-only ledger.
   route-invalid captures select pre-phase nondeterminism as a measurement
   blocker only; they select no field348 writer hypothesis and change no
   runtime behavior or default.
+- s2247's full five-store census and its fixed low-logging image control both
+  passed the 640 route and one `[missing-func]` control, then crashed before
+  title `1024` or hangar `512`. The census arm died in
+  `fillSampleStreamRange+6736` with last guest PC `0x8000834C`; the control
+  died in `RT64::NativeTarget::copyToRAM` with last guest PC `0x80001F88`.
+  Both had zero target-phase field348/stage/DMA rows. The divergent crash
+  sites do not support a census-logging-only explanation and select only a
+  route-stability blocker; no field348 writer hypothesis or runtime default
+  follows.
 - s2233's fixed retail-oracle capture passed the whole-RDRAM positive control,
   reached the 640 target, title `1024`, and hangar `512`, and recorded
   `6,665,015` writes to physical `0x166000:0x17A000`. It sampled 503
@@ -211,11 +220,13 @@ Closed investigations are not active work items. The sequence is monotonic.
   s2237 independently selected H-RetailField348Writer; s2238–s2240
   established the legitimate port init clear and the missing nonzero
   producer boundary. s2245 qualified both no-log arms through title and
-  hangar, but s2246's instrumented and low-logging attempts were route-invalid
-  before either target. The next unit is one more full field348 producer
-  census attempt with the existing image arm and all writer/callsite/stage
-  controls; a target-reaching run is required before any writer hypothesis
-  can be selected. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
+  hangar, but s2246 and s2247's instrumented/low-logging attempts were
+  route-invalid before either target. The next unit is a same-build,
+  phase-gated image-arm versus silent-stub route comparison with common
+  census logging: a target-reaching image arm resumes the five-store
+  attribution table, while an image/stub split selects an image-arm route
+  defect and two divergent pre-target crashes select shared route
+  nondeterminism. Do not promote `ROGUESQ_AUDIO_UCODE=1` or add a
   writeback/consumer guard.
 2. **M5 key-on tuple contract.** s2230's valid common-bucket table rejects
    exact tuple parity in both directions: port-only and retail-only sets occur

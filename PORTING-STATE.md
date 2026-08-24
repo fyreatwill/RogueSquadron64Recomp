@@ -105960,6 +105960,45 @@ rewritten, guarded, restored, or defaulted.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
 
+## Session 2247 (2026-08-24) — field348 census retry remained route-invalid
+
+Ran the planned qualified field348 producer census with the existing opt-in
+image arm and the complete five-store, memset, writer, task-contract,
+host-boundary, and PCM instrumentation:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_FIELD348_WRITER=1 ROGUESQ_LOG_M5_FIELD348_MEMSET=1 ROGUESQ_LOG_M5_FIELD348_CANDIDATES=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_PCM_BOUNDARY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2247_field348_producers_retry 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2247_field348_producers_retry_driver.log 2>&1
+```
+
+The census arm passed the 640 route at origin `0x00696100` and emitted one
+`[missing-func]` marker, but crashed before title or hangar in
+`fillSampleStreamRange+6736` with last guest PC `0x8000834c`. It therefore
+produced zero target-phase field348, image-stage, and image-DMA rows and
+cannot select H-PortWriterPopulates, H-PortWriterZero,
+H-PortWriterWrongDestination, or H-PortWriterAbsent.
+
+As the required fixed control, ran the same image arm with the census
+logging removed:
+
+```sh
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2247_field348_producers_control 30 12 > /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s2247_field348_producers_control_driver.log 2>&1
+```
+
+The control also passed 640 and one `[missing-func]` marker, then crashed
+before 1024 in `RT64::NativeTarget::copyToRAM` with last guest PC
+`0x80001f88`. Both route-invalid captures had zero target rows. The
+different native crash sites do not support a census-logging-only
+explanation; this iteration selects a pre-phase route-stability blocker, not
+a field348 writer hypothesis. No runtime behavior or default changed.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
 ## Session 2246 (2026-08-24) — field348 producer census stopped by pre-phase crashes
 
 Ran the planned qualified field348 producer census with the existing opt-in
