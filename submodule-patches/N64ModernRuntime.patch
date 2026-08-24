@@ -1575,7 +1575,7 @@ index 3198be0..730ca54 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..3e0f01d 100644
+index 149e770..89c25df 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,6 +8,9 @@
@@ -1588,7 +1588,7 @@ index 149e770..3e0f01d 100644
  
  #include "blockingconcurrentqueue.h"
  
-@@ -20,6 +23,243 @@
+@@ -20,6 +23,333 @@
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
@@ -1661,6 +1661,15 @@ index 149e770..3e0f01d 100644
 +    return enabled;
 +}
 +
++bool vi_parity_scheduler_log_enabled() {
++    static const bool enabled = [] {
++        const char* all = std::getenv("ROGUESQ_LOG_ALL");
++        const char* specific = std::getenv("ROGUESQ_LOG_VI_PARITY_SCHEDULER");
++        return (all && *all && *all != '0') || (specific && *specific && *specific != '0');
++    }();
++    return enabled;
++}
++
 +struct ViContextPortTrace {
 +    uint32_t all_width_prefix_rows = 0;
 +    uint32_t phase_ordinal = 0;
@@ -1676,6 +1685,18 @@ index 149e770..3e0f01d 100644
 +};
 +
 +ViContextPortTrace vi_context_port_trace;
++
++struct ViParitySchedulerTrace {
++    uint32_t all_width_prefix_rows = 0;
++    uint32_t rows = 0;
++    uint32_t overflow = 0;
++    uint32_t skipped = 0;
++    uint64_t max_delta = 0;
++    uint32_t origin_field[6][2] = {};
++    uint32_t summaries = 0;
++};
++
++ViParitySchedulerTrace vi_parity_scheduler_trace;
 +
 +const char* vi_context_port_arm() {
 +    if (vi_current_reg_from_total_vis_enabled() && vi_field_from_current_reg_enabled()) {
@@ -1803,6 +1824,75 @@ index 149e770..3e0f01d 100644
 +    }
 +}
 +
++void log_vi_parity_scheduler_summary() {
++    if (!vi_parity_scheduler_log_enabled()) return;
++    const ViParitySchedulerTrace& trace = vi_parity_scheduler_trace;
++    std::fprintf(stderr,
++        "[vi-parity-scheduler-summary] arm=%s rows=%u overflow=%u prefix=%u "
++        "skipped=%u max_delta=%" PRIu64 " "
++        "a500_f0=%u a500_f1=%u 5d4500_f0=%u 5d4500_f1=%u "
++        "6aa00_f0=%u 6aa00_f1=%u first_f0=%u first_f1=%u "
++        "second_f0=%u second_f1=%u other_f0=%u other_f1=%u\n",
++        vi_context_port_arm(), trace.rows, trace.overflow,
++        trace.all_width_prefix_rows, trace.skipped, trace.max_delta,
++        trace.origin_field[0][0], trace.origin_field[0][1],
++        trace.origin_field[1][0], trace.origin_field[1][1],
++        trace.origin_field[2][0], trace.origin_field[2][1],
++        trace.origin_field[3][0], trace.origin_field[3][1],
++        trace.origin_field[4][0], trace.origin_field[4][1],
++        trace.origin_field[5][0], trace.origin_field[5][1]);
++    std::fflush(stderr);
++}
++
++void log_vi_parity_scheduler_commit(uint64_t callback_ordinal,
++                                    uint64_t current_total_vis,
++                                    uint64_t delta_total_vis,
++                                    uint32_t selected_field,
++                                    uint32_t current_line_bit,
++                                    uint32_t committed_origin,
++                                    uint32_t width) {
++    if (!vi_parity_scheduler_log_enabled() || callback_ordinal == 0) return;
++
++    ViParitySchedulerTrace& trace = vi_parity_scheduler_trace;
++    if (trace.all_width_prefix_rows < 8) {
++        const uint32_t prefix = trace.all_width_prefix_rows++;
++        std::fprintf(stderr,
++            "[vi-parity-scheduler-control] arm=%s prefix=%u callback=%" PRIu64
++            " total_vis=%" PRIu64 " delta=%" PRIu64 " width=%u\n",
++            vi_context_port_arm(), prefix, callback_ordinal, current_total_vis,
++            delta_total_vis, width);
++        std::fflush(stderr);
++    }
++
++    if (width != 640) return;
++    if (trace.rows >= 512) {
++        trace.overflow++;
++        return;
++    }
++
++    const uint32_t row = trace.rows++;
++    const size_t bucket = vi_context_port_origin_bucket(committed_origin);
++    if (selected_field < 2) trace.origin_field[bucket][selected_field]++;
++    if (delta_total_vis > 1) trace.skipped++;
++    if (delta_total_vis > trace.max_delta) trace.max_delta = delta_total_vis;
++
++    std::fprintf(stderr,
++        "[vi-parity-scheduler] arm=%s row=%u callback=%" PRIu64
++        " callback_parity=%u total_vis=%" PRIu64 " total_parity=%u"
++        " delta=%" PRIu64 " field=%u current_line=%u origin=0x%08X\n",
++        vi_context_port_arm(), row, callback_ordinal,
++        static_cast<uint32_t>(callback_ordinal & 1u), current_total_vis,
++        static_cast<uint32_t>(current_total_vis & 1u), delta_total_vis,
++        selected_field, current_line_bit & 1u, committed_origin);
++    std::fflush(stderr);
++
++    if ((trace.rows == 64 || trace.rows == 128 || trace.rows == 192 ||
++         trace.rows == 256 || trace.rows == 512) && trace.summaries < 5) {
++        trace.summaries++;
++        log_vi_parity_scheduler_summary();
++    }
++}
++
 +std::atomic<uint32_t> event_wiring_reg_rows{0};
 +std::atomic<uint32_t> event_wiring_sp_rows{0};
 +std::atomic<uint32_t> event_wiring_dp_rows{0};
@@ -1832,7 +1922,7 @@ index 149e770..3e0f01d 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -30,6 +270,7 @@ struct SpTaskAction {
+@@ -30,6 +360,7 @@ struct SpTaskAction {
  
  struct ScreenUpdateAction {
      ultramodern::renderer::ViRegs regs;
@@ -1840,7 +1930,7 @@ index 149e770..3e0f01d 100644
  };
  
  struct UpdateConfigAction {
-@@ -39,6 +280,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
+@@ -39,6 +370,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
  
  struct ViState {
      const OSViMode* mode;
@@ -1848,7 +1938,13 @@ index 149e770..3e0f01d 100644
      PTR(void) framebuffer;
      PTR(OSMesg) mq;
      OSMesg msg;
-@@ -69,7 +311,10 @@ static struct {
+@@ -65,11 +397,15 @@ static struct {
+         ViState* get_cur_state() {
+             return &states[cur_state];
+         }
+-        void update_vi() {
++        void update_vi(uint64_t callback_ordinal, uint64_t current_total_vis,
++                       uint64_t delta_total_vis) {
              ViState* next_state = get_next_state();
              const OSViMode* next_mode = next_state->mode;
              const OSViCommonRegs* common_regs = &next_mode->comRegs;
@@ -1860,7 +1956,7 @@ index 149e770..3e0f01d 100644
              PTR(void) framebuffer = osVirtualToPhysical(next_state->framebuffer);
              PTR(void) origin = framebuffer + field_regs->origin;
  
-@@ -85,6 +330,13 @@ static struct {
+@@ -85,6 +421,17 @@ static struct {
                  origin = framebuffer;
              }
  
@@ -1870,11 +1966,15 @@ index 149e770..3e0f01d 100644
 +                static_cast<uint32_t>(framebuffer), common_regs->width,
 +                next_mode, static_cast<uint32_t>(origin),
 +                regs.VI_V_CURRENT_LINE_REG & 1u);
++            log_vi_parity_scheduler_commit(
++                callback_ordinal, current_total_vis, delta_total_vis,
++                selected_field, regs.VI_V_CURRENT_LINE_REG & 1u,
++                static_cast<uint32_t>(origin), common_regs->width);
 +
              // TODO implement osViFade
  
              // Update VI registers.
-@@ -101,7 +353,21 @@ static struct {
+@@ -101,7 +448,21 @@ static struct {
              regs.VI_X_SCALE_REG = common_regs->xScale; // TODO implement osViSetXScale
              regs.VI_Y_SCALE_REG = yScale; // TODO implement osViSetYScale
              regs.VI_STATUS_REG = next_state->control;
@@ -1897,7 +1997,7 @@ index 149e770..3e0f01d 100644
              // Swap VI states.
              cur_state ^= 1;
              *get_next_state() = *get_cur_state();
-@@ -140,6 +406,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +501,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -1906,7 +2006,7 @@ index 149e770..3e0f01d 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -165,6 +433,13 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
+@@ -165,9 +528,18 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
      next_state->mq = mq_;
      next_state->msg = msg;
      next_state->retrace_count = retrace_count;
@@ -1920,7 +2020,31 @@ index 149e770..3e0f01d 100644
  }
  
  uint64_t total_vis = 0;
-@@ -216,9 +491,20 @@ void vi_thread_func() {
++uint64_t vi_game_callback_ordinal = 0;
++uint64_t vi_previous_game_total_vis = 0;
+ 
+ 
+ extern std::atomic_bool exited;
+@@ -209,19 +581,41 @@ void vi_thread_func() {
+         }
+         total_vis = new_total_vis;
+ 
++        const bool game_started = ultramodern::is_game_started();
++        uint64_t callback_ordinal = 0;
++        uint64_t callback_delta = 0;
++        if (game_started) {
++            callback_ordinal = ++vi_game_callback_ordinal;
++            callback_delta = vi_previous_game_total_vis == 0
++                ? 0
++                : total_vis - vi_previous_game_total_vis;
++            vi_previous_game_total_vis = total_vis;
++        }
++
+         // If the game hasn't started yet, set a dummy VI mode and origin.
+-        if (!ultramodern::is_game_started()) {
++        if (!game_started) {
+             static bool odd = false;
+             set_dummy_vi(odd);
              odd = !odd;
          }
  
@@ -1941,8 +2065,12 @@ index 149e770..3e0f01d 100644
 +        });
  
          // Update VI registers and swap VI modes.
-         events_context.vi.update_vi();
-@@ -231,6 +517,17 @@ void vi_thread_func() {
+-        events_context.vi.update_vi();
++        events_context.vi.update_vi(callback_ordinal, total_vis, callback_delta);
+ 
+         // If the game has started, handle sending VI and AI events.
+         if (ultramodern::is_game_started()) {
+@@ -231,6 +625,17 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -1960,7 +2088,7 @@ index 149e770..3e0f01d 100644
                      // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
                      // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
                      ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
-@@ -252,12 +549,14 @@ void vi_thread_func() {
+@@ -252,12 +657,14 @@ void vi_thread_func() {
  void sp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
@@ -1975,7 +2103,7 @@ index 149e770..3e0f01d 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -281,13 +580,23 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -281,13 +688,23 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
          // pointer's contents (DMA, etc).
          const uint32_t task_type = task->t.type;
  
@@ -2000,7 +2128,7 @@ index 149e770..3e0f01d 100644
  
          (void)task_type;
      }
-@@ -394,6 +703,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -394,6 +811,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
              }
              else if (const auto* screen_update_action = std::get_if<ScreenUpdateAction>(&action)) {
                  events_context.vi.update_screen_regs = screen_update_action->regs;
@@ -2011,7 +2139,7 @@ index 149e770..3e0f01d 100644
                  renderer_context->update_screen();
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
-@@ -456,6 +769,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +877,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -2019,7 +2147,7 @@ index 149e770..3e0f01d 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -473,6 +787,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +895,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;

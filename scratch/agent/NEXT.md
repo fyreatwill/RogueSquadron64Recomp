@@ -1,43 +1,45 @@
-# NEXT work unit (s2216) — measure callback versus retrace parity at skipped host VIs
+# NEXT work unit (s2217) — reconcile retail audio gate and task boundaries
 
-HYPOTHESIS-ID: m5-a1-natural-current-reg-publication
+HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation
 
 ## Work unit
 
-Run the Rice-driven retail preflight first. Then add one opt-in scheduler table
-to `lib/N64ModernRuntime/ultramodern/src/events.cpp`, gated by
-`ROGUESQ_LOG_VI_PARITY_SCHEDULER=1`. For the first 512 game-started width-640
-VI callbacks, record callback ordinal, `total_vis`, delta from the previous
-`total_vis`, selected field, current-line bit, and committed origin; summarize
-the count of `delta_total_vis > 1` rows and the origin/field mapping. Do not
-change VI behavior in this unit. Export the submodule patch and build once;
-run control, existing post-commit current-register, and the s2215
-retrace-parity arm concurrently from that binary.
+Execute step 1 of `docs/M5-AUDIO-PLAN.md` only. Run the Rice-driven retail
+oracle first, with the whole-RDRAM positive control before the physical watches
+for the MusyX gate (`0xA0F50`), audio countdown/status words (`0x14998A` and
+`0x14974C`), and the known audio-task/AI callsites. Then run one existing port
+boot/title route with the passive M5 diagnostics and silent-audio control. Do
+not edit generated code, change a gate, enable the image arm, or build in this
+unit.
 
 Competing hypotheses and the single discriminator:
 
-- H-RetraceParity: after a skipped host VI, `total_vis & 1` is the parity that
-  follows the retail origin/field relation; the retrace-parity arm agrees with
-  the total-vis bit while the per-callback arm diverges.
-- H-PerCallbackToggle: field advances are tied to delivered VI callbacks; on
-  rows with `delta_total_vis > 1`, the post-commit arm's callback parity agrees
-  with retail while total-vis parity diverges.
-- H-NoSkippedVI: no width-640 row has `delta_total_vis > 1`, so this run cannot
-  distinguish the two cadence hypotheses and must leave the publisher open.
-- H-Coverage: the scheduler table lacks its positive prefix, 512 width-640
-  rows, or has overflow/crash markers, so the comparison is unevaluable.
+- H-RetailGateWriters: retail writes `0xA0F50` from the named init/display
+  PCs with a legitimate zero-to-one transition; the port's existing
+  `[m5-gate]` rows show the same value contract and downstream task/slot
+  activity.
+- H-RetailAudioCountdown: retail writes `0x14998A` and/or `0x14974C` from
+  identifiable worker/wait PCs during the gated route; those writers, not a
+  decoder change, are the next audio contract boundary.
+- H-RetailTaskBoundary: retail executes the known audio-task/AI callsites in
+  the same title/hangar phase and carries nonzero task fields; a live gate with
+  no task/AI rows selects task admission rather than the RSP image.
+- H-Coverage: the whole-RDRAM control, 640/hangar phase, or watched execution
+  controls are absent, so the narrow nulls are unevaluable and no audio change
+  is authorized.
 
-The one table is keyed by arm and committed 640 origin and records callback
-ordinal, `total_vis`, delta, selected field, current-line bit, and commit
-origin. Require the retail whole-RDRAM control, joined retail rows at both
-target origins with zero drops/overflow, one port prefix per arm, 512
-width-640 rows per arm, zero port overflow, and an explicit skipped-VI count.
-Classify only from the same-run table. Do not enable any diagnostic arm by
-default.
+The discriminator is one phase-keyed table of retail writer/execution PC,
+physical target, post-store value or watched GPRs, plus the port's existing
+`m5-gate`, audio-task dispatch/return, slot, and PCM rows. H-RetailGateWriters
+requires the whole-RDRAM control and named writer/value transitions;
+H-RetailAudioCountdown requires a positive countdown/status writer; and
+H-RetailTaskBoundary requires both task/AI execution and nonzero task fields.
+Any missing positive control selects H-Coverage. A null without the control is
+not evidence.
 
 ## Exact commands
 
-Retail ground truth, before the port edit:
+Retail ground truth, before any port change:
 
 ~~~
 tools/oracle/build/rs64_oracle \
@@ -46,57 +48,38 @@ tools/oracle/build/rs64_oracle \
   --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
   --rsp /opt/homebrew/lib/mupen64plus/mupen64plus-rsp-hle.dylib \
   --input /opt/homebrew/lib/mupen64plus/mupen64plus-input-sdl.dylib \
-  --secs 10 --hit-cap 10000 --watch-write 0:0x800000 \
-  --watch-pc 0x80035550 --vi-context-table-pc 0x80035550 \
+  --secs 70 --hit-cap 10000 \
+  --watch-write 0x0:0x800000 \
+  --watch-write 0xA0F50:0xA0F54 \
+  --watch-write 0x14998A:0x14998C \
+  --watch-write 0x14974C:0x149750 \
+  --watch-pc 0x8009173C --watch-pc 0x80091758 --watch-pc 0x80029EF4 \
+  --first-watch 0 --detail-watch 1 --pc-hist-watch 1 \
   --pc-phase-log 0x0066A500 --pc-phase-log 0x005D4500 \
   --pc-phase-log 0x0066AA00 --pc-phase-log 0x00696100 \
   --pc-phase-log 0x00696600 --vi-trace \
-  --press 6:start --hold-ms 200 > scratch/agent/s2216_retail_vi_parity_scheduler.log 2>&1
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  --hold-ms 200 > scratch/agent/s2217_retail_audio_ground_truth.log 2>&1
 ~~~
 
-After the table is added and exported, build once and run all three arms
-concurrently:
+Port existing-route control, no build and SIGKILL watchdog:
 
 ~~~
-./submodule-patches/export.sh
-cmake --build build -j8
 cd build
 env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
-  ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_VI_CONTEXT_PORT=1 \
-  ROGUESQ_LOG_VI_PARITY_SCHEDULER=1 \
-  ROGUESQ_VI_ALTERNATE_FIELDS=0 ROGUESQ_VI_FIELD_FROM_CURRENT_REG=0 \
-  ROGUESQ_VI_CURRENT_REG_TOGGLE_BEFORE_SCREEN=0 \
-  ROGUESQ_VI_CURRENT_REG_FROM_TOTAL_VIS=0 ./RogueSquadron64Recomp \
-  > ../scratch/agent/s2216_port_vi_parity_scheduler_control.log 2>&1 & p0=$!
-env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
-  ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_VI_CONTEXT_PORT=1 \
-  ROGUESQ_LOG_VI_PARITY_SCHEDULER=1 \
-  ROGUESQ_VI_ALTERNATE_FIELDS=0 ROGUESQ_VI_FIELD_FROM_CURRENT_REG=1 \
-  ROGUESQ_VI_CURRENT_REG_TOGGLE_BEFORE_SCREEN=0 \
-  ROGUESQ_VI_CURRENT_REG_FROM_TOTAL_VIS=0 ./RogueSquadron64Recomp \
-  > ../scratch/agent/s2216_port_vi_parity_scheduler_commit.log 2>&1 & p1=$!
-env ROGUESQ_AUDIO_UCODE=0 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
-  ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_VI_CONTEXT_PORT=1 \
-  ROGUESQ_LOG_VI_PARITY_SCHEDULER=1 \
-  ROGUESQ_VI_ALTERNATE_FIELDS=0 ROGUESQ_VI_FIELD_FROM_CURRENT_REG=1 \
-  ROGUESQ_VI_CURRENT_REG_TOGGLE_BEFORE_SCREEN=0 \
-  ROGUESQ_VI_CURRENT_REG_FROM_TOTAL_VIS=1 ./RogueSquadron64Recomp \
-  > ../scratch/agent/s2216_port_vi_parity_scheduler_total_vis.log 2>&1 & p2=$!
-for i in {1..60}; do
-  alive=0
-  for p in "$p0" "$p1" "$p2"; do
-    kill -0 "$p" 2>/dev/null && alive=1
-  done
-  [ "$alive" -eq 0 ] && break
+  ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 \
+  ROGUESQ_LOG_PCM_SANITY=1 ./RogueSquadron64Recomp \
+  > ../scratch/agent/s2217_port_audio_ground_truth.log 2>&1 & p=$!
+for i in {1..30}; do
+  kill -0 "$p" 2>/dev/null || break
   sleep 1
 done
-kill -9 "$p0" "$p1" "$p2" 2>/dev/null || true
-wait "$p0" 2>/dev/null || true
-wait "$p1" 2>/dev/null || true
-wait "$p2" 2>/dev/null || true
+kill -9 "$p" 2>/dev/null || true
+wait "$p" 2>/dev/null || true
 cd ..
 ~~~
 
-Inspect only each positive prefix, scheduler-table rows/summary, `[phase]`
-origin rows, `[vi-context-port]` selected-field/current-line rows, commit
-origins, overflow, and crash markers.
+Inspect only whole-RDRAM count, narrow-watch writer PCs/values, watched task/AI
+rows, 640 and hangar VI rows, `[m5-gate]`, audio dispatch/return, slot and PCM
+controls, and crash/abort markers. Do not add an instrument until the oracle
+control and target writer identities are classified.

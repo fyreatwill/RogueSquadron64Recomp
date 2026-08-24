@@ -104481,6 +104481,46 @@ added and ran an opt-in VI parity diagnostic only.
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-natural-current-reg-publication`.
 
+## Session 2216 (2026-08-23) — measured skipped-VI cadence at the port boundary
+
+Ran the independent Rice retail preflight before editing the port. The
+whole-RDRAM positive-control watch reached 10,000 writes; the execution watch
+reached 567 rows; and the `__osViNext` context join completed 469 rows with
+zero pending, dropped, or overflowed rows. Retail again reached both target
+640 origins.
+
+Added the opt-in `ROGUESQ_LOG_VI_PARITY_SCHEDULER` table to the existing
+`ViState::update_vi` boundary. Its all-width positive prefix records eight
+game-started callbacks, and its bounded width-640 rows record callback
+ordinal, `total_vis`, delta, both parities, selected field, current-line bit,
+and committed origin. Exported `submodule-patches/N64ModernRuntime.patch` and
+the full target build completed successfully.
+
+Ran control, post-commit current-register, and total-vis arms concurrently
+from that same build. Each arm fired 8/8 scheduler controls and 8/8 existing
+VI-context controls, collected 512 width-640 rows with `overflow=0`, and
+emitted no `[CRASH]` or `[ABORT]` marker. Every scheduler summary reported
+`skipped=0` and `max_delta=1`; a direct row scan found zero
+`delta=[2-9]...` rows in every arm. The control mapping was field 0 throughout
+(first target 136, sibling 0); current-register was field 0/1 256/256
+(targets 68/67); total-vis was 0/1 256/256 (targets 68/68). None of the
+60-second arms reached title or hangar, so this is scoped to the measured
+width-640 prefix.
+
+This is single-source port evidence selecting H-NoSkippedVI for this run. It
+does not distinguish callback ordinal from absolute `total_vis` parity and
+supersedes s2215's H-RetraceParity cadence selection; the dynamic arms remain
+diagnostic-only. It rules out neither cadence source when no host VI was
+skipped. No default, mitigation, task rewrite, or audio dispatch changed.
+
+ORIGIN: no wild value or corruption was suppressed or rewritten; this session
+added and ran an opt-in scheduler diagnostic only.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-audio-ground-truth-reconciliation`.
+
 ## Session 2214 (2026-08-23) — tested VI current-register publication timing
 
 Ran the independent Rice retail preflight before changing the port. The

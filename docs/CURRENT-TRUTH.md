@@ -2,8 +2,8 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger remains
-authoritative for exact commands and probe rows. Maintained in Session 2215
-(2026-08-23); behavioral and source evidence is current through s2215.
+authoritative for exact commands and probe rows. Maintained in Session 2216
+(2026-08-23); behavioral and source evidence is current through s2216.
 
 The detailed s2164–s2197 chain is archived in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §43; s2198–s2206's exact rows remain in
@@ -370,13 +370,32 @@ second ledger.
   H-FieldState and H-Coverage there, and leaves callback-vs-absolute cadence
   unresolved because the run did not record a skipped host VI. The new arm is
   diagnostic-only and does not authorize a default flip.
+- s2216's independent Rice retail preflight passed the whole-RDRAM control
+  (10,000 writes), execution control (567 rows), and joined 469 context rows
+  with zero pending/dropped/overflow rows; retail again reached both target
+  origins. The same-built scheduler table passed its all-width control (8)
+  in control, current-register, and total-vis arms, collected 512 width-640
+  rows per arm with zero overflow and no crash/abort markers, and recorded
+  zero rows with `delta_total_vis > 1` (`max_delta=1` in every arm). This is
+  single-source port evidence selecting H-NoSkippedVI for the measured scope:
+  callback versus `total_vis` cadence remains unevaluable, so s2215's cadence
+  selection is superseded. The dynamic arms remain diagnostic-only and no VI
+  default, audio dispatch, mitigation, or task rewrite changed.
 
 ## Active backlog
 
 The backlog is one monotonic sequence. Closed investigations are not active
 work items.
 
-1. **M5 A1 identify the missing second-origin transition; blocks
+1. **M5 audio de-stubbing — execute the existing plan incrementally.**
+   [`M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md) is the required design doc and its
+   inventory remains authoritative: the silent `M_AUDTASK` stub is default,
+   the Factor 5 image arm is opt-in, and no stock `aspMain` substitution or
+   safety-guard removal is authorized. The next unit is plan step 1:
+   ground-truth/reconciliation for the gate `0x800A0F50`, countdown words
+   `0x8014998A`/`0x8014974C`, and the existing audio-task/AI boundary before
+   adding any new instrument.
+2. **M5 A1 identify the missing second-origin transition; blocks
    default-on.**
    s2190 selected H-PortOriginMismatch at port `0x00696100`, s2191 selected
    H-PortSecondOriginAbsent, and s2192–s2195 showed that broad, grouped,
@@ -438,20 +457,23 @@ work items.
    publisher remains open; keep all knobs diagnostic-only. s2215's total-vis
    arm recovers the same origin-to-field relation and target split as the
    post-commit arm, but its different early-origin counts do not identify
-   whether `total_vis` or callback ordinal is the natural publisher. The next
-   discriminator must capture skipped-host-VI deltas in the same run.
-2. **M5 drain in-loop tick A/B; parked.** s2125 selected
+   whether `total_vis` or callback ordinal is the natural publisher. s2216's
+   batched scheduler table records `delta_total_vis=1` for all 512 width-640
+   rows in all three arms, with zero overflow and positive controls. This
+   single-source port result selects H-NoSkippedVI for that run and leaves
+   cadence parked pending a genuinely new discriminator.
+3. **M5 drain in-loop tick A/B; parked.** s2125 selected
    `H-PumpIrrelevant` only at route scope. s2126–s2128 failed to put both
    drain arms in the target comparison despite positive controls. Resume
    only with a new renderer-recovery or ground-truth discriminator.
-3. **M3 crash work.** Continue only as systematic idiom-class audits with
+4. **M3 crash work.** Continue only as systematic idiom-class audits with
    a named discriminator. The dormant `slotDispatcherIter+872` class has
    7,659 clean hangar calls in its guarded run; no mitigation is authorized.
-4. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+5. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation and consumer-mode H1 by the RT64 census. H3 is unavailable
    because the oracle cannot screenshot the LLE path. Do not repeat the
    `0xD60` scan.
-5. **Generated-symbol renaming sweep; closed.** s2149 closed the two-line
+6. **Generated-symbol renaming sweep; closed.** s2149 closed the two-line
    overlay-move class and s2150 selected `H-LeftoverAllHolds` for leftover
    `fake_func_*` with ELF size `> 0xC`. The remaining generated names are
    the five parked/intentional holds `func_8000040C`, `func_800927B0`,
@@ -626,6 +648,13 @@ remain in the append-only ledger. Operationally:
   The same-run positive-controlled census collected 512 rows with zero
   overflow and found that bit fixed at zero in every origin bucket, so the
   mode descriptor is not the missing field-one source at this scope.
+- s2215's H-RetraceParity selection was believable because the opt-in
+  `total_vis` arm reproduced the target origin split while the control did
+  not. s2216's same-built scheduler table independently records the callback
+  ordinal, `total_vis`, and delta for 512 width-640 rows in all three arms;
+  every delta is 1, so no skipped host VI distinguishes the two cadence
+  sources. The mapping result remains valid, but the cadence selection is
+  superseded and no publisher has been identified.
 
 ## Evidence ledger summary
 
@@ -634,7 +663,7 @@ spin-yield chain is §36; M5 archives through s2047 are §§37–38; the late
 route/fill boundary is §39; s2080–s2108 is §40; B40 is §41; and the
 s2113–s2158 contract/MORT/AI/canary archive is §42. The s2164–s2197
 pointer, failure, image-DMA, writer-parity, and VI-caller archive is §43;
-s2198–s2215 VI-boundary and retail-ground-truth work is recorded in the
+s2198–s2216 VI-boundary and retail-ground-truth work is recorded in the
 ledger.
 Exact commands, counts, failed retries, and session headings remain in
 `PORTING-STATE.md`.
