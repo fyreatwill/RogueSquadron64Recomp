@@ -107078,3 +107078,42 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-keyon-tuple-contract`.
+
+## Session 2273 (2026-08-24) — M5 Step 1 pair was route-invalid
+
+The strategic M5 priority superseded the stale key-on NEXT. I wrote the
+Step 1 competing-hypothesis table and discriminating row to `NEXT.md`, added
+the bounded pair driver
+`scratch/agent/run_s2273_m5_step1_pair.sh`, and rebuilt the unchanged Debug
+target successfully with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`.
+
+The first pair used task/DMA, audio-return, PCM, gate, VI-caller,
+filter/voice, B40, route-state, event, SP, runner, and route controls. The
+silent arm passed one `[missing-func]`, 11 B40 rows, 20 route-state rows,
+and 68 audio-dispatch rows; it reached title `1024 @ 0x00790400` and the
+first 640 target, then crashed in `findOrCreateMaterial` with
+`last-guest-pc=0x8000E29C` before hangar. The image arm was not launched
+because the explicit silent-first hangar gate was absent.
+
+I removed the high-noise VI-caller/filter/gate/event/SP probes while retaining
+the existing task/DMA, audio-return, PCM, B40, route-state, runner, and route
+controls, then ran the fixed recipe. It passed one `[missing-func]`, six B40
+rows, ten route-state rows, and 47 dispatch rows, but stalled after
+the 640 transition at origin `0x00696100` without reaching title or hangar;
+the driver SIGKILLed it and did not launch the image arm. No task/output or
+PCM null from either capture is interpretable because the target window was
+absent. This selects H-RouteInvalid for this iteration and does not advance
+or reject H-AudioDegeneracy, H-ContractGap, or H-MixedPipelines. It rules out
+only treating this pair as an audio comparison and confirms the tested route
+is still load-sensitive.
+
+ORIGIN: this session added a diagnostic driver only; no guest or host value
+was suppressed, rewritten, guarded, restored, or defaulted.
+
+### Next
+
+Use the canonical reduced trace from s2272 for a fresh Step 1 pair; do not
+interpret task/output nulls until both arms pass the title and hangar phase
+controls.
+`HYPOTHESIS-ID: m5-step1-task-output-contract`.

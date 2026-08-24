@@ -5,11 +5,11 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2272 (2026-08-24); behavioral and source evidence is
-current through s2272. This iteration ran an unchanged-build phase-gated
-silent-first/image-second pair; both arms reached title and hangar, and two
-nonzero image rows closed exact source/consumer joins. No runtime change was
-made.
+Maintained in Session 2273 (2026-08-24); behavioral and source evidence is
+current through s2273. This iteration built an unchanged Step 1 audio pair,
+but the heavy-trace arm crashed before hangar and the corrected reduced-trace
+arm stalled at the first 640 target. Neither arm reached the discriminating
+stub/image window; no runtime change was made.
 
 ## Current state
 
@@ -48,6 +48,13 @@ made.
   contract boundary, not permission to change the key-on path.
 - The VI second-origin publisher/cadence is open. Field, current-register,
   timing, and total-`VI` arms recover the split, but none is default-on.
+- s2273's first Step 1 pair was route-invalid: the heavy trace reached title
+  and the first 640 target before `findOrCreateMaterial` crashed at guest PC
+  `0x8000E29C` with one `[missing-func]`, 11 B40 rows, and 20 route-state
+  rows; the corrected reduced trace stalled after the 640 target
+  `0x00696100` with one `[missing-func]`, six B40 rows, and ten route-state
+  rows, then was SIGKILLed. Neither pair arm reached the required hangar
+  control. No audio contract null is interpretable.
 
 ## Latest evidence
 
@@ -189,19 +196,23 @@ made.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
+1. **M5 Step 1 stub/image validation.** Re-run the unchanged pair with the
+   canonical reduced trace that qualified s2272; do not interpret task/output
+   nulls until both arms pass title `1024 @ 0x00790400` and hangar
+   `512 @ 0x006AB400`. Keep `m5-step1-task-output-contract` active.
+2. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
    difference using a new pointer-versus-branch discriminator. No key-on
    return or mitigation change follows from the existing table.
-2. **M5 A1 second-origin transition.** Identify the natural host field
+3. **M5 A1 second-origin transition.** Identify the natural host field
    publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
    remain opt-in.
-3. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
+4. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
-4. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator; the dormant `slotDispatcherIter+872` class has
    thousands of clean guarded hangar calls and no authorized mitigation.
-5. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
+6. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
 
