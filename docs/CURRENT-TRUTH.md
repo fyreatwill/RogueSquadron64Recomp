@@ -5,12 +5,11 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2274 (2026-08-24); behavioral and source evidence is
-current through s2274. This iteration built the unchanged target and ran the
-Step 1 pair twice, first with the existing trace and then with the extra
-thread-resume, OST-writeback, and runner-all logs removed. Both silent arms
-were route-invalid before the expected hangar origin; the image arm never
-launched and no runtime change was made.
+Maintained in Session 2275 (2026-08-24); behavioral and source evidence is
+current through s2275. This iteration built the unchanged target and ran one
+single silent Step 1 control. It reached title, stayed alive in an off-target
+640 phase, and missed the expected hangar origin until the watchdog SIGKILL;
+no runtime change was made.
 
 ## Current state
 
@@ -68,6 +67,14 @@ launched and no runtime change was made.
   263 stub returns, and 51/51 phase-8 PCM source/consumer rows; these are
   route controls only. Both captures are H-RouteInvalid, so no audio/output
   null is interpretable and no image arm ran.
+- s2275's single silent control reached title `1024 @ 0x00790400` at 49.5s,
+  then remained alive through an off-target `640 @ 0x00696100` transition at
+  74.4s and missed `512 @ 0x006AB400` until the 180-second watchdog SIGKILL.
+  It produced one `[missing-func]`, 11 B40 rows, 20 route-state rows, 64
+  audio-dispatch rows, and 51/51 phase-8 PCM source/consumer rows, with no
+  `[CRASH]` or `[ABORT]` marker. This selects H-RouteStall at the tested
+  scope; audio/output nulls remain uninterpretable and the image arm remains
+  unlaunched.
 
 ## Latest evidence
 
@@ -214,27 +221,19 @@ launched and no runtime change was made.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 Step 1 route requalification.** Run one single silent control with
-   the reduced Step 1 probes and a phase-origin watcher that records every
-   512 phase, process death, and crash PC. Treat only
-   `512 @ 0x006AB400` as the hangar gate; the observed `0x00690400` phase is
-   not a target. Use the result to decide whether another staggered
-   silent/image pair is valid. Do not interpret task/output nulls until both
-   arms pass title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`.
-   Keep `m5-step1-task-output-contract` active.
-2. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
+1. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
    difference using a new pointer-versus-branch discriminator. No key-on
    return or mitigation change follows from the existing table.
-3. **M5 A1 second-origin transition.** Identify the natural host field
+2. **M5 A1 second-origin transition.** Identify the natural host field
    publisher and callback-versus-total-`VI` cadence. Diagnostic recovery arms
    remain opt-in.
-4. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
+3. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
-5. **M3 crash work.** Resume only as a systematic idiom-class audit with a
+4. **M3 crash work.** Resume only as a systematic idiom-class audit with a
    named discriminator; the dormant `slotDispatcherIter+872` class has
    thousands of clean guarded hangar calls and no authorized mitigation.
-6. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
+5. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
 
@@ -325,6 +324,11 @@ the append-only ledger. Operationally:
   the earlier result is superseded as an intrinsic arm defect; initial
   pre-target paired contention remains the selected route explanation at this
   recipe scope.
+- s2273–s2275's Step 1 captures were route-invalid before a paired audio/output
+  window. The final single-arm capture stayed alive after title in the
+  off-target 640 phase and was killed by the route watcher, so its PCM and
+  audio nulls do not overturn the qualified s2268/s2272 output evidence or
+  identify an audio writer.
 - s2269's pre-target controls followed by a shared width-640 stall and s2270's
   image-first/silent split are route-invalid observations. They do not make
   the qualified s2268 output tuple disappear or explain the route-load

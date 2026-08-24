@@ -1,60 +1,67 @@
-# NEXT work unit (s2275) — M5 Step 1 route requalification
+# NEXT work unit (s2276) — M5 key-on pointer-versus-branch discriminator
 
-HYPOTHESIS-ID: m5-step1-task-output-contract
+HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator
 
 ## Work unit
 
-Run one single silent-arm control using the reduced Step 1 probes and the
-phase-origin watcher. Enumerate every VI phase, process-death timing, crash
-symbol, guest PC, and route-control count. Do not launch the image arm and do
-not interpret audio/output nulls. Only `512 @ 0x006AB400` is the hangar gate;
-the `512 @ 0x00690400` phase seen in s2274 is off-target.
+Use the existing regeneration-safe key-on census and one qualified port/retail
+comparison to add the smallest pointer-versus-branch witness at all eight
+post-guard transfer sites. Record the existing tuple
+`(v0,s1,a0,a2)` together with the raw pointer operand/source word and the
+branch selector/state word that chose the transfer path. Keep this diagnostic
+only: do not change the key-on return, divide guards, slot stores, audio
+default, or route gates. Use one build and one phase-gated run per arm, with
+both arms prepared before running either.
 
 ## Competing hypotheses and discriminating measurement
 
-- **H-RouteStable:** the silent arm reaches `1024 @ 0x00790400` and then
-  `512 @ 0x006AB400`, remains alive through the post-hangar window, and has
-  the positive route controls. A new staggered pair is permitted.
-- **H-RouteDeathRace:** the expected hangar phase is emitted, but the process
-  dies before the watcher sees it or immediately after it. The phase log and
-  crash/death ordering select a driver/route-gate race, not an audio contract.
-- **H-RouteLoadCrash:** the run reaches only off-target 512/640 phases or dies
-  with a renderer/game crash before `0x006AB400`. This keeps the pair
-  unevaluable and identifies the crash boundary for route-stability work.
-- **H-RouteStall:** the process stays alive until the 180-second pre-hangar
-  deadline without the target origin. This selects a stall/load-sensitivity
-  result and does not authorize a guard or route change.
+- **H-PointerMismatch:** retail-only versus port-only tuple rows share the
+  same branch selector/state but differ in the raw pointer operand or the
+  pointed-to source word. This selects a pointer/data contract boundary.
+- **H-BranchMismatch:** the pointer operand/source word agrees, but the
+  branch selector/state differs at the transfer site. This selects a missing
+  branch-state publisher or predicate boundary.
+- **H-MixedPointerBranch:** both pointer/source and branch selector differ in
+  the same common cells. The next unit must split the two inputs with a
+  second phase-keyed capture; no key-on change is authorized.
+- **H-CoverageInvalid:** either arm misses its title/hangar positive controls,
+  the witness overflows, or the retail whole-RDRAM control does not fire. The
+  tuple result is unevaluable and the route boundary remains the active
+  blocker.
 
-The single discriminating table is:
-`phase_index,width,origin,phase_time,process_alive,death_time,pc_symbol,
-last_guest_pc,audtask_dispatch,audio_return,pcm_source/consumer,
-m5_b40_route,m5_route_state,missing_func,crash,hangar_gate`.
-`1024 @ 0x00790400` and `512 @ 0x006AB400` are positive route controls;
-`512 @ 0x00690400`, any other 640 phase, and the startup `[phase]` rows are
-not target controls. Each outcome above is selected by the target phase plus
-the process/death/crash relation, not by an audio counter.
+The discriminating table is one row per
+`origin,width,transfer_pc,normalized_tuple` with columns
+`port_or_retail,raw_pointer,source_word,branch_selector,branch_state,tuple_count,
+overflow,phase_control,whole_rdram_control,title_gate,hangar_gate`. Equal
+pointer/source with different branch fields selects H-BranchMismatch; equal
+branch fields with different pointer/source selects H-PointerMismatch; both
+different selects H-MixedPointerBranch; missing controls select
+H-CoverageInvalid.
 
 ## Ground-truth prerequisite
 
-No new runtime instrument is being added. The existing retail whole-RDRAM
-watch and writer controls remain the independent ground truth. This is a
-port-side route-validity run only; a null is not evidence about audio.
+Before editing the port census, run the retail oracle's whole-RDRAM positive
+control and the existing key-on target watch in the same phase-gated recipe.
+Only proceed if the whole-RDRAM watch fires at its expected high count and the
+retail title/hangar gates are present; otherwise classify the arm as
+H-CoverageInvalid. The port runtime is not ground truth for the new fields.
 
 ## Build
 
 ```sh
+(cd ../rogue_squadron64 && python3 tools/make_elf.py)
+(cd ../N64Recomp && ./build/N64Recomp rogue_squadron.toml)
+python3 ../N64Recomp/fixup_game_funcs.py
 cmake --build build --config Debug --target RogueSquadron64Recomp -j2
 ```
 
 ## Run
 
 ```sh
-zsh scratch/agent/run_s2275_m5_step1_route_requal.sh s2275_m5_step1_route_requal
+zsh scratch/agent/run_s2276_m5_keyon_pointer_branch.sh s2276_m5_keyon_pointer_branch
 ```
 
-The script launches one silent arm from `build/`, self-watchdogs, SIGKILLs on
-timeout, and writes bounded summaries under
-`scratch/agent/s2275_m5_step1_route_requal/`. If the target phase is
-qualified, the next iteration may construct the staggered image comparison;
-otherwise keep the Step 1 pair unevaluable and pivot to the selected route
-boundary after the third stalled attempt.
+The script must stage both port and retail arms before launch, self-watchdog
+each arm, SIGKILL only after its bounded phase deadline, and write bounded
+summaries under `scratch/agent/s2276_m5_keyon_pointer_branch/`. Do not infer
+audio/output behavior from this unit; it is a key-on contract comparison.

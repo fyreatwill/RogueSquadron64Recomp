@@ -107158,3 +107158,37 @@ Run the single silent route requalification in
 `scratch/agent/run_s2275_m5_step1_route_requal.sh`. Do not interpret
 task/output or PCM nulls until `512 @ 0x006AB400` is observed.
 `HYPOTHESIS-ID: m5-step1-task-output-contract`.
+
+## Session 2275 (2026-08-24) — M5 Step 1 single control selected route stall
+
+The M5 Step 1 route-requalification unit rebuilt the unchanged Debug target
+with `cmake --build build --config Debug --target RogueSquadron64Recomp -j2`;
+the build passed. I ran
+`zsh scratch/agent/run_s2275_m5_step1_route_requal.sh
+s2275_m5_step1_route_requal`. The driver returned 5 with
+`hangar_phase=missing; SIGKILL` at its 180-second pre-hangar deadline.
+
+The phase-origin log reached title `1024 @ 0x00790400` at 49.5s, then stayed
+alive through an off-target `640 @ 0x00696100` transition at 74.4s and never
+emitted the required `512 @ 0x006AB400` row. The driver log records the
+watchdog SIGKILL rather than an earlier process death; the game log had no
+`[CRASH]` or `[ABORT]` marker. Positive controls fired: one
+`[missing-func]`, 11 `[m5-b40-route]` rows, 20 `[m5-route-state]` rows, 64
+`[audtask-dispatch]` rows, and 51/51 phase-8 PCM source/consumer rows. These
+are route and instrument controls only; no target audio/output window existed.
+
+This selects H-RouteStall at the tested scope and rules out treating this run
+as a qualified silent arm or as evidence for H-AudioDegeneracy,
+H-ContractGap, or H-MixedPipelines. After the third consecutive Step 1 route
+failure, the task/output pair is parked and the next work unit pivots to the
+M5 key-on pointer-versus-branch discriminator. No runtime or generated code
+change was made.
+
+ORIGIN: observation only; no guest or host value was suppressed, rewritten,
+guarded, restored, or defaulted.
+
+### Next
+
+Use the M5 key-on pointer-versus-branch discriminator in
+`scratch/agent/NEXT.md` before building or changing the census.
+`HYPOTHESIS-ID: m5-keyon-pointer-branch-discriminator`.
