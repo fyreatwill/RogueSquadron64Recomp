@@ -108540,3 +108540,55 @@ cross-phase measurement driver/postprocessor and its result artifacts.
 ### Next
 
 Run the M5 PCM writer-provenance work unit from `scratch/agent/NEXT.md`.
+
+## Session 2308 (2026-08-24) — attributed rotating PCM slots to image-DMA zero-fill
+
+HYPOTHESIS-ID: m5-payload-tuple-mismatch-provenance.
+
+The planned work unit was one phase-gated M5 PCM writer-provenance capture
+with the qualified Factor 5 image arm, the retail oracle, and 45-second
+post-hangar retention. Before adding the instrument, the oracle preflight
+passed its whole-RDRAM positive control (`10,000`), title and hangar VI
+origins, target-range writes, and a target writer-PC control. The first
+driver attempt reached both port phases but was postprocessing-invalid: it
+stopped the oracle before shutdown summaries and used AWK hex bounds that did
+not compare correctly. The driver was corrected and syntax-checked; the
+capture was rerun without changing runtime behavior.
+
+The valid run passed the retail whole-RDRAM control, title/hangar origins,
+both target-range write summaries (`768` each), and a phase writer histogram.
+The port reached title and hangar, retained 45 seconds, and emitted a
+complete ring table. The nonzero phase-10 image-stage pair rotated from the
+previous capture's fixed addresses to `0x167C50`, length `0x300`, FNV
+`2B9E9631`, `nz=621`, and `0x167F50`, length `0x300`, FNV `6ADD4218`,
+`nz=639`. Stage events `9386` and `9388` were followed by exact source and
+consumer events `9467/9468` and `9469/9470`, respectively, with matching
+FNV/nonzero counts. This is the first direct writer-side evidence that the
+nonzero image output is published to and consumed from the same physical
+slots in this capture.
+
+Later PCM rows at both destinations were zero (`FNV=F59C39C5`, `nz=0`).
+Their snapshots identified the last writer as `writer_kind=image-dma`,
+`writer_pc=0`, callsite `0x8008EE84`; the image-DMA writer sequence advanced
+after the exact nonzero pair. The complete table contained 69 source and 69
+consumer rows for `0x167C50`, and 141 source and 141 consumer rows for
+`0x167F50`; each had one exact nonzero source/consumer pair followed by the
+zero rows. This selects the post-stage image-DMA zero-fill behavior at the
+observed port scope, rules out an image-publication gap and a ring-role
+mismatch for that pair, and leaves the semantic legitimacy of the zero fill
+open. The independent oracle's fixed two-slot controls did not cover the
+dynamically selected `0x167F50` slot, so retail value polarity is not yet
+proven; the port-side zero-fill attribution is explicitly single-source.
+
+No writeback, consumer, writer, slot, gate, guard, address remap, or default
+change was made. The next discriminator is a ring-wide retail phase writer
+and post-value capture keyed by the dynamically selected port slots.
+
+ORIGIN: no mitigation-shaped change; this iteration added only phase-scoped
+writer provenance, generated callsite hooks, the capture driver, and
+postprocessing.
+
+### Next
+
+Run the M5 dynamic-ring zero-fill ground-truth work unit from
+`scratch/agent/NEXT.md`.

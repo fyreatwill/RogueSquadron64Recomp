@@ -5,13 +5,14 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2307 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2308 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
 temporal join; s2306 extended it to a 45-second recurrence capture with a
 per-destination payload-mismatch summary; s2307 extended that capture across
-all retained target phases.
+all retained target phases; s2308 added phase-scoped writer provenance and
+discovered that the nonzero ring slots rotate between captures.
 
 The current M5 boundary is task/output contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
@@ -19,14 +20,15 @@ Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
 source and consumer joins. Retail independently reaches both origins and
 supplies a different task/output writer class. The latest C88 route discriminator was
 coverage-invalid before title/hangar, so it provides no C88 or key-on verdict.
-The latest M5 cross-phase table passed retail and port route controls and found
-two nonzero phase-10 image-stage rows after exact DMA. In this capture,
-`0x167650`/`len=0x300`/`fnv=2B9E9631`/`nz=621` and
-`0x167950`/`len=0x300`/`fnv=6ADD4218`/`nz=639` had no exact PCM source or
-consumer tuple across 1,251 retained target-phase PCM rows. Same-destination
-PCM calls existed for both rows, but all had zero payload (`fnv=F59C39C5`,
-`nz=0`), selecting a payload-tuple mismatch at this capture scope rather than
-a cross-phase exact join. The writer/legitimacy boundary remains open.
+The s2308 phase-gated writer table covered the whole PCM ring rather than
+assuming fixed slots. Its current nonzero phase-10 pair was
+`0x167C50`/`len=0x300`/`fnv=2B9E9631`/`nz=621` and
+`0x167F50`/`len=0x300`/`fnv=6ADD4218`/`nz=639`; each had an exact PCM
+source and consumer immediately after the stage DMA. Later same-destination
+PCM rows were zero (`fnv=F59C39C5`, `nz=0`) and their last recorded writer
+was the image-DMA path. This selects the post-stage image-DMA zero-fill
+behavior at the observed port scope, while semantic legitimacy of that zero
+fill remains unproven and no runtime behavior change is authorized.
 
 ## Current state
 
@@ -46,10 +48,12 @@ a cross-phase exact join. The writer/legitimacy boundary remains open.
 - The default image arm is qualified through the same title/hangar route as
   the stub at the tested recipe scope. The measured output contract remains
   capture-dependent: s2306 had one exact source/consumer pair and one
-  stage-only row, while s2307 found two stage rows with same-destination
-  zero-payload PCM mismatches across all retained target phases. No writeback,
-  consumer, writer, slot, gate, guard, address remap, or default change is
-  authorized.
+  stage-only row, s2307 found two fixed-address payload mismatches, and s2308
+  found a rotated pair with exact nonzero publication followed by later
+  image-DMA zero writes. The port-side writer attribution is single-source
+  for zero-fill legitimacy; the retail ring/range controls do not yet sample
+  every dynamically selected pair. No writeback, consumer, writer, slot,
+  gate, guard, address remap, or default change is authorized.
 - The retail oracle is an independent witness. Its whole-RDRAM, title, hangar,
   width-aware target, and exact-PC controls must pass before a null is read.
   The oracle currently reaches attract/title/hangar, not a mission.
@@ -59,6 +63,26 @@ a cross-phase exact join. The writer/legitimacy boundary remains open.
   `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2308 — dynamic-slot writer provenance.** The initial driver capture was
+  postprocessing-invalid because it stopped the oracle before its shutdown
+  summaries and used non-portable AWK hex bounds. The corrected same-run
+  capture passed the retail whole-RDRAM control (`10,000`), title/hangar
+  origins, both target-range write summaries (`768` each), and a phase writer
+  histogram; the port reached title/hangar and retained 45 seconds. The
+  complete ring table found that the nonzero phase-10 pair had rotated to
+  `0x167C50` (`2B9E9631`, `nz=621`) and `0x167F50` (`6ADD4218`, `nz=639`).
+  Stage events `9386/9388` were followed by exact source/consumer events
+  `9467/9468` and `9469/9470`, respectively. Subsequent rows at those same
+  destinations were `F59C39C5`/`nz=0`; their writer snapshots were
+  `writer_kind=image-dma`, `writer_pc=0`, callsite `0x8008EE84`, with the
+  image-DMA write sequence advancing after the exact pair. This is a
+  single-source port result that rules out an image-publication gap and a
+  ring-role mismatch for the observed pair; it selects
+  `H-ZeroFillLegitimate` only as the measured behavior interpretation, not
+  as proof of game intent. The independent oracle confirms active retail
+  writes in the watched PCM ring and target phase, but its fixed two-slot
+  controls did not cover the dynamically selected `0x167F50` pair.
 
 - **s2307 — cross-phase payload tuple mismatch.** The fixed same-run capture
   passed retail whole-RDRAM `10,000`, title/hangar, and all three target
@@ -158,15 +182,16 @@ a cross-phase exact join. The writer/legitimacy boundary remains open.
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 Step 3b payload-mismatch writer provenance.** Ask ground truth first,
-   then run one phase-gated same-run port/retail capture that attributes the
-   writer/caller for every same-destination PCM source and consumer row while
-   retaining the image-stage DMA tuple. Compare the port and retail writer
-   classes, payload polarity, and event ordering for the two nonzero stage
-   rows. This distinguishes a legitimate zero-fill PCM writer, a ring/address
-   mismatch, and a missing image-output publication edge. Do not change
-   runtime behavior or add writeback, consumer, slot, gate, guard, or address
-   remap machinery.
+1. **M5 Step 3c dynamic-slot zero-fill provenance.** Ask ground truth first,
+   then run one phase-gated same-run port/retail capture with the existing
+   writer instrumentation, but arm the oracle's whole PCM ring as the
+   phase-writer watch. Discover the current nonzero stage destinations from
+   the port log and compare those exact slots with the retail ring-wide
+   writer histogram and post-value summary. Require a same-run positive
+   control before reading any null. This distinguishes stable image-DMA
+   zero-fill from a slot-rotation artifact and supplies the missing retail
+   writer/value evidence; do not add writeback, consumer, slot, gate, guard,
+   or address-remap machinery.
 2. **M5 key-on tuple contract — parked.** Resume only with a genuinely new
    route discriminator that restores `512 @ 0x006AB400`. The s2302 C88=0
    crash had `route_state=2`, `b40=1`, `key_on=0`; C88=1 was withheld.
@@ -202,15 +227,17 @@ task/AI boundary are live on the port. Retail independently matches the
 status cycle. MORT speech is separate from Factor 5 RSP audio.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
-phase-gated captures show a mixed output contract: s2306 had one stage-only
-row and one source/consumer join at ordinal `+12`, while s2307 found two
-nonzero stage rows with same-destination zero-payload PCM calls and no exact
-join across retained target phases. The image-stage writer is known, but the
-PCM zero-payload writer and legitimacy of its destination/payload are not.
-The silent arm's PCM boundary is separately qualified but all-zero. Retail
-writes corresponding field spans and a different task/output span. This is a
-measured contract boundary, not permission to add a copyToRAM/CIMG writeback,
-writer guard, slot guard, consumer change, or address remap.
+phase-gated captures show a rotating mixed output contract: s2306 had one
+stage-only row and one source/consumer join at ordinal `+12`, s2307 found two
+fixed-address zero-payload mismatches, and s2308 found a nonzero pair with
+exact source/consumer publication followed by later same-destination
+image-DMA zero rows. The image-stage writer is known. The port-side zero
+writer is also identified as image-DMA, but its semantic legitimacy and
+retail value polarity remain open. The silent arm's PCM boundary is
+separately qualified but all-zero. Retail writes corresponding field spans
+and a different task/output span. This is a measured contract boundary, not
+permission to add a copyToRAM/CIMG writeback, writer guard, slot guard,
+consumer change, or address remap.
 
 ### VI state and second origin
 
@@ -254,6 +281,9 @@ but are superseded at their measured scopes:
 - s2304's two-row `0/2` same-ordinal PCM gap as a route-wide output result;
   s2305's corrected guest-address normalization and independent native join
   found one `+12` source/consumer pair in a different observed tuple class.
+- s2307's fixed `0x167650`/`0x167950` addresses as stable target slots;
+  s2308's complete ring table observed the nonzero pair at
+  `0x167C50`/`0x167F50` instead.
 
 ## Evidence and safety rules
 

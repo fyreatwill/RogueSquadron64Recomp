@@ -492,7 +492,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..cb9879a 100644
+index 1cb3f6a..c7f27e6 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -506,7 +506,7 @@ index 1cb3f6a..cb9879a 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,655 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,682 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -521,6 +521,14 @@ index 1cb3f6a..cb9879a 100644
 +extern "C" uint32_t rs64_vi_committed_width();
 +extern "C" uint32_t rs64_vi_committed_origin();
 +extern "C" __attribute__((weak)) uint32_t rs64_audio_image_break_pc();
++extern "C" __attribute__((weak)) uint32_t rs64_m5_pcm_get_callsite();
++extern "C" __attribute__((weak)) void rs64_m5_pcm_writer_dma(uint32_t addr,
++                                                               uint32_t len,
++                                                               uint32_t fnv,
++                                                               uint32_t nonzero);
++extern "C" __attribute__((weak)) void rs64_m5_pcm_writer_snapshot(
++    uint32_t addr, uint32_t* kind, uint32_t* pc, uint32_t* phys,
++    uint32_t* writes, uint64_t* sequence, uint32_t* value);
 +
 +struct AudioRouteContext {
 +    bool active = false;
@@ -1085,6 +1093,19 @@ index 1cb3f6a..cb9879a 100644
 +                                     uint32_t fnv, uint32_t nonzero) {
 +    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
 +    audio_image_scope_locked(phase, width, origin);
++    uint32_t writer_kind = 0;
++    uint32_t writer_pc = 0;
++    uint32_t writer_phys = 0;
++    uint32_t writer_writes = 0;
++    uint32_t writer_value = 0;
++    uint64_t writer_sequence = 0;
++    if (rs64_m5_pcm_writer_snapshot) {
++        rs64_m5_pcm_writer_snapshot(rdram, &writer_kind, &writer_pc,
++                                    &writer_phys, &writer_writes,
++                                    &writer_sequence, &writer_value);
++    }
++    const uint32_t callsite = rs64_m5_pcm_get_callsite ?
++        rs64_m5_pcm_get_callsite() : 0u;
 +    AudioJoinPcm pcm{};
 +    pcm.source = std::strcmp(kind, "source") == 0;
 +    pcm.event = audio_join_next_event();
@@ -1101,9 +1122,12 @@ index 1cb3f6a..cb9879a 100644
 +    fprintf(stderr,
 +            "[audio-join-pcm] kind=%s event=%" PRIu64 " n=%u phase=%u"
 +            " width=%u origin=0x%06X guest=0x%06X samples=%u bytes=%u"
-+            " fnv=%08X nz=%u\n",
++            " fnv=%08X nz=%u callsite=0x%08X writer_kind=%u"
++            " writer_pc=0x%08X writer_phys=0x%06X writer_writes=%u"
++            " writer_sequence=%" PRIu64 " writer_value=0x%08X\n",
 +            kind, pcm.event, n, phase, width, origin, rdram, samples, bytes,
-+            fnv, nonzero);
++            fnv, nonzero, callsite, writer_kind, writer_pc, writer_phys,
++            writer_writes, writer_sequence, writer_value);
 +    audio_join_match_pcm_locked(g_audio_join_pcm.size() - 1);
 +    audio_image_match_pcm_locked(g_audio_join_pcm.size() - 1);
 +}
@@ -1157,12 +1181,15 @@ index 1cb3f6a..cb9879a 100644
 +    }
 +    probe->ranges.back().payload_fnv = payload_fnv;
 +    probe->ranges.back().payload_nz = payload_nz;
++    if (rs64_m5_pcm_writer_dma) {
++        rs64_m5_pcm_writer_dma(dram_addr, len, payload_fnv, payload_nz);
++    }
 +}
 +
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +695,225 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +722,225 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  

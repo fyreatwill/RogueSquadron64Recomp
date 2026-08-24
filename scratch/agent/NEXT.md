@@ -1,64 +1,64 @@
-# NEXT work unit (s2308) — M5 PCM writer provenance for payload mismatch
+# NEXT work unit (s2309) — dynamic-ring zero-fill ground truth
 
-HYPOTHESIS-ID: m5-payload-tuple-mismatch-provenance
+HYPOTHESIS-ID: m5-dynamic-zero-fill-retail-provenance
 
 ## Work unit
 
 Ask the retail oracle for ground truth first, then run one phase-gated
-same-run port/retail capture that attributes the writer/caller for every PCM
-source and consumer row whose physical destination is one of the two current
-nonzero image-stage slots (`0x167650` and `0x167950`). Retain the image-stage
-DMA tuple, task ordinal, global event, payload FNV/nonzero count, phase, and
-the writer class for all target ring slots. Keep the qualified default image
-arm, title/hangar gates, 45-second retention, and all passive controls. Do not
-change runtime behavior or add writeback, consumer, slot, gate, guard, or
-address-remap machinery.
+same-run port/retail capture using the existing PCM writer provenance. Keep
+the whole-ring port table and discover the current nonzero image-stage
+destinations from the port log; do not assume `0x167650`/`0x167950` or any
+other fixed pair. Arm the oracle's whole PCM ring (`0x166450..0x169450`) as
+the phase writer/post-value watch so the retail result covers whichever slots
+the port selects. Keep the title/hangar gates, 45-second retention, positive
+controls, and SIGKILL cleanup. No runtime behavior or mitigation change.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-ZeroFillLegitimate: the same-destination zero-payload PCM rows are an
-  intentional zero-fill or silence writer, and the nonzero image-stage output
-  is a separate diagnostic overlap. Retail and port writer classes/ordering
-  match this interpretation.
-- H-ImagePublicationGap: the image-stage DMA produces the nonzero tuple, but
-  the port's PCM destination is later zeroed or never published. The writer
-  provenance shows a distinct zeroing/overwrite edge after stage DMA, while
-  retail's corresponding target-slot writer is nonzero or differently ordered.
-- H-RingAddressMismatch: the equal physical addresses are not the same logical
-  ring role. Writer PCs, task ordinals, and phase transitions correlate the
-  PCM rows with a different ring slot than the image-stage row.
-- H-CoverageInvalid: the retail whole-RDRAM control, both title/hangar VI
-  origins, a target-range writer control, or the port title/hangar gates fail.
+- H-StableImageDmaZeroFill: the later zero PCM rows are a normal repeated
+  image-DMA output for rotating ring slots. Retail's ring-wide phase writer
+  and post-value summaries show the same slot activity and zero/nonzero
+  polarity as the port's exact stage→PCM→zero sequence.
+- H-PortOnlyZeroFill: the port image arm emits the later zero rows, but retail
+  does not write the dynamically selected slots with the same zero polarity or
+  ordering. This points to a port-side contract divergence, not a generic
+  silence writer.
+- H-SlotRotation: the apparent overwrite is only a slot-selection artifact.
+  The dynamic port stage destination, PCM destination, and retail writer
+  bucket do not remain the same physical ring role across the joined rows.
+- H-CoverageInvalid: the whole-RDRAM control, title/hangar origins, ring-wide
+  writer control, or port title/hangar/retention gate fails.
 
-The discriminator is one complete table covering every nonzero target image
-stage row and every same-destination PCM source/consumer row, with columns
-`phase,origin,stage_event,pcm_event,kind,dest,len,stage_fnv,stage_nz,pcm_fnv,
-pcm_nz,writer_pc/writer_class,stage_before_pcm,retail_writer_class`. A positive
-retail control plus a port writer control is required before any null is read.
-The result selects one hypothesis at this capture scope; a writer/legitimacy
-null is not permission to add a mitigation.
+The discriminator is one complete table keyed by dynamically discovered
+destination, with port stage event/FNV/nz, first exact PCM source/consumer
+event/FNV/nz, first later zero PCM event, image-DMA writer sequence/class, and
+the retail ring-wide writer PC/count/post-value FNV/nz for the same physical
+slot. A positive control must pass in the same run before any null is read.
+The outcome must select one hypothesis at this capture scope; it must not
+authorize writeback, a writer guard, slot guard, consumer change, address
+remap, or a default change.
 
 ## Exact commands
 
-1. Ask ground truth before changing the driver or adding an instrument:
+1. Ground-truth preflight and ring-wide recipe check:
 
-   `grep -a -E 'positive-control threshold|watch write \[0x00167650|watch write \[0x00167950|origin=0x00790400 width=1024|origin=0x006ab400 width=512|writer-pc-phase origin=0x006ab400 width=512 watch=2|writer-pc pc=' scratch/agent/s2307_m5_cross_phase_join/../s2306_m5_temporal_recurrence/oracle.log | tail -100`
+   `grep -a -E 'positive-control threshold|watch write \[0x00166000|watch write \[0x00167650|watch write \[0x00167950|origin=0x00790400 width=1024|origin=0x006ab400 width=512|writer-pc-phase origin=0x006ab400 width=512' scratch/agent/s2308_m5_pcm_writer_provenance/oracle.log | tail -100`
 
-   Require the whole-RDRAM threshold, both VI origins, both target-range
-   watch summaries, and the three existing target writer-PC controls. If any
-   is absent, repair the oracle recipe before adding a port instrument.
+   The new oracle recipe must include `--watch-write 0x0:0x800000`,
+   `--watch-write 0x166450:0x169450`, `--pc-hist-watch 1`,
+   `--pc-hist-phase 0x006AB400:512`, and `--post-value-watch 1`, with the
+   ring watch after the whole-RDRAM control. Require whole-RDRAM `10,000`,
+   both VI origins, and a nonzero ring-wide writer/post-value control before
+   adding or interpreting any port row.
 
-2. Add one bounded writer/caller provenance field to the existing PCM/stage
-   capture, keeping all existing controls and passive diagnostics. If a file
-   under `lib/` changes, run `./submodule-patches/export.sh` and include the
-   refreshed patch in this iteration. Build all required arms together.
+2. Reuse the qualified build and existing writer hooks; if the driver needs
+   changes, create `scratch/agent/run_s2309_m5_dynamic_zero_fill.sh`, then:
 
-3. Create/update `scratch/agent/run_s2308_m5_pcm_writer_provenance.sh`, syntax
-   check it, and run the one capture:
+   `zsh -n scratch/agent/run_s2309_m5_dynamic_zero_fill.sh`
 
-   `zsh -n scratch/agent/run_s2308_m5_pcm_writer_provenance.sh`
+   `zsh scratch/agent/run_s2309_m5_dynamic_zero_fill.sh`
 
-   `zsh scratch/agent/run_s2308_m5_pcm_writer_provenance.sh`
-
-   Use SIGKILL cleanup, run from `build/`, and report the complete provenance
-   table and the retail/port positive controls before interpreting a null.
+3. Report the dynamic-slot table, the retail ring-wide writer/post-value
+   summaries, all positive controls, and the selected hypothesis. Do not
+   treat a fixed-slot null as evidence when the port's nonzero stage pair has
+   rotated.

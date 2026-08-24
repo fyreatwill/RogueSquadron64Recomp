@@ -140,6 +140,160 @@ extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *last
 // name; defined once here.
 extern "C" volatile uint32_t g_rs64_last_guest_pc = 0;
 static thread_local uint32_t g_rs64_m5_field348_static_callsite = 0;
+static thread_local uint32_t g_rs64_m5_pcm_callsite = 0;
+
+namespace {
+struct Rs64PcmWriterState {
+    uint32_t last_pc = 0;
+    uint32_t last_kind = 0;
+    uint32_t last_phys = 0;
+    uint32_t last_value = 0;
+    uint32_t writes = 0;
+    uint64_t sequence = 0;
+};
+
+constexpr uint32_t rs64_pcm_ring_first = 0x166450u;
+constexpr uint32_t rs64_pcm_ring_last = 0x169450u;
+constexpr uint32_t rs64_pcm_ring_slot = 0x300u;
+Rs64PcmWriterState g_rs64_pcm_writer[16];
+std::mutex g_rs64_pcm_writer_mutex;
+uint32_t g_rs64_pcm_writer_phase_key = 0xFFFFFFFFu;
+uint64_t g_rs64_pcm_writer_sequence = 0;
+uint32_t g_rs64_pcm_writer_printed[16] = {};
+bool g_rs64_pcm_writer_control = false;
+
+bool rs64_pcm_writer_enabled() {
+    static int enabled = -1;
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_PCM_WRITER");
+        enabled = ((all && all[0] && all[0] != '0') ||
+                   (own && own[0] && own[0] != '0')) ? 1 : 0;
+    }
+    return enabled != 0;
+}
+
+bool rs64_pcm_writer_phase(uint32_t& phase, uint32_t& width,
+                           uint32_t& origin, uint32_t& key) {
+    phase = rs64_phase_ord();
+    width = rs64_vi_committed_width();
+    origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return false;
+    key = (width << 24) ^ origin;
+    return true;
+}
+
+void rs64_pcm_writer_phase_reset(uint32_t key) {
+    if (key == g_rs64_pcm_writer_phase_key) return;
+    g_rs64_pcm_writer_phase_key = key;
+    std::memset(g_rs64_pcm_writer, 0, sizeof(g_rs64_pcm_writer));
+    std::memset(g_rs64_pcm_writer_printed, 0,
+                sizeof(g_rs64_pcm_writer_printed));
+    g_rs64_pcm_writer_control = false;
+}
+
+void rs64_pcm_writer_note(uint32_t phys, uint32_t len, uint32_t pc,
+                          uint32_t kind, uint32_t value) {
+    if (!rs64_pcm_writer_enabled() || len == 0) return;
+    uint32_t phase = 0, width = 0, origin = 0, key = 0;
+    if (!rs64_pcm_writer_phase(phase, width, origin, key)) return;
+    const uint32_t end = phys + len;
+    if (phys >= rs64_pcm_ring_last || end <= rs64_pcm_ring_first) return;
+
+    std::lock_guard<std::mutex> lock(g_rs64_pcm_writer_mutex);
+    rs64_pcm_writer_phase_reset(key);
+    if (!g_rs64_pcm_writer_control) {
+        std::fprintf(stderr,
+                     "[pcm-writer-control] phase=%u width=%u origin=0x%06X"
+                     " kind=%u phys=0x%06X len=0x%X\n",
+                     phase, width, origin, kind, phys, len);
+        std::fflush(stderr);
+        g_rs64_pcm_writer_control = true;
+    }
+
+    const uint32_t first = phys < rs64_pcm_ring_first ? rs64_pcm_ring_first : phys;
+    const uint32_t last = end > rs64_pcm_ring_last ? rs64_pcm_ring_last : end;
+    const uint32_t first_slot = (first - rs64_pcm_ring_first) / rs64_pcm_ring_slot;
+    const uint32_t last_slot = (last - 1u - rs64_pcm_ring_first) /
+                               rs64_pcm_ring_slot;
+    for (uint32_t slot = first_slot; slot <= last_slot && slot < 16u; ++slot) {
+        Rs64PcmWriterState& state = g_rs64_pcm_writer[slot];
+        state.last_pc = pc;
+        state.last_kind = kind;
+        state.last_phys = phys;
+        state.last_value = value;
+        state.writes++;
+        state.sequence = ++g_rs64_pcm_writer_sequence;
+        if (g_rs64_pcm_writer_printed[slot] < 32u) {
+            std::fprintf(stderr,
+                         "[pcm-writer] phase=%u width=%u origin=0x%06X"
+                         " slot=%u phys=0x%06X len=0x%X kind=%u pc=0x%08X"
+                         " value=0x%08X sequence=%llu writes=%u\n",
+                         phase, width, origin, slot,
+                         rs64_pcm_ring_first + slot * rs64_pcm_ring_slot,
+                         len, kind, pc, value,
+                         static_cast<unsigned long long>(state.sequence),
+                         state.writes);
+            std::fflush(stderr);
+            g_rs64_pcm_writer_printed[slot]++;
+        }
+    }
+}
+}
+
+extern "C" void rs64_m5_pcm_set_callsite(uint32_t callsite) {
+    g_rs64_m5_pcm_callsite = callsite;
+}
+
+extern "C" uint32_t rs64_m5_pcm_get_callsite() {
+    return g_rs64_m5_pcm_callsite;
+}
+
+extern "C" void rs64_m5_pcm_writer_store(char width, uint32_t pc,
+                                             uint32_t addr, uint32_t value) {
+    const uint32_t adjust = width == 'B' ? 3u : (width == 'H' ? 2u : 0u);
+    const uint32_t span = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);
+    rs64_pcm_writer_note((addr ^ adjust) - 0x80000000u, span, pc, 1u, value);
+}
+
+extern "C" void rs64_m5_pcm_writer_dma(uint32_t addr, uint32_t len,
+                                           uint32_t fnv, uint32_t nonzero) {
+    (void)fnv;
+    (void)nonzero;
+    rs64_pcm_writer_note(addr & 0x007FFFFFu, len, 0u, 2u, 0u);
+}
+
+extern "C" void rs64_m5_pcm_writer_snapshot(uint32_t addr,
+                                                uint32_t* kind,
+                                                uint32_t* pc,
+                                                uint32_t* phys,
+                                                uint32_t* writes,
+                                                uint64_t* sequence,
+                                                uint32_t* value) {
+    if (kind) *kind = 0;
+    if (pc) *pc = 0;
+    if (phys) *phys = 0;
+    if (writes) *writes = 0;
+    if (sequence) *sequence = 0;
+    if (value) *value = 0;
+    if (!rs64_pcm_writer_enabled()) return;
+    const uint32_t target = addr & 0x007FFFFFu;
+    if (target < rs64_pcm_ring_first || target >= rs64_pcm_ring_last ||
+        ((target - rs64_pcm_ring_first) % rs64_pcm_ring_slot) != 0) return;
+    uint32_t phase = 0, width = 0, origin = 0, key = 0;
+    if (!rs64_pcm_writer_phase(phase, width, origin, key)) return;
+    std::lock_guard<std::mutex> lock(g_rs64_pcm_writer_mutex);
+    rs64_pcm_writer_phase_reset(key);
+    const uint32_t slot = (target - rs64_pcm_ring_first) / rs64_pcm_ring_slot;
+    const Rs64PcmWriterState& state = g_rs64_pcm_writer[slot];
+    if (kind) *kind = state.last_kind;
+    if (pc) *pc = state.last_pc;
+    if (phys) *phys = state.last_phys;
+    if (writes) *writes = state.writes;
+    if (sequence) *sequence = state.sequence;
+    if (value) *value = state.last_value;
+}
 
 extern "C" void rs64_m5_field348_set_callsite(uint32_t callsite) {
     g_rs64_m5_field348_static_callsite = callsite;
