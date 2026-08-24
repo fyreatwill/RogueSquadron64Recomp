@@ -5,8 +5,8 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2295 (2026-08-24); behavioral and source evidence is
-current through s2295. The corrected same-build M5 Step 2 driver explicitly
+Maintained in Session 2296 (2026-08-24); behavioral and source evidence is
+current through s2296. The corrected same-build M5 Step 2 driver explicitly
 sent the eleven process-start Start events to each port window. Retail passed
 the whole-RDRAM threshold at `10,000` callbacks and reached title
 `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The port stub and default
@@ -23,6 +23,21 @@ writer class was CPU metadata construction while the port row was Factor 5
 image DMA with its own payload and source/consumer ordering. This selects
 H-RetailDifferentWriter at the measured contract scope, not an address-class
 null or a mitigation target.
+
+s2296's corrected oracle-only task/output role capture passed the independent
+whole-RDRAM threshold at `10,000`, title `1024 @ 0x00790400`, hangar
+`512 @ 0x006AB400`, and the width-aware target bucket with `1,537` VI rows.
+The independent span had `108` lifetime writes. At target origin
+`0x006AB400`, non-sentinel post-target rows recorded the same tuple
+`0x141AD0 = 0x120E0000` for both `0x8008EB8C` and `0x8008EBBC`; the
+`0x80094648` row table was saturated by earlier sentinel rows, while its
+target-phase writer histogram still recorded `48` writes. The 16 exact slot
+watches retained their `768`-write controls. This selects
+H-TaskOutputSharedOrMulti at the measured row scope and refutes each
+single-PC semantic-writer hypothesis; it does not assign the role of
+`0x80094648` or distinguish duplicate publication from one construction
+sequence. No writer, writeback, consumer, slot, gate, guard, or address-remap
+change is authorized.
 
 s2292's fixed all-ring-slot capture passed the independent retail
 whole-RDRAM/title/hangar controls and the port's title/hangar plus explicit
@@ -182,6 +197,13 @@ equivalent path at another guest address.
   `768` writes. This selects H-TaskOutputOther at the measured span and
   leaves the semantic role/join of the three PCs open. No runtime behavior
   or mitigation changed.
+- s2296's corrected oracle-only role capture passed the same independent
+  controls and recorded `1,537` target VI rows. Both `0x8008EB8C` and
+  `0x8008EBBC` had one non-sentinel target row at `0x141AD0` with value
+  `0x120E0000`; `0x80094648` had `48` target-phase writer hits but its
+  bounded row table was consumed by title-phase `0x7F7F7F7F` rows. This
+  selects H-TaskOutputSharedOrMulti and leaves the three-PC construction
+  sequence open. No runtime or mitigation behavior changed.
 - `docs/M5-AUDIO-PLAN.md` inventories the active audio stubs/traps/gates and
   defines the phase-keyed task→DMA→service→slot→voice→PCM discriminator and
   rollback conditions. The plan refresh in s2231 defined the incremental
@@ -570,15 +592,15 @@ equivalent path at another guest address.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 Step 3 target/output writer-PC role join.** s2295 closes the
-   target-phase null for the independent span: three other PCs write it
-   (`0x8008EB8C`, `0x8008EBBC`, `0x80094648`), while `0x800078EC` does not.
-   Run one oracle-only capture retaining the whole-RDRAM, title, hangar,
-   width-512 target bucket, watched-PC, and exact-slot controls, and request
-   post-target rows for all three observed PCs. Join each PC to its target
-   address/value rows and classify whether one is the semantic task/output
-   publisher, whether the three are one construction sequence, or whether
-   they are distinct housekeeping writes. Do not implement writeback,
+1. **M5 Step 3 target/output construction-sequence join.** s2296 refutes
+   the single-PC role hypotheses because `0x8008EB8C` and `0x8008EBBC` both
+   publish the same non-sentinel target tuple, while `0x80094648` has `48`
+   target-phase writes but no free bounded row slots. Run one oracle-only
+   capture with the same route, exact-slot, and task/output controls, but
+   use a target-phase-only post-value row table or an equivalent ordered
+   `(writer PC, address, value, VI)` sequence so all three PCs can be joined
+   without title sentinel saturation. Classify one shared construction
+   sequence versus distinct housekeeping writes. Do not implement writeback,
    consumer, slot, gate, guard, or address-remap behavior.
 2. **M5 key-on tuple contract.** Requalify the C88 route with a
    phase-gated control-first stagger: launch C88=1 only after a C88=0 control
@@ -659,8 +681,10 @@ target phase with tuples pointing into `0x8065E0A0`-class data. s2294's
 width-aware histogram proves that none of those 16 candidate slots is written
 in the hangar phase; s2295 identifies a different target-phase writer class
 for the independent task/output span, but does not yet join those three PCs
-to a semantic output role. This is a contract discriminator, not permission
-to add a writeback or guard.
+to a semantic output role. s2296 joins two of them to the same non-sentinel
+target tuple and leaves the third's target values unobserved because of the
+bounded title-sentinel table. This is a contract discriminator, not
+permission to add a writeback or guard.
 
 Do not flip the image default again, force C88, skip or allow
 `matchKeywordWithPriority`, add a wait/slot guard, or land a copyToRAM/CIMG

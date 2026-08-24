@@ -1,53 +1,72 @@
-# NEXT work unit (s2296) — M5 target/output writer-PC role join
+# NEXT work unit (s2297) — M5 target-only writer sequence join
 
 HYPOTHESIS-ID: m5-step3-retail-task-output-writer
 
 ## Work unit
 
-Run one oracle-only retail capture using the corrected s2295 route and
-controls. Retain watch indexes 0=`0x0:0x800000`, 1=`0x166000:0x16A000`,
-2=`0x141AD0:0x141AF0`, and 3–18 the 16 exact `0x300` ring slots. Retain
-`--watch-pc 0x800078EC`, `--pc-phase-log-width 0x006AB400:512`,
-`--pc-hist-phase 0x006AB400:512`, `--pc-hist-watch 2`, `--post-value-watch 2`,
-`--vi-trace`, `--hit-cap 200`, and the eleven named Start presses. Replace
-the prior post-value-PC request with
-`--post-value-pc 0x8008EB8C,0x8008EBBC,0x80094648` so the oracle emits bounded
-target address/value rows for each observed target-phase writer. Do not
-launch a port arm and do not implement a writer, writeback, consumer, slot,
-gate, guard, or address remap.
+Ask the retail ground truth already captured in
+`scratch/agent/s2296_m5_target_output_writer_pc_join/oracle.log` first: its
+whole-RDRAM, title, hangar, and width-512 controls are positive, and its
+`0x80094648` post-target table is saturated by title sentinel rows before the
+target phase. Then make one bounded oracle-instrument change so requested
+post-value rows are retained only when `width=512` and
+`origin=0x006AB400`; rebuild the oracle and run one retail capture with the
+s2296 controls. This keeps the existing 16-row per-PC cap while ensuring it
+captures target rows rather than title sentinels. Do not launch a port arm and
+do not implement a writer, writeback, consumer, slot, gate, guard, or address
+remap.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-TaskOutputSemanticEB8C: only `0x8008EB8C` has unique non-sentinel
-  target address/value rows; the other two PCs are setup or housekeeping.
-- H-TaskOutputSemanticEBBC: only `0x8008EBBC` has unique non-sentinel
-  target address/value rows; the other two PCs are setup or housekeeping.
-- H-TaskOutputSemantic94648: only `0x80094648` has unique non-sentinel
-  target address/value rows; the other two PCs are setup or housekeeping.
-- H-TaskOutputSharedOrMulti: two or more PCs have non-sentinel target rows,
-  or all three join the same address/value sequence, so this measurement
-  cannot assign one semantic publisher.
+- H-SharedConstruction: all three PCs contribute to one target-phase
+  construction sequence, with matching or ordered overlapping
+  `(address,value)` tuples.
+- H-94648Distinct: `0x80094648` contributes unique non-sentinel target
+  address/value tuples, while `0x8008EB8C` and `0x8008EBBC` remain the same
+  metadata publication step.
+- H-EB8COrEBBCHousekeeping: one of the two `0x141AD0` writers is a duplicate
+  or housekeeping store and the other is the only non-sentinel publisher;
+  `0x80094648` contributes only sentinel target writes.
+- H-TargetRowsInsufficient: the target-only table still cannot capture a
+  complete ordered join, so no role conclusion is allowed.
 
-The discriminator is one table keyed by `(writer PC, target-row count,
-target VI/origin, address, value, nonzero/sentinel class)`, from the
-`post-target-row-final` records. The whole-RDRAM threshold, title, hangar,
-and positive `width=512, origin=0x006AB400` bucket must all be present first;
-otherwise record H-CoverageInvalid and do not interpret writer rows.
+The discriminator is one table keyed by `(writer PC, target VI/origin,
+address, value, sentinel class, ordinal)` from the target-only
+`post-target-row-final` records, joined with the target-phase writer counts.
+Select H-SharedConstruction when the three PCs overlap in one ordered
+sequence; select H-94648Distinct when 94648 has unique non-sentinel tuples;
+select H-EB8COrEBBCHousekeeping only when exactly one of EB8C/EBBC has the
+non-sentinel publication and 94648 is sentinel-only. If the independent
+controls or target-only row capacity fail, select H-CoverageInvalid or
+H-TargetRowsInsufficient and make no contract change.
 
 ## Exact commands
 
-1. Create the self-contained driver
-   `scratch/agent/run_s2296_m5_target_output_writer_pc_join.sh` from the
-   corrected s2295 driver, changing only the output directory/name and
-   `--post-value-pc` argument to
-   `0x8008EB8C,0x8008EBBC,0x80094648`. Add a bounded summary of each
-   `post-target-row-final` PC/address/value table and a verdict using the
-   hypotheses above.
-2. Check and run exactly that driver:
+1. Ground-truth checkpoint before rebuilding the instrument:
 
-   `zsh -n scratch/agent/run_s2296_m5_target_output_writer_pc_join.sh`
+   `grep -a -E 'positive-control threshold|origin=0x006ab400 width=512|post-target-row-final pc=0x80094648|writer-pc-phase origin=0x006ab400' scratch/agent/s2296_m5_target_output_writer_pc_join/oracle.log | tail -40`
 
-   `zsh scratch/agent/run_s2296_m5_target_output_writer_pc_join.sh`
+2. Add the target-only condition in
+   `tools/oracle/rs64_oracle.c` inside
+   `record_post_value_requested_row()`: return without recording unless the
+   live VI width is `512` and origin is `0x006AB400`. Preserve the existing
+   requested-PC list and 16-row cap. Build with:
 
-If any independent control or the width-512 target bucket is absent, record
-H-CoverageInvalid and do not interpret a writer null.
+   `tools/oracle/build.sh`
+
+3. Create
+   `scratch/agent/run_s2297_m5_target_only_writer_sequence.sh` from the
+   s2296 driver, changing only the output directory/name and keeping all
+   watches, controls, Start presses, and three `--post-value-pc` PCs. Update
+   its summary/verdict to count only target-origin non-sentinel rows and to
+   print at most 16 rows per PC.
+
+4. Check and run exactly that driver:
+
+   `zsh -n scratch/agent/run_s2297_m5_target_only_writer_sequence.sh`
+
+   `zsh scratch/agent/run_s2297_m5_target_only_writer_sequence.sh`
+
+The whole-RDRAM threshold, title, hangar, and positive width-512 target bucket
+must all be present before interpreting any writer row. No runtime or
+mitigation behavior is authorized by this measurement.

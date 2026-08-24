@@ -108021,3 +108021,46 @@ Run one oracle-only capture with the same controls and request post-target
 rows for `0x8008EB8C`, `0x8008EBBC`, and `0x80094648` via
 `--post-value-pc 0x8008EB8C,0x8008EBBC,0x80094648`. Join each observed PC to
 its target address/value rows before considering any contract change.
+
+## Session 2296 (2026-08-24) — target/output role join selected shared or multi-PC construction
+
+HYPOTHESIS-ID: m5-step3-retail-task-output-writer.
+
+The planned work unit was one oracle-only retail capture retaining the
+whole-RDRAM positive control, title/hangar controls, the width-aware
+`512 @ 0x006AB400` target bucket, the watched `0x800078EC`, the independent
+task/output span, and all 16 exact ring slots. The new self-contained driver
+passed `zsh -n` and ran the oracle for its natural 120-second window. No port
+process or runtime code was changed.
+
+The run passed the whole-RDRAM threshold at `10,000`, title
+`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and the target bucket with
+`1,537` VI rows. It recorded `11,909,133` total watch hits, `108` lifetime
+writes to `0x141AD0:0x141AF0`, and `768` writes in each exact ring slot.
+The target writer histogram for the independent span was
+`0x80094648` (`n=48`), `0x8008EB8C` (`n=1`), and `0x8008EBBC` (`n=1`), with
+no `0x800078EC`.
+
+The required post-target row table recorded one non-sentinel target row for
+each of `0x8008EB8C` and `0x8008EBBC`, both at address `0x141AD0` with value
+`0x120E0000`. The `0x80094648` table was already saturated by 16 title-phase
+`0x7F7F7F7F` rows, so it produced no bounded non-sentinel row even though its
+independent target-phase writer histogram recorded 48 writes. This selects
+H-TaskOutputSharedOrMulti: the single-PC semantic-writer hypotheses are
+refuted because two PCs share the same non-sentinel target tuple. It does not
+yet assign the role of `0x80094648` or distinguish duplicate publication from
+one construction sequence. H-CoverageInvalid is ruled out by the independent
+controls. No writer, writeback, consumer, slot, gate, guard, or address-remap
+conclusion follows.
+
+ORIGIN: no mitigation-shaped change; this iteration added only the oracle
+driver and a corrected target-origin/non-sentinel summary parser. The raw
+capture and parser fix did not skip, allow, restore, or rewrite any value.
+
+### Next
+
+Run one oracle-only capture with the same controls, but replace the bounded
+post-value row collection with a target-phase-only or ordered
+`(writer PC, address, value, VI)` table. Avoid title sentinel saturation so
+the 48 target-phase `0x80094648` writes can be joined with the two shared
+`0x141AD0 = 0x120E0000` rows before considering any contract change.
