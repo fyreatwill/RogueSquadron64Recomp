@@ -107117,3 +107117,44 @@ Use the canonical reduced trace from s2272 for a fresh Step 1 pair; do not
 interpret task/output nulls until both arms pass the title and hangar phase
 controls.
 `HYPOTHESIS-ID: m5-step1-task-output-contract`.
+
+## Session 2274 (2026-08-24) — M5 Step 1 pair remained route-invalid
+
+The M5 priority kept the Step 1 task/output comparison ahead of the stale
+key-on NEXT. I rebuilt the unchanged Debug target with
+`cmake --build build --config Debug --target RogueSquadron64Recomp -j2`; the
+build passed.
+
+I ran the prescribed silent-first/image-second driver with the existing trace.
+The silent arm reached title `1024 @ 0x00790400`, returned to the 640 target
+`0x00696100`, and crashed before hangar in
+`MetalCommandList::barriers` with guest PC `0x80001F88`. The image arm was not
+launched because the explicit `512 @ 0x006AB400` gate was absent.
+
+I then removed the extra thread-resume, OST-writeback, and runner-all logging
+from the driver and reran the same gate. This arm reached title and an
+off-target `512 @ 0x00690400`, then crashed in
+`allocAndInitGridCellArray+1276` with guest PC `0x80001C94`; it never reached
+the hangar origin and again did not launch the image arm. The reduced capture
+had one `[missing-func]`, 13 `[m5-b40-route]` rows, 25 `[m5-route-state]`
+rows, 67 audio-dispatch rows, 263 silent-stub returns, and 51/51 phase-8 PCM
+source/consumer rows. These are positive route/probe controls, not an audio
+comparison. The crash/death and phase-origin relation selects H-RouteInvalid
+for this iteration; H-AudioDegeneracy, H-ContractGap, and H-MixedPipelines
+remain unevaluable.
+
+The fixed follow-up is a single-arm phase-origin watcher for the next
+iteration. It records every phase and rechecks the expected hangar row after
+process death, so an emission/death race cannot be mistaken for a missing
+target. No guest or host value was suppressed, rewritten, guarded, restored,
+or defaulted.
+
+ORIGIN: this session changed only diagnostic log selection and added a
+phase-origin watcher; no runtime value was mitigated or rewritten.
+
+### Next
+
+Run the single silent route requalification in
+`scratch/agent/run_s2275_m5_step1_route_requal.sh`. Do not interpret
+task/output or PCM nulls until `512 @ 0x006AB400` is observed.
+`HYPOTHESIS-ID: m5-step1-task-output-contract`.

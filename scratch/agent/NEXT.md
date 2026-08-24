@@ -1,56 +1,44 @@
-# NEXT work unit (s2274) — M5 Step 1 canonical-route validation
+# NEXT work unit (s2275) — M5 Step 1 route requalification
 
 HYPOTHESIS-ID: m5-step1-task-output-contract
 
 ## Work unit
 
-Run one unchanged-build, phase-gated pair with the default silent
-`M_AUDTASK` arm and the opt-in `factor5_ucode_b` arm using the canonical
-reduced trace that qualified s2272. Keep all runtime behavior and defaults
-unchanged. The pair must qualify the silent arm at the hangar before
-launching the image arm, so the image launch is not used as a route gate.
-Record one phase-keyed validation row for each arm and do not promote the
-image arm or change a gate, slot, guard, return, or writeback.
+Run one single silent-arm control using the reduced Step 1 probes and the
+phase-origin watcher. Enumerate every VI phase, process-death timing, crash
+symbol, guest PC, and route-control count. Do not launch the image arm and do
+not interpret audio/output nulls. Only `512 @ 0x006AB400` is the hangar gate;
+the `512 @ 0x00690400` phase seen in s2274 is off-target.
 
 ## Competing hypotheses and discriminating measurement
 
-- **H-AudioDegeneracy:** both arms pass the route controls, while only the
-  image arm adds the predicted downstream audio edge: nonzero DMEM/DMA,
-  completed task/SP edge, service and slot/voice progress, and a nonzero
-  phase-keyed PCM source/consumer join. This supports audio de-stubbing as a
-  causal change, but does not by itself authorize a default flip.
-- **H-ContractGap:** the image arm has dispatch, task-field identity,
-  nonzero DMEM/DMA, and `Broke`/SP completion, but one later service,
-  slot/voice, output, or PCM join is absent or unordered. This selects the
-  first missing contract edge for a later bounded change.
-- **H-MixedPipelines:** the image RSP row closes while the MORT descriptor
-  class/CPU voice path remains independent of the arm, or the inverse. This
-  keeps Factor 5 audio and CPU MORT work as separate investigations.
-- **H-RouteInvalid:** either arm lacks the positive route controls or reaches
-  no target phase. The comparison is unevaluable and selects route stability
-  work rather than an audio explanation.
+- **H-RouteStable:** the silent arm reaches `1024 @ 0x00790400` and then
+  `512 @ 0x006AB400`, remains alive through the post-hangar window, and has
+  the positive route controls. A new staggered pair is permitted.
+- **H-RouteDeathRace:** the expected hangar phase is emitted, but the process
+  dies before the watcher sees it or immediately after it. The phase log and
+  crash/death ordering select a driver/route-gate race, not an audio contract.
+- **H-RouteLoadCrash:** the run reaches only off-target 512/640 phases or dies
+  with a renderer/game crash before `0x006AB400`. This keeps the pair
+  unevaluable and identifies the crash boundary for route-stability work.
+- **H-RouteStall:** the process stays alive until the 180-second pre-hangar
+  deadline without the target origin. This selects a stall/load-sensitivity
+  result and does not authorize a guard or route change.
 
-The single discriminating table is phase-keyed:
-`arm,phase,width,origin,dispatch,task_fields/source_hash,dmem_changed,
-dma_ranges,image_exit,sp_completion,service_entry/return,status_01_02_00,
-status_03_reap,voice_activity,mort_class,pcm_source/consumer_join,
-source_before_consumer,missing_func,b40_rows,route_state_rows,title,hangar,
-crash_pc,last_guest_pc`.
-
-The positive controls are one `[missing-func]`, 14 B40 rows, 28 route-state
-rows, title `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400` in both arms;
-the stagger control is an explicit `silent_first_512=observed` line before
-the image process is launched. Select H-AudioDegeneracy only when both arms
-are route-qualified and the image-only downstream delta is complete; select
-H-ContractGap when image task controls pass but a named later edge does not;
-select H-MixedPipelines when the RSP/MORT rows separate; otherwise select
-H-RouteInvalid.
+The single discriminating table is:
+`phase_index,width,origin,phase_time,process_alive,death_time,pc_symbol,
+last_guest_pc,audtask_dispatch,audio_return,pcm_source/consumer,
+m5_b40_route,m5_route_state,missing_func,crash,hangar_gate`.
+`1024 @ 0x00790400` and `512 @ 0x006AB400` are positive route controls;
+`512 @ 0x00690400`, any other 640 phase, and the startup `[phase]` rows are
+not target controls. Each outcome above is selected by the target phase plus
+the process/death/crash relation, not by an audio counter.
 
 ## Ground-truth prerequisite
 
-No new instrument is being added. The retail whole-RDRAM watch and writer
-controls already recorded in the M5 plan/current truth are the independent
-positive control; this run uses the existing port-side phase/task/PCM probes.
+No new runtime instrument is being added. The existing retail whole-RDRAM
+watch and writer controls remain the independent ground truth. This is a
+port-side route-validity run only; a null is not evidence about audio.
 
 ## Build
 
@@ -60,23 +48,13 @@ cmake --build build --config Debug --target RogueSquadron64Recomp -j2
 
 ## Run
 
-Use the pair driver from the repo root. Both arms use
-`ROGUESQ_M5_C88_VALUE=0`, `ROGUESQ_SPIN_YIELD=1`,
-`ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1`, with
-`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`. Keep only the
-canonical existing audio-return, PCM-boundary, B40/route-state, image-stage,
-runner, thread-resume, and OST-writeback probes; the prior attempt showed
-that adding VI-caller/filter/gate/task-contract detail can make this route
-miss its target window. The driver must SIGKILL both processes, capture under
-`scratch/agent/`, and reject an image launch unless the silent log contains
-the explicit hangar phase line.
-
-Exact command after the build:
-
 ```sh
-zsh scratch/agent/run_s2273_m5_step1_pair.sh s2274_m5_step1_canonical
+zsh scratch/agent/run_s2275_m5_step1_route_requal.sh s2275_m5_step1_route_requal
 ```
 
-Read only bounded summaries and phase-keyed rows from the two run logs. The
-next ledger entry must retain both arm controls, the stagger gate, every
-nonzero image/PCM join, and any missing service/slot/voice/MORT edge.
+The script launches one silent arm from `build/`, self-watchdogs, SIGKILLs on
+timeout, and writes bounded summaries under
+`scratch/agent/s2275_m5_step1_route_requal/`. If the target phase is
+qualified, the next iteration may construct the staggered image comparison;
+otherwise keep the Step 1 pair unevaluable and pivot to the selected route
+boundary after the third stalled attempt.

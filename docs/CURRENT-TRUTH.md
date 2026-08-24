@@ -5,11 +5,12 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2273 (2026-08-24); behavioral and source evidence is
-current through s2273. This iteration built an unchanged Step 1 audio pair,
-but the heavy-trace arm crashed before hangar and the corrected reduced-trace
-arm stalled at the first 640 target. Neither arm reached the discriminating
-stub/image window; no runtime change was made.
+Maintained in Session 2274 (2026-08-24); behavioral and source evidence is
+current through s2274. This iteration built the unchanged target and ran the
+Step 1 pair twice, first with the existing trace and then with the extra
+thread-resume, OST-writeback, and runner-all logs removed. Both silent arms
+were route-invalid before the expected hangar origin; the image arm never
+launched and no runtime change was made.
 
 ## Current state
 
@@ -55,9 +56,26 @@ stub/image window; no runtime change was made.
   `0x00696100` with one `[missing-func]`, six B40 rows, and ten route-state
   rows, then was SIGKILLed. Neither pair arm reached the required hangar
   control. No audio contract null is interpretable.
+- s2274 rebuilt the unchanged target and repeated the Step 1 pair. The first
+  arm reached title `1024 @ 0x00790400`, then returned to 640 at
+  `0x00696100` and crashed in `MetalCommandList::barriers` at guest PC
+  `0x80001F88`; the image arm was not launched. After removing the extra
+  thread-resume, OST-writeback, and runner-all logs, the silent arm reached
+  title and an off-target `512 @ 0x00690400`, then crashed in
+  `allocAndInitGridCellArray+1276` at guest PC `0x80001C94`, still without
+  `512 @ 0x006AB400`. The reduced arm had one `[missing-func]`, 13
+  `[m5-b40-route]` rows, 25 `[m5-route-state]` rows, 67 audio-dispatch rows,
+  263 stub returns, and 51/51 phase-8 PCM source/consumer rows; these are
+  route controls only. Both captures are H-RouteInvalid, so no audio/output
+  null is interpretable and no image arm ran.
 
 ## Latest evidence
 
+- s2274's two same-build route attempts failed before the expected hangar
+  origin despite positive dispatch/audio/route probes. Removing the three
+  high-volume host trace categories changed the failure from a renderer
+  barrier crash after title to an off-target 512 phase followed by
+  `allocAndInitGridCellArray`; it did not produce a qualified comparison.
 - s2253–s2255 showed intermittent pre-target route failures in image/silent
   pairs; s2254 qualified both arms through title and hangar. These runs do
   not select an image-specific crash or output explanation.
@@ -196,10 +214,14 @@ stub/image window; no runtime change was made.
 
 Closed investigations are not active work items. The sequence is monotonic.
 
-1. **M5 Step 1 stub/image validation.** Re-run the unchanged pair with the
-   canonical reduced trace that qualified s2272; do not interpret task/output
-   nulls until both arms pass title `1024 @ 0x00790400` and hangar
-   `512 @ 0x006AB400`. Keep `m5-step1-task-output-contract` active.
+1. **M5 Step 1 route requalification.** Run one single silent control with
+   the reduced Step 1 probes and a phase-origin watcher that records every
+   512 phase, process death, and crash PC. Treat only
+   `512 @ 0x006AB400` as the hangar gate; the observed `0x00690400` phase is
+   not a target. Use the result to decide whether another staggered
+   silent/image pair is valid. Do not interpret task/output nulls until both
+   arms pass title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`.
+   Keep `m5-step1-task-output-contract` active.
 2. **M5 key-on tuple contract.** Explain the bidirectional port/retail tuple
    difference using a new pointer-versus-branch discriminator. No key-on
    return or mitigation change follows from the existing table.
