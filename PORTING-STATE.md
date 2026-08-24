@@ -107504,3 +107504,46 @@ PID bookkeeping before the valid rerun.
 
 Run the two-wave route-contention discriminator in `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-a1-vi-publisher-cadence`.
+
+## Session 2284 (2026-08-24) — two-wave VI publisher matrix remained route-intrinsic
+
+HYPOTHESIS-ID: m5-a1-vi-publisher-cadence.
+
+The planned same-build, phase-gated A1 two-wave route discriminator ran with
+one retail oracle. The first driver attempt was measurement-invalid: both port
+waves exited before the oracle's title and hangar controls, and the driver
+killed the still-running oracle. The driver was corrected to gate wave 1 on
+the oracle's whole-RDRAM positive threshold, title, and hangar; the gated rerun
+was the only result used below. No runtime or generated code was rebuilt or
+changed.
+
+The fixed oracle gate passed the whole-RDRAM threshold at `10,000` callbacks,
+then showed title `0x00790400` at width 1024 and hangar `0x006AB400` at width
+512. Wave 1 launched control and alternate-field concurrently. Each supplied
+`8` `[vi-context-port-control]` rows and `8`
+`[vi-parity-scheduler-control]` rows, but recorded zero committed target rows
+at `0x00696100` or `0x00696600` and aborted with status 134 at guest PC
+`0x80001F88` during the initial width-640 route. After both exited, wave 2
+launched current-register-screen and retrace-parity concurrently. Each again
+supplied `8` rows of both controls, zero target rows, and the same guest-PC
+abort with status 134.
+
+This selects H-RouteIntrinsic at the tested scope and refutes
+H-FourArmContention and H-ArmSpecificRoute: reducing four concurrent arms to
+two in each wave did not restore target coverage, and both behavior pairs
+reproduced the same failure. H-NoPublisher is not evaluated because no arm
+reached a target-origin window. The retail controls and the two independent
+wave control rows make the targetless port result interpretable as a route
+result, not a VI publisher null. No guest or host value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+ORIGIN: no mitigation-shaped change; this session added one observation-only
+two-wave driver and an oracle-control gate after discarding its ungated first
+attempt.
+
+### Next
+
+Run the M5 Step 1 full audio-contract row in `scratch/agent/NEXT.md` using a
+new same-build silent/image pair and the established route. A1 remains parked
+until a new route discriminator restores target-origin coverage.
+`HYPOTHESIS-ID: m5-step1-audio-contract`.

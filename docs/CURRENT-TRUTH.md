@@ -5,13 +5,13 @@ history through s2227–s2262 is summarized in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) §45; the append-only ledger is
 authoritative for exact commands, counts, and probe rows.
 
-Maintained in Session 2283 (2026-08-24); behavioral and source evidence is
-current through s2283. This iteration ran the corrected same-build, phase-gated
-four-arm A1 VI matrix with one retail oracle. Retail passed its whole-RDRAM,
-title, and hangar controls. All four port arms passed both runtime positive
-controls but crashed at guest PC `0x80001F88` in the initial 640 phase before
-either target origin; the matrix is H-RouteInvalid and no VI publisher or
-default changed.
+Maintained in Session 2284 (2026-08-24); behavioral and source evidence is
+current through s2284. This iteration ran the corrected same-build,
+phase-gated two-wave A1 VI matrix with one retail oracle. Retail passed its
+whole-RDRAM, title, and hangar controls. Both wave-1 arms and both wave-2 arms
+passed both runtime positive controls but crashed at guest PC `0x80001F88` in
+the initial 640 phase before either target origin; the two-wave result selects
+H-RouteIntrinsic at the tested scope and no VI publisher or default changed.
 
 ## Current state
 
@@ -68,15 +68,18 @@ default changed.
   launched. The three consecutive route-invalid attempts s2280–s2282 leave
   H-C88-route versus H-RouteLoad unresolved but park this discriminator under
   the no-fourth-attempt rule.
-- The VI second-origin publisher/cadence is open. Field, current-register,
-  timing, and total-`VI` arms recover the split, but none is default-on.
-  s2283's corrected four-arm matrix supplied `8` all-width
+- The VI second-origin publisher/cadence is open but route-parked. Field,
+  current-register, timing, and total-`VI` arms recover the split, but none is
+  default-on. s2283's corrected four-arm matrix supplied `8` all-width
   `[vi-context-port-control]` and `8` `[vi-parity-scheduler-control]` rows per
-  arm, then all four arms crashed at guest PC `0x80001F88` before
-  `0x00696100` or `0x00696600`. Retail independently passed its whole-RDRAM
-  positive control and reached title and hangar. The port second-origin null
-  is therefore route-invalid, not evidence for H-NoPublisher; the initial
-  driver attempt with literal `$!` PIDs is discarded.
+  arm, then all four arms crashed at guest PC `0x80001F88`. s2284 split the
+  arms into two concurrent waves: wave 1 (control and alternate-field) and
+  wave 2 (current-register-screen and retrace-parity) each supplied `8` rows
+  of both controls per arm, then all four reproduced the same initial-640
+  crash before `0x00696100` or `0x00696600`. Retail independently passed the
+  whole-RDRAM, title, and hangar controls. Two independent waves select
+  H-RouteIntrinsic at this recipe scope, not H-NoPublisher; no publisher arm
+  is interpretable until a new route discriminator restores target coverage.
 - s2273's first Step 1 pair was route-invalid: the heavy trace reached title
   and the first 640 target before `findOrCreateMaterial` crashed at guest PC
   `0x8000E29C` with one `[missing-func]`, 11 B40 rows, and 20 route-state
@@ -125,6 +128,18 @@ default changed.
 
 ## Latest evidence
 
+- s2284's fixed two-wave driver first gated on one retail oracle's
+  whole-RDRAM threshold (`10,000` callbacks), title, and hangar origins. The
+  wave-1 control and alternate-field arms then each passed `8`
+  `[vi-context-port-control]` and `8` `[vi-parity-scheduler-control]` rows,
+  recorded no `0x00696100` or `0x00696600` target rows, and aborted at guest PC
+  `0x80001F88`. After both exited, wave 2 launched current-register-screen
+  and retrace-parity; each again passed `8` rows of both controls, recorded no
+  target rows, and aborted at the same guest PC. The first driver attempt was
+  measurement-invalid because it killed the oracle before its title/hangar
+  controls; the gated rerun is the only result used here. This selects
+  H-RouteIntrinsic for the two-wave recipe and supplies no VI publisher
+  verdict.
 - s2283's corrected same-build four-arm A1 matrix ran one independent retail
   oracle plus control, alternate-field, current-reg-screen, and retrace-parity
   port arms. Retail passed the whole-RDRAM positive control with `10,000`
@@ -346,14 +361,12 @@ Closed investigations are not active work items. The sequence is monotonic.
    this route pair without a new route discriminator. No pointer/data or
    branch-state verdict, key-on return, or mitigation change follows. The
    Step 1 task/output pair remains parked.
-2. **M5 A1 second-origin transition.** First run a same-build two-wave route
-   discriminator with one retail oracle: launch control plus alternate-field
-   concurrently, then current-reg-screen plus retrace-parity concurrently.
-   Require both positive controls and target-origin rows in each wave before
-   interpreting publisher cadence. This tests whether s2283's four-way
-   initial-640 crash was process contention; if both waves remain targetless,
-   park A1 as route-invalid rather than infer H-NoPublisher. Diagnostic
-   recovery arms remain opt-in.
+2. **M5 A1 second-origin transition.** Parked after s2283's four-way and
+   s2284's two-wave matrices. Each wave supplied both positive controls in both
+   arms but reproduced the initial-640 crash at guest PC `0x80001F88`, so the
+   two independent wave results select H-RouteIntrinsic at this recipe scope.
+   Do not repeat the four A1 arms without a new route discriminator that can
+   restore `0x00696100`/`0x00696600` coverage; no publisher or default follows.
 3. **M5 drain in-loop tick A/B.** Parked after s2125–s2128 failed to place
    both arms in a target comparison. Resume only with a new renderer or
    ground-truth discriminator.
@@ -363,6 +376,15 @@ Closed investigations are not active work items. The sequence is monotonic.
 5. **Hangar visual artifact.** Malformed-triangle H2 and consumer-mode H1 are
    refuted. H3 is unavailable because the oracle cannot screenshot the LLE
    path; do not repeat the capped `0xD60` scan.
+
+6. **M5 Step 1 full audio-contract row.** With A1 route work parked, run one
+   new same-build silent/image pair using the established route and the full
+   plan row: task dispatch/fields/source, DMEM/DMA, image exit/SP completion,
+   service, slot/status/reap, MORT class, PCM source/consumer, and title/hangar
+   phases. Gate on an independent retail whole-RDRAM/title/hangar control and
+   both port route controls. A route-invalid result is not an audio null; a
+   qualified image-only downstream edge selects the missing contract boundary
+   without flipping the image default.
 
 Generated-symbol renaming is closed at the useful boundary. The remaining
 placeholder holds are `func_8000040C`, `func_800927B0`, `func_80092A54`,
