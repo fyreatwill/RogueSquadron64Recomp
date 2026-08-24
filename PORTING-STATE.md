@@ -109521,3 +109521,51 @@ Build one ground-truth-first table joining retail task/output writers to the
 port's rotating image-stage destinations, with both stub and image arms in one
 run. Classify exact shared-output joins, stage-only rows, destination-role
 skew, or invalid coverage. Do not change port behavior from the result.
+
+## Session 2325 (2026-08-24) — M5 task/output consumer join selects destination-role skew
+
+Ran `zsh -n scratch/agent/run_s2325_m5_task_output_join.sh` and the
+self-contained launcher. The launcher ran the retail oracle before either
+port arm, then drove stub and image sequentially with the same eleven Start
+schedule. No runtime behavior, audio default, writeback, guard, slot value,
+or key-on path changed. The new launcher and postprocessors are in
+`scratch/agent/run_s2325_m5_task_output_join.sh`; raw run artifacts are under
+`scratch/agent/s2325_m5_task_output_join/`.
+
+The independent oracle passed its controls: whole-RDRAM `1,346,640` writes,
+title and hangar VI coverage, target ring writes, task/output `108`, gate
+`17`, status `25`, wait `0`, and target task/output writer PCs
+`0x8008EB8C`, `0x8008EBBC`, and `0x80094648`. This is the ground-truth line;
+the wait zero is an observed control value, not a null conclusion.
+
+Both port arms reached title and hangar. Stub controls were task ABI/DMA
+`1143/1143`, PCM source/consumer `88/88`, gate `1024`, route `13/25`, and
+zero image-stage, slot, descriptor, voice/filter, and key-on rows. Image
+controls were task ABI/DMA `1140/1140`, DMA ranges `2305`, image joins `2300`,
+PCM source/consumer `88/88`, gate `1024`, route `13/25`, and the same zero
+downstream slot/descriptor/voice/key-on rows. The image target summary had
+`618` stage rows and two nonzero rows. `0x168850` was
+`0x300`/`2B9E9631`/`nz=621` and stage-only. `0x168B50` was
+`0x300`/`6ADD4218`/`nz=639`; its exact source event was `6426` and consumer
+event `6427`, with source-before-consumer ordering. The destination summary
+independently reports one stage-only destination and one exact source/consumer
+destination.
+
+This selects `H-Destination-Role-Skew` at capture scope. It rules out a
+uniform image-stage-only interpretation and proves the image arm is live, but
+does not establish which role feeds the missing slot/key-on contract. The
+next boundary is a destination-keyed slot/descriptor/voice/key-on table.
+The failed earlier undifferentiated task/output conclusion is superseded by
+this same-run destination split; it was believable because s2324 had only
+one stage-only row and one occasional source/consumer join without a
+destination-polarity table.
+
+ORIGIN: no mitigation-shaped change; this iteration only added the launcher,
+table extraction, and phase-scoped evidence.
+
+### Next
+
+Build one ground-truth-first table joining each rotating image destination to
+slot allocation/byte, descriptor, voice/filter, and key-on rows. Use the same
+retail controls and both eleven-Start port arms. Do not change port behavior
+from the result.

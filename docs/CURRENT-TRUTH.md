@@ -5,7 +5,7 @@ history through s2302 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §46; the append-only ledger is authoritative for exact commands, counts, and
 probe rows.
 
-Maintained in Session 2324 (2026-08-24). Session 2303 was the maintenance
+Maintained in Session 2325 (2026-08-24). Session 2303 was the maintenance
 iteration that migrated durable s2263–s2302 history to §46, pruned closed
 detail, and renumbered the active backlog. Session 2304 ran the M5
 task→stage→PCM ordinal join; s2305 extended it to a corrected bounded
@@ -98,7 +98,22 @@ live image-RSP progress plus an unresolved downstream task/output-to-slot
 contract gap at capture scope; it does not authorize a writeback, guard,
 default, or key-on change.
 
-The current M5 boundary is task/output and slot-contract work. The qualified default
+Session 2325 ran the ground-truth-first task/output-to-consumer table. The
+retail oracle passed whole-RDRAM `1346640`, title/hangar, gate/task/status
+watches `17/108/25`, wait `0`, and named target task/output writers
+`0x8008EB8C`, `0x8008EBBC`, and `0x80094648`. Both port arms reached hangar
+with the same route controls. The stub had task ABI/DMA `1143/1143`, PCM
+source/consumer `88/88`, and zero image-stage rows. The image arm had task
+ABI/DMA `1140/1140`, `2305` DMA ranges, `2300` image joins, and target
+summary `618` stage rows with two nonzero rows. Destination `0x168850`
+(`2B9E9631`, `nz=621`) was stage-only; destination `0x168B50`
+(`6ADD4218`, `nz=639`) had exact source/consumer events `6426/6427` with
+source-before-consumer ordering. Neither arm emitted slot, descriptor,
+voice/filter, or key-on rows. This selects `H-Destination-Role-Skew` at
+capture scope, rules out a uniform image-stage-only result, and leaves the
+destination-to-slot/key-on contract open. No runtime behavior changed.
+
+The current M5 boundary is destination-role to slot-contract work. The qualified default
 Factor 5 image arm reaches title `1024 @ 0x00790400` and hangar
 `512 @ 0x006AB400`; measured nonzero phase-10 slots have exact source and
 consumer joins in some captures. Retail independently reaches both origins
@@ -337,6 +352,20 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
   `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2325 — rotating image destinations split stage-only from exact PCM.** The
+  same-run retail oracle passed whole-RDRAM `1346640`, title/hangar,
+  gate/task/status `17/108/25`, wait `0`, and the named target task/output
+  writers. Stub and image both reached hangar. Stub task ABI/DMA was
+  `1143/1143` with no image-stage rows and PCM source/consumer `88/88`.
+  Image task ABI/DMA was `1140/1140`, with `2305` DMA ranges and `2300`
+  image joins. In target phase, the destination table had two nonzero rows:
+  `0x168850`/`0x300`/`2B9E9631`/`nz=621` was stage-only, while
+  `0x168B50`/`0x300`/`6ADD4218`/`nz=639` matched source event `6426` and
+  consumer event `6427` in order. This selects `H-Destination-Role-Skew`
+  at capture scope. Slot, descriptor, voice/filter, and key-on controls were
+  zero in both arms; no writeback, address remap, or default change is
+  authorized.
 
 - **s2324 — image RSP is live; downstream slot contract remains open.** The
   same-run oracle passed whole-RDRAM `10329`, title/hangar, gate/task/status
@@ -662,17 +691,17 @@ selects `H-Retail-Earlier-Or-Unattributed` at capture scope across all seven
 Closed investigations are not active work items. This is the single monotonic
 sequence; #1 is the next work unit.
 
-1. **M5 downstream task/output contract — active.** s2324 established live
-   Factor 5 image execution and an occasional nonzero PCM join, but no slot,
-   descriptor, voice, or key-on transition. The next unit must be a new
-   ground-truth-first writer/consumer table that joins the retail
-   task/output writers to the port's nonzero image-stage destinations and
-   separates stage-only from source/consumer rows. Do not add writeback,
-   guards, slot values, or defaults.
-2. **M5 key-on tuple contract — parked behind #1.** Retail status/zeroing is
-   independently closed, but the port still has no slot/descriptor/key-on
-   transition. Resume only after #1 supplies a genuinely new contract
-   discriminator; do not repeat the status capture or failed C88/A1 matrices.
+1. **M5 destination-to-slot/key-on contract — active.** s2325 established
+   live image execution and a real target-phase role split: one rotating
+   destination is stage-only while another has an exact PCM source/consumer
+   join. Neither port arm emitted slot, descriptor, voice, or key-on rows.
+   The next unit must join each destination to slot allocation/byte,
+   descriptor, voice/filter, and key-on rows by phase and event order. Do not
+   add writeback, guards, slot values, or defaults.
+2. **M5 task/output contract — closed at the current discriminator.** s2325
+   supersedes the undifferentiated task/output gap with
+   `H-Destination-Role-Skew`; revisit only if the destination-to-slot table
+   cannot classify the split. Retail status/zeroing is independently closed.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not
    repeat the failed four-arm/two-wave matrix.
@@ -725,10 +754,12 @@ s2322's detail join then found target top-byte counts `00=30`, `01=3`,
 `0x8009B214`/`0x8009B6F8`; the independent target histogram named both.
 s2323's phase-keyed status poll then recorded three complete target cycles and
 the detail table named `0x8009B7CC`/`0x8009B7EC` for the `03/00` tail. The next
-boundary is the port task/output-to-slot contract. s2324's same-build
+boundary is the port destination-role-to-slot contract. s2324's same-build
 checkpoint now proves the image arm performs real DMEM/DMA work and can
 produce a nonzero PCM join, but still records no port slot/descriptor/voice
-transition. No gate, wait, status, slot, writeback, or default change is
+transition. s2325 splits the rotating target destinations into one stage-only
+row and one exact source/consumer row, but still finds no port slot/descriptor/
+voice/key-on row. No gate, wait, status, slot, writeback, or default change is
 authorized.
 
 The image arm changes DMEM, completes, and emits generated DMA. Qualified
@@ -820,6 +851,12 @@ but are superseded at their measured scopes:
   s2323 status poll observed three target `01 -> 02 -> 03 -> 00` cycles and
   the detail table named the later `03/00` writer pair, so retail lifecycle
   semantics are now closed; the port-side slot/key-on gap remains separate.
+- s2324's undifferentiated downstream task/output gap was believable because
+  it had one stage-only nonzero row and one occasional exact PCM join but no
+  destination-polarity table. s2325's same-run target table found one
+  stage-only destination and a different destination with exact source and
+  consumer events, so the active conclusion is the narrower
+  `H-Destination-Role-Skew` at capture scope.
 
 ## Evidence and safety rules
 
