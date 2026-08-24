@@ -108453,3 +108453,47 @@ measurement driver/postprocessor and retained the existing runtime probes.
 
 Run the s2306 M5 unconsumed-edge recurrence capture from `scratch/agent/NEXT.md`,
 with 45-second post-hangar retention and the same independent controls.
+
+## Session 2306 (2026-08-24) — recurrence capture retained the stage-only edge
+
+HYPOTHESIS-ID: m5-step3-unconsumed-edge-attribution.
+
+The planned work unit was one same-run M5 Step 3 recurrence capture with the
+qualified default Factor 5 image arm, the independent retail oracle, and
+45-second post-hangar retention. The first run reached all phase gates but the
+new AWK summary had two missing closing braces; it produced no valid table or
+verdict. The fixed driver was syntax-checked and rerun in this iteration. No
+runtime or game behavior changed.
+
+The rerun passed the retail whole-RDRAM positive control at `10,000`, title
+`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and all three target writer-PC
+controls. The port reached title and hangar, and retained the hangar phase for
+45 seconds. The resulting table had two nonzero phase-10 rows, both with
+exact DMA: `0x168550`, length `0x300`, FNV `60F910DE`, `nz=621`, and
+`0x168850`, length `0x300`, FNV `7B70923A`, `nz=639`.
+
+The `0x168550` row had no exact PCM source or consumer match in its retained
+phase, while the `0x168850` row matched both endpoints at ordinal `+12`, with
+source event `6432`, consumer event `6433`, DMA-before-source, and
+source-before-consumer. The destination summary independently reported the
+same split: `0x168550` was `stage-only`, and `0x168850` was exact source and
+consumer. It also flagged one same-destination payload mismatch for each
+endpoint on `0x168850`; raw phase-10 records show those are later zero-payload
+(`F59C39C5`, `nz=0`) calls, not a match for the nonzero stage tuple. The
+primary discriminator selects `H-StageUnconsumed` for the observed first row,
+rules out `H-TransientStageOnly` and `H-OrdinalWindowTooNarrow` at this
+capture scope, and leaves cross-phase attribution open. The result does not
+authorize writeback, consumer, slot, gate, guard, or address-remap changes.
+
+The second line of evidence is the independent native image-join classification
+from s2305, which also classified its first nonzero tuple as `stage-only` and
+the paired tuple as `stage-consumer-match`; s2306 supplies recurrence and the
+same split at a different ring position. The destination mismatch count is a
+measurement, not a mitigation.
+
+ORIGIN: no mitigation-shaped change; the only changes were a measurement
+driver, its postprocessor, and the required 45-second retention.
+
+### Next
+
+Run the cross-phase M5 Step 3 attribution capture from `scratch/agent/NEXT.md`.
