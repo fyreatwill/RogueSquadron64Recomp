@@ -106353,3 +106353,44 @@ rewritten, guarded, restored, or defaulted.
 
 See `scratch/agent/NEXT.md`.
 `HYPOTHESIS-ID: m5-image-output-contract-attribution`.
+
+## Session 2256 (2026-08-24) — duplicated the silent route control
+
+Ran the prescribed same-build concurrent silent+C88=`0` / silent+C88=`0`
+pair, with the second arm launched one second after the first. Both arms used
+`ROGUESQ_LOG_THREAD_RESUME=0`, `ROGUESQ_SPIN_YIELD=1`, the B40
+route/state/read, task-contract, host-boundary, and PCM-boundary traces, with
+`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`. The existing Debug
+binary and ROM were used; no build or runtime behavior changed. Driver logs
+are `scratch/agent/s2256_stub_a_c88_0_driver.log` and
+`scratch/agent/s2256_stub_b_c88_0_driver.log`; run logs are under
+`scratch/s73_post_a_scene/s2256_stub_a_c88_0/` and
+`scratch/s73_post_a_scene/s2256_stub_b_c88_0/`.
+
+Arm A passed startup, one `[missing-func]`, the 640 origin
+`0x00696100`, title `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400`
+twice. It recorded 3,176 LLE tasks, 25 route-state rows, 13 B40-route
+rows, 137 host-boundary rows, and 208 PCM-boundary rows before the known
+post-hangar crash in `updateHangarBayScene+76432` with last guest PC
+`0x800AC8C0`. Arm B passed startup, one `[missing-func]`, both 640 origins
+including `0x00696100`, and their B40/route-state controls, but never reached
+1024; its driver waited the full 600-second phase timeout and SIGKILLed the
+game. It recorded 518 LLE tasks, 10 route-state rows, and 6 B40-route rows,
+with no target-phase host or PCM rows and no crash marker.
+
+The complete same-run route table selects H-IdenticalArmNondeterminism:
+identical silent arms split after matching positive controls, with one
+qualifying through hangar and the other remaining at 640. This rules out a
+deterministic common silent-route failure for this capture, but does not
+qualify any image/output comparison or identify a writer, consumer, gate,
+task contract, or default. The next discriminator tests whether the split is
+caused by full trace load by pairing one fully traced silent arm with one
+route-only silent arm in the same run.
+
+ORIGIN: this session added observation only; no value was suppressed,
+rewritten, guarded, restored, or defaulted.
+
+### Next
+
+See `scratch/agent/NEXT.md`.
+`HYPOTHESIS-ID: m5-image-output-contract-attribution`.
