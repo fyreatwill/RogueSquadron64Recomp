@@ -5,7 +5,7 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2344 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2345 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
 to §47. The s2343 B40 provenance census passed fresh retail whole-RDRAM,
 target-window, mode/status/title/hangar, named-PC, and both-arm port controls.
@@ -27,6 +27,17 @@ PCM source/consumer counts remained `88/88` in every arm and voice-event rows
 remained zero. This selects H-C88GateNotSufficient_PCMVoiceContractStillOpen
 at capture scope; the treatment remains opt-in and no default writer change
 was made.
+
+The s2345 C88 downstream ordinal join passed the same fresh retail controls and
+all four same-build port arms. C88=1 stored nonzero in `2/3` writer rows and
+produced `125/126` writer-joined fall-through branches. Exact route-ordinal
+rows in both C88=1 arms included key-on/slot and descriptor-init events, while
+both had `0` exact PCM source joins, `0` exact PCM consumer joins, and `0`
+completed image-task joins. Target-phase filter audit rows were `256` in each
+C88=1 arm and `0` in each control, but that logger is phase-scoped rather than
+ordinal-keyed. Image-task rows remained stage-only. This selects
+H-TaskOutputGap at capture scope; it does not authorize a writer, consumer,
+task-data, or default change.
 
 ## Current state
 
@@ -56,11 +67,20 @@ was made.
   but does not add a same-run PCM or voice-event transition. This is progress
   at the gate boundary, not a complete audio contract or permission to promote
   the store.
+- The s2345 table refines the C88 boundary. Both treatment arms have exact
+  route-ordinal key-on/slot and descriptor-init rows, and the image arm has
+  task-stage rows, but neither treatment has an exact PCM source/consumer or
+  completed task join. Filter evidence is positive only at target-phase scope,
+  because its existing audit row has no route ordinal. The remaining measured
+  boundary is task output/publication, not C88 readback or a proven consumer
+  mismatch; no writer, consumer, task-data, or default change is authorized.
 - Both silent and image arms qualify through title `1024 @ 0x00790400` and
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
-  rotate between captures; exact PCM source/consumer joins can occur, but the
-  port has no valid same-ordinal slot, descriptor, voice/filter, or key-on
-  transition. The s2332 capture had zero `output_buff`/size and zero
+  rotate between captures; exact PCM source/consumer joins can occur. In the
+  C88=0 controls the older no-slot/descriptor/key-on null remains; in the
+  opt-in C88=1 treatment, s2345 found same-ordinal key-on/slot and
+  descriptor-init rows but no same-ordinal PCM source/consumer or completed
+  task join. The s2332 capture had zero `output_buff`/size and zero
   output-overlap on both nonzero target stages, with one exact PCM
   source/consumer join and no post-stage lifecycle row. Its host-positive
   filter/voice span control fired in both arms, while the real port audit had
@@ -176,6 +196,28 @@ was made.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2345 — C88 opens same-ordinal voice work, but task output/publication remains open.**
+  The fresh retail oracle passed whole-RDRAM `32,359,524`, target-window
+  `32,349,358`, B40/status/queue `17/22/19`, both title/hangar phases, and the
+  requested named PCs. Retail's post-value watch saw `0x8008EC88` write
+  `0x01000000` twice, while `0x8008EB7C` and `0x8008ED48` wrote zero in the
+  target-like rows. The new launcher was initially absent; after repairing it,
+  the Debug build passed and all four sequential port arms passed the same-run
+  title/hangar, task/DMA, guest-receive, PCM, filter, render, key-on, and
+  callback-helper controls. Every arm was intentionally SIGKILLed after the
+  hangar retention window with rc `137` and no crash/abort marker.
+  The phase/ordinal table recorded C88=1 writer nonzero `2/3`, fall-through
+  branches `126` stub and `125` image, same-ordinal key-on/slot joins `122/118`,
+  descriptor-init joins `16/11`, and target-phase filter rows `256/256` versus
+  `0/0` controls. Both C88=1 arms had zero exact PCM source joins, zero exact
+  PCM consumer joins, zero completed image-task joins, and stage-only image
+  rows; PCM boundary counts stayed `88/88` in the stub pair and `87/87` in the
+  image treatment. Filter rows are phase-scoped because that existing logger
+  does not carry route ordinal. This selects H-TaskOutputGap at capture scope,
+  refutes H-SameOrdinalVoicePath and H-StaleOrdinalReuse for the observed
+  key-on/descriptor rows, and leaves H-ConsumerGap unevaluable because no
+  same-ordinal source exists. No behavior change was made.
 
 - **s2344 — C88 treatment restores the gate branch but not the complete audio contract.**
   The fresh retail preflight passed whole-RDRAM `32,419,426`, target-window
@@ -341,17 +383,18 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 C88 downstream ordinal join — next.** The s2344 opt-in treatment
-   restores the `0x80091468` fall-through and intermediate key-on/slot/filter
-   activity, but PCM and voice-event rows do not change. Build one phase-keyed
-   table joining `(audio_arm,c88,phase,width,origin,writer_seq,branch_event,
-   route_ordinal,keyon_table,slot02,slot00,descriptor/filter event,PCM source,
-   PCM consumer)` in the same run. Fresh retail must positively execute the
-   named C88, key-on, descriptor/trigger, and filter PCs; the four port arms
-   must retain route/task/DMA/guest-receive controls. Distinguish valid same-
-   ordinal voice/filter work from stale/prior-ordinal reuse and from a valid
-   gate path whose remaining gap is task output/PCM. Keep C88 opt-in and make
-   no store, consumer, default, or guard change.
+2. **M5 task-output/PCM handoff provenance — next.** s2345 selects
+   H-TaskOutputGap: C88=1 creates same-ordinal key-on/slot and descriptor-init
+   work, but the image-task rows are stage-only and no exact PCM source,
+   consumer, or completed task join follows. Run one fresh ground-truth-first,
+   same-build four-arm C88/audio table that joins each restored route ordinal
+   to `audtask-abi` output buffer/size, task completion, every generated DMA
+   range and overlap class, `audtask-image-join` classification, and PCM source/
+   consumer events. Keep `ROGUESQ_M5_B40_VALUE=0`, C88 opt-in, the existing
+   eleven-Start title/hangar gates, and all s2345 controls. The discriminator
+   is output metadata written before DMA versus a valid DMA range with no
+   publication versus a publication with no consumer; do not promote the
+   writer or change task data, a consumer, a default, or a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -436,6 +479,13 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   unchanged and voice-event rows stayed absent, so the measured boundary is
   now the downstream voice/PCM contract rather than C88 readback. No default
   writer or consumer change is authorized.
+  The s2345 ordinal table refined that boundary: C88=1 treatment rows joined
+  same-ordinal key-on/slot and descriptor-init events, while image-task joins
+  remained stage-only and exact PCM source/consumer joins were absent in both
+  treatment arms. Filter audit rows were positive at target-phase scope only;
+  they carry no route ordinal. The active boundary is task output/publication,
+  not a proven PCM consumer mismatch. No writer, task-data, consumer, or
+  default change is authorized.
 
 ### VI state and second origin
 
@@ -527,6 +577,13 @@ are superseded at their measured scopes:
   watch showed `0x8008EC88` legitimately writing nonzero on retail while the
   port's control arm force-stored zero. The measured boundary is now the C88
   writer mismatch, not an unexplained consumer or phase classifier failure.
+- s2344's H-C88GateNotSufficient_PCMVoiceContractStillOpen label is refined by
+  s2345: it was believable because aggregate PCM and voice-event counts stayed
+  unchanged after the gate treatment, but the ordinal table now shows exact
+  treatment-side key-on/slot and descriptor-init rows. Neither treatment has
+  an exact PCM source/consumer or completed task join; the filter rows are only
+  phase-attributed. The measured boundary is task output/publication, not C88
+  readback, stale ordinal reuse, or a proven consumer mismatch.
 
 ## Evidence and safety rules
 

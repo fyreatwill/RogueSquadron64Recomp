@@ -110461,3 +110461,66 @@ then build the Debug target and run a new four-arm phase-gated driver from
 whole-RDRAM/target/title/hangar controls and port route/task/DMA/
 guest-receive controls before interpreting nulls. Keep C88 opt-in and make no
 behavior change.
+
+## Session 2345 (2026-08-24) — M5 C88 ordinal join selects task-output gap
+
+HYPOTHESIS-ID: m5-c88-downstream-ordinal-join
+
+The planned work unit was a ground-truth-first, same-build four-arm join of
+the opt-in C88 treatment: stub/image crossed with `ROGUESQ_M5_C88_VALUE=0/1`,
+with `ROGUESQ_M5_B40_VALUE=0`. The retail command completed successfully. Its
+whole-RDRAM positive control was `32,359,524` writes and its target-window
+control was `32,349,358`; B40/status/queue watches were `17/22/19`, both title
+and hangar phases were present, and all requested C88, branch, callback,
+descriptor, key-on, and filter PCs were positive. The post-value witness saw
+`0x8008EC88` write `0x01000000` twice, while `0x8008EB7C` and `0x8008ED48`
+wrote zero in the target-like rows. Requested-zero `0x8009C4E8` remained zero.
+
+The prescribed launcher was absent, so no build was attempted on the first
+syntax check. It was repaired from the existing s2344 driver pattern, with one
+phase/ordinal table and the existing `ROGUESQ_LOG_AUDIOTICK_TRACE=1` branch
+control. The Debug target then built cleanly. All four sequential port arms
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and each
+passed task/DMA, guest-receive, PCM, filter, render, key-on, and callback-helper
+controls. Each was intentionally SIGKILLed after the 15-second hangar capture;
+all returned `137` with no crash or abort marker.
+
+The output is in
+`scratch/agent/s2345_m5_c88_downstream_ordinal_join/ordinal-table.tsv` and
+`ordinal-summary.tsv`:
+
+| arm | C88 writer nonzero | branch rows / joined fall-through | same-ordinal key-on | descriptor-init | filter phase rows | exact PCM source/consumer | task complete | image DMA ranges |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| stub C0 | 0/3 | 131 / 0 | 0 | 0 | 0 | 0 / 0 | 0 | 0 |
+| stub C1 | 2/3 | 131 / 126 | 122 | 16 | 256 | 0 / 0 | 0 | 0 |
+| image C0 | 0/3 | 131 / 0 | 0 | 0 | 0 | 0 / 0 | 0 | 2291 |
+| image C1 | 2/3 | 131 / 125 | 118 | 11 | 256 | 0 / 0 | 0 | 3756 |
+
+The treatment rows contain exact route-ordinal key-on/slot and descriptor-init
+events in both C88=1 arms. The existing filter audit is phase-scoped because
+its rows carry no route ordinal; it nevertheless rose from zero in both
+controls to `256` in both treatments. Image-task rows were stage-only, with no
+exact source/consumer or completed join. PCM boundary counts were `88/88` in
+the stub pair and `87/87` in the image pair. This selects
+**H-TaskOutputGap** at capture scope, refutes H-SameOrdinalVoicePath and
+H-StaleOrdinalReuse for the observed key-on/descriptor rows, and leaves
+H-ConsumerGap unevaluable because no same-ordinal source exists. It rules out
+no writer, consumer, task-data, or default behavior; no behavior change was
+made.
+
+ORIGIN: diagnostic-only and opt-in behavior-arm validation. The launcher and
+parser add no mitigation, skip, guard, remap, default, store, consumer, or
+task-data change. The C88 value was supplied only through the existing
+`ROGUESQ_M5_C88_VALUE` environment arm.
+
+### Next
+
+Run one fresh ground-truth-first M5 task-output/PCM handoff provenance census.
+Build one phase/ordinal table for the same four C88/audio arms joining each
+restored route ordinal to `audtask-abi` output buffer/size, task completion,
+every generated DMA range and overlap class, `audtask-image-join` classification,
+and PCM source/consumer events. Keep B40 zero, C88 opt-in, the eleven-Start
+title/hangar gates, and all s2345 controls. The discriminator is output
+metadata written before DMA versus a valid DMA range with no publication versus
+a publication with no consumer. Do not promote the writer or change task data,
+a consumer, a default, or a guard.
