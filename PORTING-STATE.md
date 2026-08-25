@@ -110855,3 +110855,36 @@ Run one fresh retail exact-destination census for the s2352 hangar field set
 `0x00171DE0`, `0x00171F70`, and `0x00173DB0`, retaining `0x00173C20` as a
 control, then join every positive 512-phase writer PC/address to the s2352
 four-arm table. Do not write a field or change the audio contract.
+
+## Session 2353 (2026-08-24) — M5 hangar writer set selected
+
+Ran the planned fresh retail exact-destination census for the three observed
+hangar fields, retaining `0x00173C20` as a control. The oracle passed
+whole-RDRAM `59,352`, target-window `44,150`, exact field watches
+`490/1,734/1,490/1,488`, all four explicit phase histories, and named-PC
+controls `23/23`. In the 512 buckets, `0x00171DE0` had positive writer rows
+from `0x800908D4`, `0x8009081C`, and `0x8009220C`; `0x00171F70` had
+`0x80090CA4`; and `0x00173DB0` had `0x80090CA4`. There were 11 positive
+writer-PC rows across the two hangar origins, with no positive row outside the
+three-field set.
+
+The prepared s2352 four-arm field/DMA table was used only as the port-side
+join. Its `stub_c0`, `stub_c1`, `image_c0`, and `image_c1` controls all
+remained qualified, and all retained rows had zero field-write events and
+zero pre/post changes. The missing s2353 parser runner was added, the regular
+Debug target built successfully, and the fixed parser produced verdict
+H-HangarFieldWriterInPortSet. This selects the retail writer/destination
+boundary at capture scope, but does not establish payload semantics or permit
+port writeback. It rules out the earlier empty-hangar-writer conclusion and
+does not change task data, consumers, defaults, or guards.
+
+ORIGIN: diagnostic-only. The runner and parser add no mitigation-shaped
+machinery and make no runtime behavior change.
+
+### Next
+
+Run the fresh retail payload/order census with `--post-value-pc` and
+`--post-value-pc-detail` for the five writer PCs listed in scratch/agent/NEXT.md,
+then join each `(phase, writer_pc, field_phys, value)` row to the s2352
+field-pre/post and task-order table. Do not write a field or change the audio
+contract.
