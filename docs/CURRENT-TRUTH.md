@@ -5,12 +5,12 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2359 (2026-08-24). The M5 retail task-field payload/order
-capture passed its controls after the recipe was corrected to include the
-watch-5 phase histogram. The exact writer is positive for every task-matched
-phase/field key, but its nonzero values do not match the retained port payload
-at the comparable rows. Two phase/field keys have no retained port profile, so
-the remaining source relation is unresolved there.
+Maintained in Session 2360 (2026-08-25). The M5 retail writer-source capture
+passed its controls and found a direct task relation in every target phase:
+`$s1 == data_ptr+0x100` at the exact task-field writer counts, with repeated
+`$a2 == data_ptr` rows. The source join is phase/field scoped because the
+oracle's execution GPR rows do not carry an exact VI; no port contract change
+is authorized.
 
 ## Current state
 
@@ -41,6 +41,11 @@ the remaining source relation is unresolved there.
   in the s2359 capture, but 910 comparable values mismatch the retained s2352
   port field payload and none match. This is a payload/source discriminator,
   not permission to alter task data or port writeback.
+- The M5 retail writer-source relation is positive at phase/field scope: the
+  exact task field is present in `$s1` for all four task-matched writer buckets,
+  while `$a2` repeatedly carries the matching task `data_ptr`. The oracle does
+  not join those GPR rows to an exact writer VI, so this selects a source class
+  without authorizing a port writeback or task-data edit.
 
 ## Latest evidence
 
@@ -65,6 +70,19 @@ the remaining source relation is unresolved there.
   ordinal can only be carried as a phase/field range because the oracle emits
   task ordinal and writer VI separately. Artifacts:
   `scratch/agent/s2359_m5_task_value_order/`.
+- **s2360 — retail writer source is directly task-related.** The fresh capture
+  passed whole-RDRAM `50,486`, target-window `36,080`, exact fields
+  `384/1,710/1,158/1,154`, all four phase histories, writer histograms 2–5,
+  named PCs `25/25`, four retained port controls, and `1,902` type-2 task rows
+  with zero invalid/overflow. It produced `40,237` phase-gated execution GPR
+  rows and `1,600` task-matched post-value rows. `$s1 == data_ptr+0x100`
+  occurred `376/376/431/417` times for the four phase/field keys, exactly
+  matching the corresponding writer buckets; `$a2 == data_ptr` occurred
+  `4,768/4,799/4,877/4,826` times. This selects
+  `H-RetailWriterSourceIsTaskData` at phase/field scope and rules out a null
+  direct source relation. The exact VI-to-GPR join remains open because the
+  oracle line format has no per-execution VI field. Artifacts:
+  `scratch/agent/s2360_m5_writer_source/`.
 - **s2356 — value-only role join was ambiguous.** Controls passed, but the
   candidate writer/value join had zero nonzero matches and only zero/sentinel
   intersections. This is superseded by s2357's independent address relation.
@@ -92,12 +110,12 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
    qualified steps. The next queued boundary is #2.
-2. **M5 retail writer source relation — next.** Add phase-gated execution
-   GPR rows for `0x80090CA4` and join them by writer VI/field to the existing
-   task-field and post-value records. Determine whether the writer's source
-   pointer/arguments resolve to the task `data_ptr`, a retained port field, or
-   a separate retail state buffer. Do not write back a field, alter task data,
-   change a consumer/default, or add a guard.
+2. **M5 Step 1 stub/image validation — next.** Run the existing same-build
+   stub/image route pair with task ABI, image-stage/DMA, service/slot, PCM,
+   and route controls. Use the s2360 retail source relation only as a
+   comparison; do not write back a field, alter task data, change a
+   consumer/default, or add a guard. The exact VI-to-GPR source join is a
+   later instrument refinement, not a reason to modify the port now.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -136,7 +154,10 @@ capture; s2355 found no nonzero value match; s2356 left the task-ABI relation
 open; s2357 closed the address/naming boundary with `1,153` nonzero
 task/field/writer/order relations; and s2359 found the exact retail writer but
 a payload mismatch at the comparable rows. The remaining question is writer
-source/provenance, not permission to patch the port.
+source/provenance, not permission to patch the port. s2360 then selected the
+direct task source class at phase/field scope: `$s1` matched each task-field
+address and `$a2` repeatedly matched each task `data_ptr`; the exact writer-VI
+join remains unavailable in the oracle output.
 
 No behavior change is authorized by these results. In particular, do not
 promote the C88 writer, invent output metadata, remap destinations, alter task

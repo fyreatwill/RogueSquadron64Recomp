@@ -111118,3 +111118,43 @@ for `0x80090CA4`, retaining the task dump, post-value detail, all four phase
 histograms, all four writer histograms, named-PC controls, and whole-RDRAM
 positive control. Join source arguments to task `data_ptr` and field
 relations; do not change the port audio contract.
+
+## Session 2360 (2026-08-25) — M5 retail writer source relation
+
+The prescribed fresh retail capture was run after `tools/oracle/build.sh`
+rebuilt `rs64_oracle`. Its whole-RDRAM positive control produced `50,486`
+writes, the target window produced `36,080`, and exact field watches produced
+`384/1,710/1,158/1,154` for `0x173C20/0x171DE0/0x171F70/0x173DB0`. All four
+phase histories, writer histograms 2–5, named PCs `25/25`, four retained port
+controls, and the phase-gated task/source instruments were positive. The task
+probe recorded `1,902` type-2 rows from `2,941` phase hits, with zero invalid
+pointers and zero overflow. Post-value detail had zero detail overflow.
+
+The capture produced `40,237` phase-gated `0x80090CA4` GPR rows and `1,600`
+post-value rows that joined to the four task field keys. The source parser
+found a direct task relation in every phase: `$s1 == data_ptr+0x100` occurred
+`376/376/431/417` times, exactly matching the four corresponding task-field
+writer buckets; `$a2 == data_ptr` occurred `4,768/4,799/4,877/4,826` times.
+This selects `H-RetailWriterSourceIsTaskData` at phase/field scope and rules
+out a null direct source relation. The oracle's GPR execution line has no
+per-execution VI, so the join table records `writer_vi_join=phase_field_scope_only`;
+it does not claim an exact writer-VI/source tuple.
+
+The first parser pass misread decimal width/task fields as hexadecimal and
+correctly rejected its empty phase join; the fixed parser passed all controls.
+The parser and bounded tables are under
+`scratch/agent/s2360_m5_writer_source/`. No runtime behavior, task data,
+writeback, consumer/default, guard, or mitigation changed. This rules out a
+phase-wide absent task-data source at the observed writer and narrows the next
+M5 work to the existing same-build stub/image validation checkpoint; it does
+not prove exact VI ordering or authorize a port contract change.
+
+ORIGIN: diagnostic-only. The retail oracle watches and parser read execution,
+task, and post-store state; no mitigation-shaped machinery was added.
+
+### Next
+
+Run the existing same-build stub/image route pair with task ABI,
+image-stage/DMA, service/slot, PCM, and route controls. Use the s2360 retail
+source relation for comparison only; do not write back a field, alter task
+data, change a consumer/default, or add a guard.

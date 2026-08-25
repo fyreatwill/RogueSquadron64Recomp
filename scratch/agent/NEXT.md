@@ -1,51 +1,49 @@
-# NEXT work unit (s2360) — retail writer source relation
+# NEXT work unit (s2361) — M5 Step 1 stub/image validation
 
-HYPOTHESIS-ID: m5-retail-writer-source-relation
+HYPOTHESIS-ID: m5-step1-stub-image-validation
 
 ## Work unit
 
-Run one fresh retail oracle capture with the qualified positive controls,
-existing task/post-value probes, and phase-gated execution GPR rows for
-`0x80090CA4`. Join each writer VI/field/value to the task `data_ptr` and
-`data_ptr+0x100` relation, the writer histogram, and retained s2352 port
-profiles. This is ground truth and analysis only: do not write back a field,
-edit task data, change a consumer/default, or add a guard.
+Run one same-build port validation with `ROGUESQ_AUDIO_UCODE=0` and `=1`
+arms. Retain the qualified route, eleven-Start input, task ABI/source,
+image-stage/DMA, service/slot, PCM, voice/filter, and title/hangar phase
+controls. Use the s2360 retail source relation as comparison only. Do not
+write back a field, alter task data, change a consumer/default, or add a guard.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-RetailWriterSourceIsTaskData: at least one positive writer row has a
-  phase-gated source argument or pointer equal to the task `data_ptr`, its
-  `data_ptr+0x100` field, or a directly joined task buffer, with the same
-  writer value. This identifies a task-data source relation.
-- H-RetailWriterSourceIsSeparateState: every positive writer row misses the
-  task pointer/field candidates, while its source pointer/argument resolves
-  to a stable non-task retail state buffer across repeated writer VIs. This
-  identifies a separate retail producer; it does not authorize port changes.
-- H-RetailWriterValueIsDerived: every positive writer row misses the direct
-  pointer candidates and no stable separate buffer exists, but the
-  phase-gated GPR/source tuple changes in lockstep with the writer value. This
-  selects a derived-value boundary requiring a deeper source probe.
-- H-CoverageInvalid: whole-RDRAM, target-window, exact fields, all four phase
-  histories, all four writer histograms, named PCs, task controls, post-value
-  detail, or phase-gated writer GPR rows fail. No source relation can be
-  inferred.
+- H-Step1ImageClosesContract: the image arm changes DMEM, emits the expected
+  DMA/stage rows, returns `Broke`, reaches SP completion, and produces the
+  predicted service/slot/PCM downstream rows while matching the stub arm's
+  title and hangar route. This selects the current image contract as the
+  validated opt-in boundary.
+- H-Step1ContractGap: the image arm has positive dispatch/DMEM/DMA/exit
+  controls but lacks one or more task-field/source, service/slot, voice/reap,
+  or PCM source/consumer joins. This keeps the image opt-in and identifies the
+  first missing contract edge without changing it.
+- H-Step1RouteOrArmInvalid: either arm lacks the positive route or task
+  controls, crashes/aborts before the target phase, or loses the required
+  phase-gated table. No audio conclusion is valid.
+- H-Step1RouteOnly: both arms pass route/task controls, but the image arm's
+  extra internal work does not produce the predicted downstream signal. This
+  rejects a completion-only explanation and keeps the contract gap open.
 
-The discriminator is one complete table keyed by
-`(phase_origin,width,writer_vi,writer_pc,source_s1,source_a0,source_a2,
-writer_addr,writer_value,task_n_scope,task_field,data_ptr,data_ptr_plus_100,
-port_arm,field_pre,field_post,ordering,source_class)`. A direct task pointer
-match selects H-RetailWriterSourceIsTaskData; a stable non-task pointer across
-positive rows selects H-RetailWriterSourceIsSeparateState; changing
-non-pointer state that tracks the writer value selects H-RetailWriterValueIsDerived.
-The parser must emit all phase-gated writer rows, report the three source
-classes separately, and reject missing controls or phase-log overflow.
+The discriminator is one arm/phase table containing
+`dispatch -> task fields/source -> DMEM/DMA -> image exit -> SP completion ->
+service -> status/slot -> voice/reap -> MORT/filter -> PCM source -> PCM
+consumer -> route phase`, plus stub/image deltas. Controls require positive
+route/task rows for both arms, nonzero image DMEM/DMA rows for the image arm,
+and the qualified title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`
+phases. Select exactly one hypothesis from the table; do not infer success
+from `Broke` alone.
 
 ## Exact commands
 
-    tools/oracle/build.sh
-    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 75 --watch-write 0x0:0x800000 --watch-write 0x149470:0x1494B0 --watch-write 0x173C20:0x173C24 --watch-write 0x171DE0:0x171DE4 --watch-write 0x171F70:0x171F74 --watch-write 0x173DB0:0x173DB4 --hit-cap 64 --pc-task-dump 0x80033FCC --post-value-watch 2 --post-value-watch 3 --post-value-watch 4 --post-value-watch 5 --post-value-pc 0x80090CA4 --post-value-pc-detail --pc-hist-watch 2 --pc-hist-watch 3 --pc-hist-watch 4 --pc-hist-watch 5 --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x00790800:1024 --pc-hist-phase 0x006AB400:512 --pc-hist-phase 0x006AB800:512 --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x00790800:1024 --pc-phase-log-width 0x006AB400:512 --pc-phase-log-width 0x006AB800:512 --watch-pc 0x800078EC,0x80033FCC,0x800908D4,0x8009081C,0x80090810,0x8009220C,0x80090CA4,0x80094648,0x8008EC88,0x80091468,0x800914A4,0x80091564,0x80091618,0x8008C9AC,0x8008CA14,0x80019B74,0x8009B5A8,0x80092128,0x80092230,0x8009231C,0x80090B68,0x80090C28,0x8009C904,0x8009D740,0x8009D7D0 --vi-trace --status-poll --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > scratch/agent/s2360_m5_writer_source.log 2>&1
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    zsh scratch/agent/run_s2327_m5_task_ordinal_prepost_join.sh s2361_m5_step1_stub_image
+    grep -E '^(controls|table|verdict) ' scratch/agent/s2361_m5_step1_stub_image/driver.log
 
-    python3 scratch/agent/parse_s2360_m5_writer_source.py scratch/agent/s2360_m5_writer_source.log scratch/agent/s2352_m5_writer_placement scratch/agent/s2360_m5_writer_source
-
-The parser must emit the complete keyed table and select exactly one of the
-three source hypotheses when all controls pass.
+The existing runner builds no separate arm: it runs both arms from the one
+binary, kills each game with SIGKILL, and writes the phase-keyed tables under
+`scratch/agent/s2361_m5_step1_stub_image/`. Reject the result if its oracle,
+title/hangar, task ABI, VI, image-join, or PCM controls are absent.
