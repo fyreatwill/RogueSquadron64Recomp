@@ -109880,3 +109880,49 @@ join retail upstream voice PCs with the port's phase-keyed render, key-on,
 filter, slot/status, service, task ordinal, and PCM rows to locate the first
 missing edge before `filterVoiceSampleBlock`. No writeback, remapping, slot
 values, guards, defaults, or output-metadata repeat.
+
+## Session 2334 (2026-08-24) — M5 upstream census leaves descriptor/filter boundary
+
+The planned work unit was one ground-truth-first upstream voice-path census.
+The first oracle gate correctly exposed a measurement defect: requested PC
+`0x8009C4E8` had zero retail executions. The fixed driver retained that PC as
+an explicit zero and required the independently positive retail render,
+decode, filter, and service PCs instead; no port arm launched on the failed
+gate. A second parser correction carried phase scope across phase-less ABI and
+`avf-gate` rows and retained prior-ordinal lifecycle events. The final same
+build/capture then passed the corrected gate and both port arms reached hangar.
+
+Retail controls: whole-RDRAM `32475857`, physical target window
+`0x00165000:0x0016B000` `32465531`, mode `108`, gate `17`, status `22`, known
+zero `0x0001498A` `0`, title/hangar, and watched execution counts render
+`0x8008FFAC=85808`, decode `0x8009C904=1930`, filter
+`0x8009D7D0=6336`, service `0x8009B5A8=3915`; requested updater
+`0x8009C4E8=0`. This is an independent positive control for the retail path,
+not a claim about the port.
+
+Both sequential stub/image arms passed title/hangar, task ABI/DMA,
+guest-receive, and the host-positive filter/voice audit. The phase-10 image
+table had two nonzero target rows. Across both arms the target table recorded
+render-stage `4`, key-on `60`, descriptor `0`, real filter audit `0`,
+same-ordinal post-stage lifecycle `0`, and prior-ordinal lifecycle `2`.
+
+The measurement **refutes** H-UpstreamVoiceAbsent at capture scope because
+target render-stage rows are positive. It does not select H-FilterPathGated:
+that hypothesis required positive target descriptor rows, and descriptor was
+zero. It does not select H-PriorOrdinalReuse because the real filter audit was
+zero. H-CoverageInvalid is refuted by the independent and same-run controls.
+The first unresolved edge is render/key-on to descriptor entry/writer to the
+filter call; no behavior change is authorized.
+
+ORIGIN: this iteration changed only `scratch/agent/run_s2333_m5_voice_path_boundary.sh`
+and scratch outputs. The driver is diagnostic and does not alter guest state,
+task data, audio output, control flow, or defaults.
+
+### Next
+
+Run a new ground-truth-first descriptor-to-filter discriminator. Keep the
+qualified route, host-positive audit, and same-build stub/image arms. Join the
+retail descriptor/filter PCs and the port's descriptor-entry/store, render,
+key-on, real-filter, slot/status, lifecycle, and PCM rows. Do not repeat the
+upstream PC census or add writeback, remapping, slot values, guards, defaults,
+or output-metadata machinery.

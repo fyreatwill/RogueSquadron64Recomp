@@ -5,11 +5,12 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2333 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2334 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The s2332 result selects H-OutputBuffZero and refutes
-H-FilterVoiceConsumer (qualified host-positive filter control); the next work
-unit is the upstream voice-path census in `scratch/agent/NEXT.md`.
+to §47. The s2333 result refutes H-UpstreamVoiceAbsent but does not select
+H-FilterPathGated or H-PriorOrdinalReuse: target render/key-on rows are live,
+while descriptor and real filter rows are absent. The next work unit is the
+descriptor-to-filter boundary in `scratch/agent/NEXT.md`.
 
 ## Current state
 
@@ -37,6 +38,14 @@ unit is the upstream voice-path census in `scratch/agent/NEXT.md`.
   zero filter/voice rows; retail independently executed the filter caller and
   callee in hangar. No writeback, address remap, consumer, slot, guard, or
   default change is authorized.
+- The s2333 upstream census is qualified by retail whole-RDRAM, target-window,
+  title/hangar, task/gate/status, and retail render/decode/filter/service
+  controls. The port target scope has four `site=render-stage` rows and sixty
+  key-on rows across the arms, but zero descriptor rows and zero real
+  `[filter-voice-audit]` rows. Two lifecycle rows are prior-ordinal events;
+  there is no same-ordinal post-stage lifecycle row. The requested retail
+  `0x8009C4E8` execution count is explicitly zero on this route, while the
+  other requested retail PCs are positive.
 - The independent retail oracle is the witness for game-side memory claims.
   Whole-RDRAM, title/hangar, gate/task/status, target-window, and named-PC
   controls must pass before a retail null is interpreted. It reaches attract,
@@ -46,6 +55,21 @@ unit is the upstream voice-path census in `scratch/agent/NEXT.md`.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2333 — upstream voice census leaves descriptor-to-filter boundary open.**
+  The corrected ground-truth-first oracle passed whole-RDRAM `32475857`,
+  physical target-window `32465531`, mode/gate/status controls, title/hangar,
+  and retail execution counts render `85808`, decode `1930`, filter `6336`,
+  and service `3915`; the requested `0x8009C4E8` PC was explicitly zero.
+  Both sequential port arms passed hangar, task ABI/DMA/guest-receive, and the
+  host-positive filter audit. The phase-10 image table had two nonzero rows.
+  Across both arms, target render-stage was `4`, key-on was `60`, descriptor
+  was `0`, real filter audit was `0`, same-ordinal post lifecycle was `0`,
+  and prior-ordinal lifecycle was `2`. This **refutes** H-UpstreamVoiceAbsent
+  at capture scope, but does not select H-FilterPathGated because its required
+  descriptor control is absent; H-PriorOrdinalReuse is not selected because
+  no real filter row exists. The next boundary is render/key-on to descriptor
+  entry/writer to filter call.
 
 - **s2332 — output metadata remains absent; filter/voice consumer is rejected
   at capture scope.** The corrected ground-truth-first oracle passed
@@ -121,13 +145,12 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 destination-to-slot/key-on contract — next.** The s2332 metadata
-   join again selected zero advertised output-buffer metadata and no DMA
-   output overlap at capture scope; the missing post-ordinal consumer remains
-   unassigned. The host-positive filter/voice audit is now qualified, but the
-   real port path emitted no filter rows. Resume with a genuinely new
-   ground-truth-first discriminator; do not repeat output metadata or add
-   writeback, address remapping, slot values, guards, or defaults.
+2. **M5 descriptor-to-filter voice boundary — next.** The s2333 census
+   refuted a missing upstream render entry but found zero target descriptor
+   rows and zero real filter rows, with two prior-ordinal lifecycle rows. Run
+   one new ground-truth-first descriptor-entry/writer/callsite discriminator;
+   do not repeat the upstream PC census, output metadata, or add writeback,
+   address remapping, slot values, guards, or defaults.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -162,9 +185,11 @@ PCM source/consumer join. The six lifecycle rows observed before target output
 are assigned to the prior audio ordinal, and no post-stage lifecycle row was
 present. The s2332 host-positive span control fired in both arms, but the real
 port filter/voice audit emitted zero rows while retail independently executed
-the caller/callee in hangar. This rejects a port filter/voice consumer join at
-capture scope without identifying why that guest path is absent. A missing
-same-ordinal slot/descriptor/key-on consumer remains the active boundary.
+the caller/callee in hangar. The s2333 census then found target render-stage
+and key-on rows but zero descriptor and real filter rows; two lifecycle rows
+were prior-ordinal. This rejects an upstream-render absence, but does not
+select a filter-path gate or prior-ordinal reuse. The active boundary is the
+render/key-on to descriptor/filter edge.
 
 ### VI state and second origin
 

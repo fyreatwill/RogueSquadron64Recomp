@@ -1,71 +1,71 @@
-# NEXT work unit (s2333) — M5 upstream voice-path boundary
+# NEXT work unit (s2334) — M5 descriptor-to-filter voice boundary
 
-HYPOTHESIS-ID: m5-destination-slot-keyon-contract
+HYPOTHESIS-ID: m5-descriptor-filter-boundary
 
 ## Work unit
 
-Run one ground-truth-first, no-behavior-change upstream voice-path census.
-Keep the qualified Factor 5 image arm, silent control, eleven-Start route,
-`ROGUESQ_DRAIN_INLOOP_TICK=1`, and the s2332 host-positive filter/voice span
-control. Do not repeat the output-buffer/overlap join and do not add writeback,
-address remapping, slot values, guards, defaults, or a consumer.
+Run one ground-truth-first, no-behavior-change descriptor-entry/writer/callsite
+census. Keep the qualified Factor 5 image arm, silent control, eleven-Start
+route, `ROGUESQ_DRAIN_INLOOP_TICK=1`, and the host-positive filter/voice span
+control. Do not repeat the upstream PC census, output metadata join, or add
+writeback, address remapping, slot values, guards, defaults, or a consumer.
 
-Join the retail upstream voice PCs and the port's existing phase-keyed render,
-key-on, filter, slot/status, service, task ordinal, and PCM rows. The target is
-to locate the first missing edge before the retail-live `filterVoiceSampleBlock`
-callee, not to infer a null from the host-positive control alone.
+The s2333 result leaves the first unresolved edge at render/key-on to
+descriptor entry/writer to filter call: target render-stage/key-on rows are
+positive, while descriptor and real filter rows are zero. The requested retail
+`0x8009C4E8` updater PC remains an explicit zero in the retail table.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-UpstreamVoiceAbsent: the port never enters the voice-render path for the
-  target ordinal. Retail upstream and filter PCs are positive, while the port
-  has no target-phase `render-stage`/voice-entry rows in either arm.
-- H-FilterPathGated: the port reaches voice rendering/key-on setup but does not
-  reach the filter path. Port target-phase render/key-on/descriptor rows are
-  positive, real `[filter-voice-audit]` rows remain zero, and no same-ordinal
-  lifecycle transition follows the image task.
-- H-PriorOrdinalReuse: the port reaches the real filter path, but the slot and
-  key-on rows attached to a target image ordinal are prior-route rows. Positive
-  real filter rows plus no same-ordinal post-stage lifecycle and a retained
-  prior signature select this; the host-positive control is not counted as a
-  filter call.
-- H-CoverageInvalid: the retail whole-RDRAM/target/status/writer or
-  title/hangar controls, either port route, task/DMA/guest-receive/PCM control,
-  or the host-positive filter control is absent.
+- H-DescriptorWriterAbsent: the port reaches target render/key-on work but never
+  enters or stores a voice descriptor. Retail descriptor/key-on PCs are
+  positive; both port arms have target render/key-on rows but zero
+  `[init-desc]` rows and zero descriptor-bearing lifecycle events.
+- H-DescriptorPriorOrdinal: the port emits descriptor rows, but they belong to
+  the prior audio ordinal. Target descriptor events have no same-ordinal join,
+  the prior-ordinal signature is present, and real filter rows remain zero.
+- H-FilterCallGated: target descriptor rows are same-ordinal and target key-on
+  rows are positive, but real `[filter-voice-audit]` rows remain zero while
+  retail filter caller/callee PCs are positive and no post-descriptor filter
+  event occurs.
+- H-CoverageInvalid: retail whole-RDRAM, physical target-window, title/hangar,
+  task/gate/status, named retail descriptor/filter PCs, either port arm, task /
+  DMA / guest-receive / PCM controls, or the host-positive audit is absent.
 
 The discriminator is one table keyed by `(arm, phase, width, origin, audio
-ordinal, row)` with: retail execution counts for
-`musyxRenderVoiceSamples=0x8008FFAC`, `updateVoiceChannelParams=0x8009C4E8`,
-`decodeAndFillVoiceBlock=0x8009C904`, `filterVoiceSampleBlock=0x8009D7D0`,
-and `serviceVoicePoolFrame=0x8009B5A8`; port render-stage/render-end,
-key-on pointer/branch/tail, descriptor, host-positive control, real filter
-row, slot/status/key-on event, task begin/end, image completion, and PCM
-source/consumer rows; plus signed event deltas and same-ordinal versus prior
-classification. Select H-UpstreamVoiceAbsent only with qualified controls and
-zero target render-stage/voice-entry rows. Select H-FilterPathGated only with
-positive target render/key-on rows and zero real filter rows. Select
-H-PriorOrdinalReuse only with positive real filter rows, no same-ordinal
-post-stage lifecycle, and the prior signature. Any missing positive control
-selects H-CoverageInvalid.
+ordinal, row, event)` containing retail execution counts for
+`musyxRenderVoiceSamples=0x8008FFAC`, `musyxInitVoiceFromSample=0x80092230`,
+`musyxTriggerVoiceAttack=0x8009231C`, key-on sites
+`0x80090B68,0x80090C28`, `updateVoiceChannelParamsLarge=0x8009D740`, and
+`filterVoiceSampleBlock=0x8009D7D0`; port render-stage/render-end, all
+`m5-keyon-*`, descriptor, host-positive, real-filter, slot/status/lifecycle,
+task/image completion, and PCM source/consumer rows; plus signed deltas and
+same-ordinal versus prior classification. Select H-DescriptorWriterAbsent
+only with qualified controls and zero descriptor rows in both arms. Select
+H-DescriptorPriorOrdinal only with positive descriptor rows, no same-ordinal
+descriptor join, the prior signature, and zero real filter rows. Select
+H-FilterCallGated only with positive same-ordinal descriptor/key-on rows and
+zero real filter rows. Any missing positive control selects H-CoverageInvalid.
 
 ## Exact commands
 
-Create `scratch/agent/run_s2333_m5_voice_path_boundary.sh`. Its retail oracle
-preflight must run first with whole-RDRAM, physical
+Create `scratch/agent/run_s2335_m5_descriptor_filter_boundary.sh`. Its retail
+oracle preflight must run first with whole-RDRAM, physical
 `0x00165000:0x0016B000`, task/output/gate/wait/status watches, title/hangar
-origins, named task/output writer PCs, and `--watch-pc` for
-`0x8008FFAC,0x8009C4E8,0x8009C904,0x8009D7D0,0x8009B5A8`. Require positive
-whole-RDRAM/target/status/title/hangar controls and positive retail upstream
-render/filter execution before launching the port. Keep the known-zero
-`0x0001498A` watch explicitly zero.
+origins, named task/output writer controls, and `--watch-pc` for every retail
+PC in the table above. Require positive whole-RDRAM/target/status/title/hangar,
+positive retail render/filter and at least one descriptor/key-on control, and
+keep the known-zero `0x0001498A` watch explicitly zero. Record
+`0x8009C4E8` as a requested zero-only PC; do not fail the preflight for that
+route-specific zero.
 
 The port arms must retain `[audtask-abi]`, `[audtask-dma-row]`,
 `[audtask-dma-range]`, image-stage/image-join, guest-receive, PCM
-source/consumer, `[m5-audio-event]`, all slot/status/descriptor/key-on
-fields, `[m5-keyon-*]`, `site=render-stage`, `site=render-end`, and both
+source/consumer, `[m5-audio-event]`, slot/status fields, `[m5-keyon-*]`,
+`site=render-stage`, `site=render-end`, `[init-desc]`, and both
 `[filter-voice-audit-control]` and real `[filter-voice-audit]` rows. Run both
 arms from one build with the validated sequential input recipe.
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh -n scratch/agent/run_s2333_m5_voice_path_boundary.sh
-    zsh scratch/agent/run_s2333_m5_voice_path_boundary.sh s2333_m5_voice_path_boundary
+    zsh -n scratch/agent/run_s2335_m5_descriptor_filter_boundary.sh
+    zsh scratch/agent/run_s2335_m5_descriptor_filter_boundary.sh s2335_m5_descriptor_filter_boundary
