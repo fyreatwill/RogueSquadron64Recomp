@@ -110635,3 +110635,62 @@ Run one oracle field dump at `0x80094648`, phase-gated to both target origins,
 then one same-build four-arm table joining the writer pointer/value relation
 to the port ABI snapshot and task event order. Keep B40 zero, C88 opt-in, and
 make no behavior change.
+
+## Session 2348 (2026-08-24) — M5 candidate output writer disproven
+
+HYPOTHESIS-ID: m5-c88-output-metadata-writer-provenance.
+
+The planned work unit was one ground-truth-first retail field dump at
+`0x80094648` followed by one same-build four-arm port table. The required
+first retail command passed its process run and whole-RDRAM watch, but its
+field summary was `rows=0/32768`: the live writer rows were at
+`0x00790800`/`0x006AB800`, not the requested `0x00790400`/`0x006AB400`
+bucket. That null was rejected as a phase-classifier failure. A two-variant
+retry produced 64 field rows but still missed the live 512 bucket. The fixed
+single oracle armed all four observed origin variants in one run and passed
+whole-RDRAM `10121`, output-span `82`, B40/status/queue `14/10/15`, both
+target-equivalent phases, and the requested named-PC controls. It recorded
+128 field rows, 24 `0x80094648` writer rows in each observed
+title/hangar-equivalent origin, 48 nonzero post-value samples per port phase,
+and only physical destinations `0x00141AD8..0x00141AEC`. The field rows had
+`s0=0x801B4E40/0x801DDB90` and source words `0x00000000/0x00009600`, with no
+identified `data_ptr+0x100` relation.
+
+The new port probe in `lib/N64ModernRuntime/librecomp/src/rsp.cpp` snapshots
+the computed `data_ptr+0x100` word before and after each qualified audio task,
+records any matching DMA event/destination, and emits independent snapshot
+and generic DMA-observer controls. The first same-build four-arm driver run
+was rejected by its own predicate: the silent stub legitimately has no DMA
+observer rows and one stub arm crashed during the retention window. The
+predicate was fixed to require the snapshot control for all arms and the
+generic observer only for image arms, then the same build was rerun.
+
+The qualified rerun passed title/hangar, task/DMA/guest-receive/PCM, filter,
+render, and C88 controls in all four arms. The rows were:
+
+| arm | target tasks | field writes | field changes | target DMA ranges | fall-through | filter rows | crash/abort |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| stub C0 | 706 | 0 | 0 | 0 | 248 | 0 | 0/0 |
+| stub C1 | 699 | 0 | 0 | 0 | 379 | 256 | 0/0 |
+| image C0 | 705 | 0 | 0 | 2,251 | 248 | 0 | 0/0 |
+| image C1 | 702 | 0 | 0 | 3,777 | 375 | 256 | 0/0 |
+
+All four arms advertised zero ABI output fields. Every computed
+`data_ptr+0x100` pre/post pair was unchanged, no field-write event was
+observed, and no image DMA range overlapped the field. C88 treatment still
+increased fall-through and filter rows, proving the port arms were live. The
+retail writer therefore selects H-RetailWriterSentinelUnrelated at this
+capture scope, while the actual retail `data_ptr+0x100` writer remains open.
+This closes the `0x80094648` candidate-writer boundary and rules out a port
+ordering loss at that field; it does not authorize a writeback, task-data,
+consumer, default, or guard change.
+
+ORIGIN: diagnostic-only. The diff adds no mitigation, skip, guard, remap,
+default, store, consumer, writeback, or task-data change. The C88 treatment
+remains opt-in, and the new field snapshot/DMA rows are observational only.
+
+### Next
+
+Run the ground-truth-first `0x80090CA4` retail writer census against the known
+task pointers and exact `data_ptr+0x100` destinations, then join it to the
+existing four-arm field snapshot/DMA ordering table. Do not change behavior.

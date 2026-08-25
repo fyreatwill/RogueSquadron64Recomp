@@ -5,7 +5,7 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2347 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2348 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
 to §47. The s2343 B40 provenance census passed fresh retail whole-RDRAM,
 target-window, mode/status/title/hangar, named-PC, and both-arm port controls.
@@ -68,6 +68,29 @@ relation to the port output ABI and any port write-before-snapshot ordering
 remain open; no writer, writeback, task-data, consumer, default, or guard
 change was made.
 
+The s2348 output-field semantic/order census first exposed a phase-gate
+classifier issue: the requested retail origins produced no field rows because
+the live `0x80094648` writer ran at `0x00790800`/`0x006AB800`. A single fixed
+oracle run armed all four observed origin variants and passed whole-RDRAM
+`10121`, output-span `82`, B40/status/queue `14/10/15`, both target phases,
+and the named-PC controls. It produced 128 field rows, 24 writer rows per
+target-equivalent phase, 48 nonzero post-value samples per port phase, and
+only `0x00141AD8..0x00141AEC` destinations. The field rows had
+`s0=0x801B4E40/0x801DDB90` and source words `0x0/0x9600`; no row identified
+the writer as a `data_ptr+0x100` field.
+
+The first same-build port attempt was rejected by its own arm predicate: the
+silent stub has no DMA observer rows and one stub arm crashed during
+retention. The fixed run added a task-field snapshot control and made the
+generic DMA-observer control image-arm-specific. All four arms then passed
+title/hangar, task/DMA/guest-receive/PCM, filter, render, and C88 fall-through
+controls; each had zero `audtask-field-write` rows and zero pre/post changes
+at its computed `data_ptr+0x100`. This selects
+H-RetailWriterSentinelUnrelated at capture scope and closes the
+`0x80094648` candidate-writer sub-boundary. The actual retail
+`data_ptr+0x100` writer boundary remains open. No writer, writeback, task-data,
+consumer, default, or guard changed.
+
 ## Current state
 
 - Overlay dispatch is fixed enough for mission entry and post-sec2 outdoor
@@ -118,6 +141,20 @@ change was made.
   C88=1 arm), not an output-field writer. This selects
   H-RetailOutputWriterPortZero at capture scope, leaves the writer's semantic
   mapping and port ordering open, and authorizes no behavior change.
+- The s2348 table closes the candidate-writer sub-boundary. The fixed
+  four-origin retail oracle passed whole-RDRAM `10121`, output-span `82`,
+  B40/status/queue `14/10/15`, named PCs, and produced 128 field rows plus
+  24 `0x80094648` rows in each observed title/hangar-equivalent origin. The
+  post-value writer addresses were only `0x00141AD8..0x00141AEC`, while the
+  field rows exposed `s0=0x801B4E40/0x801DDB90` and source words `0x0/0x9600`,
+  not a `data_ptr+0x100` relation. The corrected same-build four-arm port
+  table passed all existing controls plus task-field snapshot/observer
+  controls; every computed `data_ptr+0x100` pre/post pair was unchanged,
+  every field-write event was absent, and no DMA range overlapped the field.
+  This selects H-RetailWriterSentinelUnrelated at capture scope. The
+  `0x80094648` writer is not a proven output-field writer; the actual retail
+  `data_ptr+0x100` writer remains the next M5 contract boundary. No writer,
+  writeback, task-data, consumer, default, or guard change is authorized.
 - Both silent and image arms qualify through title `1024 @ 0x00790400` and
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur. In the
@@ -240,6 +277,25 @@ change was made.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2348 — the retail output-span writer is unrelated to the port task field.**
+  The first oracle field gate missed the live origins and was rejected as a
+  classifier failure. The fixed four-origin run passed whole-RDRAM `10121`,
+  output-span `82`, B40/status/queue `14/10/15`, both target-equivalent
+  phases, and all named-PC controls. It recorded 128 `pc-field` rows, 24
+  `0x80094648` writer rows per observed title/hangar-equivalent origin, 48
+  nonzero post-value samples per port phase, and only
+  `0x00141AD8..0x00141AEC` destinations; the field rows exposed
+  `s0=0x801B4E40/0x801DDB90` and source words `0x0/0x9600`.
+  The first same-build port attempt was rejected because its silent-arm
+  observer predicate required impossible DMA rows and one stub arm crashed
+  during retention. After adding a task-field snapshot control and making the
+  generic DMA-observer control image-only, the fixed four-arm run passed all
+  title/hangar, task/DMA/guest-receive/PCM, filter, render, and C88 controls.
+  Every arm had zero `audtask-field-write` rows, zero pre/post changes at its
+  computed `data_ptr+0x100`, and zero DMA overlap. This selects
+  H-RetailWriterSentinelUnrelated at capture scope. The table is in
+  `scratch/agent/s2348_m5_output_field_semantics/`; no behavior changed.
 
 - **s2347 — retail output-span writer is positive while port ABI output stays zero.**
   The fresh retail oracle passed whole-RDRAM `29,920,648`, target-window
@@ -468,21 +524,16 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 output-field semantic/ordering boundary — next.** s2347 selects
-   H-RetailOutputWriterPortZero: retail writes the target output span from
-   `0x80094648`, while all qualified port ABI snapshots expose zero output
-   fields. Run one fresh ground-truth-first oracle field dump at
-   `0x80094648`, phase-gated to title and hangar, to capture the writer's
-   live pointer/value relation; then use one same-build four-arm table to
-   join that relation to the existing port ABI snapshot and task event order.
-   The competing outcomes are: the retail writer is demonstrably
-   `data_ptr+0x100` output metadata and the port has no corresponding writer;
-   the retail writer is a sentinel/other field and is unrelated to output
-   publication; or a port write occurs before the ABI snapshot and is lost by
-   publication ordering. Require whole-RDRAM, target/title/hangar,
-   status/queue, named-PC, and all four port positive controls before
-   interpreting a null. Do not promote a writer, write back `data_ptr+0x100`,
-   change task data, change a consumer, change a default, or add a guard.
+2. **M5 `data_ptr+0x100` writer contract — next.** s2348 closes only the
+   candidate `0x80094648` writer: its retail writes are at
+   `0x00141AD8..0x00141AEC`, while the port's computed task fields remain
+   unchanged. Re-run the independent retail witness for the already observed
+   `0x80090CA4` writer and the known task pointers/destinations, then use the
+   existing same-build four-arm field snapshot/DMA table to join the actual
+   `data_ptr+0x100` relation and strict pre-ABI ordering. Require the
+   whole-RDRAM, task-block, exact-destination, target/title/hangar, named-PC,
+   and all four port controls before interpreting a null. Do not write back
+   the field, alter task data, change a consumer or default, or add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -592,6 +643,17 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   capture scope, but does not yet prove the writer's semantic field mapping or
   a port ordering loss. No output-field, writeback, task-data, consumer, or
   default change is authorized.
+  The s2348 field/order table then used a corrected four-origin retail gate
+  and a regeneration-safe port snapshot of each computed `data_ptr+0x100`.
+  Retail's `0x80094648` rows exposed only `0x00141AD8..0x00141AEC` writes and
+  field rows with `s0=0x801B4E40/0x801DDB90`, not a proven task-field relation.
+  All four port arms had unchanged pre/post values, no field-write event, and
+  no DMA overlap at their computed `data_ptr+0x100`, under positive task,
+  image-DMA, and C88 controls. This selects
+  H-RetailWriterSentinelUnrelated at capture scope and closes the
+  candidate-writer sub-boundary. The actual retail `data_ptr+0x100` writer
+  remains open. No writer, writeback, task-data, consumer, or default change
+  is authorized.
 
 ### VI state and second origin
 
@@ -704,6 +766,14 @@ are superseded at their measured scopes:
   `0x80094648`. The port result is therefore H-RetailOutputWriterPortZero at
   capture scope; the writer's semantic role and any port ordering loss remain
   unproven, so no contract change is authorized.
+- s2347's H-RetailOutputWriterPortZero label is refined by s2348: it was
+  believable because retail wrote the watched output span while every port
+  ABI row exposed zero output fields, but the corrected four-origin field dump
+  showed the retail writes at `0x00141AD8..0x00141AEC` with unrelated `s0`
+  and source-word fields. The same-build port snapshot then found no change,
+  DMA overlap, or write event at any computed `data_ptr+0x100` under positive
+  controls. The writer is therefore H-RetailWriterSentinelUnrelated at the
+  measured scope; no output-field or ordering change is authorized.
 
 ## Evidence and safety rules
 

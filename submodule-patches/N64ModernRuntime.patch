@@ -492,7 +492,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..ad98f7e 100644
+index 1cb3f6a..133bdad 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -506,7 +506,7 @@ index 1cb3f6a..ad98f7e 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,701 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,738 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -622,6 +622,12 @@ index 1cb3f6a..ad98f7e 100644
 +    uint32_t break_pc;
 +    uint64_t begin_event;
 +    uint64_t end_event;
++    uint32_t field_phys;
++    uint32_t field_pre;
++    uint32_t field_post;
++    uint32_t field_write_dram;
++    uint32_t field_write_len;
++    uint64_t field_write_event;
 +    std::vector<AudioDmaRange> ranges;
 +};
 +
@@ -1172,6 +1178,13 @@ index 1cb3f6a..ad98f7e 100644
 +    }
 +}
 +
++static uint32_t audio_read_rdram_word(const uint8_t* rdram, uint32_t addr) {
++    return (static_cast<uint32_t>(rdram[(addr + 0u) & 0x007FFFFFu]) << 24) |
++           (static_cast<uint32_t>(rdram[(addr + 1u) & 0x007FFFFFu]) << 16) |
++           (static_cast<uint32_t>(rdram[(addr + 2u) & 0x007FFFFFu]) << 8) |
++           static_cast<uint32_t>(rdram[(addr + 3u) & 0x007FFFFFu]);
++}
++
 +extern "C" void rs64_probe_audio_dma_write(uint8_t* rdram,
 +                                              uint32_t dram_addr, uint32_t len,
 +                                              uint32_t dmem_addr) {
@@ -1200,6 +1213,30 @@ index 1cb3f6a..ad98f7e 100644
 +    }
 +    probe->ranges.back().payload_fnv = payload_fnv;
 +    probe->ranges.back().payload_nz = payload_nz;
++    static thread_local uint32_t observer_control_key = 0xFFFFFFFFu;
++    const uint32_t observer_key = (probe->width << 24) ^ probe->origin;
++    if (observer_control_key != observer_key) {
++        observer_control_key = observer_key;
++        std::fprintf(stderr,
++                     "[audtask-field-observer-control] n=%u event=%" PRIu64
++                     " field=0x%06X dram=0x%06X len=0x%X dmem=0x%03X\n",
++                     probe->n, probe->ranges.back().event, probe->field_phys,
++                     dram_addr, len, dmem_addr);
++    }
++    const uint32_t field_phys = probe->field_phys;
++    if (field_phys != 0u &&
++        static_cast<uint64_t>(dram_addr) < static_cast<uint64_t>(field_phys) + 4u &&
++        static_cast<uint64_t>(dram_addr) + len > field_phys &&
++        probe->field_write_event == 0u) {
++        probe->field_write_dram = dram_addr;
++        probe->field_write_len = len;
++        probe->field_write_event = probe->ranges.back().event;
++        std::fprintf(stderr,
++                     "[audtask-field-write] n=%u event=%" PRIu64
++                     " field=0x%06X dram=0x%06X len=0x%X dmem=0x%03X\n",
++                     probe->n, probe->field_write_event, field_phys, dram_addr,
++                     len, dmem_addr);
++    }
 +    if (rs64_m5_pcm_writer_dma) {
 +        rs64_m5_pcm_writer_dma(dram_addr, len, payload_fnv, payload_nz);
 +    }
@@ -1208,7 +1245,7 @@ index 1cb3f6a..ad98f7e 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +741,225 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +778,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -1310,6 +1347,23 @@ index 1cb3f6a..ad98f7e 100644
 +        audio_dma_probe.pre_hash = audio_dmem_pre_hash;
 +        audio_dma_probe.source_fnv = audio_source_fnv;
 +        audio_dma_probe.source_nz = audio_source_nz;
++        const uint32_t data_ptr = static_cast<uint32_t>(task->t.data_ptr);
++        audio_dma_probe.field_phys = data_ptr == 0u ? 0u :
++            (data_ptr + 0x100u) & 0x007FFFFFu;
++        audio_dma_probe.field_pre = audio_dma_probe.field_phys == 0u ? 0u :
++            audio_read_rdram_word(rdram, audio_dma_probe.field_phys);
++        static thread_local uint32_t field_snapshot_control_key = 0xFFFFFFFFu;
++        const uint32_t field_snapshot_key =
++            (audio_dma_probe.width << 24) ^ audio_dma_probe.origin;
++        if (field_snapshot_control_key != field_snapshot_key) {
++            field_snapshot_control_key = field_snapshot_key;
++            std::fprintf(stderr,
++                         "[audtask-field-snapshot-control] n=%u field=0x%06X"
++                         " pre=0x%08X width=%u origin=0x%06X\n",
++                         audio_probe_n, audio_dma_probe.field_phys,
++                         audio_dma_probe.field_pre, audio_dma_probe.width,
++                         audio_dma_probe.origin);
++        }
 +        audio_dma_probe.begin_event = audio_join_next_event();
 +        audio_dma_probe.ranges.reserve(64);
 +        g_audio_dma_probe = &audio_dma_probe;
@@ -1322,6 +1376,8 @@ index 1cb3f6a..ad98f7e 100644
 +    if (probe_audio && audio_probe_row) {
 +        audio_dma_probe.break_pc = audio_break_pc;
 +        audio_dma_probe.end_event = audio_join_next_event();
++        audio_dma_probe.field_post = audio_dma_probe.field_phys == 0u ? 0u :
++            audio_read_rdram_word(rdram, audio_dma_probe.field_phys);
 +        uint32_t audio_canary_post = 0;
 +        uint32_t audio_dmem_post_hash = 2166136261u;
 +        uint32_t audio_dmem_changed = 0;
@@ -1351,6 +1407,10 @@ index 1cb3f6a..ad98f7e 100644
 +                " source_fnv=%08X source_nz=%u"
 +                " ucode_boot=0x%08X ucode_boot_size=0x%X"
 +                " output_buff=0x%08X output_buff_size=0x%08X"
++                " field_phys=0x%06X field_pre=0x%08X field_post=0x%08X"
++                " field_write_event=%" PRIu64
++                " field_write_dram=0x%06X field_write_len=0x%X"
++                " abi_event=%" PRIu64
 +                " yield_ptr=0x%08X yield_size=0x%X"
 +                " dmem_pre=0x%08X dmem_post=0x%08X changed=%u"
 +                " first=0x%03X last=0x%03X"
@@ -1371,6 +1431,10 @@ index 1cb3f6a..ad98f7e 100644
 +                static_cast<uint32_t>(task->t.ucode_boot_size),
 +                static_cast<uint32_t>(task->t.output_buff),
 +                static_cast<uint32_t>(task->t.output_buff_size),
++                audio_dma_probe.field_phys, audio_dma_probe.field_pre,
++                audio_dma_probe.field_post, audio_dma_probe.field_write_event,
++                audio_dma_probe.field_write_dram, audio_dma_probe.field_write_len,
++                audio_dma_probe.end_event,
 +                static_cast<uint32_t>(task->t.yield_data_ptr),
 +                static_cast<uint32_t>(task->t.yield_data_size),
 +                audio_dmem_pre_hash, audio_dmem_post_hash, audio_dmem_changed,
