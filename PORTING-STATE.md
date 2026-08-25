@@ -110239,6 +110239,56 @@ regeneration-safe fixup insertion points, and a parser positive control; it
 does not mitigate, skip, restore, or alter guest state, task data, audio
 output, control flow, stores, guards, remaps, slots, defaults, or consumers.
 
+## Session 2341 (2026-08-24) — M5 synth parent/gate census selects gate bypass
+
+HYPOTHESIS-ID: m5-descriptor-source-reachability
+
+The planned work unit was a ground-truth-first, no-behavior-change census of
+`musyxSynthFrame` entry `0x8009123C` and the three countdown branches at
+`0x80091484`, `0x80091544`, and `0x800915F8`, retaining the s2338–s2340
+callsite and callback rows. The fresh retail preflight passed whole-RDRAM
+`32450863`, physical target-window `32440518`, mode/gate/status `108/17/22`,
+callback registration `19`, both target origins, positive parent/gate/callsite
+PCs, retained scheduler/callback/service controls, descriptor/filter controls,
+and requested-zero `0x8009C4E8`.
+
+The regeneration order completed (`make_elf.py`, sibling `build/N64Recomp`,
+`fixup_game_funcs.py`, and the Debug target). The fixed sequential stub/image
+capture reached hangar in both arms with `port_controls=1`. The same-helper
+callback positive control emitted `144` stub and `145` image rows; task, DMA,
+guest-receive, PCM source/consumer, filter, render, and key-on controls were
+positive in both arms, with no crash or abort marker.
+
+The parent entry fired `268` times in each arm, while all three new gate-edge
+rows and all three retained sequencer callsite rows were zero:
+
+| arm | `0x8009123C` entry | gate 1 / call 1 | gate 2 / call 2 | gate 3 / call 3 |
+|---|---:|---:|---:|---:|
+| stub | 268 | 0 / 0 | 0 / 0 | 0 / 0 |
+| image | 268 | 0 / 0 | 0 / 0 | 0 / 0 |
+
+This selects **H-PortSynthGateBypassed** at the qualified capture scope. It
+rules out invalid retail coverage, missing target-phase port controls, an
+inactive diagnostic helper, an inactive `musyxSynthFrame` parent, a partial
+gate set, and a generated dispatch mismatch. The measured boundary is now
+inside `musyxSynthFrame`, before its first observed countdown branch; this
+does not identify which earlier loop/branch prevents gate 1 and authorizes no
+behavior change.
+
+ORIGIN: diagnostic-only. The diff adds phase-qualified parent/gate breadcrumbs,
+regeneration-safe fixup insertion points, and a parser table; it does not
+mitigate, skip, restore, or alter guest state, task data, audio output, control
+flow, stores, guards, remaps, slots, defaults, or consumers.
+
+### Next
+
+Run a ground-truth-first census of the three pre-gate branches in
+`musyxSynthFrame` at `0x8009142C`, `0x80091454`, and `0x80091468`, retaining
+the parent/gate/callsite rows and all positive controls. Batch the branch
+outcomes in one table to distinguish the outer loop rejecting all iterations,
+the per-iteration guard bypassing the first gate, and a gate-reached probe
+mismatch. Do not add behavior.
+
 ### Next
 
 Run a ground-truth-first `musyxSynthFrame` parent/gate census. Instrument entry

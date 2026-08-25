@@ -5,16 +5,16 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2340 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2341 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The s2340 scheduler-caller census moves the qualified M5 boundary
-above `tickAudioSequencerFrame`: retail whole-RDRAM/target/status/title/hangar
-and all named PC controls are positive, both port arms reached target phases
-with all host/task/DMA/guest-receive/PCM/filter/render/key-on/callback controls,
-and a same-helper callback control fired `144/145` times. The sequencer entry
-and all three static callsite rows remain zero in both arms, as do the retained
-`tickAllAudioChannels` entry/pre-call rows. The next work unit is the
-`musyxSynthFrame` parent/gate census in `scratch/agent/NEXT.md`.
+to §47. The s2341 synth parent/gate census moves the qualified M5 boundary
+inside `musyxSynthFrame`: retail whole-RDRAM/target/status/title/hangar and all
+named PC controls are positive, both port arms reached target phases with all
+host/task/DMA/guest-receive/PCM/filter/render/key-on/callback controls, and a
+same-helper callback control fired `144/145` times. The parent entry
+`0x8009123C` fired `268` times in each arm, while all three countdown/gate
+edges and the three retained sequencer callsite rows were zero in both arms.
+The next work unit is the pre-gate branch census in `scratch/agent/NEXT.md`.
 
 ## Current state
 
@@ -119,6 +119,17 @@ and all three static callsite rows remain zero in both arms, as do the retained
   `0x800914A4/0x80091564/0x80091618` in both arms; retained scheduler
   entry/pre-call rows were also `0/0`. This selects H-PortSeqCallerInactive
   at capture scope and changes no behavior.
+- The s2341 synth parent/gate census is independently qualified by a fresh
+  retail oracle: whole-RDRAM `32450863`, target-window `32440518`, mode/gate/
+  status `108/17/22`, callback registration `19`, both target origins, and
+  positive retail PCs for `0x8009123C`, all three gate PCs, all three
+  callsites, retained scheduler/callback/service sources, and descriptor/
+  filter controls; requested-zero `0x8009C4E8` stayed zero. Both same-build
+  arms reached hangar with `port_controls=1`; task/DMA/guest-receive/PCM/
+  filter/render/key-on controls were positive, and the callback helper
+  control fired `144/145` times. The port parent entry fired `268/268`, but
+  gate 1/2/3 and callsite 1/2/3 were `0/0` in both arms. This selects
+  H-PortSynthGateBypassed at capture scope and changes no behavior.
 - The independent retail oracle is the witness for game-side memory claims.
   Whole-RDRAM, title/hangar, gate/task/status, target-window, and named-PC
   controls must pass before a retail null is interpreted. It reaches attract,
@@ -259,15 +270,15 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 scheduler/callback source reachability — next.** s2340 selected
-   H-PortSeqCallerInactive: the `tickAudioSequencerFrame` entry and all three
-   static callsites are zero in both arms under a same-helper positive control,
-   while retail executes all four source PCs. Census the `musyxSynthFrame`
-   entry `0x8009123C` and its three countdown/gate edges immediately before
-   `0x800914A4`, `0x80091564`, and `0x80091618` in one table. Keep retail
-   source-PC controls, callback registration, all s2338–s2340 rows, target
-   route/task/DMA/guest-receive/PCM/filter/render/key-on controls, and both
-   arms; do not add behavior.
+2. **M5 scheduler/callback source reachability — next.** s2341 selected
+   H-PortSynthGateBypassed: `musyxSynthFrame` entry `0x8009123C` is positive
+   in both port arms, but its three countdown/gate edges and all three
+   sequencer callsites are zero under the same positive controls. Census the
+   pre-gate branches at `0x8009142C`, `0x80091454`, and `0x80091468` in one
+   table to distinguish outer-loop rejection, per-iteration guard bypass, and
+   a gate-reached probe mismatch. Keep retail source-PC controls, callback
+   registration, all s2338–s2341 rows, target route/task/DMA/guest-receive/
+   PCM/filter/render/key-on controls, and both arms; do not add behavior.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -326,7 +337,13 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   The s2340 sequencer census then found the entry and all three static caller
   edges also zero under a same-helper positive control; the active boundary is
   now above `tickAudioSequencerFrame`, with the `musyxSynthFrame` parent/gates
-  as the next measured edge.
+  as the next measured edge. The s2341 census found
+  `musyxSynthFrame` entry `0x8009123C` positive `268/268`, but its three
+  countdown/gate edges and all three sequencer callsites zero in both arms
+  under the same qualified controls. This selects H-PortSynthGateBypassed and
+  moves the active boundary inside `musyxSynthFrame`, before the first
+  observed countdown branch; no gate, state, store, or consumer change is
+  authorized.
 
 ### VI state and second origin
 
@@ -400,6 +417,12 @@ are superseded at their measured scopes:
   three static callsites were also zero under a same-helper positive control.
   The measured boundary is now above the sequencer, not a generated direct
   call mismatch or an internal sequencer branch.
+- s2340's H-PortSeqCallerInactive label is refined by s2341: it was believable
+  because the sequencer entry and all three callsites were zero under live
+  controls, but the next `musyxSynthFrame` entry fired `268/268` in the same
+  arms while all three internal gate edges remained zero. The measured
+  boundary is now inside `musyxSynthFrame`, before its first observed gate,
+  not an inactive parent or generated sequencer dispatch.
 
 ## Evidence and safety rules
 
