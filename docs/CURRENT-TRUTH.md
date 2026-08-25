@@ -5,7 +5,7 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2346 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2347 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
 to §47. The s2343 B40 provenance census passed fresh retail whole-RDRAM,
 target-window, mode/status/title/hangar, named-PC, and both-arm port controls.
@@ -52,6 +52,22 @@ rows do not prove task publication because the independent image join has no
 source/consumer match and all output overlap is zero. No writer, task-data,
 consumer, default, or guard change was made.
 
+The s2347 output-writer provenance census passed a fresh retail whole-RDRAM
+watch (`29,920,648`), target-window watch (`29,910,488`), output-span watch
+(`108`), B40/status/queue watches (`17/16/19`), both title/hangar phases, and
+the named-PC controls. The retail output-span writer was `0x80094648`, with
+`24` phase-bucketed writes at each target origin and `72` nonzero post-value
+samples. The corrected same-build four-arm port table passed every title,
+hangar, task/DMA, guest-receive, PCM, filter, render, key-on, and callback
+control. C88=1 stored nonzero in `2/3` B40 control rows and increased
+fall-through rows, while every arm's ABI output fields remained zero; image
+C88=0/1 emitted `2,299/3,752` target-phase DMA ranges and both had `0`
+output-overlap ranges. This selects H-RetailOutputWriterPortZero at capture
+scope and refines H-OutputMetadataWriterAbsent. The retail writer's semantic
+relation to the port output ABI and any port write-before-snapshot ordering
+remain open; no writer, writeback, task-data, consumer, default, or guard
+change was made.
+
 ## Current state
 
 - Overlay dispatch is fixed enough for mission entry and post-sec2 outdoor
@@ -94,6 +110,14 @@ consumer, default, or guard change was made.
   200 image-stage rows were stage-only. The sequence-keyed PCM rows remain
   non-authoritative without an output/destination match. This selects
   H-OutputMetadataWriterAbsent and authorizes no writer or task-data change.
+- The s2347 table adds the independent retail writer witness. Retail writes
+  the watched task/output span from `0x80094648` in both target phases, while
+  all four qualified port arms expose zero ABI output fields; the image arms
+  emit `2,299/3,752` target-phase DMA ranges with zero output overlap. The
+  C88 writer sequence remains only a treatment control (`2/3` nonzero in each
+  C88=1 arm), not an output-field writer. This selects
+  H-RetailOutputWriterPortZero at capture scope, leaves the writer's semantic
+  mapping and port ordering open, and authorizes no behavior change.
 - Both silent and image arms qualify through title `1024 @ 0x00790400` and
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur. In the
@@ -216,6 +240,25 @@ consumer, default, or guard change was made.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2347 — retail output-span writer is positive while port ABI output stays zero.**
+  The fresh retail oracle passed whole-RDRAM `29,920,648`, target-window
+  `29,910,488`, output-span `108`, B40/status/queue `17/16/19`, both
+  title/hangar phases, and the requested named PCs. The output-span writer
+  histogram identified `0x80094648` with `24` writes in each target phase;
+  its post-value witness had `72` nonzero samples. The first port parser was
+  corrected because individual DMA-range rows inherit phase from their
+  preceding `audtask-dma-row`; the fixed same-build sequential run qualified
+  all four arms with the full title/hangar, task/DMA, guest-receive, PCM,
+  filter, render, key-on, and callback-helper controls. Every arm was
+  SIGKILLed with rc `137`, with no crash or abort marker. C88=1 stored nonzero
+  in `2/3` B40 writer rows and had fall-through rows `382` stub and `373`
+  image, versus `256/255` in their controls. All four arms had zero nonzero
+  ABI output fields; image C88=0/1 emitted `2,299/3,752` target-phase DMA
+  ranges with zero output-overlap ranges. This selects
+  H-RetailOutputWriterPortZero at capture scope. The corrected table is in
+  `scratch/agent/s2347_m5_output_writer_provenance_fixed/`, and no behavior
+  change was made.
 
 - **s2346 — C88 treatment reaches task completion, but output metadata is absent.**
   The fresh retail oracle passed whole-RDRAM `32,515,250`, target-window
@@ -425,21 +468,21 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 output-metadata writer provenance — next.** s2346 selects
-   H-OutputMetadataWriterAbsent: the C88=1 image treatment completes joined
-   tasks and emits DMA, but all joined ABI output buffer/size fields are zero
-   and no generated range overlaps the advertised output. Run one fresh
-   ground-truth-first census of the retail task/output span
-   `0x00141AD0:0x00141AF0` and the known retail `data_ptr+0x100` writer, then
-   use one same-build four-arm port table to join the phase/task event, ABI
-   fields, writer sequence, DMA ranges, and destination overlap. The competing
-   outcomes are: retail writes a legitimate output field that the port never
-   writes; retail also leaves this field zero and the stage-only path is
-   legitimate; or a port output-field write exists but is lost by task
-   publication ordering. Require whole-RDRAM, target/title/hangar, status/
-   queue, named-PC, and all four port positive controls before interpreting a
-   null. Do not promote a writer, write back `data_ptr+0x100`, change task data,
-   change a consumer, change a default, or add a guard.
+2. **M5 output-field semantic/ordering boundary — next.** s2347 selects
+   H-RetailOutputWriterPortZero: retail writes the target output span from
+   `0x80094648`, while all qualified port ABI snapshots expose zero output
+   fields. Run one fresh ground-truth-first oracle field dump at
+   `0x80094648`, phase-gated to title and hangar, to capture the writer's
+   live pointer/value relation; then use one same-build four-arm table to
+   join that relation to the existing port ABI snapshot and task event order.
+   The competing outcomes are: the retail writer is demonstrably
+   `data_ptr+0x100` output metadata and the port has no corresponding writer;
+   the retail writer is a sentinel/other field and is unrelated to output
+   publication; or a port write occurs before the ABI snapshot and is lost by
+   publication ordering. Require whole-RDRAM, target/title/hangar,
+   status/queue, named-PC, and all four port positive controls before
+   interpreting a null. Do not promote a writer, write back `data_ptr+0x100`,
+   change task data, change a consumer, change a default, or add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -540,6 +583,15 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   publication. This selects H-OutputMetadataWriterAbsent at capture scope;
   retail/port writer provenance is the next boundary. No output-field,
   writeback, task-data, consumer, or default change is authorized.
+  The s2347 provenance table then paired that port evidence with an
+  independent retail output-span witness. Retail's `0x80094648` writer was
+  positive in both target phases (`24` rows each; nonzero post-value samples),
+  while all four port arms had zero ABI output fields. Image control/treatment
+  arms emitted `2,299/3,752` target-phase DMA ranges, with no range overlapping
+  the ABI output destination. This selects H-RetailOutputWriterPortZero at
+  capture scope, but does not yet prove the writer's semantic field mapping or
+  a port ordering loss. No output-field, writeback, task-data, consumer, or
+  default change is authorized.
 
 ### VI state and second origin
 
@@ -645,6 +697,13 @@ are superseded at their measured scopes:
   output overlap, and all 200 image-stage rows are stage-only. The active
   boundary is now output-metadata writer provenance, not a proven consumer
   mismatch or an ordinal-join failure.
+- s2346's H-OutputMetadataWriterAbsent label is refined by s2347: it was
+  believable because the image treatment completed tasks while its ABI output
+  fields and overlap rows were zero, but the fresh retail oracle independently
+  observed phase-matched nonzero writes to the same output-span watch from
+  `0x80094648`. The port result is therefore H-RetailOutputWriterPortZero at
+  capture scope; the writer's semantic role and any port ordering loss remain
+  unproven, so no contract change is authorized.
 
 ## Evidence and safety rules
 

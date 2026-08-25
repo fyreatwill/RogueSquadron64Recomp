@@ -110584,3 +110584,54 @@ Use the retail whole-RDRAM and target/title/hangar controls, the existing
 one same-build four-arm port table joining phase/task event, ABI output fields,
 writer sequence, DMA ranges, and destination overlap. Keep B40 zero, C88
 opt-in, and make no behavior change.
+
+## Session 2347 (2026-08-24) — M5 retail output writer positive, port ABI output zero
+
+HYPOTHESIS-ID: m5-c88-output-metadata-writer-provenance
+
+The planned work unit was a ground-truth-first output-metadata writer
+provenance census. The retail oracle completed with whole-RDRAM
+`29,920,648`, target-window `29,910,488`, output-span watch
+`0x00141AD0:0x00141AF0` at `108` writes, B40/status/queue `17/16/19`, both
+title/hangar phases, and the named-PC controls. The phase-qualified writer
+histogram identified `0x80094648` with `24` writes at each target origin; its
+post-value witness recorded `72` nonzero samples. This is independent retail
+writer evidence, but the field's semantic relation remains a follow-up
+question rather than an authorized contract change.
+
+The first port parser run was rejected before interpretation because its
+individual DMA-range rows did not carry width/origin and were therefore
+counted as zero target ranges. The corrected same-build sequential four-arm
+run passed title/hangar, task/DMA, guest-receive, PCM, filter, render, key-on,
+and callback-helper controls in every arm. All four games were SIGKILLed with
+rc `137`; no crash or abort marker appeared. The corrected summary is
+`scratch/agent/s2347_m5_output_writer_provenance_fixed/phase-task-writer-summary.tsv`
+and the combined table is `phase-task-writer-table.tsv` in the same directory:
+
+| arm | controls | C88 writer nonzero | fall-through | ABI output nonzero | target DMA ranges | output-overlap ranges | PCM source/consumer | filter rows |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| stub C0 | 1 | 0/3 | 256 | 0 | 0 | 0 | 88/88 | 0 |
+| stub C1 | 1 | 2/3 | 382 | 0 | 0 | 0 | 88/88 | 256 |
+| image C0 | 1 | 0/3 | 255 | 0 | 2,299 | 0 | 88/88 | 0 |
+| image C1 | 1 | 2/3 | 373 | 0 | 3,752 | 0 | 87/87 | 256 |
+
+C88 treatment fall-through increased in both audio arms, so the treatment
+was live. Every port ABI row still advertised `output_buff=0` and
+`output_buff_size=0`; image DMA was real but no range overlapped the ABI
+destination. With the independent retail writer positive in both target
+phases, this selects H-RetailOutputWriterPortZero at capture scope and refines
+s2346's H-OutputMetadataWriterAbsent. It rules out a retail target-phase
+writer null and rules out a proven same-task PCM consumer gap, but it does not
+yet prove that `0x80094648` is the port's output-field writer or that the port
+loses a nonzero field through ordering.
+
+ORIGIN: diagnostic-only and opt-in behavior-arm validation. The new driver and
+parser add no mitigation, skip, guard, remap, default, store, consumer,
+writeback, or task-data change. `ROGUESQ_M5_C88_VALUE` remains opt-in.
+
+### Next
+
+Run one oracle field dump at `0x80094648`, phase-gated to both target origins,
+then one same-build four-arm table joining the writer pointer/value relation
+to the port ABI snapshot and task event order. Keep B40 zero, C88 opt-in, and
+make no behavior change.
