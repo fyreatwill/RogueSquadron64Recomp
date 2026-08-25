@@ -5,7 +5,7 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2354 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2355 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
 to §47. The s2343 B40 provenance census selected H-PortWriterMismatch under
 fresh retail and both-arm port controls; no writer or consumer was changed.
@@ -101,14 +101,13 @@ and closes `0x80090CA4` as a universal writer candidate; the actual hangar
 writer/task relation remains open. No writer, writeback, task-data, consumer,
 default, or guard change is authorized.
 
-The s2351 all-PC hangar exact-destination census supersedes the candidate-only
-scope of s2350. With both explicit 512 origins armed, every positive
-`0x00173C20` writer-PC row remained absent while the `0x00171DE0` known-candidate
-control produced 624 rows. The four port arms passed with zero field events,
-changes, and strict task-before-ABI writes. This selects
-H-RetailHangarFieldUnwritten at capture scope; global `0x00173C20` writes still
-occur outside these phase buckets, so the writer's placement remains open.
-No behavior, writer, task-data, consumer, default, or guard change was made.
+The s2355 enlarged-detail census passed whole-RDRAM `59,355`, target-window
+`44,150`, exact fields `490/1,736/1,491/1,488`, four phase histories, named
+controls `23/23`, and the four-arm port controls. All `9/9` positive hangar
+writer keys retained detail with zero overflow; only `1/9` had any value
+intersection with the port rows, and that intersection was zero-only. This
+selects H-RetailWriterIsUnrelated at capture scope; no writeback or contract
+change is authorized.
 
 ## Current state
 
@@ -194,6 +193,11 @@ No behavior, writer, task-data, consumer, default, or guard change was made.
   render, key-on, and C88 qualified, with zero field writes and changes. This
   selects H-HangarFieldWriterInPortSet at capture scope and leaves payload and
   completion semantics open; no behavior was authorized.
+- s2355 retained detail for all nine positive hangar writer keys after raising
+  the cap to `16384`; only one joined row shared a value with the port table,
+  and it was the common zero sentinel. This refines the boundary to
+  H-RetailWriterIsUnrelated at capture scope and leaves the writer's field
+  role/order contract open.
 - Both silent and image arms qualify through title `1024 @ 0x00790400` and
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur. In the
@@ -317,26 +321,15 @@ No behavior, writer, task-data, consumer, default, or guard change was made.
 
 ## Latest evidence
 
-- **s2353 — hangar writers land in the port-observed field set.** The fresh
-  retail run passed whole-RDRAM `59,352`, target-window `44,150`, exact field
-  totals `490/1,734/1,490/1,488`, four phase histories, and named controls
-  `23/23`. The 512 buckets had 11 positive rows: `0x171DE0` from
-  `0x800908D4/0x8009081C/0x8009220C`, `0x171F70` from `0x80090CA4`, and
-  `0x173DB0` from `0x80090CA4`. All joined to the three-field hangar set in
-  the qualified s2352 port table; zero joined rows were outside it. The four
-  port arms retained zero field writes and changes. This selects
-  H-HangarFieldWriterInPortSet at capture scope; tables are in
-  `scratch/agent/s2353_m5_hangar_field_set/`, and no behavior changed.
-
-- **s2354 — hangar payload detail is capped before the discriminator.** The
-  fresh retail run passed whole-RDRAM `59,286`, target-window `44,080`, exact
-  fields `491/1,735/1,492/1,488`, all four phase histories, named controls
-  `23/23`, and the retained four-arm port controls. It reproduced 11 positive
-  hangar writer-PC keys, but `post-value-pc-detail-overflow n=4666` left zero
-  hangar detail rows; only 512 title rows were retained. The generated join
-  table is in `scratch/agent/s2354_m5_hangar_payload_order/`; this selects
-  H-RetailWriterOrderUnresolved at capture scope and authorizes no behavior
-  change.
+- **s2355 — hangar writer payloads do not match the port field values.** The
+  fresh retail run passed whole-RDRAM `59,355`, target-window `44,150`, exact
+  fields `490/1,736/1,491/1,488`, four phase histories, named controls
+  `23/23`, and the retained four-arm port controls. Raising the detail cap to
+  `16384` retained all `9/9` positive hangar writer keys with zero overflow;
+  only one joined key shared a value with the port table, and that was the
+  common zero sentinel. This selects H-RetailWriterIsUnrelated at capture
+  scope. The table and capture are under
+  `scratch/agent/s2355_m5_hangar_payload_order/`.
 
 - **s2348 — the retail output-span writer is unrelated to the port task field.**
   The first oracle field gate missed the live origins and was rejected as a
@@ -583,13 +576,14 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 hangar task-field payload/order census — next.** s2354 reproduced 11
-   positive hangar writer keys but hit the oracle's 512-row detail cap before
-   hangar values were retained. Raise `MAX_POST_VALUE_PC_DETAIL_ROWS` to
-   `16384`, rebuild the oracle, and repeat the same fresh census. Join every
-   `(phase,writer_pc,field_phys,value)` row to the s2352 field-pre/post,
-   task-interval, and completion-order table. Do not write back a field,
-   alter task data, change a consumer or default, or add a guard.
+2. **M5 retail field-role census — next.** s2355 retained all nine positive
+   hangar writer keys without overflow, but no nonzero retail payload matched
+   the port task-field values. Run one fresh oracle census with
+   `--pc-field-dump` for `0x800908D4`, `0x8009081C`, `0x80090810`,
+   `0x8009220C`, and `0x80090CA4`, phase-gated at all four title/hangar
+   origins, and join the pointed-field rows to the s2352 port table. Do not
+   write back a field, alter task data, change a consumer or default, or add a
+   guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.

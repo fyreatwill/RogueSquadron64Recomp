@@ -110921,3 +110921,41 @@ were unchanged, and no mitigation-shaped machinery was added.
 Raise `MAX_POST_VALUE_PC_DETAIL_ROWS` to `16384`, rebuild the oracle, and repeat
 the same ground-truth census so all 11 hangar writer keys can be joined to
 payload and order detail. Do not change the port audio contract.
+
+## Session 2355 (2026-08-24) — M5 hangar writer payloads do not match port fields
+
+The first oracle invocation used a nonexistent core filename and exited before
+emulation; its log contained only the `dlopen` setup error. The corrected run
+used the prescribed `libmupen64plus.dylib` and completed the 75-second retail
+census after rebuilding `rs64_oracle` with `MAX_POST_VALUE_PC_DETAIL_ROWS`
+raised from `512` to `16384`.
+
+The fresh retail controls passed whole-RDRAM `59,355`, target-window `44,150`,
+exact field watches `490/1,736/1,491/1,488`, all four phase histories, and named
+PC controls `23/23`. The retained s2352 four-arm port table also passed. The
+capture retained `3,593` detail rows with `detail_overflow=0` and all `9/9`
+positive hangar writer-PC keys. In the hangar buckets, the positive keys were
+the three `0x171DE0` writers plus `0x80090CA4` at `0x171F70` in each origin,
+with `0x80090810` adding one `0x171DE0` key at `0x006AB800`; no
+`0x173DB0` hangar key was positive in this capture. The join parser reported
+`payload_matches=1`, but that match was the shared zero sentinel; no nonzero
+retail payload matched a port field pre/post value. It selected
+H-RetailWriterIsUnrelated at capture scope.
+
+This rules out the s2354 capacity explanation and rules out using these five
+candidate PCs as a proven port task-field writeback contract. It does not
+identify the semantic role of their pointed fields or the missing upstream
+task-field writer. No task data, consumer, default, guard, or runtime behavior
+changed. Artifacts are under
+`scratch/agent/s2355_m5_hangar_payload_order/`, with the retail capture at
+`scratch/agent/s2355_m5_hangar_payload_order_oracle.log`.
+
+ORIGIN: diagnostic-only. Only the oracle detail capacity and parser/reporting
+were changed; no mitigation-shaped machinery was added.
+
+### Next
+
+Run a fresh four-phase retail `pc-field-dump` census for
+`0x800908D4/0x8009081C/0x80090810/0x8009220C/0x80090CA4`, then join pointed
+fields and nonzero payloads to the s2352 port table. Do not write back a field
+or change the audio contract.
