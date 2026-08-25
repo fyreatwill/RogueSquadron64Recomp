@@ -110818,3 +110818,40 @@ Run one fresh retail exact-destination census with explicit phase buckets for
 `0x171DE0` and whole-RDRAM controls, derive every positive `0x173C20`
 writer-PC row, and join the result to the existing four-arm field table. Do
 not write the field or change the audio contract.
+
+## Session 2352 (2026-08-24) — M5 writer placement selects title secondary origin
+
+Ran the planned all-observed-origin `0x00173C20` writer-placement census. The
+fresh retail oracle passed whole-RDRAM `56,370`, target-window `44,140`, exact
+field watches `491` (`0x00173C20`) and `1,739` (`0x00171DE0`), all four
+explicit phase histories (`0x00790400`, `0x00790800`, `0x006AB400`, and
+`0x006AB800`), and all 23 named-PC controls. The complete positive `watch=2`
+writer-PC set contained only `0x80090CA4 n=483` at `1024 @ 0x00790800`; it
+was empty at `0x00790400` and both explicit 512/hangar origins. The parser did
+not infer this set from the previously known PCs.
+
+Added the regeneration-independent four-origin runner and built the existing
+runtime. The same-build `stub_c0`, `stub_c1`, `image_c0`, and `image_c1` arms
+all passed title/hangar, task, guest-receive, PCM, field-snapshot, image-DMA,
+filter, render, key-on, and C88 controls. Target task rows were `703/698/706/695`
+and image DMA ranges were `2,341/4,232`; every arm had zero field-write events,
+zero computed-field changes, zero ordering rows, and no crash or abort marker.
+
+This selects H-TargetWriterTitleOrigin at capture scope. It rules out a
+`0x00173C20` writer in either explicit hangar origin and rules out a port-side
+field write at the tested task boundary, but does not identify the hangar
+task-field writer or authorize writeback. The queued s2328 drain soak was also
+consumed as a failed result (`rc=1`, 2 seconds); it did not qualify an image
+audio contract. Artifacts are under
+`scratch/agent/s2352_m5_writer_placement/`, with the retail oracle at
+`scratch/agent/s2352_m5_writer_placement_oracle.log`.
+
+ORIGIN: diagnostic-only. The runner added no mitigation-shaped machinery and
+made no runtime behavior, task-data, consumer, default, or guard change.
+
+### Next
+
+Run one fresh retail exact-destination census for the s2352 hangar field set
+`0x00171DE0`, `0x00171F70`, and `0x00173DB0`, retaining `0x00173C20` as a
+control, then join every positive 512-phase writer PC/address to the s2352
+four-arm table. Do not write a field or change the audio contract.
