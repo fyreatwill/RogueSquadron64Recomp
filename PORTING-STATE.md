@@ -111075,3 +111075,46 @@ Run the s2359 ground-truth capture specified in `scratch/agent/NEXT.md`, with
 all four phase buckets, task dump, post-value watches 2–5, writer PC
 `0x80090CA4`, and retained controls. Keep the C88 treatment opt-in and do not
 change the port audio contract.
+
+## Session 2359 (2026-08-24) — M5 retail writer payload mismatches port fields
+
+The first run of the prescribed s2359 capture was rejected because the exact
+command in `NEXT.md` omitted `--pc-hist-watch 5`; its log had only histogram
+watches 2–4. The fixed run added that missing control and completed 4,469 VI
+frames. The new parser is
+`scratch/agent/parse_s2359_m5_task_value_order.py`.
+
+The corrected capture passed the whole-RDRAM `59,303` positive control, target
+window `44,100`, exact field watches `491/1,733/1,491/1,488`, all four phase
+histories, writer histograms 2–5, named PCs `25/25`, task controls with
+`2,463` type-2 rows and zero invalid/overflow, four retained port controls,
+and post-value detail with zero detail overflow. The exact writer
+`0x80090CA4` was positive for all four task-matched phase/field keys.
+
+The complete phase/field-scoped post-value table contains `2,038` writer
+rows. At the two keys represented by retained s2352 port profiles, `910`
+nonzero values mismatch the retained field payload, `0` match, and `17` are
+zero/sentinel-only. The other `1,111` rows have no retained port profile and
+remain unresolved. The oracle emits task ordinal and writer VI separately, so
+the table carries the task ordinal range for each phase/field join; it does
+not invent a task-to-VI identity. This selects
+H-RetailWriterPayloadMismatch at the comparable scope, rules out
+H-RetailWriterPostValueAbsent, and refines rather than overturns
+s2357's independent task-field address relation. It authorizes no field
+writeback, task-data edit, consumer/default change, guard, or mitigation.
+
+Artifacts: `scratch/agent/s2358_m5_task_value_order.log`,
+`scratch/agent/s2359_m5_task_value_order.log`, and
+`scratch/agent/s2359_m5_task_value_order/`.
+
+ORIGIN: diagnostic-only. The parser and oracle probes read retail execution,
+task, and post-store state; no runtime behavior or mitigation machinery
+changed.
+
+### Next
+
+Run one fresh qualified retail capture with phase-gated execution GPR rows
+for `0x80090CA4`, retaining the task dump, post-value detail, all four phase
+histograms, all four writer histograms, named-PC controls, and whole-RDRAM
+positive control. Join source arguments to task `data_ptr` and field
+relations; do not change the port audio contract.

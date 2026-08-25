@@ -5,10 +5,12 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2358 (2026-08-24). This was a triggered maintenance
-iteration: the file exceeded 60,000 bytes, so durable s2332–s2357 material was
-migrated to §48 and this snapshot was compacted. No experiment ran and no new
-runtime conclusion was made.
+Maintained in Session 2359 (2026-08-24). The M5 retail task-field payload/order
+capture passed its controls after the recipe was corrected to include the
+watch-5 phase histogram. The exact writer is positive for every task-matched
+phase/field key, but its nonzero values do not match the retained port payload
+at the comparable rows. Two phase/field keys have no retained port profile, so
+the remaining source relation is unresolved there.
 
 ## Current state
 
@@ -28,11 +30,17 @@ runtime conclusion was made.
   contract. MORT is a separate CPU speech asset.
 - `docs/M5-AUDIO-PLAN.md` is the design gate for incremental audio
   de-stubbing. The current measured boundary is retail task-field writer
-  payload/order; no port contract change is authorized.
+  source/payload relation; no port contract change is authorized.
 - The independent retail oracle is the witness for game-side memory claims.
   Its whole-RDRAM, target-window, phase, status/task, and named-PC controls
   must pass before a retail null is interpreted. It reaches attract, title,
   and hangar, not a mission.
+- The M5 task ABI address relation is independently real: retail type-2 tasks
+  point at the watched field set through `data_ptr+0x100`. Retail PC
+  `0x80090CA4` then stores nonzero values at every task-matched phase/field key
+  in the s2359 capture, but 910 comparable values mismatch the retained s2352
+  port field payload and none match. This is a payload/source discriminator,
+  not permission to alter task data or port writeback.
 
 ## Latest evidence
 
@@ -46,6 +54,17 @@ runtime conclusion was made.
   rows. This selects `H-RetailTaskAbiNamesPortField` at capture scope. It does
   not authorize writeback, task-data edits, consumer/default changes, or a
   guard. Artifacts: `scratch/agent/s2357_m5_task_abi/`.
+- **s2359 — exact writer is present but payload-mismatched.** The corrected
+  capture passed whole-RDRAM `59,303`, target window `44,100`, exact fields
+  `491/1,733/1,491/1,488`, all four phase histories, 25/25 named PCs, the
+  task dump, four port controls, and post-value detail with zero detail
+  overflow. The writer histogram and post-value rows were positive for all
+  four task-matched phase/field keys. Of 2,038 joined post rows, 910
+  nonzero values mismatched the retained s2352 field payload, 0 matched, 17
+  were zero/sentinel-only, and 1,111 had no retained port profile. The task
+  ordinal can only be carried as a phase/field range because the oracle emits
+  task ordinal and writer VI separately. Artifacts:
+  `scratch/agent/s2359_m5_task_value_order/`.
 - **s2356 — value-only role join was ambiguous.** Controls passed, but the
   candidate writer/value join had zero nonzero matches and only zero/sentinel
   intersections. This is superseded by s2357's independent address relation.
@@ -73,11 +92,12 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
    qualified steps. The next queued boundary is #2.
-2. **M5 retail task-field value/order — next.** Run the fresh oracle capture
-   in `scratch/agent/NEXT.md` using the task dump, post-value watches 2–5, and
-   writer PC `0x80090CA4`. Join values and ordering to the type-2 task rows,
-   writer histogram, and retained s2352 port ABI table. Do not write back a
-   field, alter task data, change a consumer/default, or add a guard.
+2. **M5 retail writer source relation — next.** Add phase-gated execution
+   GPR rows for `0x80090CA4` and join them by writer VI/field to the existing
+   task-field and post-value records. Determine whether the writer's source
+   pointer/arguments resolve to the task `data_ptr`, a retained port field, or
+   a separate retail state buffer. Do not write back a field, alter task data,
+   change a consumer/default, or add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -113,9 +133,10 @@ retail output-span writer while port ABI output stayed zero; s2348 closed that
 writer as unrelated to the computed task field; s2349–s2353 mapped the exact
 field set across title and hangar; s2354 rejected an overflowing payload
 capture; s2355 found no nonzero value match; s2356 left the task-ABI relation
-open; and s2357 closed the address/naming boundary with `1,153` nonzero
-task/field/writer/order relations. The remaining question is writer payload
-and ordering, not permission to patch the port.
+open; s2357 closed the address/naming boundary with `1,153` nonzero
+task/field/writer/order relations; and s2359 found the exact retail writer but
+a payload mismatch at the comparable rows. The remaining question is writer
+source/provenance, not permission to patch the port.
 
 No behavior change is authorized by these results. In particular, do not
 promote the C88 writer, invent output metadata, remap destinations, alter task
