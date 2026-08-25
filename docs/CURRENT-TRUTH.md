@@ -5,16 +5,17 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2341 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2342 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The s2341 synth parent/gate census moves the qualified M5 boundary
-inside `musyxSynthFrame`: retail whole-RDRAM/target/status/title/hangar and all
-named PC controls are positive, both port arms reached target phases with all
-host/task/DMA/guest-receive/PCM/filter/render/key-on/callback controls, and a
-same-helper callback control fired `144/145` times. The parent entry
-`0x8009123C` fired `268` times in each arm, while all three countdown/gate
-edges and the three retained sequencer callsite rows were zero in both arms.
-The next work unit is the pre-gate branch census in `scratch/agent/NEXT.md`.
+to §47. The s2342 pre-gate census moves the qualified M5 boundary to the
+`0x800A0F50` audio-gate test: fresh retail whole-RDRAM/target/status/title/
+hangar and all named PC controls are positive, and both same-build port arms
+reached target phases with task/DMA/guest-receive/PCM/filter/render/key-on and
+callback controls. `musyxSynthFrame` entry fired `268` times in each arm;
+sampled rows at `0x8009142C` and `0x80091454` included fall-through outcomes,
+while every sampled `0x80091468` row took its zero-gate bypass target. The
+three retained gate edges and sequencer callsites remained zero in both arms.
+This selects H-PortPreGateB40Reject at capture scope, with no behavior change.
 
 ## Current state
 
@@ -130,6 +131,18 @@ The next work unit is the pre-gate branch census in `scratch/agent/NEXT.md`.
   control fired `144/145` times. The port parent entry fired `268/268`, but
   gate 1/2/3 and callsite 1/2/3 were `0/0` in both arms. This selects
   H-PortSynthGateBypassed at capture scope and changes no behavior.
+- The s2342 pre-gate census is independently qualified by a fresh retail
+  oracle: whole-RDRAM `32459193`, target-window `32448848`, mode/gate/status
+  `108/17/22`, callback registration `19`, both target origins, and positive
+  retail execution counts for `0x8009123C/0x8009142C/0x80091454/0x80091468`
+  of `4427/4421/7423/7423`; requested-zero `0x8009C4E8` stayed zero. Both
+  same-build arms passed retained task/DMA/guest-receive/PCM/filter/render/
+  key-on controls plus the `0x80019B74` helper control (`144` each). Parent
+  entry was `268/268`; sampled pre-gate rows were stub/image `131/131/131`
+  per site, with taken outcomes at `0x8009142C` of `10/5`, `0x80091454` of
+  `2/1`, and `0x80091468` of `131/131`. The three retained gate edges and
+  sequencer callsites were `0` in both arms. This selects
+  H-PortPreGateB40Reject at capture scope and changes no behavior.
 - The independent retail oracle is the witness for game-side memory claims.
   Whole-RDRAM, title/hangar, gate/task/status, target-window, and named-PC
   controls must pass before a retail null is interpreted. It reaches attract,
@@ -270,15 +283,16 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 scheduler/callback source reachability — next.** s2341 selected
-   H-PortSynthGateBypassed: `musyxSynthFrame` entry `0x8009123C` is positive
-   in both port arms, but its three countdown/gate edges and all three
-   sequencer callsites are zero under the same positive controls. Census the
-   pre-gate branches at `0x8009142C`, `0x80091454`, and `0x80091468` in one
-   table to distinguish outer-loop rejection, per-iteration guard bypass, and
-   a gate-reached probe mismatch. Keep retail source-PC controls, callback
-   registration, all s2338–s2341 rows, target route/task/DMA/guest-receive/
-   PCM/filter/render/key-on controls, and both arms; do not add behavior.
+2. **M5 B40 gate provenance — next.** s2342 selects
+   H-PortPreGateB40Reject: both arms reach `musyxSynthFrame`, some iterations
+   pass the outer/per-iteration tests, and the `0x800A0F50` byte test takes its
+   zero-gate bypass path. Census every named writer at `0x800A0F50` and the
+   corresponding retail writer/value transitions in one phase-keyed table to
+   distinguish a legitimate port gate-zero contract, a port writer mismatch,
+   and a probe/phase classifier failure. Keep the s2341–s2342 branch rows,
+   retail whole-RDRAM/target/mode/status/title/hangar controls, task/DMA/
+   guest-receive/PCM/filter/render/key-on controls, and both arms; do not
+   change a writer or consumer.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -344,6 +358,12 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   moves the active boundary inside `musyxSynthFrame`, before the first
   observed countdown branch; no gate, state, store, or consumer change is
   authorized.
+  The s2342 census then observed both fall-through and taken outcomes at the
+  first two pre-gate branches, but only taken outcomes at `0x80091468`; the
+  downstream gate/callsite rows stayed zero under the same controls. The
+  measured boundary is therefore the `0x800A0F50` gate-byte test, not a
+  wholly inactive `musyxSynthFrame` or an uncalled sequencer edge. No gate,
+  writer, store, or consumer change is authorized.
 
 ### VI state and second origin
 
@@ -423,6 +443,12 @@ are superseded at their measured scopes:
   arms while all three internal gate edges remained zero. The measured
   boundary is now inside `musyxSynthFrame`, before its first observed gate,
   not an inactive parent or generated sequencer dispatch.
+- s2341's H-PortSynthGateBypassed label is refined by s2342: it was believable
+  because all three gate edges and callsites were zero under live controls,
+  but the new branch census showed `musyxSynthFrame` executing its outer and
+  per-iteration tests, with the `0x80091468` zero-gate branch taken in both
+  arms. The qualified boundary is the gate-byte test; its writer and
+  legitimacy remain open, and no bypass is authorized.
 
 ## Evidence and safety rules
 

@@ -110295,3 +110295,51 @@ Run a ground-truth-first `musyxSynthFrame` parent/gate census. Instrument entry
 `0x8009123C` and the three countdown/gate edges at `0x80091484`, `0x80091544`,
 and `0x800915F8`, retaining callsites `0x800914A4`, `0x80091564`, and
 `0x80091618`, all s2338–s2340 rows, and both arms. Do not add behavior.
+
+## Session 2342 (2026-08-24) — M5 pre-gate census selects B40 gate bypass
+
+HYPOTHESIS-ID: m5-descriptor-source-reachability
+
+The planned work unit was a ground-truth-first, no-behavior-change census of
+the three branches between `musyxSynthFrame` entry and gate 1:
+`0x8009142C`, `0x80091454`, and `0x80091468`. The retail preflight passed with
+whole-RDRAM `32459193`, target-window `32448848`, mode/gate/status `108/17/22`,
+callback registration `19`, both title/hangar origins, and retail execution
+counts `0x8009123C/0x8009142C/0x80091454/0x80091468 = 4427/4421/7423/7423`.
+The requested-zero `0x8009C4E8` PC remained zero. The regeneration order
+completed (`make_elf.py`, sibling `build/N64Recomp`, `fixup_game_funcs.py`,
+and the Debug target).
+
+The fixed sequential stub/image capture reached hangar in both arms. The
+positive controls were live in both arms: host control `2`, task `1130/1136`,
+DMA `1131/3431`, guest-receive `760/749`, PCM source/consumer `88/88`, filter
+control `1`, render `5`, key-on `33`, and the `0x80019B74` callback helper
+`144/144`. The parent entry was `268/268`; the retained gate edges and all
+three sequencer callsites were zero in both arms.
+
+The phase-qualified branch logger emitted 131 sampled rows per site per arm.
+The actual compared operands and branch outcomes were retained in
+`scratch/agent/s2342_m5_synth_pre_gate_census/synth-pre-gate-table.tsv`:
+
+| arm | `0x8009142C` taken 0/1 | `0x80091454` taken 0/1 | `0x80091468` taken 0/1 |
+|---|---:|---:|---:|
+| stub | 121 / 10 | 129 / 2 | 0 / 131 |
+| image | 126 / 5 | 130 / 1 | 0 / 131 |
+
+This selects **H-PortPreGateB40Reject** at the qualified capture scope. It
+rules out invalid retail coverage, missing port controls, an inactive
+`musyxSynthFrame`, outer-loop rejection of every iteration, per-iteration
+rejection of every iteration at `0x80091454`, and a probe mismatch in which
+`0x80091468` falls through to gate 1. The measurement identifies the zero-gate
+branch, not the writer or legitimacy of `0x800A0F50`; no gate, writer, store,
+consumer, or default change is authorized.
+
+The first summary parser incorrectly treated the callback-helper counter as a
+general control counter even though it was stored in a separate table. The
+same captured logs were replayed after correcting that parser; no game was
+rerun and the selected result above is from the corrected table.
+
+ORIGIN: diagnostic-only. The diff adds the regeneration-safe pre-gate helper,
+phase-scoped branch outcome logging, and the parser table; it does not
+mitigate, skip, restore, or alter guest state, task data, audio output,
+control flow, stores, guards, remaps, slots, defaults, or consumers.
