@@ -1,59 +1,59 @@
-# NEXT work unit (s2338) — M5 parent caller reachability
+# NEXT work unit (s2339) — M5 scheduler/callback source reachability
 
 HYPOTHESIS-ID: m5-descriptor-source-reachability
 
 ## Work unit
 
-Run one ground-truth-first, no-behavior-change census of the two parent edges
-that feed the child callers found absent in s2337:
-`tickAudioChannel` entry `0x8008BC10` and its static edge to
-`soundMacroOpPlaySampleKeymap` at `0x8008C454`; and `serviceVoicePoolFrame`
-entry `0x8009B5A8` and its static edge to `startStreamedSampleVoice` at
-`0x8009B784`. Add durable target-phase/ordinal-keyed parent-entry and
-immediately-pre-call markers. Retain the s2337 child-entry/pre-call markers,
-s2336 direct-callsite/callee-entry/store probes, and all route/task/DMA/
-guest-receive/PCM/filter controls. Do not add a store, remap, slot value,
-guard, default, consumer, or audio behavior.
+Run one ground-truth-first, no-behavior-change census of the next source edges
+above the s2338 parent nulls:
+`tickAllAudioChannels` entry `0x8008C9AC` and its static edge to
+`tickAudioChannel` at `0x8008CA14`; and the VI callback dispatch `jalr` at
+`0x80019B74`, including the selected callback target identity for the
+registered `serviceVoicePoolFrame` target `0x8009B5A8`. Retain all s2338 parent
+and child markers, target-phase route/task/DMA/guest-receive/PCM/filter
+controls, and the retail callback-registration control. Do not add a store,
+remap, callback, slot value, guard, default, consumer, or audio behavior.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-CoverageInvalid: retail parent PCs, both port arms, target render/key-on
-  work, or target-phase host controls are absent.
-- H-PortParentInactive: both parent entries are zero in both arms during the
-  target phases, matching the s2337 child-caller nulls.
-- H-PortParentBranchBypassed: a parent entry is positive, but its exact
-  pre-call marker is zero on the same arm/phase; parent logic bypasses the
-  child edge.
-- H-PortParentDispatchFault: a parent pre-call marker is positive, but the
-  child entry or retained direct-callsite/callee-entry row is zero on the same
-  arm/phase; the cross-function dispatch/edge is the remaining boundary.
+- H-CoverageInvalid: retail source PCs or callback registration, both port
+  arms, target phases, or any retained positive control are absent.
+- H-PortSchedulerParentInactive: `tickAllAudioChannels` entry and its exact
+  pre-call marker are both zero in both arms, while its retail entry/edge and
+  the route controls are positive.
+- H-PortCallbackDispatchInactive: the callback dispatcher marker/target row is
+  zero in both arms while the retail dispatcher and callback-registration
+  controls are positive.
+- H-PortCallbackTargetMismatch: the port callback dispatcher is positive but
+  its target identity never equals `0x8009B5A8`, despite positive registration;
+  a target row equal to `0x8009B5A8` followed by the retained service-entry
+  null selects H-PortServiceEntryBoundary instead.
 
 The discriminator is one table keyed by
-`(arm, phase, width, origin, ordinal, row, event, caller, edge)` containing
-retail PC counts for `0x8008BC10`, `0x8008C454`, `0x8009B5A8`, and
-`0x8009B784`, plus parent entry/pre-call, retained child entry/pre-call,
-direct-callsite, callee-entry/store, render, key-on, task/DMA,
-guest-receive, PCM, filter, and host-control rows. Require positive retail
-whole-RDRAM/target/status/title/hangar controls and positive target-phase host
-controls in both arms before reading a port zero. Select H-PortParentInactive
-only when both parent entries and both parent pre-call markers are zero.
-Select H-PortParentBranchBypassed only with a positive same-key parent entry
-and zero parent pre-call marker. Select H-PortParentDispatchFault only with a
-positive same-key parent pre-call marker and a zero child entry, direct
-callsite, or callee-entry row. Any missing control selects H-CoverageInvalid;
-otherwise report H-Unresolved rather than changing behavior.
+`(arm, phase, width, origin, ordinal, row, event, source, edge, target)` with
+retail execution counts for `0x8008C9AC`, `0x8008CA14`, `0x80019B74`,
+`0x80007910`, and `0x8009B5A8`, plus port scheduler entry/pre-call,
+callback-dispatch/target, all s2338 parent and child rows, render/key-on,
+task/DMA, guest-receive, PCM, filter, and host-control rows. Require positive
+retail whole-RDRAM/target-window/mode/gate/status/title/hangar controls and
+positive target-phase host controls in both arms before reading a port zero.
+Select H-PortSchedulerParentInactive only when both scheduler rows are zero;
+select H-PortCallbackDispatchInactive only when callback dispatch/target rows
+are zero with registration positive; select H-PortCallbackTargetMismatch only
+when dispatch is positive but no target is `0x8009B5A8`. Otherwise report
+H-Unresolved rather than changing behavior.
 
 ## Exact commands
 
-The retail preflight in the new driver must arm whole-RDRAM and physical
-target-window controls, title/hangar origins, mode/gate/status controls, and
-`--watch-pc` for the four parent PCs plus the retained child/descriptor,
-key-on/decode/filter/service controls.
+The retail preflight must arm whole-RDRAM and physical target-window watches,
+title/hangar origins, mode/gate/status watches, callback-table registration
+(`0x0011A8A4:0x0011A8B4`), and `--watch-pc` for the scheduler entry/edge,
+callback dispatcher/registration, service target, and all retained s2338
+child/descriptor/key-on/decode/filter/service controls.
 
-    mv ../N64Recomp/RecompiledFuncs ../N64Recomp/RecompiledFuncs.s2338-before
     python3 ../rogue_squadron64/tools/make_elf.py
     (cd ../N64Recomp && build/N64Recomp rogue_squadron.toml)
     (cd ../N64Recomp && python3 fixup_game_funcs.py)
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh -n scratch/agent/run_s2338_m5_parent_caller_reachability.sh
-    zsh scratch/agent/run_s2338_m5_parent_caller_reachability.sh s2338_m5_parent_caller_reachability
+    zsh -n scratch/agent/run_s2339_m5_scheduler_callback_source.sh
+    zsh scratch/agent/run_s2339_m5_scheduler_callback_source.sh s2339_m5_scheduler_callback_source

@@ -110076,3 +110076,61 @@ Run the s2338 ground-truth-first parent caller reachability census. Instrument
 `tickAudioChannel` entry/edge (`0x8008BC10`/`0x8008C454`) and
 `serviceVoicePoolFrame` entry/edge (`0x8009B5A8`/`0x8009B784`), retain the
 s2337 child probes and route controls, and do not add behavior.
+
+## Session 2338 (2026-08-24) — M5 parent-edge census selects port parent inactivity
+
+HYPOTHESIS-ID: m5-descriptor-source-reachability
+
+The planned work unit was one ground-truth-first, no-behavior-change census of
+the two parent edges above the s2337 child callers. The retail preflight passed
+whole-RDRAM `32311011`, physical target-window `32300685`, mode/gate/status
+`108/17/22`, title/hangar, and all requested parent, child, descriptor,
+trigger, key-on, decode, filter, and service PC controls. Parent PCs were
+`0x8008BC10/0x8008C454 = 43284/665` and
+`0x8009B5A8/0x8009B784 = 3905/2`; requested-zero `0x8009C4E8` remained zero.
+
+The regeneration-safe change was added to
+`../N64Recomp/fixup_game_funcs.py`: it emits target-phase, route-keyed host
+markers at `tickAudioChannel` entry and before `soundMacroOpPlaySampleKeymap`,
+and at `serviceVoicePoolFrame` entry and before `startStreamedSampleVoice`.
+The guest calls, context, state, stores, defaults, and audio behavior were not
+changed. `make_elf.py`, the sibling `build/N64Recomp` from its own directory,
+`fixup_game_funcs.py`, and the full Debug target all completed successfully;
+the generated four anchors were verified before running.
+
+The first capture was not accepted: the classifier reset the active width and
+origin on `[phase] t=...` metadata-only lines, so real task/PCM controls were
+misclassified as absent. The second capture fixed phase retention but still
+had two classifier-only errors: retail keys retained a `0x` prefix while the
+oracle counter did not, and the filter host-positive control is emitted before
+the first target phase. Neither pass was used as evidence. The fixed third
+capture is `scratch/agent/s2338_m5_parent_caller_reachability_final/`.
+
+The fixed same-build sequential stub/image arms both reached title and hangar
+(`512 @ 0x006AB400`). Each had positive target-phase host/task/DMA/
+guest-receive/PCM/filter/render/key-on controls; the summary reports
+host/task/DMA/guest-receive/PCM/filter/render/target as `2/1124/1126/772/88/
+1/5/38` for stub and `2/1139/1139/770/88/1/5/38` for image. Both new parent
+entry/pre-call pairs were `0/0` in both arms. The retained child entry,
+pre-call, direct-callsite, and callee-entry rows were also zero.
+
+This selects **H-PortParentInactive** at the qualified capture scope. It rules
+out invalid retail coverage, absent target-phase port controls, a child-only
+instrumentation fault, and an active parent branch with a missing child edge.
+It does not identify whether the parent functions are bypassed by their own
+callers or whether the service callback dispatch selects another target. The
+next boundary is `tickAllAudioChannels` → `tickAudioChannel`
+(`0x8008C9AC`/`0x8008CA14`) and the VI callback dispatch at `0x80019B74`.
+
+ORIGIN: diagnostic-only. The diff adds only phase-qualified host breadcrumbs
+and regeneration-safe fixup insertion points; it does not mitigate, skip,
+restore, or alter any guest state, task data, audio output, control flow,
+store, guard, remap, slot value, default, or consumer.
+
+### Next
+
+Run the scheduler/callback source census. Instrument
+`tickAllAudioChannels` entry and its static edge to `tickAudioChannel`, plus
+the `0x80019B74` VI callback dispatch with the selected callback target
+identity for `serviceVoicePoolFrame`. Keep the retail PC and callback
+registration controls, all s2338 rows, and both port arms; do not add behavior.

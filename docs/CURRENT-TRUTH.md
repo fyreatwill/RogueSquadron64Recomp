@@ -5,14 +5,14 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2337 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2338 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The s2337 enclosing-caller census selects H-PortCallerInactive at
-capture scope: retail caller/callsite controls and both port arms are positive,
-target render/key-on activity is live, and both caller-entry/pre-call markers
-remain zero in both arms. The retained direct-callsite and callee-entry probes
-also remain zero. The next work unit is the two parent caller edges in
-`scratch/agent/NEXT.md`.
+to §47. The s2338 parent-edge census selects H-PortParentInactive at capture
+scope: retail whole-RDRAM/target/status/title/hangar and all named PC controls
+are positive, both port arms reached target phases with task/DMA/guest-receive/
+PCM/filter controls, and both parent entry/pre-call pairs remain zero. The
+retained child callsite/callee probes also remain zero. The next work unit is
+the scheduler/callback source census in `scratch/agent/NEXT.md`.
 
 ## Current state
 
@@ -80,6 +80,19 @@ also remain zero. The next work unit is the two parent caller edges in
   pre-call marker pairs were `0/0`; retained direct-callsite and callee-entry
   rows were also `0/0`. This selects H-PortCallerInactive at capture scope;
   it changes no behavior.
+- The s2338 parent-edge census is independently qualified by retail
+  whole-RDRAM `32311011`, physical target-window `32300685`, mode/gate/status
+  `108/17/22`, title/hangar, parent PCs
+  `0x8008BC10/0x8008C454 = 43284/665` and
+  `0x8009B5A8/0x8009B784 = 3905/2`, child/descriptor/trigger controls,
+  key-on `83215/2231`, decode `1944`, filter caller/callee `6389/6388`, and
+  requested-zero `0x8009C4E8`. Both same-build sequential port arms reached
+  hangar. Each had target-phase host, task, DMA, guest-receive, PCM, filter,
+  render, and key-on controls; both new parent entry/pre-call pairs, retained
+  child entry/pre-call pairs, direct callsites, and callee-entry rows were
+  zero. Two earlier captures were rejected as classifier-only coverage
+  failures: one cleared width/origin on metadata-only phase lines, and one
+  used prefixed retail keys; the fixed run selected H-PortParentInactive.
 - The independent retail oracle is the witness for game-side memory claims.
   Whole-RDRAM, title/hangar, gate/task/status, target-window, and named-PC
   controls must pass before a retail null is interpreted. It reaches attract,
@@ -205,14 +218,15 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 descriptor source/caller reachability — next.** s2337 selected
-   H-PortCallerInactive: both descriptor callers and their pre-call edges are
-   zero, while the route and retained callsite/callee controls are live.
-   Instrument the parent edges `tickAudioChannel` →
-   `soundMacroOpPlaySampleKeymap` (`0x8008BC10` / `0x8008C454`) and
-   `serviceVoicePoolFrame` → `startStreamedSampleVoice` (`0x8009B5A8` /
-   `0x8009B784`), with retail execution controls; do not repeat the child
-   null or add behavior.
+2. **M5 scheduler/callback source reachability — next.** s2338 selected
+   H-PortParentInactive: both parent functions and their child edges are zero
+   in both arms despite live route/task/PCM controls. Census the next source
+   edges: `tickAllAudioChannels` entry and its static edge to
+   `tickAudioChannel` (`0x8008C9AC` / `0x8008CA14`), plus the VI callback
+   dispatch at `0x80019B74` with the callback target identity for the
+   `serviceVoicePoolFrame` registration (`0x8009B5A8`). Keep retail PC and
+   callback-registration controls, all s2338 rows, and both port arms; do not
+   add behavior.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -257,9 +271,11 @@ static `jal` sites and retained phase-qualified host controls; both callsites
 and both entry/store probes remained zero in both arms. The s2337 census added
 target-phase entry and pre-call markers to both enclosing callers; all four
 remained zero while the same-run host controls, target render/key-on rows, and
-retained callsite/callee controls were positive. This selects
-H-PortCallerInactive at capture scope and moves the active boundary to the two
-parent caller edges; no store, guard, or consumer change is authorized.
+retained callsite/callee controls were positive. The s2338 parent census then
+added entry and pre-call markers for both parent edges; those four were also
+zero in both arms under the same qualified controls. This selects
+H-PortParentInactive at capture scope and moves the active boundary above both
+parent functions; no store, guard, or consumer change is authorized.
 
 ### VI state and second origin
 
@@ -316,6 +332,11 @@ are superseded at their measured scopes:
   target controls, but the new enclosing-caller entry and pre-call probes also
   stayed zero in both arms. The measured boundary is now above both child
   callers, not a callsite instrumentation fault or a callee branch.
+- s2337's H-PortCallerInactive label is refined by s2338: it was believable
+  because both child caller entries and pre-call edges were zero under live
+  target controls, but the new enclosing parent entries and pre-call markers
+  were also zero in both arms. The measured boundary is now above both parent
+  functions, not a child callsite, callee, or descriptor-store issue.
 
 ## Evidence and safety rules
 
