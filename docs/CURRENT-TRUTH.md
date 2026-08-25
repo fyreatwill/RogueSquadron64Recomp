@@ -5,7 +5,7 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2345 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2346 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
 to §47. The s2343 B40 provenance census passed fresh retail whole-RDRAM,
 target-window, mode/status/title/hangar, named-PC, and both-arm port controls.
@@ -38,6 +38,19 @@ C88=1 arm and `0` in each control, but that logger is phase-scoped rather than
 ordinal-keyed. Image-task rows remained stage-only. This selects
 H-TaskOutputGap at capture scope; it does not authorize a writer, consumer,
 task-data, or default change.
+
+The s2346 task-output provenance census passed the fresh retail whole-RDRAM,
+target-window, status/queue, title/hangar, and named-PC controls, then all
+four same-build C88/audio port arms. In both C88=1 arms, 99 completed task
+rows had `output_buff=0` and `output_buff_size=0`; the image arm emitted 3,689
+generated DMA ranges with zero output overlap and 200 stage rows classified
+stage-only. C88=1 still stored nonzero in `2/3` writer rows, produced
+125 fall-through branches in the image arm, and produced `256` filter rows;
+PCM boundary controls remained positive. This selects
+H-OutputMetadataWriterAbsent at capture scope. The direct sequence-keyed PCM
+rows do not prove task publication because the independent image join has no
+source/consumer match and all output overlap is zero. No writer, task-data,
+consumer, default, or guard change was made.
 
 ## Current state
 
@@ -74,6 +87,13 @@ task-data, or default change.
   because its existing audit row has no route ordinal. The remaining measured
   boundary is task output/publication, not C88 readback or a proven consumer
   mismatch; no writer, consumer, task-data, or default change is authorized.
+- The s2346 table refines task output/publication to absent output metadata at
+  capture scope. The image C88=1 treatment completed 99 joined tasks and
+  emitted 3,689 generated DMA ranges, but every joined ABI row advertised
+  zero output buffer and size, every range had zero output overlap, and all
+  200 image-stage rows were stage-only. The sequence-keyed PCM rows remain
+  non-authoritative without an output/destination match. This selects
+  H-OutputMetadataWriterAbsent and authorizes no writer or task-data change.
 - Both silent and image arms qualify through title `1024 @ 0x00790400` and
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur. In the
@@ -196,6 +216,28 @@ task-data, or default change.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2346 — C88 treatment reaches task completion, but output metadata is absent.**
+  The fresh retail oracle passed whole-RDRAM `32,515,250`, target-window
+  `32,505,084`, B40/status/queue `17/22/19`, both title/hangar phases, and the
+  requested named PCs. The post-value witness saw `0x8008EC88` store
+  `0x01000000` twice and the neighboring writers store zero. The first driver
+  attempt stopped on a shell nounset bug; the first parsed run was rejected
+  because its control predicate incorrectly required stub DMA-range rows; a
+  second parsed run was rejected because route ordinal was used as the task
+  `n`. The fixed same-build sequential run qualified all four arms with
+  title/hangar, task/DMA, guest-receive, PCM, filter, render, key-on, and
+  callback-helper controls; all arms were SIGKILLed with rc `137` and no
+  crash/abort marker. Its table is in
+  `scratch/agent/s2346_m5_task_output_provenance_joinfixed/`.
+  C88=1 stored nonzero in `2/3` writer rows and had fall-through branch rows
+  `121` stub and `125` image. The image C88=1 arm had `99` completed tasks,
+  `990` task rows, `3,689` DMA ranges, zero output-overlap ranges, `200`
+  image-stage rows, zero image-join source/consumer rows, and `99/99`
+  sequence-keyed PCM rows (30 nonzero); the ABI output buffer and size were
+  zero in all 99 completed joined rows. This selects
+  H-OutputMetadataWriterAbsent at capture scope and leaves the writer's
+  retail/port provenance open. No behavior change was made.
 
 - **s2345 — C88 opens same-ordinal voice work, but task output/publication remains open.**
   The fresh retail oracle passed whole-RDRAM `32,359,524`, target-window
@@ -383,18 +425,21 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 task-output/PCM handoff provenance — next.** s2345 selects
-   H-TaskOutputGap: C88=1 creates same-ordinal key-on/slot and descriptor-init
-   work, but the image-task rows are stage-only and no exact PCM source,
-   consumer, or completed task join follows. Run one fresh ground-truth-first,
-   same-build four-arm C88/audio table that joins each restored route ordinal
-   to `audtask-abi` output buffer/size, task completion, every generated DMA
-   range and overlap class, `audtask-image-join` classification, and PCM source/
-   consumer events. Keep `ROGUESQ_M5_B40_VALUE=0`, C88 opt-in, the existing
-   eleven-Start title/hangar gates, and all s2345 controls. The discriminator
-   is output metadata written before DMA versus a valid DMA range with no
-   publication versus a publication with no consumer; do not promote the
-   writer or change task data, a consumer, a default, or a guard.
+2. **M5 output-metadata writer provenance — next.** s2346 selects
+   H-OutputMetadataWriterAbsent: the C88=1 image treatment completes joined
+   tasks and emits DMA, but all joined ABI output buffer/size fields are zero
+   and no generated range overlaps the advertised output. Run one fresh
+   ground-truth-first census of the retail task/output span
+   `0x00141AD0:0x00141AF0` and the known retail `data_ptr+0x100` writer, then
+   use one same-build four-arm port table to join the phase/task event, ABI
+   fields, writer sequence, DMA ranges, and destination overlap. The competing
+   outcomes are: retail writes a legitimate output field that the port never
+   writes; retail also leaves this field zero and the stage-only path is
+   legitimate; or a port output-field write exists but is lost by task
+   publication ordering. Require whole-RDRAM, target/title/hangar, status/
+   queue, named-PC, and all four port positive controls before interpreting a
+   null. Do not promote a writer, write back `data_ptr+0x100`, change task data,
+   change a consumer, change a default, or add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -486,6 +531,15 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   they carry no route ordinal. The active boundary is task output/publication,
   not a proven PCM consumer mismatch. No writer, task-data, consumer, or
   default change is authorized.
+  The s2346 task-output table then joined image-stage events to their
+  `audtask-join` intervals rather than assuming route ordinal equals task
+  number. In the image C88=1 treatment, 99 completed task joins advertised
+  zero `output_buff` and `output_buff_size`; 3,689 generated DMA ranges had
+  zero output overlap and 200 stage rows were stage-only. Sequence-keyed PCM
+  rows were present, but no image-join source/consumer match restored task
+  publication. This selects H-OutputMetadataWriterAbsent at capture scope;
+  retail/port writer provenance is the next boundary. No output-field,
+  writeback, task-data, consumer, or default change is authorized.
 
 ### VI state and second origin
 
@@ -584,6 +638,13 @@ are superseded at their measured scopes:
   an exact PCM source/consumer or completed task join; the filter rows are only
   phase-attributed. The measured boundary is task output/publication, not C88
   readback, stale ordinal reuse, or a proven consumer mismatch.
+- s2345's H-TaskOutputGap label is refined by s2346: it was believable because
+  treatment-side route ordinals had key-on/descriptor work but no exact PCM
+  join, yet the new task-interval join shows 99 completed image C88=1 tasks.
+  Their ABI output fields remain zero, all 3,689 generated ranges have zero
+  output overlap, and all 200 image-stage rows are stage-only. The active
+  boundary is now output-metadata writer provenance, not a proven consumer
+  mismatch or an ordinal-join failure.
 
 ## Evidence and safety rules
 

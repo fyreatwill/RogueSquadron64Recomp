@@ -110524,3 +110524,63 @@ title/hangar gates, and all s2345 controls. The discriminator is output
 metadata written before DMA versus a valid DMA range with no publication versus
 a publication with no consumer. Do not promote the writer or change task data,
 a consumer, a default, or a guard.
+
+## Session 2346 (2026-08-24) — M5 task-output provenance selects absent output metadata
+
+HYPOTHESIS-ID: m5-c88-output-metadata-writer-provenance
+
+The planned work unit was a ground-truth-first, same-build four-arm census of
+the opt-in C88 treatment: stub/image crossed with
+`ROGUESQ_M5_C88_VALUE=0/1`, with `ROGUESQ_M5_B40_VALUE=0`. The retail oracle
+completed with whole-RDRAM `32,515,250` writes, target-window `32,505,084`,
+B40/status/queue `17/22/19`, both title/hangar phase histories, and all named
+PC controls. Its post-value witness saw `0x8008EC88` store `0x01000000` twice;
+the neighboring writers `0x8008EB7C` and `0x8008ED48` stored zero.
+
+The first driver attempt stopped before launch because a zsh `set -u`
+same-declaration expansion referenced `name` before assignment. The first
+parsed run then correctly rejected its own result as H-CoverageInvalid because
+the new predicate incorrectly required generated DMA-range rows from the
+silent stub control. A second parsed run was discarded because it joined the
+route ordinal directly to task `n`; hangar image stages use task event
+intervals instead. The fixed driver joined each image stage event to its
+`audtask-join` interval, then to ABI/DMA/PCM events, and ran all four arms
+sequentially. Every arm reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, passed task/DMA, guest-receive, PCM, filter, render,
+key-on, and callback-helper controls, and was SIGKILLed with rc `137` without
+a crash or abort marker.
+
+The qualified table is
+`scratch/agent/s2346_m5_task_output_provenance_joinfixed/task-output-table.tsv`;
+the summary is `task-output-summary.tsv`:
+
+| arm | C88 writer nonzero | branch rows / fall-through | completed task rows | DMA ranges | output-overlap ranges | image-stage rows | image source/consumer | sequence PCM source/consumer |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| stub C0 | 0/3 | 130 / 0 | 63 | 0 | 0 | 0 | 0 / 0 | 63 / 63 |
+| stub C1 | 2/3 | 124 / 121 | 55 | 0 | 0 | 0 | 0 / 0 | 55 / 55 |
+| image C0 | 0/3 | 127 / 0 | 115 | 2,265 | 0 | 230 | 0 / 0 | 115 / 115 |
+| image C1 | 2/3 | 128 / 125 | 99 | 3,689 | 0 | 200 | 0 / 0 | 99 / 99 |
+
+All 99 completed image C88=1 task joins advertised
+`output_buff=0` and `output_buff_size=0`; all 200 image-stage rows were
+`stage-only`. Sequence-keyed PCM rows included 30 nonzero rows, but no
+independent image-join source/consumer match or output overlap restored task
+publication. This selects **H-OutputMetadataWriterAbsent** at capture scope,
+refines H-TaskOutputGap, and leaves retail/port writer provenance as the next
+boundary. It rules out a proven same-task PCM consumer gap and does not
+authorize a writer, writeback, task-data, consumer, default, or guard change.
+
+ORIGIN: diagnostic-only and opt-in behavior-arm validation. The new launcher
+and parser add no mitigation, skip, guard, remap, default, store, consumer, or
+task-data change. The C88 value remains supplied only through the existing
+`ROGUESQ_M5_C88_VALUE` environment arm.
+
+### Next
+
+Run one fresh ground-truth-first M5 output-metadata writer provenance census.
+Use the retail whole-RDRAM and target/title/hangar controls, the existing
+`0x00141AD0:0x00141AF0` task/output-span watch, the known retail
+`data_ptr+0x100` writer control, and all named task/status/voice PCs. Then run
+one same-build four-arm port table joining phase/task event, ABI output fields,
+writer sequence, DMA ranges, and destination overlap. Keep B40 zero, C88
+opt-in, and make no behavior change.
