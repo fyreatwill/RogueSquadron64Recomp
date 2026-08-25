@@ -640,6 +640,39 @@ extern "C" void rs64_m5_init_voice_callsite(uint32_t caller_pc) {
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_init_voice_caller_event(uint32_t caller_pc,
+                                                   uint32_t edge_kind) {
+    if (!rs64_m5_init_voice_probe_enabled()) return;
+
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!rs64_m5_init_voice_target_phase(width, origin)) return;
+
+    uint32_t route_phase = phase;
+    uint32_t route_width = width;
+    uint32_t route_origin = origin;
+    uint32_t ordinal = 0xFFFFFFFFu;
+    uint32_t row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        &route_phase, &route_width, &route_origin, &ordinal, &row,
+        &exit_reason, &arm);
+    const uint64_t event = g_rs64_m5_init_voice_next_event.fetch_add(
+        1, std::memory_order_relaxed);
+    std::fprintf(stderr,
+                 "[init-voice-caller] event=%llu edge=%s caller=0x%08X"
+                 " phase=%u width=%u origin=0x%06X active=%u arm=%s"
+                 " ordinal=%u row=%u\n",
+                 static_cast<unsigned long long>(event),
+                 edge_kind == 0u ? "entry" : "pre-call", caller_pc,
+                 active ? route_phase : phase, active ? route_width : width,
+                 active ? route_origin : origin, active ? 1u : 0u,
+                 active && arm ? arm : "n/a", ordinal, row);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_init_voice_entry(uint32_t voice_idx, uint32_t desc,
                                            uint32_t f4, uint32_t f8,
                                            uint32_t fC, uint32_t f10,

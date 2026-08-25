@@ -5,13 +5,14 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2336 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2337 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The s2336 callsite census selects H-PortInitNeverCalled at capture
-scope: retail entry/store controls and both port arms are positive, target
-render/key-on activity is live, and both explicit callsite and function-entry
-probes remain zero in both arms. The next work unit is the enclosing caller
-reachability/branch boundary in `scratch/agent/NEXT.md`.
+to §47. The s2337 enclosing-caller census selects H-PortCallerInactive at
+capture scope: retail caller/callsite controls and both port arms are positive,
+target render/key-on activity is live, and both caller-entry/pre-call markers
+remain zero in both arms. The retained direct-callsite and callee-entry probes
+also remain zero. The next work unit is the two parent caller edges in
+`scratch/agent/NEXT.md`.
 
 ## Current state
 
@@ -68,6 +69,17 @@ reachability/branch boundary in `scratch/agent/NEXT.md`.
   target render `5`, and key-on `33`. Both direct callsite hooks and both
   `musyxInitVoiceFromSample` entry/store rows were zero. This selects
   H-PortInitNeverCalled at capture scope; it changes no behavior.
+- The s2337 parent-caller census is independently qualified by retail
+  whole-RDRAM `32431451`, physical target-window `32421125`, mode/gate/status
+  `108/17/22`, title/hangar, retail caller/callsite `686/2` and `686/2`,
+  descriptor/trigger `688/688`, key-on `83596/2231`, decode `1940`, filter
+  caller/callee `6376/6376`, service `3914`, and requested-zero
+  `0x8009C4E8`. Both same-build port arms reached hangar; each had host-positive
+  controls at title and hangar, target render/key-on `5/33`, and positive
+  task/DMA/guest-receive/PCM/filter controls. Both new caller-entry and
+  pre-call marker pairs were `0/0`; retained direct-callsite and callee-entry
+  rows were also `0/0`. This selects H-PortCallerInactive at capture scope;
+  it changes no behavior.
 - The independent retail oracle is the witness for game-side memory claims.
   Whole-RDRAM, title/hangar, gate/task/status, target-window, and named-PC
   controls must pass before a retail null is interpreted. It reaches attract,
@@ -77,6 +89,18 @@ reachability/branch boundary in `scratch/agent/NEXT.md`.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2337 — enclosing caller reachability selects H-PortCallerInactive.** The
+  retail preflight passed whole-RDRAM `32431451`, target-window `32421125`,
+  mode/gate/status `108/17/22`, title/hangar, caller/callsite `686/2` and
+  `686/2`, descriptor/trigger `688/688`, key-on `83596/2231`, decode `1940`,
+  filter caller/callee `6376/6376`, service `3914`, and explicit-zero
+  `0x8009C4E8`. Both same-build sequential port arms reached hangar; target
+  host controls fired at title and hangar, with render/key-on `5/33` and
+  task/DMA/guest-receive/PCM/filter controls in each arm. New entry/pre-call
+  rows were `0/0` for both callers in both arms; retained direct-callsite and
+  callee-entry rows were also `0/0`. This selects H-PortCallerInactive at
+  capture scope and authorizes no behavior change.
 
 - **s2336 — explicit callsite provenance selects H-PortInitNeverCalled.** The
   clean-tag ground-truth-first oracle passed whole-RDRAM `32280738`, physical
@@ -181,12 +205,14 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 descriptor source/caller reachability — next.** s2336 selected
-   H-PortInitNeverCalled: target render/key-on work and phase-qualified host
-   controls are live, but both explicit callsites into
-   `musyxInitVoiceFromSample` and its entry/store probes are zero. Instrument
-   the two enclosing callers and their exact branch-to-call edges, with retail
-   entry controls; do not repeat the callsite null or add behavior.
+2. **M5 descriptor source/caller reachability — next.** s2337 selected
+   H-PortCallerInactive: both descriptor callers and their pre-call edges are
+   zero, while the route and retained callsite/callee controls are live.
+   Instrument the parent edges `tickAudioChannel` →
+   `soundMacroOpPlaySampleKeymap` (`0x8008BC10` / `0x8008C454`) and
+   `serviceVoicePoolFrame` → `startStreamedSampleVoice` (`0x8009B5A8` /
+   `0x8009B784`), with retail execution controls; do not repeat the child
+   null or add behavior.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -228,10 +254,12 @@ zero in both arms, while the same-run host-positive filter controls fired.
 Retail independently executed the descriptor, trigger, key-on, and filter PCs.
 The s2336 callsite census then added explicit hooks immediately before both
 static `jal` sites and retained phase-qualified host controls; both callsites
-and both entry/store probes remained zero in both arms. This selects
-H-PortInitNeverCalled at capture scope and moves the active boundary to the
-two enclosing callers and their branch-to-call edges; no store, guard, or
-consumer change is authorized.
+and both entry/store probes remained zero in both arms. The s2337 census added
+target-phase entry and pre-call markers to both enclosing callers; all four
+remained zero while the same-run host controls, target render/key-on rows, and
+retained callsite/callee controls were positive. This selects
+H-PortCallerInactive at capture scope and moves the active boundary to the two
+parent caller edges; no store, guard, or consumer change is authorized.
 
 ### VI state and second origin
 
@@ -283,6 +311,11 @@ are superseded at their measured scopes:
   but explicit hooks at both static callsites also stayed zero under fresh
   target-phase controls. The measured boundary is therefore caller reachability,
   not yet a missing descriptor writer inside the callee.
+- s2336's H-PortInitNeverCalled label is refined by s2337: it was believable
+  because the direct callsite and callee-entry probes were zero under live
+  target controls, but the new enclosing-caller entry and pre-call probes also
+  stayed zero in both arms. The measured boundary is now above both child
+  callers, not a callsite instrumentation fault or a callee branch.
 
 ## Evidence and safety rules
 

@@ -110026,3 +110026,53 @@ the qualified route and both port arms. Instrument the entries of
 `startStreamedSampleVoice` (`0x80097FE8`) plus markers immediately before
 callsites `0x8008A564` and `0x800980EC`; compare them with the retained s2336
 callsite/callee probes. Do not add behavior.
+
+## Session 2337 (2026-08-24) — M5 parent caller census selects port callers inactive
+
+The planned work unit was a ground-truth-first, no-behavior-change census of
+the two enclosing callers of `musyxInitVoiceFromSample`. The independent
+retail preflight passed whole-RDRAM `32431451`, physical target-window
+`32421125`, mode/gate/status `108/17/22`, title/hangar, caller/callsite
+`0x8008A38C/0x8008A564 = 686/2` and
+`0x80097FE8/0x800980EC = 686/2`, descriptor/trigger `688/688`, key-on
+`0x80090B68/0x80090C28 = 83596/2231`, decode `1940`, filter
+caller/callee `6376/6376`, service `3914`, and requested-zero
+`0x8009C4E8`. Whole-RDRAM and target-window watches, title/hangar origins, and
+the zero status watch were all positive/qualified before the port arms ran.
+
+The first prescribed N64Recomp command was run from the project root and
+failed before doing work because `rogue_squadron.toml` is in the sibling
+N64Recomp directory. The corrected invocation from that directory completed;
+`fixup_game_funcs.py` reported both s2337 entry hooks and both s2337 pre-call
+hooks, and the full Debug target rebuilt successfully. The generated hooks
+were verified at entries `0x8008A38C`/`0x80097FE8` and immediately before
+`0x8008A564`/`0x800980EC`.
+
+The same-build sequential stub/image driver reached title and hangar in both
+arms. Each arm had target-phase host-positive controls at both target origins,
+render/key-on `5/33`, and positive task/DMA/guest-receive/PCM/filter controls.
+The new caller-entry and pre-call markers were `0/0` for both callers in both
+arms. The retained s2336 direct-callsite and independent callee-entry/store
+probes were also `0/0`. The wrapper exited cleanly; its delegated per-arm
+wait status was `127` after deliberate SIGKILL cleanup, with no crash or abort
+marker. The complete table is in
+`scratch/agent/s2337_m5_descriptor_source_reachability/caller-reachability-table.tsv`.
+
+This selects **H-PortCallerInactive** at the qualified capture scope. It rules
+out missing retail coverage, missing target-phase port controls, an inactive
+child-only callsite hook, and a callee-entry/store logger failure. It does not
+identify whether the two parent functions are themselves inactive or whether
+their own callers bypass them; the next boundary is the parent edges
+`0x8008BC10 -> 0x8008C454` and `0x8009B5A8 -> 0x8009B784`.
+
+ORIGIN: diagnostic-only. The diff adds phase-qualified host breadcrumbs and
+fixup-script insertion points; it does not mitigate, skip, restore, or alter
+any guest state, task data, audio output, control flow, store, guard, remap,
+slot value, default, or consumer.
+
+### Next
+
+Run the s2338 ground-truth-first parent caller reachability census. Instrument
+`tickAudioChannel` entry/edge (`0x8008BC10`/`0x8008C454`) and
+`serviceVoicePoolFrame` entry/edge (`0x8009B5A8`/`0x8009B784`), retain the
+s2337 child probes and route controls, and do not add behavior.
