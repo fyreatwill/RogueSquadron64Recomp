@@ -110134,3 +110134,58 @@ Run the scheduler/callback source census. Instrument
 the `0x80019B74` VI callback dispatch with the selected callback target
 identity for `serviceVoicePoolFrame`. Keep the retail PC and callback
 registration controls, all s2338 rows, and both port arms; do not add behavior.
+
+## Session 2339 (2026-08-24) — M5 scheduler/callback census selects boundary above tickAllAudioChannels
+
+HYPOTHESIS-ID: m5-descriptor-source-reachability
+
+The planned work unit was one ground-truth-first, no-behavior-change census of
+`tickAllAudioChannels` entry `0x8008C9AC`, its static edge to
+`tickAudioChannel` at `0x8008CA14`, and the VI callback dispatcher at
+`0x80019B74`, including the target identity for registered
+`serviceVoicePoolFrame` `0x8009B5A8`. The retail preflight passed whole-RDRAM
+`32662007`, physical target-window `32651783`, mode/gate/status `108/17/22`,
+callback registration `19`, title/hangar, and positive requested PCs
+`0x8008C9AC/0x8008CA14/0x80019B74/0x80007910/0x8009B5A8 =
+4221/43383/12796/11/3912`; `0x8009C4E8` remained explicitly zero.
+
+The regeneration-safe diagnostic was added to `../N64Recomp/fixup_game_funcs.py`
+and the sequential stub/image runner was built with all arms and controls in
+one capture. The first run was rejected because its parser counted the
+host-positive filter control only after the target-phase gate, while that
+control is intentionally emitted before the first target phase. The corrected
+run is in `scratch/agent/s2339_m5_scheduler_callback_source_fixed/`; its
+`port_controls=1`. In both arms, scheduler entry/pre-call rows were `0/0`.
+The VI dispatcher produced `8` stub and `48` image target-phase rows, all to
+`0x80003250` or `0x8009123C`, with no `0x8009B5A8` target row. Task/DMA,
+guest-receive, PCM source/consumer, filter control, render, key-on, callback
+slot, and callback-loop controls were positive in both arms. The wrapper’s
+delegated per-arm wait status was `127` after deliberate SIGKILL cleanup, with
+both hangar phases observed and no crash or abort marker.
+
+This selects **H-PortSchedulerParentInactive** at the qualified capture scope.
+It rules out invalid retail coverage, absent target-phase port controls, a
+missing scheduler diagnostic, and a globally inactive VI callback dispatcher.
+It moves the active port boundary above `tickAllAudioChannels`; callback
+registration is live, but its registered service target is not selected by the
+observed dispatcher rows. It does not identify whether
+`tickAudioSequencerFrame` is reached or whether another callback table is
+active. The next boundary is its entry `0x8008D960` and static callsites
+`0x800914A4`, `0x80091564`, and `0x80091618`.
+
+The build order completed: `make_elf.py`, sibling `build/N64Recomp`,
+`fixup_game_funcs.py`, and the full Debug target. The first C compile exposed
+the generated probe’s `bool` declaration portability issue; it was corrected
+to the ABI-compatible one-byte declaration before the final build and capture.
+
+ORIGIN: diagnostic-only. The diff adds phase-qualified host breadcrumbs,
+parser control accounting, and regeneration-safe fixup insertion points; it
+does not mitigate, skip, restore, or alter guest state, task data, audio
+output, control flow, stores, guards, remaps, slots, defaults, or consumers.
+
+### Next
+
+Run the s2340 ground-truth-first `tickAudioSequencerFrame` entry and three
+static-callsite reachability census. Instrument `0x8008D960`,
+`0x800914A4`, `0x80091564`, and `0x80091618`; retain the s2338/s2339 rows and
+all positive controls in both port arms; do not add behavior.
