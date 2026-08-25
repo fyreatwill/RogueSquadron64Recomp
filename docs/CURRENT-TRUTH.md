@@ -5,7 +5,7 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2350 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2351 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
 to §47. The s2343 B40 provenance census passed fresh retail whole-RDRAM,
 target-window, mode/status/title/hangar, named-PC, and both-arm port controls.
@@ -16,6 +16,14 @@ recorded the same writer with requested `1` but stored `0`; 254 of 262
 were the explicit pre-writer prefix. Every joined branch had `lhs=0` and took
 the bypass target. This selects H-PortWriterMismatch at capture scope; no
 writer or consumer was changed.
+
+The s2351 all-PC hangar census passed fresh retail whole-RDRAM `56,344`,
+target-window `44,120`, exact field watches `491/1,733`, both explicit hangar
+origins (`0x006AB400`/`0x006AB800`), title/hangar phase history, and all 23
+named-PC controls. No retail PC wrote `0x00173C20` in either hangar origin;
+known candidates wrote the `0x00171DE0` control 624 times. All four same-build
+port arms passed and had zero field-write events, changes, or ordered writes.
+This selects H-RetailHangarFieldUnwritten at capture scope; no behavior changed.
 
 The s2344 C88 treatment validation then passed fresh retail controls and all
 four same-build port arms. With `ROGUESQ_M5_C88_VALUE=0`, all three target
@@ -108,16 +116,14 @@ and closes `0x80090CA4` as a universal writer candidate; the actual hangar
 writer/task relation remains open. No writer, writeback, task-data, consumer,
 default, or guard change is authorized.
 
-The s2350 hangar exact-destination census passed fresh retail whole-RDRAM
-`56,344`, target-window `44,120`, exact field watches `491/1,733`, both
-title/hangar phase histories, and all three candidate-PC controls. In the
-512/hangar bucket, `0x800908D4/0x8009081C/0x80090810` wrote `0x171DE0`
-`161/71/1` times but wrote `0x173C20` zero times. All four same-build port
-arms passed controls; both C88=1 arms had zero field-write events and zero
-computed-field changes. This selects H-RetailHangarWriterDifferentDestination
-at capture scope: the known hangar candidates are not a universal writer for
-both fields, and the `0x173C20` hangar writer remains open. No behavior,
-writer, task-data, consumer, default, or guard change was made.
+The s2351 all-PC hangar exact-destination census supersedes the candidate-only
+scope of s2350. With both explicit 512 origins armed, every positive
+`0x00173C20` writer-PC row remained absent while the `0x00171DE0` known-candidate
+control produced 624 rows. The four port arms passed with zero field events,
+changes, and strict task-before-ABI writes. This selects
+H-RetailHangarFieldUnwritten at capture scope; global `0x00173C20` writes still
+occur outside these phase buckets, so the writer's placement remains open.
+No behavior, writer, task-data, consumer, default, or guard change was made.
 
 ## Current state
 
@@ -191,12 +197,13 @@ writer, task-data, consumer, default, or guard change was made.
   `data_ptr+0x100`. This selects H-RetailKnownDestNotAudioOutput at capture
   scope, closes the `0x80090CA4` candidate as a universal writer, and leaves
   the actual hangar writer boundary open. No behavior change is authorized.
-- The s2350 table expanded the hangar attribution to the known candidate PCs.
-  Retail's fresh controls passed, but the candidates produced `233` exact
-  `0x171DE0` hangar writes and zero exact `0x173C20` hangar writes. The four
-  port arms also passed with zero C88=1 field events and changes. This selects
-  H-RetailHangarWriterDifferentDestination at capture scope and leaves the
-  actual `0x173C20` hangar writer open; no behavior change is authorized.
+- The s2351 table expanded the hangar attribution to every positive retail
+  writer-PC row and explicitly armed both `0x006AB400`/`0x006AB800` origins.
+  Retail's fresh controls passed, the known candidates produced `624` exact
+  `0x171DE0` hangar writes, and the all-PC `0x173C20` writer set was empty.
+  The four port arms also passed with zero field events, changes, and ordered
+  writes. This selects H-RetailHangarFieldUnwritten at capture scope; global
+  writer placement remains open and no behavior change was authorized.
 - Both silent and image arms qualify through title `1024 @ 0x00790400` and
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur. In the
@@ -320,16 +327,16 @@ writer, task-data, consumer, default, or guard change was made.
 
 ## Latest evidence
 
-- **s2350 — hangar candidates do not cover both task fields.** The fresh
-  retail oracle passed whole-RDRAM `56,344`, target-window `44,120`, exact
-  field watches `491/1,733`, both phase histories, and all three candidate-PC
-  controls. In the 512/hangar bucket, `0x800908D4/0x8009081C/0x80090810`
-  wrote `0x171DE0` `161/71/1` times and `0x173C20` zero times. The same-build
-  four-arm port table passed all controls; C88=1 field events and changes were
-  zero. This selects H-RetailHangarWriterDifferentDestination, closes this
-  candidate set as a universal writer for both fields, and leaves the actual
-  `0x173C20` hangar writer open. The table is in
-  `scratch/agent/s2350_m5_hangar_writer/`; no behavior changed.
+- **s2351 — no all-PC `0x173C20` writer in either explicit hangar origin.** The
+  fixed retail run passed whole-RDRAM `56,344`, target-window `44,120`, exact
+  watches `491/1,733`, title history, both hangar origins, and named controls
+  `23/23`. The all-PC hangar writer set for `0x173C20` was empty; the known
+  `0x171DE0` candidates produced 624 rows. The four port arms all passed and
+  had zero field events, changes, and ordered writes. The first capture was
+  rejected because it armed only `0x006AB400`; the fixed capture added
+  `0x006AB800`. This selects H-RetailHangarFieldUnwritten at capture scope,
+  not a global no-write claim. Tables are in
+  `scratch/agent/s2351_m5_hangar_field_writer/`; no behavior changed.
 
 - **s2349 — `0x80090CA4` is title-only, not the universal task-field writer.**
   The fresh retail oracle passed whole-RDRAM `56,453`, target-window `44,120`,
@@ -594,16 +601,17 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 `data_ptr+0x100` writer contract — next.** s2350 closes
-   `0x800908D4/0x8009081C/0x80090810` as a universal hangar writer set:
-   they account for `0x171DE0` but not `0x173C20` in the 512/hangar bucket.
-   Run one fresh retail all-PC exact-destination census for `0x173C20` in
-   hangar, retaining `0x171DE0` as a control, canonicalizing the observed
-   `0x006AB400`/`0x006AB800` origins, then join every positive writer PC to the
-   existing four-arm field snapshot/DMA ordering table. Require whole-RDRAM,
-   task-block, both exact-field watches, both phase histories, named-PC, and
-   all four port controls before interpreting a null. Do not write back the
-   field, alter task data, change a consumer or default, or add a guard.
+2. **M5 `data_ptr+0x100` writer placement — next.** s2351 closes the full
+   all-PC writer set in both explicit 512/hangar origins, but the global
+   `0x00173C20` writer histogram remains positive. Run one fresh retail census
+   with explicit phase buckets for `0x00790400`, `0x00790800`, `0x006AB400`,
+   and `0x006AB800`, retaining `0x00171DE0` and all named PCs as controls.
+   Attribute every positive `0x00173C20` PC to its observed origin, then join
+   that set to the existing four-arm field snapshot/DMA ordering table. Require
+   whole-RDRAM, target-window, all four phase buckets, both exact-field watches,
+   named-PC, and all four port controls before interpreting a null. Do not
+   write back the field, alter task data, change a consumer or default, or add
+   a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -725,14 +733,13 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   remains open. No writer, writeback, task-data, consumer, or default change
   is authorized.
   The s2349 exact-destination census then closed `0x80090CA4` as a universal
-  writer: its exact field writes were title-only, while hangar attributed
-  `0x171DE0` to `0x800908D4/0x8009081C/0x80090810` and left `0x173C20`
-  without a phase writer. The s2350 four-arm table passed all controls and
-  found `233` candidate writes to `0x171DE0` but zero candidate writes to
-  `0x173C20`; both C88=1 arms had no field event or change. This selects
-  H-RetailHangarWriterDifferentDestination at capture scope and leaves the
-  actual `0x173C20` hangar writer open. No writer, writeback, task-data,
-  consumer, default, or guard change is authorized.
+  writer candidate. s2350 narrowed the hangar result to the three known
+  candidates. s2351 added every positive writer-PC row and explicitly armed
+  both hangar origins: the `0x173C20` hangar set remained empty while the
+  `0x171DE0` control had 624 known-candidate rows. This selects
+  H-RetailHangarFieldUnwritten at capture scope and leaves global writer
+  placement open. No writer, writeback, task-data, consumer, default, or guard
+  change is authorized.
 
 ### VI state and second origin
 
@@ -853,14 +860,13 @@ are superseded at their measured scopes:
   DMA overlap, or write event at any computed `data_ptr+0x100` under positive
   controls. The writer is therefore H-RetailWriterSentinelUnrelated at the
   measured scope; no output-field or ordering change is authorized.
-- s2349's H-RetailKnownDestNotAudioOutput label is refined by s2350: it was
-  believable because `0x80090CA4` was title-only and the hangar candidates
-  wrote `0x171DE0` while `0x173C20` had no phase writer, but the new census
-  directly tested all three candidates under fresh exact-destination and
-  four-arm controls. They produced `233` hangar writes to `0x171DE0` and zero
-  to `0x173C20`; the measured conclusion is now
-  H-RetailHangarWriterDifferentDestination for that candidate set, with the
-  actual `0x173C20` hangar writer still unproven.
+- s2349's H-RetailKnownDestNotAudioOutput label was first narrowed by s2350's
+  three-candidate hangar census. It is now refined by s2351: the candidate
+  result was believable because all three known PCs wrote `0x171DE0` under
+  positive controls, but the all-PC writer rows and both explicit hangar
+  origins still showed zero `0x173C20` writers. The measured conclusion is
+  H-RetailHangarFieldUnwritten at capture scope, not a global no-write claim;
+  global writer placement remains open.
 
 ## Evidence and safety rules
 

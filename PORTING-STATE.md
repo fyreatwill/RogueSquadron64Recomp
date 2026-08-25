@@ -110780,3 +110780,41 @@ join every positive hangar writer PC to the existing four-arm field table.
 Select the writer only if it is phase-attributed to the exact field; otherwise
 leave the field boundary open. Do not write the field, alter task data, or
 change a consumer or default.
+
+## Session 2351 (2026-08-24) — M5 all-PC hangar field writer remains absent
+
+Ran the planned `data_ptr+0x100` writer-provenance census. The first retail
+capture passed whole-RDRAM, target-window, exact-field, title/hangar, and
+named-PC controls, but its phase histogram was armed only for hangar origin
+`0x006AB400`; VI polling independently showed `0x006AB800` as well. That
+null was rejected as incomplete coverage, the parser was tightened to require
+both explicit hangar origins, and the fixed retail capture plus the same-build
+four-arm port run were completed in this session.
+
+The fixed retail run passed whole-RDRAM `56,344`, target-window `44,120`,
+exact watches `491` (`0x173C20`) and `1,733` (`0x171DE0`), title history,
+both `0x006AB400`/`0x006AB800` histories, and all 23 named-PC controls. The
+all-PC `writer-pc-phase` set for `0x173C20` was empty in both hangar origins.
+The known candidate PCs produced 624 positive `0x171DE0` control rows. The
+same-build `stub_c0`, `stub_c1`, `image_c0`, and `image_c1` arms all reached
+both phases and passed task, guest-receive, PCM, field-snapshot, image-DMA,
+filter, render, key-on, and C88 controls; all had zero field-write events,
+zero computed-field changes, and zero strict task-before-ABI writes. All arms
+were SIGKILLed with rc 137 and had no crash or abort marker.
+
+This selects H-RetailHangarFieldUnwritten at capture scope and rules out an
+all-PC writer in either explicit hangar origin plus a port-side field write at
+the tested task boundary. It does not rule out the positive global
+`0x173C20` writer histogram occurring outside the target origins, nor does it
+identify the task-field writer. No runtime behavior, task data, consumer,
+default, or guard changed. Artifacts are under
+`scratch/agent/s2351_m5_hangar_field_writer/` and the fixed oracle log is
+`scratch/agent/s2351_m5_hangar_field_writer_oracle_fixed.log`.
+
+### Next
+
+Run one fresh retail exact-destination census with explicit phase buckets for
+`0x00790400`, `0x00790800`, `0x006AB400`, and `0x006AB800`. Retain the
+`0x171DE0` and whole-RDRAM controls, derive every positive `0x173C20`
+writer-PC row, and join the result to the existing four-arm field table. Do
+not write the field or change the audio contract.

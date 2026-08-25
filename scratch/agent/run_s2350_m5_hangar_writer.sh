@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BUILD="$ROOT/build"
 TAG=${1:-s2350_m5_hangar_writer}
 OUT="$ROOT/scratch/agent/$TAG"
-ORACLE="$ROOT/scratch/agent/s2350_m5_hangar_writer_oracle.log"
+ORACLE="${RS64_ORACLE:-$ROOT/scratch/agent/s2350_m5_hangar_writer_oracle.log}"
 WINCTL="$BUILD/winctl"
 
 [[ "$TAG" != .* ]] || exit 2
@@ -142,7 +142,14 @@ oracle_path, out_dir = map(Path, sys.argv[1:])
 token = re.compile(r"([A-Za-z0-9_]+)=([^\s]+)")
 arms = ("stub_c0", "stub_c1", "image_c0", "image_c1")
 phases = ((1024, 0x790400), (512, 0x6AB400))
-candidates = (0x800908D4, 0x8009081C, 0x80090810)
+known_candidates = (0x800908D4, 0x8009081C, 0x80090810)
+named_controls = (
+    0x800078EC, 0x800908D4, 0x8009081C, 0x80090810, 0x80090CA4,
+    0x80094648, 0x8008EC88, 0x80091468, 0x800914A4, 0x80091564,
+    0x80091618, 0x8008C9AC, 0x8008CA14, 0x80019B74, 0x8009B5A8,
+    0x80092128, 0x80092230, 0x8009231C, 0x80090B68, 0x80090C28,
+    0x8009C904, 0x8009D740, 0x8009D7D0,
+)
 
 def num(value):
     try:
@@ -176,15 +183,19 @@ def count(rows, tag, predicate=lambda row: True):
 
 retail_watch = {}
 retail_phase_hist = set()
+retail_phase_origins = set()
 retail_phase_writer = defaultdict(int)
-retail_phase_candidate = defaultdict(int)
+retail_phase_pc = defaultdict(lambda: defaultdict(int))
 retail_named = {}
 if oracle_path.exists():
     text = oracle_path.read_text(errors="replace")
     for match in re.finditer(r"watch write \[0x([0-9a-f]+),0x[0-9a-f]+\): (\d+) hit", text, re.I):
         retail_watch[int(match.group(1), 16)] = int(match.group(2))
     for match in re.finditer(r"pc-hist-phase origin=0x([0-9a-f]+) width=(\d+)", text, re.I):
-        phase = canonical(int(match.group(2)), int(match.group(1), 16))
+        width = int(match.group(2))
+        origin = int(match.group(1), 16)
+        retail_phase_origins.add((width, origin))
+        phase = canonical(width, origin)
         if phase:
             retail_phase_hist.add(phase)
     for match in re.finditer(
@@ -197,8 +208,7 @@ if oracle_path.exists():
         pc = int(match.group(4), 16)
         n = int(match.group(5))
         retail_phase_writer[(phase, watch)] += n
-        if pc in candidates:
-            retail_phase_candidate[(phase, watch)] += n
+        retail_phase_pc[(phase, watch)][pc] += n
     for match in re.finditer(r"watch pc \[0x([0-9a-f]+),0x[0-9a-f]+\): (\d+) hit", text, re.I):
         retail_named[int(match.group(1), 16)] = int(match.group(2))
 
@@ -208,23 +218,29 @@ retail_controls = (
     retail_watch.get(0x173C20, 0) > 0 and
     retail_watch.get(0x171DE0, 0) > 0 and
     all(phase in retail_phase_hist for phase in phases) and
-    all(retail_named.get(pc, 0) > 0 for pc in candidates)
+    all(origin in retail_phase_origins for origin in ((512, 0x6AB400), (512, 0x6AB800))) and
+    all(retail_named.get(pc, 0) > 0 for pc in named_controls)
 )
 candidate_phase_controls = all(
-    retail_phase_candidate[(phase, 3)] > 0 for phase in phases if phase[0] == 512
+    all(retail_phase_pc[(phase, 3)].get(pc, 0) > 0 for pc in known_candidates)
+    for phase in phases if phase[0] == 512
 )
-hangar_field2 = retail_phase_candidate[((512, 0x6AB400), 2)]
-hangar_field3 = retail_phase_candidate[((512, 0x6AB400), 3)]
+retail_field2_pcs = {phase: retail_phase_pc[(phase, 2)] for phase in phases}
+retail_field2_hangar_rows = sum(retail_field2_pcs[(512, 0x6AB400)].values())
+retail_field2_hangar_pcs = ",".join(
+    f"0x{pc:08X}:{n}" for pc, n in sorted(retail_field2_pcs[(512, 0x6AB400)].items())
+)
 
 table_header = [
     "arm", "audio", "c88", "controls", "phase", "width", "origin", "task_n",
     "data_ptr", "data_ptr_plus_100", "field_phys", "field_pre", "field_post",
     "field_changed", "field_write_event", "field_write_dram", "field_write_len",
-    "task_begin", "task_end", "abi_event", "dma_event", "ordering"
+    "task_begin", "task_end", "abi_event", "dma_event", "ordering",
+    "retail_field2_writer_pcs"
 ]
 summary_header = [
     "arm", "audio", "c88", "controls", "title", "hangar", "target_tasks", "abi_rows",
-    "field_write_events", "field_changed", "dma_ranges", "field_snapshot_controls",
+    "field_write_events", "field_changed", "ordered_field_rows", "dma_ranges", "field_snapshot_controls",
     "field_observer_controls", "pcm_source", "pcm_consumer", "guest_receive",
     "render_rows", "keyon_rows", "filter_rows", "crash", "abort"
 ]
@@ -287,14 +303,20 @@ for arm in arms:
             abi_row.get("field_write_len", "-"), join.get("begin", "-"),
             join.get("end", "-"), abi_row.get("abi_event", "-"),
             str(len([r for r in rows if r["tag"] == "audtask-dma-range" and num(r.get("n")) == n])),
-            ordering
+            ordering,
+            ",".join(f"0x{pc:08X}:{count}" for pc, count in sorted(retail_field2_pcs[phase].items())) or "-"
         ])
     changed = sum(num(row.get("field_pre")) != num(row.get("field_post")) for _, row, _, _ in target)
     field_events = sum(len(v) for v in field_writes.values())
+    ordered_field_rows = sum(
+        1 for _, abi_row, join, _ in target
+        if num(abi_row.get("field_write_event")) and
+        num(join.get("begin")) < num(abi_row.get("field_write_event")) < num(abi_row.get("abi_event")) <= num(join.get("end"))
+    )
     dma_ranges = count(rows, "audtask-dma-range")
     summary.append([
         arm, str(audio), str(c88), str(controls), str(title), str(hangar),
-        str(len(target)), str(len(abi)), str(field_events), str(changed), str(dma_ranges),
+        str(len(target)), str(len(abi)), str(field_events), str(changed), str(ordered_field_rows), str(dma_ranges),
         str(snapshot), str(observer), str(source), str(consumer), str(guest),
         str(count(rows, "audtask-image-stage-row")), str(count(rows, "m5-keyon-table")),
         str(count(rows, "filter-voice-audit")), str(count(rows, "CRASH")), str(count(rows, "ABORT"))
@@ -307,11 +329,14 @@ for arm in arms:
     "\n".join("\t".join(row) for row in summary) + "\n"
 )
 (out_dir / "retail-hangar-writer-summary.tsv").write_text(
-    "phase\tphase_hist\tfield2_writer_rows\tfield3_writer_rows\tcandidate_pcs\twhole_rdram\ttarget_window\n" +
+    "phase\tphase_hist\tphase_origins\tfield2_writer_rows\tfield2_writer_pcs\tfield3_candidate_rows\tcandidate_pcs\twhole_rdram\ttarget_window\n" +
     "\n".join(
         f"{w}:{o:06X}\t{int((w, o) in retail_phase_hist)}\t"
-        f"{retail_phase_candidate[((w, o), 2)]}\t{retail_phase_candidate[((w, o), 3)]}\t"
-        f"{sum(retail_named.get(pc, 0) > 0 for pc in candidates)}/{len(candidates)}\t"
+        f"{','.join(f'0x{origin:06X}' for width, origin in sorted(retail_phase_origins) if canonical(width, origin) == (w, o)) or '-'}\t"
+        f"{sum(retail_field2_pcs[(w, o)].values())}\t"
+        f"{','.join(f'0x{pc:08X}:{n}' for pc, n in sorted(retail_field2_pcs[(w, o)].items())) or '-'}\t"
+        f"{sum(retail_phase_pc[((w, o), 3)].get(pc, 0) for pc in known_candidates)}\t"
+        f"{sum(retail_named.get(pc, 0) > 0 for pc in known_candidates)}/{len(known_candidates)}\t"
         f"{retail_watch.get(0, 0)}\t{retail_watch.get(0x149470, 0)}"
         for w, o in phases
     ) + "\n"
@@ -320,28 +345,31 @@ for arm in arms:
 by_arm = {row[0]: row for row in summary[1:]}
 port_controls = all(row[3] == "1" for row in summary[1:])
 port_treatment_changed = all(
-    int(by_arm[arm][9]) > 0 and int(by_arm[arm][8]) > 0
+    int(by_arm[arm][9]) > 0 and int(by_arm[arm][8]) > 0 and int(by_arm[arm][10]) > 0
     for arm in ("stub_c1", "image_c1")
 )
-retail_matches = hangar_field2 > 0 and hangar_field3 > 0
+retail_matches = retail_field2_hangar_rows > 0
 if not retail_controls or not candidate_phase_controls or not port_controls:
     verdict = "H-CoverageInvalid"
 elif port_treatment_changed:
     verdict = "H-PortHangarFieldWriterPresent"
 elif retail_matches:
-    verdict = "H-RetailHangarWriterMatchesField"
+    verdict = "H-RetailHangarFieldWriterPresent"
 else:
-    verdict = "H-RetailHangarWriterDifferentDestination"
+    verdict = "H-RetailHangarFieldUnwritten"
 
 print(
     f"retail_controls={int(retail_controls)} whole_rdram={retail_watch.get(0, 0)} "
-    f"target_window={retail_watch.get(0x149470, 0)} named_candidates="
-    f"{sum(retail_named.get(pc, 0) > 0 for pc in candidates)}/{len(candidates)} "
-    f"candidate_phase_controls={int(candidate_phase_controls)}"
+    f"target_window={retail_watch.get(0x149470, 0)} named_controls="
+    f"{sum(retail_named.get(pc, 0) > 0 for pc in named_controls)}/{len(named_controls)} "
+    f"candidate_phase_controls={int(candidate_phase_controls)} "
+    f"hangar_origin_controls={int(all(origin in retail_phase_origins for origin in ((512, 0x6AB400), (512, 0x6AB800))))}"
 )
 print(
-    f"hangar_field2_candidate_rows={hangar_field2} "
-    f"hangar_field3_candidate_rows={hangar_field3} retail_matches={int(retail_matches)} "
+    f"hangar_field2_writer_rows={retail_field2_hangar_rows} "
+    f"hangar_field2_writer_pcs={retail_field2_hangar_pcs or '-'} "
+    f"hangar_field3_candidate_rows={sum(retail_phase_pc[((512, 0x6AB400), 3)].get(pc, 0) for pc in known_candidates)} "
+    f"retail_matches={int(retail_matches)} "
     f"port_controls={int(port_controls)} port_treatment_changed={int(port_treatment_changed)}"
 )
 for row in summary[1:]:
