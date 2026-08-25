@@ -110888,3 +110888,36 @@ Run the fresh retail payload/order census with `--post-value-pc` and
 then join each `(phase, writer_pc, field_phys, value)` row to the s2352
 field-pre/post and task-order table. Do not write a field or change the audio
 contract.
+
+## Session 2354 (2026-08-24) — M5 hangar payload detail capped before join
+
+Ran the planned fresh retail payload/order census with `--post-value-pc` and
+`--post-value-pc-detail` for the five candidate writer PCs. The independent
+oracle passed whole-RDRAM `59,286`, target-window `44,080`, exact field watches
+`491/1,735/1,492/1,488`, all four explicit phase histories, and named-PC
+controls `23/23`. The retained s2352 four-arm port table also passed its title,
+hangar, and control predicates.
+
+Retail reproduced all 11 positive 512-phase hangar writer keys: at
+`0x006AB400`, `0x800908D4/0x8009081C/0x8009220C` wrote `0x171DE0`, and
+`0x80090CA4` wrote `0x171F70/0x173DB0`; at `0x006AB800`, the same set was
+present with `0x80090810` adding one `0x171DE0` row. However,
+`post-value-pc-detail-overflow n=4666` left only 512 retained title rows and
+zero hangar detail rows. The regeneration-safe join parser therefore selected
+H-RetailWriterOrderUnresolved, not a payload mismatch or a null writer result.
+
+This rules out coverage failure and rules out treating a positive writer count
+as a payload control. It does not identify the writer payload, task-field
+relation, or completion ordering, and it authorizes no port writeback, task-data,
+consumer, default, or guard change. Artifacts are under
+`scratch/agent/s2354_m5_hangar_payload_order/`, with the retail capture at
+`scratch/agent/s2354_m5_hangar_payload_order_oracle.log`.
+
+ORIGIN: diagnostic-only. The parser is new; the runtime and oracle behavior
+were unchanged, and no mitigation-shaped machinery was added.
+
+### Next
+
+Raise `MAX_POST_VALUE_PC_DETAIL_ROWS` to `16384`, rebuild the oracle, and repeat
+the same ground-truth census so all 11 hangar writer keys can be joined to
+payload and order detail. Do not change the port audio contract.

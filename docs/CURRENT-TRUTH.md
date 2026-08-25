@@ -5,27 +5,10 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2353 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2354 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The s2343 B40 provenance census passed fresh retail whole-RDRAM,
-target-window, mode/status/title/hangar, named-PC, and both-arm port controls.
-The retail post-store witness recorded `0x8008EC88` writing nonzero
-`0x01000000` in width-1024 and width-512 target-like phases. Both port arms
-recorded the same writer with requested `1` but stored `0`; 254 of 262
-`0x80091468` rows joined through `writer_seq`, and the eight unmatched rows
-were the explicit pre-writer prefix. Every joined branch had `lhs=0` and took
-the bypass target. This selects H-PortWriterMismatch at capture scope; no
-writer or consumer was changed.
-
-s2353 passed retail whole-RDRAM `59,352`, target-window `44,150`, exact field
-watches `490/1,734/1,490/1,488`, all four explicit phase buckets, and all 23
-named-PC controls. In the 512/hangar buckets, `0x00171DE0` had writers
-`0x800908D4`, `0x8009081C`, and `0x8009220C`; `0x00171F70` and
-`0x00173DB0` had `0x80090CA4`. The 11 positive hangar rows all landed in the
-  three-field set observed by s2352's four-arm port table; none was
-outside it. All four retained port arms remained control-qualified with zero
-field-write events and changes. This selects H-HangarFieldWriterInPortSet at
-capture scope; no behavior changed.
+to §47. The s2343 B40 provenance census selected H-PortWriterMismatch under
+fresh retail and both-arm port controls; no writer or consumer was changed.
 
 The s2344 C88 treatment validation then passed fresh retail controls and all
 four same-build port arms. With `ROGUESQ_M5_C88_VALUE=0`, all three target
@@ -345,6 +328,16 @@ No behavior, writer, task-data, consumer, default, or guard change was made.
   H-HangarFieldWriterInPortSet at capture scope; tables are in
   `scratch/agent/s2353_m5_hangar_field_set/`, and no behavior changed.
 
+- **s2354 — hangar payload detail is capped before the discriminator.** The
+  fresh retail run passed whole-RDRAM `59,286`, target-window `44,080`, exact
+  fields `491/1,735/1,492/1,488`, all four phase histories, named controls
+  `23/23`, and the retained four-arm port controls. It reproduced 11 positive
+  hangar writer-PC keys, but `post-value-pc-detail-overflow n=4666` left zero
+  hangar detail rows; only 512 title rows were retained. The generated join
+  table is in `scratch/agent/s2354_m5_hangar_payload_order/`; this selects
+  H-RetailWriterOrderUnresolved at capture scope and authorizes no behavior
+  change.
+
 - **s2348 — the retail output-span writer is unrelated to the port task field.**
   The first oracle field gate missed the live origins and was rejected as a
   classifier failure. The fixed four-origin run passed whole-RDRAM `10121`,
@@ -590,20 +583,13 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 hangar task-field payload/order census — next.** s2353 identifies 11
-   positive 512-phase writer rows in the three port-observed hangar fields.
-   Run one fresh retail census with `--post-value-pc` and
-   `--post-value-pc-detail` for `0x800908D4`, `0x8009081C`, `0x8009220C`,
-   `0x80090810`, and `0x80090CA4`; retain the whole-RDRAM, target-window, four
-   phase, exact-field, and 23-PC controls. Join each detail row by
-   `(phase,writer_pc,field_phys)` to the s2352 port table's field pre/post,
-   task interval, and completion-order fields. Competing outcomes are
-   H-RetailPayloadMatchesPortField (same destination and compatible payload
-   class/order), H-RetailWriterIsUnrelated (same address but incompatible
-   payload or task-window relation), H-RetailWriterOrderUnresolved (positive
-   writer/value rows but no bounded completion relation), and H-CoverageInvalid.
-   Do not write back a field, alter task data, change a consumer or default, or
-   add a guard until the payload and ordering table selects a contract edge.
+2. **M5 hangar task-field payload/order census — next.** s2354 reproduced 11
+   positive hangar writer keys but hit the oracle's 512-row detail cap before
+   hangar values were retained. Raise `MAX_POST_VALUE_PC_DETAIL_ROWS` to
+   `16384`, rebuild the oracle, and repeat the same fresh census. Join every
+   `(phase,writer_pc,field_phys,value)` row to the s2352 field-pre/post,
+   task-interval, and completion-order table. Do not write back a field,
+   alter task data, change a consumer or default, or add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -735,6 +721,11 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   H-HangarFieldWriterInPortSet at capture scope; payload and completion
   semantics remain open. No writer, writeback, task-data, consumer, default,
   or guard change is authorized.
+  s2354 retained all 11 writer keys but the oracle's post-value detail buffer
+  overflowed before any hangar payload rows were retained. The active boundary
+  is therefore capture capacity for payload/order, not a proven writeback
+  contract; no writer, task-data, consumer, default, or guard change is
+  authorized.
 
 ### VI state and second origin
 
@@ -868,6 +859,12 @@ are superseded at their measured scopes:
   three hangar fields, all matching the s2352 port field set. The measured
   conclusion is H-HangarFieldWriterInPortSet at capture scope; payload and
   completion semantics remain open, and no writeback is authorized.
+- s2353's H-HangarFieldWriterInPortSet conclusion is refined by s2354: it was
+  believable because all 11 positive hangar writer keys matched the port field
+  set under fresh controls, but the requested value/order detail was capped
+  (`4,666` overflow; zero hangar detail rows). The measured boundary remains
+  writer payload/order capture, not a legitimate writeback contract or a null
+  writer result.
 
 ## Evidence and safety rules
 
