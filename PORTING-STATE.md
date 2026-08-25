@@ -111002,3 +111002,48 @@ Add one oracle-only `--pc-task-dump 0x80033FCC` instrument at retail
 `osSpTaskStartGo`, dump type-2 `OSTask` fields in the four existing phase
 buckets, and join `data_ptr+0x100`/output fields to the exact writer
 histogram and s2352 port ABI table. Do not change the port audio contract.
+
+## Session 2357 (2026-08-24) — M5 retail task ABI names exact field destination
+
+The first ground-truth preflight was stopped with SIGKILL after its
+phase-gated execution logging expanded the whole-RDRAM capture to 944 MB;
+before termination it had reached the 1024 title phase and fired
+`0x80033FCC` plus the named controls, but it had no final summaries. The
+fixed preflight removed `--pc-phase-log-width` while retaining the four
+`--pc-hist-phase` buckets. It completed 4,474 VI frames and passed the
+whole-RDRAM, target-window, exact-field, phase, writer-histogram, and named-PC
+controls.
+
+Added the oracle-only `--pc-task-dump` instrument. At retail
+`osSpTaskStartGo` PC `0x80033FCC`, its `$a0` task pointer was
+`0x80149470`; the bounded run recorded `3,856` phase-gated hits and `2,477`
+type-2 rows, with `1,379` non-type-2 hits, zero invalid pointers, and zero
+overflow. All type-2 rows had zero output/yield fields. Every row's
+`data_ptr+0x100` resolved to one of `0x173C20`, `0x171DE0`, `0x171F70`, or
+`0x173DB0`.
+
+The complete 2,477-row join passed the fresh whole-RDRAM `59,327`, target
+window `44,120`, exact fields `492/1,734/1,492/1,489`, all four phase
+histories, writer histograms `2/3/4/5`, named PCs `25/25`, task controls, and
+retained four-arm port controls. It found `1,153` nonzero task/field/writer/
+order relations and `1,324` zero/sentinel-only rows. The positive relations
+were in the two phase buckets represented by the retained s2352 port table;
+the other two buckets had no retained port rows, so their zero join is not a
+negative port result. This selects H-RetailTaskAbiNamesPortField at capture
+scope and rules out the prior value-only ambiguity. It does not authorize a
+field writeback, task-data edit, consumer/default change, or guard.
+
+Artifacts: `scratch/agent/s2357_m5_task_abi/`,
+`scratch/agent/s2357_m5_task_abi_oracle.log`, and the instrument in
+`tools/oracle/rs64_oracle.c`.
+
+ORIGIN: diagnostic-only. The oracle change only reads retail task memory and
+reports existing writer/port joins; no mitigation-shaped runtime machinery or
+game behavior changed.
+
+### Next
+
+Run one fresh ground-truth capture with the task dump plus post-value sampling
+for watches 2–5 and writer PC `0x80090CA4`, then join values and order to the
+task rows and s2352 port ABI table. Keep all four phase buckets and controls;
+do not change the port audio contract.

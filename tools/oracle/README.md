@@ -49,6 +49,13 @@ execution PCs, phase-gated by `--pc-phase-log` or `--pc-phase-log-width`. Each
 row includes `$s0`, `$s1`, `MEM_W($s0+0x60)`, `MEM_BU($s0+0x22)`, `$v0`, and
 `MEM_HU($s1+0x22)`, with per-PC hit and overflow summaries at shutdown.
 
+`--pc-task-dump A` records phase-gated type-2 `OSTask` rows at execution PC
+`A`. It treats `$a0` as the task pointer and reports the task ordinal,
+`data_ptr`, `data_size`, output and yield fields, plus `data_ptr+0x100` and
+its physical RDRAM address. It uses the explicit `--pc-phase-log-width`
+buckets when present, or the `--pc-hist-phase` buckets otherwise, and reports
+invalid-pointer, non-type-2, and overflow counts at shutdown.
+
 `--watch-pc-range START:END` arms one execution breakpoint across a half-open
 guest-PC range. It is useful when the per-PC watch list would exceed the
 debugger's breakpoint capacity; each hit still reports its exact PC and GPR

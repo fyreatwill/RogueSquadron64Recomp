@@ -5,7 +5,7 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2356 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2357 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
 to §47. The s2343 B40 provenance census selected H-PortWriterMismatch under
 fresh retail and both-arm port controls; no writer or consumer was changed.
@@ -101,12 +101,18 @@ and closes `0x80090CA4` as a universal writer candidate; the actual hangar
 writer/task relation remains open. No writer, writeback, task-data, consumer,
 default, or guard change is authorized.
 
-The s2356 corrected field-role census passed whole-RDRAM `50,351`, target
-window `35,950`, exact fields `383/1,709/1,156/1,153`, named PCs `24/24`, and
-the four-arm port controls. All five field-dump PCs had zero overflow; the
-join found `0` nonzero and `11,253` zero-only intersections. This selects
-H-RetailRoleAmbiguous; the task-ABI relation remains open and no behavior
-changed.
+The s2357 task-ABI census first passed a fresh retail preflight, then the
+instrumented retail run passed whole-RDRAM `59,327`, target window `44,120`,
+exact fields `492/1,734/1,492/1,489`, all four phase histories, histogram
+watches `2/3/4/5`, and named PCs `25/25`. The task probe had `3,856`
+phase-gated hits, `2,477` type-2 rows, and zero invalid pointers or overflow.
+Every row's `data_ptr+0x100` resolved to one of the four exact fields;
+joining the writer histogram and retained s2352 port ABI table found `1,153`
+nonzero task/field/writer/order relations and `1,324` zero/sentinel-only
+rows. The relations were positive in the s2352-covered `0x00790400` and
+`0x006AB400` buckets; the other two buckets lacked retained port rows. This
+selects H-RetailTaskAbiNamesPortField at capture scope. No writeback, task
+data edit, consumer/default change, or guard was made.
 
 ## Current state
 
@@ -197,9 +203,12 @@ changed.
   and it was the common zero sentinel. This refines the boundary to
   H-RetailWriterIsUnrelated at capture scope and leaves the writer's field
   role/order contract open.
-- s2356's field-role census had zero overflow and zero nonzero port-row
-  intersections; its `11,253` were zero/sentinel-only. The retail task-ABI
-  field relation remains open.
+- s2357's retail task-ABI census found `2,477` bounded type-2 rows at
+  `0x80033FCC`; every `data_ptr+0x100` matched an exact field destination.
+  The writer/port join had `1,153` nonzero relations and `1,324`
+  zero/sentinel-only rows under all positive controls. This closes the
+  task-ABI naming boundary but leaves writer payload/order and port behavior
+  open; no writeback or default change is authorized.
 - Both silent and image arms qualify through title `1024 @ 0x00790400` and
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur. In the
@@ -329,10 +338,22 @@ changed.
   H-RetailWriterIsUnrelated; artifacts are under
   `scratch/agent/s2355_m5_hangar_payload_order/`.
 
-- **s2356 — candidate field-role join has no nonzero match.** Controls passed;
+- **s2357 — retail type-2 task ABI names the exact field destination.** A
+  ground-truth preflight passed before the instrument was built. The bounded
+  run passed whole-RDRAM `59,327`, target-window `44,120`, exact fields
+  `492/1,734/1,492/1,489`, all four phase buckets, histogram watches, and
+  named PCs `25/25`. It produced `2,477` type-2 rows with zero invalid or
+  overflow counts; every `data_ptr+0x100` matched one watched field. Joining
+  the retail writer histogram to the retained s2352 port table produced
+  `1,153` nonzero relations and `1,324` zero/sentinel-only rows. This selects
+  H-RetailTaskAbiNamesPortField at capture scope; no behavior changed. Artifacts
+  are under `scratch/agent/s2357_m5_task_abi/`.
+
+- **s2356 — candidate field-role join had no nonzero match.** Controls passed;
   all five PCs had zero overflow, with zero nonzero and `11,253` zero-only
-  intersections. This selects H-RetailRoleAmbiguous; zero/sentinel rows are
-  not a field-role control.
+  intersections. This was believable because the prior field dump had no
+  value intersection, but it is superseded by s2357's independent task-ABI
+  address relation.
 
 - **s2348 — the retail output-span writer is unrelated to the port task field.**
   The first oracle field gate missed the live origins and was rejected as a
@@ -579,14 +600,18 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 retail task-ABI field relation — next.** s2356 found no nonzero
-   pointed-field/value match for the candidate writers; the next discriminator
-   is the retail `osSpTaskStartGo` task structure itself at `0x80033FCC`.
-   Add one phase-gated `--pc-task-dump 0x80033FCC` oracle instrument that
-   records type-2 `OSTask` fields, `data_ptr+0x100`, output fields, and task
-   ordinal, then join those rows to the exact field-write histogram and the
-   s2352 port ABI table. Do not write back a field, alter task data, change a
-   consumer or default, or add a guard.
+2. **M5 retail task-field write value/order — next.** s2357 selected
+   H-RetailTaskAbiNamesPortField: every type-2 retail task row pointed
+   `data_ptr+0x100` at an exact watched field, and `1,153` rows joined a
+   positive retail writer plus the retained s2352 port field table. Run one
+   fresh oracle capture with the existing task dump plus post-value sampling
+   for watches `2/3/4/5` and writer PC `0x80090CA4`; join each post-value row
+   to the phase/field/task table and the port pre/post/order columns. A
+   nonzero writer value that matches the port field payload/order selects a
+   publish-order contract; a nonzero but unrelated value selects a payload
+   mismatch; missing post-value or any failed control selects coverage-invalid.
+   Do not write back a field, alter task data, change a consumer or default,
+   or add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -723,6 +748,15 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   is therefore capture capacity for payload/order, not a proven writeback
   contract; no writer, task-data, consumer, default, or guard change is
   authorized.
+  The s2357 ground-truth task dump then observed `2,477` type-2 rows at
+  `0x80033FCC`; every row used task pointer `0x80149470`, zero output/yield
+  fields, and a `data_ptr+0x100` matching one of the four watched fields.
+  Joining those rows to the retail writer histogram and the retained s2352
+  port ABI table produced `1,153` nonzero task/field/writer/order relations
+  and `1,324` zero/sentinel-only rows. This selects
+  H-RetailTaskAbiNamesPortField at capture scope and moves the open boundary
+  to writer payload/order; it does not authorize port writeback, task-data,
+  consumer, default, or guard changes.
 
 ### VI state and second origin
 
@@ -866,6 +900,14 @@ are superseded at their measured scopes:
   field-role join still had zero nonzero matches and only zero/sentinel
   intersections under zero-overflow controls. The boundary is the retail
   task-ABI field relation, not a promoted writer role or writeback.
+- s2356's H-RetailRoleAmbiguous label is refined by s2357: it was believable
+  because the prior field dump had no nonzero value intersection, but the
+  ground-truth type-2 task table independently showed every
+  `data_ptr+0x100` pointing at an exact watched field. The writer histogram
+  and retained port table then supplied `1,153` nonzero address/order joins;
+  the remaining `1,324` rows are zero/sentinel-only or outside the retained
+  port phase table. The task-ABI naming boundary is therefore closed at this
+  capture scope, while payload/order remains open.
 
 ## Evidence and safety rules
 
