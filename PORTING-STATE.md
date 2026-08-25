@@ -110189,3 +110189,59 @@ Run the s2340 ground-truth-first `tickAudioSequencerFrame` entry and three
 static-callsite reachability census. Instrument `0x8008D960`,
 `0x800914A4`, `0x80091564`, and `0x80091618`; retain the s2338/s2339 rows and
 all positive controls in both port arms; do not add behavior.
+
+## Session 2340 (2026-08-24) — M5 sequencer caller census selects port sequencer inactivity
+
+HYPOTHESIS-ID: m5-descriptor-source-reachability
+
+The planned work unit was a ground-truth-first, no-behavior-change census of
+`tickAudioSequencerFrame` entry `0x8008D960` and its three static callsites
+`0x800914A4`, `0x80091564`, and `0x80091618`. The fresh retail preflight passed
+whole-RDRAM `32449224`, physical target-window `32438879`, mode/gate/status
+`108/17/22`, callback registration `19`, both target origins, and positive
+execution counts `0x8008D960/0x800914A4/0x80091564/0x80091618 =
+4224/3717/334/173`. Retained scheduler sources
+`0x8008C9AC/0x8008CA14 = 4224/43504`, callback/service sources
+`0x80019B74/0x8009B5A8 = 12806/3916`, descriptor/filter controls, and all
+prior parent/child controls were positive; requested-zero `0x8009C4E8` stayed
+zero.
+
+The first port capture was rejected under iron rule 1: the target rows were
+zero, but the new helper had no positive control in that same run. The fixed
+instrument added a phase-gated invocation of the helper at the live
+`0x80019B74` callback dispatch and required its output before interpreting a
+target null. The regeneration order completed (`make_elf.py`, sibling
+`build/N64Recomp`, `fixup_game_funcs.py`, and the Debug target), and the fixed
+sequential stub/image capture reached hangar in both arms with
+`port_controls=1`. The helper control emitted `144` stub and `145` image rows.
+
+The new entry and callsite rows were zero in both arms:
+
+| arm | `0x8008D960` entry | `0x800914A4` | `0x80091564` | `0x80091618` | retained `0x8008C9AC` entry/pre-call |
+|---|---:|---:|---:|---:|---:|
+| stub | 0 | 0 | 0 | 0 | 0/0 |
+| image | 0 | 0 | 0 | 0 | 0/0 |
+
+All target task/DMA/guest-receive/PCM/filter/render/key-on controls were
+positive in both arms, and neither log contained a crash or abort marker.
+This selects **H-PortSeqCallerInactive** at the qualified capture scope. It
+rules out invalid retail coverage, missing target-phase port controls, an
+inactive diagnostic helper, a partial static callsite set, and a generated
+direct-call mismatch. It moves the measured port boundary above
+`tickAudioSequencerFrame`; it does not identify the upstream parent/gate.
+
+The failed first capture is a documented dead end rather than evidence. The
+next boundary is `musyxSynthFrame` entry `0x8009123C` and the three countdown
+gate edges immediately before the static callsites.
+
+ORIGIN: diagnostic-only. The diff adds a phase-qualified host breadcrumb,
+regeneration-safe fixup insertion points, and a parser positive control; it
+does not mitigate, skip, restore, or alter guest state, task data, audio
+output, control flow, stores, guards, remaps, slots, defaults, or consumers.
+
+### Next
+
+Run a ground-truth-first `musyxSynthFrame` parent/gate census. Instrument entry
+`0x8009123C` and the three countdown/gate edges at `0x80091484`, `0x80091544`,
+and `0x800915F8`, retaining callsites `0x800914A4`, `0x80091564`, and
+`0x80091618`, all s2338–s2340 rows, and both arms. Do not add behavior.

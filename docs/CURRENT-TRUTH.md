@@ -5,16 +5,16 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2339 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2340 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The s2339 scheduler/callback census refines the M5 boundary above
-`tickAllAudioChannels`: retail whole-RDRAM/target/status/title/hangar and all
-named PC controls are positive, both port arms reached target phases with all
-host/task/DMA/guest-receive/PCM/filter/render/key-on/callback controls, and
-both `tickAllAudioChannels` entry/pre-call rows remain zero. The VI callback
-dispatcher does run, but targets `0x80003250`/`0x8009123C`, never the registered
-`serviceVoicePoolFrame` target. The next work unit is the
-`tickAudioSequencerFrame` source census in `scratch/agent/NEXT.md`.
+to §47. The s2340 scheduler-caller census moves the qualified M5 boundary
+above `tickAudioSequencerFrame`: retail whole-RDRAM/target/status/title/hangar
+and all named PC controls are positive, both port arms reached target phases
+with all host/task/DMA/guest-receive/PCM/filter/render/key-on/callback controls,
+and a same-helper callback control fired `144/145` times. The sequencer entry
+and all three static callsite rows remain zero in both arms, as do the retained
+`tickAllAudioChannels` entry/pre-call rows. The next work unit is the
+`musyxSynthFrame` parent/gate census in `scratch/agent/NEXT.md`.
 
 ## Current state
 
@@ -105,6 +105,20 @@ dispatcher does run, but targets `0x80003250`/`0x8009123C`, never the registered
   `8` stub and `48` image. Those dispatches targeted `0x80003250` and
   `0x8009123C`, never `0x8009B5A8`. This selects H-PortSchedulerParentInactive
   at capture scope and moves the active boundary above `tickAllAudioChannels`.
+- The s2340 scheduler-caller census is independently qualified by a fresh
+  retail oracle: whole-RDRAM `32449224`, target-window `32438879`,
+  mode/gate/status `108/17/22`, callback registration `19`, title/hangar, and
+  positive retail PCs `0x8008D960/0x800914A4/0x80091564/0x80091618 =
+  4224/3717/334/173`, retained scheduler `0x8008C9AC/0x8008CA14 =
+  4224/43504`, callback/service `0x80019B74/0x8009B5A8 = 12806/3916`, with
+  requested-zero `0x8009C4E8`. Both same-build sequential arms reached
+  hangar and passed the retained task/DMA/guest-receive/PCM/filter/render/
+  key-on controls. The new helper positive control at `0x80019B74` fired
+  `144` stub and `145` image rows. New `tickAudioSequencerFrame` entry and
+  callsite rows were `0/0` for entry and each of
+  `0x800914A4/0x80091564/0x80091618` in both arms; retained scheduler
+  entry/pre-call rows were also `0/0`. This selects H-PortSeqCallerInactive
+  at capture scope and changes no behavior.
 - The independent retail oracle is the witness for game-side memory claims.
   Whole-RDRAM, title/hangar, gate/task/status, target-window, and named-PC
   controls must pass before a retail null is interpreted. It reaches attract,
@@ -114,6 +128,21 @@ dispatcher does run, but targets `0x80003250`/`0x8009123C`, never the registered
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2340 — sequencer caller census selects H-PortSeqCallerInactive.** The
+  fresh retail preflight passed whole-RDRAM `32449224`, target-window
+  `32438879`, mode/gate/status `108/17/22`, callback registration `19`,
+  title/hangar, and positive PCs
+  `0x8008D960/0x800914A4/0x80091564/0x80091618 = 4224/3717/334/173`,
+  retained scheduler `0x8008C9AC/0x8008CA14 = 4224/43504`, and
+  callback/service `0x80019B74/0x8009B5A8 = 12806/3916`; `0x8009C4E8`
+  remained explicitly zero. Both same-build sequential arms reached hangar
+  with task/DMA/guest-receive/PCM/filter/render/key-on controls positive.
+  The new helper’s live callback control fired `144` stub and `145` image
+  rows. The new sequencer entry and all three static callsite rows were zero
+  in both arms, while retained scheduler entry/pre-call rows stayed zero.
+  This selects H-PortSeqCallerInactive at capture scope and authorizes no
+  behavior change.
 
 - **s2337 — enclosing caller reachability selects H-PortCallerInactive.** The
   retail preflight passed whole-RDRAM `32431451`, target-window `32421125`,
@@ -230,13 +259,15 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 scheduler/callback source reachability — next.** s2339 selected
-   H-PortSchedulerParentInactive: `tickAllAudioChannels` entry and its child
-   edge are zero in both arms, while the VI dispatcher is active only for
-   unrelated targets. Census `tickAudioSequencerFrame` entry `0x8008D960` and
-   its three static callsites `0x800914A4`, `0x80091564`, and `0x80091618` in
-   one table. Keep retail source-PC controls, callback registration, all
-   s2338/s2339 rows, and both port arms; do not add behavior.
+2. **M5 scheduler/callback source reachability — next.** s2340 selected
+   H-PortSeqCallerInactive: the `tickAudioSequencerFrame` entry and all three
+   static callsites are zero in both arms under a same-helper positive control,
+   while retail executes all four source PCs. Census the `musyxSynthFrame`
+   entry `0x8009123C` and its three countdown/gate edges immediately before
+   `0x800914A4`, `0x80091564`, and `0x80091618` in one table. Keep retail
+   source-PC controls, callback registration, all s2338–s2340 rows, target
+   route/task/DMA/guest-receive/PCM/filter/render/key-on controls, and both
+   arms; do not add behavior.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -292,6 +323,10 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   registered service target. This refines the active boundary above the
   scheduler and leaves callback target selection unresolved; no store, guard,
   or consumer change is authorized.
+  The s2340 sequencer census then found the entry and all three static caller
+  edges also zero under a same-helper positive control; the active boundary is
+  now above `tickAudioSequencerFrame`, with the `musyxSynthFrame` parent/gates
+  as the next measured edge.
 
 ### VI state and second origin
 
@@ -359,6 +394,12 @@ are superseded at their measured scopes:
   arms. The VI dispatcher was independently active, yet selected only
   `0x80003250`/`0x8009123C`; the measured boundary is now above the scheduler,
   while the registered service-target path remains unproven.
+- s2339's H-PortSchedulerParentInactive label is refined by s2340: it was
+  believable because the scheduler entry and edge were zero under live
+  callback controls, but the next `tickAudioSequencerFrame` entry and all
+  three static callsites were also zero under a same-helper positive control.
+  The measured boundary is now above the sequencer, not a generated direct
+  call mismatch or an internal sequencer branch.
 
 ## Evidence and safety rules
 

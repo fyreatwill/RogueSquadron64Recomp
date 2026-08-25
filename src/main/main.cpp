@@ -673,6 +673,69 @@ extern "C" void rs64_m5_init_voice_caller_event(uint32_t caller_pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_audio_sequencer_event(uint32_t source,
+                                                 uint32_t edge_kind,
+                                                 uint32_t target,
+                                                 uint32_t guest_ra) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_AUDIOTICK_TRACE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!rs64_m5_init_voice_target_phase(width, origin)) return;
+
+    uint32_t slot = 0xFFFFFFFFu;
+    switch (source) {
+    case 0x8008D960u: slot = 0; break;
+    case 0x800914A4u: slot = 1; break;
+    case 0x80091564u: slot = 2; break;
+    case 0x80091618u: slot = 3; break;
+    case 0x80019B74u: slot = 4; break;
+    default: return;
+    }
+
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t event_count[5] = {};
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        for (uint32_t& count : event_count) count = 0;
+    }
+    const uint32_t event = event_count[slot]++;
+    if (event >= 64u && (event % 256u) != 0u) return;
+
+    uint32_t phase = rs64_phase_ord();
+    uint32_t route_width = width;
+    uint32_t route_origin = origin;
+    uint32_t ordinal = 0xFFFFFFFFu;
+    uint32_t row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        &phase, &route_width, &route_origin, &ordinal, &row,
+        &exit_reason, &arm);
+    if (!active) {
+        phase = rs64_phase_ord();
+        route_width = width;
+        route_origin = origin;
+        arm = "n/a";
+    }
+    std::fprintf(stderr,
+        "[m5-audio-seq] event=%u source=0x%08X edge=%s callsite=0x%08X"
+        " target=0x%08X phase=%u width=%u origin=0x%06X active=%u arm=%s"
+        " ordinal=%u row=%u ra=0x%08X\n",
+        event, source, edge_kind == 0u ? "entry" :
+            (edge_kind == 2u ? "control" : "callsite"), source,
+        target, phase, route_width, route_origin, active ? 1u : 0u,
+        active && arm ? arm : "n/a", ordinal, row, guest_ra);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_init_voice_entry(uint32_t voice_idx, uint32_t desc,
                                            uint32_t f4, uint32_t f8,
                                            uint32_t fC, uint32_t f10,
