@@ -110959,3 +110959,46 @@ Run a fresh four-phase retail `pc-field-dump` census for
 `0x800908D4/0x8009081C/0x80090810/0x8009220C/0x80090CA4`, then join pointed
 fields and nonzero payloads to the s2352 port table. Do not write back a field
 or change the audio contract.
+
+## Session 2356 (2026-08-24) — M5 retail field-role census finds no nonzero port match
+
+HYPOTHESIS-ID: m5-retail-field-role-census
+
+The planned work unit was one fresh four-phase retail `pc-field-dump` census
+joined to the qualified s2352 port task-field table. The first parser run
+failed on its own `pc-field-summary` capture regex (`IndexError`); the fixed
+parser corrected the group index and was rerun on the same capture. A bounded
+audit then found a second recipe defect: the command had armed writer
+histograms for field watches 2–4 but omitted watch 5 (`0x173DB0`). The oracle
+was rerun with only `--pc-hist-watch 5` added, and the parser was tightened to
+require all four field-histogram buckets and to join only phase/PC keys with a
+positive writer row.
+
+The accepted corrected retail run passed whole-RDRAM `50,351`, target-window
+`35,950`, exact field watches `383/1,709/1,156/1,153`, all four phase
+histories, writer histograms `2,3,4,5`, named-PC controls `24/24`, and the
+retained four-arm port controls. All five field-dump PCs had zero overflow.
+The raw oracle writer histogram contained eight positive phase/field rows;
+the complete keyed join retained `44,976` field rows and found zero nonzero
+retail/port value matches. It found `11,253` zero/sentinel-only intersections,
+which are explicitly not a field-role control. This selects
+H-RetailRoleAmbiguous at capture scope and leaves the retail task-ABI field
+relation open.
+
+This rules out a nonzero payload/value match for the tested candidate field
+writers and rules out interpreting a zero sentinel as a contract match. It
+does not identify the retail task-field relation, authorize a writeback, or
+change task data, consumers, defaults, or guards. Artifacts are under
+`scratch/agent/s2356_m5_field_role/`, with the accepted retail capture at
+`scratch/agent/s2356_m5_field_role_oracle_fixed.log`.
+
+ORIGIN: diagnostic-only. The oracle instrument was already present; this
+iteration fixed parser coverage/reporting and added no mitigation-shaped
+runtime machinery or behavior change.
+
+### Next
+
+Add one oracle-only `--pc-task-dump 0x80033FCC` instrument at retail
+`osSpTaskStartGo`, dump type-2 `OSTask` fields in the four existing phase
+buckets, and join `data_ptr+0x100`/output fields to the exact writer
+histogram and s2352 port ABI table. Do not change the port audio contract.

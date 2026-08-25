@@ -40,6 +40,13 @@ phase_hist = {
     (int(m.group(2)), int(m.group(1), 16))
     for m in re.finditer(r"pc-hist-phase origin=0x([0-9a-f]+) width=(\d+)", text, re.I)
 }
+hist_watches = {
+    int(m.group(1))
+    for m in re.finditer(
+        r"writer-pc-phase origin=0x[0-9a-f]+ width=\d+ watch=(\d+) range=",
+        text, re.I,
+    )
+}
 writer_fields = defaultdict(set)
 for m in re.finditer(
     r"writer-pc-phase origin=0x([0-9a-f]+) width=(\d+) watch=(\d+) .*?pc=0x([0-9a-f]+)",
@@ -62,7 +69,7 @@ for m in row_re.finditer(text):
     if phase in phases:
         field_rows.append((phase, int(m.group(1), 16), *(int(m.group(i), 16) for i in range(4, 10))))
 summary_overflow = {
-    int(m.group(1), 16): int(m.group(3))
+    int(m.group(1), 16): int(m.group(2))
     for m in re.finditer(r"pc-field-summary pc=0x([0-9a-f]+) rows=\d+/\d+ hits=\d+ overflow=(\d+)", text, re.I)
 }
 port_rows = tsv(port_dir / "phase-task-writer-placement-table.tsv")
@@ -81,7 +88,10 @@ table = [header]
 nonzero_matches = 0
 zero_only_matches = 0
 for phase, pc, s0, s1, source_word, source_byte, branch_selector, branch_state in field_rows:
-    for field in sorted(writer_fields[(phase, pc)] or fields):
+    positive_fields = writer_fields.get((phase, pc))
+    if not positive_fields:
+        continue
+    for field in sorted(positive_fields):
         ports = port_for(phase, field)
         port_values = {number(r.get("field_pre")) for r in ports} | {number(r.get("field_post")) for r in ports}
         pointed = {source_word, source_byte, branch_selector, branch_state}
@@ -111,7 +121,12 @@ whole = watch_hits.get(0, 0) > 0
 target = watch_hits.get(0x149470, 0) > 0
 exact = all(watch_hits.get(field, 0) > 0 for field in fields)
 controls = len(port_summary) == 4 and all(row.get("controls") == "1" for row in port_summary)
-coverage = whole and target and exact and phase_hist == set(phases) and all(named_hits.get(pc, 0) > 0 for pc in named) and controls
+coverage = (
+    whole and target and exact and hist_watches == {2, 3, 4, 5}
+    and phase_hist == set(phases)
+    and all(named_hits.get(pc, 0) > 0 for pc in named)
+    and controls
+)
 if not coverage:
     verdict = "H-CoverageInvalid"
 elif any(summary_overflow.get(pc, 0) for pc in pcs):
@@ -127,6 +142,7 @@ summary = (
     f"target_window={watch_hits.get(0x149470, 0)} "
     f"exact_fields={','.join(str(watch_hits.get(f, 0)) for f in fields)} "
     f"phase_controls={int(phase_hist == set(phases))} "
+    f"hist_watches={','.join(str(w) for w in sorted(hist_watches))} "
     f"named_controls={sum(named_hits.get(pc, 0) > 0 for pc in named)}/{len(named)} "
     f"port_controls={int(controls)} field_rows={len(field_rows)} "
     f"nonzero_matches={nonzero_matches} zero_only_matches={zero_only_matches} verdict={verdict}\n"

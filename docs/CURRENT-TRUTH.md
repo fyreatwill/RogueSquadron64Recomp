@@ -5,7 +5,7 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2355 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2356 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
 to §47. The s2343 B40 provenance census selected H-PortWriterMismatch under
 fresh retail and both-arm port controls; no writer or consumer was changed.
@@ -101,13 +101,12 @@ and closes `0x80090CA4` as a universal writer candidate; the actual hangar
 writer/task relation remains open. No writer, writeback, task-data, consumer,
 default, or guard change is authorized.
 
-The s2355 enlarged-detail census passed whole-RDRAM `59,355`, target-window
-`44,150`, exact fields `490/1,736/1,491/1,488`, four phase histories, named
-controls `23/23`, and the four-arm port controls. All `9/9` positive hangar
-writer keys retained detail with zero overflow; only `1/9` had any value
-intersection with the port rows, and that intersection was zero-only. This
-selects H-RetailWriterIsUnrelated at capture scope; no writeback or contract
-change is authorized.
+The s2356 corrected field-role census passed whole-RDRAM `50,351`, target
+window `35,950`, exact fields `383/1,709/1,156/1,153`, named PCs `24/24`, and
+the four-arm port controls. All five field-dump PCs had zero overflow; the
+join found `0` nonzero and `11,253` zero-only intersections. This selects
+H-RetailRoleAmbiguous; the task-ABI relation remains open and no behavior
+changed.
 
 ## Current state
 
@@ -198,6 +197,9 @@ change is authorized.
   and it was the common zero sentinel. This refines the boundary to
   H-RetailWriterIsUnrelated at capture scope and leaves the writer's field
   role/order contract open.
+- s2356's field-role census had zero overflow and zero nonzero port-row
+  intersections; its `11,253` were zero/sentinel-only. The retail task-ABI
+  field relation remains open.
 - Both silent and image arms qualify through title `1024 @ 0x00790400` and
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur. In the
@@ -322,14 +324,15 @@ change is authorized.
 ## Latest evidence
 
 - **s2355 — hangar writer payloads do not match the port field values.** The
-  fresh retail run passed whole-RDRAM `59,355`, target-window `44,150`, exact
-  fields `490/1,736/1,491/1,488`, four phase histories, named controls
-  `23/23`, and the retained four-arm port controls. Raising the detail cap to
-  `16384` retained all `9/9` positive hangar writer keys with zero overflow;
-  only one joined key shared a value with the port table, and that was the
-  common zero sentinel. This selects H-RetailWriterIsUnrelated at capture
-  scope. The table and capture are under
+  capped-detail fix retained all `9/9` positive keys with zero overflow; the
+  only value intersection was the common zero sentinel. This selected
+  H-RetailWriterIsUnrelated; artifacts are under
   `scratch/agent/s2355_m5_hangar_payload_order/`.
+
+- **s2356 — candidate field-role join has no nonzero match.** Controls passed;
+  all five PCs had zero overflow, with zero nonzero and `11,253` zero-only
+  intersections. This selects H-RetailRoleAmbiguous; zero/sentinel rows are
+  not a field-role control.
 
 - **s2348 — the retail output-span writer is unrelated to the port task field.**
   The first oracle field gate missed the live origins and was rejected as a
@@ -576,14 +579,14 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 retail field-role census — next.** s2355 retained all nine positive
-   hangar writer keys without overflow, but no nonzero retail payload matched
-   the port task-field values. Run one fresh oracle census with
-   `--pc-field-dump` for `0x800908D4`, `0x8009081C`, `0x80090810`,
-   `0x8009220C`, and `0x80090CA4`, phase-gated at all four title/hangar
-   origins, and join the pointed-field rows to the s2352 port table. Do not
-   write back a field, alter task data, change a consumer or default, or add a
-   guard.
+2. **M5 retail task-ABI field relation — next.** s2356 found no nonzero
+   pointed-field/value match for the candidate writers; the next discriminator
+   is the retail `osSpTaskStartGo` task structure itself at `0x80033FCC`.
+   Add one phase-gated `--pc-task-dump 0x80033FCC` oracle instrument that
+   records type-2 `OSTask` fields, `data_ptr+0x100`, output fields, and task
+   ordinal, then join those rows to the exact field-write histogram and the
+   s2352 port ABI table. Do not write back a field, alter task data, change a
+   consumer or default, or add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -859,6 +862,10 @@ are superseded at their measured scopes:
   (`4,666` overflow; zero hangar detail rows). The measured boundary remains
   writer payload/order capture, not a legitimate writeback contract or a null
   writer result.
+- s2355's H-RetailWriterIsUnrelated label is refined by s2356: the complete
+  field-role join still had zero nonzero matches and only zero/sentinel
+  intersections under zero-overflow controls. The boundary is the retail
+  task-ABI field relation, not a promoted writer role or writeback.
 
 ## Evidence and safety rules
 
