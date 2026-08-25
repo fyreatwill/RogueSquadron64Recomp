@@ -5,7 +5,7 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2343 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2344 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
 to §47. The s2343 B40 provenance census passed fresh retail whole-RDRAM,
 target-window, mode/status/title/hangar, named-PC, and both-arm port controls.
@@ -16,6 +16,17 @@ recorded the same writer with requested `1` but stored `0`; 254 of 262
 were the explicit pre-writer prefix. Every joined branch had `lhs=0` and took
 the bypass target. This selects H-PortWriterMismatch at capture scope; no
 writer or consumer was changed.
+
+The s2344 C88 treatment validation then passed fresh retail controls and all
+four same-build port arms. With `ROGUESQ_M5_C88_VALUE=0`, all three target
+writer rows stored zero and all 131 sampled `0x80091468` branches read zero
+and took the bypass. With `=1`, two of three writer rows stored nonzero,
+125/131 stub and 128/131 image branch rows read nonzero and fell through, and
+target key-on normal-tail/slot-02/slot-00 plus real filter rows appeared.
+PCM source/consumer counts remained `88/88` in every arm and voice-event rows
+remained zero. This selects H-C88GateNotSufficient_PCMVoiceContractStillOpen
+at capture scope; the treatment remains opt-in and no default writer change
+was made.
 
 ## Current state
 
@@ -39,6 +50,12 @@ writer or consumer was changed.
   store `0`, then read `lhs=0` and take the bypass. This selects
   H-PortWriterMismatch at capture scope. The pre-writer rows are not a
   classifier failure, and no behavior change is authorized by this result.
+- The s2344 opt-in treatment is the first qualified C88 behavior arm. Retail
+  independently confirms the legitimate nonzero C88 store; the port treatment
+  restores the gate branch and unlocks intermediate key-on/slot/filter work,
+  but does not add a same-run PCM or voice-event transition. This is progress
+  at the gate boundary, not a complete audio contract or permission to promote
+  the store.
 - Both silent and image arms qualify through title `1024 @ 0x00790400` and
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur, but the
@@ -159,6 +176,24 @@ writer or consumer was changed.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2344 — C88 treatment restores the gate branch but not the complete audio contract.**
+  The fresh retail preflight passed whole-RDRAM `32,419,426`, target-window
+  `32,409,260`, gate/status/queue `17/22/19`, both title/hangar phases, and all
+  requested named PCs; `0x8009C4E8` remained explicitly zero. The post-value
+  witness recorded `0x8008EC88 -> 0x01000000` in the width-1024 and width-512
+  target-like rows, while `0x8008EB7C` and `0x8008ED48` were zero. The first
+  port run was rejected because the launcher omitted `ROGUESQ_LOG_AUDIOTICK_TRACE`
+  and emitted zero branch rows; the fixed same-build sequential run qualified
+  all four arms with title/hangar and all host/task/DMA/guest-receive/PCM/
+  filter/render/key-on controls. C88=0 stored nonzero `0/3` rows and had
+  `0/131` nonzero branch reads in both audio arms. C88=1 stored nonzero `2/3`
+  rows and had nonzero/fall-through branch reads `125/131` stub and `128/131`
+  image. Its target key-on tables showed normal-tail plus slot `02` and `00`,
+  and real filter rows rose from `0` to `256`; PCM source/consumer stayed
+  `88/88` and voice-event rows stayed zero. This selects
+  `H-C88GateNotSufficient_PCMVoiceContractStillOpen` and authorizes no default
+  writer or consumer change.
 
 - **s2343 — B40 provenance selects H-PortWriterMismatch.** The fresh retail
   preflight passed whole-RDRAM `32,432,296`, target-window `32,422,130`,
@@ -306,15 +341,17 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 C88 writer treatment validation — next.** s2343 selects
-   H-PortWriterMismatch at `0x8008EC88`: retail target post-store is
-   `0x01000000`, while both port stub/image control arms request `1` and store
-   `0`. Run a same-build A/B with `ROGUESQ_M5_C88_VALUE=0` and `=1`, keeping
-   `ROGUESQ_M5_B40_VALUE=0`, across both silent and image audio arms. Require
-   the fresh retail post-value witness, both route phases, task/DMA/
-   guest-receive/PCM/filter/render/key-on and callback-helper controls, and a
-   branch/task/slot/voice comparison before interpreting a null. The treatment
-   is opt-in only; do not promote the store or change a consumer in this unit.
+2. **M5 C88 downstream ordinal join — next.** The s2344 opt-in treatment
+   restores the `0x80091468` fall-through and intermediate key-on/slot/filter
+   activity, but PCM and voice-event rows do not change. Build one phase-keyed
+   table joining `(audio_arm,c88,phase,width,origin,writer_seq,branch_event,
+   route_ordinal,keyon_table,slot02,slot00,descriptor/filter event,PCM source,
+   PCM consumer)` in the same run. Fresh retail must positively execute the
+   named C88, key-on, descriptor/trigger, and filter PCs; the four port arms
+   must retain route/task/DMA/guest-receive controls. Distinguish valid same-
+   ordinal voice/filter work from stale/prior-ordinal reuse and from a valid
+   gate path whose remaining gap is task output/PCM. Keep C88 opt-in and make
+   no store, consumer, default, or guard change.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -393,6 +430,12 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   boundary to a port writer mismatch at the C88 site. The treatment remains
   opt-in pending a same-build downstream A/B; no default writer or consumer
   change is authorized.
+  The s2344 treatment A/B then showed that nonzero C88 is read back and lets
+  the gate fall through, with normal-tail key-on, slot `02/00`, and filter
+  activity appearing in both audio arms. PCM source/consumer counts stayed
+  unchanged and voice-event rows stayed absent, so the measured boundary is
+  now the downstream voice/PCM contract rather than C88 readback. No default
+  writer or consumer change is authorized.
 
 ### VI state and second origin
 

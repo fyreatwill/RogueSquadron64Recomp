@@ -110399,3 +110399,65 @@ fresh retail post-value witness, target phases, all task/DMA/guest-receive/
 PCM/filter/render/key-on/callback controls, and a joined branch plus
 downstream task/slot/voice/PCM discriminator. Keep the treatment opt-in and
 do not promote the writer or change a consumer in that work unit.
+
+## Session 2344 (2026-08-24) — M5 C88 treatment activates gate but leaves PCM/voice contract open
+
+HYPOTHESIS-ID: m5-c88-writer-treatment
+
+The planned work unit was a ground-truth-first, same-build four-arm treatment
+of `0x8008EC88`: stub/image crossed with `ROGUESQ_M5_C88_VALUE=0/1`, with
+`ROGUESQ_M5_B40_VALUE=0`. The retail command completed successfully. Its whole-
+RDRAM positive control was `32,419,426` writes and the target-window control
+was `32,409,260`; gate/status/queue watches were `17/22/19`, both title and
+hangar phases were present, and the named C88, branch, callback, task,
+descriptor, key-on, and filter PCs were positive. The post-value witness
+recorded `0x8008EC88 -> 0x01000000` at both width-1024 and width-512 target-like
+rows, while `0x8008EB7C` and `0x8008ED48` wrote zero. Requested-zero
+`0x8009C4E8` stayed zero.
+
+The Debug target built cleanly after `zsh -n` on the new launcher. The first
+port capture reached title and hangar in all four arms with no crash or abort,
+but its branch rows were zero because the launcher omitted the existing
+`ROGUESQ_LOG_AUDIOTICK_TRACE` gate. That result was rejected as an
+instrumentation failure, not evidence. The fixed launcher was rerun against
+the same build, with the missing branch control enabled; all four arms again
+reached both phases and passed the route/task/DMA/guest-receive/PCM/filter/
+render/key-on controls. Each process was terminated with SIGKILL after the
+15-second hangar capture and returned `137` from that intentional termination.
+
+The corrected phase table is
+`scratch/agent/s2344_m5_c88_writer_treatment_fixed/c88-table.tsv`:
+
+| arm | C88 writer rows nonzero | `0x80091468` rows | nonzero lhs / fall-through | joined writer rows | PCM source/consumer | key-on/filter evidence |
+|---|---:|---:|---:|---:|---:|---|
+| stub C0 | 0/3 | 131 | 0 / 0 | 127 | 88 / 88 | key-on 33; filter 0 |
+| stub C1 | 2/3 | 131 | 125 / 125 | 128 | 88 / 88 | normal-tail, slot 02/00; filter 256 |
+| image C0 | 0/3 | 131 | 0 / 0 | 127 | 88 / 88 | key-on 33; filter 0 |
+| image C1 | 2/3 | 131 | 128 / 128 | 131 | 88 / 88 | normal-tail, slot 02/00; filter 256 |
+
+C88=1 therefore restores the gate readback and opens real intermediate
+key-on/slot/filter work in both audio arms. It does not add a PCM source or
+consumer transition, and the voice-event census remains zero in all arms.
+This selects **H-C88GateNotSufficient_PCMVoiceContractStillOpen** at the
+qualified capture scope; it refutes H-C88ReadbackMismatch and H-C88RouteOnly,
+but does not authorize promotion of the writer or a consumer change. The next
+boundary is same-ordinal provenance from the restored gate through key-on,
+descriptor/filter, and PCM.
+
+ORIGIN: diagnostic-only and opt-in behavior-arm validation. The launcher and
+parser add no mitigation, skip, guard, remap, default, store, consumer, or
+task-data change. The C88 value was supplied only through the existing
+`ROGUESQ_M5_C88_VALUE` environment arm.
+
+### Next
+
+Run one fresh ground-truth-first M5 downstream ordinal join. Build a single
+phase-keyed table for the four C88/audio arms joining `writer_seq` and the
+`0x80091468` branch event to route ordinal, key-on normal-tail/slot-02/slot-00,
+descriptor/filter event, and PCM source/consumer event. Use the existing
+retail oracle recipe with the C88, key-on, descriptor/trigger, and filter PCs,
+then build the Debug target and run a new four-arm phase-gated driver from
+`build/` with the eleven-Start schedule and SIGKILL cleanup. Require retail
+whole-RDRAM/target/title/hangar controls and port route/task/DMA/
+guest-receive controls before interpreting nulls. Keep C88 opt-in and make no
+behavior change.
