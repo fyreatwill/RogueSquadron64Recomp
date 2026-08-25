@@ -110694,3 +110694,53 @@ remains opt-in, and the new field snapshot/DMA rows are observational only.
 Run the ground-truth-first `0x80090CA4` retail writer census against the known
 task pointers and exact `data_ptr+0x100` destinations, then join it to the
 existing four-arm field snapshot/DMA ordering table. Do not change behavior.
+
+## Session 2349 (2026-08-24) — M5 `data_ptr+0x100` writer is phase-specific
+
+HYPOTHESIS-ID: m5-dataptr100-writer-provenance.
+
+The planned work unit was one independent retail census for the already
+observed `0x80090CA4` writer and exact task-field destinations, followed by one
+same-build four-arm port table. The retail command passed its controls:
+whole-RDRAM `56,453`, target-window `44,120`, exact field-watch totals
+`0x173C20=490` and `0x171DE0=1,735`, named-PC `0x800078EC=11,039,031`, and
+title/hangar phase histograms. The first parser pass treated only the two
+configured origins as canonical and reported no exact `0x173C20` rows; the
+retail log showed the live title writer using the configured origin plus
+`0x400`. The parser was fixed to canonicalize that observed variant and was
+rerun against the same completed capture; no second game run was used for the
+correction.
+
+In the canonical 1024/title phase, `0x80090CA4` had `482` phase-matched writer
+executions and `256` exact post-value rows at each of `0x00173C20` and
+`0x00171DE0`. In the 512/hangar phase it had no phase-matched writer or exact
+post-value row. The `0x00171DE0` hangar writes were attributed instead to
+`0x800908D4` (`164`), `0x8009081C` (`69`), and `0x80090810` (`1`); the
+`0x00173C20` hangar watch had no phase writer attribution.
+
+The new driver in
+`scratch/agent/run_s2349_m5_dataptr100_writer.sh` ran all four arms
+sequentially from `build/` with eleven Start presses and SIGKILL cleanup. All
+four passed title/hangar, task/ABI, guest-receive, PCM, field-snapshot,
+image-DMA, filter, render, key-on, and C88 controls. Target task/ABI rows were
+`706/706` stub C0, `698/698` stub C1, `703/703` image C0, and `700/700` image
+C1. The image arms emitted `2,308/3,740` target DMA ranges; both C88=1 arms
+had `256` filter rows. Every arm had zero `audtask-field-write` events and
+zero computed-field pre/post changes, with no crash or abort marker.
+
+This selects H-RetailKnownDestNotAudioOutput at capture scope. It closes
+`0x80090CA4` as a universal `data_ptr+0x100` writer candidate and rules out a
+port field write/change under the tested route, but it does not identify the
+actual hangar writer for both fields and authorizes no behavior change.
+
+ORIGIN: diagnostic-only. The diff adds only the bounded driver/parser and
+ledger/documentation updates; no mitigation, guard, remap, default, writer,
+writeback, task-data, consumer, or audio behavior change was made.
+
+### Next
+
+Run one fresh retail exact-destination attribution for hangar candidates
+`0x800908D4`, `0x8009081C`, and `0x80090810` plus both field watches, then join
+the resulting writer scope to the existing four-arm field snapshot/DMA table.
+Require whole-RDRAM, task-block, exact-destination, title/hangar, named-PC,
+and all four port controls before interpreting a null.
