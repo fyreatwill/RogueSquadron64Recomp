@@ -110744,3 +110744,39 @@ Run one fresh retail exact-destination attribution for hangar candidates
 the resulting writer scope to the existing four-arm field snapshot/DMA table.
 Require whole-RDRAM, task-block, exact-destination, title/hangar, named-PC,
 and all four port controls before interpreting a null.
+
+## Session 2350 (2026-08-24) — M5 hangar candidates do not cover both task fields
+
+The fresh retail oracle passed the required positive controls: whole-RDRAM
+watch `56,344`, task-block watch `44,120`, exact destination watches
+`0x00173C20=491` and `0x00171DE0=1,733`, both title/hangar phase histories, and
+all three named candidate PCs `0x800908D4`, `0x8009081C`, and `0x80090810`.
+The hangar `512 @ 0x006AB400` phase attributed `233` candidate-PC writes to
+`0x00171DE0` (`161/71/1` by `0x800908D4/1C/10`) but zero candidate-PC writes
+to `0x00173C20`. The title phase likewise had no candidate rows for either
+field; its known `0x80090CA4` relation remains phase-specific.
+
+The new four-arm driver
+`scratch/agent/run_s2350_m5_hangar_writer.sh` ran sequentially from `build/`
+with eleven Start presses and SIGKILL cleanup. Every arm passed controls. The
+stub/image C88=1 treatment arms had zero `audtask-field-write` events and zero
+computed-field pre/post changes; image arms emitted `2,321/4,300` DMA ranges.
+No arm crashed or aborted. This selects
+H-RetailHangarWriterDifferentDestination: the known hangar candidates are not
+a universal writer for both `data_ptr+0x100` fields, and the actual
+`0x00173C20` hangar writer remains open. No behavior, writer, task-data,
+consumer, default, or guard change was made.
+
+ORIGIN: diagnostic-only. The run added a ground-truth attribution table and
+reused field observers only; it added no mitigation-shaped machinery.
+
+### Next
+
+Run one fresh retail all-PC exact-destination census for `0x00173C20` in the
+512/hangar phase, retaining the `0x00171DE0` candidate rows as a control.
+Canonicalize `0x006AB400` and `0x006AB800`, require whole-RDRAM, task-block,
+both exact-field watches, both phase histories, and named-PC controls, then
+join every positive hangar writer PC to the existing four-arm field table.
+Select the writer only if it is phase-attributed to the exact field; otherwise
+leave the field boundary open. Do not write the field, alter task data, or
+change a consumer or default.
