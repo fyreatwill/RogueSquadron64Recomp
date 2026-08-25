@@ -5,17 +5,17 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2342 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2343 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The s2342 pre-gate census moves the qualified M5 boundary to the
-`0x800A0F50` audio-gate test: fresh retail whole-RDRAM/target/status/title/
-hangar and all named PC controls are positive, and both same-build port arms
-reached target phases with task/DMA/guest-receive/PCM/filter/render/key-on and
-callback controls. `musyxSynthFrame` entry fired `268` times in each arm;
-sampled rows at `0x8009142C` and `0x80091454` included fall-through outcomes,
-while every sampled `0x80091468` row took its zero-gate bypass target. The
-three retained gate edges and sequencer callsites remained zero in both arms.
-This selects H-PortPreGateB40Reject at capture scope, with no behavior change.
+to §47. The s2343 B40 provenance census passed fresh retail whole-RDRAM,
+target-window, mode/status/title/hangar, named-PC, and both-arm port controls.
+The retail post-store witness recorded `0x8008EC88` writing nonzero
+`0x01000000` in width-1024 and width-512 target-like phases. Both port arms
+recorded the same writer with requested `1` but stored `0`; 254 of 262
+`0x80091468` rows joined through `writer_seq`, and the eight unmatched rows
+were the explicit pre-writer prefix. Every joined branch had `lhs=0` and took
+the bypass target. This selects H-PortWriterMismatch at capture scope; no
+writer or consumer was changed.
 
 ## Current state
 
@@ -32,6 +32,13 @@ This selects H-PortPreGateB40Reject at capture scope, with no behavior change.
   work and generated DMA, then returns `Broke`; its host canary is probe data
   only. Stock `aspMain` is not this game's Factor 5 contract. MORT is a
   separate CPU speech asset.
+- The s2343 B40 census adds a regeneration-safe target-phase `writer_seq`
+  join from all seven `0x800A0F50` writer rows to the existing
+  `0x80091468` branch rows. Retail's `0x8008EC88` store is independently
+  positive and writes `0x01000000`; both port stub/image arms request `1` but
+  store `0`, then read `lhs=0` and take the bypass. This selects
+  H-PortWriterMismatch at capture scope. The pre-writer rows are not a
+  classifier failure, and no behavior change is authorized by this result.
 - Both silent and image arms qualify through title `1024 @ 0x00790400` and
   hangar `512 @ 0x006AB400` at the tested recipe scope. Image-stage payloads
   rotate between captures; exact PCM source/consumer joins can occur, but the
@@ -152,6 +159,22 @@ This selects H-PortPreGateB40Reject at capture scope, with no behavior change.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2343 — B40 provenance selects H-PortWriterMismatch.** The fresh retail
+  preflight passed whole-RDRAM `32,432,296`, target-window `32,422,130`,
+  B40 `17`, mode/gate/status `108/17/22`, callback registration `19`, both
+  title/hangar origins, and the requested named PCs; `0x8009C4E8` remained
+  explicitly zero. A second positive-control oracle run used the physical
+  `0xA0F50` post-value watch: `0x8008EC88` produced `0x01000000` in the
+  width-1024 and width-512 target-like rows, while `0x8008EB7C` and
+  `0x8008ED48` produced zero. In the same-build sequential port arms, all
+  task/DMA/guest-receive/PCM/filter/render/key-on and callback-helper controls
+  passed. Each arm had three target writer rows, all at `0x8008EC88`, with
+  `requested=1 stored=0`; 131 branch rows per arm were positive, 254/262
+  joined through `writer_seq`, and the eight `writer_seq=0` rows were the
+  pre-writer prefix. All joined `0x80091468` rows had `lhs=0`,
+  `taken=1`. This selects H-PortWriterMismatch, with no writer or consumer
+  change.
 
 - **s2340 — sequencer caller census selects H-PortSeqCallerInactive.** The
   fresh retail preflight passed whole-RDRAM `32449224`, target-window
@@ -283,16 +306,15 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 B40 gate provenance — next.** s2342 selects
-   H-PortPreGateB40Reject: both arms reach `musyxSynthFrame`, some iterations
-   pass the outer/per-iteration tests, and the `0x800A0F50` byte test takes its
-   zero-gate bypass path. Census every named writer at `0x800A0F50` and the
-   corresponding retail writer/value transitions in one phase-keyed table to
-   distinguish a legitimate port gate-zero contract, a port writer mismatch,
-   and a probe/phase classifier failure. Keep the s2341–s2342 branch rows,
-   retail whole-RDRAM/target/mode/status/title/hangar controls, task/DMA/
-   guest-receive/PCM/filter/render/key-on controls, and both arms; do not
-   change a writer or consumer.
+2. **M5 C88 writer treatment validation — next.** s2343 selects
+   H-PortWriterMismatch at `0x8008EC88`: retail target post-store is
+   `0x01000000`, while both port stub/image control arms request `1` and store
+   `0`. Run a same-build A/B with `ROGUESQ_M5_C88_VALUE=0` and `=1`, keeping
+   `ROGUESQ_M5_B40_VALUE=0`, across both silent and image audio arms. Require
+   the fresh retail post-value witness, both route phases, task/DMA/
+   guest-receive/PCM/filter/render/key-on and callback-helper controls, and a
+   branch/task/slot/voice comparison before interpreting a null. The treatment
+   is opt-in only; do not promote the store or change a consumer in this unit.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -364,6 +386,13 @@ H-PortParentInactive at capture scope and moves the active boundary above both
   measured boundary is therefore the `0x800A0F50` gate-byte test, not a
   wholly inactive `musyxSynthFrame` or an uncalled sequencer edge. No gate,
   writer, store, or consumer change is authorized.
+  The s2343 census then joined target-phase writer/value rows to the
+  `0x80091468` rows with `writer_seq`. Retail's `0x8008EC88` store wrote
+  nonzero `0x01000000`, while both port control arms stored zero after a
+  requested `1`; all joined branches read zero and bypassed. This refines the
+  boundary to a port writer mismatch at the C88 site. The treatment remains
+  opt-in pending a same-build downstream A/B; no default writer or consumer
+  change is authorized.
 
 ### VI state and second origin
 
@@ -449,6 +478,12 @@ are superseded at their measured scopes:
   per-iteration tests, with the `0x80091468` zero-gate branch taken in both
   arms. The qualified boundary is the gate-byte test; its writer and
   legitimacy remain open, and no bypass is authorized.
+- s2342's H-PortPreGateB40Reject label is refined by s2343: it was believable
+  because the branch read zero and took its bypass under positive port
+  controls, but the new writer-sequence join and independent retail post-store
+  watch showed `0x8008EC88` legitimately writing nonzero on retail while the
+  port's control arm force-stored zero. The measured boundary is now the C88
+  writer mismatch, not an unexplained consumer or phase classifier failure.
 
 ## Evidence and safety rules
 

@@ -673,6 +673,54 @@ extern "C" void rs64_m5_init_voice_caller_event(uint32_t caller_pc,
     std::fflush(stderr);
 }
 
+static std::atomic<uint32_t> g_rs64_m5_b40_writer_seq{0};
+
+extern "C" uint32_t rs64_m5_b40_writer_event(uint32_t pc,
+                                                uint32_t old_value,
+                                                uint32_t requested_value,
+                                                uint32_t stored_value,
+                                                uint32_t ra) {
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target = rs64_m5_init_voice_target_phase(width, origin);
+    if (!target) return g_rs64_m5_b40_writer_seq.load(std::memory_order_relaxed);
+
+    const uint32_t seq = g_rs64_m5_b40_writer_seq.fetch_add(
+        1u, std::memory_order_relaxed) + 1u;
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_B40_WRITER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return seq;
+
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t row = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (rs64_phase_ord() << 24) ^ (width << 16) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        row = 0;
+    }
+    if (row < 64u) {
+        std::fprintf(stderr,
+            "[m5-b40-writer] seq=%u row=%u phase=%u width=%u origin=0x%06X"
+            " pc=0x%08X old=0x%02X requested=0x%02X stored=0x%02X ra=0x%08X\n",
+            seq, row, rs64_phase_ord(), width, origin, pc,
+            old_value & 0xFFu, requested_value & 0xFFu,
+            stored_value & 0xFFu, ra);
+        std::fflush(stderr);
+        ++row;
+    }
+    return seq;
+}
+
+extern "C" uint32_t rs64_m5_b40_writer_sequence() {
+    return g_rs64_m5_b40_writer_seq.load(std::memory_order_relaxed);
+}
+
 extern "C" void rs64_m5_audio_sequencer_event(uint32_t source,
                                                  uint32_t edge_kind,
                                                  uint32_t target,
@@ -860,10 +908,10 @@ extern "C" void rs64_m5_synth_pregate_event(uint32_t source,
         "[m5-synth-pregate] event=%u source=0x%08X edge=branch"
         " taken=%u lhs=0x%08X rhs=0x%08X target=0x%08X"
         " phase=%u width=%u origin=0x%06X active=%u arm=%s"
-        " ordinal=%u row=%u ra=0x%08X\n",
+        " ordinal=%u row=%u writer_seq=%u ra=0x%08X\n",
         event, source, branch_taken, lhs, rhs, target, phase, route_width,
         route_origin, active ? 1u : 0u, active && arm ? arm : "n/a",
-        ordinal, row, guest_ra);
+        ordinal, row, rs64_m5_b40_writer_sequence(), guest_ra);
     std::fflush(stderr);
 }
 

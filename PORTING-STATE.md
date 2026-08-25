@@ -110343,3 +110343,59 @@ ORIGIN: diagnostic-only. The diff adds the regeneration-safe pre-gate helper,
 phase-scoped branch outcome logging, and the parser table; it does not
 mitigate, skip, restore, or alter guest state, task data, audio output,
 control flow, stores, guards, remaps, slots, defaults, or consumers.
+
+## Session 2343 (2026-08-24) — M5 B40 provenance selects C88 writer mismatch
+
+HYPOTHESIS-ID: m5-b40-gate-provenance
+
+The planned work unit was a ground-truth-first, no-behavior-change census of
+all seven named writers of guest byte `0x800A0F50`, joined to the existing
+`0x80091468` pre-gate rows. The first retail preflight passed whole-RDRAM
+`32,432,296`, target-window `32,422,130`, B40 `17`, mode/gate/status
+`108/17/22`, callback registration `19`, both target origins, and the named
+PC controls; requested-zero `0x8009C4E8` remained zero. A second independent
+retail run used the physical post-value watch and recorded
+`0x8008EC88 -> 0x01000000` in width-1024 and width-512 target-like rows,
+while `0x8008EB7C` and `0x8008ED48` wrote zero. Its whole-RDRAM control was
+`32,244,337`, target-window `32,234,171`, and the byte watch fired `17` times.
+
+The regeneration order completed: `make_elf.py`, sibling `build/N64Recomp`,
+`fixup_game_funcs.py`, and the Debug target. The regeneration-safe writer sink
+now assigns a target-phase `writer_seq` and emits PC/requested/stored rows for
+all seven named stores; the existing `0x80091468` rows carry that join key.
+The fixed sequential port run reached hangar in both arms. All retained
+controls passed:
+
+| arm | task | DMA | guest receive | PCM source/consumer | filter | render | key-on | callback helper |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| stub | 1107 | 1107 | 779 | 88 / 88 | 1 | 5 | 33 | 145 |
+| image | 1148 | 3488 | 769 | 88 / 88 | 1 | 4 | 31 | 145 |
+
+Each arm emitted 131 sampled `0x80091468` rows and three target-phase writer
+rows, all at `0x8008EC88` with `requested=1 stored=0`. The first four branch
+rows per arm had `writer_seq=0` and are the explicit pre-writer prefix; the
+remaining 254 rows joined a writer sequence. Every joined row reported
+`lhs=0`, `taken=1`, and target `0x800914AC`.
+
+The first analyzer classified the eight pre-writer rows as a phase-classifier
+failure. That was a parser bug, not a new run: the analyzer was corrected to
+separate `writer_seq=0` pre-writer rows, then replayed against the same logs.
+The corrected result selects **H-PortWriterMismatch**. Retail independently
+performed the `0x8008EC88` store with nonzero value, while the port control
+arm force-stored zero in both audio arms. This rules out a legitimate retail
+gate-zero contract and a readback mismatch at the measured scope; it does not
+prove that making C88 nonzero is sufficient for downstream audio progress.
+
+ORIGIN: diagnostic-only. The diff adds a regeneration-safe writer sequence,
+PC/value rows, the branch join field, and a parser table; it does not
+mitigate, skip, restore, or alter guest state, task data, audio output,
+control flow, stores, guards, remaps, slots, defaults, or consumers.
+
+### Next
+
+Run the four-arm same-build C88 writer treatment validation: stub/image crossed
+with `ROGUESQ_M5_C88_VALUE=0/1`, keeping `ROGUESQ_M5_B40_VALUE=0`. Require the
+fresh retail post-value witness, target phases, all task/DMA/guest-receive/
+PCM/filter/render/key-on/callback controls, and a joined branch plus
+downstream task/slot/voice/PCM discriminator. Keep the treatment opt-in and
+do not promote the writer or change a consumer in that work unit.
