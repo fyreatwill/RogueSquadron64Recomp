@@ -5,13 +5,13 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2335 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2336 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The s2335 result selects H-DescriptorWriterAbsent at capture scope:
-retail descriptor/key-on/filter controls and both port arms are positive, but
-the port has no target init event, descriptor-entry row, descriptor payload, or
-real filter row. The next work unit is the retail/port init callsite boundary
-in `scratch/agent/NEXT.md`.
+to §47. The s2336 callsite census selects H-PortInitNeverCalled at capture
+scope: retail entry/store controls and both port arms are positive, target
+render/key-on activity is live, and both explicit callsite and function-entry
+probes remain zero in both arms. The next work unit is the enclosing caller
+reachability/branch boundary in `scratch/agent/NEXT.md`.
 
 ## Current state
 
@@ -58,6 +58,16 @@ in `scratch/agent/NEXT.md`.
   rows were all `0`; the image arm had `2314` DMA-range rows. This is two
   independent port-side lines (unconditional lifecycle event census and the
   entry/filter audit) plus the retail witness, not a behavior-change result.
+- The s2336 clean-tag callsite census is independently qualified by retail
+  whole-RDRAM `32280738`, physical target window `32270412`, mode/gate/status
+  `108/17/22`, title/hangar, retail entry/store/trigger `681/681/681`, key-on
+  `83450/2231`, decode `1942`, filter caller/callee `6384/6384`, service
+  `3911`, and explicit-zero `0x8009C4E8`. Both arms reached hangar with
+  target-phase host controls at title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`; each had task/DMA/guest-receive/PCM/filter controls,
+  target render `5`, and key-on `33`. Both direct callsite hooks and both
+  `musyxInitVoiceFromSample` entry/store rows were zero. This selects
+  H-PortInitNeverCalled at capture scope; it changes no behavior.
 - The independent retail oracle is the witness for game-side memory claims.
   Whole-RDRAM, title/hangar, gate/task/status, target-window, and named-PC
   controls must pass before a retail null is interpreted. It reaches attract,
@@ -67,6 +77,20 @@ in `scratch/agent/NEXT.md`.
   `func_80092CF0`, or `func_800E9AE0`.
 
 ## Latest evidence
+
+- **s2336 — explicit callsite provenance selects H-PortInitNeverCalled.** The
+  clean-tag ground-truth-first oracle passed whole-RDRAM `32280738`, physical
+  target-window writes `32270412`, mode/gate/status `108/17/22`, title/hangar,
+  and retail execution counts entry/store/trigger `681/681/681`, key-on
+  `83450/2231`, decode `1942`, filter caller/callee `6384/6384`, and service
+  `3911`; `0x8009C4E8` was explicitly zero. Both same-build sequential port
+  arms reached the target title and hangar phases. The host-positive control
+  fired in each arm at both `1024 @ 0x00790400` and `512 @ 0x006AB400`.
+  Each arm had target render `5`, key-on `33`, task/DMA/guest-receive/PCM,
+  and filter controls; both explicit callsite hooks (`0/0`) and both
+  `musyxInitVoiceFromSample` entry/store rows (`0/0`) were zero. This selects
+  H-PortInitNeverCalled at capture scope and rules out an unqualified logger
+  or phase-control failure; it authorizes no behavior change.
 
 - **s2333 — upstream voice census leaves descriptor-to-filter boundary open.**
   The corrected ground-truth-first oracle passed whole-RDRAM `32475857`,
@@ -157,13 +181,12 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 descriptor init callsite provenance — next.** s2335 selected
-   H-DescriptorWriterAbsent: target render/key-on work is live, but both the
-   unconditional init-writer event and `musyxInitVoiceFromSample` entry probe
-   are zero. Run one ground-truth-first retail/port callsite census using the
-   actual function entry and previous-PC attribution; do not repeat the
-   descriptor/filter null, output metadata, or add writeback, remapping, slot
-   values, guards, defaults, or a consumer.
+2. **M5 descriptor source/caller reachability — next.** s2336 selected
+   H-PortInitNeverCalled: target render/key-on work and phase-qualified host
+   controls are live, but both explicit callsites into
+   `musyxInitVoiceFromSample` and its entry/store probes are zero. Instrument
+   the two enclosing callers and their exact branch-to-call edges, with retail
+   entry controls; do not repeat the callsite null or add behavior.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -203,8 +226,11 @@ and key-on rows but zero descriptor and real filter rows; s2335 added an
 unconditional init-writer event and an independent function-entry probe, both
 zero in both arms, while the same-run host-positive filter controls fired.
 Retail independently executed the descriptor, trigger, key-on, and filter PCs.
-This selects H-DescriptorWriterAbsent at capture scope and moves the active
-boundary to the callsite into `musyxInitVoiceFromSample`; no store, guard, or
+The s2336 callsite census then added explicit hooks immediately before both
+static `jal` sites and retained phase-qualified host controls; both callsites
+and both entry/store probes remained zero in both arms. This selects
+H-PortInitNeverCalled at capture scope and moves the active boundary to the
+two enclosing callers and their branch-to-call edges; no store, guard, or
 consumer change is authorized.
 
 ### VI state and second origin
@@ -252,6 +278,11 @@ are superseded at their measured scopes:
 - s2331's statement that the filter/voice null was unevaluable; s2332 added a
   labeled host-positive span control and showed the real port audit still had
   zero rows, while an independent retail run executed the caller and callee.
+- s2335's H-DescriptorWriterAbsent label is refined by s2336: it was believable
+  because the unconditional writer and downstream entry probes were both zero,
+  but explicit hooks at both static callsites also stayed zero under fresh
+  target-phase controls. The measured boundary is therefore caller reachability,
+  not yet a missing descriptor writer inside the callee.
 
 ## Evidence and safety rules
 

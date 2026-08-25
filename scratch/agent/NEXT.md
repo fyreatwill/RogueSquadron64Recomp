@@ -1,62 +1,61 @@
-# NEXT work unit (s2336) — M5 descriptor init callsite provenance
+# NEXT work unit (s2337) — M5 descriptor source/caller reachability
 
-HYPOTHESIS-ID: m5-descriptor-callsite-provenance
+HYPOTHESIS-ID: m5-descriptor-source-reachability
 
 ## Work unit
 
-Run one ground-truth-first, no-behavior-change callsite census for the actual
-`musyxInitVoiceFromSample` function entry at `0x80092128` and its descriptor
-store at `0x80092230`. Keep the qualified Factor 5 image arm, silent control,
-eleven-Start route, `ROGUESQ_DRAIN_INLOOP_TICK=1`, host-positive filter/voice
-control, and all task/DMA/guest-receive/PCM controls. Do not repeat the
-descriptor/filter null census or add writeback, remapping, slot values, guards,
-defaults, or a consumer.
+Run one ground-truth-first, no-behavior-change census of the two enclosing
+callers of `musyxInitVoiceFromSample`: `soundMacroOpPlaySampleKeymap` at
+`0x8008A38C` / callsite `0x8008A564`, and `startStreamedSampleVoice` at
+`0x80097FE8` / callsite `0x800980EC`. Add durable entry probes and
+phase/ordinal-keyed markers immediately before both exact `jal` edges. Retain
+the s2336 callsite and callee-entry/store probes as downstream controls. Keep
+the qualified Factor 5 image arm, silent control, eleven-Start route,
+`ROGUESQ_DRAIN_INLOOP_TICK=1`, host-positive filter/voice control, and all
+task/DMA/guest-receive/PCM controls. Do not add a store, remap, slot value,
+guard, default, consumer, or audio behavior.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-CoverageInvalid: the retail whole-RDRAM/target/status/title/hangar controls,
-  named retail entry/store/key-on/filter PCs, either port arm, or the task,
-  DMA, guest-receive, PCM, and host-positive controls is absent.
-- H-PortInitNeverCalled: retail enters `0x80092128` and reaches the
-  `0x80092230` store with positive previous-PC callers, while both port arms
-  retain target render/key-on rows but have zero target init-entry and init-store
-  rows.
-- H-PortInitEntryEarlyReturn: a target port init-entry row is live, but no
-  target store follows it; the entry row's base/descriptor fields and any
-  guard/return row identify the first divergence.
-- H-PortInitPriorOrdinal: target init entry/store rows exist, but only on a
-  prior audio ordinal or phase; same-ordinal versus prior joins to render/key-on
-  rows distinguish ownership rather than treating a count as a callsite.
+- H-CoverageInvalid: the retail caller/callsite controls, both port arms,
+  target render/key-on rows, or target-phase host controls are absent.
+- H-PortCallerInactive: both port caller-entry probes are zero in the target
+  phases, matching the zero direct-callsite probes; the route never reaches
+  either enclosing caller.
+- H-PortBranchBypassed: a port caller-entry probe is positive, but its
+  immediately-pre-call marker is zero; the caller is live and its branch or
+  selection logic bypasses the `musyxInitVoiceFromSample` edge.
+- H-PortCallsiteInstrumentationFault: a pre-call marker is positive while its
+  direct-callsite hook is zero (or the callsite is positive while the callee
+  entry is zero); the remaining mismatch is in generated dispatch/probe
+  placement rather than caller reachability.
 
-The discriminator is one table keyed by `(arm, phase, width, origin, ordinal,
-row, event, caller/previous-PC)` containing retail execution counts and
-previous-PC histograms for `0x80092128`, `0x80092230`, `0x8009231C`,
-`0x80090B68`, `0x80090C28`, `0x8009D740`, and `0x8009D7D0`; port
-`[init-voice-sample]` entry payload, init-writer `m5-audio-event`, render,
-key-on, slot/status/lifecycle, task/image completion, PCM, and filter rows.
-Select H-PortInitNeverCalled only with qualified controls and zero target entry
-and store rows in both arms. Select H-PortInitEntryEarlyReturn only with a
-positive target entry and zero later store. Select H-PortInitPriorOrdinal only
-with positive rows and no same-ordinal join. Any missing control selects
-H-CoverageInvalid.
+The discriminator is one table keyed by
+`(arm, phase, width, origin, ordinal, row, event, caller)` containing retail
+PC counts for `0x8008A38C`, `0x8008A564`, `0x80097FE8`, and `0x800980EC`, plus
+port caller-entry, pre-call, direct-callsite, callee-entry/store, render,
+key-on, task/DMA, PCM, filter, and host-control rows. Require positive retail
+whole-RDRAM/target/status/title/hangar controls and positive target-phase host
+controls in both arms before reading a port zero. Select H-PortCallerInactive
+only when both caller entries and both pre-call markers are zero. Select
+H-PortBranchBypassed only with a positive caller entry and zero marker on the
+same arm/phase. Select H-PortCallsiteInstrumentationFault only with a
+positive same-key pre-call marker and a zero direct hook or callee entry. Any
+missing control selects H-CoverageInvalid.
 
 ## Exact commands
 
-Create `scratch/agent/run_s2336_m5_descriptor_callsite_provenance.sh`. Its
-retail preflight must run first with whole-RDRAM, physical
-`0x00165000:0x0016B000`, task/output/gate/wait/status watches, title/hangar
-origins, the named writer controls, and `--watch-pc` for the entry/store,
-trigger, key-on, decode, filter, and service PCs above. Require positive
-whole-RDRAM/target/status/title/hangar and positive retail entry/store/key-on/
-filter controls; keep `0x0001498A` and route-specific `0x8009C4E8` explicitly
-zero-only.
+Create `scratch/agent/run_s2337_m5_descriptor_source_reachability.sh` with the
+same clean-output, SIGKILL, sequential stub/image harness shape as s2336.
+Its retail preflight must arm whole-RDRAM and physical target-window controls,
+title/hangar origins, mode/gate/status controls, and `--watch-pc` for the four
+caller/callsite PCs above plus the existing entry/store/key-on/decode/filter/
+service controls. The port table must include both caller entries and both
+pre-call markers in the same target-phase key as the retained s2336 probes.
 
-The port arms must retain `[audtask-abi]`, `[audtask-dma-row]`,
-`[audtask-dma-range]`, image-stage/image-join, guest-receive, PCM
-source/consumer, `[m5-audio-event]`, `[init-voice-sample]`, `[m5-keyon-*]`,
-`site=render-stage`, `site=render-end`, and both filter audit controls and real
-rows. Run both arms from one build with the validated sequential input recipe.
-
+    python3 ../rogue_squadron64/tools/make_elf.py
+    ../N64Recomp/build/N64Recomp rogue_squadron.toml
+    python3 ../N64Recomp/fixup_game_funcs.py
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh -n scratch/agent/run_s2336_m5_descriptor_callsite_provenance.sh
-    zsh scratch/agent/run_s2336_m5_descriptor_callsite_provenance.sh s2336_m5_descriptor_callsite_provenance
+    zsh -n scratch/agent/run_s2337_m5_descriptor_source_reachability.sh
+    zsh scratch/agent/run_s2337_m5_descriptor_source_reachability.sh s2337_m5_descriptor_source_reachability

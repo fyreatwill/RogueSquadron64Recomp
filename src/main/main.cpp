@@ -564,6 +564,9 @@ static std::atomic<uint32_t> g_rs64_audio_ordinal{0};
 static uint32_t g_rs64_audio_phase_key = 0xFFFFFFFFu;
 static uint32_t g_rs64_audio_phase_row = 0;
 static thread_local uint32_t g_rs64_audio_break_pc = 0;
+static thread_local uint32_t g_rs64_m5_init_voice_caller_pc = 0;
+static thread_local uint64_t g_rs64_m5_init_voice_event = 0;
+static std::atomic<uint64_t> g_rs64_m5_init_voice_next_event{1};
 
 extern "C" void rs64_audio_image_break(uint32_t pc) {
     g_rs64_audio_break_pc = pc;
@@ -571,6 +574,111 @@ extern "C" void rs64_audio_image_break(uint32_t pc) {
 
 extern "C" uint32_t rs64_audio_image_break_pc() {
     return g_rs64_audio_break_pc;
+}
+
+static bool rs64_m5_init_voice_probe_enabled() {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_INIT_VOICE_SAMPLE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    return enabled;
+}
+
+static bool rs64_m5_init_voice_target_phase(uint32_t width, uint32_t origin) {
+    return (width == 1024u && origin == 0x00790400u) ||
+           (width == 512u && origin == 0x006AB400u);
+}
+
+extern "C" void rs64_m5_init_voice_probe_control() {
+    if (!rs64_m5_init_voice_probe_enabled()) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!rs64_m5_init_voice_target_phase(width, origin)) return;
+    static std::atomic<uint32_t> emitted_key{0xFFFFFFFFu};
+    const uint32_t key = (width << 24) ^ origin;
+    if (emitted_key.exchange(key, std::memory_order_relaxed) == key) return;
+    std::fprintf(stderr,
+                 "[init-voice-sample-control] kind=host-positive-control"
+                 " phase=%u width=%u origin=0x%06X\n",
+                 rs64_phase_ord(), width, origin);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_init_voice_callsite(uint32_t caller_pc) {
+    g_rs64_m5_init_voice_caller_pc = caller_pc;
+    g_rs64_m5_init_voice_event = 0;
+    if (!rs64_m5_init_voice_probe_enabled()) return;
+
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!rs64_m5_init_voice_target_phase(width, origin)) return;
+
+    uint32_t route_phase = phase;
+    uint32_t route_width = width;
+    uint32_t route_origin = origin;
+    uint32_t ordinal = 0xFFFFFFFFu;
+    uint32_t row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        &route_phase, &route_width, &route_origin, &ordinal, &row,
+        &exit_reason, &arm);
+    const uint64_t event = g_rs64_m5_init_voice_next_event.fetch_add(
+        1, std::memory_order_relaxed);
+    g_rs64_m5_init_voice_event = event;
+    std::fprintf(stderr,
+                 "[init-voice-callsite] event=%llu caller_pc=0x%08X"
+                 " prev_pc=0x%08X phase=%u width=%u origin=0x%06X"
+                 " active=%u arm=%s ordinal=%u row=%u\n",
+                 static_cast<unsigned long long>(event), caller_pc, caller_pc,
+                 active ? route_phase : phase, active ? route_width : width,
+                 active ? route_origin : origin, active ? 1u : 0u,
+                 active && arm ? arm : "n/a", ordinal, row);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_init_voice_entry(uint32_t voice_idx, uint32_t desc,
+                                           uint32_t f4, uint32_t f8,
+                                           uint32_t fC, uint32_t f10,
+                                           uint32_t f14, uint32_t guest_ra) {
+    if (!rs64_m5_init_voice_probe_enabled()) return;
+
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!rs64_m5_init_voice_target_phase(width, origin)) return;
+
+    uint32_t route_phase = phase;
+    uint32_t route_width = width;
+    uint32_t route_origin = origin;
+    uint32_t ordinal = 0xFFFFFFFFu;
+    uint32_t row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        &route_phase, &route_width, &route_origin, &ordinal, &row,
+        &exit_reason, &arm);
+    const uint64_t event = g_rs64_m5_init_voice_event != 0
+        ? g_rs64_m5_init_voice_event
+        : g_rs64_m5_init_voice_next_event.fetch_add(1, std::memory_order_relaxed);
+    std::fprintf(stderr,
+                 "[init-voice-sample] event=%llu caller_pc=0x%08X"
+                 " prev_pc=0x%08X guest_ra=0x%08X phase=%u width=%u"
+                 " origin=0x%06X active=%u arm=%s ordinal=%u row=%u"
+                 " voiceIdx=0x%08X desc=0x%08X f4=0x%08X f8=0x%08X"
+                 " fC=0x%08X f10=0x%08X f14=0x%08X\n",
+                 static_cast<unsigned long long>(event),
+                 g_rs64_m5_init_voice_caller_pc,
+                 g_rs64_m5_init_voice_caller_pc, guest_ra,
+                 active ? route_phase : phase, active ? route_width : width,
+                 active ? route_origin : origin, active ? 1u : 0u,
+                 active && arm ? arm : "n/a", ordinal, row, voice_idx, desc,
+                 f4, f8, fC, f10, f14);
+    std::fflush(stderr);
+    g_rs64_m5_init_voice_event = 0;
 }
 
 static bool rs64_audio_probe_enabled() {
@@ -1970,6 +2078,7 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
             // direct measurement, not an assumption.
             static uint32_t s_audtask_n = 0;
             rs64_filter_voice_audit_positive_control();
+            rs64_m5_init_voice_probe_control();
             if (s_audtask_n < 40 || (s_audtask_n % 128) == 0) {
                 fprintf(stderr, "[audtask-dispatch] n=%u real_ucode=%d\n",
                         s_audtask_n, s_use_real_audio_ucode);

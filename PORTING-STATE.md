@@ -109977,3 +109977,52 @@ Run a ground-truth-first retail/port callsite census for the actual
 `musyxInitVoiceFromSample` function entry and its previous-PC attribution. Keep
 the qualified route, same-build stub/image arms, and all task/DMA/PCM/filter
 controls. Do not repeat the descriptor/filter null or add behavior.
+
+## Session 2336 (2026-08-24) — M5 callsite provenance selects port init never called
+
+The planned work unit was one ground-truth-first descriptor-init callsite
+census. The first fixed-version attempt exposed a script-only indentation error
+in the preflight parser and was killed with SIGKILL before its port evidence was
+accepted; its stale gate was not used as evidence. A clean-tag rerun then
+completed with the phase-qualified host positive control fixed and fresh output
+files.
+
+The independent retail oracle passed whole-RDRAM `32280738`, physical target
+window `0x00165000:0x0016B000` `32270412`, mode/gate/status `108/17/22`,
+known-zero `0x0001498A=0`, title/hangar, and positive watched PCs: entry
+`0x80092128=681`, descriptor store `0x80092230=681`, trigger
+`0x8009231C=681`, key-on `0x80090B68/0x80090C28=83450/2231`, decode
+`0x8009C904=1942`, filter caller/callee `0x8009D740/0x8009D7D0=6384/6384`,
+and service `0x8009B5A8=3911`. The route-specific `0x8009C4E8` PC was
+explicitly zero. The oracle gate was positive before either port arm ran.
+
+Both same-build sequential port arms reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`. The host-positive init-voice control fired in both
+target phases in both arms. Each arm had positive task/DMA/guest-receive/PCM/
+filter controls, target render-stage `5`, and key-on activity `33`. The two
+static callsite hooks immediately before `jal 0x80092128` emitted `0/0` rows;
+the callee's independent entry probe and descriptor-store/payload rows were
+also `0/0` in both arms. No crash or abort marker occurred; the harness's
+per-arm wait status was the known `127` cleanup artifact after hangar was
+observed, while the wrapper itself exited `0` and selected `H-PortInitNeverCalled`.
+
+This selects **H-PortInitNeverCalled** at the qualified capture scope. The
+retail caller/store witness, target-phase host controls, render/key-on rows,
+and two independent port-side lines (explicit callsite hooks plus callee
+entry/store probes) rule out a missing positive control or a stale filter/logger
+gate. It rules out neither inactive enclosing callers nor a pre-call branch;
+those are the next discriminator. No guest state, task data, audio output,
+control flow, store, guard, remap, slot value, default, or consumer changed.
+
+ORIGIN: diagnostic-only. The code diff adds phase-qualified host/callsite/
+entry probes and durable fixup-script insertion points; it does not mitigate,
+skip, restore, or alter any corruption or wild value.
+
+### Next
+
+Run the s2337 ground-truth-first caller reachability/branch-edge census. Keep
+the qualified route and both port arms. Instrument the entries of
+`soundMacroOpPlaySampleKeymap` (`0x8008A38C`) and
+`startStreamedSampleVoice` (`0x80097FE8`) plus markers immediately before
+callsites `0x8008A564` and `0x800980EC`; compare them with the retained s2336
+callsite/callee probes. Do not add behavior.
