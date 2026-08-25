@@ -5,12 +5,13 @@ history through s2329 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.
 §47; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2334 (2026-08-24). The file was compacted in s2330
+Maintained in Session 2335 (2026-08-24). The file was compacted in s2330
 after exceeding the 60,000-byte threshold; durable s2304–s2329 history moved
-to §47. The s2333 result refutes H-UpstreamVoiceAbsent but does not select
-H-FilterPathGated or H-PriorOrdinalReuse: target render/key-on rows are live,
-while descriptor and real filter rows are absent. The next work unit is the
-descriptor-to-filter boundary in `scratch/agent/NEXT.md`.
+to §47. The s2335 result selects H-DescriptorWriterAbsent at capture scope:
+retail descriptor/key-on/filter controls and both port arms are positive, but
+the port has no target init event, descriptor-entry row, descriptor payload, or
+real filter row. The next work unit is the retail/port init callsite boundary
+in `scratch/agent/NEXT.md`.
 
 ## Current state
 
@@ -46,6 +47,17 @@ descriptor-to-filter boundary in `scratch/agent/NEXT.md`.
   there is no same-ordinal post-stage lifecycle row. The requested retail
   `0x8009C4E8` execution count is explicitly zero on this route, while the
   other requested retail PCs are positive.
+- The s2335 descriptor census is qualified by retail whole-RDRAM `32439063`,
+  target-window `32428737`, mode/gate/status `108/17/22`, title/hangar, and
+  retail render `85891`, descriptor `688`, trigger `688`, key-on
+  `83628/2231`, filter caller/callee `6384/6384`, and requested-zero
+  `0x8009C4E8`. Both port arms reached hangar and had task/DMA,
+  guest-receive, PCM source/consumer, and host-positive controls. Each had
+  target render-stage `5` and key-on activity, but init-writer events,
+  `init-voice-sample` entry rows, descriptor payload events, and real filter
+  rows were all `0`; the image arm had `2314` DMA-range rows. This is two
+  independent port-side lines (unconditional lifecycle event census and the
+  entry/filter audit) plus the retail witness, not a behavior-change result.
 - The independent retail oracle is the witness for game-side memory claims.
   Whole-RDRAM, title/hangar, gate/task/status, target-window, and named-PC
   controls must pass before a retail null is interpreted. It reaches attract,
@@ -145,12 +157,13 @@ sequence; #1 is the next work unit.
    gate and inventories live stubs, traps, gates, and the incremental
    task→DMA→service→slot→voice→PCM validation sequence. Continue only with a
    ground-truth-first, positive-control-qualified step.
-2. **M5 descriptor-to-filter voice boundary — next.** The s2333 census
-   refuted a missing upstream render entry but found zero target descriptor
-   rows and zero real filter rows, with two prior-ordinal lifecycle rows. Run
-   one new ground-truth-first descriptor-entry/writer/callsite discriminator;
-   do not repeat the upstream PC census, output metadata, or add writeback,
-   address remapping, slot values, guards, or defaults.
+2. **M5 descriptor init callsite provenance — next.** s2335 selected
+   H-DescriptorWriterAbsent: target render/key-on work is live, but both the
+   unconditional init-writer event and `musyxInitVoiceFromSample` entry probe
+   are zero. Run one ground-truth-first retail/port callsite census using the
+   actual function entry and previous-PC attribution; do not repeat the
+   descriptor/filter null, output metadata, or add writeback, remapping, slot
+   values, guards, defaults, or a consumer.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator restoring `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
@@ -186,10 +199,13 @@ are assigned to the prior audio ordinal, and no post-stage lifecycle row was
 present. The s2332 host-positive span control fired in both arms, but the real
 port filter/voice audit emitted zero rows while retail independently executed
 the caller/callee in hangar. The s2333 census then found target render-stage
-and key-on rows but zero descriptor and real filter rows; two lifecycle rows
-were prior-ordinal. This rejects an upstream-render absence, but does not
-select a filter-path gate or prior-ordinal reuse. The active boundary is the
-render/key-on to descriptor/filter edge.
+and key-on rows but zero descriptor and real filter rows; s2335 added an
+unconditional init-writer event and an independent function-entry probe, both
+zero in both arms, while the same-run host-positive filter controls fired.
+Retail independently executed the descriptor, trigger, key-on, and filter PCs.
+This selects H-DescriptorWriterAbsent at capture scope and moves the active
+boundary to the callsite into `musyxInitVoiceFromSample`; no store, guard, or
+consumer change is authorized.
 
 ### VI state and second origin
 

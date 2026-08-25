@@ -109926,3 +109926,54 @@ retail descriptor/filter PCs and the port's descriptor-entry/store, render,
 key-on, real-filter, slot/status, lifecycle, and PCM rows. Do not repeat the
 upstream PC census or add writeback, remapping, slot values, guards, defaults,
 or output-metadata machinery.
+
+## Session 2335 (2026-08-24) — M5 descriptor init writer absent at target scope
+
+The planned work unit was one ground-truth-first, no-behavior-change
+descriptor-entry/writer/callsite census. The driver first repeated the retail
+oracle preflight. It passed whole-RDRAM `32439063`, physical target window
+`0x00165000:0x0016B000` `32428737`, mode/gate/status `108/17/22`, known-zero
+`0x0001498A` `0`, title/hangar, and positive retail execution counts render
+`0x8008FFAC=85891`, descriptor `0x80092230=688`, trigger `0x8009231C=688`,
+key-on `0x80090B68=83628` and `0x80090C28=2231`, filter caller/callee
+`0x8009D740/0x8009D7D0=6384/6384`, and service `0x8009B5A8=3915`.
+The requested route-specific `0x8009C4E8` execution count remained zero.
+
+The first same-build port capture reached hangar in both arms but was
+classified `H-CoverageInvalid` by a harness predicate: it incorrectly required
+image DMA-range rows from the silent arm and phase-gated the host-positive
+filter control. That run is recorded as a harness failure, not game evidence.
+The fixed driver reran the same work unit after making the stub/image control
+requirements arm-specific and counting the host control globally.
+
+In the qualified fixed capture, both sequential arms reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Stub controls were task ABI
+`36`, DMA rows `36`, guest-receive `52`, PCM source/consumer `38/38`, and host
+filter control `1`; image controls were task ABI/DMA rows `27/27`, DMA-range
+`2314`, guest-receive `38`, PCM source/consumer `26/26`, and host filter control
+`1`. The image table had two nonzero target stage rows. Across the target
+scope, each arm had render-stage `5` and key-on activity `33`, while both had
+zero init-writer `[m5-audio-event]` rows at `0x80092230`, zero independent
+`[init-voice-sample]` entry rows, zero descriptor payload events, zero
+`[init-desc]` rows, and zero real `[filter-voice-audit]` rows. Same-ordinal and
+prior-ordinal descriptor-stage joins were both zero.
+
+This selects **H-DescriptorWriterAbsent** at the measured capture scope. The
+qualified controls rule out H-CoverageInvalid, and the two independent port
+lines (the unconditional lifecycle-event census and the function-entry/
+filter audit) rule out treating the old `[init-desc]` logger gate as the sole
+explanation. It does not authorize a store, guard, remap, slot value, default,
+or consumer change; the next discriminator is the retail/port callsite into
+the actual `musyxInitVoiceFromSample` entry.
+
+ORIGIN: this iteration added only the diagnostic driver
+`scratch/agent/run_s2335_m5_descriptor_filter_boundary.sh`, its fixed control
+predicate, and capture summaries; no guest state, task data, audio output,
+control flow, or default changed.
+
+### Next
+
+Run a ground-truth-first retail/port callsite census for the actual
+`musyxInitVoiceFromSample` function entry and its previous-PC attribution. Keep
+the qualified route, same-build stub/image arms, and all task/DMA/PCM/filter
+controls. Do not repeat the descriptor/filter null or add behavior.
