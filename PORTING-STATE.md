@@ -111047,3 +111047,31 @@ Run one fresh ground-truth capture with the task dump plus post-value sampling
 for watches 2–5 and writer PC `0x80090CA4`, then join values and order to the
 task rows and s2352 port ABI table. Keep all four phase buckets and controls;
 do not change the port audio contract.
+
+## Session 2358 (2026-08-24) — maintenance compacted current truth and migrated M5 archive
+
+The required maintenance check found `docs/CURRENT-TRUTH.md` at `62,553`
+bytes, above the `60,000`-byte threshold. No experiment, build, oracle run,
+or runtime edit was performed. Durable s2332–s2357 M5 findings were migrated
+to `docs/PROJECT-OVERVIEW.md` §48, including the C88 treatment boundary, the
+retail writer-placement/value results, and s2357's `2,477`-row task-ABI join
+with `1,153` nonzero task/field/writer/order relations. The operational current
+truth was compacted to `11,644` bytes and `203` lines, preserving the active
+backlog, safety rules, superseded conclusions, and the s2359 task-field
+value/order work unit.
+
+This maintenance result rules out no new runtime hypothesis and authorizes no
+writer, task-data, consumer, default, guard, or mitigation change. It does
+confirm that the durable recent history is available in §48 and that the next
+discriminator remains the retail post-value/order join. The previous submodule
+modifications were left untouched.
+
+ORIGIN: documentation maintenance only; no mitigation-shaped machinery or
+game behavior changed.
+
+### Next
+
+Run the s2359 ground-truth capture specified in `scratch/agent/NEXT.md`, with
+all four phase buckets, task dump, post-value watches 2–5, writer PC
+`0x80090CA4`, and retained controls. Keep the C88 treatment opt-in and do not
+change the port audio contract.

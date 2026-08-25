@@ -4408,3 +4408,81 @@ the six-row prior-route signature. This selects `H-OutputBuffZero` at capture
 scope, leaves the destination-to-slot/key-on boundary open, and authorizes no
 behavior change. The filter/voice null remains unevaluable without its
 positive control.
+
+## 48. M5 task-field, writer, and audio-boundary archive (s2332–s2357), migrated in s2358
+
+This section preserves the durable conclusions that were compacted out of
+`CURRENT-TRUTH.md`. Exact commands, parser revisions, rejected captures, and
+raw counts remain in `PORTING-STATE.md` and the session artifacts.
+
+### Audio route and upstream boundary
+
+s2332–s2338 added independent retail controls and a sequence of regeneration-
+safe port probes. The port reached target render and key-on work, but the real
+descriptor/filter path remained absent under positive host controls. Direct
+callsite, callee-entry, child-caller, and parent-edge probes were all zero in
+both silent and image arms. s2339–s2342 moved the measured boundary upward
+through the scheduler and sequencer: the VI dispatcher reached
+`musyxSynthFrame`, but did not dispatch the registered service path, and the
+first observed gate at `0x80091468` read zero and bypassed. These were capture-
+scope reachability results, not permissions to add guards or bypasses.
+
+s2343 independently watched the retail and port writer sequence for the gate.
+Retail `0x8008EC88` stored `0x01000000`; both port arms requested nonzero but
+stored zero and then took the bypass. s2344's opt-in C88 treatment restored the
+fall-through branch and exposed normal-tail, slot, and filter activity, but did
+not produce a complete PCM/voice transition. s2345's ordinal join found
+treatment-side key-on/slot and descriptor-init rows, while exact PCM and
+completed-task joins remained absent. The active boundary therefore moved from
+C88 readback to task output/publication; no default writer or consumer change
+was authorized.
+
+### Task output and retail writer provenance
+
+s2346 joined image-stage rows to completed task intervals. The C88=1 image arm
+completed `99` tasks, but every joined ABI row advertised zero output buffer and
+size; `3,689` generated DMA ranges had zero output overlap, and `200` image
+stage rows were stage-only. Sequence-keyed PCM rows were not sufficient to
+prove publication. This selected `H-OutputMetadataWriterAbsent` at capture
+scope.
+
+s2347 paired that port result with an independent retail output-span witness.
+Retail wrote the watched span from `0x80094648` in both target phases, while
+all four qualified port arms exposed zero ABI output fields. s2348's corrected
+four-origin field census showed those retail writes landed at
+`0x00141AD8..0x00141AEC`, with unrelated `s0`/source-word fields; no port
+computed `data_ptr+0x100` changed, was written, or overlapped a generated DMA
+range. This closed `0x80094648` as a candidate task-field writer and selected
+`H-RetailWriterSentinelUnrelated` at the measured scope.
+
+s2349–s2353 mapped known retail writer PCs to exact task-field destinations.
+`0x80090CA4` joined both fields only in the 1024/title phase and was absent as
+a universal writer in the 512/hangar phase. The hangar census found `11`
+positive writer rows for the three watched fields, all within the retained
+s2352 port field set; the actual payload and completion contract remained
+open. s2354's first detail capture overflowed, so its null was rejected as a
+capacity result. s2355 retained all nine positive keys after increasing the
+detail cap; the only value intersection was the common zero sentinel, selecting
+`H-RetailWriterIsUnrelated` at capture scope. s2356 independently found no
+nonzero field-role match and left the retail task-ABI relation open.
+
+s2357 added an oracle-only task dump at retail `osSpTaskStartGo`, PC
+`0x80033FCC`. It recorded `2,477` bounded type-2 rows; every
+`data_ptr+0x100` resolved to one of the four exact watched fields, with zero
+invalid pointers and overflow. Joining those rows to the retail writer
+histogram and retained s2352 port ABI table produced `1,153` nonzero
+task/field/writer/order relations and `1,324` zero/sentinel-only rows. The
+nonzero relations occurred in the two phase buckets represented by the
+retained port table; the other buckets had no retained port rows. This selects
+`H-RetailTaskAbiNamesPortField` at capture scope and closes the task-ABI naming
+boundary, while leaving writer payload/order and port behavior open.
+
+### Safety and non-results
+
+No session in this archive changed a writer, task data, DMA metadata, consumer,
+default, guard, or mitigation. The C88 treatment remains opt-in. The retail
+oracle remains the independent witness for game-side memory claims and reaches
+attract, title, and hangar, not a mission. Both tested port arms qualify through
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; image-stage payloads
+rotate between captures. The next discriminator is retail post-value/order
+sampling joined to the type-2 task table and the retained port ABI table.
