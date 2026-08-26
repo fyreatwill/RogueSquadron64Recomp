@@ -30,17 +30,20 @@ Current maintenance marker: Session 2461 (2026-08-26).
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
 
-- **s2463 — the dynamic callback capture is blocked before the target phase.**
-  The independent retail oracle passed the whole-RDRAM control, reached
-  hangar origin `0x006AB400`, and observed 314 `spawnNpcOfType`/`0x800400BC`
-  executions plus 3,220 `slotDispatcherIter` executions. The qualified port
-  build fired its indirect resolver positive control, reached only phase 4
-  (`640`, origin `0x0066A500`), then aborted in `get_function(0)` through
-  `convertMat3x4ToN64Mtx` with last guest PC `0x80001F88`. No target-phase
-  dynamic-callback or pre-dispatch rows were emitted. This is a qualified
-  non-result for `H-ZeroWriter`, `H-ValidWriter`, and `H-UnresolvedWriter`,
-  not evidence for any callback polarity or permission for a guard/change.
-  Artifact: `scratch/agent/s2463_m5_dynamic_callback_capture/audit.md`.
+- **s2463/s2464 — the dynamic callback capture selects H-PhaseMismatch as
+  route diagnosis.** The independent retail oracle passed the whole-RDRAM
+  control, reached hangar origin `0x006AB400`, and observed 314
+  `spawnNpcOfType`/`0x800400BC` executions plus 3,220 `slotDispatcherIter`
+  executions. The qualified port build fired its indirect resolver positive
+  control, reached only phase 4 (`640`, origin `0x0066A500`), then aborted
+  in `get_function(0)` through `convertMat3x4ToN64Mtx` with last guest PC
+  `0x80001F88`. No pre-target boundary row was emitted before the abort;
+  per the defined discriminator, this selects `H-PhaseMismatch` as the route
+  diagnosis. `H-ZeroWriter`, `H-ValidWriter`, and `H-UnresolvedWriter` are
+  unevaluable in the current configuration and refuted as interpretable by
+  these rows. No callback polarity, guard, dispatch change, or audio change
+  is authorized. Artifact:
+  `scratch/agent/s2463_m5_dynamic_callback_capture/audit.md`.
 
 - **s2454 — no port runtime dispatcher body replaces retail `0x8002BEEC`.**
   The source candidate table finds `get_function`/`rs64_m5_dispatch_boundary`

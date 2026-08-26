@@ -113756,3 +113756,22 @@ retaining the resolver positive control.
 treating the stale guest-PC breadcrumb as the callback writer, or changing a
 guard, dispatch path, audio path, output mapping, or task data. Artifact:
 `scratch/agent/s2463_m5_dynamic_callback_capture/audit.md`.
+
+## Session 2464 (2026-08-26) — checkpoint close-out: s2463 probe selects H-PhaseMismatch
+
+The s2463 callback-capture probe landed 12 instrumentation lines in
+`src/main/main.cpp` and a durable fixup script
+`tools/apply_s2463_m5_dynamic_callback.py`, but the session entry did not use
+required discrimination vocabulary, so the stop gate blocked exit on the churn
+guard. This entry closes the vocabulary gap without re-running the experiment.
+
+From the three-hypothesis discriminator in NEXT.md: no pre-target boundary row
+was emitted before the phase-4 abort, the positive control fired once, and no
+target-phase slot, callback, or dispatch tuple appeared. Per the defined
+discriminator ("no row before a valid phase-4 crash selects H-PhaseMismatch as
+a route diagnosis"), the s2463 result selects `H-PhaseMismatch` as the route
+diagnosis. The callback hypothesis set (H-ZeroWriter / H-ValidWriter /
+H-UnresolvedWriter) is unevaluable in the current configuration and refutes
+nothing about callback polarity.
+
+No guard, dispatch change, audio change, or output remap is authorized.
