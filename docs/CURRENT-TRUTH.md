@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2409 (2026-08-26).
+Current maintenance marker: Session 2411 (2026-08-26).
 
 ## Current state
 
@@ -53,6 +53,11 @@ Current maintenance marker: Session 2409 (2026-08-26).
   image identity rows were captured. This produces no identity selection; the
   image null is route-invalid. Artifact:
   `scratch/agent/s2410_identity_join/`.
+- s2411 reran the bounded identity capture. The stub control reached title and
+  hangar and fired the independent key-on positive control, but the image arm
+  crashed before title at guest PC `0x8000B650`. It emitted no identity rows,
+  so this is route-invalid and selects no identity hypothesis. Artifact:
+  `scratch/agent/s2411_identity_join/`.
 
 ## Latest evidence
 
@@ -103,6 +108,11 @@ Current maintenance marker: Session 2409 (2026-08-26).
   authorizes repeating the downstream-range table. No downstream consumer
   conclusion follows yet. Artifact:
   `scratch/agent/s2408_downstream_range_identity/`.
+- **s2411 — identity comparison was again route-invalid.** The stub arm reached
+  title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` and emitted
+  `keyon-w40`; the image arm died before width 1024 at guest PC `0x8000B650`.
+  No image identity rows exist, so phase, ordinal/row, sequence, and no-join
+  hypotheses remain unselected.
 - **s2402 — identity is valid at stage entry.** Corrected same-build stub/image
   arms passed route controls; both observed `prepare-clear`, then
   `stage-observe` with `valid=1` and matching `prepare_seq`, followed by
@@ -186,9 +196,9 @@ produced no same-identity downstream rows. s2409 independently observed
 hangar key-on events while the image join still classified every captured row
 as `stage-only`; the current conclusion is an identity-key mismatch, not an
 absent consumer or a valid destination remap.
-The s2410 identity table is present in the runtime, but its image-arm capture
-is pending a valid route; do not interpret its zero table rows or change the
-sequence window until the image arm reaches title and hangar.
+The s2410 identity table is present in the runtime, but s2411 again failed to
+obtain a valid image-arm capture; do not interpret its zero table rows or
+change the sequence window until the image arm reaches title and hangar.
 No behavior change is authorized: do not promote C88, invent output metadata,
 remap destinations, alter task data, force a consumer, or add a guard without
 a new discriminator and named writer legitimacy.

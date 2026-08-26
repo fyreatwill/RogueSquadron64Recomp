@@ -112593,3 +112593,22 @@ positive control, but not the image-side table.
 ORIGIN: no mitigation or behavior change; the new table is diagnostic only.
 Artifacts: `scratch/agent/retail_m5_groundtruth.log`,
 `scratch/agent/s2410_identity_join/`.
+
+## Session 2411 (2026-08-26) — reran M5 identity table with route controls
+
+The existing instrumented binary was rebuilt only because the expected binary
+was absent in this checkout. The image arm ran first with the phase-gated s2411
+recipe, but died before VI width 1024; its log contains `[CRASH]` at guest PC
+`0x8000B650` and no image-stage or identity-table rows. This is route-invalid,
+not evidence for H-PhaseKey, H-OrdinalRowKey, H-SequenceKey, or
+H-NoJoinAtCapture.
+
+The same-binary silent-stub control reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`. Its independent downstream positive control fired,
+including `slot-sb` and `keyon-w40` events; it also emitted PCM and audio-task
+join rows. Thus the control path and event instrumentation were live in this
+run, while the image-side identity comparison remained unexecuted. No task,
+audio, gate, routing, VI, output, or mitigation behavior changed.
+
+ORIGIN: no mitigation or behavior change; the identity table is diagnostic only.
+Artifacts: `scratch/agent/s2411_identity_join/`.
