@@ -112256,3 +112256,28 @@ Artifact: `scratch/agent/s2397_route_order/`.
 
 ORIGIN: no mitigation or behavior change; added only preparation-order
 witnesses and the documented env var.
+
+## Session 2398 (2026-08-25) — M5 route-order logging perturbation control
+
+The prescribed same-build two-arm capture ran the qualified LLE image arm
+from `build/` for 60 seconds with missing-function suppression and title phase
+gating. Arm A disabled `ROGUESQ_LOG_M5_ROUTE_ORDER`; Arm B enabled it. Both
+arms passed the dispatch and title-origin controls and had no crash/abort
+markers when intentionally SIGKILLed at the timeout. Arm A emitted `60`
+`[audtask-dispatch]` and `140` `[m5-stage-call]` rows. Arm B emitted `61`
+dispatch, `140` stage-call, and `2,744` `[m5-route-prepare]` rows, including
+`574` accepted target-phase preparations.
+
+Arm B's target-phase stage calls still reported `route_valid=0`, matching
+Arm A's invalid stage identity. This selects
+`H-RouteOrderWitnessPreservesRoute` and refutes
+`H-RouteOrderWitnessPerturbsPath`: the route-order logger did not perturb title
+reachability. It also makes s2397's pre-title crash a non-reproduced
+setup/intermittency result rather than evidence of logging causality. The
+accepted-preparation to invalid-stage identity boundary remains open. The
+capture did not change task data, audio, gate, fallback, dispatch, VI, output,
+or mitigation behavior. Artifact:
+`scratch/agent/s2398_route_order_perturbation_run2/`.
+
+ORIGIN: no mitigation or behavior change; this was a same-build logging
+perturbation control.

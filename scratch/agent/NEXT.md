@@ -1,47 +1,38 @@
-# NEXT work unit (s2398) — isolate route-order witness reachability perturbation
+# NEXT work unit (s2399) — locate accepted-preparation identity clearing
 
 HYPOTHESIS-ID: m5-image-stage-route-order-perturbation
 
-## State going in
-
-s2397's behavior-neutral route-order witness passed dispatch and stage-call
-controls but crashed at `0x8000B650` before title. Its audio-probe-enabled
-retry also failed to reach title, while s2396's stage-call-only run reached
-title. The target-phase preparation question is therefore confounded by
-whether the extra logging changes timing/state or whether the crash is an
-independent pre-title route failure.
-
 ## Work unit
 
-Run the existing built binary in two same-build arms concurrently for 60
-seconds from `build/`: Arm A has the s2396 controls and stage-call witness but
-`ROGUESQ_LOG_M5_ROUTE_ORDER=0`; Arm B adds `ROGUESQ_LOG_M5_ROUTE_ORDER=1`.
-Capture dispatch, title-origin, crash/abort, stage-call, and preparation-row
-counts. Use the s2392 oracle exact-window result as the existing ground-truth
-prerequisite; do not change task data, audio, gate, fallback, dispatch, VI,
-output behavior, or mitigation.
+Use the existing route-order/stage-call instrumentation in one new bounded
+capture. Keep the qualified LLE route, image arm, missing-function suppression,
+and `PROBE_PHASE_WIDTH=1024`. Add one phase-keyed join/reducer over Arm B's
+accepted `[m5-route-prepare]` rows and subsequent `[m5-stage-call]` rows,
+including the identity's `route_valid`, `prepare_seq`, route ordinal/row, and
+the call's guest PC/callsite if already available. Do not change task data,
+audio, gate, fallback, dispatch, VI, output behavior, or mitigation.
 
 ## Competing hypotheses and discriminator
 
-- H-RouteOrderWitnessPerturbsPath: only Arm B loses title or crashes; the
-  added preparation logging changes timing/state.
-- H-PreTitleCrashIndependent: both arms lose title with the same pre-title
-  crash family; route-order logging is not causal for reachability.
-- H-RouteOrderWitnessPreservesRoute: both arms reach title; the s2397 failure
-  was a one-off run/setup failure and target-phase ordering can be analyzed
-  from Arm B.
+- H-IdentityClearedBeforeStage: an accepted target preparation is followed by
+  a stage call with the identity cleared before entry.
+- H-IdentityNotConsumedByStage: accepted preparation remains observable, but
+  the stage call reads a separate/non-route identity source.
+- H-TargetPreparationIsUnrelated: accepted rows are from unrelated work and
+  do not temporally precede the target stage calls.
 
-The discriminating table is one row per arm: dispatch count, title-origin
-control, crash/abort count and last guest PC, stage-call count, preparation
-count, accepted-preparation count, and stage-call preparation-sequence joins.
-Only an Arm-B-only failure selects logging perturbation; matched pre-title
-failures select an independent crash boundary; title in both arms permits the
-target-phase ordering analysis.
+The discriminating table is phase-keyed and has one row per retained stage
+call: preceding accepted preparation sequence, delta/order, identity-valid
+state, route ordinal/row, stage callsite/PC, and arm. A consistent immediate
+accepted predecessor followed by `route_valid=0` selects clearing; an accepted
+identity with invalid stage state selects separate-source use; no accepted
+predecessors selects unrelated preparation. The existing whole-RDRAM oracle
+and s2392 exact-window controls remain prerequisites before adding or trusting
+any new field.
 
-## Controls and commands
+## Required controls
 
-Both arms must show `[audtask-dispatch]` activity; title origin
-`0x00790400` is the phase control. Use the built macOS executable from `build/`
-with the existing s2396 route controls, then SIGKILL each process after 60
-seconds. The s2392 oracle exact-window witness is the ground-truth
-prerequisite.
+Both the logger-off and logger-on arms must show dispatch activity and title
+origin `0x00790400`; phase-gate all counts with `PROBE_PHASE_WIDTH=1024` and
+kill each run with SIGKILL. The s2398 two-arm result is the reachability
+control; do not spend another iteration re-testing logger perturbation.

@@ -5,18 +5,17 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Current maintenance marker: Session 2397 (2026-08-25).
+Current maintenance marker: Session 2398 (2026-08-25).
 
-Maintained in Session 2397 (2026-08-25). The behavior-neutral route-order
-witness build produced `47` dispatch rows and `104` stage-call rows, but the
-suppressed run crashed at guest PC `0x8000B650` before title origin
-`0x00790400`; therefore the target-phase discriminator is route-invalid. In
-the pre-title capture, each four-stage call group echoed the immediately
-preceding route-preparation sequence, and all `1,010` preparation rows were
-non-target (`accepted=0`). This proves only that pre-title stage calls have a
-preceding preparation call; it does not distinguish target-phase preparation
-ordering or identity clearing. No task-data, audio, gate, fallback, dispatch,
-VI, output, or mitigation change is authorized.
+Maintained in Session 2398 (2026-08-25). The same-build route-order perturbation
+run passed title in both arms: Arm A (logger off) had `60` dispatch and `140`
+stage-call rows; Arm B (logger on) had `61` dispatch, `140` stage-call, and
+`2,744` preparation rows, including `574` accepted target-phase rows. Neither
+arm had crash/abort markers. Arm B's target-phase stage calls still had
+`route_valid=0`, matching Arm A's invalid identity, so the logger did not
+perturb reachability and accepted preparation is followed by identity loss or
+non-use before stage entry. No task-data, audio, gate, fallback, dispatch, VI,
+output, or mitigation change is authorized.
 
 The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
 
@@ -139,6 +138,22 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2398 — route-order logging does not perturb title reachability.** The
+  same-build two-arm run passed dispatch and title controls in both arms and
+  stayed free of crash/abort markers. Logger-off Arm A emitted `60` dispatch
+  and `140` stage-call rows. Logger-on Arm B emitted `61` dispatch, `140`
+  stage-call, and `2,744` preparation rows, of which `574` were accepted at
+  title phase. Its target-phase stage calls nevertheless remained
+  `route_valid=0`, as in Arm A. This selects
+  `H-RouteOrderWitnessPreservesRoute`, refutes
+  `H-RouteOrderWitnessPerturbsPath`, and makes the s2397 pre-title crash a
+  non-reproduced setup/intermittency result rather than a logging effect. The
+  accepted-preparation to invalid-stage identity boundary remains open.
+  Artifact: `scratch/agent/s2398_route_order_perturbation_run2/`.
+
+  ORIGIN: no mitigation or behavior change; this was a same-build logging
+  perturbation control.
 
 - **s2396 — image-stage calls occur before route identity is prepared.** The
   same-build suppressed image-arm run passed dispatch (`59` rows) and title
@@ -593,9 +608,11 @@ sequence; #1 is the next campaign priority.
   with suppression enabled the route is valid but the image-stage producer
   emitted zero rows, so audit that producer boundary next. s2397's route-order
   witness was target-phase invalid because the fixed run crashed before title;
-  do not treat its pre-title ordering as a target conclusion. Next, isolate the
-  crash boundary with a phase-transition control while retaining the same
-  preparation/stage join.
+  s2398's two-arm control shows the logger itself does not cause that failure.
+  Both arms reached title, while accepted target preparations were followed by
+  invalid stage identities. Next, isolate the identity-clear/non-use boundary
+  with one phase-keyed stage-to-preparation join; do not rerun the route-order
+  perturbation.
 2. **M5 task/output closure — closed at current capture scope.** s2387's
    corrected reporter-candidate table associated raw `[audtask-join]` records
    with 100% of 4,688 image-stage candidates; reporter completion was true for
@@ -741,6 +758,11 @@ are superseded at their measured scopes:
   census only retained stage-to-output rows and had no direct callback
   invocation marker; the new marker and the existing completion-event field
   both show producer invocation and association in the image arms.
+- s2397's implied logging-induced pre-title route failure is superseded by
+  s2398's same-build two-arm control: both logger-off and logger-on arms
+  reached title without crash markers. It was believable because the fixed
+  s2397 capture crashed before its title control, but that outcome did not
+  repeat when the logger was the only arm difference.
 
 ## Evidence and safety rules
 
