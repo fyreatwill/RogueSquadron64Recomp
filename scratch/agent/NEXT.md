@@ -1,50 +1,47 @@
-# NEXT work unit (s2423) — phase-key the port consumer-writer table
+# NEXT work unit (s2424) — close guest-store coverage for M5 candidate ranges
 
 HYPOTHESIS-ID: m5-image-contract-gap
 
 ## Work unit
 
-Add one observation-only, bounded port table at the existing audio/image
-consumer boundary. Record every phase-gated write or consumer event that can
-touch the retail-selected candidate ranges, joined to image DMA ordinal/row,
-task data pointer, and SP return. Keep the image opt-in and do not change task
-data, output ranges, gates, guards, dispatch, or defaults.
+Use the existing phase-keyed candidate-range table as the base and add one
+bounded observation-only table for guest CPU stores/DMA consumers in
+`0x167000:0x169B00`, `0x179800:0x179B00`, and `0x18FC00:0x18FD00`. Join each
+row to image ordinal/row, task data pointer, DMA destination, and SP return.
+Do not change task data, output ranges, gates, guards, dispatch, or defaults.
 
 ## Competing hypotheses and discriminator
 
-- H-MissingImageConsumer: valid image DMA/SP rows have no later port writer or
-  consumer event for the candidate range.
-- H-LegitimateConsumerWriter: a port writer/event joins the image row with the
-  same range and ordering as a retail candidate writer.
-- H-SharedConsumerWriter: a port writer exists, but only a phase transition or
-  task-field key joins it to the image row.
-- H-PortTableInvalid: the positive controls or image route fail, so a null is
-  uninterpretable.
+- H-ImageOnly: the image DMA is the only port writer in the candidate ranges.
+- H-PortGuestConsumer: a guest CPU writer/consumer exists and joins the image
+  row by phase/range/order.
+- H-SharedConsumer: a guest consumer exists but joins only by phase or task
+  field, not image ordinal/row.
+- H-TableInvalid: route or positive controls fail, so a null is unevaluable.
 
-The discriminating measurement is one phase-scoped row per candidate range
-with port event/PC, value/length, image ordinal/row, data pointer, DMA
-destination, break/SP return, and PCM/slot controls. A same-identity matching
-range/order selects H-LegitimateConsumerWriter; only a phase/task-field join
-selects H-SharedConsumerWriter; valid controls with no event select
-H-MissingImageConsumer. Missing controls select H-PortTableInvalid.
+The discriminator is a single phase-scoped table containing writer kind,
+guest PC, address/length/value, image ordinal/row, task data pointer, image
+DMA destination, SP return, and PCM/slot controls. A same-row guest writer
+selects H-PortGuestConsumer; only phase/task-field association selects
+H-SharedConsumer; valid controls with only `kind=2, pc=0` image DMA selects
+H-ImageOnly; missing controls selects H-TableInvalid.
 
-## Exact commands
+## Ground-truth and exact commands
 
-1. Before instrumentation, map the existing image-stage/DMA and consumer
-   logging sites:
-   `rg -n 'audtask-image-stage|audtask-dma-range|slot-sb|pcm-boundary|filter-voice' src lib tools`
-   and identify the narrowest existing write/consumer boundary. Do not add a
-   counter until the table fields above can all be populated.
-2. Build one instrumented target:
+1. Before instrumentation, map the fixup hooks and candidate sites:
+   `rg -n 'rs64_m5_pcm_writer_(store|dma)|0x167000|0x179800|0x18FC00|slot-sb|filter-voice' tools src lib`
+   and confirm the oracle writer PCs/ranges already recorded in
+   `scratch/agent/s2422_m5_writer/oracle.log`.
+2. Add only the bounded table in the fixup/runtime hook identified above,
+   retaining a positive-control row and all existing phase gates.
+3. Build once:
    `cmake --build build --config Debug --target RogueSquadron64Recomp`
-3. Run the independent oracle control and the two-arm driver in one capture,
-   preserving the whole-RDRAM/title/hangar gate and SIGKILL cleanup. Reuse the
-   candidate ranges `0x167000:0x169B00`, `0x179800:0x179B00`, and
-   `0x18FC00:0x18FD00`:
-   `zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2423_m5_port_writer`
-4. Summarize only phase-gated rows in
-   `scratch/agent/s2423_m5_port_writer/`; leave behavior unchanged.
+4. Run the oracle-gated two-arm capture with all passive controls:
+   `zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2424_m5_guest_writer`
+5. Summarize only title/hangar phase rows in
+   `scratch/agent/s2424_m5_guest_writer/`. Require oracle whole-RDRAM/title/
+   hangar controls, both port route controls, and the table positive control.
 
-Expected outcomes: both port arms and the independent controls must reach
-title and hangar. A matching port writer selects the legitimate/shared arm;
-valid controls with no event preserve H-MissingImageConsumer provisionally.
+Expected outcomes: same-row guest writes select H-PortGuestConsumer; only a
+phase/task-field join selects H-SharedConsumer; valid controls with no guest
+writer beyond image DMA preserve H-ImageOnly. No behavior change is allowed.

@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2422 (2026-08-26).
+Current maintenance marker: Session 2423 (2026-08-26).
 
 ## Current state
 
@@ -188,6 +188,14 @@ Current maintenance marker: Session 2422 (2026-08-26).
   not identify the semantic role of retail writers, establish payload
   legitimacy, or authorize a writeback, remap, task-data change, gate change,
   or guard. Artifact: `scratch/agent/s2422_m5_writer/`.
+- **s2423 — the port writer table sees only the image's own DMA.** The fixed
+  recipe armed `ROGUESQ_LOG_M5_PCM_WRITER`; the independent oracle passed
+  whole-RDRAM, title, and hangar controls, and both port arms reached title and
+  hangar. The silent arm had zero candidate-range writer rows. The image arm
+  had 953 rows, all sampled as `kind=2`, `pc=0` image-DMA writes, with zero
+  later image-downstream, slot, descriptor, or filter-consumer rows. This
+  selects `H-MissingImageConsumer` at the current key and does not authorize
+  remapping or writeback. Artifact: `scratch/agent/s2423_m5_port_writer_fixed/`.
 
 - **s2403 — retained image-stage bytes are legitimately zero at capture scope.**
   The retail oracle passed whole-RDRAM (`32,791,644` hits), title, and hangar
@@ -356,7 +364,11 @@ adjacent/task-field ranges, but the same-build port image arm still has no
 bounded slot/voice/descriptor/filter consumer row. This is a valid-control,
 single-capture selection of `H-MissingImageConsumer`, not proof that every
 retail writer is an image-output writer; port writer attribution remains the
-next discriminator.
+next discriminator. The fixed s2423 capture armed the existing phase-keyed
+writer table and found only image-owned DMA writes (`kind=2`, `pc=0`), not a
+later CPU/consumer writer; the silent control had none. Continue by closing
+the guest-store/consumer coverage gap rather than treating these DMA rows as
+retail-writer parity.
 The first same-identity post-DMA slot/key-on fields are now available in the
 image join. s2408 validated both route controls, but its image arm still
 produced no same-identity downstream rows. s2409 independently observed

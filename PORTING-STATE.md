@@ -112854,3 +112854,23 @@ retail controls, invalid port route, absent image dispatch, and missing image
 task completion. It does not identify the semantic role of the retail
 writers, prove payload legitimacy, or authorize a writeback/remap, task-data
 change, gate change, or guard. Artifact: `scratch/agent/s2422_m5_writer/`.
+
+## Session 2423 (2026-08-26) — validated M5 port writer table
+
+The first capture used the existing phase-keyed candidate-range table but the
+driver omitted `ROGUESQ_LOG_M5_PCM_WRITER`; it therefore produced no writer
+rows or table positive control and was not interpreted. Added that env var to
+the shared recipe and reran the same Debug build with the independent retail
+oracle. The oracle passed the whole-RDRAM positive control and title
+`0x00790400` / hangar `0x006AB400`; silent and image arms both reached title
+and hangar.
+
+The silent arm emitted zero candidate-range writer rows. The image arm
+emitted the writer control and 953 candidate-range rows. The sampled rows
+were all `kind=2`, `pc=0`, corresponding to the image arm's own DMA writes;
+there were zero later image-downstream, slot, descriptor, or filter-consumer
+rows. This selects `H-MissingImageConsumer` at the current key and rules out
+an observed port CPU/consumer writer in the table. It does not establish the
+semantic role or legitimacy of the retail writer PCs and authorizes no
+writeback, remap, task-data change, gate change, or guard. Artifact:
+`scratch/agent/s2423_m5_port_writer_fixed/`.
