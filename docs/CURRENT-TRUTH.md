@@ -5,13 +5,21 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2369 (2026-08-25). The M5 A1 pre-target capture passed
+Maintained in Session 2370 (2026-08-25). The M5 A1 pre-target capture passed
 the oracle and both early-640 port controls; both arms requested the null
 function address before target origin. The resident table contained only
 sections 0, 1, and 3, none containing address zero. This selects a missing or
 null function request at capture scope, not resident-overlay wrong dispatch.
 The first driver attempt was invalid because zsh stored literal `$!` PID
 values; the fixed scalar-PID driver reran the same build and arms.
+
+The s2370 A1 origin capture passed the oracle whole-RDRAM, target-origin, and
+watch-PC controls. Retail produced zero execution rows for `0x80001F88` in
+the target route, while both same-build port arms reached that guest PC and
+requested `0x00000000`. This selects `H-RetailCallsiteAbsent` at capture
+scope: the port reaches a null-function call site retail does not reach in the
+captured phase. It does not identify the preceding branch/input divergence or
+authorize a null fallback, dispatch change, VI change, or audio contract edit.
 
 The M5 A1 second-origin capture passed
 retail whole-RDRAM and both target-origin controls, but both same-build port
@@ -83,6 +91,19 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2370 — retail does not execute the port's A1 null-function call site at
+  this capture scope.** The repaired same-build runner passed the oracle
+  whole-RDRAM positive control (`10,000` callbacks), both target 640 origins,
+  and the oracle watch-PC mechanism control. Retail produced zero execution
+  rows for `0x80001F88` in the target route. Both same-build port arms passed
+  the early 640 transition and emitted one `[a1-abort]` row at phase 4
+  requesting `0x00000000`; both had the same three resident sections, none
+  containing address zero. This selects `H-RetailCallsiteAbsent` at capture
+  scope and rules out a shared retail null request. It does not name the
+  preceding divergence or authorize a fallback, dispatch/VI change, or audio
+  contract edit. Artifact:
+  `scratch/agent/s2370_m5_a1_null_function_origin/`.
 
 - **s2368 — A1 target-origin comparison was route-invalid on the port.** The
   fresh retail oracle passed the whole-RDRAM positive control (`10,000` hits)
@@ -221,11 +242,14 @@ sequence; #1 is the next campaign priority.
    requested address is `0x00000000`, outside every resident section in both
    arms. Do not repeat the resident-overlay table without a new ground-truth
    discriminator or add a null fallback.
-4. **M5 A1 null-function origin — next.** Use the retail oracle at guest PC
-   `0x80001F88` plus the port's named abort row to determine whether retail
-   executes the same call-site with a nonzero target/context, or whether the
-   port reaches a call-site retail never reaches. Keep whole-RDRAM, both target
-   origins, and early-640 controls; do not change dispatch or VI behavior.
+4. **M5 A1 caller/input boundary — next.** Use one new ground-truth-first
+   table around the port's predecessor path to `0x80001F88`: compare the
+   retail execution of the immediately preceding guest-PC window and its
+   `$a0/$a2` rows against the port last-guest-PC and call-site rows. Keep
+   whole-RDRAM, both target origins, and early-640 controls; do not add a null
+   fallback or change dispatch/VI behavior. A missing retail predecessor with
+   positive controls selects a route/input divergence; a matching predecessor
+   with different arguments selects an ABI/input value divergence.
 5. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator; do not chase a single recurring crash.
 6. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer-mode

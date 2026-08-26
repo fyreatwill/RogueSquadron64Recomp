@@ -111468,3 +111468,41 @@ the oracle's `$a0` GPR row and the port abort row. Determine whether retail
 executes the call-site with a nonzero target, the same null request, or never
 executes it in the target phase. Keep whole-RDRAM, both target origins, and
 early-640 controls; do not add a fallback or change dispatch/VI behavior.
+
+## Session 2370 (2026-08-25) — M5 A1 retail call site absent
+
+The prescribed s2370 runner was missing, so I reconstructed the bounded
+ground-truth-first runner from the validated s2369 recipe, adding only the
+retail watch at guest PC `0x80001F88` and fixing its summary parser. The Debug
+target built successfully before the capture.
+
+The retail oracle passed the whole-RDRAM positive control (`10,000` callbacks),
+both target 640 origin controls (`0x00696100` and `0x00696600`), and the
+watch-PC mechanism's independent `[gpr-ctl]` control. It produced zero
+execution rows for `0x80001F88` in the target route. In the same build, both
+port control and alternate arms passed the early 640 transition and emitted
+one `[a1-abort]` row at phase 4 requesting `0x00000000`; each resident table
+contained sections 0, 1, and 3, and none contained address zero. The port logs
+also recorded the expected abort-path crash markers and last-guest-PC marker
+`0x80001F88`.
+
+The two independent lines select `H-RetailCallsiteAbsent` at capture scope:
+the port reaches a null-function call site retail does not execute in this
+route. This rules out a shared retail null request, but does not identify the
+preceding branch/input divergence and authorizes no fallback, dispatch change,
+VI change, or audio contract edit. The next discriminator is a retail/port
+predecessor-window and argument comparison.
+
+Artifacts: `scratch/agent/s2370_m5_a1_null_function_origin/` and
+`scratch/agent/run_s2370_m5_a1_null_function_origin.sh`.
+
+ORIGIN: diagnostic-only. No game behavior, dispatch, VI selection, task data,
+field writeback, guard, or mitigation changed.
+
+### Next
+
+Run one ground-truth-first capture around the predecessor path to the port's
+null-function request. Watch a bounded retail guest-PC predecessor window with
+`$a0/$a2`, retain whole-RDRAM and both target-origin controls, and compare it
+with the port last-guest-PC and abort rows. Do not add a null fallback or
+change dispatch/VI behavior.
