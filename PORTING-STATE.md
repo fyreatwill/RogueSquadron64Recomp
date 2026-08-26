@@ -114347,3 +114347,27 @@ This is single-source port evidence; the oracle result is only a positive
 control. The pre-existing `MEM_W` row still disagrees with the explicit aligned
 read, so that discrepancy remains open. No remap, guard, or audio behavior
 change was made. Artifact: `scratch/agent/s2489_m5_descriptor_layout/audit.md`.
+
+## Session 2490 (2026-08-26) — explained descriptor macro discrepancy
+
+The oracle whole-RDRAM positive control ran before the port capture and
+reached its 10,000-callback threshold in 8 emulated seconds. The Debug build
+succeeded. Two short port captures were non-results because their input
+recipes did not reach the target phase; the fixed run used the established
+eleven-Start boot-relative schedule and reached 512 / `0x6AB400` at 26.1
+seconds.
+
+The fixed run recorded 36 phase-10 and 28 phase-12 comparison rows. Every
+selected field had `MEM_W == TO_PTR != explicit memcpy` at the same host
+offset; e.g. field 0 was `0x60A77444` versus explicit `0x00000001`, and field
+2 was `0x0CB0001D` versus explicit `0x800825D0`. The existing raw-byte rows
+retain the coherent OSTask shape, and descriptor/scheduler controls fired.
+
+This selects the pointer-ABI explanation: the callback takes `task_ptr` as
+`uint32_t`, while `MEM_W` and `TO_PTR` require the sign-extended guest
+representation when subtracting `0xFFFFFFFF80000000`. The callback therefore
+zero-extends the pointer before both reads, making them agree on invalid host
+memory. This rules out a TO_PTR-only struct-layout difference at this
+boundary. No task dispatch, audio behavior, descriptor remap, or guard was
+changed. Artifact:
+`scratch/agent/s2490_m5_descriptor_compare_hangar/audit.md`.

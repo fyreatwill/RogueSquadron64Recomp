@@ -1544,6 +1544,31 @@ extern "C" void rs64_m5_descriptor_yield(uint8_t* rdram, uint32_t task_ptr) {
         }
         std::fprintf(stderr, "\n");
         std::fflush(stderr);
+
+        const OSTask* task = TO_PTR(OSTask, task_ptr);
+        const uint32_t to_ptr_words[16] = {
+            (uint32_t)task->t.type, (uint32_t)task->t.flags,
+            (uint32_t)task->t.ucode_boot, (uint32_t)task->t.ucode_boot_size,
+            (uint32_t)task->t.ucode, (uint32_t)task->t.ucode_size,
+            (uint32_t)task->t.ucode_data, (uint32_t)task->t.ucode_data_size,
+            (uint32_t)task->t.dram_stack, (uint32_t)task->t.dram_stack_size,
+            (uint32_t)task->t.output_buff, (uint32_t)task->t.output_buff_size,
+            (uint32_t)task->t.data_ptr, (uint32_t)task->t.data_size,
+            (uint32_t)task->t.yield_data_ptr, (uint32_t)task->t.yield_data_size,
+        };
+        static const uint32_t compare_fields[] = {0u, 2u, 4u, 6u, 10u, 11u, 12u, 14u};
+        std::fprintf(stderr, "[m5-descriptor-compare] phase=%u width=%u origin=0x%06X task_ptr=0x%08X base=0x%06X",
+                     phase, width, origin, task_ptr, base);
+        for (uint32_t field : compare_fields) {
+            uint32_t explicit_read = 0;
+            std::memcpy(&explicit_read, rdram + base + field * 4u, sizeof(explicit_read));
+            std::fprintf(stderr, " f%u:guest=0x%08X off=0x%06X memw=0x%08X explicit=0x%08X toptr=0x%08X",
+                         field, task_ptr + field * 4u, base + field * 4u,
+                         (uint32_t)MEM_W(field * 4u, task_ptr), explicit_read,
+                         to_ptr_words[field]);
+        }
+        std::fprintf(stderr, "\n");
+        std::fflush(stderr);
     }
     g_rs64_m5_descriptor_yield_ptr.store(task_ptr, std::memory_order_release);
     std::fprintf(stderr,

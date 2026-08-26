@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2489 (2026-08-26).
+Current maintenance marker: Session 2490 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,18 @@ Current maintenance marker: Session 2489 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2490 — `MEM_W` and `TO_PTR` agree because the callback truncates the
+  guest pointer.** The oracle whole-RDRAM control passed at 10,000 callbacks;
+  the qualified hangar capture produced 36 phase-10 and 28 phase-12 comparison
+  rows. In every row `MEM_W` and `TO_PTR` matched, while explicit aligned reads
+  from `rdram + (task_ptr - 0x80000000)` contained the coherent OSTask fields.
+  Static inspection supplies the independent explanation: both runtime
+  address expressions subtract the sign-extended `0xFFFFFFFF80000000` base,
+  but `rs64_m5_descriptor_yield` accepts `task_ptr` as `uint32_t`, so the
+  callback argument is zero-extended before those expressions run. No
+  descriptor remap or behavior change is authorized. Artifact:
+  `scratch/agent/s2490_m5_descriptor_compare_hangar/audit.md`.
 
 - **s2489 — explicit raw-byte layout separates the descriptor representation.**
   After the oracle whole-RDRAM positive control fired 10,000 callbacks, the
@@ -513,11 +525,11 @@ Closed investigations are not active work items. This is one monotonic sequence;
    The host-local bridge reaches the target image task; SP completion and
    consumption are confirmed; the scheduler dispatches gspTask (0x800377C8)
    with `event_payload=task_ptr` in the hangar phase (yield-and-restart cycle).
-   The explicit raw-byte table shows a coherent aligned-host OSTask layout, but
-   the same callback's `MEM_W` row remains different. Next: isolate that macro
-   discrepancy with a same-callback comparison of `MEM_W`, explicit `memcpy`,
-   `TO_PTR` field reads, and exact guest/base offsets. Keep the scheduler
-   control and use the corrected boot-relative recipe with
+   The explicit raw-byte table shows a coherent aligned-host OSTask layout.
+   `MEM_W` and `TO_PTR` are invalid because the callback loses the required
+   sign extension. Next: change only the probe boundary to preserve the
+   guest pointer's `gpr` representation, then rerun the equality table. Keep
+   the scheduler control and use the corrected boot-relative recipe with
    `ROGUESQ_LOG_AUDIO_RETURN=1`, `PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=300`.
    Do NOT use `PROBE_KEYS_FROM_PHASE=1`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
