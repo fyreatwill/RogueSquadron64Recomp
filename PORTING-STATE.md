@@ -113105,3 +113105,23 @@ rules out a missing exact callback but does not authorize output remapping,
 writeback, task-data changes, gates, guards, or defaults. The next unit must
 capture the stable caller boundary as an independent discriminator.
 Artifact: `scratch/agent/s2434_retail_exact_store_context/`.
+
+## Session 2435 (2026-08-26) — tested retail caller boundary for exact writer
+
+The first launch did not run because this macOS environment has no `timeout`
+utility (`rc=127`); it produced no oracle output. The corrected shell-native
+watchdog ran the same observation-only retail capture and passed the
+whole-RDRAM positive control (`12,769` writes), title `1024 @ 0x00790400`,
+hangar `512 @ 0x006AB400`, and exact-range totals of `1,536` and `1,125`.
+The exact-store table retained `408` phase-latched rows from `0x800078EC`
+with no overflow. Every row returned to `0x8008F2D4`, shared
+`a0=0x801797B0`, `a1=0`, `a2=0x298`, `t0=0x2000FF01`, and `t1=0x8010FEF8`,
+while store addresses advanced through `0x001798B0..0x00179A44` and
+pre-store words varied. The return-site execution watch fired six lifetime
+times but emitted no phase-gated caller-context rows. This corroborates
+`H-RetailStoreHelper` at the same single-source oracle scope and rules out
+neither a semantic caller nor a missing phase-latched caller sample. It does
+rule out treating the return-site watch as a semantic-entry discriminator;
+the next unit must watch the actual `jal` callsite at `0x8008F2CC`. No port
+behavior, mapping, writeback, task-data, gate, guard, or default changed.
+Artifact: `scratch/agent/s2435_retail_caller_boundary/`.

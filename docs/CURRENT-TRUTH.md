@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2434 (2026-08-26).
+Current maintenance marker: Session 2435 (2026-08-26).
 
 ## Current state
 
@@ -412,9 +412,12 @@ sequence; #1 is the next campaign priority.
    `ra=0x8008F2D4`, `a0=0x801797B0`, `a1=0`, `a2=0x298`, `t0=0x2000FF01`,
    `t1=0x8010FEF8`, and advanced through the exact range while pre-store
    words varied. This selects `H-RetailStoreHelper` provisionally at the
-   oracle-only scope; a second independent line is still required. The next
-   unit must discriminate the stable caller/return context from a semantic
-   entry with a bounded caller execution/context capture. No port behavior
+   oracle-only scope; a second independent line is still required. s2435
+   repeated the capture with a return-site watch: six lifetime `0x8008F2D4`
+   hits and no phase-gated caller-context rows. This corroborates the repeated
+   helper shape at the same single-source oracle scope but does not close
+   semantic-entry identity. The next unit must use a genuinely new caller
+   discriminator, not another identical return-site watch. No port behavior
    change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
@@ -521,6 +524,17 @@ pre-store words varied. This selects `H-RetailStoreHelper` provisionally as
 single-source oracle evidence and rules out a missing exact callback, but it
 does not establish semantic entry identity or authorize a port change.
 Artifact: `scratch/agent/s2434_retail_exact_store_context/`.
+s2435 repeated the exact-store capture with a watch on the stable return site
+`0x8008F2D4`. The retail oracle passed the positive control (12,769 writes),
+title and hangar controls, and exact-range totals of 1,536 and 1,125 writes.
+It retained 408 phase-latched exact-store rows from `0x800078EC`; all shared
+`ra=0x8008F2D4`, `a0=0x801797B0`, `a1=0`, `a2=0x298`, `t0=0x2000FF01`, and
+`t1=0x8010FEF8`, with varied pre-store words. The return-site watch fired
+six lifetime times but produced no phase-gated caller-context rows. This
+corroborates `H-RetailStoreHelper` only at the single-source oracle scope and
+leaves semantic-entry identity unresolved; it rules out neither a missing
+phase-latched caller sample nor a semantic caller. No port behavior change is
+authorized. Artifact: `scratch/agent/s2435_retail_caller_boundary/`.
 - s2428's fixed paired port capture passed retail whole-RDRAM/title/hangar
   controls and both port-arm title/hangar controls. Each arm recorded 256
   exact `0x80015BC8` writes in `0x169730..0x1698EC`, joined to title
