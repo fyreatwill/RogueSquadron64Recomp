@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2420 (2026-08-26).
+Current maintenance marker: Session 2421 (2026-08-26).
 
 ## Current state
 
@@ -130,6 +130,15 @@ Current maintenance marker: Session 2420 (2026-08-26).
   `H-ContractGap` for the image-specific downstream contract at this capture
   scope. No default flip or output change is authorized. Artifact:
   `scratch/agent/s2420_m5_contract_fixed/`.
+- s2421 repeated the eleven-Start contract capture with the retail oracle
+  whole-RDRAM/title/hangar controls passing. Both port arms reached title and
+  hangar. The image arm changed DMEM, emitted generated DMA, reached
+  `break_pc=0x1328`, and completed SP service; neither arm emitted slot,
+  voice/reap, or MORT rows. PCM source/consumer rows remained the existing
+  zero-valued boundary stream and no row closed against the image task/DMA
+  identity. This selects `H-MissingImageConsumer` provisionally at the current
+  capture key. It does not authorize an output remap or prove the image DMA
+  payload is legitimate. Artifact: `scratch/agent/s2421_m5_contract/`.
 
 ## Latest evidence
 
@@ -157,6 +166,16 @@ Current maintenance marker: Session 2420 (2026-08-26).
   the port arms received no Start input; the fixed rerun used the eleven-Start
   schedule and is the only result interpreted here. Artifact:
   `scratch/agent/s2420_m5_contract_fixed/`.
+- **s2421 — image task completion still has no bounded downstream consumer.**
+  The independent oracle passed whole-RDRAM, title, and hangar controls, and
+  both stub/image port arms passed the same route controls. The image arm
+  produced DMEM changes, generated DMA, image-stage rows, `break_pc=0x1328`,
+  and SP completion. Neither arm produced slot, voice/reap, or MORT rows;
+  PCM source/consumer rows were the pre-existing zero-valued boundary stream
+  and did not join the image task/DMA identity. This provisionally selects
+  `H-MissingImageConsumer`, while leaving writer legitimacy and any
+  phase-transition/shared consumer unresolved. No behavior change is
+  authorized. Artifact: `scratch/agent/s2421_m5_contract/`.
 
 - **s2403 — retained image-stage bytes are legitimately zero at capture scope.**
   The retail oracle passed whole-RDRAM (`32,791,644` hits), title, and hangar
@@ -275,16 +294,19 @@ Current maintenance marker: Session 2420 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
-1. **M5 image contract gap — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
+1. **M5 image consumer provenance — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate. Step 1 is now valid: the image task dispatches, changes DMEM,
    performs generated DMA, reaches `break_pc=0x1328`, and completes SP service,
    but no image-specific slot/voice/output contract closes. Keep the image
-   opt-in and do not alter task data, output ranges, gates, or guards. Next run
-   one phase-keyed observation-only contract-gap table that joins image DMA
-   completion to named service, slot, voice, MORT, and PCM records for both
-   title and hangar, retaining the retail controls. The discriminator must
-   distinguish a missing image consumer from a shared downstream path and
-   from a zero-payload legitimate result.
+   opt-in and do not alter task data, output ranges, gates, or guards. Next ask
+   the retail oracle, before adding any port instrument, for PC attribution on
+   the candidate title/hangar image-DMA destination windows and the adjacent
+   task-field window, with whole-RDRAM/title/hangar controls. Then run one
+   same-build phase-keyed port capture only if the oracle has positive writer
+   hits. The discriminator is whether a named retail writer and matching port
+   writer owns the candidate output range, or whether no legitimate consumer
+   writer exists at that identity. Do not infer legitimacy from zero payloads,
+   SP completion, or PCM boundary rows.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate

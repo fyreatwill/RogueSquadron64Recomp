@@ -112813,3 +112813,20 @@ real, but no image-specific downstream slot/voice/output contract closes. It
 rules out route failure and missing image task completion, but does not prove a
 legitimate output destination or authorize a default flip. No runtime behavior
 changed. Artifact: `scratch/agent/s2420_m5_contract_fixed/`.
+
+## Session 2421 (2026-08-26) — ran M5 image downstream contract table
+
+Ran `cmake --build build --config Debug --target RogueSquadron64Recomp` and
+`zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2421_m5_contract`.
+The independent retail oracle passed the whole-RDRAM positive control and both
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` controls. The silent
+stub and Factor 5 image port arms both reached those phases. The image arm
+changed DMEM, emitted generated DMA and image-stage rows, reached
+`break_pc=0x1328`, and completed SP service. Neither arm emitted slot,
+voice/reap, or MORT rows; PCM source/consumer rows remained the pre-existing
+zero-valued boundary stream and no bounded row joined it to the image task/DMA
+identity. This provisionally selects `H-MissingImageConsumer` for the current
+capture key. It rules out route invalidity, absent image dispatch, missing task
+completion, and a same-key slot/voice/MORT closure. It does not establish a
+legitimate output writer or authorize a destination remap, task-data change, or
+default flip. Artifact: `scratch/agent/s2421_m5_contract/`.
