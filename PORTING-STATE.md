@@ -113326,3 +113326,29 @@ controlled by `ROGUESQ_LOG_M5_SECOND_EXEC`, and its fixup implementation is in
 `N64Recomp/fixup_game_funcs.py`. Artifacts:
 `scratch/agent/s2445_ground_truth/` and
 `scratch/agent/s2445_m5_port_second_range_execution_identity_fixed/`.
+
+## Session 2446 (2026-08-26) — corrected port second-range dispatch boundary
+
+Ground truth first: the retail oracle passed whole-RDRAM (1,340,192 hits),
+title/hangar VI controls, exact image ranges, and the phase-gated writer-PC
+control. The initial same-build paired capture also passed both port route
+controls and the indirect positive control, but targeted `0x800078EC` as if it
+were a callable function. Static inspection of the generated body showed that
+`0x800078EC` is a loop block inside `rs_memset`, whose function entry is
+`0x800078E0`; the initial target was therefore invalid.
+
+The corrected rerun retained the same controls. The known indirect target
+`0x8009123C` resolved in both stub and image arms, while
+`get_function(0x800078E0)` produced zero target-boundary rows in either arm.
+The image arm produced 2,276 stage rows and two nonzero stage-only rows; the
+callee block table retained 512 second-range rows with `ra=0`. This selects
+`H-PortStaticRsMemsetPath` at the current capture scope and rules out an
+observed indirect runtime-wrapper edge for `rs_memset`; it does not identify
+which static callsite supplies the zero return context. The reducer now emits
+`port-dispatch-boundary.tsv`. No audio, output, task-data, dispatch, or guard
+behavior changed.
+
+ORIGIN: the new boundary table is observation-only, grounded by the retail
+`0x8002BEEC` -> `0x800078EC` relation and the same-run indirect-resolution
+positive control. Artifact:
+`scratch/agent/s2446_m5_port_dispatch_boundary_fixed/`.

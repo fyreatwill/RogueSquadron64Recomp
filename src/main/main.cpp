@@ -72,6 +72,7 @@ void rs64_register_overlays();
 extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
 extern "C" uint32_t rs64_vi_committed_width();
 extern "C" uint32_t rs64_vi_committed_origin();
+extern "C" uint32_t rs64_phase_ord();
 extern "C" void rs64_audio_route_set(const char* arm, uint32_t phase,
                                        uint32_t width, uint32_t origin,
                                        uint32_t ordinal, uint32_t row,
@@ -95,6 +96,56 @@ extern "C" uint64_t rs64_audio_join_m5_event(
     uint32_t phase, uint32_t width, uint32_t origin, uint32_t ordinal,
     uint32_t row, uint32_t idx, uint32_t dest, uint32_t value0,
     uint32_t value1, uint32_t value2, uint32_t value3);
+
+extern "C" volatile uint32_t g_rs64_last_guest_pc;
+
+extern "C" void rs64_m5_dispatch_boundary(uint32_t target_pc) {
+    static int enabled = -1;
+    static uint32_t control = 0;
+    static uint32_t rows = 0;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_SECOND_EXEC");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        enabled = ((e && e[0] && e[0] != '0') ||
+                   (all && all[0] && all[0] != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool target_phase =
+        (width == 1024u && origin == 0x00790400u) ||
+        (width == 512u && origin == 0x006AB400u);
+    if (!target_phase) return;
+    const bool target = target_pc == 0x800078E0u;
+    const bool positive_control = target_pc == 0x8009123Cu;
+    if (!target && !positive_control) return;
+    uint32_t phase = rs64_phase_ord();
+    uint32_t ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &ordinal, &row, &exit_reason, &arm);
+    if (!control) {
+        std::fprintf(stderr,
+            "[m5-dispatch-boundary-control] phase=%u width=%u origin=0x%06X"
+            " target=0x%08X caller=0x%08X arm=%s active=%u\n",
+            phase, width, origin, target_pc,
+            static_cast<uint32_t>(g_rs64_last_guest_pc), arm ? arm : "n/a",
+            active ? 1u : 0u);
+        std::fflush(stderr);
+        control = 1;
+    }
+    if (!target || rows >= 512u) return;
+    std::fprintf(stderr,
+        "[m5-dispatch-boundary] n=%u target=0x%08X caller=0x%08X"
+        " phase=%u width=%u origin=0x%06X arm=%s ordinal=%u row=%u"
+        " active=%u exit=%d\n",
+        rows, target_pc, static_cast<uint32_t>(g_rs64_last_guest_pc),
+        phase, width, origin, arm ? arm : "n/a", ordinal, row,
+        active ? 1u : 0u, exit_reason);
+    std::fflush(stderr);
+    ++rows;
+}
 
 // Wrapper: captures rdram into the watchdog global on first call so the
 // hwbp/poll diagnostic threads can attach. Forwards to the real entrypoint.

@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2445 (2026-08-26).
+Current maintenance marker: Session 2446 (2026-08-26).
 
 ## Current state
 
@@ -167,6 +167,23 @@ Current maintenance marker: Session 2445 (2026-08-26).
   SIGKILL cleanup after the hangar control; no post-cleanup lifetime claim is
   made. No audio or output behavior changed. Artifact:
   `scratch/agent/s2444_m5_port_second_range_consumer/`.
+
+- **s2446 — the port second-range writer is not reached through an observed
+  indirect dispatch boundary.** The corrected paired capture passed the
+  independent retail controls (whole-RDRAM `1,340,192` hits, title/hangar,
+  exact ranges, and writer-PC control) and both port title/hangar controls.
+  The known indirect positive-control target `0x8009123C` resolved in both
+  arms, but `get_function(0x800078E0)` produced zero target rows in either
+  arm. Static inspection establishes that `0x800078EC` is a loop block inside
+  `rs_memset`, whose function entry is `0x800078E0`; it is not an independent
+  callable target. The image arm produced 2,276 stage rows and two nonzero
+  stage-only rows; its bounded block table again retained 512 rows with
+  `ra=0`. Together with the live positive control, this selects
+  `H-PortStaticRsMemsetPath` at the current capture scope and rules out an
+  observed `get_function`/wrapper edge for this execution. It does not yet
+  identify which of the 88 static `rs_memset` callsites supplies the zero
+  return context or authorize behavior changes. Artifact:
+  `scratch/agent/s2446_m5_port_dispatch_boundary_fixed/`.
 
 - **s2443 — the paired port capture found no second-range consumer event.** The
   independent retail controls passed, including the whole-RDRAM positive
@@ -447,10 +464,12 @@ Current maintenance marker: Session 2445 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
-1. **M5 port execution identity — active.** Explain why port
-   `0x800078EC` second-range rows have `ra=0` despite retail's
-   `0x8002BEEC` predecessor, using one new bounded dispatch-boundary table.
-   Keep image/stub arms and retail controls in one capture; no behavior change.
+1. **M5 port execution identity — active.** Identify the target-phase static
+   `rs_memset` callsite(s) that lead to block `0x800078EC` with `ra=0`. Use a
+   regeneration-safe entry/callsite table covering all 88 generated
+   `rs_memset` callsites, joined to the existing second-range and image/DMA
+   identity. The same-run indirect-resolution positive control and retail
+   controls must remain; no behavior change.
 2. **M5 image consumer provenance — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate. s2425 establishes retail/port parity for the title
    `0x80015BC8` writer family, while s2426 shows neither candidate PC writes
@@ -778,6 +797,11 @@ superseded at their measured scopes:
 - s2397's implied logging-induced route failure and s2399's
   `H-IdentityClearedBeforeStage` label; same-build controls and s2402's
   corrected identity publication superseded them.
+- s2445's `H-PortAlternatePath` label and s2446's original assumption that
+  `0x800078EC` was a callable function target are superseded by the corrected
+  function-boundary inspection and live indirect positive control. The
+  second-range block still has zero `ra`; only the dispatch mechanism label
+  changed.
 
 ## Evidence and safety rules
 

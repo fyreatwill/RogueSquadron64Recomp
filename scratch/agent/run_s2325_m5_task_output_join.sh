@@ -230,6 +230,13 @@ END { for (d in stage) print "image\t*\t*\t*\t" stage[d] "\t*\t" (exact[d]+0) "\
 
 awk '
 function val(name,    i) { for (i=1;i<=NF;i++) if (index($i,name "=")==1) return substr($i,length(name)+2); return "" }
+BEGIN { print "source\tkind\ttarget\tcaller\tphase\twidth\torigin\tordinal\trow\tactive\texit" }
+$1 == "[m5-dispatch-boundary-control]" { print FILENAME "\tcontrol\t" val("target") "\t" val("caller") "\t" val("phase") "\t" val("width") "\t" val("origin") "\t*\t*\t" val("active") "\t*" }
+$1 == "[m5-dispatch-boundary]" { print FILENAME "\ttarget\t" val("target") "\t" val("caller") "\t" val("phase") "\t" val("width") "\t" val("origin") "\t" val("ordinal") "\t" val("row") "\t" val("active") "\t" val("exit") }
+' "$OUT/stub.log" "$OUT/image.log" > "$OUT/port-dispatch-boundary.tsv"
+
+awk '
+function val(name,    i) { for (i=1;i<=NF;i++) if (index($i,name "=")==1) return substr($i,length(name)+2); return "" }
 BEGIN { print "pc\tcount" }
 $1 == "[oracle]" && $2 == "writer-pc" && $3 ~ /^pc=/ { print val("pc") "\t" val("n") }
 ' "$OUT/oracle.log" > "$OUT/retail-task-output-writers.tsv"

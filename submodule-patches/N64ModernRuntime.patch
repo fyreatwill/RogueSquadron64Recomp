@@ -173,7 +173,7 @@ index b0d6bef..a693bbc 100644
  
  namespace recomp {
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..164d0f9 100644
+index 8c8e5d1..24324d8 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
 @@ -1,9 +1,11 @@
@@ -188,18 +188,19 @@ index 8c8e5d1..164d0f9 100644
  
  #include "ultramodern/ultramodern.hpp"
  
-@@ -12,6 +14,10 @@
+@@ -12,6 +14,11 @@
  #include "overlays.hpp"
  #include "sections.h"
  
 +extern "C" void rs64_e9prov_section2_latch();
 +extern "C" uint32_t rs64_phase_ord();
 +extern "C" recomp_func_t serviceVoicePoolFrame;
++extern "C" void rs64_m5_dispatch_boundary(uint32_t target_pc);
 +
  static recomp::overlays::overlay_section_table_data_t sections_info {};
  static recomp::overlays::overlays_by_index_t overlays_info {};
  
-@@ -198,8 +204,14 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
+@@ -198,8 +205,14 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
              return addr < entry.size + entry.rom_addr;
          }
      );
@@ -216,7 +217,7 @@ index 8c8e5d1..164d0f9 100644
          load_overlay(std::distance(&sections_info.code_sections[0], it), it->rom_addr - rom + ram_addr);
      }
  }
-@@ -238,6 +250,25 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
+@@ -238,6 +251,25 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
      }
  }
  
@@ -242,7 +243,7 @@ index 8c8e5d1..164d0f9 100644
  extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
      for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
          const auto& section = sections_info.code_sections[it->section_table_index];
-@@ -361,13 +392,178 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
+@@ -361,13 +393,179 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
      return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
  }
  
@@ -396,6 +397,7 @@ index 8c8e5d1..164d0f9 100644
 +}
 +
  extern "C" recomp_func_t * get_function(int32_t addr) {
++    rs64_m5_dispatch_boundary(static_cast<uint32_t>(addr));
 +    rs64_log_dma_ring_caller(addr);
 +    rs64_log_tickfunc_caller(addr);
      auto func_find = func_map.find(addr);
