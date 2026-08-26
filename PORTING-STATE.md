@@ -112409,3 +112409,16 @@ source sample in the existing phase-gated stage-byte row. Artifacts:
 ORIGIN: no mitigation or behavior change; the new source sample names the
 writer under test as the Factor 5 image's DMEM stage span and treats its zero
 value as an observed value only, not yet as a proven legitimate final output.
+## Session 2404 (2026-08-25) — maintenance-compacted current truth
+
+The maintenance threshold fired at 60,131 bytes. No experiment or build was
+run. `docs/CURRENT-TRUTH.md` was compacted from 921 to 173 lines and its
+durable s2357–s2403 progression was migrated to section 49 of
+`docs/PROJECT-OVERVIEW.md`. The live state, latest s2403 zero-byte boundary,
+monotonic backlog, superseded labels, and safety rules remain in CURRENT-TRUTH.
+The next unit remains the ground-truth-first M5 zero-output writer/consumer
+contract audit described in `scratch/agent/NEXT.md`.
+
+This rules out only documentation staleness/oversize as the maintenance issue;
+it provides no new runtime evidence and authorizes no code, audio, task-data,
+gate, fallback, dispatch, VI, output, or mitigation change.

@@ -4486,3 +4486,54 @@ attract, title, and hangar, not a mission. Both tested port arms qualify through
 title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; image-stage payloads
 rotate between captures. The next discriminator is retail post-value/order
 sampling joined to the type-2 task table and the retained port ABI table.
+
+## 49. Current-truth archive: s2357–s2403
+
+The compact `CURRENT-TRUTH.md` retains the live state and latest boundary;
+this section preserves the durable progression removed during s2404
+maintenance. Exact commands, counts, and artifacts remain in
+`PORTING-STATE.md`.
+
+The M5 task ABI boundary closed in s2357: retail type-2 tasks identify the
+exact watched field through `data_ptr+0x100`. s2359 showed the exact retail
+writer was present but its payload mismatched retained port field values;
+s2360 showed the writer source is directly task-related at phase/field scope
+(`$s1 == data_ptr+0x100`, with `$a2 == data_ptr`), while an exact writer-VI
+join remains unavailable. s2361–s2363 established that the image arm changes
+DMEM, emits two stage DMAs, and runs inside a containing task, but task
+completion and PCM/output closure were not established. s2364–s2367 found
+partial publication and changed candidates without a legitimate same-task
+transform owner; no port contract change was authorized.
+
+The A1 boundary was independently narrowed in s2370–s2380. Retail executes
+the predecessor window but not the port's `0x80001F88` null-function callsite;
+both port arms request zero outside resident sections. The port's generated
+receive flag is one, and retail's callee entry also receives one despite the
+pre-delay call-site label showing zero. These observations identify an
+upstream caller/input divergence, not a reason to add a fallback or alter the
+flag.
+
+The downstream M5 sequence closed several misleading labels. s2381 provided
+independent retail gate-writer/value evidence; s2382 showed port-side gate
+fallthrough and key-on work but no complete output closure. s2383–s2384
+corrected the task-completion join and showed completion producers are called
+and associated. s2386–s2388 established the reporter predicate: completion
+requires source and consumer on the same DMA range. s2389–s2391 showed the
+retained image-stage nonzero predicate selected no title rows, while broad
+retail regions were active; the exact byte contract remained open. s2392
+supplied exact retail-window activity but not an exact payload match. s2393's
+port byte capture was route-invalid, and s2395 established that missing-
+function suppression is required for a valid title route.
+
+s2396–s2398 showed stage-call production before route preparation and then
+demonstrated, with a same-build logging control, that route logging itself did
+not cause the title failure. s2399 initially labeled stage identity as cleared
+after preparation, but s2402 repaired the omitted identity-publication
+variable and phase-blind budget: both arms observed valid identity at stage
+entry with matching preparation sequence. s2400–s2401 are route-invalid
+captures and must not be used. Finally, s2403 sampled source and destination
+bytes for retained stage rows; both were exactly zero with matching hashes and
+`exact=1`, selecting `H-StageBytesLegitimatelyZero` at capture scope and
+closing the span-mismatch explanation. The next legitimate work is therefore
+the zero-output writer/consumer contract, as specified in
+`scratch/agent/NEXT.md`.

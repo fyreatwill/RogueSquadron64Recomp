@@ -1,4 +1,4 @@
-# NEXT work unit (s2404) — identify zero-output writer/consumer contract
+# NEXT work unit (s2405) — identify zero-output writer/consumer contract
 
 HYPOTHESIS-ID: m5-zero-output-contract
 
