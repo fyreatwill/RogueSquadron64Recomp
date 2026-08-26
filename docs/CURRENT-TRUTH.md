@@ -5,7 +5,15 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2372 (2026-08-25). The M5 A1 predecessor-argument capture passed the oracle whole-RDRAM, both target origins, and predecessor-PC controls. Retail's target-phase `0x80001F84` row had `$a0=1,$a2=0`; both port arms had `$a0=0x8010FEE0,$a2=0` before the same null request. This selects an argument/input divergence before `get_function(0)`, not resident-overlay wrong dispatch. No fallback or contract edit is authorized.
+Maintained in Session 2373 (2026-08-25). The M5 A1 `rs_free` boundary capture passed all oracle and both port controls. Retail `rs_free` entry rows carried ordinary heap pointers and later reached target-phase `$a0=1`; both port arms entered with ordinary heap pointers but later reached `$a0=0x8010FEE0`, with captured `$ra=0`. This selects an internal `rs_free`/callee-path divergence at capture scope, not a caller that supplied retail's final `$a0=1`. No fallback or contract edit is authorized.
+
+The s2372 predecessor capture remains valid: retail's target-phase
+`0x80001F84` row had `$a0=1,$a2=0`, while both port arms had
+`$a0=0x8010FEE0,$a2=0` before the same null request. The s2373 entry rows
+show that retail's `$a0=1` is not its `rs_free` entry argument; it is produced
+before the predecessor return. The port entry `$ra` probe is uniformly zero,
+so it does not identify the caller. No fallback, dispatch, VI, task, or audio
+contract change is authorized.
 
 The M5 A1 pre-target capture passed
 the oracle and both early-640 port controls; both arms requested the null
@@ -105,6 +113,20 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2373 — `rs_free` entry/return boundary is positive and internally
+  divergent.** The fresh oracle passed whole-RDRAM `10,000`, both target 640
+  origins, and the predecessor/`rs_free` live execution controls. Retail
+  produced `2,390` target-origin `rs_free` rows in the retained log; its
+  entry rows carried ordinary heap pointers, while corresponding predecessor
+  rows reached `$a0=1,$a2=0`. Both same-build port arms passed early-640,
+  `[a1-args]`, and `[a1-abort]` controls, with `369/374` `rs_free` entries;
+  the phase-4 sequence entered with ordinary heap pointers and returned with
+  `$a0=0x8010FEE0,$a2=0`, and every shown `$ra` was zero. This selects
+  `H-RsFreeInternalPathDiverges` at capture scope and rules out treating the
+  retail predecessor `$a0=1` as the `rs_free` entry argument. The caller is
+  still unidentified; no behavior change is authorized. Artifact:
+  `scratch/agent/s2373_m5_a1_rs_free_boundary_fixed/`.
 
 - **s2372 — retail and port predecessor arguments differ.** The fresh oracle
   passed whole-RDRAM `10,000`, both target 640 origins, and the predecessor-PC
@@ -275,12 +297,12 @@ sequence; #1 is the next campaign priority.
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
 
-3. **M5 A1 caller/input boundary — active.** Retail and port both execute the
-   predecessor, but retail has `$a0=1` while the port has `$a0=0x8010FEE0` at
-   `0x80001F84`; `$a2` is zero in both. Next, capture the port `rs_free`
-   entry/return `$a0` and `$ra`, paired with retail predecessor `$a0/$a2` and
-   caller histograms, to identify whether the divergence is at the caller's
-   argument construction or inside the callee. Keep all positive controls; do
+3. **M5 A1 caller/input boundary — active.** Retail and port both execute
+   `rs_free` and the predecessor. The fresh pair shows ordinary entry
+   pointers on both sides, but retail reaches `$a0=1` at `0x80001F84` while
+   port reaches `$a0=0x8010FEE0`; port `$ra` is zero in every bounded entry
+   row. Next, capture the bounded internal `$a0` write/branch sequence in
+   `rs_free` to locate the first divergence. Keep all positive controls; do
    not add a fallback, change dispatch/VI behavior, or edit task/audio data.
 4. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both

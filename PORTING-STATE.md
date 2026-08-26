@@ -111572,3 +111572,38 @@ predecessor rows with the port's `[rs-free]` entry and bounded `0x80001F84`
 return rows. Determine whether the divergent `$a0` is already present at
 `rs_free` entry or is changed inside the callee. Keep all positive controls;
 do not change behavior.
+
+## Session 2373 (2026-08-25) — M5 A1 rs_free entry/return boundary
+
+Before building, a 40-second retail oracle ground-truth run passed the whole-
+RDRAM positive control, predecessor range, both target-origin routes, and the
+live `rs_free` entry watch at `0x80001C98`. The first paired runner attempt
+was invalid because its gate waited for the oracle's shutdown-only
+`exec-prev` summary; the live `rs_free` hit was present. The fixed runner
+used the live `[hit] pc=0x80001c98` row and then launched both same-build arms.
+
+The Debug build completed successfully. The fresh paired capture passed the
+oracle controls and both port early-640, `[a1-args]`, and `[a1-abort]`
+controls. Retail retained 2,390 target-origin `rs_free` rows; its entry rows
+carried ordinary heap pointers, while the corresponding predecessor rows
+reached `$a0=1,$a2=0`. The control and alternate port arms retained 369 and
+374 `rs_free` entry rows. Their phase-4 entries carried ordinary heap
+pointers, then the bounded predecessor rows reached
+`$a0=0x8010FEE0,$a2=0`; every shown port entry `$ra` was zero. This selects
+`H-RsFreeInternalPathDiverges` at capture scope and rules out treating the
+retail predecessor `$a0=1` as the `rs_free` entry argument. It does not name
+the caller or authorize a fallback, dispatch/VI change, task/audio edit, or
+mitigation. The 36 crash-marker counts in each arm were not evidence because
+the driver SIGKILLs each arm after its capture marker.
+
+Artifacts: `scratch/agent/s2373_m5_a1_rs_free_boundary_fixed/` and
+`scratch/agent/run_s2373_m5_a1_rs_free_boundary.sh`.
+
+ORIGIN: diagnostic-only. No game behavior, dispatch, VI selection, task data,
+field writeback, guard, fallback, or mitigation changed.
+
+### Next
+
+Run one ground-truth-first capture of the first internal `$a0` writes/branches
+inside `rs_free`, paired with retail's entry and predecessor rows. Keep all
+positive controls and do not change behavior.
