@@ -1,36 +1,44 @@
-# NEXT work unit (s2428) — join the selected retail title writer to the port task row
+# NEXT work unit (s2429) — ground-truth the unresolved hangar image consumer
 
 HYPOTHESIS-ID: m5-image-contract-gap
 
 ## Work unit
 
-Run the existing two-arm, phase-gated M5 contract recipe with its observation-only
-writer table enabled. Do not change audio behavior, task data, output ranges,
-gates, guards, dispatch, or defaults. Retain the exact title writer relation
-(`pc=0x80015BC8`, title range `0x169730..0x169B30`) and join it to the port
-task-data/ordinal/row table; retain the hangar image-DMA rows for comparison.
+Run one independent retail-oracle capture for the unresolved hangar consumer.
+This is the complete work unit; defer any port capture until the oracle selects
+the writer set. Keep the port behavior unchanged: do not remap output, alter
+task data, change gates, add guards, or change defaults.
 
 ## Competing hypotheses and discriminator
 
-- H-PortTitleWriterJoin: title rows from `0x80015BC8` join the exact retail
-  range and the same port task-data/ordinal/row identity.
-- H-PortTitleWriterRangeOnly: the port exact-range writer rows exist but do not
-  join the selected task identity.
-- H-PortTitleWriterAbsent: the valid port route has no corresponding CPU writer
-  rows; only DMA rows remain.
-- H-PortRouteInvalid: either arm misses title or hangar controls.
+- H-RetailHangarConsumerPC: retail exact image-range writes are attributed to
+  one stable hangar PC whose execution and writes can be watched independently.
+- H-RetailHangarHelperSet: the range is written by multiple helper PCs, so no
+  single consumer identity is valid at this scope.
+- H-RetailHangarNoWriter: exact hangar range writes are absent after valid
+  whole-RDRAM, phase, and execution controls.
+- H-RetailControlInvalid: the oracle misses its whole-RDRAM, title, hangar, or
+  named-PC positive controls.
 
-The discriminator is one phase-keyed table containing exact-range writer PC,
-task data, ordinal, row, and arm, plus image-DMA rows. A valid same-row join
-selects H-PortTitleWriterJoin; valid controls with no join but writer rows
-select H-PortTitleWriterRangeOnly; valid controls with no CPU writer rows
-select H-PortTitleWriterAbsent; missing route controls select H-PortRouteInvalid.
+The discriminator is one oracle table combining whole-RDRAM, title/hangar VI
+controls, exact hangar image-range writes (`0x167650..0x167C50` and
+`0x1798B0..0x179A48`), and execution watches for every writer PC attributed in
+those ranges. A valid single-PC attribution selects H-RetailHangarConsumerPC;
+a valid multi-PC attribution selects H-RetailHangarHelperSet; valid controls
+with no exact writes select H-RetailHangarNoWriter; missing positive controls
+select H-RetailControlInvalid. Arm the whole-RDRAM watch first and require its
+positive threshold before interpreting any null.
 
-## Exact commands
+## Exact command
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    env ROGUESQ_LOG_M5_PCM_WRITER=1 zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2428_m5_title_writer_join
+    env tools/oracle/build/rs64_oracle \\
+      --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \\
+      --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \\
+      --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \\
+      --secs 120 --watch-write 0x0:0x800000 \\
+      --watch-write 0x167650:0x167C50 --watch-write 0x1798B0:0x179A48 \\
+      --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start
 
-Require the recipe's retail whole-RDRAM/title/hangar controls, both port-arm
-title/hangar controls, and positive-control writer rows before interpreting any
-null join.
+Require the whole-RDRAM positive threshold and title/hangar VI controls before
+interpreting exact-range nulls. Record every PC attributed in each exact range;
+the following iteration must add execution watches for that complete set.

@@ -112969,3 +112969,21 @@ It rules out treating the exact title range as an image-range writer or
 claiming that the candidate PCs explain the hangar image ranges. No output
 remap, writeback, task-data, gate, guard, or default change was made.
 Artifact: `scratch/agent/s2427_m5_retail_title_writer/`.
+
+## Session 2428 (2026-08-26) — joined M5 port title writer to task identity
+
+The first launch was invalid because the oracle was still running and the
+paired arms never launched; it was SIGKILLed and not interpreted. The fixed
+same-build paired capture passed the retail whole-RDRAM positive control and
+title/hangar VI controls. Both port arms reached title and hangar controls.
+
+Each arm recorded 256 exact `0x80015BC8` guest writes in the title range
+`0x169730..0x1698EC`. They joined title ordinal/row 4 and
+`task_data=0x80171CE0`; the image arm also carried a pending DMA identity on
+those rows, while the stub arm had no DMA identity. Neither arm produced
+selected-PC writer rows in hangar. The image arm retained its expected
+hangar DMA rows; the stub had none. This selects `H-PortTitleWriterJoin` for
+the title-only relation and leaves the hangar consumer unresolved. It rules
+out title-writer absence and route invalidity for this capture, but does not
+authorize a remap, writeback, task-data change, gate, guard, or default.
+Artifact: `scratch/agent/s2428_m5_title_writer_join/`.

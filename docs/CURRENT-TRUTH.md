@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2426 (2026-08-26).
+Current maintenance marker: Session 2428 (2026-08-26).
 
 ## Current state
 
@@ -139,6 +139,15 @@ Current maintenance marker: Session 2426 (2026-08-26).
   identity. This selects `H-MissingImageConsumer` provisionally at the current
   capture key. It does not authorize an output remap or prove the image DMA
   payload is legitimate. Artifact: `scratch/agent/s2421_m5_contract/`.
+- s2428 joined the selected title writer to the port task table in the same
+  paired, phase-gated capture. Retail whole-RDRAM, title, and hangar controls
+  passed; both port arms reached title and hangar. Each arm recorded 256 exact
+  `0x80015BC8` writes in `0x169730..0x1698EC`, joined to title ordinal/row 4
+  and `task_data=0x80171CE0`. The image arm had a pending DMA identity on
+  those rows while the stub had none. No selected-PC writer rows appeared in
+  hangar. This selects `H-PortTitleWriterJoin` for the title-only relation,
+  not a hangar consumer or output remap. Artifact:
+  `scratch/agent/s2428_m5_title_writer_join/`.
 
 ## Latest evidence
 
@@ -360,8 +369,10 @@ sequence; #1 is the next campaign priority.
    writer's exact store/range relation into the image/task identity, or close
    the remaining hangar consumer gap with a new ground-truth discriminator.
    No output remap, task-data change, gate change, or guard is authorized.
-   s2427 now confirms the exact retail title-range writer; the next capture
-   should join that identity to the port task row before any behavior change.
+   s2427 confirmed the exact retail title-range writer and s2428 joined it to
+   the port title task row. The next capture must use a new ground-truth
+   discriminator for the unresolved hangar consumer; no behavior change is
+   authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -422,6 +433,14 @@ wrote 70 times. This corroborates the title writer identity at the exact
 range and selects `H-RetailTitleExactWriter` at this scope. The image-range
 attribution remains `0x800078EC`/helpers from s2426; no hangar consumer,
 remap, writeback, task-data, gate, or guard is authorized.
+- s2428's fixed paired port capture passed retail whole-RDRAM/title/hangar
+  controls and both port-arm title/hangar controls. Each arm recorded 256
+  exact `0x80015BC8` writes in `0x169730..0x1698EC`, joined to title
+  ordinal/row 4 and `task_data=0x80171CE0`. The image arm carried a pending
+  DMA identity on those rows; the stub had none. No selected-PC writer rows
+  appeared in hangar. This selects `H-PortTitleWriterJoin` for the title-only
+  relation and leaves the hangar consumer unresolved. Artifact:
+  `scratch/agent/s2428_m5_title_writer_join/`.
 The first same-identity post-DMA slot/key-on fields are now available in the
 image join. s2408 validated both route controls, but its image arm still
 produced no same-identity downstream rows. s2409 independently observed
