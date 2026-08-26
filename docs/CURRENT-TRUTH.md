@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2366 (2026-08-25). The M5 mixed-stage publication refinement passed all
+Maintained in Session 2367 (2026-08-25). The M5 payload-owner join passed all
 route and execution controls and placed both target-stage rows inside a
 containing audio task; no audio contract change is authorized. The M5
 retail writer-source capture
@@ -134,6 +134,15 @@ is authorized.
   the candidate. This selects `H-MixedOrUnrelatedCandidate` at capture scope,
   not a legitimate transform or a port contract. Artifacts:
   `scratch/agent/s2366_m5_payload_transformation_provenance/`.
+- **s2367 — payload-owner join still has no legitimate transform source.** The
+  fresh oracle and both same-build stub/image arms passed all retained route,
+  VI, ABI, image-stage, image-join, filter/voice, and crash controls. The
+  target table retained two rows and one changed destination/length candidate;
+  source and consumer events were present, but writer/source fields were zero
+  and zero changed rows had same-task ordered owner events. This selects
+  `H-MixedOrUnrelatedCandidate` at capture scope and rules out a legitimate
+  transform from this table. Artifacts:
+  `scratch/agent/s2367_m5_payload_owner_join/`.
 - **s2361 — stub/image route validation is positive but same-task timing is
   unresolved.** One binary ran both arms. Oracle whole-RDRAM writes were
   `487,474`; route, VI, task-ABI, filter/voice, and PCM controls passed for
@@ -170,17 +179,15 @@ sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
-   qualified steps. The next queued boundary is #2.
-2. **M5 payload-transformation provenance — next.** Run one same-build
-   refinement retaining all s2361–s2366 controls. Join each changed-payload
-   candidate to its source/consumer event's owning task interval and completion
-   ordinal, and require a nonzero writer/source field before labeling any
-   candidate a transformation. The current zero-writer result is not a port
-   explanation. Do not write back a field, alter task data, change a
-   consumer/default, or add a guard.
-3. **M5 A1 second-origin transition — parked.** Resume only with a new
-   discriminator that restores `0x00696100`/`0x00696600` coverage; do not repeat
-   the failed four-arm/two-wave matrix.
+  qualified steps. The next queued boundary is #3.
+2. **M5 payload-transformation provenance — closed at current capture scope.**
+   s2367's owner join retained source/consumer events but no nonzero
+   writer/source relation or same-task ordered owner events. Do not repeat this
+   phase-wide candidate join without a new ground-truth discriminator.
+3. **M5 A1 second-origin transition — next, only with a new discriminator.**
+   Design a ground-truth-first capture that restores and positively controls
+   `0x00696100`/`0x00696600` coverage; do not repeat the failed four-arm/two-wave
+   matrix.
 4. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator; do not chase a single recurring crash.
 5. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer-mode

@@ -111374,3 +111374,33 @@ Run one same-build M5 payload provenance owner-join refinement. Retain all
 s2361–s2366 controls and assign each source/consumer event to its owning task
 interval while retaining writer/source fields and completion ordering. Do not
 change the port contract.
+
+## Session 2367 (2026-08-25) — M5 payload-owner join remains mixed or unrelated
+
+Built the Debug target and ran the prescribed same-build stub/image capture
+with the retail oracle first. The oracle gate passed (`oracle_rc=0`,
+`oracle_controls=1`); both arms reached the target 512/0x006AB400 phase, with
+positive ABI, VI, filter/voice, image-stage, image-join, and crash/abort
+controls. Both game processes were terminated by SIGKILL from the driver.
+
+The owner-join table retained two target-stage rows and one changed
+destination/length candidate. It retained source and consumer events for the
+candidate, but every writer/source field was zero and zero changed rows had a
+same-task ordered owner relation. The corrected parse selected
+`H-MixedOrUnrelatedCandidate` at capture scope. This rules out labeling the
+candidate a legitimate transform from this table; it does not identify the
+writer and authorizes no task-data, field-writeback, consumer/default, or guard
+change. Artifacts: `scratch/agent/s2367_m5_payload_owner_join/`.
+
+The first owner-ranking parser raised a local Python exception after the game
+capture; the fixed parser was run parse-only against the same captured log and
+produced the final owner table and verdict. No second game capture was used.
+
+ORIGIN: diagnostic-only. No game behavior, task data, field writeback,
+consumer/default, guard, or mitigation changed.
+
+### Next
+
+Design and run a ground-truth-first M5 A1 second-origin discriminator that
+restores positive coverage for 0x00696100 and 0x00696600. Do not repeat the
+four-arm/two-wave matrix or interpret port nulls without oracle controls.

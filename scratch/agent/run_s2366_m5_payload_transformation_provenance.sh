@@ -82,20 +82,43 @@ for stage in stages:
             dma.get('dram', dma.get('guest','')), owner.get('n','') if owner else '',
             owner.get('begin','') if owner else '', owner.get('end','') if owner else '',
             owner.get('complete','') if owner else '', event_detail(dma)))
-    source_desc = ','.join(f"{p.get('event','')}:{event_detail(p)}" for p in source)
-    consumer_desc = ','.join(f"{p.get('event','')}:{event_detail(p)}" for p in consumer)
+    def owner_for_event(event):
+        owners = [t for t in task_scope if n(t.get('begin')) <= event <= n(t.get('end'))]
+        if not owners:
+            return None
+        return sorted(owners, key=lambda t: abs(n(t.get('end')) - event))[0]
+    def owned_event_desc(p):
+        event = n(p.get('event'))
+        owner = owner_for_event(event)
+        return '%s:task=%s:begin=%s:end=%s:complete=%s:delta=%s:%s' % (
+            p.get('event', ''), owner.get('n', '') if owner else '',
+            owner.get('begin', '') if owner else '', owner.get('end', '') if owner else '',
+            owner.get('complete', '') if owner else '',
+            event - n(stage.get('event')), event_detail(p))
+    source_desc = ','.join(owned_event_desc(p) for p in source)
+    consumer_desc = ','.join(owned_event_desc(p) for p in consumer)
     completions = ','.join(f"{t.get('n','')}:{t.get('end','')}:{t.get('complete','')}" for t in task_scope)
     writer_source_n = sum(1 for p in phase_events if n(p.get('writer_pc')) or n(p.get('writer_writes')))
+    source_owners = [owner_for_event(n(p.get('event'))) for p in source]
+    consumer_owners = [owner_for_event(n(p.get('event'))) for p in consumer]
+    owner_n = lambda t: t.get('n', '') if t else ''
+    source_owner_set = {owner_n(t) for t in source_owners if t}
+    consumer_owner_set = {owner_n(t) for t in consumer_owners if t}
+    ordered_task_events = bool(source_owners and consumer_owners and
+                               source_owner_set & consumer_owner_set and
+                               all(n(p.get('event')) <= n(q.get('event'))
+                                   for p, q in zip(source, consumer)))
     rows.append([stage.get('arm',''), stage.get('ordinal',''), stage.get('row',''),
                  stage.get('stage',''), stage.get('event',''), task_n,
                  task.get('begin',''), task.get('end',''), task.get('complete',''),
                  stage.get('dest',''), stage.get('len',''), stage.get('fnv',''), stage.get('nz',''),
                  len(candidates), len(changed), ';'.join(changed_desc),
-                 len(source), len(consumer), writer_source_n, source_desc, consumer_desc, completions])
+                 len(source), len(consumer), writer_source_n, int(ordered_task_events),
+                 source_desc, consumer_desc, completions])
 
 header = ('arm ordinal row stage stage_event containing_task task_begin task_end task_complete '
           'dest len stage_fnv stage_nz candidate_n changed_candidate_n changed_candidates '
-          'phase_source_n phase_consumer_n writer_source_n phase_source_events phase_consumer_events '
+          'phase_source_n phase_consumer_n writer_source_n ordered_task_events phase_source_events phase_consumer_events '
           'phase_task_completion_order').split()
 with open(table_path, 'w') as out:
     out.write('\t'.join(header) + '\n')
@@ -105,6 +128,7 @@ changed_rows = sum(bool(r[14]) for r in rows)
 source_rows = sum(bool(r[16]) for r in rows)
 consumer_rows = sum(bool(r[17]) for r in rows)
 writer_rows = sum(bool(r[18]) for r in rows)
+ordered_rows = sum(bool(r[19]) for r in rows)
 with open(summary_path, 'w') as out:
     out.write('metric\tvalue\n')
     out.write(f'target_stage_rows\t{len(rows)}\n')
@@ -113,6 +137,7 @@ with open(summary_path, 'w') as out:
     out.write(f'changed_rows_with_phase_source\t{source_rows}\n')
     out.write(f'changed_rows_with_phase_consumer\t{consumer_rows}\n')
     out.write(f'changed_rows_with_writer_source\t{writer_rows}\n')
+    out.write(f'changed_rows_with_ordered_task_events\t{ordered_rows}\n')
 print('payload_provenance_table target_stage_rows=%d changed_payload_candidate_rows=%d changed_rows_with_phase_source=%d changed_rows_with_phase_consumer=%d' %
       (len(rows), changed_rows, source_rows, consumer_rows))
 PY
@@ -125,14 +150,15 @@ changed=$(awk -F '\t' '$1 == "changed_payload_candidate_rows" {print $2}' "$OUT/
 sources=$(awk -F '\t' '$1 == "changed_rows_with_phase_source" {print $2}' "$OUT/payload-provenance-summary.tsv")
 consumers=$(awk -F '\t' '$1 == "changed_rows_with_phase_consumer" {print $2}' "$OUT/payload-provenance-summary.tsv")
 writers=$(awk -F '\t' '$1 == "changed_rows_with_writer_source" {print $2}' "$OUT/payload-provenance-summary.tsv")
+ordered=$(awk -F '\t' '$1 == "changed_rows_with_ordered_task_events" {print $2}' "$OUT/payload-provenance-summary.tsv")
 if (( controls == 0 || target == 0 )); then
     verdict=H-TimingCaptureInvalid
 elif (( changed == 0 )); then
     verdict=H-NoChangedCandidate
-elif (( sources > 0 && consumers > 0 && writers > 0 )); then
+elif (( sources > 0 && consumers > 0 && writers > 0 && ordered > 0 )); then
     verdict=H-LegitimateTransformSource
 else
     verdict=H-MixedOrUnrelatedCandidate
 fi
-print "verdict=$verdict controls=$controls target_stage_rows=$target changed_payload_candidate_rows=$changed changed_rows_with_phase_source=$sources changed_rows_with_phase_consumer=$consumers changed_rows_with_writer_source=$writers" | tee -a "$OUT/driver.log"
+print "verdict=$verdict controls=$controls target_stage_rows=$target changed_payload_candidate_rows=$changed changed_rows_with_phase_source=$sources changed_rows_with_phase_consumer=$consumers changed_rows_with_writer_source=$writers changed_rows_with_ordered_task_events=$ordered" | tee -a "$OUT/driver.log"
 exit 0
