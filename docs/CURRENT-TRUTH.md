@@ -5,7 +5,9 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2381 (2026-08-25). The M5 A1 oracle capture passed the whole-RDRAM and both target-640 controls, and joined 2,524 retail executions from `0x80001CB8` through callee entry at `osRecvMesg` (`0x800331D0`) and successor `0x80001CC0`; every joined callee row received `$a2=1`. This selects blocking semantics at capture scope and closes the delay-slot flag question. The port flag remains unchanged because the measurement identifies the effective retail operand, not the upstream reason for the port's A1 boundary or a justified fallback.
+Maintained in Session 2382 (2026-08-25). The M5 A1 oracle capture passed the whole-RDRAM and both target-640 controls, and joined 2,524 retail executions from `0x80001CB8` through callee entry at `osRecvMesg` (`0x800331D0`) and successor `0x80001CC0`; every joined callee row received `$a2=1`. This selects blocking semantics at capture scope and closes the delay-slot flag question. The port flag remains unchanged because the measurement identifies the effective retail operand, not the upstream reason for the port's A1 boundary or a justified fallback.
+
+The s2382 same-build M5 downstream capture passed all four route/phase controls. The c88=1 arms joined 124/125 gate fallthroughs and 118/116 key-on rows, but all four arms had zero task-completion joins and zero PCM source/consumer joins; image arms still produced 2,270/4,235 task-DMA ranges and 2,271/2,344 render rows. This selects `H-TaskOutputGap` at capture scope: gate polarity and intermediate downstream work are present, while task completion/output closure is absent. No audio contract or gate change is authorized.
 
 The s2381 corrected M5 gate-writer oracle capture passed whole-RDRAM (`10,017`),
 target 640, title 1024, and hangar 512 route controls. Gate `0x800A0F50` had
@@ -122,6 +124,18 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2382 — gate/downstream path is positive but task/output closure is absent.**
+  The same-build driver passed controls for stub c0/c1 and image c0/c1; each
+  reached title 1024 and hangar 512. The c88=1 arms had three gate writers,
+  `stored_nonzero=2`, `fallthrough_joined=124/125`, and `keyon_joined=118/116`.
+  Across all arms `task_complete=0`, `pcm_source_joined=0`, and
+  `pcm_consumer_joined=0`; image c0/c1 nevertheless had `task_dma_ranges`
+  `2270/4235` and `render_rows` `2271/2344`. This selects
+  `H-TaskOutputGap` at capture scope, rules out a route-invalid or wholly
+  pre-gate explanation, and does not authorize changing the gate, task data,
+  audio contract, fallback, or output publication. Artifact:
+  `scratch/agent/s2345_m5_c88_downstream_ordinal_join/ordinal-summary.tsv`.
 
 - **s2379 — retail call/return is positive, but the delay-slot flag is not
   observable through the oracle breakpoint.** The fresh oracle run passed the
@@ -401,27 +415,31 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
   qualified steps. The next queued boundary is #4.
-2. **M5 gate polarity/writer join — active.** s2381 independently identified
-   retail gate writer/value behavior. Compare the named port writer and
-   downstream gate/task/slot controls in one same-build capture before any
-   gate treatment.
-3. **M5 payload-transformation provenance — closed at current capture scope.**
+2. **M5 task/output closure — active.** s2382 found positive c88 gate and
+   intermediate key-on joins but no task completion or PCM source/consumer
+   joins. Audit the existing completion/output event contracts with one
+   positive-control-qualified capture before changing task data or audio.
+3. **M5 gate polarity/writer join — closed at current capture scope.** s2381
+   independently identified retail gate writer/value behavior and s2382
+   supplied the port-side downstream comparison; no gate treatment is
+   authorized.
+4. **M5 payload-transformation provenance — closed at current capture scope.**
    s2367's owner join retained source/consumer events but no nonzero
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
 
-4. **M5 A1 retail flag semantics — closed at current capture scope.** s2380
+5. **M5 A1 retail flag semantics — closed at current capture scope.** s2380
   independently observed `osRecvMesg` entry with `$a2=1` on all `2,524`
   target call joins, despite the pre-delay call-site `$a2=0`. Do not repeat
   the delay-slot watch or change the flag based on this result; the upstream
   caller/input divergence remains a separate question.
-5. **M5 A1 pre-target route boundary — closed at current capture scope.** The
+6. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both
    arms. Do not repeat the resident-overlay table without a new ground-truth
    discriminator or add a null fallback.
-6. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
+7. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator; do not chase a single recurring crash.
-7. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer-mode
+8. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer-mode
    H1 are refuted. H3 is unavailable because the oracle cannot screenshot the
    LLE path; do not repeat the capped `0xD60` scan.
 

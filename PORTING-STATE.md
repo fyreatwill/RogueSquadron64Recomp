@@ -111849,3 +111849,23 @@ port-side match remains open.
 Artifact: `scratch/agent/s2381_m5_gate_writer_ground_truth.log`.
 
 ORIGIN: no mitigation or behavior change; both runs were oracle-only.
+
+## Session 2382 (2026-08-25) — M5 gate/downstream task-output join
+
+Ran the prescribed same-build M5 downstream capture with stub/image and c88
+arms: `cmake --build build --config Debug --target RogueSquadron64Recomp`,
+then `env zsh scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh`.
+All four arms passed the route controls, reaching title 1024 and hangar 512.
+The c88=1 arms retained the named gate path: three writers, two nonzero gate
+stores, fallthrough joins 124/125, and key-on joins 118/116. The capture's
+discriminator was negative for completion/output closure in every arm:
+`task_complete=0`, `pcm_source_joined=0`, and `pcm_consumer_joined=0`.
+The image arms still emitted task-DMA ranges 2270/4235 and render rows
+2271/2344. This selects `H-TaskOutputGap` at capture scope, rules out a
+route-invalid or wholly pre-gate explanation, and leaves the completion/
+publication contract open. It does not authorize changing the gate, task
+data, audio contract, fallback, or output publication.
+
+Artifact: `scratch/agent/s2345_m5_c88_downstream_ordinal_join/ordinal-summary.tsv`.
+
+ORIGIN: no mitigation or behavior change; instrumentation and capture only.
