@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2474 (2026-08-26).
+Current maintenance marker: Session 2476 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,17 @@ Current maintenance marker: Session 2474 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2476 — the continuation tail is host-local, not map-registered.** The
+  exhaustive generated census found one variable-register tail lookup in
+  `convertMat3x4ToN64Mtx`: it copies `$ra` to `$t9` and dispatches through
+  `LOOKUP_FUNC(ctx->r25)`. Its sole caller writes the legitimate PC+8 link
+  `0x800155EC`, which is that caller's local `after_4` continuation. The
+  runtime map registers function starts and overlay offsets only; no
+  `after_N` continuation registration exists. This selects
+  `H-HostContinuationOnly`, refutes `H-ContinuationMap` at the inspected
+  scope, and leaves the bridge design open. Static-only; no code or guard
+  change. Artifact: `scratch/agent/s2476_m5_continuation_audit/audit.md`.
 
 - **s2475 — the missing guest link is real, but a raw intra-function link is
   not a registered continuation.** The regenerated callsite at `0x800155E4`
@@ -353,9 +364,9 @@ Closed investigations are not active work items. This is one monotonic sequence;
    writer is that JAL and the legitimate value is `0x800155EC` (MIPS PC+8).
    The link write is now verified, but the target is an intra-function
    continuation (`after_4`) rather than a registered function entry. Next:
-   statically audit how this generator/runtime represents continuation targets
-   and identify one bridge that preserves the guest link while returning to
-   `after_4`; do not add a second raw-link or NULL-function guard. See `NEXT.md`.
+   The s2476 census selected the host-local continuation branch: identify one
+   bridge that preserves the guest link and returns to `after_4`; do not add a
+   second raw-link or NULL-function guard. See `NEXT.md`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

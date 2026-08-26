@@ -114053,3 +114053,18 @@ The independent retail oracle could not be run this session because the
 available checkout lacks `tools/oracle/rice_hold_start.lua` and its watch
 harness. Consequently this run is qualified port evidence only; no retail
 null was interpreted. Artifact: `scratch/agent/s2475_m5_converter_callsite_fix/audit.md`.
+
+## Session 2476 (2026-08-26) — audited generated continuation-tail lowering
+
+The required static table searched every generated variable-register
+`LOOKUP_FUNC(ctx->r25|r31|r9)` site and found exactly one: the tail dispatch in
+`convertMat3x4ToN64Mtx`. Its sole caller writes the legitimate PC+8 link
+`0x800155EC`, and that address is the caller's local generated `after_4` label.
+The runtime cross-check found that `func_map` is populated only from function
+starts, overlay offsets, and patch-section offsets; no continuation labels are
+registered. This selects `H-HostContinuationOnly`, rules out a mapped
+continuation at the inspected generated/runtime scope, and rules out a wrong
+tail contract because the target is consumed as the immediate post-call
+continuation. No build, runtime, audio, guard, or bridge change was made.
+
+Artifact: `scratch/agent/s2476_m5_continuation_audit/audit.md`.
