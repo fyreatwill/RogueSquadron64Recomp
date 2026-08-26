@@ -30,6 +30,19 @@ Current maintenance marker: Session 2474 (2026-08-26).
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
 
+- **s2475 — the missing guest link is real, but a raw intra-function link is
+  not a registered continuation.** The regenerated callsite at `0x800155E4`
+  has delay slot `addiu $a1,$sp,0x10`, so it does not alter `$ra`; the fixup
+  wrote the legitimate MIPS link `0x800155EC` before calling
+  `convertMat3x4ToN64Mtx`. The qualified port run then changed the failure from
+  `get_function(0)` to `Failed to find function at 0x800155EC`, proving the
+  converter consumed the link but the host function map has no entry for the
+  generated `after_4` continuation. This selects the incomplete-continuation
+  branch, refutes the delay-slot explanation, and leaves continuation
+  lowering/mapping open. The retail oracle positive control was unavailable in
+  this environment because its script/watch harness is absent; no retail null
+  was interpreted. Artifact: `scratch/agent/s2475_m5_converter_callsite_fix/audit.md`.
+
 - **s2469 — the live setupCameraMatrices caller supplies the inherited zero.**
   The independent retail control completed with whole-RDRAM and driven VI
   controls. The qualified port's resolver positive control for `0x8009123C`
@@ -331,18 +344,18 @@ Current maintenance marker: Session 2474 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, generator-gap fix pending.**
+1. **M5 generated alternate equivalence — active, continuation bridge pending.**
    The runtime zero-initializes `recomp_context ctx{}` with no `r31` setup and
    no `thread_create_callback` registered for this game. The generator lowered
    the JAL at `0x800155E4` in `traverseSceneGraphRecursive` to a direct C call
    without writing `ctx->r31 = 0x800155EC`, but `convertMat3x4ToN64Mtx` reads
    `ctx->r31` as its tail-call target. This is not a mitigation; the legitimate
    writer is that JAL and the legitimate value is `0x800155EC` (MIPS PC+8).
-   Next: verify the delay slot at `0x800155E8` does not override `$ra`, add the
-   `ctx->r31 = 0x800155EC` write to `fixup_game_funcs.py`, rebuild, and confirm
-   the pre-target `get_function(0)` abort is resolved. See `NEXT.md` for exact
-   commands. No audio gate, output remap, task-data, or dispatch change is
-   authorized beyond this callsite patch.
+   The link write is now verified, but the target is an intra-function
+   continuation (`after_4`) rather than a registered function entry. Next:
+   statically audit how this generator/runtime represents continuation targets
+   and identify one bridge that preserves the guest link while returning to
+   `after_4`; do not add a second raw-link or NULL-function guard. See `NEXT.md`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

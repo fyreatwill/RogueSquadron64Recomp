@@ -114031,3 +114031,25 @@ override `$ra`, then add `ctx->r31 = 0x800155EC;` before the converter call in
 `fixup_game_funcs.py`, rebuild, and run to confirm the pre-target abort is
 resolved. NEXT.md rewritten with exact commands and competing hypotheses.
 No guard, stub, audio, output, or dispatch change was made.
+
+## Session 2475 (2026-08-26) — patched converter JAL link and exposed continuation boundary
+
+The required static delay-slot control passed: the words at the converter
+callsite are `jal 0x80018D80` followed by `addiu $a1,$sp,0x10`; the delay slot
+does not overwrite `$ra`. The regeneration and fixup pipeline completed, and
+the fixup added `ctx->r31 = 0x800155EC` immediately before the generated direct
+call at `0x800155E4`. The Debug build completed successfully.
+
+The qualified 60-second port run reached the same converter stack but failed
+with `Failed to find function at 0x800155EC`, replacing the previous
+`get_function(0)` failure. This confirms the converter consumed the legitimate
+MIPS PC+8 link value and selects the incomplete-continuation hypothesis:
+`0x800155EC` is the generated function's `after_4` intra-function continuation,
+not a registered host function entry. The delay-slot hypothesis is ruled out;
+the raw link write alone is not a complete fix. No audio, task-data, output,
+gate, guard, or dispatch change was made.
+
+The independent retail oracle could not be run this session because the
+available checkout lacks `tools/oracle/rice_hold_start.lua` and its watch
+harness. Consequently this run is qualified port evidence only; no retail
+null was interpreted. Artifact: `scratch/agent/s2475_m5_converter_callsite_fix/audit.md`.
