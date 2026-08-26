@@ -113157,3 +113157,20 @@ single-source oracle scope; the hangar caller shares the writer's broad
 context shape. It rules out a zero-reach explanation for the observed intro
 caller but does not close semantic identity, authorize a port mapping, or
 justify a mitigation. Artifact: `scratch/agent/s2437_retail_caller_reachability/`.
+
+## Session 2438 (2026-08-26) — joined retail caller to callee context
+
+The first observation-only oracle arm was instrument-invalid: the high-frequency
+`--pc-field-dump 0x800078EC` arm reached title but stopped at 49.3 emulated
+seconds, with only 618 writes in the second exact range, so it did not satisfy
+the hangar control. The corrected arm retained the caller field dump and exact
+store table, passed whole-RDRAM (`12,661` writes), title `1024 @ 0x00790400`,
+hangar `512 @ 0x006AB400`, and exact image-range totals of `1,536` and `1,125`.
+It recorded one intro caller row at `0x8008F2CC` with `s0=0x10`, `s1=0x561F`,
+selector `0x801934E0`, while the exact-store table retained 408 phase rows at
+`0x800078EC` with `s0=0x12`, `s1=0x561F`, source byte `1`,
+`ra=0x8008F2D4`, and `a0=0x801797B0`. This independently corroborates
+`H-RetailCallerToOtherPath` for the intro caller at the current oracle scope.
+It rules out neither the hangar caller's semantic identity nor a later port
+consumer, and authorizes no port behavior change. Artifact:
+`scratch/agent/s2438_retail_callee_context/`.

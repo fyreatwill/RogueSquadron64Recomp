@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2437 (2026-08-26).
+Current maintenance marker: Session 2438 (2026-08-26).
 
 ## Current state
 
@@ -426,7 +426,16 @@ sequence; #1 is the next campaign priority.
    selecting `H-RetailCallerUnrelated` provisionally at this single-source
    oracle scope. The hangar row shared the writer's broad tuple shape. A new
    phase-local callee/context capture is required before semantic identity is
-   closed; no port behavior change is authorized.
+   closed; no port behavior change is authorized. s2438's corrected same-run
+   capture passed whole-RDRAM (12,661), title, hangar, and exact-range controls
+   (1,536 and 1,125). The intro caller field row remained `s0=0x10`,
+   `s1=0x561F`, selector `0x801934E0`, while 408 phase-latched exact-store
+   rows at callee `0x800078EC` retained `s0=0x12`, `s1=0x561F`, source byte
+   `1`, `ra=0x8008F2D4`, and `a0=0x801797B0`; this independently corroborates
+   `H-RetailCallerToOtherPath` for the intro caller. The first arm was
+   instrument-invalid because callee field dumping stopped before hangar;
+   only the corrected arm is interpreted. The hangar caller/callee relation
+   remains open; no port behavior change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -590,6 +599,18 @@ phase-latched `s0=0x12`, `s1=0x561F`, source-byte-1 context; the hangar row
 shared the writer's broad tuple. This selects `H-RetailCallerUnrelated`
 provisionally at single-source oracle scope, not a port mapping or output
 remap. Artifact: `scratch/agent/s2437_retail_caller_reachability/`.
+
+s2438 independently repeated the caller/callee capture with valid controls.
+The corrected arm reached title and hangar and recorded exact-range totals of
+1,536 and 1,125 writes. Its one retained intro caller row again had
+`s0=0x10`, `s1=0x561F`, selector `0x801934E0`; 408 phase-latched exact-store
+rows at `0x800078EC` had `s0=0x12`, `s1=0x561F`, source byte `1`,
+`ra=0x8008F2D4`, and `a0=0x801797B0`. This corroborates
+`H-RetailCallerToOtherPath` for the intro caller at the current oracle scope.
+The callee field-dump arm was too high-frequency to reach hangar and is
+discarded as instrument-invalid; the corrected arm used the exact-store table
+instead. Hangar caller/callee semantic identity remains open. Artifact:
+`scratch/agent/s2438_retail_callee_context/`.
 
 ### VI, M3, M4, and generated symbols
 
