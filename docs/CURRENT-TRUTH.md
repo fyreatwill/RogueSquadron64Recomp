@@ -167,6 +167,20 @@ Current maintenance marker: Session 2447 (2026-08-26).
   guard behavior changed. Artifact:
   `scratch/agent/s2447_m5_static_rsmemset_callsites_fixed/`.
 
+- **s2448 — every observed static caller already has zero guest `ra`.** The
+  fixed paired capture passed the independent retail whole-RDRAM/title/hangar,
+  exact-range, writer-PC, and port route controls; the same-run indirect
+  `0x8009123C` positive control resolved in both arms. A regeneration-safe
+  caller table covered all 88 static `jal 0x800078E0` sites. Both stub and image
+  arms retained 1,024 caller rows, and every row had `ra=0`; the entry table
+  independently retained `ra=0` rows. This selects `H-CallsiteAlreadyZero` at
+  the current caller boundary and rules out an observed wrapper-only loss.
+  The diagnostic TLS handoff of caller identity was reversed/zero at entry and
+  is not used as evidence. The image arm still produced two nonzero
+  stage-only rows with zero source/consumer joins. No audio, output, task-data,
+  dispatch, or guard behavior changed. Artifact:
+  `scratch/agent/s2448_m5_static_rsmemset_callsite_abi_fixed/`.
+
 - **s2444 — an independent paired capture repeats the missing port second-range
   consumer.** The retail oracle passed the whole-RDRAM positive control
   (`1,344,797` hits), title/hangar VI controls, both exact image-range
@@ -480,12 +494,13 @@ Current maintenance marker: Session 2447 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
-1. **M5 port execution identity — active.** Identify the target-phase static
-   `rs_memset` callsite(s) that lead to block `0x800078EC` with `ra=0`. Use a
-   regeneration-safe entry/callsite table covering all 88 generated
-   `rs_memset` callsites, joined to the existing second-range and image/DMA
-   identity. The same-run indirect-resolution positive control and retail
-   controls must remain; no behavior change.
+1. **M5 port execution identity — active.** Audit the generated lowering of all
+   88 static `rs_memset` callsites: enumerate each callsite's preceding guest
+   instruction/delay-slot pair and whether generated code writes `ctx->r31`
+   before the direct call. Use the s2448 caller table as the live control and
+   do not change behavior. The next result must distinguish a missing
+   generated `jal` return write from a caller-side overwrite; no output,
+   task-data, dispatch, guard, or audio change is authorized.
 2. **M5 image consumer provenance — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate. s2425 establishes retail/port parity for the title
    `0x80015BC8` writer family, while s2426 shows neither candidate PC writes

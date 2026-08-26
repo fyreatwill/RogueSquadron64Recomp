@@ -203,6 +203,56 @@ extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *last
 extern "C" volatile uint32_t g_rs64_last_guest_pc = 0;
 static thread_local uint32_t g_rs64_m5_field348_static_callsite = 0;
 static thread_local uint32_t g_rs64_m5_pcm_callsite = 0;
+static thread_local uint32_t g_rs64_m5_static_rs_memset_callsite = 0;
+static thread_local uint32_t g_rs64_m5_static_rs_memset_ra = 0;
+
+extern "C" void rs64_m5_static_rs_memset_callsite(uint32_t callsite,
+                                                    uint32_t ra,
+                                                    uint32_t dst,
+                                                    uint32_t value,
+                                                    uint32_t len) {
+    g_rs64_m5_static_rs_memset_callsite = callsite;
+    g_rs64_m5_static_rs_memset_ra = ra;
+    static int enabled = -1;
+    static uint32_t rows = 0;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_STATIC_CALLS");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        enabled = ((e && e[0] && e[0] != '0') ||
+                   (all && all[0] && all[0] != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    uint32_t width = rs64_vi_committed_width();
+    uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+    uint32_t next_bucket = (width << 24) ^ origin;
+    if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
+    if (rows >= 512u) return;
+    uint32_t phase = rs64_phase_ord();
+    uint32_t ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    unsigned active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &ordinal, &row, &exit_reason, &arm) ? 1u : 0u;
+    std::fprintf(stderr,
+        "[m5-static-rsmemset-call] n=%u callsite=0x%08X ra=0x%08X "
+        "phase=%u width=%u origin=0x%06X arm=%s ordinal=%u row=%u active=%u "
+        "dst=0x%08X val=0x%08X len=0x%X exit=%d\n",
+        rows, callsite, ra, phase, width, origin, arm ? arm : "n/a",
+        ordinal, row, active, dst, value, len, exit_reason);
+    std::fflush(stderr);
+    ++rows;
+}
+
+extern "C" uint32_t rs64_m5_static_rs_memset_last_callsite() {
+    return g_rs64_m5_static_rs_memset_callsite;
+}
+
+extern "C" uint32_t rs64_m5_static_rs_memset_last_ra() {
+    return g_rs64_m5_static_rs_memset_ra;
+}
 
 namespace {
 struct Rs64PcmWriterState {

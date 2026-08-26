@@ -16,6 +16,8 @@ static void rs64_m5_static_rs_memset_entry(recomp_context* ctx) {
     extern unsigned char rs64_audio_current_route_snapshot(
         uint32_t*, uint32_t*, uint32_t*, uint32_t*, uint32_t*, int*, const char**);
     extern volatile uint32_t g_rs64_last_guest_pc;
+    extern uint32_t rs64_m5_static_rs_memset_last_callsite(void);
+    extern uint32_t rs64_m5_static_rs_memset_last_ra(void);
     static int enabled = -1;
     static unsigned rows = 0;
     static uint32_t bucket = 0xFFFFFFFFu;
@@ -46,10 +48,12 @@ static void rs64_m5_static_rs_memset_entry(recomp_context* ctx) {
     uint32_t callsite = ra >= 8u ? ra - 8u : 0u;
     fprintf(stderr,
         "[m5-static-rsmemset] n=%u entry=0x800078E0 ra=0x%08X "
+        "caller_callsite=0x%08X caller_ra=0x%08X "
         "callsite=0x%08X breadcrumb=0x%08X phase=%u width=%u "
         "origin=0x%06X arm=%s ordinal=%u row=%u active=%u "
         "dst=0x%08X val=0x%08X len=0x%X exit=%d\n",
-        rows, ra, callsite, (unsigned)g_rs64_last_guest_pc, phase, width,
+        rows, ra, callsite, rs64_m5_static_rs_memset_last_callsite(),
+        rs64_m5_static_rs_memset_last_ra(), (unsigned)g_rs64_last_guest_pc, phase, width,
         origin, arm ? arm : "n/a", ordinal, row, active,
         U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), exit_reason);
     fflush(stderr);

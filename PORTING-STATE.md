@@ -113382,3 +113382,30 @@ control. Its generated-code injection is regeneration-safe in
 `tools/apply_s2447_m5_static_calls.py`.
 Artifacts: `scratch/agent/s2447_m5_static_rsmemset_callsites/` (invalid first
 budget) and `scratch/agent/s2447_m5_static_rsmemset_callsites_fixed/`.
+
+## Session 2448 (2026-08-26) — captured static rs_memset caller ABI state
+
+Ground truth first: the fixed paired recipe passed the retail whole-RDRAM,
+title/hangar VI, exact-range, writer-PC, and both port route controls. The
+same-run indirect `0x8009123C` positive control resolved in both stub and image
+arms. The first attempt omitted the dispatch-control environment variable and
+is recorded as invalid rather than evidence.
+
+The corrected run added a regeneration-safe caller probe at all 88 generated
+`jal 0x800078E0` sites. Stub and image arms each retained 1,024 caller rows;
+every row had `ra=0`. The entry table independently retained zero `ra` rows.
+This selects `H-CallsiteAlreadyZero` at the observed caller boundary and rules
+out an observed wrapper-only loss. The diagnostic TLS handoff of caller
+identity was reversed/zero at entry, so its caller-site fields are not used as
+evidence. The image arm produced 2,323 stage rows and two nonzero stage-only
+rows, with zero exact source/consumer joins and zero destination-role skew.
+No audio, output, task-data, dispatch, or guard behavior changed.
+
+ORIGIN: the caller table is observation-only, grounded by the independent
+retail controls, the same-run indirect positive control, and the existing
+retail `0x8002BEEC` -> `0x800078EC` relation. Its generated-code injection is
+regeneration-safe in `tools/apply_s2448_m5_static_callers.py`; the entry-table
+format refresh is in `tools/apply_s2447_m5_static_calls.py`.
+Artifacts: `scratch/agent/s2448_m5_static_rsmemset_callsite_abi/` (invalid
+positive-control configuration) and
+`scratch/agent/s2448_m5_static_rsmemset_callsite_abi_fixed/`.
