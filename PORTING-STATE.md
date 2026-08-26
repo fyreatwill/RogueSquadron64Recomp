@@ -114303,3 +114303,21 @@ fingerprint). **H-DescriptorStaleOrEmpty refuted** (non-zero, consistent).
 gspTask == started task in the hangar). Open: endian-correct per-field decode to
 verify type, data_ptr, yield_data_ptr values against retail ground truth. Artifact:
 `scratch/agent/s2487_m5_descriptor_capture/audit.md`.
+
+## Session 2488 (2026-08-26) — tested MEM_W descriptor endian correction
+
+Changed `rs64_m5_descriptor_yield` to read each of the sixteen gspTask words
+with the runtime `MEM_W(offset, guest_address)` macro. The Debug build passed.
+The corrected probe reached width 512 / origin `0x6AB400` at 48.3 seconds and
+the scheduler-id plus descriptor controls fired in the target phase. It ended
+at 62.3 seconds after 54 frames in the known `recomp::do_rom_read` crash family.
+
+The descriptor-yield rows still emitted the exact s2487 sequence, beginning
+`0A8C2907,88C3045E,...` and ending `7F8317E0,4818188C`; no field became a
+plausible OSTask value. This is an inconclusive null, not a selection between
+legitimate and garbage: the unchanged result means the assumed endian defect,
+RDRAM representation, or task-pointer base remains unresolved. The retail
+oracle positive-control attempt failed because the required debugger-enabled
+`libmupen64plus.dylib` is absent, so no retail null was interpreted. No audio
+behavior or descriptor contents were remapped. Artifact:
+`scratch/agent/s2488_m5_descriptor_decode/audit.md`.

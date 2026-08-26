@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2487 (2026-08-26).
+Current maintenance marker: Session 2488 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,16 @@ Current maintenance marker: Session 2487 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2488 — the proposed `MEM_W` endian correction did not change the
+  descriptor fingerprint.** The Debug build succeeded and the corrected
+  capture reached the 512/hangar phase; scheduler and descriptor controls
+  fired. Every hangar row still emitted the exact s2487 sixteen-word sequence,
+  including implausible `0x0A8C2907`. This is an inconclusive single-source
+  result: it does not select legitimate or garbage descriptor contents because
+  the assumed byte representation/task base has not been separated. The
+  retail oracle could not run because its debugger-enabled core dylib is
+  absent. Artifact: `scratch/agent/s2488_m5_descriptor_decode/audit.md`.
 
 - **s2487 — gspTask descriptor is populated, stable, and joined to the
   scheduler dispatch in the hangar phase.** Two recipe bugs suppressed all

@@ -1509,16 +1509,15 @@ extern "C" void rs64_m5_descriptor_yield(uint8_t* rdram, uint32_t task_ptr) {
     uint32_t phase = 0, width = 0, origin = 0;
     const char* arm = nullptr;
     if (!rs64_m5_descriptor_phase(&phase, &width, &origin, &arm)) return;
-    const OSTask* task = TO_PTR(OSTask, task_ptr);
     const uint32_t words[16] = {
-        (uint32_t)task->t.type, (uint32_t)task->t.flags,
-        (uint32_t)task->t.ucode_boot, (uint32_t)task->t.ucode_boot_size,
-        (uint32_t)task->t.ucode, (uint32_t)task->t.ucode_size,
-        (uint32_t)task->t.ucode_data, (uint32_t)task->t.ucode_data_size,
-        (uint32_t)task->t.dram_stack, (uint32_t)task->t.dram_stack_size,
-        (uint32_t)task->t.output_buff, (uint32_t)task->t.output_buff_size,
-        (uint32_t)task->t.data_ptr, (uint32_t)task->t.data_size,
-        (uint32_t)task->t.yield_data_ptr, (uint32_t)task->t.yield_data_size,
+        (uint32_t)MEM_W(0x00, task_ptr), (uint32_t)MEM_W(0x04, task_ptr),
+        (uint32_t)MEM_W(0x08, task_ptr), (uint32_t)MEM_W(0x0C, task_ptr),
+        (uint32_t)MEM_W(0x10, task_ptr), (uint32_t)MEM_W(0x14, task_ptr),
+        (uint32_t)MEM_W(0x18, task_ptr), (uint32_t)MEM_W(0x1C, task_ptr),
+        (uint32_t)MEM_W(0x20, task_ptr), (uint32_t)MEM_W(0x24, task_ptr),
+        (uint32_t)MEM_W(0x28, task_ptr), (uint32_t)MEM_W(0x2C, task_ptr),
+        (uint32_t)MEM_W(0x30, task_ptr), (uint32_t)MEM_W(0x34, task_ptr),
+        (uint32_t)MEM_W(0x38, task_ptr), (uint32_t)MEM_W(0x3C, task_ptr),
     };
     g_rs64_m5_descriptor_yield_ptr.store(task_ptr, std::memory_order_release);
     std::fprintf(stderr,
