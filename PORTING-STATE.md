@@ -111199,3 +111199,40 @@ only the current same-task pre/post window. The discriminator is whether the
 two target rows join to an earlier task ordinal, to a later task ordinal, or to
 no task ordinal while the positive controls remain intact. Do not change task
 data, writeback, consumers/defaults, or add a guard.
+
+## Session 2362 (2026-08-25) — M5 expanded task-stage timing join
+
+The prescribed s2362 timing refinement was run from a fresh Debug build with
+the retail oracle first. The oracle exited cleanly (`oracle_rc=0`) and passed
+the whole-RDRAM, target-window, field, phase, writer-PC, and VI controls. The
+stub and image arms both reached the 512/0x6AB400 phase; ABI controls were
+positive (`1041` stub, `1070` image), VI controls were positive (`16` each),
+filter/voice controls fired for both, and the image join control fired. Both
+game processes were terminated by the driver watchdog with SIGKILL (`rc=137`),
+not treated as crashes or aborts.
+
+The expanded table retained two nonzero target-stage rows. Each row fell
+inside containing task ordinal `0`, had task ordinal `1` as the next task, and
+had no previous task in the retained scope. The driver selected
+`H-StageInsideTask`. This overturns s2361's local zero same-task event label:
+that null came from joining lifecycle events on the unrelated image-stage
+ordinal and was a join-window/ordinal artifact. The result does not prove an
+output writeback, PCM closure, or a legitimate contract edge.
+
+This rules out “the target stage precedes all task work” at this capture scope.
+It does not authorize task-data edits, field writeback, consumer/default
+changes, guards, or mitigation. Artifacts:
+`scratch/agent/s2362_m5_task_stage_timing_join/`.
+
+ORIGIN: diagnostic-only. The persistent driver parser now records containing,
+previous, and next task ordinals while retaining the existing event probes;
+no game behavior or mitigation machinery changed.
+
+### Next
+
+Run one same-build M5 stage/output contract join. Retain every s2361 control,
+use the containing task ordinal from this session, and join its stage payload,
+generated DMA destination, source/consumer PCM rows, and completion ordering.
+Select containing-task output/PCM closure versus an internal-only stage; do
+not write back a field, alter task data, change a consumer/default, or add a
+guard.

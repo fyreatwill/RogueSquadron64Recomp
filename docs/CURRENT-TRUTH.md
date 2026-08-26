@@ -5,9 +5,9 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2361 (2026-08-25). The M5 stub/image validation passed
-its route and execution controls but found target-stage rows earlier than the
-current same-task join window; no audio contract change is authorized. The M5
+Maintained in Session 2362 (2026-08-25). The M5 timing refinement passed all
+route and execution controls and placed both target-stage rows inside a
+containing audio task; no audio contract change is authorized. The M5
 retail writer-source capture
 passed its controls and found a direct task relation in every target phase:
 `$s1 == data_ptr+0x100` at the exact task-field writer counts, with repeated
@@ -49,12 +49,19 @@ is authorized.
   while `$a2` repeatedly carries the matching task `data_ptr`. The oracle does
   not join those GPR rows to an exact writer VI, so this selects a source class
   without authorizing a port writeback or task-data edit.
-- The s2361 same-build stub/image validation is route-valid for both arms. The
-  stub is a true no-op (`dmem_changed=0`, no DMA, canary preserved); the image
-  arm changes DMEM and emits two destination DMAs per task. The bounded table
-  has two target-stage rows but zero same-task pre/post joins, selecting
-  `H-PreEvents-EarlierTick` at capture scope. Task-to-stage timing remains
-  unresolved and no port contract change is authorized.
+- The s2361 same-build stub/image validation was route-valid for both arms. The
+  stub was a true no-op (`dmem_changed=0`, no DMA, canary preserved); the image
+  arm changed DMEM and emitted two destination DMAs per task. Its bounded
+  table had two target-stage rows but zero same-task pre/post joins. s2362
+  superseded that local timing label by joining stages to containing task
+  boundaries; no port contract change is authorized.
+- The s2362 expanded timing table is route-valid for both arms and contains
+  two target-stage rows. Both rows fall inside task ordinal 0 and have task
+  ordinal 1 as the next task; no earlier task exists in the retained scope.
+  The previous zero same-task event result was a join-window/ordinal artifact,
+  not evidence that the stage preceded all task work. This selects
+  `H-StageInsideTask` at capture scope; it does not identify a legitimate
+  output writeback or authorize a contract change.
 
 ## Latest evidence
 
@@ -129,12 +136,13 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
    qualified steps. The next queued boundary is #2.
-2. **M5 task-to-stage timing join — next.** Run one same-build refinement of
-   the existing stub/image pair, retaining all s2361 controls, and join the
-   complete ordinal/event stream around each target stage rather than only the
-   current same-task pre/post window. The discriminator is earlier-task,
-   later-task, or no-task join while controls remain positive. Do not write
-   back a field, alter task data, change a consumer/default, or add a guard.
+2. **M5 stage/output contract join — next.** Run one same-build refinement of
+   the existing stub/image pair, retaining all s2361 controls, and join each
+   containing task ordinal to its stage payload, generated DMA destination,
+   source/consumer PCM rows, and completion ordering. The discriminator is
+   containing-task output/PCM closure versus an internal-only stage while
+   controls remain positive. Do not write back a field, alter task data,
+   change a consumer/default, or add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.
