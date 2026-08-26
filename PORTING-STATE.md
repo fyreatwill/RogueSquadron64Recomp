@@ -112281,3 +112281,26 @@ or mitigation behavior. Artifact:
 
 ORIGIN: no mitigation or behavior change; this was a same-build logging
 perturbation control.
+
+## Session 2399 (2026-08-25) — M5 accepted-preparation identity join
+
+The prescribed phase-keyed reducer ran against one rebuilt binary in two
+behavior-neutral arms from `build/`, with the qualified LLE/image route,
+missing-function suppression, title phase gating, and SIGKILL timeout. The
+first Arm-B attempt enabled `ROGUESQ_LOG_ALL=1` and failed before target; that
+attempt was rejected as a logger-reachability failure. The fixed pair enabled
+only `ROGUESQ_LOG_M5_ROUTE_ORDER=1` and `ROGUESQ_LOG_M5_STAGE_CALLS=1` in both
+arms.
+
+Arm A retained 607 accepted target preparations and 32 target stage rows; Arm
+B retained 466 and 32. Every retained stage row had `route_valid=0`. Every
+row joined to the latest accepted target preparation at the same
+`prepare_seq` (`delta=0`), while the stage row's route ordinal and row were
+zero. This selects `H-IdentityClearedBeforeStage` at capture scope and rules
+out `H-TargetPreparationIsUnrelated`. It does not distinguish a host clear
+from a guest-side clear or separate read at the exact boundary, and it does
+not authorize a route, audio, task-data, gate, fallback, dispatch, VI, output,
+or mitigation change. Artifact: `scratch/agent/s2399_identity_join/`.
+
+ORIGIN: no mitigation or behavior change; the only addition was a bounded
+post-run reducer over existing diagnostic rows.

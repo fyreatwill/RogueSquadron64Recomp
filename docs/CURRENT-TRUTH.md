@@ -5,7 +5,16 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Current maintenance marker: Session 2398 (2026-08-25).
+Current maintenance marker: Session 2399 (2026-08-25).
+
+Maintained in Session 2399 (2026-08-25). The phase-keyed identity join ran
+from one rebuilt binary in both behavior-neutral arms. Arm A had 607 accepted
+target preparations and 32 target stage calls; Arm B had 466 and 32. Every
+retained stage call had `route_valid=0`, while the latest accepted preparation
+had the same `prepare_seq` (`delta=0`) and the call echoed zero route ordinal/
+row. This selects `H-IdentityClearedBeforeStage` at capture scope and rules
+out unrelated preparation; it does not authorize changing route identity,
+audio, task data, gate, fallback, dispatch, VI, output, or mitigation.
 
 Maintained in Session 2398 (2026-08-25). The same-build route-order perturbation
 run passed title in both arms: Arm A (logger off) had `60` dispatch and `140`
@@ -154,6 +163,23 @@ is authorized.
 
   ORIGIN: no mitigation or behavior change; this was a same-build logging
   perturbation control.
+
+- **s2399 — accepted preparation is immediately followed by cleared stage
+  identity.** The fixed same-build capture passed the target title controls in
+  both arms. Arm A retained `607` accepted target preparations and `32` stage
+  rows; Arm B retained `466` and `32`. All 64 stage rows had `route_valid=0`,
+  and every row joined to the latest accepted preparation at the same
+  `prepare_seq` (`delta=0`), while route ordinal/row remained zero. This
+  selects `H-IdentityClearedBeforeStage` at capture scope and refutes
+  `H-TargetPreparationIsUnrelated`; it does not distinguish host clearing
+  from a guest-side clear or separate read at the exact boundary. The first
+  Arm-B attempt with `ROGUESQ_LOG_ALL=1` failed before target and was rejected
+  as a logger-reachability failure; the fixed pair used only the required
+  route/stage probes. Artifact:
+  `scratch/agent/s2399_identity_join/`.
+
+  ORIGIN: no mitigation or behavior change; added only a bounded reducer
+  artifact over existing diagnostic rows.
 
 - **s2396 — image-stage calls occur before route identity is prepared.** The
   same-build suppressed image-arm run passed dispatch (`59` rows) and title
@@ -610,9 +636,11 @@ sequence; #1 is the next campaign priority.
   witness was target-phase invalid because the fixed run crashed before title;
   s2398's two-arm control shows the logger itself does not cause that failure.
   Both arms reached title, while accepted target preparations were followed by
-  invalid stage identities. Next, isolate the identity-clear/non-use boundary
-  with one phase-keyed stage-to-preparation join; do not rerun the route-order
-  perturbation.
+  invalid stage identities. s2399 joined every retained stage row to an
+  immediately preceding accepted preparation with `delta=0`, selecting
+  `H-IdentityClearedBeforeStage` at capture scope. Next identify the clear
+  writer/edge with an independent ground-truth discriminator; do not change
+  the route contract from this host-side join alone.
 2. **M5 task/output closure — closed at current capture scope.** s2387's
    corrected reporter-candidate table associated raw `[audtask-join]` records
    with 100% of 4,688 image-stage candidates; reporter completion was true for

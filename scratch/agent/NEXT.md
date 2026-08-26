@@ -1,38 +1,50 @@
-# NEXT work unit (s2399) — locate accepted-preparation identity clearing
+# NEXT work unit (s2400) — identify the accepted-preparation clear edge
 
 HYPOTHESIS-ID: m5-image-stage-route-order-perturbation
 
 ## Work unit
 
-Use the existing route-order/stage-call instrumentation in one new bounded
-capture. Keep the qualified LLE route, image arm, missing-function suppression,
-and `PROBE_PHASE_WIDTH=1024`. Add one phase-keyed join/reducer over Arm B's
-accepted `[m5-route-prepare]` rows and subsequent `[m5-stage-call]` rows,
-including the identity's `route_valid`, `prepare_seq`, route ordinal/row, and
-the call's guest PC/callsite if already available. Do not change task data,
-audio, gate, fallback, dispatch, VI, output behavior, or mitigation.
+Use one ground-truth-first, bounded capture to distinguish where the accepted
+route identity is cleared between `rs64_audio_route_prepare` and
+`rs64_audio_image_stage`. Keep the qualified LLE/image route,
+`ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=1024`, and the existing
+route/stage probes. Do not change task data, audio, gate, fallback, dispatch,
+VI, output behavior, or mitigation.
+
+Before building, arm the retail oracle's whole-RDRAM positive control and the
+target-origin control; only trust a null after both controls fire. In the port,
+add one complete phase-keyed clear-edge table covering the accepted preparation
+sequence, stage entry, route-valid state, and every host/guest clear or reset
+edge already present in the route identity path. Run all A/B arms from the same
+build and kill with SIGKILL.
 
 ## Competing hypotheses and discriminator
 
-- H-IdentityClearedBeforeStage: an accepted target preparation is followed by
-  a stage call with the identity cleared before entry.
-- H-IdentityNotConsumedByStage: accepted preparation remains observable, but
-  the stage call reads a separate/non-route identity source.
-- H-TargetPreparationIsUnrelated: accepted rows are from unrelated work and
-  do not temporally precede the target stage calls.
+- H-HostClearBetweenPrepareStage: the host-side route identity is explicitly
+  cleared between preparation and stage entry.
+- H-GuestClearBeforeHostStage: a guest-side edge clears the source state before
+  the host stage callback observes it.
+- H-SeparateIdentityRead: the accepted identity remains live, but stage entry
+  reads a different identity source.
 
-The discriminating table is phase-keyed and has one row per retained stage
-call: preceding accepted preparation sequence, delta/order, identity-valid
-state, route ordinal/row, stage callsite/PC, and arm. A consistent immediate
-accepted predecessor followed by `route_valid=0` selects clearing; an accepted
-identity with invalid stage state selects separate-source use; no accepted
-predecessors selects unrelated preparation. The existing whole-RDRAM oracle
-and s2392 exact-window controls remain prerequisites before adding or trusting
-any new field.
+The discriminator is a single phase-keyed table with one row per retained stage
+call and columns for preparation sequence, clear-edge sequence/PC/source,
+stage sequence, route-valid state, route ordinal/row, and arm. A clear event
+between equal preparation and stage sequence selects the corresponding clear
+edge; no clear with invalid stage identity selects separate-source use.
 
-## Required controls
+## Exact command shape
 
-Both the logger-off and logger-on arms must show dispatch activity and title
-origin `0x00790400`; phase-gate all counts with `PROBE_PHASE_WIDTH=1024` and
-kill each run with SIGKILL. The s2398 two-arm result is the reachability
-control; do not spend another iteration re-testing logger perturbation.
+`cmake --build build -j2`
+
+Run the two same-build arms with the controls from
+`scratch/agent/s2399_identity_join_run.sh`, plus the oracle control recipe in
+`tools/oracle/README.md`; use `env ... zsh ...` for env-prefixed commands.
+Reduce logs with `python3 scratch/agent/s2399_identity_join.py LOG` only after
+the positive controls and target title origin are present.
+
+Expected outcomes: host clear rows select `H-HostClearBetweenPrepareStage`;
+guest clear rows select `H-GuestClearBeforeHostStage`; no clear rows with
+persisting accepted identity select `H-SeparateIdentityRead`. If the route
+control fails in either arm, reject the capture and fix the driver in the same
+iteration.
