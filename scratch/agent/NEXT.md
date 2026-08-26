@@ -1,4 +1,4 @@
-# NEXT work unit (s2453) — identify the port replacement for the retail dispatcher boundary
+# NEXT work unit (s2454) — identify the port replacement for the retail dispatcher boundary
 
 HYPOTHESIS-ID: m5-port-dispatcher-replacement
 

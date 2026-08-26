@@ -113496,3 +113496,17 @@ behavior change.
 ORIGIN: static ELF symbol-range inspection plus generated source inventory;
 the audit is recorded in
 `scratch/agent/s2452_m5_caller_lowering/audit.md`.
+
+## Session 2453 (2026-08-26) — compacted current truth maintenance ledger
+
+The maintenance check found `docs/CURRENT-TRUTH.md` at 60,076 bytes and 897
+lines, above the 60,000-byte gate. I compacted it to 11,871 bytes and 197
+lines, preserving the current route/configuration, M5 design and safety rules,
+latest s2447–s2452 evidence, active backlog, durable boundaries, and
+superseded conclusions. Repeated historical detail was merged into the durable
+project overview/current ledger; no experiment, build, runtime, or submodule
+file changed. This is a maintenance advancement, not new runtime evidence.
+
+ORIGIN: documentation-only compaction triggered by the byte-size maintenance
+gate. The before/after counts are recorded above; the append-only ledger remains
+authoritative for the retained historical details.
