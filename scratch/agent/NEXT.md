@@ -1,39 +1,39 @@
-# NEXT work unit (s2377) — M5 A1 queue/return boundary
+# NEXT work unit (s2378) — M5 A1 flag-contract provenance
 
-HYPOTHESIS-ID: m5-a1-queue-return-boundary
+HYPOTHESIS-ID: m5-a1-flag-contract-provenance
 
 ## Work unit
 
-Run one ground-truth-first, same-build capture of the `rs_free` call to
-`osRecvMesg` at `0x80001CB8`, recording queue argument, return/result, and the
-post-call queue-head value in both port arms; pair it with an independent
-retail physical watch of the corresponding queue state. Do not change game
-behavior, dispatch, VI selection, task data, or audio behavior.
+Perform one bounded source/ABI audit of the `osRecvMesg` call at
+`0x80001CB8`. Establish whether port `$a2=1` comes from the generated
+delay-slot instruction, is changed by the recomp binding/host wrapper, or is a
+call-site label mismatch. Do not change the flag or any game behavior.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-QueueStateDiffers: retail and port enter the same `osRecvMesg` call, but
-  queue contents/return or the post-call bit-0x8 state differ.
-- H-CallContractDiffers: the queue argument, blocking mode, or return contract
-  differs between retail and port.
-- H-JoinOrLabelArtifact: the observed rows do not refer to the same call or
-  post-call state.
+- H-GeneratedFlag: generated `rs_free` emits `$a2=1` at the call and the port
+  runtime preserves it.
+- H-HostTranslation: generated code supplies `$a2=0`, but a recomp binding or
+  wrapper changes it to `1` before `osRecvMesg`.
+- H-LabelArtifact: the watched port runtime receive is not the same call as
+  retail `0x80001CB8`.
 
-The discriminator is one joined table keyed by phase and call ordinal:
-queue argument, `$a1`, `$a2`, osRecvMesg result, queue-head word, and the
-post-call `0x8` decision, with positive controls for whole-RDRAM, target phase,
-and the call-site marker. Matching call arguments but different queue/result
-state selects `H-QueueStateDiffers`; a call-argument or blocking-mode mismatch
-selects `H-CallContractDiffers`; failure to join the same call selects
-`H-JoinOrLabelArtifact`.
+The discriminator is one source-to-runtime table for the same call ordinal:
+generated instruction/delay-slot operands at `0x80001CB4..0x80001CBC`, the
+recomp binding argument values, the actual `osRecvMesg` implementation flag,
+and the guest PC marker. H-GeneratedFlag is selected if source, binding, and
+runtime all show `1`; H-HostTranslation if source/binding show `0` but runtime
+shows `1`; H-LabelArtifact if the guest PC/ordinal cannot join the runtime row.
 
-## Exact commands
+## Ground truth and exact commands
 
-    read docs/F5-UCODE-REFERENCE.md before designing the oracle watch
-    inspect tools/oracle/README.md and arm a whole-RDRAM positive control
-    build one instrumented binary with the complete joined table
-    run the oracle and both port arms concurrently; SIGKILL each port arm after the phase marker
+    read docs/F5-UCODE-REFERENCE.md and tools/oracle/README.md
+    grep the generated `rs_free` body and binding definitions around `0x80001CB4..0x80001CBC`
+    use the already qualified oracle watch at `0x80001CB8` as the independent `$a2` control
+    build one source/runtime probe only if the static table cannot close the join
+    run both port arms together; SIGKILL after the phase-4 marker
 
-The driver must report controls plus every joined field for both arms and the
-retail watch, and must not treat a null result as evidence unless all positive
-controls fire in that same run.
+Expected result: the table must either prove the generated delay-slot flag is
+the source of the port difference or identify an ABI translation boundary. A
+null control or the unqualified retail queue-write watch must not be used as
+evidence.

@@ -1228,6 +1228,28 @@ extern "C" int32_t osSendMesg(uint8_t* rdram, int32_t mq_, OSMesg mesg, s32 flag
 extern "C" int32_t osRecvMesg(uint8_t* rdram, int32_t mq_, PTR(OSMesg) mesg, s32 flag);
 extern "C" uint32_t rs64_phase_ord(void);
 
+static void log_a1_queue_boundary(uint32_t mq_addr, PTR(OSMesg) msg, s32 flag,
+                                  int32_t result, const OSMesgQueue& before,
+                                  const OSMesgQueue& after) {
+    static const bool enabled = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_A1_QUEUE");
+        return e && *e && *e != '0';
+    }();
+    if (!enabled || mq_addr != 0x8010FEE0u) return;
+    static uint32_t rows = 0;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase >= 4u && rows >= 256u) return;
+    ++rows;
+    std::fprintf(stderr,
+        "[a1-queue] row=%u phase=%u guest_pc=0x%08X mq=0x%08X msg=0x%08X flag=%d "
+        "pre_valid=%d pre_first=%d pre_count=%d pre_msg=0x%08X result=%d "
+        "post_valid=%d post_first=%d post_count=%d post_msg=0x%08X\n",
+        rows, phase, (unsigned)g_rs64_last_guest_pc, mq_addr, (uint32_t)msg, (int)flag,
+        before.validCount, before.first, before.msgCount, (uint32_t)before.msg,
+        (int)result, after.validCount, after.first, after.msgCount, (uint32_t)after.msg);
+    std::fflush(stderr);
+}
+
 static bool submit_boundary_log_enabled() {
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
@@ -1318,7 +1340,17 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     if (mq_addr == 0x8011A818u || mq_addr == 0x8011A7E8u || mq_addr == 0x8011A408u) {
         log_submit_boundary(rdram, "recv", mq_addr, (uint32_t)ctx->r6);
     }
-    ctx->r2 = osRecvMesg(rdram, (int32_t)ctx->r4, (PTR(OSMesg))ctx->r5, (s32)ctx->r6);
+    if (mq_addr == 0x8010FEE0u) {
+        const OSMesgQueue before = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
+        const int32_t result = osRecvMesg(rdram, (int32_t)ctx->r4,
+                                          (PTR(OSMesg))ctx->r5, (s32)ctx->r6);
+        const OSMesgQueue after = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
+        ctx->r2 = result;
+        log_a1_queue_boundary(mq_addr, (PTR(OSMesg))ctx->r5, (s32)ctx->r6,
+                              result, before, after);
+    } else {
+        ctx->r2 = osRecvMesg(rdram, (int32_t)ctx->r4, (PTR(OSMesg))ctx->r5, (s32)ctx->r6);
+    }
 }
 
 // Override upstream's osStopThread_recomp because upstream's osStopThread

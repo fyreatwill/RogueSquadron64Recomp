@@ -111702,3 +111702,43 @@ ORIGIN: diagnostic/source audit only; no value or behavior was changed.
 Capture the `osRecvMesg` queue argument, return/result, and post-call queue
 head for both same-build port arms, and independently watch the corresponding
 retail queue state before interpreting the successor divergence.
+## Session 2377 (2026-08-25) — M5 A1 queue/return contract differs
+
+Before instrumenting, the retail oracle passed the whole-RDRAM positive control
+and fired the `0x80001CB8` call-site watch in both target 640 origins. Its
+target rows carried `$a0=0x8010FEE0`, `$a1=0`, and `$a2=0`; the queue-field
+watch was armed but produced no write rows, so that null is not evidence about
+queue state. The initial port probe was keyed to the pre-adjustment `$s1`
+value `0x80110000` and produced no rows. The oracle trace then independently
+showed the generated `addiu -0x120` makes the actual queue argument
+`0x8010FEE0`.
+
+The fixed build instrumented the actual ultramodern `osRecvMesg` implementation
+and ran the oracle plus both same-build port arms together. All controls passed:
+each port arm reached 640, emitted 256 bounded queue rows, 16 A1 argument rows,
+and one null-request abort; the oracle retained 2,394 call-site rows and 2,416
+predecessor rows. In target phase 4, both port arms independently recorded
+204 receives with the same contract: queue `0x8010FEE0`, message pointer zero,
+flag `1`, result `0`, and queue state `validCount 1 -> 0`, `first 0`,
+`msgCount 1`, `msg 0x8010FEF8`. The two port arms were identical.
+
+This selects `H-CallContractDiffers` at capture scope: retail's independent
+call-site GPR rows show `$a2=0`, while both port runtime rows pass flag `1`.
+It rules out a port-arm-specific queue-state difference and does not establish
+why the generated call supplies the blocking flag, nor authorize changing it.
+The queue write null remains unqualified. No behavior, dispatch, VI, task,
+audio, fallback, guard, or mitigation change was made.
+
+Artifacts: `scratch/agent/s2377_ground_truth/`,
+`scratch/agent/s2377_m5_a1_queue_boundary/`, and
+`scratch/agent/run_s2377_m5_a1_queue_boundary.sh`.
+
+ORIGIN: diagnostic-only. The runtime probe and its exported submodule patch
+only observe queue state; no game value or behavior was changed.
+
+### Next
+
+Audit the generated and host ABI path for the `osRecvMesg` flag at
+`0x80001CB8`: determine whether the port's `$a2=1` is emitted by the generated
+delay-slot instruction, introduced by argument translation, or merely mislabeled
+relative to the retail watch. Keep behavior unchanged.

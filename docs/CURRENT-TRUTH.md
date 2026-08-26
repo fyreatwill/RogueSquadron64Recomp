@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2376 (2026-08-25). The M5 A1 source audit found no generated control-flow mismatch at the disputed boundary: the port contains the expected `0x80001CB4` setup and `jal 0x800331D0`, then reaches `0x80001CD8` only after `osRecvMesg` and the `0x8` queue-state test. The companion function is still `INCLUDE_ASM`, so the retail body comparison is source-unavailable; this is a single-source audit, not a complete explanation. No fallback or contract edit is authorized.
+Maintained in Session 2377 (2026-08-25). The M5 A1 queue/return capture passed all route controls and selected a call-contract difference: retail's `0x80001CB8` rows carry `$a2=0`, while both port arms pass flag `1` to queue `0x8010FEE0`. The port queue state is identical in both arms (`validCount 1 -> 0`); the retail queue-write watch was silent and is not evidence. The generated body still contains the delay-slot `$a2=1`, but why that differs from retail remains open. No flag change or fallback is authorized.
 
 The s2372 predecessor capture remains valid: retail's target-phase
 `0x80001F84` row had `$a0=1,$a2=0`, while both port arms had
@@ -128,6 +128,22 @@ is authorized.
   or caller divergence. No behavior, fallback, dispatch, VI, task, audio,
   guard, or mitigation change was made. This is single-source for the body
   audit. Artifact: source audit only; s2375 capture retained.
+
+- **s2377 — A1 queue state matches between port arms but the receive flag
+  differs from retail.** The oracle passed whole-RDRAM, both target origins, and
+  the `0x80001CB8` call-site controls. Retail target rows carry
+  `$a0=0x8010FEE0,$a1=0,$a2=0`; its queue-field watch produced no writes and is
+  unqualified. Both same-build port arms passed early-640, A1, and abort
+  controls and each recorded 204 target-phase receives at queue `0x8010FEE0`
+  with `msg=0`, `flag=1`, result `0`, and `validCount 1 -> 0`, `first=0`,
+  `msgCount=1`, `msg=0x8010FEF8`. This selects `H-CallContractDiffers` at
+  capture scope, rules out a port-arm-specific queue-state difference, and
+  supersedes s2376's `H-InputDependentPath` label as an explanation of this
+  boundary. It does not identify why the generated delay slot supplies `1` or
+  authorize changing it. No behavior, fallback, dispatch, VI, task, audio,
+  guard, or mitigation change was made. Artifacts:
+  `scratch/agent/s2377_m5_a1_queue_boundary/` and
+  `scratch/agent/s2377_ground_truth/`.
 
 - **s2373 — `rs_free` entry/return boundary is positive and internally
   divergent.** The fresh oracle passed whole-RDRAM `10,000`, both target 640
@@ -338,13 +354,12 @@ sequence; #1 is the next campaign priority.
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
 
-3. **M5 A1 queue/return boundary — active.** The generated body has the
-   expected `0x80001CB4`/`osRecvMesg` sequence; port reaches the later free-list
-   branch while retail's retained route stops at `0x80001CB4`. Capture the
-   queue argument, `osRecvMesg` return/result, and the post-call queue-head
-   value in the same-build port arms, with an independent retail watch of the
-   corresponding physical queue state. Do not add a fallback or change
-   dispatch, VI, task, or audio behavior.
+3. **M5 A1 flag-contract provenance — active.** s2377 selects a retail/port
+  receive-flag difference at `0x80001CB8`: retail `$a2=0`, both port arms
+  pass `1` to queue `0x8010FEE0`. Audit the generated delay slot and host ABI
+  mapping to distinguish an emitted port mismatch from a translation or label
+  artifact. Do not change the flag, fallback, dispatch, VI, task, or audio
+  behavior.
 4. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both
    arms. Do not repeat the resident-overlay table without a new ground-truth
@@ -453,6 +468,11 @@ are superseded at their measured scopes:
   the task field.
 - s2349–s2356's successive retail writer-placement/value ambiguities; s2357's
   independent task dump established the exact `data_ptr+0x100` field relation.
+- s2376's `H-InputDependentPath` boundary label is superseded for the A1
+  receive call: it was believable because the generated body visibly tests the
+  post-call queue-head bit, but s2377 independently measured retail `$a2=0`
+  versus port flag `1` in both arms. The remaining question is contract
+  provenance, not queue-state arm divergence.
 
 ## Evidence and safety rules
 

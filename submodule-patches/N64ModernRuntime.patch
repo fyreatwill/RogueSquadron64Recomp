@@ -2294,10 +2294,10 @@ index 149e770..89c25df 100644
  }
  
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..c1a96c3 100644
+index 9944a02..7715582 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
-@@ -1,18 +1,208 @@
+@@ -1,18 +1,209 @@
  #include <bitset>
  #include <thread>
 +#include <cstdio>
@@ -2313,6 +2313,7 @@ index 9944a02..c1a96c3 100644
 +extern "C" __attribute__((weak)) bool rs64_audio_route_snapshot(
 +    uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
 +    uint32_t* row, int* exit_reason, const char** arm);
++extern "C" uint32_t rs64_phase_ord();
 +
 +// s215: do_send/do_recv dereference their PTR(OSMesgQueue) argument via
 +// TO_PTR's unchecked `&rdram[(uint64_t)var - 0xFFFFFFFF80000000]` arithmetic
@@ -2506,7 +2507,7 @@ index 9944a02..c1a96c3 100644
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -28,7 +218,19 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -28,7 +219,19 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
  }
  
  void ultramodern::enqueue_external_message_src(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, EventMessageSource src) {
@@ -2527,7 +2528,7 @@ index 9944a02..c1a96c3 100644
  }
  
  void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, bool requeue_if_blocked) {
-@@ -37,33 +239,64 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
+@@ -37,33 +240,64 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block);
  
@@ -2596,7 +2597,7 @@ index 9944a02..c1a96c3 100644
      }
  }
  
-@@ -90,6 +323,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +324,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -2606,7 +2607,7 @@ index 9944a02..c1a96c3 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +342,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +343,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -2621,7 +2622,7 @@ index 9944a02..c1a96c3 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +373,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +374,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -2632,7 +2633,7 @@ index 9944a02..c1a96c3 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +393,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +394,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -2647,7 +2648,7 @@ index 9944a02..c1a96c3 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -161,6 +415,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -161,6 +416,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
  }
  
  extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -2655,7 +2656,7 @@ index 9944a02..c1a96c3 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      bool jam = false;
      
-@@ -183,6 +438,7 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,6 +439,7 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -2663,12 +2664,18 @@ index 9944a02..c1a96c3 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      bool jam = true;
      
-@@ -205,15 +461,28 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +462,54 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
 +    log_vi_mq("recv", mq_, flags);
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
++    const bool log_a1_queue = [] {
++        const char* e = std::getenv("ROGUESQ_LOG_A1_QUEUE");
++        return e && *e && *e != '0';
++    }();
++    const bool is_a1_queue = static_cast<uint32_t>(mq_) == 0x8010FEE0u;
++    const OSMesgQueue before = (log_a1_queue && is_a1_queue) ? *mq : OSMesgQueue{};
      
      assert(ultramodern::is_game_thread() && "RecvMesg not allowed outside of game threads.");
 +
@@ -2693,6 +2700,27 @@ index 9944a02..c1a96c3 100644
      
      // Check the queue to see if this thread should swap execution to another.
      ultramodern::check_running_queue(PASS_RDRAM1);
+
+-    return received ? 0 : -1;
++    const s32 result = received ? 0 : -1;
++    if (log_a1_queue && is_a1_queue) {
++        static uint32_t rows = 0;
++        const uint32_t phase = rs64_phase_ord();
++        if (phase < 4u || rows < 256u) {
++            ++rows;
++            std::fprintf(stderr,
++                "[a1-queue-runtime] row=%u phase=%u mq=0x%08X msg=0x%08X flag=%d "
++                "pre_valid=%d pre_first=%d pre_count=%d pre_msg=0x%08X result=%d "
++                "post_valid=%d post_first=%d post_count=%d post_msg=0x%08X\n",
++                rows, phase, static_cast<uint32_t>(mq_), static_cast<uint32_t>(msg_),
++                static_cast<int>(flags), before.validCount, before.first, before.msgCount,
++                static_cast<uint32_t>(before.msg), static_cast<int>(result), mq->validCount,
++                mq->first, mq->msgCount, static_cast<uint32_t>(mq->msg));
++            std::fflush(stderr);
++        }
++    }
++    return result;
+ }
 diff --git a/ultramodern/src/scheduling.cpp b/ultramodern/src/scheduling.cpp
 index a22f747..d0510cb 100644
 --- a/ultramodern/src/scheduling.cpp
