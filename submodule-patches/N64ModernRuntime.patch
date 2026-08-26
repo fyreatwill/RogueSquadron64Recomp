@@ -1828,10 +1828,19 @@ index 1cb3f6a..054ac10 100644
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
-index ae0f44f..8eaf259 100644
+index ae0f44f..edcc5c4 100644
 --- a/librecomp/src/sp.cpp
 +++ b/librecomp/src/sp.cpp
-@@ -9,7 +9,7 @@ extern "C" void osSpTaskLoad_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -3,13 +3,15 @@
+ #include <ultramodern/ultramodern.hpp>
+ #include "recomp.h"
+ 
++extern "C" void rs64_m5_port_task_load(uint8_t* rdram, uint32_t task_ptr);
++
+ extern "C" void osSpTaskLoad_recomp(uint8_t* rdram, recomp_context* ctx) {
+-    // Nothing to do here
++    rs64_m5_port_task_load(rdram, static_cast<uint32_t>(ctx->r4));
+ }
  
  bool dump_frame = false;
  

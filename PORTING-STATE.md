@@ -114435,3 +114435,26 @@ writer diagnosis and authorizes no remap, guard, or audio change. The next
 discriminator is the port's own generated `osSpTaskLoad` entry, joined
 directly to the retail rows. Failed and corrected captures, plus bounded logs,
 are in `scratch/agent/s2493_m5_retail_task_join/`.
+## Session 2494 (2026-08-26) — captured port osSpTaskLoad task boundary
+
+The Debug target first failed to link when the probe was added as a project
+compatibility override: the runtime already defines a strong
+`osSpTaskLoad_recomp`. The probe was moved into that owning runtime function,
+the submodule diff was exported, and the target rebuilt successfully.
+
+The qualified LLE route with the boot-relative eight-Start driver reached the
+gated title and hangar phases. The same run passed the descriptor and scheduler
+controls and produced 512 port-load rows. In hangar `512 / 0x006AB400`, the
+port's type-2 load rows used `task_ptr=0x80149470`, `data_ptr=0x80171E70` or
+`0x80173CB0`, `data_size=1`, and zero output/yield pointers. These match the
+independent retail oracle's 477 type-2 rows watched at `0x80033E3C`, including
+the same task/data-pointer set and zero output/yield fields.
+
+The capture also showed type-1 `gspTask=0x800377C8` rows with graphics fields;
+these are the scheduler descriptor path and are not the retail audio load
+task. This selects `H-port-load-matches-retail`, refutes the direct load
+mismatch and not-reached hypotheses, and supersedes s2493's descriptor-to-load
+mismatch as a join artifact. The downstream image-stage/output/PCM identity
+remains open. The run ended in the pre-existing `recomp::do_rom_read` crash
+after the target rows were captured. Artifact:
+`scratch/agent/s2494_m5_port_load_join/audit.md`.

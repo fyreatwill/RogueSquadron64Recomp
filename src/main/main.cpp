@@ -1612,6 +1612,54 @@ extern "C" void rs64_m5_descriptor_start(uint8_t* rdram, uint32_t task_ptr) {
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_port_task_load(uint8_t* rdram, uint32_t task_ptr) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_PORT_LOAD");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+
+    uint32_t phase = 0, width = 0, origin = 0;
+    const char* arm = nullptr;
+    if (!rs64_m5_descriptor_phase(&phase, &width, &origin, &arm)) return;
+
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t phase_rows = 0;
+    static uint32_t control_key = 0xFFFFFFFFu;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        phase_rows = 0;
+    }
+    if (key != control_key) {
+        control_key = key;
+        std::fprintf(stderr,
+            "[m5-port-load-control] phase=%u width=%u origin=0x%06X arm=%s\n",
+            phase, width, origin, arm ? arm : "n/a");
+        std::fflush(stderr);
+    }
+    if (phase_rows++ >= 256u) return;
+
+    const uint64_t guest_task_ptr = static_cast<uint64_t>(
+        static_cast<int64_t>(static_cast<int32_t>(task_ptr)));
+    const OSTask* task = TO_PTR(OSTask, guest_task_ptr);
+    std::fprintf(stderr,
+        "[m5-port-load] phase=%u width=%u origin=0x%06X arm=%s row=%u "
+        "task_ptr=0x%08X type=0x%08X flags=0x%08X data_ptr=0x%08X "
+        "data_size=0x%08X output_buff=0x%08X output_size=0x%08X "
+        "yield_ptr=0x%08X yield_size=0x%08X\n",
+        phase, width, origin, arm ? arm : "n/a", phase_rows - 1u, task_ptr,
+        (uint32_t)task->t.type, (uint32_t)task->t.flags,
+        (uint32_t)task->t.data_ptr, (uint32_t)task->t.data_size,
+        (uint32_t)task->t.output_buff, (uint32_t)task->t.output_buff_size,
+        (uint32_t)task->t.yield_data_ptr, (uint32_t)task->t.yield_data_size);
+    std::fflush(stderr);
+}
+
 static void rs64_audio_hash_dmem(uint32_t addr, uint32_t len,
                                   uint32_t& fnv, uint32_t& nonzero) {
     fnv = 2166136261u;

@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2493 (2026-08-26).
+Current maintenance marker: Session 2494 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,19 @@ Current maintenance marker: Session 2493 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2494 — the port's own `osSpTaskLoad` matches the retail audio boundary.**
+  The qualified port capture reached both target phases and passed the
+  descriptor/scheduler controls. At hangar `512 / 0x006AB400`, its generated
+  load rows used `task_ptr=0x80149470`, type 2, `data_ptr=0x80171E70` or
+  `0x80173CB0`, `data_size=1`, and zero output/yield pointers, matching the
+  independent retail oracle's 477 type-2 rows at `0x80033E3C`. The distinct
+  type-1 `gspTask=0x800377C8` rows are graphics scheduler descriptors, not the
+  audio load task. This selects `H-port-load-matches-retail` and supersedes the
+  s2493 descriptor-to-load mismatch as a join artifact. The direct load
+  boundary is closed; the legitimate downstream image-task/output/PCM join
+  remains open. Artifact:
+  `scratch/agent/s2494_m5_port_load_join/audit.md`.
 
 - **s2493 — retail `osSpTaskLoad` does not join the port's probed descriptor.**
   The independent oracle passed the whole-RDRAM control, reached hangar, and
@@ -557,19 +570,20 @@ Current maintenance marker: Session 2493 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, capture the port
-   `osSpTaskLoad` boundary.**
+1. **M5 generated alternate equivalence — closed at the direct load boundary.**
    The host-local bridge reaches the target image task; SP completion and
    consumption are confirmed; the scheduler dispatches gspTask (0x800377C8)
    with `event_payload=task_ptr` in the hangar phase (yield-and-restart cycle).
    The explicit raw-byte table shows a coherent aligned-host OSTask layout.
    the corrected callback now makes all three port views agree. The s2493
    retail comparison instead found a distinct type-2 load task at
-   `0x80149470`; capture the generated port `osSpTaskLoad` entry and compare
-   its task pointer and type/data/yield/output fields directly. Do not remap
-   any task or output field until that boundary is measured.
-2. **M5 task/output closure — closed at current capture scope.** The earlier
-   task-gap label was a join artifact.
+   `0x80149470`; the port now matches those fields at its own load entry. The
+   earlier gspTask mismatch was a descriptor-vs-audio-task join error.
+2. **M5 generated image downstream join — active.** Join the image-arm stage
+   DMAs and completion to the matching type-2 load rows and identify the first
+   legitimate consumer/output or PCM edge. Do not map the image stage to the
+   type-1 gspTask descriptor, and do not change task or output fields without
+   a named writer and independent retail evidence.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at

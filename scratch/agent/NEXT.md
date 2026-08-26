@@ -1,45 +1,48 @@
-# NEXT work unit (s2494) — capture the port osSpTaskLoad task boundary
+# NEXT work unit (s2495) — join image-stage DMAs to the matching audio load rows
 
-HYPOTHESIS-ID: m5-generated-alternate-equivalence
+HYPOTHESIS-ID: m5-generated-image-downstream-join
 
 ## Single work unit
 
-Capture the port's generated `osSpTaskLoad` entry during the qualified driven
-hangar route and join its task pointer and fields to the established retail
-oracle rows at `0x80033E3C`. The s2493 descriptor callback is a distinct
-type-1 `gspTask` object, so do not compare it as if it were the retail type-2
-load task. Use one batched port run with the descriptor control retained, the
-new load-boundary fields, and all phase controls. Do not change task dispatch,
-audio behavior, or guards.
+Use one qualified port run to join the established type-2 audio
+`osSpTaskLoad` rows (`0x80149470`) to the image-arm stage rows and their
+completion rows. Retain the descriptor and scheduler controls, and keep the
+new port-load control active. Do not join through type-1 `gspTask`, change task
+dispatch, change audio behavior, or add an output remap.
 
 ## Competing hypotheses and discriminator
 
-- H-port-load-matches-retail: the port load task pointer and selected
-  type/data/yield/output fields match one of the retail target tuples.
-- H-port-load-differs-retail: port load rows are populated but differ in
-  pointer or selected fields, refuting equivalence at the direct load boundary.
-- H-port-load-not-reached: the containing scheduler path is live but the port
-  load hook has zero target-phase rows; move to the actual caller only then.
+- H-image-load-joined: image-stage events occur after a matching type-2 load
+  row and the task's data pointer identifies the same image input/completion
+  sequence.
+- H-image-load-distinct: type-2 loads are real and retail-matching, but image
+  stage/completion rows do not join them by task pointer, data pointer, or
+  ordering; the missing edge is downstream of task load.
+- H-image-load-unobservable: the route and controls are live but no image
+  stage or completion rows occur in the same target phase; move to the actual
+  image caller only then.
 
-The discriminator is the joined table at port origin `0x006AB400`, width 512.
-The port target-phase control, load-boundary hook, and prior retail positive
-controls must be present. A complete pointer/field match selects equivalence;
-a populated mismatch refutes it. Zero port load rows are valid only for the
-third hypothesis when the containing scheduler path is live in the same run.
+The discriminator is one phase-keyed table at `0x006AB400` / width 512 with
+load task/data fields, image stage event/destination/length/completion, and
+same-run ordering. The port target-phase, load, descriptor, scheduler, and
+image-stage controls must all fire. A joined task/data/order row selects the
+first hypothesis; populated non-joining rows select the second; zero image
+rows with live controls select the third.
 
 | Field | Port load hook | Retail oracle | Outcome |
 |---|---|---|---|
-| task pointer, type, data/yield/output fields | generated `osSpTaskLoad` rows | `0x80149470` tuples | match / mismatch |
-| target route | port phase 12 / `0x006AB400` | retail 512 / `0x006AB400` | invalid without either |
-| positive controls | descriptor + scheduler controls | whole-RDRAM 10,000; VI/PIF; load hits | invalid without controls |
-| load hook | target-phase port rows | retail `0x80033E3C` rows established | third hypothesis if absent |
+| type-2 task/data fields and image association | port `osSpTaskLoad` + image-stage rows | retail `0x80033E3C` tuples | joined / distinct |
+| target route | port phase 10 / `0x006AB400` | retail 512 / `0x006AB400` | invalid without either |
+| positive controls | descriptor + scheduler + image-stage controls | whole-RDRAM 10,000; VI/PIF; retail load hits | invalid without controls |
+| image stage/completion | image-stage event, destination, length, completion | retail task/data class only | third hypothesis if absent |
 
 ## Exact commands
 
-First use the existing oracle artifact from s2493; do not rebuild or alter
-the runtime before adding the complete port-side load-boundary table. Run the
-qualified `tools/probe.sh` recipe with boot-relative Start presses, phase gate
-at 1024, and the port generated load hook enabled alongside the existing
-descriptor/scheduler controls. Capture the run log under
-`scratch/agent/s2494_m5_port_load_join/` and SIGKILL the game through
-`tools/probe.sh`.
+Use the existing oracle artifact from s2493 and the s2494 port-load artifact;
+do not rebuild or alter runtime behavior before adding the complete join
+table. Run the qualified `tools/probe.sh` recipe with boot-relative Start
+presses, phase gate at 1024, `PROBE_LEAVE_OK=1`, and
+`ROGUESQ_LOG_AUDIO_RETURN=1`, `ROGUESQ_LOG_M5_DESCRIPTOR=1`,
+`ROGUESQ_LOG_M5_SCHEDULER_ID=1`, and `ROGUESQ_LOG_M5_PORT_LOAD=1`.
+Capture under `scratch/agent/s2495_m5_image_downstream_join/` and SIGKILL
+through `tools/probe.sh`.
