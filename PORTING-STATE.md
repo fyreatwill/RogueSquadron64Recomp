@@ -114321,3 +114321,29 @@ oracle positive-control attempt failed because the required debugger-enabled
 `libmupen64plus.dylib` is absent, so no retail null was interpreted. No audio
 behavior or descriptor contents were remapped. Artifact:
 `scratch/agent/s2488_m5_descriptor_decode/audit.md`.
+
+## Session 2489 (2026-08-26) — separated gspTask byte-layout hypotheses
+
+The retail oracle whole-RDRAM positive control ran before the port build and
+reached its 10,000-callback threshold in 8 emulated seconds with the
+debugger-enabled core. This validates the independent watch instrument, but
+does not make a descriptor-specific retail claim.
+
+The first qualified port capture reached 512 / `0x6AB400` at 48.4 seconds, but
+the new 64-row layout cap was run-lifetime and had already been consumed by the
+title phase. That result was discarded as non-discriminating. The corrected
+build reset the cap per VI phase, reached the target at 48.5 seconds, and
+captured 64 layout rows in both title and hangar, one target scheduler control,
+256 target scheduler rows, and 82 target descriptor-yield rows before the
+known `recomp::do_rom_read` crash at 59.7 seconds.
+
+For every hangar layout row, the explicit host-aligned reads gave a coherent
+OSTask shape: field 0 was `0x00000001`, and fields 2, 4, 6, 10, 11, 12, and 14
+were guest-RDRAM pointers. The byte-offset-`^3` and byte-swapped aligned
+interpretations did not form a coherent tuple. This selects
+`H-byte-layout-is-aligned-host` and refutes `H-byte-lane-transform` at this
+port boundary. `H-pointer-base-wrong` is not supported by the stable tuple.
+This is single-source port evidence; the oracle result is only a positive
+control. The pre-existing `MEM_W` row still disagrees with the explicit aligned
+read, so that discrepancy remains open. No remap, guard, or audio behavior
+change was made. Artifact: `scratch/agent/s2489_m5_descriptor_layout/audit.md`.

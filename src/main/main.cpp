@@ -1519,6 +1519,32 @@ extern "C" void rs64_m5_descriptor_yield(uint8_t* rdram, uint32_t task_ptr) {
         (uint32_t)MEM_W(0x30, task_ptr), (uint32_t)MEM_W(0x34, task_ptr),
         (uint32_t)MEM_W(0x38, task_ptr), (uint32_t)MEM_W(0x3C, task_ptr),
     };
+    static uint32_t layout_phase_key = 0xFFFFFFFFu;
+    static uint32_t layout_rows = 0;
+    const uint32_t layout_key = (width << 24) ^ origin;
+    if (layout_key != layout_phase_key) {
+        layout_phase_key = layout_key;
+        layout_rows = 0;
+    }
+    if (layout_rows++ < 64u) {
+        const uint32_t base = task_ptr - 0x80000000u;
+        std::fprintf(stderr, "[m5-descriptor-layout] phase=%u width=%u origin=0x%06X task_ptr=0x%08X raw=",
+                     phase, width, origin, task_ptr);
+        for (uint32_t i = 0; i < 0x40u; ++i)
+            std::fprintf(stderr, "%02X", (unsigned)rdram[base + i]);
+        std::fprintf(stderr, " fields=");
+        for (uint32_t i = 0; i < 16u; ++i) {
+            uint32_t aligned = 0;
+            uint32_t xor_lane = 0;
+            std::memcpy(&aligned, rdram + base + i * 4u, sizeof(aligned));
+            std::memcpy(&xor_lane, rdram + base + (i * 4u ^ 3u), sizeof(xor_lane));
+            std::fprintf(stderr, "%s%u:g=0x%08X,a=0x%08X,x=0x%08X,s=0x%08X",
+                         i ? ";" : "", i, task_ptr + i * 4u, aligned, xor_lane,
+                         __builtin_bswap32(aligned));
+        }
+        std::fprintf(stderr, "\n");
+        std::fflush(stderr);
+    }
     g_rs64_m5_descriptor_yield_ptr.store(task_ptr, std::memory_order_release);
     std::fprintf(stderr,
         "[m5-descriptor-control] phase=%u width=%u origin=0x%06X arm=%s\n",

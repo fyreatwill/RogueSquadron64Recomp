@@ -30,6 +30,20 @@ Current maintenance marker: Session 2488 (2026-08-26).
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
 
+- **s2489 — explicit raw-byte layout separates the descriptor representation.**
+  After the oracle whole-RDRAM positive control fired 10,000 callbacks, the
+  qualified Debug capture reached title and hangar. A phase-keyed table recorded
+  all 64 raw bytes at `gspTask=0x800377C8` and three interpretations per field.
+  In 64 hangar rows, direct host-aligned reads consistently formed an OSTask
+  tuple (`type=1`, guest-RDRAM pointer fields); byte-offset-`^3` and
+  byte-swapped aligned reads did not. This selects
+  `H-byte-layout-is-aligned-host` and refutes `H-byte-lane-transform`. It is
+  **single-source port evidence**: the oracle positive control validates its
+  watch, not these descriptor values. The pre-existing `MEM_W` row still
+  disagrees with the explicit aligned read, so that discrepancy is now the
+  discriminator; no remap or guard is authorized. Artifact:
+  `scratch/agent/s2489_m5_descriptor_layout/audit.md`.
+
 - **s2488 — the proposed `MEM_W` endian correction did not change the
   descriptor fingerprint.** The Debug build succeeded and the corrected
   capture reached the 512/hangar phase; scheduler and descriptor controls
@@ -495,18 +509,17 @@ Current maintenance marker: Session 2488 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, descriptor field decode open.**
+1. **M5 generated alternate equivalence — active, explain MEM_W/raw layout.**
    The host-local bridge reaches the target image task; SP completion and
    consumption are confirmed; the scheduler dispatches gspTask (0x800377C8)
    with `event_payload=task_ptr` in the hangar phase (yield-and-restart cycle).
-   The sixteen words at gspTask are captured and stable but are endian-invalid
-   from the struct-cast bug. Next: add a MEM_W-based per-field decoder to
-   `rs64_m5_descriptor_yield` to read type, `data_ptr`, `yield_data_ptr`, and
-   `output_buff` correctly, then compare those values against retail ground
-   truth (via the oracle or a known-valid task submission in the hangar). Use the
-   corrected recipe: boot-relative keys, `ROGUESQ_LOG_AUDIO_RETURN=1`,
-   `PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=300`. Do NOT use
-   `PROBE_KEYS_FROM_PHASE=1`.
+   The explicit raw-byte table shows a coherent aligned-host OSTask layout, but
+   the same callback's `MEM_W` row remains different. Next: isolate that macro
+   discrepancy with a same-callback comparison of `MEM_W`, explicit `memcpy`,
+   `TO_PTR` field reads, and exact guest/base offsets. Keep the scheduler
+   control and use the corrected boot-relative recipe with
+   `ROGUESQ_LOG_AUDIO_RETURN=1`, `PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=300`.
+   Do NOT use `PROBE_KEYS_FROM_PHASE=1`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
