@@ -112774,3 +112774,18 @@ TLS while audio dispatch ran on another thread; that field is a probe defect,
 not evidence about the task ABI. No task data, audio behavior, dispatch, or
 output behavior changed. Artifact: `scratch/agent/s2418_port_handoff/route640/`;
 retail control: `scratch/agent/s2418_port_handoff/oracle.log`.
+
+## Session 2419 (2026-08-26) — repaired shared guest task-pointer witness
+
+Replaced the task-pointer handoff's submitter-thread `thread_local` with a
+release-store/acquire-load shared atomic, then built the normal Debug target
+once. The phase-gated qualified image run passed title `1024 / 0x00790400`
+and hangar `512 / 0x006AB400`, emitted two handoff controls and 512 handoff
+rows, and completed without a crash marker. Every row reported task pointer
+`0x80149470`, independently matching the retail task-pointer witness. The
+phase/data table still contained title `0x80171CE0` in addition to
+`0x80173B20`, hangar `0x80171E70` in addition to `0x80173CB0`, and phase-local
+size variation. This selects `H-PortDiffersAtHandoff` with the pointer witness
+repaired and rules out TLS loss/zero as the explanation for the port relation.
+It does not authorize a task-data or output change. Artifact:
+`scratch/agent/s2419_task_pointer/`.

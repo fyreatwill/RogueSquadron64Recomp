@@ -542,10 +542,12 @@ static thread_local uint32_t s_pending_task_data_size = 0;
 static thread_local uint32_t s_pending_task_ucode_data = 0;
 static thread_local uint32_t s_pending_task_ucode_data_size = 0;
 static thread_local const OSTask* s_pending_audio_task = nullptr;
-static thread_local uint32_t s_pending_task_guest_ptr = 0;
+// The task submitter and RSP dispatcher are different threads. Release/acquire
+// publishes the guest task address without making it part of audio behavior.
+static std::atomic<uint32_t> s_pending_task_guest_ptr{0};
 
 extern "C" void rs64_set_pending_task_guest_ptr(uint32_t guest_ptr) {
-    s_pending_task_guest_ptr = guest_ptr;
+    s_pending_task_guest_ptr.store(guest_ptr, std::memory_order_release);
 }
 
 // Rogue Squadron uses Factor5's MusyX audio ucode, NOT stock aspMain. Running
@@ -1189,7 +1191,7 @@ static void rs64_m5_task_handoff(const OSTask* task) {
         g_rs64_audio_identity.phase, g_rs64_audio_identity.width,
         g_rs64_audio_identity.origin, g_rs64_audio_identity.arm,
         g_rs64_audio_identity.ordinal, g_rs64_audio_identity.row,
-        s_pending_task_guest_ptr, data_ptr,
+        s_pending_task_guest_ptr.load(std::memory_order_acquire), data_ptr,
         static_cast<uint32_t>(task->t.data_size), data_ptr + 0x100u);
     std::fflush(stderr);
 }

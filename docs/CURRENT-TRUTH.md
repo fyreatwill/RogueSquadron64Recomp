@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2418 (2026-08-26).
+Current maintenance marker: Session 2419 (2026-08-26).
 
 ## Current state
 
@@ -112,6 +112,14 @@ Current maintenance marker: Session 2418 (2026-08-26).
   ran on another thread; it is not ground truth and must be repaired before
   using task-pointer parity. Artifact:
   `scratch/agent/s2418_port_handoff/route640/`.
+- s2419 repaired that witness with a release-store/acquire-load shared atomic.
+  The same phase-gated image capture passed title and hangar controls and
+  emitted 512 handoff rows; every row reported task pointer 0x80149470. The
+  phase/data table still contained the extra title 0x80171CE0 and hangar
+  0x80171E70 rows, plus phase-local size variation, so the repaired capture
+  selects `H-PortDiffersAtHandoff` and closes the TLS probe defect. No task,
+  audio, dispatch, or output behavior changed. Artifact:
+  `scratch/agent/s2419_task_pointer/`.
 
 ## Latest evidence
 
@@ -248,10 +256,10 @@ sequence; #1 is the next campaign priority.
    `H-NoDownstreamRelation`, and s2416 selected `H-NoHandoffKey` because the
    existing task/DMA/PCM markers do not survive the title-to-hangar transition.
    The retail task/data witness selects `H-RetailStableWriter`; s2418's port
-   table selects `H-PortDiffersAtHandoff` from extra phase-local data pointers,
-   but its task-pointer column is invalid due to cross-thread TLS capture. Next
-   repair that capture with a shared guest-task-pointer witness and rerun the
-   same table with both route controls. Do not change task data,
+   table selected `H-PortDiffersAtHandoff` from extra phase-local data pointers,
+   and s2419's repaired shared task-pointer witness confirmed 0x80149470 on all
+   512 rows. Next run the complete Step-1 same-build stub/image contract
+   checkpoint. Do not change task data,
    audio, gate, fallback, dispatch, VI, output behavior, or the nonzero
    predicate.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
