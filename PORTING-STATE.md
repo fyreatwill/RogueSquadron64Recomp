@@ -112830,3 +112830,27 @@ capture key. It rules out route invalidity, absent image dispatch, missing task
 completion, and a same-key slot/voice/MORT closure. It does not establish a
 legitimate output writer or authorize a destination remap, task-data change, or
 default flip. Artifact: `scratch/agent/s2421_m5_contract/`.
+
+## Session 2422 (2026-08-26) — attributed M5 image-range writers
+
+Ran a 100-second independent retail-oracle capture with whole-RDRAM,
+title/hangar VI controls, candidate image ranges, adjacent DMA range, and the
+task-field range. The positive control reached 10,000 callbacks; title
+`0x00790400` and hangar `0x006AB400` both occurred. Retail attributed the
+title/hangar `0x167000`-class range to PCs including `0x80015BC8` and
+`0x8000F3A0`; the adjacent `0x179800`-class range had the `0x8008FBxx` /
+`0x8008FExx` family and `0x800078EC`; the task-field range had
+`0x80018F5C/60`. The retail run completed with 633,293 watch hits.
+
+Built the current target and ran
+`zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2422_m5_writer`.
+The stub and image arms both reached title and hangar. The image arm emitted
+2,309 phase-relevant DMA-range rows and 4,668 image-stage rows, including
+`0x168B50`/`0x168E50`-class destinations and the `0x1798B0` companion DMA,
+with `break_pc=0x1328` and SP completion. Neither arm emitted slot, voice,
+descriptor, or filter-consumer rows. This provisionally selects
+`H-MissingImageConsumer` at the current identity key. It rules out invalid
+retail controls, invalid port route, absent image dispatch, and missing image
+task completion. It does not identify the semantic role of the retail
+writers, prove payload legitimacy, or authorize a writeback/remap, task-data
+change, gate change, or guard. Artifact: `scratch/agent/s2422_m5_writer/`.

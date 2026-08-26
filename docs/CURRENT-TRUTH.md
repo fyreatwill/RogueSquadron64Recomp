@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2421 (2026-08-26).
+Current maintenance marker: Session 2422 (2026-08-26).
 
 ## Current state
 
@@ -176,6 +176,18 @@ Current maintenance marker: Session 2421 (2026-08-26).
   `H-MissingImageConsumer`, while leaving writer legitimacy and any
   phase-transition/shared consumer unresolved. No behavior change is
   authorized. Artifact: `scratch/agent/s2421_m5_contract/`.
+- **s2422 — retail candidate writers exist, but no port consumer writer joined.**
+  The independent oracle passed whole-RDRAM, title, and hangar controls and
+  attributed the candidate title/hangar range to PCs including `0x80015BC8`
+  and `0x8000F3A0`; the adjacent range had the `0x8008FBxx`/`0x8008FExx`
+  family and `0x800078EC`, and the task-field range had `0x80018F5C/60`.
+  Both same-build port arms passed title and hangar. The image arm emitted the
+  expected `0x168B50`/`0x168E50`-class and `0x1798B0` DMA rows, but neither
+  arm emitted slot, voice, descriptor, or filter-consumer rows. This
+  provisionally selects `H-MissingImageConsumer` at the current key. It does
+  not identify the semantic role of retail writers, establish payload
+  legitimacy, or authorize a writeback, remap, task-data change, gate change,
+  or guard. Artifact: `scratch/agent/s2422_m5_writer/`.
 
 - **s2403 — retained image-stage bytes are legitimately zero at capture scope.**
   The retail oracle passed whole-RDRAM (`32,791,644` hits), title, and hangar
@@ -295,18 +307,15 @@ Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
 1. **M5 image consumer provenance — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
-   design gate. Step 1 is now valid: the image task dispatches, changes DMEM,
-   performs generated DMA, reaches `break_pc=0x1328`, and completes SP service,
-   but no image-specific slot/voice/output contract closes. Keep the image
-   opt-in and do not alter task data, output ranges, gates, or guards. Next ask
-   the retail oracle, before adding any port instrument, for PC attribution on
-   the candidate title/hangar image-DMA destination windows and the adjacent
-   task-field window, with whole-RDRAM/title/hangar controls. Then run one
-   same-build phase-keyed port capture only if the oracle has positive writer
-   hits. The discriminator is whether a named retail writer and matching port
-   writer owns the candidate output range, or whether no legitimate consumer
-   writer exists at that identity. Do not infer legitimacy from zero payloads,
-   SP completion, or PCM boundary rows.
+   design gate. Retail candidate writers are independently observed, but the
+   existing port capture has no PC-level consumer-writer table. Before changing
+   behavior, add one bounded table for the retail-selected writer sites/ranges
+   or their proven port equivalents, phase-keyed to image DMA ordinal/row, task
+   data pointer, and SP return, with slot/voice/PCM rows as controls. The
+   discriminator is a same-identity port writer with matching range/order,
+   versus a valid port capture with no such writer, versus a writer that joins
+   only through a phase/task-field key. No output remap, task-data change, gate
+   change, or guard is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -342,6 +351,12 @@ current result is a consumer-range mismatch, not proof that zero is legitimate
 or corrupt output. Retail independently proves that related memory regions and
 task-field writers are active, but no exact legitimate port writeback or
 slot/key-on consumer contract has been established.
+The s2422 retail witness names writers in the candidate title/hangar and
+adjacent/task-field ranges, but the same-build port image arm still has no
+bounded slot/voice/descriptor/filter consumer row. This is a valid-control,
+single-capture selection of `H-MissingImageConsumer`, not proof that every
+retail writer is an image-output writer; port writer attribution remains the
+next discriminator.
 The first same-identity post-DMA slot/key-on fields are now available in the
 image join. s2408 validated both route controls, but its image arm still
 produced no same-identity downstream rows. s2409 independently observed

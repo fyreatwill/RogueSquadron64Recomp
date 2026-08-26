@@ -1,50 +1,50 @@
-# NEXT work unit (s2422) — attribute the M5 image consumer writer
+# NEXT work unit (s2423) — phase-key the port consumer-writer table
 
 HYPOTHESIS-ID: m5-image-contract-gap
 
 ## Work unit
 
-First run one independent retail-oracle writer-attribution capture for the
-candidate title/hangar image-DMA ranges and adjacent task-field range. Only if
-the oracle has positive writer hits, run the existing eleven-Start driver once
-with both audio arms in the same build and phase-key the port writer table to
-the image DMA rows. This is observation-only: do not change task data, output
-ranges, gates, guards, dispatch, or the image default.
+Add one observation-only, bounded port table at the existing audio/image
+consumer boundary. Record every phase-gated write or consumer event that can
+touch the retail-selected candidate ranges, joined to image DMA ordinal/row,
+task data pointer, and SP return. Keep the image opt-in and do not change task
+data, output ranges, gates, guards, dispatch, or defaults.
 
 ## Competing hypotheses and discriminator
 
-- H-MissingImageConsumer: the candidate range has no named retail writer and
-  no matching port writer at the image task identity.
-- H-LegitimateConsumerWriter: retail writes the candidate range from a named
-  PC, and the matching port writer is present after image DMA/SP completion.
-- H-SharedConsumerWriter: retail/port writers exist, but only a bounded
-  phase-transition or task-field key joins them to the image row.
-- H-WriterTableInvalid: any oracle whole-RDRAM/title/hangar or port route
-  control fails, so the writer null is uninterpretable.
+- H-MissingImageConsumer: valid image DMA/SP rows have no later port writer or
+  consumer event for the candidate range.
+- H-LegitimateConsumerWriter: a port writer/event joins the image row with the
+  same range and ordering as a retail candidate writer.
+- H-SharedConsumerWriter: a port writer exists, but only a phase transition or
+  task-field key joins it to the image row.
+- H-PortTableInvalid: the positive controls or image route fail, so a null is
+  uninterpretable.
 
-The discriminating measurement is a complete writer row per phase and
-candidate range containing retail PC/value/length and port PC/value/length,
-joined to task data pointer, ordinal, DMA destination, image break/SP return,
-and PCM source/consumer identity. A named writer on both sides selects
-H-LegitimateConsumerWriter; only a phase-transition key selects
-H-SharedConsumerWriter; valid controls with no named writer selects
-H-MissingImageConsumer. Missing controls select H-WriterTableInvalid.
+The discriminating measurement is one phase-scoped row per candidate range
+with port event/PC, value/length, image ordinal/row, data pointer, DMA
+destination, break/SP return, and PCM/slot controls. A same-identity matching
+range/order selects H-LegitimateConsumerWriter; only a phase/task-field join
+selects H-SharedConsumerWriter; valid controls with no event select
+H-MissingImageConsumer. Missing controls select H-PortTableInvalid.
 
 ## Exact commands
 
-1. Arm the retail oracle with whole-RDRAM plus candidate ranges from the
-   existing image-stage/DMA rows (title `0x168E50`-class and hangar
-   `0x168B50`-class spans, plus task-field `0x18FC70`-class bytes), and require
-   positive-control threshold, title, and hangar before interpreting a null.
-2. If those writer controls pass, build with `cmake --build build --config
-   Debug --target RogueSquadron64Recomp`.
-3. Run the validated driver, preserving its SIGKILL cleanup and oracle gate:
-   `zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2422_m5_writer`
-   (retain the eleven-Start injector).
-4. Summarize only phase-gated rows from the oracle and both arm logs in
-   `scratch/agent/s2422_m5_writer/`.
+1. Before instrumentation, map the existing image-stage/DMA and consumer
+   logging sites:
+   `rg -n 'audtask-image-stage|audtask-dma-range|slot-sb|pcm-boundary|filter-voice' src lib tools`
+   and identify the narrowest existing write/consumer boundary. Do not add a
+   counter until the table fields above can all be populated.
+2. Build one instrumented target:
+   `cmake --build build --config Debug --target RogueSquadron64Recomp`
+3. Run the independent oracle control and the two-arm driver in one capture,
+   preserving the whole-RDRAM/title/hangar gate and SIGKILL cleanup. Reuse the
+   candidate ranges `0x167000:0x169B00`, `0x179800:0x179B00`, and
+   `0x18FC00:0x18FD00`:
+   `zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2423_m5_port_writer`
+4. Summarize only phase-gated rows in
+   `scratch/agent/s2423_m5_port_writer/`; leave behavior unchanged.
 
-Expected outcomes: oracle whole-RDRAM/title/hangar and both port arms must pass
-their route controls. Retail writer hits with matching port writer rows select
-the legitimate/shared-writer arm; valid controls with no candidate writer keep
-H-MissingImageConsumer provisional. Leave behavior unchanged either way.
+Expected outcomes: both port arms and the independent controls must reach
+title and hangar. A matching port writer selects the legitimate/shared arm;
+valid controls with no event preserve H-MissingImageConsumer provisionally.
