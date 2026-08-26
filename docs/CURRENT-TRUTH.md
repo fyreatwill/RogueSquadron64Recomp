@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2438 (2026-08-26).
+Current maintenance marker: Session 2439 (2026-08-26).
 
 ## Current state
 
@@ -611,6 +611,17 @@ The callee field-dump arm was too high-frequency to reach hangar and is
 discarded as instrument-invalid; the corrected arm used the exact-store table
 instead. Hangar caller/callee semantic identity remains open. Artifact:
 `scratch/agent/s2438_retail_callee_context/`.
+
+s2439 repaired its first route-invalid oracle arm by restoring the established
+`--pc-phase-log 0x006AB400` control. The fixed arm passed whole-RDRAM (12,661
+writes), title and hangar VI controls, and exact image-range totals of 1,536
+and 1,125. In hangar, `0x8008F2CC` executed with `s0=0x12`, `s1=0x561F`, and
+selector `0x801797B0`; `0x800078EC` showed the same tuple and
+`ra=0x8008F2D4`, directly linking the caller to the exact first-range store
+helper. This selects `H-HangarCallerSamePath` at the current single-source
+oracle scope and rules out an unreached hangar caller. It does not identify
+the second-range writer or a port consumer, and no behavior change is
+authorized. Artifact: `scratch/agent/s2439_retail_hangar_caller/`.
 
 ### VI, M3, M4, and generated symbols
 

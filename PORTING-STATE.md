@@ -113174,3 +113174,17 @@ selector `0x801934E0`, while the exact-store table retained 408 phase rows at
 It rules out neither the hangar caller's semantic identity nor a later port
 consumer, and authorizes no port behavior change. Artifact:
 `scratch/agent/s2438_retail_callee_context/`.
+
+## Session 2439 (2026-08-26) — joined hangar caller to exact store helper
+
+The first oracle arm was route-invalid: it stayed at VI width 640 and had no
+title/hangar phase rows. The fixed observation-only arm restored the
+established `--pc-phase-log 0x006AB400` route control and passed whole-RDRAM
+(12,661 writes), title and hangar VI controls, and exact image-range totals
+of 1,536 and 1,125. In hangar, `0x8008F2CC` executed with `s0=0x12`,
+`s1=0x561F`, and selector `0x801797B0`; `0x800078EC` showed the same tuple,
+returned to `ra=0x8008F2D4`, and its store callbacks covered the first range.
+This selects `H-HangarCallerSamePath` at the current single-source oracle
+scope and rules out `H-HangarCallerUnreached`; it does not establish the
+second-range writer, port consumer identity, or authorize a port behavior
+change. Artifact: `scratch/agent/s2439_retail_hangar_caller/`.
