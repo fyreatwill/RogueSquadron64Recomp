@@ -112140,3 +112140,24 @@ a fixed instrumentation attempt, not evidence. Artifacts:
 
 ORIGIN: no mitigation or behavior change; added only a bounded ground-truth
 watch and its fixed phase coverage.
+
+## Session 2393 (2026-08-25) — M5 exact port stage-byte capture route audit
+
+Added a bounded `[m5-stage-bytes]` capture at the image-stage event for the
+three exact destinations selected by s2392 (`0x167050:0x300`,
+`0x1935E0:0x198`, and `0x166D50:0x300`). It recomputes the physical span's
+nonzero count and FNV and prints a 16-byte sample before the image-stage join.
+The build completed successfully.
+
+The first phase-gated image-arm run produced active VI updates but remained at
+width 640 and reached neither title 1024 nor an image-stage row. A fixed run
+with the recent drain/route controls crashed at guest PC `0x80001F88`, still
+at width 640. Both runs emitted zero `[audtask-image-stage-row]` and zero
+`[m5-stage-bytes]` rows. This is a route-invalid capture, not evidence that
+the stage bytes are zero, nonzero, or mismatched. It rules out interpreting
+this iteration as a stage predicate result; it does not rule out any of the
+stage-byte hypotheses. No task, audio, gate, fallback, dispatch, VI, or
+output behavior changed.
+
+ORIGIN: no mitigation or behavior change; added only bounded diagnostic
+capture and its environment-variable documentation.

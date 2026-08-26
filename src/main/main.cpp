@@ -1323,6 +1323,46 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
                                dest_fnv, dest_nz, dest_valid);
     }
     uint32_t dma_fnv_a = fnv_a, dma_nz_a = nz_a;
+    if (stage >= 2 && dest_valid) {
+        const uint32_t phys = (dest & 0xFFFFF8u) & 0x007FFFFFu;
+        const char* window = nullptr;
+        uint32_t slot = 0;
+        if (phys == 0x167050u && dest_len == 0x300u) {
+            window = "167050";
+            slot = 0;
+        } else if (phys == 0x1935E0u && dest_len == 0x198u) {
+            window = "1935E0";
+            slot = 1;
+        } else if (phys == 0x166D50u && dest_len == 0x300u) {
+            window = "166D50";
+            slot = 2;
+        }
+        static const bool capture_enabled = [] {
+            const char* all = std::getenv("ROGUESQ_LOG_ALL");
+            const char* own = std::getenv("ROGUESQ_LOG_M5_STAGE_BYTES");
+            return (all && all[0] && all[0] != '0') ||
+                   (own && own[0] && own[0] != '0');
+        }();
+        static uint32_t capture_count[3] = {};
+        if (capture_enabled && window != nullptr && capture_count[slot] < 8u) {
+            char sample[49] = {};
+            const uint32_t sample_len = dest_len < 16u ? dest_len : 16u;
+            for (uint32_t i = 0; i < sample_len; ++i) {
+                std::snprintf(sample + i * 3u, 4u, "%02X%s", rdram[phys + i],
+                              i + 1u == sample_len ? "" : " ");
+            }
+            ++capture_count[slot];
+            std::fprintf(stderr,
+                "[m5-stage-bytes] arm=%s ordinal=%u row=%u phase=%u width=%u "
+                "origin=0x%06X stage=%u window=%s phys=0x%06X len=0x%X "
+                "capture_nz=%u capture_fnv=%08X retained_nz=%u "
+                "retained_fnv=%08X exact=%u sample=%s\n",
+                route.arm, route.ordinal, route.row, route.phase, route.width,
+                route.origin, stage, window, phys, dest_len, dest_nz, dest_fnv,
+                dest_nz, dest_fnv, 1u, sample);
+            std::fflush(stderr);
+        }
+    }
     if (stage >= 2) {
         rs64_audio_hash_dmem_dma(dmem_a, len_a, dma_fnv_a, dma_nz_a);
         rs64_audio_join_image_stage(

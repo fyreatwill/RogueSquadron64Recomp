@@ -1,40 +1,29 @@
-# NEXT work unit (s2393) — capture the port image-stage bytes at the exact event
+# NEXT work unit (s2394) — stabilize the M5 image-arm route for byte capture
 
-HYPOTHESIS-ID: m5-image-stage-nonzero-contract
+HYPOTHESIS-ID: m5-image-stage-capture-route
 
 ## Work unit
 
-Perform one bounded port-side capture of the exact image-stage event and its
-payload bytes for the representative rows already identified by s2392:
-title `0x167050/0x300`, title `0x1935E0/0x198`, and hangar `0x166D50/0x300`.
-Use one build and one run with the existing qualified image arm. Record the
-stage event, physical destination, length, byte count, FNV, and a bounded byte
-sample before any reporter/image predicate is evaluated. Recompute the tuple
-from the captured bytes and compare it with the retained stage/DMA fields.
-Do not change task data, audio, gate, fallback, dispatch, VI, or output
-behavior. If the capture cannot expose the stage bytes at the event, record
-that discriminator failure and stop.
+Run one same-build, two-arm route control (`ROGUESQ_STUB_MISSING_FUNCS=0/1`)
+using the known phase-gated title/hangar recipe, with the new stage-byte
+capture enabled. Determine whether missing-function suppression is required
+to reach title 1024 and the exact stage event. If either arm reaches title,
+retain its byte table; otherwise retain the crash/stall PC and stop. Do not
+change task data, audio, gate, fallback, dispatch, VI, or output behavior.
 
 ## Competing hypotheses and discriminator
 
-- H-StageLoggerWrongRegion: the logger's `stage_nz`/FNV reads a different
-  region than the DMA/stage destination; the same-event byte recomputation
-  disagrees with the retained tuple.
-- H-StagePayloadZeroLegit: the exact stage bytes are zero at the event and the
-  retained zero predicate is legitimate.
-- H-StagePcmRepresentationMismatch: the exact stage bytes match the retained
-  tuple, but the later PCM/source representation differs; stage-to-PCM joins
-  remain unequal.
-- H-PortStageCaptureInvalid: the event or bytes cannot be captured with the
-  required route/phase controls.
+- H-MissingFunctionSuppressionRequired: only the suppression arm reaches the
+  title phase and emits stage events.
+- H-MissingFunctionSuppressionIrrelevant: both arms have the same route result.
+- H-MissingFunctionSuppressionHarmful: only the unsuppressed arm reaches title.
+- H-PortStageCaptureInvalid: neither arm reaches the required phase.
 
-The discriminating table is one row per selected stage event: arm, phase,
-destination, length, captured nonzero count, recomputed FNV, retained
-`stage_nz`/FNV, and exact-byte agreement. Agreement with zero bytes selects
-H-StagePayloadZeroLegit; disagreement selects H-StageLoggerWrongRegion;
-agreement followed by a distinct PCM tuple selects
-H-StagePcmRepresentationMismatch; failed controls select
-H-PortStageCaptureInvalid.
+The discriminating table is one row per arm: suppression value, title/hangar
+VI control, crash/abort status, last guest PC, stage-row count, and byte-row
+count. One-arm-only title reach selects the corresponding suppression
+hypothesis; equal arm results select irrelevance; two invalid arms select the
+route-invalid hypothesis.
 
 ## Ground-truth result carried forward
 

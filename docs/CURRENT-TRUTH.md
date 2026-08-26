@@ -5,6 +5,8 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
+Current maintenance marker: Session 2393 (2026-08-25).
+
 Maintained in Session 2392 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. The s2388 source audit shows `complete` is a same-range-both predicate, not an aggregate-count or ordering predicate. Among the 411 incomplete rows (232/179), 331 had neither source nor consumer, 38 source-only, 42 consumer-only, and none had both; ordering flags varied only with the one-sided matches. The s2389 range audit found task-reporter selections for 1,454/1,432 title-stage rows, but zero image-stage selections because every relevant stage had `stage_nz=0`, which the image matcher explicitly rejects; there were zero same-range agreements and zero conflicts. The s2390 retained-field audit confirms target-stage zeros in both image arms (1,424/1,421 unique rows), with only two positive rows in one hangar arm; all controls pass. The s2391 retail oracle payload-region capture passed the whole-RDRAM, title, and hangar controls and found 57,871/102,400 final nonzero bytes in the broad candidate region, with phase-gated writer PCs, but no exact per-stage payload bytes or one-to-one port hash join. The s2392 exact-window capture passed the whole-RDRAM control (`12,962` writes), title and hangar VI controls, and exact watches. Window `0x1935E0:0x198` had target-phase writers and a nonzero final snapshot (`186/408`, FNV `0xE2F69C77`) while the retained port stage is `stage_nz=0`, FNV `0x762B22A5`; the other exact windows also ended nonzero but lacked sufficient phase-specific attribution. This selects `H-StageNonzeroLoggingArtifact` at capture scope, not a legitimate-zero or exact PCM-representation conclusion. No task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
 
 The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
@@ -128,6 +130,17 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2393 — exact port byte capture was route-invalid.** The build added a
+  bounded pre-join capture for `0x167050:0x300`, `0x1935E0:0x198`, and
+  `0x166D50:0x300`, including a 16-byte sample and recomputed nonzero/FNV
+  tuple. The first qualified image run stayed at VI 640 despite active VI
+  updates and emitted zero stage rows. A fixed run with drain/route controls
+  crashed at guest PC `0x80001F88`, still at VI 640, also with zero stage rows
+  and zero byte captures. This selects `H-PortStageCaptureInvalid` for the
+  iteration and leaves all stage-byte hypotheses open. Artifacts:
+  `scratch/agent/s2393_stage_bytes_run2/`,
+  `scratch/agent/s2393_stage_bytes_run3/`.
 
 - **s2392 — exact retail windows are active where the retained port stage is
   zero.** The first capture covered only one alternating VI origin; the fixed
