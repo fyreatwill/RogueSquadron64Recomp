@@ -360,6 +360,8 @@ sequence; #1 is the next campaign priority.
    writer's exact store/range relation into the image/task identity, or close
    the remaining hangar consumer gap with a new ground-truth discriminator.
    No output remap, task-data change, gate change, or guard is authorized.
+   s2427 now confirms the exact retail title-range writer; the next capture
+   should join that identity to the port task row before any behavior change.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -412,6 +414,14 @@ with other helper PCs on the latter. This selects `H-RetailDifferentRange`
 for the candidate-PC relation and keeps the hangar image-consumer identity
 open. It is ground-truth attribution only; no output remap or mitigation is
 authorized.
+s2427's independent exact-title-range oracle run passed whole-RDRAM (552,718
+hits), title (633 VI rows), hangar (1,593 VI rows), and both candidate-PC
+execution controls (643,883 and 680,798 hits). In the title range
+`0x169730..0x169B30`, `0x80015BC8` wrote 71,100 times while `0x8000F3A0`
+wrote 70 times. This corroborates the title writer identity at the exact
+range and selects `H-RetailTitleExactWriter` at this scope. The image-range
+attribution remains `0x800078EC`/helpers from s2426; no hangar consumer,
+remap, writeback, task-data, gate, or guard is authorized.
 The first same-identity post-DMA slot/key-on fields are now available in the
 image join. s2408 validated both route controls, but its image arm still
 produced no same-identity downstream rows. s2409 independently observed

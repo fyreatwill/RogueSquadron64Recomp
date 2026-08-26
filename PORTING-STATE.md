@@ -112949,3 +112949,23 @@ This selects `H-RetailDifferentRange` at the current capture scope and rules
 out `H-RetailImageRangeWriter`. It does not identify the legitimate hangar
 consumer or authorize a writeback, remap, task-data change, gate, or guard.
 Artifact: `scratch/agent/s2426_m5_retail_image_ranges/`.
+
+## Session 2427 (2026-08-26) — confirmed M5 retail title exact writer
+
+Ground truth was checked before any port change. One Rice-oracle run used the
+whole-RDRAM positive control, title/hangar VI controls, exact title and image
+ranges, and execution watches for `0x80015BC8` and `0x8000F3A0`.
+
+The whole-RDRAM control fired 552,718 times; title produced 633 phase rows at
+`0x00790400`/1024 and hangar 1,593 at `0x006AB400`/512. Both candidate PCs
+executed (`643,883` and `680,798` hits). In the exact title range
+`0x169730..0x169B30`, `0x80015BC8` was attributed 71,100 writes and
+`0x8000F3A0` 70 writes. The image ranges remained separate from these
+candidate PCs, consistent with s2426's `0x800078EC`/helper attribution.
+
+This selects `H-RetailTitleExactWriter` at the current capture scope and
+corroborates the title writer identity against the prior port-context result.
+It rules out treating the exact title range as an image-range writer or
+claiming that the candidate PCs explain the hangar image ranges. No output
+remap, writeback, task-data, gate, guard, or default change was made.
+Artifact: `scratch/agent/s2427_m5_retail_title_writer/`.
