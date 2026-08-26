@@ -113922,3 +113922,29 @@ caller that supplies zero to `menuOverlayInit` open. It rules out no audio
 contract or output mapping. No guard, stub, dispatch, audio, output, or
 task-data change was made. Artifact:
 `scratch/agent/s2470_m5_model_viewer_caller_boundary/audit.md`.
+## Session 2471 (2026-08-26) — captured menu-init caller boundary
+
+Work unit: locate the first zero before `menuOverlayInit` with a complete
+static/live caller table. The independent retail oracle control completed with
+whole-RDRAM writes `32,429,723`, exact watched-range writes `32,419,557`,
+driven title and hangar VI phases, and `4,419` executions of resolver target
+`0x8009123C`; these controls qualify the route and instrument.
+
+The first regenerated probe used a phase-4 gate and emitted no menu-init
+caller rows; the phase-3 correction also emitted none. Both runs retained the
+resolver positive control and the known model-viewer caller row, showing that
+the menu-init call precedes those phase gates. The fixed regeneration used an
+unconditional 256-row-capped capture at the eight generated
+`LOOKUP_FUNC(0x800C58A0)` callsites.
+
+The qualified port run used `ROGUESQ_AUDIO_UCODE=0`, `ROGUESQ_LLE_FORCE=1`,
+`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, and
+`ROGUESQ_LOG_M5_PRETARGET=1`. It recorded the live row
+`caller=mainGameLoop callsite=0x8003E090 phase=2 r31=0x00000000
+r4=0x80130B40 r5=0x00000009`. The resolver positive control fired 83 times;
+the model-viewer caller row again had `r31=0`, and the run reached the known
+matrix null-dispatch abort. This selects `H-MenuInitCallerZero`, refutes an
+in-entry zero introduction and an unreachable static caller, and leaves the
+earlier caller that supplies zero to `mainGameLoop` open. No guard, stub,
+dispatch, audio, output, or task-data change was made. Artifact:
+`scratch/agent/s2471_m5_menu_init_caller_boundary/audit.md`.

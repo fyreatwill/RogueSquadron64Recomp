@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2470 (2026-08-26).
+Current maintenance marker: Session 2471 (2026-08-26).
 
 ## Current state
 
@@ -52,6 +52,20 @@ Current maintenance marker: Session 2470 (2026-08-26).
   and leaves the earlier caller that supplies zero to `menuOverlayInit` open;
   no behavior change was authorized. Artifact:
   `scratch/agent/s2470_m5_model_viewer_caller_boundary/audit.md`.
+
+- **s2471 — the live menuOverlayInit caller supplies the inherited zero.** The
+  independent retail control passed whole-RDRAM and driven VI controls. The
+  regenerated exhaustive caller census found eight generated
+  `mainGameLoop` callsites to the menu-init entry; the final port capture
+  recorded the live call at `0x8003E090` in phase 2 with `r31=0`,
+  `r4=0x80130B40`, and `r5=9`. The resolver positive control fired 83 times,
+  and the known model-viewer caller row also fired. Phase-4 and phase-3 gates
+  produced no menu-init rows because this caller precedes them; the final
+  unconditional capped capture corrected that measurement boundary. This
+  selects `H-MenuInitCallerZero`, refutes an in-entry zero introduction and an
+  unreachable static caller, and leaves the earlier caller that supplies zero
+  to `mainGameLoop` open. No behavior change was authorized. Artifact:
+  `scratch/agent/s2471_m5_menu_init_caller_boundary/audit.md`.
 
 - **s2468 — setupCameraMatrices supplies the inherited zero.** The independent
   retail oracle passed whole-RDRAM and freelist controls and reached hangar.
@@ -293,13 +307,12 @@ Current maintenance marker: Session 2470 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, upstream menu-init caller
-   open.** A phase-gated exhaustive caller capture shows the sole generated
-   `runMenuModelViewerScreen` caller, `menuOverlayInit` at `0x800C5C9C`,
-   supplies `r31=0`; setup and traverse inherit that zero. Audit the complete
-   static/live caller boundary that invokes `menuOverlayInit` and identify the
-   earlier zero source. Do not infer callback polarity or add a guard. No
-   output remap, task-data change, gate change, or guard is authorized.
+1. **M5 generated alternate equivalence — active, main-loop caller boundary
+   open.** The live generated `mainGameLoop` callsite `0x8003E090` invokes
+   `menuOverlayInit` with `r31=0`; the earlier caller/continuation that
+   supplies zero to `mainGameLoop` remains unidentified. Audit that complete
+   static/live boundary next. Do not infer callback polarity or add a guard.
+   No output remap, task-data change, gate change, or guard is authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
