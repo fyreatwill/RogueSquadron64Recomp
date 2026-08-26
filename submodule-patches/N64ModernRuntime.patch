@@ -520,7 +520,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..133bdad 100644
+index 1cb3f6a..6a17a94 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -534,7 +534,7 @@ index 1cb3f6a..133bdad 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,738 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,754 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -963,6 +963,22 @@ index 1cb3f6a..133bdad 100644
 +    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
 +    audio_image_scope_locked(phase, width, origin);
 +    const uint64_t complete_event = audio_join_next_event();
++    static const bool log_completion_call = [] {
++        const char* all = std::getenv("ROGUESQ_LOG_ALL");
++        const char* specific = std::getenv("ROGUESQ_LOG_M5_COMPLETION_CALL");
++        return (all && *all && *all != '0') ||
++               (specific && *specific && *specific != '0');
++    }();
++    const bool target_phase = (width == 1024 && origin == 0x00790400) ||
++                              (width == 512 && origin == 0x006AB400);
++    if (log_completion_call && target_phase) {
++        fprintf(stderr,
++                "[audtask-image-complete-call] arm=%s ordinal=%u row=%u phase=%u"
++                " width=%u origin=0x%06X event=%" PRIu64 "\n",
++                arm ? arm : "n/a", ordinal, row, phase, width, origin,
++                complete_event);
++        fflush(stderr);
++    }
 +    for (AudioImageStage& stage : g_audio_image_stages) {
 +        if (stage.ordinal != ordinal || stage.phase != phase ||
 +            stage.row != row || std::strcmp(stage.arm, arm) != 0) continue;
@@ -1273,7 +1289,7 @@ index 1cb3f6a..133bdad 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +778,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +794,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -2700,7 +2716,7 @@ index 9944a02..7715582 100644
      
      // Check the queue to see if this thread should swap execution to another.
      ultramodern::check_running_queue(PASS_RDRAM1);
-
+ 
 -    return received ? 0 : -1;
 +    const s32 result = received ? 0 : -1;
 +    if (log_a1_queue && is_a1_queue) {

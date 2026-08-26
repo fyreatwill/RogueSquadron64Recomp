@@ -40,6 +40,7 @@ COMMON=(
     ROGUESQ_LOG_INIT_VOICE_SAMPLE=1
     ROGUESQ_LOG_M5_KEYON_CENSUS=1
     ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1
+    ROGUESQ_LOG_M5_COMPLETION_CALL=1
 )
 
 PIDS=()
@@ -212,7 +213,7 @@ summary_header = [
 summary = [summary_header]
 candidate_header = [
     "arm", "audio", "c88", "phase", "width", "origin", "ordinal", "row",
-    "stage_event", "stage", "complete_event", "complete", "dma_count",
+    "stage_event", "stage", "callback_events", "callback_joined", "complete_event", "complete", "dma_count",
     "dma_range_events", "source_event", "consumer_event", "classification",
 ]
 candidate_table = [candidate_header]
@@ -229,16 +230,32 @@ for arm in arms:
     joins_all = [r for r in rows if r["tag"] == "audtask-image-join" and phase_key(r) is not None]
     stages_all = [r for r in rows if r["tag"] == "audtask-image-stage-row" and phase_key(r) is not None]
     ranges_all = [r for r in rows if r["tag"] == "audtask-dma-range"]
-    for join in joins_all:
-        key = (num(join.get("ordinal")), num(join.get("row")))
-        stage_rows = [r for r in stages_all if phase_key(r) == phase_key(join) and
-                      (num(r.get("ordinal")), num(r.get("row"))) == key]
+    completion_calls = [r for r in rows if r["tag"] == "audtask-image-complete-call"]
+    completion_by_key = defaultdict(list)
+    for callback in completion_calls:
+        callback_phase = phase_key(callback)
+        if callback_phase is not None:
+            completion_by_key[(callback.get("arm"), callback_phase,
+                              num(callback.get("ordinal")),
+                              num(callback.get("row")))].append(callback)
+    for stage_row in stages_all:
+        key = (num(stage_row.get("ordinal")), num(stage_row.get("row")))
+        key_phase = phase_key(stage_row)
+        joins = exact(rows, "audtask-image-join", key,
+                      lambda r: phase_key(r) == key_phase)
+        callbacks = completion_by_key.get((stage_row.get("arm"), key_phase,
+                                           key[0], key[1]), [])
+        join = joins[-1] if joins else {}
+        callback_events = ",".join(r.get("event", "") for r in callbacks)
+        if not callback_events:
+            callback_events = join.get("complete_event", "")
         range_events = [r.get("event", "") for r in ranges_all
-                        if r.get("event") and num(r.get("event")) >= num(join.get("stage_event"))]
+                        if r.get("event") and num(r.get("event")) >= num(stage_row.get("event"))]
         candidate_table.append([
-            arm, str(audio), str(c88), "target", str(phase_key(join)[0]),
-            f"0x{phase_key(join)[1]:06X}", join.get("ordinal", ""), join.get("row", ""),
-            ",".join(r.get("event", "") for r in stage_rows), join.get("stage", ""),
+            arm, str(audio), str(c88), "target", str(key_phase[0]),
+            f"0x{key_phase[1]:06X}", stage_row.get("ordinal", ""), stage_row.get("row", ""),
+            stage_row.get("event", ""), stage_row.get("stage", ""),
+            callback_events, str(bool(callbacks) or bool(join.get("complete_event"))),
             join.get("complete_event", ""), join.get("complete", ""), join.get("dma_count", ""),
             ",".join(range_events), join.get("source_event", ""),
             join.get("consumer_event", ""), join.get("classification", ""),

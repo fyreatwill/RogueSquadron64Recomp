@@ -111896,3 +111896,30 @@ Artifacts: `scratch/agent/s2383_m5_task_output_contract_audit/ordinal-summary.ts
 and `candidate-task-table.tsv`.
 
 ORIGIN: no mitigation or behavior change; harness instrumentation and capture only.
+
+## Session 2384 (2026-08-25) — M5 completion callback producer audit
+
+The completion-producer audit added a phase-scoped
+`[audtask-image-complete-call]` marker at
+`rs64_audio_join_image_complete` and extended the existing four-arm candidate
+table to retain every image-stage row plus callback and completion-event
+columns. The build succeeded with `cmake --build build --config Debug --target
+RogueSquadron64Recomp`, and the same build ran
+`env zsh scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh
+s2384_m5_completion_producer_audit`.
+
+All four stub/image x c88 arms passed title-1024 and hangar-512 controls and
+exited cleanly. The image arms emitted 1,147 and 1,022 target-phase callback
+rows. The candidate table retained 4,389 stage rows across both image arms;
+completion events were present on the retained candidate rows, including
+event 18 for the first image candidate. The direct callback marker and the
+independent stored `complete_event` join both show that the completion
+producer ran and associated with image-stage keys. This selects
+`H-CompletionProducerCalledAndAssociated` at capture scope and rules out
+`H-CompletionProducerUncalled` and the prior `H-CompletionEventMissing`
+label. It does not explain the absent task completion bit, DMA-count join, or
+PCM source/consumer closure, and no behavior or audio/task contract changed.
+
+Artifacts: `scratch/agent/s2384_m5_completion_producer_audit/`.
+
+ORIGIN: no mitigation or behavior change; phase-scoped callback instrumentation and capture only.

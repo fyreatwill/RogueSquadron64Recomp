@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2383 (2026-08-25). The M5 A1 oracle capture passed the whole-RDRAM and both target-640 controls, and joined 2,524 retail executions from `0x80001CB8` through callee entry at `osRecvMesg` (`0x800331D0`) and successor `0x80001CC0`; every joined callee row received `$a2=1`. This selects blocking semantics at capture scope and closes the delay-slot flag question. The port flag remains unchanged because the measurement identifies the effective retail operand, not the upstream reason for the port's A1 boundary or a justified fallback.
+Maintained in Session 2384 (2026-08-25). The M5 completion-producer capture passed all four route controls. Image arms emitted 1,147 and 1,022 target-phase completion-call rows; their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the s2383 completion-event null. It does not explain the still-absent task completion bit, DMA-count join, or PCM source/consumer closure, and authorizes no behavior change.
 
 The s2383 same-build task/output candidate census passed all four route controls. It retained 4,342 phase-keyed image-stage candidates across c88=0/1 image arms; stage/render events were present, but every candidate lacked a completion event/bit and a task DMA-count join, and none had PCM source or consumer events. Stub arms had no image candidates as expected. This narrows `H-TaskOutputGap` to `H-CompletionEventMissing` at capture scope; it does not authorize changing task data, audio, gate, fallback, or publication behavior.
 
@@ -418,10 +418,12 @@ sequence; #1 is the next campaign priority.
    design gate and proceed only with ground-truth-first, positive-control-
   qualified steps. The next queued boundary is #4.
 2. **M5 task/output closure — active.** s2383's candidate census found
-   stage/render rows but no completion event/bit, task DMA-count join, or PCM
-   source/consumer event in 4,342 image candidates. Trace the completion-event
-   producer and its task association with one positive-control-qualified
-   capture before changing task data or audio.
+   stage/render rows but no task completion bit, task DMA-count join, or PCM
+   source/consumer event. s2384 traced the producer: completion callbacks were
+   invoked and associated with image-stage keys in both image arms (1,147 and
+   1,022 target-phase calls), with completion events present in the candidate
+   table. The next boundary is the task completion reporter/association, not
+   the callback producer; do not change task data or audio.
 3. **M5 gate polarity/writer join — closed at current capture scope.** s2381
    independently identified retail gate writer/value behavior and s2382
    supplied the port-side downstream comparison; no gate treatment is
@@ -554,6 +556,11 @@ are superseded at their measured scopes:
   capture. The call-site zero was believable as a semantic flag only because
   the debugger labels the `jal` PC, but it is pre-delay state; the callee
   received one in every target join.
+- s2383's `H-CompletionEventMissing` label is superseded by s2384's
+  phase-keyed callback audit. It was believable because the prior candidate
+  census only retained stage-to-output rows and had no direct callback
+  invocation marker; the new marker and the existing completion-event field
+  both show producer invocation and association in the image arms.
 
 ## Evidence and safety rules
 
