@@ -1,44 +1,45 @@
-# NEXT work unit (s2413) — corroborate M5 sequence-key identity
+# NEXT work unit (s2414) — test whether the sequence key is legitimate
 
-HYPOTHESIS-ID: m5-identity-join-defect
+HYPOTHESIS-ID: m5-sequence-key-legitimacy
 
 ## Work unit
 
-Run one fresh image-arm capture with the rebuilt retained-stage table. The
-valid s2412 image run selected `H-SequenceKey` (1,161 phase-only, 10
-phase-plus-sequence, 2 all-key rows), but the silent-stub control again died
-before title and is not comparable. Do not rerun the invalid stub arm. Require
-title and hangar phase controls plus the key-on positive control before
-reducing the table. Do not change task data, audio, gate, fallback, dispatch,
-VI, output behavior, or the nonzero predicate.
+Run one bounded, observation-only reducer over the two valid image captures
+(`s2412` and `s2413`). For every retained identity row, join the selected
+first-later key-on event to the image stage event and report the complete
+table by phase, stage event, key-on event, route ordinal/row, and event delta.
+Do not change task data, audio, gate, fallback, dispatch, VI, output behavior,
+the nonzero predicate, or the 64-event window.
 
 ## Competing hypotheses and discriminator
 
-- H-PhaseKey: image and key-on records use different phase labels or VI-origin
-  transitions, but match after phase/origin normalization.
-- H-OrdinalRowKey: phase/origin match, but the producer uses a different
-  ordinal/row convention; a shifted or transformed row joins the event.
-- H-SequenceKey: neither phase nor row explains the mismatch; the missing key
-  is a task/DMA/event sequence relationship.
-- H-NoJoinAtCapture: independent key-on events still cannot be associated with
-  any target image row after all three keys are tested.
+- H-SequenceLegitimate: the selected key-on event has a stable, causal
+  relationship to the image stage/task sequence in both captures.
+- H-RouteOrdinalAlias: the apparent sequence match is only a consequence of
+  the route ordinal/row or a repeated frame pattern; event deltas vary when
+  ordinal/row differs.
+- H-GlobalEventCollision: the same global event stream collides with unrelated
+  image rows; matching rows are not phase- or task-local.
+- H-NoLegitimateRelation: the repeated class split does not survive the
+  complete event-delta/route-local reducer.
 
-The discriminator remains one table containing all four candidate keys and
-counts of rows joined by phase/origin, ordinal/row, bounded sequence, or not
-at all. The sequence candidate is the first key-on event after the image-stage
-event and within 64 join events, regardless of route labels. Reproduction of
-the class-5/class-7 population selects `H-SequenceKey`; a phase-only table
-reopens `H-IdentityJoinDefect`; no stage rows or no key-on positive control is
-route-invalid. Rows are capped at 512 per target phase and key-on history at
-4096 per target phase.
+The discriminator is one combined table, not a new field: counts and min/max
+event deltas for class-5 and class-7 rows, partitioned by capture, phase,
+route ordinal/row equality, and stage/task ordering. Stable nonzero deltas in
+both captures with route-local ordering selects H-SequenceLegitimate; rows
+whose deltas vary only with ordinal/row select H-RouteOrdinalAlias; matches
+spanning unrelated phases or tasks select H-GlobalEventCollision; an empty or
+unstable table selects H-NoLegitimateRelation. A missing input marker is
+route-invalid.
 
 ## Exact commands
 
-No rebuild is needed unless the current binary is absent. Use the rebuilt
-retained-table binary and this phase-gated image command, changing only the
-output directory:
+`python3 - <<'PY' scratch/agent/s2412_identity_join/image/run.log scratch/agent/s2413_identity_join/image/run.log`
 
-`env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1 ROGUESQ_LOG_INIT_VOICE_SAMPLE=1 ROGUESQ_LOG_M5_INIT_VOICE=1 ROGUESQ_LOG_M5_AUDIO_EVENT=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=120 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start' ROGUESQ_DRAIN_INLOOP_TICK=1 zsh tools/probe.sh scratch/agent/s2413_identity_join/image 75 1`
+The reducer must parse `[m5-identity-table]` lines, print the full bounded
+summary, and write its output to `scratch/agent/s2414_sequence_legitimacy/`.
+If no reducer exists, create it as a tracked script before running; do not
+interpret raw run-log nulls without the positive-control and phase markers.
 
-Preserve `run.log` and reduce the complete table before interpreting any
-null.
+Required controls in each input: title `1024 @ 0x00790400`, hangar
+`512 @ 0x006AB400`, and a key-on positive-control marker.

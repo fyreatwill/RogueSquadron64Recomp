@@ -112643,3 +112643,24 @@ diagnostic identity rows across phase-scope transitions and adds a one-shot
 table-size control. The stage/key-on values are legitimate observations, not
 an output remap or guard.
 Artifacts: `scratch/agent/s2412_identity_join/`.
+
+## Session 2413 (2026-08-26) — corroborated M5 sequence-key identity
+
+The expected Debug executable was absent, so the existing target was rebuilt
+successfully. No instrumentation or behavior change was made. The prescribed
+phase-gated image-arm capture then reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`; the independent key-on positive control fired at
+event 5321. The complete retained identity table contained 1,180 target rows:
+1,168 class-1 phase/origin-only rows, 10 class-5 phase/origin-plus-sequence
+rows, and 2 class-7 rows matching phase/origin, ordinal/row, and sequence.
+
+This reproduces s2412's class-5/class-7 population in a second valid image
+capture and corroborates H-SequenceKey at the current capture scope. It rules
+out another route-invalid null and another simple phase/ordinal-only join, but
+does not prove that the sequence is the legitimate downstream identity. No
+task, audio, gate, fallback, dispatch, VI, output, or mitigation behavior
+changed.
+
+ORIGIN: no mitigation or behavior change; the identity table remains
+observation-only and its sequence match is not an output remap or guard.
+Artifacts: `scratch/agent/s2413_identity_join/image/`.
