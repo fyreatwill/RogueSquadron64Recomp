@@ -112111,3 +112111,32 @@ or output behavior was changed. The next probe must use exact representative
 destination/length windows.
 
 Artifact: `scratch/agent/s2391_oracle_stage_payload.log`.
+
+## Session 2392 (2026-08-25) — M5 exact retail stage-window witness
+
+The prescribed exact-window oracle audit was run with the whole-RDRAM positive
+control first, Rice video, the verified Start schedule, title/hangar VI tracing,
+phase writer histograms for both alternating origins, and post-value summaries.
+The first pass covered only one origin per phase; its fixed rerun added both
+title origins (`0x790400/0x790800`) and both hangar origins
+(`0x6ab400/0x6ab800`) without changing the exact-watch set.
+
+The fixed capture passed the positive control (`12,962` writes), reached title
+and hangar, and wrote all four exact windows. For `0x1935E0:0x198`, target-phase
+writers were observed at title (`0x800078EC`, 408 writes) and hangar
+(`0x80018F5C`, 103; `0x80018F60`, 99). Its final snapshot was `186/408`
+nonzero with FNV `0xE2F69C77`; the retained port stage row for that window is
+`stage_nz=0`, FNV `0x762B22A5`. The other windows ended nonzero as well:
+`0x167050:0x300` was `765/768`, `0x166D50:0x300` was `759/768`, and
+`0x178D80:0x198` was `20/408`, but none had phase-hist writer rows.
+
+This selects `H-StageNonzeroLoggingArtifact` at capture scope and rules out an
+inactive exact retail region. It does not distinguish a wrong port logger
+region from a payload-representation or stage-join mismatch, and it does not
+authorize a predicate relaxation or task, audio, gate, fallback, dispatch, VI,
+or output change. The first pass's incomplete origin coverage is documented as
+a fixed instrumentation attempt, not evidence. Artifacts:
+`scratch/agent/s2392_oracle_exact_stage_windows/`.
+
+ORIGIN: no mitigation or behavior change; added only a bounded ground-truth
+watch and its fixed phase coverage.

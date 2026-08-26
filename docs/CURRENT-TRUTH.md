@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2391 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. The s2388 source audit shows `complete` is a same-range-both predicate, not an aggregate-count or ordering predicate. Among the 411 incomplete rows (232/179), 331 had neither source nor consumer, 38 source-only, 42 consumer-only, and none had both; ordering flags varied only with the one-sided matches. The s2389 range audit found task-reporter selections for 1,454/1,432 title-stage rows, but zero image-stage selections because every relevant stage had `stage_nz=0`, which the image matcher explicitly rejects; there were zero same-range agreements and zero conflicts. The s2390 retained-field audit confirms target-stage zeros in both image arms (1,424/1,421 unique rows), with only two positive rows in one hangar arm; all controls pass. The s2391 retail oracle payload-region capture passed the whole-RDRAM, title, and hangar controls and found 57,871/102,400 final nonzero bytes in the broad candidate region, with phase-gated writer PCs, but no exact per-stage payload bytes or one-to-one port hash join. This rules out an inactive retail region, not legitimate-zero, logger-region, or representation-mismatch explanations. No task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
+Maintained in Session 2392 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. The s2388 source audit shows `complete` is a same-range-both predicate, not an aggregate-count or ordering predicate. Among the 411 incomplete rows (232/179), 331 had neither source nor consumer, 38 source-only, 42 consumer-only, and none had both; ordering flags varied only with the one-sided matches. The s2389 range audit found task-reporter selections for 1,454/1,432 title-stage rows, but zero image-stage selections because every relevant stage had `stage_nz=0`, which the image matcher explicitly rejects; there were zero same-range agreements and zero conflicts. The s2390 retained-field audit confirms target-stage zeros in both image arms (1,424/1,421 unique rows), with only two positive rows in one hangar arm; all controls pass. The s2391 retail oracle payload-region capture passed the whole-RDRAM, title, and hangar controls and found 57,871/102,400 final nonzero bytes in the broad candidate region, with phase-gated writer PCs, but no exact per-stage payload bytes or one-to-one port hash join. The s2392 exact-window capture passed the whole-RDRAM control (`12,962` writes), title and hangar VI controls, and exact watches. Window `0x1935E0:0x198` had target-phase writers and a nonzero final snapshot (`186/408`, FNV `0xE2F69C77`) while the retained port stage is `stage_nz=0`, FNV `0x762B22A5`; the other exact windows also ended nonzero but lacked sufficient phase-specific attribution. This selects `H-StageNonzeroLoggingArtifact` at capture scope, not a legitimate-zero or exact PCM-representation conclusion. No task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
 
 The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
 
@@ -128,6 +128,22 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2392 — exact retail windows are active where the retained port stage is
+  zero.** The first capture covered only one alternating VI origin; the fixed
+  capture added both title origins (`0x790400/0x790800`) and both hangar
+  origins (`0x6ab400/0x6ab800`). The whole-RDRAM positive control recorded
+  `12,962` writes and the run reached title and hangar. Exact watch
+  `0x1935E0:0x198` had target-phase writers at title (`0x800078EC`, 408
+  writes) and hangar (`0x80018F5C`, 103; `0x80018F60`, 99); its final snapshot
+  was `186/408` nonzero, FNV `0xE2F69C77`, versus the retained port stage's
+  `stage_nz=0`, FNV `0x762B22A5`. Exact windows `0x167050:0x300`,
+  `0x166D50:0x300`, and `0x178D80:0x198` ended `765/768`, `759/768`, and
+  `20/408` nonzero respectively, but had no phase-hist writer rows. The
+  independent oracle/port comparison selects `H-StageNonzeroLoggingArtifact`
+  at capture scope; it does not identify whether the port logger region,
+  payload representation, or stage join is wrong. Artifact:
+  `scratch/agent/s2392_oracle_exact_stage_windows/`.
 
 - **s2386 — raw task reporter association is positive.** The build succeeded
   and the same-built stub/image × c88=0/1 driver passed title `1024` and
@@ -503,8 +519,8 @@ sequence; #1 is the next campaign priority.
   output-contract requirement or a capture/reducer artifact. s2390 confirmed
   the retained target zeros but could not recompute bytes; s2391 confirmed
   retail activity in the broad candidate region but not exact stage payloads.
-  Narrow the oracle to representative destination/length windows before
-  changing the predicate.
+  s2392 found nonzero retail bytes in a retained-zero exact window; audit the
+  port logger's exact region and bytes before changing the predicate.
 2. **M5 task/output closure — closed at current capture scope.** s2387's
    corrected reporter-candidate table associated raw `[audtask-join]` records
    with 100% of 4,688 image-stage candidates; reporter completion was true for
