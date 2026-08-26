@@ -111435,3 +111435,36 @@ guard, or mitigation changed.
 Isolate the shared pre-A1 get_function route boundary with a new table keyed by
 abort ordinal, requested guest address, resident overlay/load rows, early 640
 control, and independent retail target-origin controls.
+## Session 2369 (2026-08-25) — M5 A1 pre-target abort names null request
+
+Ran the required retail ground-truth capture before building the diagnostic.
+The oracle whole-RDRAM positive control reached 10,000 callbacks and both
+target 640 origins, `0x00696100` and `0x00696600`. Built the Debug target
+after adding a gated read-only table to `get_function` that records the
+requested address and all resident overlay/load ranges. The first driver
+attempt was invalid: its zsh associative-array PID values became literal
+`$!`, so both port logs were empty. Replaced that with scalar PIDs and reran
+the same build and two arms.
+
+The corrected control and alternate arms each passed the early 640 transition
+control and emitted one abort row at guest PC `0x80001F88`, requesting
+`0x00000000`. Each reported the same resident sections 0, 1, and 3, with
+ranges `0x80000400..0x80000440`, `0x80000440..0x800A5130`, and
+`0x800A5130..0x800CD520`; none contained the requested address. The table
+selects `H-MissingOverlayFunction` at capture scope and rules out resident
+overlay wrong dispatch. It does not identify the guest writer or authorize a
+null fallback, overlay change, VI change, or audio contract change.
+
+Artifacts: `scratch/agent/s2369_ground_truth/` and
+`scratch/agent/s2369_m5_a1_pre_target_route_boundary_fixed/`.
+
+ORIGIN: diagnostic-only. No game behavior, dispatch, VI selection, task data,
+field writeback, guard, or mitigation changed.
+
+### Next
+
+Run one ground-truth-first oracle/port capture at guest PC `0x80001F88` with
+the oracle's `$a0` GPR row and the port abort row. Determine whether retail
+executes the call-site with a nonzero target, the same null request, or never
+executes it in the target phase. Keep whole-RDRAM, both target origins, and
+early-640 controls; do not add a fallback or change dispatch/VI behavior.

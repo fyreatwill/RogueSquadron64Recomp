@@ -1,43 +1,42 @@
-# NEXT work unit (s2369) — M5 A1 pre-target get_function route boundary
+# NEXT work unit (s2370) — M5 A1 null-function origin
 
-HYPOTHESIS-ID: m5-a1-pre-target-route-boundary
+HYPOTHESIS-ID: m5-a1-null-function-origin
 
 ## Work unit
 
-Design and run one ground-truth-first capture of the shared pre-A1
-`get_function` abort at guest PC `0x80001F88`. Keep one build and two port
-arms (control/alternate), positively control the oracle's whole-RDRAM and both
-target origins, and capture the requested function address plus resident
-overlay/load rows at the abort. Do not repeat the four-arm/two-wave matrix,
-alter VI selection, write back a field, or add a guard. If the abort marker is
-not positive in both port arms, select `H-AbortInstrumentInvalid`; if the
-requested address is outside the resident overlay, select
-`H-MissingOverlayFunction`; otherwise select `H-ResidentOverlayWrongDispatch`.
+Run one ground-truth-first capture at guest PC `0x80001F88` to determine
+whether the port's `get_function(0)` request is a port-only call-site or a
+retail call-site with a different/nonzero target. Keep the existing read-only
+abort table and one build; use the retail oracle before the port. Retain the
+whole-RDRAM and both target-origin controls plus the port early-640 transition
+control. Do not add a null fallback, change dispatch, change VI selection, or
+edit task/audio data.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-AbortInstrumentInvalid: the two port arms do not both emit the abort
-  marker, so the requested-function table is not trustworthy.
-- H-MissingOverlayFunction: both arms emit the marker and the requested
-  address is not registered in any resident overlay section.
-- H-ResidentOverlayWrongDispatch: both arms emit the marker and the address
-  is registered, but the resident overlay/load table points at a different
-  dispatch target.
+- H-RetailCallsiteNonzero: the oracle executes `0x80001F88` in the target
+  phase with a nonzero `$a0`/requested target while both port arms request
+  `0x00000000`; this selects a port call-site/input divergence.
+- H-RetailCallsiteNull: the oracle reaches `0x80001F88` with the same null
+  request in the target phase; this selects a shared guest null-function
+  origin and rules out a port-only call-site.
+- H-RetailCallsiteAbsent: the oracle reaches both target origins with positive
+  controls but has zero execution rows at `0x80001F88`; this selects that the
+  port reaches a call-site retail does not.
 
-The discriminator is one table keyed by arm and abort ordinal containing the
-abort marker, requested guest address, resident overlay/load rows, early 640
-transition control, and oracle origin controls. Select a hypothesis only when
-the oracle and both port controls pass; otherwise select
-`H-AbortInstrumentInvalid`.
+The discriminator is one arm/phase table containing oracle watch-PC rows and
+GPR `$a0`, oracle target-origin rows, port `[a1-abort]` requested address and
+last guest PC, port early-640 transition rows, and crash/abort status. A null
+oracle result is invalid unless the whole-RDRAM, target-origin, and named-PC
+controls are all positive.
 
 ## Exact commands
 
-    apply_patch < persistent pre-A1 abort table parser and driver patch
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s2369_m5_a1_pre_target_route_boundary.sh s2369_m5_a1_pre_target_route_boundary
-    grep -E '^(controls|table|verdict) ' scratch/agent/s2369_m5_a1_pre_target_route_boundary/driver.log
+    zsh scratch/agent/run_s2370_m5_a1_null_function_origin.sh s2370_m5_a1_null_function_origin
+    grep -E '^(controls|table|verdict) ' scratch/agent/s2370_m5_a1_null_function_origin/driver.log
 
-The driver must run the retail oracle before the port arms, arm whole-RDRAM
-and both target-origin controls, use phase-gated budgets, launch both arms
-from one build, and kill game processes with SIGKILL. A null without same-run
-positive controls is invalid. No behavior change is authorized.
+The driver must run the oracle first with `--watch-write 0x0:0x800000`, both
+target-origin watches, and `--watch-pc 0x80001F88`, then launch control and
+alternate port arms from the same build and SIGKILL them after the table is
+complete.

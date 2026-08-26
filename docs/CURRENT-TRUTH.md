@@ -5,7 +5,15 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2368 (2026-08-25). The M5 A1 second-origin capture passed
+Maintained in Session 2369 (2026-08-25). The M5 A1 pre-target capture passed
+the oracle and both early-640 port controls; both arms requested the null
+function address before target origin. The resident table contained only
+sections 0, 1, and 3, none containing address zero. This selects a missing or
+null function request at capture scope, not resident-overlay wrong dispatch.
+The first driver attempt was invalid because zsh stored literal `$!` PID
+values; the fixed scalar-PID driver reran the same build and arms.
+
+The M5 A1 second-origin capture passed
 retail whole-RDRAM and both target-origin controls, but both same-build port
 arms aborted in `get_function` before reaching either target origin; no A1
 publisher comparison is valid. The M5 payload-owner join passed all
@@ -86,6 +94,17 @@ is authorized.
   capture. This selects `H-A1-CoverageInvalid` for the port comparison and
   does not identify a publisher or authorize a VI change. Artifact:
   `scratch/agent/s2368_m5_a1_second_origin_discriminator_result/`.
+
+- **s2369 — A1 pre-target abort is a null/missing function request.** The fresh
+  retail oracle passed the whole-RDRAM positive control and both target origins.
+  Both same-build port arms independently passed the early 640 transition
+  control, then emitted one `[a1-abort]` row for requested `0x00000000` at
+  guest PC `0x80001F88`. Each resident table had the same three sections
+  (0, 1, and 3), and none contained address zero. This selects
+  `H-MissingOverlayFunction` at capture scope and rules out
+  `H-ResidentOverlayWrongDispatch`; it does not identify the guest writer or
+  authorize a fallback, guard, overlay change, or audio contract change.
+  Artifact: `scratch/agent/s2369_m5_a1_pre_target_route_boundary_fixed/`.
 
 - **s2357 — task ABI names the exact field destination.** A fresh retail
   capture passed whole-RDRAM `59,327`, target window `44,120`, exact fields
@@ -193,20 +212,23 @@ sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
-  qualified steps. The next queued boundary is #3.
+  qualified steps. The next queued boundary is #4.
 2. **M5 payload-transformation provenance — closed at current capture scope.**
    s2367's owner join retained source/consumer events but no nonzero
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
-3. **M5 A1 pre-target route boundary — next, with a new discriminator.**
-   Isolate the shared `get_function` abort at guest PC `0x80001F88` before
-   attempting another second-origin comparison. The next capture must name
-   the requested function address and resident overlay at the abort, with
-   positive retail target-origin and port early-640 controls. Do not repeat
-   the four-arm/two-wave matrix or change VI selection.
-4. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
+3. **M5 A1 pre-target route boundary — closed at current capture scope.** The
+   requested address is `0x00000000`, outside every resident section in both
+   arms. Do not repeat the resident-overlay table without a new ground-truth
+   discriminator or add a null fallback.
+4. **M5 A1 null-function origin — next.** Use the retail oracle at guest PC
+   `0x80001F88` plus the port's named abort row to determine whether retail
+   executes the same call-site with a nonzero target/context, or whether the
+   port reaches a call-site retail never reaches. Keep whole-RDRAM, both target
+   origins, and early-640 controls; do not change dispatch or VI behavior.
+5. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator; do not chase a single recurring crash.
-5. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer-mode
+6. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer-mode
    H1 are refuted. H3 is unavailable because the oracle cannot screenshot the
    LLE path; do not repeat the capped `0xD60` scan.
 

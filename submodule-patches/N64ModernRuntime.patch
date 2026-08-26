@@ -173,7 +173,7 @@ index b0d6bef..a693bbc 100644
  
  namespace recomp {
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..0d5f7a5 100644
+index 8c8e5d1..164d0f9 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
 @@ -1,9 +1,11 @@
@@ -242,7 +242,7 @@ index 8c8e5d1..0d5f7a5 100644
  extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
      for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
          const auto& section = sections_info.code_sections[it->section_table_index];
-@@ -361,13 +392,150 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
+@@ -361,13 +392,178 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
      return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
  }
  
@@ -368,11 +368,39 @@ index 8c8e5d1..0d5f7a5 100644
 +    }
 +}
 +
++static void rs64_log_a1_missing_function(int32_t addr) {
++    static const bool enabled = []{
++        const char* e = std::getenv("ROGUESQ_LOG_A1_ABORT");
++        return e && *e && *e != '0';
++    }();
++    if (!enabled) {
++        return;
++    }
++    static unsigned ordinal = 0;
++    const unsigned n = ++ordinal;
++    if (n > 16) {
++        return;
++    }
++    fprintf(stderr, "[a1-abort] ordinal=%u phase=%u requested=0x%08X loaded_count=%zu\n",
++        n, rs64_phase_ord(), static_cast<uint32_t>(addr), loaded_sections.size());
++    for (const LoadedSection& loaded : loaded_sections) {
++        const SectionTableEntry& section = sections_info.code_sections[loaded.section_table_index];
++        const uint32_t lo = static_cast<uint32_t>(loaded.loaded_ram_addr);
++        const uint32_t hi = lo + section.size;
++        fprintf(stderr,
++            "[a1-resident] ordinal=%u section=%zu rom=0x%08X size=0x%X ram=0x%08X range=0x%08X..0x%08X contains=%d\n",
++            n, loaded.section_table_index, section.rom_addr, section.size, lo, lo, hi,
++            static_cast<uint32_t>(addr) >= lo && static_cast<uint32_t>(addr) < hi ? 1 : 0);
++    }
++    fflush(stderr);
++}
++
  extern "C" recomp_func_t * get_function(int32_t addr) {
 +    rs64_log_dma_ring_caller(addr);
 +    rs64_log_tickfunc_caller(addr);
      auto func_find = func_map.find(addr);
      if (func_find == func_map.end()) {
++        rs64_log_a1_missing_function(addr);
 +        static const bool stub_missing = []{
 +            const char* e = std::getenv("ROGUESQ_STUB_MISSING_FUNCS");
 +            return e && *e && *e != '0';
