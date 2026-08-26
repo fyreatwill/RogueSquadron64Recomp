@@ -112422,3 +112422,35 @@ contract audit described in `scratch/agent/NEXT.md`.
 This rules out only documentation staleness/oversize as the maintenance issue;
 it provides no new runtime evidence and authorizes no code, audio, task-data,
 gate, fallback, dispatch, VI, output, or mitigation change.
+
+## Session 2405 (2026-08-25) — M5 zero-output joins collide on zero tuples
+
+The retail oracle ran before the port capture with a whole-RDRAM positive
+control: 13,324 writes. It reached title origin `0x00790400` at 17.3s and
+hangar origin `0x006AB400` at 38.4s. Exact destination-window controls recorded
+768 writes each for `0x166450`, `0x167050`, and `0x166D50`, and 1,020 for
+`0x1935E0`. This independently establishes that the retail route and named
+windows are active.
+
+The existing image-stage join was changed in the runtime patch to admit zero
+stage values; no task or output behavior changed. The first pair, which enabled
+`ROGUESQ_LOG_ALL`, was route-invalid: both arms stopped at 640 under the log
+flood. The fixed pair used the proven s2403 phase/task/PCM/identity controls
+without the master log switch and ran both arms concurrently from `build/`.
+The image arm reached title 1024 and emitted 4,448 zero-valued stage join rows,
+2,731 completion observations, 3,436 apparent PCM matches, and 1,717 ordering
+violations. Stage 3 also produced stage-only rows. The stub arm stopped at 640
+in this concurrent recipe and is route-invalid; no stub-arm null is interpreted.
+
+The apparent PCM matches cannot select a contract: repeated all-zero
+`(address,length,FNV,nonzero)` tuples match multiple rows, and the ordering
+violations are collision artifacts rather than timing evidence. This rules out
+only the old zero-row measurement blind spot. It does not select legitimate
+zero output, missing writer, or consumer mismatch. The next discriminator must
+use stage ordinal/row plus the exact DMA event and destination range before
+joining PCM and first slot/key-on use.
+
+No behavior or mitigation changed. ORIGIN: diagnostic-only runtime join change;
+the named writer under observation is the Factor 5 image DMEM-to-RDRAM DMA and
+its zero payload is not yet judged legitimate. Artifacts:
+`scratch/agent/s2405_zero_output_contract/`.

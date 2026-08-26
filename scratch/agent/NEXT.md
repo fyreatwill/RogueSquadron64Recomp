@@ -1,46 +1,47 @@
-# NEXT work unit (s2405) — identify zero-output writer/consumer contract
+# NEXT work unit (s2406) — disambiguate zero-output joins
 
-HYPOTHESIS-ID: m5-zero-output-contract
+HYPOTHESIS-ID: m5-zero-output-identity
 
 ## Work unit
 
-Run one ground-truth-first, same-build audit of the zero-valued image output
-after s2403 closed the source/destination span mismatch for retained stage
-rows. Do not change task data, audio, gate, fallback, dispatch, VI, output
-behavior, or mitigation.
+Run one ground-truth-first, same-build audit that replaces the repeated
+all-zero tuple as the identity key for image stage rows. Diagnostic only: do
+not change task data, audio, gate, fallback, dispatch, VI, output behavior, or
+the nonzero predicate.
 
 ## Competing hypotheses and discriminator
 
-- H-ZeroOutputIsLegitimate: the image task's zero source and destination are
-  the intended contract for this task/phase, and downstream consumers treat
-  zero as a valid payload.
-- H-ZeroOutputWriterMissing: a legitimate writer should populate the image
-  source or destination after the captured stage edge, but the port misses it.
-- H-ZeroOutputConsumerMismatch: the zero payload is valid, but the port joins
-  or routes the downstream consumer incorrectly.
-- H-ZeroOutputRouteInvalid: either same-build arm fails target activation or
-  phase controls, so no zero-output conclusion is interpretable.
+- H-ZeroOutputIsLegitimate: the exact image DMA and zero PCM source/consumer
+  rows are ordered for the same stage ordinal and downstream slot/key-on use.
+- H-ZeroOutputWriterMissing: the exact stage DMA is followed by a legitimate
+  nonzero writer or consumer payload that the port misses.
+- H-ZeroOutputConsumerMismatch: exact zero stage/DMA rows are valid, but the
+  port's first downstream slot/key-on event does not consume that row.
+- H-ZeroOutputRouteInvalid: either arm lacks target activation or target-origin
+  controls, making the table unevaluable.
 
-The discriminator is one phase-keyed table joining each retained zero stage
-row to: image completion, every generated DMA range, the exact destination
-write watcher, PCM source/consumer rows, and the first downstream slot/key-on
-consumer event. The retail oracle must first pass whole-RDRAM, title, hangar,
-and exact destination-window writer controls. Both port arms must pass
-activation and target-origin controls. A zero stage with no retail-equivalent
-writer but ordered consumer use selects legitimate zero output; a later
-nonzero writer selects missing writer; a valid zero stage with consumer rows
-but no matching port consumer selects consumer mismatch.
+The discriminator is one phase-keyed table keyed first by arm + audio ordinal
+and row, then exact generated DMA event/range and destination. Only after that
+key is fixed may PCM source/consumer and the first slot/key-on event be joined.
+All rows must report event ordering and whether the destination is one of the
+retail-controlled windows. A same-ordinal exact zero row with ordered consumer
+use selects legitimate zero output; a later exact nonzero writer selects
+missing writer; a valid exact row with no matching consumer selects consumer
+mismatch; missing arm controls select route-invalid.
 
 ## Exact command shape
 
-1. Read `docs/F5-UCODE-REFERENCE.md`, `docs/M5-AUDIO-PLAN.md`, and
-   `tools/oracle/README.md`. Run the retail oracle with whole-RDRAM first,
-   title/hangar VI controls, and exact windows `0x166450:0x300`,
-   `0x167050:0x300`, `0x166D50:0x300`, and `0x1935E0:0x198`.
-2. Build once with `cmake --build build -j2` after adding only the complete
-   bounded join table and its activation control.
-3. Run stub and image concurrently from `build/` using the qualified
-   LLE/image route, `ROGUESQ_STUB_MISSING_FUNCS=1`,
-   `PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and all existing
-   task/PCM/identity controls. Kill with SIGKILL and preserve logs under
-   `scratch/agent/s2404_zero_output_contract/`.
+1. Run the retail oracle first with whole-RDRAM control, title/hangar VI
+   controls, and exact windows `0x166450:0x300`, `0x167050:0x300`,
+   `0x166D50:0x300`, and `0x1935E0:0x198`.
+2. Add the complete bounded ordinal/row-to-DMA table and positive activation
+   control in the fixup/runtime instrumentation, then build once with
+   `cmake --build build -j2`.
+3. Run stub and image concurrently from `build/` with the proven s2403 control
+   set, `ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=1024`, and
+   `PROBE_KEYS_FROM_PHASE=1`; use the Start driver, SIGKILL any survivors,
+   and preserve logs under `scratch/agent/s2406_zero_output_identity/`.
+
+Expected outcomes: both arms reach target controls and the exact table selects
+one hypothesis; otherwise record the failed control and do not interpret a
+null. Do not use `ROGUESQ_LOG_ALL`.

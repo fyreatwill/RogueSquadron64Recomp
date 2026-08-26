@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2404 (2026-08-25).
+Current maintenance marker: Session 2405 (2026-08-25).
 
 ## Current state
 
@@ -25,6 +25,9 @@ Current maintenance marker: Session 2404 (2026-08-25).
   Whole-RDRAM, phase, status/task, and named-PC controls must pass before a
   retail null is interpreted. It reaches attract, title, and hangar, not a
   mission.
+- The zero-output join now admits zero-valued image rows. This is diagnostic
+  only: all-zero source, destination, and PCM tuples collide across rows, so
+  apparent PCM matches and ordering violations are not yet provenance.
 
 ## Latest evidence
 
@@ -36,6 +39,16 @@ Current maintenance marker: Session 2404 (2026-08-25).
   refutes a source/destination span mismatch for those rows. The image arm
   later crashed at the existing `0x8000834C` path; no image-hangar claim is
   made. Artifact: `scratch/agent/s2403_stage_bytes/`.
+- **s2405 — zero-row completion/PCM contract remains under-discriminated.** The
+  retail oracle independently passed whole-RDRAM and exact destination-window
+  controls, reaching title and hangar. The corrected image arm reached title;
+  its stage-2/3 source and destination tuples were zero. The new zero-admitting
+  join saw 4,448 rows, 2,731 completions, 3,436 apparent PCM matches, and
+  1,717 ordering violations caused by repeated all-zero tuples; stage 3 also
+  produced stage-only rows. The concurrent stub arm stopped before target
+  activation, so it is route-invalid. This selects a new zero-join identity
+  discriminator, not legitimacy, missing writer, or consumer mismatch.
+  Artifact: `scratch/agent/s2405_zero_output_contract/`.
 - **s2402 — identity is valid at stage entry.** Corrected same-build stub/image
   arms passed route controls; both observed `prepare-clear`, then
   `stage-observe` with `valid=1` and matching `prepare_seq`, followed by
@@ -74,13 +87,13 @@ Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
-   design gate. The next work unit is the zero-output writer/consumer contract:
-   ground-truth-first, same-build, phase-keyed joining of each retained zero
-   stage row to completion, generated DMA, exact destination writes, PCM
-   source/consumer rows, and first downstream slot/key-on use. Do not change
-   task data, audio, gate, fallback, dispatch, VI, output behavior, or the
-   nonzero predicate until the table selects a legitimate writer, missing
-   writer, or consumer mismatch.
+   design gate. The next work unit is a ground-truth-first zero-join identity
+   discriminator: join stage ordinal/row to the exact DMA event and destination
+   range, then to PCM source/consumer and first slot/key-on event without using
+   the repeated all-zero hash as identity. Both arms must pass target controls;
+   do not change task data, audio, gate, fallback, dispatch, VI, output
+   behavior, or the nonzero predicate until the table selects legitimacy,
+   missing writer, or consumer mismatch.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate

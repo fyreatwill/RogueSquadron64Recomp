@@ -520,7 +520,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..6a17a94 100644
+index 1cb3f6a..deaf2e0 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -534,7 +534,7 @@ index 1cb3f6a..6a17a94 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,754 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,762 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -745,7 +745,7 @@ index 1cb3f6a..6a17a94 100644
 +
 +static bool audio_image_match(const AudioImageStage& stage,
 +                              const AudioJoinPcm& pcm) {
-+    return stage.nonzero != 0 && stage.dest_valid &&
++    return stage.dest_valid &&
 +           pcm.phase == stage.phase &&
 +           stage.dest == (pcm.rdram & 0x007FFFFFu) &&
 +           stage.len == pcm.bytes && stage.fnv == pcm.fnv &&
@@ -811,17 +811,23 @@ index 1cb3f6a..6a17a94 100644
 +static void audio_image_summary_locked() {
 +    if (g_audio_image_scope_key == UINT64_MAX) return;
 +    size_t nonzero = 0;
++    size_t zero = 0;
 +    size_t source_matches = 0;
 +    size_t consumer_matches = 0;
 +    size_t stage_only = 0;
++    size_t zero_stage_only = 0;
++    size_t zero_completed = 0;
 +    size_t ordering_violations = 0;
 +    for (const AudioImageStage& stage : g_audio_image_stages) {
-+        if (stage.nonzero == 0) continue;
-+        ++nonzero;
++        if (stage.nonzero == 0) ++zero;
++        else ++nonzero;
 +        if (stage.source_pcm >= 0) ++source_matches;
 +        if (stage.consumer_pcm >= 0) ++consumer_matches;
 +        if (stage.complete_event != 0 && stage.source_pcm < 0 &&
 +            stage.consumer_pcm < 0) ++stage_only;
++        if (stage.nonzero == 0 && stage.complete_event != 0) ++zero_completed;
++        if (stage.nonzero == 0 && stage.complete_event != 0 &&
++            stage.source_pcm < 0 && stage.consumer_pcm < 0) ++zero_stage_only;
 +        const AudioJoinPcm* source = stage.source_pcm >= 0 ?
 +            &g_audio_join_pcm[stage.source_pcm] : nullptr;
 +        const AudioJoinPcm* consumer = stage.consumer_pcm >= 0 ?
@@ -839,11 +845,13 @@ index 1cb3f6a..6a17a94 100644
 +    const uint32_t origin = static_cast<uint32_t>(g_audio_image_scope_key & 0xFFFFFFu);
 +    fprintf(stderr,
 +            "[audtask-image-summary] phase=%u width=%u origin=0x%06X"
-+            " stage_rows=%zu nonzero_stage_rows=%zu source_matches=%zu"
++            " stage_rows=%zu nonzero_stage_rows=%zu zero_stage_rows=%zu"
++            " zero_completed=%zu zero_stage_only=%zu source_matches=%zu"
 +            " consumer_matches=%zu stage_only=%zu"
 +            " consumer_only_observed=%u ordering_violations=%zu\n",
 +            phase, width, origin, g_audio_image_stages.size(), nonzero,
-+            source_matches, consumer_matches, stage_only,
++            zero, zero_completed, zero_stage_only, source_matches,
++            consumer_matches, stage_only,
 +            g_audio_image_consumer_only, ordering_violations);
 +    fflush(stderr);
 +}
@@ -1289,7 +1297,7 @@ index 1cb3f6a..6a17a94 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +794,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +802,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
