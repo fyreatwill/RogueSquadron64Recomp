@@ -1,38 +1,36 @@
-# NEXT work unit (s2374) — M5 A1 first internal `$a0` divergence
+# NEXT work unit (s2375) — M5 A1 retail internal `$a0` join
 
 HYPOTHESIS-ID: m5-a1-rs-free-internal-a0
 
 ## Work unit
 
-Run one ground-truth-first capture of the first internal writes/branches to
-`ctx->r4` in port `rs_free` (`0x80001C98..0x80001F84`), paired with retail's
-existing watch rows for `rs_free` entry and predecessor return. Keep
-whole-RDRAM, both target origins, predecessor range, live `rs_free` entry,
-early-640, and both control/alternate arms. Do not add a fallback or change
-dispatch, VI selection, task data, or audio behavior.
+Run one ground-truth-first capture with the oracle watch range widened to
+`0x80001C98..0x80001FA0`, while retaining whole-RDRAM, both target origins,
+predecessor range, live `rs_free` entry, early-640, and both same-build port
+arms. Reuse the positive port internal trace from s2374. Do not change game
+behavior, dispatch, VI selection, task data, or audio behavior.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-RsFreeInternalWriteDiverges: the first port write/branch to `ctx->r4`
-  differs from the retail predecessor path before `0x80001F84`.
-- H-RsFreeInternalMatches: the port internal sequence matches the retained
-  retail shape and the divergence is after this bounded `rs_free` body.
-- H-RsFreeJoinInvalid: positive controls pass but the internal rows cannot be
-  joined to the target entry/return, so no explanation is selected.
+- H-RsFreeInternalWriteDiverges: retail and port differ in the first matched
+  internal `$a0` assignment or branch before `0x80001F84`.
+- H-RsFreeInternalMatches: the matched retail and port internal sequence is
+  equivalent through the bounded body; divergence is after it.
+- H-RsFreeJoinInvalid: widened oracle rows still cannot be phase/entry joined.
 
-The discriminator is one phase-4 table containing the first internal port
-`$a0` write/branch, retail `rs_free` entry `$a0/prev_pc`, retail
-`0x80001F84` `$a0/$a2/prev_pc`, port `[rs-free]` entry `$a0/$ra`, port
-`[a1-args]` return `$a0/$a2`, both `[a1-abort]` rows, and all controls.
-Retail nulls are invalid unless the whole-RDRAM, target-origin,
-`rs_free`-entry, and predecessor-PC controls are positive.
+The discriminator is one phase-4 table joining oracle rows at
+`0x80001CAC`, `0x80001CB0`, `0x80001CD8`, and `0x80001F84` with the port
+`[rs-free-internal]`, `[rs-free]`, `[a1-args]`, and `[a1-abort]` rows in both
+arms. A null result is invalid unless all whole-RDRAM, target-origin,
+predecessor, entry, early-640, and internal positive controls pass.
 
 ## Exact commands
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s2374_m5_a1_internal_a0.sh s2374_m5_a1_internal_a0
-    grep -E '^(controls|table|verdict) ' scratch/agent/s2374_m5_a1_internal_a0/driver.log
+    cp scratch/agent/run_s2373_m5_a1_rs_free_boundary.sh scratch/agent/run_s2375_m5_a1_rs_free_internal_join.sh
+    sed -i '' 's/0x80001F40:0x80001FA0/0x80001C98:0x80001FA0/' scratch/agent/run_s2375_m5_a1_rs_free_internal_join.sh
+    env ROGUESQ_LOG_RS_FREE_INTERNAL=1 zsh scratch/agent/run_s2375_m5_a1_rs_free_internal_join.sh s2375_m5_a1_rs_free_internal_join
+    grep -E '^(controls|table|verdict) ' scratch/agent/s2375_m5_a1_rs_free_internal_join/driver.log
 
-The driver must run the oracle first with `--watch-write 0x0:0x800000`, both
-target-origin watches, the predecessor range, and the `rs_free` entry PC;
-then launch both same-build port arms and SIGKILL each after its abort marker.
+The driver must SIGKILL each port arm after its abort marker and must report
+counts for every internal PC plus all controls.

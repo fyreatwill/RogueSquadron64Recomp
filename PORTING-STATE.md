@@ -111607,3 +111607,34 @@ field writeback, guard, fallback, or mitigation changed.
 Run one ground-truth-first capture of the first internal `$a0` writes/branches
 inside `rs_free`, paired with retail's entry and predecessor rows. Keep all
 positive controls and do not change behavior.
+## Session 2374 (2026-08-25) — M5 A1 internal rs_free join is invalid
+
+Before building, the planned oracle-first controls were retained. The Debug
+target built successfully after adding a rate-limited, env-gated internal
+`$a0` trace at the four generated `rs_free` assignment sites; the persistent
+generator hook was added to `../N64Recomp/fixup_game_funcs.py` as well.
+
+The fresh oracle passed the whole-RDRAM positive control (`10,000`), both
+target origins, predecessor range, and live `rs_free` entry control. Both
+same-build port arms passed early-640, `[rs-free]`, `[a1-args]`, and
+`[a1-abort]` controls. Both emitted the same internal sequence in the bounded
+capture: ordinary entry pointer, `0x80110000` at the message-queue argument,
+then `$a0=0x8010FEE0` at the `0x80001CD8` assignment. The oracle emitted no
+internal rows because the reused range was `0x80001F40..0x80001FA0`, so the
+retail/port internal join was not possible.
+
+This selects `H-RsFreeJoinInvalid` at capture scope and rules out neither
+`H-RsFreeInternalWriteDiverges` nor `H-RsFreeInternalMatches`. The identical
+control/alternate port traces are positive port evidence only. The 36
+crash-marker counts per arm were ignored because the driver intentionally
+SIGKILLs each arm after its capture marker. No behavior, dispatch, VI, task,
+audio, fallback, guard, or mitigation changed.
+
+ORIGIN: diagnostic-only. No game behavior, dispatch, VI selection, task data,
+field writeback, guard, fallback, or mitigation changed.
+
+### Next
+
+Widen the oracle watch range to `0x80001C98..0x80001FA0` and rerun the same
+paired capture so retail internal rows can be joined to the positive port
+internal trace.
