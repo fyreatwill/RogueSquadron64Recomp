@@ -30,6 +30,19 @@ Current maintenance marker: Session 2461 (2026-08-26).
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
 
+- **s2465 — the earliest pre-target null dispatch is inside the named matrix
+  converter.** The first resolver capture was instrument-valid but saturated
+  its ordinary 64-row phase-4 budget on repeated `0x80029CD0` requests. The
+  fixed same-run capture retained priority rows and observed the indirect
+  positive-control target `0x8009123C`, then `get_function(0)` at phase 4 with
+  native frames `convertMat3x4ToN64Mtx` → `traverseSceneGraphRecursive`.
+  The independent full null-resolver backtrace agrees and continues through
+  `setupCameraMatrices` → `runMenuModelViewerScreen` → `menuOverlayInit`.
+  This selects `H-TargetBoundary` and rules out `H-EarlierBoundary` and
+  `H-PhaseMismatch` for this route. The zero-producing callsite/field remains
+  open; no guard or dispatch/audio change is authorized. Artifact:
+  `scratch/agent/s2465_m5_pre_target_capture/audit.md`.
+
 - **s2463/s2464 — the dynamic callback capture selects H-PhaseMismatch as
   route diagnosis.** The independent retail oracle passed the whole-RDRAM
   control, reached hangar origin `0x006AB400`, and observed 314
@@ -224,14 +237,13 @@ Current maintenance marker: Session 2461 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, pre-target boundary open.**
-   The dynamic callback capture is qualified but blocked before the target
-   phase: the port's resolver positive control fires, while the port aborts in
-   `convertMat3x4ToN64Mtx` before any callback or pre-dispatch tuple. Isolate
-   the earliest pre-target null-dispatch boundary with one phase-gated capture,
-   retaining the resolver positive control. Do not infer callback polarity or
-   add a guard. No output remap, task-data change, gate change, or guard is
-   authorized.
+1. **M5 generated alternate equivalence — active, zero-producing edge open.**
+   The shared resolver capture now places the first null at
+   `convertMat3x4ToN64Mtx` → `traverseSceneGraphRecursive`, after a same-hook
+   positive-control resolution. Audit the converter's complete indirect-call
+   lowering and the live register/field that supplies the zero, using one
+   phase-gated capture. Do not infer callback polarity or add a guard. No
+   output remap, task-data change, gate change, or guard is authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

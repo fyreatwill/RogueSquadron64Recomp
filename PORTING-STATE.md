@@ -113775,3 +113775,27 @@ H-UnresolvedWriter) is unevaluable in the current configuration and refutes
 nothing about callback polarity.
 
 No guard, dispatch change, audio change, or output remap is authorized.
+
+## Session 2465 (2026-08-26) — captured M5 pre-target null boundary
+
+The shared `get_function` hook was extended with a phase-gated native-frame
+census. The first 30-second run passed the positive-control mechanism but its
+ordinary phase-4 budget saturated on repeated `0x80029CD0` requests before
+the null, so it was treated as instrument-valid but non-discriminating. The
+fixed build retained priority rows for `0x8009123C` and `0x00000000` and
+captured two caller frames.
+
+The fixed qualified-route rerun reached phase 4, width 640, origin
+`0x0066A500`. The same hook resolved `0x8009123C`, then captured
+`get_function(0)` with native frames mapping to
+`convertMat3x4ToN64Mtx` -> `traverseSceneGraphRecursive`; the independent
+full null-resolver backtrace continued through `setupCameraMatrices`,
+`runMenuModelViewerScreen`, and `menuOverlayInit` before the abort. This
+selects `H-TargetBoundary` and rules out `H-EarlierBoundary` and
+`H-PhaseMismatch` for this route. It does not identify the zero-producing
+field/callsite.
+
+**Rules out:** treating the phase-4 null as an earlier model-viewer boundary,
+or adding a null guard, dispatch change, callback inference, audio change,
+output remap, or task-data change. Artifact:
+`scratch/agent/s2465_m5_pre_target_capture/audit.md`.

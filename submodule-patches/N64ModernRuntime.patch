@@ -173,7 +173,7 @@ index b0d6bef..a693bbc 100644
  
  namespace recomp {
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..cadc37b 100644
+index 8c8e5d1..0907c36 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
 @@ -1,9 +1,11 @@
@@ -243,7 +243,7 @@ index 8c8e5d1..cadc37b 100644
  extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
      for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
          const auto& section = sections_info.code_sections[it->section_table_index];
-@@ -361,13 +393,209 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
+@@ -361,13 +393,244 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
      return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
  }
  
@@ -425,11 +425,46 @@ index 8c8e5d1..cadc37b 100644
 +    fflush(stderr);
 +}
 +
++static void rs64_log_m5_pretarget_resolver(int32_t addr) {
++    static const bool enabled = []{
++        const char* e = std::getenv("ROGUESQ_LOG_M5_PRETARGET");
++        return e && *e && *e != '0';
++    }();
++    if (!enabled || rs64_phase_ord() < 4) {
++        return;
++    }
++    static uint32_t bucket = 0xFFFFFFFFu;
++    static uint32_t rows = 0;
++    const uint32_t phase = rs64_phase_ord();
++    if (phase != bucket) {
++        bucket = phase;
++        rows = 0;
++    }
++    const bool priority = addr == 0 || static_cast<uint32_t>(addr) == 0x8009123Cu;
++    if (rows >= 64u && !priority) {
++        return;
++    }
++    void* frames[4]{};
++    const int depth = backtrace(frames, 4);
++    fprintf(stderr,
++        "[m5-pretarget] n=%u phase=%u requested=0x%08X guest=0x%08X "
++        "native_frame_1=%p native_frame_2=%p depth=%d priority=%u\n",
++        rows, phase, static_cast<uint32_t>(addr),
++        static_cast<uint32_t>(g_rs64_last_guest_pc),
++        depth > 2 ? frames[2] : nullptr,
++        depth > 3 ? frames[3] : nullptr, depth, priority ? 1u : 0u);
++    fflush(stderr);
++    if (!priority) {
++        ++rows;
++    }
++}
++
  extern "C" recomp_func_t * get_function(int32_t addr) {
 +    rs64_m5_dispatch_boundary(static_cast<uint32_t>(addr));
 +    rs64_log_dma_ring_caller(addr);
 +    rs64_log_tickfunc_caller(addr);
 +    rs64_log_first_null_resolver(addr);
++    rs64_log_m5_pretarget_resolver(addr);
      auto func_find = func_map.find(addr);
      if (func_find == func_map.end()) {
 +        rs64_log_a1_missing_function(addr);

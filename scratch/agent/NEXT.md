@@ -1,55 +1,52 @@
-# NEXT work unit (s2465) — isolate the earliest pre-target null-dispatch boundary
+# NEXT work unit (s2466) — locate the zero-producing converter edge
 
 HYPOTHESIS-ID: m5-generated-alternate-equivalence
 
 ## Context
 
-s2463 selects H-PhaseMismatch as route diagnosis: the port fires the indirect
-resolver positive control, reaches phase 4, then aborts in `get_function(0)`
-through `convertMat3x4ToN64Mtx` before any target-phase slot, callback, or
-dispatch tuple. The pre-target abort must be characterised before the callback
-hypothesis set (H-ZeroWriter / H-ValidWriter / H-UnresolvedWriter) is
-evaluable.
+s2465's fixed shared-resolver capture selected H-TargetBoundary: the first
+null target occurs in `convertMat3x4ToN64Mtx`, with
+`traverseSceneGraphRecursive` as its caller. The same hook resolved the
+`0x8009123C` indirect positive control in phase 4. The remaining question is
+which converter input or lowered indirect edge supplies zero.
 
 ## Work unit
 
-Build one phase-gated capture at the earliest reachable pre-target boundary:
-log every `get_function(N)` call with its requested address and its native
-backtrace from within `convertMat3x4ToN64Mtx`, retaining the indirect resolver
-positive control and the phase transition control. Do not add guards or change
-dispatch/audio behaviour.
+Perform one static, bounded audit of the complete generated
+`convertMat3x4ToN64Mtx` body and its direct caller. Enumerate every call,
+`LOOKUP_FUNC`, register load, and continuation around the converter entry,
+then identify the exact register/value that reaches the shared resolver on
+the null event. If static inspection cannot name it, add one phase-gated
+capture at the converter's indirect-call boundary in the fixup script, with
+the existing shared-resolver positive control retained. No guard, stub,
+dispatch, callback, or audio behavior change.
 
 ## Competing hypotheses and discriminator
 
-- H-TargetBoundary: the first `get_function(0)` before the abort is in
-  `convertMat3x4ToN64Mtx` itself, so the pre-target boundary is already named.
-- H-EarlierBoundary: a different indirect call in the menu model-viewer path
-  (`traverseSceneGraphRecursive` → `setupCameraMatrices` →
-  `runMenuModelViewerScreen`, as established in s2457) reaches `get_function(0)`
-  first.
-- H-PhaseMismatch: the phase-4 abort is unrelated to the audio target and the
-  callback boundary remains unevaluable in this configuration.
+- H-ConverterRegisterZero: the converter's generated indirect-call register
+  is explicitly zeroed or loaded from a zero field before `LOOKUP_FUNC`.
+- H-CallerContextZero: the converter receives a bad matrix/context pointer
+  from `traverseSceneGraphRecursive`, and the converter's indirect target is
+  only accidentally zero at the callee boundary.
+- H-UnseenLoweringEdge: the generated body has a call/continuation lowering
+  edge not visible in the first text census, producing the zero after the
+  converter's normal setup.
 
-The discriminator is the ordered same-run tuple
-`(phase, named callsite, requested target, positive-control-fired, crash/return)`.
-A `get_function(0)` row at any named site BEFORE the abort selects
-H-TargetBoundary (if in `convertMat3x4ToN64Mtx`) or H-EarlierBoundary (if
-earlier). A valid phase-4 crash with no `get_function(0)` row is a non-result
-and selects H-PhaseMismatch only as a route diagnosis.
+The discriminator is one ordered table of all converter indirect-call
+sites/register sources plus the fixed-run null tuple: a statically proven
+zero source at the same site selects H-ConverterRegisterZero; a nonzero
+converter input paired with a zero at resolver entry selects
+H-CallerContextZero; no complete static source or boundary tuple selects
+H-UnseenLoweringEdge. A missing positive-control row invalidates the run.
 
 ## Exact commands
 
-1. Grep the generated body of `convertMat3x4ToN64Mtx` and its direct callers
-   in `RecompiledFuncs/` (established chain: `runMenuModelViewerScreen` →
-   `setupCameraMatrices` → `traverseSceneGraphRecursive` →
-   `convertMat3x4ToN64Mtx`) for `LOOKUP_FUNC` / `get_function` expansions.
-2. In one fixup pass, add a phase-gated `get_function`-call capture that logs
-   `(phase, requested_addr, native_backtrace_depth_2)` before the resolver is
-   called; bound the log to 64 rows per phase; retain the existing indirect
-   resolver positive control.
-3. Rebuild with `make_elf.py` → N64Recomp → `fixup_game_funcs.py` → cmake.
-4. Run the qualified route (`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1
-   ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1`) from `build/` with the ROM
-   present; SIGKILL after 30 s.
-5. Write `scratch/agent/s2465_m5_pre_target_capture/audit.md` with the
-   ordered tuple rows and the hypothesis selection.
+1. Grep the generated converter and `traverseSceneGraphRecursive` bodies by
+   function header and read bounded windows around every call, `jalr`,
+   `LOOKUP_FUNC`, register write, and `after_*` continuation.
+2. Build one fixup/static-audit artifact only if the complete text census
+   cannot establish the source; retain `ROGUESQ_LOG_M5_PRETARGET=1` and its
+   phase-4 positive-control row.
+3. Run the qualified route from `build/` for 30 seconds, SIGKILLing the game
+   if it remains active, and write
+   `scratch/agent/s2466_m5_zero_source/audit.md`.
