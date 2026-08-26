@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2453 (2026-08-26).
+Current maintenance marker: Session 2455 (2026-08-26).
 
 ## Current state
 
@@ -37,6 +37,14 @@ Current maintenance marker: Session 2453 (2026-08-26).
   statically grounded second-range-capable alternate. This selects
   `H-PortGeneratedAlternate` at source scope and rules out a generated/runtime
   `__osDispatchThread` replacement; live provenance remains open.
+
+- **s2455 — the matched port provenance capture is blocked before the target
+  phase.** Retail controls passed, including hangar origin `0x006AB400` and
+  target-PC rows. The rebuilt qualified port arm reproduced an abort at 4.3s
+  in `get_function(0)` from `convertMat3x4ToN64Mtx` (last guest PC
+  `0x80001F88`), with no phase-gated M5 witness rows. This is a non-result for
+  `H-PortF2CC/H-PortOtherStatic/H-PortDynamic`, not evidence for any one arm.
+  The immediate blocker is the pre-phase null-dispatch boundary.
 
 ## Latest evidence
 
@@ -116,9 +124,11 @@ Current maintenance marker: Session 2453 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 port second-range provenance — active.** Ground the live port execution's
-   relation to `allocateSongChannelArray/0x8008F2CC` versus any other direct
-   `rs_memset` caller. Do not change behavior.
+1. **M5 port pre-phase null-dispatch boundary — active blocker.** Identify the
+   missing target behind the `get_function(0)` call from
+   `convertMat3x4ToN64Mtx`/guest PC `0x80001F88`, using a bounded static call
+   and symbol audit. Do not change behavior until the writer and legitimacy of
+   the target are established; then resume second-range provenance.
 2. **M5 image consumer provenance — active but downstream.** Use a new
    ground-truth discriminator to trace the retail-selected writer's exact
    relation into the port image/task identity or close the hangar consumer gap.

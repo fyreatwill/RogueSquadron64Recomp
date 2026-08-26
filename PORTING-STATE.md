@@ -113532,3 +113532,24 @@ witness join to determine whether live port rows actually originate at
 
 ORIGIN: retail predecessor relation from s2442 and source inventory from s2452;
 explanatory audit, not mitigation. Full table: `scratch/agent/s2454_m5_dispatcher_replacement/audit.md`.
+
+## Session 2455 (2026-08-26) — blocked M5 caller join at pre-phase null dispatch
+
+The planned phase-matched retail/port second-range provenance join did not
+produce a caller selection. The corrected retail oracle run passed `[gpr-ctl]`,
+the whole-RDRAM positive control, and the explicit 512 / `0x006AB400` hangar
+phase; target `0x800078EC` rows included `PREVIOUS_PC=0x8002BEEC`. The first
+port capture and a rebuilt identical rerun both aborted at about 4.3 seconds
+in `get_function(0)` from `convertMat3x4ToN64Mtx`, with last guest PC
+`0x80001F88` and zero phase-gated M5 witness rows. The port was therefore not
+phase-comparable, and `H-PortF2CC`, `H-PortOtherStatic`, and `H-PortDynamic`
+remain unselected.
+
+This rules out only a usable port capture under the current qualified route;
+it does not explain the null target or authorize a no-op/guard. The next unit
+is a bounded static `get_function`/symbol audit at the pre-phase boundary,
+paired with a retail watch of `0x80001F88` and the same controls.
+
+ORIGIN: retail oracle capture plus rebuilt port runtime capture; no behavior,
+audio, dispatch, output, task-data, or mitigation change. Captures:
+`scratch/agent/s2455_oracle_fixed.log`, `scratch/agent/s2455_port_rebuilt.log`.
