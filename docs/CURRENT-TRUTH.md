@@ -43,6 +43,16 @@ Current maintenance marker: Session 2409 (2026-08-26).
   the same hangar route. This selects `H-IdentityJoinDefect` at the current
   capture key; it does not identify the missing identity field or legitimize
   any output remap. Artifact: `scratch/agent/s2409_downstream_range_identity/`.
+- s2410 added a bounded, observation-only identity table that records each
+  image row's first later key-on plus phase/origin, ordinal/row, and a
+  64-event sequence candidate. The retail oracle independently passed its
+  whole-RDRAM control (12,160 hits), reached title and hangar, and wrote both
+  candidate image ranges (768 hits each). The port stub control reached both
+  target phases and fired the key-on positive control, but both image-arm
+  attempts crashed before title at the existing `0x8000834C` path, so no
+  image identity rows were captured. This produces no identity selection; the
+  image null is route-invalid. Artifact:
+  `scratch/agent/s2410_identity_join/`.
 
 ## Latest evidence
 
@@ -176,6 +186,9 @@ produced no same-identity downstream rows. s2409 independently observed
 hangar key-on events while the image join still classified every captured row
 as `stage-only`; the current conclusion is an identity-key mismatch, not an
 absent consumer or a valid destination remap.
+The s2410 identity table is present in the runtime, but its image-arm capture
+is pending a valid route; do not interpret its zero table rows or change the
+sequence window until the image arm reaches title and hangar.
 No behavior change is authorized: do not promote C88, invent output metadata,
 remap destinations, alter task data, force a consumer, or add a guard without
 a new discriminator and named writer legitimacy.

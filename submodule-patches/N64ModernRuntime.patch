@@ -520,7 +520,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..acb765b 100644
+index 1cb3f6a..c8aaadb 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -534,7 +534,7 @@ index 1cb3f6a..acb765b 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,887 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,917 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -745,6 +745,9 @@ index 1cb3f6a..acb765b 100644
 +    const char* first_keyon_kind = nullptr;
 +    uint32_t first_slot_site = 0;
 +    uint32_t first_keyon_site = 0;
++    uint64_t identity_keyon_event = 0;
++    uint32_t identity_keyon_site = 0;
++    bool identity_table_logged = false;
 +};
 +
 +static std::atomic<uint64_t> g_audio_join_event{1};
@@ -1109,6 +1112,33 @@ index 1cb3f6a..acb765b 100644
 +            }
 +        }
 +    }
++    if (is_keyon) {
++        for (AudioImageStage& stage : g_audio_image_stages) {
++            if (stage.identity_table_logged || event <= stage.stage_event) continue;
++            stage.identity_keyon_event = event;
++            stage.identity_keyon_site = site;
++            stage.identity_table_logged = true;
++            const bool phase_key = stage.width == width && stage.origin == origin;
++            const bool ordinal_key = stage.ordinal == ordinal && stage.row == row;
++            const bool sequence_key = event <= stage.stage_event + 64u;
++            const uint32_t classification = phase_key ?
++                (ordinal_key ? (sequence_key ? 7u : 3u) : (sequence_key ? 5u : 1u)) :
++                (ordinal_key ? (sequence_key ? 6u : 2u) : (sequence_key ? 4u : 0u));
++            std::fprintf(stderr,
++                "[m5-identity-table] arm=%s stage_ordinal=%u stage_row=%u"
++                " stage_phase=%u stage_width=%u stage_origin=0x%06X"
++                " stage=%u stage_event=%" PRIu64 " keyon_event=%" PRIu64
++                " keyon_site=0x%08X event_phase=%u event_width=%u"
++                " event_origin=0x%06X event_ordinal=%u event_row=%u"
++                " phase_key=%u ordinal_key=%u sequence_key=%u class=%u\n",
++                stage.arm ? stage.arm : "n/a", stage.ordinal, stage.row,
++                stage.phase, stage.width, stage.origin, stage.stage,
++                stage.stage_event, event, site, phase, width, origin,
++                ordinal, row, phase_key ? 1u : 0u, ordinal_key ? 1u : 0u,
++                sequence_key ? 1u : 0u, classification);
++            std::fflush(stderr);
++        }
++    }
 +    fprintf(stderr,
 +            "[m5-audio-event] kind=%s event=%" PRIu64
 +            " active=%u arm=%s phase=%u width=%u origin=0x%06X"
@@ -1422,7 +1452,7 @@ index 1cb3f6a..acb765b 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +927,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +957,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  

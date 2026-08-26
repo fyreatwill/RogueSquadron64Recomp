@@ -112563,3 +112563,33 @@ consumer-presence evidence. No code or behavior changed.
 ORIGIN: no mitigation or behavior change; this run only compared existing
 image-DMA, PCM, slot, and key-on identity records.
 Artifacts: `scratch/agent/s2409_downstream_range_identity/`.
+
+## Session 2410 (2026-08-26) — added bounded M5 identity sequence table
+
+Before building, the retail oracle was run with a whole-RDRAM positive control,
+the two candidate image ranges, the freelist control, VI tracing, and the
+validated Start schedule. It produced 12,160 whole-RDRAM callbacks, reached
+the 1024 title and 512 hangar origins, and recorded 768 writes in each image
+candidate range plus 624 freelist writes. This independently confirms that the
+target phases and both candidate ranges are active in retail.
+
+The one build added an observation-only `[m5-identity-table]` record. For each
+image-stage row it records the first later key-on event and independently marks
+phase/origin equality, ordinal/row equality, and whether that event is within
+64 join events of the stage event. It does not require an image DMA join and
+does not change task data, audio, routing, or output behavior. The runtime
+build passed and the submodule patch export was refreshed.
+
+The phase-gated stub control reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`; its independent key-on positive control fired. The image
+arm first exited before title with the existing `cutsceneDispatchSlotsByFlag`
+crash at guest PC `0x8000834C`; a retry with a 180-second phase timeout hit
+the same pre-title failure. Neither image attempt emitted image-stage or new
+identity-table rows. The image arm is therefore route-invalid and the new
+null cannot select H-PhaseKey, H-OrdinalRowKey, H-SequenceKey, or
+H-NoJoinAtCapture. The stub route and key-on event prove the diagnostic path's
+positive control, but not the image-side table.
+
+ORIGIN: no mitigation or behavior change; the new table is diagnostic only.
+Artifacts: `scratch/agent/retail_m5_groundtruth.log`,
+`scratch/agent/s2410_identity_join/`.
