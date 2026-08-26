@@ -1,42 +1,45 @@
-# NEXT work unit (s2442) — phase-locate the second-range helper caller
+# NEXT work unit (s2443) — test the port-side second-range consumer boundary
 
-HYPOTHESIS-ID: m5-second-range-caller-boundary
+HYPOTHESIS-ID: m5-port-second-range-consumer
 
 ## Work unit
 
-Run one bounded, observation-only retail-oracle capture using the validated
-eleven-Start route. Keep the whole-RDRAM positive control, title
-`0x00790400:1024`, hangar `0x006AB400:512`, and exact ranges
-`0x167650:0x167C50` and `0x1798B0:0x179A48`. Watch execution at the lifetime
-caller candidate `0x8002BEEC`, the helper `0x800078EC`, and the known caller
-`0x8008F2CC`; add a phase-gated field table only for `0x8002BEEC` and the
-bounded exact-store table for `0x800078EC`. No port change.
+Using the now-grounded retail relation (`0x8002BEEC` → `0x800078EC`), add one
+regeneration-safe, observation-only port table around the image-arm hangar
+path. Build one Debug binary, then run the validated eleven-Start route with
+the silent-stub and Factor 5 image arms in the same capture recipe. Record,
+phase-gated by `0x006AB400:512`, the task ordinal/row, task data pointer,
+image-DMA ordinal/row, and every later port write or consumer event that can
+join those identities. Keep the existing independent retail-oracle controls
+and do not change audio or output behavior.
 
 ## Competing hypotheses and discriminator
 
-- H-SecondRangeSemanticCaller: `0x8002BEEC` executes in hangar with a stable
-  `PREVIOUS_PC`/return relation and context matching the exact-store helper.
-- H-SecondRangeHelperDirect: the helper writes in hangar, but
-  `0x8002BEEC` has no hangar execution/context row.
-- H-SecondRangeOtherCaller: both execute, but the helper's hangar stores join
-  a different stable caller relation.
+- H-PortSecondRangeConsumer: the image arm has a hangar consumer that joins
+  the validated task/image identity and produces a bounded post-DMA event.
+- H-PortSecondRangeMissing: the image arm completes its task and DMA but has
+  no later hangar consumer event; the stub arm remains quiet at the same key.
+- H-PortSecondRangeDifferentIdentity: a consumer exists, but the current
+  task/DMA identity is not the join key and a stable alternate field is
+  required.
 
-The discriminator is one same-run hangar-keyed table joining the exact-store
-helper's `PREVIOUS_PC`, the `0x8002BEEC` execution/field row, and the
-`0x8008F2CC` caller row. A matching stable `0x8002BEEC` row selects
-H-SecondRangeSemanticCaller; helper stores with no such row select
-H-SecondRangeHelperDirect; a different stable caller relation selects
-H-SecondRangeOtherCaller. Do not interpret any null until all controls and
-both exact-range totals pass. The store-field phase latch was zero in s2441,
-so treat it as supplemental and use the live phase histogram as the writer
-control.
+The discriminator is one same-build, same-phase table containing both arms:
+an image-row with a joined later consumer selects H-PortSecondRangeConsumer;
+an image-row with no later consumer while the stub control is valid selects
+H-PortSecondRangeMissing; repeated consumer events with a stable alternate
+field but no current-key join selects H-PortSecondRangeDifferentIdentity.
+No null is interpreted unless both port arms pass title and hangar controls,
+the image arm shows DMEM work/generated DMA/SP completion, and the retail
+whole-RDRAM/title/hangar controls pass in the paired recipe.
 
-## Exact command shape
+## Exact commands
 
-Use `tools/oracle/build/rs64_oracle` with the established core, retail ROM,
-Rice video, `--secs 120`, `--hit-cap 200`, `--watch-write 0x0:0x800000`, both
-exact-range watches, `--watch-pc 0x8002BEEC,0x800078EC,0x8008F2CC`,
-`--pc-phase-log-width 0x006AB400:512`, `--pc-field-dump 0x8002BEEC`,
-`--store-field-dump 2:0x800078EC`, `--pc-hist-watch 1`,
-`--pc-hist-watch 2`, `--pc-hist-phase 0x006AB400:512`, `--vi-trace`, and
-the eleven-Start schedule. Run under a shell-native watchdog and SIGKILL.
+First run `cmake --build build --config Debug --target
+RogueSquadron64Recomp`. Then run the existing paired eleven-Start driver after
+adding the single bounded table to the appropriate fixup/runtime source; use
+`ROGUESQ_AUDIO_UCODE=0` for the stub arm and the default image arm, with
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
+ROGUESQ_LLE_SOLO=1`. Run the retail oracle separately only as the required
+ground-truth control, with `--watch-write 0x0:0x800000`, title/hangar VI
+controls, exact ranges `0x167650:0x167C50` and `0x1798B0:0x179A48`, and the
+eleven-Start schedule. Use shell-native watchdogs and SIGKILL.

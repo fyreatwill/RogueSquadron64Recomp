@@ -113224,3 +113224,30 @@ invalid and is not evidence of a writer null. The result rules out
 semantic caller or authorize a port remap, writeback, task-data change, gate,
 guard, or default. No port behavior changed. Artifact:
 `scratch/agent/s2441_retail_second_range_writer_fixed/`.
+
+## Session 2442 (2026-08-26) — joined retail second-range helper to semantic caller
+
+Ran the observation-only retail-oracle capture with the whole-RDRAM positive
+control, title and hangar VI controls, exact watches on
+`0x167650..0x167C50` and `0x1798B0..0x179A48`, phase-gated field/store tables,
+and execution watches for `0x8002BEEC`, `0x800078EC`, and `0x8008F2CC`. The
+capture completed normally after 120 seconds and reached title
+`0x00790400` at width 1024 and hangar `0x006AB400` at width 512. Exact ranges
+recorded 1,536 and 1,125 writes; the oracle reported 11,345,833 total watch
+hits, so the positive control was live.
+
+The phase-gated `0x8002BEEC` field table retained 6,016 unique rows from
+51,371 hits without overflow. The exact-store table retained 408 hangar
+rows from 816 callbacks at `0x800078EC`; all retained rows had the established
+`ra=0x8008F2D4`, `a0=0x801797B0`, `s0=0x12`, and `s1=0x561F` context. The
+execution histogram independently recorded `0x800078EC` with
+`PREVIOUS_PC=0x8002BEEC` 632 times. The known `0x8008F2CC` callsite executed
+only six times, so it is not the required semantic boundary for this
+second-range helper.
+
+This selects `H-SecondRangeSemanticCaller` at the current retail-oracle
+scope and closes the prior helper-only ambiguity. It rules out a missing
+`0x8002BEEC` caller relation for the observed helper path, but does not prove
+that the port has an equivalent consumer or authorize a remap, writeback,
+task-data change, gate, guard, or default. No port behavior changed. Artifact:
+`scratch/agent/s2442_retail_second_range_caller/`.

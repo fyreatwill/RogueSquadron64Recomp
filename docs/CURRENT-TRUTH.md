@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2441 (2026-08-26).
+Current maintenance marker: Session 2442 (2026-08-26).
 
 ## Current state
 
@@ -164,6 +164,21 @@ Current maintenance marker: Session 2441 (2026-08-26).
   semantic caller or authorize any port remap, writeback, task-data change,
   gate, guard, or default. Artifact:
   `scratch/agent/s2441_retail_second_range_writer_fixed/`.
+
+- **s2442 — the second-range helper has a stable hangar caller boundary.** The
+  independent retail oracle passed the whole-RDRAM execution control, title
+  and hangar VI controls, and exact image-range totals of 1,536 and 1,125
+  writes. The phase-gated field table at `0x8002BEEC` retained 6,016 unique
+  rows from 51,371 hits; the exact-store table retained 408 hangar rows from
+  816 callbacks at `0x800078EC`. The same run's execution histogram recorded
+  `0x800078EC` with `PREVIOUS_PC=0x8002BEEC` 632 times, while the known
+  `0x8008F2CC` callsite executed only six times. Together with the exact
+  store rows' stable `ra=0x8008F2D4`, `a0=0x801797B0`, `s0=0x12`, and
+  `s1=0x561F` context, this selects `H-SecondRangeSemanticCaller` at the
+  current oracle scope and closes the helper-only ambiguity. It does not
+  identify a port consumer or authorize a remap, writeback, task-data change,
+  gate, guard, or default. Artifact:
+  `scratch/agent/s2442_retail_second_range_caller/`.
 
 - **s2418 — port task/data relation differs from the retail handoff.** The
   fresh retail control passed whole-RDRAM, title, and hangar controls. The
@@ -461,9 +476,23 @@ s2440's lifetime-only gap; the semantic caller remains open. No behavior
 change is authorized. Artifact:
 `scratch/agent/s2441_retail_second_range_writer_fixed/`.
 
-The next ground-truth unit should phase-locate the actual caller boundary of
-`0x800078EC` (the lifetime `PREVIOUS_PC=0x8002BEEC` relation) with a bounded
-execution/field table. It must keep the same controls and make no port change.
+s2442's observation-only retail capture passed the whole-RDRAM positive
+control, title and hangar VI controls, and exact image-range totals of 1,536
+and 1,125. The phase-gated `0x8002BEEC` field table retained 6,016 unique
+rows from 51,371 hits; the exact-store table retained 408 hangar rows from
+816 callbacks at `0x800078EC`. The execution histogram joined the helper to
+`PREVIOUS_PC=0x8002BEEC` 632 times, while `0x8008F2CC` executed six times.
+The exact-store rows retained the stable `ra=0x8008F2D4`, `a0=0x801797B0`,
+`s0=0x12`, `s1=0x561F` context. This selects
+`H-SecondRangeSemanticCaller` at the current oracle scope and closes the
+helper-only ambiguity. It does not establish a port consumer or authorize
+any behavior change. Artifact:
+`scratch/agent/s2442_retail_second_range_caller/`.
+
+The next M5 unit should test the port-side post-DMA consumer against the now
+grounded retail relation `0x8002BEEC` → `0x800078EC`, using one bounded
+same-build table for the stub and image arms. It must keep the same route
+controls and make no audio or output behavior change.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
