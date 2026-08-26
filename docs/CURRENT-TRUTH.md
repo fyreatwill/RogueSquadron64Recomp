@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2365 (2026-08-25). The M5 mixed-stage publication refinement passed all
+Maintained in Session 2366 (2026-08-25). The M5 mixed-stage publication refinement passed all
 route and execution controls and placed both target-stage rows inside a
 containing audio task; no audio contract change is authorized. The M5
 retail writer-source capture
@@ -124,6 +124,16 @@ is authorized.
   that row as an exact post-task publication. It does not identify the writer,
   establish legitimacy, or authorize a port contract change. Artifacts:
   `scratch/agent/s2365_m5_mixed_stage_publication_split/`.
+- **s2366 — phase-wide provenance does not identify a legitimate transform.**
+  The fresh oracle, route, VI, ABI, filter/voice, image-stage, and image-join
+  controls all passed for the same-build stub/image pair; both arms reached the
+  target phase with zero crash/abort markers. One changed destination/length
+  candidate had eight phase-scoped source and eight consumer events, but every
+  event had zero payload and zero writer fields (`writer_pc=0`,
+  `writer_writes=0`), and the retained task completion sequence did not close
+  the candidate. This selects `H-MixedOrUnrelatedCandidate` at capture scope,
+  not a legitimate transform or a port contract. Artifacts:
+  `scratch/agent/s2366_m5_payload_transformation_provenance/`.
 - **s2361 — stub/image route validation is positive but same-task timing is
   unresolved.** One binary ran both arms. Oracle whole-RDRAM writes were
   `487,474`; route, VI, task-ABI, filter/voice, and PCM controls passed for
@@ -162,12 +172,12 @@ sequence; #1 is the next campaign priority.
    design gate and proceed only with ground-truth-first, positive-control-
    qualified steps. The next queued boundary is #2.
 2. **M5 payload-transformation provenance — next.** Run one same-build
-   refinement retaining all s2361–s2365 controls. For each changed-payload
-   destination/length candidate, join the candidate's source/consumer event,
-   task ordinal, and completion ordering across the full retained phase window;
-   require a writer/source relation before labeling it a transformation.
-   Do not write back a field, alter task data, change a consumer/default, or
-   add a guard.
+   refinement retaining all s2361–s2366 controls. Join each changed-payload
+   candidate to its source/consumer event's owning task interval and completion
+   ordinal, and require a nonzero writer/source field before labeling any
+   candidate a transformation. The current zero-writer result is not a port
+   explanation. Do not write back a field, alter task data, change a
+   consumer/default, or add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.

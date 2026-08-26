@@ -111344,3 +111344,33 @@ Run one same-build M5 payload-transformation provenance refinement. Retain all
 s2361–s2365 controls and join changed-payload candidates to source/consumer
 events, task ordinal, completion ordering, and writer/source fields across the
 full phase window. Do not change the port contract.
+
+## Session 2366 (2026-08-25) — M5 phase-wide provenance has no writer/source relation
+
+Built the existing Debug target and ran one same-build stub/image capture with
+the retail oracle first. The oracle gate passed (`oracle_rc=0`,
+`oracle_controls=1`); both port arms reached the target 512/0x006AB400 phase,
+and ABI, VI, filter/voice, image-stage, image-join, and crash/abort controls
+were positive. Both arms were terminated with SIGKILL by the driver.
+
+The phase-wide provenance table retained two target-stage rows and one changed
+destination/length candidate. That candidate had eight source and eight
+consumer events, but all were zero-payload rows with `writer_pc=0` and
+`writer_writes=0`; the task completion sequence did not close the candidate.
+The corrected discriminator selected `H-MixedOrUnrelatedCandidate` at capture
+scope. This rules out calling the changed payload a legitimate transform from
+the available evidence, but does not identify the writer or authorize any port
+contract change. The initial parser failed after capture due to a local type
+bug; parse-only correction of the same logs produced the final table and did
+not require another game run. Artifacts:
+`scratch/agent/s2366_m5_payload_transformation_provenance/`.
+
+ORIGIN: diagnostic-only. No game behavior, task data, field writeback,
+consumer/default, guard, or mitigation changed.
+
+### Next
+
+Run one same-build M5 payload provenance owner-join refinement. Retain all
+s2361–s2366 controls and assign each source/consumer event to its owning task
+interval while retaining writer/source fields and completion ordering. Do not
+change the port contract.
