@@ -5,7 +5,19 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Current maintenance marker: Session 2402 (2026-08-25).
+Current maintenance marker: Session 2403 (2026-08-25).
+
+Maintained in Session 2403 (2026-08-25). The ground-truth oracle completed
+with `32,791,644` whole-RDRAM hits and reached the 1024 title phases; its VI
+trace also reached the 512 hangar origin. The rebuilt image arm's bounded
+source/destination byte rows passed the activation and title controls. At
+stage 2 (`0x6F0 -> 0x300`) and stage 3 (`0xCB0 -> 0x198`), source and
+destination samples were both all-zero with matching FNV/nonzero tuples and
+`exact=1`; this selects `H-StageBytesLegitimatelyZero` at capture scope and
+refutes a source/destination span mismatch for the retained rows. The stub
+arm reached the hangar control; the image arm reached title and later crashed
+at the existing `0x8000834C` path before hangar. No task-data, audio, gate,
+fallback, dispatch, VI, output, or mitigation change is authorized.
 
 Maintained in Session 2402 (2026-08-25). The oracle controls passed, and the
 corrected same-build pair reached the 1024 title route in both arms. The first
@@ -167,6 +179,21 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2403 — image-stage source and destination bytes agree at zero.** The
+  oracle completed its positive-control run with `32,791,644` whole-RDRAM
+  hits and reached title and hangar VI phases. The one rebuilt two-arm port
+  run enabled a bounded source sample alongside the existing exact destination
+  sample. The image arm reached title; retained stage-2 and stage-3 rows had
+  `source_nz=0`, `capture_nz=0`, identical source/destination FNV values, and
+  `exact=1`, with all sampled bytes zero. This selects
+  `H-StageBytesLegitimatelyZero` at capture scope and refutes
+  `H-StageBytesCaptureMismatch` for these rows. The stub arm reached hangar;
+  the image arm later crashed at guest PC `0x8000834C`, so no image-hangar
+  claim is made. Artifact: `scratch/agent/s2403_stage_bytes/`.
+
+  ORIGIN: no behavior or mitigation change; added only a phase-gated,
+  eight-row-per-destination source-byte sample to the existing stage audit.
 
 - **s2402 — route-valid identity edges persist through stage entry.** The
   oracle whole-RDRAM positive control reached `10,000` callbacks and retail
@@ -711,6 +738,12 @@ sequence; #1 is the next campaign priority.
   valid identity at stage entry, refuting the clear-edge label. The next
   boundary is the exact image-stage nonzero predicate; audit its bytes and
   writer relation before changing the output contract.
+  s2403 added the source-byte sample: retained stage-2 and stage-3 source and
+  destination spans were exactly zero with matching hashes, selecting
+  `H-StageBytesLegitimatelyZero` and closing the span-mismatch explanation at
+  capture scope. The next step is to identify the legitimate writer/consumer
+  contract for this zero-valued image output; do not change the nonzero
+  predicate or output behavior yet.
 2. **M5 task/output closure — closed at current capture scope.** s2387's
    corrected reporter-candidate table associated raw `[audtask-join]` records
    with 100% of 4,688 image-stage candidates; reporter completion was true for

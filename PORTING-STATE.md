@@ -112382,3 +112382,30 @@ Artifacts: `scratch/agent/s2402_identity_edges/` and
 
 ORIGIN: no mitigation or behavior change; the diagnostic cap and driver were
 repaired only so the target lifecycle rows could be observed.
+## Session 2403 (2026-08-25) — M5 image-stage source and destination bytes agree at zero
+
+The retail oracle was run first with a whole-RDRAM positive control. It
+completed with `32,791,644` hits and reached the 1024 title phases plus the
+512 hangar origin in its VI trace. The rebuilt same-build port arms then ran
+with the existing qualified route and a new bounded source-byte sample beside
+the exact destination sample. The stub arm reached the hangar control. The
+image arm reached title and emitted activation, task, DMA, completion, and
+stage rows before later crashing at the existing guest PC `0x8000834C` path;
+the image-hangar route was not claimed.
+
+For retained target title rows, stage 2 (`DMEM 0x6F0`, length `0x300`) and
+stage 3 (`DMEM 0xCB0`, length `0x198`) had source nonzero `0`, destination
+nonzero `0`, identical source/destination FNV values, and `exact=1`. The
+bounded source and destination samples were all zero. This selects
+`H-StageBytesLegitimatelyZero` at capture scope and refutes
+`H-StageBytesCaptureMismatch` for these rows. It does not identify the
+downstream writer/consumer contract or authorize changing the nonzero
+predicate, task data, audio, gate, or output behavior.
+
+No behavior or mitigation changed. The only code change was a diagnostic
+source sample in the existing phase-gated stage-byte row. Artifacts:
+`scratch/agent/s2403_stage_bytes/`.
+
+ORIGIN: no mitigation or behavior change; the new source sample names the
+writer under test as the Factor 5 image's DMEM stage span and treats its zero
+value as an observed value only, not yet as a proven legitimate final output.

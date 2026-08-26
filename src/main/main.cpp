@@ -1477,8 +1477,15 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
         }();
         static uint32_t capture_count[3] = {};
         if (capture_enabled && window != nullptr && capture_count[slot] < 8u) {
+            char source_sample[49] = {};
             char sample[49] = {};
             const uint32_t sample_len = dest_len < 16u ? dest_len : 16u;
+            const uint32_t source_len = len_a < 16u ? len_a : 16u;
+            for (uint32_t i = 0; i < source_len; ++i) {
+                const uint8_t b = dmem[((dmem_a + (i ^ 3u)) & 0xFFFu) ^ 3u];
+                std::snprintf(source_sample + i * 3u, 4u, "%02X%s", b,
+                              i + 1u == source_len ? "" : " ");
+            }
             for (uint32_t i = 0; i < sample_len; ++i) {
                 std::snprintf(sample + i * 3u, 4u, "%02X%s", rdram[phys + i],
                               i + 1u == sample_len ? "" : " ");
@@ -1487,11 +1494,13 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
             std::fprintf(stderr,
                 "[m5-stage-bytes] arm=%s ordinal=%u row=%u phase=%u width=%u "
                 "origin=0x%06X stage=%u window=%s phys=0x%06X len=0x%X "
+                "source=0x%03X source_len=0x%X source_nz=%u source_fnv=%08X "
                 "capture_nz=%u capture_fnv=%08X retained_nz=%u "
-                "retained_fnv=%08X exact=%u sample=%s\n",
+                "retained_fnv=%08X exact=%u source_sample=%s sample=%s\n",
                 route.arm, route.ordinal, route.row, route.phase, route.width,
-                route.origin, stage, window, phys, dest_len, dest_nz, dest_fnv,
-                dest_nz, dest_fnv, 1u, sample);
+                route.origin, stage, window, phys, dest_len, dmem_a, len_a,
+                nz_a, fnv_a, dest_nz, dest_fnv, dest_nz, dest_fnv, 1u,
+                source_sample, sample);
             std::fflush(stderr);
         }
     }
