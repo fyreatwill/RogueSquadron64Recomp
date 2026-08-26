@@ -112304,3 +112304,27 @@ or mitigation change. Artifact: `scratch/agent/s2399_identity_join/`.
 
 ORIGIN: no mitigation or behavior change; the only addition was a bounded
 post-run reducer over existing diagnostic rows.
+
+## Session 2400 (2026-08-25) — M5 identity-edge capture was route-invalid
+
+The retail oracle was run before the port capture with a whole-RDRAM positive
+control and VI tracing. The oracle reached 10,000 whole-RDRAM write callbacks
+and repeatedly reached title origin `0x00790400` at width 1024, so its controls
+passed. The port was rebuilt with a bounded `[m5-identity-edge]` lifecycle
+table for preparation clear, stage observation, and return clear, plus a
+one-time `[m5-identity-control]` activation row.
+
+The first post-build pair reached target in both arms, but the lifecycle table
+was not instrument-controlled and emitted no rows; it was rejected. The
+corrected pair emitted one activation row in each arm, proving the instrument
+was live, but both arms crashed before target origin at guest PCs `0x8000834C`
+and `0x8000B650`, with zero target identity-edge rows. This is a route-invalid
+result, not evidence for host clear, guest clear, or separate identity read.
+The target-reaching earlier pair had 1,520 and 1,107 accepted preparations in
+the two logs before its crashes, but its pre-correction null is not used.
+
+No route, audio, task-data, gate, fallback, dispatch, VI, output, or mitigation
+behavior changed. Artifact: `scratch/agent/s2400_identity_edges/`.
+
+ORIGIN: no mitigation or behavior change; added only bounded diagnostic
+identity lifecycle logging and its activation control.

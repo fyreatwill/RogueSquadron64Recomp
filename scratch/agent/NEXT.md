@@ -1,4 +1,4 @@
-# NEXT work unit (s2400) — identify the accepted-preparation clear edge
+# NEXT work unit (s2401) — rerun the accepted-preparation clear-edge capture
 
 HYPOTHESIS-ID: m5-image-stage-route-order-perturbation
 
@@ -6,7 +6,8 @@ HYPOTHESIS-ID: m5-image-stage-route-order-perturbation
 
 Use one ground-truth-first, bounded capture to distinguish where the accepted
 route identity is cleared between `rs64_audio_route_prepare` and
-`rs64_audio_image_stage`. Keep the qualified LLE/image route,
+`rs64_audio_image_stage`. Reuse the landed lifecycle table in
+`src/main/main.cpp` (`[m5-identity-control]` and `[m5-identity-edge]`). Keep the qualified LLE/image route,
 `ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=1024`, and the existing
 route/stage probes. Do not change task data, audio, gate, fallback, dispatch,
 VI, output behavior, or mitigation.
@@ -40,8 +41,10 @@ edge; no clear with invalid stage identity selects separate-source use.
 Run the two same-build arms with the controls from
 `scratch/agent/s2399_identity_join_run.sh`, plus the oracle control recipe in
 `tools/oracle/README.md`; use `env ... zsh ...` for env-prefixed commands.
-Reduce logs with `python3 scratch/agent/s2399_identity_join.py LOG` only after
-the positive controls and target title origin are present.
+Require one activation-control row and target-origin rows in both port arms;
+if either route control fails, reject the capture and fix the driver in the
+same iteration. Reduce only route-valid logs with
+`python3 scratch/agent/s2399_identity_join.py LOG`.
 
 Expected outcomes: host clear rows select `H-HostClearBetweenPrepareStage`;
 guest clear rows select `H-GuestClearBeforeHostStage`; no clear rows with

@@ -5,7 +5,18 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Current maintenance marker: Session 2399 (2026-08-25).
+Current maintenance marker: Session 2400 (2026-08-25).
+
+Maintained in Session 2400 (2026-08-25). The retail oracle positive controls
+fired in one run: whole-RDRAM writes reached `10,000`, and VI tracing reached
+title origin `0x00790400` at width 1024. The rebuilt port lifecycle instrument
+passed its activation control in both final arms, but that final same-build
+pair crashed before target origin (guest PCs `0x8000834C` and `0x8000B650`),
+so no clear-edge null is interpretable. An earlier target-reaching pair used
+the pre-correction lifecycle instrument and emitted no identity rows; it is
+rejected by the instrument-control rule. The bounded identity-edge table
+remains landed for the next route-valid run; no route, audio, task-data, gate,
+fallback, dispatch, VI, output, or mitigation change is authorized.
 
 Maintained in Session 2399 (2026-08-25). The phase-keyed identity join ran
 from one rebuilt binary in both behavior-neutral arms. Arm A had 607 accepted
@@ -147,6 +158,21 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2400 — identity-edge capture was route-invalid after instrument repair.**
+  The oracle controls passed: whole-RDRAM callbacks reached `10,000`, and VI
+  tracing reached title origin `0x00790400` at width 1024. The final rebuilt
+  port pair emitted one `[m5-identity-control]` row per arm, proving the
+  lifecycle instrument was live, but both arms crashed before target origin
+  (`0x8000834C` and `0x8000B650`) and emitted no target identity-edge rows. A
+  preceding pair reached target in one arm at 50.6 seconds and accepted 409
+  target preparations, but had no lifecycle activation control; that null is
+  rejected. This selects only `H-IdentityCaptureRouteInvalid` for the final
+  pair and leaves all three clear-edge hypotheses open. Artifact:
+  `scratch/agent/s2400_identity_edges/`.
+
+  ORIGIN: no mitigation or behavior change; added only a bounded diagnostic
+  lifecycle table and its explicit activation control.
 
 - **s2398 — route-order logging does not perturb title reachability.** The
   same-build two-arm run passed dispatch and title controls in both arms and

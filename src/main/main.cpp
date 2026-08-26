@@ -567,10 +567,62 @@ static uint32_t g_rs64_audio_phase_row = 0;
 static std::atomic<uint32_t> g_rs64_audio_prepare_seq{0};
 static thread_local uint32_t g_rs64_audio_last_prepare_seq = 0xFFFFFFFFu;
 static thread_local uint32_t g_rs64_audio_last_prepare_accepted = 0;
+static std::atomic<uint32_t> g_rs64_audio_identity_edge_seq{0};
+static std::atomic<uint32_t> g_rs64_audio_identity_thread_seq{1};
+static thread_local uint32_t g_rs64_audio_identity_thread_id = 0;
 static thread_local uint32_t g_rs64_audio_break_pc = 0;
 static thread_local uint32_t g_rs64_m5_init_voice_caller_pc = 0;
 static thread_local uint64_t g_rs64_m5_init_voice_event = 0;
 static std::atomic<uint64_t> g_rs64_m5_init_voice_next_event{1};
+
+static bool rs64_m5_identity_edge_enabled() {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_IDENTITY_EDGES");
+        return own && own[0] && own[0] != '0';
+    }();
+    return enabled;
+}
+
+static uint32_t rs64_m5_identity_thread_id() {
+    if (g_rs64_audio_identity_thread_id == 0) {
+        g_rs64_audio_identity_thread_id =
+            g_rs64_audio_identity_thread_seq.fetch_add(1, std::memory_order_relaxed);
+    }
+    return g_rs64_audio_identity_thread_id;
+}
+
+static void rs64_m5_identity_edge(const char* edge,
+                                  const Rs64AudioRouteIdentity& route,
+                                  uint32_t prepare_seq, uint32_t clear_seq,
+                                  uint32_t phase, uint32_t width,
+                                  uint32_t origin) {
+    if (!rs64_m5_identity_edge_enabled()) return;
+    static std::atomic<bool> control_emitted{false};
+    bool expected = false;
+    if (control_emitted.compare_exchange_strong(expected, true)) {
+        std::fprintf(stderr,
+            "[m5-identity-control] enabled=1 thread=%u phase=%u width=%u origin=0x%06X\n",
+            rs64_m5_identity_thread_id(), phase, width, origin & 0x00FFFFFFu);
+        std::fflush(stderr);
+    }
+    static std::atomic<uint32_t> emitted{0};
+    const uint32_t n = emitted.fetch_add(1, std::memory_order_relaxed);
+    if (n >= 4096u) return;
+    origin &= 0x00FFFFFFu;
+    const bool target = (width == 1024u && origin == 0x00790400u) ||
+                        (width == 512u && origin == 0x006AB400u);
+    if (!target && !route.valid) return;
+    std::fprintf(stderr,
+        "[m5-identity-edge] n=%u edge=%s thread=%u clear_seq=%u "
+        "prepare_seq=%u valid=%u route_prepare=%u route_ordinal=%u "
+        "route_row=%u route_phase=%u route_width=%u route_origin=0x%06X "
+        "phase=%u width=%u origin=0x%06X\n",
+        n, edge ? edge : "?", rs64_m5_identity_thread_id(), clear_seq,
+        prepare_seq, route.valid ? 1u : 0u, route.prepare_seq,
+        route.ordinal, route.row, route.phase, route.width, route.origin,
+        phase, width, origin);
+    std::fflush(stderr);
+}
 
 extern "C" void rs64_audio_image_break(uint32_t pc) {
     g_rs64_audio_break_pc = pc;
@@ -1040,6 +1092,9 @@ static void rs64_audio_route_prepare(const char* arm) {
         g_rs64_audio_prepare_seq.fetch_add(1, std::memory_order_relaxed) :
         0xFFFFFFFFu;
     g_rs64_audio_last_prepare_seq = prepare_seq;
+    const Rs64AudioRouteIdentity before_clear = g_rs64_audio_identity;
+    const uint32_t clear_seq = g_rs64_audio_identity_edge_seq.fetch_add(
+        1, std::memory_order_relaxed);
     g_rs64_audio_identity.valid = false;
     const uint32_t phase = rs64_phase_ord();
     const uint32_t width = rs64_vi_committed_width();
@@ -1047,6 +1102,8 @@ static void rs64_audio_route_prepare(const char* arm) {
     const bool target_phase =
         (width == 1024u && origin == 0x00790400u) ||
         (width == 512u && origin == 0x006AB400u);
+    rs64_m5_identity_edge("prepare-clear", before_clear, prepare_seq, clear_seq,
+                          phase, width, origin);
     g_rs64_audio_last_prepare_accepted = target_phase ? 1u : 0u;
     if (!rs64_audio_probe_enabled()) {
         if (order_probe_enabled) {
@@ -1335,6 +1392,11 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
                                          uint32_t r2, uint32_t field348,
                                          uint32_t field44, uint32_t dest) {
     const Rs64AudioRouteIdentity& route = g_rs64_audio_identity;
+    rs64_m5_identity_edge("stage-observe", route,
+                          route.valid ? route.prepare_seq : g_rs64_audio_last_prepare_seq,
+                          g_rs64_audio_identity_edge_seq.load(std::memory_order_relaxed),
+                          rs64_phase_ord(), rs64_vi_committed_width(),
+                          rs64_vi_committed_origin());
     if (stage <= 3u) {
         static const bool capture_enabled = [] {
             const char* own = std::getenv("ROGUESQ_LOG_M5_STAGE_CALLS");
@@ -1473,6 +1535,11 @@ static void rs64_log_audio_return(const char* arm, RspExitReason reason) {
     rs64_audio_route_set(arm, route.phase, route.width, route.origin,
                          route.ordinal, route.row,
                          static_cast<int>(reason));
+    const uint32_t clear_seq = g_rs64_audio_identity_edge_seq.fetch_add(
+        1, std::memory_order_relaxed);
+    rs64_m5_identity_edge("return-clear", route, route.prepare_seq, clear_seq,
+                          rs64_phase_ord(), rs64_vi_committed_width(),
+                          rs64_vi_committed_origin());
     g_rs64_audio_identity.valid = false;
 }
 
