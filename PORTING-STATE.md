@@ -112710,3 +112710,24 @@ dispatch, VI, output, or mitigation behavior changed.
 ORIGIN: no mitigation or behavior change; the reducer is observation-only and
 does not remap output or promote a consumer.
 Artifacts: `scratch/agent/s2415_sequence_pcm_link/`.
+
+## Session 2416 (2026-08-26) — audited M5 title-to-hangar handoff markers
+
+The planned observation-only audit consumed the retained s2412 image log and
+s2413 image log. Both captures had the same title key-on shape at
+`site=0x80090C28`, `dest=0x80173B30`, and values `0x27/0x00276578`, but the
+first hangar task identity differed: s2412 used ordinal/row `822/241` with
+first image DMA `0x167050`, while s2413 used `783/197` with first image DMA
+`0x169150`. The first five hangar PCM guest-address sequences also diverged
+(`0x80169150..0x80166D50` versus `0x80167350..0x80167F50`). The shared second
+DMA role at `0x1798B0` is insufficient to identify a consumer.
+
+This selects `H-NoHandoffKey` for the current existing-marker scope. It rules
+out a stable task/DMA ordinal, row, destination, or PCM-address continuation
+through the VI-origin transition, and does not promote broad event order to a
+legitimate identity. It does not prove PCM absence or authorize an output
+remap. No runtime, task, audio, gate, fallback, dispatch, VI, output, or
+mitigation behavior changed.
+
+ORIGIN: no mitigation or behavior change; the comparison is observation-only.
+Artifacts: `scratch/agent/s2416_phase_transition_identity/`.

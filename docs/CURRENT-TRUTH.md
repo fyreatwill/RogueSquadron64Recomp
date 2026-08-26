@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2415 (2026-08-26).
+Current maintenance marker: Session 2416 (2026-08-26).
 
 ## Current state
 
@@ -82,6 +82,14 @@ Current maintenance marker: Session 2415 (2026-08-26).
   `H-NoDownstreamRelation` for the current identity table, not a legitimate
   destination remap or proof that the PCM is absent. Artifact:
   `scratch/agent/s2415_sequence_pcm_link/`.
+- s2416 audited the existing phase-transition markers without adding runtime
+  instrumentation. In both valid captures the title key-on shape was identical,
+  but the first hangar task ordinal/row and first 0x300-byte DMA destination
+  differed, as did the first five PCM guest-address sequences. No task, DMA,
+  ordinal/row, or destination field remained stable across the VI-origin
+  transition. This selects `H-NoHandoffKey` at the current marker scope; broad
+  event order is not promoted to a legitimate identity. Artifact:
+  `scratch/agent/s2416_phase_transition_identity/`.
 
 ## Latest evidence
 
@@ -204,11 +212,13 @@ sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate. The retained identity table and two-run event-delta reducer
-   select `H-SequenceLegitimate` at the current capture scope. The s2415
-   complete table selected `H-NoDownstreamRelation` because PCM moved to the
-   hangar origin after the title key-on. Next identify a phase-transition key
-   using existing task/PCM markers. Do not change task data, audio, gate,
-   fallback, dispatch, VI, output behavior, or the nonzero predicate.
+   select `H-SequenceLegitimate` at the current capture scope. s2415 selected
+   `H-NoDownstreamRelation`, and s2416 selected `H-NoHandoffKey` because the
+   existing task/DMA/PCM markers do not survive the title-to-hangar transition.
+   Next design one new independent phase-transition discriminator, grounded in
+   the retail oracle before adding a port instrument. Do not change task data,
+   audio, gate, fallback, dispatch, VI, output behavior, or the nonzero
+   predicate.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
