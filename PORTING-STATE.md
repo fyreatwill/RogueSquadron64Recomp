@@ -112004,3 +112004,28 @@ Artifacts: `scratch/agent/s2387_m5_incomplete_reporter/`.
 ORIGIN: no mitigation or behavior change; added only reducer fields and a
 log-reuse execution path after the initial post-run reducer did not emit its
 tables.
+
+## Session 2388 (2026-08-25) — M5 reporter completion predicate audit
+
+The retained s2387 logs were reduced without a new build or game run. The
+same-build stub/image × c88=0/1 capture retained its title `1024` and hangar
+`512` controls in all four arms. The source audit of
+`audio_join_report_locked` shows that `complete` is set only when one
+`AudioJoinRange` has both `source_pcm` and `consumer_pcm`; aggregate source or
+consumer counts and ordering flags do not set it.
+
+The incomplete raw-reporter table contained 411 candidates: image c0/c1 were
+232/179. Patterns were neither match 331 (166/165), source-only 38 (36/2),
+consumer-only 42 (30/12), and both-match 0. Ordering flags varied only in the
+one-sided rows, so `H-PredicateRequiresSameRange` is selected for the reporter
+label; `H-PredicateGlobalCounts` and `H-PredicateOrderingOnly` are ruled out at
+capture scope. This clarifies the reporter label but does not establish a
+legitimate task/output contract or authorize task-data, audio, gate, fallback,
+dispatch, VI, or output changes.
+
+The first post-run reducer invocation in s2387 had produced no tables; this
+iteration used its existing `REUSE_LOGS=1` path and produced the expected
+tables. No runtime or submodule files were changed.
+
+ORIGIN: no mitigation or behavior change; this was a source audit and retained
+log reduction only.

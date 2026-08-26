@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2387 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. This refutes an uncalled reporter and an interval-key mismatch. The s2387 incomplete-only table found 232 and 179 `complete=0` candidates: the dominant pattern in both image arms was neither source nor consumer match (166/165), followed by source-only and consumer-only rows; no incomplete row had both. This refines the remaining boundary to an incomplete reporter predicate/output-closure classification, not a single consumer-only gap. The prior task/output gap was a reducer mismatch that joined `[audtask-image-join]` instead of raw `[audtask-join]`; no task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
+Maintained in Session 2388 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. The s2388 source audit shows `complete` is a same-range-both predicate, not an aggregate-count or ordering predicate. Among the 411 incomplete rows (232/179), 331 had neither source nor consumer, 38 source-only, 42 consumer-only, and none had both; ordering flags varied only with the one-sided matches. This closes the reporter-predicate question at capture scope and leaves legitimate task/output contract provenance open. No task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
 
 The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
 
@@ -151,6 +151,18 @@ is authorized.
   scope and rules out a single missing-consumer or missing-source explanation.
   It does not authorize a task-data, audio, gate, fallback, dispatch, VI, or
   output change. Artifact: `scratch/agent/s2387_m5_incomplete_reporter/`.
+
+- **s2388 — reporter completion is same-range-both.** The retained s2387
+  four-arm logs passed the existing title/hangar controls and were reduced
+  against the raw reporter records. The reporter implementation sets
+  `complete` only when a single DMA range has both `source_pcm` and
+  `consumer_pcm`; aggregate source/consumer totals and ordering flags do not
+  set it. The 411 incomplete candidates were no-match `331`, source-only
+  `38`, consumer-only `42`, and both-match `0`. This selects
+  `H-PredicateRequiresSameRange` for the reporter label, refutes
+  `H-PredicateGlobalCounts` and `H-PredicateOrderingOnly`, and leaves
+  `H-PredicateReducerMismatch` open only for any future independent reducer
+  disagreement. Artifact: `scratch/agent/s2387_m5_incomplete_reporter/`.
 
 - **s2382 — gate/downstream path is positive but task/output closure is absent.**
   The same-build driver passed controls for stub c0/c1 and image c0/c1; each
@@ -441,7 +453,8 @@ sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
-  qualified steps. The next queued boundary is #4.
+  qualified steps. The reporter-predicate audit is closed; the next queued
+  boundary is an independent task/output contract provenance discriminator.
 2. **M5 task/output closure — closed at current capture scope.** s2387's
    corrected reporter-candidate table associated raw `[audtask-join]` records
    with 100% of 4,688 image-stage candidates; reporter completion was true for

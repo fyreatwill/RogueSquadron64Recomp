@@ -1,44 +1,44 @@
-# NEXT work unit (s2388) — audit raw reporter completion predicate
+# NEXT work unit (s2389) — audit reporter range matching against image-stage matching
 
-HYPOTHESIS-ID: m5-reporter-completion-predicate
+HYPOTHESIS-ID: m5-reporter-range-matching
 
 ## Work unit
 
-Audit the raw `audio_join_report_locked` completion predicate against the
-s2387 incomplete-row table. Trace how `sources`, `consumers`, `complete`, and
-the ordering flags are accumulated across task ranges, then run the bounded
-reducer on the retained s2387 logs with one table that distinguishes
-stage-only, source-only, consumer-only, and both-match rows by task ordinal
-and range count. Analysis only: no task-data, audio, gate, fallback,
+Build one bounded reducer over the retained s2387 raw logs. For every image
+stage candidate, compare the exact task reporter range(s) selected by
+`audio_join_match_task_locked` with the image-stage source/consumer matches.
+Report task ordinal, stage ordinal/row, DMA event, DMEM/guest/length/hash,
+reporter range index, source/consumer indices, and whether the two matchers
+select the same range. Analysis only: no task-data, audio, gate, fallback,
 dispatch, VI, or output behavior change.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-PredicateRequiresSameRange: `complete` requires source and consumer on one
-  joined DMA range, so aggregate source/consumer counts can be nonzero while
-  incomplete stage-only rows are expected.
-- H-PredicateGlobalCounts: `complete` is based on task-global source and
-  consumer totals, so incomplete rows indicate a missing aggregate edge.
-- H-PredicateOrderingOnly: both sides are joined, but a task/range ordering
-  condition clears completion.
-- H-PredicateReducerMismatch: the source/consumer fields in the raw reporter
-  do not describe the same ranges selected by the stage reducer.
+- H-RangeMatcherAgreement: reporter and image-stage matchers select the same
+  DMA range; incomplete rows are genuinely unmatched task ranges.
+- H-RangeMatcherConflict: both matchers find a source/consumer edge but select
+  different ranges, so the apparent stage-only classification is a reducer
+  association artifact.
+- H-RangeMatcherMultiplicity: duplicate or reused PCM records make greedy
+  matching order-dependent; a stable one-to-one assignment changes the
+  source/consumer classification.
+- H-RangeCaptureInvalid: any arm loses title/hangar controls or the positive
+  image-stage/reporter associations.
 
-The discriminator is a source-level predicate table plus the s2387 row table:
-for every incomplete candidate, show task ordinal, range count, each range's
-source/consumer indices, aggregate counts, same-range-both bit, and ordering
-flags. Same-range-both with complete=0 selects H-PredicateOrderingOnly;
-nonzero aggregate counts with no same-range-both selects
-H-PredicateRequiresSameRange; disagreement with the reducer selects
-H-PredicateReducerMismatch. Failed route/phase controls select
-H-PredicateCaptureInvalid.
+The discriminator is one range-level table covering all four arms and both
+target phases. Agreement on every retained incomplete row selects
+H-RangeMatcherAgreement; any same-key differing range selects
+H-RangeMatcherConflict; a change only after stable one-to-one reassignment
+selects H-RangeMatcherMultiplicity; failed controls select
+H-RangeCaptureInvalid.
 
 ## Exact commands / controls
 
-    sed -n '507,580p' lib/N64ModernRuntime/librecomp/src/rsp.cpp
-    rg -n -C 8 'AudioJoinRange|source_pcm|consumer_pcm|complete = true' lib/N64ModernRuntime/librecomp/src/rsp.cpp
+    sed -n '586,626p' lib/N64ModernRuntime/librecomp/src/rsp.cpp
+    rg -n -C 10 'audio_join_match\(|audio_image_match\(' lib/N64ModernRuntime/librecomp/src/rsp.cpp
     env REUSE_LOGS=1 zsh scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh s2387_m5_incomplete_reporter
 
-Expected controls are the retained s2387 four-arm capture, title `1024`,
-hangar `512`, all four `controls=1`, and zero crash/abort markers. No new
-binary or game run is needed unless the retained logs fail validation.
+Use the retained logs only; no new binary or game run is needed unless the
+range-level reducer cannot validate all four controls. Expected controls are
+title `1024`, hangar `512`, and `controls=1` for stub_c0, stub_c1, image_c0,
+and image_c1, with zero crash/abort markers.
