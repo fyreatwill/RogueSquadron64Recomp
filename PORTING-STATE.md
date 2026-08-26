@@ -113067,3 +113067,22 @@ identity. It rules out using the current generic field table as the
 discriminator; no output remap, writeback, task-data change, gate, guard, or
 default change was made. Artifact:
 `scratch/agent/s2432_retail_hangar_field_context/`.
+## Session 2433 (2026-08-26) — joined retail exact image stores to field context
+
+Built the oracle after adding `--store-field-dump W:A[,B...]`, an exact
+memory-write callback table keyed by watch index and selected writer PC. The
+first launch omitted the eleven-Start schedule and was route-invalid; the
+second launch used a mistyped core path and did not run. The corrected capture
+passed the whole-RDRAM positive control (12,661 writes), title and hangar
+controls, and exact image-range totals of 1,536 writes at
+`0x167650..0x167C50` and 1,125 at `0x1798B0..0x179A48`. It initially showed
+2,661 selected-PC callbacks but zero phase rows because memory callbacks did
+not carry a reliable live VI phase. After switching the new table to the
+VI-callback-latched phase, the final capture retained 408 rows, all watch 2
+at writer PC `0x800078EC`; the other 12 selected PCs and watch 1 had no rows.
+Every retained row had the degenerate tuple `s0=0x12`, `s1=0x561F`,
+`source_word=0`, `source_byte=1`, `branch_state=0`. This selects
+`H-RetailExactStoreWriter` for the first range and `H-DegenerateStoreContext`
+for the field tuple. It rules out a complete exact-writer attribution gap, but
+does not distinguish semantic entry from helper or authorize a port change.
+Artifact: `scratch/agent/s2433_retail_exact_store_context/`.

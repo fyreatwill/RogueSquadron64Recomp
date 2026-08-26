@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2430 (2026-08-26).
+Current maintenance marker: Session 2433 (2026-08-26).
 
 ## Current state
 
@@ -404,12 +404,12 @@ sequence; #1 is the next campaign priority.
    set in the hangar phase to distinguish active consumer entry from
    store-helper execution; no port behavior change is authorized.
    s2431 execution-watched the complete set with valid controls. Every selected
-   PC executed in the hangar phase: `0x800078EC` had 408 hits, `0x80007670`
-   had 184, and each listed helper had 11–12. This rules out a complete retail
-   execution gap and selects `H-RetailHangarExecutionClass`; the semantic
-   entry/helper distinction remains open. The next unit must collect one
-   phase-gated field-context table for that class; no port behavior change is
-   authorized.
+   PC executed in the hangar phase, ruling out a complete retail execution gap.
+   s2433's exact-store table then attributed the first range to `0x800078EC`,
+   but its retained field tuple was degenerate. The next unit must capture the
+   exact writer's call/return context and store value/address in one
+   phase-gated ground-truth table to distinguish a semantic entry from a
+   lower-level helper; no port behavior change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -493,6 +493,18 @@ same broad tuple families, but those rows were not joined to an exact store
 event. This selects `H-FieldTableUnjoinable` as an oracle-instrument result,
 not a retail semantic-entry or helper conclusion. No output remap, writeback,
 task-data change, gate, guard, or default change is authorized.
+s2433's repaired exact-store capture again passed the whole-RDRAM, title, and
+hangar controls and recorded 1,536 and 1,125 exact-range writes. It observed
+2,661 selected-PC store callbacks; the VI-callback-latched phase gate retained
+408 rows, all watch 2 at PC `0x800078EC`. The other 12 selected PCs and watch
+1 had no retained rows. Every retained row had the degenerate tuple
+`s0=0x12, s1=0x561F, source_word=0, source_byte=1, branch_state=0`. This
+selects `H-RetailExactStoreWriter` for the first range and
+`H-DegenerateStoreContext` for this field tuple, but does not distinguish a
+semantic entry from a store helper or authorize a port change. The initial
+zero-phase rerun was instrument-invalid because memory callbacks did not carry
+a reliable live VI phase. Artifact:
+`scratch/agent/s2433_retail_exact_store_context/`.
 - s2428's fixed paired port capture passed retail whole-RDRAM/title/hangar
   controls and both port-arm title/hangar controls. Each arm recorded 256
   exact `0x80015BC8` writes in `0x169730..0x1698EC`, joined to title

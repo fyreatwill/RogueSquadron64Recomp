@@ -58,6 +58,8 @@
 #define MAX_VI_CONTEXT_ROWS 1024
 #define MAX_PC_FIELD_DUMP_PCS 32
 #define MAX_PC_FIELD_DUMP_ROWS 32768
+#define MAX_STORE_FIELD_DUMP_PCS 32
+#define MAX_STORE_FIELD_DUMP_ROWS 32768
 #define MAX_PC_TASK_DUMP_ROWS 8192
 #define VI_ORIGIN_ADDR 0xA4400004u
 #define VI_WIDTH_ADDR  0xA4400008u
@@ -229,6 +231,8 @@ struct pc_phase_log_bucket {
 static struct pc_phase_log_bucket
     g_pc_phase_log[MAX_PC_PHASE_LOG_ORIGINS];
 static int g_n_pc_phase_log_origin;
+static uint32_t g_latched_phase_width;
+static uint32_t g_latched_phase_origin;
 static uint32_t g_mode_dump_pc;
 static int g_mode_dump_enabled;
 static long g_mode_dump_rows;
@@ -301,6 +305,30 @@ struct pc_field_dump_bucket {
 static struct pc_field_dump_bucket
     g_pc_field_dump[MAX_PC_FIELD_DUMP_PCS];
 static int g_n_pc_field_dump;
+struct store_field_dump_pc {
+    uint32_t pc;
+    uint64_t watch_mask;
+};
+struct store_field_dump_row {
+    int watch;
+    uint32_t pc;
+    uint32_t s0;
+    uint32_t s1;
+    uint32_t source_word;
+    uint32_t source_byte;
+    uint32_t branch_selector;
+    uint32_t branch_state;
+    long n;
+};
+static struct store_field_dump_pc
+    g_store_field_dump_pc[MAX_STORE_FIELD_DUMP_PCS];
+static int g_n_store_field_dump_pc;
+static struct store_field_dump_row
+    g_store_field_dump_rows[MAX_STORE_FIELD_DUMP_ROWS];
+static int g_n_store_field_dump_rows;
+static long g_store_field_dump_hits;
+static long g_store_field_dump_overflow;
+static long g_store_field_dump_candidate_callbacks;
 static uint32_t g_pc_task_dump_pc;
 static int g_pc_task_dump_enabled;
 struct pc_task_dump_row {
@@ -362,6 +390,16 @@ static int pc_phase_log_match(void)
             origin == g_pc_phase_log[i].origin)
             return 1;
     }
+    return 0;
+}
+
+static int store_field_phase_log_match(void)
+{
+    int i;
+    for (i = 0; i < g_n_pc_phase_log_origin; i++)
+        if (g_latched_phase_width == g_pc_phase_log[i].width &&
+            g_latched_phase_origin == g_pc_phase_log[i].origin)
+            return 1;
     return 0;
 }
 
@@ -457,6 +495,102 @@ static void dump_pc_field(uint32_t pc)
            row.source_word, row.source_byte, row.branch_selector,
            row.branch_state);
     fflush(stdout);
+}
+
+static int store_field_dump_pc_index(uint32_t pc)
+{
+    int i;
+    for (i = 0; i < g_n_store_field_dump_pc; i++)
+        if (g_store_field_dump_pc[i].pc == pc)
+            return i;
+    return -1;
+}
+
+static void dump_store_field(int watch, uint32_t pc)
+{
+    struct store_field_dump_row row;
+    int pc_index = store_field_dump_pc_index(pc);
+    int i;
+
+    if (pc_index < 0 || !(g_store_field_dump_pc[pc_index].watch_mask &
+                           (UINT64_C(1) << watch)))
+        return;
+    g_store_field_dump_candidate_callbacks++;
+    if (!store_field_phase_log_match())
+        return;
+    g_store_field_dump_hits++;
+    row.watch = watch;
+    row.pc = pc;
+    row.s0 = gpr32(16);
+    row.s1 = gpr32(17);
+    row.source_word = pDebugMemRead32(debug_rdram_addr((row.s0 + 0x60u) & ~3u));
+    row.source_byte = debug_mem_u8(row.s0 + 0x22u);
+    row.branch_selector = gpr32(2);
+    row.branch_state = debug_mem_u16(row.s1 + 0x22u);
+    for (i = 0; i < g_n_store_field_dump_rows; i++) {
+        struct store_field_dump_row *old = &g_store_field_dump_rows[i];
+        if (old->watch == row.watch && old->pc == row.pc &&
+            old->s0 == row.s0 && old->s1 == row.s1 &&
+            old->source_word == row.source_word &&
+            old->source_byte == row.source_byte &&
+            old->branch_selector == row.branch_selector &&
+            old->branch_state == row.branch_state) {
+            old->n++;
+            return;
+        }
+    }
+    if (g_n_store_field_dump_rows >= MAX_STORE_FIELD_DUMP_ROWS) {
+        g_store_field_dump_overflow++;
+        return;
+    }
+    row.n = 1;
+    g_store_field_dump_rows[g_n_store_field_dump_rows++] = row;
+    printf("[store-field-dump] watch=%d pc=0x%08x width=%u origin=0x%08x "
+           "s0=0x%08x s1=0x%08x source_word=0x%08x source_byte=0x%02x "
+           "branch_selector=0x%08x branch_state=0x%04x n=1\n",
+           row.watch, row.pc, pDebugMemRead32(VI_WIDTH_ADDR),
+           pDebugMemRead32(VI_ORIGIN_ADDR), row.s0, row.s1, row.source_word,
+           row.source_byte, row.branch_selector, row.branch_state);
+    fflush(stdout);
+}
+
+static void add_store_field_dump(const char *arg)
+{
+    char *copy = strdup(arg);
+    char *pcs, *tok, *save = NULL;
+    int watch;
+    if (!copy)
+        exit(1);
+    pcs = strchr(copy, ':');
+    if (!pcs) {
+        fprintf(stderr, "[oracle] bad --store-field-dump '%s'\n", arg);
+        free(copy);
+        exit(2);
+    }
+    *pcs++ = '\0';
+    watch = atoi(copy);
+    if (watch < 0 || watch >= MAX_WATCHES || !*pcs) {
+        fprintf(stderr, "[oracle] bad --store-field-dump '%s'\n", arg);
+        free(copy);
+        exit(2);
+    }
+    for (tok = strtok_r(pcs, ",", &save); tok;
+         tok = strtok_r(NULL, ",", &save)) {
+        uint32_t pc = (uint32_t)strtoul(tok, NULL, 0);
+        int i = store_field_dump_pc_index(pc);
+        if (i < 0) {
+            if (g_n_store_field_dump_pc >= MAX_STORE_FIELD_DUMP_PCS) {
+                fprintf(stderr, "[oracle] too many --store-field-dump PCs\n");
+                free(copy);
+                exit(2);
+            }
+            i = g_n_store_field_dump_pc++;
+            g_store_field_dump_pc[i].pc = pc;
+            g_store_field_dump_pc[i].watch_mask = 0;
+        }
+        g_store_field_dump_pc[i].watch_mask |= UINT64_C(1) << watch;
+    }
+    free(copy);
 }
 
 static void add_pc_field_dump_pcs(const char *arg)
@@ -1236,6 +1370,9 @@ static void dbg_update(unsigned int pc)
                     }
                 }
             }
+            if ((access_flags & M64P_BKP_FLAG_WRITE) &&
+                g_n_store_field_dump_pc > 0)
+                dump_store_field(i, pc);
             if ((g_post_value_watch_mask & (UINT64_C(1) << i)) &&
                 (access_flags & M64P_BKP_FLAG_WRITE) &&
                 g_post_value_armed) {
@@ -1375,6 +1512,9 @@ static void dbg_vi(void)
     }
 
     g_vis++;
+
+    g_latched_phase_width = pDebugMemRead32(VI_WIDTH_ADDR);
+    g_latched_phase_origin = pDebugMemRead32(VI_ORIGIN_ADDR);
 
     if (g_post_swap_table_enabled) {
         width = pDebugMemRead32(VI_WIDTH_ADDR);
@@ -1754,6 +1894,7 @@ static void usage(void)
         "  --pc-phase-log ORIGIN log watched execs only at 640-width VI origin (repeatable)\n"
         "  --pc-phase-log-width ORIGIN:WIDTH log watched execs at an explicit VI bucket\n"
         "  --pc-field-dump A[,B...] dump phase-gated $s0/$s1 and pointed fields\n"
+        "  --store-field-dump W:A[,B...] dump phase-gated fields at exact writes on watch W\n"
         "  --pc-task-dump A   dump phase-gated type-2 OSTask fields at PC A\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
         "  --post-swap-table-pc A join a 640-wide swap at A to the following VI callback\n"
@@ -1848,6 +1989,8 @@ int main(int argc, char **argv)
             add_pc_phase_log_width(argv[++i]);
         else if (!strcmp(argv[i], "--pc-field-dump") && i + 1 < argc)
             add_pc_field_dump_pcs(argv[++i]);
+        else if (!strcmp(argv[i], "--store-field-dump") && i + 1 < argc)
+            add_store_field_dump(argv[++i]);
         else if (!strcmp(argv[i], "--pc-task-dump") && i + 1 < argc) {
             g_pc_task_dump_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_pc_task_dump_enabled = 1;
@@ -2185,6 +2328,22 @@ int main(int argc, char **argv)
                    bucket->rows[j].branch_selector,
                    bucket->rows[j].source_byte,
                    bucket->rows[j].branch_state, bucket->rows[j].n);
+    }
+    if (g_n_store_field_dump_pc > 0) {
+        printf("[oracle] store-field-summary pcs=%d callbacks=%ld phase_hits=%ld "
+               "rows=%d/%d overflow=%ld\n", g_n_store_field_dump_pc,
+               g_store_field_dump_candidate_callbacks, g_store_field_dump_hits,
+               g_n_store_field_dump_rows, MAX_STORE_FIELD_DUMP_ROWS,
+               g_store_field_dump_overflow);
+        for (int i = 0; i < g_n_store_field_dump_rows; i++) {
+            struct store_field_dump_row *row = &g_store_field_dump_rows[i];
+            printf("[oracle] store-field-row watch=%d pc=0x%08x s0=0x%08x "
+                   "s1=0x%08x source_word=0x%08x source_byte=0x%02x "
+                   "branch_selector=0x%08x branch_state=0x%04x n=%ld\n",
+                   row->watch, row->pc, row->s0, row->s1, row->source_word,
+                   row->source_byte, row->branch_selector, row->branch_state,
+                   row->n);
+        }
     }
     if (g_pc_task_dump_enabled)
         printf("[oracle] pc-task-summary pc=0x%08x rows=%d/%d "
