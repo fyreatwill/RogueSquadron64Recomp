@@ -112232,3 +112232,27 @@ Artifacts: `scratch/agent/s2396_stage_call_boundary/`.
 
 ORIGIN: no mitigation or behavior change; added only a bounded entry witness
 and its env-var catalog entry.
+
+## Session 2397 (2026-08-25) — M5 route-order witness was pre-title
+
+The first driver attempt was invalid because it created the capture directory
+relative to `build/` while redirecting to its absolute repository path. The
+audio-probe-enabled retry also failed qualification: it remained at width 640
+and did not reach title, so it was not used as target evidence. The fixed
+behavior-neutral build added `[m5-route-prepare]` rows with a shared sequence
+and echoed the sequence in `[m5-stage-call]`; it ran with the suppressed image
+arm and the qualified LLE controls.
+
+The fixed run passed the dispatch positive control (`47` rows) and stage-call
+control (`104` rows), but produced `36` crash/abort markers and ended before
+title origin `0x00790400`; the last guest PC was `0x8000B650`. It recorded
+`1,010` preparation rows, all `accepted=0`, and every four-stage call group
+shared the immediately preceding preparation sequence. This is positive
+pre-title ordering evidence only. Because the title control failed, it does
+not distinguish target-phase missing preparation, non-target preparation, or
+identity clearing, and it rules out none of those target hypotheses. No task,
+audio, gate, fallback, dispatch, VI, output, or mitigation behavior changed.
+Artifact: `scratch/agent/s2397_route_order/`.
+
+ORIGIN: no mitigation or behavior change; added only preparation-order
+witnesses and the documented env var.

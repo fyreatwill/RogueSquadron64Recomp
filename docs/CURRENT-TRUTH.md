@@ -5,9 +5,18 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Current maintenance marker: Session 2396 (2026-08-25).
+Current maintenance marker: Session 2397 (2026-08-25).
 
-Maintained in Session 2396 (2026-08-25). The s2396 same-build suppressed image-arm run passed dispatch (`59` rows) and title-origin (`0x00790400`) controls, stayed alive without crash/abort for 60 seconds, and recorded `140` image-stage call attempts across stages 0–3. Every retained attempt had `route_valid=0`, `width=0`, and `origin=0`; the title transition occurred at phase 8 after the calls began. No `[audtask-image-stage]` or `[m5-stage-bytes]` rows were emitted. This refutes a globally absent image-stage callsite but does not select route filtering for the title phase: the route identity is missing before the stage entry. The next boundary is route-identity preparation ordering, with no task-data, audio, gate, fallback, dispatch, VI, output, or mitigation change authorized.
+Maintained in Session 2397 (2026-08-25). The behavior-neutral route-order
+witness build produced `47` dispatch rows and `104` stage-call rows, but the
+suppressed run crashed at guest PC `0x8000B650` before title origin
+`0x00790400`; therefore the target-phase discriminator is route-invalid. In
+the pre-title capture, each four-stage call group echoed the immediately
+preceding route-preparation sequence, and all `1,010` preparation rows were
+non-target (`accepted=0`). This proves only that pre-title stage calls have a
+preceding preparation call; it does not distinguish target-phase preparation
+ordering or identity clearing. No task-data, audio, gate, fallback, dispatch,
+VI, output, or mitigation change is authorized.
 
 The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
 
@@ -147,6 +156,21 @@ is authorized.
 
   ORIGIN: no mitigation or behavior change; added only a bounded entry
   witness and its env-var catalog entry.
+
+- **s2397 — route-order capture is pre-title and route-invalid.** The fixed
+  behavior-neutral build passed the dispatch positive control (`47` rows) and
+  stage-call control (`104` rows), but the suppressed run crashed at guest PC
+  `0x8000B650` before title origin, with `36` crash/abort markers. Every
+  four-stage call group shared the immediately preceding preparation sequence;
+  all `1,010` preparation rows were non-target. The first driver had an
+  invalid output-directory path, and the audio-probe-enabled retry changed
+  reachability by stalling at 640, so neither is evidence for the target
+  phase. The fixed behavior-neutral run rules out “no preparation before any
+  pre-title stage call” only; it does not select any target-phase hypothesis.
+  Artifact: `scratch/agent/s2397_route_order/`.
+
+  ORIGIN: no mitigation or behavior change; added only preparation-order
+  witnesses and the documented env var.
 
 - **s2395 — suppression is required for a valid title route.** The fixed
   same-build two-arm run passed the unsuppressed Arm A control by reproducing
@@ -567,7 +591,11 @@ sequence; #1 is the next campaign priority.
   port logger's exact region and bytes before changing the predicate. s2395
   established that missing-function suppression is required to reach title;
   with suppression enabled the route is valid but the image-stage producer
-  emitted zero rows, so audit that producer boundary next.
+  emitted zero rows, so audit that producer boundary next. s2397's route-order
+  witness was target-phase invalid because the fixed run crashed before title;
+  do not treat its pre-title ordering as a target conclusion. Next, isolate the
+  crash boundary with a phase-transition control while retaining the same
+  preparation/stage join.
 2. **M5 task/output closure — closed at current capture scope.** s2387's
    corrected reporter-candidate table associated raw `[audtask-join]` records
    with 100% of 4,688 image-stage candidates; reporter completion was true for

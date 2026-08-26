@@ -557,12 +557,16 @@ struct Rs64AudioRouteIdentity {
     uint32_t origin = 0;
     uint32_t ordinal = 0;
     uint32_t row = 0;
+    uint32_t prepare_seq = 0xFFFFFFFFu;
 };
 
 static thread_local Rs64AudioRouteIdentity g_rs64_audio_identity;
 static std::atomic<uint32_t> g_rs64_audio_ordinal{0};
 static uint32_t g_rs64_audio_phase_key = 0xFFFFFFFFu;
 static uint32_t g_rs64_audio_phase_row = 0;
+static std::atomic<uint32_t> g_rs64_audio_prepare_seq{0};
+static thread_local uint32_t g_rs64_audio_last_prepare_seq = 0xFFFFFFFFu;
+static thread_local uint32_t g_rs64_audio_last_prepare_accepted = 0;
 static thread_local uint32_t g_rs64_audio_break_pc = 0;
 static thread_local uint32_t g_rs64_m5_init_voice_caller_pc = 0;
 static thread_local uint64_t g_rs64_m5_init_voice_event = 0;
@@ -1026,17 +1030,45 @@ extern "C" void rs64_m5_audio_event(const char* kind, uint32_t site,
 }
 
 static void rs64_audio_route_prepare(const char* arm) {
+    static const bool order_probe_enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_ORDER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    const uint32_t prepare_seq = order_probe_enabled ?
+        g_rs64_audio_prepare_seq.fetch_add(1, std::memory_order_relaxed) :
+        0xFFFFFFFFu;
+    g_rs64_audio_last_prepare_seq = prepare_seq;
     g_rs64_audio_identity.valid = false;
-    if (!rs64_audio_probe_enabled()) {
-        return;
-    }
     const uint32_t phase = rs64_phase_ord();
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin();
     const bool target_phase =
         (width == 1024u && origin == 0x00790400u) ||
         (width == 512u && origin == 0x006AB400u);
-    if (!target_phase) return;
+    g_rs64_audio_last_prepare_accepted = target_phase ? 1u : 0u;
+    if (!rs64_audio_probe_enabled()) {
+        if (order_probe_enabled) {
+            std::fprintf(stderr,
+                "[m5-route-prepare] seq=%u accepted=%u phase=%u width=%u "
+                "origin=0x%06X arm=%s probe=disabled\n",
+                prepare_seq, target_phase ? 1u : 0u, phase, width, origin,
+                arm ? arm : "n/a");
+            std::fflush(stderr);
+        }
+        return;
+    }
+    if (!target_phase) {
+        if (order_probe_enabled) {
+            std::fprintf(stderr,
+                "[m5-route-prepare] seq=%u accepted=0 phase=%u width=%u "
+                "origin=0x%06X arm=%s\n",
+                prepare_seq, phase, width, origin, arm ? arm : "n/a");
+            std::fflush(stderr);
+        }
+        return;
+    }
     const uint32_t key = (width << 24) ^ origin;
     if (key != g_rs64_audio_phase_key) {
         g_rs64_audio_phase_key = key;
@@ -1045,8 +1077,16 @@ static void rs64_audio_route_prepare(const char* arm) {
     g_rs64_audio_identity = {
         true, arm, phase, width, origin,
         g_rs64_audio_ordinal.fetch_add(1, std::memory_order_relaxed),
-        g_rs64_audio_phase_row++
+        g_rs64_audio_phase_row++, prepare_seq
     };
+    if (order_probe_enabled) {
+        std::fprintf(stderr,
+            "[m5-route-prepare] seq=%u accepted=1 phase=%u width=%u "
+            "origin=0x%06X arm=%s route_ordinal=%u route_row=%u\n",
+            prepare_seq, phase, width, origin, arm ? arm : "n/a",
+            g_rs64_audio_identity.ordinal, g_rs64_audio_identity.row);
+        std::fflush(stderr);
+    }
 }
 
 static void rs64_audio_hash_dmem(uint32_t addr, uint32_t len,
@@ -1314,9 +1354,13 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
                 const uint32_t ordinal = capture_count[stage]++;
                 std::fprintf(stderr,
                     "[m5-stage-call] ordinal=%u stage=%u route_valid=%u arm=%s "
-                    "route_ordinal=%u route_row=%u phase=%u width=%u origin=0x%06X\n",
+                    "route_ordinal=%u route_row=%u prepare_seq=%u phase=%u "
+                    "width=%u origin=0x%06X\n",
                     ordinal, stage, route.valid ? 1u : 0u, route.arm,
-                    route.ordinal, route.row, phase, route.width, route.origin);
+                    route.ordinal, route.row,
+                    route.valid ? route.prepare_seq : g_rs64_audio_last_prepare_seq,
+                    phase, route.valid ? route.width : rs64_vi_committed_width(),
+                    route.valid ? route.origin : rs64_vi_committed_origin());
                 std::fflush(stderr);
             }
         }
