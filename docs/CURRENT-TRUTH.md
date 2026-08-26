@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2449 (2026-08-26).
+Current maintenance marker: Session 2450 (2026-08-26).
 
 ## Current state
 
@@ -190,6 +190,20 @@ Current maintenance marker: Session 2449 (2026-08-26).
   observed generated-code boundary. It does not establish whether the
   omission is intentional generator semantics or a lowering defect. No runtime
   behavior changed. Artifact: `scratch/agent/s2449_static_audit.tsv`.
+
+- **s2450 — direct and indirect calls share the generator's no-link contract.**
+  The bounded source audit found that `process_instruction` uses
+  `needs_link_branch` only to emit an `after_N` continuation; it never writes
+  `ctx->r31` for a non-tail `jal`. `emit_function_call`, named calls, reference
+  calls, runtime lookup calls, and register lookup calls all emit a plain
+  `(rdram, ctx)` invocation. The generated `rs_memset` call has that form, and
+  the indirect `jalr` positive-control path emits `LOOKUP_FUNC(ctx->rN)` with
+  the same form. This selects `H-GeneratorIntentionalNoRA` at the
+  source-to-output contract scope and rules out a callsite-specific fixup
+  rewrite. It does not establish that this contract is semantically valid for
+  `rs_memset`, whose second-range behavior remains unexplained. No runtime,
+  audio, output, task-data, dispatch, or guard behavior changed. Artifact:
+  `scratch/agent/s2450_direct_jal_audit/`.
 
 - **s2444 — an independent paired capture repeats the missing port second-range
   consumer.** The retail oracle passed the whole-RDRAM positive control
@@ -504,11 +518,10 @@ Current maintenance marker: Session 2449 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
-1. **M5 port execution identity — active.** Inspect N64Recomp's direct-`jal`
-   lowering and C-generator call emission that produced s2449. Compare a known
-   indirect positive-control lowering with the static `rs_memset` path and
-   determine whether the missing `ctx->r31` write is generator semantics or a
-   defect. No runtime or generated-output change is authorized.
+1. **M5 port execution identity — active.** Audit the complete generated and
+   retail `rs_memset` bodies for `$ra` reads and return-dependent control flow.
+   Determine whether zero `ctx->r31` can explain the missing second-range
+   consumer. No runtime or generated-output change is authorized.
 2. **M5 image consumer provenance — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate. s2425 establishes retail/port parity for the title
    `0x80015BC8` writer family, while s2426 shows neither candidate PC writes

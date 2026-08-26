@@ -113430,3 +113430,24 @@ behavior changed.
 ORIGIN: the static table is observation-only and covers the complete generated
 callsite set; its live cross-check is s2448's independent-controls capture.
 Artifact: `scratch/agent/s2449_static_audit.tsv`.
+
+## Session 2450 (2026-08-26) — audited direct-jal lowering semantics
+
+The bounded source-to-output audit compared N64Recomp's direct `jal` path,
+the C generator call emitters, one generated `rs_memset` call, and the
+generated indirect `jalr` positive-control path. `process_instruction` sets
+`needs_link_branch` for a non-tail call only so the host output can jump to an
+`after_N` continuation; it emits no `ctx->r31` assignment. The direct,
+reference-symbol, named, runtime-lookup, and register-lookup emitters all
+produce a plain `(rdram, ctx)` call, and generated output matches that form.
+
+This selects `H-GeneratorIntentionalNoRA` at the source-to-output contract
+scope and rules out a callsite-specific fixup rewrite. It does not establish
+that the contract is semantically valid for `rs_memset`; its second-range
+consumer remains open. No runtime, audio, output, task-data, dispatch, or
+guard behavior changed.
+
+ORIGIN: this is a source/generated-code audit, not a mitigation. The positive
+control is the existing generated indirect `jalr` path that resolves through
+`LOOKUP_FUNC`; no behavior was altered.
+Artifact: `scratch/agent/s2450_direct_jal_audit/`.
