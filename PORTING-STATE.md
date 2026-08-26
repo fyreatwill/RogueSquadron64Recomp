@@ -113948,3 +113948,27 @@ in-entry zero introduction and an unreachable static caller, and leaves the
 earlier caller that supplies zero to `mainGameLoop` open. No guard, stub,
 dispatch, audio, output, or task-data change was made. Artifact:
 `scratch/agent/s2471_m5_menu_init_caller_boundary/audit.md`.
+
+## Session 2472 (2026-08-26) — located the external main-loop entry boundary
+
+The retail oracle control passed in one run: whole-RDRAM watch recorded
+373,722 writes, exact range `0x00166000:0x0016A000` recorded 363,722 writes,
+and VI trace reached title 1024 and hangar 512 at origin `0x006AB400`.
+
+The exhaustive generated-tree census found no materialized direct call to
+`mainGameLoop(rdram, ctx)` and no literal `LOOKUP_FUNC`/indirect target for
+`0x8003DFA0` outside the function body. A durable s2472 fixup probe was added
+for any future direct caller and the entry boundary. The available newer
+recompiler failed on the known unsupported `cache` instruction after clearing
+its output, so the known s2471 generated snapshot was restored and rebuilt
+with the diagnostic applied directly.
+
+The qualified port run retained the resolver positive control 85 times and
+emitted the entry row at phase 2:
+`caller=<entry> callsite=0x8003DFA0 r31=0x00000000 r4=0x80163E00
+r5=0x8013AF00`. It then reached the known matrix null-dispatch abort. The
+empty generated caller set plus the entry-side zero selects an external/runtime
+entry boundary and rules out a missed generated caller as the zero source.
+The runtime dispatch site that constructs the entry context remains open. No
+guard, stub, dispatch, audio, output, or task-data change was made. Artifact:
+`scratch/agent/s2472_m5_main_loop_caller_boundary/audit.md`.

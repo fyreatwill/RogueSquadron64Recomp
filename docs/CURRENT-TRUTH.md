@@ -67,6 +67,19 @@ Current maintenance marker: Session 2471 (2026-08-26).
   to `mainGameLoop` open. No behavior change was authorized. Artifact:
   `scratch/agent/s2471_m5_menu_init_caller_boundary/audit.md`.
 
+- **s2472 — `mainGameLoop` has no materialized generated caller.** The
+  independent retail oracle passed whole-RDRAM and exact-range controls,
+  reached title and hangar, and the qualified port retained the resolver
+  positive control 85 times. An exhaustive generated-tree census found no
+  direct or literal indirect call to `mainGameLoop`; the new entry capture
+  recorded phase 2 `r31=0`, `r4=0x80163E00`, and `r5=0x8013AF00`. This selects
+  an external/runtime entry boundary and refutes a missed generated caller as
+  the source of the zero. The runtime dispatch site that constructs this
+  entry context remains open. The newer recompiler again failed on `cache`
+  after clearing output, so the run used the restored s2471 generated tree
+  with the diagnostic applied directly; no behavior change was made. Artifact:
+  `scratch/agent/s2472_m5_main_loop_caller_boundary/audit.md`.
+
 - **s2468 — setupCameraMatrices supplies the inherited zero.** The independent
   retail oracle passed whole-RDRAM and freelist controls and reached hangar.
   The qualified port's same-run resolver positive control fired; at phase 4,
@@ -307,12 +320,12 @@ Current maintenance marker: Session 2471 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, main-loop caller boundary
-   open.** The live generated `mainGameLoop` callsite `0x8003E090` invokes
-   `menuOverlayInit` with `r31=0`; the earlier caller/continuation that
-   supplies zero to `mainGameLoop` remains unidentified. Audit that complete
-   static/live boundary next. Do not infer callback polarity or add a guard.
-   No output remap, task-data change, gate change, or guard is authorized.
+1. **M5 generated alternate equivalence — active, runtime entry boundary open.**
+   The live `mainGameLoop` entry has `r31=0`, but the exhaustive generated
+   caller census is empty. Identify the runtime/overlay dispatch site that
+   constructs this entry context. Do not infer callback polarity or add a
+   guard. No output remap, task-data change, gate change, or guard is
+   authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
