@@ -40,7 +40,8 @@ conclusion to `scratch/agent/s2498_m5_slot_voice_pcm_join/audit.md`.
 ```sh
 rg -n "m5-guest-writer|m5-second-range|pcm-boundary-consumer|audtask-image-downstream|keyon-w40|slot-sb|DebugSetCallbacks|800078EC|166450|169150|1798B0|179A48" src lib tools/oracle
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 zsh tools/run-qualified-probe.sh
+env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 PROBE_KEYS="6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start" zsh tools/probe.sh scratch/agent/s2498_m5_slot_voice_pcm_join/port 120 0.5
+zsh scratch/agent/run_s2293_m5_retail_writer_phase_join.sh
 ```
 
 Use the repository's existing oracle recipe with whole-RDRAM, hangar, and
