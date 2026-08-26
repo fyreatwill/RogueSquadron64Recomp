@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2370 (2026-08-25). The M5 A1 pre-target capture passed
+Maintained in Session 2371 (2026-08-25). The M5 A1 pre-target capture passed
 the oracle and both early-640 port controls; both arms requested the null
 function address before target origin. The resident table contained only
 sections 0, 1, and 3, none containing address zero. This selects a missing or
@@ -20,6 +20,18 @@ requested `0x00000000`. This selects `H-RetailCallsiteAbsent` at capture
 scope: the port reaches a null-function call site retail does not reach in the
 captured phase. It does not identify the preceding branch/input divergence or
 authorize a null fallback, dispatch change, VI change, or audio contract edit.
+
+The s2371 M5 A1 predecessor capture passed the oracle whole-RDRAM, both target
+origins, and range-watch positive controls. Retail executed the bounded
+`0x80001F40..0x80001FA0` window 230,902 times overall and the target 640
+origins produced 19,196 rows, including 2,408 at `0x80001F84`, immediately
+before the port's `0x80001F88` last-guest-PC marker. Both port arms again
+reached the same phase-4 null request and resident table. This selects
+`H-RetailPredecessorPresent` at capture scope and rules out
+`H-RetailPredecessorAbsent`; the port-side `$a0/$a2` values were not captured,
+so `H-RetailPredecessorMatches` versus `H-RetailPredecessorArgsDiffer` remains
+open. No dispatch, VI, fallback, task-data, or audio contract change is
+authorized.
 
 The M5 A1 second-origin capture passed
 retail whole-RDRAM and both target-origin controls, but both same-build port
@@ -91,6 +103,17 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2371 — retail executes the A1 predecessor window.** The fresh oracle
+  passed whole-RDRAM `10,000` and both target-origin controls. The bounded
+  predecessor range fired `230,902` times overall and `19,196` times in the
+  target 640-origin rows, including `2,408` executions at `0x80001F84`.
+  Both same-build port arms passed the early-640 control and emitted the same
+  phase-4 `[a1-abort]` requesting zero, with last guest PC `0x80001F88` and
+  three resident sections. This selects `H-RetailPredecessorPresent` and
+  rules out `H-RetailPredecessorAbsent`; it is single-source for the
+  retail/port argument comparison because the port abort row has no `$a0/$a2`.
+  Artifact: `scratch/agent/s2371_m5_a1_caller_input_boundary/`.
 
 - **s2370 — retail does not execute the port's A1 null-function call site at
   this capture scope.** The repaired same-build runner passed the oracle
@@ -238,6 +261,12 @@ sequence; #1 is the next campaign priority.
    s2367's owner join retained source/consumer events but no nonzero
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
+
+3. **M5 A1 caller/input boundary — active.** Retail predecessor execution is
+   now positive, but the port-side predecessor arguments are missing. Add one
+   bounded port-side `$a0/$a2` capture at the `0x80001F84` to `0x80001F88`
+   transition, retaining the existing oracle controls. Do not add a fallback,
+   change dispatch or VI selection, or edit task/audio data.
 3. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both
    arms. Do not repeat the resident-overlay table without a new ground-truth

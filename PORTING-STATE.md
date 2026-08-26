@@ -111503,6 +111503,39 @@ field writeback, guard, or mitigation changed.
 
 Run one ground-truth-first capture around the predecessor path to the port's
 null-function request. Watch a bounded retail guest-PC predecessor window with
-`$a0/$a2`, retain whole-RDRAM and both target-origin controls, and compare it
-with the port last-guest-PC and abort rows. Do not add a null fallback or
+`$a0/$a2`, retain whole-RDRAM and both target-origin controls, and capture the
+matching port-side predecessor arguments before `get_function(0)`. Do not add
+a null fallback or change dispatch/VI behavior.
+
+## Session 2371 (2026-08-25) — M5 A1 predecessor window is retail-positive
+
+The prescribed s2371 runner was missing, so I reconstructed it from the
+validated s2370 recipe before building. The Debug target built successfully.
+The fresh retail oracle passed the whole-RDRAM positive control (`10,000`
+callbacks), both target 640 origin controls (`0x00696100` and `0x00696600`),
+and the predecessor range watch's positive control. The range
+`0x80001F40..0x80001FA0` fired `230,902` times overall; target 640 rows
+accounted for `19,196`, including `2,408` executions at `0x80001F84`.
+
+Both same-build port arms passed the early 640 transition and emitted the
+same phase-4 `[a1-abort]` requesting `0x00000000`, with resident sections 0,
+1, and 3 and last guest PC `0x80001F88`. This selects
+`H-RetailPredecessorPresent` at capture scope and rules out
+`H-RetailPredecessorAbsent`. The port abort row has no `$a0/$a2`, so the
+comparison between `H-RetailPredecessorMatches` and
+`H-RetailPredecessorArgsDiffer` remains open; no port-side argument claim is
+made from this run.
+
+Artifacts: `scratch/agent/s2371_m5_a1_caller_input_boundary/` and
+`scratch/agent/run_s2371_m5_a1_caller_input_boundary.sh`.
+
+ORIGIN: diagnostic-only. No game behavior, dispatch, VI selection, task data,
+field writeback, guard, or mitigation changed.
+
+### Next
+
+Run one ground-truth-first capture around the predecessor path to the port's
+null-function request. Watch the same bounded retail window with `$a0/$a2`,
+retain whole-RDRAM and both target-origin controls, and add a bounded port-side
+`$a0/$a2` capture before `get_function(0)`. Do not add a null fallback or
 change dispatch/VI behavior.
