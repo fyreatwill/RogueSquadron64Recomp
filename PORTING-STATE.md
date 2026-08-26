@@ -113510,3 +113510,25 @@ file changed. This is a maintenance advancement, not new runtime evidence.
 ORIGIN: documentation-only compaction triggered by the byte-size maintenance
 gate. The before/after counts are recorded above; the append-only ledger remains
 authoritative for the retained historical details.
+
+## Session 2454 (2026-08-26) — audited port dispatcher replacement
+
+The bounded source/runtime audit enumerated the candidate port-side entries for
+retail `__osDispatchThread/0x8002BEEC` before `rs_memset/0x800078EC`. The
+`get_function` -> `rs64_m5_dispatch_boundary` path is only a lookup observer;
+it has one source caller (`run_thread_function`) and does not invoke
+`rs_memset`. The generated tree has 88 direct `rs_memset` callsites and no
+generated `__osDispatchThread` body or `0x8002BEEC` label. The complete
+audio-overlay alternate at `0x8008F2CC` (`allocateSongChannelArray` ->
+`rs_memset` -> `after_6`) is the only statically grounded second-range-capable
+candidate identified by the table. This selects `H-PortGeneratedAlternate` at
+source scope and rules out a generated/runtime retail-dispatcher replacement;
+live port provenance remains open.
+
+No build, runtime, audio, output, task-data, dispatch, or guard behavior
+changed. The next work unit is a phase-matched retail-oracle and existing-port
+witness join to determine whether live port rows actually originate at
+`0x8008F2CC` or another direct caller.
+
+ORIGIN: retail predecessor relation from s2442 and source inventory from s2452;
+explanatory audit, not mitigation. Full table: `scratch/agent/s2454_m5_dispatcher_replacement/audit.md`.

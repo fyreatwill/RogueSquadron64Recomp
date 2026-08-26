@@ -29,6 +29,15 @@ Current maintenance marker: Session 2453 (2026-08-26).
   caller boundary. The image arm reaches task completion and generated DMA, but
   no legitimate downstream slot/voice/output contract has been established.
 
+- **s2454 — no port runtime dispatcher body replaces retail `0x8002BEEC`.**
+  The source candidate table finds `get_function`/`rs64_m5_dispatch_boundary`
+  is only a lookup observer, while `rs_memset` is reached through 88 direct
+  generated calls. The complete audio-overlay candidate at `0x8008F2CC`
+  (`allocateSongChannelArray` -> `rs_memset` -> `after_6`) is the only
+  statically grounded second-range-capable alternate. This selects
+  `H-PortGeneratedAlternate` at source scope and rules out a generated/runtime
+  `__osDispatchThread` replacement; live provenance remains open.
+
 ## Latest evidence
 
 - **s2452 — the retail second-range boundary has no generated dispatcher body.**
@@ -107,11 +116,9 @@ Current maintenance marker: Session 2453 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 port second-range caller lowering — active.** Audit the port-side
-   replacement for retail `__osDispatchThread/0x8002BEEC` before
-   `0x800078EC`. Enumerate candidate host/runtime entry points, immediate callers
-   and continuations, and whether each can reach the exact second-range store
-   path. Do not repeat a literal generated-address search or change behavior.
+1. **M5 port second-range provenance — active.** Ground the live port execution's
+   relation to `allocateSongChannelArray/0x8008F2CC` versus any other direct
+   `rs_memset` caller. Do not change behavior.
 2. **M5 image consumer provenance — active but downstream.** Use a new
    ground-truth discriminator to trace the retail-selected writer's exact
    relation into the port image/task identity or close the hangar consumer gap.
