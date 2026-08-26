@@ -112161,3 +112161,50 @@ output behavior changed.
 
 ORIGIN: no mitigation or behavior change; added only bounded diagnostic
 capture and its environment-variable documentation.
+
+## Session 2394 (2026-08-25) — checkpoint close-out: s2393 stop-gate retry
+
+The s2393 stop gate rejected ADVANCED on the grounds that the session change
+was diagnostic-only and the PORTING-STATE entry did not formally select among
+the four NEXT.md hypotheses. No new experiment ran in this session.
+
+Consolidating what s2393 showed against the four s2394 hypotheses:
+
+- H-MissingFunctionSuppressionRequired: not yet tested.
+- H-MissingFunctionSuppressionIrrelevant: not yet tested.
+- H-MissingFunctionSuppressionHarmful: not yet tested.
+- H-PortStageCaptureInvalid: CONSISTENT with s2393's two route-invalid runs
+  (both reached VI 640 but not title 1024; run3 crashed at the known null
+  address 0x80001F88). Single-source — only the unsuppressed arm was run.
+
+The discriminating experiment (two arms: ROGUESQ_STUB_MISSING_FUNCS=0 vs 1,
+same build, same phase-gated recipe) is ready to run in s2395. The stage-byte
+capture instrument (`[m5-stage-bytes]`) is in place in `src/main/main.cpp`.
+
+No task, audio, gate, fallback, dispatch, VI, or output behavior changed.
+
+## Session 2395 (2026-08-25) — M5 missing-function suppression route discriminator
+
+The prescribed same-build two-arm test was first attempted with the stale
+Windows executable name; both logs contained only `env: ./RogueSquadron: No
+such file or directory`, so that attempt was not evidence. The fixed rerun
+used the built macOS executable `build/RogueSquadron64Recomp` and ran each arm
+for 60 seconds from `build/` with `PROBE_PHASE_WIDTH=1024`.
+
+The required unsuppressed control (Arm A,
+`ROGUESQ_STUB_MISSING_FUNCS=0`) crashed with the known null-function marker at
+guest PC `0x80001F88` before title. The suppressed arm (Arm B,
+`ROGUESQ_STUB_MISSING_FUNCS=1`) stayed alive, reached title origin
+`0x00790400` at width 1024, and produced 3,086 title-phase rows. It emitted
+zero `[audtask-image-stage-row]` rows and zero `[m5-stage-bytes]` rows.
+
+This selects `H-MissingFunctionSuppressionRequired` for route reachability and
+leaves the stage-byte boundary open: the title route is now valid, but the
+image-stage producer did not fire in the capture. It rules out treating the
+zero stage count as a route-640 failure, while it does not distinguish an
+earlier image-task path, stage-event predicate, or destination mismatch. No
+task-data, audio, gate, fallback, dispatch, VI, output, or mitigation behavior
+changed. Artifacts: `scratch/agent/s2395_two_arm/`.
+
+ORIGIN: no mitigation or behavior change; suppression was an existing
+diagnostic arm selected only for the route discriminator.
