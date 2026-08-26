@@ -113251,3 +113251,30 @@ scope and closes the prior helper-only ambiguity. It rules out a missing
 that the port has an equivalent consumer or authorize a remap, writeback,
 task-data change, gate, guard, or default. No port behavior changed. Artifact:
 `scratch/agent/s2442_retail_second_range_caller/`.
+
+## Session 2443 (2026-08-26) — tested port second-range consumer boundary
+
+Added a regeneration-safe, observation-only table in `src/main/main.cpp` for
+CPU stores overlapping the retail-grounded second range
+`0x1798B0..0x179A48`. The table is phase-reset and records port arm,
+task ordinal/row, task data, and the latest image-DMA destination/length; it
+does not change audio or output behavior. The Debug target built successfully.
+
+Ran the paired eleven-Start driver for the silent stub and Factor 5 image arms.
+The retail oracle passed its whole-RDRAM positive control, title/hangar VI
+controls, and exact-range controls. Both port arms reached title and hangar;
+the stub had zero image-stage rows, while the image arm had 2,244 image-stage
+rows, including two nonzero retained rows. The new table recorded zero
+second-range CPU stores in both arms. The existing reducer classified both
+nonzero image rows as `stage-only`, with zero source/consumer matches, and
+neither arm emitted slot/key-on rows. The image process later exited with its
+pre-existing crash status after the hangar control; no post-crash lifetime
+claim is made.
+
+This selects `H-PortSecondRangeMissing` at the current observation scope and
+does not select `H-PortSecondRangeDifferentIdentity`, because no port consumer
+event was observed from which to derive an alternate key. It rules out a
+currently observed port CPU-store consumer in the exact retail second range,
+but does not close the hypothesis without an independent repeat. No
+mitigation, remap, writeback, task-data, gate, or default change was made.
+Artifact: `scratch/agent/s2443_m5_port_second_range_consumer/`.

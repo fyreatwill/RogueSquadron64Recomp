@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2442 (2026-08-26).
+Current maintenance marker: Session 2443 (2026-08-26).
 
 ## Current state
 
@@ -150,6 +150,22 @@ Current maintenance marker: Session 2442 (2026-08-26).
   `scratch/agent/s2428_m5_title_writer_join/`.
 
 ## Latest evidence
+
+- **s2443 — the paired port capture found no second-range consumer event.** The
+  independent retail controls passed, including the whole-RDRAM positive
+  control, title/hangar VI controls, and the existing exact-range controls.
+  Both port arms reached title and hangar; the stub arm emitted no image-stage
+  rows, while the image arm emitted 2,244 stage rows and 2 nonzero retained
+  rows. The new phase-gated table recorded zero CPU stores in
+  `0x1798B0..0x179A48` in both arms. The existing reducer classified both
+  nonzero image rows as `stage-only`, with zero source/consumer matches; no
+  slot/key-on rows appeared. This selects `H-PortSecondRangeMissing` at the
+  current observation scope. `H-PortSecondRangeDifferentIdentity` is not
+  selected because no port consumer event was observed from which to derive an
+  alternate identity. The image arm later exited with the pre-existing crash
+  status after the hangar control, so no post-crash lifetime claim is made.
+  No audio or output behavior changed. Artifact:
+  `scratch/agent/s2443_m5_port_second_range_consumer/`.
 
 - **s2441 — the hangar second-range phase join selects the lower helper.** The
   independent retail oracle passed the whole-RDRAM positive control, title and
@@ -493,6 +509,17 @@ The next M5 unit should test the port-side post-DMA consumer against the now
 grounded retail relation `0x8002BEEC` → `0x800078EC`, using one bounded
 same-build table for the stub and image arms. It must keep the same route
 controls and make no audio or output behavior change.
+
+s2443's paired capture passed the retail controls and both port title/hangar
+controls. The image arm produced 2,244 stage rows, including two nonzero rows,
+but the new phase-gated table saw zero CPU stores in
+`0x1798B0..0x179A48` in either arm. The existing reducer classified both
+nonzero rows as stage-only and saw no slot/key-on events. This selects
+`H-PortSecondRangeMissing` at the current capture scope; it does not select an
+alternate identity because no consumer event exists to anchor one. The next
+unit must independently repeat this same-build table with the exact retail
+controls before treating the missing event as a closed port boundary. No
+behavior change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate

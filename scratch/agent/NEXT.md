@@ -1,19 +1,18 @@
-# NEXT work unit (s2443) — test the port-side second-range consumer boundary
+# NEXT work unit (s2444) — independently repeat the port-side second-range boundary
 
 HYPOTHESIS-ID: m5-port-second-range-consumer
 
 ## Work unit
 
-Using the now-grounded retail relation (`0x8002BEEC` → `0x800078EC`), add one
-regeneration-safe, observation-only port table around the image-arm hangar
-path. Build one Debug binary, then run the validated eleven-Start route with
-the silent-stub and Factor 5 image arms in the same capture recipe. Record,
-phase-gated by `0x006AB400:512`, the task ordinal/row, task data pointer,
-image-DMA ordinal/row, and every later port write or consumer event that can
-join those identities. Keep the existing independent retail-oracle controls
-and do not change audio or output behavior.
+Repeat the completed s2443 paired recipe with the new table unchanged. Build
+one Debug binary and run the silent-stub and Factor 5 image arms with the
+eleven-Start schedule, retaining the phase-gated task/DMA identity and every
+later `0x1798B0..0x179A48` port event. Run the independent retail oracle with
+the exact second-range controls. Do not change audio or output behavior.
 
 ## Competing hypotheses and discriminator
+
+These are the hypotheses written before the build for this iteration:
 
 - H-PortSecondRangeConsumer: the image arm has a hangar consumer that joins
   the validated task/image identity and produces a bounded post-DMA event.
@@ -34,12 +33,14 @@ whole-RDRAM/title/hangar controls pass in the paired recipe.
 
 ## Exact commands
 
-First run `cmake --build build --config Debug --target
-RogueSquadron64Recomp`. Then run the existing paired eleven-Start driver after
-adding the single bounded table to the appropriate fixup/runtime source; use
-`ROGUESQ_AUDIO_UCODE=0` for the stub arm and the default image arm, with
+`cmake --build build --config Debug --target RogueSquadron64Recomp`
+
+`zsh scratch/agent/run_s2325_m5_task_output_join.sh s2444_m5_port_second_range_consumer`
+
+The driver must use `ROGUESQ_AUDIO_UCODE=0` for the stub and `=1` for the image
+arm, with
 `ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
-ROGUESQ_LLE_SOLO=1`. Run the retail oracle separately only as the required
-ground-truth control, with `--watch-write 0x0:0x800000`, title/hangar VI
-controls, exact ranges `0x167650:0x167C50` and `0x1798B0:0x179A48`, and the
-eleven-Start schedule. Use shell-native watchdogs and SIGKILL.
+ROGUESQ_LLE_SOLO=1`, the eleven-Start schedule, and retail controls including
+`--watch-write 0x0:0x800000`, title/hangar VI controls, exact ranges
+`0x167650:0x167C50` and `0x1798B0:0x179A48`, plus the
+`0x8002BEEC`/`0x800078EC` relation. Use shell-native watchdogs and SIGKILL.

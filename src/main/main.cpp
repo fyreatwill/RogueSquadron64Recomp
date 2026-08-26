@@ -180,6 +180,7 @@ bool g_rs64_pcm_writer_control = false;
 uint32_t g_rs64_pcm_last_dma_phys = 0;
 uint32_t g_rs64_pcm_last_dma_len = 0;
 uint32_t g_rs64_pcm_guest_rows = 0;
+uint32_t g_rs64_m5_second_range_rows = 0;
 std::atomic<uint32_t> g_rs64_pcm_task_data_ptr{0};
 
 bool rs64_pcm_writer_enabled() {
@@ -212,6 +213,7 @@ void rs64_pcm_writer_phase_reset(uint32_t key) {
                 sizeof(g_rs64_pcm_writer_printed));
     g_rs64_pcm_writer_control = false;
     g_rs64_pcm_guest_rows = 0;
+    g_rs64_m5_second_range_rows = 0;
 }
 
 void rs64_pcm_writer_note(uint32_t phys, uint32_t len, uint32_t pc,
@@ -265,6 +267,30 @@ void rs64_pcm_writer_note(uint32_t phys, uint32_t len, uint32_t pc,
                      active ? 1u : 0u, exit_reason);
         std::fflush(stderr);
         ++g_rs64_pcm_guest_rows;
+    }
+    const bool second_range = phys < 0x179A48u && end > 0x1798B0u;
+    if (second_range && kind == 1u && g_rs64_m5_second_range_rows < 256u) {
+        uint32_t route_phase = phase, route_width = width, route_origin = origin;
+        uint32_t ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;
+        int exit_reason = 0;
+        const char* arm = "n/a";
+        const bool active = rs64_audio_current_route_snapshot(
+            &route_phase, &route_width, &route_origin, &ordinal, &row,
+            &exit_reason, &arm);
+        std::fprintf(stderr,
+            "[m5-second-range] n=%u phase=%u width=%u origin=0x%06X"
+            " pc=0x%08X phys=0x%06X len=0x%X value=0x%08X"
+            " arm=%s ordinal=%u row=%u task_data=0x%08X"
+            " dma_dest=0x%06X dma_len=0x%X active=%u exit=%d\n",
+            g_rs64_m5_second_range_rows,
+            active ? route_phase : phase, active ? route_width : width,
+            active ? route_origin : origin, pc, phys, len, value,
+            active && arm ? arm : "n/a", ordinal, row,
+            g_rs64_pcm_task_data_ptr.load(std::memory_order_relaxed),
+            g_rs64_pcm_last_dma_phys, g_rs64_pcm_last_dma_len,
+            active ? 1u : 0u, exit_reason);
+        std::fflush(stderr);
+        ++g_rs64_m5_second_range_rows;
     }
     if (!ring) return;
 
