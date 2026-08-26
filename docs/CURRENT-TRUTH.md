@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2364 (2026-08-25). The M5 post-task publication refinement passed all
+Maintained in Session 2365 (2026-08-25). The M5 mixed-stage publication refinement passed all
 route and execution controls and placed both target-stage rows inside a
 containing audio task; no audio contract change is authorized. The M5
 retail writer-source capture
@@ -114,6 +114,16 @@ is authorized.
   task record for `1/2` rows; the other row had no exact post-task PCM tuple.
   This selects `H-ContainingTaskInternalOnly` at this capture scope. Artifacts:
   `scratch/agent/s2364_m5_post_task_publication_join_final/`.
+- **s2365 — destination/length candidates expose a changed post-task payload.**
+  The same-build stub/image pair retained the oracle, route, VI, ABI,
+  filter/voice, image-stage, and image-join controls. Both nonzero target rows
+  had a destination/length DMA candidate and exact stage payload identity. One
+  row had no post-task PCM candidate; the other had six destination/length
+  candidates, all with `F59C39C5:0` rather than the stage's `6ADD4218:639`.
+  This selects `H-PayloadTransform` at capture scope and rules out interpreting
+  that row as an exact post-task publication. It does not identify the writer,
+  establish legitimacy, or authorize a port contract change. Artifacts:
+  `scratch/agent/s2365_m5_mixed_stage_publication_split/`.
 - **s2361 — stub/image route validation is positive but same-task timing is
   unresolved.** One binary ran both arms. Oracle whole-RDRAM writes were
   `487,474`; route, VI, task-ABI, filter/voice, and PCM controls passed for
@@ -151,13 +161,13 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
    qualified steps. The next queued boundary is #2.
-2. **M5 mixed-stage publication split — next.** Run one same-build refinement of
-   the existing stub/image pair, retaining all s2361–s2364 controls. For every
-   target row, retain exact DMA matches plus destination/length candidates with
-   any payload FNV/nonzero value, then join post-task source/consumer rows and
-   completion ordering. This distinguishes a mixed stage role from a payload
-   transformation and from absent publication. Do not write back a field, alter
-   task data, change a consumer/default, or add a guard.
+2. **M5 payload-transformation provenance — next.** Run one same-build
+   refinement retaining all s2361–s2365 controls. For each changed-payload
+   destination/length candidate, join the candidate's source/consumer event,
+   task ordinal, and completion ordering across the full retained phase window;
+   require a writer/source relation before labeling it a transformation.
+   Do not write back a field, alter task data, change a consumer/default, or
+   add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.

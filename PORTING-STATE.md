@@ -111313,3 +111313,34 @@ controls, expand each target destination/length join across payload FNV/nonzero
 variants, and classify the unmatched row as mixed stage role, payload
 transformation, or absent post-task publication. Do not change task data, field
 writeback, consumer/default behavior, or add a guard.
+
+## Session 2365 (2026-08-25) — M5 mixed-stage publication selects payload transformation
+
+The planned M5 mixed-stage publication split was run from the rebuilt Debug
+target. The retail oracle ran first and passed its whole-RDRAM, target-window,
+phase, named-PC, and writer controls (`oracle_controls=1`). The same-build stub
+and image arms both reached the target VI phase and passed ABI, VI-caller,
+filter/voice, and image-join controls; both were watchdog-terminated with
+SIGKILL and neither logged a crash or abort.
+
+The expanded table retained two nonzero target-stage rows. Both had a
+destination/length DMA candidate with an exact stage FNV/nonzero match. One row
+had no post-task PCM candidate. The other had six destination/length post-task
+PCM candidates, all `F59C39C5:0`, while its stage tuple was `6ADD4218:639`; no
+post candidate had exact stage payload identity. The driver selected
+`H-PayloadTransform` at this capture scope. This rules out treating that row as
+an exact post-task publication and distinguishes it from an absent candidate,
+but it does not identify the writer, establish legitimacy, or authorize a port
+contract change. Artifacts:
+`scratch/agent/s2365_m5_mixed_stage_publication_split/`.
+
+ORIGIN: diagnostic-only. The new parser retained candidate payload and event
+joins; no game behavior, task data, field writeback, consumer/default, guard,
+or mitigation changed.
+
+### Next
+
+Run one same-build M5 payload-transformation provenance refinement. Retain all
+s2361–s2365 controls and join changed-payload candidates to source/consumer
+events, task ordinal, completion ordering, and writer/source fields across the
+full phase window. Do not change the port contract.
