@@ -114499,3 +114499,23 @@ boundary existence and single-source for the missing identity join. No task,
 output, gate, or mitigation change was made. The run completed its capture
 without a crash. Artifact:
 `scratch/agent/s2496_m5_first_image_consumer/audit.md`.
+
+## Session 2497 (2026-08-26) — audited image-to-AI-buffer provenance
+
+The prescribed static-only audit enumerated every generated
+`osAiSetNextBuffer_recomp` callsite and both named host consumer boundaries.
+The only generated callsites are `0x8008EE00` and `0x8008EE84` in
+`runAiAudioStreamPlaybackLoop`; both pass a `0x300`-byte pointer from the
+heap-backed ring/table rooted at `0x801096B0`. That pointer and byte count
+survive through `queue_audio_buffer` to `queue_samples`; no M5 task-data
+pointer, image destination, image DMA event, or image ordinal enters the
+chain.
+
+The image stage separately computes its `dest` from the stage argument and
+records stage/DMA identity in the runtime join layer. The static table found
+no destination-to-ring relation, so this selects `H-handoff-absent`, refutes
+`H-handoff-explicit`, and does not establish `H-handoff-reconstructed`.
+Temporal adjacency and payload hashes remain correlation mechanisms, not a
+handoff. No build, runtime behavior, task/output remap, guard, or mitigation
+was made. Artifact:
+`scratch/agent/s2497_m5_image_handoff_audit/audit.md`.

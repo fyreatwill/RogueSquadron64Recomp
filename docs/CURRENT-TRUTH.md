@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2495 (2026-08-26).
+Current maintenance marker: Session 2497 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,17 @@ Current maintenance marker: Session 2495 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2497 — the image-to-AI-buffer handoff is absent at the static boundary.**
+  The exhaustive census found two generated `osAiSetNextBuffer_recomp`
+  callsites, both in `runAiAudioStreamPlaybackLoop` at `0x8008EE00` and
+  `0x8008EE84`. They pass a `0x300`-byte pointer from the independent
+  `0x801096B0` heap-backed ring/table; the pointer and byte count are the only
+  values that survive through `queue_audio_buffer` to `queue_samples`.
+  `M_AUDTASK.data_ptr`, image-stage `dest`, image DMA event, and image ordinal
+  do not enter this call chain. This selects `H-handoff-absent`, refutes an
+  explicit image identity, and does not establish a reconstructed stable
+  relation. Artifact: `scratch/agent/s2497_m5_image_handoff_audit/audit.md`.
 
 - **s2496 — the first port PCM consumer still has no image identity join.**
   The static census identifies guest `rs_memset` at `0x800078EC` as the retail
@@ -606,15 +617,15 @@ Closed investigations are not active work items. This is one monotonic sequence;
    retail comparison instead found a distinct type-2 load task at
    `0x80149470`; the port now matches those fields at its own load entry. The
    earlier gspTask mismatch was a descriptor-vs-audio-task join error.
-2. **M5 generated image downstream join — active.** s2496 selected
-   `H-image-consumer-identity-gap`: the qualified image stage and the first
-   host PCM consumer are both live, but no image ordinal/destination identity
-   reaches the consumer join. Next, audit the consumer's generated callsites
-   and the image-stage destination-to-buffer handoff as one bounded static
-   table, then select one earliest address-bearing boundary for an independent
-   retail/port join. Do not map through `gspTask`, infer identity from
-   ordering, or change task/output fields without a named writer and
-   independent retail evidence.
+2. **M5 generated image downstream join — active.** s2496 found the first
+   host PCM consumer live without an image identity; s2497 selects
+   `H-handoff-absent` for the generated AI-buffer path. The image-stage
+   destination is not an input to `runAiAudioStreamPlaybackLoop`,
+   `queue_audio_buffer`, or `queue_samples`. The next bounded join must test
+   the separate slot/voice contract against the retail writer, keyed by phase
+   and address rather than ordering. Do not map through `gspTask`, infer an
+   image identity from hashes or timing, or change task/output fields without
+   a named writer and independent retail evidence.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at
