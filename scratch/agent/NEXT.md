@@ -1,44 +1,42 @@
-# NEXT work unit (s2389) — audit reporter range matching against image-stage matching
+# NEXT work unit (s2390) — validate the image-stage nonzero predicate
 
-HYPOTHESIS-ID: m5-reporter-range-matching
+HYPOTHESIS-ID: m5-image-stage-nonzero-contract
 
 ## Work unit
 
-Build one bounded reducer over the retained s2387 raw logs. For every image
-stage candidate, compare the exact task reporter range(s) selected by
-`audio_join_match_task_locked` with the image-stage source/consumer matches.
-Report task ordinal, stage ordinal/row, DMA event, DMEM/guest/length/hash,
-reporter range index, source/consumer indices, and whether the two matchers
-select the same range. Analysis only: no task-data, audio, gate, fallback,
-dispatch, VI, or output behavior change.
+Perform one ground-truth-first, analysis-only audit of the image-stage
+`stage_nz != 0` admission predicate. Use the retained s2387 logs and source
+definitions; do not change task data, audio, gate, fallback, dispatch, VI, or
+output behavior. Determine whether the zero `stage_nz` values are a real
+stage/output contract, a logging/hash artifact, or a mismatch between the
+stage record and the PCM record.
 
-## Competing hypotheses and discriminating measurement
+## Competing hypotheses and discriminator
 
-- H-RangeMatcherAgreement: reporter and image-stage matchers select the same
-  DMA range; incomplete rows are genuinely unmatched task ranges.
-- H-RangeMatcherConflict: both matchers find a source/consumer edge but select
-  different ranges, so the apparent stage-only classification is a reducer
-  association artifact.
-- H-RangeMatcherMultiplicity: duplicate or reused PCM records make greedy
-  matching order-dependent; a stable one-to-one assignment changes the
-  source/consumer classification.
-- H-RangeCaptureInvalid: any arm loses title/hangar controls or the positive
-  image-stage/reporter associations.
+- H-StageNonzeroLegitimate: stage payloads are legitimately zero and the image
+  matcher must reject them; reporter-only associations are expected.
+- H-StageNonzeroLoggingArtifact: the stage logger records the wrong hash/byte
+  region, so a positive-control recomputation from the same retained bytes
+  makes `stage_nz` nonzero.
+- H-StageNonzeroPcmMismatch: stage and PCM records refer to different payload
+  representations; the exact destination/length/hash join fails while a
+  source-region or task-range join explains the zero.
+- H-StageCaptureInvalid: any retained arm loses title/hangar or positive
+  stage/DMA controls.
 
-The discriminator is one range-level table covering all four arms and both
-target phases. Agreement on every retained incomplete row selects
-H-RangeMatcherAgreement; any same-key differing range selects
-H-RangeMatcherConflict; a change only after stable one-to-one reassignment
-selects H-RangeMatcherMultiplicity; failed controls select
-H-RangeCaptureInvalid.
+The discriminator is a single table for all four arms and both target phases:
+recompute nonzero from the logged stage/hash inputs, compare stage and PCM
+destination/length/FNV/nonzero fields, and report exact task-range joins.
+Legitimate zeros with exact stage/DMA joins select H-StageNonzeroLegitimate;
+recomputed positive values select H-StageNonzeroLoggingArtifact; only a
+payload-representation mismatch selects H-StageNonzeroPcmMismatch; failed
+controls select H-StageCaptureInvalid.
 
 ## Exact commands / controls
 
-    sed -n '586,626p' lib/N64ModernRuntime/librecomp/src/rsp.cpp
-    rg -n -C 10 'audio_join_match\(|audio_image_match\(' lib/N64ModernRuntime/librecomp/src/rsp.cpp
-    env REUSE_LOGS=1 zsh scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh s2387_m5_incomplete_reporter
+    rg -n -C 12 'audio_image_match|audtask-image-stage-row' lib/N64ModernRuntime/librecomp/src/rsp.cpp
+    python3 scratch/agent/s2390_audit_stage_nonzero.py scratch/agent/s2387_m5_incomplete_reporter
 
-Use the retained logs only; no new binary or game run is needed unless the
-range-level reducer cannot validate all four controls. Expected controls are
-title `1024`, hangar `512`, and `controls=1` for stub_c0, stub_c1, image_c0,
-and image_c1, with zero crash/abort markers.
+Expected controls are title `1024`, hangar `512`, `controls=1` for all four
+arms, and zero crash/abort markers. No game run or build is needed unless the
+retained logs lack the positive stage/DMA fields required by the table.

@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2388 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. The s2388 source audit shows `complete` is a same-range-both predicate, not an aggregate-count or ordering predicate. Among the 411 incomplete rows (232/179), 331 had neither source nor consumer, 38 source-only, 42 consumer-only, and none had both; ordering flags varied only with the one-sided matches. This closes the reporter-predicate question at capture scope and leaves legitimate task/output contract provenance open. No task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
+Maintained in Session 2389 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. The s2388 source audit shows `complete` is a same-range-both predicate, not an aggregate-count or ordering predicate. Among the 411 incomplete rows (232/179), 331 had neither source nor consumer, 38 source-only, 42 consumer-only, and none had both; ordering flags varied only with the one-sided matches. The s2389 range audit found task-reporter selections for 1,454/1,432 title-stage rows, but zero image-stage selections because every relevant stage had `stage_nz=0`, which the image matcher explicitly rejects; there were zero same-range agreements and zero conflicts. This closes the reporter-predicate question at capture scope and leaves legitimate task/output contract provenance open. No task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
 
 The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
 
@@ -163,6 +163,21 @@ is authorized.
   `H-PredicateGlobalCounts` and `H-PredicateOrderingOnly`, and leaves
   `H-PredicateReducerMismatch` open only for any future independent reducer
   disagreement. Artifact: `scratch/agent/s2387_m5_incomplete_reporter/`.
+
+- **s2389 — reporter and image-stage range policies meet no image-stage row.**
+  The retained four-arm logs passed title `1024`, hangar `512`, and zero
+  crash/abort controls. Reimplementing the task reporter's exact first-unused
+  range matcher selected PCM ranges for `1,454` image c0 and `1,432` image c1
+  title-stage rows. Reimplementing the image matcher selected zero rows in
+  every arm/phase because every relevant stage had `stage_nz=0`, while the
+  implementation requires nonzero stage data. There were zero same-range
+  agreements, zero differing-range conflicts, and no multiplicity result.
+  This exposes the image-stage nonzero predicate as the next boundary; it does
+  not authorize a contract or runtime change. Artifact:
+  `scratch/agent/s2387_m5_incomplete_reporter/`.
+
+  ORIGIN: no mitigation or behavior change; added only a bounded retained-log
+  reducer and its range-level output.
 
 - **s2382 — gate/downstream path is positive but task/output closure is absent.**
   The same-build driver passed controls for stub c0/c1 and image c0/c1; each
@@ -454,7 +469,8 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
   qualified steps. The reporter-predicate audit is closed; the next queued
-  boundary is an independent task/output contract provenance discriminator.
+  boundary is whether the image-stage `nonzero` predicate is a legitimate
+  output-contract requirement or a capture/reducer artifact.
 2. **M5 task/output closure — closed at current capture scope.** s2387's
    corrected reporter-candidate table associated raw `[audtask-join]` records
    with 100% of 4,688 image-stage candidates; reporter completion was true for

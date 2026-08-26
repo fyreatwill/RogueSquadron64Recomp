@@ -112029,3 +112029,33 @@ tables. No runtime or submodule files were changed.
 
 ORIGIN: no mitigation or behavior change; this was a source audit and retained
 log reduction only.
+## Session 2389 (2026-08-25) — M5 reporter/image range matcher audit
+
+The retained s2387 logs were reduced without a new build or game run. The
+source audit confirmed that `audio_join_match_task_locked` uses first-unused
+exact-range matching, while `audio_image_match_stage_locked` uses nearest
+event distance and admits a stage only when `stage.nonzero != 0` and
+`dest_valid` is true. The same-build four-arm capture retained title `1024`,
+hangar `512`, and zero crash/abort controls in every arm.
+
+The bounded range table reimplemented both policies. The task reporter
+selected PCM ranges for `1,454` image c0 and `1,432` image c1 title-stage rows;
+the image matcher selected zero rows in every arm/phase because all relevant
+title-stage rows had `stage_nz=0`. There were zero same-range agreements,
+zero differing-range conflicts, and no multiplicity result. Four hangar rows
+had nonzero stage values but did not produce an image match. Thus the
+original agreement/conflict/multiplicity hypotheses were not selected: the
+discriminator exposed the explicit image-stage nonzero admission predicate as
+the next boundary. It does not establish that the predicate is wrong or
+authorize any task, audio, gate, fallback, dispatch, VI, or output change.
+
+The first reducer version incorrectly discarded all DMA ranges because those
+raw records lack width/origin; after correcting the phase join, the same
+retained logs produced the result above. No runtime or submodule files were
+changed.
+
+Artifacts: `scratch/agent/s2387_m5_incomplete_reporter/` and
+`scratch/agent/s2389_compare_reporter_image_ranges.py`.
+
+ORIGIN: no mitigation or behavior change; added only a bounded retained-log
+range reducer and its output.
