@@ -1,45 +1,44 @@
-# NEXT work unit (s2386) — M5 task-reporter record boundary
+# NEXT work unit (s2387) — M5 incomplete reporter semantics
 
-HYPOTHESIS-ID: m5-task-output-gap
+HYPOTHESIS-ID: m5-incomplete-task-reporter
 
 ## Work unit
 
-Audit the task reporter that emits `[audtask-join]` after s2385 found direct
-image completion callbacks but no task `complete` or PCM source/consumer
-closure. First use the existing retail oracle whole-RDRAM and target-phase
-controls; then add one phase-scoped, behavior-neutral reporter table to the
-existing four-arm driver. For each image-stage candidate, join the containing
-`[audtask-join]` record by phase and event interval and retain task ordinal,
-range count, `complete`, source/consumer counts, and callback/stage event
-ordering. Keep stub/image × c88=0/1 in the same build and run.
+Extend the corrected phase/event reporter reducer to classify only image-stage
+candidates whose containing raw `[audtask-join]` has `complete=0`. Preserve the
+same-build stub/image × c88=0/1 arms and all existing controls. Emit one
+bounded table with task `source_matches`, `consumer_matches`,
+`source_before_consumer`, `pcm_after_task`, `consumer_after_task`, DMA count,
+and stage/task event ordering. This is analysis only: no task-data, audio,
+gate, fallback, dispatch, VI, or output behavior change.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-TaskReporterUncalled: no `[audtask-join]` record is emitted for the target
-  task interval.
-- H-TaskReporterKeyMismatch: task records are emitted, but phase/event
-  containment cannot associate them with the callback/stage candidate.
-- H-TaskCompleteSemantics: the containing task record is associated and has
-  ranges, but its `complete` field is only the PCM source+consumer predicate,
-  so it remains zero without output publication.
-- H-TaskReporterCaptureInvalid: oracle, route, phase, or candidate controls do
-  not pass.
+- H-IncompleteNoConsumer: incomplete reporter rows have a source match but no
+  consumer match; the missing consumer is the remaining closure edge.
+- H-IncompleteNoSource: incomplete rows have a consumer match but no source;
+  the source publication edge is missing.
+- H-IncompleteOrdering: both matches exist, but the reporter remains
+  incomplete because source/consumer ordering or task-boundary ordering fails.
+- H-IncompleteJoinArtifact: the incomplete classification disappears when the
+  stage is joined to the containing raw reporter interval, while route and
+  positive controls still pass.
 
-The discriminator is the single candidate-to-task interval table: zero
-containing reporter rows selects H-TaskReporterUncalled; positive containing
-rows with no candidate association selects H-TaskReporterKeyMismatch; a
-positive association with `complete=0` and the reporter's documented
-source/consumer predicate selects H-TaskCompleteSemantics; failed controls
-select H-TaskReporterCaptureInvalid.
+The discriminator is the complete table of incomplete reporter-candidate rows,
+not a count-only summary: each row must show the raw task ordinal, interval,
+DMA count, complete bit, source/consumer presence, ordering bits, and stage
+event. H-IncompleteNoConsumer, H-IncompleteNoSource, or H-IncompleteOrdering
+is selected by the dominant mutually exclusive pattern; H-IncompleteJoinArtifact
+is selected only if no valid containing interval remains. Failed controls select
+H-IncompleteCaptureInvalid.
 
 ## Exact commands / controls
 
-    rg -n -C 6 'audio_join_report_locked|audtask-join|complete =|g_audio_join_tasks' lib/N64ModernRuntime/librecomp/src/rsp.cpp
-    rg -n -C 4 'audtask-image-complete-call|audtask-image-join|candidate-task-table' scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh lib/N64ModernRuntime/librecomp/src/rsp.cpp
+    rg -n -C 6 'audio_join_report_locked|audtask-join|source_before_consumer|pcm_after_task' lib/N64ModernRuntime/librecomp/src/rsp.cpp
+    rg -n -C 5 'reporter-candidate-table|reporter_candidate' scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env zsh scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh s2386_m5_task_reporter_boundary
+    env zsh scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh s2387_m5_incomplete_reporter
 
-Expected controls are a successful build, title 1024, hangar 512, and all
-four arms retained. A failed control selects H-TaskReporterCaptureInvalid;
-do not change task data, audio, gate, fallback, dispatch, VI, or output
-behavior.
+Expected controls are a successful build, title `1024`, hangar `512`, all four
+arms retained, and zero crash/abort markers. If any control fails, select
+H-IncompleteCaptureInvalid and do not interpret incomplete rows.

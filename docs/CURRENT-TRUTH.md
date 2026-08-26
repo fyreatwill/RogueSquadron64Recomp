@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2385 (2026-08-25). The M5 task-reporter audit passed all four route controls. The image arms retained 4,389 phase-keyed stage candidates with direct completion callbacks and matching completion events, but both had zero `task_complete` and zero task-reporter PCM source/consumer closure; they nevertheless produced 2,255/3,831 task-DMA ranges and 2,256/2,068 render rows. This selects `H-TaskOutputGap` at capture scope and moves the boundary below callback association. It authorizes no task-data, audio, gate, fallback, dispatch, VI, or output behavior change.
+Maintained in Session 2386 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. This refutes an uncalled reporter and an interval-key mismatch. The prior task/output gap was a reducer mismatch that joined `[audtask-image-join]` instead of raw `[audtask-join]`; no task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
 
 The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
 
@@ -128,6 +128,18 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2386 — raw task reporter association is positive.** The build succeeded
+  and the same-built stub/image × c88=0/1 driver passed title `1024` and
+  hangar `512` controls in all four arms, with no crash or abort. The
+  corrected phase/event interval table matched raw `[audtask-join]` records
+  to every image-stage candidate: image c0 `2,340/2,340` and image c1
+  `2,348/2,348`; reporter `complete=1` counts were `2,150` and `2,143`.
+  Source/consumer matches were present on `2,186/2,188` and `2,153/2,151`
+  rows. This selects `H-TaskReporterAssociated` at capture scope, refutes
+  `H-TaskReporterUncalled` and `H-TaskReporterKeyMismatch`, and supersedes
+  s2385's reducer-based task/output-gap label. Artifact:
+  `scratch/agent/s2386_m5_task_reporter_boundary/`.
 
 - **s2382 — gate/downstream path is positive but task/output closure is absent.**
   The same-build driver passed controls for stub c0/c1 and image c0/c1; each
@@ -419,13 +431,14 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
   qualified steps. The next queued boundary is #4.
-2. **M5 task/output closure — active.** s2385 retained 4,389 image-stage
-   candidates across the two image arms. Direct completion callbacks and
-   completion events were present, while task-reporter `complete` and PCM
-   source/consumer closure remained zero; the image arms still produced
-   2,255/3,831 task-DMA ranges and 2,256/2,068 render rows. The next boundary
-   is the task reporter's task-record association/output fields, not callback
-   production; do not change task data or audio.
+2. **M5 task/output closure — closed at current capture scope.** s2386's
+   corrected reporter-candidate table associated raw `[audtask-join]` records
+   with 100% of 4,688 image-stage candidates; reporter completion was true for
+   4,293 rows. Source/consumer matches were present on 2,186/2,188 and
+   2,153/2,151 rows in the two image arms. The s2385 zero was caused by joining
+   the wrong marker
+   family, not by absent task records. Keep the corrected reducer and do not
+   change task data or audio based on the old gap.
 3. **M5 gate polarity/writer join — closed at current capture scope.** s2381
    independently identified retail gate writer/value behavior and s2382
    supplied the port-side downstream comparison; no gate treatment is

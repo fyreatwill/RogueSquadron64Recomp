@@ -157,6 +157,7 @@ from pathlib import Path
 
 out_dir, table_path, summary_path = map(Path, sys.argv[1:])
 candidate_path = out_dir / "candidate-task-table.tsv"
+reporter_candidate_path = out_dir / "reporter-candidate-table.tsv"
 token = re.compile(r"([^=\s]+)=([^\s]+)")
 arms = ("stub_c0", "stub_c1", "image_c0", "image_c1")
 phases = ((1024, 0x790400), (512, 0x6AB400))
@@ -217,6 +218,12 @@ candidate_header = [
     "dma_range_events", "source_event", "consumer_event", "classification",
 ]
 candidate_table = [candidate_header]
+reporter_candidate_header = [
+    "arm", "phase", "width", "origin", "stage_ordinal", "stage_row",
+    "stage_event", "reporter_matches", "task_n", "begin_event", "end_event",
+    "dma_count", "complete", "source_matches", "consumer_matches",
+]
+reporter_candidate_table = [reporter_candidate_header]
 
 for arm in arms:
     log = out_dir / f"{arm}.log"
@@ -228,6 +235,7 @@ for arm in arms:
     keyon_tables = [r for r in rows if r["tag"] == "m5-keyon-table" and phase_key(r) is not None]
     filters = [r for r in rows if r["tag"] == "filter-voice-audit" and phase_key(r) is not None]
     joins_all = [r for r in rows if r["tag"] == "audtask-image-join" and phase_key(r) is not None]
+    reporters_all = [r for r in rows if r["tag"] == "audtask-join" and phase_key(r) is not None]
     stages_all = [r for r in rows if r["tag"] == "audtask-image-stage-row" and phase_key(r) is not None]
     ranges_all = [r for r in rows if r["tag"] == "audtask-dma-range"]
     completion_calls = [r for r in rows if r["tag"] == "audtask-image-complete-call"]
@@ -259,6 +267,21 @@ for arm in arms:
             join.get("complete_event", ""), join.get("complete", ""), join.get("dma_count", ""),
             ",".join(range_events), join.get("source_event", ""),
             join.get("consumer_event", ""), join.get("classification", ""),
+        ])
+        stage_event = num(stage_row.get("event"))
+        containing = [r for r in reporters_all
+                      if phase_key(r) == key_phase and
+                      num(r.get("begin")) <= stage_event <= num(r.get("end"))]
+        containing.sort(key=lambda r: (num(r.get("begin")), num(r.get("end"))))
+        reporter = containing[-1] if containing else {}
+        reporter_candidate_table.append([
+            arm, "target", str(key_phase[0]), f"0x{key_phase[1]:06X}",
+            stage_row.get("ordinal", ""), stage_row.get("row", ""),
+            stage_row.get("event", ""), str(len(containing)),
+            reporter.get("n", ""), reporter.get("begin", ""),
+            reporter.get("end", ""), reporter.get("dma_count", ""),
+            reporter.get("complete", ""), reporter.get("source_matches", ""),
+            reporter.get("consumer_matches", ""),
         ])
     controls = int(
         count_tag(rows, "vi-callers-control") > 0 and
@@ -346,12 +369,22 @@ for arm in arms:
         str(count_tag(rows, "CRASH")), str(count_tag(rows, "ABORT")),
     ])
 
-for path, data in ((table_path, table), (summary_path, summary), (candidate_path, candidate_table)):
+for path, data in ((table_path, table), (summary_path, summary),
+                   (candidate_path, candidate_table),
+                   (reporter_candidate_path, reporter_candidate_table)):
     path.write_text("\n".join("\t".join(row) for row in data) + "\n")
 
 print("ordinal_summary")
 for row in summary[1:]:
     print(" ".join(f"{key}={value}" for key, value in zip(summary_header, row)))
+
+print("reporter_candidate_summary")
+for arm in arms:
+    rows = [r for r in reporter_candidate_table[1:] if r[0] == arm]
+    matched = sum(int(r[7]) > 0 for r in rows)
+    complete = sum(r[12] == "1" for r in rows)
+    print(f"arm={arm} stage_candidates={len(rows)} reporter_matched={matched}"
+          f" reporter_complete={complete}")
 
 if not all(row[3] == "1" for row in summary[1:]):
     print("verdict=H-CoverageInvalid missing same-run positive control")

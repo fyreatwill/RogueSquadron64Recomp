@@ -111949,3 +111949,31 @@ Artifacts: `scratch/agent/s2384_m5_completion_producer_audit/`.
 
 ORIGIN: no mitigation or behavior change; existing phase-scoped markers and
 the bounded candidate/task reducer only.
+
+## Session 2386 (2026-08-25) — M5 raw task reporter boundary
+
+The first s2386 run passed the build and all four route controls, but its
+existing candidate table joined `[audtask-image-join]`, not the raw
+`[audtask-join]` reporter. A bounded inspection showed raw reporter rows were
+present, so that reducer could not discriminate an uncalled reporter from a
+wrong marker-family join. The fixed behavior-neutral reducer was rerun with
+the same built binary and four arms.
+
+The corrected phase/event interval table matched a raw reporter record to
+every image-stage candidate: `2,340/2,340` for image c0 and `2,348/2,348`
+for image c1. Reporter `complete=1` occurred on `2,150` and `2,143` rows;
+source/consumer matches were present on `2,186/2,188` and `2,153/2,151`
+rows. Stub c0/c1 retained no image candidates, as expected. All arms reached
+title `1024` and hangar `512`, exited with rc 0, and had zero crash/abort
+markers.
+
+This selects `H-TaskReporterAssociated` at capture scope and refutes
+`H-TaskReporterUncalled` and `H-TaskReporterKeyMismatch`. It supersedes the
+s2385 task/output-gap label: that null was a reducer marker-family mismatch,
+not absent reporter records. It does not authorize changing task data,
+audio, gate, fallback, dispatch, VI, or output behavior.
+
+Artifacts: `scratch/agent/s2386_m5_task_reporter_boundary/`.
+
+ORIGIN: no mitigation or behavior change; added only the phase/event-scoped
+raw reporter association table.
