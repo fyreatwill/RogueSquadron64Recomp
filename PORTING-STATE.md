@@ -112684,3 +112684,29 @@ legitimate PCM/task consumer identity, and no runtime behavior changed.
 ORIGIN: no mitigation or behavior change; the reducer is observation-only and
 does not remap output or promote a consumer.
 Artifacts: `scratch/agent/s2414_sequence_legitimacy/`.
+
+## Session 2415 (2026-08-26) — linked M5 key-on identity to downstream PCM table
+
+The bounded observation-only reducer consumed the retained s2412 image log and
+s2413 image log. Both inputs passed title `1024 @ 0x00790400`, hangar
+`512 @ 0x006AB400`, and the key-on positive control. It retained 12 selected
+class-5/7 identity rows per capture and generated a complete 92,904-row table
+covering every later PCM source/consumer record with event, phase/origin,
+ordinal/row, payload tuple, and event delta.
+
+In both captures, zero rows matched the key-on phase/origin and ordinal/row.
+Every retained later PCM row was at the hangar origin `0x006AB400`, while the
+selected key-on identity was at title origin `0x00790400`; no zero-valued tuple
+was treated as a match. This selects `H-NoDownstreamRelation` for the current
+capture key and leaves a phase-transition identity gap open. It rules out a
+stable same-identity PCM join and a same-origin ordinal/row consumer relation,
+but does not prove the PCM is absent or authorize an output remap.
+
+The first reducer pass failed before writing results because its CSV field list
+omitted the retained identity line number; adding that diagnostic column and
+rerunning produced the complete table. No runtime, task, audio, gate, fallback,
+dispatch, VI, output, or mitigation behavior changed.
+
+ORIGIN: no mitigation or behavior change; the reducer is observation-only and
+does not remap output or promote a consumer.
+Artifacts: `scratch/agent/s2415_sequence_pcm_link/`.

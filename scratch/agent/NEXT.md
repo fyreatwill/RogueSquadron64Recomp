@@ -1,49 +1,41 @@
-# NEXT work unit (s2415) — link sequence-key identity to PCM/task identity
+# NEXT work unit (s2416) — identify the title-to-hangar M5 handoff key
 
-HYPOTHESIS-ID: m5-sequence-pcm-link
+HYPOTHESIS-ID: m5-phase-transition-identity
 
 ## Work unit
 
-Run one bounded, observation-only reducer over the valid retained image logs
-from s2412 and s2413. Parse each selected class-5/7 identity row, its key-on
-event/ordinal/row, and every later `[audio-join-pcm]` source/consumer record in
-the same phase/origin. Produce one complete table keyed by capture, stage
-event, key-on event, key-on ordinal/row, PCM event, PCM ordinal/row, address,
-and event delta. Do not change task data, audio, gate, fallback, dispatch, VI,
-output behavior, the nonzero predicate, or the 64-event identity window.
+Run one bounded, observation-only source audit over the existing s2412 and
+s2413 logs. Enumerate every M5 task, DMA, PCM, slot, and key-on marker from the
+selected title key-on event through the first hangar PCM records. Build one
+complete table keyed by capture, event, phase, origin, ordinal/row, task/data
+address fields, and event delta. Do not build or alter runtime code unless the
+existing markers cannot supply the table; do not change task data, audio, gate,
+fallback, dispatch, VI, output behavior, or the nonzero predicate.
 
 ## Competing hypotheses and discriminator
 
-- H-SequencePcmLegitimate: the selected key-on identity is followed by PCM
-  source/consumer records with the same phase/origin and ordinal/row, in both
-  captures.
-- H-KeyonOnly: the sequence legitimately identifies the key-on event, but the
-  PCM records use a separate identity or range; same-identity PCM joins are
-  absent or non-stable.
-- H-GlobalPcmCollision: later PCM records match only by phase/origin or global
-  event order and do not preserve the key-on ordinal/row.
-- H-NoDownstreamRelation: the selected key-on relation does not survive the
-  complete PCM/task table or is route-invalid in either capture.
+- H-PhaseTransitionKey: an existing task/DMA field or ordered event relation
+  links the title key-on to the first hangar PCM records in both captures.
+- H-TaskOrdinalKey: the link survives by task or DMA ordinal/row even though
+  the VI origin changes.
+- H-GlobalSequenceOnly: only broad event order links the records; no stable
+  task/DMA identity survives the transition.
+- H-NoHandoffKey: the complete existing-marker table has no stable relation in
+  one or both captures.
 
-The discriminator is the one combined per-row table. A stable same-identity
-PCM source and consumer join after the selected key-on in both valid captures
-selects H-SequencePcmLegitimate; key-on-only rows with stable phase/origin but
-no ordinal/row PCM join select H-KeyonOnly; only broad phase/origin matches
-select H-GlobalPcmCollision; a missing control or empty/unstable table selects
-H-NoDownstreamRelation. Do not interpret a zero-valued PCM tuple as a match
-without its event and ordinal/row identity.
+The discriminator is one cross-capture table containing all candidate handoff
+fields and the first five post-key-on PCM source/consumer records. A stable
+field matching both captures selects its hypothesis; only event-order matches
+select H-GlobalSequenceOnly; an empty or inconsistent table selects
+H-NoHandoffKey. Do not interpret zero-valued payloads as identity.
 
-## Exact inputs and command
+## Exact commands
 
-Inputs:
+First inventory marker names without reading whole logs:
 
-- `scratch/agent/s2412_identity_join/image_retained/run.log`
-- `scratch/agent/s2413_identity_join/image/run.log`
+`rg -o '\\[(m5-[^]]+|audio-[^]]+|slot-[^]]+|keyon-[^]]+)\\]' scratch/agent/s2412_identity_join/image_retained/run.log scratch/agent/s2413_identity_join/image/run.log | sort | uniq -c`
 
-Create `scratch/agent/s2415_sequence_pcm_link/reduce.py` if needed, then run:
-
-`python3 scratch/agent/s2415_sequence_pcm_link/reduce.py scratch/agent/s2412_identity_join/image_retained/run.log scratch/agent/s2413_identity_join/image/run.log`
-
-Required controls in each input: title `1024 @ 0x00790400`, hangar
-`512 @ 0x006AB400`, and a key-on positive-control marker. Write the complete
-table and summary under `scratch/agent/s2415_sequence_pcm_link/`.
+Then inspect only bounded windows around the selected key-on events (s2412
+event 5288, s2413 event 5321) and the first subsequent hangar-origin PCM
+records. Write the complete table and summary under
+`scratch/agent/s2416_phase_transition_identity/`.

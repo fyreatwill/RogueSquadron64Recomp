@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2413 (2026-08-26).
+Current maintenance marker: Session 2415 (2026-08-26).
 
 ## Current state
 
@@ -74,6 +74,14 @@ Current maintenance marker: Session 2413 (2026-08-26).
   it does not establish that the sequence is the legitimate downstream
   identity or authorize an output change. Artifact:
   `scratch/agent/s2413_identity_join/image/`.
+- s2415 reduced every later PCM source/consumer record against the selected
+  class-5/7 rows from s2412 and s2413. Both captures passed title, hangar, and
+  key-on controls. All 92,904 retained pairings were later records on a
+  different origin (PCM at hangar `0x006AB400`, key-on at title
+  `0x00790400`); zero matched same phase/origin and ordinal/row. This selects
+  `H-NoDownstreamRelation` for the current identity table, not a legitimate
+  destination remap or proof that the PCM is absent. Artifact:
+  `scratch/agent/s2415_sequence_pcm_link/`.
 
 ## Latest evidence
 
@@ -150,6 +158,13 @@ Current maintenance marker: Session 2413 (2026-08-26).
   `H-SequenceLegitimate` under the planned discriminator at the current scope,
   while the shared key-on across multiple rows leaves its downstream PCM/task
   legitimacy open. Artifact: `scratch/agent/s2414_sequence_legitimacy/`.
+- **s2415 — selected key-on has no same-origin downstream PCM identity.** Both
+  validated captures passed title, hangar, and key-on controls. The complete
+  table contains 92,904 later PCM source/consumer pairings and zero
+  same-phase/origin plus ordinal/row matches; every pairing is at the hangar
+  origin while the selected key-on is at title origin. This selects
+  `H-NoDownstreamRelation` at the current capture scope, leaving a possible
+  phase-transition identity gap open. No output behavior is authorized.
 - **s2402 — identity is valid at stage entry.** Corrected same-build stub/image
   arms passed route controls; both observed `prepare-clear`, then
   `stage-observe` with `valid=1` and matching `prepare_seq`, followed by
@@ -189,10 +204,11 @@ sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate. The retained identity table and two-run event-delta reducer
-   select `H-SequenceLegitimate` at the current capture scope. Next test
-   whether the selected key-on identity links to the same downstream PCM/task
-   identity. Do not change task data, audio, gate, fallback, dispatch, VI,
-   output behavior, or the nonzero predicate.
+   select `H-SequenceLegitimate` at the current capture scope. The s2415
+   complete table selected `H-NoDownstreamRelation` because PCM moved to the
+   hangar origin after the title key-on. Next identify a phase-transition key
+   using existing task/PCM markers. Do not change task data, audio, gate,
+   fallback, dispatch, VI, output behavior, or the nonzero predicate.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -240,7 +256,11 @@ scope transitions and selected a sequence-key join. s2413 reproduced the same
 class-5/class-7 population in a second valid image capture, and s2414 found the
 same ordered event-delta table in both captures. This selects the sequence as a
 legitimate identity candidate at the current scope, but does not prove that its
-key-on event is the legitimate PCM/task consumer identity. No behavior change is authorized: do not
+key-on event is the legitimate PCM/task consumer identity. s2415 found no
+same-origin PCM/task record after the selected key-on in either valid capture;
+all retained downstream PCM records were at the hangar origin. This selects
+`H-NoDownstreamRelation` at the current key and leaves a phase-transition
+identity gap open. No behavior change is authorized: do not
 promote C88, invent output metadata, remap destinations, alter task data,
 force a consumer, or add a guard without a new discriminator and named writer
 legitimacy.
