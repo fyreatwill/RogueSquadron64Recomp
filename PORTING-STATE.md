@@ -113895,3 +113895,30 @@ live setup caller but not the earlier caller that supplies zero to
 `runMenuModelViewerScreen`. No guard, stub, dispatch, audio, output, or
 task-data change was made. Artifact:
 `scratch/agent/s2469_m5_setup_caller_boundary/audit.md`.
+## Session 2470 (2026-08-26) — captured model-viewer caller boundary
+
+Work unit: locate the first zero before `runMenuModelViewerScreen` with a
+complete static/live caller table. The independent retail oracle control
+completed with `oracle_rc=0`; whole-RDRAM execution and driven VI controls were
+active, qualifying the route comparison. The first regeneration attempt used a
+stale in-repo `tools/make_elf.py` path and stopped before changing generated
+output; the corrected order ran the sibling decomp generator, cleaned the
+explicit generated-file targets, ran N64Recomp, applied fixup, and built the
+port successfully.
+
+The fixup census found one generated
+`runMenuModelViewerScreen(rdram, ctx)` callsite, in `menuOverlayInit` at
+`0x800C5C9C`, and added the phase-gated caller probe. The qualified port run
+used `ROGUESQ_AUDIO_UCODE=0`, `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, and
+`ROGUESQ_LOG_M5_PRETARGET=1`. Its resolver positive control for `0x8009123C`
+fired 85 times. The live phase-4 caller row was `menuOverlayInit`, callsite
+`0x800C5C9C`, with `r31=0`, `r4=0`, and `r5=0`; the run then hit the known
+null dispatch through the model-viewer matrix path and aborted.
+
+This selects `H-ModelViewerCallerZero`, rules out a nonzero model-viewer
+caller and an unreachable statically selected caller, and leaves the earlier
+caller that supplies zero to `menuOverlayInit` open. It rules out no audio
+contract or output mapping. No guard, stub, dispatch, audio, output, or
+task-data change was made. Artifact:
+`scratch/agent/s2470_m5_model_viewer_caller_boundary/audit.md`.

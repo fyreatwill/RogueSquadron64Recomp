@@ -42,6 +42,17 @@ Current maintenance marker: Session 2469 (2026-08-26).
   `runMenuModelViewerScreen` remains open; no behavior change was authorized.
   Artifact: `scratch/agent/s2469_m5_setup_caller_boundary/audit.md`.
 
+- **s2470 — the live runMenuModelViewerScreen caller supplies the inherited
+  zero.** The independent retail control completed with whole-RDRAM and driven
+  VI controls. The regenerated exhaustive caller census found one generated
+  callsite, `menuOverlayInit` at `0x800C5C9C`; its phase-4 row had
+  `r31=0`, `r4=0`, and `r5=0`. The resolver positive control for `0x8009123C`
+  fired 85 times in the same run. This selects `H-ModelViewerCallerZero`,
+  rules out an in-entry zero introduction and an unreachable static caller,
+  and leaves the earlier caller that supplies zero to `menuOverlayInit` open;
+  no behavior change was authorized. Artifact:
+  `scratch/agent/s2470_m5_model_viewer_caller_boundary/audit.md`.
+
 - **s2468 — setupCameraMatrices supplies the inherited zero.** The independent
   retail oracle passed whole-RDRAM and freelist controls and reached hangar.
   The qualified port's same-run resolver positive control fired; at phase 4,
@@ -282,13 +293,13 @@ Current maintenance marker: Session 2469 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, upstream model-viewer caller
-   open.** A phase-gated exhaustive caller capture shows the live
-   `runMenuModelViewerScreen` callsite `0x800C2D84` invokes
-   `setupCameraMatrices` with `r31=0`, and the callee preserves it. Audit the
-   complete static/live caller boundary that invokes
-   `runMenuModelViewerScreen`; do not infer callback polarity or add a guard.
-   No output remap, task-data change, gate change, or guard is authorized.
+1. **M5 generated alternate equivalence — active, upstream menu-init caller
+   open.** A phase-gated exhaustive caller capture shows the sole generated
+   `runMenuModelViewerScreen` caller, `menuOverlayInit` at `0x800C5C9C`,
+   supplies `r31=0`; setup and traverse inherit that zero. Audit the complete
+   static/live caller boundary that invokes `menuOverlayInit` and identify the
+   earlier zero source. Do not infer callback polarity or add a guard. No
+   output remap, task-data change, gate change, or guard is authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
