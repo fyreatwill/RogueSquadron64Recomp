@@ -113205,3 +113205,22 @@ field row. This refutes H-SecondRangeUnattributed at lifetime scope but does
 not distinguish H-SecondRangeEntry from H-SecondRangeHelperOnly because the
 candidate-to-store phase join did not close. No port behavior or mitigation
 changed. Artifact: `scratch/agent/s2440_retail_second_range_writer/`.
+
+## Session 2441 (2026-08-26) — selected retail second-range helper in hangar
+
+The corrected observation-only retail-oracle capture passed the whole-RDRAM
+positive control (10,000 callbacks before removal), title and hangar VI
+controls, and exact image-range totals of 1,536 writes at
+`0x167650..0x167C50` and 1,125 at `0x1798B0..0x179A48`. The complete
+second-range candidate/helper set executed, including `0x8008F2CC` (6 hits).
+
+The live phase-gated writer histogram attributed all 408 hangar-phase writes
+in the second range to `0x800078EC`; no other selected candidate joined that
+phase bucket. This selects `H-SecondRangeHelperOnly` and closes s2440's
+lifetime-only attribution gap. The phase-latched store-field table received
+1,125 selected callbacks but retained zero rows; that latch is instrument-
+invalid and is not evidence of a writer null. The result rules out
+`H-SecondRangeUnattributed` at this capture scope, but does not identify the
+semantic caller or authorize a port remap, writeback, task-data change, gate,
+guard, or default. No port behavior changed. Artifact:
+`scratch/agent/s2441_retail_second_range_writer_fixed/`.

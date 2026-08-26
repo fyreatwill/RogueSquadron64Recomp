@@ -1,32 +1,42 @@
-# NEXT work unit (s2441) — close the phase join for second-range writers
+# NEXT work unit (s2442) — phase-locate the second-range helper caller
 
-HYPOTHESIS-ID: m5-retail-second-range-writer
+HYPOTHESIS-ID: m5-second-range-caller-boundary
 
 ## Work unit
 
-Run one bounded retail-oracle capture using the validated eleven-Start route.
-Keep whole-RDRAM, title, hangar, and both exact image-range controls. Replace
-the high-frequency candidate field dump with a phase-latched execution/store
-table that records the exact second-range writer PC, `PREVIOUS_PC`/return
-relation, live VI origin/width, and store address for every requested
-candidate: `0x80007670,0x8001E2C0,0x8001FACC,0x8001FAF8,0x8001FD2C`, plus
-`0x800078EC` and caller `0x8008F2CC`. Observation-only; no port change.
+Run one bounded, observation-only retail-oracle capture using the validated
+eleven-Start route. Keep the whole-RDRAM positive control, title
+`0x00790400:1024`, hangar `0x006AB400:512`, and exact ranges
+`0x167650:0x167C50` and `0x1798B0:0x179A48`. Watch execution at the lifetime
+caller candidate `0x8002BEEC`, the helper `0x800078EC`, and the known caller
+`0x8008F2CC`; add a phase-gated field table only for `0x8002BEEC` and the
+bounded exact-store table for `0x800078EC`. No port change.
 
 ## Competing hypotheses and discriminator
 
-- H-SecondRangeEntry: a requested candidate has hangar-phase execution and
-  phase-latched exact stores with a stable caller/return relation.
-- H-SecondRangeHelperOnly: only the lower helper path has exact stores, while
-  candidate execution is separate or lacks a stable entry relation.
-- H-SecondRangeUnattributed: exact second-range writes pass, but no requested
-  PC joins to them in the phase-latched table.
+- H-SecondRangeSemanticCaller: `0x8002BEEC` executes in hangar with a stable
+  `PREVIOUS_PC`/return relation and context matching the exact-store helper.
+- H-SecondRangeHelperDirect: the helper writes in hangar, but
+  `0x8002BEEC` has no hangar execution/context row.
+- H-SecondRangeOtherCaller: both execute, but the helper's hangar stores join
+  a different stable caller relation.
 
-The discriminator is one same-run hangar-keyed table joining candidate PC,
-exact store address, VI phase, and caller/return relation. Candidate rows with
-exact stores and a stable relation select H-SecondRangeEntry; only helper rows
-select H-SecondRangeHelperOnly; zero candidate joins with valid controls select
-H-SecondRangeUnattributed. The s2440 run selected only the lifetime portion of
-the third case, so this unit must repair the phase join before interpreting it.
+The discriminator is one same-run hangar-keyed table joining the exact-store
+helper's `PREVIOUS_PC`, the `0x8002BEEC` execution/field row, and the
+`0x8008F2CC` caller row. A matching stable `0x8002BEEC` row selects
+H-SecondRangeSemanticCaller; helper stores with no such row select
+H-SecondRangeHelperDirect; a different stable caller relation selects
+H-SecondRangeOtherCaller. Do not interpret any null until all controls and
+both exact-range totals pass. The store-field phase latch was zero in s2441,
+so treat it as supplemental and use the live phase histogram as the writer
+control.
 
-Require whole-RDRAM, title `0x00790400:1024`, hangar `0x006AB400:512`, and
-exact-range totals before interpreting any null.
+## Exact command shape
+
+Use `tools/oracle/build/rs64_oracle` with the established core, retail ROM,
+Rice video, `--secs 120`, `--hit-cap 200`, `--watch-write 0x0:0x800000`, both
+exact-range watches, `--watch-pc 0x8002BEEC,0x800078EC,0x8008F2CC`,
+`--pc-phase-log-width 0x006AB400:512`, `--pc-field-dump 0x8002BEEC`,
+`--store-field-dump 2:0x800078EC`, `--pc-hist-watch 1`,
+`--pc-hist-watch 2`, `--pc-hist-phase 0x006AB400:512`, `--vi-trace`, and
+the eleven-Start schedule. Run under a shell-native watchdog and SIGKILL.

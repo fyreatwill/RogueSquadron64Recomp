@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2440 (2026-08-26).
+Current maintenance marker: Session 2441 (2026-08-26).
 
 ## Current state
 
@@ -150,6 +150,20 @@ Current maintenance marker: Session 2440 (2026-08-26).
   `scratch/agent/s2428_m5_title_writer_join/`.
 
 ## Latest evidence
+
+- **s2441 — the hangar second-range phase join selects the lower helper.** The
+  independent retail oracle passed the whole-RDRAM positive control, title and
+  hangar VI controls, and exact image-range totals of 1,536 and 1,125 writes.
+  The complete requested candidate/helper set executed, but the phase-gated
+  exact-range histogram attributed all 408 hangar-phase second-range writes
+  to `0x800078EC`; no other candidate joined that phase bucket. The
+  phase-latched store-field table received 1,125 callbacks but retained zero
+  rows, so that latch is instrument-invalid and is not evidence of a null.
+  This selects `H-SecondRangeHelperOnly` at the current capture scope and
+  closes s2440's lifetime-only attribution gap. It does not identify the
+  semantic caller or authorize any port remap, writeback, task-data change,
+  gate, guard, or default. Artifact:
+  `scratch/agent/s2441_retail_second_range_writer_fixed/`.
 
 - **s2418 — port task/data relation differs from the retail handoff.** The
   fresh retail control passed whole-RDRAM, title, and hangar controls. The
@@ -437,16 +451,19 @@ sequence; #1 is the next campaign priority.
    only the corrected arm is interpreted. The hangar caller/callee relation
    remains open; no port behavior change is authorized.
 
-s2440's corrected retail capture passed whole-RDRAM (12,253 writes), title and
-hangar controls, and exact image ranges of 1,536 and 717 writes. The second-
-range lifetime histogram included every requested candidate/helper, including
-0x80007670=184, 0x8001E2C0=12, 0x8001FACC=12, 0x8001FAF8=11,
-0x8001FD2C=11, and 0x800078EC=408. The phase-gated exact-store table retained
-408 rows only for 0x800078EC; candidate PCs had no joined field rows. This
-refutes H-SecondRangeUnattributed at lifetime scope but leaves semantic entry
-versus store-helper unresolved because the phase-latched candidate/store join
-did not close. No behavior change is authorized. Artifact:
-`scratch/agent/s2440_retail_second_range_writer/`.
+s2441's corrected retail capture passed whole-RDRAM, title and hangar
+controls, and exact image ranges of 1,536 and 1,125 writes. The complete
+candidate/helper set executed; the phase-gated exact-range histogram retained
+408 second-range writes only for 0x800078EC. The store-field table received
+1,125 callbacks but retained zero rows, so its phase latch is invalid and is
+not interpreted as a null. This selects H-SecondRangeHelperOnly and closes
+s2440's lifetime-only gap; the semantic caller remains open. No behavior
+change is authorized. Artifact:
+`scratch/agent/s2441_retail_second_range_writer_fixed/`.
+
+The next ground-truth unit should phase-locate the actual caller boundary of
+`0x800078EC` (the lifetime `PREVIOUS_PC=0x8002BEEC` relation) with a bounded
+execution/field table. It must keep the same controls and make no port change.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
