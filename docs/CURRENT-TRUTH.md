@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2439 (2026-08-26).
+Current maintenance marker: Session 2440 (2026-08-26).
 
 ## Current state
 
@@ -436,6 +436,17 @@ sequence; #1 is the next campaign priority.
    instrument-invalid because callee field dumping stopped before hangar;
    only the corrected arm is interpreted. The hangar caller/callee relation
    remains open; no port behavior change is authorized.
+
+s2440's corrected retail capture passed whole-RDRAM (12,253 writes), title and
+hangar controls, and exact image ranges of 1,536 and 717 writes. The second-
+range lifetime histogram included every requested candidate/helper, including
+0x80007670=184, 0x8001E2C0=12, 0x8001FACC=12, 0x8001FAF8=11,
+0x8001FD2C=11, and 0x800078EC=408. The phase-gated exact-store table retained
+408 rows only for 0x800078EC; candidate PCs had no joined field rows. This
+refutes H-SecondRangeUnattributed at lifetime scope but leaves semantic entry
+versus store-helper unresolved because the phase-latched candidate/store join
+did not close. No behavior change is authorized. Artifact:
+`scratch/agent/s2440_retail_second_range_writer/`.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate

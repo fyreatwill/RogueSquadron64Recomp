@@ -113187,4 +113187,21 @@ returned to `ra=0x8008F2D4`, and its store callbacks covered the first range.
 This selects `H-HangarCallerSamePath` at the current single-source oracle
 scope and rules out `H-HangarCallerUnreached`; it does not establish the
 second-range writer, port consumer identity, or authorize a port behavior
-change. Artifact: `scratch/agent/s2439_retail_hangar_caller/`.
+ change. Artifact: `scratch/agent/s2439_retail_hangar_caller/`.
+
+## Session 2440 (2026-08-26) — captured retail second-range writer candidates
+
+The first oracle launch was invalid because this macOS host has no `timeout`
+utility (`rc=127`) and produced no data. The corrected observation-only run
+passed whole-RDRAM (12,253 writes), title (450 VI rows at 1024/0x00790400),
+hangar (832 VI rows at 512/0x006AB400), and exact image-range totals of 1,536
+and 717 writes. The lifetime second-range histogram attributed writes to
+0x80007670 (184), 0x8001E2C0 (12), 0x8001FACC (12), 0x8001FAF8 (11),
+0x8001FD2C (11), 0x800078EC (408), and the adjacent 0x8001FAD* helper set.
+Every requested candidate executed. The phase-gated exact-store table
+retained 408 rows, all at 0x800078EC with the established 0x8008F2D4 return
+and 0x801797B0/0x12/0x561F context; no candidate PC retained a phase-latched
+field row. This refutes H-SecondRangeUnattributed at lifetime scope but does
+not distinguish H-SecondRangeEntry from H-SecondRangeHelperOnly because the
+candidate-to-store phase join did not close. No port behavior or mitigation
+changed. Artifact: `scratch/agent/s2440_retail_second_range_writer/`.
