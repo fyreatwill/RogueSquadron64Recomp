@@ -112535,3 +112535,31 @@ judgment about zero payloads. No code or behavior changed.
 ORIGIN: no mitigation or behavior change; this run only revalidated the
 existing image DMEM-to-RDRAM DMA observation and its silent control.
 Artifacts: `scratch/agent/s2408_downstream_range_identity/`.
+
+## Session 2409 (2026-08-26) — compared M5 downstream identity ranges
+
+The prescribed phase-gated downstream-range comparison was run with the
+unchanged build and complete M5 diagnostics. The first stub and image attempts
+both died before the 1024 control in an RT64 Metal framebuffer crash; these
+were route-invalid and were not interpreted. Retrying the same recipes made
+both controls valid: the stub captured 66 frames and the image arm captured 67
+frames, each reaching title `vi_width=1024 origin=0x00790400` and hangar
+`vi_width=512 origin=0x006AB400`.
+
+In the image retry, target-phase image joins were all `stage-only`: 1,202
+title rows and 3,137 hangar rows, all zero payloads, with zero same-identity
+PCM, slot-sb, or keyon-w40 events. The exact image-DMA range therefore did not
+join the PCM range or a post-DMA consumer. Independently, the same image run's
+key-on census fired in the hangar route (14 key-on events and 8 transfers),
+while the stub control also fired the same positive downstream census. Thus
+the consumer path is live but is not represented by the current image-join
+identity key. This selects `H-IdentityJoinDefect`; it does not identify the
+missing key, prove zero payloads legitimate, or authorize an output remap.
+
+The phase-gated route controls and image-stage summaries are independent lines
+of evidence; the image join and key-on census provide the independent
+consumer-presence evidence. No code or behavior changed.
+
+ORIGIN: no mitigation or behavior change; this run only compared existing
+image-DMA, PCM, slot, and key-on identity records.
+Artifacts: `scratch/agent/s2409_downstream_range_identity/`.

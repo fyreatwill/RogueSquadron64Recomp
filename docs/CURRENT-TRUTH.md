@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2408 (2026-08-26).
+Current maintenance marker: Session 2409 (2026-08-26).
 
 ## Current state
 
@@ -37,6 +37,12 @@ Current maintenance marker: Session 2408 (2026-08-26).
   image arm produced target-phase stage and image-DMA rows; the stub control
   produced none, as expected. The downstream-range comparison is now
   authorized.
+- s2409 repeated that comparison with both route controls valid. The image
+  arm's exact image-range joins remained `stage-only` with no same-identity
+  PCM, slot, or key-on event, while the independent key-on census fired in
+  the same hangar route. This selects `H-IdentityJoinDefect` at the current
+  capture key; it does not identify the missing identity field or legitimize
+  any output remap. Artifact: `scratch/agent/s2409_downstream_range_identity/`.
 
 ## Latest evidence
 
@@ -125,10 +131,10 @@ Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
-   design gate. Repeat the downstream-range table now that the sequential
-   stub/image route prerequisite is validated, using the existing
-   image-stage/PCM/slot/key-on diagnostics. Do not change task data, audio,
-   gate, fallback, dispatch, VI, output behavior, or the nonzero predicate.
+   design gate. Resolve the selected identity-join defect by correlating the
+   image-stage ordinal/row with the independent key-on event/transfer
+   sequence in one bounded table. Do not change task data, audio, gate,
+   fallback, dispatch, VI, output behavior, or the nonzero predicate.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -166,8 +172,10 @@ task-field writers are active, but no exact legitimate port writeback or
 slot/key-on consumer contract has been established.
 The first same-identity post-DMA slot/key-on fields are now available in the
 image join. s2408 validated both route controls, but its image arm still
-produced no downstream rows; the range comparison is the next discriminator,
-not a conclusion about the consumer.
+produced no same-identity downstream rows. s2409 independently observed
+hangar key-on events while the image join still classified every captured row
+as `stage-only`; the current conclusion is an identity-key mismatch, not an
+absent consumer or a valid destination remap.
 No behavior change is authorized: do not promote C88, invent output metadata,
 remap destinations, alter task data, force a consumer, or add a guard without
 a new discriminator and named writer legitimacy.
