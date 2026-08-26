@@ -115,9 +115,9 @@ extern "C" void rs64_m5_dispatch_boundary(uint32_t target_pc) {
     const bool target_phase =
         (width == 1024u && origin == 0x00790400u) ||
         (width == 512u && origin == 0x006AB400u);
-    if (!target_phase) return;
     const bool target = target_pc == 0x800078E0u;
     const bool positive_control = target_pc == 0x8009123Cu;
+    if (!target_phase && !positive_control) return;
     if (!target && !positive_control) return;
     uint32_t phase = rs64_phase_ord();
     uint32_t ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;

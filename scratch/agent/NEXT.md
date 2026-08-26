@@ -1,48 +1,49 @@
-# NEXT work unit (s2457) — capture the first-null resolver caller
+# NEXT work unit (s2458) — trace the retail-selected M5 writer into the port
 
-HYPOTHESIS-ID: m5-first-null-resolver-boundary
+HYPOTHESIS-ID: m5-image-consumer-provenance
 
 ## Work unit
 
-Add one host-side, first-hit-only capture at the existing `get_function` entry
-for `addr == 0`, including native return address/backtrace, the requested
-address, and `g_rs64_last_guest_pc`; retain the existing indirect positive
-control in the same qualified port run. This is a bounded diagnostic change,
-not a behavior change and not permission to stub missing functions.
+Build one phase-gated retail/port provenance table for the exact retail
+second-range writer relation established at `0x800078EC` and the port image
+arm's corresponding task/DMEM identity. Keep the first-null resolver capture
+and indirect resolver control passive. Do not remap output, alter task data,
+change gates, or add guards.
 
 ## Competing hypotheses and discriminator
 
-- H-ResolverGeneratedCaller: the first null has a generated native caller and
-  a symbol-derived or register-derived guest target absent from the map.
-- H-ResolverEntryPolicy: the first null originates at thread entry or another
-  runtime resolver boundary, not a generated in-game callsite.
-- H-StaleGuestBreadcrumb: the native caller and `g_rs64_last_guest_pc` do not
-  agree; `0x80001F88` is stale/unrelated to the null lookup.
+- H-PortSecondRangeEquivalent: the port image/task row joins a legitimate
+  second-range consumer equivalent to retail's `0x8002BEEC` → `0x800078EC`.
+- H-PortGeneratedAlternate: the port row joins the generated audio-overlay
+  alternate at `0x8008F2CC` or another direct `rs_memset` caller.
+- H-PortNoConsumer: the port image/task identity has no corresponding
+  second-range consumer before the hangar boundary.
 
-The discriminator is one first-null row containing native caller, backtrace,
-requested target, guest-PC breadcrumb, and whether the same run's indirect
-positive control resolves. A generated caller with a real target selects
-H-ResolverGeneratedCaller; a runtime caller selects H-ResolverEntryPolicy;
-disagreement between native caller and guest breadcrumb selects
-H-StaleGuestBreadcrumb. Missing the positive control is a non-result.
+The discriminator is one complete same-run table joining retail writer PC,
+range offset/value, phase/origin, and caller predecessor against port image
+ordinal/task identity and any bounded second-range consumer row. The retail
+whole-RDRAM and target-PC controls must fire; the port image arm and resolver
+positive control must fire. A retail-equivalent join selects
+H-PortSecondRangeEquivalent; a generated-alternate join selects
+H-PortGeneratedAlternate; an active image/task row with no consumer selects
+H-PortNoConsumer. Missing any control is a non-result.
 
 ## Exact commands
 
-1. Before building, inspect the existing resolver and control:
+1. Before instrumenting, run the retail oracle with whole-RDRAM positive
+   control, explicit hangar origin `0x006AB400`, and the selected writer PCs
+   from the prior audit; inspect `tools/oracle/README.md` first.
 
-   `rg -n "get_function\\(|LOOKUP_FUNC|rs64_log_tickfunc_caller|backtrace" lib/N64ModernRuntime/librecomp/src lib/N64ModernRuntime/N64Recomp/src`
+2. Before building, inspect the existing M5 image/task rows and the retail
+   writer audit:
 
-2. Add the first-null-only capture in
-   `lib/N64ModernRuntime/librecomp/src/overlays.cpp` at `get_function`, using
-   the existing log gate and `backtrace` helpers. Keep the positive-control
-   path unchanged. Build once with the qualified route; do not set
-   `ROGUESQ_STUB_MISSING_FUNCS`.
+   `rg -n "0x800078EC|m5.*image|audtask-image|pcm-boundary|image-stage|rs_memset" src lib scratch/agent/s2456_m5_null_dispatch`
 
-3. Run one 120-second qualified port capture from `build/`, with
-   `ROGUESQ_LOG_M5_SECOND_EXEC=1`, capturing stdout/stderr to
-   `scratch/agent/s2457_port_null_resolver.log`; SIGKILL the process if the
-   watchdog expires.
+3. Batch all fields in one build and one qualified port run from `build/`,
+   with `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_LOG_M5_SECOND_EXEC=1`, and the
+   existing passive M5 breadcrumb variables. Capture to a non-dot-prefixed
+   path and SIGKILL on timeout.
 
-4. Expected selection: one first-null row with a native caller and a live
-   positive-control resolution. Zero rows or no positive control is a
-   non-result; do not enable a mitigation or resume second-range provenance.
+4. Expected selection: a complete table with both independent controls and a
+   single join classification. Do not treat a zero-valued port row as proof of
+   no consumer without a phase-gated positive control.

@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2456 (2026-08-26).
+Current maintenance marker: Session 2457 (2026-08-26).
 
 ## Current state
 
@@ -54,6 +54,16 @@ Current maintenance marker: Session 2456 (2026-08-26).
   hangar phase rows. This is a non-result for the original missing-target,
   legitimate-zero, and bad-data hypotheses; the resolver needs a native
   caller capture before the stale guest-PC breadcrumb can be interpreted.
+
+- **s2457 — the first null is reached from generated menu code, but the guest
+  breadcrumb is stale.** A first-hit resolver capture recorded requested
+  `0x00000000`, guest `0x80001F88`, and a native backtrace through
+  `convertMat3x4ToN64Mtx` → `traverseSceneGraphRecursive` →
+  `setupCameraMatrices` → `runMenuModelViewerScreen`. The same rerun's
+  indirect positive control resolved `0x8009123C` before the abort. This
+  selects `H-ResolverGeneratedCaller` for the native boundary and
+  `H-StaleGuestBreadcrumb` for the reported guest PC; it does not identify
+  the zero-producing generated callsite or authorize a missing-function stub.
 
 ## Latest evidence
 
@@ -133,26 +143,21 @@ Current maintenance marker: Session 2456 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 first-null resolver boundary — active blocker.** Add one bounded
-   host-side capture at `get_function` for the first `addr==0`, recording the
-   native return address/backtrace and `g_rs64_last_guest_pc`, with the existing
-   indirect-resolution positive control in the same run. Do not change
-   behavior or enable the missing-function stub.
-2. **M5 image consumer provenance — active but downstream.** Use a new
+1. **M5 image consumer provenance — active.** Use a new
    ground-truth discriminator to trace the retail-selected writer's exact
    relation into the port image/task identity or close the hangar consumer gap.
    No output remap, task-data change, gate change, or guard is authorized.
-3. **M5 task/output closure — closed at current capture scope.** The earlier
+2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
-4. **M5 gate polarity/writer join — closed at current capture scope.**
-5. **M5 payload-transformation provenance — closed at current capture scope.**
-6. **M5 A1 retail flag semantics and pre-target route boundary — closed at
+3. **M5 gate polarity/writer join — closed at current capture scope.**
+4. **M5 payload-transformation provenance — closed at current capture scope.**
+5. **M5 A1 retail flag semantics and pre-target route boundary — closed at
    current capture scope.**
-7. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
+6. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator.
-8. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
+7. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
-9. **Generated-symbol renaming — parked.** Resume only after M5 closes or M3
+8. **Generated-symbol renaming — parked.** Resume only after M5 closes or M3
    obtains a new discriminator; do not invent names for unresolved placeholders.
 
 ## Durable boundaries

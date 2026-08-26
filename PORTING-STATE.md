@@ -113574,3 +113574,27 @@ guest-PC breadcrumb as the null callsite, but does not explain the null.
 ORIGIN: independent retail target-PC/control run plus static source/symbol
 audit; no behavior, audio, dispatch, output, task-data, or mitigation change.
 Full audit: `scratch/agent/s2456_m5_null_dispatch/audit.md`.
+
+## Session 2457 (2026-08-26) — captured first null resolver caller
+
+The first 120-second qualified port capture aborted at the known pre-phase
+`get_function(0)` boundary before its phase-gated positive control fired, so it
+was a non-result under the positive-control rule. The diagnostic-only rerun
+allowed the existing indirect control outside the target phase. It resolved
+`0x8009123C` at phase 2, then captured exactly one null with requested address
+`0x00000000`, guest breadcrumb `0x80001F88`, and a native stack through
+`convertMat3x4ToN64Mtx`, `traverseSceneGraphRecursive`, `setupCameraMatrices`,
+and `runMenuModelViewerScreen` before the abort.
+
+This selects a generated menu caller at the resolver boundary and establishes
+that the `0x80001F88` breadcrumb is stale for this null; it does not identify
+the zero-producing generated callsite. It rules out treating the breadcrumb as
+the lookup callsite and does not authorize missing-function stubbing or any
+audio/output mitigation. The resolver capture and control-gate adjustment are
+diagnostic only.
+
+ORIGIN: same-run port resolver capture with an independent indirect-resolution
+positive control; no behavior, audio, dispatch, output, task-data, or
+mitigation change. Captures:
+`scratch/agent/s2457_port_null_resolver.log`,
+`scratch/agent/s2457_port_null_resolver_fixed.log`.
