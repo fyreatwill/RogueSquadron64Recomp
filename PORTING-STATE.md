@@ -111277,3 +111277,39 @@ s2361/s2363 control, join each exact target DMA tuple to post-task source and
 consumer PCM rows and the containing task's later completion/publication
 update, and select closure versus internal-only. Do not change task data,
 field writeback, consumer/default behavior, or add a guard.
+
+## Session 2364 (2026-08-25) — M5 post-task publication remains partial
+
+The prescribed s2364 M5 refinement was run from the Debug build with the
+retail oracle first. The oracle passed (`oracle_rc=0`, `oracle_controls=1`).
+Stub and image arms both reached the target hangar phase and passed the ABI,
+VI-caller, filter/voice, and image-join controls; both were terminated by the
+watchdog with SIGKILL (`137`) and neither logged a crash or abort.
+
+The corrected post-task table retained two nonzero target-stage rows and exact
+stage/DMA destination, length, FNV, and nonzero-count matches for both. One row
+also had post-task source and consumer PCM rows with matching destination,
+length, FNV, and nonzero count, followed by the containing task's completed
+record. The other row had no exact post-task PCM tuple. The final table was
+`target_stage_rows=2`, `exact_dma_rows=2`, `closed_rows=1`; the driver selected
+`H-ContainingTaskInternalOnly`. This rules out a missing stage-to-DMA relation
+and a fully closed publication contract at this capture scope. It does not
+authorize writeback, task-data changes, consumer/default changes, or a guard.
+
+Two parser defects were found and fixed before accepting the run: PCM uses the
+`guest` field rather than `rdram`, KSEG1 guest addresses must be masked to
+physical addresses, and unprefixed FNV fields require base-16 parsing. The
+accepted result is the final capture after those fixes. Artifacts:
+`scratch/agent/s2364_m5_post_task_publication_join_final/`.
+
+ORIGIN: diagnostic-only. The new parser/driver retained candidate joins; no
+game behavior, task data, field writeback, consumer/default, guard, or
+mitigation changed.
+
+### Next
+
+Run one same-build M5 mixed-stage publication split. Retain all s2361–s2364
+controls, expand each target destination/length join across payload FNV/nonzero
+variants, and classify the unmatched row as mixed stage role, payload
+transformation, or absent post-task publication. Do not change task data, field
+writeback, consumer/default behavior, or add a guard.
