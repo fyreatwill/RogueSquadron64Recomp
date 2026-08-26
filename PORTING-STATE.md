@@ -113352,3 +113352,33 @@ ORIGIN: the new boundary table is observation-only, grounded by the retail
 `0x8002BEEC` -> `0x800078EC` relation and the same-run indirect-resolution
 positive control. Artifact:
 `scratch/agent/s2446_m5_port_dispatch_boundary_fixed/`.
+
+## Session 2447 (2026-08-26) — audited generated rs_memset static caller context
+
+Ground truth first: the paired recipe's retail oracle passed whole-RDRAM,
+title/hangar VI, exact-range, and writer-PC controls; both port arms passed
+title and hangar, and the known indirect positive control resolved in both
+arms. The first entry-table attempt was invalid because a lifetime budget was
+consumed in title. Its phase-scoped rerun retained 517 title and 507 hangar
+image-arm rows, with corresponding stub rows.
+
+Static enumeration found exactly 88 generated `jal 0x800078E0` callsites. At
+the shared `rs_memset` entry, every retained row in both arms had `ra=0` and
+`callsite=0`, including rows with entry destination `0x801797B0`; the existing
+second-range loop-store rows remained zero-`ra`. This selects
+`H-StaticCallerContextLost` at the current entry boundary and rules out a
+non-executing static path. It does not distinguish a generated caller that
+never writes the ABI return register from a host wrapper that clears it. No
+audio, output, task-data, dispatch, or guard behavior changed.
+
+The fixed run's reducer still classified both nonzero image rows as
+stage-only, with zero exact source/consumer joins and zero destination-role
+skew. The first invalid budget result is recorded as a failed experiment, not
+as evidence.
+
+ORIGIN: the entry table is observation-only and was grounded by the retail
+`0x8002BEEC` -> `0x800078EC` relation plus the same-run indirect positive
+control. Its generated-code injection is regeneration-safe in
+`tools/apply_s2447_m5_static_calls.py`.
+Artifacts: `scratch/agent/s2447_m5_static_rsmemset_callsites/` (invalid first
+budget) and `scratch/agent/s2447_m5_static_rsmemset_callsites_fixed/`.

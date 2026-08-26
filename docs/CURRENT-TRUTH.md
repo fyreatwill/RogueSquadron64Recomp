@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2446 (2026-08-26).
+Current maintenance marker: Session 2447 (2026-08-26).
 
 ## Current state
 
@@ -150,6 +150,22 @@ Current maintenance marker: Session 2446 (2026-08-26).
   `scratch/agent/s2428_m5_title_writer_join/`.
 
 ## Latest evidence
+
+- **s2447 — the generated `rs_memset` entry loses every static caller return
+  address.** The first instrument was invalid because its lifetime budget was
+  consumed in title; the corrected phase-scoped rerun passed the independent
+  retail controls and both port title/hangar controls. Static enumeration found
+  exactly 88 `jal 0x800078E0` callsites. The image arm retained 517 title and
+  507 hangar entry rows across the phase buckets; every row in both stub and
+  image arms had `ra=0` and `callsite=0`, including the hangar rows whose
+  destinations included `0x801797B0` and whose `rs_memset` loop owns the
+  second-range stores. The known indirect positive control still resolved in
+  both arms. This selects `H-StaticCallerContextLost` at the current entry
+  boundary and rules out a non-executing static path; it does not identify
+  whether the generated callsites omit the ABI return write or whether a
+  caller-side wrapper clears it. No audio, output, task-data, dispatch, or
+  guard behavior changed. Artifact:
+  `scratch/agent/s2447_m5_static_rsmemset_callsites_fixed/`.
 
 - **s2444 — an independent paired capture repeats the missing port second-range
   consumer.** The retail oracle passed the whole-RDRAM positive control

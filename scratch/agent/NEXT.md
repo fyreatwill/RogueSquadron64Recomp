@@ -1,41 +1,40 @@
-# NEXT work unit (s2447) — identify the target-phase rs_memset callsite
+# NEXT work unit (s2448) — capture caller-side `rs_memset` ABI state
 
 HYPOTHESIS-ID: m5-port-static-rsmemset-callsite
 
 ## Work unit
 
-Add one regeneration-safe, observation-only table at `rs_memset` entry that
-records `ctx->r31`, the current guest-PC breadcrumb, route identity, and the
-entry's caller site for every generated static callsite. Cover all 88
-`rs_memset` callsites in one build/run and join target-phase rows to the
-existing `0x800078EC` second-range rows and image/DMA identity. Do not change
+Add one regeneration-safe, observation-only caller-side table around all 88
+generated `jal 0x800078E0` callsites. Record the static callsite address,
+`ctx->r31` immediately before the generated call, breadcrumb, route identity,
+and the matching `rs_memset` entry ordinal. Join the table to the corrected
+s2447 phase-scoped entry rows and the existing second-range rows. Do not change
 audio, output, task data, dispatch, or guards.
 
 ## Competing hypotheses and discriminator
 
-- H-StaticCallerKnown: one or more target-phase callsites have a stable
-  generated caller identity and the zero `ra` rows join those callsites.
-- H-StaticCallerContextLost: target-phase entry rows exist, but `ctx->r31` is
-  zero or otherwise unchanged across all contributing callsites; the loss is
-  at the generated call/entry ABI boundary.
-- H-StaticCallerOtherPath: the target-phase second-range rows do not join any
-  `rs_memset` entry row, so they come from a different resident or stale path.
+- H-CallsiteWritesRA: caller-side rows show a nonzero `ctx->r31` that is lost
+  between the generated call and `rs_memset` entry.
+- H-CallsiteAlreadyZero: all 88 caller-side rows show zero `ctx->r31`, proving
+  the generated caller path does not materialize the guest return address.
+- H-EntryWrapperClearsRA: caller-side rows show a nonzero return value, while
+  entry rows remain zero, locating the loss in the host call/wrapper boundary.
 
-The discriminator is a single table covering all static callsites in both
-stub/image arms. A stable callsite joined to the second-range identity selects
-H-StaticCallerKnown; joined entries with zero/unchanged `ra` select
-H-StaticCallerContextLost; no joined entry with all route and image controls
-valid selects H-StaticCallerOtherPath. The same-run `get_function(0x8009123C)`
-positive control must fire, and a null is valid only with retail whole-RDRAM,
-title/hangar, exact-range, writer-PC, and both port route controls passing.
+The discriminator is a single table covering every static callsite in both
+stub/image arms, with the known indirect target `0x8009123C` positive control
+still required. A nonzero caller value plus zero entry value selects
+H-EntryWrapperClearsRA; zero at both sides selects H-CallsiteAlreadyZero; a
+nonzero joined entry selects H-CallsiteWritesRA. A null is valid only with the
+retail whole-RDRAM, title/hangar, exact-range, writer-PC, and both port route
+controls passing.
 
 ## Exact commands
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-`env ROGUESQ_LOG_M5_STATIC_CALLS=1 zsh scratch/agent/run_s2325_m5_task_output_join.sh s2447_m5_static_rsmemset_callsites`
+`env ROGUESQ_LOG_M5_STATIC_CALLS=1 zsh scratch/agent/run_s2325_m5_task_output_join.sh s2448_m5_static_rsmemset_callsite_abi`
 
-Keep the established eleven-Start schedule and retail controls. Keep
+Keep the established eleven-Start schedule, phase-gated budgets, SIGKILL
+cleanup, and qualified route:
 `ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
-ROGUESQ_LLE_SOLO=1` on both port arms. Use phase-gated budgets and SIGKILL
-cleanup.
+ROGUESQ_LLE_SOLO=1`.
