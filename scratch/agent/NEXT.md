@@ -1,54 +1,44 @@
-# NEXT work unit (s2496) — locate the first downstream image consumer
+# NEXT work unit (s2497) — audit image-to-buffer handoff
 
 HYPOTHESIS-ID: m5-generated-image-downstream-join
 
 ## Single work unit
 
-Perform one bounded provenance audit of the first post-image-stage consumer.
-Use the existing retail oracle ground-truth ranges and the s2495 port log to
-enumerate candidate writers/readers for the image destinations
-`0x00166450..0x00169150` and `0x001798B0..0x00179A48`, then capture one
-phase-keyed port table at the earliest candidate boundary. Preserve the
-qualified image arm and all existing controls. Do not map through `gspTask`,
-infer identity from ordering, or change task/output behavior.
+Perform one bounded static provenance audit of the image-stage-to-PCM-buffer
+handoff. Enumerate every generated callsite of `osAiSetNextBuffer_recomp` and
+the named callers feeding `queue_samples`, then trace the phase-10 image
+destinations (`0x166450..0x169150`, `0x1798B0..0x179A48`) through the existing
+task-data and DMA fields. Use the s2496 positive controls and the independent
+retail `0x800078EC` writer only as ground truth; do not infer identity from
+ordering and do not change behavior.
 
 ## Competing hypotheses and discriminator
 
-- H-image-consumer-writer: a named generated/runtime writer consumes an image
-  destination or ordinal and produces a downstream slot, voice, PCM, or output
-  state transition.
-- H-image-consumer-reader-only: the image destination is written and returned,
-  but no downstream consumer in the candidate set reads it before the observed
-  output/PCM boundary.
-- H-image-consumer-unreachable: the candidate boundary is not reached in the
-  target phase despite live image-stage and return controls.
+- H-handoff-explicit: a generated callsite or task-data field explicitly
+  carries the image destination/ordinal into the PCM consumer.
+- H-handoff-reconstructed: the handoff has no explicit image identity, but a
+  stable buffer slot/length/hash relation can be established at one named
+  boundary.
+- H-handoff-absent: the image-stage destination is not used by the PCM
+  consumer path; the matching addresses are independent consumer inputs.
 
-The discriminator is one table keyed by phase/origin and image ordinal with
-candidate site, destination/range, read/write direction, and the first paired
-downstream event or state value. A joined candidate site plus downstream event
-selects the first hypothesis; live image controls with no candidate read or
-state transition select the second; zero candidate rows with all controls live
-selects the third. A null is invalid without the same-run positive controls.
+The discriminator is one exhaustive static table with caller PC, callee,
+buffer-address source expression, task-data source, image destination/range,
+and whether ordinal or destination identity survives to `queue_samples`.
+An explicit identity selects `H-handoff-explicit`; a unique stable relation
+with no explicit field selects `H-handoff-reconstructed`; no reachable
+relation selects `H-handoff-absent`. Do not add a runtime field unless this
+table names one earliest boundary and each outcome would split the hypotheses.
 
-## Exact preparation and commands
-
-Before adding any probe, consult the independent oracle artifact and verify
-its whole-RDRAM and target-range controls; do not interpret a retail null
-without those controls. Inspect the candidate census with bounded searches:
+## Exact commands
 
 ```sh
-rg -n "0x00166450|0x00169150|0x001798B0|0x00179A48|167350|1798B0" \
-  src lib RecompiledFuncs tools/oracle scratch/agent/s2493_m5_retail_task_join
+rg -n "osAiSetNextBuffer_recomp|queue_samples|rs64_audio_join_pcm|166450|169150|1798B0|179A48|task_data|data_ptr" \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+  src lib tools/oracle scratch/agent/s2496_m5_first_image_consumer
 ```
 
-If a single earliest candidate boundary is identified, add all fields for the
-table in one build, run the qualified `tools/probe.sh` recipe once with
-`PROBE_PHASE_WIDTH=1024`, boot-relative Start presses, `PROBE_LEAVE_OK=1`,
-`ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`,
-`ROGUESQ_LOG_M5_DESCRIPTOR=1`, `ROGUESQ_LOG_M5_SCHEDULER_ID=1`, and
-`ROGUESQ_LOG_M5_PORT_LOAD=1`, plus the new candidate probe. Capture under
-`scratch/agent/s2496_m5_first_image_consumer/` and terminate with SIGKILL.
-
-If static inspection cannot name one earliest candidate, do not add a
-diagnostic field: record the census as a blocked discriminator and select the
-highest-information static boundary for the following iteration.
+Write the table and conclusion to
+`scratch/agent/s2497_m5_image_handoff_audit/audit.md`. If the static table
+names one earliest boundary, prepare the next iteration's single phase-keyed
+port/oracle capture there; this iteration is static-only and needs no build.

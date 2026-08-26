@@ -30,6 +30,20 @@ Current maintenance marker: Session 2495 (2026-08-26).
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
 
+- **s2496 — the first port PCM consumer still has no image identity join.**
+  The static census identifies guest `rs_memset` at `0x800078EC` as the retail
+  PCM-ring writer boundary and `queue_samples` after `osAiSetNextBuffer_recomp`
+  as the first host consumer boundary. The qualified port run passed the
+  target controls (512 / `0x006AB400`), recorded 1,671 image-stage rows and
+  completions, and recorded 48 phase-10 PCM consumer rows. No image-stage
+  source or consumer join matched; one nonzero consumer-only row had no image
+  identity, while the port guest-writer hook recorded no candidate row. This
+  selects `H-image-consumer-identity-gap` at the observable port boundary and
+  refutes an unreachable consumer. Retail's independent `0x800078EC` writer
+  evidence is not a port writer attribution. No task, output, gate, or
+  mitigation change was made. Artifact:
+  `scratch/agent/s2496_m5_first_image_consumer/audit.md`.
+
 - **s2495 — image stages do not yet join the matching type-2 load by identity.**
   The qualified port capture reached phase 10, width 512, origin `0x006AB400`
   and passed the target load, descriptor, scheduler, image-stage, and return
@@ -592,14 +606,15 @@ Closed investigations are not active work items. This is one monotonic sequence;
    retail comparison instead found a distinct type-2 load task at
    `0x80149470`; the port now matches those fields at its own load entry. The
    earlier gspTask mismatch was a descriptor-vs-audio-task join error.
-2. **M5 generated image downstream join — active.** The s2495 capture selected
-   `H-image-load-distinct`: type-2 loads are legitimate and retail-matching,
-   while image-stage rows have no task/data identity and remain `stage-only`.
-   Next, identify the first legitimate downstream writer/consumer that can
-   carry an image ordinal or destination identity into slot, voice, PCM, or
-   output state. Do not map the image stage to the type-1 gspTask descriptor,
-   infer identity from temporal adjacency, or change task/output fields
-   without a named writer and independent retail evidence.
+2. **M5 generated image downstream join — active.** s2496 selected
+   `H-image-consumer-identity-gap`: the qualified image stage and the first
+   host PCM consumer are both live, but no image ordinal/destination identity
+   reaches the consumer join. Next, audit the consumer's generated callsites
+   and the image-stage destination-to-buffer handoff as one bounded static
+   table, then select one earliest address-bearing boundary for an independent
+   retail/port join. Do not map through `gspTask`, infer identity from
+   ordering, or change task/output fields without a named writer and
+   independent retail evidence.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at

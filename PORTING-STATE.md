@@ -114479,3 +114479,23 @@ rows are a phase-budget artifact, not a null result. No task/output remap,
 guard, or mitigation was made. The run ended in the pre-existing
 `recomp::do_rom_read` crash after the target rows were captured. Artifact:
 `scratch/agent/s2495_m5_image_downstream_join/audit.md`.
+
+## Session 2496 (2026-08-26) — audited first image-to-PCM consumer boundary
+
+The static census identified guest `rs_memset` at `0x800078EC` as the retail
+PCM-ring writer boundary and `queue_samples` after
+`osAiSetNextBuffer_recomp` as the first port host-consumer boundary. The
+qualified image-arm build succeeded and the phase-keyed run passed the target
+512 / `0x006AB400` route, dispatch, image-stage, and completion controls. It
+recorded 1,671 image-stage rows and completions plus 48 target PCM-consumer
+rows. The image summary had 0 source matches, 0 consumer matches, 2,044
+stage-only rows, and one nonzero consumer-only event without image identity;
+the port guest-writer and second-range hooks recorded zero rows.
+
+This selects `H-image-consumer-identity-gap` at the observable port boundary
+and refutes an unreachable consumer. The independent retail writer result is
+not treated as a port writer attribution. The result is two-source for
+boundary existence and single-source for the missing identity join. No task,
+output, gate, or mitigation change was made. The run completed its capture
+without a crash. Artifact:
+`scratch/agent/s2496_m5_first_image_consumer/audit.md`.
