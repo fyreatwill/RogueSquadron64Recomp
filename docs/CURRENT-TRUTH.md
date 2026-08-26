@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2477 (2026-08-26).
+Current maintenance marker: Session 2478 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,19 @@ Current maintenance marker: Session 2477 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2478 — the host-local bridge reaches the target image task but not its
+  containing-task completion.** Independent retail controls passed, and both
+  port arms reached the target hangar route. The image arm produced two
+  target stage rows with matching DMAs and no `0x800155EC` lookup failure or
+  `get_function(0)`, while the containing task remained `complete=0` with no
+  output-PCM row. This selects `H-ContainingTaskInternalOnly` at the target
+  join boundary, rules out an unchanged continuation lookup failure in the
+  reached route, and leaves the post-bridge containing-task contract open.
+  ORIGIN: `0x800155EC` is the legitimate PC+8 written by the JAL at
+  `0x800155E4`; the zero completion is not being mitigated and its writer is
+  unresolved. Artifact:
+  `scratch/agent/s2478_m5_continuation_bridge_validation/audit.md`.
 
 - **s2476 — the continuation tail is host-local, not map-registered.** The
   exhaustive generated census found one variable-register tail lookup in
@@ -368,16 +381,13 @@ Current maintenance marker: Session 2477 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, bridge target validation
-   pending.** The runtime zero-initializes `recomp_context ctx{}` with no
-   `r31` setup and no `thread_create_callback` registered for this game. The
-   converter's sole generated caller writes the legitimate link `0x800155EC`,
-   and the fixup now returns from the converter so that caller's `after_4`
-   host label can resume. The s2477 smoke run missed this path. Next: run the
-   existing driven target-phase route against the bridge and classify
-   pass-through, immediate contract failure, or unchanged lookup failure. Do
-   not add a runtime continuation API or NULL guard until that discriminator
-   fires. See `NEXT.md`.
+1. **M5 generated alternate equivalence — active, containing-task boundary
+   open.** The host-local bridge reaches the target image task and removes the
+   old continuation lookup failure, but two target stage DMAs remain
+   `stage-only` and the containing task has no completion/output-PCM row.
+   Next: statically audit the generated containing-task completion path around
+   the image arm's `break_pc=0x1328`, mapping every completion publication and
+   exit edge before adding runtime machinery or a guard. See `NEXT.md`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

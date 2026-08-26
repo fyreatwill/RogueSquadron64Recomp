@@ -114096,3 +114096,28 @@ target-phase hypotheses. No audio, output, task-data, guard, or dispatch
 change was made.
 
 Artifact: `scratch/agent/s2477_m5_continuation_bridge/audit.md`.
+
+## Session 2478 (2026-08-26) — validated bridge at target image-task boundary
+
+The established driven recipe passed its independent retail controls
+(`oracle_rc=0`, `oracle_controls=1`) and both port arms reached the target
+hangar route. The image arm produced two target stage rows with matching
+generated DMAs. Its positive controls fired (1,153 audio ABI rows, 2,346
+image-stage rows, 2,346 image joins), and no `Failed to find function at
+0x800155EC` or `get_function(0)` marker appeared. The stub arm reached the
+same route and produced no image rows, as expected.
+
+The containing-task join remained incomplete: `containing_task_rows=2`,
+`task_complete_rows=0`, and `task_output_pcm_rows=0`; the target verdict was
+`H-ContainingTaskInternalOnly`. The image task emitted two DMAs and reached
+`break_pc=0x1328`, but the target rows were `stage-only`. This rules out an
+unchanged continuation lookup failure in the reached route and confirms the
+bridge reaches the image task, but it does not establish full caller-contract
+resumption or authorize a runtime continuation API, NULL guard, output remap,
+task-data change, or audio mitigation.
+
+ORIGIN: `0x800155EC` is legitimately written as the PC+8 continuation by the
+JAL at `0x800155E4`. The zero completion is not treated as a wild-value defect;
+its writer and legitimacy remain open at the containing-task boundary.
+
+Artifact: `scratch/agent/s2478_m5_continuation_bridge_validation/audit.md`.
