@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2378 (2026-08-25). The M5 A1 ABI audit closes the port-side provenance: the generated `0x80001CBC` delay slot sets `$a2=1`, and both the project override and weak recomp binding forward `ctx->r6` unchanged to `osRecvMesg`; no host translation changes it. Together with s2377's independent retail `$a2=0` rows, this selects `H-GeneratedFlag` at capture scope and refutes `H-HostTranslation`. The retail-side instruction/semantic source remains open. No flag change or fallback is authorized.
+Maintained in Session 2379 (2026-08-25). The M5 A1 oracle capture passed the whole-RDRAM and both target-640 controls, and recorded 8,510 retail call/successor pairs. The debugger exposes the call at `0x80001CB8` and the return successor at `0x80001CC0`, but never reports the MIPS delay-slot PC `0x80001CBC`; therefore the retail call-site `$a2` is a pre-delay observation and cannot establish the effective flag. This refutes the s2377 inference that retail's observed `$a2=0` is necessarily nonblocking, while the retail instruction/semantic source remains open. No flag change or fallback is authorized.
 
 The s2372 predecessor capture remains valid: retail's target-phase
 `0x80001F84` row had `$a0=1,$a2=0`, while both port arms had
@@ -113,6 +113,21 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2379 — retail call/return is positive, but the delay-slot flag is not
+  observable through the oracle breakpoint.** The fresh oracle run passed the
+  whole-RDRAM positive control (`10,000` writes), observed both target 640
+  origins, and recorded `8,510` executions each at `0x80001CB8` and
+  `0x80001CC0`. Every successor row had `prev_pc=0x80033300`; the call rows
+  had `prev_pc=0x80001CB4`. The requested delay-slot watch at `0x80001CBC`
+  recorded zero hits, so the varying `$a2` values at `0x80001CB8` are the
+  pre-delay register state, not proof of the flag passed after the delay-slot
+  instruction. This selects `H-RetailCallReturnJoin` at capture scope, rules
+  out `H-RetailLabelArtifact`, and leaves `H-RetailNonblocking` versus
+  `H-RetailBlockingObserved` unresolved. The s2377 `$a2=0` observation must
+  not be used as an effective-call contract. No behavior, fallback, dispatch,
+  VI, task, audio, guard, or mitigation change was made. Artifact:
+  `scratch/agent/s2379_m5_a1_retail_flag_semantics/`.
 
 - **s2378 — port `$a2=1` is generated, not host-translated.** The generated
   `rs_free` body explicitly sets `$a1=0` at `0x80001CB4`, calls
@@ -367,11 +382,12 @@ sequence; #1 is the next campaign priority.
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
 
-3. **M5 A1 retail flag semantics — active.** s2378 selects the generated
-  delay-slot source for the port's `$a2=1` and refutes host translation. Use a
-  fresh oracle-side instruction/return capture around `0x80001CB8..0x80001CC0`
-  to establish whether retail's `$a2=0` is an actual nonblocking delay-slot
-  operand or a call-site/ABI observation artifact. Do not change the flag,
+3. **M5 A1 retail flag semantics — active.** s2378 establishes the generated
+  port delay-slot source and refutes host translation. s2379 establishes the
+  retail call/return join but shows that the oracle cannot trap the delay-slot
+  PC. Resolve the effective retail operand from an independent instruction
+  source or an oracle measurement that observes the callee's received flags;
+  do not treat the call-site `$a2` as sufficient. Do not change the flag,
   fallback, dispatch, VI, task, or audio behavior.
 4. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both

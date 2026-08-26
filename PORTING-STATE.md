@@ -111773,3 +111773,24 @@ establish whether retail's `$a2=0` is its actual delay-slot operand and whether
 the call returns through the same successor. Keep both port arms out of this
 work unit unless the oracle capture needs a same-run route control; do not alter
 the port flag.
+
+## Session 2379 (2026-08-25) — M5 A1 retail call/return flag capture
+
+The fresh oracle-only capture used the retail ROM, Rice video, the qualified
+Start schedule, a whole-RDRAM positive-control watch, and phase-gated watches at
+`0x80001CB8`, `0x80001CBC`, and `0x80001CC0`. The positive control reached its
+10,000-hit threshold; both target 640 origins were observed. The capture
+recorded 8,510 rows at the call and 8,510 at the successor. Call rows had
+`prev_pc=0x80001CB4`; successor rows had `prev_pc=0x80033300`, establishing the
+call/return join at `0x80001CC0`.
+
+The delay-slot PC produced zero rows. The call-site `$a2` values varied,
+including zero, but that breakpoint observes the register before the delay-slot
+instruction and therefore cannot establish the effective receive flag. This
+rules out `H-RetailLabelArtifact` at capture scope and establishes
+`H-RetailCallReturnJoin`; `H-RetailNonblocking` versus
+`H-RetailBlockingObserved` remains unresolved. It supersedes s2377's use of
+the retail call-site `$a2=0` as an effective-call contract. No port flag,
+fallback, dispatch, VI, task, audio, guard, or mitigation change was made.
+
+Artifact: `scratch/agent/s2379_m5_a1_retail_flag_semantics/`.

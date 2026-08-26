@@ -1,37 +1,42 @@
-# NEXT work unit (s2379) — M5 A1 retail flag semantics
+# NEXT work unit (s2380) — M5 A1 effective retail receive flag
 
 HYPOTHESIS-ID: m5-a1-retail-flag-semantics
 
 ## Work unit
 
-Run one independent oracle-side execution capture around the retail
-`osRecvMesg` call at `0x80001CB8..0x80001CC0`. Establish whether retail's
-`$a2=0` is the actual delay-slot operand and whether the call returns through
-the same successor observed in the port. Do not change the port flag or any
-game behavior.
+Resolve the effective `$a2` received by retail `osRecvMesg` at the
+`0x80001CB8` call without changing the port. Use one independent source that
+can observe the callee-entry argument or decode the retail instruction at the
+delay-slot address. First verify the address mapping against the known port
+instruction sequence; do not infer the effective flag from the pre-delay
+call-site register.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-RetailNonblocking: retail executes a zero-valued delay-slot/flag at the
-  call and returns under nonblocking semantics.
-- H-RetailBlockingObserved: the oracle's `$a2=0` row is not the effective
-  call flag; a nearby instruction or ABI path supplies blocking semantics.
-- H-RetailLabelArtifact: the watched retail PC/rows do not correspond to the
-  same call ordinal as the port's generated `0x80001CB8` sequence.
+- H-RetailNonblocking: retail supplies zero to the callee and uses
+  nonblocking semantics.
+- H-RetailBlockingObserved: retail's delay slot or ABI path supplies a
+  nonzero/blocking flag.
+- H-RetailLabelArtifact: the proposed source/measurement does not identify the
+  same call ordinal.
 
-The discriminator is one phase-gated oracle table containing execution rows at
-`0x80001CB8`, `0x80001CBC`, and `0x80001CC0`, with `$a0/$a1/$a2/$v0`, previous
-PC, and the successor/return marker. H-RetailNonblocking is selected if the
-call and delay-slot rows both show `$a2=0` and the call joins the expected
-successor; H-RetailBlockingObserved if the effective call path shows a
-nonzero/blocking flag; H-RetailLabelArtifact if the rows cannot join by
-previous-PC and successor.
+The discriminator is a single joined row keyed by the retail call ordinal:
+callee-entry `$a0/$a1/$a2`, the preceding `0x80001CB8` call, and return to
+`0x80001CC0`. Zero at callee entry selects H-RetailNonblocking; nonzero
+blocking semantics selects H-RetailBlockingObserved; failure to join the
+callee and successor selects H-RetailLabelArtifact. A decoded delay-slot
+instruction may select the first two only if its ROM-to-RAM address mapping is
+independently verified.
 
-## Ground truth and exact commands
+## Exact commands / controls
 
-Read `tools/oracle/README.md`; arm the whole-RDRAM positive control first,
-then use the already-qualified target 640 origins and watch PCs. Run the oracle
-from its build directory with the retail ROM, capture to a non-dot final path,
-and SIGKILL only if the watchdog must terminate it. No port build is needed
-unless the oracle route control fails and must be paired with an existing
-same-build control.
+Read `tools/oracle/README.md` before changing the oracle recipe. If extending
+the oracle, keep `--watch-write 0x0:0x800000`, the two target 640 origins, and
+the `0x80001CB8`/`0x80001CC0` watches in the same run. The s2379 baseline was:
+
+    env tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 42 --hit-cap 120 --watch-write 0x0:0x800000 --watch-pc 0x80001CB8,0x80001CBC,0x80001CC0 --pc-phase-log-width 0x00696100:640 --pc-phase-log-width 0x00696600:640 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start
+
+Expected outcomes: the delay-slot watch may remain zero because the debugger
+does not breakpoint MIPS delay slots; that is a measurement limitation, not
+evidence for either flag hypothesis. Do not change the port flag, fallback,
+dispatch, VI, task, or audio behavior.
