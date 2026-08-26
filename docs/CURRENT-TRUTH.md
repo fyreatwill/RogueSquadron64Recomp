@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2377 (2026-08-25). The M5 A1 queue/return capture passed all route controls and selected a call-contract difference: retail's `0x80001CB8` rows carry `$a2=0`, while both port arms pass flag `1` to queue `0x8010FEE0`. The port queue state is identical in both arms (`validCount 1 -> 0`); the retail queue-write watch was silent and is not evidence. The generated body still contains the delay-slot `$a2=1`, but why that differs from retail remains open. No flag change or fallback is authorized.
+Maintained in Session 2378 (2026-08-25). The M5 A1 ABI audit closes the port-side provenance: the generated `0x80001CBC` delay slot sets `$a2=1`, and both the project override and weak recomp binding forward `ctx->r6` unchanged to `osRecvMesg`; no host translation changes it. Together with s2377's independent retail `$a2=0` rows, this selects `H-GeneratedFlag` at capture scope and refutes `H-HostTranslation`. The retail-side instruction/semantic source remains open. No flag change or fallback is authorized.
 
 The s2372 predecessor capture remains valid: retail's target-phase
 `0x80001F84` row had `$a0=1,$a2=0`, while both port arms had
@@ -113,6 +113,19 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2378 — port `$a2=1` is generated, not host-translated.** The generated
+  `rs_free` body explicitly sets `$a1=0` at `0x80001CB4`, calls
+  `0x800331D0` at `0x80001CB8`, and executes delay-slot `addiu $a2,$zero,1`
+  at `0x80001CBC` before `osRecvMesg_recomp`. Both the project override and
+  the weak librecomp binding forward `ctx->r6` unchanged to the host
+  `osRecvMesg`, whose `flags` parameter is then compared directly to
+  `OS_MESG_BLOCK`. This selects `H-GeneratedFlag` and refutes
+  `H-HostTranslation` at capture scope. The port call/marker join is positive;
+  the companion retail body is `INCLUDE_ASM`, so the retail instruction source
+  remains open and the label conclusion is single-source for the port side.
+  No behavior, fallback, dispatch, VI, task, audio, guard, or mitigation
+  change was made.
 
 - **s2376 — generated `rs_free` boundary has no source-visible control-flow
   mismatch.** The generated body maps `0x80001CAC` to `lui $a0,0x8011`,
@@ -354,12 +367,12 @@ sequence; #1 is the next campaign priority.
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
 
-3. **M5 A1 flag-contract provenance — active.** s2377 selects a retail/port
-  receive-flag difference at `0x80001CB8`: retail `$a2=0`, both port arms
-  pass `1` to queue `0x8010FEE0`. Audit the generated delay slot and host ABI
-  mapping to distinguish an emitted port mismatch from a translation or label
-  artifact. Do not change the flag, fallback, dispatch, VI, task, or audio
-  behavior.
+3. **M5 A1 retail flag semantics — active.** s2378 selects the generated
+  delay-slot source for the port's `$a2=1` and refutes host translation. Use a
+  fresh oracle-side instruction/return capture around `0x80001CB8..0x80001CC0`
+  to establish whether retail's `$a2=0` is an actual nonblocking delay-slot
+  operand or a call-site/ABI observation artifact. Do not change the flag,
+  fallback, dispatch, VI, task, or audio behavior.
 4. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both
    arms. Do not repeat the resident-overlay table without a new ground-truth

@@ -111742,3 +111742,34 @@ Audit the generated and host ABI path for the `osRecvMesg` flag at
 `0x80001CB8`: determine whether the port's `$a2=1` is emitted by the generated
 delay-slot instruction, introduced by argument translation, or merely mislabeled
 relative to the retail watch. Keep behavior unchanged.
+
+## Session 2378 (2026-08-25) — M5 A1 generated flag provenance audit
+
+The prescribed bounded source/ABI audit closed the port-side path without a
+build or runtime change. In `RecompiledFuncs/funcs_0.c`, the disputed sequence
+is explicit: `0x80001CB4` sets `$a1=0`, `0x80001CB8` calls the guest target
+`0x800331D0`, and the delay-slot instruction at `0x80001CBC` sets `$a2=1`
+before `osRecvMesg_recomp(rdram, ctx)`. The project override in
+`src/main/upstream_compat.cpp` forwards `ctx->r6` unchanged to `osRecvMesg`;
+the weak default in `librecomp/src/ultra_translation.cpp` does the same. The
+host `osRecvMesg` implementation accepts that value as its `flags` argument
+and compares it directly to `OS_MESG_BLOCK`.
+
+This selects `H-GeneratedFlag` at capture scope and refutes
+`H-HostTranslation`. The call target and generated guest-PC marker agree with
+s2377's port rows, so there is no evidence for `H-LabelArtifact`; that remains
+single-source for the port-side join because the companion retail body is
+`INCLUDE_ASM`. Combined with s2377's oracle GPR rows (`$a2=0` at the retail
+call site), the remaining discriminator is the retail instruction/semantic
+source, not another port wrapper probe. No flag, fallback, dispatch, VI, task,
+audio, guard, or mitigation change was made.
+
+ORIGIN: diagnostic/source audit only; no value or behavior was changed.
+
+### Next
+
+Use a fresh oracle-side execution capture around `0x80001CB8..0x80001CC0` to
+establish whether retail's `$a2=0` is its actual delay-slot operand and whether
+the call returns through the same successor. Keep both port arms out of this
+work unit unless the oracle capture needs a same-run route control; do not alter
+the port flag.
