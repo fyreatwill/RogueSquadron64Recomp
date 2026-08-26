@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2419 (2026-08-26).
+Current maintenance marker: Session 2420 (2026-08-26).
 
 ## Current state
 
@@ -120,6 +120,16 @@ Current maintenance marker: Session 2419 (2026-08-26).
   selects `H-PortDiffersAtHandoff` and closes the TLS probe defect. No task,
   audio, dispatch, or output behavior changed. Artifact:
   `scratch/agent/s2419_task_pointer/`.
+- s2420 completed the Step-1 same-build M5 checkpoint after repairing the
+  driver to deliver the validated eleven-Start route schedule. The retail
+  oracle passed whole-RDRAM, title, and hangar controls. Stub and image port
+  arms both reached title and hangar. The image arm showed DMEM change, two
+  generated DMAs, `break_pc=0x1328`, and `sp-complete-enter/return`; the stub
+  showed no DMEM/DMA activity. Neither arm emitted slot/voice rows, and both
+  retained only the pre-existing PCM boundary rows. This selects
+  `H-ContractGap` for the image-specific downstream contract at this capture
+  scope. No default flip or output change is authorized. Artifact:
+  `scratch/agent/s2420_m5_contract_fixed/`.
 
 ## Latest evidence
 
@@ -132,6 +142,21 @@ Current maintenance marker: Session 2419 (2026-08-26).
   task-pointer column was zero from a cross-thread TLS probe defect, so this
   does not select task-pointer parity. Artifact:
   `scratch/agent/s2418_port_handoff/route640/`.
+
+- **s2420 — Step-1 M5 contract checkpoint selects an image-specific gap.** The
+  independent retail oracle passed whole-RDRAM, title, and hangar controls.
+  The same-build stub and image arms both passed title and hangar. The stub
+  had 1,413 task ABI rows with unchanged DMEM and zero generated DMA rows. The
+  image had 1,055 ABI rows, 2,197 DMA-range rows, 2,190 image-stage rows, and
+  repeated `run-task-return`/`sp-complete-enter`/`sp-complete-return` rows with
+  `break_pc=0x1328`; payloads were zero and the canary was diagnostic-only.
+  Neither arm emitted slot/voice rows, while both emitted the existing PCM
+  source/consumer boundary rows. This selects `H-ContractGap` at the current
+  checkpoint scope, not a route failure, missing task completion, or proof of
+  a legitimate output destination. The first attempt was route-invalid because
+  the port arms received no Start input; the fixed rerun used the eleven-Start
+  schedule and is the only result interpreted here. Artifact:
+  `scratch/agent/s2420_m5_contract_fixed/`.
 
 - **s2403 — retained image-stage bytes are legitimately zero at capture scope.**
   The retail oracle passed whole-RDRAM (`32,791,644` hits), title, and hangar
@@ -250,18 +275,16 @@ Current maintenance marker: Session 2419 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
-1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
-   design gate. The retained identity table and two-run event-delta reducer
-   select `H-SequenceLegitimate` at the current capture scope. s2415 selected
-   `H-NoDownstreamRelation`, and s2416 selected `H-NoHandoffKey` because the
-   existing task/DMA/PCM markers do not survive the title-to-hangar transition.
-   The retail task/data witness selects `H-RetailStableWriter`; s2418's port
-   table selected `H-PortDiffersAtHandoff` from extra phase-local data pointers,
-   and s2419's repaired shared task-pointer witness confirmed 0x80149470 on all
-   512 rows. Next run the complete Step-1 same-build stub/image contract
-   checkpoint. Do not change task data,
-   audio, gate, fallback, dispatch, VI, output behavior, or the nonzero
-   predicate.
+1. **M5 image contract gap — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
+   design gate. Step 1 is now valid: the image task dispatches, changes DMEM,
+   performs generated DMA, reaches `break_pc=0x1328`, and completes SP service,
+   but no image-specific slot/voice/output contract closes. Keep the image
+   opt-in and do not alter task data, output ranges, gates, or guards. Next run
+   one phase-keyed observation-only contract-gap table that joins image DMA
+   completion to named service, slot, voice, MORT, and PCM records for both
+   title and hangar, retaining the retail controls. The discriminator must
+   distinguish a missing image consumer from a shared downstream path and
+   from a zero-payload legitimate result.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate

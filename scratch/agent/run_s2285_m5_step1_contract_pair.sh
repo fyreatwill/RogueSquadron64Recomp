@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BUILD="$ROOT/build"
 TAG=${1:-s2285_m5_step1_contract_pair}
 OUT="$ROOT/scratch/agent/$TAG"
+WINCTL="$BUILD/winctl"
 ORACLE="$ROOT/tools/oracle/build/rs64_oracle"
 ORACLE_CORE=/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib
 ORACLE_ROM=/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64
@@ -15,7 +16,7 @@ if [[ ! -x "$ORACLE" || ! -f "$ORACLE_CORE" || ! -f "$ORACLE_ROM" ]]; then
     print "ERROR: retail oracle prerequisites are missing" > "$OUT/driver.log"
     exit 2
 fi
-if [[ ! -x "$BUILD/RogueSquadron64Recomp" || ! -f "$BUILD/rogue_squadron.z64" ]]; then
+if [[ ! -x "$BUILD/RogueSquadron64Recomp" || ! -f "$BUILD/rogue_squadron.z64" || ! -x "$WINCTL" ]]; then
     print "ERROR: build/ control prerequisites are missing" > "$OUT/driver.log"
     exit 3
 fi
@@ -46,7 +47,11 @@ COMMON=(
 ORACLE_PID=""
 SILENT_PID=""
 IMAGE_PID=""
+KEY_PIDS=()
 trap '
+    for keypid in "${KEY_PIDS[@]}"; do
+        if [[ -n "$keypid" ]] && kill -0 "$keypid" 2>/dev/null; then kill -9 "$keypid" 2>/dev/null; fi
+    done
     for pid in "$ORACLE_PID" "$SILENT_PID" "$IMAGE_PID"; do
         if [[ -n "$pid" && "$pid" != 0 ]] && kill -0 "$pid" 2>/dev/null; then
             kill -9 "$pid" 2>/dev/null
@@ -108,6 +113,21 @@ launch_arm() {
         IMAGE_PID=$!
         print "image_pid=$IMAGE_PID" >> "$OUT/driver.log"
     fi
+    local game_pid
+    if [[ "$name" == silent ]]; then game_pid="$SILENT_PID"; else game_pid="$IMAGE_PID"; fi
+    (
+        local previous=0
+        local at
+        for at in 6 11 16 21 26 31 36 41 46 51 56; do
+            sleep "$((at - previous))"
+            previous=$at
+            if ! kill -0 "$game_pid" 2>/dev/null; then exit 0; fi
+            "$WINCTL" activate "$game_pid" >/dev/null 2>&1 || true
+            /usr/bin/osascript -e "tell application \"System Events\" to set frontmost of first application process whose unix id is $game_pid to true" >/dev/null 2>&1 || true
+            "$WINCTL" key "$game_pid" 36 >/dev/null 2>&1 || true
+        done
+    ) &
+    KEY_PIDS+=("$!")
 }
 
 wait_for_hangar() {

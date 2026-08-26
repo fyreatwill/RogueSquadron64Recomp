@@ -112789,3 +112789,27 @@ size variation. This selects `H-PortDiffersAtHandoff` with the pointer witness
 repaired and rules out TLS loss/zero as the explanation for the port relation.
 It does not authorize a task-data or output change. Artifact:
 `scratch/agent/s2419_task_pointer/`.
+
+## Session 2420 (2026-08-26) — completed M5 Step-1 contract checkpoint
+
+The first checkpoint launch was route-invalid: the port arms received no
+Start input, the silent arm aborted at guest PC `0x8000B650` before the target
+route, and the image arm was not launched. The driver was repaired to send the
+validated eleven-Start schedule to each arm, then the same Debug build was
+rerun with the independent retail oracle. The oracle passed its whole-RDRAM
+positive control and title `1024 / 0x00790400` plus hangar `512 / 0x006AB400`
+controls. Both silent and image port arms passed title and hangar in the same
+capture.
+
+The silent arm emitted 1,413 task-ABI rows with unchanged DMEM and zero
+generated DMA rows. The image arm emitted 1,055 task-ABI rows, 2,197 DMA-range
+rows, 2,190 image-stage rows, and repeated `run-task-return`,
+`sp-complete-enter`, and `sp-complete-return` rows; its generated image path
+reached `break_pc=0x1328` and changed DMEM. Neither arm emitted slot/voice
+rows. Both retained the existing PCM source/consumer boundary rows, so those
+rows are not image-specific evidence. The checkpoint therefore selects
+`H-ContractGap` at this capture scope: image task/DMEM/DMA/SP completion is
+real, but no image-specific downstream slot/voice/output contract closes. It
+rules out route failure and missing image task completion, but does not prove a
+legitimate output destination or authorize a default flip. No runtime behavior
+changed. Artifact: `scratch/agent/s2420_m5_contract_fixed/`.
