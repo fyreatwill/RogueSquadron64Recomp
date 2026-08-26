@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2425 (2026-08-26).
+Current maintenance marker: Session 2426 (2026-08-26).
 
 ## Current state
 
@@ -222,6 +222,19 @@ Current maintenance marker: Session 2425 (2026-08-26).
   this scope. No hangar image consumer or legitimate writeback/remap is
   established. Artifact: `scratch/agent/s2425_m5_retail_writer/`.
 
+- **s2426 — retail candidate PCs do not write the port image ranges.** The
+  independent Rice oracle passed whole-RDRAM (`12,661` hits), title
+  (`633` VI phase rows at `0x00790400`), hangar (`1,594` rows at
+  `0x006AB400`), and both candidate-PC execution controls (`378,745` hits for
+  `0x80015BC8`, `418,954` for `0x8000F3A0`). The exact port image ranges were
+  written (`1,536` hits at `0x167650..0x167C50`, `1,125` at
+  `0x1798B0..0x179A48`), but no write was attributed to either candidate.
+  The first range's observed writer was `0x800078EC`; the second included
+  `0x800078EC` plus helper PCs. This selects `H-RetailDifferentRange` at the
+  current capture scope and rules out `H-RetailImageRangeWriter`; it does not
+  identify the legitimate hangar consumer or authorize a remap. Artifact:
+  `scratch/agent/s2426_m5_retail_image_ranges/`.
+
 - **s2403 — retained image-stage bytes are legitimately zero at capture scope.**
   The retail oracle passed whole-RDRAM (`32,791,644` hits), title, and hangar
   controls. In one rebuilt two-arm port run, retained stage-2 and stage-3
@@ -341,12 +354,12 @@ sequence; #1 is the next campaign priority.
 
 1. **M5 image consumer provenance — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate. s2425 establishes retail/port parity for the title
-   `0x80015BC8` writer family but classifies `0x8000F3A0` as a different-role
-   helper; neither establishes a hangar image consumer. The next bounded unit
-   must trace the retail-selected title writer's exact store/range relation
-   into the image/task identity, or close the remaining hangar consumer gap
-   with a new ground-truth discriminator. No output remap, task-data change,
-   gate change, or guard is authorized.
+   `0x80015BC8` writer family, while s2426 shows neither candidate PC writes
+   the exact port image ranges; `0x800078EC` and helper PCs write those ranges
+   instead. The next bounded unit must trace the retail-selected title
+   writer's exact store/range relation into the image/task identity, or close
+   the remaining hangar consumer gap with a new ground-truth discriminator.
+   No output remap, task-data change, gate change, or guard is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -392,6 +405,13 @@ writer table and found only image-owned DMA writes (`kind=2`, `pc=0`), not a
 later CPU/consumer writer; the silent control had none. Continue by closing
 the guest-store/consumer coverage gap rather than treating these DMA rows as
 retail-writer parity.
+s2426's exact-range oracle run found that the port image destinations are
+written in retail, but not by either previously selected candidate PC:
+`0x800078EC` accounts for the first range and also contributes to the second,
+with other helper PCs on the latter. This selects `H-RetailDifferentRange`
+for the candidate-PC relation and keeps the hangar image-consumer identity
+open. It is ground-truth attribution only; no output remap or mitigation is
+authorized.
 The first same-identity post-DMA slot/key-on fields are now available in the
 image join. s2408 validated both route controls, but its image arm still
 produced no same-identity downstream rows. s2409 independently observed

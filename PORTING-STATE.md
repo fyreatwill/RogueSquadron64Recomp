@@ -112930,3 +112930,22 @@ identify a legitimate hangar image consumer and authorizes no writeback,
 remap, task-data, gate, or guard change. It rules out treating both candidate
 PCs as one undifferentiated retail image writer. Artifact:
 `scratch/agent/s2425_m5_retail_writer/`.
+
+## Session 2426 (2026-08-26) — separated M5 retail image-range writers
+
+Ground truth was checked before any port change. One Rice-oracle run used the
+whole-RDRAM positive control, title/hangar VI controls, exact port image-range
+watches, and execution watches for `0x80015BC8` and `0x8000F3A0`.
+
+The whole-RDRAM control fired `12,661` times; title produced `633` phase rows
+at `0x00790400` and hangar `1,594` at `0x006AB400`. Both candidate PCs were
+validly executed (`378,745` and `418,954` hits respectively). The exact port
+image ranges were written: `1,536` hits at `0x167650..0x167C50` and `1,125`
+at `0x1798B0..0x179A48`. None was attributed to either candidate PC. The
+first range's observed writer was `0x800078EC`; the second included
+`0x800078EC` plus helper PCs.
+
+This selects `H-RetailDifferentRange` at the current capture scope and rules
+out `H-RetailImageRangeWriter`. It does not identify the legitimate hangar
+consumer or authorize a writeback, remap, task-data change, gate, or guard.
+Artifact: `scratch/agent/s2426_m5_retail_image_ranges/`.
