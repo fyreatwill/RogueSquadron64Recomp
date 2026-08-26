@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2455 (2026-08-26).
+Current maintenance marker: Session 2456 (2026-08-26).
 
 ## Current state
 
@@ -45,6 +45,15 @@ Current maintenance marker: Session 2455 (2026-08-26).
   `0x80001F88`), with no phase-gated M5 witness rows. This is a non-result for
   `H-PortF2CC/H-PortOtherStatic/H-PortDynamic`, not evidence for any one arm.
   The immediate blocker is the pre-phase null-dispatch boundary.
+
+- **s2456 — the reported pre-phase PC is not a lookup callsite.** The external
+  generated census contains 28,385 `LOOKUP_FUNC` expansions, but none in
+  `convertMat3x4ToN64Mtx`; `0x80001F88` is only the return delay-slot `nop` of
+  `buildHeapFreeList`. The retail oracle passed `[gpr-ctl]` and the whole-RDRAM
+  control but observed zero executions of `0x80001F88` in 3,557 VI, with no
+  hangar phase rows. This is a non-result for the original missing-target,
+  legitimate-zero, and bad-data hypotheses; the resolver needs a native
+  caller capture before the stale guest-PC breadcrumb can be interpreted.
 
 ## Latest evidence
 
@@ -124,11 +133,11 @@ Current maintenance marker: Session 2455 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 port pre-phase null-dispatch boundary — active blocker.** Identify the
-   missing target behind the `get_function(0)` call from
-   `convertMat3x4ToN64Mtx`/guest PC `0x80001F88`, using a bounded static call
-   and symbol audit. Do not change behavior until the writer and legitimacy of
-   the target are established; then resume second-range provenance.
+1. **M5 first-null resolver boundary — active blocker.** Add one bounded
+   host-side capture at `get_function` for the first `addr==0`, recording the
+   native return address/backtrace and `g_rs64_last_guest_pc`, with the existing
+   indirect-resolution positive control in the same run. Do not change
+   behavior or enable the missing-function stub.
 2. **M5 image consumer provenance — active but downstream.** Use a new
    ground-truth discriminator to trace the retail-selected writer's exact
    relation into the port image/task identity or close the hangar consumer gap.

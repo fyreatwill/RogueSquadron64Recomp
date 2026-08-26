@@ -113553,3 +113553,24 @@ paired with a retail watch of `0x80001F88` and the same controls.
 ORIGIN: retail oracle capture plus rebuilt port runtime capture; no behavior,
 audio, dispatch, output, task-data, or mitigation change. Captures:
 `scratch/agent/s2455_oracle_fixed.log`, `scratch/agent/s2455_port_rebuilt.log`.
+
+## Session 2456 (2026-08-26) — audited pre-phase null-dispatch boundary
+
+The bounded static audit found no lookup callsite in
+`convertMat3x4ToN64Mtx`; the external generated tree contains 28,385
+`LOOKUP_FUNC` expansions, while reported guest PC `0x80001F88` is only the
+return delay-slot `nop` of `buildHeapFreeList` at `0x80001F8C`. The checked-in
+runtime has one resolver body and one thread-entry resolver call; the
+generator emits literal or register lookups without a zero-target special
+case. The companion symbol map confirms the relevant ranges.
+
+The prescribed retail oracle run passed `[gpr-ctl]` and the whole-RDRAM
+positive control (10,000 callbacks), ran 3,557 VI, and observed zero
+executions of `0x80001F88`; it also produced zero explicit hangar-phase rows.
+Therefore the original missing-target, legitimate-zero, and bad-data
+hypotheses are not selected. The result rules out interpreting the current
+guest-PC breadcrumb as the null callsite, but does not explain the null.
+
+ORIGIN: independent retail target-PC/control run plus static source/symbol
+audit; no behavior, audio, dispatch, output, task-data, or mitigation change.
+Full audit: `scratch/agent/s2456_m5_null_dispatch/audit.md`.

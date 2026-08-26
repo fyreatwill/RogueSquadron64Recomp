@@ -1,48 +1,48 @@
-# NEXT work unit (s2456) — audit the pre-phase null-dispatch boundary
+# NEXT work unit (s2457) — capture the first-null resolver caller
 
-HYPOTHESIS-ID: m5-prephase-null-dispatch
+HYPOTHESIS-ID: m5-first-null-resolver-boundary
 
 ## Work unit
 
-Perform one bounded static call/symbol audit of the pre-phase
-`get_function(0)` abort from `convertMat3x4ToN64Mtx` at guest PC `0x80001F88`,
-then ask the retail oracle whether the corresponding guest PC executes on the
-driven route. Do not change behavior or add a diagnostic field.
+Add one host-side, first-hit-only capture at the existing `get_function` entry
+for `addr == 0`, including native return address/backtrace, the requested
+address, and `g_rs64_last_guest_pc`; retain the existing indirect positive
+control in the same qualified port run. This is a bounded diagnostic change,
+not a behavior change and not permission to stub missing functions.
 
 ## Competing hypotheses and discriminator
 
-- H-NullMissingGeneratedTarget: the port abort is a generated callsite whose
-  target should resolve to a real retail/decomp symbol but is absent from the
-  generated function map.
-- H-NullLegitimateZero: the callsite intentionally resolves to zero or a
-  runtime no-op, and the abort is a runtime policy mismatch.
-- H-NullBadGuestData: the generated caller computes or loads zero from a
-  corrupted/unsupported guest data path rather than naming a missing symbol.
+- H-ResolverGeneratedCaller: the first null has a generated native caller and
+  a symbol-derived or register-derived guest target absent from the map.
+- H-ResolverEntryPolicy: the first null originates at thread entry or another
+  runtime resolver boundary, not a generated in-game callsite.
+- H-StaleGuestBreadcrumb: the native caller and `g_rs64_last_guest_pc` do not
+  agree; `0x80001F88` is stale/unrelated to the null lookup.
 
-The discriminator is one complete table of every generated/runtime
-`get_function` callsite: guest PC, lookup expression/target, caller symbol,
-and matching retail/decomp address range, plus a retail oracle row for
-`0x80001F88` with whole-RDRAM and GPR controls. A real mapped target at the
-crashing callsite selects H-NullMissingGeneratedTarget; a complete zero-target
-contract with retail execution selects H-NullLegitimateZero; a non-symbol-
-derived zero/data load selects H-NullBadGuestData. Missing oracle controls or
-no retail target-PC row is a non-result.
+The discriminator is one first-null row containing native caller, backtrace,
+requested target, guest-PC breadcrumb, and whether the same run's indirect
+positive control resolves. A generated caller with a real target selects
+H-ResolverGeneratedCaller; a runtime caller selects H-ResolverEntryPolicy;
+disagreement between native caller and guest breadcrumb selects
+H-StaleGuestBreadcrumb. Missing the positive control is a non-result.
 
 ## Exact commands
 
-1. First enumerate the static table without editing or building:
+1. Before building, inspect the existing resolver and control:
 
-   `rg -n "get_function\\(|convertMat3x4ToN64Mtx|0x80001F88|Failed to find function" src lib RecompiledFuncs tools`
+   `rg -n "get_function\\(|LOOKUP_FUNC|rs64_log_tickfunc_caller|backtrace" lib/N64ModernRuntime/librecomp/src lib/N64ModernRuntime/N64Recomp/src`
 
-   Read only bounded windows around each hit and record the complete table in
-   `scratch/agent/s2456_m5_null_dispatch/audit.md`.
+2. Add the first-null-only capture in
+   `lib/N64ModernRuntime/librecomp/src/overlays.cpp` at `get_function`, using
+   the existing log gate and `backtrace` helpers. Keep the positive-control
+   path unchanged. Build once with the qualified route; do not set
+   `ROGUESQ_STUB_MISSING_FUNCS`.
 
-2. Ask the retail oracle for ground truth in one run:
+3. Run one 120-second qualified port capture from `build/`, with
+   `ROGUESQ_LOG_M5_SECOND_EXEC=1`, capturing stdout/stderr to
+   `scratch/agent/s2457_port_null_resolver.log`; SIGKILL the process if the
+   watchdog expires.
 
-   `tools/oracle/build/rs64_oracle --core "/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" --rom "/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64" --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --watch-write 0x0:0x800000 --watch-pc 0x80001F88 --pc-phase-log-width 0x6ab400:512 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > scratch/agent/s2456_oracle.log 2>&1`
-
-   Require `[gpr-ctl]`, whole-RDRAM hits, and report whether the target PC
-   executes in the driven route before interpreting the static table.
-
-3. Do not rerun the 120-second port provenance capture until this boundary is
-   classified; the current route aborts at 4.3s before its phase gate.
+4. Expected selection: one first-null row with a native caller and a live
+   positive-control resolution. Zero rows or no positive control is a
+   non-result; do not enable a mitigation or resume second-range provenance.
