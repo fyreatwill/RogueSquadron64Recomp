@@ -112084,3 +112084,30 @@ Artifacts: `scratch/agent/s2390_audit_stage_nonzero.py` and
 
 ORIGIN: no mitigation or behavior change; added only a bounded retained-log
 audit and its output.
+## Session 2391 (2026-08-25) — M5 retail payload-region witness
+
+The prescribed ground-truth-first image-stage audit initially failed before
+launch because `build/Debug/rogue_squadron.z64` was absent. A scoped search
+found the valid retail ROM at `build/rogue_squadron.z64`, and the same oracle
+capture was rerun with the whole-RDRAM control first, Rice video, the verified
+Start schedule, title/hangar VI tracing, a broad `0x167000:0x180000` candidate
+watch, phase writer histograms, and a post-value snapshot.
+
+The corrected capture reached title (`0x790400`, width 1024) and hangar
+(`0x6ab400`, width 512). The whole-RDRAM control recorded 21,381,891 writes;
+the candidate region recorded 21,371,891 writes. Its final 102,400-byte
+snapshot contained 57,871 nonzero bytes. Hangar-phase writer histograms
+included `0x80090F8C`, `0x800923B8`, `0x80090268`, and `0x800908D4`.
+
+This independently proves that the retail candidate region is active and
+written during both target route coverage and does not support an inactive
+region explanation. It does not select legitimate stage zeros versus a port
+logger-region error versus a different PCM representation: the broad range
+contains unrelated fields, the post-value result is a final aggregate, and
+the run produced no exact per-stage/per-length payload table or one-to-one
+port FNV join. The initial missing-ROM failure is a path/configuration issue,
+not a ground-truth result. No task-data, audio, gate, fallback, dispatch, VI,
+or output behavior was changed. The next probe must use exact representative
+destination/length windows.
+
+Artifact: `scratch/agent/s2391_oracle_stage_payload.log`.

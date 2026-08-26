@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2390 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. The s2388 source audit shows `complete` is a same-range-both predicate, not an aggregate-count or ordering predicate. Among the 411 incomplete rows (232/179), 331 had neither source nor consumer, 38 source-only, 42 consumer-only, and none had both; ordering flags varied only with the one-sided matches. The s2389 range audit found task-reporter selections for 1,454/1,432 title-stage rows, but zero image-stage selections because every relevant stage had `stage_nz=0`, which the image matcher explicitly rejects; there were zero same-range agreements and zero conflicts. The s2390 retained-field audit confirms target-stage zeros in both image arms (1,424/1,421 unique rows), with only two positive rows in one hangar arm; all controls pass. The artifacts contain no payload bytes, so byte-level recomputation cannot distinguish a legitimate zero from a logger-region artifact. No task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
+Maintained in Session 2391 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. The s2388 source audit shows `complete` is a same-range-both predicate, not an aggregate-count or ordering predicate. Among the 411 incomplete rows (232/179), 331 had neither source nor consumer, 38 source-only, 42 consumer-only, and none had both; ordering flags varied only with the one-sided matches. The s2389 range audit found task-reporter selections for 1,454/1,432 title-stage rows, but zero image-stage selections because every relevant stage had `stage_nz=0`, which the image matcher explicitly rejects; there were zero same-range agreements and zero conflicts. The s2390 retained-field audit confirms target-stage zeros in both image arms (1,424/1,421 unique rows), with only two positive rows in one hangar arm; all controls pass. The s2391 retail oracle payload-region capture passed the whole-RDRAM, title, and hangar controls and found 57,871/102,400 final nonzero bytes in the broad candidate region, with phase-gated writer PCs, but no exact per-stage payload bytes or one-to-one port hash join. This rules out an inactive retail region, not legitimate-zero, logger-region, or representation-mismatch explanations. No task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
 
 The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
 
@@ -190,6 +190,24 @@ is authorized.
 
   ORIGIN: no mitigation or behavior change; added only a bounded retained-log
   audit and its output.
+
+- **s2391 — retail candidate region is active but the broad payload witness is
+  not exact.** The first oracle attempt failed before launch because the
+  documented `build/Debug/rogue_squadron.z64` path is absent; the corrected
+  run used the present `build/rogue_squadron.z64`. Whole-RDRAM control reached
+  `21,381,891` writes, title and hangar phase buckets were observed, and the
+  candidate range `0x167000:0x180000` received `21,371,891` retail writes.
+  Its final snapshot had `57,871/102,400` nonzero bytes. Hangar-phase writer
+  PCs included `0x80090F8C`, `0x800923B8`, `0x80090268`, and `0x800908D4`.
+  Because the range contains many unrelated fields and the snapshot is not
+  per-stage or per-length, this is independent evidence that the retail
+  region is active, not a payload-level match to the port's zero stage rows.
+  `H-StageNonzeroLegitimate`, `H-StageNonzeroLoggingArtifact`, and
+  `H-StageNonzeroPcmMismatch` remain open; no predicate relaxation or output
+  change is authorized. Artifact:
+  `scratch/agent/s2391_oracle_stage_payload.log`.
+
+  ORIGIN: no mitigation or behavior change; added only a ground-truth watch.
 
 - **s2382 — gate/downstream path is positive but task/output closure is absent.**
   The same-build driver passed controls for stub c0/c1 and image c0/c1; each
@@ -483,8 +501,10 @@ sequence; #1 is the next campaign priority.
   qualified steps. The reporter-predicate audit is closed; the next queued
   boundary is whether the image-stage `nonzero` predicate is a legitimate
   output-contract requirement or a capture/reducer artifact. s2390 confirmed
-  the retained target zeros but could not recompute bytes; obtain a new
-  ground-truth payload/region witness before changing the predicate.
+  the retained target zeros but could not recompute bytes; s2391 confirmed
+  retail activity in the broad candidate region but not exact stage payloads.
+  Narrow the oracle to representative destination/length windows before
+  changing the predicate.
 2. **M5 task/output closure — closed at current capture scope.** s2387's
    corrected reporter-candidate table associated raw `[audtask-join]` records
    with 100% of 4,688 image-stage candidates; reporter completion was true for
