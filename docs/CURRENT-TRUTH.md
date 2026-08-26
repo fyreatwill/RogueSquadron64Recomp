@@ -5,7 +5,9 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2371 (2026-08-25). The M5 A1 pre-target capture passed
+Maintained in Session 2372 (2026-08-25). The M5 A1 predecessor-argument capture passed the oracle whole-RDRAM, both target origins, and predecessor-PC controls. Retail's target-phase `0x80001F84` row had `$a0=1,$a2=0`; both port arms had `$a0=0x8010FEE0,$a2=0` before the same null request. This selects an argument/input divergence before `get_function(0)`, not resident-overlay wrong dispatch. No fallback or contract edit is authorized.
+
+The M5 A1 pre-target capture passed
 the oracle and both early-640 port controls; both arms requested the null
 function address before target origin. The resident table contained only
 sections 0, 1, and 3, none containing address zero. This selects a missing or
@@ -103,6 +105,17 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2372 — retail and port predecessor arguments differ.** The fresh oracle
+  passed whole-RDRAM `10,000`, both target 640 origins, and the predecessor-PC
+  control. It recorded `2,411` target-phase executions at `0x80001F84`, with
+  target rows showing `$a0=0x00000001,$a2=0`. Both same-build port arms passed
+  early-640 and emitted the phase-4 null request; their bounded predecessor
+  rows showed `$a0=0x8010FEE0,$a2=0`. This selects
+  `H-RetailPredecessorArgsDiffer` at capture scope and rules out matching
+  predecessor arguments. It does not identify the writer/caller divergence or
+  authorize a fallback, dispatch/VI change, or audio/task contract edit.
+  Artifact: `scratch/agent/s2372_m5_a1_port_predecessor_args/`.
 
 - **s2371 — retail executes the A1 predecessor window.** The fresh oracle
   passed whole-RDRAM `10,000` and both target-origin controls. The bounded
@@ -262,23 +275,17 @@ sequence; #1 is the next campaign priority.
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
 
-3. **M5 A1 caller/input boundary — active.** Retail predecessor execution is
-   now positive, but the port-side predecessor arguments are missing. Add one
-   bounded port-side `$a0/$a2` capture at the `0x80001F84` to `0x80001F88`
-   transition, retaining the existing oracle controls. Do not add a fallback,
-   change dispatch or VI selection, or edit task/audio data.
-3. **M5 A1 pre-target route boundary — closed at current capture scope.** The
+3. **M5 A1 caller/input boundary — active.** Retail and port both execute the
+   predecessor, but retail has `$a0=1` while the port has `$a0=0x8010FEE0` at
+   `0x80001F84`; `$a2` is zero in both. Next, capture the port `rs_free`
+   entry/return `$a0` and `$ra`, paired with retail predecessor `$a0/$a2` and
+   caller histograms, to identify whether the divergence is at the caller's
+   argument construction or inside the callee. Keep all positive controls; do
+   not add a fallback, change dispatch/VI behavior, or edit task/audio data.
+4. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both
    arms. Do not repeat the resident-overlay table without a new ground-truth
    discriminator or add a null fallback.
-4. **M5 A1 caller/input boundary — next.** Use one new ground-truth-first
-   table around the port's predecessor path to `0x80001F88`: compare the
-   retail execution of the immediately preceding guest-PC window and its
-   `$a0/$a2` rows against the port last-guest-PC and call-site rows. Keep
-   whole-RDRAM, both target origins, and early-640 controls; do not add a null
-   fallback or change dispatch/VI behavior. A missing retail predecessor with
-   positive controls selects a route/input divergence; a matching predecessor
-   with different arguments selects an ABI/input value divergence.
 5. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator; do not chase a single recurring crash.
 6. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer-mode

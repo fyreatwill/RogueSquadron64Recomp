@@ -111539,3 +111539,36 @@ null-function request. Watch the same bounded retail window with `$a0/$a2`,
 retain whole-RDRAM and both target-origin controls, and add a bounded port-side
 `$a0/$a2` capture before `get_function(0)`. Do not add a null fallback or
 change dispatch/VI behavior.
+
+## Session 2372 (2026-08-25) — M5 A1 predecessor arguments differ
+
+Before building, the fresh retail oracle passed the whole-RDRAM positive
+control (`10,000` callbacks), both target 640 origin controls, and the
+predecessor-PC control. It recorded `2,411` target-phase executions at
+`0x80001F84`; the target rows had `$a0=0x00000001,$a2=0`. The Debug target
+then built successfully with a bounded diagnostic at the port's corresponding
+return site.
+
+Both same-build port arms passed the early-640 transition and emitted one
+phase-4 `[a1-abort]` requesting `0x00000000`. Their positive predecessor rows
+had `$a0=0x8010FEE0,$a2=0` in both control and alternate arms. The discriminator
+selects `H-RetailPredecessorArgsDiffer` at capture scope and rules out matching
+predecessor arguments. The run did not identify the writer/caller divergence,
+and does not authorize a fallback, dispatch/VI change, task/audio edit, or
+mitigation. The reported crash-marker count was not used as evidence because
+the driver intentionally SIGKILLs each arm after its capture marker.
+
+Artifacts: `scratch/agent/s2372_ground_truth/`,
+`scratch/agent/s2372_m5_a1_port_predecessor_args/`, and
+`scratch/agent/run_s2372_m5_a1_port_predecessor_args.sh`.
+
+ORIGIN: diagnostic-only. No game behavior, dispatch, VI selection, task data,
+field writeback, guard, fallback, or mitigation changed.
+
+### Next
+
+Run one ground-truth-first capture pairing the retail `rs_free` entry and
+predecessor rows with the port's `[rs-free]` entry and bounded `0x80001F84`
+return rows. Determine whether the divergent `$a0` is already present at
+`rs_free` entry or is changed inside the callee. Keep all positive controls;
+do not change behavior.
