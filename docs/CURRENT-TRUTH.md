@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2460 (2026-08-26).
+Current maintenance marker: Session 2461 (2026-08-26).
 
 ## Current state
 
@@ -106,6 +106,19 @@ Current maintenance marker: Session 2460 (2026-08-26).
   stamps. Static-only; no behavior change. Artifact:
   `scratch/agent/s2460_m5_pre_target_boundary/audit.md`.
 
+- **s2461 — the corrected port capture remains blocked before the M5 target
+  join.** The retail oracle passed its whole-RDRAM control with 11,206,982
+  writes, reached 512/`0x006AB400`, and observed `0x800078EC` 624 times from
+  predecessor `0x8002BEEC`. The port reached 1024 and its indirect resolver
+  positive control fired, but crashed 0.6 seconds into the first target frame
+  with `last-guest-pc=0x80007904`; no target-phase slot pre-call,
+  `m5-dispatch-boundary`, or `get_function(0)` row was emitted. The initial
+  all-category attempt was discarded because its bounded slot budget ended in
+  phase 6; the phase-8 rerun is a qualified non-result for
+  `H-ZeroUpdateTerminal` versus `H-NonzeroSlotThenMatch`, not evidence for
+  either. Artifact:
+  `scratch/agent/s2461_m5_zero_update_port_fixed/audit.md`.
+
 ## Latest evidence
 
 - **s2452 — the retail second-range boundary has no generated dispatcher body.**
@@ -184,16 +197,16 @@ Current maintenance marker: Session 2460 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active.** Compare the port
-   `0x8008F2CC` alternate's phase/task arguments and destination against the
-   independently grounded retail callsite, then determine whether it is an
-   equivalent consumer or bootstrap-only path.
-   The static audit selected the explicit `slot->update_func==0` →
-   `get_function(0)` edge for the slot-dispatch family. Run one qualified
-   capture with the existing resolver, slot pre-call, and indirect positive
-   controls to distinguish that edge from a nonzero slot callback followed by
-   the match dereference failure. No output remap, task-data change, gate
-   change, or guard is authorized.
+1. **M5 generated alternate equivalence — active, pre-target blocked.** Compare
+   the port `0x8008F2CC` alternate's phase/task arguments and destination
+   against the independently grounded retail callsite, then determine whether
+   it is an equivalent consumer or bootstrap-only path. The phase-gated
+   resolver/slot join was attempted with a passing positive control, but the
+   port crashes at `last-guest-pc=0x80007904` before target rows. Next isolate
+   that boundary by enumerating the generated `slotDispatcherIter` callers and
+   the writers of their callback field; do not infer slot-update polarity or
+   add a guard. No output remap, task-data change, gate change, or guard is
+   authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

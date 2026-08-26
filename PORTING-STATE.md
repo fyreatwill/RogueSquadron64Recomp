@@ -113680,3 +113680,30 @@ explanation for the resolver failure; interpreting either stale breadcrumb as
 the native resolver caller. It does not rule out a separate match-path fault or
 establish equivalence of the generated audio alternate. Artifact:
 `scratch/agent/s2460_m5_pre_target_boundary/audit.md`.
+
+## Session 2461 (2026-08-26) — qualified M5 zero-update capture blocked pre-target
+
+The retail oracle was run first with Rice, whole-RDRAM write control, the
+512/`0x006AB400` hangar drive, and watches at `0x8002BEEC` and `0x800078EC`.
+The positive control passed with 11,206,982 writes; the target phase was
+reached and `0x800078EC` executed 624 times with predecessor `0x8002BEEC`.
+
+The current qualified port built successfully. The first capture enabled
+`ROGUESQ_LOG_ALL`, reached 1024 after 47.0 seconds, and had a live indirect
+resolver control, but exhausted the bounded slot rows in phase 6; it was
+discarded as non-discriminating. The corrected phase-8 capture reached 1024,
+the resolver positive control fired, and one target frame was captured. It
+then crashed 0.6 seconds later with native `si_addr=0xfffffffffffffff8` and
+`last-guest-pc=0x80007904`. No target-phase `slot-dispatch kind=pre`,
+`m5-dispatch-boundary`, or `get_function(0)` row was emitted.
+
+**Hypotheses:** `H-ZeroUpdateTerminal` and `H-NonzeroSlotThenMatch` remain
+qualified non-results because the pre-target crash precedes their join.
+`H-ResolverControlFailure` is ruled out by the same-run positive control.
+
+**Rules out:** treating the missing slot row as evidence for either callback
+polarity, or using the stale `0x80007904` breadcrumb as proof of the exact
+resolver callsite. No guard, dispatch change, output remap, or audio behavior
+change was made. Next work is a bounded caller/field-writer audit for
+`slotDispatcherIter`. Artifact:
+`scratch/agent/s2461_m5_zero_update_port_fixed/audit.md`.
