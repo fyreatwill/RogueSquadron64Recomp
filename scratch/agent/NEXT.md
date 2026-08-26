@@ -1,50 +1,41 @@
-# NEXT work unit (s2481) — validate target-route SP completion consumption
+# NEXT work unit (s2482) — trace the post-receive image-task consumer
 
 HYPOTHESIS-ID: m5-generated-alternate-equivalence
 
 ## Single work unit
 
-Run one phase-valid qualified image-arm capture using the known eleven-Start
-`tools/probe.sh` route. Verify the runtime SP completion message's complete
-lifecycle: event registration, `run_task` return, `sp_complete` publication,
-and game-side queue consumption. Do not change code, add a runtime API, add a
-NULL guard, or remap audio/output in this unit.
+Use the completed s2481 capture plus the generated tree to identify the first
+game-side consumer after the target SP receive, and determine whether it joins
+the image task's DMA identity or a later slot/voice/PCM/output identity. This
+is one bounded provenance audit; do not change code, add a runtime API, add a
+NULL guard, or remap audio/output.
 
 ## Competing hypotheses
 
-- H-SPConsumed: the runtime publishes the registered SP message and the game
-  consumes it after each image-arm task.
-- H-SPPublishedUnconsumed: publication occurs, but the registered game queue
-  does not consume it on this route.
-- H-SPRegistrationGap: the SP event is missing or registered with the wrong
-  queue/message before image tasks run.
+- H-ImageConsumer: the first post-receive generated consumer retains the image
+  task identity and leads to a legitimate output contract.
+- H-LaterConsumer: the receive returns into a generic scheduler/slot path and
+  the image identity is not retained at the first consumer boundary.
+- H-UnresolvedConsumer: the capture/static tree cannot join the receive to a
+  consumer without a new instrument; no output remap is justified.
 
 ## Discriminator
 
-The same-run rows must show registration plus paired publication and consume
-counts for the target image route. Registration + publication + consumption
-selects H-SPConsumed; registration + publication with no consume selects
-H-SPPublishedUnconsumed; absent/incorrect registration selects
-H-SPRegistrationGap. The positive control is `[event-wiring] register` plus
-`[event-wiring] complete kind=SP`, and the route control is a phase 512 row
-with the hangar origin; both must fire in this run.
+Produce a complete caller/return path from the target `guest-receive` row
+through the generated consumer and join its data key to the target image-task
+key, a slot/voice/PCM key, or neither. A direct joined image identity selects
+H-ImageConsumer; a generic handoff with a distinct later identity selects
+H-LaterConsumer; an incomplete path selects H-UnresolvedConsumer. The passed
+positive controls are recorded in
+`scratch/agent/s2481_m5_runtime_sp_lifecycle/audit.md`.
 
-## Exact command
+## Exact commands
 
 Build is not needed. From the repo root:
 
 ```sh
-mkdir -p scratch/agent/soak_results/s2481_runtime_sp_lifecycle
-env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 \
-  ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-  ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_EVENT_WIRING=1 \
-  ROGUESQ_LOG_AUDIO_RETURN=1 PROBE_PHASE_WIDTH=512 \
-  PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 \
-  PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-  zsh tools/probe.sh scratch/agent/soak_results/s2481_runtime_sp_lifecycle 180 2
-grep -n -E 'event-wiring.*(register|complete kind=SP)|audio-route.*(run-task-return|sp-complete)|audtask-abi' \
-  scratch/agent/soak_results/s2481_runtime_sp_lifecycle/port.log | tail -120
+rg -n '0x8011A420|0x80128C70|guest-receive|sp-complete|audio-route|audtask-join' \
+  scratch/agent/soak_results/s2481_runtime_sp_lifecycle/run.log | tail -160
+rg -n '0x8011A420|0x80128C70|osRecvMesg|guest-receive|sp_complete' \
+  RecompiledFuncs src lib/N64ModernRuntime | head -240
 ```
-
-If the route control fails again, do not interpret generic SP rows; classify
-the capture as phase-invalid and diagnose the input/route gate next.

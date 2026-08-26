@@ -114121,6 +114121,26 @@ JAL at `0x800155E4`. The zero completion is not treated as a wild-value defect;
 its writer and legitimacy remain open at the containing-task boundary.
 
 Artifact: `scratch/agent/s2478_m5_continuation_bridge_validation/audit.md`.
+
+## Session 2481 (2026-08-26) — validated target-route SP completion consumption
+
+Ran the prescribed eleven-Start qualified image-arm capture with
+`ROGUESQ_AUDIO_UCODE=1`, the LLE-qualified route, and event-wiring/audio-route
+diagnostics. The capture reached the required hangar phase at VI width 512,
+origin `0x006AB400`. Controls fired: one SP registration for
+`0x8011A420/0x80128C70` and 64 runtime SP completions. Independent target-route
+queue rows then showed external delivery followed by `guest-receive` for the
+same queue/message, including the phase-12 row at ordinal 1474. This selects
+`H-SPConsumed`, rules out a registration gap and a published-but-unconsumed SP
+message at this boundary, and leaves the post-receive consumer/output
+contract open.
+
+The process later crashed in `recomp::do_rom_read` after 13 captured frames,
+following the completed lifecycle observation. That late crash is not used to
+interpret SP registration, publication, delivery, or receive. No code,
+instrumentation, guard, output remap, or audio behavior changed.
+
+Artifact: `scratch/agent/s2481_m5_runtime_sp_lifecycle/audit.md`.
 ## Session 2479 (2026-08-26) — audited image-arm containing-task completion
 
 Ran the prescribed bounded static audit using the s2478 image capture and the

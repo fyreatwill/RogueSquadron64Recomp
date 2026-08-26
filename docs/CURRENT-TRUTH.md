@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2480 (2026-08-26).
+Current maintenance marker: Session 2481 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,17 @@ Current maintenance marker: Session 2480 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2481 — the target image-route SP completion is consumed.** The qualified
+  eleven-Start capture reached hangar width 512 and passed both lifecycle
+  lines: one SP registration and 64 runtime SP completions, plus target-route
+  queue rows showing external delivery followed by guest receive on
+  `0x8011A420/0x80128C70`. This selects `H-SPConsumed`, rules out a registration
+  gap and a published-but-unconsumed SP message at this boundary, and leaves
+  the post-receive output/consumer contract open. The run later crashed in
+  `recomp::do_rom_read` after 13 frames; that late failure is separate from the
+  completed lifecycle observation. Artifact:
+  `scratch/agent/s2481_m5_runtime_sp_lifecycle/audit.md`.
 
 - **s2479 — containing-task completion is runtime-owned, not generated.** The
   complete static table found the image arm's terminal `0x1328` `Broke` edge,
@@ -404,12 +415,11 @@ Closed investigations are not active work items. This is one monotonic sequence;
 1. **M5 generated alternate equivalence — active, downstream contract open.**
    The host-local bridge reaches the target image task and removes the old
    continuation lookup failure. The generated image arm exits normally at
-   `0x1328`; containing-task SP completion is runtime-owned, while the two
-   target stage DMAs remain `stage-only`. Next: dynamically validate that the
-   runtime SP completion message is registered, published, and consumed on the
-   qualified image route before investigating output/consumer semantics. The
-   plain launch was phase-invalid; use the eleven-Start `tools/probe.sh` route
-   in `NEXT.md`.
+   `0x1328`; containing-task SP completion is runtime-owned, the SP message is
+   consumed on the qualified image route, and the two target stage DMAs remain
+   `stage-only`. Next: identify the legitimate post-receive consumer/output
+   contract. The plain launch was phase-invalid; use the eleven-Start
+   `tools/probe.sh` route in `NEXT.md`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
@@ -436,7 +446,8 @@ controls are in [`F5-UCODE-REFERENCE.md`](F5-UCODE-REFERENCE.md) and
 ### M5 audio and image output
 
 Direct service entry/exit, service gate/loop, task/AI boundary, image DMEM work,
-generated DMA, and reporter association are live on the port. The image arm's
+generated DMA, reporter association, and target-route SP queue consumption are
+live on the port. The image arm's
 downstream identity is not yet a legitimate slot, voice, PCM, or output mapping.
 Retail proves related ranges and task-field writers are active, including the
 second-range helper/caller relation, but does not prove a port equivalent.
