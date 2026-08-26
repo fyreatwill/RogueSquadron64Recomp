@@ -30,6 +30,16 @@ Current maintenance marker: Session 2484 (2026-08-26).
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
 
+- **s2485 — the later scheduler pointer is the normal `gspTask` OSTask
+  descriptor.** The generated census found no reads/writes or wrapper-specific
+  accesses in the `0x40`-byte object at `0x800377C8`; the data-symbol table and
+  companion decomp independently name it `gspTask` with type `OSTask`, and
+  `spTaskSchedulerThread` passes it specifically to `osSpTaskYielded`. This
+  selects `H-DescriptorIsOSTask` at the static boundary and rules out a
+  generated wrapper field pattern. It does not identify the descriptor writer
+  or join its field contents to the later task. Artifact:
+  `scratch/agent/s2485_m5_descriptor_audit/audit.md`.
+
 - **s2481 — the target image-route SP completion is consumed.** The qualified
   eleven-Start capture reached hangar width 512 and passed both lifecycle
   lines: one SP registration and 64 runtime SP completions, plus target-route
@@ -458,8 +468,10 @@ Closed investigations are not active work items. This is one monotonic sequence;
    contract. The first post-receive edge is now classified as a generic
    scheduler handoff; the event object's `+4` payload has not been joined to
    the image task identity. That capture now selects a distinct later-task
-   pointer at the `OSTask.data_ptr` boundary; next decode the descriptor at
-   `0x800377C8` from generated guest-word accesses. The plain launch was
+   pointer at the `OSTask.data_ptr` boundary. Static evidence now identifies
+   `0x800377C8` as the normal `gspTask` OSTask; next capture all sixteen guest
+   words at that descriptor at the `osSpTaskYielded` boundary and join them to
+   the event payload and later task-start argument. The plain launch was
    phase-invalid; use the eleven-Start `tools/probe.sh` route in `NEXT.md` only
    if a later capture is required.
 2. **M5 task/output closure — closed at current capture scope.** The earlier

@@ -114225,3 +114225,21 @@ are not evidence. The stable guest-word pointers remain evidence; the later
 descriptor layout and consumer are open. No scheduler behavior, remap, guard,
 or audio contract changed. Artifact:
 `scratch/agent/s2484_m5_scheduler_identity/audit.md`.
+
+## Session 2485 (2026-08-26) — audited later scheduler task descriptor
+
+Ran the mandated static descriptor census. `syms/rogue_squadron.datasyms.toml`
+and the companion `rogue_squadron64` symbol file independently identify
+`0x800377C8` as `gspTask`, an `OSTask` of size `0x40`. In
+`spTaskSchedulerThread`, generated PC `0x80019E0C` constructs that pointer and
+passes it to `osSpTaskYielded` at `0x80019E14`; the later
+`osSpTaskLoad`/`osSpTaskStartGo` calls use the separately held task pointer
+whose corrected global is `0x80128D38`.
+
+The exhaustive generated-tree search found no guest-word reads/writes in the
+descriptor span and no wrapper-specific copy or consumer. Runtime `OSTask` is
+the matching 16-word, `0x40`-byte layout. This selects
+`H-DescriptorIsOSTask` at the static boundary and rules out a generated
+wrapper-field pattern, but does not identify the descriptor writer or join its
+contents to the later task. No code or behavior changed. Artifact:
+`scratch/agent/s2485_m5_descriptor_audit/audit.md`.
