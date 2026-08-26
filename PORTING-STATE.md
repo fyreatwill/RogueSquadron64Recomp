@@ -113998,3 +113998,36 @@ source explanation. It does not yet establish whether zero is the intended
 OSThread-entry ABI or a missing continuation/link value. No guard, stub,
 dispatch, audio, output, task-data, or callback-polarity change was made.
 Artifact: `scratch/agent/s2473_m5_runtime_entry_boundary/audit.md`.
+
+## Session 2474 (2026-08-26) — checkpoint close-out: identified generator gap at converter callsite
+
+This session was a checkpoint close-out. NEXT.md had not been rewritten after
+s2473 completed; no planned s2474 work unit existed. Static analysis of the
+runtime and generator confirmed the root-cause explanation for the inherited
+zero and identified the s2475 discriminating work unit.
+
+Static findings this session:
+
+- `run_thread_function` (librecomp/src/recomp.cpp:463) zero-initializes
+  `recomp_context ctx{}` and sets only `r29` (sp), `r4` (arg), `mips3_float_mode`,
+  and `f_odd`. `r31` is never written.
+- The game's `GameEntry.thread_create_callback` field is null; no game-specific
+  context initialization runs. The zero `r31` at thread entry is therefore
+  entirely from the runtime's context zero-initialization, with no subsequent
+  override.
+- Combined with s2466's static census (JAL at `0x800155E4` lowered to a direct
+  C call without `ctx->r31 = PC+8`; converter entry copies `ctx->r31` into
+  `ctx->r25` and dispatches via `LOOKUP_FUNC(ctx->r25)`), the root cause is
+  identified: the generator convention omits `ctx->r31` for direct JAL-to-named-
+  function calls, but `convertMat3x4ToN64Mtx` depends on the guest `$ra` value.
+
+ORIGIN: Writer = JAL at `0x800155E4` in `traverseSceneGraphRecursive`.
+Legitimate value = `0x800155EC` (standard MIPS PC+8 link register value for
+that JAL). This is not a mitigation; it is the correct return address the recomp
+generator convention omits.
+
+The s2475 work unit is: verify the delay slot at `0x800155E8` does not
+override `$ra`, then add `ctx->r31 = 0x800155EC;` before the converter call in
+`fixup_game_funcs.py`, rebuild, and run to confirm the pre-target abort is
+resolved. NEXT.md rewritten with exact commands and competing hypotheses.
+No guard, stub, audio, output, or dispatch change was made.

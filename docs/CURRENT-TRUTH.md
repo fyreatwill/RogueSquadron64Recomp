@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2473 (2026-08-26).
+Current maintenance marker: Session 2474 (2026-08-26).
 
 ## Current state
 
@@ -331,14 +331,18 @@ Current maintenance marker: Session 2473 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, thread-entry ABI boundary
-   open.** The runtime constructs the main worker context with `r31=0` before
-   `mainGameLoop` inherits it. Determine whether that zero is the intended
-   thread-entry ABI or a missing continuation/link value by comparing the
-   context before and after `thread_create_callback`, immediately before the
-   generated thread function, and at `mainBootstrapWorker` entry. No callback
-   polarity, guard, output remap, task-data change, gate change, or dispatch
-   change is authorized.
+1. **M5 generated alternate equivalence — active, generator-gap fix pending.**
+   The runtime zero-initializes `recomp_context ctx{}` with no `r31` setup and
+   no `thread_create_callback` registered for this game. The generator lowered
+   the JAL at `0x800155E4` in `traverseSceneGraphRecursive` to a direct C call
+   without writing `ctx->r31 = 0x800155EC`, but `convertMat3x4ToN64Mtx` reads
+   `ctx->r31` as its tail-call target. This is not a mitigation; the legitimate
+   writer is that JAL and the legitimate value is `0x800155EC` (MIPS PC+8).
+   Next: verify the delay slot at `0x800155E8` does not override `$ra`, add the
+   `ctx->r31 = 0x800155EC` write to `fixup_game_funcs.py`, rebuild, and confirm
+   the pre-target `get_function(0)` abort is resolved. See `NEXT.md` for exact
+   commands. No audio gate, output remap, task-data, or dispatch change is
+   authorized beyond this callsite patch.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
