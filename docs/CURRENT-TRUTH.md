@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2375 (2026-08-25). The M5 A1 widened internal capture passed all oracle and both port controls. Retail reaches `0x80001CAC -> 0x80001CB0 -> 0x80001CB4`, while both port arms reach `0x80001CAC -> 0x80001CB0 -> 0x80001CD8F`; this selects an internal control-flow divergence at capture scope. No fallback or contract edit is authorized.
+Maintained in Session 2376 (2026-08-25). The M5 A1 source audit found no generated control-flow mismatch at the disputed boundary: the port contains the expected `0x80001CB4` setup and `jal 0x800331D0`, then reaches `0x80001CD8` only after `osRecvMesg` and the `0x8` queue-state test. The companion function is still `INCLUDE_ASM`, so the retail body comparison is source-unavailable; this is a single-source audit, not a complete explanation. No fallback or contract edit is authorized.
 
 The s2372 predecessor capture remains valid: retail's target-phase
 `0x80001F84` row had `$a0=1,$a2=0`, while both port arms had
@@ -113,6 +113,21 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2376 — generated `rs_free` boundary has no source-visible control-flow
+  mismatch.** The generated body maps `0x80001CAC` to `lui $a0,0x8011`,
+  `0x80001CB0` to `addiu $a0,-0x120`, `0x80001CB4` to `addu $a1,$zero,$zero`,
+  and `0x80001CB8` to `jal 0x800331D0` with delay-slot `a2=1`. After the call,
+  it reads the queue head and tests bit `0x8` at `0x80001CD4`; only the
+  not-taken path reaches `0x80001CD8`. The companion project provides no C
+  body for `rs_free` (`INCLUDE_ASM` only), while the s2375 port rows show the
+  `0x80001CD8F` marker after the call. This selects
+  `H-InputDependentPath` only for the available generated/runtime evidence,
+  and leaves the retail-vs-port queue/return state open. It rules out a
+  generated mismatch visible in the audited body, not the underlying writer
+  or caller divergence. No behavior, fallback, dispatch, VI, task, audio,
+  guard, or mitigation change was made. This is single-source for the body
+  audit. Artifact: source audit only; s2375 capture retained.
 
 - **s2373 — `rs_free` entry/return boundary is positive and internally
   divergent.** The fresh oracle passed whole-RDRAM `10,000`, both target 640
@@ -323,13 +338,13 @@ sequence; #1 is the next campaign priority.
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
 
-3. **M5 A1 caller/input boundary — active.** Retail and port both execute
-   `rs_free` and the predecessor. The widened internal join selects a
-   successor-PC divergence after the shared `0x80001CAC -> 0x80001CB0`
-   prefix: retail reaches `0x80001CB4`, while port reaches `0x80001CD8F`.
-   Identify the first port-side branch/call-site distinction and its retail
-   counterpart with positive controls; do not add a fallback, change
-   dispatch/VI behavior, or edit task/audio data.
+3. **M5 A1 queue/return boundary — active.** The generated body has the
+   expected `0x80001CB4`/`osRecvMesg` sequence; port reaches the later free-list
+   branch while retail's retained route stops at `0x80001CB4`. Capture the
+   queue argument, `osRecvMesg` return/result, and the post-call queue-head
+   value in the same-build port arms, with an independent retail watch of the
+   corresponding physical queue state. Do not add a fallback or change
+   dispatch, VI, task, or audio behavior.
 4. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both
    arms. Do not repeat the resident-overlay table without a new ground-truth

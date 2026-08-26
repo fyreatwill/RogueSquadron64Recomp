@@ -111676,3 +111676,29 @@ field writeback, guard, fallback, or mitigation changed.
 Audit the companion retail and generated port `rs_free` bodies around
 `0x80001CAC..0x80001CD8F` to distinguish a generated control-flow mismatch,
 an input-dependent path, and a probe-label artifact.
+## Session 2376 (2026-08-25) — M5 A1 rs_free source boundary audit
+
+The prescribed bounded audit compared the generated `rs_free` body with the
+companion project and the s2375 runtime rows. The generated body is internally
+consistent at the disputed boundary: `0x80001CAC`/`0x80001CB0` set the queue
+argument, `0x80001CB4` sets `$a1=0`, `0x80001CB8` calls `osRecvMesg` with the
+delay-slot `$a2=1`, and the later `0x80001CD8` path is selected only when the
+post-call queue-head value has bit `0x8` clear. The companion has no source
+body for this function (`INCLUDE_ASM` only), so a full retail instruction
+comparison could not be made.
+
+The s2375 port rows already show the positive internal markers and the
+post-call `0x80001CD8F` marker in both arms. This rules out a generated
+control-flow mismatch visible in the audited port body and selects
+`H-InputDependentPath` only for the available generated/runtime evidence. It
+does not identify the retail queue state, writer, caller, or a legitimate
+fix. No build or behavior change was made; no fallback, dispatch, VI, task,
+audio, guard, or mitigation change was authorized.
+
+ORIGIN: diagnostic/source audit only; no value or behavior was changed.
+
+### Next
+
+Capture the `osRecvMesg` queue argument, return/result, and post-call queue
+head for both same-build port arms, and independently watch the corresponding
+retail queue state before interpreting the successor divergence.
