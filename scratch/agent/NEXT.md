@@ -1,30 +1,33 @@
-# NEXT work unit (s2449) — audit generated `rs_memset` call lowering
+# NEXT work unit (s2450) — inspect direct-`jal` lowering semantics
 
 HYPOTHESIS-ID: m5-port-static-rsmemset-callsite
 
 ## Work unit
 
-Perform a bounded static audit of all 88 generated `jal 0x800078E0` sites.
-For each site, record the callsite, preceding instruction, delay-slot
-instruction, and whether any generated statement writes `ctx->r31` between the
-function entry and the direct `rs_memset` call. Compare the result with the
-s2448 live caller table; do not change runtime behavior.
+Perform a bounded source audit of N64Recomp's direct-`jal` lowering and C
+generator call emission, then compare it with one generated static
+`rs_memset` call and one generated indirect positive-control call. Do not
+change runtime or generated output.
 
 ## Competing hypotheses and discriminator
 
-- H-GeneratedJalWritesRA: generated lowering writes `ctx->r31` for the direct
-  call, so s2448's zero is caused by a later overwrite.
-- H-GeneratedDirectCallOmitsRA: none of the 88 direct call lowerings writes
-  `ctx->r31`, explaining the live zero at both caller and entry.
-- H-SiteSubsetWritesRA: only a subset writes `ctx->r31`; the static table
-  identifies whether target-phase rows use that subset.
+- H-GeneratorIntentionalNoRA: direct C calls intentionally omit guest link
+  writes, while indirect calls use a different contract.
+- H-GeneratorLoweringDefect: direct `jal` lowering should write the guest link
+  but the emitted path does not.
+- H-CallsiteSpecificRewrite: a later generation/fixup rewrite removes the link
+  only for this generated call family.
 
-The discriminator is the complete 88-site static table, cross-checked against
-s2448's positive-controlled live rows. Any site with a generated `ctx->r31`
-write selects H-GeneratedJalWritesRA or H-SiteSubsetWritesRA; no writes at all
-selects H-GeneratedDirectCallOmitsRA. No new run is needed unless the static
-enumeration and live table disagree.
+The discriminator is the source-to-output contract comparison: if the generator
+explicitly omits links for all direct calls and the positive-control indirect
+path writes/resolves one, select intentional semantics; if source requires a
+link but output omits it, select a lowering defect; if only fixup output differs,
+select a callsite-specific rewrite.
 
-## Exact command
+## Exact commands
 
-`python3 scratch/agent/audit_s2449_static_rsmemset_lowering.py`
+`sed -n '120,370p' ../N64Recomp/src/recompilation.cpp`
+
+`sed -n '400,450p' ../N64Recomp/src/cgenerator.cpp`
+
+`rg -n -C 4 "rs_memset\\(rdram, ctx\\)|get_function\\(.*8009123C|ctx->r31 =" ../N64Recomp/RecompiledFuncs/funcs_2.c ../N64Recomp/RecompiledFuncs/funcs_*.c | head -240`

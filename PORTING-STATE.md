@@ -113409,3 +113409,24 @@ format refresh is in `tools/apply_s2447_m5_static_calls.py`.
 Artifacts: `scratch/agent/s2448_m5_static_rsmemset_callsite_abi/` (invalid
 positive-control configuration) and
 `scratch/agent/s2448_m5_static_rsmemset_callsite_abi_fixed/`.
+
+## Session 2449 (2026-08-26) — audited generated rs_memset call lowering
+
+The prescribed audit initially found zero sites because its script resolved the
+generated tree as `repo/N64Recomp`; the actual sibling tree is
+`../N64Recomp`. That was a path defect, not experiment evidence. After fixing
+the path, the bounded static table found all expected 88 generated
+`jal 0x800078E0` sites, including each preceding instruction and delay-slot
+instruction. None of the 88 sites had a generated `ctx->r31 =` statement
+between function entry and the direct `rs_memset` call.
+
+Together with s2448's same-run live caller and entry rows, this selects
+`H-GeneratedDirectCallOmitsRA` at the observed generated-code boundary and
+rules out a caller-side overwrite as the explanation for the zero guest `ra`.
+It does not distinguish intentional direct-call semantics from a generator
+lowering defect. No runtime, audio, output, task-data, dispatch, or guard
+behavior changed.
+
+ORIGIN: the static table is observation-only and covers the complete generated
+callsite set; its live cross-check is s2448's independent-controls capture.
+Artifact: `scratch/agent/s2449_static_audit.tsv`.
