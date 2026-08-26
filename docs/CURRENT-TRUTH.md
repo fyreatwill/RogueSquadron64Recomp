@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2457 (2026-08-26).
+Current maintenance marker: Session 2459 (2026-08-26).
 
 ## Current state
 
@@ -81,6 +81,18 @@ Current maintenance marker: Session 2457 (2026-08-26).
   target phase, so its null target-phase rows are a non-result. This is
   single-source port-boundary evidence paired with independent retail ground
   truth; no output remap, task-data change, gate, or guard is authorized.
+
+- **s2459 — generated-alternate equivalence remains a qualified non-result at
+  the port boundary.** The corrected retail oracle passed whole-RDRAM (12,661),
+  exact ranges (1,536/1,125), 627 hangar-phase `0x8002BEEC` -> `0x800078EC`
+  predecessor rows, and six `0x8008F2CC` executions. The paired port image arm
+  crashed before target capture in `matchKeywordWithPriority`
+  (`last-guest-pc=0x8000834C`); a fixed image-only attempt with
+  `ROGUESQ_DRAIN_INLOOP_TICK=1` also crashed in `slotDispatcherIter`
+  (`last-guest-pc=0x80007904`). The passed controls qualify the missing port
+  tuples as a non-result, but do not select equivalent versus bootstrap-only.
+  The initial oracle command without Rice/hold controls is setup-only and
+  excluded. Artifact: `scratch/agent/s2459_m5_generated_alternate_equivalence/audit.md`.
 
 ## Latest evidence
 
@@ -164,7 +176,10 @@ Closed investigations are not active work items. This is one monotonic sequence;
    `0x8008F2CC` alternate's phase/task arguments and destination against the
    independently grounded retail callsite, then determine whether it is an
    equivalent consumer or bootstrap-only path.
-   No output remap, task-data change, gate change, or guard is authorized.
+   The current port boundary is pre-target dispatch
+   (`matchKeywordWithPriority` / `slotDispatcherIter`); audit the complete
+   bounded call/return idiom there before another equivalence capture. No
+   output remap, task-data change, gate change, or guard is authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

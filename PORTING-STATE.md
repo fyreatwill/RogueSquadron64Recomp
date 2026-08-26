@@ -113628,3 +113628,24 @@ evidence paired with independent retail ground truth. Artifact:
 ORIGIN: retail oracle controls plus observation-only port callsite, image-stage,
 and join probes; no behavior, audio, dispatch, output, task-data, or mitigation
 change.
+
+## Session 2459 (2026-08-26) — qualified M5 alternate capture non-result
+
+The first paired capture used an oracle command missing Rice video and
+`--hold-ms`; it stayed on the wrong route and is setup-only. The corrected
+retail oracle passed the whole-RDRAM positive control (12,661 writes), exact
+target ranges (1,536 and 1,125 writes), 627 hangar-phase
+`0x8002BEEC` -> `0x800078EC` predecessor rows, and six executions of
+`0x8008F2CC`.
+
+The paired port image arm crashed before the target phase in
+`matchKeywordWithPriority` (`last-guest-pc=0x8000834C`). A fixed image-only
+attempt with `ROGUESQ_DRAIN_INLOOP_TICK=1` also crashed before target capture
+in `slotDispatcherIter` (`last-guest-pc=0x80007904`). Thus the passed controls
+make the missing port tuples a qualified non-result, but do not select
+equivalent versus bootstrap-only. These failures do not authorize a guard,
+dispatch change, output remap, task-data change, or gate change. Artifact:
+`scratch/agent/s2459_m5_generated_alternate_equivalence/audit.md`.
+
+ORIGIN: independent retail controls plus observation-only port attempts; no
+behavior or mitigation change.
