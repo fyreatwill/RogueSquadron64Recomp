@@ -1,54 +1,46 @@
-# NEXT work unit (s2402) — repair route-validity, then capture the clear edge
+# NEXT work unit (s2403) — audit exact image-stage nonzero predicate
 
-HYPOTHESIS-ID: m5-image-stage-route-order-perturbation
+HYPOTHESIS-ID: m5-image-stage-nonzero-contract
 
 ## Work unit
 
-First repair the same-build two-arm driver so both arms reach the 1024 title
-origin with the lifecycle activation control before interpreting the already
-landed identity-edge table. Use the qualified LLE/image route,
-`ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=1024`, and the existing
-route/stage probes. Keep both arms in one build and concurrent; use a bounded
-launch/watchdog schedule that does not add `ROGUESQ_LOG_ALL`. Do not change
-task data, audio, gate, fallback, dispatch, VI, output behavior, or mitigation.
-
-Before building, arm the retail oracle's whole-RDRAM positive control and the
-target-origin control. In the port, keep one activation-control row per arm
-and the phase-keyed clear-edge table. If the route controls pass in both arms,
-use that single capture to distinguish where the accepted route identity is
-cleared between `rs64_audio_route_prepare` and `rs64_audio_image_stage`.
+Run one ground-truth-first, same-build audit of the image-stage `nonzero`
+predicate. Determine whether the retained zero payloads are a legitimate
+output-contract requirement or a capture/reducer artifact. Do not change task
+data, audio, gate, fallback, dispatch, VI, output behavior, or mitigation.
 
 ## Competing hypotheses and discriminator
 
-- H-HostClearBetweenPrepareStage: the host-side route identity is explicitly
-  cleared between preparation and stage entry.
-- H-GuestClearBeforeHostStage: a guest-side edge clears the source state before
-  the host stage callback observes it.
-- H-SeparateIdentityRead: the accepted identity remains live, but stage entry
-  reads a different identity source.
-- H-RouteDriverStillInvalid: at least one arm fails to reach target, so no
-  clear-edge hypothesis is testable.
+- H-StageBytesLegitimatelyZero: the image producer and destination bytes are
+  legitimately zero for the captured stage.
+- H-StageBytesCaptureMismatch: the producer has nonzero bytes, but the logger
+  hashes the wrong DMEM/RDRAM span or joins the wrong destination.
+- H-StageBytesWrittenThenCleared: nonzero producer bytes exist briefly and are
+  cleared before the current destination snapshot.
+- H-StageBytesRouteInvalid: either arm fails the target controls, so no byte
+  null is interpretable.
 
-The first discriminator is both-arm route validity: each arm must emit its
-activation row, target-origin row, and target stage rows. If either is absent,
-select `H-RouteDriverStillInvalid` and do not interpret null identity rows. If
-both pass, the single phase-keyed table has one row per retained stage call
-with preparation sequence, clear-edge sequence/PC/source, stage sequence,
-route-valid state, route ordinal/row, and arm. A clear event between equal
-preparation and stage sequence selects the corresponding clear edge; no clear
-with invalid stage identity selects separate-source use.
+The discriminator is one phase-keyed table joining, in both same-build arms,
+the image-stage DMEM source span, generated DMA destination/length, immediate
+destination bytes, and a bounded post-stage destination snapshot. The oracle
+must arm whole-RDRAM positive control first, then a target-origin control and
+the matching physical destination windows. Both port arms must emit lifecycle
+activation and target-origin/stage controls. A nonzero source with matching
+nonzero destination selects legitimate producer output; nonzero source with
+zero destination selects writeback/clear; zero source and destination with
+independent exact-window retail activity selects capture mismatch. Missing
+route controls selects H-StageBytesRouteInvalid and forbids interpretation.
 
 ## Exact command shape
 
-`cmake --build build -j2`
-
-Run the two same-build arms with the controls from
-the repaired driver, plus the oracle control recipe in
-`tools/oracle/README.md`; use `env ... zsh ...` for env-prefixed commands.
-Require one activation-control row and target-origin rows in both port arms.
-Reduce only route-valid logs with the existing identity reducer.
-
-Expected outcomes: both-arm route failure selects `H-RouteDriverStillInvalid`;
-host clear rows select `H-HostClearBetweenPrepareStage`; guest clear rows select
-`H-GuestClearBeforeHostStage`; no clear rows with persisting accepted identity
-select `H-SeparateIdentityRead`.
+1. Read `docs/F5-UCODE-REFERENCE.md` and the current M5 plan before adding
+   any probe. Run the oracle recipe from `tools/oracle/README.md` with the
+   whole-RDRAM positive control, title origin `0x00790400`, and exact stage
+   destination watches.
+2. Build once with `cmake --build build -j2`.
+3. Run both concurrent arms from `build/` using the qualified LLE/image route,
+   `ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=1024`,
+   `PROBE_KEYS_FROM_PHASE=1`, and the existing stage/identity controls plus
+   one bounded exact-byte table.
+4. Reduce only target-phase rows. Kill with SIGKILL and preserve logs under
+   `scratch/agent/s2403_stage_bytes/`.

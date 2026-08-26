@@ -605,13 +605,13 @@ static void rs64_m5_identity_edge(const char* edge,
             rs64_m5_identity_thread_id(), phase, width, origin & 0x00FFFFFFu);
         std::fflush(stderr);
     }
-    static std::atomic<uint32_t> emitted{0};
-    const uint32_t n = emitted.fetch_add(1, std::memory_order_relaxed);
-    if (n >= 4096u) return;
     origin &= 0x00FFFFFFu;
     const bool target = (width == 1024u && origin == 0x00790400u) ||
                         (width == 512u && origin == 0x006AB400u);
     if (!target && !route.valid) return;
+    static std::atomic<uint32_t> emitted{0};
+    const uint32_t n = emitted.fetch_add(1, std::memory_order_relaxed);
+    if (n >= 4096u) return;
     std::fprintf(stderr,
         "[m5-identity-edge] n=%u edge=%s thread=%u clear_seq=%u "
         "prepare_seq=%u valid=%u route_prepare=%u route_ordinal=%u "

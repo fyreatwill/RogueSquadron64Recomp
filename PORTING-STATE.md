@@ -112350,3 +112350,35 @@ behavior changed. Artifacts: `scratch/agent/s2401_identity_edges/`.
 
 ORIGIN: no mitigation or behavior change; only the bounded capture driver's
 watchdog changed from 75 to 120 seconds after the first route-control failure.
+
+## Session 2402 (2026-08-25) — M5 identity edge was route-valid
+
+The retail oracle was run before the port capture with a whole-RDRAM positive
+control and VI tracing. It reached 10,000 write callbacks and title origin
+`0x00790400` at width 1024. The port was rebuilt once after repairing the
+two-arm driver's independent watchdog handling. The first pair exposed a
+configuration error: route preparation logging was enabled, but
+`ROGUESQ_LOG_AUDIO_RETURN=1`, which enables identity publication, was omitted;
+both arms consequently reported `probe=disabled`. The driver was corrected
+and rerun.
+
+The corrected pair reached target title in both arms. Arm A had 1,380 target
+preparations and Arm B 1,086; each had 32 target stage calls, all with
+`route_valid=1` and matching `prepare_seq`. The identity-edge budget was then
+made target-visible and the binary rebuilt once more. The final pair emitted
+the lifecycle table in both arms: `prepare-clear` observed no prior identity,
+`stage-observe` saw `valid=1` with the same preparation sequence, and
+`return-clear` followed the stage. The table therefore shows no clear between
+accepted preparation and stage entry. This refutes host-clear, guest-clear,
+and separate-identity-read hypotheses at capture scope and supersedes s2399's
+invalid-identity label. Both arms later crashed in unrelated existing paths
+(`0x80001F88`/`0x80022160`), after the discriminating target rows were emitted.
+
+No route, audio, task-data, gate, fallback, dispatch, VI, output, or
+mitigation behavior changed. The only changes were diagnostic driver/env
+configuration and moving the identity-edge cap after target filtering.
+Artifacts: `scratch/agent/s2402_identity_edges/` and
+`scratch/agent/s2402_oracle_control.log`.
+
+ORIGIN: no mitigation or behavior change; the diagnostic cap and driver were
+repaired only so the target lifecycle rows could be observed.

@@ -5,16 +5,16 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Current maintenance marker: Session 2401 (2026-08-25).
+Current maintenance marker: Session 2402 (2026-08-25).
 
-Maintained in Session 2401 (2026-08-25). The oracle controls passed, but both
-same-build port arms were route-invalid: the 75-second pair left Arm A at 640,
-and the 120-second retry left Arm A at 640 while Arm B crashed at guest PC
-`0x8000B650`. Both retries fired the lifecycle activation control, but neither
-produced a target identity-edge row. The clear-edge hypotheses remain open and
-no route, audio, task-data, gate, fallback, dispatch, VI, output, or mitigation
-change is authorized. The next unit must repair route-valid capture before
-interpreting any identity null.
+Maintained in Session 2402 (2026-08-25). The oracle controls passed, and the
+corrected same-build pair reached the 1024 title route in both arms. The first
+target lifecycle sequence was `prepare-clear` with no prior identity, followed
+by `stage-observe` with `valid=1` and the same `prepare_seq`; `return-clear`
+followed stage processing. This refutes a clear between accepted preparation
+and stage observation in both arms and supersedes s2399's invalid-identity
+label. No route, audio, task-data, gate, fallback, dispatch, VI, output, or
+mitigation change is authorized.
 
 Maintained in Session 2400 (2026-08-25). The retail oracle positive controls
 fired in one run: whole-RDRAM writes reached `10,000`, and VI tracing reached
@@ -167,6 +167,26 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2402 — route-valid identity edges persist through stage entry.** The
+  oracle whole-RDRAM positive control reached `10,000` callbacks and retail
+  reached title origin `0x00790400` at width 1024. The rebuilt same-build pair
+  emitted activation controls and target title controls in both arms. Arm A
+  had `1,380` target preparations and Arm B `1,086`; each had `32` target stage
+  calls, all with `route_valid=1` and matching `prepare_seq`. The first target
+  rows in both arms were `prepare-clear` (`valid=0` before publication), then
+  `stage-observe` (`valid=1`, same preparation), with `return-clear` after the
+  stage. The original capture's zero rows was caused by an omitted
+  `ROGUESQ_LOG_AUDIO_RETURN=1` probe-enabling variable; the follow-up zero was
+  caused by a run-lifetime cap consumed before target. Both were fixed and
+  rerun. This refutes `H-HostClearBetweenPrepareStage`,
+  `H-GuestClearBeforeHostStage`, and `H-SeparateIdentityRead` at capture scope;
+  it does not authorize a route or audio contract change. Artifact:
+  `scratch/agent/s2402_identity_edges/`.
+
+  ORIGIN: no behavior or mitigation change; repaired only the capture driver
+  watchdog/env configuration and scoped the identity-edge budget so target
+  rows cannot be hidden by earlier phases.
 
 - **s2401 — the repaired identity-edge driver remained route-invalid.** The
   oracle whole-RDRAM positive control reached `10,000` callbacks and its VI
@@ -686,9 +706,11 @@ sequence; #1 is the next campaign priority.
   Both arms reached title, while accepted target preparations were followed by
   invalid stage identities. s2399 joined every retained stage row to an
   immediately preceding accepted preparation with `delta=0`, selecting
-  `H-IdentityClearedBeforeStage` at capture scope. Next identify the clear
-  writer/edge with an independent ground-truth discriminator; do not change
-  the route contract from this host-side join alone.
+  `H-IdentityClearedBeforeStage` at capture scope. s2402 corrected the omitted
+  identity-publication env var and phase-blind cap: both arms then observed
+  valid identity at stage entry, refuting the clear-edge label. The next
+  boundary is the exact image-stage nonzero predicate; audit its bytes and
+  writer relation before changing the output contract.
 2. **M5 task/output closure — closed at current capture scope.** s2387's
    corrected reporter-candidate table associated raw `[audtask-join]` records
    with 100% of 4,688 image-stage candidates; reporter completion was true for
@@ -839,6 +861,11 @@ are superseded at their measured scopes:
   reached title without crash markers. It was believable because the fixed
   s2397 capture crashed before its title control, but that outcome did not
   repeat when the logger was the only arm difference.
+- s2399's `H-IdentityClearedBeforeStage` label is superseded by s2402. It was
+  believable because route preparation was logged while identity publication
+  was disabled, and the first corrected capture's edge budget was consumed
+  before target. With the enabling variable and target-visible budget, both
+  arms observed the accepted identity at stage entry.
 
 ## Evidence and safety rules
 
