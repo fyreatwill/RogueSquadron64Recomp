@@ -112511,3 +112511,27 @@ interpretable because the stub control failed and no positive downstream
 activation was captured. It does establish that the instrumentation is
 present in the image-stage join; the next iteration must revalidate both arms
 with the driver before using its nulls.
+
+## Session 2408 (2026-08-26) — revalidated M5 two-arm route prerequisite
+
+The existing phase-gated Start-driver was run sequentially against the
+unchanged build, first with `ROGUESQ_AUDIO_UCODE=0` and then with `=1`, while
+retaining the complete M5 downstream instrumentation. Both arms reached the
+positive route controls: title `vi_width=1024 origin=0x00790400` and hangar
+`vi_width=512 origin=0x006AB400`. The stub arm captured 66 frames and had no
+`[CRASH]`; its image-stage summary had zero stage rows and zero image-DMA
+joins, as expected for the silent control, while it still emitted 5,185 PCM
+join records over the run. The image arm captured 67 frames and had no
+`[CRASH]`; its target hangar phase had 432 image-stage rows and 168
+image-DMA joins, with 514 PCM join records in the title phase and no
+`audtask-image-downstream` rows.
+
+The phase/origin records and the per-phase image-stage summaries are two
+independent lines of route evidence. This selects `H-RouteDriverOnly` from
+s2407's competing route hypotheses and authorizes repeating the downstream
+range table. It does not select a downstream consumer or make a legitimacy
+judgment about zero payloads. No code or behavior changed.
+
+ORIGIN: no mitigation or behavior change; this run only revalidated the
+existing image DMEM-to-RDRAM DMA observation and its silent control.
+Artifacts: `scratch/agent/s2408_downstream_range_identity/`.

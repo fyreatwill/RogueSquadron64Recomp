@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2407 (2026-08-26).
+Current maintenance marker: Session 2408 (2026-08-26).
 
 ## Current state
 
@@ -32,6 +32,11 @@ Current maintenance marker: Session 2407 (2026-08-26).
 - The image-stage join now records the first post-DMA `slot-sb` and
   `keyon-w40` event for the same arm/phase/ordinal/row, when either exists.
   This is diagnostic only and does not alter audio behavior.
+- s2408 revalidated the route prerequisite sequentially: both stub and image
+  arms reached title and hangar controls in the same phase-gated recipe. The
+  image arm produced target-phase stage and image-DMA rows; the stub control
+  produced none, as expected. The downstream-range comparison is now
+  authorized.
 
 ## Latest evidence
 
@@ -73,6 +78,15 @@ Current maintenance marker: Session 2407 (2026-08-26).
   no positive downstream activation, this does not select a consumer
   hypothesis or interpret the image-side zero as a null. Artifact:
   `scratch/agent/s2407_downstream_range_identity/`.
+- **s2408 — sequential route controls validate both M5 arms.** The same
+  phase-gated driver reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400` for both arms without a crash. The stub control produced
+  zero image-stage/DMA rows; the image arm produced 432 target-phase
+  image-stage rows and 168 image-DMA joins, while both produced PCM rows.
+  This selects `H-RouteDriverOnly` from s2407's route hypotheses and
+  authorizes repeating the downstream-range table. No downstream consumer
+  conclusion follows yet. Artifact:
+  `scratch/agent/s2408_downstream_range_identity/`.
 - **s2402 — identity is valid at stage entry.** Corrected same-build stub/image
   arms passed route controls; both observed `prepare-clear`, then
   `stage-observe` with `valid=1` and matching `prepare_seq`, followed by
@@ -111,11 +125,10 @@ Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
-   design gate. First revalidate the two-arm route prerequisite one arm at a
-   time using the phase-gated driver and the existing image-stage/PCM/event
-   diagnostics; only after both arms reach title and hangar repeat the
-   downstream-range table. Do not change task data, audio, gate, fallback,
-   dispatch, VI, output behavior, or the nonzero predicate.
+   design gate. Repeat the downstream-range table now that the sequential
+   stub/image route prerequisite is validated, using the existing
+   image-stage/PCM/slot/key-on diagnostics. Do not change task data, audio,
+   gate, fallback, dispatch, VI, output behavior, or the nonzero predicate.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -152,8 +165,9 @@ or corrupt output. Retail independently proves that related memory regions and
 task-field writers are active, but no exact legitimate port writeback or
 slot/key-on consumer contract has been established.
 The first same-identity post-DMA slot/key-on fields are now available in the
-image join, but s2407's only image arm had no such event and the stub arm was
-route-invalid; no downstream conclusion is authorized from that null.
+image join. s2408 validated both route controls, but its image arm still
+produced no downstream rows; the range comparison is the next discriminator,
+not a conclusion about the consumer.
 No behavior change is authorized: do not promote C88, invent output metadata,
 remap destinations, alter task data, force a consumer, or add a guard without
 a new discriminator and named writer legitimacy.
