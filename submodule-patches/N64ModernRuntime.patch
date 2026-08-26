@@ -520,7 +520,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..07acdca 100644
+index 1cb3f6a..acb765b 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -534,7 +534,7 @@ index 1cb3f6a..07acdca 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,841 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,887 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -739,6 +739,12 @@ index 1cb3f6a..07acdca 100644
 +    int reported_source_pcm = -2;
 +    int reported_consumer_pcm = -2;
 +    uint64_t reported_complete_event = 0;
++    uint64_t first_slot_event = 0;
++    uint64_t first_keyon_event = 0;
++    const char* first_slot_kind = nullptr;
++    const char* first_keyon_kind = nullptr;
++    uint32_t first_slot_site = 0;
++    uint32_t first_keyon_site = 0;
 +};
 +
 +static std::atomic<uint64_t> g_audio_join_event{1};
@@ -807,7 +813,9 @@ index 1cb3f6a..07acdca 100644
 +            " consumer_n=%u consumer_bytes=%u consumer_fnv=%08X"
 +            " consumer_nz=%u completion_before_source=%d"
 +            " completion_before_consumer=%d source_before_consumer=%d"
-+            " ordering_violation=%d\n",
++            " ordering_violation=%d slot_event=%" PRIu64
++            " slot_kind=%s slot_site=0x%08X keyon_event=%" PRIu64
++            " keyon_kind=%s keyon_site=0x%08X\n",
 +            stage.arm, stage.ordinal, stage.row, stage.phase, stage.width,
 +            stage.origin, stage.stage, stage.stage_event, stage.complete_event,
 +            stage.dest, stage.len, stage.fnv, stage.nonzero,
@@ -819,7 +827,11 @@ index 1cb3f6a..07acdca 100644
 +            consumer ? consumer->fnv : 0, consumer ? consumer->nonzero : 0,
 +            completion_before_source ? 1 : 0,
 +            completion_before_consumer ? 1 : 0,
-+            source_before_consumer ? 1 : 0, ordering_violation ? 1 : 0);
++            source_before_consumer ? 1 : 0, ordering_violation ? 1 : 0,
++            stage.first_slot_event, stage.first_slot_kind ? stage.first_slot_kind : "n/a",
++            stage.first_slot_site, stage.first_keyon_event,
++            stage.first_keyon_kind ? stage.first_keyon_kind : "n/a",
++            stage.first_keyon_site);
 +    fflush(stderr);
 +    stage.reported_complete_event = stage.complete_event;
 +    stage.reported_source_pcm = stage.source_pcm;
@@ -1063,6 +1075,40 @@ index 1cb3f6a..07acdca 100644
 +    uint32_t value1, uint32_t value2, uint32_t value3) {
 +    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
 +    const uint64_t event = audio_join_next_event();
++    const bool is_slot = kind != nullptr && std::strcmp(kind, "slot-sb") == 0;
++    const bool is_keyon = kind != nullptr && std::strcmp(kind, "keyon-w40") == 0;
++    if (is_slot || is_keyon) {
++        for (AudioImageStage& stage : g_audio_image_stages) {
++            if (stage.dma_event == 0 || stage.ordinal != ordinal ||
++                stage.row != row || stage.phase != phase ||
++                stage.width != width || stage.origin != origin ||
++                std::strcmp(stage.arm, arm ? arm : "n/a") != 0 ||
++                event <= stage.dma_event) continue;
++            if (is_slot && stage.first_slot_event == 0) {
++                stage.first_slot_event = event;
++                stage.first_slot_kind = kind;
++                stage.first_slot_site = site;
++            }
++            if (is_keyon && stage.first_keyon_event == 0) {
++                stage.first_keyon_event = event;
++                stage.first_keyon_kind = kind;
++                stage.first_keyon_site = site;
++            }
++            if ((is_slot && stage.first_slot_event == event) ||
++                (is_keyon && stage.first_keyon_event == event)) {
++                std::fprintf(stderr,
++                    "[audtask-image-downstream] arm=%s ordinal=%u row=%u"
++                    " phase=%u width=%u origin=0x%06X stage=%u dma_event=%" PRIu64
++                    " event=%" PRIu64 " kind=%s site=0x%08X idx=%u dest=0x%08X"
++                    " slot_event=%" PRIu64 " keyon_event=%" PRIu64 "\n",
++                    stage.arm, stage.ordinal, stage.row, stage.phase, stage.width,
++                    stage.origin, stage.stage, stage.dma_event, event,
++                    kind ? kind : "n/a", site, idx, dest,
++                    stage.first_slot_event, stage.first_keyon_event);
++                std::fflush(stderr);
++            }
++        }
++    }
 +    fprintf(stderr,
 +            "[m5-audio-event] kind=%s event=%" PRIu64
 +            " active=%u arm=%s phase=%u width=%u origin=0x%06X"
@@ -1376,7 +1422,7 @@ index 1cb3f6a..07acdca 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +881,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +927,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  

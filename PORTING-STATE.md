@@ -112484,3 +112484,30 @@ ORIGIN: diagnostic-only identity propagation; the named writer under
 observation remains the Factor 5 image DMEM-to-RDRAM DMA, and its zero payload
 has not been treated as corrupt or legitimate by code.
 Artifacts: `scratch/agent/s2406_zero_output_identity/validated/`.
+## Session 2407 (2026-08-26) — instrumented M5 downstream slot/key-on identity
+
+Ground truth first: ran the retail oracle with a whole-RDRAM positive-control
+watch and exact windows `0x166450:0x300`, `0x167050:0x300`,
+`0x166D50:0x300`, and `0x1935E0:0x198`, plus the known eleven-Start driver
+and VI trace. The positive control produced 13,324 writes; the four exact
+windows produced 768, 768, 768, and 1,020 writes. Retail reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`.
+
+The one build added a bounded join from each image-stage row to the first
+post-DMA `slot-sb` and `keyon-w40` event with matching arm, phase, ordinal, and
+row. It changed no audio behavior. `cmake --build build -j2` passed, and
+`./submodule-patches/export.sh` refreshed the runtime patch.
+
+The first concurrent two-arm run was route-invalid for the stub arm: it
+crashed before the 1024 target, while the image arm reached title and emitted
+2,864 stage rows, 1,334 image-DMA joins, and 3,282 PCM rows. The new
+`audtask-image-downstream` counter emitted zero rows. A fixed sequential
+phase-gated stub run also crashed before title at the existing
+`cutsceneDispatchSlotsByFlag`, guest PC `0x8000834C`; therefore the required
+two-arm target controls were not both present.
+
+This rules out no downstream hypothesis. The zero downstream count is not
+interpretable because the stub control failed and no positive downstream
+activation was captured. It does establish that the instrumentation is
+present in the image-stage join; the next iteration must revalidate both arms
+with the driver before using its nulls.

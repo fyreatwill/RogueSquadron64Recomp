@@ -1,47 +1,39 @@
-# NEXT work unit (s2407) — audit downstream range and slot identity
+# NEXT work unit (s2408) — revalidate M5 two-arm route prerequisite
 
 HYPOTHESIS-ID: m5-downstream-range-identity
 
 ## Work unit
 
-Run one ground-truth-first, same-build diagnostic audit of the first same-
-identity PCM source/consumer and slot/key-on event after each exact image DMA.
-Do not change task data, audio, gate, fallback, dispatch, VI, output behavior,
-or the nonzero predicate.
+Run the existing phase-gated Start-driver recipe one arm at a time from the
+same built executable, with the complete downstream instrumentation enabled.
+This is a prerequisite rerun after s2407's concurrent stub arm crashed before
+the target phase. Do not change task data, audio, gate, fallback, dispatch,
+VI, output behavior, or the nonzero predicate.
 
 ## Competing hypotheses and discriminator
 
-- H-ImageRangeIsConsumer: the image DMA destination is the legitimate
-  downstream range, but the PCM/slot reporter is observing a different alias or
-  range.
-- H-DownstreamWriterMissing: a later legitimate writer populates the
-  same-identity consumer range and the current port misses that writer.
-- H-ConsumerRangeIsIntentional: the image zero row is an intermediate buffer;
-  the same-identity PCM range is the intended consumer input and its slot/key-on
-  event follows it.
-- H-RouteInvalid: either arm lacks title/hangar target controls.
+- H-RouteDriverOnly: the s2407 stub miss was caused by concurrent-window/input
+  focus interference; a sequential driver run reaches title and hangar.
+- H-StubRouteCrash: the silent stub arm itself crashes before title even with
+  valid phase-gated input.
+- H-ImageRouteCrash: the image arm cannot reach both target phases under the
+  same driver recipe.
+- H-ControlsInvalid: either arm lacks a positive route control, so no
+  downstream null may be interpreted.
 
-The discriminator is a phase-keyed table keyed by arm + ordinal + row, with
-exact image DMA event/destination, first same-identity PCM source/consumer,
-first slot/key-on event, and event ordering. The retail oracle must first pass
-whole-RDRAM, title/hangar VI, and the four exact windows. An exact image-range
-consumer selects H-ImageRangeIsConsumer; a later same-range writer selects
-H-DownstreamWriterMissing; an ordered different-range PCM plus slot/key-on
-selects H-ConsumerRangeIsIntentional; missing controls select H-RouteInvalid.
+The discriminator is one table per arm containing process result, first
+`vi_width=1024 origin=0x790400`, first `vi_width=512 origin=0x6AB400`, and
+counts of image-stage rows, image-DMA joins, PCM rows, and
+`audtask-image-downstream` rows. Both arms reaching both target phases selects
+H-RouteDriverOnly and authorizes repeating the downstream range comparison;
+an arm-specific crash selects that route failure; missing controls selects
+H-ControlsInvalid.
 
-## Exact command shape
+## Exact commands
 
-1. Run the retail oracle first with `--watch-write 0x0:0x800000` and exact
-   windows `0x166450:0x300`, `0x167050:0x300`, `0x166D50:0x300`, and
-   `0x1935E0:0x198`, plus title/hangar VI trace.
-2. Add the complete bounded downstream table and positive activation control,
-   then build once with `cmake --build build -j2`; export submodule patches if
-   `lib/` changes.
-3. Run validated stub and image arms from `build/` with the repository Start
-   driver, `ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=1024`, and
-   `PROBE_KEYS_FROM_PHASE=1`. Preserve logs under
-   `scratch/agent/s2407_downstream_range_identity/` and kill survivors with
-   SIGKILL.
+Use the already-built image from s2407. For each arm, run:
 
-Do not use `ROGUESQ_LOG_ALL`; both arms must pass target controls before a null
-or mismatch is interpreted.
+`env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=<0|1> ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_M5_HOST_BOUNDARY=1 ROGUESQ_LOG_M5_KEYON_CENSUS=1 ROGUESQ_LOG_M5_KEYON_PORT_TUPLES=1 ROGUESQ_LOG_INIT_VOICE_SAMPLE=1 ROGUESQ_LOG_M5_INIT_VOICE=1 ROGUESQ_LOG_M5_AUDIO_EVENT=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=120 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start' ROGUESQ_DRAIN_INLOOP_TICK=1 zsh tools/probe.sh scratch/agent/s2408_downstream_range_identity/<arm> 75 1`
+
+Run arm 0 then arm 1; preserve each `run.log`. Kill survivors with SIGKILL
+through `tools/probe.sh`. Do not build unless the executable is stale.
