@@ -135,6 +135,9 @@ extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_13
                                                   uint32_t staged_130, uint32_t skipped_host_130,
                                                   uint32_t boot_ff0, uint32_t staged_ff0,
                                                   uint32_t skipped_host_ff0);
+extern "C" uint32_t rs64_audio_image_break_pc();
+extern "C" uint32_t rs64_m5_pcm_task_data_ptr();
+extern "C" void rs64_m5_pcm_task_data_set(uint32_t data_ptr);
 // Defined in lib/rt64/src/hle/rt64_state.cpp — s171 crash-instant snapshot
 // of [vi-fs-decision] state, read from the SIGSEGV/SIGBUS handler below.
 extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *lastFireDecisionN,
@@ -163,12 +166,21 @@ struct Rs64PcmWriterState {
 constexpr uint32_t rs64_pcm_ring_first = 0x166450u;
 constexpr uint32_t rs64_pcm_ring_last = 0x169450u;
 constexpr uint32_t rs64_pcm_ring_slot = 0x300u;
+constexpr uint32_t rs64_m5_candidate_ranges[][2] = {
+    {0x167000u, 0x169B00u},
+    {0x179800u, 0x179B00u},
+    {0x18FC00u, 0x18FD00u},
+};
 Rs64PcmWriterState g_rs64_pcm_writer[16];
 std::mutex g_rs64_pcm_writer_mutex;
 uint32_t g_rs64_pcm_writer_phase_key = 0xFFFFFFFFu;
 uint64_t g_rs64_pcm_writer_sequence = 0;
 uint32_t g_rs64_pcm_writer_printed[16] = {};
 bool g_rs64_pcm_writer_control = false;
+uint32_t g_rs64_pcm_last_dma_phys = 0;
+uint32_t g_rs64_pcm_last_dma_len = 0;
+uint32_t g_rs64_pcm_guest_rows = 0;
+std::atomic<uint32_t> g_rs64_pcm_task_data_ptr{0};
 
 bool rs64_pcm_writer_enabled() {
     static int enabled = -1;
@@ -199,6 +211,7 @@ void rs64_pcm_writer_phase_reset(uint32_t key) {
     std::memset(g_rs64_pcm_writer_printed, 0,
                 sizeof(g_rs64_pcm_writer_printed));
     g_rs64_pcm_writer_control = false;
+    g_rs64_pcm_guest_rows = 0;
 }
 
 void rs64_pcm_writer_note(uint32_t phys, uint32_t len, uint32_t pc,
@@ -207,11 +220,19 @@ void rs64_pcm_writer_note(uint32_t phys, uint32_t len, uint32_t pc,
     uint32_t phase = 0, width = 0, origin = 0, key = 0;
     if (!rs64_pcm_writer_phase(phase, width, origin, key)) return;
     const uint32_t end = phys + len;
-    if (phys >= rs64_pcm_ring_last || end <= rs64_pcm_ring_first) return;
+    bool candidate = false;
+    for (const auto& range : rs64_m5_candidate_ranges) {
+        if (phys < range[1] && end > range[0]) {
+            candidate = true;
+            break;
+        }
+    }
+    const bool ring = phys < rs64_pcm_ring_last && end > rs64_pcm_ring_first;
+    if (!candidate && !ring) return;
 
     std::lock_guard<std::mutex> lock(g_rs64_pcm_writer_mutex);
     rs64_pcm_writer_phase_reset(key);
-    if (!g_rs64_pcm_writer_control) {
+    if (candidate && !g_rs64_pcm_writer_control) {
         std::fprintf(stderr,
                      "[pcm-writer-control] phase=%u width=%u origin=0x%06X"
                      " kind=%u phys=0x%06X len=0x%X\n",
@@ -219,6 +240,33 @@ void rs64_pcm_writer_note(uint32_t phys, uint32_t len, uint32_t pc,
         std::fflush(stderr);
         g_rs64_pcm_writer_control = true;
     }
+
+    if (candidate && kind == 1u && g_rs64_pcm_guest_rows < 256u) {
+        uint32_t route_phase = phase, route_width = width, route_origin = origin;
+        uint32_t ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;
+        int exit_reason = 0;
+        const char* arm = "n/a";
+        const bool active = rs64_audio_current_route_snapshot(
+            &route_phase, &route_width, &route_origin, &ordinal, &row,
+            &exit_reason, &arm);
+        std::fprintf(stderr,
+                     "[m5-guest-writer] n=%u phase=%u width=%u origin=0x%06X"
+                     " pc=0x%08X phys=0x%06X len=0x%X value=0x%08X"
+                     " arm=%s ordinal=%u row=%u task_data=0x%08X"
+                     " dma_dest=0x%06X dma_len=0x%X sp_return=0x%04X"
+                     " active=%u exit=%d\n",
+                     g_rs64_pcm_guest_rows, active ? route_phase : phase,
+                     active ? route_width : width,
+                     active ? route_origin : origin, pc, phys, len, value,
+                     active && arm ? arm : "n/a", ordinal, row,
+                     g_rs64_pcm_task_data_ptr.load(std::memory_order_relaxed),
+                     g_rs64_pcm_last_dma_phys,
+                     g_rs64_pcm_last_dma_len, rs64_audio_image_break_pc(),
+                     active ? 1u : 0u, exit_reason);
+        std::fflush(stderr);
+        ++g_rs64_pcm_guest_rows;
+    }
+    if (!ring) return;
 
     const uint32_t first = phys < rs64_pcm_ring_first ? rs64_pcm_ring_first : phys;
     const uint32_t last = end > rs64_pcm_ring_last ? rs64_pcm_ring_last : end;
@@ -269,7 +317,9 @@ extern "C" void rs64_m5_pcm_writer_dma(uint32_t addr, uint32_t len,
                                            uint32_t fnv, uint32_t nonzero) {
     (void)fnv;
     (void)nonzero;
-    rs64_pcm_writer_note(addr & 0x007FFFFFu, len, 0u, 2u, 0u);
+    g_rs64_pcm_last_dma_phys = addr & 0x007FFFFFu;
+    g_rs64_pcm_last_dma_len = len;
+    rs64_pcm_writer_note(g_rs64_pcm_last_dma_phys, len, 0u, 2u, 0u);
 }
 
 extern "C" void rs64_m5_pcm_writer_snapshot(uint32_t addr,
@@ -545,6 +595,14 @@ static thread_local const OSTask* s_pending_audio_task = nullptr;
 // The task submitter and RSP dispatcher are different threads. Release/acquire
 // publishes the guest task address without making it part of audio behavior.
 static std::atomic<uint32_t> s_pending_task_guest_ptr{0};
+
+extern "C" uint32_t rs64_m5_pcm_task_data_ptr() {
+    return g_rs64_pcm_task_data_ptr.load(std::memory_order_relaxed);
+}
+
+extern "C" void rs64_m5_pcm_task_data_set(uint32_t data_ptr) {
+    g_rs64_pcm_task_data_ptr.store(data_ptr, std::memory_order_relaxed);
+}
 
 extern "C" void rs64_set_pending_task_guest_ptr(uint32_t guest_ptr) {
     s_pending_task_guest_ptr.store(guest_ptr, std::memory_order_release);
@@ -2567,6 +2625,7 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
         s_pending_audio_task = task;
         s_pending_task_data_ptr = (uint32_t)task->t.data_ptr;
         s_pending_task_data_size = (uint32_t)task->t.data_size;
+        rs64_m5_pcm_task_data_set(s_pending_task_data_ptr);
         g_rs64_audio_break_pc = 0;
         // The image arm is default; set ROGUESQ_AUDIO_UCODE=0 for the stub
         // control used by the incremental audio qualification steps.

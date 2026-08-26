@@ -196,6 +196,17 @@ Current maintenance marker: Session 2423 (2026-08-26).
   later image-downstream, slot, descriptor, or filter-consumer rows. This
   selects `H-MissingImageConsumer` at the current key and does not authorize
   remapping or writeback. Artifact: `scratch/agent/s2423_m5_port_writer_fixed/`.
+- **s2424 — guest-store coverage finds a title-only candidate writer.** The
+  first run's flat 256-row budget and thread-local task field were invalidated
+  and fixed in the same iteration. The corrected rerun passed the independent
+  retail controls and both port routes. Stub and image each recorded 256 title
+  rows from `0x80015BC8` into `0x169730..0x169B2C`, joined to
+  `ordinal=4,row=4` and `task_data=0x80171CE0`; no guest rows appeared in
+  hangar, and image hangar output remained DMA-only. This selects
+  `H-PortGuestConsumer` for the title row at this capture key, but not an
+  image-specific or hangar consumer; `H-MissingImageConsumer` remains open for
+  hangar. No behavior change is authorized. Artifact:
+  `scratch/agent/s2424_m5_guest_writer_fixed/`.
 
 - **s2403 — retained image-stage bytes are legitimately zero at capture scope.**
   The retail oracle passed whole-RDRAM (`32,791,644` hits), title, and hangar

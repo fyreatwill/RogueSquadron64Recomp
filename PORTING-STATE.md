@@ -112874,3 +112874,37 @@ an observed port CPU/consumer writer in the table. It does not establish the
 semantic role or legitimacy of the retail writer PCs and authorizes no
 writeback, remap, task-data change, gate change, or guard. Artifact:
 `scratch/agent/s2423_m5_port_writer_fixed/`.
+
+## Session 2424 (2026-08-26) — closed M5 guest-store candidate coverage
+
+Ground truth was checked before instrumentation: the retail oracle's existing
+candidate-range log showed the whole-RDRAM positive control and title/hangar VI
+controls, with retail PCs `0x80015BC8`/`0x8000F3A0` on the title/hangar range,
+the `0x8008FBxx`/`0x8008FExx` family plus `0x800078EC` on the adjacent range,
+and `0x80018F5C/60` on the task-field range. The first implementation extended
+the existing regeneration-safe guest-store hook to all three ranges but used a
+flat 256-row budget and a thread-local task-data field. A same-work-unit fixed
+build reset the budget on each target VI phase and published task data through
+a shared atomic.
+
+Built with `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+Ran the oracle-gated paired capture with
+`zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2424_m5_guest_writer`
+and the fixed rerun with
+`zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2424_m5_guest_writer_fixed`.
+The fixed oracle passed the whole-RDRAM control (`10000` threshold), title
+`0x00790400`/1024, and hangar `0x006AB400`/512. Both silent and image arms
+reached title and hangar and were SIGKILLed by the recipe after capture.
+
+Both arms recorded the table's positive-control activity and 256 title guest
+rows from `pc=0x80015BC8`, `phys=0x169730..0x169B2C`, joined to
+`ordinal=4,row=4` and `task_data=0x80171CE0`. The image arm's last adjacent DMA
+context was `0x178D80/0x198`; the silent arm had no DMA. Neither arm recorded a
+guest-store row in hangar; image hangar rows remained image-DMA-only. The fixed
+measurement therefore selects `H-PortGuestConsumer` for the observed title
+identity row, but not an image-specific or hangar consumer. It rules out a
+blanket claim that the candidate ranges have no port CPU writer, while leaving
+`H-MissingImageConsumer` open for hangar. No task-data, output, gate, guard, or
+writeback behavior changed. The first run is recorded as invalid measurement,
+not evidence, because its title-only flat budget and zero task-data field could
+not discriminate. Artifact: `scratch/agent/s2424_m5_guest_writer_fixed/`.

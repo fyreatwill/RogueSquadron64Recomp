@@ -1,47 +1,41 @@
-# NEXT work unit (s2424) — close guest-store coverage for M5 candidate ranges
+# NEXT work unit (s2425) — independently attribute the observed M5 guest writer
 
 HYPOTHESIS-ID: m5-image-contract-gap
 
 ## Work unit
 
-Use the existing phase-keyed candidate-range table as the base and add one
-bounded observation-only table for guest CPU stores/DMA consumers in
-`0x167000:0x169B00`, `0x179800:0x179B00`, and `0x18FC00:0x18FD00`. Join each
-row to image ordinal/row, task data pointer, DMA destination, and SP return.
-Do not change task data, output ranges, gates, guards, dispatch, or defaults.
+Use the retail oracle to phase-gate the two observed candidate PCs
+`0x80015BC8` and `0x8000F3A0`, with the existing positive controls, and dump
+their argument/field context in title and hangar. Compare those rows against
+the fixed s2424 port rows and the image DMA identity. This is observation-only:
+do not change task data, output ranges, gates, guards, dispatch, or defaults.
 
 ## Competing hypotheses and discriminator
 
-- H-ImageOnly: the image DMA is the only port writer in the candidate ranges.
-- H-PortGuestConsumer: a guest CPU writer/consumer exists and joins the image
-  row by phase/range/order.
-- H-SharedConsumer: a guest consumer exists but joins only by phase or task
-  field, not image ordinal/row.
-- H-TableInvalid: route or positive controls fail, so a null is unevaluable.
+- H-RetailSameWriter: retail `0x80015BC8` has the same candidate address and
+  structure context as the port title writer, supporting a legitimate shared
+  writer identity.
+- H-RetailDifferentRole: retail execution reaches the PC but its fields/range
+  differ from the port row, so the port row is not the retail consumer.
+- H-RetailNoExecution: the PC has no phase-gated retail execution hits despite
+  valid controls; the prior attribution is not a usable writer witness.
+- H-ControlsInvalid: a whole-RDRAM, title, hangar, or selected-PC control fails.
 
-The discriminator is a single phase-scoped table containing writer kind,
-guest PC, address/length/value, image ordinal/row, task data pointer, image
-DMA destination, SP return, and PCM/slot controls. A same-row guest writer
-selects H-PortGuestConsumer; only phase/task-field association selects
-H-SharedConsumer; valid controls with only `kind=2, pc=0` image DMA selects
-H-ImageOnly; missing controls selects H-TableInvalid.
+The discriminator is the single oracle phase/PC field table joined to the
+existing port tuple `(pc, phys, ordinal, row, task_data, dma_dest)`. Matching
+PC plus candidate address/field context selects H-RetailSameWriter; a valid
+different context selects H-RetailDifferentRole; valid controls with zero PC
+hits select H-RetailNoExecution; any missing positive control selects
+H-ControlsInvalid.
 
-## Ground-truth and exact commands
+## Exact commands
 
-1. Before instrumentation, map the fixup hooks and candidate sites:
-   `rg -n 'rs64_m5_pcm_writer_(store|dma)|0x167000|0x179800|0x18FC00|slot-sb|filter-voice' tools src lib`
-   and confirm the oracle writer PCs/ranges already recorded in
-   `scratch/agent/s2422_m5_writer/oracle.log`.
-2. Add only the bounded table in the fixup/runtime hook identified above,
-   retaining a positive-control row and all existing phase gates.
-3. Build once:
-   `cmake --build build --config Debug --target RogueSquadron64Recomp`
-4. Run the oracle-gated two-arm capture with all passive controls:
-   `zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2424_m5_guest_writer`
-5. Summarize only title/hangar phase rows in
-   `scratch/agent/s2424_m5_guest_writer/`. Require oracle whole-RDRAM/title/
-   hangar controls, both port route controls, and the table positive control.
-
-Expected outcomes: same-row guest writes select H-PortGuestConsumer; only a
-phase/task-field join selects H-SharedConsumer; valid controls with no guest
-writer beyond image DMA preserve H-ImageOnly. No behavior change is allowed.
+1. Before adding instrumentation, run the existing oracle recipe with
+   `--watch-write 0x0:0x800000`, exact title/hangar windows, and
+   `--watch-pc 0x80015BC8,0x8000F3A0`, using Rice and the verified eleven-Start
+   schedule. Require the whole-RDRAM positive-control threshold plus both VI
+   phases before interpreting PC rows.
+2. If the existing oracle field output is sufficient, add no port code. If a
+   bounded field table is needed, add it to the oracle only, then run once.
+3. Compare against `scratch/agent/s2424_m5_guest_writer_fixed/`; no behavior
+   change is authorized.
