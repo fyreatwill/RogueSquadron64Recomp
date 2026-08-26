@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2471 (2026-08-26).
+Current maintenance marker: Session 2473 (2026-08-26).
 
 ## Current state
 
@@ -79,6 +79,17 @@ Current maintenance marker: Session 2471 (2026-08-26).
   after clearing output, so the run used the restored s2471 generated tree
   with the diagnostic applied directly; no behavior change was made. Artifact:
   `scratch/agent/s2472_m5_main_loop_caller_boundary/audit.md`.
+
+- **s2473 — the runtime constructs the inherited zero before the main worker.**
+  The independent retail oracle passed its whole-RDRAM positive control and
+  reached title and hangar. A single qualified port run captured zero `r31` at
+  the registered game entry, the host entry wrapper, and the
+  `run_thread_function` context for the main worker (`addr=0x80000C68`) before
+  the generated `mainGameLoop` entry also observed zero. This selects
+  `H-RuntimeZero`, refutes `H-ContextClobber` at the construction boundary, and
+  makes an overlay wrapper unnecessary as the source explanation. It does not
+  establish whether the zero is valid thread-entry ABI or a missing continuation
+  value. Artifact: `scratch/agent/s2473_m5_runtime_entry_boundary/audit.md`.
 
 - **s2468 — setupCameraMatrices supplies the inherited zero.** The independent
   retail oracle passed whole-RDRAM and freelist controls and reached hangar.
@@ -320,12 +331,14 @@ Current maintenance marker: Session 2471 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, runtime entry boundary open.**
-   The live `mainGameLoop` entry has `r31=0`, but the exhaustive generated
-   caller census is empty. Identify the runtime/overlay dispatch site that
-   constructs this entry context. Do not infer callback polarity or add a
-   guard. No output remap, task-data change, gate change, or guard is
-   authorized.
+1. **M5 generated alternate equivalence — active, thread-entry ABI boundary
+   open.** The runtime constructs the main worker context with `r31=0` before
+   `mainGameLoop` inherits it. Determine whether that zero is the intended
+   thread-entry ABI or a missing continuation/link value by comparing the
+   context before and after `thread_create_callback`, immediately before the
+   generated thread function, and at `mainBootstrapWorker` entry. No callback
+   polarity, guard, output remap, task-data change, gate change, or dispatch
+   change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

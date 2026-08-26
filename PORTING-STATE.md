@@ -113972,3 +113972,29 @@ entry boundary and rules out a missed generated caller as the zero source.
 The runtime dispatch site that constructs the entry context remains open. No
 guard, stub, dispatch, audio, output, or task-data change was made. Artifact:
 `scratch/agent/s2472_m5_main_loop_caller_boundary/audit.md`.
+
+## Session 2473 (2026-08-26) — captured the runtime main-worker context boundary
+
+The independent retail oracle control passed: the whole-RDRAM positive control
+recorded 109,006 writes and reached its 10,000-callback threshold, the
+freelist watch recorded 624 writes, the secondary range watch recorded 98,382
+writes, and VI reached title width 1024 and hangar width 512 at origin
+`0x006AB400`.
+
+The qualified port build added one batched runtime capture at the registered
+game entry, the host entry wrapper, and `run_thread_function`, retaining the
+existing generated `mainGameLoop` entry/caller capture. The main worker's
+thread entry was `0x80000C68`; its runtime-constructed context was already
+`r31=0`, with `sp=0x80166018` and `arg/r4=0x80163E00`. The registered entry and
+wrapper also started with `r31=0`, and the generated `mainGameLoop` entry later
+recorded `r31=0`, `r4=0x80163E00`, `r5=0x8013AF00`. The run reached the 640
+transition but later hit the known pre-target abort, so it provides no
+downstream M5 output result.
+
+This selects `H-RuntimeZero`: the runtime's zero-initialized context is the
+first observed source of the inherited zero. It refutes `H-ContextClobber` at
+the construction boundary and makes an overlay wrapper unnecessary as the
+source explanation. It does not yet establish whether zero is the intended
+OSThread-entry ABI or a missing continuation/link value. No guard, stub,
+dispatch, audio, output, task-data, or callback-polarity change was made.
+Artifact: `scratch/agent/s2473_m5_runtime_entry_boundary/audit.md`.

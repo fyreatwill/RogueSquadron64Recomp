@@ -189,6 +189,14 @@ extern "C" void rs64_m5_dynamic_callback(uint32_t context,
 extern "C" volatile uint8_t* volatile g_recomp_rdram_for_wp_raw;
 extern "C" void rs64_entrypoint_with_rdram_capture(uint8_t* rdram, recomp_context* ctx) {
     g_recomp_rdram_for_wp_raw = rdram;
+    if (const char* e = std::getenv("ROGUESQ_LOG_M5_PRETARGET");
+        e && e[0] && e[0] != '0') {
+        std::fprintf(stderr,
+            "[m5-runtime-context] site=rs64_entrypoint_with_rdram_capture "
+            "r31=0x%08X r4=0x%08X r5=0x%08X\n",
+            (unsigned)ctx->r31, (unsigned)ctx->r4, (unsigned)ctx->r5);
+        std::fflush(stderr);
+    }
     recomp_entrypoint(rdram, ctx);
 }
 // The game's N64 "main" function — renamed to avoid clash with C main()
