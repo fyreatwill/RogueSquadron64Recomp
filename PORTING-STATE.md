@@ -111638,3 +111638,41 @@ field writeback, guard, fallback, or mitigation changed.
 Widen the oracle watch range to `0x80001C98..0x80001FA0` and rerun the same
 paired capture so retail internal rows can be joined to the positive port
 internal trace.
+
+## Session 2375 (2026-08-25) — M5 A1 rs_free internal successor diverges
+
+Before the capture, the Debug target built successfully with the existing
+regeneration-safe internal `rs_free` trace. The widened oracle range was
+`0x80001C98..0x80001FA0`; whole-RDRAM, both target origins, predecessor, and
+live entry controls were retained. Both port arms used the same build and
+the existing positive internal trace. No game behavior was changed.
+
+The fresh oracle passed the whole-RDRAM positive control (`10,000`), both
+target origins, predecessor range, and live `rs_free` entry controls. It
+retained `4,980` widened `rs_free`-entry rows and `2,489` predecessor rows.
+In target-origin rows, retail reached `0x80001CAC`, then `0x80001CB0`, then
+`0x80001CB4`; the rows at the first two PCs carried the shared internal
+values, while `0x80001CB4` was the next observed instruction. Both same-build
+port arms passed early-640, `[rs-free]`, `[a1-args]`, and `[a1-abort]`
+controls. They emitted identical internal rows through `0x80001CB0`, then
+`0x80001CD8F` instead of the retail `0x80001CB4` successor. Their retained
+`rs_free` row counts were `369` and `373`; each had `16` argument rows and
+one abort row. This selects `H-RsFreeInternalWriteDiverges` at capture scope
+and rules out `H-RsFreeInternalMatches` and the prior join-invalid result.
+
+This does not identify the writer/caller or establish a legitimate fix. The
+36 crash-marker counts in each arm were ignored because the driver SIGKILLs
+each arm after its capture marker. No fallback, dispatch, VI, task, audio,
+guard, or mitigation change was made.
+
+Artifacts: `scratch/agent/s2375_m5_a1_rs_free_internal_join/` and
+`scratch/agent/run_s2375_m5_a1_rs_free_internal_join.sh`.
+
+ORIGIN: diagnostic-only. No game behavior, dispatch, VI selection, task data,
+field writeback, guard, fallback, or mitigation changed.
+
+### Next
+
+Audit the companion retail and generated port `rs_free` bodies around
+`0x80001CAC..0x80001CD8F` to distinguish a generated control-flow mismatch,
+an input-dependent path, and a probe-label artifact.

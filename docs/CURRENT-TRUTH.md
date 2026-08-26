@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2374 (2026-08-25). The M5 A1 internal `$a0` capture passed all oracle and both port controls, and both port arms fired identical internal rows. The oracle range did not cover the internal `rs_free` PCs, so the retail-vs-port internal join is invalid; no internal divergence is selected and no fallback or contract edit is authorized.
+Maintained in Session 2375 (2026-08-25). The M5 A1 widened internal capture passed all oracle and both port controls. Retail reaches `0x80001CAC -> 0x80001CB0 -> 0x80001CB4`, while both port arms reach `0x80001CAC -> 0x80001CB0 -> 0x80001CD8F`; this selects an internal control-flow divergence at capture scope. No fallback or contract edit is authorized.
 
 The s2372 predecessor capture remains valid: retail's target-phase
 `0x80001F84` row had `$a0=1,$a2=0`, while both port arms had
@@ -127,6 +127,21 @@ is authorized.
   retail predecessor `$a0=1` as the `rs_free` entry argument. The caller is
   still unidentified; no behavior change is authorized. Artifact:
   `scratch/agent/s2373_m5_a1_rs_free_boundary_fixed/`.
+
+- **s2375 — `rs_free` internal control flow diverges after the shared prefix.**
+  The fresh oracle passed whole-RDRAM `10,000`, both target origins, the
+  predecessor range, and live entry controls. It retained `4,980` widened
+  `rs_free`-entry rows and `2,489` predecessor rows. In target-origin rows,
+  the retail sequence reaches `0x80001CAC`, `0x80001CB0`, then
+  `0x80001CB4`; both same-build port arms passed early-640,
+  `[rs-free]`, `[a1-args]`, and `[a1-abort]` controls and emitted the same
+  internal sequence through `0x80001CB0`, then `0x80001CD8F` instead of the
+  retail successor. This selects `H-RsFreeInternalWriteDiverges` at capture
+  scope and rules out `H-RsFreeInternalMatches` and the prior join-invalid
+  result. It identifies neither the writer/caller nor a legitimate fix; no
+  behavior, fallback, dispatch, VI, task, audio, or mitigation change is
+  authorized. Artifact:
+  `scratch/agent/s2375_m5_a1_rs_free_internal_join/`.
 
 - **s2374 — port internal `$a0` trace is positive but retail join-invalid.** The
   fresh oracle passed whole-RDRAM `10,000`, both target origins, predecessor
@@ -309,13 +324,12 @@ sequence; #1 is the next campaign priority.
    phase-wide candidate join without a new ground-truth discriminator.
 
 3. **M5 A1 caller/input boundary — active.** Retail and port both execute
-   `rs_free` and the predecessor. The fresh pair shows ordinary entry
-   pointers on both sides, but retail reaches `$a0=1` at `0x80001F84` while
-   port reaches `$a0=0x8010FEE0`; port `$ra` is zero in every bounded entry
-   row. The s2374 port internal trace needs a matching retail range watch
-   before it can select an internal divergence. Keep all positive controls;
-   do not add a fallback, change dispatch/VI behavior, or edit task/audio
-   data.
+   `rs_free` and the predecessor. The widened internal join selects a
+   successor-PC divergence after the shared `0x80001CAC -> 0x80001CB0`
+   prefix: retail reaches `0x80001CB4`, while port reaches `0x80001CD8F`.
+   Identify the first port-side branch/call-site distinction and its retail
+   counterpart with positive controls; do not add a fallback, change
+   dispatch/VI behavior, or edit task/audio data.
 4. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both
    arms. Do not repeat the resident-overlay table without a new ground-truth
