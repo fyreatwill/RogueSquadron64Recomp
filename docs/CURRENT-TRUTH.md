@@ -119,6 +119,18 @@ Current maintenance marker: Session 2461 (2026-08-26).
   either. Artifact:
   `scratch/agent/s2461_m5_zero_update_port_fixed/audit.md`.
 
+- **s2462 — the complete static slot-callback audit selects
+  `H-UnresolvedWriter`.** The generated tree has 144 `slotDispatcherIter`
+  callsites across 72 callers. `allocateNpcSlot` legitimately zeros a new
+  context callback at `0x8003E65C`; `spawnNpcOfType` installs the handler
+  argument at `0x800400BC`; and `setupNpcUpdateFunctions` supplies nonzero
+  handlers on recognized type-table branches. The handler argument is dynamic,
+  and the unsupported-type path can leave a fresh context uninstalled, so the
+  static census cannot prove a reachable post-install zero or a universal
+  nonzero invariant. This does not identify the live s2461 field writer and
+  authorizes no guard or dispatch/audio change. Artifact:
+  `scratch/agent/s2462_m5_slot_callback_provenance/audit.md`.
+
 ## Latest evidence
 
 - **s2452 — the retail second-range boundary has no generated dispatcher body.**
@@ -197,16 +209,14 @@ Current maintenance marker: Session 2461 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, pre-target blocked.** Compare
-   the port `0x8008F2CC` alternate's phase/task arguments and destination
-   against the independently grounded retail callsite, then determine whether
-   it is an equivalent consumer or bootstrap-only path. The phase-gated
-   resolver/slot join was attempted with a passing positive control, but the
-   port crashes at `last-guest-pc=0x80007904` before target rows. Next isolate
-   that boundary by enumerating the generated `slotDispatcherIter` callers and
-   the writers of their callback field; do not infer slot-update polarity or
-   add a guard. No output remap, task-data change, gate change, or guard is
-   authorized.
+1. **M5 generated alternate equivalence — active, callback provenance open.**
+   The complete static audit selects `H-UnresolvedWriter`: the callback is
+   installed dynamically by `spawnNpcOfType`, with a legitimate allocation-time
+   zero and an unsupported-type failure path. Build one phase-gated capture of
+   the dynamic handler argument, the context `+0x00` write, and the pre-dispatch
+   value, retaining the indirect resolver positive control. Do not infer slot
+   polarity or add a guard. No output remap, task-data change, gate change, or
+   guard is authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

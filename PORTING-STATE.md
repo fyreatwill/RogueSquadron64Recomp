@@ -113707,3 +113707,28 @@ resolver callsite. No guard, dispatch change, output remap, or audio behavior
 change was made. Next work is a bounded caller/field-writer audit for
 `slotDispatcherIter`. Artifact:
 `scratch/agent/s2461_m5_zero_update_port_fixed/audit.md`.
+
+## Session 2462 (2026-08-26) — audited M5 slot callback provenance
+
+The bounded static audit covered the current generated tree and the companion
+symbol files. It found 144 `slotDispatcherIter` callsites across 72 distinct
+callers, plus the complete lifecycle path for the callback consumed at
+`0x8003E974`.
+
+`allocateNpcSlot` writes zero to a new NPC context's `+0x00` at `0x8003E65C`.
+`spawnNpcOfType` writes its dynamic handler argument to that field at
+`0x800400BC`. `setupNpcUpdateFunctions` selects nonzero handler addresses on
+recognized type-table branches before calling `spawnNpcOfType`; an unsupported
+type takes the failure path and can leave a newly allocated context without a
+handler.
+
+**Hypotheses:** the complete static table selects `H-UnresolvedWriter`, with a
+qualified legitimate allocation-time zero. It does not establish that the
+s2461 live pre-target context was left zero, nor that every dynamic handler
+argument is nonzero.
+
+**Rules out:** treating the allocation zero as proof of a reachable post-install
+zero; treating the recognized type-table handlers as proof of a universal
+nonzero invariant; or inferring a guard/dispatch/audio fix from the static
+result. No behavior change was made. Artifact:
+`scratch/agent/s2462_m5_slot_callback_provenance/audit.md`.
