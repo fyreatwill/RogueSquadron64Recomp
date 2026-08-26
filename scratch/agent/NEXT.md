@@ -1,45 +1,46 @@
-# NEXT work unit (s2444) — independently repeat the port-side second-range boundary
+# NEXT work unit (s2445) — locate the port-side execution identity for the grounded second-range path
 
-HYPOTHESIS-ID: m5-port-second-range-consumer
+HYPOTHESIS-ID: m5-port-second-range-execution-identity
 
 ## Work unit
 
-Repeat the completed s2443 paired recipe with the new table unchanged. Build
-one Debug binary and run the silent-stub and Factor 5 image arms with the
-eleven-Start schedule, retaining the phase-gated task/DMA identity and every
-later `0x1798B0..0x179A48` port event. Run the independent retail oracle with
-the exact second-range controls. Do not change audio or output behavior.
+Add one regeneration-safe, observation-only port execution table for the
+guest-call boundary corresponding to the retail-grounded
+`0x8002BEEC` → `0x800078EC` relation, joined to the existing image task/DMA
+identity and the exact `0x1798B0..0x179A48` range. Build one Debug binary and
+run the same eleven-Start stub/image arms plus the retail oracle controls.
+Do not change audio, output, dispatch, task data, or guards.
 
 ## Competing hypotheses and discriminator
 
-These are the hypotheses written before the build for this iteration:
+These hypotheses are written before the next build:
 
-- H-PortSecondRangeConsumer: the image arm has a hangar consumer that joins
-  the validated task/image identity and produces a bounded post-DMA event.
-- H-PortSecondRangeMissing: the image arm completes its task and DMA but has
-  no later hangar consumer event; the stub arm remains quiet at the same key.
-- H-PortSecondRangeDifferentIdentity: a consumer exists, but the current
-  task/DMA identity is not the join key and a stable alternate field is
-  required.
+- H-PortSemanticPathLive: the port executes the grounded caller/callee path
+  after the image task, but the exact range is reached through a non-CPU or
+  differently keyed event already missing from the current join.
+- H-PortSemanticPathAbsent: neither the grounded caller boundary nor its
+  callee executes in the target phase for the image identity.
+- H-PortAlternatePath: a stable port execution path reaches the target phase
+  and image identity, but it is not the grounded caller/callee pair.
 
 The discriminator is one same-build, same-phase table containing both arms:
-an image-row with a joined later consumer selects H-PortSecondRangeConsumer;
-an image-row with no later consumer while the stub control is valid selects
-H-PortSecondRangeMissing; repeated consumer events with a stable alternate
-field but no current-key join selects H-PortSecondRangeDifferentIdentity.
-No null is interpreted unless both port arms pass title and hangar controls,
-the image arm shows DMEM work/generated DMA/SP completion, and the retail
-whole-RDRAM/title/hangar controls pass in the paired recipe.
+execution of the grounded pair joined after an image DMA selects
+H-PortSemanticPathLive; no execution of either boundary with all controls
+valid selects H-PortSemanticPathAbsent; execution of a stable alternate path
+joined to the same image identity selects H-PortAlternatePath. A null is not
+interpreted unless both port arms pass title/hangar controls, the image arm
+shows DMEM work/generated DMA/SP completion, and the retail
+whole-RDRAM/title/hangar/writer controls pass.
 
 ## Exact commands
 
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-`zsh scratch/agent/run_s2325_m5_task_output_join.sh s2444_m5_port_second_range_consumer`
+`zsh scratch/agent/run_s2325_m5_task_output_join.sh s2445_m5_port_second_range_execution_identity`
 
-The driver must use `ROGUESQ_AUDIO_UCODE=0` for the stub and `=1` for the image
-arm, with
-`ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
+Before building, add the bounded execution table to the existing
+instrumentation and arm both stub and image with `ROGUESQ_AUDIO_UCODE=0/1`,
+with `ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
 ROGUESQ_LLE_SOLO=1`, the eleven-Start schedule, and retail controls including
 `--watch-write 0x0:0x800000`, title/hangar VI controls, exact ranges
 `0x167650:0x167C50` and `0x1798B0:0x179A48`, plus the

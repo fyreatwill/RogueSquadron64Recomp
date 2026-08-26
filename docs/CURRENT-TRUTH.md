@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2443 (2026-08-26).
+Current maintenance marker: Session 2444 (2026-08-26).
 
 ## Current state
 
@@ -150,6 +150,23 @@ Current maintenance marker: Session 2443 (2026-08-26).
   `scratch/agent/s2428_m5_title_writer_join/`.
 
 ## Latest evidence
+
+- **s2444 — an independent paired capture repeats the missing port second-range
+  consumer.** The retail oracle passed the whole-RDRAM positive control
+  (`1,344,797` hits), title/hangar VI controls, both exact image-range
+  controls, and the phase-gated writer-PC control. Both port arms reached
+  title and hangar; the stub emitted no image-stage rows, while the image arm
+  emitted 2,330 stage rows and 2 nonzero retained rows. The image arm showed
+  DMEM work, two generated DMAs, and SP completion. The second-range table
+  recorded zero CPU stores in `0x1798B0..0x179A48` in either arm; both
+  nonzero image rows remained `stage-only`, with zero exact source/consumer
+  joins, zero slot/key-on events, and no destination-role skew. This
+  independently corroborates `H-PortSecondRangeMissing` at the current
+  observation scope and does not select an alternate identity because no
+  consumer event was observed. The image process ended through the driver's
+  SIGKILL cleanup after the hangar control; no post-cleanup lifetime claim is
+  made. No audio or output behavior changed. Artifact:
+  `scratch/agent/s2444_m5_port_second_range_consumer/`.
 
 - **s2443 — the paired port capture found no second-range consumer event.** The
   independent retail controls passed, including the whole-RDRAM positive
@@ -505,21 +522,22 @@ helper-only ambiguity. It does not establish a port consumer or authorize
 any behavior change. Artifact:
 `scratch/agent/s2442_retail_second_range_caller/`.
 
-The next M5 unit should test the port-side post-DMA consumer against the now
-grounded retail relation `0x8002BEEC` → `0x800078EC`, using one bounded
-same-build table for the stub and image arms. It must keep the same route
-controls and make no audio or output behavior change.
+s2444 independently repeated the port-side post-DMA consumer table with the
+grounded retail relation controls. Both arms passed route controls; the image
+arm produced 2,330 stage rows and zero CPU stores in the exact second range,
+with both nonzero rows still stage-only. The next M5 unit should locate the
+port-side execution identity for `0x8002BEEC` → `0x800078EC` using one bounded
+same-build table, with no audio or output behavior change.
 
 s2443's paired capture passed the retail controls and both port title/hangar
 controls. The image arm produced 2,244 stage rows, including two nonzero rows,
 but the new phase-gated table saw zero CPU stores in
 `0x1798B0..0x179A48` in either arm. The existing reducer classified both
-nonzero rows as stage-only and saw no slot/key-on events. This selects
-`H-PortSecondRangeMissing` at the current capture scope; it does not select an
-alternate identity because no consumer event exists to anchor one. The next
-unit must independently repeat this same-build table with the exact retail
-controls before treating the missing event as a closed port boundary. No
-behavior change is authorized.
+nonzero rows as stage-only and saw no slot/key-on events. s2444 independently
+repeated this result with the same controls and 2,330 image-stage rows, so the
+missing second-range event is no longer awaiting a repeat. The next unit must
+use a new discriminator around the retail-grounded `0x8002BEEC` →
+`0x800078EC` execution relation on the port; no behavior change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate

@@ -113278,3 +113278,28 @@ currently observed port CPU-store consumer in the exact retail second range,
 but does not close the hypothesis without an independent repeat. No
 mitigation, remap, writeback, task-data, gate, or default change was made.
 Artifact: `scratch/agent/s2443_m5_port_second_range_consumer/`.
+
+## Session 2444 (2026-08-26) — independently repeated port second-range boundary
+
+Built the Debug target and ran the paired eleven-Start driver with the retail
+oracle, silent stub arm, and Factor 5 image arm. The independent oracle passed
+the whole-RDRAM positive control (1,344,797 hits), title/hangar VI controls,
+both exact image-range controls, and the phase-gated writer-PC control. Both
+port arms reached title and hangar. The stub emitted no image-stage rows; the
+image arm emitted 2,330 image-stage rows, including two nonzero retained rows,
+and showed DMEM work, two generated DMAs, and SP completion.
+
+The phase-gated port table recorded zero CPU stores in
+`0x1798B0..0x179A48` in either arm. Both nonzero image rows were
+`stage-only`, with zero exact source/consumer joins, zero slot/key-on events,
+and zero destination-role skew. The image process was SIGKILL-cleaned by the
+driver after the hangar control; no post-cleanup lifetime claim is made.
+
+This independently corroborates `H-PortSecondRangeMissing` at the current
+observation scope and does not select `H-PortSecondRangeDifferentIdentity`,
+because no consumer event was observed from which to derive an alternate key.
+It rules out a currently observed port CPU-store consumer in the exact retail
+second range, but does not identify why the retail-grounded
+`0x8002BEEC` → `0x800078EC` relation is absent or differently represented on
+the port. No mitigation, remap, writeback, task-data, gate, or default change
+was made. Artifact: `scratch/agent/s2444_m5_port_second_range_consumer/`.
