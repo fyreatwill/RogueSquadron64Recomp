@@ -111794,3 +111794,29 @@ the retail call-site `$a2=0` as an effective-call contract. No port flag,
 fallback, dispatch, VI, task, audio, guard, or mitigation change was made.
 
 Artifact: `scratch/agent/s2379_m5_a1_retail_flag_semantics/`.
+
+## Session 2380 (2026-08-25) — M5 A1 retail callee-entry receive flag
+
+Ran the single work unit from `scratch/agent/NEXT.md`: a fresh retail-oracle
+capture with Rice video, the qualified eleven-Start route, whole-RDRAM positive
+control, target 640 phase buckets, and watches at `0x80001CB8`, the
+unbreakable delay-slot address `0x80001CBC`, `osRecvMesg` entry
+`0x800331D0`, and successor `0x80001CC0`.
+
+The positive control reached `10,000` callbacks and both target 640 origins were
+observed. The capture joined `2,524` target call rows to callee-entry rows by
+`prev_pc=0x80001CB8`, and to the return successor. Every joined callee row had
+`$a2=1`; the call-site rows had `$a2=0` because they were sampled before the
+delay slot. The delay-slot watch had zero rows, confirming only the debugger's
+delay-slot limitation. This selects `H-RetailBlockingObserved` and rules out
+`H-RetailNonblocking` and `H-RetailLabelArtifact` at capture scope.
+
+This closes the effective retail flag question but does not identify the
+upstream caller/input divergence and does not authorize changing the port flag,
+fallback, dispatch, VI, task, audio, guard, or mitigation. The existing
+`s2377` queue/return difference remains a boundary observation, not a fix.
+
+Artifact: `scratch/agent/s2380_m5_a1_retail_flag_semantics.log`.
+
+ORIGIN: no mitigation or behavior change; the oracle-only measurement changed
+no game or runtime state.

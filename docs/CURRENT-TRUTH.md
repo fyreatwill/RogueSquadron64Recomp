@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2379 (2026-08-25). The M5 A1 oracle capture passed the whole-RDRAM and both target-640 controls, and recorded 8,510 retail call/successor pairs. The debugger exposes the call at `0x80001CB8` and the return successor at `0x80001CC0`, but never reports the MIPS delay-slot PC `0x80001CBC`; therefore the retail call-site `$a2` is a pre-delay observation and cannot establish the effective flag. This refutes the s2377 inference that retail's observed `$a2=0` is necessarily nonblocking, while the retail instruction/semantic source remains open. No flag change or fallback is authorized.
+Maintained in Session 2380 (2026-08-25). The M5 A1 oracle capture passed the whole-RDRAM and both target-640 controls, and joined 2,524 retail executions from `0x80001CB8` through callee entry at `osRecvMesg` (`0x800331D0`) and successor `0x80001CC0`; every joined callee row received `$a2=1`. This selects blocking semantics at capture scope and closes the delay-slot flag question. The port flag remains unchanged because the measurement identifies the effective retail operand, not the upstream reason for the port's A1 boundary or a justified fallback.
 
 The s2372 predecessor capture remains valid: retail's target-phase
 `0x80001F84` row had `$a0=1,$a2=0`, while both port arms had
@@ -128,6 +128,21 @@ is authorized.
   not be used as an effective-call contract. No behavior, fallback, dispatch,
   VI, task, audio, guard, or mitigation change was made. Artifact:
   `scratch/agent/s2379_m5_a1_retail_flag_semantics/`.
+
+- **s2380 — retail callee entry receives a blocking flag.** The fresh oracle
+  run passed the whole-RDRAM positive control (`10,000` writes), observed both
+  target 640 origins, and watched the call, delay-slot address, `osRecvMesg`
+  entry (`0x800331D0`), and successor. It joined `2,524` target rows by
+  `prev_pc=0x80001CB8` at the callee and by the `0x80001CC0` successor; all
+  `2,524` callee rows had `$a2=1`, while the call-site rows had `$a2=0` before
+  the unbreakable delay slot. The delay-slot watch remained unhit, as
+  expected from the debugger limitation. This selects
+  `H-RetailBlockingObserved`, rules out `H-RetailNonblocking` and
+  `H-RetailLabelArtifact` at capture scope, and closes the effective-flag
+  work unit. It does not identify the upstream caller/input divergence or
+  authorize changing the port flag, fallback, dispatch, VI, task, audio,
+  guard, or mitigation. Artifact:
+  `scratch/agent/s2380_m5_a1_retail_flag_semantics.log`.
 
 - **s2378 — port `$a2=1` is generated, not host-translated.** The generated
   `rs_free` body explicitly sets `$a1=0` at `0x80001CB4`, calls
@@ -382,13 +397,11 @@ sequence; #1 is the next campaign priority.
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
 
-3. **M5 A1 retail flag semantics — active.** s2378 establishes the generated
-  port delay-slot source and refutes host translation. s2379 establishes the
-  retail call/return join but shows that the oracle cannot trap the delay-slot
-  PC. Resolve the effective retail operand from an independent instruction
-  source or an oracle measurement that observes the callee's received flags;
-  do not treat the call-site `$a2` as sufficient. Do not change the flag,
-  fallback, dispatch, VI, task, or audio behavior.
+3. **M5 A1 retail flag semantics — closed at current capture scope.** s2380
+  independently observed `osRecvMesg` entry with `$a2=1` on all `2,524`
+  target call joins, despite the pre-delay call-site `$a2=0`. Do not repeat
+  the delay-slot watch or change the flag based on this result; the upstream
+  caller/input divergence remains a separate question.
 4. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both
    arms. Do not repeat the resident-overlay table without a new ground-truth
@@ -502,6 +515,11 @@ are superseded at their measured scopes:
   post-call queue-head bit, but s2377 independently measured retail `$a2=0`
   versus port flag `1` in both arms. The remaining question is contract
   provenance, not queue-state arm divergence.
+- s2379's unresolved `H-RetailNonblocking` versus
+  `H-RetailBlockingObserved` split is superseded by s2380's callee-entry
+  capture. The call-site zero was believable as a semantic flag only because
+  the debugger labels the `jal` PC, but it is pre-delay state; the callee
+  received one in every target join.
 
 ## Evidence and safety rules
 
