@@ -43,6 +43,19 @@ Current maintenance marker: Session 2461 (2026-08-26).
   open; no guard or dispatch/audio change is authorized. Artifact:
   `scratch/agent/s2465_m5_pre_target_capture/audit.md`.
 
+- **s2466 — the complete static converter census identifies inherited `$ra` as
+  the zero-source edge.** `convertMat3x4ToN64Mtx` copies `ctx->r31` into
+  `ctx->r25` at `0x80018D84` and its terminal `LOOKUP_FUNC(ctx->r25)` is the
+  only indirect edge. Its sole generated caller,
+  `traverseSceneGraphRecursive` at `0x800155E4`, uses a continuation-style
+  call and writes no new `ctx->r31`; the converter therefore inherits the
+  shared context's earlier `$ra`. This selects `H-CallerContextZero` at static
+  ABI/context scope, rules out a converter field/register zeroing source and
+  an unaccounted converter lowering edge, and leaves the first earlier caller
+  that supplied zero open. Static-only; no build, instrument, guard, dispatch,
+  or audio change. Artifact:
+  `scratch/agent/s2466_m5_zero_source/audit.md`.
+
 - **s2463/s2464 — the dynamic callback capture selects H-PhaseMismatch as
   route diagnosis.** The independent retail oracle passed the whole-RDRAM
   control, reached hangar origin `0x006AB400`, and observed 314
@@ -237,7 +250,7 @@ Current maintenance marker: Session 2461 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, zero-producing edge open.**
+1. **M5 generated alternate equivalence — active, inherited-r31 boundary open.**
    The shared resolver capture now places the first null at
    `convertMat3x4ToN64Mtx` → `traverseSceneGraphRecursive`, after a same-hook
    positive-control resolution. Audit the converter's complete indirect-call

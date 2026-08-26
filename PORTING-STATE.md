@@ -113799,3 +113799,26 @@ field/callsite.
 or adding a null guard, dispatch change, callback inference, audio change,
 output remap, or task-data change. Artifact:
 `scratch/agent/s2465_m5_pre_target_capture/audit.md`.
+
+## Session 2466 (2026-08-26) — audited M5 converter zero-source edge
+
+The complete generated `traverseSceneGraphRecursive` caller and
+`convertMat3x4ToN64Mtx` body were audited without a build or runtime change.
+The converter copies `ctx->r31` into `ctx->r25` at `0x80018D84`, and its only
+indirect edge is the terminal `LOOKUP_FUNC(ctx->r25)` implementing
+`jr $t9`. Its sole generated caller at `0x800155E4` calls through a host
+continuation and does not write `ctx->r31`; all three internal row-packing
+calls are direct and have explicit `after_0/1/2` continuations.
+
+**Hypotheses:** this selects `H-CallerContextZero` at static ABI/context
+scope: a null resolver request must be inherited from an earlier caller
+boundary through `ctx->r31`. It rules out `H-ConverterRegisterZero` as a
+matrix-field or in-body zeroing source and `H-UnseenLoweringEdge` within the
+complete converter census. The first earlier boundary that supplied zero
+remains unlocated.
+
+**Rules out:** adding a converter null guard, replacing the terminal lookup,
+changing callback polarity, dispatch, audio behavior, output mapping, or task
+data based on this static result. The next discriminator is one phase-gated
+entry/resolver tuple with the existing `0x8009123C` positive control. Artifact:
+`scratch/agent/s2466_m5_zero_source/audit.md`.
