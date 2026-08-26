@@ -111401,6 +111401,37 @@ consumer/default, guard, or mitigation changed.
 
 ### Next
 
-Design and run a ground-truth-first M5 A1 second-origin discriminator that
-restores positive coverage for 0x00696100 and 0x00696600. Do not repeat the
-four-arm/two-wave matrix or interpret port nulls without oracle controls.
+Design and run a ground-truth-first M5 A1 pre-target route-boundary capture
+around the shared get_function abort at guest PC 0x80001F88. Name the
+requested function and resident overlay/load relation before interpreting a
+publisher gap. Do not repeat the four-arm/two-wave matrix or change VI
+selection.
+
+## Session 2368 (2026-08-25) — M5 A1 target-origin comparison is route-invalid
+
+Built the Debug target and ran the prescribed ground-truth-first A1 capture.
+The retail oracle passed the whole-RDRAM positive control with 10,000 hits and
+reached both target 640 origins, 0x00696100 and 0x00696600, twice each. The
+same-build control and alternate port arms both emitted eight early context
+controls and one transition-producer row, but neither reached either target
+origin. Both aborted at get_function with last guest PC 0x80001F88; each had 36
+abort markers. The requested named-PC phase rows were zero, so those PCs were
+not positive controls for this capture. The table therefore selected
+H-A1-CoverageInvalid for the port comparison. This rules out no VI publisher
+and authorizes no VI, field, or writeback change. Artifacts:
+scratch/agent/s2368_m5_a1_second_origin_discriminator_result/.
+
+The first two harness attempts failed before launching the port arms because
+the driver used the wrong working directory and then stored literal `$!` PID
+values in a zsh associative array. Both defects were fixed and the same
+experiment was rerun successfully; the result above is from the corrected
+run. No behavior change was made.
+
+ORIGIN: diagnostic-only. No game behavior, VI selection, field writeback,
+guard, or mitigation changed.
+
+### Next
+
+Isolate the shared pre-A1 get_function route boundary with a new table keyed by
+abort ordinal, requested guest address, resident overlay/load rows, early 640
+control, and independent retail target-origin controls.

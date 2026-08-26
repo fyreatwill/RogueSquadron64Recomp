@@ -5,7 +5,10 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2367 (2026-08-25). The M5 payload-owner join passed all
+Maintained in Session 2368 (2026-08-25). The M5 A1 second-origin capture passed
+retail whole-RDRAM and both target-origin controls, but both same-build port
+arms aborted in `get_function` before reaching either target origin; no A1
+publisher comparison is valid. The M5 payload-owner join passed all
 route and execution controls and placed both target-stage rows inside a
 containing audio task; no audio contract change is authorized. The M5
 retail writer-source capture
@@ -72,6 +75,17 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2368 — A1 target-origin comparison was route-invalid on the port.** The
+  fresh retail oracle passed the whole-RDRAM positive control (`10,000` hits)
+  and reached both target 640 origins (`0x00696100` and `0x00696600`, two VI
+  rows each). Both same-build port arms emitted the early transition producer
+  and positive context controls, but both aborted at `get_function` with last
+  guest PC `0x80001F88` before reaching either target origin. The named-PC
+  phase rows were zero, so those PCs are not positive controls for this A1
+  capture. This selects `H-A1-CoverageInvalid` for the port comparison and
+  does not identify a publisher or authorize a VI change. Artifact:
+  `scratch/agent/s2368_m5_a1_second_origin_discriminator_result/`.
 
 - **s2357 — task ABI names the exact field destination.** A fresh retail
   capture passed whole-RDRAM `59,327`, target window `44,120`, exact fields
@@ -184,10 +198,12 @@ sequence; #1 is the next campaign priority.
    s2367's owner join retained source/consumer events but no nonzero
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
-3. **M5 A1 second-origin transition — next, only with a new discriminator.**
-   Design a ground-truth-first capture that restores and positively controls
-   `0x00696100`/`0x00696600` coverage; do not repeat the failed four-arm/two-wave
-   matrix.
+3. **M5 A1 pre-target route boundary — next, with a new discriminator.**
+   Isolate the shared `get_function` abort at guest PC `0x80001F88` before
+   attempting another second-origin comparison. The next capture must name
+   the requested function address and resident overlay at the abort, with
+   positive retail target-origin and port early-640 controls. Do not repeat
+   the four-arm/two-wave matrix or change VI selection.
 4. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator; do not chase a single recurring crash.
 5. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer-mode
