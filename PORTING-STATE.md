@@ -113822,3 +113822,26 @@ changing callback polarity, dispatch, audio behavior, output mapping, or task
 data based on this static result. The next discriminator is one phase-gated
 entry/resolver tuple with the existing `0x8009123C` positive control. Artifact:
 `scratch/agent/s2466_m5_zero_source/audit.md`.
+
+## Session 2467 (2026-08-26) — captured M5 inherited-r31 boundary
+
+The independent retail oracle passed its whole-RDRAM positive control with
+10,624 writes, recorded 624 writes in the watched freelist range, and reached
+hangar at VI 2267 (`0x006ab400`, width 512). The qualified port run used one
+clean regenerated build and a phase-4 resolver capture. Its same-hook positive
+control for `0x8009123C` fired, and the first null tuple at the converter was:
+`entry_r31=0`, `entry_r25=0xECC70000`, `entry_r4=0x80710040`,
+`entry_r5=0x80165DB0`, `terminal_r25=0`, with last guest PC `0x80001F88`.
+
+The discriminator selects `H-CallerContextZero`: the converter inherits zero
+before copying `r31` to `r25` at `0x80018D84`. It rules out an in-converter
+register overwrite and an unseen lowering edge between entry and resolver.
+The first earlier caller that supplied zero remains open. The first capture
+attempts were discarded as harness/fixup failures (bad relative log path and
+a literal-newline format-string build error), and are documented in the
+artifact rather than treated as evidence.
+
+**Rules out:** adding a converter guard, replacing the terminal lookup,
+changing callback polarity, dispatch, audio behavior, output mapping, or task
+data based on this result. Artifact:
+`scratch/agent/s2467_m5_inherited_r31/audit.md`.

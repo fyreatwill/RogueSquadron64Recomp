@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2461 (2026-08-26).
+Current maintenance marker: Session 2467 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,16 @@ Current maintenance marker: Session 2461 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2467 — the converter inherits a zero before its terminal indirect edge.**
+  The independent retail oracle passed its whole-RDRAM and freelist controls
+  and reached hangar. The qualified port capture passed the same-hook
+  `0x8009123C` resolver positive control, then recorded the first null tuple at
+  phase 4: converter entry `r31=0`, terminal `r25=0`, `r4=0x80710040`, and
+  `r5=0x80165DB0`. This selects `H-CallerContextZero` and rules out an
+  in-converter register overwrite or unseen lowering edge. The first earlier
+  caller that supplied zero remains open; no behavior change is authorized.
+  Artifact: `scratch/agent/s2467_m5_inherited_r31/audit.md`.
 
 - **s2465 — the earliest pre-target null dispatch is inside the named matrix
   converter.** The first resolver capture was instrument-valid but saturated

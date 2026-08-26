@@ -1,46 +1,21 @@
-# NEXT work unit (s2467) — capture inherited r31 at converter/resolver boundary
+# NEXT work unit (s2468) — locate the first zero before the converter
 
 HYPOTHESIS-ID: m5-generated-alternate-equivalence
 
-## Context
-
-s2466's complete static census selected H-CallerContextZero at ABI/context
-scope: the converter's resolver input is `ctx->r31`, and its only generated
-caller supplies no new `r31` before the continuation-style call. The remaining
-question is which earlier caller boundary first makes the inherited value zero.
-
 ## Work unit
 
-Add one phase-gated capture at the converter entry and terminal resolver edge
-in the fixup script. Record `ctx->r31`, `ctx->r25`, `ctx->r4`, `ctx->r5`, and
-the last guest PC for the first null tuple; retain the existing shared-resolver
-positive-control row for `0x8009123C`. Use the qualified route and one run.
-No guard, stub, dispatch, callback, or audio behavior change.
+Add one phase-gated, diagnostic-only capture at the `setupCameraMatrices` callsite into `traverseSceneGraphRecursive` and at `traverseSceneGraphRecursive` entry. Record `r31`, `r4`, and `r5` at both boundaries, retaining the existing `0x8009123C` resolver positive-control row. Use one clean regeneration, one build, and one qualified-route run. Do not add a guard, stub, dispatch, callback, audio, output, or task-data change.
 
 ## Competing hypotheses and discriminator
 
-- H-CallerContextZero: the inherited `ctx->r31` is already zero at converter
-  entry, identifying the earlier caller/context boundary as the source.
-- H-ConverterRegisterZero: converter entry has nonzero `r31` but terminal
-  `r25` is zero, implying an in-body register overwrite not present in the
-  static census.
-- H-UnseenLoweringEdge: converter entry has nonzero `r31`/`r25`, but the
-  resolver observes zero, implying an unobserved lowering edge between them.
+- H-SetupCallerZero: the callsite already has `r31=0`, so the zero is supplied before the traverse call.
+- H-TraverseLoweringZero: the callsite has nonzero `r31` but traverse entry has zero, identifying the call-lowering boundary.
+- H-ContextClobber: both callsite and traverse entry have nonzero `r31`, so the zero must be introduced between traverse entry and the converter call.
 
-The discriminator is one ordered table of the converter-entry and
-resolver-edge tuples plus the fixed shared-resolver positive-control row.
-`entry_r31==0` and `entry_r25==0` selects H-CallerContextZero;
-`entry_r31!=0` with `entry_r25==0` selects H-ConverterRegisterZero; both
-nonzero at entry with zero only at resolver selects H-UnseenLoweringEdge. A
-missing positive-control row invalidates the run.
+The ordered callsite/entry table is the discriminator. Callsite zero selects H-SetupCallerZero; nonzero callsite with zero entry selects H-TraverseLoweringZero; both nonzero selects H-ContextClobber. A missing `0x8009123C` row invalidates the run.
 
-## Exact commands
+## Commands
 
-1. Ask/verify the retail oracle whole-RDRAM control and hangar phase before
-   adding the port capture; no retail behavior change is expected.
-2. Add the two phase-gated rows in `fixup_game_funcs.py`, regenerate in the
-   documented order, and retain `ROGUESQ_LOG_M5_PRETARGET=1` plus its phase-4
-   positive-control row.
-3. Run the qualified route from `build/` for 30 seconds, SIGKILLing the game
-   if it remains active, and write
-   `scratch/agent/s2467_m5_inherited_r31/audit.md`.
+1. Run the retail oracle with Rice, the whole-RDRAM positive control, freelist watch, and driven Start schedule; confirm positive-control and hangar rows.
+2. Add the two rows in `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`, then regenerate in order: `python3 tools/make_elf.py`, clean `RecompiledFuncs`, `N64Recomp rogue_squadron.toml`, `python3 fixup_game_funcs.py`, and `cmake --build build --parallel 4`.
+3. Run from `build/` for 30 seconds with `ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_M5_PRETARGET=1`, SIGKILLing the game, and write `scratch/agent/s2468_m5_setup_traverse_boundary/audit.md`.
