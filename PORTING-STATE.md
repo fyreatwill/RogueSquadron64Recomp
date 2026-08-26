@@ -114458,3 +114458,24 @@ mismatch as a join artifact. The downstream image-stage/output/PCM identity
 remains open. The run ended in the pre-existing `recomp::do_rom_read` crash
 after the target rows were captured. Artifact:
 `scratch/agent/s2494_m5_port_load_join/audit.md`.
+
+## Session 2495 (2026-08-26) — joined image stages against type-2 audio loads
+
+The prescribed qualified image-arm capture reached the target phase 10 route
+at width 512 and origin `0x006AB400`. Target load, descriptor, scheduler,
+image-stage, and return controls fired. The run recorded 171 type-2
+`osSpTaskLoad` rows, 316 stage-2 image rows across 314 image ordinals, and 257
+audio returns. Every 316 image joins remained `stage-only`, with zero source or
+consumer identity rows.
+
+The type-2 rows used the established `0x80149470` task pointer and the
+retail-matching data-pointer set. Loads and image stages were interleaved, but
+image-stage rows contain neither the load task pointer nor its data pointer,
+and several stage rows occur per load. Temporal adjacency therefore does not
+prove an image/load identity. This selects `H-image-load-distinct` at the
+observable boundary, refutes `H-image-load-unobservable`, and leaves the first
+legitimate downstream writer/consumer open. The later phase's missing load
+rows are a phase-budget artifact, not a null result. No task/output remap,
+guard, or mitigation was made. The run ended in the pre-existing
+`recomp::do_rom_read` crash after the target rows were captured. Artifact:
+`scratch/agent/s2495_m5_image_downstream_join/audit.md`.

@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2494 (2026-08-26).
+Current maintenance marker: Session 2495 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,19 @@ Current maintenance marker: Session 2494 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2495 — image stages do not yet join the matching type-2 load by identity.**
+  The qualified port capture reached phase 10, width 512, origin `0x006AB400`
+  and passed the target load, descriptor, scheduler, image-stage, and return
+  controls. It recorded 171 type-2 loads, 316 stage-2 rows across 314 image
+  ordinals, and 257 returns; all 316 image joins remained `stage-only`, with no
+  source or consumer identity. Loads and image stages were interleaved, but
+  image rows contain neither the type-2 task pointer nor its data pointer, and
+  several image stages occur per load. This selects
+  `H-image-load-distinct` at the observable identity boundary and refutes
+  `H-image-load-unobservable`; temporal adjacency is insufficient to select a
+  joined image/load pair. The later phase's load-row absence is a phase-budget
+  artifact. Artifact: `scratch/agent/s2495_m5_image_downstream_join/audit.md`.
 
 - **s2494 — the port's own `osSpTaskLoad` matches the retail audio boundary.**
   The qualified port capture reached both target phases and passed the
@@ -579,11 +592,14 @@ Closed investigations are not active work items. This is one monotonic sequence;
    retail comparison instead found a distinct type-2 load task at
    `0x80149470`; the port now matches those fields at its own load entry. The
    earlier gspTask mismatch was a descriptor-vs-audio-task join error.
-2. **M5 generated image downstream join — active.** Join the image-arm stage
-   DMAs and completion to the matching type-2 load rows and identify the first
-   legitimate consumer/output or PCM edge. Do not map the image stage to the
-   type-1 gspTask descriptor, and do not change task or output fields without
-   a named writer and independent retail evidence.
+2. **M5 generated image downstream join — active.** The s2495 capture selected
+   `H-image-load-distinct`: type-2 loads are legitimate and retail-matching,
+   while image-stage rows have no task/data identity and remain `stage-only`.
+   Next, identify the first legitimate downstream writer/consumer that can
+   carry an image ordinal or destination identity into slot, voice, PCM, or
+   output state. Do not map the image stage to the type-1 gspTask descriptor,
+   infer identity from temporal adjacency, or change task/output fields
+   without a named writer and independent retail evidence.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at
