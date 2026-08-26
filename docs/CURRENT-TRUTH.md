@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2435 (2026-08-26).
+Current maintenance marker: Session 2436 (2026-08-26).
 
 ## Current state
 
@@ -414,11 +414,12 @@ sequence; #1 is the next campaign priority.
    words varied. This selects `H-RetailStoreHelper` provisionally at the
    oracle-only scope; a second independent line is still required. s2435
    repeated the capture with a return-site watch: six lifetime `0x8008F2D4`
-   hits and no phase-gated caller-context rows. This corroborates the repeated
-   helper shape at the same single-source oracle scope but does not close
-   semantic-entry identity. The next unit must use a genuinely new caller
-   discriminator, not another identical return-site watch. No port behavior
-   change is authorized.
+   hits and no phase-gated caller-context rows. s2436 watched the actual
+   `jal 0x8008F2CC`: it again fired six times lifetime but zero times in
+   title/hangar buckets, while the exact writer retained 408 rows. This
+   selects `H-RetailCallerOutsideTargetPhases` at the current scope. The next
+   unit must phase-locate those six calls across the observed 640 intro origins,
+   not repeat the return-site watch. No port behavior change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -535,6 +536,16 @@ corroborates `H-RetailStoreHelper` only at the single-source oracle scope and
 leaves semantic-entry identity unresolved; it rules out neither a missing
 phase-latched caller sample nor a semantic caller. No port behavior change is
 authorized. Artifact: `scratch/agent/s2435_retail_caller_boundary/`.
+s2436 replaced the return-site watch with the actual `jal` callsite
+`0x8008F2CC`. The independent oracle passed whole-RDRAM (`12,661` writes),
+title (`1024 @ 0x00790400`), hangar (`512 @ 0x006AB400`), and exact image-range
+controls (`1,536` and `1,125`). The callsite executed six times lifetime but
+produced zero phase-gated field rows, while the exact writer retained 408
+phase rows with the same `ra=0x8008F2D4` context and advancing store addresses.
+This selects `H-RetailCallerOutsideTargetPhases` at the current capture scope:
+the callsite is not a title/hangar semantic discriminator yet. It does not
+prove the caller is non-semantic in its execution phase and authorizes no port
+change. Artifact: `scratch/agent/s2436_retail_caller_site/`.
 - s2428's fixed paired port capture passed retail whole-RDRAM/title/hangar
   controls and both port-arm title/hangar controls. Each arm recorded 256
   exact `0x80015BC8` writes in `0x169730..0x1698EC`, joined to title

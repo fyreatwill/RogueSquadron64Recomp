@@ -113125,3 +113125,19 @@ rule out treating the return-site watch as a semantic-entry discriminator;
 the next unit must watch the actual `jal` callsite at `0x8008F2CC`. No port
 behavior, mapping, writeback, task-data, gate, guard, or default changed.
 Artifact: `scratch/agent/s2435_retail_caller_boundary/`.
+
+## Session 2436 (2026-08-26) — phase-located retail caller attempt
+
+The observation-only retail oracle run passed the whole-RDRAM positive control
+(`12,661` writes), title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and
+exact image-range totals of `1,536` at `0x167650..0x167C50` and `1,125` at
+`0x1798B0..0x179A48`. The actual `jal` callsite `0x8008F2CC` executed six
+times over the run but emitted zero phase-gated caller-field rows. The exact
+writer table retained 408 phase rows from `0x800078EC`, all with
+`ra=0x8008F2D4`, `a0=0x801797B0`, `a1=0`, `a2=0x298`, `t0=0x2000FF01`, and
+`t1=0x8010FEF8`, while store addresses advanced across the exact range and
+pre-store words varied. This selects `H-RetailCallerOutsideTargetPhases` at
+the current capture scope: the callsite is not a title/hangar discriminator.
+It rules out neither caller semantics in an observed 640 intro phase nor the
+need for a new phase bucket, and authorizes no port behavior change.
+Artifact: `scratch/agent/s2436_retail_caller_site/`.
