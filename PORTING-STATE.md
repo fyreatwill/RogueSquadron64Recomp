@@ -111869,3 +111869,30 @@ data, audio contract, fallback, or output publication.
 Artifact: `scratch/agent/s2345_m5_c88_downstream_ordinal_join/ordinal-summary.tsv`.
 
 ORIGIN: no mitigation or behavior change; instrumentation and capture only.
+
+## Session 2383 (2026-08-25) — M5 task completion/output candidate census
+
+Patched the existing same-build driver to emit an all-candidate,
+phase-keyed `candidate-task-table.tsv` containing each image-stage candidate's
+ordinal/row, render event, completion event/bit, DMA count, PCM source and
+consumer events, and classification. Also made the harness tolerate the
+expected SIGKILL status when waiting for a terminated arm so postprocessing
+always runs. Built with `cmake --build build --config Debug --target
+RogueSquadron64Recomp`, then ran `env zsh
+scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh
+s2383_m5_task_output_contract_audit`.
+
+All four stub/image × c88 arms passed title-1024 and hangar-512 controls. The
+candidate table retained 4,342 image rows: 2,316 for image-c0 and 2,026 for
+image-c1. Stage/render events were present in every retained row, while all
+rows lacked completion event/bit and DMA-count join fields; no candidate had
+a PCM source or consumer event. The summary remained `H-TaskOutputGap`, with
+the candidate-level discriminator selecting `H-CompletionEventMissing`.
+This rules out route-invalid coverage and completion-bit-false at this capture
+scope, but does not identify why the completion producer is absent. No runtime
+behavior or audio/task contract changed.
+
+Artifacts: `scratch/agent/s2383_m5_task_output_contract_audit/ordinal-summary.tsv`
+and `candidate-task-table.tsv`.
+
+ORIGIN: no mitigation or behavior change; harness instrumentation and capture only.

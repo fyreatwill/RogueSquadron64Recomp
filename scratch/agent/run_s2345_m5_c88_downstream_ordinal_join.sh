@@ -137,7 +137,7 @@ run_arm() {
     (( hangar )) || print "${name}_controls=failed title_or_hangar_missing" | tee -a "$OUT/driver.log"
     cleanup_game "$pid" "$keypid"
     wait "$keypid" 2>/dev/null || true
-    wait "$pid" 2>/dev/null
+    wait "$pid" 2>/dev/null || true
     local rc=$?
     print "${name}_rc=$rc controls=$hangar" | tee -a "$OUT/driver.log"
 }
@@ -155,6 +155,7 @@ from collections import defaultdict
 from pathlib import Path
 
 out_dir, table_path, summary_path = map(Path, sys.argv[1:])
+candidate_path = out_dir / "candidate-task-table.tsv"
 token = re.compile(r"([^=\s]+)=([^\s]+)")
 arms = ("stub_c0", "stub_c1", "image_c0", "image_c1")
 phases = ((1024, 0x790400), (512, 0x6AB400))
@@ -209,6 +210,12 @@ summary_header = [
     "render_rows", "keyon_tables", "crash", "abort",
 ]
 summary = [summary_header]
+candidate_header = [
+    "arm", "audio", "c88", "phase", "width", "origin", "ordinal", "row",
+    "stage_event", "stage", "complete_event", "complete", "dma_count",
+    "dma_range_events", "source_event", "consumer_event", "classification",
+]
+candidate_table = [candidate_header]
 
 for arm in arms:
     log = out_dir / f"{arm}.log"
@@ -219,6 +226,23 @@ for arm in arms:
     writers = [r for r in rows if r["tag"] == "m5-b40-writer" and phase_key(r) is not None]
     keyon_tables = [r for r in rows if r["tag"] == "m5-keyon-table" and phase_key(r) is not None]
     filters = [r for r in rows if r["tag"] == "filter-voice-audit" and phase_key(r) is not None]
+    joins_all = [r for r in rows if r["tag"] == "audtask-image-join" and phase_key(r) is not None]
+    stages_all = [r for r in rows if r["tag"] == "audtask-image-stage-row" and phase_key(r) is not None]
+    ranges_all = [r for r in rows if r["tag"] == "audtask-dma-range"]
+    for join in joins_all:
+        key = (num(join.get("ordinal")), num(join.get("row")))
+        stage_rows = [r for r in stages_all if phase_key(r) == phase_key(join) and
+                      (num(r.get("ordinal")), num(r.get("row"))) == key]
+        range_events = [r.get("event", "") for r in ranges_all
+                        if r.get("event") and num(r.get("event")) >= num(join.get("stage_event"))]
+        candidate_table.append([
+            arm, str(audio), str(c88), "target", str(phase_key(join)[0]),
+            f"0x{phase_key(join)[1]:06X}", join.get("ordinal", ""), join.get("row", ""),
+            ",".join(r.get("event", "") for r in stage_rows), join.get("stage", ""),
+            join.get("complete_event", ""), join.get("complete", ""), join.get("dma_count", ""),
+            ",".join(range_events), join.get("source_event", ""),
+            join.get("consumer_event", ""), join.get("classification", ""),
+        ])
     controls = int(
         count_tag(rows, "vi-callers-control") > 0 and
         count_tag(rows, "filter-voice-audit-control") > 0 and
@@ -305,7 +329,7 @@ for arm in arms:
         str(count_tag(rows, "CRASH")), str(count_tag(rows, "ABORT")),
     ])
 
-for path, data in ((table_path, table), (summary_path, summary)):
+for path, data in ((table_path, table), (summary_path, summary), (candidate_path, candidate_table)):
     path.write_text("\n".join("\t".join(row) for row in data) + "\n")
 
 print("ordinal_summary")

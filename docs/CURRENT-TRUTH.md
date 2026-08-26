@@ -5,7 +5,9 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2382 (2026-08-25). The M5 A1 oracle capture passed the whole-RDRAM and both target-640 controls, and joined 2,524 retail executions from `0x80001CB8` through callee entry at `osRecvMesg` (`0x800331D0`) and successor `0x80001CC0`; every joined callee row received `$a2=1`. This selects blocking semantics at capture scope and closes the delay-slot flag question. The port flag remains unchanged because the measurement identifies the effective retail operand, not the upstream reason for the port's A1 boundary or a justified fallback.
+Maintained in Session 2383 (2026-08-25). The M5 A1 oracle capture passed the whole-RDRAM and both target-640 controls, and joined 2,524 retail executions from `0x80001CB8` through callee entry at `osRecvMesg` (`0x800331D0`) and successor `0x80001CC0`; every joined callee row received `$a2=1`. This selects blocking semantics at capture scope and closes the delay-slot flag question. The port flag remains unchanged because the measurement identifies the effective retail operand, not the upstream reason for the port's A1 boundary or a justified fallback.
+
+The s2383 same-build task/output candidate census passed all four route controls. It retained 4,342 phase-keyed image-stage candidates across c88=0/1 image arms; stage/render events were present, but every candidate lacked a completion event/bit and a task DMA-count join, and none had PCM source or consumer events. Stub arms had no image candidates as expected. This narrows `H-TaskOutputGap` to `H-CompletionEventMissing` at capture scope; it does not authorize changing task data, audio, gate, fallback, or publication behavior.
 
 The s2382 same-build M5 downstream capture passed all four route/phase controls. The c88=1 arms joined 124/125 gate fallthroughs and 118/116 key-on rows, but all four arms had zero task-completion joins and zero PCM source/consumer joins; image arms still produced 2,270/4,235 task-DMA ranges and 2,271/2,344 render rows. This selects `H-TaskOutputGap` at capture scope: gate polarity and intermediate downstream work are present, while task completion/output closure is absent. No audio contract or gate change is authorized.
 
@@ -415,10 +417,11 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
   qualified steps. The next queued boundary is #4.
-2. **M5 task/output closure — active.** s2382 found positive c88 gate and
-   intermediate key-on joins but no task completion or PCM source/consumer
-   joins. Audit the existing completion/output event contracts with one
-   positive-control-qualified capture before changing task data or audio.
+2. **M5 task/output closure — active.** s2383's candidate census found
+   stage/render rows but no completion event/bit, task DMA-count join, or PCM
+   source/consumer event in 4,342 image candidates. Trace the completion-event
+   producer and its task association with one positive-control-qualified
+   capture before changing task data or audio.
 3. **M5 gate polarity/writer join — closed at current capture scope.** s2381
    independently identified retail gate writer/value behavior and s2382
    supplied the port-side downstream comparison; no gate treatment is
