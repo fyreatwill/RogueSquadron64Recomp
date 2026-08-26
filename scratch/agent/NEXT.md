@@ -1,13 +1,14 @@
-# NEXT work unit (s2480) — validate runtime SP completion consumption
+# NEXT work unit (s2481) — validate target-route SP completion consumption
 
 HYPOTHESIS-ID: m5-generated-alternate-equivalence
 
 ## Single work unit
 
-Run one qualified image-arm capture that verifies the runtime SP completion
-message's complete lifecycle: event registration, `run_task` return,
-`sp_complete` publication, and game-side queue consumption. Do not change
-code, add a runtime API, add a NULL guard, or remap audio/output in this unit.
+Run one phase-valid qualified image-arm capture using the known eleven-Start
+`tools/probe.sh` route. Verify the runtime SP completion message's complete
+lifecycle: event registration, `run_task` return, `sp_complete` publication,
+and game-side queue consumption. Do not change code, add a runtime API, add a
+NULL guard, or remap audio/output in this unit.
 
 ## Competing hypotheses
 
@@ -24,27 +25,26 @@ The same-run rows must show registration plus paired publication and consume
 counts for the target image route. Registration + publication + consumption
 selects H-SPConsumed; registration + publication with no consume selects
 H-SPPublishedUnconsumed; absent/incorrect registration selects
-H-SPRegistrationGap. The positive control is the existing event-wiring
-category itself: `[event-wiring] register` and `[event-wiring] complete kind=SP`
-must both visibly fire, or the run is invalid.
+H-SPRegistrationGap. The positive control is `[event-wiring] register` plus
+`[event-wiring] complete kind=SP`, and the route control is a phase 512 row
+with the hangar origin; both must fire in this run.
 
 ## Exact command
 
-Build is not needed. From the repo root, launch one qualified image-arm run
-with a bounded watchdog and lifecycle logs, then inspect bounded rows:
+Build is not needed. From the repo root:
 
 ```sh
-mkdir -p scratch/agent/soak_results/s2480_runtime_sp_lifecycle
-(cd build && env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 \
-    ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-    ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_EVENT_WIRING=1 \
-    ROGUESQ_LOG_AUDIO_RETURN=1 ./RogueSquadron64Recomp \
-    > ../scratch/agent/soak_results/s2480_runtime_sp_lifecycle/run.log 2>&1) &
-pid=$!; sleep 180; kill -KILL "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true
+mkdir -p scratch/agent/soak_results/s2481_runtime_sp_lifecycle
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 \
+  ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_EVENT_WIRING=1 \
+  ROGUESQ_LOG_AUDIO_RETURN=1 PROBE_PHASE_WIDTH=512 \
+  PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 \
+  PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
+  zsh tools/probe.sh scratch/agent/soak_results/s2481_runtime_sp_lifecycle 180 2
 grep -n -E 'event-wiring.*(register|complete kind=SP)|audio-route.*(run-task-return|sp-complete)|audtask-abi' \
-  scratch/agent/soak_results/s2480_runtime_sp_lifecycle/run.log | tail -120
+  scratch/agent/soak_results/s2481_runtime_sp_lifecycle/port.log | tail -120
 ```
 
-The existing event-wiring positive control must pass in this same run. If the
-queue lifecycle is complete, the next unit can audit the image downstream
-consumer; if publication is not consumed, first locate the game queue consumer.
+If the route control fails again, do not interpret generic SP rows; classify
+the capture as phase-invalid and diagnose the input/route gate next.

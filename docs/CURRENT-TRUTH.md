@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2479 (2026-08-26).
+Current maintenance marker: Session 2480 (2026-08-26).
 
 ## Current state
 
@@ -40,6 +40,15 @@ Current maintenance marker: Session 2479 (2026-08-26).
   SP completion. This selects `H-ContainingTaskRuntime` and treats
   `0x1328` as a legitimate terminal image-task contract. Artifact:
   `scratch/agent/s2479_m5_containing_task_completion/audit.md`.
+
+- **s2480 — generic SP publication is live, but the target image route was not
+  reached.** The prescribed image-arm run passed the event-wiring controls:
+  one SP registration for `0x8011A420/0x80128C70` and 64 runtime SP
+  completions. It emitted no image-route or audio-task ABI rows and remained
+  on the title/640-width route, so the target SP consumer discriminator is
+  unevaluable. This is not evidence for consumption, non-consumption, or a
+  registration gap on the image route. Artifact:
+  `scratch/agent/s2480_m5_runtime_sp_lifecycle/audit.md`.
 
 - **s2478 — the host-local bridge reaches the target image task but not its
   containing-task completion.** Independent retail controls passed, and both
@@ -398,8 +407,9 @@ Closed investigations are not active work items. This is one monotonic sequence;
    `0x1328`; containing-task SP completion is runtime-owned, while the two
    target stage DMAs remain `stage-only`. Next: dynamically validate that the
    runtime SP completion message is registered, published, and consumed on the
-   qualified image route before investigating output/consumer semantics. See
-   `NEXT.md`.
+   qualified image route before investigating output/consumer semantics. The
+   plain launch was phase-invalid; use the eleven-Start `tools/probe.sh` route
+   in `NEXT.md`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

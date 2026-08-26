@@ -114136,3 +114136,18 @@ completion. This selects `H-ContainingTaskRuntime`, treats `0x1328` as a
 legitimate terminal image-task contract, and rules out a generated
 containing-task completion writer. No code or mitigation changed. Artifact:
 `scratch/agent/s2479_m5_containing_task_completion/audit.md`.
+## Session 2480 (2026-08-26) — captured generic runtime SP lifecycle
+
+Ran the prescribed bounded qualified image-arm capture from `build/` with
+`ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`,
+`ROGUESQ_LLE_SOLO=1`, and the M5, event-wiring, and audio-return logs. The
+positive event-wiring controls fired: one SP registration for
+`mq=0x8011A420 msg=0x80128C70` and 64 runtime SP completions. The process also
+emitted repeated `audtask-dispatch real_ucode=1` rows, but no `audio-route`,
+`audtask-abi`, or target image-task lifecycle rows; it remained on the
+title/640-width route and did not reach the image phase. Therefore the
+target-route hypotheses H-SPConsumed, H-SPPublishedUnconsumed, and
+H-SPRegistrationGap are all unevaluable. This rules out a globally absent SP
+registration/publication path, but does not establish image-route queue
+consumption. The next attempt must use the known eleven-Start `tools/probe.sh`
+route. Artifact: `scratch/agent/s2480_m5_runtime_sp_lifecycle/audit.md`.
