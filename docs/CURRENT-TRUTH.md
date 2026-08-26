@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2429 (2026-08-26).
+Current maintenance marker: Session 2430 (2026-08-26).
 
 ## Current state
 
@@ -255,6 +255,19 @@ Current maintenance marker: Session 2429 (2026-08-26).
   selects no consumer-PC hypothesis. The next run must request phase-gated
   writer histograms explicitly.
 
+- **s2430 — retail hangar image ranges select one writer and one helper set.**
+  The independent oracle passed whole-RDRAM (`12,253` writes), title, and
+  hangar controls. The exact `0x167650..0x167C50` range recorded `1,536`
+  writes, all from `0x800078EC`. The exact `0x1798B0..0x179A48` range recorded
+  `717` writes from `0x80007670`, `0x800078EC`, `0x8001E2C0`,
+  `0x8001FACC`, `0x8001FADC`, `0x8001FAE4`, `0x8001FAEC`, `0x8001FAF0`,
+  `0x8001FAF8`, `0x8001FB10`, `0x8001FB14`, `0x8001FBE4`, and
+  `0x8001FD2C`. This selects `H-RetailHangarSingleWriter` for the first
+  range and `H-RetailHangarHelperSet` for the second at the oracle's
+  phase-gated attribution scope. It does not establish which helper is the
+  semantic image consumer or authorize any port change. Artifact:
+  `scratch/agent/s2430_retail_hangar_consumer/`.
+
 - **s2403 — retained image-stage bytes are legitimately zero at capture scope.**
   The retail oracle passed whole-RDRAM (`32,791,644` hits), title, and hangar
   controls. In one rebuilt two-arm port run, retained stage-2 and stage-3
@@ -385,9 +398,11 @@ sequence; #1 is the next campaign priority.
    discriminator for the unresolved hangar consumer; no behavior change is
    authorized.
    s2429 confirmed both exact hangar ranges are written on retail, but omitted
-   the explicit writer-PC histogram required to attribute them. The next unit
-   must repeat the oracle with `--pc-hist-watch 1/2` and a hangar phase bucket;
-   no port behavior change is authorized.
+   the explicit writer-PC histogram required to attribute them. s2430 filled
+   that gap: the first range is single-writer `0x800078EC`, while the second
+   has the listed helper set. The next unit must execute-watch that complete
+   set in the hangar phase to distinguish active consumer entry from
+   store-helper execution; no port behavior change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate

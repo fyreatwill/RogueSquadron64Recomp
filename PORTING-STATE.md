@@ -113002,3 +113002,25 @@ the no-write hypothesis but selects neither a single retail consumer PC nor a
 helper set; the result is aggregate-only and the missing attribution is an
 instrumentation omission. The next unit requests both explicit histograms in
 the hangar phase. No port behavior changed.
+
+## Session 2430 (2026-08-26) — attributed retail hangar image-range writers
+
+Ran the prescribed independent retail-oracle capture with the whole-RDRAM
+positive control first, exact watches on `0x167650..0x167C50` and
+`0x1798B0..0x179A48`, phase-gated writer histograms, VI tracing, and the
+validated Start schedule. The whole-RDRAM control reached `12,253` writes;
+title reached `1024 @ 0x00790400`; hangar reached `512 @ 0x006AB400` with
+`1,304` phase VI rows. The exact ranges recorded `1,536` and `717` writes.
+
+The first range was written exclusively by `0x800078EC` (`1,536`). The
+second was written by `0x80007670` (`184`), `0x800078EC` (`408`), and the
+helper PCs `0x8001E2C0`, `0x8001FACC`, `0x8001FADC`, `0x8001FAE4`,
+`0x8001FAEC`, `0x8001FAF0`, `0x8001FAF8`, `0x8001FB10`, `0x8001FB14`,
+`0x8001FBE4`, and `0x8001FD2C` (`11` or `12` each). This selects
+`H-RetailHangarSingleWriter` for the first range and
+`H-RetailHangarHelperSet` for the second at this phase-gated attribution
+scope. It rules out `H-RetailHangarNoWriter` and the prior aggregate-only
+state, but does not identify the semantic consumer among the second range's
+helpers or authorize a port remap, writeback, task-data change, gate, guard,
+or default change. Artifact:
+`scratch/agent/s2430_retail_hangar_consumer/`.
