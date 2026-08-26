@@ -114410,3 +114410,28 @@ not refute or select generated-alternate equivalence. The next discriminator
 is the retail `osSpTaskLoad` entry at `0x80033E3C`. No runtime code, task
 dispatch, audio behavior, or descriptor mapping changed. Artifact:
 `scratch/agent/s2492_m5_retail_task_join/audit.md`.
+
+## Session 2493 (2026-08-26) — joined retail and port task boundaries at osSpTaskLoad
+
+The prescribed oracle capture passed the whole-RDRAM positive control at
+10,000 writes, reached the driven retail hangar at width 512 / origin
+`0x006AB400`, and watched `osSpTaskLoad` at `0x80033E3C`. It recorded 6,177
+execution hits and 477 phase-gated type-2 task rows. The target rows used
+task pointer `0x80149470`, `data_ptr=0x80171E70` or `0x80173CB0`,
+`data_size=1` or `2`, and zero output/yield pointers.
+
+The first port launch was a recipe failure: direct executable launch supplied
+no input and stayed in 640, so its null was discarded. The fixed
+`tools/probe.sh` launch used the eleven boot-relative Start schedule, reached
+both 512 target phases, and passed the descriptor controls, producing 718
+descriptor-control rows before the known `recomp::do_rom_read` crash. Its
+phase-12 descriptor rows consistently used the distinct `gspTask` pointer
+`0x800377C8`, type 1, and did not contain the retail task or data pointers.
+
+This selects `H-retail-load-differs-from-port` for the attempted descriptor
+join and refutes generated-alternate equivalence at this boundary. The two
+observed pointers identify distinct scheduler/task objects; this is not a
+writer diagnosis and authorizes no remap, guard, or audio change. The next
+discriminator is the port's own generated `osSpTaskLoad` entry, joined
+directly to the retail rows. Failed and corrected captures, plus bounded logs,
+are in `scratch/agent/s2493_m5_retail_task_join/`.
