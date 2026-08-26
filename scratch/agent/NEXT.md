@@ -1,38 +1,35 @@
-# NEXT work unit (s2452) — audit the generated caller of the retail second-range path
+# NEXT work unit (s2453) — identify the port replacement for the retail dispatcher boundary
 
-HYPOTHESIS-ID: m5-port-second-range-caller-lowering
+HYPOTHESIS-ID: m5-port-dispatcher-replacement
 
 ## Work unit
 
-Perform a bounded static audit of the generated function containing the
-retail-grounded second-range semantic caller boundary `0x8002BEEC` and its
-call/continuation around the observed `rs_memset` path. Enumerate the complete
-callsite lowering, especially whether the translated caller reaches the
-`rs_memset` entry directly, through a generated continuation, or through a
-different helper. Do not change runtime or generated output.
+Perform one bounded source/runtime audit of the port-side call boundary that
+replaces retail `__osDispatchThread/0x8002BEEC` before `0x800078EC`. Start from
+the existing generated `rs_memset` execution helper and runtime dispatch path;
+enumerate candidate host/runtime entry points and their immediate caller
+identity in one table. Do not change behavior or add a new diagnostic field.
 
 ## Competing hypotheses and discriminator
 
-- H-DirectCallerPresent: the translated caller contains the expected direct
-  `jal 0x800078E0` and its continuation preserves the same store/data path.
-- H-CallerLoweringDiverges: the translated caller has a structural lowering
-  difference at the call or continuation that can account for the missing
-  second-range consumer.
-- H-DifferentGeneratedBoundary: `0x8002BEEC` is not represented by the
-  generated function/path that performs the observed second-range stores.
+- H-PortRuntimeDispatcher: one runtime dispatcher entry replaces the retail
+  boundary and can be named from the existing execution path.
+- H-PortGeneratedAlternate: the port uses the known generated
+  `0x8008F2CC`/`after_6` path, with no dispatcher-equivalent handoff.
+- H-PortMultipleBoundaries: more than one port entry reaches the callee, so the
+  retail predecessor is not a one-to-one port boundary.
 
-The discriminator is a complete caller-boundary table: direct target,
-preceding argument setup, continuation label, and all stores/data accesses in
-the caller block. A matching direct call and continuation selects
-H-DirectCallerPresent; a structural call/continuation difference selects
-H-CallerLoweringDiverges; absence of the expected generated boundary selects
-H-DifferentGeneratedBoundary. An incomplete function body is
-non-discriminating and must not be promoted.
+The discriminator is a complete candidate table containing each entry symbol,
+its immediate caller/continuation, and whether it can reach the exact
+second-range store path. One unique runtime entry selects
+H-PortRuntimeDispatcher; only the `0x8008F2CC` generated path selects
+H-PortGeneratedAlternate; multiple complete entries select
+H-PortMultipleBoundaries. An incomplete table is non-discriminating.
 
 ## Exact commands
 
-`rg -n -C 8 "8002BEEC|800078E0|800078EC" ../N64Recomp/RecompiledFuncs/funcs_*.c`
+`rg -n -C 8 "rs64_m5_second_execution|second_execution|800078EC|dispatch|enqueue_external|submit_rsp_task" src lib/N64ModernRuntime ../N64Recomp/RecompiledFuncs --glob '*.{c,cpp,h}'`
 
-`rg -n -C 3 "8002BEEC|800078E0|800078EC|after_[0-9]+" ../N64Recomp/RecompiledFuncs/funcs_*.c`
+`rg -n -C 8 "8008F2CC|rs_memset\\(rdram, ctx\\)|after_6" ../N64Recomp/RecompiledFuncs/funcs_23.c`
 
-`nm -n ../rogue_squadron64/build/roguesquadron.elf | awk '$1 >= "8002be00" && $1 <= "8002c000"'`
+`rg -n -C 5 "__osDispatchThread|8002BEEC|800078EC" syms ../N64Recomp/fixup_game_funcs.py src lib/N64ModernRuntime`

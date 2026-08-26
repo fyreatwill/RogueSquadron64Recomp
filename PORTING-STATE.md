@@ -113472,3 +113472,27 @@ ORIGIN: this is a static comparison of the retail ELF and generated host body,
 not a mitigation. The complete bodies themselves are the independent lines of
 evidence; the disassembly audit is recorded in
 `scratch/agent/s2451_rs_memset_ra_audit.txt`.
+
+## Session 2452 (2026-08-26) — audited generated second-range caller boundary
+
+The bounded static audit found that retail `0x8002BEEC` is inside
+`__osDispatchThread` (`0x8002BD74..0x8002BEEF`), immediately before
+`__osCleanupThread` at `0x8002BEF0`. The generated tree contains no
+`__osDispatchThread` body, no `0x8002BEEC` label, and no generated caller that
+can correspond literally to that retail boundary. This selects
+`H-DifferentGeneratedBoundary` and rules out `H-DirectCallerPresent` at the
+literal address; `H-CallerLoweringDiverges` cannot be compared because its
+generated dispatcher body does not exist.
+
+The generated tree does contain the known alternate direct path at
+`funcs_23.c:0x8008F2CC`: it sets `a0`/`a1`/`a2`, invokes `rs_memset`, branches to
+`after_6`, then reloads the result and calls `osWritebackDCache` at
+`0x8008F2DC`. The complete generated census contains 88 direct
+`jal 0x800078E0` sites, none at the retail boundary. This distinguishes a
+missing generated runtime boundary from a malformed direct call/continuation,
+but does not identify the port-side replacement and does not authorize any
+behavior change.
+
+ORIGIN: static ELF symbol-range inspection plus generated source inventory;
+the audit is recorded in
+`scratch/agent/s2452_m5_caller_lowering/audit.md`.

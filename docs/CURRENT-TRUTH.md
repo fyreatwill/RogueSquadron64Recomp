@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2451 (2026-08-26).
+Current maintenance marker: Session 2452 (2026-08-26).
 
 ## Current state
 
@@ -199,6 +199,18 @@ Current maintenance marker: Session 2451 (2026-08-26).
   second-range consumer. It does not explain the caller/data-path divergence,
   and no runtime, audio, output, task-data, dispatch, or guard behavior
   changed. Artifact: `scratch/agent/s2451_rs_memset_ra_audit.txt`.
+
+- **s2452 — the retail second-range boundary has no generated dispatcher body.**
+  Static inspection places `0x8002BEEC` inside retail `__osDispatchThread`
+  (`0x8002BD74..0x8002BEEF`), immediately before `__osCleanupThread`; the
+  generated tree contains no body or label for that runtime dispatcher. The
+  known generated alternate at `funcs_23.c:0x8008F2CC` directly calls
+  `rs_memset`, continues at `after_6`, and then performs writeback-cache setup.
+  The 88-site direct-call census contains no literal `0x8002BEEC` caller. This
+  selects `H-DifferentGeneratedBoundary` and rules out a malformed direct
+  call/continuation at that literal boundary, but does not identify the
+  port-side runtime replacement. No behavior change is authorized. Artifact:
+  `scratch/agent/s2452_m5_caller_lowering/audit.md`.
 
 - **s2450 — direct and indirect calls share the generator's no-link contract.**
   The bounded source audit found that `process_instruction` uses
@@ -527,11 +539,13 @@ Current maintenance marker: Session 2451 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
-1. **M5 port second-range caller lowering — active.** s2451 proves the
-   generated and retail `rs_memset` bodies do not consume `$ra`, so zero guest
-   `ra` is not the body-level explanation. Audit the complete generated caller
-   boundary around retail `0x8002BEEC`, its direct call/continuation, and its
-   data stores. No runtime or generated-output change is authorized.
+1. **M5 port second-range caller lowering — active.** s2452 proves the retail
+   boundary is inside an ungenerated runtime dispatcher, while the known
+   generated alternate `0x8008F2CC` has a complete direct-call continuation.
+   Identify the port-side replacement for the retail dispatcher boundary with
+   a new bounded runtime/source discriminator; do not repeat a literal
+   generated-address search. No runtime or generated-output change is
+   authorized.
 2. **M5 image consumer provenance — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate. s2425 establishes retail/port parity for the title
    `0x80015BC8` writer family, while s2426 shows neither candidate PC writes
