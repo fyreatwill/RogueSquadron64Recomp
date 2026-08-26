@@ -113451,3 +113451,24 @@ ORIGIN: this is a source/generated-code audit, not a mitigation. The positive
 control is the existing generated indirect `jalr` path that resolves through
 `LOOKUP_FUNC`; no behavior was altered.
 Artifact: `scratch/agent/s2450_direct_jal_audit/`.
+
+## Session 2451 (2026-08-26) — audited rs_memset return dependency
+
+The bounded body audit compared the complete generated `rs_memset` body at
+`0x800078E0..0x80007907` with the same range in the retail ELF. Both bodies
+contain zero `$ra` reads, zero `$ra` writes, and no return-dependent branch.
+The only `$ra` use is the terminal `jr $ra` at `0x80007900`, with a `nop`
+delay slot at `0x80007904`; the loop uses only the destination, fill byte, and
+length registers. This selects `H-RsMemsetDoesNotConsumeRA` for the complete
+body-level question and rules out `H-RsMemsetConsumesRA` and
+`H-RetailPortBodyDiffers` at that scope.
+
+The result rules out zero guest `ra` as an explanation inside the callee, but
+does not explain the missing port second-range consumer. The next boundary is
+the generated caller corresponding to retail `0x8002BEEC`. No runtime, audio,
+output, task-data, dispatch, or guard behavior changed.
+
+ORIGIN: this is a static comparison of the retail ELF and generated host body,
+not a mitigation. The complete bodies themselves are the independent lines of
+evidence; the disassembly audit is recorded in
+`scratch/agent/s2451_rs_memset_ra_audit.txt`.

@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2450 (2026-08-26).
+Current maintenance marker: Session 2451 (2026-08-26).
 
 ## Current state
 
@@ -190,6 +190,15 @@ Current maintenance marker: Session 2450 (2026-08-26).
   observed generated-code boundary. It does not establish whether the
   omission is intentional generator semantics or a lowering defect. No runtime
   behavior changed. Artifact: `scratch/agent/s2449_static_audit.tsv`.
+
+- **s2451 — `rs_memset` does not consume guest `$ra` in either body.** The
+  complete generated body at `0x800078E0..0x80007907` and the retail ELF body
+  have zero `$ra` reads/writes and no return-dependent branch; both only use
+  `jr $ra` as the terminal return. This selects `H-RsMemsetDoesNotConsumeRA`
+  and rules out a body-level return/link explanation for the missing
+  second-range consumer. It does not explain the caller/data-path divergence,
+  and no runtime, audio, output, task-data, dispatch, or guard behavior
+  changed. Artifact: `scratch/agent/s2451_rs_memset_ra_audit.txt`.
 
 - **s2450 — direct and indirect calls share the generator's no-link contract.**
   The bounded source audit found that `process_instruction` uses
@@ -518,10 +527,11 @@ Current maintenance marker: Session 2450 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
-1. **M5 port execution identity — active.** Audit the complete generated and
-   retail `rs_memset` bodies for `$ra` reads and return-dependent control flow.
-   Determine whether zero `ctx->r31` can explain the missing second-range
-   consumer. No runtime or generated-output change is authorized.
+1. **M5 port second-range caller lowering — active.** s2451 proves the
+   generated and retail `rs_memset` bodies do not consume `$ra`, so zero guest
+   `ra` is not the body-level explanation. Audit the complete generated caller
+   boundary around retail `0x8002BEEC`, its direct call/continuation, and its
+   data stores. No runtime or generated-output change is authorized.
 2. **M5 image consumer provenance — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate. s2425 establishes retail/port parity for the title
    `0x80015BC8` writer family, while s2426 shows neither candidate PC writes
