@@ -114371,3 +114371,22 @@ memory. This rules out a TO_PTR-only struct-layout difference at this
 boundary. No task dispatch, audio behavior, descriptor remap, or guard was
 changed. Artifact:
 `scratch/agent/s2490_m5_descriptor_compare_hangar/audit.md`.
+## Session 2491 (2026-08-26) — repaired descriptor probe guest-pointer ABI
+
+The Debug build succeeded. The independent retail oracle ran first and passed
+the whole-RDRAM positive control at 10,000 callbacks in 8 emulated seconds.
+The qualified port capture used the eleven boot-relative Start schedule and
+reached 512 / `0x006AB400` at 25.7 seconds. Descriptor control and yield
+controls fired 26 times each in the target phase. The scheduler-id control was
+not enabled by this recipe and is not used as evidence.
+
+The callback still receives and logs the generated 32-bit task identity, but it
+now sign-extends that value before `MEM_W` and `TO_PTR`. All 26 target
+comparison rows had `MEM_W == explicit aligned memcpy == TO_PTR`; the raw byte
+table retained the coherent aligned OSTask shape. This selects
+`H-pointer-sign-extension-fixed` and refutes `H-pointer-ABI-not-causal` at the
+descriptor callback boundary. The run later crashed in `submitSceneNodeRender`
+with `last-guest-pc=0x80010840`, after the discriminator had fired; it is not
+attributed to this ABI change. No task dispatch, audio behavior, or guard
+changed. Artifact:
+`scratch/agent/s2491_m5_descriptor_abi/audit.md`.

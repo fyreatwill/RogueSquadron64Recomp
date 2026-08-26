@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2490 (2026-08-26).
+Current maintenance marker: Session 2491 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,17 @@ Current maintenance marker: Session 2490 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2491 — preserving the guest pointer ABI repairs the descriptor table.**
+  After the oracle whole-RDRAM positive control reached 10,000 callbacks, the
+  qualified port capture reached 512 / `0x006AB400` and emitted 26 target
+  descriptor controls and comparison rows. In every selected field,
+  `MEM_W == explicit aligned bytes == TO_PTR`; the aligned raw layout remains
+  a coherent OSTask. The callback still logs the raw 32-bit identity but now
+  sign-extends it before `MEM_W`/`TO_PTR`. This selects
+  `H-pointer-sign-extension-fixed` and refutes `H-pointer-ABI-not-causal` at
+  this boundary. The later `submitSceneNodeRender` crash is separate. Artifact:
+  `scratch/agent/s2491_m5_descriptor_abi/audit.md`.
 
 - **s2490 — `MEM_W` and `TO_PTR` agree because the callback truncates the
   guest pointer.** The oracle whole-RDRAM control passed at 10,000 callbacks;
@@ -521,17 +532,16 @@ Current maintenance marker: Session 2490 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, explain MEM_W/raw layout.**
+1. **M5 generated alternate equivalence — active, close the retail/port task join.**
    The host-local bridge reaches the target image task; SP completion and
    consumption are confirmed; the scheduler dispatches gspTask (0x800377C8)
    with `event_payload=task_ptr` in the hangar phase (yield-and-restart cycle).
    The explicit raw-byte table shows a coherent aligned-host OSTask layout.
-   `MEM_W` and `TO_PTR` are invalid because the callback loses the required
-   sign extension. Next: change only the probe boundary to preserve the
-   guest pointer's `gpr` representation, then rerun the equality table. Keep
-   the scheduler control and use the corrected boot-relative recipe with
-   `ROGUESQ_LOG_AUDIO_RETURN=1`, `PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=300`.
-   Do NOT use `PROBE_KEYS_FROM_PHASE=1`.
+   the corrected callback now makes all three port views agree. Next: capture
+   the retail `osSpTaskYielded` task fields at `0x80034450` in the same target
+   phase, with the whole-RDRAM positive control first, then compare its
+   type/data/yield/output fields to the corrected port rows. Do not remap any
+   task or output field until that comparison is made.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

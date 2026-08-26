@@ -1509,15 +1509,17 @@ extern "C" void rs64_m5_descriptor_yield(uint8_t* rdram, uint32_t task_ptr) {
     uint32_t phase = 0, width = 0, origin = 0;
     const char* arm = nullptr;
     if (!rs64_m5_descriptor_phase(&phase, &width, &origin, &arm)) return;
+    const uint64_t guest_task_ptr = static_cast<uint64_t>(
+        static_cast<int64_t>(static_cast<int32_t>(task_ptr)));
     const uint32_t words[16] = {
-        (uint32_t)MEM_W(0x00, task_ptr), (uint32_t)MEM_W(0x04, task_ptr),
-        (uint32_t)MEM_W(0x08, task_ptr), (uint32_t)MEM_W(0x0C, task_ptr),
-        (uint32_t)MEM_W(0x10, task_ptr), (uint32_t)MEM_W(0x14, task_ptr),
-        (uint32_t)MEM_W(0x18, task_ptr), (uint32_t)MEM_W(0x1C, task_ptr),
-        (uint32_t)MEM_W(0x20, task_ptr), (uint32_t)MEM_W(0x24, task_ptr),
-        (uint32_t)MEM_W(0x28, task_ptr), (uint32_t)MEM_W(0x2C, task_ptr),
-        (uint32_t)MEM_W(0x30, task_ptr), (uint32_t)MEM_W(0x34, task_ptr),
-        (uint32_t)MEM_W(0x38, task_ptr), (uint32_t)MEM_W(0x3C, task_ptr),
+        (uint32_t)MEM_W(0x00, guest_task_ptr), (uint32_t)MEM_W(0x04, guest_task_ptr),
+        (uint32_t)MEM_W(0x08, guest_task_ptr), (uint32_t)MEM_W(0x0C, guest_task_ptr),
+        (uint32_t)MEM_W(0x10, guest_task_ptr), (uint32_t)MEM_W(0x14, guest_task_ptr),
+        (uint32_t)MEM_W(0x18, guest_task_ptr), (uint32_t)MEM_W(0x1C, guest_task_ptr),
+        (uint32_t)MEM_W(0x20, guest_task_ptr), (uint32_t)MEM_W(0x24, guest_task_ptr),
+        (uint32_t)MEM_W(0x28, guest_task_ptr), (uint32_t)MEM_W(0x2C, guest_task_ptr),
+        (uint32_t)MEM_W(0x30, guest_task_ptr), (uint32_t)MEM_W(0x34, guest_task_ptr),
+        (uint32_t)MEM_W(0x38, guest_task_ptr), (uint32_t)MEM_W(0x3C, guest_task_ptr),
     };
     static uint32_t layout_phase_key = 0xFFFFFFFFu;
     static uint32_t layout_rows = 0;
@@ -1545,7 +1547,7 @@ extern "C" void rs64_m5_descriptor_yield(uint8_t* rdram, uint32_t task_ptr) {
         std::fprintf(stderr, "\n");
         std::fflush(stderr);
 
-        const OSTask* task = TO_PTR(OSTask, task_ptr);
+        const OSTask* task = TO_PTR(OSTask, guest_task_ptr);
         const uint32_t to_ptr_words[16] = {
             (uint32_t)task->t.type, (uint32_t)task->t.flags,
             (uint32_t)task->t.ucode_boot, (uint32_t)task->t.ucode_boot_size,
@@ -1564,7 +1566,7 @@ extern "C" void rs64_m5_descriptor_yield(uint8_t* rdram, uint32_t task_ptr) {
             std::memcpy(&explicit_read, rdram + base + field * 4u, sizeof(explicit_read));
             std::fprintf(stderr, " f%u:guest=0x%08X off=0x%06X memw=0x%08X explicit=0x%08X toptr=0x%08X",
                          field, task_ptr + field * 4u, base + field * 4u,
-                         (uint32_t)MEM_W(field * 4u, task_ptr), explicit_read,
+                         (uint32_t)MEM_W(field * 4u, guest_task_ptr), explicit_read,
                          to_ptr_words[field]);
         }
         std::fprintf(stderr, "\n");

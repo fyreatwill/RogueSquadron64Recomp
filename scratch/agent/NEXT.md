@@ -1,34 +1,27 @@
-# NEXT work unit (s2491) — preserve descriptor probe guest-pointer ABI
+# NEXT work unit (s2492) — retail/port OSTask join at osSpTaskYielded
 
 HYPOTHESIS-ID: m5-generated-alternate-equivalence
 
 ## Single work unit
 
-Change the existing diagnostic callback boundary so
-`rs64_m5_descriptor_yield` receives the guest task pointer with the runtime's
-sign-extended `gpr` ABI instead of `uint32_t`; keep the generated call's
-`U32(ctx->r4)` unchanged only if the callback re-sign-extends it before any
-`MEM_W`/`TO_PTR` expression. Retain the comparison rows, raw-byte table, and
-scheduler-id positive control. Do not change task dispatch, audio behavior, or
-any guard.
+Capture the retail task fields at `osSpTaskYielded` (`0x80034450`) and compare
+them with the corrected port descriptor rows. Use the oracle whole-RDRAM
+positive control first, then one retail run with the target phase bucket and
+the task dump. Do not change task dispatch, audio behavior, or any guard.
 
-Before building, verify the callback declaration and callsite types, then run
-one Debug build and one qualified hangar capture with the oracle whole-RDRAM
-positive control first. Use `ROGUESQ_LOG_AUDIO_RETURN=1`,
-`ROGUESQ_LOG_M5_DESCRIPTOR=1`, `PROBE_PHASE_WIDTH=512`,
-`PROBE_PHASE_TIMEOUT=300`, and the boot-relative eleven-Start schedule:
-`6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start
-46:start 51:start 56:start`. Do not use `PROBE_KEYS_FROM_PHASE=1`.
+Before building, write the comparison table in this file. Run the oracle with:
+
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 70 --watch-write 0x0:0x800000 --watch-pc 0x80034450 --pc-phase-log-width 0x006AB400:512 --pc-task-dump 0x80034450`
 
 ## Competing hypotheses and discriminator
 
-- H-pointer-sign-extension-fixed: all three reads agree after preserving the
-  `gpr` representation.
-- H-pointer-ABI-not-causal: `MEM_W`/`TO_PTR` still disagree with explicit
-  aligned bytes after the boundary fix.
+- H-retail-matches-corrected-port: retail `type`, `data_ptr`, `data_size`,
+  `yield_data_ptr`, and output fields join the corrected port descriptor rows.
+- H-retail-differs-from-port: the same phase-gated retail task rows differ,
+  leaving generated-alternate equivalence unresolved at the task boundary.
 
-The discriminator is the same-run equality table in the 512 /
-`0x6AB400` phase, with descriptor and scheduler controls firing. Equality of
-`MEM_W`, explicit reads, and `TO_PTR` selects the ABI explanation; continued
-disagreement refutes it and reopens macro/layout handling. The oracle remains
-a phase-independent positive control, not descriptor evidence.
+The discriminator is the joined field table at `0x006AB400` / width 512, with
+the oracle positive-control row present. A field-by-field retail/port match
+selects the equivalence hypothesis; a mismatch refutes it. A zero task-dump
+row count is invalid until the positive control and watched-PC control both
+fire.
