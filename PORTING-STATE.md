@@ -112059,3 +112059,28 @@ Artifacts: `scratch/agent/s2387_m5_incomplete_reporter/` and
 
 ORIGIN: no mitigation or behavior change; added only a bounded retained-log
 range reducer and its output.
+
+## Session 2390 (2026-08-25) — M5 retained image-stage nonzero audit
+
+The prescribed s2390 reducer was absent, so a bounded replacement was added
+and run against the retained s2387 artifacts; no build or game run was needed.
+The source audit confirmed that `audio_image_match` admits a stage only when
+`stage.nonzero != 0`, `dest_valid`, and exact phase/destination/length/hash/
+nonzero equality hold. The same-build stub c0/c1 and image c0/c1 controls all
+passed (`controls=1`, zero crash/abort). Deduplicating by stage event produced
+target-stage zeros in both image arms (`1,424` c0 and `1,421` c1); only two
+positive-stage rows appeared, both in hangar image c0. No exact stage/PCM range
+agreement appeared. The retained rows contain hashes, lengths, and nonzero
+counts but no payload bytes, so byte-level recomputation was unavailable.
+
+This establishes the target zero values as a logged-field fact, but does not
+select legitimate zero bytes over a logger-region artifact or a different PCM
+representation. It rules out neither of those hypotheses and does not
+authorize relaxing the predicate or changing task, audio, gate, fallback,
+dispatch, VI, or output behavior.
+
+Artifacts: `scratch/agent/s2390_audit_stage_nonzero.py` and
+`scratch/agent/s2387_m5_incomplete_reporter/s2390-stage-nonzero-audit.txt`.
+
+ORIGIN: no mitigation or behavior change; added only a bounded retained-log
+audit and its output.

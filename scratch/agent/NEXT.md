@@ -1,15 +1,17 @@
-# NEXT work unit (s2390) — validate the image-stage nonzero predicate
+# NEXT work unit (s2391) — obtain a payload-level witness for image-stage nonzero
 
 HYPOTHESIS-ID: m5-image-stage-nonzero-contract
 
 ## Work unit
 
-Perform one ground-truth-first, analysis-only audit of the image-stage
-`stage_nz != 0` admission predicate. Use the retained s2387 logs and source
-definitions; do not change task data, audio, gate, fallback, dispatch, VI, or
-output behavior. Determine whether the zero `stage_nz` values are a real
-stage/output contract, a logging/hash artifact, or a mismatch between the
-stage record and the PCM record.
+Perform one ground-truth-first payload-level audit of the image-stage
+`stage_nz != 0` admission predicate. First use the independent retail oracle
+with its whole-RDRAM positive control and a phase-gated watch/read of the
+stage destination/length fields identified by the retained image rows; then
+compare observed bytes/nonzero counts with the port logger's stage fields.
+Do not change task data, audio, gate, fallback, dispatch, VI, or output
+behavior. If the oracle cannot reach the target phase or expose bytes, record
+that discriminator failure and stop without a port instrument.
 
 ## Competing hypotheses and discriminator
 
@@ -24,19 +26,22 @@ stage record and the PCM record.
 - H-StageCaptureInvalid: any retained arm loses title/hangar or positive
   stage/DMA controls.
 
-The discriminator is a single table for all four arms and both target phases:
-recompute nonzero from the logged stage/hash inputs, compare stage and PCM
-destination/length/FNV/nonzero fields, and report exact task-range joins.
-Legitimate zeros with exact stage/DMA joins select H-StageNonzeroLegitimate;
-recomputed positive values select H-StageNonzeroLoggingArtifact; only a
-payload-representation mismatch selects H-StageNonzeroPcmMismatch; failed
-controls select H-StageCaptureInvalid.
+The discriminator is one table for both retail target phases and matching port
+target rows: oracle byte/nonzero witness, port byte/nonzero witness,
+destination/length/hash, and exact task-range join. Legitimate zero bytes
+select H-StageNonzeroLegitimate; positive oracle/port bytes with a logger zero
+select H-StageNonzeroLoggingArtifact; different but valid byte regions select
+H-StageNonzeroPcmMismatch; failed oracle controls select
+H-StageCaptureInvalid.
 
 ## Exact commands / controls
 
-    rg -n -C 12 'audio_image_match|audtask-image-stage-row' lib/N64ModernRuntime/librecomp/src/rsp.cpp
-    python3 scratch/agent/s2390_audit_stage_nonzero.py scratch/agent/s2387_m5_incomplete_reporter
+    rg -n -C 20 'rs64_audio_join_image|audtask-image-stage-row|stage_nz' src lib scratch tools/oracle
+    sed -n '1,220p' tools/oracle/README.md
+    # Then run the oracle recipe selected by the source audit, with its
+    # whole-RDRAM positive control and target-phase gate.
 
-Expected controls are title `1024`, hangar `512`, `controls=1` for all four
-arms, and zero crash/abort markers. No game run or build is needed unless the
-retained logs lack the positive stage/DMA fields required by the table.
+Expected controls are a whole-RDRAM oracle watch hit, both target phase
+origins if reachable, and a bounded stage-byte read/watch. A null without
+those controls is inconclusive. No port build is authorized unless the
+ground-truth audit identifies a specific logger-region ambiguity.

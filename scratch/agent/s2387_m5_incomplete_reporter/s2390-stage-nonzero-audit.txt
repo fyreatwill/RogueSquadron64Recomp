@@ -1,0 +1,11 @@
+controls
+stub_c0 controls=1 crash=0 abort=0 task_dma_rows=1174 render_rows=0
+stub_c1 controls=1 crash=0 abort=0 task_dma_rows=1032 render_rows=0
+image_c0 controls=1 crash=0 abort=0 task_dma_rows=1159 render_rows=2335
+image_c1 controls=1 crash=0 abort=0 task_dma_rows=1187 render_rows=2377
+stage-table
+image_c0 target 1024 0x790400 conflict=0 same_range=0 stage_matchable=0 stage_nz_positive=0 stage_nz_zero=1424 stages=1424
+image_c0 target 512 0x6ab400 conflict=0 same_range=0 stage_dma_nz_disagree=911 stage_matchable=2 stage_nz_positive=2 stage_nz_zero=909 stages=911
+image_c1 target 1024 0x790400 conflict=0 same_range=0 stage_matchable=0 stage_nz_positive=0 stage_nz_zero=1421 stages=1421
+image_c1 target 512 0x6ab400 conflict=0 same_range=0 stage_dma_nz_disagree=956 stage_matchable=0 stage_nz_positive=0 stage_nz_zero=956 stages=956
+payload-recompute unavailable=1 reason=retained_rows_have_hash_and_nz_only
