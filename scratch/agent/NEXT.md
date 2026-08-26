@@ -1,41 +1,45 @@
-# NEXT work unit (s2385) — M5 task completion reporter/association audit
+# NEXT work unit (s2386) — M5 task-reporter record boundary
 
 HYPOTHESIS-ID: m5-task-output-gap
 
 ## Work unit
 
-Audit the task completion reporter/association after s2384 showed that the
-image completion callback is invoked and its completion event is attached to
-stage candidates. Read the existing task reporter and its call sites, then add
-one bounded, behavior-neutral table that joins each target completion callback
-to task records by `(arm, phase, ordinal, row)` and records whether the task
-completion bit/count is emitted. Retain the same four stub/image × c88 arms
-and existing route controls.
+Audit the task reporter that emits `[audtask-join]` after s2385 found direct
+image completion callbacks but no task `complete` or PCM source/consumer
+closure. First use the existing retail oracle whole-RDRAM and target-phase
+controls; then add one phase-scoped, behavior-neutral reporter table to the
+existing four-arm driver. For each image-stage candidate, join the containing
+`[audtask-join]` record by phase and event interval and retain task ordinal,
+range count, `complete`, source/consumer counts, and callback/stage event
+ordering. Keep stub/image × c88=0/1 in the same build and run.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-TaskReporterUncalled: completion callbacks occur but no task reporter
-  invocation is associated with the target key.
-- H-TaskCompletionBitSuppressed: task reporter invocation occurs but emits no
-  completion bit/count on the containing task.
-- H-TaskCompletionJoinKeyMismatch: task records exist but their association
-  key differs from the callback's arm/phase/ordinal/row.
-- H-CompletionAuditInvalid: controls or candidate census are incomplete.
+- H-TaskReporterUncalled: no `[audtask-join]` record is emitted for the target
+  task interval.
+- H-TaskReporterKeyMismatch: task records are emitted, but phase/event
+  containment cannot associate them with the callback/stage candidate.
+- H-TaskCompleteSemantics: the containing task record is associated and has
+  ranges, but its `complete` field is only the PCM source+consumer predicate,
+  so it remains zero without output publication.
+- H-TaskReporterCaptureInvalid: oracle, route, phase, or candidate controls do
+  not pass.
 
-The discriminator is one phase-keyed table joining every callback row to task
-reporter rows and containing-task completion fields by the full key. Zero
-reporter rows selects H-TaskReporterUncalled; positive reporter joins with
-absent task completion fields selects H-TaskCompletionBitSuppressed; task rows
-with no full-key joins selects H-TaskCompletionJoinKeyMismatch; failed
-controls select H-CompletionAuditInvalid.
+The discriminator is the single candidate-to-task interval table: zero
+containing reporter rows selects H-TaskReporterUncalled; positive containing
+rows with no candidate association selects H-TaskReporterKeyMismatch; a
+positive association with `complete=0` and the reporter's documented
+source/consumer predicate selects H-TaskCompleteSemantics; failed controls
+select H-TaskReporterCaptureInvalid.
 
 ## Exact commands / controls
 
-    rg -n -C 5 'complete_event|task.*complete|complete.*task|audtask-image-complete-call' lib/N64ModernRuntime/librecomp/src/rsp.cpp src/main/main.cpp scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh
+    rg -n -C 6 'audio_join_report_locked|audtask-join|complete =|g_audio_join_tasks' lib/N64ModernRuntime/librecomp/src/rsp.cpp
+    rg -n -C 4 'audtask-image-complete-call|audtask-image-join|candidate-task-table' scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh lib/N64ModernRuntime/librecomp/src/rsp.cpp
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env zsh scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh s2384_m5_completion_producer_audit
+    env zsh scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh s2386_m5_task_reporter_boundary
 
 Expected controls are a successful build, title 1024, hangar 512, and all
-four arms retained. If any control fails, classify H-CompletionAuditInvalid
-and do not change gate, fallback, dispatch, VI, task, audio, guard, or
-mitigation behavior.
+four arms retained. A failed control selects H-TaskReporterCaptureInvalid;
+do not change task data, audio, gate, fallback, dispatch, VI, or output
+behavior.

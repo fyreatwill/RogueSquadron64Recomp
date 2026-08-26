@@ -5,7 +5,9 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2384 (2026-08-25). The M5 completion-producer capture passed all four route controls. Image arms emitted 1,147 and 1,022 target-phase completion-call rows; their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the s2383 completion-event null. It does not explain the still-absent task completion bit, DMA-count join, or PCM source/consumer closure, and authorizes no behavior change.
+Maintained in Session 2385 (2026-08-25). The M5 task-reporter audit passed all four route controls. The image arms retained 4,389 phase-keyed stage candidates with direct completion callbacks and matching completion events, but both had zero `task_complete` and zero task-reporter PCM source/consumer closure; they nevertheless produced 2,255/3,831 task-DMA ranges and 2,256/2,068 render rows. This selects `H-TaskOutputGap` at capture scope and moves the boundary below callback association. It authorizes no task-data, audio, gate, fallback, dispatch, VI, or output behavior change.
+
+The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
 
 The s2383 same-build task/output candidate census passed all four route controls. It retained 4,342 phase-keyed image-stage candidates across c88=0/1 image arms; stage/render events were present, but every candidate lacked a completion event/bit and a task DMA-count join, and none had PCM source or consumer events. Stub arms had no image candidates as expected. This narrows `H-TaskOutputGap` to `H-CompletionEventMissing` at capture scope; it does not authorize changing task data, audio, gate, fallback, or publication behavior.
 
@@ -417,13 +419,13 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
   qualified steps. The next queued boundary is #4.
-2. **M5 task/output closure — active.** s2383's candidate census found
-   stage/render rows but no task completion bit, task DMA-count join, or PCM
-   source/consumer event. s2384 traced the producer: completion callbacks were
-   invoked and associated with image-stage keys in both image arms (1,147 and
-   1,022 target-phase calls), with completion events present in the candidate
-   table. The next boundary is the task completion reporter/association, not
-   the callback producer; do not change task data or audio.
+2. **M5 task/output closure — active.** s2385 retained 4,389 image-stage
+   candidates across the two image arms. Direct completion callbacks and
+   completion events were present, while task-reporter `complete` and PCM
+   source/consumer closure remained zero; the image arms still produced
+   2,255/3,831 task-DMA ranges and 2,256/2,068 render rows. The next boundary
+   is the task reporter's task-record association/output fields, not callback
+   production; do not change task data or audio.
 3. **M5 gate polarity/writer join — closed at current capture scope.** s2381
    independently identified retail gate writer/value behavior and s2382
    supplied the port-side downstream comparison; no gate treatment is

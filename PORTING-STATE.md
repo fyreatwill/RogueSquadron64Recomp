@@ -111923,3 +111923,29 @@ PCM source/consumer closure, and no behavior or audio/task contract changed.
 Artifacts: `scratch/agent/s2384_m5_completion_producer_audit/`.
 
 ORIGIN: no mitigation or behavior change; phase-scoped callback instrumentation and capture only.
+
+## Session 2385 (2026-08-25) — M5 task reporter/output association audit
+
+The same-build four-arm audit ran
+`env zsh scratch/agent/run_s2345_m5_c88_downstream_ordinal_join.sh
+s2384_m5_completion_producer_audit` after a successful
+`cmake --build build --config Debug --target RogueSquadron64Recomp`.
+Stub/image × c88=0/1 all passed title-1024 and hangar-512 controls and exited
+cleanly. The image arms retained 4,389 phase-keyed stage candidates. Direct
+`[audtask-image-complete-call]` rows were present and the candidate rows held
+matching completion events, including event 18 for the first image candidate.
+
+The task-reporter side did not close: `task_complete=0` and
+`pcm_source_joined=pcm_consumer_joined=0` in both image arms, despite
+2,255/3,831 task-DMA ranges and 2,256/2,068 render rows. Stub c88 controls
+also remained zero for task completion and PCM candidate closure as expected.
+The two independent lines—raw callback/stage association and the reducer's
+task summary—select `H-TaskOutputGap` at capture scope, rule out an uncalled
+completion producer and route-invalid coverage, and leave the task reporter's
+completion/output association unresolved. No runtime behavior or audio/task
+contract changed.
+
+Artifacts: `scratch/agent/s2384_m5_completion_producer_audit/`.
+
+ORIGIN: no mitigation or behavior change; existing phase-scoped markers and
+the bounded candidate/task reducer only.
