@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2405 (2026-08-25).
+Current maintenance marker: Session 2406 (2026-08-26).
 
 ## Current state
 
@@ -27,7 +27,8 @@ Current maintenance marker: Session 2405 (2026-08-25).
   mission.
 - The zero-output join now admits zero-valued image rows. This is diagnostic
   only: all-zero source, destination, and PCM tuples collide across rows, so
-  apparent PCM matches and ordering violations are not yet provenance.
+  apparent PCM matches and ordering violations are not yet provenance. s2406
+  also propagates route ordinal/row into PCM records for diagnostic identity.
 
 ## Latest evidence
 
@@ -49,6 +50,16 @@ Current maintenance marker: Session 2405 (2026-08-25).
   activation, so it is route-invalid. This selects a new zero-join identity
   discriminator, not legitimacy, missing writer, or consumer mismatch.
   Artifact: `scratch/agent/s2405_zero_output_contract/`.
+- **s2406 — zero image rows and PCM rows have route identity, but not the same
+  DMA range.** The retail oracle passed whole-RDRAM and all four exact windows,
+  reaching title and hangar. The validated stub and image arms passed both
+  target controls. Same-ordinal/row PCM source and consumer records were
+  present, but exact image DMA rows remained `stage-only`; e.g. stage 2 used
+  `0x167050`/`0x300` while a same-identity PCM row used `0x167C50`/`0x300`,
+  with both payloads zero. This selects `H-ZeroOutputConsumerMismatch` at the
+  captured range; it does not identify the legitimate downstream writer or
+  key-on consumer. Artifact:
+  `scratch/agent/s2406_zero_output_identity/validated/`.
 - **s2402 — identity is valid at stage entry.** Corrected same-build stub/image
   arms passed route controls; both observed `prepare-clear`, then
   `stage-observe` with `valid=1` and matching `prepare_seq`, followed by
@@ -87,13 +98,12 @@ Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
-   design gate. The next work unit is a ground-truth-first zero-join identity
-   discriminator: join stage ordinal/row to the exact DMA event and destination
-   range, then to PCM source/consumer and first slot/key-on event without using
-   the repeated all-zero hash as identity. Both arms must pass target controls;
-   do not change task data, audio, gate, fallback, dispatch, VI, output
-   behavior, or the nonzero predicate until the table selects legitimacy,
-   missing writer, or consumer mismatch.
+   design gate. The next work unit is a ground-truth-first downstream-range
+   audit: use image-stage ordinal/row to enumerate the exact DMA destination,
+   first same-identity PCM source/consumer, and first slot/key-on event, then
+   compare those ranges against retail-controlled windows. Both arms must pass
+   target controls; do not change task data, audio, gate, fallback, dispatch,
+   VI, output behavior, or the nonzero predicate.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -122,11 +132,13 @@ and [`tools/oracle/README.md`](../tools/oracle/README.md).
 ### M5 audio and image output
 
 Direct service entry/exit, service gate/loop, task/AI boundary, image DMEM
-work, generated DMA, and reporter association are live on the port. The
-remaining measured boundary is the meaning of an image-stage source and
-destination that are both exactly zero in retained rows. Retail independently
-proves that related memory regions and task-field writers are active, but no
-exact legitimate port writeback or consumer contract has been established.
+work, generated DMA, and reporter association are live on the port. s2406
+propagated route ordinal/row identity into PCM records; same-identity PCM rows
+exist, but their ranges differ from the exact image DMA destination, so the
+current result is a consumer-range mismatch, not proof that zero is legitimate
+or corrupt output. Retail independently proves that related memory regions and
+task-field writers are active, but no exact legitimate port writeback or
+slot/key-on consumer contract has been established.
 No behavior change is authorized: do not promote C88, invent output metadata,
 remap destinations, alter task data, force a consumer, or add a guard without
 a new discriminator and named writer legitimacy.

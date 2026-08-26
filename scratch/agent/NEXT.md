@@ -1,47 +1,47 @@
-# NEXT work unit (s2406) — disambiguate zero-output joins
+# NEXT work unit (s2407) — audit downstream range and slot identity
 
-HYPOTHESIS-ID: m5-zero-output-identity
+HYPOTHESIS-ID: m5-downstream-range-identity
 
 ## Work unit
 
-Run one ground-truth-first, same-build audit that replaces the repeated
-all-zero tuple as the identity key for image stage rows. Diagnostic only: do
-not change task data, audio, gate, fallback, dispatch, VI, output behavior, or
-the nonzero predicate.
+Run one ground-truth-first, same-build diagnostic audit of the first same-
+identity PCM source/consumer and slot/key-on event after each exact image DMA.
+Do not change task data, audio, gate, fallback, dispatch, VI, output behavior,
+or the nonzero predicate.
 
 ## Competing hypotheses and discriminator
 
-- H-ZeroOutputIsLegitimate: the exact image DMA and zero PCM source/consumer
-  rows are ordered for the same stage ordinal and downstream slot/key-on use.
-- H-ZeroOutputWriterMissing: the exact stage DMA is followed by a legitimate
-  nonzero writer or consumer payload that the port misses.
-- H-ZeroOutputConsumerMismatch: exact zero stage/DMA rows are valid, but the
-  port's first downstream slot/key-on event does not consume that row.
-- H-ZeroOutputRouteInvalid: either arm lacks target activation or target-origin
-  controls, making the table unevaluable.
+- H-ImageRangeIsConsumer: the image DMA destination is the legitimate
+  downstream range, but the PCM/slot reporter is observing a different alias or
+  range.
+- H-DownstreamWriterMissing: a later legitimate writer populates the
+  same-identity consumer range and the current port misses that writer.
+- H-ConsumerRangeIsIntentional: the image zero row is an intermediate buffer;
+  the same-identity PCM range is the intended consumer input and its slot/key-on
+  event follows it.
+- H-RouteInvalid: either arm lacks title/hangar target controls.
 
-The discriminator is one phase-keyed table keyed first by arm + audio ordinal
-and row, then exact generated DMA event/range and destination. Only after that
-key is fixed may PCM source/consumer and the first slot/key-on event be joined.
-All rows must report event ordering and whether the destination is one of the
-retail-controlled windows. A same-ordinal exact zero row with ordered consumer
-use selects legitimate zero output; a later exact nonzero writer selects
-missing writer; a valid exact row with no matching consumer selects consumer
-mismatch; missing arm controls select route-invalid.
+The discriminator is a phase-keyed table keyed by arm + ordinal + row, with
+exact image DMA event/destination, first same-identity PCM source/consumer,
+first slot/key-on event, and event ordering. The retail oracle must first pass
+whole-RDRAM, title/hangar VI, and the four exact windows. An exact image-range
+consumer selects H-ImageRangeIsConsumer; a later same-range writer selects
+H-DownstreamWriterMissing; an ordered different-range PCM plus slot/key-on
+selects H-ConsumerRangeIsIntentional; missing controls select H-RouteInvalid.
 
 ## Exact command shape
 
-1. Run the retail oracle first with whole-RDRAM control, title/hangar VI
-   controls, and exact windows `0x166450:0x300`, `0x167050:0x300`,
-   `0x166D50:0x300`, and `0x1935E0:0x198`.
-2. Add the complete bounded ordinal/row-to-DMA table and positive activation
-   control in the fixup/runtime instrumentation, then build once with
-   `cmake --build build -j2`.
-3. Run stub and image concurrently from `build/` with the proven s2403 control
-   set, `ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=1024`, and
-   `PROBE_KEYS_FROM_PHASE=1`; use the Start driver, SIGKILL any survivors,
-   and preserve logs under `scratch/agent/s2406_zero_output_identity/`.
+1. Run the retail oracle first with `--watch-write 0x0:0x800000` and exact
+   windows `0x166450:0x300`, `0x167050:0x300`, `0x166D50:0x300`, and
+   `0x1935E0:0x198`, plus title/hangar VI trace.
+2. Add the complete bounded downstream table and positive activation control,
+   then build once with `cmake --build build -j2`; export submodule patches if
+   `lib/` changes.
+3. Run validated stub and image arms from `build/` with the repository Start
+   driver, `ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=1024`, and
+   `PROBE_KEYS_FROM_PHASE=1`. Preserve logs under
+   `scratch/agent/s2407_downstream_range_identity/` and kill survivors with
+   SIGKILL.
 
-Expected outcomes: both arms reach target controls and the exact table selects
-one hypothesis; otherwise record the failed control and do not interpret a
-null. Do not use `ROGUESQ_LOG_ALL`.
+Do not use `ROGUESQ_LOG_ALL`; both arms must pass target controls before a null
+or mismatch is interpreted.

@@ -520,7 +520,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..deaf2e0 100644
+index 1cb3f6a..07acdca 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -534,7 +534,7 @@ index 1cb3f6a..deaf2e0 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,762 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,841 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -661,12 +661,22 @@ index 1cb3f6a..deaf2e0 100644
 +
 +static thread_local AudioDmaProbe* g_audio_dma_probe = nullptr;
 +
++extern "C" void rs64_audio_join_image_dma(
++    const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
++    uint32_t width, uint32_t origin, uint64_t dma_event, uint32_t dram,
++    uint32_t len, uint32_t fnv, uint32_t nonzero);
++extern "C" bool rs64_audio_current_route_snapshot(
++    uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
++    uint32_t* row, int* exit_reason, const char** arm);
++
 +struct AudioJoinPcm {
 +    bool source;
 +    uint64_t event;
 +    uint32_t phase;
 +    uint32_t width;
 +    uint32_t origin;
++    uint32_t ordinal;
++    uint32_t row;
 +    uint32_t n;
 +    uint32_t rdram;
 +    uint32_t samples;
@@ -674,6 +684,8 @@ index 1cb3f6a..deaf2e0 100644
 +    uint32_t fnv;
 +    uint32_t nonzero;
 +    bool used;
++    bool image_source_used;
++    bool image_consumer_used;
 +};
 +
 +struct AudioJoinRange {
@@ -716,6 +728,11 @@ index 1cb3f6a..deaf2e0 100644
 +    uint32_t nonzero;
 +    bool dest_valid;
 +    uint64_t stage_event;
++    uint64_t dma_event = 0;
++    uint32_t dma_dram = 0;
++    uint32_t dma_len = 0;
++    uint32_t dma_fnv = 0;
++    uint32_t dma_nonzero = 0;
 +    uint64_t complete_event = 0;
 +    int source_pcm = -1;
 +    int consumer_pcm = -1;
@@ -745,11 +762,12 @@ index 1cb3f6a..deaf2e0 100644
 +
 +static bool audio_image_match(const AudioImageStage& stage,
 +                              const AudioJoinPcm& pcm) {
-+    return stage.dest_valid &&
++    return stage.dma_event != 0 && stage.dest_valid &&
 +           pcm.phase == stage.phase &&
-+           stage.dest == (pcm.rdram & 0x007FFFFFu) &&
-+           stage.len == pcm.bytes && stage.fnv == pcm.fnv &&
-+           stage.nonzero == pcm.nonzero;
++           pcm.ordinal == stage.ordinal && pcm.row == stage.row &&
++           stage.dma_dram == (pcm.rdram & 0x007FFFFFu) &&
++           stage.dma_len == pcm.bytes && stage.dma_fnv == pcm.fnv &&
++           stage.dma_nonzero == pcm.nonzero;
 +}
 +
 +static void audio_image_report_locked(AudioImageStage& stage) {
@@ -874,7 +892,10 @@ index 1cb3f6a..deaf2e0 100644
 +        uint64_t best_distance = UINT64_MAX;
 +        for (size_t i = 0; i < g_audio_join_pcm.size(); ++i) {
 +            const AudioJoinPcm& pcm = g_audio_join_pcm[i];
-+            if (pcm.source != source_kind || !audio_image_match(stage, pcm)) continue;
++            const bool already_used = source_kind ? pcm.image_source_used :
++                pcm.image_consumer_used;
++            if (pcm.source != source_kind || already_used ||
++                pcm.event <= stage.dma_event || !audio_image_match(stage, pcm)) continue;
 +            const uint64_t distance = pcm.event > stage.stage_event ?
 +                pcm.event - stage.stage_event : stage.stage_event - pcm.event;
 +            if (distance < best_distance) {
@@ -906,8 +927,13 @@ index 1cb3f6a..deaf2e0 100644
 +    }
 +    if (best >= 0) {
 +        AudioImageStage& stage = g_audio_image_stages[best];
-+        if (pcm.source) stage.source_pcm = static_cast<int>(pcm_index);
-+        else stage.consumer_pcm = static_cast<int>(pcm_index);
++        if (pcm.source) {
++            stage.source_pcm = static_cast<int>(pcm_index);
++            g_audio_join_pcm[pcm_index].image_source_used = true;
++        } else {
++            stage.consumer_pcm = static_cast<int>(pcm_index);
++            g_audio_join_pcm[pcm_index].image_consumer_used = true;
++        }
 +        audio_image_report_locked(stage);
 +    } else if (!pcm.source && pcm.nonzero != 0 &&
 +               !g_audio_image_stages.empty()) {
@@ -961,6 +987,41 @@ index 1cb3f6a..deaf2e0 100644
 +            arm, ordinal, row, phase, width, origin, stage,
 +            registered.stage_event, registered.dest, len, fnv, nonzero,
 +            registered.dest_valid ? 1u : 0u);
++    fflush(stderr);
++}
++
++extern "C" void rs64_audio_join_image_dma(
++    const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
++    uint32_t width, uint32_t origin, uint64_t dma_event, uint32_t dram,
++    uint32_t len, uint32_t fnv, uint32_t nonzero) {
++    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
++    audio_image_scope_locked(phase, width, origin);
++    int best = -1;
++    for (size_t i = 0; i < g_audio_image_stages.size(); ++i) {
++        AudioImageStage& stage = g_audio_image_stages[i];
++        if (stage.dma_event != 0 || stage.ordinal != ordinal ||
++            stage.row != row || stage.phase != phase || stage.width != width ||
++            stage.origin != origin || std::strcmp(stage.arm, arm) != 0 ||
++            stage.dest != (dram & 0x007FFFFFu) || stage.len != len) continue;
++        best = static_cast<int>(i);
++        break;
++    }
++    if (best < 0) return;
++    AudioImageStage& stage = g_audio_image_stages[best];
++    stage.dma_event = dma_event;
++    stage.dma_dram = dram & 0x007FFFFFu;
++    stage.dma_len = len;
++    stage.dma_fnv = fnv;
++    stage.dma_nonzero = nonzero;
++    audio_image_match_stage_locked(stage);
++    fprintf(stderr,
++            "[audtask-image-dma-join] arm=%s ordinal=%u row=%u phase=%u"
++            " width=%u origin=0x%06X dma_event=%" PRIu64
++            " dram=0x%06X len=0x%X fnv=%08X nz=%u stage=%u"
++            " stage_event=%" PRIu64 "\n",
++            arm ? arm : "n/a", ordinal, row, phase, width, origin, dma_event,
++            stage.dma_dram, len, fnv, nonzero, stage.stage,
++            stage.stage_event);
 +    fflush(stderr);
 +}
 +
@@ -1165,6 +1226,7 @@ index 1cb3f6a..deaf2e0 100644
 +
 +extern "C" void rs64_audio_join_pcm(const char* kind, uint32_t phase,
 +                                     uint32_t width, uint32_t origin,
++                                     uint32_t ordinal, uint32_t row,
 +                                     uint32_t n, uint32_t rdram,
 +                                     uint32_t samples, uint32_t bytes,
 +                                     uint32_t fnv, uint32_t nonzero) {
@@ -1189,6 +1251,8 @@ index 1cb3f6a..deaf2e0 100644
 +    pcm.phase = phase;
 +    pcm.width = width;
 +    pcm.origin = origin;
++    pcm.ordinal = ordinal;
++    pcm.row = row;
 +    pcm.n = n;
 +    pcm.rdram = rdram;
 +    pcm.samples = samples;
@@ -1198,11 +1262,12 @@ index 1cb3f6a..deaf2e0 100644
 +    g_audio_join_pcm.push_back(pcm);
 +    fprintf(stderr,
 +            "[audio-join-pcm] kind=%s event=%" PRIu64 " n=%u phase=%u"
-+            " width=%u origin=0x%06X guest=0x%06X samples=%u bytes=%u"
++            " width=%u origin=0x%06X ordinal=%u row=%u guest=0x%06X"
++            " samples=%u bytes=%u"
 +            " fnv=%08X nz=%u callsite=0x%08X writer_kind=%u"
 +            " writer_pc=0x%08X writer_phys=0x%06X writer_writes=%u"
 +            " writer_sequence=%" PRIu64 " writer_value=0x%08X\n",
-+            kind, pcm.event, n, phase, width, origin, rdram, samples, bytes,
++            kind, pcm.event, n, phase, width, origin, ordinal, row, rdram, samples, bytes,
 +            fnv, nonzero, callsite, writer_kind, writer_pc, writer_phys,
 +            writer_writes, writer_sequence, writer_value);
 +    audio_join_match_pcm_locked(g_audio_join_pcm.size() - 1);
@@ -1265,6 +1330,20 @@ index 1cb3f6a..deaf2e0 100644
 +    }
 +    probe->ranges.back().payload_fnv = payload_fnv;
 +    probe->ranges.back().payload_nz = payload_nz;
++    uint32_t route_phase = probe->phase;
++    uint32_t route_width = probe->width;
++    uint32_t route_origin = probe->origin;
++    uint32_t route_ordinal = probe->n;
++    uint32_t route_row = probe->n;
++    int route_exit = 0;
++    const char* route_arm = probe->arm;
++    rs64_audio_current_route_snapshot(
++        &route_phase, &route_width, &route_origin, &route_ordinal,
++        &route_row, &route_exit, &route_arm);
++    rs64_audio_join_image_dma(
++        route_arm, route_ordinal, route_row, route_phase, route_width,
++        route_origin, probe->ranges.back().event, dram_addr, len,
++        payload_fnv, payload_nz);
 +    static thread_local uint32_t observer_control_key = 0xFFFFFFFFu;
 +    const uint32_t observer_key = (probe->width << 24) ^ probe->origin;
 +    if (observer_control_key != observer_key) {
@@ -1297,7 +1376,7 @@ index 1cb3f6a..deaf2e0 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +802,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +881,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -1641,15 +1720,16 @@ index 1f3a4cf..b9cc34f 100644
  }
  
 diff --git a/ultramodern/include/ultramodern/ultramodern.hpp b/ultramodern/include/ultramodern/ultramodern.hpp
-index 57db6f6..cd78b51 100644
+index 57db6f6..a282425 100644
 --- a/ultramodern/include/ultramodern/ultramodern.hpp
 +++ b/ultramodern/include/ultramodern/ultramodern.hpp
-@@ -121,8 +121,14 @@ void set_audio_frequency(uint32_t freq);
+@@ -121,8 +121,15 @@ void set_audio_frequency(uint32_t freq);
  void queue_audio_buffer(RDRAM_ARG PTR(s16) audio_data, uint32_t byte_count);
  uint32_t get_remaining_audio_bytes();
  
 +extern "C" void rs64_audio_join_pcm(const char* kind, uint32_t phase,
 +                                     uint32_t width, uint32_t origin,
++                                     uint32_t ordinal, uint32_t row,
 +                                     uint32_t n, uint32_t rdram,
 +                                     uint32_t samples, uint32_t bytes,
 +                                     uint32_t fnv, uint32_t nonzero);
@@ -1661,10 +1741,10 @@ index 57db6f6..cd78b51 100644
      using set_frequency_t = void(uint32_t);
      queue_samples_t* queue_samples;
 diff --git a/ultramodern/src/audio.cpp b/ultramodern/src/audio.cpp
-index 3198be0..730ca54 100644
+index 3198be0..e35819c 100644
 --- a/ultramodern/src/audio.cpp
 +++ b/ultramodern/src/audio.cpp
-@@ -1,9 +1,15 @@
+@@ -1,9 +1,17 @@
  #include "ultramodern/ultra64.h"
  #include "ultramodern/ultramodern.hpp"
  #include <cassert>
@@ -1676,11 +1756,13 @@ index 3198be0..730ca54 100644
 +extern "C" uint32_t rs64_phase_ord();
 +extern "C" uint32_t rs64_vi_committed_width();
 +extern "C" uint32_t rs64_vi_committed_origin();
++extern "C" bool rs64_audio_current_route_snapshot(
++    uint32_t*, uint32_t*, uint32_t*, uint32_t*, uint32_t*, int*, const char**);
 +
  static ultramodern::audio_callbacks_t audio_callbacks;
  
  void ultramodern::set_audio_callbacks(const ultramodern::audio_callbacks_t& callbacks) {
-@@ -31,7 +37,54 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
+@@ -31,7 +39,59 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
  
      // Queue the swapped audio data.
      if (sample_count > 0 && audio_callbacks.queue_samples) {
@@ -1717,8 +1799,13 @@ index 3198be0..730ca54 100644
 +                    fnv = (fnv * 16777619u) ^ p[i];
 +                    nonzero += p[i] != 0;
 +                }
++                uint32_t ordinal = 0xFFFFFFFFu;
++                uint32_t row = 0xFFFFFFFFu;
++                rs64_audio_current_route_snapshot(nullptr, nullptr, nullptr,
++                                                  &ordinal, &row, nullptr, nullptr);
 +                rs64_audio_join_pcm("source", rs64_phase_ord(), width, origin,
-+                                    n, static_cast<uint32_t>(audio_data_),
++                                    ordinal, row, n,
++                                    static_cast<uint32_t>(audio_data_),
 +                                    sample_count, full_byte_count, fnv, nonzero);
 +                if (n < 40 || (n % 128) == 0) {
 +                    std::fprintf(stderr,

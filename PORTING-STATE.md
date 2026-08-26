@@ -112454,3 +112454,33 @@ No behavior or mitigation changed. ORIGIN: diagnostic-only runtime join change;
 the named writer under observation is the Factor 5 image DMEM-to-RDRAM DMA and
 its zero payload is not yet judged legitimate. Artifacts:
 `scratch/agent/s2405_zero_output_contract/`.
+
+## Session 2406 (2026-08-26) — M5 zero-output identity reaches PCM but not the image DMA range
+
+The retail oracle ran first with whole-RDRAM and four exact destination-window
+controls. It recorded 13,324 whole-RDRAM writes, 768 writes each for
+`0x166450`, `0x167050`, and `0x166D50`, and 1,020 for `0x1935E0`; its VI trace
+reached title `0x00790400` and hangar `0x006AB400`.
+
+The diagnostic change propagated active audio route ordinal/row into PCM source
+and consumer records, and required that identity in the image-stage join. The
+concurrent two-arm attempts were invalid because the input harness did not
+advance either instance beyond 640. The repository's validated sequential
+driver then passed title and hangar controls for stub_c0, stub_c1, image_c0,
+and image_c1. In image_c0, 1,124 stage identities and 916 PCM identities had
+915 overlapping ordinal/row pairs; image_c1 had 1,172 stage identities and 965
+PCM identities with 964 overlaps.
+
+The exact image DMA join still reported `stage-only` for retained zero rows.
+For example, image_c0 ordinal 1126/row 422 stage 2 emitted zero bytes to
+`0x167050` length `0x300`, while same-identity source and consumer PCM records
+used guest `0x80167C50` (physical `0x167C50`) length `768`, also zero. The
+image c1 arm showed the same shape with different row/address values. This
+selects `H-ZeroOutputConsumerMismatch` at the captured range and rules out the
+repeated all-zero tuple as a usable identity key. It does not prove which
+downstream writer or slot/key-on event is legitimate; no behavior changed.
+
+ORIGIN: diagnostic-only identity propagation; the named writer under
+observation remains the Factor 5 image DMEM-to-RDRAM DMA, and its zero payload
+has not been treated as corrupt or legitimate by code.
+Artifacts: `scratch/agent/s2406_zero_output_identity/validated/`.
