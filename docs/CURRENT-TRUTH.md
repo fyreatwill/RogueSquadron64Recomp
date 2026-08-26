@@ -25,9 +25,10 @@ Current maintenance marker: Session 2457 (2026-08-26).
   whole-RDRAM, phase, task/status, and named-PC controls must pass before a
   retail null is interpreted. It reaches attract, title, and hangar, not a
   mission.
-- The current M5 question is the missing port-side second-range consumer and its
-  caller boundary. The image arm reaches task completion and generated DMA, but
-  no legitimate downstream slot/voice/output contract has been established.
+- The current M5 question is whether the port's generated audio-overlay
+  alternate is the legitimate counterpart of retail's second-range consumer.
+  The image arm reaches task completion and generated DMA, but no legitimate
+  downstream slot/voice/output contract has been established.
 
 - **s2454 — no port runtime dispatcher body replaces retail `0x8002BEEC`.**
   The source candidate table finds `get_function`/`rs64_m5_dispatch_boundary`
@@ -64,6 +65,22 @@ Current maintenance marker: Session 2457 (2026-08-26).
   selects `H-ResolverGeneratedCaller` for the native boundary and
   `H-StaleGuestBreadcrumb` for the reported guest PC; it does not identify
   the zero-producing generated callsite or authorize a missing-function stub.
+
+- **s2458 — the port image arm reaches a generated alternate, but not the
+  retail-grounded second-range relation.** Retail controls passed: whole-RDRAM
+  writes 12,661, exact image-range writes 1,536/1,125, and 594 hangar-phase
+  `0x8002BEEC` → `0x800078EC` predecessor rows; `0x8008F2CC` executed 6 times.
+  In the paired qualified port run, the image arm reached title and hangar,
+  produced 8,351 image-stage rows and 4,149 completed joins, all
+  `stage-only`, and no PCM or consumer-only rows. Its phase-scoped static
+  `rs_memset` table retained 1,024 rows; the first hangar row was callsite
+  `0x8008F2CC`, `dst=0x801797B0`, `len=0x298`, with active Factor 5 identity,
+  followed mainly by `0x800052C4`. This selects
+  `H-PortGeneratedAlternate` at static-callsite scope and rules out an
+  observed port second-range consumer join. The stub arm crashed before the
+  target phase, so its null target-phase rows are a non-result. This is
+  single-source port-boundary evidence paired with independent retail ground
+  truth; no output remap, task-data change, gate, or guard is authorized.
 
 ## Latest evidence
 
@@ -143,9 +160,10 @@ Current maintenance marker: Session 2457 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 image consumer provenance — active.** Use a new
-   ground-truth discriminator to trace the retail-selected writer's exact
-   relation into the port image/task identity or close the hangar consumer gap.
+1. **M5 generated alternate equivalence — active.** Compare the port
+   `0x8008F2CC` alternate's phase/task arguments and destination against the
+   independently grounded retail callsite, then determine whether it is an
+   equivalent consumer or bootstrap-only path.
    No output remap, task-data change, gate change, or guard is authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.

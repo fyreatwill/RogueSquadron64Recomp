@@ -113598,3 +113598,33 @@ positive control; no behavior, audio, dispatch, output, task-data, or
 mitigation change. Captures:
 `scratch/agent/s2457_port_null_resolver.log`,
 `scratch/agent/s2457_port_null_resolver_fixed.log`.
+
+## Session 2458 (2026-08-26) — traced port M5 generated alternate
+
+Ground truth first: the retail oracle passed the whole-RDRAM positive control
+with 12,661 writes, exact image-range controls with 1,536 and 1,125 writes,
+and the hangar phase. The retail execution histogram recorded 594
+`0x8002BEEC` -> `0x800078EC` predecessor rows and six executions of
+`0x8008F2CC`.
+
+One build carried the existing phase-gated M5 provenance fields, and the stub
+and image arms ran concurrently. The image arm reached title and hangar,
+produced 8,351 image-stage rows and 4,149 completed image joins, all
+`stage-only`, with no PCM consumer or consumer-only rows. Its static
+`rs_memset` table retained 1,024 rows; the first hangar row was generated
+callsite `0x8008F2CC`, with `dst=0x801797B0`, `len=0x298`, and active Factor 5
+image identity, followed mainly by `0x800052C4`. This selects
+`H-PortGeneratedAlternate` at static-callsite scope and rules out an observed
+port second-range consumer join. The stub arm crashed in the VI retrace
+thread before width 1024, so its missing target-phase rows are a non-result.
+
+This does not establish that the alternate is retail-equivalent, and it does
+not authorize output remapping, task-data changes, gate changes, guards, or
+other mitigation. The image-side selection is single-source live-port
+evidence paired with independent retail ground truth. Artifact:
+`scratch/agent/s2458_m5_provenance/audit.md` and
+`scratch/agent/s2458_m5_provenance_20260826-115639/`.
+
+ORIGIN: retail oracle controls plus observation-only port callsite, image-stage,
+and join probes; no behavior, audio, dispatch, output, task-data, or mitigation
+change.
