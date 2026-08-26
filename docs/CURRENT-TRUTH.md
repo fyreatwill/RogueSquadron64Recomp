@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2436 (2026-08-26).
+Current maintenance marker: Session 2437 (2026-08-26).
 
 ## Current state
 
@@ -419,7 +419,14 @@ sequence; #1 is the next campaign priority.
    title/hangar buckets, while the exact writer retained 408 rows. This
    selects `H-RetailCallerOutsideTargetPhases` at the current scope. The next
    unit must phase-locate those six calls across the observed 640 intro origins,
-   not repeat the return-site watch. No port behavior change is authorized.
+   not repeat the return-site watch. s2437 did so: controls passed, and the
+   callsite retained one intro row at `0x00696100` plus one hangar row. The
+   intro tuple (`s0=0x10`, `s1=0x561F`, selector `0x801934E0`) did not match
+   the exact writer/helper tuple (`s0=0x12`, `s1=0x561F`, source byte `1`),
+   selecting `H-RetailCallerUnrelated` provisionally at this single-source
+   oracle scope. The hangar row shared the writer's broad tuple shape. A new
+   phase-local callee/context capture is required before semantic identity is
+   closed; no port behavior change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -574,6 +581,15 @@ identity gap open. No behavior change is authorized: do not
 promote C88, invent output metadata, remap destinations, alter task data,
 force a consumer, or add a guard without a new discriminator and named writer
 legitimacy.
+
+s2437 phase-gated the retail `jal 0x8008F2CC` across all six observed 640
+intro origins plus title and hangar. Controls passed, and the callsite
+retained one intro row at `0x00696100` and one hangar row. The intro row had
+`s0=0x10`, `s1=0x561F`, and selector `0x801934E0`, unlike the exact writer's
+phase-latched `s0=0x12`, `s1=0x561F`, source-byte-1 context; the hangar row
+shared the writer's broad tuple. This selects `H-RetailCallerUnrelated`
+provisionally at single-source oracle scope, not a port mapping or output
+remap. Artifact: `scratch/agent/s2437_retail_caller_reachability/`.
 
 ### VI, M3, M4, and generated symbols
 

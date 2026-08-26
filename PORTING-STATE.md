@@ -113141,3 +113141,19 @@ the current capture scope: the callsite is not a title/hangar discriminator.
 It rules out neither caller semantics in an observed 640 intro phase nor the
 need for a new phase bucket, and authorizes no port behavior change.
 Artifact: `scratch/agent/s2436_retail_caller_site/`.
+
+## Session 2437 (2026-08-26) — phase-located retail caller reachability
+
+The first launch was a setup failure because the oracle's eight phase-bucket
+limit was exceeded; the corrected observation-only run removed the duplicate
+hangar bucket and passed the whole-RDRAM positive control, title, hangar, and
+exact image-range controls. The actual `jal` callsite `0x8008F2CC` retained
+two phase rows: one intro row at `0x00696100` with `s0=0x10`, `s1=0x561F`,
+and selector `0x801934E0`, and one hangar row with `s0=0x12`, `s1=0x561F`,
+and selector `0x801797B0`. The phase-latched exact writer rows retained the
+`s0=0x12`, `s1=0x561F`, source-byte-1 context. This selects
+`H-RetailCallerUnrelated` provisionally for the intro caller at the
+single-source oracle scope; the hangar caller shares the writer's broad
+context shape. It rules out a zero-reach explanation for the observed intro
+caller but does not close semantic identity, authorize a port mapping, or
+justify a mitigation. Artifact: `scratch/agent/s2437_retail_caller_reachability/`.
