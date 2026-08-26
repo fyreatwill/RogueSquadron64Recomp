@@ -113303,3 +113303,26 @@ second range, but does not identify why the retail-grounded
 `0x8002BEEC` → `0x800078EC` relation is absent or differently represented on
 the port. No mitigation, remap, writeback, task-data, gate, or default change
 was made. Artifact: `scratch/agent/s2444_m5_port_second_range_consumer/`.
+
+## Session 2445 (2026-08-26) — located port second-range execution identity
+
+Ground truth first: the retail oracle passed whole-RDRAM (12,661 hits), title
+and hangar VI controls, exact image ranges (1,536 and 1,125 writes), and the
+grounded `0x8002BEEC` -> `0x800078EC` predecessor relation (619 hits). A new
+regeneration-safe, observation-only port table was added at the generated
+`0x800078EC` callee and joined to the existing task/image identity. The first
+paired run was instrument-invalid because title rows exhausted its budget;
+the positive control fired, so the table was narrowed to the exact second
+range and rerun.
+
+The fixed paired capture passed all controls. Stub and image arms each emitted
+512 second-range callee rows; every row had `ra=0`, and none matched the retail
+caller predecessor. The image arm also emitted 2,318 stage rows, two nonzero
+rows, generated DMA, DMEM work, and SP completion. This selects
+`H-PortAlternatePath` at the current capture scope and rules out
+`H-PortSemanticPathAbsent`; it does not explain zero `ra`, identify the
+semantic caller, or authorize a remap or behavior change. The new table is
+controlled by `ROGUESQ_LOG_M5_SECOND_EXEC`, and its fixup implementation is in
+`N64Recomp/fixup_game_funcs.py`. Artifacts:
+`scratch/agent/s2445_ground_truth/` and
+`scratch/agent/s2445_m5_port_second_range_execution_identity_fixed/`.

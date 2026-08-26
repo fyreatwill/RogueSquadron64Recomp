@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2444 (2026-08-26).
+Current maintenance marker: Session 2445 (2026-08-26).
 
 ## Current state
 
@@ -447,7 +447,11 @@ Current maintenance marker: Session 2444 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
-1. **M5 image consumer provenance — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
+1. **M5 port execution identity — active.** Explain why port
+   `0x800078EC` second-range rows have `ra=0` despite retail's
+   `0x8002BEEC` predecessor, using one new bounded dispatch-boundary table.
+   Keep image/stub arms and retail controls in one capture; no behavior change.
+2. **M5 image consumer provenance — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate. s2425 establishes retail/port parity for the title
    `0x80015BC8` writer family, while s2426 shows neither candidate PC writes
    the exact port image ranges; `0x800078EC` and helper PCs write those ranges
@@ -522,12 +526,25 @@ helper-only ambiguity. It does not establish a port consumer or authorize
 any behavior change. Artifact:
 `scratch/agent/s2442_retail_second_range_caller/`.
 
+s2445 first ran a new port execution table, but title-region rows exhausted its
+budget before the target range; that result was discarded after the probe's
+positive control fired. The fixed same-build paired capture passed all retail
+controls and both port title/hangar controls. The stub and image arms each
+emitted 512 bounded second-range callee rows at `0x800078EC`, including the
+image arm's stage/DMA/SP-completion controls, but every saved return address
+was zero and none matched retail's grounded caller predecessor `0x8002BEEC`
+(retail: 619 hits). This selects `H-PortAlternatePath` at the current capture
+scope: the port reaches the callee/range through a stable path, but the
+grounded caller identity is not represented by saved `ra`. It rules out
+`H-PortSemanticPathAbsent`, but does not explain zero `ra`, identify the
+semantic caller, or authorize a consumer remap or behavior change. Artifact:
+`scratch/agent/s2445_m5_port_second_range_execution_identity_fixed/`.
+
 s2444 independently repeated the port-side post-DMA consumer table with the
 grounded retail relation controls. Both arms passed route controls; the image
 arm produced 2,330 stage rows and zero CPU stores in the exact second range,
-with both nonzero rows still stage-only. The next M5 unit should locate the
-port-side execution identity for `0x8002BEEC` → `0x800078EC` using one bounded
-same-build table, with no audio or output behavior change.
+with both nonzero rows still stage-only. This result led to the s2445
+execution-identity probe; no audio or output behavior changed.
 
 s2443's paired capture passed the retail controls and both port title/hangar
 controls. The image arm produced 2,244 stage rows, including two nonzero rows,
@@ -538,19 +555,19 @@ repeated this result with the same controls and 2,330 image-stage rows, so the
 missing second-range event is no longer awaiting a repeat. The next unit must
 use a new discriminator around the retail-grounded `0x8002BEEC` →
 `0x800078EC` execution relation on the port; no behavior change is authorized.
-2. **M5 task/output closure — closed at current capture scope.** Keep the
+3. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
-3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
+4. **M5 gate polarity/writer join — closed at current capture scope.** No gate
    treatment is authorized.
-4. **M5 payload-transformation provenance — closed at current capture scope.**
+5. **M5 payload-transformation provenance — closed at current capture scope.**
    Do not repeat the phase-wide candidate join without a new discriminator.
-5. **M5 A1 retail flag semantics — closed at current capture scope.** Do not
+6. **M5 A1 retail flag semantics — closed at current capture scope.** Do not
    repeat the delay-slot watch or change the flag.
-6. **M5 A1 pre-target route boundary — closed at current capture scope.** Do
+7. **M5 A1 pre-target route boundary — closed at current capture scope.** Do
    not add a null fallback or repeat the resident-overlay table.
-7. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
+8. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator.
-8. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
+9. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
 
 ## Durable boundaries
