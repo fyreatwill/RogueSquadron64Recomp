@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2459 (2026-08-26).
+Current maintenance marker: Session 2460 (2026-08-26).
 
 ## Current state
 
@@ -94,6 +94,18 @@ Current maintenance marker: Session 2459 (2026-08-26).
   The initial oracle command without Rice/hold controls is setup-only and
   excluded. Artifact: `scratch/agent/s2459_m5_generated_alternate_equivalence/audit.md`.
 
+- **s2460 — the pre-target static audit finds one explicit terminal edge.**
+  `matchKeywordWithPriority` has one generated caller at `0x800A9248`, a valid
+  `after_22` continuation, and no resolver in its body. `slotDispatcherIter`
+  loads `slot->update_func` and passes it through `LOOKUP_FUNC` at `0x8003E974`,
+  so `update_func==0` explicitly reaches `get_function(0)` and can terminate
+  before target capture. This selects `H-PreTargetBoundary` for the
+  `slotDispatcherIter` family, does not identify the field writer, and rules out
+  a generated continuation mismatch at the named match call. The
+  `0x8000834C`/`0x80007904` breadcrumbs remain unrelated return delay-slot
+  stamps. Static-only; no behavior change. Artifact:
+  `scratch/agent/s2460_m5_pre_target_boundary/audit.md`.
+
 ## Latest evidence
 
 - **s2452 — the retail second-range boundary has no generated dispatcher body.**
@@ -176,10 +188,12 @@ Closed investigations are not active work items. This is one monotonic sequence;
    `0x8008F2CC` alternate's phase/task arguments and destination against the
    independently grounded retail callsite, then determine whether it is an
    equivalent consumer or bootstrap-only path.
-   The current port boundary is pre-target dispatch
-   (`matchKeywordWithPriority` / `slotDispatcherIter`); audit the complete
-   bounded call/return idiom there before another equivalence capture. No
-   output remap, task-data change, gate change, or guard is authorized.
+   The static audit selected the explicit `slot->update_func==0` →
+   `get_function(0)` edge for the slot-dispatch family. Run one qualified
+   capture with the existing resolver, slot pre-call, and indirect positive
+   controls to distinguish that edge from a nonzero slot callback followed by
+   the match dereference failure. No output remap, task-data change, gate
+   change, or guard is authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

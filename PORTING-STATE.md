@@ -113649,3 +113649,34 @@ dispatch change, output remap, task-data change, or gate change. Artifact:
 
 ORIGIN: independent retail controls plus observation-only port attempts; no
 behavior or mitigation change.
+
+## Session 2460 (2026-08-26) — audited M5 pre-target dispatch boundary
+
+**Work unit:** one bounded static audit of the generated call/return idioms
+around the qualified-run failures at `0x8000834C` and `0x80007904`.
+
+**What ran:** inspected generated bodies and callers for
+`matchKeywordWithPriority` (`0x800AF2C8`), `slotDispatcherIter` (`0x8003E8DC`),
+`rs_memset` (`0x800078E0`), and the `get_function`/`LOOKUP_FUNC` boundary. No
+build or runtime behavior changed.
+
+**What it showed:** `matchKeywordWithPriority` has one generated caller,
+`spawnCutsceneEffectsAndCues` at `0x800A9248`; its named call returns through
+`after_22` and the callee has no resolver edge. `slotDispatcherIter` loads
+`slot->update_func` at `0x8003E938` and invokes `LOOKUP_FUNC` at `0x8003E974`
+through `after_0`; a zero update pointer explicitly reaches `get_function(0)`,
+whose missing-function path asserts/exits unless stubbed. `rs_memset` has no
+resolver edge; `0x80007904` is its return delay-slot breadcrumb. The same
+reasoning applies to `0x8000834C`: it is a return delay-slot stamp, not a
+resolver caller.
+
+**Hypotheses:** the explicit zero-update edge selects `H-PreTargetBoundary`
+for the `slotDispatcherIter` family. The audit does not identify the writer of
+`slot->update_func`, does not prove that the match-keyword input is invalid, and
+does not support `H-GeneratedContinuationMismatch`.
+
+**Rules out:** a generated continuation mismatch at the named match call as an
+explanation for the resolver failure; interpreting either stale breadcrumb as
+the native resolver caller. It does not rule out a separate match-path fault or
+establish equivalence of the generated audio alternate. Artifact:
+`scratch/agent/s2460_m5_pre_target_boundary/audit.md`.

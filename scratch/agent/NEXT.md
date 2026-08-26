@@ -1,34 +1,40 @@
-# NEXT work unit (s2460) — audit the pre-target dispatch boundary
+# NEXT work unit (s2461) — qualify the explicit zero-update resolver edge
 
 HYPOTHESIS-ID: m5-generated-alternate-equivalence
 
 ## Work unit
 
-Perform one bounded static audit of the complete generated call/return idiom
-leading to the pre-target failures at `last-guest-pc=0x8000834C` and
-`0x80007904`, including callers, continuation blocks, and resolver boundary.
-Do not add guards or change dispatch/audio behavior.
+Run one qualified port capture with the existing first-null resolver,
+`slotDispatcherIter` pre-call, and indirect positive-control diagnostics. Test
+whether the `slot->update_func==0` edge identified in s2460 occurs immediately
+before `get_function(0)`, or whether the update pointer is nonzero and the
+failure is instead in the match-keyword dereference path. Do not add guards or
+change dispatch/audio behavior.
 
 ## Competing hypotheses and discriminator
 
-- H-PreTargetBoundary: one pre-target path aborts or starves the qualified route.
-- H-UnrelatedFailure: both failures are separate activity and do not explain
-  absent target-phase alternate rows.
-- H-GeneratedContinuationMismatch: generated lowering changes control flow
-  before target capture.
+- H-ZeroUpdateTerminal: `slotDispatcherIter` observes `update_func==0`, then
+  `get_function(0)` terminates the run before target capture.
+- H-NonzeroSlotThenMatch: the slot callback pointer is nonzero; the route fails
+  later in `matchKeywordWithPriority` or its input producer.
+- H-ResolverControlFailure: the indirect positive control does not resolve in
+  the same run, making the null result non-discriminating.
 
-The discriminator is a complete site table: each failure PC's generated
-caller, guest continuation/return target, resolver operation, and whether it
-can terminate or starve the phase-gated route. An explicit termination edge
-selects H-PreTargetBoundary; no such edge selects H-UnrelatedFailure; an
-inconsistent continuation selects H-GeneratedContinuationMismatch.
+The discriminator is one phase-scoped row joining the slot pre-call's
+`update_func`, the resolver's requested address, and the indirect positive
+control. `update_func=0` immediately followed by `get_function(0)` selects
+H-ZeroUpdateTerminal. A nonzero update pointer followed by match-path failure
+selects H-NonzeroSlotThenMatch. Missing positive-control resolution requires a
+corrected capture.
 
 ## Exact commands
 
-1. Use `rg -n` for `0x8000834C`, `0x80007904`,
-   `matchKeywordWithPriority`, and `slotDispatcherIter`; inspect bounded
-   windows around every generated and runtime boundary.
-2. Compare generated continuation/return forms against retail context and
-   record all sites in one table.
-3. Require an explicit control-flow edge before selecting a hypothesis; keep
-   behavior frozen if no edge can be proven.
+1. Build the current tree using the normal qualified configuration.
+2. Run one instance from `build/` with `ROGUESQ_LLE_FORCE=1`,
+   `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+   `ROGUESQ_LOG_ALL=1`, `ROGUESQ_LOG_SLOT_DISPATCH=1`,
+   `ROGUESQ_SLOT_DISPATCH_PHASE_MIN=4`, `ROGUESQ_LOG_M5_SECOND_EXEC=1`, and
+   `ROGUESQ_LOG_A1_ABORT=1`; capture output to a non-dot final path and kill
+   with SIGKILL after the existing hangar/abort boundary.
+3. Record joined rows and positive-control counts in one artifact. Do not
+   interpret a null without the indirect resolver control firing.
