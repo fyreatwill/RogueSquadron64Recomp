@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2467 (2026-08-26).
+Current maintenance marker: Session 2469 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,18 @@ Current maintenance marker: Session 2467 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2469 — the live setupCameraMatrices caller supplies the inherited zero.**
+  The independent retail control completed with whole-RDRAM and driven VI
+  controls. The qualified port's resolver positive control for `0x8009123C`
+  fired; the exhaustive regenerated caller probe then recorded 23 phase-4
+  rows, all from `runMenuModelViewerScreen` callsite `0x800C2D84`, with
+  `r31=0`, `r4=0x800CF090`, and `r5=0`. The existing setup-to-traverse row
+  also had `r31=0`, followed by the known `get_function(0)` abort. This selects
+  `H-SetupCallerZero` and rules out setup's introduction of the zero and an
+  unreachable statically selected caller. The first caller supplying zero to
+  `runMenuModelViewerScreen` remains open; no behavior change was authorized.
+  Artifact: `scratch/agent/s2469_m5_setup_caller_boundary/audit.md`.
 
 - **s2468 — setupCameraMatrices supplies the inherited zero.** The independent
   retail oracle passed whole-RDRAM and freelist controls and reached hangar.
@@ -270,13 +282,13 @@ Current maintenance marker: Session 2467 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, earlier setup caller open.**
-   A phase-gated paired capture shows `setupCameraMatrices` already has
-   `r31=0` immediately before calling `traverseSceneGraphRecursive`, and the
-   callee entry preserves it. Audit the complete static/live caller boundary
-   that invokes `setupCameraMatrices`; do not infer callback polarity or add a
-   guard. No output remap, task-data change, gate change, or guard is
-   authorized.
+1. **M5 generated alternate equivalence — active, upstream model-viewer caller
+   open.** A phase-gated exhaustive caller capture shows the live
+   `runMenuModelViewerScreen` callsite `0x800C2D84` invokes
+   `setupCameraMatrices` with `r31=0`, and the callee preserves it. Audit the
+   complete static/live caller boundary that invokes
+   `runMenuModelViewerScreen`; do not infer callback polarity or add a guard.
+   No output remap, task-data change, gate change, or guard is authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

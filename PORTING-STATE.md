@@ -113867,3 +113867,31 @@ This selects `H-SetupCallerZero` and rules out `H-TraverseLoweringZero` and
 that supplied zero. No guard, stub, dispatch, callback, audio, output, or
 task-data change was made. The failed post-call placement is documented in
 `scratch/agent/s2468_m5_setup_traverse_boundary/audit.md`.
+## Session 2469 (2026-08-26) — captured setup caller boundary
+
+Work unit: locate the first zero before `setupCameraMatrices` with a complete
+static/live caller table. The static census found 39 generated
+`setupCameraMatrices(rdram, ctx)` callsites across 11 files. I added the
+phase-gated callsite probe to `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`,
+regenerated in the required order (`make_elf.py` -> N64Recomp -> fixup ->
+CMake), and build-verified the result. The first build exposed an implicit
+declaration conflict for `rs64_phase_ord`; the fix was made in the fixup
+source and the full regeneration/build was rerun successfully.
+
+The retail oracle control completed with `oracle_rc=0`, whole-RDRAM and driven
+VI controls active, reaching the driven 1024 title route. The qualified port
+run used the established LLE-only route and audio stub, with
+`ROGUESQ_LOG_M5_PRETARGET=1`. Its resolver positive control for
+`0x8009123C` fired. The phase-4 setup-caller probe emitted 23 rows before the
+known null dispatch; every row identified `runMenuModelViewerScreen` at
+callsite `0x800C2D84`, with `r31=0`, `r4=0x800CF090`, and `r5=0`. The existing
+setup-to-traverse row also had `r31=0`, then the run reported
+`Failed to find function at 0x00000000` and aborted with the known
+`last-guest-pc=0x80001f88` breadcrumb.
+
+This selects `H-SetupCallerZero` and rules out setupCameraMatrices introducing
+the zero and an unreachable statically selected caller. It identifies the
+live setup caller but not the earlier caller that supplies zero to
+`runMenuModelViewerScreen`. No guard, stub, dispatch, audio, output, or
+task-data change was made. Artifact:
+`scratch/agent/s2469_m5_setup_caller_boundary/audit.md`.
