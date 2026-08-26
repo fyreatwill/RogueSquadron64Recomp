@@ -312,6 +312,14 @@ struct store_field_dump_pc {
 struct store_field_dump_row {
     int watch;
     uint32_t pc;
+    uint32_t store_addr;
+    uint32_t pre_store_word;
+    uint32_t ra;
+    uint32_t a0;
+    uint32_t a1;
+    uint32_t a2;
+    uint32_t t0;
+    uint32_t t1;
     uint32_t s0;
     uint32_t s1;
     uint32_t source_word;
@@ -506,7 +514,7 @@ static int store_field_dump_pc_index(uint32_t pc)
     return -1;
 }
 
-static void dump_store_field(int watch, uint32_t pc)
+static void dump_store_field(int watch, uint32_t pc, uint32_t accessed)
 {
     struct store_field_dump_row row;
     int pc_index = store_field_dump_pc_index(pc);
@@ -521,6 +529,14 @@ static void dump_store_field(int watch, uint32_t pc)
     g_store_field_dump_hits++;
     row.watch = watch;
     row.pc = pc;
+    row.store_addr = accessed;
+    row.pre_store_word = pDebugMemRead32(debug_rdram_addr(accessed & ~3u));
+    row.ra = gpr32(31);
+    row.a0 = gpr32(4);
+    row.a1 = gpr32(5);
+    row.a2 = gpr32(6);
+    row.t0 = gpr32(8);
+    row.t1 = gpr32(9);
     row.s0 = gpr32(16);
     row.s1 = gpr32(17);
     row.source_word = pDebugMemRead32(debug_rdram_addr((row.s0 + 0x60u) & ~3u));
@@ -530,6 +546,10 @@ static void dump_store_field(int watch, uint32_t pc)
     for (i = 0; i < g_n_store_field_dump_rows; i++) {
         struct store_field_dump_row *old = &g_store_field_dump_rows[i];
         if (old->watch == row.watch && old->pc == row.pc &&
+            old->store_addr == row.store_addr &&
+            old->pre_store_word == row.pre_store_word &&
+            old->ra == row.ra && old->a0 == row.a0 && old->a1 == row.a1 &&
+            old->a2 == row.a2 && old->t0 == row.t0 && old->t1 == row.t1 &&
             old->s0 == row.s0 && old->s1 == row.s1 &&
             old->source_word == row.source_word &&
             old->source_byte == row.source_byte &&
@@ -546,11 +566,15 @@ static void dump_store_field(int watch, uint32_t pc)
     row.n = 1;
     g_store_field_dump_rows[g_n_store_field_dump_rows++] = row;
     printf("[store-field-dump] watch=%d pc=0x%08x width=%u origin=0x%08x "
+           "store_addr=0x%08x pre_store_word=0x%08x ra=0x%08x "
+           "a0=0x%08x a1=0x%08x a2=0x%08x t0=0x%08x t1=0x%08x "
            "s0=0x%08x s1=0x%08x source_word=0x%08x source_byte=0x%02x "
            "branch_selector=0x%08x branch_state=0x%04x n=1\n",
            row.watch, row.pc, pDebugMemRead32(VI_WIDTH_ADDR),
-           pDebugMemRead32(VI_ORIGIN_ADDR), row.s0, row.s1, row.source_word,
-           row.source_byte, row.branch_selector, row.branch_state);
+           pDebugMemRead32(VI_ORIGIN_ADDR), row.store_addr,
+           row.pre_store_word, row.ra, row.a0, row.a1, row.a2, row.t0, row.t1,
+           row.s0, row.s1, row.source_word, row.source_byte,
+           row.branch_selector, row.branch_state);
     fflush(stdout);
 }
 
@@ -1372,7 +1396,7 @@ static void dbg_update(unsigned int pc)
             }
             if ((access_flags & M64P_BKP_FLAG_WRITE) &&
                 g_n_store_field_dump_pc > 0)
-                dump_store_field(i, pc);
+                dump_store_field(i, pc, accessed);
             if ((g_post_value_watch_mask & (UINT64_C(1) << i)) &&
                 (access_flags & M64P_BKP_FLAG_WRITE) &&
                 g_post_value_armed) {
@@ -2337,12 +2361,15 @@ int main(int argc, char **argv)
                g_store_field_dump_overflow);
         for (int i = 0; i < g_n_store_field_dump_rows; i++) {
             struct store_field_dump_row *row = &g_store_field_dump_rows[i];
-            printf("[oracle] store-field-row watch=%d pc=0x%08x s0=0x%08x "
-                   "s1=0x%08x source_word=0x%08x source_byte=0x%02x "
+            printf("[oracle] store-field-row watch=%d pc=0x%08x "
+                   "store_addr=0x%08x pre_store_word=0x%08x ra=0x%08x "
+                   "a0=0x%08x a1=0x%08x a2=0x%08x t0=0x%08x t1=0x%08x "
+                   "s0=0x%08x s1=0x%08x source_word=0x%08x source_byte=0x%02x "
                    "branch_selector=0x%08x branch_state=0x%04x n=%ld\n",
-                   row->watch, row->pc, row->s0, row->s1, row->source_word,
-                   row->source_byte, row->branch_selector, row->branch_state,
-                   row->n);
+                   row->watch, row->pc, row->store_addr, row->pre_store_word,
+                   row->ra, row->a0, row->a1, row->a2, row->t0, row->t1,
+                   row->s0, row->s1, row->source_word, row->source_byte,
+                   row->branch_selector, row->branch_state, row->n);
         }
     }
     if (g_pc_task_dump_enabled)

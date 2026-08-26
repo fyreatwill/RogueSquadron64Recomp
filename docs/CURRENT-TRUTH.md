@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2433 (2026-08-26).
+Current maintenance marker: Session 2434 (2026-08-26).
 
 ## Current state
 
@@ -406,10 +406,16 @@ sequence; #1 is the next campaign priority.
    s2431 execution-watched the complete set with valid controls. Every selected
    PC executed in the hangar phase, ruling out a complete retail execution gap.
    s2433's exact-store table then attributed the first range to `0x800078EC`,
-   but its retained field tuple was degenerate. The next unit must capture the
-   exact writer's call/return context and store value/address in one
-   phase-gated ground-truth table to distinguish a semantic entry from a
-   lower-level helper; no port behavior change is authorized.
+   but its retained field tuple was degenerate. s2434 extended that table with
+   exact store address/pre-store word and `$ra/$a0/$a1/$a2/$t0/$t1`: 816
+   phase-latched rows (590 unique), all watch 2 at `0x800078EC`, shared
+   `ra=0x8008F2D4`, `a0=0x801797B0`, `a1=0`, `a2=0x298`, `t0=0x2000FF01`,
+   `t1=0x8010FEF8`, and advanced through the exact range while pre-store
+   words varied. This selects `H-RetailStoreHelper` provisionally at the
+   oracle-only scope; a second independent line is still required. The next
+   unit must discriminate the stable caller/return context from a semantic
+   entry with a bounded caller execution/context capture. No port behavior
+   change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -505,6 +511,16 @@ semantic entry from a store helper or authorize a port change. The initial
 zero-phase rerun was instrument-invalid because memory callbacks did not carry
 a reliable live VI phase. Artifact:
 `scratch/agent/s2433_retail_exact_store_context/`.
+s2434's exact-store context capture passed the whole-RDRAM positive control
+(12,769 writes), title/hangar controls, and exact-range totals of 1,536 and
+1,125 writes. The table retained 816 phase-latched rows (590 unique), all
+watch 2 at `0x800078EC`; every row shared `ra=0x8008F2D4`,
+`a0=0x801797B0`, `a1=0`, `a2=0x298`, `t0=0x2000FF01`, and `t1=0x8010FEF8`,
+while store addresses advanced from `0x001798B0` through `0x00179A44` and
+pre-store words varied. This selects `H-RetailStoreHelper` provisionally as
+single-source oracle evidence and rules out a missing exact callback, but it
+does not establish semantic entry identity or authorize a port change.
+Artifact: `scratch/agent/s2434_retail_exact_store_context/`.
 - s2428's fixed paired port capture passed retail whole-RDRAM/title/hangar
   controls and both port-arm title/hangar controls. Each arm recorded 256
   exact `0x80015BC8` writes in `0x169730..0x1698EC`, joined to title

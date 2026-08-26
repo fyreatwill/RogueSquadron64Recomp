@@ -1,30 +1,31 @@
-# NEXT work unit (s2434) — capture exact-writer call/store context
+# NEXT work unit (s2435) — separate exact writer from caller semantic entry
 
 HYPOTHESIS-ID: m5-image-contract-gap
 
 ## Work unit
 
-Extend the oracle-only exact-store table for watch 1 and watch 2 to include
-the physical store address, pre-store word, `$ra`, `$a0`, `$a1`, `$a2`, `$t0`,
-and `$t1`, keyed by exact writer PC and latched VI phase. Keep the generic
-`--pc-field-dump` path unchanged. Build once, then run the validated 120-second
-retail recipe from s2433 with the whole-RDRAM control first, exact ranges,
-phase gates, the 13 selected PCs, and the eleven-Start schedule.
+Use the built oracle's new exact-store result to capture the caller boundary in
+one bounded run: watch execution at the stable return site `0x8008F2D4` and
+the exact writer `0x800078EC`, with the same title/hangar phase gates and exact
+store table. Keep all watches observation-only and do not change the port.
 
 ## Competing hypotheses and discriminator
 
-- H-RetailSemanticEntry: the exact range writer carries a stable caller/return
-  and store-value/address tuple identifying the semantic image entry.
-- H-RetailStoreHelper: the exact writer has a repeated copy-loop/register
-  tuple, with caller/return context separating it from the semantic entry.
+- H-RetailSemanticEntry: the caller execution has a stable phase-specific
+  semantic context that matches the exact range's store tuple.
+- H-RetailStoreHelper: the caller execution is a repeated lower-level copy
+  context, with stable return/register state but no phase-specific semantic
+  distinction.
 - H-RetailContextInvalid: whole-RDRAM or title/hangar controls fail, so no
-  tuple is interpretable.
+  caller tuple is interpretable.
 
-The discriminator is the bounded exact-store table grouped by phase, watch,
-writer PC, `$ra`, store address, and store value. A stable semantic tuple
-selects the first hypothesis; repeated copy-loop tuples with distinct callers
-select the second; failed controls select the third. Zero exact callbacks is
-an instrument failure, not a semantic null.
+The discriminator is the same-run join of exact-store rows to phase-gated
+caller execution rows, grouped by phase, writer PC, caller PC, `$ra`, store
+address, and pre-store word. A stable phase-specific caller context selects
+the first hypothesis; repeated caller context across the range with no
+semantic phase distinction selects the second; failed controls select the
+third. Zero exact callbacks or zero caller rows is an instrument failure, not
+a semantic null.
 
 ## Exact validation
 

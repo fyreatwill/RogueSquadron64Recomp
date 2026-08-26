@@ -113086,3 +113086,22 @@ Every retained row had the degenerate tuple `s0=0x12`, `s1=0x561F`,
 for the field tuple. It rules out a complete exact-writer attribution gap, but
 does not distinguish semantic entry from helper or authorize a port change.
 Artifact: `scratch/agent/s2433_retail_exact_store_context/`.
+
+## Session 2434 (2026-08-26) — captured retail exact writer call/store context
+
+Built the oracle after extending `--store-field-dump` with the physical store
+address, pre-store word, `$ra`, `$a0`, `$a1`, `$a2`, `$t0`, and `$t1`. The
+capture passed the whole-RDRAM positive control (`12,769` writes), title and
+hangar controls, and exact image-range totals of `1,536` at
+`0x167650..0x167C50` and `1,125` at `0x1798B0..0x179A48`. It retained `816`
+phase-latched rows (`590` unique) from watch 2 at `0x800078EC`; watch 1 and
+the other 12 selected PCs had no retained rows. Every row shared
+`ra=0x8008F2D4`, `a0=0x801797B0`, `a1=0`, `a2=0x298`, `t0=0x2000FF01`, and
+`t1=0x8010FEF8`, while store addresses advanced through
+`0x001798B0..0x00179A44` and pre-store words varied. This provisionally
+selects `H-RetailStoreHelper` at the single-source oracle scope: the exact
+writer behaves like a repeated copy-loop, not a proven semantic entry. It
+rules out a missing exact callback but does not authorize output remapping,
+writeback, task-data changes, gates, guards, or defaults. The next unit must
+capture the stable caller boundary as an independent discriminator.
+Artifact: `scratch/agent/s2434_retail_exact_store_context/`.
