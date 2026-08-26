@@ -5,7 +5,16 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2380 (2026-08-25). The M5 A1 oracle capture passed the whole-RDRAM and both target-640 controls, and joined 2,524 retail executions from `0x80001CB8` through callee entry at `osRecvMesg` (`0x800331D0`) and successor `0x80001CC0`; every joined callee row received `$a2=1`. This selects blocking semantics at capture scope and closes the delay-slot flag question. The port flag remains unchanged because the measurement identifies the effective retail operand, not the upstream reason for the port's A1 boundary or a justified fallback.
+Maintained in Session 2381 (2026-08-25). The M5 A1 oracle capture passed the whole-RDRAM and both target-640 controls, and joined 2,524 retail executions from `0x80001CB8` through callee entry at `osRecvMesg` (`0x800331D0`) and successor `0x80001CC0`; every joined callee row received `$a2=1`. This selects blocking semantics at capture scope and closes the delay-slot flag question. The port flag remains unchanged because the measurement identifies the effective retail operand, not the upstream reason for the port's A1 boundary or a justified fallback.
+
+The s2381 corrected M5 gate-writer oracle capture passed whole-RDRAM (`10,017`),
+target 640, title 1024, and hangar 512 route controls. Gate `0x800A0F50` had
+17 writes; sampled values were `0x00000000` (4) and `0x01000000` (2), with
+`0x8008EC88` producing both sampled nonzero stores. Target-phase writer PCs
+were `0x8008EB7C`/`0x8008EC88` for origin `0x00696100` and `0x8008ED48` for
+`0x00696600`. This selects `H-RetailGateWriterObserved` at capture scope and
+provides independent writer/value evidence for the existing `reapplyDisplayMode`
+polarity; it does not authorize changing the gate or any audio contract.
 
 The s2372 predecessor capture remains valid: retail's target-phase
 `0x80001F84` row had `$a0=1,$a2=0`, while both port arms had
@@ -392,23 +401,27 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
   qualified steps. The next queued boundary is #4.
-2. **M5 payload-transformation provenance — closed at current capture scope.**
+2. **M5 gate polarity/writer join — active.** s2381 independently identified
+   retail gate writer/value behavior. Compare the named port writer and
+   downstream gate/task/slot controls in one same-build capture before any
+   gate treatment.
+3. **M5 payload-transformation provenance — closed at current capture scope.**
    s2367's owner join retained source/consumer events but no nonzero
    writer/source relation or same-task ordered owner events. Do not repeat this
    phase-wide candidate join without a new ground-truth discriminator.
 
-3. **M5 A1 retail flag semantics — closed at current capture scope.** s2380
+4. **M5 A1 retail flag semantics — closed at current capture scope.** s2380
   independently observed `osRecvMesg` entry with `$a2=1` on all `2,524`
   target call joins, despite the pre-delay call-site `$a2=0`. Do not repeat
   the delay-slot watch or change the flag based on this result; the upstream
   caller/input divergence remains a separate question.
-4. **M5 A1 pre-target route boundary — closed at current capture scope.** The
+5. **M5 A1 pre-target route boundary — closed at current capture scope.** The
    requested address is `0x00000000`, outside every resident section in both
    arms. Do not repeat the resident-overlay table without a new ground-truth
    discriminator or add a null fallback.
-5. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
+6. **M3 crash work — parked.** Resume only as a systematic idiom-class audit
    with a named discriminator; do not chase a single recurring crash.
-6. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer-mode
+7. **Hangar visual artifact — parked.** Malformed-triangle H2 and consumer-mode
    H1 are refuted. H3 is unavailable because the oracle cannot screenshot the
    LLE path; do not repeat the capped `0xD60` scan.
 

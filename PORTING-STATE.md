@@ -111820,3 +111820,32 @@ Artifact: `scratch/agent/s2380_m5_a1_retail_flag_semantics.log`.
 
 ORIGIN: no mitigation or behavior change; the oracle-only measurement changed
 no game or runtime state.
+
+## Session 2381 (2026-08-25) — M5 gate writer/value ground truth
+
+Ran the prescribed M5 gate-writer oracle capture. The first same-recipe run
+was route-positive but omitted post-value sampling, so it was not used as the
+discriminator. The fixed run added `--post-value-watch 1` to the same
+whole-RDRAM, gate-watch, writer-histogram, phase-histogram, Rice-video, and
+eleven-Start recipe.
+
+The corrected run passed the whole-RDRAM positive control (`10,017` writes),
+observed target 640 origins `0x00696100` and `0x00696600`, title 1024
+`0x00790400`, and hangar 512 including `0x006AB400`; it exited 0 after 3,576
+VI. Gate `0x800A0F50` produced 17 writes. Six post-store samples had two
+values: `0x00000000` four times and `0x01000000` twice. PC attribution found
+`0x8008EC88` produced both nonzero samples; `0x8008EB7C` and `0x8008ED48`
+produced zero samples. Target-phase writer histograms were
+`0x8008EB7C`/`0x8008EC88` for origin `0x00696100`, and `0x8008ED48` for
+`0x00696600`.
+
+This selects `H-RetailGateWriterObserved` at capture scope and independently
+supports the existing `reapplyDisplayMode` nonzero polarity. It rules out an
+unobservable target route, but does not compare the port downstream contract
+and authorizes no gate, fallback, dispatch, VI, task, audio, guard, or
+mitigation change. The writer/value result is independent ground truth; the
+port-side match remains open.
+
+Artifact: `scratch/agent/s2381_m5_gate_writer_ground_truth.log`.
+
+ORIGIN: no mitigation or behavior change; both runs were oracle-only.
