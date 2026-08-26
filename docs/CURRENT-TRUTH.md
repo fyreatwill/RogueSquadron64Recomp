@@ -5,7 +5,10 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2360 (2026-08-25). The M5 retail writer-source capture
+Maintained in Session 2361 (2026-08-25). The M5 stub/image validation passed
+its route and execution controls but found target-stage rows earlier than the
+current same-task join window; no audio contract change is authorized. The M5
+retail writer-source capture
 passed its controls and found a direct task relation in every target phase:
 `$s1 == data_ptr+0x100` at the exact task-field writer counts, with repeated
 `$a2 == data_ptr` rows. The source join is phase/field scoped because the
@@ -46,6 +49,12 @@ is authorized.
   while `$a2` repeatedly carries the matching task `data_ptr`. The oracle does
   not join those GPR rows to an exact writer VI, so this selects a source class
   without authorizing a port writeback or task-data edit.
+- The s2361 same-build stub/image validation is route-valid for both arms. The
+  stub is a true no-op (`dmem_changed=0`, no DMA, canary preserved); the image
+  arm changes DMEM and emits two destination DMAs per task. The bounded table
+  has two target-stage rows but zero same-task pre/post joins, selecting
+  `H-PreEvents-EarlierTick` at capture scope. Task-to-stage timing remains
+  unresolved and no port contract change is authorized.
 
 ## Latest evidence
 
@@ -83,6 +92,16 @@ is authorized.
   direct source relation. The exact VI-to-GPR join remains open because the
   oracle line format has no per-execution VI field. Artifacts:
   `scratch/agent/s2360_m5_writer_source/`.
+- **s2361 — stub/image route validation is positive but same-task timing is
+  unresolved.** One binary ran both arms. Oracle whole-RDRAM writes were
+  `487,474`; route, VI, task-ABI, filter/voice, and PCM controls passed for
+  both arms. The stub had unchanged DMEM and no DMA; the image arm had roughly
+  `1,600` changed DMEM bytes and two stage DMAs per task. The bounded table had
+  `target_stage_rows=2`, `same_task_pre_rows=0`, and
+  `same_task_post_rows=0`, so the driver selected
+  `H-PreEvents-EarlierTick`. This proves execution of the image internal path,
+  not downstream audio completion. Artifacts:
+  `scratch/agent/s2361_m5_step1_stub_image/`.
 - **s2356 — value-only role join was ambiguous.** Controls passed, but the
   candidate writer/value join had zero nonzero matches and only zero/sentinel
   intersections. This is superseded by s2357's independent address relation.
@@ -110,12 +129,12 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
    qualified steps. The next queued boundary is #2.
-2. **M5 Step 1 stub/image validation — next.** Run the existing same-build
-   stub/image route pair with task ABI, image-stage/DMA, service/slot, PCM,
-   and route controls. Use the s2360 retail source relation only as a
-   comparison; do not write back a field, alter task data, change a
-   consumer/default, or add a guard. The exact VI-to-GPR source join is a
-   later instrument refinement, not a reason to modify the port now.
+2. **M5 task-to-stage timing join — next.** Run one same-build refinement of
+   the existing stub/image pair, retaining all s2361 controls, and join the
+   complete ordinal/event stream around each target stage rather than only the
+   current same-task pre/post window. The discriminator is earlier-task,
+   later-task, or no-task join while controls remain positive. Do not write
+   back a field, alter task data, change a consumer/default, or add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.

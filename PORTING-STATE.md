@@ -111158,3 +111158,44 @@ Run the existing same-build stub/image route pair with task ABI,
 image-stage/DMA, service/slot, PCM, and route controls. Use the s2360 retail
 source relation for comparison only; do not write back a field, alter task
 data, change a consumer/default, or add a guard.
+
+## Session 2361 (2026-08-25) — M5 stub/image route validation finds pre-event join timing
+
+The prescribed single-build driver ran both `ROGUESQ_AUDIO_UCODE=0` and `=1`
+arms on the qualified LLE route. The retail oracle whole-RDRAM control passed
+with `487,474` writes. Both arms reached hangar and were watchdog-killed with
+no crash or abort (`rc=137`); VI controls were positive for both (`16` each),
+task-ABI controls were positive (`968` stub, `1,170` image), and the filter/
+voice control was positive for both. The image arm's independent control was
+also positive: `2,376` image-stage rows and `2,378` image joins were observed,
+including two target-stage rows in the bounded table.
+
+The arms differ as expected. The stub preserved DMEM (`changed=0`), emitted no
+DMA, and preserved its canary. The image arm changed about `1,600` DMEM bytes,
+returned at the image exit PC, and emitted two DMAs per task to the observed
+stage destinations. PCM source and consumer controls both fired (`88` each),
+but their payloads were zero-filled in this capture. The bounded same-task
+table had `target_stage_rows=2` and `same_task_pre_rows=0`,
+`same_task_post_rows=0`; the driver therefore selected
+`H-PreEvents-EarlierTick`. This is a timing/ordinal discriminator, not a
+contract-gap conclusion: the image arm is proven to execute its internal
+stage/DMA path, while the task-to-stage downstream join remains unevaluable.
+
+This rules out a missing image dispatch, missing DMEM mutation, and missing
+image DMA as explanations for the absent same-task rows at this capture scope.
+It does not authorize task-data edits, field writeback, consumer/default
+changes, guards, or any mitigation. Artifacts:
+`scratch/agent/s2361_m5_step1_stub_image/`.
+
+ORIGIN: diagnostic-only. The driver and runtime probes only recorded arm,
+task, DMA, phase, and PCM events; no behavior or mitigation machinery changed.
+
+### Next
+
+Run one same-build timing-only refinement of the existing M5 stub/image pair:
+retain all s2361 controls, but join the complete ordinal/event stream around
+each target stage (including earlier image-stage and task events) rather than
+only the current same-task pre/post window. The discriminator is whether the
+two target rows join to an earlier task ordinal, to a later task ordinal, or to
+no task ordinal while the positive controls remain intact. Do not change task
+data, writeback, consumers/defaults, or add a guard.
