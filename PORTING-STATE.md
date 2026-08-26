@@ -113845,3 +113845,25 @@ artifact rather than treated as evidence.
 changing callback polarity, dispatch, audio behavior, output mapping, or task
 data based on this result. Artifact:
 `scratch/agent/s2467_m5_inherited_r31/audit.md`.
+## Session 2468 (2026-08-26) — captured setup-to-traverse inherited-r31 boundary
+
+Ran the required independent retail control first: a 45-second Rice oracle
+run with whole-RDRAM write control, heap-freelist watch, and verified Start
+schedule reached the 512-width hangar phase at `0x006AB400`; both controls
+fired. Added a regeneration-owned, phase-gated diagnostic at the
+`setupCameraMatrices` callsite into `traverseSceneGraphRecursive`, regenerated
+in order, built successfully, and ran the qualified LLE route.
+
+The first placement was after the call and was invalid because the call
+aborted; the fixup was corrected and the same binary was rerun with both
+diagnostic gates enabled. The fixed run emitted the resolver positive control
+for `0x8009123C`, then at phase 4 recorded setup-callsite `r31=0`,
+`r4=0x801B6D48`, `r5=0x800CF0BC`; traverse entry recorded the same arguments
+and `r31=0`. The converter subsequently reported inherited entry `r31=0` and
+terminal `r25=0`, followed by the known abort in `get_function(0)`.
+
+This selects `H-SetupCallerZero` and rules out `H-TraverseLoweringZero` and
+`H-ContextClobber` at this boundary. It does not identify the earlier caller
+that supplied zero. No guard, stub, dispatch, callback, audio, output, or
+task-data change was made. The failed post-call placement is documented in
+`scratch/agent/s2468_m5_setup_traverse_boundary/audit.md`.

@@ -30,6 +30,16 @@ Current maintenance marker: Session 2467 (2026-08-26).
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
 
+- **s2468 — setupCameraMatrices supplies the inherited zero.** The independent
+  retail oracle passed whole-RDRAM and freelist controls and reached hangar.
+  The qualified port's same-run resolver positive control fired; at phase 4,
+  the new pre-call capture recorded `setupCameraMatrices` with `r31=0`, and
+  the paired `traverseSceneGraphRecursive` entry also had `r31=0`, before the
+  converter's terminal null dispatch. This selects `H-SetupCallerZero` and
+  rules out a traverse call-lowering or in-traverse clobber at this boundary.
+  The first earlier caller supplying zero remains open; no behavior change is
+  authorized. Artifact: `scratch/agent/s2468_m5_setup_traverse_boundary/audit.md`.
+
 - **s2467 — the converter inherits a zero before its terminal indirect edge.**
   The independent retail oracle passed its whole-RDRAM and freelist controls
   and reached hangar. The qualified port capture passed the same-hook
@@ -260,13 +270,13 @@ Current maintenance marker: Session 2467 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, inherited-r31 boundary open.**
-   The shared resolver capture now places the first null at
-   `convertMat3x4ToN64Mtx` → `traverseSceneGraphRecursive`, after a same-hook
-   positive-control resolution. Audit the converter's complete indirect-call
-   lowering and the live register/field that supplies the zero, using one
-   phase-gated capture. Do not infer callback polarity or add a guard. No
-   output remap, task-data change, gate change, or guard is authorized.
+1. **M5 generated alternate equivalence — active, earlier setup caller open.**
+   A phase-gated paired capture shows `setupCameraMatrices` already has
+   `r31=0` immediately before calling `traverseSceneGraphRecursive`, and the
+   callee entry preserves it. Audit the complete static/live caller boundary
+   that invokes `setupCameraMatrices`; do not infer callback polarity or add a
+   guard. No output remap, task-data change, gate change, or guard is
+   authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
