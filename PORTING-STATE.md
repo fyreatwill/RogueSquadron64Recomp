@@ -114068,3 +114068,31 @@ tail contract because the target is consumed as the immediate post-call
 continuation. No build, runtime, audio, guard, or bridge change was made.
 
 Artifact: `scratch/agent/s2476_m5_continuation_audit/audit.md`.
+
+## Session 2477 (2026-08-26) — implemented host-local converter continuation bridge
+
+The s2477 work unit implemented the selected host-local continuation bridge in
+the durable external fixup source (`../N64Recomp/fixup_game_funcs.py`) and the
+current generated `RecompiledFuncs/funcs_4.c`: the terminal
+`LOOKUP_FUNC(ctx->r25)` in `convertMat3x4ToN64Mtx` now returns to its sole
+generated caller, whose host control resumes at `after_4`. The fixup match was
+widened to include the existing s2467 terminal probe, preserving the change on
+the next normal regeneration.
+
+ORIGIN: the legitimate writer is the JAL at `0x800155E4`; its legitimate
+`0x800155EC` PC+8 value is a host-local continuation, not a registered
+function-map entry. This is a lowering bridge, not a NULL guard or wild-value
+mitigation.
+
+The Debug build passed. A qualified 30-second run from `build/`, with
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
+ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_M5_PRETARGET=1`, was stopped with SIGKILL. It
+reached only intro/attract 640 phases. The 67,671-line capture contained zero
+`Failed to find function`, `get_function(0)`, and `[m5-inherited-r31]` markers,
+but did not exercise `0x800155EC`; this is a non-target smoke result, not
+confirmation of target-phase bridge correctness. It rules out recurrence of
+the old lookup failure in the phases reached, but does not select among the
+target-phase hypotheses. No audio, output, task-data, guard, or dispatch
+change was made.
+
+Artifact: `scratch/agent/s2477_m5_continuation_bridge/audit.md`.

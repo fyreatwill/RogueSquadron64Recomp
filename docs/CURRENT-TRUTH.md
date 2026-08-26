@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2476 (2026-08-26).
+Current maintenance marker: Session 2477 (2026-08-26).
 
 ## Current state
 
@@ -40,6 +40,19 @@ Current maintenance marker: Session 2476 (2026-08-26).
   `H-HostContinuationOnly`, refutes `H-ContinuationMap` at the inspected
   scope, and leaves the bridge design open. Static-only; no code or guard
   change. Artifact: `scratch/agent/s2476_m5_continuation_audit/audit.md`.
+
+- **s2477 — the host-local continuation bridge builds, but the smoke run missed
+  the target phase.** The durable fixup now replaces the converter's terminal
+  `LOOKUP_FUNC(ctx->r25)` with a host return after the sole caller's generated
+  `after_4` continuation; the existing s2467 terminal probe is included in
+  the match so the change survives regeneration. The Debug build passed. A
+  qualified 30-second run reached only intro/attract 640 phases and recorded
+  zero `Failed to find function`, `get_function(0)`, or inherited-r31 markers,
+  but did not exercise `0x800155EC`. This is a code-change plus non-target
+  smoke result, not evidence that the bridge is correct at the converter
+  boundary. ORIGIN: the legitimate writer remains the JAL at `0x800155E4`,
+  and `0x800155EC` remains its legitimate PC+8 host-local continuation.
+  Artifact: `scratch/agent/s2477_m5_continuation_bridge/audit.md`.
 
 - **s2475 — the missing guest link is real, but a raw intra-function link is
   not a registered continuation.** The regenerated callsite at `0x800155E4`
@@ -355,18 +368,16 @@ Current maintenance marker: Session 2476 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, continuation bridge pending.**
-   The runtime zero-initializes `recomp_context ctx{}` with no `r31` setup and
-   no `thread_create_callback` registered for this game. The generator lowered
-   the JAL at `0x800155E4` in `traverseSceneGraphRecursive` to a direct C call
-   without writing `ctx->r31 = 0x800155EC`, but `convertMat3x4ToN64Mtx` reads
-   `ctx->r31` as its tail-call target. This is not a mitigation; the legitimate
-   writer is that JAL and the legitimate value is `0x800155EC` (MIPS PC+8).
-   The link write is now verified, but the target is an intra-function
-   continuation (`after_4`) rather than a registered function entry. Next:
-   The s2476 census selected the host-local continuation branch: identify one
-   bridge that preserves the guest link and returns to `after_4`; do not add a
-   second raw-link or NULL-function guard. See `NEXT.md`.
+1. **M5 generated alternate equivalence — active, bridge target validation
+   pending.** The runtime zero-initializes `recomp_context ctx{}` with no
+   `r31` setup and no `thread_create_callback` registered for this game. The
+   converter's sole generated caller writes the legitimate link `0x800155EC`,
+   and the fixup now returns from the converter so that caller's `after_4`
+   host label can resume. The s2477 smoke run missed this path. Next: run the
+   existing driven target-phase route against the bridge and classify
+   pass-through, immediate contract failure, or unchanged lookup failure. Do
+   not add a runtime continuation API or NULL guard until that discriminator
+   fires. See `NEXT.md`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

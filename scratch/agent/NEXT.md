@@ -1,53 +1,51 @@
-# NEXT work unit (s2477) — design and implement the host-local continuation bridge
+# NEXT work unit (s2478) — validate the host-local continuation bridge in target phase
 
 HYPOTHESIS-ID: m5-generated-alternate-equivalence
 
-## Context
+## Single work unit
 
-s2476 exhaustively classified the only variable-register indirect tail in the
-generated tree. `convertMat3x4ToN64Mtx` dispatches through the guest `$ra`, and
-the legitimate `0x800155EC` value is the caller's local `after_4` continuation,
-not a registered function-map entry. The next unit is one bounded bridge change
-with a validation build/run.
+Run the existing driven target-phase port recipe against the s2477 bridge. Use
+one build/run capture; do not add another bridge, runtime API, NULL guard, or
+audio/output remap before this discriminator.
 
 ## Competing hypotheses
 
-- H-BridgeGenerated: the fixup can lower this edge as a special continuation
-  bridge that invokes the converter and then resumes the caller's existing
-  `after_4` path without `get_function`.
-- H-BridgeRuntime: a reusable runtime continuation API is required; one bridge
-  registration/dispatch mechanism can represent the guest continuation while
-  preserving the shared context.
-- H-TailContractStillWrong: even with the known PC+8 link, the converter's
-  `jr $t9` is not intended to return to the generated caller path, so either
-  the generated caller or the tail lowering must be corrected differently.
+- H-BridgeGenerated: returning from `convertMat3x4ToN64Mtx` resumes the sole
+  generated caller's `after_4` path and the target phase advances.
+- H-BridgeRuntime: the host return is insufficient and a reusable runtime
+  continuation mechanism is required.
+- H-TailContractStillWrong: the converter's `jr $t9` contract is not the
+  caller-local `after_4` continuation.
 
-## Discriminating measurement
+## Discriminator
 
-Implement one bridge arm selected from the static audit, build once, and run
-the qualified route. A run that passes `0x800155EC` without a
-`Failed to find function`/`get_function(0)` and reaches the next existing
-`after_4` work selects H-BridgeGenerated or H-BridgeRuntime according to the
-bridge layer. A repeat failure at `0x800155EC` proves the bridge did not replace
-the map lookup. A clean return followed by a different, immediate converter
-contract failure selects H-TailContractStillWrong. Preserve the same-run
-indirect resolver positive control and phase gate any later M5 interpretation.
+The pass arm must reach the target 640/512 route and show no
+`Failed to find function at 0x800155EC` or `get_function(0)`. Reaching the
+existing work after `after_4` selects H-BridgeGenerated. A different immediate
+converter failure selects H-TailContractStillWrong. An unchanged lookup
+failure selects H-BridgeRuntime or proves the bridge was not applied; inspect
+the generated marker before choosing between them. The same capture must keep
+the existing indirect-resolver positive control and phase-gate any M5 result.
 
-## Ground-truth and safety gate
+## Exact command
 
-Before any new runtime instrument, verify the retail oracle whole-RDRAM
-positive control and driven-VI control are available. No mitigation or NULL
-stub is authorized; the legitimate writer remains the JAL at `0x800155E4`, and
-the legitimate value remains `0x800155EC`.
-
-## Commands
+First verify the existing driver is available:
 
 ```sh
-cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-rg -n 'convertMat3x4ToN64Mtx|after_4|LOOKUP_FUNC\(ctx->r25\)' ../N64Recomp/RecompiledFuncs/funcs_4.c tools/fixup_game_funcs.py
-cmake --build build --config Debug --target RogueSquadron64Recomp
+test -x tools/winctl/winctl || test -x "$HOME/bin/winctl"
 ```
 
-Run from `build/` with the ROM present, use the qualified LLE route, capture
-the log to a non-dot final path, and kill the process with SIGKILL. Record the
-bridge source and result in `scratch/agent/s2477_m5_continuation_bridge/`.
+Then run the already-established single image-arm driven recipe from the repo
+root (its eleven-start schedule reaches the target route):
+
+```sh
+zsh scratch/agent/run_s2327_m5_task_ordinal_prepost_join.sh
+```
+
+Capture under `scratch/agent/s2478_m5_continuation_bridge_validation/`, kill
+the game with SIGKILL, and do not interpret a run that fails its route-control
+gate. If the driver is unavailable, record that concrete setup failure and
+use `SUBSTITUTED` only with a falsifiable replacement experiment.
+
+Ground truth: no new runtime instrument is planned. If a new one becomes
+necessary, first run the retail oracle whole-RDRAM and driven-VI controls.
