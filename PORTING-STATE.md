@@ -114390,3 +114390,23 @@ with `last-guest-pc=0x80010840`, after the discriminator had fired; it is not
 attributed to this ABI change. No task dispatch, audio behavior, or guard
 changed. Artifact:
 `scratch/agent/s2491_m5_descriptor_abi/audit.md`.
+
+## Session 2492 (2026-08-26) — tested retail osSpTaskYielded descriptor join
+
+The first oracle invocation passed the whole-RDRAM positive control at 10,000
+callbacks but was undriven, so its zero task rows were discarded. The fixed
+Rice run used the documented eleven Start presses and also passed the positive
+control, but its exact `osSpTaskYielded` watch at `0x80034450` remained at zero.
+
+One batched diagnostic run added independent VI trace/poll and PIF trace plus a
+range watch over `0x80034420:0x800344D0`. It reached the retail hangar at width
+512, origin `0x006AB400`, at about 38.4 seconds; PIF reads confirmed the Start
+path. The SP-status range executed 24,732 times, including repeated
+`0x80034420/24` hits, while `0x80034450` still had zero executions and zero
+phase-gated task rows. This selects
+`H-retail-osSpTaskYielded-not-executed` and rules out an absent SP-status block
+or an input/VI route failure. It does not compare descriptor fields and does
+not refute or select generated-alternate equivalence. The next discriminator
+is the retail `osSpTaskLoad` entry at `0x80033E3C`. No runtime code, task
+dispatch, audio behavior, or descriptor mapping changed. Artifact:
+`scratch/agent/s2492_m5_retail_task_join/audit.md`.

@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2491 (2026-08-26).
+Current maintenance marker: Session 2492 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,18 @@ Current maintenance marker: Session 2491 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2492 — retail does not execute `osSpTaskYielded` in the target phase.**
+  The independent oracle whole-RDRAM control reached 10,000 callbacks. A
+  driven run with Rice, eleven verified Start presses, VI trace and VI poll
+  reached the retail hangar at width 512 / origin `0x006AB400`; PIF reads also
+  confirmed the input path. A range watch over `0x80034420:0x800344D0` recorded
+  24,732 SP-status-block executions, including `0x80034420/24`, but the exact
+  `osSpTaskYielded` watch at `0x80034450` recorded zero executions and zero
+  task rows. This selects `H-retail-osSpTaskYielded-not-executed` and makes the
+  requested direct descriptor comparison unavailable, not mismatched. The
+  next join point is retail `osSpTaskLoad` at `0x80033E3C`. Artifact:
+  `scratch/agent/s2492_m5_retail_task_join/audit.md`.
 
 - **s2491 — preserving the guest pointer ABI repairs the descriptor table.**
   After the oracle whole-RDRAM positive control reached 10,000 callbacks, the
@@ -532,16 +544,16 @@ Current maintenance marker: Session 2491 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, close the retail/port task join.**
+1. **M5 generated alternate equivalence — active, move the retail/port task join to osSpTaskLoad.**
    The host-local bridge reaches the target image task; SP completion and
    consumption are confirmed; the scheduler dispatches gspTask (0x800377C8)
    with `event_payload=task_ptr` in the hangar phase (yield-and-restart cycle).
    The explicit raw-byte table shows a coherent aligned-host OSTask layout.
-   the corrected callback now makes all three port views agree. Next: capture
-   the retail `osSpTaskYielded` task fields at `0x80034450` in the same target
-   phase, with the whole-RDRAM positive control first, then compare its
-   type/data/yield/output fields to the corrected port rows. Do not remap any
-   task or output field until that comparison is made.
+   the corrected callback now makes all three port views agree. Retail does
+   not execute `osSpTaskYielded` at `0x80034450` in the hangar, so the next
+   probe must capture type/data/yield/output fields at retail `osSpTaskLoad`
+   `0x80033E3C`, again with the whole-RDRAM positive control first. Do not
+   remap any task or output field until that comparison is made.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
