@@ -111977,3 +111977,30 @@ Artifacts: `scratch/agent/s2386_m5_task_reporter_boundary/`.
 
 ORIGIN: no mitigation or behavior change; added only the phase/event-scoped
 raw reporter association table.
+
+## Session 2387 (2026-08-25) — M5 incomplete reporter semantics
+
+The Debug build succeeded. The same-build stub/image × c88=0/1 driver passed
+title `1024` and hangar `512` in all four arms; every arm exited with rc 0 and
+had zero crash/abort markers. The reducer was extended to retain only image
+stage candidates whose containing raw `[audtask-join]` reporter had
+`complete=0`, and to emit source/consumer counts, ordering flags, and stage
+interval ordering. The first post-run reducer invocation did not write tables,
+so the same captured logs were processed through a log-reuse mode; the fixed
+reducer produced the bounded table.
+
+The incomplete table retained 232 image c0 and 179 image c1 candidates, with
+no stub candidates. The dominant pattern in image c0/c1 was neither source nor
+consumer match (`166/165`), followed by source-only (`36/2`) and consumer-only
+(`30/12`) rows; no incomplete row had both. This selects
+`H-IncompleteStageOnly` at capture scope and rules out a single missing-source
+or missing-consumer explanation. It also rules out an interval-join artifact:
+every retained row had a containing reporter. The result refines, but does
+not overturn, s2386's positive raw reporter association. No task-data, audio,
+gate, fallback, dispatch, VI, or output behavior changed.
+
+Artifacts: `scratch/agent/s2387_m5_incomplete_reporter/`.
+
+ORIGIN: no mitigation or behavior change; added only reducer fields and a
+log-reuse execution path after the initial post-run reducer did not emit its
+tables.

@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2386 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. This refutes an uncalled reporter and an interval-key mismatch. The prior task/output gap was a reducer mismatch that joined `[audtask-image-join]` instead of raw `[audtask-join]`; no task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
+Maintained in Session 2387 (2026-08-25). The corrected M5 task-reporter audit passed all four route controls. Raw `[audtask-join]` records were phase/event-contained for every image-stage candidate: 2,340/2,340 and 2,348/2,348; reporter `complete=1` on 2,150/2,143 rows. This refutes an uncalled reporter and an interval-key mismatch. The s2387 incomplete-only table found 232 and 179 `complete=0` candidates: the dominant pattern in both image arms was neither source nor consumer match (166/165), followed by source-only and consumer-only rows; no incomplete row had both. This refines the remaining boundary to an incomplete reporter predicate/output-closure classification, not a single consumer-only gap. The prior task/output gap was a reducer mismatch that joined `[audtask-image-join]` instead of raw `[audtask-join]`; no task-data, audio, gate, fallback, dispatch, VI, or output behavior change is authorized.
 
 The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
 
@@ -140,6 +140,17 @@ is authorized.
   `H-TaskReporterUncalled` and `H-TaskReporterKeyMismatch`, and supersedes
   s2385's reducer-based task/output-gap label. Artifact:
   `scratch/agent/s2386_m5_task_reporter_boundary/`.
+
+- **s2387 — incomplete reporter rows are mostly stage-only.** The same-build
+  four-arm driver passed title `1024` and hangar `512` in every arm, with zero
+  crash/abort markers. Filtering only raw `[audtask-join]` rows with
+  `complete=0` retained 232 image c0 and 179 image c1 candidates; stub arms
+  retained none. The dominant pattern was no source and no consumer match
+  (166/165), with source-only (36/2) and consumer-only (30/12) minorities;
+  no retained row had both. This selects `H-IncompleteStageOnly` at capture
+  scope and rules out a single missing-consumer or missing-source explanation.
+  It does not authorize a task-data, audio, gate, fallback, dispatch, VI, or
+  output change. Artifact: `scratch/agent/s2387_m5_incomplete_reporter/`.
 
 - **s2382 — gate/downstream path is positive but task/output closure is absent.**
   The same-build driver passed controls for stub c0/c1 and image c0/c1; each
@@ -431,14 +442,14 @@ sequence; #1 is the next campaign priority.
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
    design gate and proceed only with ground-truth-first, positive-control-
   qualified steps. The next queued boundary is #4.
-2. **M5 task/output closure — closed at current capture scope.** s2386's
+2. **M5 task/output closure — closed at current capture scope.** s2387's
    corrected reporter-candidate table associated raw `[audtask-join]` records
    with 100% of 4,688 image-stage candidates; reporter completion was true for
-   4,293 rows. Source/consumer matches were present on 2,186/2,188 and
-   2,153/2,151 rows in the two image arms. The s2385 zero was caused by joining
-   the wrong marker
-   family, not by absent task records. Keep the corrected reducer and do not
-   change task data or audio based on the old gap.
+  4,293 rows. Among incomplete rows, neither source nor consumer matched in
+  166/165 candidates, with source-only and consumer-only minorities and no
+  both-match row. The s2385 zero was caused by joining the wrong marker family,
+  not by absent task records. Keep the corrected reducer and do not change
+  task data or audio based on the old gap.
 3. **M5 gate polarity/writer join — closed at current capture scope.** s2381
    independently identified retail gate writer/value behavior and s2382
    supplied the port-side downstream comparison; no gate treatment is

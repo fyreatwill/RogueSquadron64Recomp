@@ -144,10 +144,14 @@ run_arm() {
 }
 
 print "arms=stub_c0,stub_c1,image_c0,image_c1 sequential; eleven-start; B40=0" | tee "$OUT/driver.log"
-run_arm stub_c0 0 0
-run_arm stub_c1 0 1
-run_arm image_c0 1 0
-run_arm image_c1 1 1
+if [[ "${REUSE_LOGS:-0}" != 1 ]]; then
+    run_arm stub_c0 0 0
+    run_arm stub_c1 0 1
+    run_arm image_c0 1 0
+    run_arm image_c1 1 1
+else
+    print "reusing_existing_arm_logs=1" | tee -a "$OUT/driver.log"
+fi
 
 python3 - "$OUT" "$OUT/ordinal-table.tsv" "$OUT/ordinal-summary.tsv" <<'PY' | tee -a "$OUT/driver.log"
 import re
@@ -222,8 +226,12 @@ reporter_candidate_header = [
     "arm", "phase", "width", "origin", "stage_ordinal", "stage_row",
     "stage_event", "reporter_matches", "task_n", "begin_event", "end_event",
     "dma_count", "complete", "source_matches", "consumer_matches",
+    "source_before_consumer", "pcm_after_task", "consumer_after_task",
+    "stage_after_begin", "stage_before_end",
 ]
 reporter_candidate_table = [reporter_candidate_header]
+incomplete_reporter_count = defaultdict(int)
+incomplete_patterns = defaultdict(int)
 
 for arm in arms:
     log = out_dir / f"{arm}.log"
@@ -274,15 +282,29 @@ for arm in arms:
                       num(r.get("begin")) <= stage_event <= num(r.get("end"))]
         containing.sort(key=lambda r: (num(r.get("begin")), num(r.get("end"))))
         reporter = containing[-1] if containing else {}
-        reporter_candidate_table.append([
-            arm, "target", str(key_phase[0]), f"0x{key_phase[1]:06X}",
-            stage_row.get("ordinal", ""), stage_row.get("row", ""),
-            stage_row.get("event", ""), str(len(containing)),
-            reporter.get("n", ""), reporter.get("begin", ""),
-            reporter.get("end", ""), reporter.get("dma_count", ""),
-            reporter.get("complete", ""), reporter.get("source_matches", ""),
-            reporter.get("consumer_matches", ""),
-        ])
+        if reporter.get("complete", "") == "0":
+            stage_event = num(stage_row.get("event"))
+            begin_event = num(reporter.get("begin"))
+            end_event = num(reporter.get("end"))
+            source = reporter.get("source_matches", "")
+            consumer = reporter.get("consumer_matches", "")
+            source_before = reporter.get("source_before_consumer", "")
+            pcm_after = reporter.get("pcm_after_task", "")
+            consumer_after = reporter.get("consumer_after_task", "")
+            pattern = (source, consumer, source_before, pcm_after, consumer_after)
+            incomplete_reporter_count[arm] += 1
+            incomplete_patterns[(arm, pattern)] += 1
+            reporter_candidate_table.append([
+                arm, "target", str(key_phase[0]), f"0x{key_phase[1]:06X}",
+                stage_row.get("ordinal", ""), stage_row.get("row", ""),
+                stage_row.get("event", ""), str(len(containing)),
+                reporter.get("n", ""), reporter.get("begin", ""),
+                reporter.get("end", ""), reporter.get("dma_count", ""),
+                reporter.get("complete", ""), source, consumer,
+                source_before, pcm_after, consumer_after,
+                str(int(stage_event >= begin_event)),
+                str(int(stage_event <= end_event)),
+            ])
     controls = int(
         count_tag(rows, "vi-callers-control") > 0 and
         count_tag(rows, "filter-voice-audit-control") > 0 and
@@ -382,9 +404,13 @@ print("reporter_candidate_summary")
 for arm in arms:
     rows = [r for r in reporter_candidate_table[1:] if r[0] == arm]
     matched = sum(int(r[7]) > 0 for r in rows)
-    complete = sum(r[12] == "1" for r in rows)
-    print(f"arm={arm} stage_candidates={len(rows)} reporter_matched={matched}"
-          f" reporter_complete={complete}")
+    print(f"arm={arm} incomplete_candidates={len(rows)} reporter_matched={matched}")
+    for (pattern_arm, pattern), count in sorted(incomplete_patterns.items()):
+        if pattern_arm == arm:
+            source, consumer, source_before, pcm_after, consumer_after = pattern
+            print(f"arm={arm} pattern_count={count} source_matches={source}"
+                  f" consumer_matches={consumer} source_before_consumer={source_before}"
+                  f" pcm_after_task={pcm_after} consumer_after_task={consumer_after}")
 
 if not all(row[3] == "1" for row in summary[1:]):
     print("verdict=H-CoverageInvalid missing same-run positive control")
