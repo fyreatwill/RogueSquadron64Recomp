@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2481 (2026-08-26).
+Current maintenance marker: Session 2483 (2026-08-26).
 
 ## Current state
 
@@ -51,6 +51,19 @@ Current maintenance marker: Session 2481 (2026-08-26).
   image-DMA identity consumer there. The later slot/voice/PCM/output join is
   still open; no remap or guard is authorized. Artifact:
   `scratch/agent/s2482_m5_post_receive_consumer/audit.md`.
+
+- **s2483 — the scheduler handoff is event-payload sourced, but identity is
+  unresolved.** Static inspection finds the event-type-1 path loading the word
+  at `0x80128C70+4` at `0x80019D28`, storing it at `0x80019D3C` into the
+  active pending-task slot, and immediately passing it through
+  `osSpTaskLoad`/`osSpTaskStartGo`. The deferred path repeats that promotion at
+  `0x80019F84`. The independent s2481 capture proves the target receive and
+  image-stage DMAs but lacks the event `+4` payload/task identity, so it cannot
+  distinguish an image-task join from a distinct later task. This corrects the
+  s2482 shorthand `0x801372D8`; the generated address expression is
+  `0x80130000-0x72C8 = 0x80128D38`. `H-UnresolvedHandoff` selected; no
+  behavior change. Artifact:
+  `scratch/agent/s2483_m5_scheduler_task_identity/audit.md`.
 
 - **s2479 — containing-task completion is runtime-owned, not generated.** The
   complete static table found the image arm's terminal `0x1328` `Broke` edge,
@@ -430,8 +443,9 @@ Closed investigations are not active work items. This is one monotonic sequence;
    consumed on the qualified image route, and the two target stage DMAs remain
    `stage-only`. Next: identify the legitimate post-receive consumer/output
    contract. The first post-receive edge is now classified as a generic
-   scheduler handoff; next identify the later task/slot/voice/PCM/output
-   contract. The plain launch was phase-invalid; use the eleven-Start
+   scheduler handoff; the event object's `+4` payload has not been joined to
+   the image task identity. Next capture that payload/task value with the
+   same-run image DMA key. The plain launch was phase-invalid; use the eleven-Start
    `tools/probe.sh` route in `NEXT.md`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.

@@ -1,42 +1,41 @@
-# NEXT work unit (s2483) — trace the scheduler task handoff after SP receive
+# NEXT work unit (s2484) — capture the scheduler event payload/task identity
 
 HYPOTHESIS-ID: m5-generated-alternate-equivalence
 
 ## Single work unit
 
-Use the completed s2481 capture plus the generated tree to trace the pending
-task pointer loaded after `spTaskSchedulerThread` receives the fixed SP event.
-Identify the first generated task/slot/voice/PCM/output field consumer and
-determine whether its key joins the image task's DMA identity or is a distinct
-later identity. This is one bounded provenance audit; do not change code, add
-a runtime API, add a NULL guard, or remap audio/output.
+Use one qualified eleven-Start image-arm capture to record the event object's
+`0x80128C70 + 4` payload and the task pointer/data identity passed by the
+`spTaskSchedulerThread` event-type-1 path to `osSpTaskLoad`/`osSpTaskStartGo`.
+Join that value to the existing image-stage DMA key in the same run. Do not
+change scheduler behavior, add a NULL guard, or remap audio/output.
 
 ## Competing hypotheses
 
-- H-ImageTaskHandoff: the pending task pointer is the image task and its first
-  generated consumer retains the image DMA identity.
-- H-LaterTaskHandoff: the scheduler loads a distinct later task/slot identity,
-  so the image identity is not retained after the receive.
-- H-UnresolvedHandoff: the static tree cannot identify the pending-task writer
-  or first consumer; no output remap is justified.
+- H-ImageTaskHandoff: the event `+4` payload/task pointer equals the image
+  task identity and reaches the first SP consumer.
+- H-LaterTaskHandoff: the event `+4` payload/task pointer is a distinct later
+  task identity, not the image task's DMA-associated identity.
+- H-UnresolvedHandoff: the payload or task identity is absent/ambiguous even
+  though the scheduler path is observed.
 
 ## Discriminator
 
-Produce a complete path from the target `guest-receive` row through the
-pending-task writer, `osSpTaskLoad`, and the first generated consumer. Join
-the task/consumer key to the target image DMA key or to a distinct later
-identity. A direct image join selects H-ImageTaskHandoff; a distinct later
-task/slot/voice/PCM key selects H-LaterTaskHandoff; an incomplete path selects
-H-UnresolvedHandoff. The passed positive controls are recorded in
+The same-run positive controls must include the target SP registration and
+guest receive, plus at least one image-stage DMA row. A payload/task value that
+equals the image task key selects H-ImageTaskHandoff; a non-equal stable task
+key selects H-LaterTaskHandoff; missing or non-joinable values select
+H-UnresolvedHandoff. The passed controls are recorded in
 `scratch/agent/s2481_m5_runtime_sp_lifecycle/audit.md`.
 
 ## Exact commands
 
-Build is not needed. From the repo root:
+Before building, ask the retail oracle for the corresponding event-object/task
+payload ground truth and arm its positive control. Then batch the port capture
+in one build/run using the existing probe/fixup path; do not run separate
+counter builds. Static references are:
 
 ```sh
-rg -n '0x8011A420|0x80128C70|guest-receive|sp-complete|audio-route|audtask-join' \
-  scratch/agent/soak_results/s2481_runtime_sp_lifecycle/run.log | tail -160
-rg -n '0x8011A420|0x80128C70|0x801372D8|osSpTaskLoad|osSpTaskStartGo' \
+rg -n '0x8011A420|0x80128C70|0x80128D38|osSpTaskLoad|osSpTaskStartGo' \
   ../N64Recomp/RecompiledFuncs src lib/N64ModernRuntime | head -260
 ```

@@ -114187,3 +114187,20 @@ later task/slot/voice/PCM/output join open. No code, instrumentation, guard,
 output remap, or audio behavior changed.
 
 Artifact: `scratch/agent/s2482_m5_post_receive_consumer/audit.md`.
+
+## Session 2483 (2026-08-26) — audited scheduler event-payload task handoff
+
+Ran the prescribed static-only post-receive handoff audit against the s2481
+capture and the generated tree. In `spTaskSchedulerThread`, the event-type-1
+path loads the received event object's `0x80128C70+4` word at `0x80019D28`,
+writes it to the active pending-task slot at `0x80019D3C`, then passes that
+same value through `osSpTaskLoad` and `osSpTaskStartGo`; the deferred path
+promotes the saved value at `0x80019F84`. The generated addressing identifies
+the slot expression as `0x80130000-0x72C8 = 0x80128D38`, correcting the prior
+`0x801372D8` shorthand. The independent s2481 capture proves the target SP
+receive and image-stage DMAs, but contains neither the event `+4` payload nor
+the task data/code identity, so the image-task join remains unresolved.
+This selects `H-UnresolvedHandoff`, refutes the stronger claim that the first
+consumer is necessarily a distinct later task, and rules out any output remap
+or mitigation. No code or instrumentation changed. Artifact:
+`scratch/agent/s2483_m5_scheduler_task_identity/audit.md`.
