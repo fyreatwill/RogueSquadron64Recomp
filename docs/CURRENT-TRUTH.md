@@ -5,7 +5,7 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Maintained in Session 2362 (2026-08-25). The M5 timing refinement passed all
+Maintained in Session 2363 (2026-08-25). The M5 stage/output refinement passed all
 route and execution controls and placed both target-stage rows inside a
 containing audio task; no audio contract change is authorized. The M5
 retail writer-source capture
@@ -62,6 +62,14 @@ is authorized.
   not evidence that the stage preceded all task work. This selects
   `H-StageInsideTask` at capture scope; it does not identify a legitimate
   output writeback or authorize a contract change.
+- The s2363 same-build stage/output table passed oracle, route, VI, ABI,
+  filter/voice, and image-stage controls. Both target rows matched the
+  containing task's DMA start, length, payload hash, and nonzero count, but
+  the containing task records had `complete=0`, `source_matches=1`,
+  `consumer_matches=0`, and no nonzero task-window PCM rows. This selects
+  `H-ContainingTaskInternalOnly` at capture scope: stage/DMA closure exists,
+  while completion and output/PCM closure do not. No port contract change is
+  authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
 
@@ -139,10 +147,11 @@ sequence; #1 is the next campaign priority.
 2. **M5 stage/output contract join — next.** Run one same-build refinement of
    the existing stub/image pair, retaining all s2361 controls, and join each
    containing task ordinal to its stage payload, generated DMA destination,
-   source/consumer PCM rows, and completion ordering. The discriminator is
-   containing-task output/PCM closure versus an internal-only stage while
-   controls remain positive. Do not write back a field, alter task data,
-   change a consumer/default, or add a guard.
+   source/consumer PCM rows, and completion ordering. The s2363 result leaves
+   the post-task publication edge open; next join the exact DMA tuple to
+   post-task source/consumer rows and the containing-task completion update.
+   Do not write back a field, alter task data, change a consumer/default, or
+   add a guard.
 3. **M5 A1 second-origin transition — parked.** Resume only with a new
    discriminator that restores `0x00696100`/`0x00696600` coverage; do not repeat
    the failed four-arm/two-wave matrix.

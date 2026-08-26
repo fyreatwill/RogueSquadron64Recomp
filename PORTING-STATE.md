@@ -111236,3 +111236,44 @@ generated DMA destination, source/consumer PCM rows, and completion ordering.
 Select containing-task output/PCM closure versus an internal-only stage; do
 not write back a field, alter task data, change a consumer/default, or add a
 guard.
+
+## Session 2363 (2026-08-25) — M5 stage/output contract remains internal-only
+
+The prescribed same-build M5 stage/output refinement was run from a fresh
+Debug build with the retail oracle first. The oracle exited cleanly and passed
+the whole-RDRAM positive control (`536,899` writes), target-window control
+(`526,752` writes), task-field control (`108` writes), gate/slot controls,
+both target VI phases, and the named writer-PC controls. Stub and image arms
+both reached title and hangar; each had `16` VI caller controls and one
+filter/voice control, while the image arm had `2,305` image-stage rows and
+`2,305` image-join rows. Both processes were terminated by the watchdog with
+SIGKILL (`137`); neither arm logged a crash or abort.
+
+The corrected table retained two nonzero target-stage rows. Both matched the
+containing task's exact generated DMA start, length, payload hash, and
+nonzero-count tuple (`stage_dma_matches=2/2`). The containing task records
+had `complete=0`, `source_matches=1`, `consumer_matches=0`; the task-window
+PCM rows were present (`46` source, `45` consumer per row) but all were zero
+valued. The driver selected `H-ContainingTaskInternalOnly`. This rules out a
+missing stage-to-DMA relation at this capture scope, but does not establish
+task completion, a legitimate output publication, PCM writeback, or a port
+contract change.
+
+The first two attempts in this iteration were rejected as parser-invalid:
+the initial parser selected an incomplete task record, then treated DMA range
+strings as scalar addresses and used the image-stage join for task completion.
+The fixes were applied before the final run; only the final table above is
+evidence. Artifacts:
+`scratch/agent/s2363_m5_stage_output_contract_join_final/`.
+
+ORIGIN: diagnostic-only. The persistent parser gained exact DMA tuple,
+containing-task completion, and task-window PCM fields; no game behavior,
+task data, field writeback, consumer/default, guard, or mitigation changed.
+
+### Next
+
+Run one same-build M5 post-task publication/completion join. Retain every
+s2361/s2363 control, join each exact target DMA tuple to post-task source and
+consumer PCM rows and the containing task's later completion/publication
+update, and select closure versus internal-only. Do not change task data,
+field writeback, consumer/default behavior, or add a guard.
