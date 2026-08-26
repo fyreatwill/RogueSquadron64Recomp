@@ -113732,3 +113732,27 @@ zero; treating the recognized type-table handlers as proof of a universal
 nonzero invariant; or inferring a guard/dispatch/audio fix from the static
 result. No behavior change was made. Artifact:
 `scratch/agent/s2462_m5_slot_callback_provenance/audit.md`.
+
+## Session 2463 (2026-08-26) — qualified M5 dynamic callback capture blocked pre-target
+
+The retail oracle ran for 60 seconds with Rice video, RSP-HLE, and the
+eleven-Start schedule. The whole-RDRAM positive control reached its 10,000-hit
+cap; retail reached hangar origin `0x006AB400` and observed 314 executions each
+of `spawnNpcOfType` and its `0x800400BC` store, 3,220 `slotDispatcherIter`
+executions, and 26,016 executions at the `0x8003E974` indirect-call site.
+
+The qualified port build added the durable s2463 callback tuple probe and
+fired its indirect resolver positive control once. It reached only phase 4,
+640-wide origin `0x0066A500`, and emitted zero target-phase dynamic-callback,
+slot-pre, or target-dispatch rows. It then aborted in `get_function(0)` through
+`convertMat3x4ToN64Mtx`, with last guest PC `0x80001F88`.
+
+**Hypotheses:** this is a qualified non-result for `H-ZeroWriter`,
+`H-ValidWriter`, and `H-UnresolvedWriter`; the port dies before their target
+phase. The next discriminator is an ordered pre-target boundary capture,
+retaining the resolver positive control.
+
+**Rules out:** interpreting missing callback rows as callback polarity,
+treating the stale guest-PC breadcrumb as the callback writer, or changing a
+guard, dispatch path, audio path, output mapping, or task data. Artifact:
+`scratch/agent/s2463_m5_dynamic_callback_capture/audit.md`.

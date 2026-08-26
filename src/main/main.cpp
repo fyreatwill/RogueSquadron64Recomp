@@ -147,6 +147,43 @@ extern "C" void rs64_m5_dispatch_boundary(uint32_t target_pc) {
     ++rows;
 }
 
+extern "C" void rs64_m5_dynamic_callback(uint32_t context,
+                                           uint32_t handler,
+                                           uint32_t update,
+                                           uint32_t ra) {
+    static int enabled = -1;
+    static uint32_t rows = 0;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_DYNAMIC_CALLBACK");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        enabled = ((e && e[0] && e[0] != '0') ||
+                   (all && all[0] && all[0] != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+    const uint32_t next_bucket = (width << 24) ^ origin;
+    if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
+    if (rows >= 512u) return;
+    uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &ordinal, &route_row, &exit_reason, &arm);
+    std::fprintf(stderr,
+        "[m5-dynamic-callback] n=%u phase=%u width=%u origin=0x%06X "
+        "arm=%s ordinal=%u row=%u active=%u context=0x%08X "
+        "handler=0x%08X stored=0x%08X pre=0x%08X ra=0x%08X exit=%d\n",
+        rows, rs64_phase_ord(), width, origin, arm ? arm : "n/a",
+        ordinal, route_row, active ? 1u : 0u, context, handler, update,
+        update, ra, exit_reason);
+    std::fflush(stderr);
+    ++rows;
+}
+
 // Wrapper: captures rdram into the watchdog global on first call so the
 // hwbp/poll diagnostic threads can attach. Forwards to the real entrypoint.
 extern "C" volatile uint8_t* volatile g_recomp_rdram_for_wp_raw;

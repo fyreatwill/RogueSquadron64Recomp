@@ -30,6 +30,18 @@ Current maintenance marker: Session 2461 (2026-08-26).
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
 
+- **s2463 — the dynamic callback capture is blocked before the target phase.**
+  The independent retail oracle passed the whole-RDRAM control, reached
+  hangar origin `0x006AB400`, and observed 314 `spawnNpcOfType`/`0x800400BC`
+  executions plus 3,220 `slotDispatcherIter` executions. The qualified port
+  build fired its indirect resolver positive control, reached only phase 4
+  (`640`, origin `0x0066A500`), then aborted in `get_function(0)` through
+  `convertMat3x4ToN64Mtx` with last guest PC `0x80001F88`. No target-phase
+  dynamic-callback or pre-dispatch rows were emitted. This is a qualified
+  non-result for `H-ZeroWriter`, `H-ValidWriter`, and `H-UnresolvedWriter`,
+  not evidence for any callback polarity or permission for a guard/change.
+  Artifact: `scratch/agent/s2463_m5_dynamic_callback_capture/audit.md`.
+
 - **s2454 — no port runtime dispatcher body replaces retail `0x8002BEEC`.**
   The source candidate table finds `get_function`/`rs64_m5_dispatch_boundary`
   is only a lookup observer, while `rs_memset` is reached through 88 direct
@@ -209,14 +221,14 @@ Current maintenance marker: Session 2461 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, callback provenance open.**
-   The complete static audit selects `H-UnresolvedWriter`: the callback is
-   installed dynamically by `spawnNpcOfType`, with a legitimate allocation-time
-   zero and an unsupported-type failure path. Build one phase-gated capture of
-   the dynamic handler argument, the context `+0x00` write, and the pre-dispatch
-   value, retaining the indirect resolver positive control. Do not infer slot
-   polarity or add a guard. No output remap, task-data change, gate change, or
-   guard is authorized.
+1. **M5 generated alternate equivalence — active, pre-target boundary open.**
+   The dynamic callback capture is qualified but blocked before the target
+   phase: the port's resolver positive control fires, while the port aborts in
+   `convertMat3x4ToN64Mtx` before any callback or pre-dispatch tuple. Isolate
+   the earliest pre-target null-dispatch boundary with one phase-gated capture,
+   retaining the resolver positive control. Do not infer callback polarity or
+   add a guard. No output remap, task-data change, gate change, or guard is
+   authorized.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

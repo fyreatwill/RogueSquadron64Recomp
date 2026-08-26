@@ -1,40 +1,37 @@
-# NEXT work unit (s2463) — capture dynamic slot callback provenance
+# NEXT work unit (s2464) — isolate the earliest pre-target null-dispatch boundary
 
 HYPOTHESIS-ID: m5-generated-alternate-equivalence
 
 ## Work unit
 
-After arming and passing the retail oracle's whole-RDRAM positive control and
-hangar phase control, build one phase-gated port capture for the dynamic handler
-argument at `spawnNpcOfType` (`0x800400BC`), the resulting context `+0x00`
-write, and the `slotDispatcherIter` pre-dispatch value. Retain the indirect
-resolver positive control. Do not add guards or change dispatch/audio behavior.
+The s2463 callback tuple was qualified but blocked before the target phase.
+Build one phase-gated capture at the earliest reachable pre-target boundary
+around `convertMat3x4ToN64Mtx` and its indirect calls, retaining the indirect
+resolver positive control and the phase transition control. Do not add guards
+or change dispatch/audio behavior.
 
 ## Competing hypotheses and discriminator
 
-- H-ZeroWriter: a reachable caller writes or preserves `update_func==0` in a
-  slot that is later dispatched.
-- H-ValidWriter: reachable callers initialize a nonzero callback, so the
-  observed pre-target failure is outside the explicit zero-update edge.
-- H-UnresolvedWriter: the callback comes from an unclassified copied or
-  overlay-produced value, so static provenance is incomplete.
+- H-TargetBoundary: the next null dispatch is the same pre-target boundary and
+  can be captured before the target phase.
+- H-EarlierBoundary: a different indirect call in the menu model-viewer path
+  reaches `get_function(0)` first.
+- H-PhaseMismatch: the existing phase-4 crash is outside the target route and
+  the callback boundary remains unevaluable in this run.
 
-The discriminator is the same-run joined tuple `(handler argument,
-context+0 write, pre-dispatch update_func, phase, indirect-control-fired)`.
-An argument and write of zero that reaches a target-phase dispatch selects
-H-ZeroWriter. A nonzero argument/write followed by a zero pre-dispatch value
-selects H-PostWriteClobber. A nonzero argument/write and nonzero pre-dispatch
-value followed by the known failure selects H-NonzeroSlotThenMatch. Missing
-tuples or a failed positive control are non-results and require a corrected
-capture.
+The discriminator is the ordered same-run tuple `(phase, named callsite,
+requested target, positive-control-fired, crash/return)`. A target-boundary
+row immediately before the abort selects H-TargetBoundary; an earlier named
+zero-target row selects H-EarlierBoundary; no row before a valid phase-4 crash
+or a missing positive control is a non-result and selects H-PhaseMismatch only
+as a route diagnosis, not as a callback conclusion.
 
 ## Exact commands
 
 1. Run the retail oracle positive-control recipe from `tools/oracle/README.md`
    and retain its whole-RDRAM and hangar-phase counts.
-2. Add all three port capture points in one generated/fixup build, with phase
-   gating and bounded rows; run the qualified route from `docs/CURRENT-TRUTH.md`.
-3. Compare only joined rows with the indirect resolver control and write
-   `scratch/agent/s2463_m5_dynamic_callback_capture/audit.md`. If the port
-   dies before a tuple, report a qualified non-result and isolate the earliest
-   missing boundary next; do not infer callback polarity.
+2. Grep the generated `convertMat3x4ToN64Mtx` body and its direct callers;
+   add all selected pre-target capture points in one fixup build, with bounded
+   phase rows and the indirect resolver positive control.
+3. Run the qualified route from `docs/CURRENT-TRUTH.md`, compare the ordered
+   rows, and write `scratch/agent/s2464_m5_pre_target_boundary/audit.md`.
