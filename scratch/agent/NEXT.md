@@ -1,23 +1,22 @@
-# NEXT work unit (s2401) — rerun the accepted-preparation clear-edge capture
+# NEXT work unit (s2402) — repair route-validity, then capture the clear edge
 
 HYPOTHESIS-ID: m5-image-stage-route-order-perturbation
 
 ## Work unit
 
-Use one ground-truth-first, bounded capture to distinguish where the accepted
-route identity is cleared between `rs64_audio_route_prepare` and
-`rs64_audio_image_stage`. Reuse the landed lifecycle table in
-`src/main/main.cpp` (`[m5-identity-control]` and `[m5-identity-edge]`). Keep the qualified LLE/image route,
+First repair the same-build two-arm driver so both arms reach the 1024 title
+origin with the lifecycle activation control before interpreting the already
+landed identity-edge table. Use the qualified LLE/image route,
 `ROGUESQ_STUB_MISSING_FUNCS=1`, `PROBE_PHASE_WIDTH=1024`, and the existing
-route/stage probes. Do not change task data, audio, gate, fallback, dispatch,
-VI, output behavior, or mitigation.
+route/stage probes. Keep both arms in one build and concurrent; use a bounded
+launch/watchdog schedule that does not add `ROGUESQ_LOG_ALL`. Do not change
+task data, audio, gate, fallback, dispatch, VI, output behavior, or mitigation.
 
 Before building, arm the retail oracle's whole-RDRAM positive control and the
-target-origin control; only trust a null after both controls fire. In the port,
-add one complete phase-keyed clear-edge table covering the accepted preparation
-sequence, stage entry, route-valid state, and every host/guest clear or reset
-edge already present in the route identity path. Run all A/B arms from the same
-build and kill with SIGKILL.
+target-origin control. In the port, keep one activation-control row per arm
+and the phase-keyed clear-edge table. If the route controls pass in both arms,
+use that single capture to distinguish where the accepted route identity is
+cleared between `rs64_audio_route_prepare` and `rs64_audio_image_stage`.
 
 ## Competing hypotheses and discriminator
 
@@ -27,27 +26,29 @@ build and kill with SIGKILL.
   the host stage callback observes it.
 - H-SeparateIdentityRead: the accepted identity remains live, but stage entry
   reads a different identity source.
+- H-RouteDriverStillInvalid: at least one arm fails to reach target, so no
+  clear-edge hypothesis is testable.
 
-The discriminator is a single phase-keyed table with one row per retained stage
-call and columns for preparation sequence, clear-edge sequence/PC/source,
-stage sequence, route-valid state, route ordinal/row, and arm. A clear event
-between equal preparation and stage sequence selects the corresponding clear
-edge; no clear with invalid stage identity selects separate-source use.
+The first discriminator is both-arm route validity: each arm must emit its
+activation row, target-origin row, and target stage rows. If either is absent,
+select `H-RouteDriverStillInvalid` and do not interpret null identity rows. If
+both pass, the single phase-keyed table has one row per retained stage call
+with preparation sequence, clear-edge sequence/PC/source, stage sequence,
+route-valid state, route ordinal/row, and arm. A clear event between equal
+preparation and stage sequence selects the corresponding clear edge; no clear
+with invalid stage identity selects separate-source use.
 
 ## Exact command shape
 
 `cmake --build build -j2`
 
 Run the two same-build arms with the controls from
-`scratch/agent/s2399_identity_join_run.sh`, plus the oracle control recipe in
+the repaired driver, plus the oracle control recipe in
 `tools/oracle/README.md`; use `env ... zsh ...` for env-prefixed commands.
-Require one activation-control row and target-origin rows in both port arms;
-if either route control fails, reject the capture and fix the driver in the
-same iteration. Reduce only route-valid logs with
-`python3 scratch/agent/s2399_identity_join.py LOG`.
+Require one activation-control row and target-origin rows in both port arms.
+Reduce only route-valid logs with the existing identity reducer.
 
-Expected outcomes: host clear rows select `H-HostClearBetweenPrepareStage`;
-guest clear rows select `H-GuestClearBeforeHostStage`; no clear rows with
-persisting accepted identity select `H-SeparateIdentityRead`. If the route
-control fails in either arm, reject the capture and fix the driver in the same
-iteration.
+Expected outcomes: both-arm route failure selects `H-RouteDriverStillInvalid`;
+host clear rows select `H-HostClearBetweenPrepareStage`; guest clear rows select
+`H-GuestClearBeforeHostStage`; no clear rows with persisting accepted identity
+select `H-SeparateIdentityRead`.

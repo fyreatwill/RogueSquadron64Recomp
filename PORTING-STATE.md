@@ -112328,3 +112328,25 @@ behavior changed. Artifact: `scratch/agent/s2400_identity_edges/`.
 
 ORIGIN: no mitigation or behavior change; added only bounded diagnostic
 identity lifecycle logging and its activation control.
+## Session 2401 (2026-08-25) — M5 identity-edge driver remained route-invalid
+
+The retail oracle was run before the port with a whole-RDRAM positive control
+and VI tracing. It reached 10,000 write callbacks and title origin
+`0x00790400` at width 1024, so the independent controls passed. The port was
+built once with the existing bounded identity-edge table and run in both arms
+concurrently.
+
+The initial 75-second pair emitted one lifecycle activation row per arm, but
+Arm A stopped at 640 while Arm B reached the 1024 target; neither emitted an
+identity-edge row. Per the route-control rule this pair was rejected. The
+watchdog was then extended to 120 seconds and the same binary was rerun. Arm A
+again stopped at 640, while Arm B crashed before target at guest PC
+`0x8000B650`; both activation controls fired. This remains route-invalid and
+does not select host clear, guest clear, or separate identity read. It rules
+out interpreting either null as a clear-edge result.
+
+No route, audio, task-data, gate, fallback, dispatch, VI, output, or mitigation
+behavior changed. Artifacts: `scratch/agent/s2401_identity_edges/`.
+
+ORIGIN: no mitigation or behavior change; only the bounded capture driver's
+watchdog changed from 75 to 120 seconds after the first route-control failure.

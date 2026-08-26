@@ -5,7 +5,16 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Current maintenance marker: Session 2400 (2026-08-25).
+Current maintenance marker: Session 2401 (2026-08-25).
+
+Maintained in Session 2401 (2026-08-25). The oracle controls passed, but both
+same-build port arms were route-invalid: the 75-second pair left Arm A at 640,
+and the 120-second retry left Arm A at 640 while Arm B crashed at guest PC
+`0x8000B650`. Both retries fired the lifecycle activation control, but neither
+produced a target identity-edge row. The clear-edge hypotheses remain open and
+no route, audio, task-data, gate, fallback, dispatch, VI, output, or mitigation
+change is authorized. The next unit must repair route-valid capture before
+interpreting any identity null.
 
 Maintained in Session 2400 (2026-08-25). The retail oracle positive controls
 fired in one run: whole-RDRAM writes reached `10,000`, and VI tracing reached
@@ -158,6 +167,19 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2401 — the repaired identity-edge driver remained route-invalid.** The
+  oracle whole-RDRAM positive control reached `10,000` callbacks and its VI
+  trace reached title origin `0x00790400` at width 1024. The first same-build
+  port pair emitted one lifecycle activation row per arm, but Arm A stopped at
+  640 while Arm B reached target; no identity-edge rows were emitted. After
+  extending the watchdog from 75 to 120 seconds, Arm A again stopped at 640
+  and Arm B crashed at guest PC `0x8000B650`; both activation controls still
+  fired. Therefore neither pair is interpretable for any clear-edge hypothesis.
+  Artifact: `scratch/agent/s2401_identity_edges/`.
+
+  ORIGIN: no mitigation or behavior change; only the bounded capture driver
+  watchdog was extended after the first arm failed the target route control.
 
 - **s2400 — identity-edge capture was route-invalid after instrument repair.**
   The oracle controls passed: whole-RDRAM callbacks reached `10,000`, and VI
