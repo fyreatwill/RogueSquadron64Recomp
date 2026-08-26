@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2417 (2026-08-26).
+Current maintenance marker: Session 2418 (2026-08-26).
 
 ## Current state
 
@@ -101,8 +101,29 @@ Current maintenance marker: Session 2417 (2026-08-26).
   earlier `0x800078EC` attempt was invalid because it had no retail execution
   hits; the final run registered the task PC with `--watch-pc`. Artifact:
   `scratch/agent/s2417_retail_handoff_final/`.
+- s2418 added an observation-only port task/data handoff table after route
+  preparation. The phase-gated driver passed title 1024/0x00790400 and hangar
+  512/0x006AB400 in one run, producing 512 handoff rows and two task-phase
+  controls. Port rows included the retail-selected title pointer 0x80173B20
+  and hangar pointer 0x80173CB0, but also title 0x80171CE0 and hangar
+  0x80171E70 rows, with phase-local size variation. This selects
+  `H-PortDiffersAtHandoff` at the current capture scope. The task-pointer
+  field was zero because it was captured in submitter TLS while audio dispatch
+  ran on another thread; it is not ground truth and must be repaired before
+  using task-pointer parity. Artifact:
+  `scratch/agent/s2418_port_handoff/route640/`.
 
 ## Latest evidence
+
+- **s2418 — port task/data relation differs from the retail handoff.** The
+  fresh retail control passed whole-RDRAM, title, and hangar controls. The
+  corrected phase-640 port driver reached title and hangar in one run and
+  emitted 512 handoff rows plus both task-phase controls. It included the
+  retail pointers 0x80173B20/0x80173CB0 but also 0x80171CE0/0x80171E70 and
+  phase-local size variation, selecting `H-PortDiffersAtHandoff`. The port
+  task-pointer column was zero from a cross-thread TLS probe defect, so this
+  does not select task-pointer parity. Artifact:
+  `scratch/agent/s2418_port_handoff/route640/`.
 
 - **s2403 — retained image-stage bytes are legitimately zero at capture scope.**
   The retail oracle passed whole-RDRAM (`32,791,644` hits), title, and hangar
@@ -226,9 +247,11 @@ sequence; #1 is the next campaign priority.
    select `H-SequenceLegitimate` at the current capture scope. s2415 selected
    `H-NoDownstreamRelation`, and s2416 selected `H-NoHandoffKey` because the
    existing task/DMA/PCM markers do not survive the title-to-hangar transition.
-   The retail task/data witness now selects `H-RetailStableWriter`; next add
-   one observation-only port table for the same phase/task-pointer/data-pointer
-   relation, with both route controls in one run. Do not change task data,
+   The retail task/data witness selects `H-RetailStableWriter`; s2418's port
+   table selects `H-PortDiffersAtHandoff` from extra phase-local data pointers,
+   but its task-pointer column is invalid due to cross-thread TLS capture. Next
+   repair that capture with a shared guest-task-pointer witness and rerun the
+   same table with both route controls. Do not change task data,
    audio, gate, fallback, dispatch, VI, output behavior, or the nonzero
    predicate.
 2. **M5 task/output closure — closed at current capture scope.** Keep the

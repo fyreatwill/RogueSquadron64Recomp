@@ -538,8 +538,15 @@ static const RS64LocalSymbol* rs64_lookup_local_symbol(uint64_t pc) {
 // Cached for the next ucode invocation. get_rsp_microcode is called with the
 // OSTask immediately before the ucode runs on the same thread.
 static thread_local uint32_t s_pending_task_data_ptr  = 0;
+static thread_local uint32_t s_pending_task_data_size = 0;
 static thread_local uint32_t s_pending_task_ucode_data = 0;
 static thread_local uint32_t s_pending_task_ucode_data_size = 0;
+static thread_local const OSTask* s_pending_audio_task = nullptr;
+static thread_local uint32_t s_pending_task_guest_ptr = 0;
+
+extern "C" void rs64_set_pending_task_guest_ptr(uint32_t guest_ptr) {
+    s_pending_task_guest_ptr = guest_ptr;
+}
 
 // Rogue Squadron uses Factor5's MusyX audio ucode, NOT stock aspMain. Running
 // aspMain on MusyX-formatted task data produces garbage or hangs the audio
@@ -1146,6 +1153,47 @@ static void rs64_audio_route_prepare(const char* arm) {
     }
 }
 
+static void rs64_m5_task_handoff(const OSTask* task) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_TASK_CONTRACT");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || !g_rs64_audio_identity.valid || !task) return;
+
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t phase_rows = 0;
+    static uint32_t control_key = 0xFFFFFFFFu;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (g_rs64_audio_identity.width << 24) ^
+                         g_rs64_audio_identity.origin;
+    if (key != phase_key) {
+        phase_key = key;
+        phase_rows = 0;
+    }
+    if (key != control_key) {
+        control_key = key;
+        std::fprintf(stderr,
+            "[m5-task-handoff-control] phase=%u width=%u origin=0x%06X arm=%s\n",
+            g_rs64_audio_identity.phase, g_rs64_audio_identity.width,
+            g_rs64_audio_identity.origin, g_rs64_audio_identity.arm);
+    }
+    if (phase_rows++ >= 256u) return;
+    const uint32_t data_ptr = static_cast<uint32_t>(task->t.data_ptr);
+    std::fprintf(stderr,
+        "[m5-task-handoff] phase=%u width=%u origin=0x%06X arm=%s "
+        "ordinal=%u row=%u task_ptr=0x%08X data_ptr=0x%08X data_size=0x%08X "
+        "data_ptr_plus_100=0x%08X\n",
+        g_rs64_audio_identity.phase, g_rs64_audio_identity.width,
+        g_rs64_audio_identity.origin, g_rs64_audio_identity.arm,
+        g_rs64_audio_identity.ordinal, g_rs64_audio_identity.row,
+        s_pending_task_guest_ptr, data_ptr,
+        static_cast<uint32_t>(task->t.data_size), data_ptr + 0x100u);
+    std::fflush(stderr);
+}
+
 static void rs64_audio_hash_dmem(uint32_t addr, uint32_t len,
                                   uint32_t& fnv, uint32_t& nonzero) {
     fnv = 2166136261u;
@@ -1554,6 +1602,7 @@ static void rs64_log_audio_return(const char* arm, RspExitReason reason) {
 
 static RspExitReason musyx_stub_probe(uint8_t* rdram, uint32_t ucode_addr) {
     rs64_audio_route_prepare("musyx_stub");
+    rs64_m5_task_handoff(s_pending_audio_task);
     const RspExitReason reason = musyx_stub(rdram, ucode_addr);
     rs64_log_audio_return("musyx_stub", reason);
     return reason;
@@ -1562,6 +1611,7 @@ static RspExitReason musyx_stub_probe(uint8_t* rdram, uint32_t ucode_addr) {
 static RspExitReason factor5_ucode_b_probe(uint8_t* rdram, uint32_t ucode_addr) {
     g_rs64_audio_break_pc = 0;
     rs64_audio_route_prepare("factor5_ucode_b");
+    rs64_m5_task_handoff(s_pending_audio_task);
     const RspExitReason reason = factor5_ucode_b(rdram, ucode_addr);
     rs64_log_audio_return("factor5_ucode_b", reason);
     return reason;
@@ -2512,6 +2562,9 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
         s_pending_task_ucode_data_size = (uint32_t)task->t.ucode_data_size;
         return &factor5_gfx_runner;
     case M_AUDTASK:
+        s_pending_audio_task = task;
+        s_pending_task_data_ptr = (uint32_t)task->t.data_ptr;
+        s_pending_task_data_size = (uint32_t)task->t.data_size;
         g_rs64_audio_break_pc = 0;
         // The image arm is default; set ROGUESQ_AUDIO_UCODE=0 for the stub
         // control used by the incremental audio qualification steps.

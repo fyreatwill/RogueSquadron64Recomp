@@ -112750,3 +112750,27 @@ the retail oracle lacks phase/task coverage, but does not prove that the port
 must use either pointer or authorize an output change. Artifact:
 `scratch/agent/s2417_retail_handoff_final/`; summary:
 `scratch/agent/s2417_retail_handoff/RESULT.txt`.
+
+## Session 2418 (2026-08-26) — compared port task/data handoff relation
+
+Ran the retail oracle before adding the port table. Its whole-RDRAM positive
+control fired 15,787 times; title `1024 / 0x00790400` and hangar
+`512 / 0x006AB400` both occurred. The first two ad-hoc port launches were
+invalid: one used a missing `timeout` utility, and the next omitted the
+environment from the backgrounded game; both produced no target controls. A
+third launch with the documented `ROGUESQ_STUB_MISSING_FUNCS=1` still stopped
+before title, so it was also route-invalid. The corrected `tools/probe.sh`
+launch gated at 640, delivered the phase-relative input schedule, and passed
+both target phase controls in one run.
+
+The new observation-only table emitted 512 `[m5-task-handoff]` rows and two
+`[m5-task-handoff-control]` rows. Port title rows included `data_ptr=0x80173B20`
+and also `0x80171CE0`; hangar rows included `0x80173CB0` and `0x80171E70`.
+`data_size` also varied by phase and row. Against the independent retail table
+(title `0x80173B20`, hangar `0x80173CB0`, task pointer `0x80149470`), this
+selects `H-PortDiffersAtHandoff` at the current phase/data scope. The port
+task-pointer field was zero because the guest pointer was stored in submitter
+TLS while audio dispatch ran on another thread; that field is a probe defect,
+not evidence about the task ABI. No task data, audio behavior, dispatch, or
+output behavior changed. Artifact: `scratch/agent/s2418_port_handoff/route640/`;
+retail control: `scratch/agent/s2418_port_handoff/oracle.log`.
