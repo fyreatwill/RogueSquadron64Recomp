@@ -1426,6 +1426,64 @@ static void rs64_m5_task_handoff(const OSTask* task) {
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_scheduler_handoff(uint8_t* rdram,
+                                            uint32_t event_ptr,
+                                            uint32_t payload,
+                                            uint32_t task_ptr) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_M5_SCHEDULER_ID");
+        return all && all[0] && all[0] != '0';
+    }();
+    if (!enabled) return;
+
+    uint32_t phase = 0;
+    uint32_t width = 0;
+    uint32_t origin = 0;
+    uint32_t ordinal = 0;
+    uint32_t row = 0;
+    int exit_reason = 0;
+    const char* arm = nullptr;
+    if (!rs64_audio_current_route_snapshot(&phase, &width, &origin,
+                                           &ordinal, &row, &exit_reason,
+                                           &arm)) return;
+
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t phase_rows = 0;
+    static uint32_t control_key = 0xFFFFFFFFu;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        phase_rows = 0;
+    }
+    if (key != control_key) {
+        control_key = key;
+        std::fprintf(stderr,
+            "[m5-scheduler-id-control] phase=%u width=%u origin=0x%06X arm=%s\n",
+            phase, width, origin, arm ? arm : "n/a");
+    }
+    if (phase_rows++ >= 256u) return;
+
+    const OSTask* task = nullptr;
+    if (task_ptr >= 0x80000000u && task_ptr < 0x80800000u) {
+        const uint32_t offset = (task_ptr - 0x80000000u) ^ 3u;
+        task = reinterpret_cast<const OSTask*>(rdram + offset);
+    }
+    std::fprintf(stderr,
+        "[m5-scheduler-id] phase=%u width=%u origin=0x%06X arm=%s "
+        "ordinal=%u row=%u event_ptr=0x%08X event_payload=0x%08X "
+        "task_ptr=0x%08X type=0x%08X data_ptr=0x%08X data_size=0x%08X "
+        "output_buff=0x%08X yield_data_ptr=0x%08X\n",
+        phase, width, origin, arm ? arm : "n/a", ordinal, row,
+        event_ptr, payload, task_ptr, task ? (unsigned)task->t.type : 0u,
+        task ? (unsigned)task->t.data_ptr : 0u,
+        task ? (unsigned)task->t.data_size : 0u,
+        task ? (unsigned)task->t.output_buff : 0u,
+        task ? (unsigned)task->t.yield_data_ptr : 0u);
+    std::fflush(stderr);
+}
+
 static void rs64_audio_hash_dmem(uint32_t addr, uint32_t len,
                                   uint32_t& fnv, uint32_t& nonzero) {
     fnv = 2166136261u;

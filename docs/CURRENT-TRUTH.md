@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2483 (2026-08-26).
+Current maintenance marker: Session 2484 (2026-08-26).
 
 ## Current state
 
@@ -64,6 +64,19 @@ Current maintenance marker: Session 2483 (2026-08-26).
   `0x80130000-0x72C8 = 0x80128D38`. `H-UnresolvedHandoff` selected; no
   behavior change. Artifact:
   `scratch/agent/s2483_m5_scheduler_task_identity/audit.md`.
+
+- **s2484 — the scheduler payload is a distinct later-task pointer.** The
+  required retail-oracle attempt failed `DebugSetCallbacks` with the installed
+  non-debugger Homebrew core, so no retail null was interpreted. The corrected
+  port probe sampled immediately after `0x80019D28` and, with target SP receive
+  and image-stage controls live, recorded stable `event_payload=task_ptr=
+  0x800377C8`. Same-run image-stage ABI rows carried changing `data_ptr` values
+  such as `0x80171E70`/`0x80173CB0`, never `0x800377C8`. This selects
+  `H-LaterTaskHandoff` at the `OSTask.data_ptr` join, rules out an image-task
+  identity equality at that boundary, and leaves the descriptor layout and
+  later consumer open. The probe's raw host-struct field decode was endian
+  invalid and is discarded. Artifact:
+  `scratch/agent/s2484_m5_scheduler_identity/audit.md`.
 
 - **s2479 — containing-task completion is runtime-owned, not generated.** The
   complete static table found the image arm's terminal `0x1328` `Broke` edge,
@@ -444,9 +457,11 @@ Closed investigations are not active work items. This is one monotonic sequence;
    `stage-only`. Next: identify the legitimate post-receive consumer/output
    contract. The first post-receive edge is now classified as a generic
    scheduler handoff; the event object's `+4` payload has not been joined to
-   the image task identity. Next capture that payload/task value with the
-   same-run image DMA key. The plain launch was phase-invalid; use the eleven-Start
-   `tools/probe.sh` route in `NEXT.md`.
+   the image task identity. That capture now selects a distinct later-task
+   pointer at the `OSTask.data_ptr` boundary; next decode the descriptor at
+   `0x800377C8` from generated guest-word accesses. The plain launch was
+   phase-invalid; use the eleven-Start `tools/probe.sh` route in `NEXT.md` only
+   if a later capture is required.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

@@ -114204,3 +114204,24 @@ This selects `H-UnresolvedHandoff`, refutes the stronger claim that the first
 consumer is necessarily a distinct later task, and rules out any output remap
 or mitigation. No code or instrumentation changed. Artifact:
 `scratch/agent/s2483_m5_scheduler_task_identity/audit.md`.
+
+## Session 2484 (2026-08-26) — captured scheduler payload/task identity
+
+Ran the prescribed ground-truth gate first. The retail oracle launched with a
+whole-RDRAM positive-control watch and scheduler watches but failed
+`DebugSetCallbacks` because the installed Homebrew core is not debugger-built;
+no retail null was interpreted. Corrected the port probe to sample immediately
+after generated PC `0x80019D28`, before `getTimeLow32` overwrites `$v0`, then
+built once and ran one qualified eleven-Start image-arm capture.
+
+The same run passed the target SP guest-receive control and recorded 893 target
+image-stage rows. At width 512/origin `0x6AB400`, 256 bounded scheduler rows
+repeated `event_payload=task_ptr=0x800377C8`. The image-stage ABI rows carried
+distinct changing `data_ptr` values such as `0x80171E70` and `0x80173CB0`.
+This selects `H-LaterTaskHandoff` at the captured `OSTask.data_ptr` join and
+rules out equality with the image task identity at that boundary. The probe's
+raw host-struct cast produced endian-invalid decoded fields, so those fields
+are not evidence. The stable guest-word pointers remain evidence; the later
+descriptor layout and consumer are open. No scheduler behavior, remap, guard,
+or audio contract changed. Artifact:
+`scratch/agent/s2484_m5_scheduler_identity/audit.md`.
