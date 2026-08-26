@@ -403,6 +403,13 @@ sequence; #1 is the next campaign priority.
    has the listed helper set. The next unit must execute-watch that complete
    set in the hangar phase to distinguish active consumer entry from
    store-helper execution; no port behavior change is authorized.
+   s2431 execution-watched the complete set with valid controls. Every selected
+   PC executed in the hangar phase: `0x800078EC` had 408 hits, `0x80007670`
+   had 184, and each listed helper had 11–12. This rules out a complete retail
+   execution gap and selects `H-RetailHangarExecutionClass`; the semantic
+   entry/helper distinction remains open. The next unit must collect one
+   phase-gated field-context table for that class; no port behavior change is
+   authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -469,6 +476,12 @@ the second. Because `--pc-hist-watch` was not armed, this is aggregate-only
 ground truth and cannot select a writer or justify a consumer mapping. The
 missing attribution is an instrumentation omission, not evidence of no
 consumer; no behavior change is authorized.
+s2431's independent execution-watch run passed the whole-RDRAM, title, and
+hangar controls. It found hangar-phase execution for every selected range
+writer PC, including the `0x800078EC` first-range writer and the
+`0x80007670`/helper class for the second range. This closes the complete
+execution-gap hypothesis but leaves semantic entry versus lower-level helper
+identity unresolved; no output remap or mitigation is authorized.
 - s2428's fixed paired port capture passed retail whole-RDRAM/title/hangar
   controls and both port-arm title/hangar controls. Each arm recorded 256
   exact `0x80015BC8` writes in `0x169730..0x1698EC`, joined to title

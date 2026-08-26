@@ -113024,3 +113024,24 @@ state, but does not identify the semantic consumer among the second range's
 helpers or authorize a port remap, writeback, task-data change, gate, guard,
 or default change. Artifact:
 `scratch/agent/s2430_retail_hangar_consumer/`.
+## Session 2431 (2026-08-26) — execution-watched retail hangar image writers
+
+Ran the prescribed independent retail-oracle capture with whole-RDRAM positive
+control first, exact watches on `0x167650..0x167C50` and
+`0x1798B0..0x179A48`, phase-gated writer histograms, and execution watches for
+the complete s2430 candidate set. The control reached `12,253` whole-RDRAM
+writes, title `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400`; the phase
+histogram bucket contained `1,252` hangar VI rows. Exact ranges recorded `1,536`
+and `717` writes.
+
+The first range was written exclusively by `0x800078EC` (`1,536`). The second
+range's writers were `0x80007670` (`184`), `0x800078EC` (`408`),
+`0x8001E2C0` (`12`), `0x8001FACC` (`12`), `0x8001FADC` (`12`),
+`0x8001FAE4` (`11`), `0x8001FAEC` (`11`), `0x8001FAF0` (`12`),
+`0x8001FAF8` (`11`), `0x8001FB10` (`11`), `0x8001FB14` (`11`),
+`0x8001FBE4` (`11`), and `0x8001FD2C` (`11`). Every selected PC also had
+hangar-phase execution hits. This selects `H-RetailHangarExecutionClass` and
+rules out a complete retail execution gap and invalid controls. It does not
+identify the semantic consumer among the entry/helper class, nor authorize a
+port remap, writeback, task-data change, gate, guard, or default change.
+Artifact: `scratch/agent/s2431_retail_hangar_exec/`.
