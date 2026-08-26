@@ -113045,3 +113045,25 @@ rules out a complete retail execution gap and invalid controls. It does not
 identify the semantic consumer among the entry/helper class, nor authorize a
 port remap, writeback, task-data change, gate, guard, or default change.
 Artifact: `scratch/agent/s2431_retail_hangar_exec/`.
+
+## Session 2432 (2026-08-26) — tested retail hangar field-context discriminator
+
+Ran the prescribed independent retail-oracle capture with the whole-RDRAM
+positive control first, exact watches on `0x167650..0x167C50` and
+`0x1798B0..0x179A48`, phase-gated writer histograms, all 13 selected
+execution PCs, the new `--pc-field-dump` table, VI tracing, and the validated
+eleven-Start schedule. The control reached `12,661` whole-RDRAM writes, title
+`1024 @ 0x00790400`, and hangar `512 @ 0x006AB400`; exact ranges recorded
+`1,536` and `1,125` writes.
+
+The field table was not a usable discriminator. `0x800078EC` recorded
+`1,361,077` phase hits, filled all `32,768` unique rows, and overflowed
+`932,403`; `0x80007670`, `0x8001E2C0`, `0x8001FACC`, `0x8001FAF8`, and
+`0x8001FD2C` had zero field rows despite execution/range-writer hits. The
+helper PCs with rows shared broad tuple families, but the rows were not joined
+to exact store events. This selects `H-FieldTableUnjoinable` as an
+oracle-instrument result and rules out neither semantic entry nor helper
+identity. It rules out using the current generic field table as the
+discriminator; no output remap, writeback, task-data change, gate, guard, or
+default change was made. Artifact:
+`scratch/agent/s2432_retail_hangar_field_context/`.

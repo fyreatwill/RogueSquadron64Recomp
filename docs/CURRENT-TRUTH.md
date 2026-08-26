@@ -482,6 +482,17 @@ writer PC, including the `0x800078EC` first-range writer and the
 `0x80007670`/helper class for the second range. This closes the complete
 execution-gap hypothesis but leaves semantic entry versus lower-level helper
 identity unresolved; no output remap or mitigation is authorized.
+s2432's independent field-context capture again passed the whole-RDRAM,
+title, and hangar controls and reproduced exact image-range totals of 1,536
+and 1,125 writes. The field table itself was not a usable discriminator:
+`0x800078EC` produced 1,361,077 phase hits, saturated its 32,768-row unique
+table, and overflowed 932,403 rows, while `0x80007670`, `0x8001E2C0`,
+`0x8001FACC`, `0x8001FAF8`, and `0x8001FD2C` produced no field rows despite
+range-writer execution. The helper PCs that did produce rows shared the
+same broad tuple families, but those rows were not joined to an exact store
+event. This selects `H-FieldTableUnjoinable` as an oracle-instrument result,
+not a retail semantic-entry or helper conclusion. No output remap, writeback,
+task-data change, gate, guard, or default change is authorized.
 - s2428's fixed paired port capture passed retail whole-RDRAM/title/hangar
   controls and both port-arm title/hangar controls. Each arm recorded 256
   exact `0x80015BC8` writes in `0x169730..0x1698EC`, joined to title
