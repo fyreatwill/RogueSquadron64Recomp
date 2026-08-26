@@ -112731,3 +112731,22 @@ mitigation behavior changed.
 
 ORIGIN: no mitigation or behavior change; the comparison is observation-only.
 Artifacts: `scratch/agent/s2416_phase_transition_identity/`.
+## Session 2417 (2026-08-26) — independent retail task/data handoff witness
+
+Ran the retail oracle before adding any port instrumentation. The first two
+captures passed the whole-RDRAM, title, and hangar controls but selected an
+unregistered task PC, so their zero task rows were invalid. The corrected
+capture registered `0x80033FCC` with `--watch-pc` and `--pc-task-dump` in one
+run. It completed cleanly (`oracle_rc=0`), reached title `1024 /
+0x00790400` and hangar `512 / 0x006AB400`, and fired the whole-RDRAM positive
+control 10,092 times. The task table contained 820 type-2 rows from 1,349
+phase hits, with 529 non-type-2 and zero invalid rows. Title rows used
+`data_ptr=0x80173B20` (572 rows with size 2 and 56 with size 1); hangar rows
+used `data_ptr=0x80173CB0` (179 with size 2 and 13 with size 1). The task
+pointer stayed `0x80149470`. The retail witness therefore selects
+`H-RetailStableWriter` at this capture scope and authorizes one observation-only
+port table for the same phase/task/data relation. It rules out the idea that
+the retail oracle lacks phase/task coverage, but does not prove that the port
+must use either pointer or authorize an output change. Artifact:
+`scratch/agent/s2417_retail_handoff_final/`; summary:
+`scratch/agent/s2417_retail_handoff/RESULT.txt`.

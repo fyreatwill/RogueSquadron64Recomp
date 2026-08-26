@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2416 (2026-08-26).
+Current maintenance marker: Session 2417 (2026-08-26).
 
 ## Current state
 
@@ -90,6 +90,17 @@ Current maintenance marker: Session 2416 (2026-08-26).
   transition. This selects `H-NoHandoffKey` at the current marker scope; broad
   event order is not promoted to a legitimate identity. Artifact:
   `scratch/agent/s2416_phase_transition_identity/`.
+- s2417 used the retail oracle as an independent handoff witness. The whole-
+  RDRAM control fired 10,092 times; title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400` both occurred. With the positive execution control at
+  `0x80033FCC`, 820 type-2 task rows were captured (1,349 phase hits, 529
+  non-type-2), including 572 title rows using `data_ptr=0x80173B20` and 179
+  hangar rows using `data_ptr=0x80173CB0`; task pointer remained
+  `0x80149470`. The retail task/data relation supplies a stable phase-specific
+  handoff discriminator and selects `H-RetailStableWriter` at this scope. The
+  earlier `0x800078EC` attempt was invalid because it had no retail execution
+  hits; the final run registered the task PC with `--watch-pc`. Artifact:
+  `scratch/agent/s2417_retail_handoff_final/`.
 
 ## Latest evidence
 
@@ -215,8 +226,9 @@ sequence; #1 is the next campaign priority.
    select `H-SequenceLegitimate` at the current capture scope. s2415 selected
    `H-NoDownstreamRelation`, and s2416 selected `H-NoHandoffKey` because the
    existing task/DMA/PCM markers do not survive the title-to-hangar transition.
-   Next design one new independent phase-transition discriminator, grounded in
-   the retail oracle before adding a port instrument. Do not change task data,
+   The retail task/data witness now selects `H-RetailStableWriter`; next add
+   one observation-only port table for the same phase/task-pointer/data-pointer
+   relation, with both route controls in one run. Do not change task data,
    audio, gate, fallback, dispatch, VI, output behavior, or the nonzero
    predicate.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
