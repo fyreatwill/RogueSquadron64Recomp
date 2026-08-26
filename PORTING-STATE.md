@@ -112664,3 +112664,23 @@ changed.
 ORIGIN: no mitigation or behavior change; the identity table remains
 observation-only and its sequence match is not an output remap or guard.
 Artifacts: `scratch/agent/s2413_identity_join/image/`.
+
+## Session 2414 (2026-08-26) — reduced M5 sequence-key legitimacy table
+
+The planned bounded reducer initially found that the default s2412
+`image/run.log` had no identity-table records. The ledger's 1,173-row capture
+was present in `image_retained/run.log`; using that artifact and s2413's
+1,180-row image log, both runs passed title `1024 @ 0x00790400`, hangar
+`512 @ 0x006AB400`, and the key-on positive control. The complete selected
+class-5/7 table was identical in both captures: ten class-5 rows with deltas
+`61,59,54,52,45,43,36,34,27,25`, and two class-7 rows with deltas `18,16`.
+All rows were stage-before-key-on; the class-7 rows also matched route
+ordinal/row, while class-5 rows matched only the sequence key. This selects
+`H-SequenceLegitimate` under the predeclared discriminator at the current
+capture scope and refutes an empty/unstable sequence result and a global
+phase/order failure. It does not establish that the shared key-on event is the
+legitimate PCM/task consumer identity, and no runtime behavior changed.
+
+ORIGIN: no mitigation or behavior change; the reducer is observation-only and
+does not remap output or promote a consumer.
+Artifacts: `scratch/agent/s2414_sequence_legitimacy/`.

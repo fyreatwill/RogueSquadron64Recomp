@@ -1,45 +1,49 @@
-# NEXT work unit (s2414) — test whether the sequence key is legitimate
+# NEXT work unit (s2415) — link sequence-key identity to PCM/task identity
 
-HYPOTHESIS-ID: m5-sequence-key-legitimacy
+HYPOTHESIS-ID: m5-sequence-pcm-link
 
 ## Work unit
 
-Run one bounded, observation-only reducer over the two valid image captures
-(`s2412` and `s2413`). For every retained identity row, join the selected
-first-later key-on event to the image stage event and report the complete
-table by phase, stage event, key-on event, route ordinal/row, and event delta.
-Do not change task data, audio, gate, fallback, dispatch, VI, output behavior,
-the nonzero predicate, or the 64-event window.
+Run one bounded, observation-only reducer over the valid retained image logs
+from s2412 and s2413. Parse each selected class-5/7 identity row, its key-on
+event/ordinal/row, and every later `[audio-join-pcm]` source/consumer record in
+the same phase/origin. Produce one complete table keyed by capture, stage
+event, key-on event, key-on ordinal/row, PCM event, PCM ordinal/row, address,
+and event delta. Do not change task data, audio, gate, fallback, dispatch, VI,
+output behavior, the nonzero predicate, or the 64-event identity window.
 
 ## Competing hypotheses and discriminator
 
-- H-SequenceLegitimate: the selected key-on event has a stable, causal
-  relationship to the image stage/task sequence in both captures.
-- H-RouteOrdinalAlias: the apparent sequence match is only a consequence of
-  the route ordinal/row or a repeated frame pattern; event deltas vary when
-  ordinal/row differs.
-- H-GlobalEventCollision: the same global event stream collides with unrelated
-  image rows; matching rows are not phase- or task-local.
-- H-NoLegitimateRelation: the repeated class split does not survive the
-  complete event-delta/route-local reducer.
+- H-SequencePcmLegitimate: the selected key-on identity is followed by PCM
+  source/consumer records with the same phase/origin and ordinal/row, in both
+  captures.
+- H-KeyonOnly: the sequence legitimately identifies the key-on event, but the
+  PCM records use a separate identity or range; same-identity PCM joins are
+  absent or non-stable.
+- H-GlobalPcmCollision: later PCM records match only by phase/origin or global
+  event order and do not preserve the key-on ordinal/row.
+- H-NoDownstreamRelation: the selected key-on relation does not survive the
+  complete PCM/task table or is route-invalid in either capture.
 
-The discriminator is one combined table, not a new field: counts and min/max
-event deltas for class-5 and class-7 rows, partitioned by capture, phase,
-route ordinal/row equality, and stage/task ordering. Stable nonzero deltas in
-both captures with route-local ordering selects H-SequenceLegitimate; rows
-whose deltas vary only with ordinal/row select H-RouteOrdinalAlias; matches
-spanning unrelated phases or tasks select H-GlobalEventCollision; an empty or
-unstable table selects H-NoLegitimateRelation. A missing input marker is
-route-invalid.
+The discriminator is the one combined per-row table. A stable same-identity
+PCM source and consumer join after the selected key-on in both valid captures
+selects H-SequencePcmLegitimate; key-on-only rows with stable phase/origin but
+no ordinal/row PCM join select H-KeyonOnly; only broad phase/origin matches
+select H-GlobalPcmCollision; a missing control or empty/unstable table selects
+H-NoDownstreamRelation. Do not interpret a zero-valued PCM tuple as a match
+without its event and ordinal/row identity.
 
-## Exact commands
+## Exact inputs and command
 
-`python3 - <<'PY' scratch/agent/s2412_identity_join/image/run.log scratch/agent/s2413_identity_join/image/run.log`
+Inputs:
 
-The reducer must parse `[m5-identity-table]` lines, print the full bounded
-summary, and write its output to `scratch/agent/s2414_sequence_legitimacy/`.
-If no reducer exists, create it as a tracked script before running; do not
-interpret raw run-log nulls without the positive-control and phase markers.
+- `scratch/agent/s2412_identity_join/image_retained/run.log`
+- `scratch/agent/s2413_identity_join/image/run.log`
+
+Create `scratch/agent/s2415_sequence_pcm_link/reduce.py` if needed, then run:
+
+`python3 scratch/agent/s2415_sequence_pcm_link/reduce.py scratch/agent/s2412_identity_join/image_retained/run.log scratch/agent/s2413_identity_join/image/run.log`
 
 Required controls in each input: title `1024 @ 0x00790400`, hangar
-`512 @ 0x006AB400`, and a key-on positive-control marker.
+`512 @ 0x006AB400`, and a key-on positive-control marker. Write the complete
+table and summary under `scratch/agent/s2415_sequence_pcm_link/`.

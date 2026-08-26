@@ -142,6 +142,14 @@ Current maintenance marker: Session 2413 (2026-08-26).
   the prior valid run's class-5/class-7 population. This closes the need for
   another reproduction of the same identity table, but is still a
   current-scope identity result, not proof of legitimate output consumption.
+- **s2414 — sequence-key legitimacy reducer selects the ordered relation.**
+  The corrected s2412 `image_retained` artifact and s2413 image log both passed
+  title, hangar, and key-on controls. Their complete class-5/7 tables were
+  identical: ten sequence-only rows at deltas 25–61 and two full-key rows at
+  16–18; every key-on followed its stage event. This selects
+  `H-SequenceLegitimate` under the planned discriminator at the current scope,
+  while the shared key-on across multiple rows leaves its downstream PCM/task
+  legitimacy open. Artifact: `scratch/agent/s2414_sequence_legitimacy/`.
 - **s2402 — identity is valid at stage entry.** Corrected same-build stub/image
   arms passed route controls; both observed `prepare-clear`, then
   `stage-observe` with `valid=1` and matching `prepare_seq`, followed by
@@ -180,10 +188,11 @@ Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
-   design gate. The retained identity table now corroborates `H-SequenceKey`
-   across two valid image captures. Next determine whether that sequence is
-   the legitimate downstream identity. Do not change task data, audio, gate,
-   fallback, dispatch, VI, output behavior, or the nonzero predicate.
+   design gate. The retained identity table and two-run event-delta reducer
+   select `H-SequenceLegitimate` at the current capture scope. Next test
+   whether the selected key-on identity links to the same downstream PCM/task
+   identity. Do not change task data, audio, gate, fallback, dispatch, VI,
+   output behavior, or the nonzero predicate.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -228,9 +237,10 @@ absent consumer or a valid destination remap.
 The s2410 identity table is present in the runtime, but its original phase
 scope discarded rows before the downstream event. s2412 retained rows across
 scope transitions and selected a sequence-key join. s2413 reproduced the same
-class-5/class-7 population in a second valid image capture, corroborating the
-sequence key at this scope. This still does not prove it is the legitimate
-legitimate consumer identity. No behavior change is authorized: do not
+class-5/class-7 population in a second valid image capture, and s2414 found the
+same ordered event-delta table in both captures. This selects the sequence as a
+legitimate identity candidate at the current scope, but does not prove that its
+key-on event is the legitimate PCM/task consumer identity. No behavior change is authorized: do not
 promote C88, invent output metadata, remap destinations, alter task data,
 force a consumer, or add a guard without a new discriminator and named writer
 legitimacy.

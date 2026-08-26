@@ -1,0 +1,38 @@
+identity rows by capture: {'s2412': 1173, 's2413': 1180}
+identity rows by capture/phase: {('s2412', 8): 1173, ('s2413', 8): 1180}
+identity rows by capture/class: {('s2412', 1): 1161, ('s2412', 5): 10, ('s2412', 7): 2, ('s2413', 1): 1168, ('s2413', 5): 10, ('s2413', 7): 2}
+all-row route/order partitions:
+  ('s2412', 8, 'route-different', 'after'): count=1171
+  ('s2412', 8, 'route-equal', 'after'): count=2
+  ('s2413', 8, 'route-different', 'after'): count=1178
+  ('s2413', 8, 'route-equal', 'after'): count=2
+selected class 5/7 event-delta table:
+  ('s2412', 8, 5, 'route-different', 'after'): count=10 min_delta=25 max_delta=61 deltas=[61, 59, 54, 52, 45, 43, 36, 34, 27, 25]
+  ('s2412', 8, 7, 'route-equal', 'after'): count=2 min_delta=16 max_delta=18 deltas=[18, 16]
+  ('s2413', 8, 5, 'route-different', 'after'): count=10 min_delta=25 max_delta=61 deltas=[61, 59, 54, 52, 45, 43, 36, 34, 27, 25]
+  ('s2413', 8, 7, 'route-equal', 'after'): count=2 min_delta=16 max_delta=18 deltas=[18, 16]
+selected class 5/7 rows:
+  capture=s2412 phase=8 stage=2 stage_event=5227 keyon_event=5288 route_stage=575/575 route_keyon=580/580 delta=61 class=5 route=different ordering=after
+  capture=s2412 phase=8 stage=3 stage_event=5229 keyon_event=5288 route_stage=575/575 route_keyon=580/580 delta=59 class=5 route=different ordering=after
+  capture=s2412 phase=8 stage=2 stage_event=5234 keyon_event=5288 route_stage=576/576 route_keyon=580/580 delta=54 class=5 route=different ordering=after
+  capture=s2412 phase=8 stage=3 stage_event=5236 keyon_event=5288 route_stage=576/576 route_keyon=580/580 delta=52 class=5 route=different ordering=after
+  capture=s2412 phase=8 stage=2 stage_event=5243 keyon_event=5288 route_stage=577/577 route_keyon=580/580 delta=45 class=5 route=different ordering=after
+  capture=s2412 phase=8 stage=3 stage_event=5245 keyon_event=5288 route_stage=577/577 route_keyon=580/580 delta=43 class=5 route=different ordering=after
+  capture=s2412 phase=8 stage=2 stage_event=5252 keyon_event=5288 route_stage=578/578 route_keyon=580/580 delta=36 class=5 route=different ordering=after
+  capture=s2412 phase=8 stage=3 stage_event=5254 keyon_event=5288 route_stage=578/578 route_keyon=580/580 delta=34 class=5 route=different ordering=after
+  capture=s2412 phase=8 stage=2 stage_event=5261 keyon_event=5288 route_stage=579/579 route_keyon=580/580 delta=27 class=5 route=different ordering=after
+  capture=s2412 phase=8 stage=3 stage_event=5263 keyon_event=5288 route_stage=579/579 route_keyon=580/580 delta=25 class=5 route=different ordering=after
+  capture=s2412 phase=8 stage=2 stage_event=5270 keyon_event=5288 route_stage=580/580 route_keyon=580/580 delta=18 class=7 route=equal ordering=after
+  capture=s2412 phase=8 stage=3 stage_event=5272 keyon_event=5288 route_stage=580/580 route_keyon=580/580 delta=16 class=7 route=equal ordering=after
+  capture=s2413 phase=8 stage=2 stage_event=5260 keyon_event=5321 route_stage=580/580 route_keyon=585/585 delta=61 class=5 route=different ordering=after
+  capture=s2413 phase=8 stage=3 stage_event=5262 keyon_event=5321 route_stage=580/580 route_keyon=585/585 delta=59 class=5 route=different ordering=after
+  capture=s2413 phase=8 stage=2 stage_event=5267 keyon_event=5321 route_stage=581/581 route_keyon=585/585 delta=54 class=5 route=different ordering=after
+  capture=s2413 phase=8 stage=3 stage_event=5269 keyon_event=5321 route_stage=581/581 route_keyon=585/585 delta=52 class=5 route=different ordering=after
+  capture=s2413 phase=8 stage=2 stage_event=5276 keyon_event=5321 route_stage=582/582 route_keyon=585/585 delta=45 class=5 route=different ordering=after
+  capture=s2413 phase=8 stage=3 stage_event=5278 keyon_event=5321 route_stage=582/582 route_keyon=585/585 delta=43 class=5 route=different ordering=after
+  capture=s2413 phase=8 stage=2 stage_event=5285 keyon_event=5321 route_stage=583/583 route_keyon=585/585 delta=36 class=5 route=different ordering=after
+  capture=s2413 phase=8 stage=3 stage_event=5287 keyon_event=5321 route_stage=583/583 route_keyon=585/585 delta=34 class=5 route=different ordering=after
+  capture=s2413 phase=8 stage=2 stage_event=5294 keyon_event=5321 route_stage=584/584 route_keyon=585/585 delta=27 class=5 route=different ordering=after
+  capture=s2413 phase=8 stage=3 stage_event=5296 keyon_event=5321 route_stage=584/584 route_keyon=585/585 delta=25 class=5 route=different ordering=after
+  capture=s2413 phase=8 stage=2 stage_event=5303 keyon_event=5321 route_stage=585/585 route_keyon=585/585 delta=18 class=7 route=equal ordering=after
+  capture=s2413 phase=8 stage=3 stage_event=5305 keyon_event=5321 route_stage=585/585 route_keyon=585/585 delta=16 class=7 route=equal ordering=after
