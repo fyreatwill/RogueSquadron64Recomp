@@ -41,6 +41,17 @@ Current maintenance marker: Session 2481 (2026-08-26).
   completed lifecycle observation. Artifact:
   `scratch/agent/s2481_m5_runtime_sp_lifecycle/audit.md`.
 
+- **s2482 — the first post-receive consumer is a generic scheduler handoff.**
+  Static control flow places the target receive in `spTaskSchedulerThread` at
+  `0x80019CD0`; it reads the fixed event byte from `0x80128C70`, then uses the
+  separately held pending-task pointer at `0x801372D8` for
+  `osSpTaskLoad`/`osSpTaskStartGo`. The s2481 image joins independently retain
+  `source_matches=0`, `consumer_matches=0`, and `stage-only`. This selects
+  `H-LaterConsumer` at the first post-receive boundary and rules out a direct
+  image-DMA identity consumer there. The later slot/voice/PCM/output join is
+  still open; no remap or guard is authorized. Artifact:
+  `scratch/agent/s2482_m5_post_receive_consumer/audit.md`.
+
 - **s2479 — containing-task completion is runtime-owned, not generated.** The
   complete static table found the image arm's terminal `0x1328` `Broke` edge,
   its two generated DMA edges, the host image-join reporter, and the runtime
@@ -418,6 +429,8 @@ Closed investigations are not active work items. This is one monotonic sequence;
    `0x1328`; containing-task SP completion is runtime-owned, the SP message is
    consumed on the qualified image route, and the two target stage DMAs remain
    `stage-only`. Next: identify the legitimate post-receive consumer/output
+   contract. The first post-receive edge is now classified as a generic
+   scheduler handoff; next identify the later task/slot/voice/PCM/output
    contract. The plain launch was phase-invalid; use the eleven-Start
    `tools/probe.sh` route in `NEXT.md`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier

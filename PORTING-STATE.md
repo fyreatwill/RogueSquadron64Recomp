@@ -114171,3 +114171,19 @@ H-SPRegistrationGap are all unevaluable. This rules out a globally absent SP
 registration/publication path, but does not establish image-route queue
 consumption. The next attempt must use the known eleven-Start `tools/probe.sh`
 route. Artifact: `scratch/agent/s2480_m5_runtime_sp_lifecycle/audit.md`.
+
+## Session 2482 (2026-08-26) — audited post-receive image-task consumer
+
+Ran the prescribed bounded post-receive provenance audit against the s2481
+capture and the available generated tree. The target receive is in
+`spTaskSchedulerThread` at `0x80019CD0`; it consumes the fixed event message
+`0x80128C70` and then uses the separately held pending-task pointer at
+`0x801372D8` for the `osSpTaskLoad`/`osSpTaskStartGo` handoff. No image DMA
+destination or route ordinal is carried through this first consumer boundary.
+The independent s2481 image joins retain `source_matches=0`,
+`consumer_matches=0`, and `stage-only`. This selects `H-LaterConsumer`, rules
+out a direct image-identity consumer at the receive boundary, and leaves the
+later task/slot/voice/PCM/output join open. No code, instrumentation, guard,
+output remap, or audio behavior changed.
+
+Artifact: `scratch/agent/s2482_m5_post_receive_consumer/audit.md`.
