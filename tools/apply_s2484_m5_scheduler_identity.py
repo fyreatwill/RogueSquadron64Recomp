@@ -13,6 +13,12 @@ INSERT = (
     "rs64_m5_scheduler_handoff(rdram, U32(ctx->r4), U32(ctx->r2), "
     "U32(ctx->r2)); }\n"
 )
+YIELD_MARKER = "/* PATCH: s2486 m5 descriptor yield */"
+YIELD_INSERT = (
+    f"    {YIELD_MARKER}\n"
+    "    { extern void rs64_m5_descriptor_yield(uint8_t*, unsigned); "
+    "rs64_m5_descriptor_yield(rdram, U32(ctx->r4)); }\n"
+)
 
 
 def main() -> None:
@@ -29,6 +35,18 @@ def main() -> None:
     )
     replacement = needle + INSERT
     path.write_text(text.replace(needle, replacement, 1), encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
+    yield_needle = "    osSpTaskYielded_recomp(rdram, ctx);\n"
+    if text.count(yield_needle) != 1:
+        raise SystemExit(f"expected one scheduler yield call, found {text.count(yield_needle)}")
+    text = re.sub(
+        rf"(?m)^\s*{re.escape(YIELD_MARKER)}\n"
+        r"\s*\{ extern void rs64_m5_descriptor_yield\([^\n]+\n",
+        "",
+        text,
+    )
+    text = text.replace(yield_needle, YIELD_INSERT + yield_needle, 1)
+    path.write_text(text, encoding="utf-8")
     print("apply_s2484: inserted scheduler identity probe")
 
 

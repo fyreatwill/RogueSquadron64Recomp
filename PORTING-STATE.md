@@ -114243,3 +114243,22 @@ the matching 16-word, `0x40`-byte layout. This selects
 wrapper-field pattern, but does not identify the descriptor writer or join its
 contents to the later task. No code or behavior changed. Artifact:
 `scratch/agent/s2485_m5_descriptor_audit/audit.md`.
+
+## Session 2486 (2026-08-26) — attempted later scheduler descriptor capture
+
+Implemented the durable phase-gated descriptor capture. The generated
+`osSpTaskYielded` callsite now records all sixteen guest words at
+`gspTask=0x800377C8`; the existing strong `osSpTaskStartGo` wrapper records
+the later task pointer, `data_ptr`, and joins it to the latest scheduler
+event payload. The Debug build completed after removing an invalid duplicate
+shadow of the runtime's `osSpTaskYielded_recomp` symbol.
+
+The first 45-second post-1024 run reached width 1024 only at 48.4 seconds and
+ended before 512/hangar. The fixed 120-second run never reached width 1024 in
+its 180-second gate and remained at width 640. Both runs fired the resolver
+positive-control row once; neither produced descriptor or start rows. The
+descriptor hypotheses therefore remain unevaluable. This rules out neither
+populated nor stale descriptor fields, and it rules out interpreting either
+zero-row result as a target-phase null. No scheduler behavior, remap, guard,
+or audio contract changed. Artifact:
+`scratch/agent/s2486_m5_descriptor_capture/audit.md`.

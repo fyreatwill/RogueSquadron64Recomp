@@ -1,51 +1,31 @@
-# NEXT work unit (s2486) — capture the later OSTask descriptor contents
+# NEXT work unit (s2487) — reproduce target route for descriptor capture
 
 HYPOTHESIS-ID: m5-generated-alternate-equivalence
 
 ## Single work unit
 
-Build one phase-gated capture that records all sixteen guest words at
-`gspTask=0x800377C8` when `spTaskSchedulerThread` calls
-`osSpTaskYielded`, and joins that row to the `0x80019D28` event payload plus
-the later `osSpTaskLoad`/`osSpTaskStartGo` task pointer. Use the existing
-eleven-Start `tools/probe.sh` route only if the capture is needed to reach the
-target phase. Do not alter scheduler behavior or remap audio/output.
+Run the existing descriptor capture unchanged with the exact s2484 qualified
+eleven-Start recipe, using a 300-second phase-relative budget. Do not add
+fields, alter scheduler behavior, or remap audio/output. The only question is
+whether the already-valid instrument reaches the target 1024/512 route.
 
 ## Competing hypotheses
 
-- H-DescriptorPopulated: the sixteen words form a populated normal OSTask and
-  identify a legitimate later task at the scheduler boundary.
-- H-DescriptorStaleOrEmpty: the object has zero/stale fields when yielded, so
-  the pointer is only a yield-status descriptor and cannot explain the later
-  consumer identity.
-- H-DescriptorWriterUnjoined: the fields are populated, but no same-run writer
-  or task-start identity join is visible, leaving population provenance open.
+- H-Route-Stable: the s2484 route is reproducible and descriptor rows will be
+  captured at `0x800377C8`.
+- H-Route-Flaky: the current build remains on 640, so the descriptor boundary
+  is still unobservable and requires route diagnosis.
+- H-Instrument-Dead: the target phase is reached but neither descriptor nor
+  start hook fires; this would identify a callsite/fixup or phase-gate defect.
 
 ## Discriminator
 
-The single run must include a positive control for the existing resolver hook
-(`0x8009123C`) and phase-gated rows for: (1) all 16 words at `0x800377C8`,
-(2) event payload at `0x80019D28`, and (3) the later task pointer and its
-`OSTask.data_ptr` field at each `osSpTaskStartGo`. A populated descriptor whose
-identity/fields join to the later task selects H-DescriptorPopulated; a
-zero/stale descriptor selects H-DescriptorStaleOrEmpty; populated but
-unjoined fields select H-DescriptorWriterUnjoined. A missing resolver control
-invalidates the null result.
+The same run must show the resolver positive-control row and a `[phase]` row
+for width 1024 followed by width 512/origin `0x006AB400`. If those controls
+pass, classify the sixteen-word yield rows and start joins. If only the
+resolver fires and 1024/512 do not, select H-Route-Flaky. If 512 is present
+but descriptor rows are absent, select H-Instrument-Dead.
 
-## Preparation and exact commands
+## Exact command
 
-1. Add the complete capture to the durable fixup/instrumentation path, then
-   regenerate in the required order:
-
-   `python tools/make_elf.py && build/Debug/N64Recomp.exe rogue_squadron.toml && python tools/fixup_game_funcs.py`
-
-2. Build:
-
-   `cmake --build build --config Debug --target RogueSquadron64Recomp`
-
-3. Run the qualified eleven-Start probe with all passive breadcrumbs and the
-   new descriptor capture enabled, phase-gated by VI transitions; capture to a
-   non-hidden final path and SIGKILL the process.
-
-4. Report the three joined row classes and resolver-control count in
-   `scratch/agent/s2486_m5_descriptor_capture/audit.md`.
+`env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_M5_DESCRIPTOR=1 ROGUESQ_LOG_M5_SCHEDULER_ID=1 ROGUESQ_LOG_M5_SECOND_EXEC=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start' zsh tools/probe.sh scratch/agent/s2487_m5_descriptor_capture 300 1`

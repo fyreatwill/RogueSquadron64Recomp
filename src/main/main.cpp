@@ -1385,6 +1385,9 @@ static void rs64_audio_route_prepare(const char* arm) {
     }
 }
 
+static std::atomic<uint32_t> g_rs64_m5_descriptor_event_payload{0};
+static std::atomic<uint32_t> g_rs64_m5_descriptor_yield_ptr{0};
+
 static void rs64_m5_task_handoff(const OSTask* task) {
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
@@ -1436,6 +1439,8 @@ extern "C" void rs64_m5_scheduler_handoff(uint8_t* rdram,
     }();
     if (!enabled) return;
 
+    g_rs64_m5_descriptor_event_payload.store(payload, std::memory_order_release);
+
     uint32_t phase = 0;
     uint32_t width = 0;
     uint32_t origin = 0;
@@ -1481,6 +1486,77 @@ extern "C" void rs64_m5_scheduler_handoff(uint8_t* rdram,
         task ? (unsigned)task->t.data_size : 0u,
         task ? (unsigned)task->t.output_buff : 0u,
         task ? (unsigned)task->t.yield_data_ptr : 0u);
+    std::fflush(stderr);
+}
+
+static bool rs64_m5_descriptor_phase(uint32_t* phase, uint32_t* width,
+                                     uint32_t* origin, const char** arm) {
+    uint32_t ordinal = 0, row = 0;
+    int exit_reason = 0;
+    if (!rs64_audio_current_route_snapshot(phase, width, origin, &ordinal, &row,
+                                           &exit_reason, arm)) return false;
+    return (*width == 1024u && *origin == 0x00790400u) ||
+           (*width == 512u && *origin == 0x006AB400u);
+}
+
+extern "C" void rs64_m5_descriptor_yield(uint8_t* rdram, uint32_t task_ptr) {
+    static const bool enabled = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_DESCRIPTOR");
+        return e && e[0] && e[0] != '0';
+    }();
+    if (!enabled || task_ptr != 0x800377C8u) return;
+
+    uint32_t phase = 0, width = 0, origin = 0;
+    const char* arm = nullptr;
+    if (!rs64_m5_descriptor_phase(&phase, &width, &origin, &arm)) return;
+    const OSTask* task = TO_PTR(OSTask, task_ptr);
+    const uint32_t words[16] = {
+        (uint32_t)task->t.type, (uint32_t)task->t.flags,
+        (uint32_t)task->t.ucode_boot, (uint32_t)task->t.ucode_boot_size,
+        (uint32_t)task->t.ucode, (uint32_t)task->t.ucode_size,
+        (uint32_t)task->t.ucode_data, (uint32_t)task->t.ucode_data_size,
+        (uint32_t)task->t.dram_stack, (uint32_t)task->t.dram_stack_size,
+        (uint32_t)task->t.output_buff, (uint32_t)task->t.output_buff_size,
+        (uint32_t)task->t.data_ptr, (uint32_t)task->t.data_size,
+        (uint32_t)task->t.yield_data_ptr, (uint32_t)task->t.yield_data_size,
+    };
+    g_rs64_m5_descriptor_yield_ptr.store(task_ptr, std::memory_order_release);
+    std::fprintf(stderr,
+        "[m5-descriptor-control] phase=%u width=%u origin=0x%06X arm=%s\n",
+        phase, width, origin, arm ? arm : "n/a");
+    std::fprintf(stderr,
+        "[m5-descriptor-yield] phase=%u width=%u origin=0x%06X arm=%s "
+        "task_ptr=0x%08X event_payload=0x%08X words=",
+        phase, width, origin, arm ? arm : "n/a", task_ptr,
+        g_rs64_m5_descriptor_event_payload.load(std::memory_order_acquire));
+    for (uint32_t i = 0; i < 16; ++i)
+        std::fprintf(stderr, "%s%08X", i ? "," : "", words[i]);
+    std::fprintf(stderr, "\n");
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_descriptor_start(uint8_t* rdram, uint32_t task_ptr) {
+    static const bool enabled = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_DESCRIPTOR");
+        return e && e[0] && e[0] != '0';
+    }();
+    if (!enabled) return;
+    uint32_t phase = 0, width = 0, origin = 0;
+    const char* arm = nullptr;
+    if (!rs64_m5_descriptor_phase(&phase, &width, &origin, &arm)) return;
+    const OSTask* task = TO_PTR(OSTask, task_ptr);
+    static std::atomic<uint32_t> rows{0};
+    const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
+    if (row >= 256u) return;
+    const uint32_t yielded = g_rs64_m5_descriptor_yield_ptr.load(std::memory_order_acquire);
+    const uint32_t payload = g_rs64_m5_descriptor_event_payload.load(std::memory_order_acquire);
+    std::fprintf(stderr,
+        "[m5-descriptor-start] phase=%u width=%u origin=0x%06X arm=%s row=%u "
+        "task_ptr=0x%08X data_ptr=0x%08X data_size=0x%08X "
+        "yield_ptr=0x%08X event_payload=0x%08X yield_match=%u payload_match=%u\n",
+        phase, width, origin, arm ? arm : "n/a", row, task_ptr,
+        (uint32_t)task->t.data_ptr, (uint32_t)task->t.data_size, yielded,
+        payload, task_ptr == yielded ? 1u : 0u, task_ptr == payload ? 1u : 0u);
     std::fflush(stderr);
 }
 

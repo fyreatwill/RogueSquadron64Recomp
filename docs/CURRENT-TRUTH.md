@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2484 (2026-08-26).
+Current maintenance marker: Session 2486 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,16 @@ Current maintenance marker: Session 2484 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2486 — the descriptor instrument is built but the target route was not
+  reached.** The durable fixup captures all sixteen words at `gspTask` before
+  `osSpTaskYielded` and joins later starts to the scheduler payload. The first
+  45-second capture reached 1024 too late; the fixed 120-second capture never
+  reached 1024 in its 180-second gate. Both had the resolver positive control,
+  but zero descriptor/start rows. `H-DescriptorPopulated`,
+  `H-DescriptorStaleOrEmpty`, and `H-DescriptorWriterUnjoined` remain
+  unevaluable; no field value is evidence. Artifact:
+  `scratch/agent/s2486_m5_descriptor_capture/audit.md`.
 
 - **s2485 — the later scheduler pointer is the normal `gspTask` OSTask
   descriptor.** The generated census found no reads/writes or wrapper-specific
