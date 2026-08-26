@@ -520,7 +520,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..c8aaadb 100644
+index 1cb3f6a..054ac10 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -534,7 +534,7 @@ index 1cb3f6a..c8aaadb 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,917 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,933 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -896,7 +896,6 @@ index 1cb3f6a..c8aaadb 100644
 +    if (key == g_audio_image_scope_key) return;
 +    audio_image_summary_locked();
 +    g_audio_image_scope_key = key;
-+    g_audio_image_stages.clear();
 +    g_audio_image_consumer_only = 0;
 +}
 +
@@ -1113,6 +1112,23 @@ index 1cb3f6a..c8aaadb 100644
 +        }
 +    }
 +    if (is_keyon) {
++        static bool identity_control_logged = false;
++        if (!identity_control_logged) {
++            size_t eligible = 0;
++            for (const AudioImageStage& stage : g_audio_image_stages) {
++                if (!stage.identity_table_logged && event > stage.stage_event) {
++                    ++eligible;
++                }
++            }
++            std::fprintf(stderr,
++                "[m5-identity-control] event=%" PRIu64
++                " phase=%u width=%u origin=0x%06X ordinal=%u row=%u"
++                " stages=%zu eligible=%zu\n",
++                event, phase, width, origin, ordinal, row,
++                g_audio_image_stages.size(), eligible);
++            std::fflush(stderr);
++            identity_control_logged = true;
++        }
 +        for (AudioImageStage& stage : g_audio_image_stages) {
 +            if (stage.identity_table_logged || event <= stage.stage_event) continue;
 +            stage.identity_keyon_event = event;
@@ -1452,7 +1468,7 @@ index 1cb3f6a..c8aaadb 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +957,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +973,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  

@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2411 (2026-08-26).
+Current maintenance marker: Session 2412 (2026-08-26).
 
 ## Current state
 
@@ -58,6 +58,14 @@ Current maintenance marker: Session 2411 (2026-08-26).
   crashed before title at guest PC `0x8000B650`. It emitted no identity rows,
   so this is route-invalid and selects no identity hypothesis. Artifact:
   `scratch/agent/s2411_identity_join/`.
+- s2412 repaired the identity table's phase-scope lifetime and reran the image
+  arm. Both target phases and the key-on positive control fired. Of 1,173
+  retained stage rows, 1,161 matched phase/origin only, 10 matched
+  phase/origin plus the bounded event sequence, and 2 matched all three keys
+  (including ordinal/row). This selects `H-SequenceKey` at the current
+  capture scope; an independent corroboration run is still required. The
+  silent-stub arm exited before title and remains route-invalid. Artifact:
+  `scratch/agent/s2412_identity_join/`.
 
 ## Latest evidence
 
@@ -113,6 +121,12 @@ Current maintenance marker: Session 2411 (2026-08-26).
   `keyon-w40`; the image arm died before width 1024 at guest PC `0x8000B650`.
   No image identity rows exist, so phase, ordinal/row, sequence, and no-join
   hypotheses remain unselected.
+- **s2412 — bounded identity table selects the sequence key.** After retaining
+  stage rows across intervening scope transitions, the valid image arm
+  produced 1,173 rows: class 1 (phase/origin only) 1,161, class 5
+  (phase/origin plus sequence) 10, and class 7 (all three keys) 2. This is a
+  single capture and needs an independent rerun before closing the identity
+  defect or changing any output behavior. The stub control was route-invalid.
 - **s2402 — identity is valid at stage entry.** Corrected same-build stub/image
   arms passed route controls; both observed `prepare-clear`, then
   `stage-observe` with `valid=1` and matching `prepare_seq`, followed by
@@ -151,10 +165,10 @@ Closed investigations are not active work items. This is one monotonic
 sequence; #1 is the next campaign priority.
 
 1. **M5 audio de-stubbing — active.** Keep `docs/M5-AUDIO-PLAN.md` as the
-   design gate. Resolve the selected identity-join defect by correlating the
-   image-stage ordinal/row with the independent key-on event/transfer
-   sequence in one bounded table. Do not change task data, audio, gate,
-   fallback, dispatch, VI, output behavior, or the nonzero predicate.
+   design gate. Independently rerun the retained identity table to corroborate
+   `H-SequenceKey`, then determine whether the sequence is the legitimate
+   downstream identity. Do not change task data, audio, gate, fallback,
+   dispatch, VI, output behavior, or the nonzero predicate.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -196,12 +210,14 @@ produced no same-identity downstream rows. s2409 independently observed
 hangar key-on events while the image join still classified every captured row
 as `stage-only`; the current conclusion is an identity-key mismatch, not an
 absent consumer or a valid destination remap.
-The s2410 identity table is present in the runtime, but s2411 again failed to
-obtain a valid image-arm capture; do not interpret its zero table rows or
-change the sequence window until the image arm reaches title and hangar.
-No behavior change is authorized: do not promote C88, invent output metadata,
-remap destinations, alter task data, force a consumer, or add a guard without
-a new discriminator and named writer legitimacy.
+The s2410 identity table is present in the runtime, but its original phase
+scope discarded rows before the downstream event. s2412 retained rows across
+scope transitions and selected a sequence-key join in one valid image capture;
+corroborate it before changing the sequence window or interpreting it as the
+legitimate consumer identity. No behavior change is authorized: do not
+promote C88, invent output metadata, remap destinations, alter task data,
+force a consumer, or add a guard without a new discriminator and named writer
+legitimacy.
 
 ### VI, M3, M4, and generated symbols
 

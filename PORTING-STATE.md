@@ -112612,3 +112612,34 @@ audio, gate, routing, VI, output, or mitigation behavior changed.
 
 ORIGIN: no mitigation or behavior change; the identity table is diagnostic only.
 Artifacts: `scratch/agent/s2411_identity_join/`.
+
+## Session 2412 (2026-08-26) — selected M5 sequence-key identity
+
+The prescribed image-arm identity capture was first run against a stale
+executable: the phase controls and key-on positive control fired, but the
+expected identity marker was absent. A rebuild confirmed the source marker,
+but the table still had zero rows because its phase-scope lifetime discarded
+image stages before the downstream key-on event. A bounded control showed
+`stages=0` at the key-on despite preceding same-identity image rows.
+
+The diagnostic table was repaired to retain stage rows across intervening
+scope transitions; phase/ordinal/row matching remains observation-only. The
+rebuilt image arm reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, and the key-on positive control fired. The retained table
+had 1,173 rows: 1,161 phase/origin-only (class 1), 10 phase/origin-plus-
+sequence (class 5), and 2 phase/origin-plus-ordinal/row-plus-sequence (class
+7). This selects `H-SequenceKey` at the current capture scope. The silent
+stub control exited before title and is route-invalid; it was not used for
+comparison.
+
+The image-stage rows and key-on event are separate producer paths, while the
+phase controls independently validate the route. The identity result is
+single-capture evidence and needs a fresh corroboration run before any
+consumer/output conclusion. No task, audio, gate, routing, VI, output, or
+mitigation behavior changed.
+
+ORIGIN: no mitigation or behavior change; the only code change retains
+diagnostic identity rows across phase-scope transitions and adds a one-shot
+table-size control. The stage/key-on values are legitimate observations, not
+an output remap or guard.
+Artifacts: `scratch/agent/s2412_identity_join/`.
