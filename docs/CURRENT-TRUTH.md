@@ -5,9 +5,9 @@ history through s2357 is archived in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md
 §48; the append-only ledger remains authoritative for exact commands, counts,
 and probe rows.
 
-Current maintenance marker: Session 2395 (2026-08-25).
+Current maintenance marker: Session 2396 (2026-08-25).
 
-Maintained in Session 2395 (2026-08-25). The s2395 same-build suppression discriminator passed its required Arm A positive control: explicit `ROGUESQ_STUB_MISSING_FUNCS=0` crashed at guest PC `0x80001F88` before title. Arm B with suppression reached title VI 1024 (3,086 phase rows), stayed alive for the 60-second window, but emitted zero `[audtask-image-stage-row]` and zero `[m5-stage-bytes]` rows. This selects `H-MissingFunctionSuppressionRequired` for route reachability and separately leaves the stage-byte boundary open: title reachability is now valid, but the stage producer did not fire in this capture. No task-data, audio, gate, fallback, dispatch, VI, output, or mitigation behavior changed.
+Maintained in Session 2396 (2026-08-25). The s2396 same-build suppressed image-arm run passed dispatch (`59` rows) and title-origin (`0x00790400`) controls, stayed alive without crash/abort for 60 seconds, and recorded `140` image-stage call attempts across stages 0–3. Every retained attempt had `route_valid=0`, `width=0`, and `origin=0`; the title transition occurred at phase 8 after the calls began. No `[audtask-image-stage]` or `[m5-stage-bytes]` rows were emitted. This refutes a globally absent image-stage callsite but does not select route filtering for the title phase: the route identity is missing before the stage entry. The next boundary is route-identity preparation ordering, with no task-data, audio, gate, fallback, dispatch, VI, output, or mitigation change authorized.
 
 The s2384 completion-producer capture remains valid: image arms emitted 1,147 and 1,022 target-phase completion-call rows, and their stage candidates carried matching completion events, including event `18` for the first image candidate. This selects `H-CompletionProducerCalledAndAssociated` at capture scope and closes the completion-event null; it does not explain task completion or PCM closure.
 
@@ -130,6 +130,23 @@ is authorized.
   authorized. Artifacts: `scratch/agent/s2363_m5_stage_output_contract_join_final/`.
 
 ## Latest evidence
+
+- **s2396 — image-stage calls occur before route identity is prepared.** The
+  same-build suppressed image-arm run passed dispatch (`59` rows) and title
+  origin (`0x00790400`) controls, stayed alive with zero crash/abort markers,
+  and emitted `140` bounded `[m5-stage-call]` rows across stages 0–3. Every
+  retained call attempt had `route_valid=0`, `width=0`, and `origin=0`; the
+  title transition was logged at phase 8 after the captured call attempts.
+  There were zero `[audtask-image-stage]` and zero `[m5-stage-bytes]` rows.
+  This selects `H-ImageStageCallsiteReachedBeforeRoutePrepare` at capture
+  scope, refutes a globally absent callsite, and leaves title-call ordering
+  versus non-target task identity open. The call marker and dispatch/title
+  controls are independent runtime evidence; the s2392 oracle remains the
+  independent retail prerequisite. Artifact:
+  `scratch/agent/s2396_stage_call_boundary/`.
+
+  ORIGIN: no mitigation or behavior change; added only a bounded entry
+  witness and its env-var catalog entry.
 
 - **s2395 — suppression is required for a valid title route.** The fixed
   same-build two-arm run passed the unsuppressed Arm A control by reproducing

@@ -112208,3 +112208,27 @@ changed. Artifacts: `scratch/agent/s2395_two_arm/`.
 
 ORIGIN: no mitigation or behavior change; suppression was an existing
 diagnostic arm selected only for the route discriminator.
+
+## Session 2396 (2026-08-25) — M5 image-stage call reach versus route identity
+
+The prescribed same-build suppressed image-arm run used the built macOS
+executable from `build/` for 60 seconds with the qualified LLE route, missing
+function suppression, title phase gating, and the new bounded entry witness.
+It passed the dispatch positive control (`59` `[audtask-dispatch]` rows),
+reached the title origin `0x00790400` at width 1024, stayed alive with zero
+crash/abort markers, and logged `140` `[m5-stage-call]` attempts across
+stages 0–3. Every retained attempt had `route_valid=0`, `width=0`, and
+`origin=0`; the title transition occurred at phase 8 after the captured calls.
+There were zero `[audtask-image-stage]` and zero `[m5-stage-bytes]` rows.
+
+This refutes `H-ImageStageCallsiteNotReached` globally: the stage entry is
+reached. It does not select `H-StageCallRouteFiltered` for the title route,
+because no call retained a title route identity; instead it selects
+`H-ImageStageCallsiteReachedBeforeRoutePrepare` at capture scope. The next
+discriminator is preparation ordering: whether `rs64_audio_route_prepare`
+ran and accepted a target identity before each stage call. No task-data,
+audio, gate, fallback, dispatch, VI, output, or mitigation behavior changed.
+Artifacts: `scratch/agent/s2396_stage_call_boundary/`.
+
+ORIGIN: no mitigation or behavior change; added only a bounded entry witness
+and its env-var catalog entry.

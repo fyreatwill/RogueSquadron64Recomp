@@ -1295,6 +1295,32 @@ extern "C" void rs64_audio_image_stage(uint32_t stage, uint8_t* rdram,
                                          uint32_t r2, uint32_t field348,
                                          uint32_t field44, uint32_t dest) {
     const Rs64AudioRouteIdentity& route = g_rs64_audio_identity;
+    if (stage <= 3u) {
+        static const bool capture_enabled = [] {
+            const char* own = std::getenv("ROGUESQ_LOG_M5_STAGE_CALLS");
+            return own && own[0] && own[0] != '0';
+        }();
+        static std::mutex capture_mutex;
+        static uint32_t capture_phase = UINT32_MAX;
+        static uint32_t capture_count[4] = {};
+        if (capture_enabled) {
+            std::lock_guard<std::mutex> lock(capture_mutex);
+            const uint32_t phase = rs64_phase_ord();
+            if (phase != capture_phase) {
+                capture_phase = phase;
+                std::fill(std::begin(capture_count), std::end(capture_count), 0u);
+            }
+            if (capture_count[stage] < 8u) {
+                const uint32_t ordinal = capture_count[stage]++;
+                std::fprintf(stderr,
+                    "[m5-stage-call] ordinal=%u stage=%u route_valid=%u arm=%s "
+                    "route_ordinal=%u route_row=%u phase=%u width=%u origin=0x%06X\n",
+                    ordinal, stage, route.valid ? 1u : 0u, route.arm,
+                    route.ordinal, route.row, phase, route.width, route.origin);
+                std::fflush(stderr);
+            }
+        }
+    }
     if (!route.valid ||
         !((route.width == 1024u && route.origin == 0x00790400u) ||
           (route.width == 512u && route.origin == 0x006AB400u))) return;
