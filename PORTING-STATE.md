@@ -112908,3 +112908,25 @@ blanket claim that the candidate ranges have no port CPU writer, while leaving
 writeback behavior changed. The first run is recorded as invalid measurement,
 not evidence, because its title-only flat budget and zero task-data field could
 not discriminate. Artifact: `scratch/agent/s2424_m5_guest_writer_fixed/`.
+## Session 2425 (2026-08-26) — attributed M5 retail candidate writer contexts
+
+Ground truth was checked before any port change. One Rice-oracle run used the
+whole-RDRAM positive control, the existing title/hangar range controls, and
+phase-gated execution and field watches for `0x80015BC8` and `0x8000F3A0`.
+The whole-RDRAM control fired 10,125 times; the title-range control fired 17
+times; the hangar-range control fired 108 times; title `1024 @ 0x00790400`
+and hangar `512 @ 0x006AB400` both occurred. The fourth historical selector
+watch was quiet, but it was not required by the title/hangar route gate.
+
+Retail `0x80015BC8` produced title rows whose `branch_selector` traversed
+`0x80169730` and the adjacent field progression, with `s0=0x801143B0`-class
+context matching the fixed s2424 port guest rows writing
+`0x169730..0x169B2C`. This selects `H-RetailSameWriter` for the observed title
+writer identity. Retail `0x8000F3A0` produced valid title and hangar rows but
+with phase-specific helper contexts (`s1=0x80165C88` versus `0x80165DC8`, and
+different selectors/arguments), not an image-output range; this selects
+`H-RetailDifferentRole` for that candidate at this scope. The run does not
+identify a legitimate hangar image consumer and authorizes no writeback,
+remap, task-data, gate, or guard change. It rules out treating both candidate
+PCs as one undifferentiated retail image writer. Artifact:
+`scratch/agent/s2425_m5_retail_writer/`.
