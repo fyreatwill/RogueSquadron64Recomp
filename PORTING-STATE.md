@@ -114262,3 +114262,44 @@ populated nor stale descriptor fields, and it rules out interpreting either
 zero-row result as a target-phase null. No scheduler behavior, remap, guard,
 or audio contract changed. Artifact:
 `scratch/agent/s2486_m5_descriptor_capture/audit.md`.
+
+## Session 2487 (2026-08-26) — captured gspTask descriptor at osSpTaskYielded boundary
+
+Diagnosed two orthogonal recipe bugs that blocked all prior descriptor captures.
+**Bug 1**: `ROGUESQ_LOG_AUDIO_RETURN` (or equivalent) was absent from every prior
+probe command; `audio_route_log_enabled()` therefore returned false, causing
+`rs64_audio_route_set` to set `g_audio_route_context.active = false`, which in turn
+caused `rs64_audio_current_route_snapshot` to always return false, suppressing
+every phase-gated hook (descriptor-yield, descriptor-start, scheduler-id)
+regardless of VI width. **Bug 2**: `PROBE_PHASE_WIDTH=1024` with
+`PROBE_KEYS_FROM_PHASE=1` cannot advance the game to 1024 because the keys only
+fire AFTER 1024 is reached. Boot-relative keys at 15 s, 30 s, 45 s reliably push
+the game to 512 (hangar) in ~49 s.
+
+Corrected probe added `ROGUESQ_LOG_AUDIO_RETURN=1` (avoids the heavier TASK_CONTRACT
+DMEM snapshot which caused early Metal framebuffer crashes) and used boot-relative
+keys with `PROBE_PHASE_WIDTH=512`. The run reached 512 at 48.4 s, captured 50 frames
+before crashing at 57.5 s in `setByteAcrossEntryList` (same family as prior hangar
+crashes). 1602 total `m5-descriptor-yield` rows; 74 in the hangar (512/0x6AB400)
+phase. The `m5-scheduler-id-control` fired at both title (1024) and hangar (512)
+phases, confirming the route gate was live.
+
+The sixteen words at gspTask (0x800377C8) are STABLE and non-zero across all
+observations in both title and hangar phases:
+`0A8C2907,88C3045E,20848201,2907F858,17F04A94,911C317E,1FE145F4,12060623,
+1FE16082,C12A50A7,84820188,07F85820,5F8A9C29,4470CB04,7F8317E0,4818188C`.
+These values carry the known struct-cast endian defect (s2484) and cannot be
+directly mapped to OSTask fields without a MEM_W-based per-field decoder.
+
+Scheduler dispatch rows in the hangar phase show `event_payload=task_ptr=
+0x800377C8` with `yield_match=1, payload_match=1`, confirming gspTask is both the
+event payload and the task being restarted via osSpTaskLoad/osSpTaskStartGo in a
+yield-and-restart cycle. In the title (1024) phase the event payload is also
+0x800377C8 but the started task is 0x80149470 (distinct, consistent with s2484).
+
+**H-DescriptorPopulated selected** (74 hangar-phase yield rows, non-zero stable
+fingerprint). **H-DescriptorStaleOrEmpty refuted** (non-zero, consistent).
+**H-DescriptorWriterUnjoined refuted** at dispatcher boundary (event_payload ==
+gspTask == started task in the hangar). Open: endian-correct per-field decode to
+verify type, data_ptr, yield_data_ptr values against retail ground truth. Artifact:
+`scratch/agent/s2487_m5_descriptor_capture/audit.md`.

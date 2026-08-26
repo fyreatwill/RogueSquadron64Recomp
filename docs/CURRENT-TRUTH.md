@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2486 (2026-08-26).
+Current maintenance marker: Session 2487 (2026-08-26).
 
 ## Current state
 
@@ -30,14 +30,30 @@ Current maintenance marker: Session 2486 (2026-08-26).
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
 
-- **s2486 — the descriptor instrument is built but the target route was not
-  reached.** The durable fixup captures all sixteen words at `gspTask` before
-  `osSpTaskYielded` and joins later starts to the scheduler payload. The first
-  45-second capture reached 1024 too late; the fixed 120-second capture never
-  reached 1024 in its 180-second gate. Both had the resolver positive control,
-  but zero descriptor/start rows. `H-DescriptorPopulated`,
-  `H-DescriptorStaleOrEmpty`, and `H-DescriptorWriterUnjoined` remain
-  unevaluable; no field value is evidence. Artifact:
+- **s2487 — gspTask descriptor is populated, stable, and joined to the
+  scheduler dispatch in the hangar phase.** Two recipe bugs suppressed all
+  prior descriptor rows: (a) `ROGUESQ_LOG_AUDIO_RETURN` was absent, causing
+  `audio_route_log_enabled()` to return false and disabling all phase-gated
+  hooks; (b) `PROBE_KEYS_FROM_PHASE=1` cannot navigate to the hangar because
+  Start keys fire only after 1024 is reached. Corrected probe (boot-relative
+  keys, `ROGUESQ_LOG_AUDIO_RETURN=1`) reached 512/0x6AB400 at ~49 s and
+  captured 1602 yield rows; 74 in the hangar. The sixteen words at
+  `gspTask=0x800377C8` are non-zero and identical across all observations:
+  `0A8C2907,88C3045E,...` (endian-invalid struct-cast values, same defect
+  noted in s2484). Scheduler dispatch rows at 512 show
+  `event_payload=task_ptr=0x800377C8` with `yield_match=1, payload_match=1`
+  — gspTask is both the event payload and the task restarted via
+  `osSpTaskLoad/osSpTaskStartGo` in the hangar (a yield-and-restart cycle).
+  `H-DescriptorPopulated` selected; `H-DescriptorStaleOrEmpty` and
+  `H-DescriptorWriterUnjoined` refuted at the dispatcher boundary. Open:
+  endian-correct per-field decode (MEM_W per word) to verify type,
+  `data_ptr`, `yield_data_ptr` against retail ground truth. Artifact:
+  `scratch/agent/s2487_m5_descriptor_capture/audit.md`.
+
+- **s2486 — descriptor instrument built; target route missed due to recipe
+  bugs.** Zero descriptor rows in both captures; the causes were the two
+  bugs described in s2487. The durable fixup at `osSpTaskYielded_recomp` is
+  correct and remains in place. Artifact:
   `scratch/agent/s2486_m5_descriptor_capture/audit.md`.
 
 - **s2485 — the later scheduler pointer is the normal `gspTask` OSTask
@@ -469,21 +485,18 @@ Current maintenance marker: Session 2486 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, downstream contract open.**
-   The host-local bridge reaches the target image task and removes the old
-   continuation lookup failure. The generated image arm exits normally at
-   `0x1328`; containing-task SP completion is runtime-owned, the SP message is
-   consumed on the qualified image route, and the two target stage DMAs remain
-   `stage-only`. Next: identify the legitimate post-receive consumer/output
-   contract. The first post-receive edge is now classified as a generic
-   scheduler handoff; the event object's `+4` payload has not been joined to
-   the image task identity. That capture now selects a distinct later-task
-   pointer at the `OSTask.data_ptr` boundary. Static evidence now identifies
-   `0x800377C8` as the normal `gspTask` OSTask; next capture all sixteen guest
-   words at that descriptor at the `osSpTaskYielded` boundary and join them to
-   the event payload and later task-start argument. The plain launch was
-   phase-invalid; use the eleven-Start `tools/probe.sh` route in `NEXT.md` only
-   if a later capture is required.
+1. **M5 generated alternate equivalence — active, descriptor field decode open.**
+   The host-local bridge reaches the target image task; SP completion and
+   consumption are confirmed; the scheduler dispatches gspTask (0x800377C8)
+   with `event_payload=task_ptr` in the hangar phase (yield-and-restart cycle).
+   The sixteen words at gspTask are captured and stable but are endian-invalid
+   from the struct-cast bug. Next: add a MEM_W-based per-field decoder to
+   `rs64_m5_descriptor_yield` to read type, `data_ptr`, `yield_data_ptr`, and
+   `output_buff` correctly, then compare those values against retail ground
+   truth (via the oracle or a known-valid task submission in the hangar). Use the
+   corrected recipe: boot-relative keys, `ROGUESQ_LOG_AUDIO_RETURN=1`,
+   `PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=300`. Do NOT use
+   `PROBE_KEYS_FROM_PHASE=1`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
