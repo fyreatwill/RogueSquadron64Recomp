@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2478 (2026-08-26).
+Current maintenance marker: Session 2479 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,17 @@ Current maintenance marker: Session 2478 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2479 — containing-task completion is runtime-owned, not generated.** The
+  complete static table found the image arm's terminal `0x1328` `Broke` edge,
+  its two generated DMA edges, the host image-join reporter, and the runtime
+  `task_thread_func` publication. Only the runtime's unconditional
+  `sp_complete()` after successful `run_task` publishes the containing-task
+  SP event; no generated completion or PCM-output writer is reachable after
+  `0x1328`. The s2478 `complete=0` field is a source/consumer join result, not
+  SP completion. This selects `H-ContainingTaskRuntime` and treats
+  `0x1328` as a legitimate terminal image-task contract. Artifact:
+  `scratch/agent/s2479_m5_containing_task_completion/audit.md`.
 
 - **s2478 — the host-local bridge reaches the target image task but not its
   containing-task completion.** Independent retail controls passed, and both
@@ -381,13 +392,14 @@ Current maintenance marker: Session 2478 (2026-08-26).
 Closed investigations are not active work items. This is one monotonic sequence;
 #1 is the next campaign priority.
 
-1. **M5 generated alternate equivalence — active, containing-task boundary
-   open.** The host-local bridge reaches the target image task and removes the
-   old continuation lookup failure, but two target stage DMAs remain
-   `stage-only` and the containing task has no completion/output-PCM row.
-   Next: statically audit the generated containing-task completion path around
-   the image arm's `break_pc=0x1328`, mapping every completion publication and
-   exit edge before adding runtime machinery or a guard. See `NEXT.md`.
+1. **M5 generated alternate equivalence — active, downstream contract open.**
+   The host-local bridge reaches the target image task and removes the old
+   continuation lookup failure. The generated image arm exits normally at
+   `0x1328`; containing-task SP completion is runtime-owned, while the two
+   target stage DMAs remain `stage-only`. Next: dynamically validate that the
+   runtime SP completion message is registered, published, and consumed on the
+   qualified image route before investigating output/consumer semantics. See
+   `NEXT.md`.
 2. **M5 task/output closure — closed at current capture scope.** The earlier
    task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

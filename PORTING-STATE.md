@@ -114121,3 +114121,18 @@ JAL at `0x800155E4`. The zero completion is not treated as a wild-value defect;
 its writer and legitimacy remain open at the containing-task boundary.
 
 Artifact: `scratch/agent/s2478_m5_continuation_bridge_validation/audit.md`.
+## Session 2479 (2026-08-26) — audited image-arm containing-task completion
+
+Ran the prescribed bounded static audit using the s2478 image capture and the
+available generated Factor 5 sources. The image arm has two generated DMA
+edges and a terminal `0x1328` `Broke` return; no generated branch publishes a
+task message or PCM output after that point. The host image-join callback only
+sets diagnostic `complete_event` state. `run_task` accepts the `Broke` result,
+and the queued-audio runtime unconditionally calls `sp_complete()` after a
+successful `run_task`, which enqueues the registered SP message. The GFX
+thread's separate `sp_complete` and `dp_complete` paths are unreachable for
+`M_AUDTASK`. s2478's `complete=0` is the source/consumer join field, not SP
+completion. This selects `H-ContainingTaskRuntime`, treats `0x1328` as a
+legitimate terminal image-task contract, and rules out a generated
+containing-task completion writer. No code or mitigation changed. Artifact:
+`scratch/agent/s2479_m5_containing_task_completion/audit.md`.
