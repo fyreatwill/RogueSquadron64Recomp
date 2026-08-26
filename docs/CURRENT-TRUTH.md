@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2428 (2026-08-26).
+Current maintenance marker: Session 2429 (2026-08-26).
 
 ## Current state
 
@@ -244,6 +244,17 @@ Current maintenance marker: Session 2428 (2026-08-26).
   identify the legitimate hangar consumer or authorize a remap. Artifact:
   `scratch/agent/s2426_m5_retail_image_ranges/`.
 
+- **s2429 — retail hangar image ranges are active, but this capture did not
+  expose writer attribution.** The oracle passed the whole-RDRAM positive
+  control (`12,253` writes), reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400`, and recorded `1,536` writes to
+  `0x167650..0x167C50` plus `717` writes to `0x1798B0..0x179A48`. The
+  invocation did not request `--pc-hist-watch`, and the global 200-event print
+  cap was consumed by the control stream; its shutdown output therefore
+  contained no writer-PC attribution. This confirms active retail writes but
+  selects no consumer-PC hypothesis. The next run must request phase-gated
+  writer histograms explicitly.
+
 - **s2403 — retained image-stage bytes are legitimately zero at capture scope.**
   The retail oracle passed whole-RDRAM (`32,791,644` hits), title, and hangar
   controls. In one rebuilt two-arm port run, retained stage-2 and stage-3
@@ -373,6 +384,10 @@ sequence; #1 is the next campaign priority.
    the port title task row. The next capture must use a new ground-truth
    discriminator for the unresolved hangar consumer; no behavior change is
    authorized.
+   s2429 confirmed both exact hangar ranges are written on retail, but omitted
+   the explicit writer-PC histogram required to attribute them. The next unit
+   must repeat the oracle with `--pc-hist-watch 1/2` and a hangar phase bucket;
+   no port behavior change is authorized.
 2. **M5 task/output closure — closed at current capture scope.** Keep the
    corrected reporter reducer; the earlier task-gap label was a join artifact.
 3. **M5 gate polarity/writer join — closed at current capture scope.** No gate
@@ -433,6 +448,12 @@ wrote 70 times. This corroborates the title writer identity at the exact
 range and selects `H-RetailTitleExactWriter` at this scope. The image-range
 attribution remains `0x800078EC`/helpers from s2426; no hangar consumer,
 remap, writeback, task-data, gate, or guard is authorized.
+s2429's independent oracle run again passed whole-RDRAM, title, and hangar
+controls and found `1,536` writes in the first exact image range plus `717` in
+the second. Because `--pc-hist-watch` was not armed, this is aggregate-only
+ground truth and cannot select a writer or justify a consumer mapping. The
+missing attribution is an instrumentation omission, not evidence of no
+consumer; no behavior change is authorized.
 - s2428's fixed paired port capture passed retail whole-RDRAM/title/hangar
   controls and both port-arm title/hangar controls. Each arm recorded 256
   exact `0x80015BC8` writes in `0x169730..0x1698EC`, joined to title

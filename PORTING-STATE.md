@@ -112987,3 +112987,18 @@ the title-only relation and leaves the hangar consumer unresolved. It rules
 out title-writer absence and route invalidity for this capture, but does not
 authorize a remap, writeback, task-data change, gate, guard, or default.
 Artifact: `scratch/agent/s2428_m5_title_writer_join/`.
+
+## Session 2429 (2026-08-26) — captured retail hangar image-range activity
+
+Ran the prescribed independent retail-oracle capture with the whole-RDRAM
+positive control first, exact watches on `0x167650..0x167C50` and
+`0x1798B0..0x179A48`, VI tracing, and the validated Start schedule. The
+whole-RDRAM control reached `12,253` writes, title reached `1024 @
+0x00790400`, and hangar reached `512 @ 0x006AB400`. The exact ranges recorded
+`1,536` and `717` writes respectively. The invocation did not include
+`--pc-hist-watch`, and the global 200-event print cap was consumed by the
+whole-RDRAM stream, so no writer-PC attribution was emitted. This rules out
+the no-write hypothesis but selects neither a single retail consumer PC nor a
+helper set; the result is aggregate-only and the missing attribution is an
+instrumentation omission. The next unit requests both explicit histograms in
+the hangar phase. No port behavior changed.
