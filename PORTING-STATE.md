@@ -117570,3 +117570,24 @@ This selects `H-RetailWriterUnresolved` and rules out promoting either
 legitimate payload, destination class, and ordering were tied to the s2662
 port rows. No runtime behavior changed. Artifact:
 `scratch/agent/s2663_m5_retail_output_writer_attribution/`.
+
+## Session 2664 (2026-08-27) — audited the named retail writer call-sites
+
+The bounded static audit compared the named retail PCs from s2663 with the
+companion symbol file and the active generated tree. `0x800078EC` is the
+generic `rs_memset` byte-fill loop; its callers cover broad reset/setup paths
+and its store value is caller-supplied, with no MORT descriptor or audio
+handoff in the body. `0x8001E2C0` is the zero-halfword loop in
+`initTextureLUTAndAllocBuffers`, clearing 36-byte texture records. The
+`0x8001FACC–0x8001FD2C` family is inside `loadTextureToMemory`: it populates
+texture-record flags, packed image bytes, dimensions, and decoded metadata,
+then calls `parseImageFile`. Its higher chain is
+`loadAndDecodeTexture`/`func_800547C0`, not CPU-MORT publication.
+
+This selects `H-800078EC-utility` and classifies the secondary writers as
+texture/image metadata. It refutes `H-800078EC-MORT` and leaves
+`H-Secondary-writer-edge` without a legitimate payload, destination identity,
+and ordering relation to the s2662 port rows. The s2662 stage-only result is
+therefore unchanged. No build or runtime run was needed; no port behavior,
+task-field writeback, remap, gate, wait, or generated code changed. Full table:
+`scratch/agent/s2664_m5_retail_writer_callsite_audit.md`.

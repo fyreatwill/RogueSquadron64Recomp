@@ -1,44 +1,47 @@
-# NEXT work unit (s2664) — audit the named retail writer call-sites
+# NEXT work unit (s2665) — write the M5 audio de-stubbing plan
 
-HYPOTHESIS-ID: m5-retail-output-writer-attribution
+HYPOTHESIS-ID: m5-audio-destub-plan
 
 ## Work unit
 
-Perform one bounded static call-site audit of the named retail writers from
-s2663 (`0x800078EC`, `0x8001E2C0`, and `0x8001FAxx–0x8001FD2C`) against the
-companion source/symbols and the port-side generated tree. Identify which
-stores are memset/metadata churn versus a plausible PCM or MORT publication
-edge, and map caller/ordering evidence to the s2662 port rows. Do not change
-port behavior, task fields, writeback, remap, gates, waits, or generated code.
+Create `docs/M5-AUDIO-PLAN.md`. Survey every audio stub, immediate-return
+trap, disabled route, and defensive gate currently in force in `src/`,
+`patches/`, the generated fixups, and the runtime integration. For each item,
+record its symbol/site, current behavior, retail contract if known, risk,
+rollback, and a phase-gated validation soak. Order the smallest incremental
+de-stubbing steps so each step has an independent positive control and does
+not conflate MusyX RSP with the CPU MORT speech boundary. Do not implement a
+de-stub in this work unit.
 
 ## Competing hypotheses and discriminator
 
-- `H-800078EC-MORT`: the named writer's callers/arguments establish a CPU-MORT
-  publication edge matching the secondary span.
-- `H-800078EC-utility`: the writer is generic memset/utility activity and does
-  not publish the target output.
-- `H-Secondary-writer-edge`: one of the other named secondary-span writers is
-  the legitimate publication edge.
+- `H-Plan-covers-all-gates`: the survey enumerates every active audio stub/trap/
+  gate and can assign each one a bounded validation step.
+- `H-Plan-misses-live-edge`: at least one active audio behavior is absent from
+  the survey or cannot be assigned a contract and positive control.
+- `H-Plan-conflates-contracts`: the proposed sequence mixes MusyX RSP task
+  execution with CPU MORT publication and therefore lacks a valid rollback or
+  discriminator.
 
-The discriminator is one call-site table keyed by writer PC with companion
-name/body, callers, destination span, value semantics, and ordering relation to
-the s2662 port stage/consumer rows. Select an edge only if one row closes all
-of those fields; otherwise retain `H-RetailWriterUnresolved`.
+The discriminator is one completeness table: every active stub/trap/gate must
+have a named owner, current branch behavior, retail/port contract, positive
+control, expected phase-gated signal, rollback, and soak recipe. A complete,
+separated table selects `H-Plan-covers-all-gates`; any missing site or mixed
+contract selects the corresponding hypothesis and requires repairing the plan
+before implementation.
 
 ## Exact commands
 
-1. Locate the companion and generated definitions/callers with `rg -n
-   '800078EC|8001E2C0|8001FA|8001FB|8001FC|8001FD'` in the companion and
-   repository trees; inspect only bounded windows around each hit.
-2. Build one table including every named writer, its caller chain, and the
-   s2662 port row it could explain; use `scratch/agent/s2663_m5_retail_output_writer_attribution/oracle.log`
-   for the measured phase/value columns.
-3. Select exactly one hypothesis. No behavior change is authorized by this
-   audit alone.
+1. `rg -n -i 'stub|noop|no-op|Broke|AUDIO_UCODE|MORT|MusyX|audio' src patches tools ../N64Recomp/RecompiledFuncs/funcs_*.c`
+2. Inspect bounded windows around each unique active site and the canonical
+   env-var catalog before recording it.
+3. Write `docs/M5-AUDIO-PLAN.md` with the complete discriminator table and
+   exact one-run-per-step validation recipes. No build or runtime run is
+   required for the design-only unit.
 
 ## Expected outcomes
 
-- A CPU-MORT caller/argument chain selects `H-800078EC-MORT`.
-- A utility body with no publication semantics selects `H-800078EC-utility`.
-- A distinct secondary writer with a closed payload/order relation selects
-  `H-Secondary-writer-edge`; otherwise retain `H-RetailWriterUnresolved`.
+- A complete, separated table selects `H-Plan-covers-all-gates`.
+- An unlisted active site selects `H-Plan-misses-live-edge`.
+- A step that lacks contract separation, rollback, or positive control selects
+  `H-Plan-conflates-contracts`.

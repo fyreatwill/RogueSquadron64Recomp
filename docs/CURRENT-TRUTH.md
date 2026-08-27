@@ -4,9 +4,23 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2663 (2026-08-27).
+Current maintenance marker: Session 2664 (2026-08-27).
 
 ## Decision-relevant evidence
+
+- **s2664 — the named retail writer call-sites are utility/texture paths, not
+  a closed MORT edge.** The companion symbol file and active generated tree
+  identify `0x800078EC` as the generic `rs_memset` byte-fill loop. The other
+  named PCs (`0x8001E2C0` and `0x8001FACC–0x8001FD2C`) are stores inside
+  `initTextureLUTAndAllocBuffers` and `loadTextureToMemory`, which initialize
+  or populate 36-byte texture-LUT/image records and call `parseImageFile`.
+  Their caller chains contain no MORT header, PCM buffer, or audio completion
+  handoff. This selects `H-800078EC-utility` and classifies the secondary
+  writers as texture/image metadata; it refutes `H-800078EC-MORT` and leaves
+  `H-Secondary-writer-edge` without a legitimate payload/order join to the
+  s2662 port rows. Static evidence only; no writeback, remap, gate, wait, or
+  generated-code behavior changed. Full table:
+  `scratch/agent/s2664_m5_retail_writer_callsite_audit.md`.
 
 - **s2658 — retail keeps the dispatched task output fields zero.** The fixed
   oracle run passed the whole-RDRAM control with 10,000 writes, reached title
@@ -454,7 +468,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    MORT publication boundary, before changing behavior. Do not revisit the
    hangar `0x80094648` relation. The s2659 census leaves the next named edge
    at the Factor 5 task/output ABI versus CPU-MORT publication boundary; map
-   one of those boundaries before any behavior change. Keep C88=`0` and
+   one of those boundaries before any behavior change. The s2664 static audit
+   rules out the named retail writer call-sites as that edge; do not repeat
+   their utility/texture classification. The next bounded action is the M5
+   audio-plan survey, starting from every active stub/trap/gate and its first
+   validation control. Keep C88=`0` and
    `ROGUESQ_AUDIO_UCODE=0` as
    rollbacks/controls.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
