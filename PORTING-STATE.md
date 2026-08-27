@@ -118759,3 +118759,16 @@ protected-placeholder failure occurred. This selects
 `H-exact-matches` for this region. No build or game run was warranted for the
 symbol-only sweep. Decision evidence:
 `scratch/agent/s2733_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2734 (2026-08-27) — bounded the next generated-symbol region
+
+The generated-symbol sweep covered `0x800CB000..0x800CE000` in the external
+generated snapshot. Its complete decision table evaluated 133 companion
+candidates: 100 semantic entries were already synchronized and 33
+address-only/fake entries were preserved as ambiguous-or-fake. The
+`--require-rename` option returned status 2 because zero generated references
+changed in zero files. No parser or duplicate-destination failure occurred.
+This selects `H-already-synchronized` / `H-ambiguous-or-fake` and rules out
+`H-exact-matches` for this interval. No build or game run was warranted for
+the symbol-only sweep. Decision evidence:
+`scratch/agent/s2734_generated_symbol_sweep/decision-table.txt`.

@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2733 (2026-08-27).
+Current maintenance marker: Session 2734 (2026-08-27).
+
+Session 2734's generated-symbol sweep covered `0x800CB000..0x800CE000` and
+evaluated 133 companion candidates: 100 semantic entries were already
+synchronized and 33 address-only/fake entries were preserved. The
+`--require-rename` option returned status 2 because zero generated references
+changed in zero files. There was no parser or duplicate-destination failure.
+This rules out `H-exact-matches` for the interval and preserves the
+`H-already-synchronized` / `H-ambiguous-or-fake` policy. Evidence:
+`scratch/agent/s2734_generated_symbol_sweep/decision-table.txt`.
 
 Session 2733's generated-symbol sweep covered `0x800C8000..0x800CB000` and
 found zero safe semantic renames: 26 companion candidates were already
@@ -558,9 +567,9 @@ precomputed generated-name set. The bounded fake-prefix rerun selected no
 rename, so future work continues only where exact companion evidence exists.
 
 This is one monotonic sequence; #1 is the next campaign priority. The s2729
-through s2733 batches confirm their covered intervals have no exact
+through s2734 batches confirm their covered intervals have no exact
 unsynchronized companion names. The next unexamined bounded interval is
-`0x800CB000..0x800CE000`.
+`0x800CE000..0x800D1000`.
 
 1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
