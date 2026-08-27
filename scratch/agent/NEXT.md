@@ -1,11 +1,11 @@
-# NEXT work unit (s2792) — close generated-symbol interval 0x8012D000..0x8012F000
+# NEXT work unit (s2793) — close generated-symbol interval 0x8012F000..0x80131000
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
 Run the bounded generated-symbol selector for guest interval
-`0x8012D000..0x8012F000`. Apply only source-backed companion names, preserve
+`0x8012F000..0x80131000`. Apply only source-backed companion names, preserve
 ambiguous/data entries, then independently scan the generated tree for
 placeholder definitions/references in the same interval. This is one rename
 interval; do not repair the unrelated duplicate generated definition or add
@@ -33,7 +33,7 @@ selects H-ambiguous-data for those entries.
 ## Exact commands
 
 ```sh
-rg -n "8012D000|8012F000|selector|rename" docs tools scratch/agent
+rg -n "8012F000|80131000|selector|rename" docs tools scratch/agent
 # Run the existing bounded selector command identified by that search.
 git diff --check
 git status --short

@@ -119596,3 +119596,14 @@ generated `lv2_initializeObjectTracking` definition in `funcs_43.c`.
 but this iteration produced no runtime evidence and does not establish task
 interruption/resumption or audio progress. The next bounded work unit is the
 generated-symbol interval `0x8012D000..0x8012F000`.
+
+## Session 2793 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The regeneration-safe companion census for `0x8012D000..0x8012F000` found 18
+entries already synchronized. The bounded selector changed zero generated
+references in zero files, and the independent generated-tree inventory found
+zero `func_8012...` or `fake_func_8012...` placeholders whose numeric suffix
+lies in the interval. No ambiguous or fake candidate was renamed. `git diff
+--check` passed; no build or regeneration was needed. This closes the interval
+and rules out stale generated placeholders there, not the remaining rename
+sweep. The next interval is `0x8012F000..0x80131000`.
