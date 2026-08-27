@@ -124,7 +124,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    scan found no placeholder definitions or references. Session 2786 closed
    `0x80123000..0x80125000`: the selector changed zero references in zero
    files, and the independent generated-tree scan found no placeholder
-   definitions or references. Continue with `0x80125000..0x80127000`.
+   definitions or references. Session 2787 closed
+   `0x80125000..0x80127000`: the selector changed zero references in zero
+   files, and the independent generated-tree scan found no placeholder
+   definitions or references. Continue with `0x80127000..0x80129000`.
 
 2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
@@ -280,6 +283,10 @@ ledger. The current late-chain checkpoints are:
   renames and the independent generated-tree scan found no in-range
   placeholders or references. The interval is closed without a build; the
   next interval is `0x80123000..0x80125000`.
+- s2787: the generated-symbol interval `0x80125000..0x80127000` selected zero
+  renames and the independent generated-tree scan found no in-range
+  placeholders or references. The interval is closed without a build; the
+  next interval is `0x80127000..0x80129000`.
 - s2781: the generated-symbol interval `0x80119000..0x8011B000` had three
   ambiguous-or-fake candidates. The regeneration-safe selector changed zero
   generated references, and a corrected independent generated-tree symbol
