@@ -117150,3 +117150,15 @@ No placeholder, duplicate overlay identity, or boundary-only mapping beyond the
 preserved fragment required an action. No rename, build, or runtime change was
 warranted. This rules out an actionable rename in this bounded lead, not the
 broader symbol-sweep hypothesis. The next bounded lead is `0x800C7FF8`.
+
+## Session 2638 (2026-08-27) — synchronized the stale updateHudHealthIndicator mapping
+
+Ran the bounded generated-symbol-renaming sweep after the `0x800C7FF8` lead
+was already resolved. The exact companion/generated check found
+`updateHudHealthIndicator` at `0x800BF790` with matching `0x634` span,
+generated definition/header, and companion mission symbol. The repository TOML
+alone still named that address `func_800BF790`; synchronized it to the semantic
+name. This is a regeneration/configuration rename with no runtime behavior
+change. It rules out a placeholder/configuration mismatch at this exact body,
+not the broader M5 or symbol-sweep hypotheses. The next bounded lead is
+`0x800C804C`, where mission and menu overlay identities must remain distinct.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2637 (2026-08-27).
+Current maintenance marker: Session 2638 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -240,6 +240,14 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
   semantic rename. No placeholder, duplicate overlay identity, or boundary-only
   mapping required an action; the next bounded lead is `0x800C7FF8`.
 
+- **s2638 — synchronized one stale generated-symbol mapping.** The active
+  generated output defines `updateHudHealthIndicator` at `0x800BF790` with
+  the exact `0x634` span, while the repository TOML still used
+  `func_800BF790`. The companion mission symbol file and generated header/body
+  agree on the semantic name. The TOML row now matches the generated and
+  companion identities; no runtime behavior changed. This is an exact
+  regeneration/configuration rename, not a boundary-only inference.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -261,7 +269,8 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C7FF8` next using companion symbols, exact spans, and callers;
+   Audit `0x800C804C` next using companion symbols, exact spans, callers, and
+   overlay identity;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an

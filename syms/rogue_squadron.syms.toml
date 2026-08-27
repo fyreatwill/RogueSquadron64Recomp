@@ -1683,7 +1683,7 @@ functions = [
     { name = "fake_func_800BF498", vram = 0x800BF498, size = 0x8 },
     { name = "attached3DSoundEmitterNpcHandler", vram = 0x800BF4A0, size = 0x2E4 },
     { name = "fake_func_800BF784", vram = 0x800BF784, size = 0xC },
-    { name = "func_800BF790", vram = 0x800BF790, size = 0x634 },
+    { name = "updateHudHealthIndicator", vram = 0x800BF790, size = 0x634 },
     { name = "setHudSecondaryWeaponInfo", vram = 0x800BFDC4, size = 0xDC },
     { name = "findHudElementExtremes", vram = 0x800BFEA0, size = 0x1E4 },
     { name = "handleHUD", vram = 0x800C0084, size = 0x1AE0 },
