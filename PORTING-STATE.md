@@ -118358,3 +118358,18 @@ out `H-exact-matches` in this region. No build or game run was warranted.
 The full decision table is in
 `scratch/agent/s2708_generated_symbol_sweep/decision-table.txt`. The external
 generated worktree remains dirty from prior work; this run did not modify it.
+
+## Session 2709 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title revisit check did not trigger: the recent titles
+were not all sweep-scoped. Ran the tracked bounded rename tool for companion
+candidates in `0x8009E000..0x800A1000`. Its complete decision table contained
+44 candidates: five were already synchronized and 39 were preserved as
+ambiguous-or-fake address-only entries. It selected zero renames in zero files
+and exited successfully, with no parser or duplicate-destination rejection.
+This selects `H-already-synchronized` for the semantic candidates and rules
+out `H-exact-matches` in this region. No build or game run was warranted.
+
+The full decision table is in
+`scratch/agent/s2709_generated_symbol_sweep/decision-table.txt`. The external
+generated worktree remains dirty from prior work; this run did not modify it.
