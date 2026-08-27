@@ -119770,3 +119770,13 @@ regeneration work; only the regeneration-safe mapping is committed here.
 This advances symbol clarity and rules out treating these four records as
 callable generated functions. It provides no runtime or M5 audio evidence;
 the next bounded sweep is `0x80143000..0x80145000`.
+## Session 2806 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+Ran the regeneration-safe companion selector for `0x80143000..0x80145000`
+with the independent generated-tree placeholder scan. The selector changed
+zero references in zero files, found no companion candidates, and the scan
+found no `func_8014*` or `fake_func_8014*` placeholders in the generated tree.
+This closes the interval as already synchronized; no build or runtime soak was
+needed. It rules out a source-backed generated-symbol rename in this range,
+not any runtime or audio hypothesis. The next bounded interval is
+`0x80145000..0x80147000`.

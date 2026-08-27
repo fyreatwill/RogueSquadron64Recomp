@@ -136,6 +136,10 @@ The latest durable M5 chain is:
   `data_gap_*` names. The companion map marks each fake record immediately
   before a named function; the selector changed 12 references in four files.
   This is a symbol-clarity change, not audio or runtime evidence.
+- Session 2806 closed generated-symbol interval `0x80143000..0x80145000`.
+  The bounded selector found no companion candidates and changed zero
+  references in zero files; the independent generated-tree placeholder scan
+  was empty. The interval is already synchronized and no build was needed.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -150,23 +154,12 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
 
 1. **Generated-symbol renaming sweep — next bounded interval.** The full
    Debug target now links after the fake/data collision repair, but the
-   phase-gated validation still stalled before the target phases. Continue
-   with `0x80137000..0x80139000`, preserving ambiguous/data entries and
-   applying only source-backed names. Session 2799's oracle and arm controls
-   were positive, but no target-phase lifecycle rows were valid. Session 2800
-   closed `0x80137000..0x80139000` with four already-synchronized semantic
-   entries, zero selected references, and an empty independent placeholder
-   scan. Continue with `0x80139000..0x8013B000`, preserving ambiguous/data
-   entries and applying only source-backed names. Session 2801 closed
-   `0x80139000..0x8013B000` with zero selected references and no generated
-   placeholders. Session 2802 closed `0x8013B000..0x8013D000` with zero
-   selected references and no generated placeholders. Session 2803 closed
-   `0x8013D000..0x8013F000`: one candidate at `0x8013D880` was preserved as
-   ambiguous-or-fake, the selector changed zero references in zero files, and
-   the independent placeholder scan was empty. Session 2804 closed
-   `0x8013F000..0x80141000` with zero selected references and no generated
-   placeholders. Continue with the next bounded interval
-   `0x80141000..0x80143000`.
+   phase-gated validation still stalled before the target phases. Sessions
+   2800–2806 closed intervals through `0x80145000`; each had either
+   already-synchronized symbols or preserved ambiguous/data entries, with no
+   stale generated placeholders selected. Continue with
+   `0x80145000..0x80147000`, preserving ambiguous/data entries and applying
+   only source-backed names.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still
