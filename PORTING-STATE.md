@@ -117693,3 +117693,19 @@ markers. The image arm reached title and hangar with 942 task/DMA rows,
 isolated-launch explanation for the pre-hangar loss. It qualifies the Step 1
 contract comparison; no runtime, audio, gate, writeback, remap, wait, or guard
 behavior changed.
+
+## Session 2671 (2026-08-27) — qualified the M5 Step 1 contract separation
+
+The existing `s2285` phase driver ran the same-build silent/image comparison
+after the independent oracle gate. The oracle passed its whole-RDRAM positive
+control (`10000`) and title/hangar transitions. Both port arms reached title
+and hangar. Silent produced 1,290 ABI/task rows, zero DMA-range rows, zero
+image-stage rows, and 36 post-hangar crash markers. Image produced 987
+ABI/task rows, 2,132 DMA-range rows, 4,399 image-stage rows, and no crash or
+abort markers. Both arms retained zero `output_buff`/`output_buff_size` fields
+and zero PCM source/consumer payloads. This selects
+`H-contract-separated`: the image/silent work separation is measurable and
+the next missing edge is output/publication. It rules out an invalid pair
+driver as the explanation for this comparison, but does not explain the
+silent arm's later crash or authorize output writeback. No runtime, audio,
+gate, writeback, remap, or guard behavior changed.

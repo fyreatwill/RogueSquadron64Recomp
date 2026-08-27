@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2670 (2026-08-27).
+Current maintenance marker: Session 2671 (2026-08-27).
+
+## Session 2671 result
+
+The qualified same-build Step 1 driver passed the independent oracle whole-RDRAM
+control (`10000`) and title/hangar transitions, then reached both target phases
+in both arms. The silent `musyx_stub` control produced 1,290 task rows with no
+DMA ranges or image-stage rows and later recorded 36 crash markers; the image
+arm produced 987 task rows, 2,132 DMA-range rows, and 4,399 image-stage rows
+with no crash or abort markers. Both arms retained zero task output fields and
+zero PCM source/consumer payloads in this run. This selects
+`H-contract-separated`: the image/silent work separation is measurable, so the
+next missing edge is the output/publication contract. No runtime, audio, gate,
+writeback, remap, or guard behavior changed.
 
 ## Session 2670 result
 
@@ -231,6 +244,17 @@ soak was run because this was the required design-only unit.
   arm produced none of that work. Image payload samples and port PCM samples
   were nevertheless zero in the evaluated reruns. This selects
   `H-ContractGap` at the output edge and refutes `H-SilentPathNotIndependent`.
+
+- **s2671 — the qualified Step 1 pair separates image work from the silent
+  control.** The oracle passed its whole-RDRAM positive control (`10000`) and
+  title/hangar transitions. Both port arms reached title and hangar. Silent
+  produced 1,290 ABI/task rows, zero DMA-range rows, zero image-stage rows,
+  and 36 post-hangar crash markers. Image produced 987 ABI/task rows, 2,132
+  DMA-range rows, 4,399 image-stage rows, and no crash or abort markers. Both
+  arms retained zero `output_buff`/`output_buff_size` fields and zero PCM
+  source/consumer payloads. This selects `H-contract-separated` and makes the
+  output/publication edge the next work unit; it does not authorize writeback
+  from destination overlap or explain the silent arm's later crash.
 
 - **s2608–s2609 — the C88 gate promotion is shipped and the indexed writer is
   legitimate.** Unset `0x8008EC88` now stores guest `$v0`; setting
@@ -580,12 +604,13 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 Step 1 contract rebaseline — primary active thread.** The stable
-  phase driver now qualifies both silent and default image arms through title
-  and hangar. Run the existing same-build contract comparison and use the
-  phase-keyed task/DMEM/DMA/SP/PCM rows to identify the next missing output
-  edge; do not change audio behavior or add writeback from destination overlap
-  alone.
+1. **M5 Step 3 output/publication contract audit — primary active thread.**
+  Step 1 now qualifies the silent/image separation through title and hangar:
+  image has real DMEM/DMA/image-stage work while silent is the zero-work
+  control, but both retain zero task output fields and zero PCM payloads.
+  Trace one named output edge with existing task/DMA/PCM artifacts and the
+  retail writer evidence before changing behavior; do not add writeback from
+  destination overlap alone.
 2. **M5 de-stubbing sequence — secondary active thread.** Obtain an independent
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
