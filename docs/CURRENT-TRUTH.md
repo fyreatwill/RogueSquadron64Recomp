@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2555 (2026-08-26).
+Current maintenance marker: Session 2556 (2026-08-26).
 
 ## Current state
 
@@ -406,6 +406,16 @@ Current maintenance marker: Session 2555 (2026-08-26).
   selects `H-data-boundary` / `H-no-match`; no generated code changed. Artifact:
   `scratch/agent/s2555_symbol_census/audit.md`.
 
+- **s2556 — the M4 producer/consumer index remains static-only.** The complete
+  generated producer path writes `DMEM[0xB00/B02/B04 + r7]` at
+  `0x8002642C–0x80026434`, advances `r7` by six, and supplies 0x670-derived
+  pointers. The indirect consumer at `0x80026640–0x8002664C` uses a runtime
+  byte loaded through the `0xC70/0xB74` path, masks it with `0x7F`, and loads
+  those three table fields. The consumer is real, but generated source does
+  not bound its runtime index to a producer slot. This is a static,
+  single-source result; no writer or legitimacy claim follows. Artifact:
+  [`M4-INDEX-PROVENANCE-REVISIT.md`](M4-INDEX-PROVENANCE-REVISIT.md).
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -474,13 +484,16 @@ This is one monotonic sequence; #1 is the next campaign priority.
   overlay table. Their names encode the companion-map duplicate-collision
   relationship, not independent game functions. s2555 left
   `0x800E406C–0x800E406F` unchanged as a four-byte boundary fragment; the
-  next unresolved placeholder is `0x800E447C`.
-5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
-   s2536 found overlay 0x1c table writers derived from `0x670` and the
-   overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index
-   join in a qualified scene remains open. Do not add a mitigation or repeat
-   literal-offset audits; only a phase-gated index/provenance capture can
-   close the remaining dynamic question.
+  next unresolved placeholder is `0x800E447C`. s2556 revisited M4 with a
+  complete generated producer/consumer index table and found the consumer's
+  low-seven-bit index is sourced from runtime state, so the alias remains
+  static-only; no runtime or mitigation change was authorized.
+5. **M4 accumulator-origin work — dynamic index join remains open.** s2536
+   found overlay 0x1c table writers derived from `0x670`; s2556 exhaustively
+   identified the overlay-0x20 indirect consumer and its runtime index source,
+   but could not bound that index to a producer slot. Do not add a mitigation
+   or repeat static literal audits; only a phase-gated producer-slot/consumer-
+   index capture can close the remaining dynamic question.
 
 ## Durable boundaries
 

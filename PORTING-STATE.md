@@ -115623,3 +115623,21 @@ Artifact: `scratch/agent/s2555_symbol_census/audit.md`.
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
+## Session 2556 (2026-08-26) — revisited M4 producer-consumer index provenance
+
+The last fifteen ledger titles were all generated-symbol sweep sessions, so
+the mandatory revisit rule selected M4 instead of another sweep region. I
+defined the discriminator before analysis: enumerate every generated
+`DMEM[0xB00/B02/B04]` producer store, its six-byte slot progression, every
+indirect consumer load, and the consumer index source.
+
+Static inspection of `RecompiledFuncs/funcs_7.c` found the complete producer
+at `0x8002642C–0x80026434`, with `r7` starting at zero and advancing by six at
+`0x80026450`; the surrounding path supplies 0x670-derived pointers. The
+consumer at `0x80026640–0x8002664C` masks a runtime byte with `0x7F` and loads
+the same three table fields. That runtime byte comes through the `0xC70/0xB74`
+state path and is not statically bounded to the producer slots. The result is
+`H-static-only`: the alias path is real, but a qualified-scene index join is
+not proven. This is static, single-source evidence; it names no writer and
+authorizes no mitigation. No runtime, generated code, or behavior changed.
+Artifact: `docs/M4-INDEX-PROVENANCE-REVISIT.md`.
