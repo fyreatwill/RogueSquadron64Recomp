@@ -117436,3 +117436,25 @@ clear writer. No output writeback, remap, gate, or defensive behavior changed.
 Evidence is two-source for the retail/port field result, with the static store
 census explicitly single-source. Artifacts:
 `scratch/agent/s2656_m5_task_producer/`.
+## Session 2657 (2026-08-27) — bounded task initialization boundary census
+
+Reused the unchanged retail oracle control before interpreting the port run.
+It recorded 10,000 whole-RDRAM writes, reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`, and retained 845 phase-gated type-2 rows for task
+`0x80149470`; sampled `output_buff` and `output_buff_size` remained zero.
+
+Ran the existing same-build phase-gated image/silent pair. Both arms reached
+the target route and emitted descriptor/task positive controls. The image arm
+produced 765 ABI rows with DMEM changes, `break_pc=0x1328`, DMA, and SP
+completion; the silent arm produced 835 ABI rows and the expected no-DMEM/no-
+DMA control. Every observed task snapshot in both arms retained
+`task_ptr=0x80149470`, `output_buff=0`, and `output_buff_size=0`; the field
+observer reported no writes to the data-pointer-plus-0x100 field.
+
+This refutes dispatch-time pointer mismatch and host-only clearing for the
+observed task object. It does not distinguish zero-valued generic-copy
+initialization from producer overwrite because the current hooks do not
+attribute guest stores before handoff. No writeback, remap, gate, or
+defensive behavior changed. The task producer remains open; the next useful
+measurement is an independent PC-attributed watch on the task output fields.
+Artifact: `scratch/agent/s2657_m5_task_init_boundary/`.

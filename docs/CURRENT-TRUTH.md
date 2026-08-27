@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2656 (2026-08-27).
+Current maintenance marker: Session 2657 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -26,6 +26,22 @@ Current maintenance marker: Session 2656 (2026-08-27).
   open. No writeback, remap, gate, or defensive behavior changed. Oracle and
   port captures are independent sources; the static store census is a separate
   single-source qualification.
+
+- **s2657 — the task-initialization boundary remains unresolved after a
+  same-build pair.** The unchanged retail oracle control recorded 10,000
+  whole-RDRAM writes, reached title and hangar, and retained 845 phase-gated
+  type-2 rows for task `0x80149470`; sampled output fields remained zero. The
+  port image/silent pair reached both target phases. Image produced 765 ABI
+  rows with DMEM changes, `break_pc=0x1328`, and DMA/SP completion; silent
+  produced 835 ABI rows and the expected zero-work positive control. Every
+  observed task snapshot in both arms retained `0x80149470`,
+  `output_buff=0`, and `output_buff_size=0`; no observed field writes fired.
+  This independently refutes dispatch-time pointer mismatch and host-only
+  clearing for the observed object, but does not distinguish a zero-valued
+  generic copy from an overwritten producer because the hooks do not
+  attribute pre-handoff guest stores. No writeback, remap, gate, or defensive
+  behavior changed. Artifact:
+  `scratch/agent/s2657_m5_task_init_boundary/`.
 
 - **s2616 — same-build Step 1 rebaseline selects the image output contract
   gap.** The retail oracle passed the whole-RDRAM control at 10,000 writes and
@@ -378,7 +394,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
    remains zero at load and start; trace the allocator/initialization or
    generic task-copy boundary. Do not repeat the
    title-zero census or revisit the hangar
-   `0x80094648` relation. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as
+   `0x80094648` relation. The s2657 boundary run did not attribute a
+   pre-handoff writer; obtain independent PC-attributed watches on the task
+   output fields before adding another port hook. Keep C88=`0` and
+   `ROGUESQ_AUDIO_UCODE=0` as
    rollbacks/controls.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
