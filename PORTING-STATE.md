@@ -116790,3 +116790,26 @@ It rules out route absence and a silent/image dispatch-equivalence explanation,
 but does not authorize writeback, remapping, or gate changes. Artifact:
 `scratch/agent/s2616_m5_step1_contract_pair/`. Next is a bounded census of
 port-side PCM writer/copy edges.
+
+## Session 2617 (2026-08-27) — censused port PCM publication edges
+
+Ran the prescribed bounded static census for the M5 image output/PCM
+publication edge. Searched the current generated functions, the regeneration
+fixup script, source hooks, and companion symbol files for direct stores,
+copies, and named callsites covering physical spans `0x166450:0x169450` and
+`0x1798B0:0x179A48`, including retail PCs `0x800078EC`, `0x80007670`,
+`0x8001E2C0`, and `0x8001FAxx–0x8001FD2C`.
+
+No complete port-side candidate exists in the inspected trees. The current
+`rs64_m5_pcm_writer_store` hook is a generic dynamic destination witness and
+does not establish a writer edge. Port `0x8001E2C0` clears 0x24-byte
+texture-table records; port `0x8001FAxx–0x8001FD2C` parses image/texture
+metadata and calls the image parser. Neither reaches a PCM destination.
+
+This selects `H-PortPublicationGap` over `H-PortWriterIdentified` and
+`H-NonPCMWriter`. It rules out promoting the named retail PCs as port writer
+callsites and rules out adding a guessed witness, writeback, remap, C88, or
+routing change. No build or runtime experiment was run because the static
+census produced no complete candidate requiring one. Next is the bounded
+same-build hangar `0x80094648` writer/value boundary with title PCM as its
+positive control.

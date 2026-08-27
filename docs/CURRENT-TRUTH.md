@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2616 (2026-08-27).
+Current maintenance marker: Session 2617 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -56,6 +56,15 @@ Current maintenance marker: Session 2616 (2026-08-27).
   `jr-$t9` path. The regeneration-safe fixup restores the writer-parity line
   and rejects that lookup. The qualified run then reached title and hangar.
 
+- **s2617 — the port-side PCM publication census found no complete candidate.**
+  The generated tree contains no direct static references to either retail
+  destination span. The named retail-PC matches are unrelated: port
+  `0x8001E2C0` clears 0x24-byte texture-table records, and
+  `0x8001FAxx–0x8001FD2C` parses image/texture metadata and calls the image
+  parser. Existing `rs64_m5_pcm_writer_store` coverage is a generic dynamic
+  destination witness, not a source/destination edge. This selects
+  `H-PortPublicationGap`; no build or runtime arm was warranted.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -76,24 +85,19 @@ Current maintenance marker: Session 2616 (2026-08-27).
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 image output/PCM contract edge.** Add one regeneration-safe,
-   phase-gated witness for port-side direct stores/copies corresponding to
-   retail `0x800078EC`, `0x80007670`, `0x8001E2C0`, and
-   `0x8001FAxx–0x8001FD2C`. Retain image/DMA, task/event, and PCM joins; do
-   not change C88, dispatch, or routing.
-2. **M5 hangar PCM writer/value boundary.** Revisit the `0x80094648` output
+1. **M5 hangar PCM writer/value boundary.** Revisit the `0x80094648` output
    relation only after the title positive control is established in the same
    run. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as rollbacks/controls.
-3. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-4. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
+3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
-5. **Generated-symbol renaming — bounded fallback.** If M5 is inapplicable,
+4. **Generated-symbol renaming — bounded fallback.** If M5 is inapplicable,
    continue one companion-supported batch under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`; unresolved boundary
    fragments stay placeholders. Session 2615 added the supported duplicate
    prefix at `0x800E8A34`.
-6. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
+5. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
    established; broader slot coverage is optional and lower priority than M5.
 
 ## Durable boundaries

@@ -1,48 +1,42 @@
-# NEXT work unit (s2617) — audit port PCM writer/copy edges
+# NEXT work unit (s2618) — revisit hangar PCM writer/value boundary
 
-HYPOTHESIS-ID: m5-port-publication-edge
+HYPOTHESIS-ID: m5-hangar-publication-boundary
 
 ## Single work unit
 
-Perform one bounded static census of port-side direct stores, copies, and DMA
-consumers that can publish the image task's PCM spans corresponding to retail
-writers `0x800078EC`, `0x80007670`, `0x8001E2C0`, and
-`0x8001FAxx–0x8001FD2C`. Add one regeneration-safe phase-gated witness only
-if the census identifies a complete candidate edge. Do not change C88,
-routing, dispatch, or output behavior.
+Perform one bounded same-build title/hangar validation of the existing
+`0x80094648` indexed writer relation, with C88=`0` and the silent arm as
+rollbacks/controls. Add no output remap or writeback. Add a witness only if
+the run identifies a legitimate nonzero hangar publication edge.
 
 ## Competing hypotheses and discriminator
 
-- `H-PortWriterIdentified`: a complete port store/copy edge reaches a retail-
-  corresponding destination and can be witnessed without guessing a remap.
-- `H-PortPublicationGap`: the port has no complete candidate edge at the
-  retail spans, or only zero-valued host DMA/readback rows; the missing edge
-  remains unresolved.
-- `H-NonPCMWriter`: the candidate writers touch the spans for another valid
-  purpose, while PCM is published elsewhere; destination/value joins reject
-  treating them as audio output.
+- `H-HangarWriterLegitimate`: `0x80094648` writes a nonzero hangar PCM value
+  to the established destination and orders before the PCM consumer.
+- `H-HangarWriterNonPCM`: it writes a nonzero value, but the destination or
+  consumer join identifies a non-audio role.
+- `H-HangarPublicationGap`: the writer stays zero/absent in hangar while the
+  title positive control remains live.
 
-The discriminator is one table for every candidate edge: source function/PC,
-destination physical span, length, value/hash/nonzero count, phase, and
-ordering against image DMA, PCM source/consumer, and the independent retail
-writer PCs. A complete matching edge selects `H-PortWriterIdentified`; no
-candidate selects `H-PortPublicationGap`; a matching span with a non-audio
-value/use selects `H-NonPCMWriter`.
+The discriminator is one phase-gated table joining writer PC, destination,
+value/nonzero count, C88, image DMA completion, and PCM source/consumer rows
+in title and hangar. A nonzero destination- and consumer-matched hangar row
+selects `H-HangarWriterLegitimate`; a non-audio use selects
+`H-HangarWriterNonPCM`; zero/absent hangar rows with title-positive controls
+select `H-HangarPublicationGap`.
 
 ## Exact checks
 
-1. Search the generated/fixup/source trees for writes and copies covering
-   physical `0x166450:0x169450` and `0x1798B0:0x179A48`, then inspect each
-   complete caller/callee span and its existing task/PCM hooks. Use bounded
-   `rg`/`sed` windows; do not read generated files wholesale.
-2. Ask the retail oracle ground truth only if a new narrow witness is needed;
-   its existing whole-RDRAM control must fire first. Batch all candidate edges
-   in one build and one title/hangar phase-gated run, with positive controls
-   for image DMA and PCM endpoints.
+1. Run the existing qualified driver with image and silent arms in one build,
+   keeping `PROBE_PHASE_WIDTH=1` and `PROBE_KEYS_FROM_PHASE=1`; enable the
+   existing writer, image/DMA, task/event, and PCM join logs.
+2. Confirm title PCM is nonzero in the same run before interpreting hangar;
+   require image/DMA and PCM positive controls. Ask the retail oracle only if
+   the destination relation changes or a new narrow witness is needed.
 
 ## Expected outcomes
 
-- Complete candidate: add only its regeneration-safe witness and queue the
-  validation soak; do not add writeback or remapping.
-- No complete candidate: record the whole census and leave behavior unchanged;
-  pivot to the next bounded M5 contract edge.
+- Legitimate hangar edge: record it and queue one validation soak; do not add
+  writeback or remapping.
+- Non-audio or absent edge: record the joined table and pivot without changing
+  behavior.
