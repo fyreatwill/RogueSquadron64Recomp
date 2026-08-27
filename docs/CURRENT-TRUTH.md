@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2534 (2026-08-26).
+Current maintenance marker: Session 2535 (2026-08-26).
 
 ## Current state
 
@@ -221,6 +221,16 @@ Current maintenance marker: Session 2534 (2026-08-26).
   This selects `H-no-match`; no generated code changed. Artifact:
   `scratch/agent/s2534_symbol_census/audit.md`.
 
+- **s2535 — the next bounded generated-symbol region had no defensible
+  mapping.** The complete `0x80097D58–0x80097D5F` span is an 8-byte epilogue
+  fragment (`lw $fp,0x88($sp)` / `addiu $sp,$sp,0x90`) immediately before the
+  independently named `clearStreamedVoiceFlags` at `0x80097D60`. The project
+  symbol input, generated declaration/implementation/overlay table, and
+  companion symbol file retain `fake_func_80097D58`; exact-address/source/m2c/
+  caller searches found no human candidate. This selects `H-no-match`; no
+  generated code changed. This is a static, single-source result. Artifact:
+  `scratch/agent/s2535_symbol_census/audit.md`.
+
 - **s2531 — two adjacent generated fragments were renamed through the
   regeneration input and generated tables.** `0x80082268` is now
   `cheatCodeConstantPreamble`, an 8-byte constant-load fragment immediately
@@ -261,8 +271,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   adjacent `0x800825C8` were renamed in s2531 after their boundaries were
   established. s2532 revalidated `0x80093E74` as an unchanged epilogue
   fragment, and s2533 left `0x80094348` unchanged as a jump fragment; s2534
-  left `0x8009711C` unchanged as a jump into `bindMacroIdsToSoundGroup`; next
-  is `0x80097D58`.
+  left `0x8009711C` unchanged as a jump into `bindMacroIdsToSoundGroup`, and
+  s2535 left `0x80097D58` unchanged as an epilogue fragment; next is
+  `0x80099C4C`.
 5. **M4 accumulator-origin work — parked** pending a new boundary idea.
 
 ## Durable boundaries

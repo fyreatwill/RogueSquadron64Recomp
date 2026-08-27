@@ -114869,6 +114869,27 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2535 (2026-08-26) — censused fifteenth generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x80097D58–0x80097D5F` after
+the required sweep preflight. It contains exactly one 8-byte placeholder,
+`fake_func_80097D58`, whose generated body is the epilogue fragment `lw
+$fp,0x88($sp)` / `addiu $sp,$sp,0x90`. The next complete body is the
+independently named `clearStreamedVoiceFlags` at `0x80097D60`. The active
+generated files, project symbol input, and companion symbol file retain the
+fake name; exact-address, source, m2c, and caller searches found no human
+rename candidate.
+
+This selects `H-no-match` and rules out a defensible rename or
+regeneration-safe build for this entry. Naming the fragment after the
+following function would be speculative boundary rewriting. This is a static,
+single-source result. No generated code, runtime, submodule, or mitigation
+changed. Artifact:
+`scratch/agent/s2535_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
+
 ## Session 2534 (2026-08-26) — censused fourteenth generated-symbol sweep region
 
 Enumerated the complete main-overlay interval `0x8009711C–0x8009711F` after
