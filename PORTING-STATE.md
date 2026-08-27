@@ -119452,3 +119452,17 @@ matched unrelated immediate-value comments. `git diff --check` passed. No
 build or regeneration was needed. This closes the interval and rules out
 stale generated placeholders there, not the remaining rename sweep. The next
 interval is `0x80119000..0x8011B000`.
+
+## Session 2781 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The regeneration-safe companion census for `0x80119000..0x8011B000` found
+three candidates (`0x8011A420`, `0x8011A7E8`, and `0x8011A8D0`), all classified
+ambiguous-or-fake. It selected zero generated references in zero files; the
+`--require-rename` nonzero status was the expected zero-selection result. The
+corrected independent generated-tree symbol inventory found zero
+`func_8011...` or `fake_func_8011...` placeholders whose numeric suffix lies
+in the interval. The initial BSD-awk scan was invalid because `strtonum` is
+unavailable; a Perl scan supplied the independent result. `git diff --check`
+passed. No build or regeneration was needed. This closes the interval and
+rules out stale generated placeholders there, not the remaining rename sweep.
+The next interval is `0x8011B000..0x8011D000`.

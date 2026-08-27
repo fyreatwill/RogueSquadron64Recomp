@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2780 (2026-08-27).
+Current maintenance marker: Session 2781 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -106,8 +106,11 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    placeholder function symbols in the interval. Session 2780 closed
    `0x80117000..0x80119000`: the companion selector found no candidates and
    the corrected independent symbol inventory found zero placeholder
-   definitions in the interval. Continue with the next bounded interval
-   after `0x80119000`.
+   definitions in the interval. Session 2781 closed
+   `0x80119000..0x8011B000`: three ambiguous-or-fake candidates were
+   preserved, the selector changed zero references, and the corrected
+   independent symbol inventory found zero placeholder definitions. Continue
+   with the next bounded interval after `0x8011B000`.
 
 2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
@@ -252,6 +255,12 @@ ledger. The current late-chain checkpoints are:
   source-backed companion candidates and zero generated placeholder symbols;
   the bounded selector changed zero references and no build was needed. The
   next interval begins after `0x80119000`.
+- s2781: the generated-symbol interval `0x80119000..0x8011B000` had three
+  ambiguous-or-fake candidates. The regeneration-safe selector changed zero
+  generated references, and a corrected independent generated-tree symbol
+  inventory found zero placeholder definitions in the interval. The interval
+  is closed without inventing names; the next interval begins after
+  `0x8011B000`.
 - s2752: the generated-symbol interval `0x800E7000..0x800E9000` was fully
   synchronized; two fake/address-only placeholders were preserved and the
   next interval was advanced to `0x800E9000..0x800EB000`.
