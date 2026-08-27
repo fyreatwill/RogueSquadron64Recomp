@@ -114887,3 +114887,23 @@ or mitigation changed. Artifact:
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2519 (2026-08-26) — censused second generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x80003424–0x80005568` after
+the required sweep preflight. It contains exactly three placeholders:
+`fake_func_80003424`, `fake_func_8000537C`, and `fake_func_80005568`. The
+companion `main_overlay.txt` retains each exact fake name, and a source-wide
+companion search found no human symbol or m2c definition at any of the three
+addresses. The isolated bodies are a three-instruction fragment, a fixup
+gap-filler trap, and a one-instruction fragment immediately before
+`piDmaWorker`; nearby real DMA functions have distinct named addresses.
+
+This selects `H-no-match` for the bounded region and rules out a defensible
+rename or regeneration-safe build for these three entries. It does not prove
+the fragments are dead or permanently unnameable. No generated code, runtime,
+or mitigation changed. Artifact:
+`scratch/agent/s2519_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.

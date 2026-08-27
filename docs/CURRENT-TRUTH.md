@@ -80,6 +80,14 @@ Current maintenance marker: Session 2518 (2026-08-26).
   Their bodies are isolated one- or two-instruction fragments. No generated
   code was changed. Artifact:
   `scratch/agent/s2518_symbol_census/audit.md`.
+- **s2519 — the second bounded generated-symbol region also had no defensible
+  mappings.** The complete main-overlay interval `0x80003424–0x80005568`
+  contained `fake_func_80003424`, `fake_func_8000537C`, and
+  `fake_func_80005568`. The companion symbol file retains all three fake
+  names; source search found no human definition at those exact addresses.
+  Nearby DMA functions have distinct named entries, so no alias was inferred.
+  This is a single-source/static result and no generated code changed.
+  Artifact: `scratch/agent/s2519_symbol_census/audit.md`.
 
 ## Active backlog
 
@@ -96,8 +104,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2517 found no new legitimate edge; do not add a writeback/remap or repeat
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
-  Next work unit: continue the bounded generated-symbol renaming sweep in
-  `0x80003424–0x80005568`.
+  Next work unit: continue the bounded generated-symbol renaming sweep around
+  the next unresolved main-overlay placeholder at `0x8000595C`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.

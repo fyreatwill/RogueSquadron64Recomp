@@ -1,14 +1,14 @@
-# NEXT work unit (s2519) — generated-symbol renaming sweep, next bounded region
+# NEXT work unit (s2520) — generated-symbol renaming sweep, next bounded region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-The previous region `0x8000737C–0x80007908` was completely censused and had
-four isolated placeholders with no companion mapping. Continue the same sweep
-with exactly one new bounded region: main-overlay `0x80003424–0x80005568`, the
-three placeholders in `funcs_1.c` plus any placeholder whose entry address is
-inside that interval. Before starting, run:
+The previous region `0x80003424–0x80005568` was completely censused and had
+three isolated placeholders with no companion mapping. Continue the same sweep
+with exactly one new bounded region: main-overlay `0x80005570–0x8000595C`,
+including the next unresolved placeholder at `0x8000595C` and any placeholder
+whose entry address is inside that interval. Before starting, run:
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
@@ -19,8 +19,9 @@ M4 accumulator boundary with a genuinely new angle. Otherwise enumerate the
 complete selected interval, find matching named functions or m2c output in the
 companion `rogue_squadron64` tree, and rename only unambiguous matches through
 the regeneration-safe symbol/fixup path. Do not invent names or edit unrelated
-generated functions. The prior result is in
-`scratch/agent/s2518_symbol_census/audit.md`.
+generated functions. The prior results are in
+`scratch/agent/s2518_symbol_census/audit.md` and
+`scratch/agent/s2519_symbol_census/audit.md`.
 
 ## Competing hypotheses and discriminator
 
