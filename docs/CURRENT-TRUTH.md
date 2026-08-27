@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2715 (2026-08-27).
+Current maintenance marker: Session 2716 (2026-08-27).
 
 ## Live result
 
@@ -474,7 +474,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    that region. s2715 covered `0x800B0000..0x800B3000`: 23 candidates were
    already synchronized and three were preserved as ambiguous-or-fake; zero
    references changed in zero files, with no parser or duplicate-destination
-   rejection. Continue with the next adjacent bounded region.
+   rejection. s2716 covered `0x800B3000..0x800B6000`: 46 candidates were
+   already synchronized and three were preserved as ambiguous-or-fake; zero
+   references changed in zero files, with no parser or duplicate-destination
+   rejection. This rules out `H-exact-matches` for that region; continue with
+   the next adjacent bounded region.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
@@ -573,3 +577,13 @@ duplicate-destination rejection. This selects
 `H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
 `H-exact-matches` there; no build or game run was warranted. The complete
 decision table is in `scratch/agent/s2714_generated_symbol_sweep/decision-table.txt`.
+
+s2716 continued the generated-symbol sweep after the required last-15-title
+check did not trigger. The bounded `0x800B3000..0x800B6000` region contained
+49 companion candidates: 46 semantic entries were already synchronized and
+three address-only/fake entries were preserved as ambiguous-or-fake. Zero
+references changed in zero generated files, and the tool exited successfully
+without parser or duplicate-destination rejection. This selects
+`H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
+`H-exact-matches`; no build or game run was warranted. The complete decision
+table is in `scratch/agent/s2716_generated_symbol_sweep/decision-table.txt`.
