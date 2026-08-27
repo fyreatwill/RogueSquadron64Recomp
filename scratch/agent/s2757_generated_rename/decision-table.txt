@@ -1,0 +1,25 @@
+Session 2757 bounded generated-symbol census
+
+Command:
+python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800ED000 --end-address 0x800EF000 --limit 32
+
+Result: renamed 0 references in 0 files.
+
+Classification:
+- 0x800ED148 fake_func_800ED148: ambiguous-or-fake; preserved.
+- 0x800ED150 claimSongSlotForCurrentHandle: already synchronized.
+- 0x800ED200 tickActiveSongSlots: already synchronized.
+- 0x800EDBB0 shouldSwitchToPendingSong: already synchronized.
+- 0x800EDC90 selectAndStageNextSong: already synchronized.
+- 0x800EDD8C stopSongAndRebuildActiveCueList: already synchronized.
+- 0x800EDF68 processPendingSoundCueRequest: already synchronized.
+- 0x800EE730 tickSongFadeTimer: already synchronized.
+- 0x800EE984 pushActiveSoundDescriptor: already synchronized.
+- 0x800EE9F4 popActiveSoundDescriptor: already synchronized.
+- 0x800EEA54 preloadSceneReferencedSongs: already synchronized.
+- 0x800EED7C stageSongFromRequestDescriptor: already synchronized.
+- 0x800EEF34 resetMusicSubsystemState: already synchronized.
+
+Decision: H2 selected for the preserved fake symbol; H1 is false for the
+interval because no stale placeholder had a new source-backed rename. No
+unsafe alias case (H3) was encountered. No generated files changed.
