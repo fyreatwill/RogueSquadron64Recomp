@@ -118437,3 +118437,19 @@ or duplicate-destination rejection. This selects
 The decision table is in
 `scratch/agent/s2713_generated_symbol_sweep/decision-table.txt`. The external
 generated worktree remains dirty from prior work; this run did not modify it.
+
+## Session 2714 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger because the recent titles
+were not all sweep-scoped. Ran the tracked rename tool over the adjacent
+`0x800AD000..0x800B0000` companion-symbol region. Its complete decision table
+selected zero renames in zero files: unique semantic candidates were already
+synchronized, while fake/address-only entries were preserved as
+ambiguous-or-fake. The tool exited successfully with no parser or
+duplicate-destination rejection. This selects
+`H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
+`H-exact-matches`; no build or game run was warranted.
+
+The decision table is in
+`scratch/agent/s2714_generated_symbol_sweep/decision-table.txt`. The external
+generated worktree remains dirty from prior work; this run did not modify it.

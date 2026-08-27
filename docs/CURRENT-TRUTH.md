@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2712 (2026-08-27).
+Current maintenance marker: Session 2714 (2026-08-27).
 
 ## Live result
 
@@ -467,7 +467,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    `H-exact-matches` for that region and retains
    `H-already-synchronized`/`H-ambiguous-or-fake`;
    preserve address-only or fake fragments and do not infer names from
-   implementation shape alone.
+   implementation shape alone. s2714 covered `0x800AD000..0x800B0000` and
+   again selected zero renames: semantic candidates were already
+   synchronized and fake/address-only entries were preserved, with no parser
+   or duplicate-destination rejection. This rules out `H-exact-matches` for
+   that region; continue with the next adjacent bounded region.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
@@ -556,3 +560,13 @@ the tool exited successfully without parser or duplicate-destination
 rejection. This selects `H-already-synchronized`/`H-ambiguous-or-fake` for
 the region and rules out `H-exact-matches` there; no build or game run was
 warranted.
+
+s2714 continued the generated-symbol sweep after the required last-15-title
+check did not trigger. The bounded `0x800AD000..0x800B0000` region selected
+zero renames in zero generated files: unique semantic candidates were already
+synchronized, while fake/address-only entries were preserved as
+ambiguous-or-fake. The tool exited successfully with no parser or
+duplicate-destination rejection. This selects
+`H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
+`H-exact-matches` there; no build or game run was warranted. The complete
+decision table is in `scratch/agent/s2714_generated_symbol_sweep/decision-table.txt`.
