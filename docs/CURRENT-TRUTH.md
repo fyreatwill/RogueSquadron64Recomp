@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2627 (2026-08-27).
+Current maintenance marker: Session 2628 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -198,7 +198,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C7120` next using companion symbols, exact spans, and callers;
+   Audit `0x800C722C` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
@@ -258,6 +258,18 @@ already an exact `getConfigFloatPair` entry, so no placeholder or collision was
 available to rename. This selects `H-CompanionExact` as already resolved,
 rules out a boundary-only interpretation for the lead, and changes no runtime
 behavior. The next bounded lead is `0x800C7120`.
+
+## Session 2628 result
+
+The bounded sweep audited `0x800C7120` against the mission companion symbols,
+generated body, overlay table, repository TOML, and callers. The companion
+name is `getConfigFloatPair`; the generated body starts at `0x800C7120` and
+spans the exact `0x1C` bytes to `0x800C713C`, and the overlay table carries the
+matching ROM size. Generated caller `0x800530A4` invokes the target. The
+adjacent `0x800C713C` row is already the exact
+`accumulateVectorInObjectFrame` mapping. No placeholder or collision remained,
+so no rename or runtime change was made. This selects `H-CompanionExact` as
+already resolved and moves the next bounded lead to `0x800C722C`.
 
 ## Superseded conclusions
 

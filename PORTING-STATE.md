@@ -116990,3 +116990,16 @@ invokes it. The adjacent `0x800C7120` row is already the exact
 `getConfigFloatPair` mapping. No placeholder remained to rename, no collision
 was found, and no runtime behavior changed. This rules out a new rename at
 `0x800C6FFC`; the next bounded lead is `0x800C7120`.
+
+## Session 2628 (2026-08-27) — audited the 800C7120 symbol region
+
+The bounded generated-symbol sweep audited `0x800C7120` against the mission
+companion symbols, generated body, overlay table, repository TOML, and callers.
+The companion name is `getConfigFloatPair`; the generated body starts at
+`0x800C7120`, spans the exact `0x1C` bytes to `0x800C713C`, and the overlay
+table carries the matching ROM size. Generated caller `0x800530A4` invokes it.
+The adjacent `0x800C713C` row is already the exact
+`accumulateVectorInObjectFrame` mapping. No placeholder or overlay collision
+remained, so no rename or runtime behavior change was made. This selects
+`H-CompanionExact` as already resolved and moves the next bounded lead to
+`0x800C722C`.
