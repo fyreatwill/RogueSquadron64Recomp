@@ -114698,3 +114698,23 @@ only the idea that the present run data can attribute a writer; it does not
 rule out any writer or prove the joined buffers are unwritten. No audio
 behavior, filter, address remap, or mitigation changed. Artifact:
 `scratch/agent/s2507_m5_joined_payload_writer/audit.md`.
+
+## Session 2508 (2026-08-26) — compared silent and image audio-arm reachability
+
+Ran the retail oracle first with its whole-RDRAM positive control; it reached
+the 1024 title phase but not the 512 hangar in the 90-second budget, so no
+retail target null was interpreted. Rebuilt the Debug target. A corrected
+same-build direct driver launched silent (`ROGUESQ_AUDIO_UCODE=0`) and image
+(`ROGUESQ_AUDIO_UCODE=1`) arms concurrently with the same phase-relative key
+schedule and the full route/task/image/PCM controls.
+
+The silent arm reached 1024 at 48.4 seconds and 512 hangar at 60.1 and 68.4
+seconds, with 71 dispatches, 1397 ABI rows, 1397 DMA rows, 520 audio returns,
+96 PCM source and 96 consumer rows, and no crash or abort. The image arm
+crashed before title: 48 dispatches, zero ABI/DMA/image/return/PCM rows, 36
+crash markers, native `MetalFramebuffer` constructor symbol, and
+`last-guest-pc=0x8000B650`. This selects `H-image-causes-route-stall` and
+refutes route-independent and stub-degenerate explanations for this route.
+The target writer discriminator remains unevaluable because image never
+reached it; no behavior, output mapping, guard, or mitigation changed.
+Artifact: `scratch/agent/s2508_m5_audio_arm_route/audit.md`.

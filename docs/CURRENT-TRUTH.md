@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2506 (2026-08-26).
+Current maintenance marker: Session 2508 (2026-08-26).
 
 ## Current state
 
@@ -41,6 +41,17 @@ Current maintenance marker: Session 2506 (2026-08-26).
   target controls are absent. It localizes the next M5 question to same-build
   stub/image route reachability. No behavior or mitigation changed. Artifact:
   `scratch/agent/s2507_m5_joined_payload_writer/audit.md`.
+
+- **s2508 — the image arm causes the current route failure.** A same-build
+  direct A/B launched silent and image arms concurrently with identical
+  phase-relative input. The silent arm reached title and hangar, passed its
+  early controls, and recorded 96 PCM source/consumer pairs with no crash.
+  The image arm crashed before title at `last-guest-pc=0x8000B650` in
+  `plume::MetalFramebuffer::MetalFramebuffer`, with zero target task, image,
+  return, or PCM rows. This selects `H-image-causes-route-stall` over
+  route-independent and stub-degenerate explanations for this route. It does
+  not identify the pre-title renderer crash's writer or permit a mitigation.
+  Artifact: `scratch/agent/s2508_m5_audio_arm_route/audit.md`.
 
 - **s2500 — no active generated kind=1 PCM-store caller exists.** The sibling
   generated tree has 51 `funcs_*.c` files and zero
@@ -749,8 +760,10 @@ Closed investigations are not active work items. This is one monotonic sequence;
    s2506 performed the runtime join and selected
    `H-rsp-destination-joined`. s2507 could not reach the target phase with the
    writer census: the image arm crashed or stalled at 640 in two attempts.
-   The next unit compares stub/image route reachability before retrying the
-   writer boundary.
+   s2508's same-build A/B selects the image arm as the route failure: silent
+   reached title/hangar while image crashed before title in MetalFramebuffer.
+   Next, isolate and classify that pre-title image-arm crash before retrying
+   the writer boundary.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at
