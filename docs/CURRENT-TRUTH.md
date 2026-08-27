@@ -287,6 +287,16 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
   was found, so no rename or build was warranted; the next bounded lead is
   `0x800CA18C`.
 
+- **s2643 — the `0x800CA18C` sweep lead was already exact.** The companion
+  mission symbols name it `playNpcAmbientEffect`; repository TOML agrees with
+  size `0xE0`, and the next mission symbol `initNpcActorVariant` at
+  `0x800CA270` confirms the exact end boundary. No stale placeholder or
+  overlay collision was found in the checked-in mapping. The external
+  generated-function tree was absent from this workspace, so the fresh
+  generated-body/caller line could not be inspected; this is a single-source
+  companion/configuration result. No rename or build was warranted; the next
+  bounded lead is `0x800CA270`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -308,7 +318,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800CA18C` next using companion symbols, exact spans, callers, and
+   Audit `0x800CA270` next using companion symbols, exact spans, callers, and
    overlay identity;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.

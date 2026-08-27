@@ -117228,3 +117228,15 @@ The lead was already resolved across independent companion-symbol and
 generated-output/configuration lines. No placeholder, stale mapping, or
 actionable rename remained. No runtime behavior or build changed; the next
 bounded lead is `0x800CA18C`.
+
+## Session 2643 (2026-08-27) — audited the 800CA18C symbol lead
+
+Ran the bounded generated-symbol-renaming sweep required by
+`scratch/agent/NEXT.md`. The companion mission symbols name `0x800CA18C`
+`playNpcAmbientEffect`; repository TOML agrees with size `0xE0`, and the next
+mission symbol `initNpcActorVariant` at `0x800CA270` gives the exact end
+boundary. No stale placeholder or overlay collision was found in the
+checked-in mapping. The external generated-function tree was absent from this
+workspace, so the fresh generated-body/caller line could not be inspected;
+this is a single-source companion/configuration result. No rename, build, or
+runtime change was warranted. The next bounded lead is `0x800CA270`.
