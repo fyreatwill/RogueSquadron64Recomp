@@ -119547,3 +119547,14 @@ numeric suffix lies in the interval. Companion entries at `0x80128C80` and
 `git diff --check` passed. No build or regeneration was needed. This closes
 the interval and rules out stale generated placeholders there, not the
 remaining rename sweep. The next interval is `0x80129000..0x8012B000`.
+
+## Session 2789 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The regeneration-safe companion census for `0x80129000..0x8012B000` selected
+zero generated references in zero files; the `--require-rename` nonzero status
+was the expected zero-selection result. The independent generated-tree symbol
+inventory found zero `func_8012...` or `fake_func_8012...` placeholders whose
+numeric suffix lies in the interval. `git diff --check` passed. No build or
+regeneration was needed. This closes the interval and rules out stale generated
+placeholders there, not the remaining rename sweep. The next interval is
+`0x8012B000..0x8012D000`.

@@ -1,10 +1,10 @@
-# NEXT work unit (s2789) — audit the next generated-symbol interval
+# NEXT work unit (s2790) — audit the next generated-symbol interval
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Run the regeneration-safe companion census for `0x80129000..0x8012B000`.
+Run the regeneration-safe companion census for `0x8012B000..0x8012D000`.
 Preserve data, fake, ambiguous, and already-synchronized entries. Apply only
 exact source-backed semantic renames through the existing rename tooling.
 
@@ -23,18 +23,18 @@ H-tooling-gap and requires a tooling fix in the same unit.
 ## Exact commands
 
 ```sh
-mkdir -p scratch/agent/s2789_generated_rename
+mkdir -p scratch/agent/s2790_generated_rename
 python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs \
   --companion-dir ../rogue_squadron64/symbol_files \
-  --start-address 0x80129000 --end-address 0x8012B000 --limit 32 \
+  --start-address 0x8012B000 --end-address 0x8012D000 --limit 32 \
   --require-rename \
-  > scratch/agent/s2789_generated_rename/decision-table.txt 2>&1
+  > scratch/agent/s2790_generated_rename/decision-table.txt 2>&1
 rg -n 'func_8012|fake_func_8012|0x8012' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c \
-  > scratch/agent/s2789_generated_rename/generated-scan.txt || true
-perl -ne 'while (/\b(?:func|fake_func)_([0-9A-Fa-f]{8})\b/g) { $v=hex($1); print "$&\n" if $v >= hex("80129000") && $v < hex("8012B000") }' \
+  > scratch/agent/s2790_generated_rename/generated-scan.txt || true
+perl -ne 'while (/\b(?:func|fake_func)_([0-9A-Fa-f]{8})\b/g) { $v=hex($1); print "$&\n" if $v >= hex("8012B000") && $v < hex("8012D000") }' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | sort -u \
-  > scratch/agent/s2789_generated_rename/generated-placeholder-in-interval.txt
+  > scratch/agent/s2790_generated_rename/generated-placeholder-in-interval.txt
 git diff --check
 ```
 
