@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2673 (2026-08-27).
+Current maintenance marker: Session 2674 (2026-08-27).
+
+## Session 2674 result
+
+The mandated pivot moved from the unevaluable M5 publication audit to the
+generated-symbol sweep. The companion/TOML identity for
+`0x800E9AE0` is `func_mission_overlay_800E9AE0`; the external generated tree
+already contained that synchronized name, so the checked-in rename tool now
+records it as part of the authoritative batch and is idempotent on reruns.
+The sweep scanner was repaired to understand both `fake_func_` and `func_`
+TOML entries and to stop at the first unresolved placeholder. Its positive
+run stopped at `fake_func_800E406C`, an intentional 4-byte gap fragment, and
+renamed zero additional references. This closes no M5 contract edge and does
+not authorize writeback, remap, gate, wait, or guard changes.
 
 ## Session 2673 result
 

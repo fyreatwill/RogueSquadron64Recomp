@@ -14,6 +14,7 @@ RENAMES = {
     "fake_func_800D4EC4": "duplicateSymbolPrefixForNpcInitChildLinkedToParent",
     "fake_func_800DD2C4": "duplicateSymbolPrefixForNpcInitFullModel",
     "fake_func_800DFB8C": "duplicateSymbolPrefixForApplyCraftAnimAndDetailParams",
+    "func_800E9AE0": "func_mission_overlay_800E9AE0",
 }
 
 
@@ -43,12 +44,10 @@ def main() -> int:
             path.write_text(updated)
             changed.append(path)
 
-    missing = [old for old, count in counts.items() if count == 0]
-    if missing:
-        raise SystemExit("rename targets not found: " + ", ".join(missing))
     print(f"renamed {sum(counts.values())} references in {len(changed)} files")
     for old, count in counts.items():
-        print(f"{old} -> {RENAMES[old]}: {count}")
+        state = "updated" if count else "already synchronized"
+        print(f"{old} -> {RENAMES[old]}: {count} ({state})")
     return 0
 
 

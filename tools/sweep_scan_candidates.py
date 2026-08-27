@@ -1,9 +1,9 @@
-"""Generated-symbol renaming sweep: find TOML func_8xxxxxxx placeholders
+"""Generated-symbol renaming sweep: find TOML function placeholders
 that already have a real name in the generated N64Recomp tree.
 
 Usage: python3 tools/sweep_scan_candidates.py <start_name>
-  <start_name> is the func_8xxxxxxx entry to resume the TOML-order scan
-  from (inclusive), e.g. func_800FFE00.
+<start_name> is the TOML entry to resume the scan from
+(inclusive), e.g. fake_func_800E406C.
 
 Walks syms/rogue_squadron.syms.toml in file order (NOT sorted by address —
 overlay sections reuse VRAM ranges) starting at <start_name>, and for each
@@ -60,7 +60,7 @@ addr_to_name = {a: m[0] for a, m in addr_to_matches.items() if len(m) == 1}
 names = []
 with open(TOML) as f:
     for line in f:
-        m = re.search(r'name = "(func_8[0-9A-F]+)"', line)
+        m = re.search(r'name = "((?:fake_func_|func_)?8[0-9A-F]+)"', line)
         if m:
             names.append(m.group(1))
 
@@ -72,7 +72,7 @@ ordered = names[names.index(start_name):]
 
 resolved = []
 for n in ordered:
-    addr = n[len("func_"):]
+    addr = n.rsplit("_", 1)[-1].upper()
     if addr in collisions:
         print(f"STOP: {n} address has multiple overlay matches, needs manual review", file=sys.stderr)
         break
@@ -81,7 +81,7 @@ for n in ordered:
         print(f"STOP: {n} has no comment/prologue match in generated tree", file=sys.stderr)
         break
     gen_name, fp, lineno = entry
-    if gen_name == n or gen_name.startswith("func_0x"):
+    if gen_name == n or gen_name.startswith(("func_", "fake_func_")):
         print(f"STOP: {n} generated name is still a placeholder ({gen_name}) at {fp}:{lineno}", file=sys.stderr)
         break
     resolved.append((n, gen_name, fp, lineno))

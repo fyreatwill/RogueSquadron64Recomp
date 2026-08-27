@@ -1,4 +1,4 @@
-# NEXT work unit (s2674) — audit the CPU-side MORT publication boundary
+# NEXT work unit (s2675) — audit the CPU-side MORT publication boundary
 
 HYPOTHESIS-ID: m5-audio-cpu-mort-publication-boundary
 

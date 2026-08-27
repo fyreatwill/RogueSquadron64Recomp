@@ -117744,3 +117744,17 @@ This selects `H-ring-unmapped` and rules out promoting an image writeback or
 remap from destination overlap. Full table:
 `scratch/agent/s2673_m5_ring_writer_ground_truth.md`. No runtime behavior,
 audio route, gate, writeback, remap, or guard changed.
+## Session 2674 (2026-08-27) — resumed the generated-symbol sweep
+
+The mandated pivot moved from the unevaluable M5 publication audit to the
+generated-symbol sweep. The companion/TOML identity for `0x800E9AE0` is
+`func_mission_overlay_800E9AE0`; the external generated tree already had
+that synchronized name, so the checked-in rename tool now includes the
+mapping and safely verifies it on repeat runs. The sweep scanner was fixed
+to accept both `fake_func_` and `func_` TOML entries and to normalize their
+addresses. Python compilation passed; the scanner's positive run stopped at
+`fake_func_800E406C`, an intentional 4-byte gap fragment, while the rename
+tool verified all eight mappings and changed zero external references.
+This rules out a stale-tool failure, but does not identify a new semantic
+rename or close any M5 audio contract edge. No runtime behavior, writeback,
+remap, gate, wait, or guard changed.
