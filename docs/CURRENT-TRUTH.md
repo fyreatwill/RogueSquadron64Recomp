@@ -119,7 +119,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    source-backed level-handler renames (`lv2` through `lvj`) at
    `0x80101CCC..0x80109618`, changing 42 generated references in 8 files;
    the companion comments explicitly identify each function. Continue with
-   `0x80121000..0x80123000`.
+   `0x80121000..0x80123000`. Session 2785 closed that interval: the selector
+   changed zero references in zero files, and the independent generated-tree
+   scan found no placeholder definitions or references. Continue with
+   `0x80123000..0x80125000`.
 
 2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
@@ -271,6 +274,10 @@ ledger. The current late-chain checkpoints are:
 - s2783: the generated-symbol interval `0x8011D000..0x8011F000` selected zero
   renames and the independent generated-tree scan found no in-range
   placeholders. The interval is closed; continue with `0x8011F000..0x80121000`.
+- s2785: the generated-symbol interval `0x80121000..0x80123000` selected zero
+  renames and the independent generated-tree scan found no in-range
+  placeholders or references. The interval is closed without a build; the
+  next interval is `0x80123000..0x80125000`.
 - s2781: the generated-symbol interval `0x80119000..0x8011B000` had three
   ambiguous-or-fake candidates. The regeneration-safe selector changed zero
   generated references, and a corrected independent generated-tree symbol

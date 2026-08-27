@@ -119501,3 +119501,15 @@ objective handlers. Applying the map changed 42 generated references in 8
 files. `git diff --check` passed. The map is source-backed, and this is a
 symbol-only change; it does not alter runtime behavior. The next interval is
 `0x80121000..0x80123000`.
+
+## Session 2785 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The regeneration-safe companion census for `0x80121000..0x80123000` selected
+zero generated references in zero files; the `--require-rename` nonzero status
+was the expected zero-selection result. The independent generated-tree scan
+found zero `func_8012...` or `fake_func_8012...` placeholders whose numeric
+suffix lies in the interval. The broader textual scan only matched MIPS
+instruction comments containing the immediate `0x8012`, not symbol names.
+`git diff --check` passed. No build or regeneration was needed. This closes
+the interval and rules out stale generated placeholders there, not the
+remaining rename sweep. The next interval is `0x80123000..0x80125000`.
