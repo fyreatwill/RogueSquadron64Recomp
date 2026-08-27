@@ -1,41 +1,41 @@
-# NEXT work unit (s2695) — audit post-mix output-block handoff
+# NEXT work unit (s2696) — audit the unresolved post-mix callback
 
 HYPOTHESIS-ID: m5-mort-publication-postmix-boundary
 
 ## Work unit
 
-Audit named/indirect consumers after `musyxMixActiveVoices` returns and the
-`musyxSynthFrame` output-block handoff. Do not repeat the already-audited
-initializer, setup, renderer, mixer, AI-submit, cache, acquire, or direct
-caller bodies. Trace whether the per-frame output block passed as `$a3` at
-`0x80090F00` is copied/transformed into the AI source, including writer,
-destination, payload legitimacy, queue/service signal, and ordering relative
-to `osAiSetNextBuffer`.
+Source-read the callback target loaded at `0x80091670`/invoked at
+`0x80091684` in `musyxSynthFrame`, plus its immediate named/indirect
+consumers. Do not repeat the completed renderer, mixer, post-mix maintenance,
+AI-submit, cache, acquire, or direct-caller bodies. Trace whether this
+callback receives or publishes the per-frame output block into the AI source,
+including writer, destination, payload legitimacy, queue/service signal, and
+ordering relative to `osAiSetNextBuffer`.
 
 ## Competing hypotheses and discriminator
 
-- `H-postmix-publishes`: a named post-mix consumer copies the per-frame block
-  into the AI-source span and orders the copy before submission.
-- `H-consumer-only`: post-mix consumers only advance cursors/state; publication
-  is in an unnamed or indirect helper outside the audited call graph.
-- `H-service-boundary`: the output block is handed to a queue/callback whose
-  consumer performs publication asynchronously.
+- `H-callback-publishes`: the callback target is a legitimate output-block or
+  AI-source publisher; its source, destination, and ordering select the edge.
+- `H-callback-service`: the callback hands data to a queue/service consumer
+  that performs publication asynchronously.
+- `H-callback-unrelated`: the callback only services streamed voice/control
+  state and does not touch the synth output or AI source.
 
-The discriminator is a complete post-mix consumer table: every named or
-indirect handoff, each output-block read/write, any payload copy/transform and
-destination, queue/service signal, and ordering edge to AI submission. A
-named legitimate copy selects `H-postmix-publishes`; state-only consumers
-select `H-consumer-only`; a queued handoff selects `H-service-boundary`. If no
-named edge exists, retain `H-unresolved-address` and do not add runtime
-watches or writeback.
+The discriminator is a complete callback target/consumer table: target
+identity, all arguments, output-block reads/writes, payload copy/transform and
+destination, queue/service signal, and ordering edge to `osAiSetNextBuffer`.
+A named legitimate copy selects `H-callback-publishes`; a queued handoff
+selects `H-callback-service`; a state-only path selects `H-callback-unrelated`
+and retains `H-unresolved-address`. If the target remains unresolved, record
+that limitation and do not add a runtime watch, writeback, remap, or
+mitigation.
 
 ## Exact commands
 
-1. Locate generated/fixup definitions, output-block arguments, post-mix calls,
-   and AI submission with `rg -n "musyxMixActiveVoices|musyxSynthFrame|0x80090F00|0x801496B0|osAiSetNextBuffer"`.
-2. Read bounded windows around each post-mix handoff and immediate consumer;
-   record the complete table in
-   `scratch/agent/s2695_mort_postmix_boundary/audit.md`.
+1. Locate the callback-table writer and target consumers:
+   `rg -n "0x80091670|0x80091684|0x801499DC|0x8000794C|findAndZeroTableSlotMatching|serviceStreamedVoices|flushStreamedVoiceBuffers" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files`
+2. Read bounded windows around the target definition, callback-table
+   initialization, and immediate callers. Record the complete table in
+   `scratch/agent/s2696_mort_callback_boundary/audit.md`.
 3. Do not build or run unless the static table identifies a concrete runtime
-   discriminator; no mitigation, writeback, remap, or watch is authorized by
-   this unit.
+   discriminator with a named destination and ordering edge.

@@ -223,6 +223,21 @@ allocation. This selects `H-unresolved-address`, rules out
 source evidence), and authorizes no runtime watch, writeback, remap, or
 mitigation.
 
+s2695 completed the post-mix output-block handoff audit. The three
+`musyxMixActiveVoices` calls in `musyxSynthFrame` hand the render kernel's
+per-frame `$a3` block back only through the mixer, whose post-call work is
+cursor/status bookkeeping. Named post-mix consumers are
+`flushStreamedVoiceBuffers`, `osRecvMesg`/`yieldFromSpThread`, the indirect
+callback at `0x80091684`, `serviceStreamedVoices`, timing, and
+`factor5QueueSignal`; none receives or copies the synth output into the AI
+worker's `0x801496B0` source. The only concrete copy is
+`copyFourHalfwordsWriteback`, a four-halfword descriptor-local streamed-voice
+copy followed by cache writeback. This selects `H-consumer-only` for the
+named post-mix chain and retains `H-unresolved-address` for the complete
+publication edge (static evidence); the unresolved callback is the next
+bounded source-read target. No runtime watch, writeback, remap, or mitigation
+is authorized. Detailed table: `scratch/agent/s2695_mort_postmix_boundary/audit.md`.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -238,10 +253,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    allocate/link metadata and zeroed decode storage, and s2690 found the same
    for the cache initializer. The acquire audit found only descriptor
    ownership/cursor propagation. The caller audit found only the mixer caller
-   and cursor/status updates. The next useful work must audit remaining
-   named/indirect consumers after the per-frame output block is handed back to
-   `musyxSynthFrame`, without repeating the caller, renderer, mixer, or
-   AI-submit body audits.
+   and cursor/status updates. s2695 audited the post-mix chain: named
+   consumers are state/service/timing operations, and the only concrete copy
+   is descriptor-local `copyFourHalfwordsWriteback`; the indirect callback at
+   `0x80091684` remains unresolved. Next: source-read that callback's target
+   table and immediate consumers only, looking for a legitimate output-block
+   or AI-source publication edge. Do not repeat the completed bodies.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.

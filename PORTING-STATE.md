@@ -118095,3 +118095,27 @@ The complete caller/consumer table selects `H-unresolved-address`, rules out
 evidence, and authorizes no runtime watch, writeback, remap, or mitigation.
 No build or run was performed because the table did not identify a concrete
 ground-truth discriminator. Full table: `scratch/agent/s2694_mort_caller_boundary/audit.md`.
+
+## Session 2695 (2026-08-27) — audited the M5 post-mix output-block handoff
+
+Ran the prescribed bounded static audit of the three
+`musyxMixActiveVoices` call sites in `musyxSynthFrame` and every named
+post-mix consumer through the function epilogue. At `0x80090F00`, the render
+kernel receives `$a3` as the per-frame output block; after each mixer returns,
+the caller only advances cursors and updates voice/status bookkeeping.
+
+The post-mix table covered `flushStreamedVoiceBuffers`,
+`osRecvMesg`/`yieldFromSpThread`, the indirect callback at `0x80091684`,
+`serviceStreamedVoices`, timing, and `factor5QueueSignal`. None receives the
+synth output block or copies it into the AI worker's `0x801496B0` source. The
+only concrete copy is `copyFourHalfwordsWriteback`, which copies four
+halfwords between streamed-voice descriptor-derived addresses and performs
+cache writeback; it is not an AI publication edge. The queue signal sends
+completion state and has no payload pointer.
+
+This selects `H-consumer-only` for the named post-mix chain and retains
+`H-unresolved-address` for the complete MORT-to-PCM publication edge. The
+unresolved indirect callback is the next bounded source-read target. No build
+or run was performed because the table did not identify a concrete runtime
+discriminator. No runtime watch, writeback, remap, or mitigation was added.
+Full table: `scratch/agent/s2695_mort_postmix_boundary/audit.md`.
