@@ -117162,3 +117162,22 @@ name. This is a regeneration/configuration rename with no runtime behavior
 change. It rules out a placeholder/configuration mismatch at this exact body,
 not the broader M5 or symbol-sweep hypotheses. The next bounded lead is
 `0x800C804C`, where mission and menu overlay identities must remain distinct.
+
+## Session 2639 (2026-08-27) — audited the 800C804C symbol lead
+
+Ran the bounded generated-symbol-renaming sweep required by
+`scratch/agent/NEXT.md`. The comparison table covered `0x800C804C` and its
+adjacent menu/mission overlay region:
+
+| address | companion/generated identity | span/overlay evidence | result |
+|---|---|---|---|
+| `0x800C804C` | `computeCellGridIndices` | `0x1D0`, repository TOML and ELF dump agree on `.ovl.menu` | exact, already named |
+| `0x800C8178` | `spawnNpcDestructionEffect` | `0x38C`, `.ovl.mission`, distinct from the menu body | exact adjacent identity |
+| `0x800C821C` | `buildDebrisCellBitfield` | `0x1C8`, `.ovl.menu` and exact adjacent boundary | exact, already named |
+| `0x800C83E4` | `decodeDeltaCellCounts` | `0x13C`, `.ovl.menu` and exact adjacent boundary | exact, already named |
+
+The lead was already resolved in the companion, repository TOML, and
+independent ELF artifacts; no placeholder, stale mapping, or overlay collision
+required an action. No rename, build, or runtime change was warranted. This
+rules out an actionable rename in this bounded lead, not the broader
+symbol-sweep hypothesis. The next bounded lead is `0x800C8178`.

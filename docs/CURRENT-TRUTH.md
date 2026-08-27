@@ -248,6 +248,16 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
   companion identities; no runtime behavior changed. This is an exact
   regeneration/configuration rename, not a boundary-only inference.
 
+- **s2639 — the `0x800C804C` sweep lead was already exact.** The companion
+  menu identity is `computeCellGridIndices`; the repository TOML and the
+  independent ELF symbol dump agree on `.ovl.menu`, address `0x800C804C`, and
+  size `0x1D0`. The adjacent menu entries `buildDebrisCellBitfield` and
+  `decodeDeltaCellCounts` likewise have exact names and spans, while the
+  mission occupant at `0x800C8178` is a distinct overlay identity. No
+  placeholder or stale mapping was found, so no rename or build was warranted.
+  This rules out an actionable rename in this bounded lead, not the broader
+  symbol-sweep hypothesis. The next bounded lead is `0x800C8178`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -269,7 +279,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C804C` next using companion symbols, exact spans, callers, and
+   Audit `0x800C8178` next using companion symbols, exact spans, callers, and
    overlay identity;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
