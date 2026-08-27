@@ -1573,7 +1573,7 @@ functions = [
     { name = "tickCinematicEffectObject", vram = 0x800AC7B4, size = 0x5E8 },
     { name = "playerSnowSpeederUpdate", vram = 0x800ACD9C, size = 0x584 },
     { name = "triggerPlayerVehicleSpecialSlotEffect", vram = 0x800AD320, size = 0x58 },
-    { name = "fake_func_800AD378", vram = 0x800AD378, size = 0x8 },
+    { name = "storeTrackedObjectAuxiliaryFields", vram = 0x800AD378, size = 0x8 },
     { name = "computeTrackedObjectWorldAnchor", vram = 0x800AD380, size = 0x98 },
     { name = "updateCinematicCameraStateMachine", vram = 0x800AD418, size = 0x944 },
     { name = "submitCameraTrackedObjectToRender", vram = 0x800ADD5C, size = 0x1D0 },

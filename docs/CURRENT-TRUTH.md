@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2644 (2026-08-27).
+Current maintenance marker: Session 2645 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -459,3 +459,17 @@ identity to collapse. No generated caller was found in the available tree.
 This selects `H-CompanionExact` as already resolved, with the collision
 preserved; no rename or runtime change was warranted. The next bounded lead is
 `0x800CA3A4`.
+
+## Session 2645 result
+
+The external generated tree confirms that `0x800CA3A4` is already resolved as
+`spawnProbeDroidGroundImpactEffect`, with a `0x1BC` body ending at the exact
+`0x800CA560` boundary; its neighboring probe-droid functions and callers are
+also semantically named. The same census found the remaining exact
+companion-backed placeholder at `0x800AD378`: companion and redef sources name
+it `storeTrackedObjectAuxiliaryFields`, while the generated definition remains
+`fake_func_800AD378` with an `0x8` span immediately before
+`computeTrackedObjectWorldAnchor`. The repository TOML now carries that
+semantic name, promoting the regeneration-safe mapping from the build redef
+append to the source symbol table. No overlay collision or runtime behavior
+was changed. The next bounded lead is `0x800CA560`.

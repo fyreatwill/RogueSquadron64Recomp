@@ -117251,3 +117251,17 @@ name and ROM size. The companion marks a deleted overlapping
 context-specific. No generated caller was found in the available tree. This
 rules out an actionable rename at the lead and advances the sweep to
 `0x800CA3A4`; no runtime behavior changed.
+## Session 2645 (2026-08-27) — promoted exact tracked-object symbol mapping
+
+The bounded generated-symbol sweep checked `0x800CA3A4` against the external
+generated tree, companion mission symbols, repository TOML, overlay table, and
+callers. `spawnProbeDroidGroundImpactEffect` is already exact, spanning
+`0x1BC` bytes to `0x800CA560`; the adjacent probe-droid functions and callers
+are also named. A whole generated-definition census found the remaining exact
+companion-backed placeholder at `0x800AD378`: companion and existing redef
+sources name it `storeTrackedObjectAuxiliaryFields`, while the generated body
+is `fake_func_800AD378` with an `0x8` span immediately before
+`computeTrackedObjectWorldAnchor`. Promoted that mapping in
+`syms/rogue_squadron.syms.toml`; `build_redefs.py` emits all three placeholder
+forms for it. This lands a regeneration-safe rename and rules out a new rename
+at `0x800CA3A4`; no runtime behavior changed. The next lead is `0x800CA560`.
