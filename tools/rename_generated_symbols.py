@@ -88,6 +88,9 @@ RENAMES = {
     # companion map and are not callable function bodies.
     "fake_func_80041EEC": "data_gap_80041EEC",
     "fake_func_800457CC": "data_gap_800457CC",
+    # The companion map marks this defined 8-byte record as having no
+    # accompanying real function; the generated body is invalid data.
+    "fake_func_8003DF98": "data_gap_8003DF98",
 }
 
 

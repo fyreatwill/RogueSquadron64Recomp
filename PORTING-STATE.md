@@ -120327,3 +120327,16 @@ in zero files and returned the expected `--require-rename` fail-closed result.
 This rules out a source-backed data-gap rename in this interval but does not
 add semantic evidence about other placeholders. No build or game run was
 needed. The next sweep interval is `0x8004C000..0x8004D000`.
+## Session 2846 (2026-08-27) — renamed defined invalid-data record
+
+The planned `0x8004C000..0x8004D000` sweep selected no generated references:
+its candidates were already-synchronized callable entries or one
+ambiguous/fake record. Neighboring checks through `0x80052000` had the same
+fail-closed result. The corrected bounded source-backed batch identified
+`0x8003DF98` as a defined 8-byte record with no accompanying real function;
+the generated body explicitly traps because its bytes are invalid data. The
+selector renamed three generated references in `funcs_8.c`, `funcs.h`, and
+`recomp_overlays.inl` to `data_gap_8003DF98`, and the companion record now
+documents the non-callable status. No build or game run was needed. This
+rules out a data-gap rename in the queued `0x8004C000` interval, but does not
+classify the remaining ambiguous placeholders.

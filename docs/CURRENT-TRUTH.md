@@ -784,3 +784,14 @@ It changed zero generated references and returned the expected
 `--require-rename` fail-closed result. No source-backed data-gap or ambiguous
 placeholder was selected; the next sweep interval is
 `0x8004C000..0x8004D000`.
+
+Session 2846 first tested the queued interval `0x8004C000..0x8004D000`;
+its candidates were already-synchronized callable entries or one
+ambiguous/fake record, so `--require-rename` correctly failed closed. The two
+neighboring intervals through `0x80052000` were likewise synchronized or
+ambiguous. A corrected bounded batch identified `0x8003DF98` as a defined
+8-byte record with no accompanying real function; its generated body is an
+invalid-data trap. The regeneration-safe selector renamed its three
+generated references to `data_gap_8003DF98`. No build or game run was needed.
+The next sweep interval remains `0x8004C000..0x8004D000` after this bounded
+source-backed correction.
