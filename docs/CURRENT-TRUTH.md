@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2520 (2026-08-26).
+Current maintenance marker: Session 2521 (2026-08-26).
 
 ## Current state
 
@@ -112,7 +112,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
   Next work unit: continue the bounded generated-symbol renaming sweep around
-  the next unresolved main-overlay placeholder at `0x80006BFC`.
+  the next unresolved main-overlay placeholder at `0x80006D8FC`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
