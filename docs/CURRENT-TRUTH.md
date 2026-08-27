@@ -55,6 +55,14 @@ The latest qualified M5 evidence is:
   (`fnv=F59C39C5`, `nz=0`). This selects `H-ContractGap` at the measured
   downstream boundary, rejects `H-RouteOnly` and `H-AudioDegeneracy` there,
   and does not identify a legitimate writer or authorize writeback/remap.
+- s2681's positive-controlled retail join reached both hangar origins and kept
+  the named renderer/mixer/AI PCs live. The candidate AI-source span
+  `0x166450:0x169450` had 3,072 reads but only the known initialization writer
+  `0x800078EC`; the adjacent span `0x1B4A00:0x1B5000` had phase-live nonzero
+  renderer writes at `0x8009DB2C`. The renderer was not joined to the AI
+  source, selecting `H-AI-source-gap` for these candidate ranges (single-source
+  retail evidence) and rejecting `H-MORT-PCM` there. The complete publication
+  edge remains open; no writeback or remap is authorized.
 
 Retail is the independent witness for game-side memory claims. A narrow null
 is unevaluable unless the whole-RDRAM positive control fires first and the
@@ -65,11 +73,12 @@ target phase is reached. The current corrected oracle reaches attract, title
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 CPU-side MORT PCM publication.** The Step 1 image-vs-silent control
-   confirms an image contract gap but no downstream divergence. Revisit only
-   with a genuinely new renderer-to-AI destination/order join; do not repeat
-   the filter, persistent-object, task-field, ring, shared-stack, or Step 1
-   arm census.
+1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
+   separates the live renderer span from the AI-source span but does not name
+   the missing copy/publication edge. Audit the exact address arithmetic and
+   caller contracts of `0x8009DB2C` and `0x8002A0B8` before another runtime
+   probe; do not repeat the filter, persistent-object, task-field, ring,
+   shared-stack, or Step 1 arm census.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.

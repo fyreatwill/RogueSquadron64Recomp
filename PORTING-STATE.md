@@ -117857,3 +117857,27 @@ sampled PCM payload polarity were otherwise matched: 77 dispatch, 526 return,
 legitimate destination. No runtime behavior, writeback, remap, gate, guard,
 or mitigation changed. Full table:
 `scratch/agent/s2680_m5_step1_rebaseline/RESULT.md`.
+## Session 2681 (2026-08-27) — ran the M5 renderer-to-AI publication join
+
+Ran one corrected retail-oracle capture with the whole-RDRAM positive control,
+Rice video, the existing driven hangar schedule, renderer/mixer/AI execution
+watches, and read/write watches on the candidate AI-source and adjacent
+renderer spans. The control fired 84,777 writes and the route reached both
+hangar origins at width 512. `renderVoiceAudioBlock` ran 496 times,
+`audioMixStereoBlock8` 1,984 times, and `osAiSetNextBuffer` plus
+`__osAiDeviceBusy` 6,153 times each.
+
+The candidate source span `0x166450:0x169450` had 12,288 writes and 3,072
+reads; its only writer histogram entry was initialization `0x800078EC`. The
+adjacent span `0x1B4A00:0x1B5000` had 62,489 writes and 939,523 reads, with
+phase-live renderer writes at `0x8009DB2C` and AI-side writes at
+`0x8002A0B8..0x8002A0D8`; the renderer post-stores were nonzero while the
+AI-side post-stores were zero. This rejects `H-MORT-PCM` for the measured
+candidate ranges and selects `H-AI-source-gap` there, but does not identify
+the complete copy/publication edge. The result is single-source retail
+evidence; no port behavior, writeback, remap, or mitigation changed.
+
+The run rules out the prior candidate that the renderer directly publishes
+into `0x166450:0x169450`. It does not rule out a distinct intermediate copy,
+DMA, or source range. Next unit: bounded static address/order audit of
+`0x8009DB2C` and `0x8002A0B8..0x8002A0D8`.
