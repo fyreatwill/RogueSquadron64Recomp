@@ -114958,6 +114958,28 @@ not prove the fragment is dead or permanently unnameable. Artifact:
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2525 (2026-08-26) — censused eighth generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x80079278–0x80079278` after
+the required sweep preflight. It contains exactly one 8-byte placeholder,
+`fake_func_80079278`, whose generated body is the boundary fragment `nop`
+followed by `lw a0, 0x1C(fp)`. It is immediately before the named
+`heavyMechSubEffectNpcHandler` at `0x80079280`; the generated overlay table
+and project symbol TOML agree on the 8-byte span. The companion
+`main_overlay.txt` retains the exact fake name, and exact-address and
+semantic searches found no human definition, m2c implementation, caller
+attribution, or rename candidate.
+
+This selects `H-no-match` for the bounded region and rules out a defensible
+rename or regeneration-safe build. The two-instruction body may be padding or
+a function-boundary artifact, but this static, single-source result does not
+prove it is dead or permanently unnameable. No generated code, runtime, or
+mitigation changed. Artifact:
+`scratch/agent/s2525_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
+
 ## Session 2520 (2026-08-26) — censused third generated-symbol sweep region
 
 Enumerated the complete main-overlay interval `0x80005570–0x8000595C` after

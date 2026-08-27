@@ -1,13 +1,14 @@
-# NEXT work unit (s2525) — generated-symbol renaming sweep, next bounded region
+# NEXT work unit (s2526) — generated-symbol renaming sweep, next bounded region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-The region `0x80072CE8–0x80072CE8` was completely censused and had one
-isolated placeholder with no companion mapping. Continue the same sweep with
-exactly one new bounded region around the next unresolved main-overlay
-placeholder after `0x80072CE8` (currently `0x80079278`). Before starting, run:
+The region `0x80079278–0x80079278` was completely censused and had one
+8-byte boundary placeholder with no companion mapping. Continue the same
+sweep with exactly one new bounded region around the next unresolved
+main-overlay placeholder after `0x80079278` (currently `0x80079CD8`). Before
+starting, run:
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
@@ -20,11 +21,12 @@ companion `rogue_squadron64` tree, and rename only unambiguous matches through
 the regeneration-safe symbol/fixup path. Do not invent names or edit unrelated
 generated functions. The prior results are in
 `scratch/agent/s2518_symbol_census/audit.md`,
-`scratch/agent/s2519_symbol_census/audit.md`, and
+`scratch/agent/s2519_symbol_census/audit.md`,
 `scratch/agent/s2521_symbol_census/audit.md`,
-`scratch/agent/s2522_symbol_census/audit.md`, and
-`scratch/agent/s2523_symbol_census/audit.md` and
-`scratch/agent/s2524_symbol_census/audit.md`.
+`scratch/agent/s2522_symbol_census/audit.md`,
+`scratch/agent/s2523_symbol_census/audit.md`,
+`scratch/agent/s2524_symbol_census/audit.md`, and
+`scratch/agent/s2525_symbol_census/audit.md`.
 
 ## Competing hypotheses and discriminator
 
@@ -45,8 +47,9 @@ matches selects `H-no-match`; a failed regeneration-safe validation selects
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
-rg -n '^void func_|^static .*func_|func_0x[0-9A-Fa-f]+' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -200
-rg --files /Users/williambuckley/Documents/Tools/rogue_squadron64 | head -100
+rg -n 'func_0x80079CD8|fake_func_80079CD8|80079CD8' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
+rg -n -C 8 'fake_func_80079CD8' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -i '79CD8|candidate semantic terms' /Users/williambuckley/Documents/Tools/rogue_squadron64/src /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 ```
 
 Do not build or rename until the region and its companion evidence are

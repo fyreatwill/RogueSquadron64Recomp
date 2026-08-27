@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2524 (2026-08-26).
+Current maintenance marker: Session 2525 (2026-08-26).
 
 ## Current state
 
@@ -141,6 +141,14 @@ Current maintenance marker: Session 2524 (2026-08-26).
   repository search found no named definition, caller, or m2c source. This is
   a static, single-source result; no generated code changed. Artifact:
   `scratch/agent/s2524_symbol_census/audit.md`.
+- **s2525 — the eighth bounded generated-symbol region had no defensible
+  mapping.** The complete interval `0x80079278–0x80079278` contains one
+  8-byte placeholder consisting only of a `nop` and `lw a0,0x1C(fp)` before
+  the named `heavyMechSubEffectNpcHandler` at `0x80079280`. The companion
+  symbol file retains `fake_func_80079278`; exact-address and semantic
+  searches found no human definition, m2c implementation, caller attribution,
+  or rename candidate. This is a static, single-source result; no generated
+  code changed. Artifact: `scratch/agent/s2525_symbol_census/audit.md`.
 
 ## Active backlog
 
@@ -158,7 +166,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
   Next work unit: continue the bounded generated-symbol renaming sweep around
-  the next unresolved main-overlay placeholder after `0x80072CE8`.
+  the next unresolved main-overlay placeholder after `0x80079278`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
