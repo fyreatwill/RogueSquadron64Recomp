@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2619 (2026-08-27).
+Current maintenance marker: Session 2620 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -93,6 +93,18 @@ Current maintenance marker: Session 2619 (2026-08-27).
   during capture; that is a failure signal, not the title discriminator.
   Artifact: `scratch/agent/s2619_title_pcm_boundary/`.
 
+- **s2620 — Step 3 contract-edge audit found no promotable edge.** The retail
+  whole-RDRAM control and title/hangar transitions are present. Retail names
+  PC `0x800078EC` as the dominant writer of `0x166450:0x169450`; the secondary
+  `0x1798B0:0x179A48` span also has named retail writers. Port image rows show
+  task ordering and DMA destinations, but every sampled image DMA payload is
+  zero, and the host writer witness is `kind=2`, `pc=0`, with no guest
+  publication PC. The generated tree has no direct static reference to the
+  retail PCM spans. Thus `H-ImageOutputEdge` and `H-CPU-MORT-Edge` remain
+  incomplete mappings; `H-Unproven` is selected. No writeback, remap, gate,
+  or de-stub behavior change is authorized until an independent mapping names
+  the port writer, destination, legitimate value, and ordering.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -113,13 +125,13 @@ Current maintenance marker: Session 2619 (2026-08-27).
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 de-stubbing sequence — next contract edge.** The title discriminator
-   selected a missing output/publication edge. Follow `docs/M5-AUDIO-PLAN.md`
-   Step 3 and select one proven image-task contract edge before changing
-   behavior; do not repeat the title-zero census or revisit the hangar
-   `0x80094648` relation. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as
-   rollbacks/controls, and require a named legitimate writer plus a same-run
-   nonzero title PCM join before promotion.
+1. **M5 de-stubbing sequence — blocked on contract ground truth.** Obtain an
+   independent mapping from retail PC `0x800078EC` (and the secondary-span
+   writers) to the port-side writer or CPU MORT publication boundary, including
+   destination, legitimate payload polarity, and ordering relative to image
+   completion and PCM consumption. Do not repeat the title-zero census or
+   revisit the hangar `0x80094648` relation. Keep C88=`0` and
+   `ROGUESQ_AUDIO_UCODE=0` as rollbacks/controls.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;

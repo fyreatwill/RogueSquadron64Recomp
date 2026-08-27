@@ -116858,3 +116858,23 @@ another identical title-zero census as the next action. It does not identify
 a legitimate port writer or authorize writeback/remapping. The next unit
 pivots to the M5 de-stubbing plan's Step 3 contract-edge selection. Artifact:
 `scratch/agent/s2619_title_pcm_boundary/`.
+## Session 2620 (2026-08-27) — audited M5 contract edges
+
+Performed the planned M5 Step 3 selection/design audit using the independent
+retail artifact from s2614 and the same-build image/silent contract pair from
+s2616. The retail oracle passed its whole-RDRAM positive control, reached title
+and hangar, and attributed the primary PCM span `0x166450:0x169450` to the
+dominant writer PC `0x800078EC`; the secondary span had the previously named
+retail writer family. Port image rows showed task completion, image DMA, and
+the expected destination ranges, but sampled image payloads were zero. The
+port host writer witness was only `kind=2`, `pc=0`, and no generated source
+reference mapped a guest writer to the retail PCM spans.
+
+The discriminator therefore selected `H-Unproven`: neither a legitimate image
+writeback edge nor a CPU MORT publication edge has all of writer identity,
+destination, legitimate value, and producer-before-consumer ordering. This
+rules out implementing guessed `data_ptr+0x100` writeback, broad remapping,
+gate changes, or another title-zero census. No runtime code or lib submodule
+was changed. The next unit is blocked pending an independent retail-to-port
+contract attribution; a watch/decomp mapping tying `0x800078EC` to a named
+port writer or CPU publication destination would refute the block.
