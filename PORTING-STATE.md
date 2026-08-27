@@ -116765,3 +116765,28 @@ so this is a symbol rename rather than a guessed callable name. No build or
 runtime experiment was run in this maintenance iteration. The next unit is the
 generated-symbol sweep continuation described in `scratch/agent/NEXT.md`; M5
 remains the higher-priority behavioral backlog after this bounded pivot.
+
+## Session 2616 (2026-08-27) — rebaselined M5 image and silent task arms
+
+Ran `scratch/agent/run_s2285_m5_step1_contract_pair.sh` as the single M5 Step
+1 work unit. The retail oracle passed its whole-RDRAM positive control at
+10,000 writes and reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. The silent and image port arms both reached those phases,
+so the route controls were valid.
+
+The silent arm selected `musyx_stub` and produced 1,297 ABI/task rows but no
+image-stage or DMA-range rows. The image arm produced 1,014 ABI/DMA rows,
+2,189 DMA-range rows, and 4,496 image-stage rows; representative rows reached
+`break_pc=0x1328`, `exit=1` (`Broke`), and wrote the expected spans
+`0x166450`/`0x1798B0`. Those image DMA payloads and both PCM endpoints were
+zero-valued. The image arm had no crash, abort, or missing-function marker;
+the silent arm ended `rc=139` in hangar.
+
+This selects `H-ContractGap` over `H-AudioDegeneracy` using two independent
+lines: the retail oracle established the phase/task ground truth, while the
+same-build arm separation showed image-only task work without output joins.
+The silent crash is a recorded failure signal and does not identify its cause.
+It rules out route absence and a silent/image dispatch-equivalence explanation,
+but does not authorize writeback, remapping, or gate changes. Artifact:
+`scratch/agent/s2616_m5_step1_contract_pair/`. Next is a bounded census of
+port-side PCM writer/copy edges.

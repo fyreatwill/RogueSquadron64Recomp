@@ -4,9 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2615 (2026-08-27).
+Current maintenance marker: Session 2616 (2026-08-27).
 
 ## Decision-relevant evidence
+
+- **s2616 — same-build Step 1 rebaseline selects the image output contract
+  gap.** The retail oracle passed the whole-RDRAM control at 10,000 writes and
+  reached title `1024 @ 0x00790400` plus hangar `512 @ 0x006AB400`. Both port
+  arms reached title and hangar. The silent arm produced no image-stage or DMA
+  rows; the image arm produced 1,014 task/DMA rows, 2,189 DMA-range rows, and
+  4,496 image-stage rows, with `break_pc=0x1328` and `exit=1` (`Broke`). Image
+  DMA payloads and PCM source/consumer spans were still zero. The silent arm
+  ended with `rc=139` in hangar; the image arm had no crash, abort, or missing
+  function marker. The independent oracle route controls and the same-build
+  silent/image separation select `H-ContractGap` over `H-AudioDegeneracy`;
+  the crash is recorded as a failure signal, not its cause. Artifact:
+  `scratch/agent/s2616_m5_step1_contract_pair/`.
 
 - **s2614 — retail names the PCM-span writers; the port does not.** The
   debugger-enabled retail oracle passed the whole-RDRAM control with 23,413
