@@ -121,8 +121,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    the companion comments explicitly identify each function. Continue with
    `0x80121000..0x80123000`. Session 2785 closed that interval: the selector
    changed zero references in zero files, and the independent generated-tree
-   scan found no placeholder definitions or references. Continue with
-   `0x80123000..0x80125000`.
+   scan found no placeholder definitions or references. Session 2786 closed
+   `0x80123000..0x80125000`: the selector changed zero references in zero
+   files, and the independent generated-tree scan found no placeholder
+   definitions or references. Continue with `0x80125000..0x80127000`.
 
 2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
