@@ -117084,3 +117084,17 @@ placeholder or cross-overlay collision was found, so no rename, build, or
 runtime change was warranted. This rules out an actionable rename in that
 neighborhood, not the broader symbol-sweep hypothesis. The next bounded lead
 is `0x800C7884`.
+
+## Session 2634 (2026-08-27) — audited the 800C7884 symbol lead
+
+Ran the bounded generated-symbol-renaming sweep required by `scratch/agent/NEXT.md`.
+The comparison table covered `0x800C7884` and its adjacent region through
+`0x800C7CF8`: the lead is already named `setHudFlagBit40AndStoreArg` in the
+companion symbols, active generated body, repository TOML, and generated
+overlay table. Its generated body has the exact `0x1C` span ending at
+`0x800C78A0`, and generated callers use the resolved name. The adjacent
+entries through `playObjectiveVoiceLine1` likewise have companion names and
+matching TOML/generated overlay sizes; no placeholder or cross-overlay
+collision required an action. No rename, build, or runtime change was
+warranted. This rules out an actionable rename in this bounded lead, not the
+broader symbol-sweep hypothesis. The next bounded lead is `0x800C78A0`.
