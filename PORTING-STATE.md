@@ -116277,3 +116277,15 @@ following duplicate-symbol deletion. Exact-address searches across companion
 source, m2c, symbol data, and callers found no semantic candidate; the rename
 generator emitted no mapping. This selects `H-BoundaryOnly` and leaves the
 placeholder unchanged. No runtime build or experiment ran.
+
+## Session 2594 (2026-08-26) — classified the next generated-symbol boundary
+
+Audited the complete placeholder span at `0x800CA26C`. `funcs_36.c` contains
+only `lbu v1, 0x11(fp)` before the named `initNpcActorVariant` body at
+`0x800CA270`. The companion symbol file retains `fake_func_800CA26C` and
+documents deletion of the following duplicate `func_800CA270`; exact-address
+source, m2c, caller, and alternate-symbol searches found no semantic name.
+The rename generator has no mapping, so no generated file or runtime behavior
+changed. This selects `H-BoundaryOnly` and advances the sweep to `0x800CC038`.
+It rules out only a renameable companion mapping for this span. Artifact:
+`scratch/agent/s2594_symbol_census_audit.md`.
