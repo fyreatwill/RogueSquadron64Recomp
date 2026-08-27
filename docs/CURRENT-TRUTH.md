@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2510 (2026-08-26).
+Current maintenance marker: Session 2512 (2026-08-26).
 
 ## Current state
 
@@ -30,6 +30,13 @@ Current maintenance marker: Session 2510 (2026-08-26).
   The image arm reaches task completion and generated DMA. s2506 joins
   stage-2 image DMA destinations to the generated AI table and its PCM
   consumers; the legitimate nonzero payload writer remains unresolved.
+
+- **s2512 — checkpoint close-out; orphaned loop.sh.new deleted.** The prior
+  session left an uncommitted `tools/agent/loop.sh.new` draft. The no-engineering
+  churn guard it contained was already committed in commit `7af7d623` before
+  s2511. No experiment ran; the .new file was cleaned up. Next is the
+  m5-image-payload-writer-provenance work unit (staggered-startup qualified
+  image-arm PCM payload writer capture).
 
 - **s2511 — staggering startup separates the paired pre-target failure from
   the later image-arm crash.** The same-build driver waited for the

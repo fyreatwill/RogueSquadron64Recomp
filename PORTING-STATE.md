@@ -114774,3 +114774,17 @@ refuted as its sufficient explanation. The distinct later image crashes and
 the image-to-PCM payload writer remain unresolved. All image joins were still
 stage-only; no writer, behavior, guard, or mitigation changed. Artifact:
 `scratch/agent/s2511_m5_staggered_image_concurrency/audit.md`.
+
+## Session 2512 (2026-08-26) — checkpoint close-out after early stop; deleted orphaned loop.sh.new
+
+**Work unit:** Close-out (prior iteration stopped early with uncommitted working file).
+
+**What ran:** Discovered that the uncommitted `tools/agent/loop.sh.new` was an
+orphaned draft of the no-engineering churn guard. The guard itself was already
+committed in commit `7af7d623` ("harness: slug-independent no-engineering churn
+guard") prior to session 2511. The .new file was deleted, ledger updated, and
+NEXT.md set to resume the m5-image-payload-writer-provenance work unit.
+
+**No experiment ran; no conclusion changed.** Next: resume the qualified staggered-
+startup image-arm capture for PCM payload writer provenance (scratch/agent/NEXT.md,
+session s2513).
