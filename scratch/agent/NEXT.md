@@ -1,13 +1,13 @@
-# NEXT work unit (s2603) — locate the next generated-symbol sweep span
+# NEXT work unit (s2604) — locate the next generated-symbol sweep span
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Select the next unresolved generated-symbol placeholder after `0x800E406C`,
+Select the next unresolved generated-symbol placeholder after `0x800E447C`,
 using the generated overlays and companion symbol files to identify the next
 segment/address. Rename only fragments with a defensible companion name or
-clear local semantics. The next expected address is `0x800E447C`. Keep
+clear local semantics. The next expected address is `0x800E71C8`. Keep
 unresolved boundary/data fragments unchanged. This is a static rename unit; do
 not run the game or add runtime probes.
 
@@ -34,8 +34,8 @@ disagreement selects `H-ToolMismatch`.
 
 1. Enumerate unresolved `fake_func_*` entries in
    `../N64Recomp/RecompiledFuncs/` and companion symbol files, sorted by
-   address, then inspect the first span after `0x800E406C` (currently expected
-   at `0x800E447C`).
+   address, then inspect the first span after `0x800E447C` (currently expected
+   at `0x800E71C8`).
 2. Add only justified mappings to `tools/rename/build_redefs.py` with
    `apply_patch`.
 3. Run `python3 tools/rename/build_redefs.py` and verify expected lines in

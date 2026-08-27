@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2602 (2026-08-26).
+Current maintenance marker: Session 2603 (2026-08-26).
+
+- **s2603 — the next generated-symbol span is a duplicate-symbol boundary
+  fragment.** `0x800E447C` is the two-instruction fragment `lhu v0, 0x14(v1)`
+  / `lw a0, 0x58(fp)` between the complete `handleRayShieldedNpcDestroy` and
+  `resetCraftInstanceMotionState` bodies. The companion retains only
+  `fake_func_800E447C` and documents deletion of the following duplicate
+  symbol; exact-address source, m2c, caller, and alternate-name searches found
+  no defensible candidate. The rename generator emitted no mapping, so the
+  placeholder remains unchanged. Artifact:
+  `scratch/agent/s2603_symbol_census_audit.md`.
 
 - **s2602 — the next generated-symbol span is an unnamed boundary fragment.**
   `0x800E406C` is a single `sw $a0, 0x20($sp)` instruction between the

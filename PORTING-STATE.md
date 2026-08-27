@@ -116398,3 +116398,17 @@ source, m2c, and caller searches found no semantic candidate. Running
 placeholder. No generated source, runtime build, or game run was performed.
 This selects `H-BoundaryOnly` and advances the sweep to `0x800E447C`. See
 `scratch/agent/s2602_symbol_census_audit.md`.
+
+## Session 2603 (2026-08-26) — classified the next generated-symbol boundary
+
+The bounded generated-symbol sweep inspected the first unresolved mission-overlay
+placeholder after `0x800E406C`, at `0x800E447C`. Generated code contains only
+the two-instruction fragment `lhu v0, 0x14(v1)` / `lw a0, 0x58(fp)` between the
+complete `handleRayShieldedNpcDestroy` and `resetCraftInstanceMotionState`
+bodies. The companion retains `fake_func_800E447C` and documents deletion of
+the following `func_800E4480` duplicate-symbol entry; exact-address source,
+m2c, caller, and alternate-name searches found no semantic candidate. The
+rename generator completed successfully with no mapping. This selects
+`H-BoundaryOnly`, leaves the placeholder unchanged, and rules out both an
+available companion mapping and a tool-input mismatch. Artifact:
+`scratch/agent/s2603_symbol_census_audit.md`.
