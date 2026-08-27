@@ -114757,3 +114757,20 @@ because the paired controls missed the target. Their target nulls are
 unevaluable. No audio behavior, writer mapping, guard, or mitigation changed.
 Artifact:
 `scratch/agent/s2510_m5_image_concurrency/audit.md`.
+
+## Session 2511 (2026-08-26) — separated startup-order from image concurrency
+
+Repaired the missing staggered-start driver, rebuilt the target, and ran one
+same-build capture. The driver waited for the single-image baseline to report
+the 1024 positive control before launching the image-plus-silent pair. The
+baseline passed 1024 and emitted 2,287 image-stage rows and 926 image-DMA
+joins before a later `do_rom_read+572` crash at guest `0x80001b08`. The paired
+image arm also passed 1024, reached the 512/hangar route, and emitted 3,274
+image-stage rows and 1,392 joins before `updateHangarBayScene+76424` at guest
+`0x800ac8c0`. The silent peer passed 1024 and was SIGKILLed without a crash
+marker. Thus the earlier paired-image pre-target failure is startup-order
+sensitive: `H-startup-order` is supported and `H-concurrent-resource` is
+refuted as its sufficient explanation. The distinct later image crashes and
+the image-to-PCM payload writer remain unresolved. All image joins were still
+stage-only; no writer, behavior, guard, or mitigation changed. Artifact:
+`scratch/agent/s2511_m5_staggered_image_concurrency/audit.md`.

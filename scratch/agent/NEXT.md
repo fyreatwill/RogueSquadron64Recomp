@@ -1,48 +1,46 @@
-# NEXT work unit (s2511) — separate persistent sharing from startup-order divergence
+# NEXT work unit (s2512) — batch the reachable image-to-PCM writer provenance capture
 
-HYPOTHESIS-ID: m5-image-concurrency-control
+HYPOTHESIS-ID: m5-image-payload-writer-provenance
 
 ## Single work unit
 
-Run one same-build staggered-start control: launch a single image process and
-wait until its 1024 positive control fires, then launch the image-plus-silent
-pair with the same phase-relative input. Keep the existing single-image arm
-as the route control if capacity permits. Do not change audio implementation
-or add a mitigation. Capture phase reached, image-task rows, first crash
-symbol/guest PC, and whether the paired image misses the gate before any
-target null is interpreted.
+Run one qualified image-arm capture now that the staggered route reaches the
+target phase. Use the existing all-in-one image-stage, DMA-join, AI-table,
+PCM-consumer, guest-store, RSP-writer, and host-writer controls. The capture
+must include the independent retail oracle controls first, then the port arm;
+do not interpret a writer null unless the oracle whole-RDRAM/phase controls and
+the port image-stage and PCM-consumer controls all fire.
 
 ## Competing hypotheses and discriminator
 
-- `H-concurrent-resource`: adding the silent peer causes the image arm to
-  miss the 1024 gate while the single image arm passes it.
-- `H-route-input`: the paired image diverges for phase/input reasons that are
-  independent of shared renderer pressure.
-- `H-image-renderer-resource`: the single image arm reaches a reproducible
-  renderer crash after its positive controls.
-- `H-startup-order`: the paired failure is caused by simultaneous process
-  startup or early global initialization; staggering the pair after a live
-  image target route prevents the pre-target failure.
+- `H-guest-payload-writer`: a generated guest CPU store writes nonzero bytes to
+  an image-joined AI-table destination before the first PCM consumer.
+- `H-rsp-payload-writer`: the Factor 5 image/RSP path writes the nonzero
+  payload, with a destination and event join visible in the RSP/DMA controls.
+- `H-host-payload-writer`: host audio plumbing writes the AI blocks after the
+  guest/RSP boundary and before queue consumption.
+- `H-no-observable-writer`: all positive controls fire but none of the three
+  writer classes joins a nonzero consumer buffer in the target phase.
 
-The discriminator is one same-build table of the staggered paired-image arm
-versus the single-image baseline: whether the pair reaches 1024 after the
-image baseline is already live, image-task positive-control count, first crash
-symbol, last guest PC, and crash/timeout. A target null is valid only if that
-arm's image-task positive control fires; no writer claim is allowed unless the
-target route is reached.
+The discriminator is one phase-scoped table keyed by AI-table entry and image
+ordinal: first nonzero writer class/PC or RSP event, destination, byte count,
+payload fingerprint, image-DMA completion, and first PCM-consumer event. A
+guest/RSP/host join selects its corresponding hypothesis; a fully controlled
+null selects `H-no-observable-writer`; missing image or consumer controls makes
+the result unevaluable and selects nothing.
 
 ## Exact commands
 
 ```sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
+tools/oracle/build.sh
+cmake --build build --target RogueSquadron64Recomp
 env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
 ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_PHASE=1 \
 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 \
-ROGUESQ_LOG_M5_GATE_CONTRACT=1 zsh scratch/agent/run_s2511_staggered_image_concurrency.sh
+ROGUESQ_LOG_M5_GATE_CONTRACT=1 zsh scratch/agent/run_s2512_m5_payload_writer.sh
 ```
 
-The driver must launch the image baseline from `build/`, wait for its 1024
-positive control, then launch the image-plus-silent pair, watchdog all
-processes, use identical phase-relative keys, SIGKILL them, and write
-absolute logs under
-`scratch/agent/s2511_m5_staggered_image_concurrency/`.
+The driver must arm the retail positive control before its target-phase watch,
+launch one port image arm from `build/`, gate at 1024 then 512 with
+phase-relative keys, and SIGKILL the process after the bounded capture. Logs
+must be absolute under `scratch/agent/s2512_m5_payload_writer/`.

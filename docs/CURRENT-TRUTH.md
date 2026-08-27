@@ -31,6 +31,19 @@ Current maintenance marker: Session 2510 (2026-08-26).
   stage-2 image DMA destinations to the generated AI table and its PCM
   consumers; the legitimate nonzero payload writer remains unresolved.
 
+- **s2511 — staggering startup separates the paired pre-target failure from
+  the later image-arm crash.** The same-build driver waited for the
+  single-image baseline to reach the 1024 positive control before starting the
+  image-plus-silent pair. Both image arms passed 1024 and reached the 512
+  hangar route with image-stage and generated-DMA rows. The pair then crashed
+  at `updateHangarBayScene+76424`, while the baseline later crashed at
+  `do_rom_read+572`; the silent peer reached its target and was SIGKILLed
+  without a crash marker. This supports `H-startup-order` for the earlier
+  pre-target symptom and refutes `H-concurrent-resource` as its sufficient
+  explanation. It does not identify the later crash writer or the unresolved
+  image-to-PCM payload writer. Artifact:
+  `scratch/agent/s2511_m5_staggered_image_concurrency/audit.md`.
+
 - **s2510 — the paired-image route failure persists, but the concurrency
   control is incomplete.** A same-build three-arm capture launched
   single-image, image-plus-silent, and silent-control processes with identical
@@ -794,10 +807,13 @@ Closed investigations are not active work items. This is one monotonic sequence;
    concurrent-resource is selected for this route, with route/input
    divergence still open. s2510 reproduced the paired-image pre-target
    failure, but the paired-silent control also missed 1024, so shared renderer
-   pressure versus route/input or startup-order divergence remains open. Next,
-   run a staggered-start same-build control: single-image, then
-   image-plus-silent after the image arm has passed 1024, retaining target-phase
-   positive controls before interpreting any null.
+   pressure versus route/input or startup-order divergence remained open. s2511's
+   staggered-start control made both image arms pass 1024 and reach hangar,
+   selecting startup-order as the explanation for that pre-target symptom. The
+   later image-arm crash and image-to-PCM payload writer remain open. Next, use
+   the now-reachable target route for one batched writer-provenance capture;
+   require image-stage and consumer controls before interpreting any writer
+   null.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at
