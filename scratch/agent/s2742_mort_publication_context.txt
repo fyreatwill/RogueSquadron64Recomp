@@ -1,0 +1,157 @@
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c-7077-        goto L_800055B0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c-7078-    // 0x80005698: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c-7079-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c-7080-;}
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:7081:RECOMP_FUNC void submitDmaRequestBatch(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c-7082-    uint64_t hi = 0, lo = 0, result = 0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c-7083-    int c1cs = 0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c-7084-    // 0x8000569C: addiu       $sp, $sp, -0x38
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c-7085-    ctx->r29 = ADD32(ctx->r29, -0X38);
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c-599-    // 0x80000D08: sw          $v0, 0x20($sp)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c-600-    rs64_m5_writer_parity('W', 0x80000D08u, U32(ADD32(ctx->r29, 0X20)), 0u); /* PATCH: s2190 m5 scalar */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c-601-    rs64_probe_submit_gate_store('W', 0x80000D08u, U32(ADD32(ctx->r29, 0X20)), U32(ctx->r2));
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c-602-    MEM_W(0X20, ctx->r29) = ctx->r2;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c:603:    submitDmaRequestBatch(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c-604-        goto after_3;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c-605-    // 0x80000D08: sw          $v0, 0x20($sp)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c-606-    rs64_m5_writer_parity('W', 0x80000D08u, U32(ADD32(ctx->r29, 0X20)), 0u); /* PATCH: s2190 m5 scalar */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c-607-    rs64_probe_submit_gate_store('W', 0x80000D08u, U32(ADD32(ctx->r29, 0X20)), U32(ctx->r2));
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11464-    MEM_B(-0X6910, ctx->r1) = 0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11465-    // 0x8008EE08: jal         0x80029E80
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11466-    // 0x8008EE0C: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11467-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c:11468:    osAiSetNextBuffer_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11469-        goto after_3;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11470-    // 0x8008EE0C: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11471-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11472-    after_3:
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11554-    ctx->r4 = MEM_W(ctx->r2, 0X0);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11555-    // 0x8008EE84: jal         0x80029E80
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11556-    // 0x8008EE88: addiu       $a1, $zero, 0x300
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11557-    ctx->r5 = ADD32(0, 0X300);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c:11558:    osAiSetNextBuffer_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11559-        goto after_5;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11560-    // 0x8008EE88: addiu       $a1, $zero, 0x300
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11561-    ctx->r5 = ADD32(0, 0X300);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c-11562-    after_5:
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c-2192-    ctx->r5 = MEM_W(ctx->r1, 0X2A2C);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c-2193-    // 0x80097FAC: jal         0x800925A8
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c-2194-    // 0x80097FB0: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c-2195-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c:2196:    copyFourHalfwordsWriteback(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c-2197-        goto after_0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c-2198-    // 0x80097FB0: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c-2199-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c-2200-    after_0:
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c-9630-    return;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c-9631-    // 0x800925A4: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c-9632-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c-9633-;}
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c:9634:RECOMP_FUNC void copyFourHalfwordsWriteback(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c-9635-    uint64_t hi = 0, lo = 0, result = 0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c-9636-    int c1cs = 0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c-9637-    // 0x800925A8: addiu       $sp, $sp, -0x18
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c-9638-    ctx->r29 = ADD32(ctx->r29, -0X18);
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-1392-    // 0x8009C4C4: sh          $v0, 0xE($t0)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-1393-    rs64_m5_writer_parity('H', 0x8009C4C4u, U32(ADD32(ctx->r8, 0XE)), 0u); /* PATCH: s2190 m5 scalar */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-1394-    rs64_probe_submit_gate_store('H', 0x8009C4C4u, U32(ADD32(ctx->r8, 0XE)), U32(ctx->r2));
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-1395-    MEM_H(0XE, ctx->r8) = ctx->r2;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:1396:    renderVoiceAudioBlock(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-1397-        goto after_0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-1398-    // 0x8009C4C4: sh          $v0, 0xE($t0)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-1399-    rs64_m5_writer_parity('H', 0x8009C4C4u, U32(ADD32(ctx->r8, 0XE)), 0u); /* PATCH: s2190 m5 scalar */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-1400-    rs64_probe_submit_gate_store('H', 0x8009C4C4u, U32(ADD32(ctx->r8, 0XE)), U32(ctx->r2));
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5226-    return;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5227-    // 0x8009DB40: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5228-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5229-;}
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5230:RECOMP_FUNC void renderVoiceAudioBlock(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5231-    uint64_t hi = 0, lo = 0, result = 0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5232-    int c1cs = 0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5233-L_8009D980:
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5234-    // 0x8009DB44: addiu       $sp, $sp, -0x44
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5314-    }
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5315-    // 0x8009DBA8: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5316-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5317-    after_0:
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5318:    ctx->r31 = 0x8009DBACu; /* PATCH: s1971 bltzal-link at 0x8009DBA4 (renderVoiceAudioBlock) */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5319-    // 0x8009DBAC: addiu       $t3, $ra, 0x190
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5320-    ctx->r11 = ADD32(ctx->r31, 0X190);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5321-    // 0x8009DBB0: bgezal      $zero, L_8009DC98
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5322-    if (SIGNED(0) >= 0) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5323-        // 0x8009DBB4: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5324-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5325:    audioMixStereoBlock8(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5326-        goto after_1;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5327-    }
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5328-    // 0x8009DBB4: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5329-
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5351-    }
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5352-    // 0x8009DBCC: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5353-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5354-    after_3:
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5355:    ctx->r31 = 0x8009DBD0u; /* PATCH: s1971 bltzal-link at 0x8009DBC8 (renderVoiceAudioBlock) */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5356-    // 0x8009DBD0: addiu       $t3, $ra, 0x184
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5357-    ctx->r11 = ADD32(ctx->r31, 0X184);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5358-    // 0x8009DBD4: bgezal      $zero, L_8009DC98
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5359-    if (SIGNED(0) >= 0) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5360-        // 0x8009DBD8: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5361-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5362:    audioMixStereoBlock8(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5363-        goto after_4;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5364-    }
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5365-    // 0x8009DBD8: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5366-
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5388-    }
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5389-    // 0x8009DBF0: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5390-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5391-    after_6:
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5392:    ctx->r31 = 0x8009DBF4u; /* PATCH: s1971 bltzal-link at 0x8009DBEC (renderVoiceAudioBlock) */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5393-    // 0x8009DBF4: addiu       $t3, $ra, 0x170
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5394-    ctx->r11 = ADD32(ctx->r31, 0X170);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5395-    // 0x8009DBF8: bgezal      $zero, L_8009DC98
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5396-    if (SIGNED(0) >= 0) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5397-        // 0x8009DBFC: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5398-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5399:    audioMixStereoBlock8(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5400-        goto after_7;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5401-    }
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5402-    // 0x8009DBFC: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5403-
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5425-    }
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5426-    // 0x8009DC14: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5427-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5428-    after_9:
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5429:    ctx->r31 = 0x8009DC18u; /* PATCH: s1971 bltzal-link at 0x8009DC10 (renderVoiceAudioBlock) */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5430-    // 0x8009DC18: addiu       $t3, $ra, 0x164
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5431-    ctx->r11 = ADD32(ctx->r31, 0X164);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5432-    // 0x8009DC1C: bgezal      $zero, L_8009DC98
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5433-    if (SIGNED(0) >= 0) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5434-        // 0x8009DC20: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5435-
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5436:    audioMixStereoBlock8(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5437-        goto after_10;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5438-    }
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5439-    // 0x8009DC20: nop
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5440-
+--
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5523-    return;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5524-    // 0x8009DC94: addiu       $sp, $sp, 0x44
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5525-    ctx->r29 = ADD32(ctx->r29, 0X44);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5526-;}
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5527:RECOMP_FUNC void audioMixStereoBlock8(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5528-    uint64_t hi = 0, lo = 0, result = 0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5529-    int c1cs = 0;
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5530-    // 0x8009DC98: lh          $at, 0x188($a0)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c-5531-    ctx->r1 = MEM_H(ctx->r4, 0X188);

@@ -1,0 +1,221 @@
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:1103:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:1117:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:1763:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:1796:RECOMP_FUNC void copySaveUnk08(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:2053:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:2164:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:3155:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:3169:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:3546:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:3820:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:3852:    copySaveUnk08(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:4637:RECOMP_FUNC void sendServiceMessage(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_2.c:5035:RECOMP_FUNC void sendServiceMessageAwaitReply(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:101:void piDmaWorker(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:102:void submitDmaRequestBatch(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:111:void copySaveUnk08(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:127:void sendServiceMessage(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:131:void sendServiceMessageAwaitReply(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:239:void zmemcpy(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:341:void copyTextureDescriptorWithData(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:405:void osAiSetNextBuffer_recomp(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:479:void bcopy_recomp(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:485:void memcpy_recomp(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:897:void copyLevelConfigColorTriple(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:898:void copyLevelConfigPackedWord(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:949:void copyAccountRecordAndMarkActive(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:1304:void copyFourHalfwordsWriteback(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:1314:void copyVoiceSamplesS16(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:1315:void copyVoiceSamplesLut(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:1436:void renderVoiceAudioBlock(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:1437:void audioMixStereoBlock8(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:1624:void copyMorphTargetVertices(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:1688:void copyTieInterceptorAnimBuffer(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:1840:void copyCurrentObjectMatrix(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:2157:void copyPipeDelimitedField(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h:2158:void copyRandomPipeDelimitedField(uint8_t* rdram, recomp_context* ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c:603:    submitDmaRequestBatch(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_11.c:16393:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_11.c:18987:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:3960:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:4081:    bcopy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:4288:RECOMP_FUNC void bcopy_recomp(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:4941:RECOMP_FUNC void memcpy_recomp(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:8145:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:8184:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:8269:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:8360:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:8575:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:9234:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c:10833:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c:2196:    copyFourHalfwordsWriteback(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_7.c:11714:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_7.c:13516:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_7.c:18241:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_7.c:18360:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:102:    { .func = piDmaWorker, .offset = 0x00005130, .rom_size = 0x0000012C },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:103:    { .func = submitDmaRequestBatch, .offset = 0x0000525C, .rom_size = 0x000001B4 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:112:    { .func = copySaveUnk08, .offset = 0x00005D58, .rom_size = 0x000001A0 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:128:    { .func = sendServiceMessage, .offset = 0x00006B38, .rom_size = 0x000000C4 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:132:    { .func = sendServiceMessageAwaitReply, .offset = 0x00006D08, .rom_size = 0x00000114 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:240:    { .func = zmemcpy, .offset = 0x00018AB4, .rom_size = 0x000000A4 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:342:    { .func = copyTextureDescriptorWithData, .offset = 0x00022A18, .rom_size = 0x000000F0 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:406:    { .func = osAiSetNextBuffer_recomp, .offset = 0x00029A40, .rom_size = 0x00000000 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:480:    { .func = bcopy_recomp, .offset = 0x00033BD0, .rom_size = 0x00000310 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:486:    { .func = memcpy_recomp, .offset = 0x000342B0, .rom_size = 0x0000002C },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:898:    { .func = copyLevelConfigColorTriple, .offset = 0x0006B128, .rom_size = 0x00000064 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:899:    { .func = copyLevelConfigPackedWord, .offset = 0x0006B18C, .rom_size = 0x00000038 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:950:    { .func = copyAccountRecordAndMarkActive, .offset = 0x0006EA54, .rom_size = 0x00000098 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:1305:    { .func = copyFourHalfwordsWriteback, .offset = 0x00092168, .rom_size = 0x0000004C },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:1315:    { .func = copyVoiceSamplesS16, .offset = 0x00092D0C, .rom_size = 0x00000178 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:1316:    { .func = copyVoiceSamplesLut, .offset = 0x00092E84, .rom_size = 0x000001E0 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:1437:    { .func = renderVoiceAudioBlock, .offset = 0x0009D704, .rom_size = 0x00000154 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:1438:    { .func = audioMixStereoBlock8, .offset = 0x0009D858, .rom_size = 0x000000A4 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:1610:    { .func = copyCurrentObjectMatrix, .offset = 0x00022138, .rom_size = 0x00000048 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:1885:    { .func = copyPipeDelimitedField, .offset = 0x0004DF7C, .rom_size = 0x00000098 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:1886:    { .func = copyRandomPipeDelimitedField, .offset = 0x0004E014, .rom_size = 0x00000114 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:2338:    { .func = copyMorphTargetVertices, .offset = 0x0000F25C, .rom_size = 0x00000068 },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl:2366:    { .func = copyTieInterceptorAnimBuffer, .offset = 0x00016E50, .rom_size = 0x000001CC },
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c:4533:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c:5760:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c:6068:RECOMP_FUNC void copyPipeDelimitedField(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c:6217:RECOMP_FUNC void copyRandomPipeDelimitedField(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c:6775:    copyRandomPipeDelimitedField(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c:6795:    copyPipeDelimitedField(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_41.c:6863:    copyPipeDelimitedField(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_19.c:304:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_19.c:1813:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_19.c:3671:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_19.c:13504:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_19.c:16423:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_19.c:16807:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c:2563:    copyRandomPipeDelimitedField(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c:2580:    copyPipeDelimitedField(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_40.c:15883:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_31.c:807:RECOMP_FUNC void copyMorphTargetVertices(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_31.c:7870:    copyMorphTargetVertices(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_31.c:12381:    copyTieInterceptorAnimBuffer(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_31.c:12659:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_31.c:26673:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_31.c:26759:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_31.c:28232:    copyMorphTargetVertices(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:2151:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:3508:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:4819:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:4894:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:5038:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:5456:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:5545:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:6833:RECOMP_FUNC void piDmaWorker(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:7081:RECOMP_FUNC void submitDmaRequestBatch(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:7386:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_1.c:7546:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_38.c:232:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_38.c:3768:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_38.c:40014:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_38.c:40355:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_14.c:1187:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_29.c:1609:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_29.c:1621:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_29.c:1633:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_29.c:1850:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_29.c:5219:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_12.c:4332:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_12.c:6171:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_12.c:6551:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_12.c:9438:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_12.c:9886:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_35.c:3588:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_35.c:5629:RECOMP_FUNC void copyCurrentObjectMatrix(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c:9634:RECOMP_FUNC void copyFourHalfwordsWriteback(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c:11731:RECOMP_FUNC void copyVoiceSamplesS16(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c:12018:RECOMP_FUNC void copyVoiceSamplesLut(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_36.c:8580:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_36.c:14919:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_36.c:14945:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_36.c:19012:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c:24503:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c:38352:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c:38688:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:6161:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:6286:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:7363:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_34.c:10307:    copyCurrentObjectMatrix(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_30.c:14509:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_30.c:15697:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_30.c:18931:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_10.c:587:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_10.c:11803:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_16.c:13351:RECOMP_FUNC void copyLevelConfigColorTriple(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_16.c:13415:RECOMP_FUNC void copyLevelConfigPackedWord(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_16.c:15304:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_16.c:19708:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_37.c:12010:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_37.c:19491:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_37.c:24650:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_37.c:24666:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_37.c:25249:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_37.c:25911:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_6.c:17109:RECOMP_FUNC void copyTextureDescriptorWithData(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_6.c:17299:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_6.c:18091:    memcpy_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_9.c:431:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_9.c:766:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_9.c:4209:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_9.c:20658:    copyLevelConfigColorTriple(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_32.c:9902:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_32.c:9980:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_32.c:13721:RECOMP_FUNC void copyTieInterceptorAnimBuffer(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_32.c:13769:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_32.c:21498:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_32.c:21514:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_32.c:26386:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_33.c:27735:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_33.c:31387:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:1396:    renderVoiceAudioBlock(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5230:RECOMP_FUNC void renderVoiceAudioBlock(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5318:    ctx->r31 = 0x8009DBACu; /* PATCH: s1971 bltzal-link at 0x8009DBA4 (renderVoiceAudioBlock) */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5325:    audioMixStereoBlock8(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5355:    ctx->r31 = 0x8009DBD0u; /* PATCH: s1971 bltzal-link at 0x8009DBC8 (renderVoiceAudioBlock) */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5362:    audioMixStereoBlock8(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5392:    ctx->r31 = 0x8009DBF4u; /* PATCH: s1971 bltzal-link at 0x8009DBEC (renderVoiceAudioBlock) */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5399:    audioMixStereoBlock8(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5429:    ctx->r31 = 0x8009DC18u; /* PATCH: s1971 bltzal-link at 0x8009DC10 (renderVoiceAudioBlock) */
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5436:    audioMixStereoBlock8(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:5527:RECOMP_FUNC void audioMixStereoBlock8(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:126124:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_17.c:820:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_17.c:3673:    copyAccountRecordAndMarkActive(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_17.c:4322:RECOMP_FUNC void copyAccountRecordAndMarkActive(uint8_t* rdram, recomp_context* ctx) {
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_17.c:4391:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_17.c:5165:    sendServiceMessage(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_17.c:8385:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_39.c:12277:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c:11468:    osAiSetNextBuffer_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_23.c:11558:    osAiSetNextBuffer_recomp(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_13.c:4556:    copyLevelConfigPackedWord(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_13.c:5203:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_13.c:5242:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_13.c:5389:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_13.c:20555:    zmemcpy(rdram, ctx);
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:2375:            ctx->r2 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:2410:            ctx->r3 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:20984:            ctx->r2 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:21019:            ctx->r3 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:21309:            ctx->r2 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:21344:            ctx->r3 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:21638:            ctx->r2 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:21673:            ctx->r3 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:21963:            ctx->r2 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:21998:            ctx->r3 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:23738:            ctx->r2 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c:23779:            ctx->r3 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c:2441:            ctx->r2 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c:2482:            ctx->r3 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c:5024:            ctx->r2 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c:5065:            ctx->r3 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c:7208:            ctx->r2 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c:7243:            ctx->r3 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c:7843:            ctx->r2 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c:7878:            ctx->r3 = 0; // force zero -> any downstream "if (r != 0)" write skips; a bare value copy elsewhere becomes a safe 0 (self-heals, same precedent as FREELIST_NEXT_GUARD)
+/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c:33691:RECOMP_FUNC void zmemcpy(uint8_t* rdram, recomp_context* ctx) {
