@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2802 (2026-08-27).
+Current maintenance marker: Session 2804 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -126,6 +126,10 @@ The latest durable M5 chain is:
   changed zero references in zero files, and the independent generated-tree
   scan found no `func_8013*` or `fake_func_8013*` placeholders. No rename or
   build was needed.
+- Session 2804 closed generated-symbol interval `0x8013F000..0x80141000`.
+  The selector changed zero references in zero files, and the independent
+  generated-tree scan found no `func_8013*`, `fake_func_8013*`, `func_8014*`,
+  or `fake_func_8014*` placeholders. No rename or build was needed.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -153,8 +157,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    selected references and no generated placeholders. Session 2803 closed
    `0x8013D000..0x8013F000`: one candidate at `0x8013D880` was preserved as
    ambiguous-or-fake, the selector changed zero references in zero files, and
-   the independent placeholder scan was empty. Continue with the next bounded
-   interval `0x8013F000..0x80141000`.
+   the independent placeholder scan was empty. Session 2804 closed
+   `0x8013F000..0x80141000` with zero selected references and no generated
+   placeholders. Continue with the next bounded interval
+   `0x80141000..0x80143000`.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still

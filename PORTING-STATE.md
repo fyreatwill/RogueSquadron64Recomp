@@ -119740,3 +119740,16 @@ soak was needed because no generated source changed.
 This selects the already-synchronized hypothesis for the interval and rules
 out a safe semantic rename there, not the remaining sweep. The next bounded
 interval is `0x8013F000..0x80141000`.
+
+## Session 2804 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+Ran the regeneration-safe companion selector for `0x8013F000..0x80141000`
+and independently scanned the generated tree for `func_8013*`,
+`fake_func_8013*`, `func_8014*`, and `fake_func_8014*` placeholders. The
+selector changed zero references in zero files. The independent scan found no
+matching placeholder definitions or references, and `git diff --check` passed.
+No build or game soak was needed because no generated source changed.
+
+This selects the already-synchronized hypothesis for the interval and rules
+out stale generated semantic placeholders there, not the remaining sweep.
+The next bounded interval is `0x80141000..0x80143000`.
