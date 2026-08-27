@@ -1,29 +1,36 @@
-# NEXT work unit (s2831) — sweep generated symbols at 0x80175000..0x80177000
+# NEXT work unit (s2832) — design M5 audio de-stubbing sequence
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-audio-destub-design
 
 ## Work unit
 
-Run the regeneration-safe companion selector for
-`0x80175000..0x80177000`, independently scan the generated tree for
-placeholders in that interval, and apply only source-backed semantic names or
-mechanical `data_gap_*` classifications for proven non-callable fragments.
-Preserve unresolved entries and do not run a game soak. If this interval is
-already synchronized, record that result and advance to the next bounded
-interval.
+Create `docs/M5-AUDIO-PLAN.md`. Survey every currently active audio stub,
+trap, and gate in the runtime and generated code, then specify an incremental
+de-stubbing order. For each step name the contract being restored, the
+expected failure mode, the phase-qualified validation soak, and its positive
+control. This work unit is documentation only; do not change runtime behavior
+or run a game experiment.
 
 ## Competing hypotheses and discriminator
 
-- H-callable-semantic: a companion semantic symbol maps to a generated placeholder, so a semantic rename is justified.
-- H-explicit-data-gap: a placeholder is proven to be a non-callable fragment, so a mechanical `data_gap_*` rename is justified.
-- H-unresolved: candidates are ambiguous or callable semantics are not defensible, so their address-encoded names remain.
+- H-audio-degenerate-paths: the current silent/stubbed paths plausibly cause
+  recurring audio-related crashes or state corruption, so at least one planned
+  de-stub has a concrete validation discriminator.
+- H-audio-boundary-independent: the active stubs are not on the named crash or
+  publication paths, so the plan must preserve them as controls and identify
+  the evidence needed before de-stubbing.
+- H-contract-unknown: a stub lacks enough contract evidence for safe execution,
+  so it must remain parked behind a ground-truth or microcode prerequisite.
 
-The discriminator is the complete selector decision table plus the independent generated-tree scan and each selected body: matching semantic references select H-callable-semantic; a renamed isolated fragment with no old-name references selects H-explicit-data-gap; preserved candidates select H-unresolved.
+The discriminator is the complete inventory-to-step matrix in the new plan:
+every active stub maps to either a bounded de-stub step with a measurable
+outcome, an explicit control, or a named prerequisite. Missing mappings mean
+the survey is incomplete.
 
 ## Exact commands
 
 ```sh
-python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80175000 --end-address 0x80177000 --limit 32
-rg -n 'func_8017|fake_func_8017' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+rg -n -i 'audio|aspMain|musyx|MORT|RspExitReason::Broke|audio.*stub|silent|waitForAnyAudioSlot|osAi|osSpTask|AI_' src lib RecompiledFuncs tools docs --glob '!*.log' --glob '!*.md' > scratch/agent/s2832_audio_inventory.txt
+rg -n -i 'audio|aspMain|musyx|MORT|RspExitReason::Broke|audio.*stub|silent|waitForAnyAudioSlot|osAi|osSpTask|AI_' docs/CURRENT-TRUTH.md docs/PROJECT-OVERVIEW.md docs/debug-trace-env-vars.md
 git diff --check
 ```

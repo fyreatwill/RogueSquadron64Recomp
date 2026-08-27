@@ -120089,3 +120089,20 @@ closes the interval as already synchronized; ambiguous/data entries remain
 intentionally preserved. No build or game soak was needed.
 
 The next bounded interval is `0x80175000..0x80177000`.
+
+## Session 2831 (2026-08-27) — M4 producer-consumer join remained unevaluable
+
+Because the last 15 session titles were generated-symbol sweep sessions, the
+required revisit rule made the prescribed sweep ineligible. Ran the existing
+M4 producer/consumer index probe in one rebuilt qualified LLE-solo run from
+`build/`, with `ROGUESQ_LOG_M4_INDEX=1`, `ROGUESQ_LOG_F5_STATE=1`, and the
+autopilot driver. The executable built and linked successfully. The same-run
+positive control fired 8 `[f5-fetch-control]` rows and the M4 control markers
+fired 514 times, but the port stopped at VI 640/origin `0x0066A500` before
+title or hangar, producing zero `[m4-index]` producer or consumer rows.
+
+This single-source run selects the control-only/unevaluable outcome for the
+M4 join window. It rules out neither a live index join nor an index mismatch;
+it does rule out treating this run's zero M4 rows as evidence about either.
+The M4 accumulator boundary remains parked pending a phase-qualified title
+or hangar route.

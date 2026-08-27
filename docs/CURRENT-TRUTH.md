@@ -173,6 +173,16 @@ legitimate payload, destination, and ordering relation. Any mitigation-shaped
 diff must include an `ORIGIN:` line naming the writer and stating whether its
 value is legitimate.
 
+Session 2831 revisited the parked M4 producer/consumer join after the recent
+15-session sweep streak made another sweep interval ineligible. The rebuilt
+qualified LLE-solo run had positive `[f5-fetch-control]` activity (8 rows) and
+M4 control markers (514 rows), but stopped at VI 640/origin `0x0066A500`
+before title or hangar and emitted zero producer/consumer `[m4-index]` rows.
+This is single-source control-only evidence: it makes the M4 join
+unevaluable in this window, and does not select either a live join or an index
+mismatch. Keep the accumulator boundary parked until a phase-qualified title
+or hangar route exists.
+
 Session 2812 pivoted from the already-synchronized `0x8014F000..0x80151000`
 interval to a bounded source-backed data-gap rename batch. The selector now
 maps `0x80064294`, `0x80064934`, and `0x80065A5C` to explicit `data_gap_*`
@@ -231,9 +241,15 @@ evidence.
 ## Next steps
 
 Priority follows the user directive: maintenance, then M5, then systematic M3,
-then generated-symbol renaming when M5 is closed and M3 is parked.
+then generated-symbol renaming when M5 is closed and M3 is parked. The
+generated-symbol sweep is also subject to the 15-title revisit rule.
 
-1. **Generated-symbol renaming sweep — next bounded interval.** The full
+1. **M5 audio de-stubbing — write the design doc.** Survey every active audio
+   stub, trap, and gate, then create `docs/M5-AUDIO-PLAN.md` with an
+   incremental de-stubbing sequence and a phase-qualified validation soak for
+   each step. Do not change runtime behavior in the design-doc work unit.
+
+2. **Generated-symbol renaming sweep — next bounded interval.** The full
    Debug target now links after the fake/data collision repair, but the
    phase-gated validation still stalled before the target phases. Sessions
    2800–2809 closed intervals through `0x8014B000`; each had either
@@ -276,7 +292,7 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    ambiguous/data entries remain preserved. No build or game soak was needed.
    Continue with `0x80175000..0x80177000`.
 
-2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
+3. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still
    stalls before the target phases. Preserve the lifecycle change; do not infer
    task interruption or audio progress from the reset alone.
@@ -352,7 +368,7 @@ Historical generated-symbol sweep route note: M5 Step 1
    target has zero duplicate definitions. Continue with
    `0x80137000..0x80139000` after full-target M5 validation.
 
-3. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
+4. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
    route; preserve the shim but do not pursue its unexercised semantics.
    The `0x800F9000..0x800FB000` interval is synchronized. The widened
@@ -373,7 +389,7 @@ Historical generated-symbol sweep route note: M5 Step 1
    were preserved, with zero generated references selected. Continue with the
    next bounded interval after this region, preserving ambiguous/data entries.
 
-4. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
+5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
    legitimate destination is the voice ring and its ordering edge is the
    completion queue. `+0x194` is the sample source. Do not repeat this edge or
@@ -381,20 +397,20 @@ Historical generated-symbol sweep route note: M5 Step 1
    named. The speech-loader surface is now closed as service-only; the
    remaining publication boundary is unresolved.
 
-5. **External retail-entry boundary — parked revisit.** Only return with a
+6. **External retail-entry boundary — parked revisit.** Only return with a
    genuinely new, phase-qualified oracle discriminator. The oracle's whole-
    RDRAM positive control is mandatory; it currently does not drive missions.
 
-6. **M4 accumulator origin — parked.** The absolute-DMEM path is localized to
+7. **M4 accumulator origin — parked.** The absolute-DMEM path is localized to
    its known producer, selector state, and indirect consumer. Pointer-relative
    `0xB00/B02/B04` matches are unrelated fields. The dynamic producer-slot /
    consumer-index equality remains unresolved; broad range watches are not a
    substitute.
 
-7. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+8. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator. Passive recurrence belongs in the soak queue.
 
-8. **M5 image task contract and hangar visual artifact — parked.** Implement
+9. **M5 image task contract and hangar visual artifact — parked.** Implement
    no image writeback/remap without a named legitimate image writer and
    destination/order relation. H2 and consumer-mode H1 are refuted; H3 is
    unavailable because the oracle cannot screenshot the LLE path.
