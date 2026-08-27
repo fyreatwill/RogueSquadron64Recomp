@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2750 (2026-08-27).
+Current maintenance marker: Session 2751 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -50,6 +50,10 @@ The latest durable M5 chain is:
   while `+0x194` is the legitimate speech-sample source. The target is the
   fixed `dmaVoiceSampleAndSignal` routine, which performs sample DMA into the
   voice ring and sends a completion message; it has no AI publication edge.
+- The bounded speech-loader surface audit found that `loadSpeechFile` writes
+  only speech metadata and performs asset DMA, `initMusyXVoiceSlot` initializes
+  slot pointers/state, and `consumeVoiceSamples` advances counters/status. It
+  has no PCM/AI-visible payload writer or new ordering edge.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -62,30 +66,28 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **M5 CPU-side MORT publication — active, callback edge closed.** The
+1. **Generated-symbol renaming sweep — active fallback.** The bounded M5
+   speech-loader audit selected service-only and found no new source-backed
+   publication surface. Resume the source-backed rename campaign with one
+   contiguous batch; preserve ambiguous/fake/address-only symbols.
+
+2. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
    legitimate destination is the voice ring and its ordering edge is the
    completion queue. `+0x194` is the sample source. Do not repeat this edge or
    add a runtime watch until a new legitimate AI destination and order are
-   named. The remaining publication boundary is unresolved.
+   named. The speech-loader surface is now closed as service-only; the
+   remaining publication boundary is unresolved.
 
-2. **External retail-entry boundary — parked revisit.** Only return with a
+3. **External retail-entry boundary — parked revisit.** Only return with a
    genuinely new, phase-qualified oracle discriminator. The oracle's whole-
    RDRAM positive control is mandatory; it currently does not drive missions.
 
-3. **M4 accumulator origin — parked.** The absolute-DMEM path is localized to
+4. **M4 accumulator origin — parked.** The absolute-DMEM path is localized to
    its known producer, selector state, and indirect consumer. Pointer-relative
    `0xB00/B02/B04` matches are unrelated fields. The dynamic producer-slot /
    consumer-index equality remains unresolved; broad range watches are not a
    substitute.
-
-4. **Generated-symbol renaming sweep — ready fallback.** Continue one bounded
-   source-backed batch only after M5 is closed or the next M5 surface is
-   unevaluable. Exact companion evidence may be applied through
-   `tools/rename_generated_symbols.py`; preserve address-only and fake
-   fragments. Never infer names from implementation shape. Recent verified
-   batches renamed fragments at `0x8005C000..0x8006B000` and
-   `0x800AA000..0x800AC000`; adjacent regions were mostly synchronized.
 
 5. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator. Passive recurrence belongs in the soak queue.
@@ -176,6 +178,9 @@ ledger. The current late-chain checkpoints are:
 - s2749–s2750: the streaming callback audit corrected the field offset,
   identified `dmaVoiceSampleAndSignal` as the fixed target, and ruled out AI
   publication in that callback.
+- s2751: the speech-loader/voice-slot/cursor surface was audited; metadata,
+  asset DMA, slot initialization, and cursor/state work were found, but no new
+  PCM/AI publication edge.
 
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

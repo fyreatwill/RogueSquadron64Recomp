@@ -119022,3 +119022,22 @@ H-callback-publishes there, and rules out the prior `+0x194` callback premise as
 an offset error. The complete table is in
 `scratch/agent/s2750_m5_streaming_callback/audit.md`. No build, runtime watch,
 or mitigation was added.
+## Session 2751 (2026-08-27) — audited the M5 speech-loader publication surface
+
+Audited the bounded CPU-side MORT surface consisting of `loadSpeechFile`
+(`0x8009BA38`), `initMusyXVoiceSlot` (`0x8009BE40`), and
+`consumeVoiceSamples` (`0x8009C240`) using the generated snapshot plus the
+companion function/data maps. The complete table is in
+`scratch/agent/s2751_m5_speech_loader/audit.md`.
+
+The selected result is H-service-only: `loadSpeechFile` writes
+`numSpeechSamples`, `speechSampleOffsets`, and `speechFile` metadata while
+performing asset DMA; slot initialization clears and stores pointers/state;
+sample consumption advances counters and status. No instruction in this
+surface writes PCM or an AI-visible source span, and no new completion-order
+edge exists. The companion maps independently confirm the named globals and
+function ranges. This rules out the speech-loader/slot/cursor surface as the
+missing M5 AI publication writer, without justifying a runtime watch, guard,
+writeback, remap, or build. The remaining M5 publication boundary is
+unresolved, so the next unit switches to the ready generated-symbol rename
+fallback.

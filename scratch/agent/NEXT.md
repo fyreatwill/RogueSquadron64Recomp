@@ -1,38 +1,43 @@
-# NEXT work unit (s2751) — identify a new M5 publication surface
+# NEXT work unit (s2752) — bounded generated-symbol rename batch
 
-HYPOTHESIS-ID: m5-cpu-mort-publication
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-The previous audit closed the streaming callback edge: the indirect target at
-`0x8009C040` is descriptor `+0x190`, initialized to fixed
-`dmaVoiceSampleAndSignal` (`0x8009BE08`); `+0x194` is the sample source. Select
-one new, source-backed CPU-side MORT publication surface from the remaining
-named call/data graph. Do not repeat the streaming body, callback, queue,
-renderer, mixer, AI-worker, PI-service, host-AI, or voice-pool audits. Do not
-add a runtime watch until a legitimate AI destination and ordering edge are
-named.
+The M5 speech-loader surface was audited in
+`scratch/agent/s2751_m5_speech_loader/audit.md` and selected service-only:
+there is no new source-backed CPU publication edge to de-stub. Resume the
+generated-symbol sweep with one bounded source-backed batch. Before changing
+anything, run the required revisit check; the last 15 ledger titles are not
+all sweep titles, so the sweep remains eligible.
+
+Use the rename tool's companion-backed decision table to select the next
+contiguous region, apply only exact source/m2c-backed mappings, and preserve
+address-only, fake, and ambiguous symbols. This is a real rename change, not a
+diagnostic census.
 
 ## Competing hypotheses and discriminator
 
-- H-new-publisher: the selected surface contains a legitimate write into the
-  AI-visible source span, with a named producer and ordering edge.
-- H-service-only: the selected surface contains only state, DMA, timing, or
-  queue work and cannot publish AI payload.
-- H-unresolved: the selected surface remains data-driven or lacks a complete
-  writer-to-destination chain.
+- H2-exact: companion/source evidence maps at least one placeholder to a
+  defensible human name and the rename is applied in the generated tree.
+- H3-ambiguous: the selected region has candidates but evidence is insufficient
+  for a safe rename; preserve them and document why.
+- H4-synchronized: the selected region is already synchronized with human
+  names, so move to the next bounded region without changing symbols.
 
-The discriminator is a complete writer-to-target/dataflow table for the newly
-selected surface. An explicit payload-to-AI and ordering edge selects
-H-new-publisher; only service work selects H-service-only; an incomplete chain
-selects H-unresolved. If no source-backed surface can be selected, stop and
-switch to the ready generated-symbol renaming fallback rather than adding
-instrumentation.
+The discriminator is the batch decision table: exact companion/source-backed
+mappings select H2-exact; all candidates lacking defensible evidence select
+H3-ambiguous; a fully synchronized bounded region selects H4-synchronized.
+The batch must land either a real rename change or a newly classified bounded
+region with the next address interval identified.
 
 ## Exact commands
 
-1. Grep the named M5 call/data graph and `docs/M5-AUDIO-PLAN.md` for the next
-   unclosed CPU-side producer; exclude the surfaces listed above.
-2. Read only bounded windows around the selected writer, target, and consumer.
-3. Record the complete table in a new `scratch/agent/s2751_*/audit.md` file;
-   do not build or run unless a legitimate destination/order is identified.
+1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`; confirm this is not a
+   sweep-only revisit.
+2. Inspect the rename tool's next bounded region and companion evidence; do
+   not read the full ledger or generated tree.
+3. Run the tool's dry-run/decision-table mode, then apply only exact mappings
+   from that same table.
+4. Verify changed symbols and references, and save the table under
+   `scratch/agent/s2752_generated_symbol_sweep/`.
