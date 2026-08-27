@@ -114869,6 +114869,26 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2527 (2026-08-26) — censused tenth generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x8007A0E8–0x8007A0E8` after
+the required sweep preflight. It contains exactly one 8-byte placeholder,
+`fake_func_8007A0E8`, whose body is `lw v1, 0x7C(fp)` followed by
+`sh v0, 0(v1)`. It is bounded by the delay-slot tail of
+`getControllerStickYPercentage` at `0x8007A0E4` and the independently named
+`sampleRgbBoxFilter2x2AtSubpixel` at `0x8007A0F0`. The companion symbol file
+retains the fake name; exact-address search found no human source, m2c
+definition, or caller attribution.
+
+This selects `H-no-match` for the bounded region and rules out a defensible
+rename or regeneration-safe build. The fragment may be a boundary artifact
+or callable fragment, but this static, single-source result does not prove
+which. No generated code, runtime, or mitigation changed. Artifact:
+`scratch/agent/s2527_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
+
 ## Session 2524 (2026-08-26) — censused seventh generated-symbol sweep region
 
 Enumerated the complete main-overlay interval `0x80072CE8–0x80072CE8` after

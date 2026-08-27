@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2526 (2026-08-26).
+Current maintenance marker: Session 2527 (2026-08-26).
 
 ## Current state
 
@@ -158,6 +158,15 @@ Current maintenance marker: Session 2526 (2026-08-26).
   no human or m2c candidate. This is a static, single-source result; no
   generated code changed. Artifact:
   `scratch/agent/s2526_symbol_census/audit.md`.
+- **s2527 — the tenth bounded generated-symbol region had no defensible
+  mapping.** The complete main-overlay interval `0x8007A0E8–0x8007A0E8`
+  contains one 8-byte placeholder with `lw v1,0x7C(fp); sh v0,0(v1)`, between
+  the delay-slot tail of `getControllerStickYPercentage` and
+  `sampleRgbBoxFilter2x2AtSubpixel`. The companion symbol file retains the
+  fake name; exact-address search found no human source, m2c definition, or
+  caller attribution. This is a static, single-source result and does not
+  prove the fragment is dead or permanently unnameable. Artifact:
+  `scratch/agent/s2527_symbol_census/audit.md`.
 
 ## Active backlog
 
@@ -184,6 +193,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
 4. **Generated-symbol renaming — active after M5 Step 3 closure.** Resume with
   one bounded address-region census and only names supported by the companion
   decomp or clear local semantics; leave unresolved placeholders unchanged.
+  s2527 left `0x8007A0E8` unresolved; next is `0x8007A86C`.
 5. **M4 accumulator-origin work — parked** pending a new boundary idea.
 
 ## Durable boundaries
