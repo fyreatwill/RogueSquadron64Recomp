@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2687 (2026-08-27).
+Current maintenance marker: Session 2689 (2026-08-27).
 
 ## Live result
 
@@ -150,6 +150,19 @@ table (static source evidence), rules out `H-direct-publish` and
 `H-service-boundary` at the audited sites, and authorizes no runtime watch,
 writeback, remap, or mitigation.
 
+s2689 audited the named AI-ring producers. `setupSongRenderBuffers` has only
+one direct caller, `acquireSampleStreamBlock` (`0x80091944`), and passes the
+channel count, source stream pointer, and channel index into setup. It allocates
+channel metadata and then calls `buildSongDecodeBufferRing`; that helper
+allocates a descriptor array and a separate `count*0x100` byte area, links each
+descriptor to successive `0x100` chunks, and initializes descriptor links and
+cursors. Neither helper copies sample or rendered-voice payload. The AI worker's
+separate `0x3000` allocation at `0x801496B0`, cleared before submission, remains
+without a named producer or source relation. The complete producer table
+therefore selects `H-unresolved-address`, rules out `H-ring-producer` and
+`H-service-boundary` for these helpers/caller, and authorizes no runtime watch,
+writeback, remap, or mitigation.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -160,11 +173,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    are a renderer filter output and generic `bzero`, not the missing copy.
    s2683 shows the named DMA callback is stream-to-slot, not renderer-to-AI.
    s2686 found no publication edge in the update/renderer path, s2687 found no
-   publication edge in the mixer callback/state boundary, and s2688 found no
-   join in the named AI worker. The next useful work must audit the named
-   producers and setup helpers for the AI worker's 16-buffer ring, starting
-   with `setupSongRenderBuffers`, `buildSongDecodeBufferRing`, and their direct
-   callers, without repeating the renderer or AI-submit body audit.
+   publication edge in the mixer callback/state boundary, s2688 found no join
+   in the named AI worker, and s2689 found that the named ring setup helpers
+   only allocate/link metadata and zeroed decode storage. The next useful work
+   must audit `initSampleStreamBlockCache` and its direct callers for a named
+   stream/cache-to-AI publication relation, without repeating these setup,
+   renderer, mixer, or AI-submit body audits.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.

@@ -1,39 +1,35 @@
-# NEXT work unit (s2689) — audit producers of the named AI buffer ring
+# NEXT work unit (s2690) — audit the sample-stream cache boundary
 
 HYPOTHESIS-ID: m5-cpu-mort-publication
 
 ## Work unit
 
-Perform a bounded static audit of the named AI worker's buffer-ring producers:
-trace `setupSongRenderBuffers`, `buildSongDecodeBufferRing`, and their direct
-named callers, recording every destination and source used to populate the
-sixteen `0x300`-byte buffers later submitted by `runAiAudioStreamPlaybackLoop`.
-Do not repeat the renderer, mixer-table, filter, persistent-object, task-field,
-shared-stack, DMA callback, update/renderer, mixer callback, or AI-submit-body
-audits. Stop at unresolved indirect calls or pointers rather than inferring a
-MORT join.
+Perform a bounded static audit of `initSampleStreamBlockCache` and every
+direct named caller. Record each source, destination, copy/transform operation,
+queue or service signal, and ordering relation. Follow only named calls and
+direct stores/copies; stop at unresolved indirect state. Do not repeat the
+renderer, mixer, filter, persistent-object, task-field, shared-stack,
+DMA-callback, update/renderer, AI-submit, or ring-setup audits.
 
 ## Competing hypotheses and discriminator
 
-- `H-ring-producer`: a named producer fills the AI ring from a legitimate
-  rendered-voice or MORT-derived source, with ordering visible.
-- `H-service-boundary`: a named setup/service boundary fills the ring, but its
-  source or relation to rendered voice remains outside the audited caller.
-- `H-unresolved-address`: ring producers remain unrelated to rendered voice or
-  terminate at unresolved indirect state.
+- `H-cache-producer`: the cache path copies a legitimate rendered/MORT-derived
+  payload toward the AI source or signals its publication.
+- `H-service-boundary`: the cache path is a named service boundary, but the
+  payload source or AI relation remains outside the audited caller.
+- `H-unresolved-address`: the cache path only initializes/advances unrelated
+  state or ends at unresolved indirect pointers.
 
-The discriminator is a complete producer/source/destination/order table for
-both ring setup helpers and every direct named caller: each outcome must name
-the writer, ring range, payload polarity, and ordering relation, or explicitly
-show which field is absent.
-
-## Ground-truth prerequisite
-
-No runtime watch, build, or soak is authorized until the static table names a
-ground-truth target.
+The discriminator is a complete caller/source/destination/order table. Each
+outcome must identify the writer and legitimate payload polarity, or explicitly
+show which field is absent. No runtime watch or build is allowed unless that
+table names a ground-truth target and the whole-RDRAM positive control is
+planned in the same run.
 
 ## Exact commands
 
-1. `rg -n -H 'setupSongRenderBuffers|buildSongDecodeBufferRing|runAiAudioStreamPlaybackLoop|serviceAudioOutputBuffers|0x801569B0|0x80156A' ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`
-2. Read bounded windows for each unique helper and direct named caller; follow only named calls or direct stores/copies.
-3. Record the complete producer/source/destination/order table and selected hypothesis in the ledger.
+1. `rg -n -H 'initSampleStreamBlockCache|acquireSampleStreamBlock|sampleStreamBlock|0x801499|0x801496' ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`
+2. Read bounded windows for each unique helper and direct named caller; follow
+   only named calls or direct stores/copies.
+3. Record the complete table and selected hypothesis in the ledger/current
+   truth; do not add runtime instrumentation from a static unresolved result.

@@ -117994,3 +117994,28 @@ writeback, remap, mitigation, or soak was run.
 ## Session 2688 (2026-08-27) — audited the downstream M5 AI consumer boundary
 
 Ran the prescribed bounded static audit using generated callers and the companion symbol map; no build or runtime probe was authorized because the table did not yet name a ground-truth target. `renderVoiceAudioBlock` is called by `updateVoiceChannelParams` at `0x8009C4C0`, reads eight words from `voice+0x140`, and writes them back after its internal mix/compand chain at `0x8009DC38..0x8009DC54`. `audioMixStereoBlock8` only consumes voice sample fields and returns packed values in registers. The named `runAiAudioStreamPlaybackLoop` independently allocates sixteen `0x300`-byte buffers in a `0x3000` region, clears the region, and submits the current buffer directly to `osAiSetNextBuffer`; its visible ordering is the receive-message loop. No named copy, source relation, or publication ordering joins the rendered voice object to this AI ring. This selects `H-unresolved-address`, rules out `H-direct-publish` and `H-service-boundary` at these audited sites, and rules out a runtime watch, writeback, remap, or mitigation. The next probe is the bounded producer/setup audit for `setupSongRenderBuffers` and `buildSongDecodeBufferRing`.
+Ran the prescribed bounded static audit using generated callers and the companion symbol map; no build or runtime probe was authorized because the table did not yet name a ground-truth target. `renderVoiceAudioBlock` is called by `updateVoiceChannelParams` at `0x8009C4C0`, reads eight words from `voice+0x140`, and writes them back after its internal mix/compand chain at `0x8009DC38..0x8009DC54`. `audioMixStereoBlock8` only consumes voice sample fields and returns packed values in registers. The named `runAiAudioStreamPlaybackLoop` independently allocates sixteen `0x300`-byte buffers in a `0x3000` region, clears the region, and submits the current buffer directly to `osAiSetNextBuffer`; its visible ordering is the receive-message loop. No named copy, source relation, or publication ordering joins the rendered voice object to this AI ring. This selects `H-unresolved-address`, rules out `H-direct-publish` and `H-service-boundary` at these audited sites, and rules out a runtime watch, writeback, remap, or mitigation. The next probe is the bounded producer/setup audit for `setupSongRenderBuffers` and `buildSongDecodeBufferRing`.
+
+## Session 2689 (2026-08-27) — audited the M5 AI-ring producers
+
+Read the compact current truth, next-work file, and soak-result tail before
+performing the mandated static-only producer audit. The only generated caller
+of `setupSongRenderBuffers` is `acquireSampleStreamBlock` at `0x80091944`; it
+passes the channel count, source stream pointer, and channel index. The setup
+helper allocates channel metadata and delegates to `buildSongDecodeBufferRing`.
+
+`buildSongDecodeBufferRing` allocates a descriptor array of `count*0x14` bytes
+and a separate `count*0x100` byte area, stores the latter as successive `0x100`
+chunks in descriptor `+0x8`, links descriptors through `+0x4`/`-0x14`, and
+initializes cursors and the terminal link. These are metadata and decode
+storage operations; neither helper copies sample data or rendered voice words.
+The AI worker's separate `0x3000` allocation at `0x801496B0` (sixteen `0x300`
+slots) is not written by either helper and has no named source/order relation
+to the rendered voice object.
+
+The complete producer/source/destination/order table selects
+`H-unresolved-address`, rules out `H-ring-producer` and `H-service-boundary` at
+the audited helpers and direct caller, and rules out a runtime watch,
+writeback, remap, or mitigation. No build, watch, or soak was run because the
+static table did not name a ground-truth target. The next bounded audit is
+`initSampleStreamBlockCache` and its direct callers.
