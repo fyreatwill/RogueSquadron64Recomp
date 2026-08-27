@@ -1,0 +1,9 @@
+Independent interval scan: 0x80105000 <= address < 0x80107000
+
+Placeholders found:
+fake_func_80105B54 (funcs_47.c, funcs.h, recomp_overlays.inl)
+fake_func_8010619C (funcs_47.c, funcs.h, recomp_overlays.inl)
+fake_func_80106BE8 (funcs_47.c, funcs.h, recomp_overlays.inl)
+
+No other func_80105*, func_80106*, fake_func_80105*, or fake_func_80106*
+placeholders were present in the interval.
