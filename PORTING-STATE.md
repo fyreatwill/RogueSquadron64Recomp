@@ -119713,3 +119713,16 @@ generated source changed.
 This selects the already-synchronized hypothesis for the interval and rules
 out stale generated semantic placeholders there, not the remaining sweep.
 The next bounded interval is `0x8013B000..0x8013D000`.
+
+## Session 2802 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+Ran the regeneration-safe companion selector for `0x8013B000..0x8013D000`
+and independently scanned the generated tree for `func_8013*` and
+`fake_func_8013*` placeholders. The selector changed zero references in zero
+files. The independent scan found no matching placeholder definitions or
+references, and `git diff --check` passed. No build or game soak was needed
+because no generated source changed.
+
+This selects the already-synchronized hypothesis for the interval and rules
+out stale generated semantic placeholders there, not the remaining sweep.
+The next bounded interval is `0x8013D000..0x8013F000`.
