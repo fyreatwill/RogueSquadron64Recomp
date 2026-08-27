@@ -118828,3 +118828,26 @@ reference changed; there was no parser, duplicate-destination, or protected
 placeholder failure. This rules out `H-exact-matches` for this interval and
 selects `H-already-synchronized`. No build or game run was warranted.
 Evidence: `scratch/agent/s2738_generated_symbol_sweep/decision-table.txt`.
+## Session 2739 (2026-08-27) — de-stubbed SP yield state for M5 audio
+
+- The prescribed generated-symbol sweep over `0x800DA000..0x800DD000` returned
+  status 2 because no generated references were selected; a preview of the
+  next `0x800DD000..0x800E0000` region was also fully synchronized. With no
+  legitimate rename available, this iteration pivoted to the M5 priority.
+- Landed code in `lib/N64ModernRuntime/librecomp/src/sp.cpp`:
+  `osSpTaskYield_recomp` now records a process-local yield request and
+  `osSpTaskYielded_recomp` reports it. Task interruption and resume behavior
+  remain unchanged, so this is an observable API-state de-stub, not a claim
+  that an audio task yielded.
+- Exported the runtime diff to `submodule-patches/N64ModernRuntime.patch` and
+  rebuilt the full Debug target successfully. No game soak was run in this
+  work unit.
+- Competing hypotheses for the next unit are H-yield-observed (request/status
+  joins a task transition), H-yield-unused (no request in target phases), and
+  H-yield-state-only (state changes without task or downstream change). The
+  next phase-gated validation must include the whole-RDRAM retail positive
+  control, task fields, yield request/status, task exit, SP completion, and PCM
+  joins in one row.
+- This rules out only the old unconditional no-op implementation. It does not
+  establish audio yield usage, task-contract completeness, PCM publication, or
+  a legitimate output writer. No mitigation or writeback was added.

@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2738 (2026-08-27).
+Current maintenance marker: Session 2739 (2026-08-27).
+
+Session 2739 landed the first M5 runtime de-stub in the checked-in runtime:
+`osSpTaskYield_recomp` records a real yield request and
+`osSpTaskYielded_recomp` reports it, while task interruption/resumption stays
+unchanged. The full Debug target rebuilt successfully. This is an API-state
+change only; it does not establish an audio-task yield, completion, or PCM
+publication edge. The generated-symbol regions `0x800DA000..0x800E0000` were
+already synchronized, so no rename was made.
 
 Session 2738's generated-symbol sweep covered `0x800D7000..0x800DA000` and
 evaluated 13 companion candidates: all 13 semantic entries were already
@@ -601,10 +609,18 @@ through s2735 batches confirm their covered intervals have no exact
 unsynchronized companion names. s2736 covered `0x800D1000..0x800D4000` and
 evaluated 14 candidates: semantic entries were already synchronized and one
 fake/duplicate-prefix entry was preserved; zero references changed in zero
-files, with no parser or duplicate-destination failure. The next unexamined
-bounded interval is `0x800DA000..0x800DD000`.
+files, with no parser or duplicate-destination failure. Session 2739 then
+confirmed `0x800DA000..0x800E0000` is also synchronized; symbol sweep work is
+parked until a future regeneration exposes a new exact companion match.
 
-1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
+1. **M5 SP yield contract validation.** Session 2739 de-stubbed
+   `osSpTaskYield_recomp`/`osSpTaskYielded_recomp` so the runtime records and
+   reports a real request state. Validate this with one phase-gated same-build
+   image/silent run, the whole-RDRAM retail positive control, task identity and
+   fields, task exit, SP completion, and downstream PCM joins. A reported state
+   without a task transition is only `H-yield-state-only`; do not infer audio
+   progress from it.
+2. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.
@@ -641,7 +657,7 @@ bounded interval is `0x800DA000..0x800DD000`.
    reached hangar with clean task/SP progress, but both retained zero PCM
    payload, so the next M5 unit requires a genuinely new named publication
    surface; do not repeat the drain A/B.
-2. **Generated-symbol renaming sweep.** s2718 renamed the three exact
+3. **Generated-symbol renaming sweep.** s2718 renamed the three exact
    resampling helpers at `0x800927B0..0x80092CF0`; preserve the unresolved
    `0x8000040C` placeholder. Continue with one adjacent bounded region only
    when exact companion/source evidence exists. s2704 found all 19 candidates in
@@ -717,14 +733,14 @@ bounded interval is `0x800DA000..0x800DD000`.
    entries were preserved; zero references changed in zero generated files,
    with no parser or duplicate-destination rejection. Continue with the next
    adjacent region only while exact companion evidence remains available.
-3. **M5 image task contract edge.** Implement only after a named legitimate
+4. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
-4. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+5. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-5. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
+6. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
-6. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
+7. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
    established. The s2737 complete alias census localized the absolute-DMEM
    path to the known producer, selector state, and indirect consumer and
    ruled out merging pointer-relative `0xB00/B02/B04` fields from unrelated
