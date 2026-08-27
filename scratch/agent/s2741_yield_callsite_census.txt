@@ -1,0 +1,18 @@
+# Complete generated yield call-site census
+
+The external generated snapshot was searched with:
+
+`rg -n "osSpTaskYield(_recomp|ed_recomp)" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs`
+
+The raw search returned two generated calls, plus declarations and overlay
+registration entries. The declarations and registration entries are runtime
+symbol plumbing, not guest call sites.
+
+| Generated reference | Guest PC | Containing function | Context | Classification |
+|---|---:|---|---|---|
+| `osSpTaskYield_recomp` | `0x80019DAC` | `spTaskSchedulerThread` | After scheduler message/slot handling; immediately followed by loading and starting the selected task. | Generic SP scheduler control; not audio-specific. |
+| `osSpTaskYielded_recomp` | `0x80019E14` | `spTaskSchedulerThread` | Poll inside the same scheduler loop; result controls whether the scheduler continues polling before starting the saved task. | Generic SP scheduler control; not audio-specific. |
+
+The scheduler may service an audio task indirectly, but this census provides no
+audio-task discriminator and does not establish runtime reachability, request
+consumption, or task completion.

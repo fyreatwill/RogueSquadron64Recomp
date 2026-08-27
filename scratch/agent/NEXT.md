@@ -1,35 +1,37 @@
-# NEXT work unit (s2741) — census SP yield call sites
+# NEXT work unit (s2742) — audit M5 CPU-side MORT PCM publication
 
-HYPOTHESIS-ID: m5-audio-yield-contract
+HYPOTHESIS-ID: m5-mort-pcm-publication
 
 ## Work unit
 
-Perform one bounded static census of every generated reference to
-`osSpTaskYield_recomp` and `osSpTaskYielded_recomp`. For each reference record
-the generated function, guest address, containing file, caller/callee context,
-and whether the surrounding path is an audio-task path or a non-audio control
-path. Use the census to decide whether a target-phase runtime validation is
-still meaningful; do not modify generated behavior.
+Perform one bounded static audit of the unresolved CPU-side MORT publication
+boundary, starting from the known renderer output in the voice object and the
+known AI worker/source spans. Enumerate every caller, callee, store/copy,
+queue/service handoff, and destination in the contiguous post-mix path that
+can connect those two contracts. Do not add runtime instrumentation or a
+writeback/remap.
 
 ## Competing hypotheses and discriminator
 
-- H-yield-audio-callsite: at least one yield API reference is on an audio-task
-  path, so the failed runtime reachability remains the only missing evidence.
-- H-yield-non-audio: all references are on graphics, scheduler, or unrelated
-  control paths, making an audio-task validation unsupported by current code.
-- H-yield-no-reference: the generated snapshot has no references because the
-  API is only a runtime symbol; the next action must then be a symbol/linkage
-  audit rather than another phase-gated run.
+- H-publish-edge-found: the static path contains a complete renderer/output
+  writer to AI-source destination edge with ordering and ownership.
+- H-publish-edge-partial: a candidate copy or handoff exists, but its source,
+  destination, or ordering cannot be proven legitimate from static evidence.
+- H-publish-edge-absent: the bounded post-mix path contains no candidate edge;
+  the next discriminator must move to the remaining indirect/data-driven
+  boundary rather than add another watch to known sites.
 
-The discriminator is the complete reference table, with every possible result
-classifying all call sites into audio-task, non-audio, or no-reference. This
-is static evidence only; no conclusion about actual yielding is allowed.
+The discriminator is a complete source/destination table for the bounded path:
+each possible result identifies a full edge, a partial edge, or no edge. This
+is static evidence only; no runtime legitimacy or payload conclusion follows
+without the retail oracle.
 
 ## Exact commands
 
 ```sh
-rg -n "osSpTaskYield(_recomp|ed_recomp)" RecompiledFuncs build/factor5_ucode \
-  > scratch/agent/s2741_yield_callsite_census.txt
-rg -n "osSpTaskYield(_recomp|ed_recomp)" RecompiledFuncs build/factor5_ucode \
-  | cut -d: -f1 | sort -u
+rg -n "renderVoiceAudioBlock|audioMixStereoBlock8|osAiSetNextBuffer|copy|memcpy|bcopy|submitDmaRequestBatch|sendServiceMessage|piDmaWorker|801496B0|166450|1B4A00" \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+  > scratch/agent/s2742_mort_publication_census.txt
+rg -n "renderVoiceAudioBlock|audioMixStereoBlock8|osAiSetNextBuffer|submitDmaRequestBatch|sendServiceMessage|piDmaWorker" \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64
 ```

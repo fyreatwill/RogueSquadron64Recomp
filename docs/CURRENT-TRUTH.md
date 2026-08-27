@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2739 (2026-08-27).
+Current maintenance marker: Session 2741 (2026-08-27).
+
+Session 2741 completed the bounded generated-source census requested after
+s2740. The only generated references to the SP yield APIs are
+`osSpTaskYield_recomp` at guest PC `0x80019DAC` and
+`osSpTaskYielded_recomp` at `0x80019E14`; both are in the generic
+`spTaskSchedulerThread`. Neither call site has an audio-task branch or an
+audio-specific caller context. This selects `H-yield-non-audio` for the static
+call-site classification, while leaving indirect scheduler service of audio
+tasks, runtime reachability, and yield completion unevaluable. Evidence:
+`scratch/agent/s2741_yield_callsite_census.txt`.
 
 Session 2740 rebuilt the Debug target and ran the planned M5 yield validation
 in both image (`ROGUESQ_AUDIO_UCODE=1`) and silent-control
@@ -625,15 +635,7 @@ files, with no parser or duplicate-destination failure. Session 2739 then
 confirmed `0x800DA000..0x800E0000` is also synchronized; symbol sweep work is
 parked until a future regeneration exposes a new exact companion match.
 
-1. **M5 SP yield call-site census.** The s2740 same-build validation could not
-   reach the target 1024/512 phases: both image and silent arms stopped at the
-   640 cinematic phase even with `ROGUESQ_SPIN_YIELD=1`, so the yield
-   hypotheses remain unevaluable rather than negative. Audit every generated
-   call site of `osSpTaskYield_recomp` and `osSpTaskYielded_recomp`, map each
-   caller to its task/route context, and identify whether any call is reachable
-   from an audio task. Do not add a runtime probe or infer a contract from a
-   call site alone.
-2. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
+1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.

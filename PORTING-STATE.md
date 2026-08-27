@@ -118869,3 +118869,20 @@ Evidence: `scratch/agent/s2738_generated_symbol_sweep/decision-table.txt`.
 - The next unit is a bounded static census of every generated yield API call
   site, classified by audio-task versus non-audio context. No mitigation,
   writeback, or task-contract conclusion follows.
+## Session 2741 (2026-08-27) — censused SP yield call sites
+
+- The prescribed generated-source census initially found the Windows-era
+  paths absent from this checkout; locating the external generated snapshot at
+  `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs` supplied
+  the intended source. The complete search found two generated API calls.
+- `osSpTaskYield_recomp` is called at guest PC `0x80019DAC` and
+  `osSpTaskYielded_recomp` at `0x80019E14`; both are in
+  `spTaskSchedulerThread`. Their surrounding control is generic scheduler
+  receive/poll/load/start logic, with no audio-task branch or audio-specific
+  caller context.
+- This selects `H-yield-non-audio` for the static call-site classification and
+  rules out a dedicated audio yield call site. It does not rule out an audio
+  task passing through the generic scheduler, and it provides no runtime
+  evidence of request consumption, task interruption, or completion. No build,
+  run, behavior change, mitigation, or writeback was performed.
+- Evidence: `scratch/agent/s2741_yield_callsite_census.txt`.
