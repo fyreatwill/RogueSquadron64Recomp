@@ -115418,6 +115418,7 @@ Selected `H-data-boundary` / `H-no-match` and left it unchanged. Artifact:
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
+
 ## Session 2543 (2026-08-26) — renamed tracked-object auxiliary-field fragment
 
 Ran the required generated-symbol sweep preflight and inspected the complete
@@ -115452,6 +115453,22 @@ independently registers `tickEasedCameraKeyframeBlend` at overlapping
 would be unsafe. Exact source, m2c, and caller searches found no defensible
 human mapping. Selected `H-data-boundary` / `H-no-match` and left it unchanged.
 Artifact: `scratch/agent/s2544_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.
+
+## Session 2546 (2026-08-26) — censused generated-symbol format boundary
+
+Ran the bounded generated-symbol census at `0x800B2628`. The complete
+menu-overlay span is eight bytes (`0x800B2628–0x800B262F`) containing only
+`lwc1 f0,-0x5D04(at)` and `swc1 f0,0x168(v0)`, between
+`playExitSoundAndToggleScreenMeshes` and `buildFormatMessageGlyphBuffer`.
+The active generated body/declaration/overlay table and companion symbol input
+retain `fake_func_800B2628`; exact-address, source, m2c, and caller searches
+found no human candidate. With no prologue, return, jump, or complete callable
+body, renaming it would be speculative. Selected `H-data-boundary` /
+`H-no-match` and left it unchanged. Artifact:
+`scratch/agent/s2546_symbol_census/audit.md`.
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.

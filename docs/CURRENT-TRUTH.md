@@ -311,6 +311,17 @@ Current maintenance marker: Session 2545 (2026-08-26).
   absorb an established function boundary, so it remains unchanged. Artifact:
   `scratch/agent/s2545_symbol_census/audit.md`.
 
+- **s2546 — the next generated-symbol region has no defensible mapping.** The
+  complete menu-overlay span `0x800B2628–0x800B262F` is an eight-byte fragment
+  containing only `lwc1 f0,-0x5D04(at)` and `swc1 f0,0x168(v0)`, between
+  `playExitSoundAndToggleScreenMeshes` and `buildFormatMessageGlyphBuffer`.
+  The active generated body/declaration/overlay table and companion symbol
+  input retain `fake_func_800B2628`; exact-address, source, m2c, and caller
+  searches found no human candidate. It has no complete callable boundary, so
+  renaming it is speculative. This static, single-source result selects
+  `H-data-boundary` / `H-no-match`; it remains unchanged. Artifact:
+  `scratch/agent/s2546_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -327,7 +338,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
   Next work unit: continue the bounded generated-symbol renaming sweep at
-  `0x800B2628`.
+  `0x800B47C4`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
@@ -361,8 +372,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   before `playerSnowSpeederInit`; s2543 renamed the complete two-store span
   at `0x800AD378` to `storeTrackedObjectAuxiliaryFields`; s2544 left
   `0x800AE3E4–0x800AE3EF` unchanged as an overlay/boundary fragment; s2545
-  left `0x800AEC54–0x800AEC5F` unchanged as a trap-only data boundary.
-  Continue at `0x800B2628`.
+  left `0x800AEC54–0x800AEC5F` unchanged as a trap-only data boundary; s2546
+  left `0x800B2628–0x800B262F` unchanged as an eight-byte data-boundary
+  fragment. Continue at `0x800B47C4`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index
