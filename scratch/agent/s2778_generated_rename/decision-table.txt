@@ -1,0 +1,3 @@
+error: bounded sweep selected no generated references
+renamed 0 references in 0 files
+candidate 0x801132C0 D_801132C0: ambiguous-or-fake

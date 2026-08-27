@@ -119419,3 +119419,14 @@ M5 publication hypothesis, and the qualified port input boundary remains
 unexplained. The next unit pivots to the bounded generated-symbol sweep at
 `0x80111000..0x80113000`. Artifacts:
 `scratch/agent/s2776_m5_step1_recipe_repair_final/`.
+
+## Session 2778 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The regeneration-safe companion census for `0x80113000..0x80115000` found one
+candidate at `0x801132C0`, classified ambiguous-or-fake. It changed zero
+generated references in zero files; the `--require-rename` nonzero status was
+the expected zero-selection result. An independent generated-tree scan found
+zero `func_8011` or `fake_func_8011` placeholder references, and `git diff
+--check` passed. No build or regeneration was needed. This closes the interval
+and rules out stale generated placeholders there, not the remaining rename
+sweep. The next interval is `0x80115000..0x80117000`.

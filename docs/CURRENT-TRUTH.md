@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2777 (2026-08-27).
+Current maintenance marker: Session 2778 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -97,10 +97,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    input-recipe repair is now exhausted at this discriminator: boot-time
    probe keys, phase-relative probe keys, and the existing autopilot all
    failed to move the qualified port arms beyond VI 640 in this iteration.
-   Audit `0x80113000..0x80115000`, preserving ambiguous/data entries and
-   applying only source-backed names. The `0x80111000..0x80113000` census
-   found 17 already-synchronized or ambiguous/data candidates and selected
-   zero renames.
+   Audit `0x80115000..0x80117000`, preserving ambiguous/data entries and
+   applying only source-backed names. The `0x80113000..0x80115000` census
+   found one ambiguous-or-fake candidate, selected zero renames, and found
+   zero generated placeholder references.
 
 2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
@@ -233,6 +233,10 @@ ledger. The current late-chain checkpoints are:
 - s2751: the speech-loader/voice-slot/cursor surface was audited; metadata,
   asset DMA, slot initialization, and cursor/state work were found, but no new
   PCM/AI publication edge.
+- s2778: the generated-symbol interval `0x80113000..0x80115000` was closed;
+  one ambiguous-or-fake candidate was preserved, zero source-backed renames
+  were selected, and an independent generated-tree scan found zero
+  placeholders. The next interval is `0x80115000..0x80117000`.
 - s2752: the generated-symbol interval `0x800E7000..0x800E9000` was fully
   synchronized; two fake/address-only placeholders were preserved and the
   next interval was advanced to `0x800E9000..0x800EB000`.
