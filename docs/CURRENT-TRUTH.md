@@ -247,6 +247,16 @@ with no stale placeholder references. Their companion entries immediately
 precede named routines, so this is symbol clarity only, not runtime or M5
 evidence.
 
+Session 2838 ran the independent retail gate watch and a fixed same-build
+image/silent pair. The retail whole-RDRAM control fired 10,000 callbacks and
+the gate watch fired twice from PCs `0x8008EA34` and `0x8008EB40`, but retail
+remained at VI 320 with no title/hangar phase. Both port arms reached the same
+pre-title VI 640/origin `0x0066A500`, each had 42 positive dispatch controls
+(`real_ucode=1` versus `0`), and neither emitted target-phase gate, writer,
+service, MORT, or PCM rows. The gate route is therefore unevaluable here; no
+writer change or gate explanation is selected. The new recipe is
+`scratch/agent/run_s2838_m5_gate_writer.sh`.
+
 ## Next steps
 
 Priority follows the user directive: maintenance, then M5, then systematic M3,
@@ -296,10 +306,11 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    change is authorized.
 
 2. **M5 audio de-stubbing — Step 1 route repair / qualification.** The
-   initialization-barrier angle is exhausted: s2837 waited for 40 image
-   dispatches before launching silent, yet both arms still stopped at VI 640 /
-   origin `0x0066A500`. Use a new source-level dispatch-selection angle before
-   interpreting any target-phase rows.
+   initialization-barrier and gate-writer angles are currently unevaluable:
+   s2837 waited for 40 image dispatches, and s2838 independently found retail
+   gate writers but no target phase; both port arms still stopped at VI 640 /
+   origin `0x0066A500`. Use a source-level task-field/dispatch-selection
+   discriminator before interpreting any target-phase rows.
    Once the
    title/hangar phases are reached, require the task-field, DMEM/DMA, image
    exit, SP completion, service/slot/voice, MORT, and PCM source/consumer

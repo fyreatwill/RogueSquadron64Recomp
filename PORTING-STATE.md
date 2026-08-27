@@ -120215,3 +120215,25 @@ advantage over launch-order variation and leaves the route split unresolved.
 It authorizes no audio behavior change and rules out no downstream M5 contract
 hypothesis. The first wrapper attempt failed during cleanup before its
 summary; it was fixed and rerun, and only the fixed run above is evidence.
+
+## Session 2838 (2026-08-27) — M5 gate writer was unevaluable before target phase
+
+Ran the independent retail ground-truth probe first. The whole-RDRAM positive
+control fired 10,000 callbacks. The physical gate watch at `0x000A0F50` fired
+twice, with writer PCs `0x8008EA34` and `0x8008EB40`, but retail remained at
+VI 320 for the 20-second run; no title or hangar phase rows were present.
+
+The Debug target rebuilt successfully. The fixed same-build image/silent pair
+ran concurrently for 20 seconds. Both arms reached pre-title VI 640/origin
+`0x0066A500`, each emitted 42 `[audtask-dispatch]` controls, and the route
+selection differed as intended (`real_ucode=1` for image, `real_ucode=0` for
+silent). Both had zero target-phase `[m5-gate]`, `[m5-writer]`, service,
+MORT, or PCM rows, with no crash or abort. The first recipe wrapper failed
+during cleanup-summary scanning; its shell variable bug was fixed and the
+short-window rerun supplied the evidence above.
+
+This rules out neither a downstream audio contract nor a scheduling-sensitive
+route effect. It makes the requested target-phase retail/port gate comparison
+unevaluable in this window and authorizes no gate store, guard, or other audio
+behavior change. The next discriminator must inspect task-field/dispatch
+selection at the pre-title boundary.
