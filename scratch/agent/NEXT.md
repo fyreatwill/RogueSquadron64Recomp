@@ -33,8 +33,8 @@ it; positive dispatch with no boundary rows selects H-unreached.
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-env ROGUESQ_LOG_M5_FIRST_TASK=1 zsh scratch/agent/run_s2839_m5_dispatch_fields.sh
-grep -a -E 'positive-control|watch write|\[audtask-dispatch\]|\[audtask-first-boundary\]|\[phase\]|\[m5-gate\]|\[m5-writer\]|\[CRASH\]|\[ABORT\]' scratch/agent/s2839_m5_dispatch_fields/driver.log
+env ROGUESQ_LOG_M5_FIRST_TASK=1 zsh scratch/agent/run_s2838_m5_gate_writer.sh
+grep -a -E 'positive-control|watch write|\[audtask-dispatch\]|\[audtask-first-boundary\]|\[phase\]|\[m5-gate\]|\[m5-writer\]|\[CRASH\]|\[ABORT\]' scratch/agent/s2838_m5_gate_writer/driver.log
 ```
 
 The recipe must launch both arms from `build/`, arm the retail positive
