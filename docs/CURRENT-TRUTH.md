@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2674 (2026-08-27).
+Current maintenance marker: Session 2675 (2026-08-27).
+
+## Session 2675 result
+
+The batched retail CPU-side MORT watch passed the whole-RDRAM positive control
+(`10,000` writes) and reached the driven 512/hangar origin. The named entries
+`0x8009C540` and `0x8009C88C` had zero executions; `0x8009D740` executed
+`1,984` times, always from `0x8009D73C`, including rows at origin
+`0x006AB400`. The execution watch exposed no destination write, payload
+polarity, or ordering join to the port PCM consumer. This selects
+`H-MORT-unmapped` at the measured boundary and leaves `H-MORT-edge` and
+`H-image-edge` unproven. No runtime, audio, gate, writeback, remap, or guard
+behavior changed. Full table: [`s2675_m5_cpu_mort_publication_audit.md`](../scratch/agent/s2675_m5_cpu_mort_publication_audit.md).
 
 ## Session 2674 result
 

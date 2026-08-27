@@ -117758,3 +117758,17 @@ tool verified all eight mappings and changed zero external references.
 This rules out a stale-tool failure, but does not identify a new semantic
 rename or close any M5 audio contract edge. No runtime behavior, writeback,
 remap, gate, wait, or guard changed.
+
+## Session 2675 (2026-08-27) — audited the live CPU-side MORT boundary
+
+The batched retail oracle capture passed the whole-RDRAM positive control with
+10,000 writes and reached the driven 512/hangar phase. Execution watches for
+the three named MORT/voice entries recorded zero hits at `0x8009C540` and
+`0x8009C88C`; `0x8009D740` recorded 1,984 hits, all with predecessor
+`0x8009D73C`, including target-origin rows at `0x006AB400`. The execution
+watch exposes register arguments and caller attribution but no destination
+write. No source/destination, nonzero payload, or ordering join to the port
+PCM consumer was established. This selects `H-MORT-unmapped` at the measured
+boundary and leaves the image-edge hypothesis unproven. No runtime, audio,
+gate, writeback, remap, or guard behavior changed. Full table:
+`scratch/agent/s2675_m5_cpu_mort_publication_audit.md`.
