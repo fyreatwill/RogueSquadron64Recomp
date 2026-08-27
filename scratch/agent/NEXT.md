@@ -1,10 +1,10 @@
-# NEXT work unit (s2771) — bounded generated-symbol rename interval
+# NEXT work unit (s2772) — bounded generated-symbol rename interval
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Run the regeneration-safe companion census for `0x8010B000..0x8010D000`,
+Run the regeneration-safe companion census for `0x8010D000..0x8010F000`,
 then apply only exact semantic companion mappings to the checked-in symbol
 map and generated tree. Preserve ambiguous, fake, data, and address-only
 entries. This is a bounded rename batch; do not run the stalled M5
@@ -29,7 +29,7 @@ and does not authorize inventing a name.
 
 ## Exact commands
 
-1. `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x8010B000 --end-address 0x8010D000 --limit 32 --require-rename`
+1. `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x8010D000 --end-address 0x8010F000 --limit 32 --require-rename`
 2. Inspect bounded decision output and run `git diff --check`.
 
 Expected outcomes: semantic candidates either rename exactly or are shown

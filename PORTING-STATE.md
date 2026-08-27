@@ -119321,3 +119321,15 @@ regeneration was needed because the generated tree already contained the
 semantic names. This closes the interval and rules out stale checked-in names
 there, not the remaining sweep. Evidence:
 `scratch/agent/s2770_generated_rename/decision-table.txt`.
+## Session 2771 (2026-08-27) — bounded generated-symbol interval was already synchronized
+
+The regeneration-safe census for `0x8010B000..0x8010D000` found six exact
+semantic companion candidates, all already synchronized: `gRadar`,
+`playerCraftHobObjectNames`, `playerCraftUpdateFunctions`, `demoInputs`,
+`simpleCheckHandles`, and `gObjectiveTimers`. Thirteen data/ambiguous
+candidates were preserved. The selector changed zero references in zero
+files; an independent generated-tree scan found zero placeholder hits in the
+interval. `git diff --check` passed, and no build or regeneration was needed.
+This closes the interval and rules out stale generated placeholders there, not
+the remaining rename sweep. Evidence:
+`scratch/agent/s2771_generated_rename/decision-table.txt`.

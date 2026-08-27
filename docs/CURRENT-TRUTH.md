@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2770 (2026-08-27).
+Current maintenance marker: Session 2771 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -93,7 +93,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    `0x80109000..0x8010B000` are now synchronized. Session 2770 also
    reconciled three address-encoded checked-in symbols with their companion
    names: `lvi/lvk/lvj_objectiveSlot1`. Continue with
-   `0x8010B000..0x8010D000`, preserving
+   `0x8010B000..0x8010D000` is now synchronized: all six semantic
+   candidates were already synchronized and no generated placeholder remained
+   in the interval; ambiguous/data entries were preserved. Continue with
+   `0x8010D000..0x8010F000`, preserving
    ambiguous/fake/address-only symbols.
 
 3. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
@@ -289,5 +292,11 @@ ledger. The current late-chain checkpoints are:
   slot names at `0x801091F8`, `0x801095CC`, and `0x80109628` with the
   companion semantic names `lvi/lvk/lvj_objectiveSlot1`. The generated tree
   already contained those names, so no regeneration or build was needed.
+- s2771: the generated-symbol interval `0x8010B000..0x8010D000` had six
+  semantic companion candidates, all already synchronized. The remaining
+  data/ambiguous candidates were preserved; an independent generated-tree
+  scan found zero placeholder hits in the interval. The regeneration-safe
+  selection changed zero references and no build was needed. The next interval
+  is `0x8010D000..0x8010F000`.
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.
