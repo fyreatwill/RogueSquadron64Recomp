@@ -1,0 +1,32 @@
+Session 2754 generated-symbol sweep decision table
+
+Command:
+python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800EB000 --end-address 0x800ED000 --limit 32 --require-rename
+
+Result: exit status 2; renamed 0 references in 0 files. The tool reported no
+generated references selected by the bounded sweep.
+
+| Address | Companion candidate | Decision | Reason |
+|---|---|---|---|
+| 0x800EB984 | resetObjectPoolListHead | already synchronized | generated name matches companion-backed name |
+| 0x800EB990 | npcPowerUpUpdate | already synchronized | generated name matches companion-backed name |
+| 0x800EC10C | fake_func_800EC10C | ambiguous-or-fake | preserve fake/address-only placeholder |
+| 0x800EC110 | allocObjectPoolNode | already synchronized | generated name matches companion-backed name |
+| 0x800EC388 | unlinkAndFreeChildNpcNode | already synchronized | generated name matches companion-backed name |
+| 0x800EC4D8 | resetObjectContextPool | already synchronized | generated name matches companion-backed name |
+| 0x800EC514 | freeAllObjectContextPoolNodes | already synchronized | generated name matches companion-backed name |
+| 0x800EC588 | createAndInitObject | already synchronized | generated name matches companion-backed name |
+| 0x800EC684 | clearPendingAndDestroyChildNpc | already synchronized | generated name matches companion-backed name |
+| 0x800EC6C0 | destroyObjectOwnedNpcSlot | already synchronized | generated name matches companion-backed name |
+| 0x800EC6EC | fake_func_800EC6EC | ambiguous-or-fake | preserve fake/address-only placeholder |
+| 0x800EC6F0 | tickCraftMountedAnimationEffect | already synchronized | generated name matches companion-backed name |
+| 0x800ECC28 | craftMountedAnimationNpcHandler | already synchronized | generated name matches companion-backed name |
+| 0x800ECDDC | dispatchSlotActionTwelveByGlobalId | already synchronized | generated name matches companion-backed name |
+| 0x800ECE04 | fake_func_800ECE04 | ambiguous-or-fake | preserve fake/address-only placeholder |
+| 0x800ECE10 | datItemActorNpcHandler | already synchronized | generated name matches companion-backed name |
+
+Independent bounded verification: `rg` found the synchronized addresses in
+the generated declarations/definitions and overlay call sites, including
+`funcs_40.c` definitions and references from `funcs_18.c`, `funcs_36.c`,
+`funcs_37.c`, `funcs_39.c`, and `funcs_42.c`. No placeholder in this interval
+had an exact source-backed rename.

@@ -119066,3 +119066,17 @@ overlay references in `funcs.h`, `funcs_39.c`, and `recomp_overlays.inl`.
 This selects H4-synchronized and rules out an exact rename in this interval;
 the next bounded region is `0x800EB000..0x800ED000`. Evidence:
 `scratch/agent/s2753_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2754 (2026-08-27) — bounded the next synchronized generated-symbol region
+
+Ran the companion-backed generated-symbol decision table over
+`0x800EB000..0x800ED000` with `--require-rename`. The command returned status
+2 with zero renamed references in zero files. Thirteen semantic companion
+entries were already synchronized; the three placeholder entries at
+`0x800EC10C`, `0x800EC6EC`, and `0x800ECE04` were ambiguous/fake and preserved.
+The bounded textual verification found the synchronized declarations and
+overlay references in the generated tree.
+
+This selects H4-synchronized and rules out an exact rename in this interval;
+the next bounded region is `0x800ED000..0x800EF000`. Evidence:
+`scratch/agent/s2754_generated_symbol_sweep/decision-table.txt`.
