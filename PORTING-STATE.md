@@ -119440,3 +119440,15 @@ address-immediate comments/assembly references. `git diff --check` passed. No
 build or regeneration was needed. This closes the interval and rules out stale
 generated placeholders there, not the remaining rename sweep. The next interval
 is `0x80117000..0x80119000`.
+## Session 2780 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The regeneration-safe companion census for `0x80117000..0x80119000` found no
+source-backed candidates and selected zero generated references in zero files;
+the `--require-rename` nonzero status was the expected zero-selection result.
+The corrected independent generated-tree symbol inventory found zero
+`func_8011...` or `fake_func_8011...` placeholders whose numeric suffix lies
+in the interval; the earlier broad address scan was discarded because it
+matched unrelated immediate-value comments. `git diff --check` passed. No
+build or regeneration was needed. This closes the interval and rules out
+stale generated placeholders there, not the remaining rename sweep. The next
+interval is `0x80119000..0x8011B000`.

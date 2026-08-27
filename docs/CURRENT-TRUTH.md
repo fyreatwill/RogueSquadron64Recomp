@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2779 (2026-08-27).
+Current maintenance marker: Session 2780 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -97,14 +97,17 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    input-recipe repair is now exhausted at this discriminator: boot-time
    probe keys, phase-relative probe keys, and the existing autopilot all
    failed to move the qualified port arms beyond VI 640 in this iteration.
-   Audit `0x80115000..0x80117000`, preserving ambiguous/data entries and
+   Audit `0x80119000..0x8011B000`, preserving ambiguous/data entries and
    applying only source-backed names. The `0x80113000..0x80115000` census
    found one ambiguous-or-fake candidate, selected zero renames, and found
    zero generated placeholder references.
    Session 2779 closed `0x80115000..0x80117000`: the bounded selector
    selected zero references, and the independent generated-tree scan found no
-   placeholder function symbols in the interval. Continue with the next
-   bounded interval after `0x80117000`.
+   placeholder function symbols in the interval. Session 2780 closed
+   `0x80117000..0x80119000`: the companion selector found no candidates and
+   the corrected independent symbol inventory found zero placeholder
+   definitions in the interval. Continue with the next bounded interval
+   after `0x80119000`.
 
 2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
@@ -245,6 +248,10 @@ ledger. The current late-chain checkpoints are:
   the selector changed zero references in zero files, and the independent
   scan found no placeholder function symbols. No build was needed; continue
   after `0x80117000`.
+- s2780: the generated-symbol interval `0x80117000..0x80119000` had no
+  source-backed companion candidates and zero generated placeholder symbols;
+  the bounded selector changed zero references and no build was needed. The
+  next interval begins after `0x80119000`.
 - s2752: the generated-symbol interval `0x800E7000..0x800E9000` was fully
   synchronized; two fake/address-only placeholders were preserved and the
   next interval was advanced to `0x800E9000..0x800EB000`.

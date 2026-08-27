@@ -1,12 +1,12 @@
-# NEXT work unit (s2780) — audit the next generated-symbol interval
+# NEXT work unit (s2781) — audit the next generated-symbol interval
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
 Run the regeneration-safe companion census for the next 0x2000-byte interval
-after the closed `0x80115000..0x80117000` region: start at `0x80117000` and
-end at `0x80119000`. Preserve data, fake, ambiguous, and already-synchronized
+after the closed `0x80117000..0x80119000` region: start at `0x80119000` and
+end at `0x8011B000`. Preserve data, fake, ambiguous, and already-synchronized
 entries. Apply only exact source-backed semantic renames through the existing
 rename tooling; do not hand-edit generated C. If this interval also selects
 none, retain the synchronized result and do not invent names.
@@ -29,15 +29,20 @@ selector selects H-tooling-gap and requires a tooling fix in this same unit.
 ## Exact commands
 
 ```sh
-mkdir -p scratch/agent/s2780_generated_rename
+mkdir -p scratch/agent/s2781_generated_rename
 python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs \
   --companion-dir ../rogue_squadron64/symbol_files \
-  --start-address 0x80117000 --end-address 0x80119000 --limit 32 \
+  --start-address 0x80119000 --end-address 0x8011B000 --limit 32 \
   --require-rename \
-  > scratch/agent/s2780_generated_rename/decision-table.txt 2>&1
+  > scratch/agent/s2781_generated_rename/decision-table.txt 2>&1
 rg -n 'func_8011|fake_func_8011|0x8011' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c \
-  > scratch/agent/s2780_generated_rename/generated-scan.txt || true
+  > scratch/agent/s2781_generated_rename/generated-scan.txt || true
+rg -o --no-filename '\b(?:func|fake_func)_[0-9A-Fa-f]{8}\b' \\
+  ../N64Recomp/RecompiledFuncs/funcs_*.c | sort -u \\
+  | awk 'BEGIN {lo= strtonum("0x80119000"); hi=strtonum("0x8011B000")} \\
+    {a=$0; sub(/^.*_/, "", a); v=strtonum("0x" a); if (v>=lo && v<hi) print}' \\
+  > scratch/agent/s2781_generated_rename/generated-placeholder-in-interval.txt
 git diff --check
 ```
 
