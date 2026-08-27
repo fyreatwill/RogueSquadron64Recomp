@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2651 (2026-08-27).
+Current maintenance marker: Session 2653 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -317,23 +317,22 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800CC9B8` next using companion symbols, exact spans, callers, and
-   overlay identity;
-   unresolved fragments stay placeholders under
-   `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
-2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
-   independent mapping from retail PC `0x800078EC` (and the secondary-span
-   writers) to the port-side writer or CPU MORT publication boundary, including
-   destination, legitimate payload polarity, and ordering relative to image
-   completion and PCM consumption. Do not repeat the title-zero census or
-   revisit the hangar `0x80094648` relation. Keep C88=`0` and
-   `ROGUESQ_AUDIO_UCODE=0` as rollbacks/controls.
-3. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+1. **M5 de-stubbing sequence — now the primary active thread.** The
+   generated-symbol-renaming sweep is CLOSED: only 5 true `func_` placeholders
+   remain across all generated files (`func_8000040C`, `func_800927B0`,
+   `func_80092A54`, `func_80092CF0`, `func_800E9AE0`), and none has a semantic
+   companion name — all are genuinely unresolvable. Obtain an independent
+   mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
+   port-side writer or CPU MORT publication boundary, including destination,
+   legitimate payload polarity, and ordering relative to image completion and
+   PCM consumption. Do not repeat the title-zero census or revisit the hangar
+   `0x80094648` relation. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as
+   rollbacks/controls.
+2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-4. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
+3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
-5. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
+4. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
    established; broader slot coverage is optional and lower priority than M5.
 
 ## Durable boundaries
@@ -562,3 +561,21 @@ carries those semantic names, so the next regeneration will preserve the
 already-generated identifiers. `0x800E9AE0` remains a placeholder in the
 companion symbol file and was not renamed. No overlay collision or runtime
 behavior changed; the next bounded lead is `0x800CCB1C`.
+
+## Session 2653 result
+
+The bounded sweep audited `0x800CCB1C`. The companion mission symbol names it
+`processAtAtSubFeatureSlot`; the generated body in `funcs_37.c` uses that name,
+spanning `0x17C` bytes to the exact `0x800CCC98` boundary, the TOML carries the
+same name and size, and the generated caller at `0x800CE24C` invokes the
+resolved name. The menu overlay has only data entries in this window. This
+selects `H-CompanionExact` as already resolved; no rename or build was warranted.
+
+Full census of remaining true `func_` placeholders in all generated files: 5
+entries (`func_8000040C` in funcs_0.c; `func_800927B0`, `func_80092A54`,
+`func_80092CF0` in funcs_24.c; `func_800E9AE0` in funcs_39.c). Each has only an
+address-coded companion entry — no semantic name is available in the mission,
+menu, or main overlay symbol files. The 125 `fake_func_` entries in the
+generated files are intentionally preserved gap-fillers and duplicate-symbol
+boundaries. The generated-symbol-renaming sweep is CLOSED. Priority shifts to
+M5 de-stubbing (backlog #1).

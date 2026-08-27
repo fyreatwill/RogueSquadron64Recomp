@@ -117344,3 +117344,38 @@ the matching identity and ROM size. Generated callers at `0x800CE160` and
 rename remained; no runtime or build change was warranted. This selects the
 already-resolved `H-CompanionExact` result and advances the next bounded lead
 to `0x800CC9B8`.
+
+## Session 2652 (2026-08-27) — synchronized two stale TOML symbol entries
+
+The bounded generated-symbol sweep found two companion-backed TOML entries
+still carrying address-coded placeholder names. The companion mission symbols,
+generated definitions, exact overlay spans, and generated callers agree on
+`initPlayerCraftTrailBuffers` at `0x800AE3F0` (size `0x1D4`) and
+`stepObjectOrientationTowardTarget` at `0x800FEF10` (size `0xEF0`). The TOML
+was synchronized to those semantic names; no regeneration was required because
+the generated bodies already use the companion-derived identifiers. The
+`0x800E9AE0` entry remains a `func_` placeholder; its companion mission symbol
+file entry also carries no semantic name. No overlay collision or runtime
+behavior changed. The next bounded lead is `0x800CCB1C`.
+
+## Session 2653 (2026-08-27) — sweep census: zero actionable func_ placeholders remain
+
+The bounded sweep audited `0x800CCB1C`. The companion mission symbol names it
+`processAtAtSubFeatureSlot`; the generated body in `funcs_37.c` starts at that
+exact VRAM address, the TOML carries the semantic name with size `0x17C` ending
+at the exact `0x800CCC98` boundary (`npcAtAtHandleDestruction`), and the
+generated caller at `0x800CE24C` invokes the resolved name. The menu overlay
+has only data entries in this window, no competing function identity. This
+selects `H-CompanionExact` as already resolved; no rename or build was
+warranted.
+
+Full census of all true `func_` placeholders remaining in the generated files:
+five entries across funcs_0.c, funcs_24.c (×3), and funcs_39.c
+(`func_8000040C`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_800E9AE0`). Every one of these carries only a `func_` address-coded name
+in its companion symbol file; no semantic companion name exists for any. The
+125 `fake_func_` entries in the generated files are intentionally preserved
+duplicate-symbol boundaries and gap-fillers, not candidates for semantic
+renaming. The generated-symbol-renaming sweep is effectively complete: all
+addressable func_→semantic renames from companion sources have been landed.
+Priority shifts to M5 de-stubbing (backlog item #2, strategic priority #2).
