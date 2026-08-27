@@ -332,6 +332,17 @@ evidence). The MORT-to-PCM edge remains unresolved; no runtime watch,
 writeback, remap, or mitigation is authorized. Detailed table:
 `scratch/agent/s2703_m5_ai_indirect_path/audit.md`.
 
+s2704 continued the generated-symbol sweep after the required last-15-title
+check did not trigger a revisit. The rename tool now accepts an explicit
+half-open address interval and prints a per-candidate decision table; fixed
+renames are filtered to that same interval. The bounded
+`0x8008ED6C..0x80091C80` region contained 19 companion candidates, all already
+synchronized: zero selected renames, zero changed generated files, zero
+ambiguous/fake candidates, and no parser or duplicate-destination rejection.
+This selects `H-already-synchronized` and rules out `H-exact-matches` for this
+region, without naming the protected placeholders or resolving MORT-to-PCM.
+No build, run, runtime watch, writeback, remap, or mitigation was needed.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -367,9 +378,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
    be named; do not repeat thread, queue/service, renderer, mixer, allocation,
    or host audits. Do not add a runtime watch until a legitimate destination
    and ordering edge are named.
-2. **Generated-symbol renaming sweep.** Reconcile one bounded address region
-   against companion source/m2c evidence; rename only exact, unique matches
-   and preserve address-only or fake fragments. Do not infer names from
+2. **Generated-symbol renaming sweep.** s2704 found all 19 candidates in
+   `0x8008ED6C..0x80091C80` already synchronized. Continue with one adjacent
+   bounded region only while exact companion/source evidence remains available;
+   preserve address-only or fake fragments and do not infer names from
    implementation shape alone.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;

@@ -18,9 +18,17 @@ RENAMES = {
 }
 
 
-def companion_renames(symbol_dir: Path, generated_text: str) -> dict[str, str]:
+def in_region(address: str, start: int | None, end: int | None) -> bool:
+    value = int(address, 16)
+    return (start is None or value >= start) and (end is None or value < end)
+
+
+def companion_renames(
+    symbol_dir: Path, generated_text: str, start: int | None, end: int | None
+) -> tuple[dict[str, str], list[tuple[str, str, str]]]:
     """Return only semantic companion names for placeholders in the snapshot."""
     result = {}
+    decisions = []
     generated_placeholders = set(re.findall(r"\bfunc_([0-9A-Fa-f]{8})\b", generated_text))
     for symbol_file in sorted(symbol_dir.glob("*.txt")):
         for line in symbol_file.read_text().splitlines():
@@ -31,12 +39,18 @@ def companion_renames(symbol_dir: Path, generated_text: str) -> dict[str, str]:
             if not match:
                 continue
             name, address = match.groups()
+            if not in_region(address, start, end):
+                continue
             if name.startswith(("D_", "fake_func_", "func_")):
+                decisions.append((address.upper(), name, "ambiguous-or-fake"))
                 continue
             old = f"func_{address.upper()}"
             if address.upper() in generated_placeholders:
                 result[old] = name
-    return result
+                decisions.append((address.upper(), name, "selected"))
+            else:
+                decisions.append((address.upper(), name, "already-synchronized"))
+    return result, decisions
 
 
 def main() -> int:
@@ -50,6 +64,8 @@ def main() -> int:
     parser.add_argument(
         "--limit", type=int, default=32, help="maximum companion renames per run"
     )
+    parser.add_argument("--start-address", type=lambda value: int(value, 0))
+    parser.add_argument("--end-address", type=lambda value: int(value, 0))
     args = parser.parse_args()
 
     if args.limit < 1:
@@ -63,9 +79,19 @@ def main() -> int:
         ]
     )
     generated_text = "\n".join(path.read_text() for path in files if path.exists())
-    renames = dict(RENAMES)
+    if args.start_address is not None and args.end_address is not None:
+        if args.end_address <= args.start_address:
+            parser.error("--end-address must be greater than --start-address")
+    renames = {
+        old: new
+        for old, new in RENAMES.items()
+        if in_region(old.rsplit("_", 1)[-1], args.start_address, args.end_address)
+    }
+    decisions = []
     if args.companion_dir:
-        discovered = companion_renames(args.companion_dir, generated_text)
+        discovered, decisions = companion_renames(
+            args.companion_dir, generated_text, args.start_address, args.end_address
+        )
         if len(discovered) > args.limit:
             parser.error(
                 f"companion batch has {len(discovered)} matches; lower scope is required"
@@ -94,6 +120,8 @@ def main() -> int:
             changed.append(path)
 
     print(f"renamed {sum(counts.values())} references in {len(changed)} files")
+    for address, name, decision in decisions:
+        print(f"candidate 0x{address} {name}: {decision}")
     for old, count in counts.items():
         state = "updated" if count else "already synchronized"
         print(f"{old} -> {renames[old]}: {count} ({state})")

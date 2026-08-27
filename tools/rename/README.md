@@ -31,6 +31,17 @@ violate the "no address-encoded identifiers" rule).
 python tools/rename/build_redefs.py
 ```
 
+The checked generated snapshot can be reconciled in an address-bounded batch:
+
+```sh
+python tools/rename_generated_symbols.py <generated-dir> \
+  --companion-dir <symbol_files-dir> --start-address 0x8008ED6C \
+  --end-address 0x80091C80 --limit 32
+```
+
+The end address is exclusive. The command prints each companion candidate's
+decision and fails closed on duplicate destination names.
+
 ### `find_callers.py`
 Lists every function in the recompiled C that calls a given target. Used
 constantly when deciding whether a target function has enough call-site

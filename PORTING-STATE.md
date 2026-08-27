@@ -118206,6 +118206,26 @@ the upstream edge. No build, run, runtime watch, writeback, remap, or
 mitigation was performed. Detailed table:
 `scratch/agent/s2700_m5_queue_boundary/audit.md`.
 
+## Session 2704 (2026-08-27) — bounded the generated-symbol sweep
+
+The next work unit continued the generated-symbol-renaming sweep after the
+last-15-title check did not trigger the revisit rule. The rename tool now
+accepts an explicit half-open address interval and prints a decision for each
+companion candidate, while fixed renames are filtered to the same interval.
+This prevents a bounded lead from silently touching unrelated regions.
+
+Ran the tool against `0x8008ED6C..0x80091C80` using the external generated
+snapshot and companion `symbol_files`. It examined 19 candidates: all 19 were
+already synchronized, with zero selected renames, zero changed generated
+files, zero ambiguous/fake candidates, and no parser or duplicate-destination
+rejection. The complete decision table is
+`scratch/agent/s2704_generated_symbol_sweep/decision-table.txt`.
+
+This selects `H-already-synchronized` for this region and rules out
+`H-exact-matches` there. It does not name the two protected address-only
+functions or resolve the MORT-to-PCM publication edge. No build or game run
+was needed; no runtime watch, writeback, remap, or mitigation was added.
+
 ## Session 2703 (2026-08-27) — audited the M5 AI-worker indirect path
 
 Ran the bounded source audit of all generated and host registration/call edges

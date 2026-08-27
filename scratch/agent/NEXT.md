@@ -1,16 +1,15 @@
-# NEXT work unit (s2704) — bounded generated-symbol rename lead
+# NEXT work unit (s2705) — bounded generated-symbol rename lead
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Before beginning the sweep, run the required last-15-title revisit check. If
-the check does not force a revisit, reconcile one bounded companion-symbol
-region: the main-overlay audio/utility window `0x8008ED6C..0x80091C80`.
-Rename only exact, unique generated placeholders supported by the companion
-map and source/caller evidence; preserve fake, ambiguous, and already-human
-names. This is one bounded rename-tool change or one bounded rename batch, not
-a whole-tree census.
+Run the required last-15-title revisit check. If it still does not force a
+revisit, reconcile the next adjacent companion-symbol region
+`0x80091C80..0x80095000` with the bounded rename tool. Rename only exact,
+unique generated placeholders supported by the companion map; preserve fake,
+ambiguous, and already-human names. This is one bounded rename batch, not a
+whole-tree census.
 
 ## Competing hypotheses and discriminator
 
@@ -33,8 +32,10 @@ selects `H-tool-rejects` and requires fixing it in this iteration.
 
 1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
 2. Inspect the tracked rename-tool usage: `sed -n '1,260p' tools/rename/README.md` and `rg -n 'argparse|region|mapping|placeholder|duplicate|redef' tools/rename/rename_generated_symbols.py tools/rename/build_redefs.py`.
-3. Run the tool's bounded region/candidate command as documented, capturing
-   its decision table under `scratch/agent/s2704_generated_symbol_sweep/`.
+3. Run:
+   `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --limit 32 --start-address 0x80091C80 --end-address 0x80095000`
+   and capture its decision table under
+   `scratch/agent/s2705_generated_symbol_sweep/`.
 4. Verify the generated diff and exact unique companion/source evidence; do
    not build or run the game unless a real rename changes generated code.
 
