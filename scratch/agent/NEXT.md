@@ -1,45 +1,48 @@
-# NEXT work unit (s2582) — M5 Step 1 image/control contract checkpoint
+# NEXT work unit (s2583) — retail writer/value boundary for M5 contract
 
 HYPOTHESIS-ID: m5-audio-contract-gap
 
 ## Single work unit
 
-Run the existing same-build silent/image Step 1 contract pair, with the
-independent retail oracle control, now that the first-task boundary is proven
-live. Do not change runtime behavior or task, output, gate, or wait values.
-Compare the complete phase-keyed row for silent versus image at title and
-hangar.
+Run one retail-oracle capture that attributes the existing candidate output/PCM
+ranges by writer PC and post-store value, phase-gated to title and hangar.
+Do not alter the port or promote any task/output field.
 
 ## Competing hypotheses and discriminator
 
-- `H-AudioDegeneracy`: the real image adds a downstream service, slot, voice,
-  or PCM edge relative to the silent control.
-- `H-ContractGap`: image DMEM/DMA/return completes but the task/output/PCM
-  contract remains unclosed relative to the silent control and retail rows.
-- `H-RouteOnly`: image and silent differ only in route reachability or shared
-  phase behavior; no image-owned downstream edge appears.
+- `H-RetailLegitZero`: retail reaches the same boundary and legitimately writes
+  zero/empty values; the port's zero PCM is not evidence of a missing producer.
+- `H-RetailWriterMissing`: retail has a nonzero writer/value event in the target
+  phase that the port does not reproduce.
+- `H-RetailAddressMismatch`: retail writes a nonzero value, but to a different
+  candidate range or through a different phase-owned address than the port
+  observer uses.
 
-The discriminator is one same-phase table containing dispatch, task fields,
-DMEM/DMA, image return/SP completion, service, slot/status, voice/reap, PCM
-source/consumer, and route phase for both arms. A new image-only downstream
-edge selects `H-AudioDegeneracy`; equal image/stub completion with an open
-output/PCM join selects `H-ContractGap`; equal complete rows with only route
-variation selects `H-RouteOnly`. Missing oracle whole-RDRAM/title/hangar or
-port autopilot/route controls makes the capture unevaluable.
+The discriminator is one phase-keyed oracle table for watches at `0xA0F50`,
+`0x141AD0`, and `0x1498A`, including first hits, writer-PC histograms, and
+post-store nonzero/FNV summaries. Whole-RDRAM callbacks must reach 10,000 and
+VI must include title `0x00790400 @ 1024` and hangar `0x006AB400 @ 512`;
+otherwise the capture is unevaluable. A phase-matched nonzero retail writer
+selects `H-RetailWriterMissing`; a zero retail table selects `H-RetailLegitZero`;
+a nonzero writer absent from all three watches selects `H-RetailAddressMismatch`
+and requires a new bounded address census.
 
-The independent retail whole-RDRAM control must first report at least 10,000
-write callbacks and nonzero VI. The port capture is valid only if its table
-has the autopilot key presses, an image-dispatch row, and at least one boundary
-row; otherwise classify it as unevaluable and do not promote any ABI or gate
-interpretation.
-
-## Exact commands
+## Exact command
 
 ```sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2582_m5_step1_contract_pair
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --secs 120 --watch-write 0x0:0x800000 \
+  --watch-write 0xA0F50:0xA0F54 --watch-write 0x141AD0:0x141AF0 \
+  --watch-write 0x1498A:0x1498B \
+  --first-watch 1 --first-watch 2 --first-watch 3 \
+  --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3 \
+  --post-value-watch 1 --post-value-watch 2 --post-value-watch 3 \
+  --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  --vi-trace > scratch/agent/s2583_m5_retail_writer_value.log 2>&1
 ```
 
-Use the existing retail oracle positive-control recipe before adding any new
-probe. Record the first-task row in `PORTING-STATE.md`; no promotion or
-mitigation is authorized from a `Broke` return alone.
+Record the oracle result before any port-side instrumentation or mitigation.

@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2581 (2026-08-26).
+Current maintenance marker: Session 2582 (2026-08-26).
+
+- **s2582 — the same-build M5 contract pair selects `H-ContractGap` at the
+  current observable boundary.** The retail oracle first passed the required
+  whole-RDRAM 10,000-callback control and reached title and hangar. Silent and
+  image port arms both reached those phases. The image arm positively produced
+  2,922 title and 1,798 hangar image-stage rows plus generated DMA rows; silent
+  produced none. Both arms still had zero task output/yield fields and matching
+  zero-valued PCM source/consumer samples (title 45/45 each; hangar 47/47
+  silent and 43/43 image). No slot/voice/reap rows appeared. This proves the
+  image path is live, but not that its output or PCM contract is complete; no
+  task/output/gate promotion or mitigation is authorized. The silent arm also
+  reproduced the known wild-ROM `do_rom_read` crash; image did not. Artifact:
+  `scratch/agent/s2582_m5_step1_contract_pair/audit.md`.
 
 - **s2581 — the first-task boundary is live; the prior s2580 null was an
   observability miss, not an image/host stall.** The required retail oracle
@@ -673,23 +686,16 @@ Current maintenance marker: Session 2581 (2026-08-26).
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 Step 1 contract checkpoint — re-baseline the current default image against the silent control.** The direct load boundary,
-   SP completion/consumption, image DMEM work, generated DMA, and PCM
-   consumer are live under qualified controls. Runtime joins show image
-   stage-2 destinations equal generated AI-table entries, but the legitimate
-   nonzero payload writer is only selected at the observable consumer
-  boundary and exact DMA attribution is still open. Do not map through
-  `gspTask`, infer identity from timing or hashes, or change task/output
-  fields without a named writer and independent retail evidence. s2516 and
-  s2517 found no new legitimate edge; do not add a writeback/remap or repeat
-  the unresolved observer. The current source defaults to the image arm;
-  later M5 steps remain conditional on a new named retail writer/value
-  boundary, with `ROGUESQ_AUDIO_UCODE=0` retained as the control and rollback.
-  s2559's staged pair adds a positive image execution control but no distinct
-  downstream audio edge. Do not promote the image arm or alter task/output
-  fields without a newly named contract writer and independent retail
-  evidence. The next work unit is the phase-gated paired checkpoint described
-  in `scratch/agent/NEXT.md`; M4 remains parked while M5 has priority.
+1. **M5 named retail writer/value boundary — identify the legitimate producer behind the open output/PCM contract.** s2582's
+   same-build phase-gated pair selects `H-ContractGap`: image-stage and DMA
+   execution is image-owned, while output/yield remain zero and silent/image
+   PCM source-consumer samples are identical zero buffers. Do not map through
+   `gspTask`, infer identity from timing or hashes, or change task/output fields
+   without a named writer and independent retail evidence. The next unit is a
+   retail-oracle writer/value capture over the existing candidate output/PCM
+   ranges, with the whole-RDRAM control and title/hangar VI gates in the same
+   run. Later M5 steps remain conditional on a legitimate writer; retain
+   `ROGUESQ_AUDIO_UCODE=0` as control and rollback.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.

@@ -116084,3 +116084,25 @@ Ran the required independent retail oracle positive control first:
 The image run logged 16/16 first-task rows through `run-task-enter`, `staged`, `image-enter`, `image-return`, and `sp-task-return`; each image returned `break_pc=0x1328`, `exit=1`, and `ok=1`. Existing ABI diagnostics recorded 1,163 rows, target-phase audio returns were present, autopilot fired, and the run reached hangar `512 @ 0x006AB400`. This rejects `H-ImageLoop` and `H-HostWait` at the first-task boundary and shows the prior s2580 zero-row result was caused by target-phase observability gating. The exact first task shape was stable (type 2, ucode `0x80099FE0`, ucode data `0x800A4E00` size `0x800`, data size 1–3, output/yield zero); it is not a blocker for these tasks. The downstream image/PCM contract gap remains open. No behavior, task field, output, gate, or wait value changed.
 
 Artifacts: `scratch/agent/s2581_m5_image_first_task_stall/audit.md`, `scratch/agent/s2581_m5_image_first_task_stall/run.log`.
+
+## Session 2582 (2026-08-26) — selected M5 contract-gap boundary
+
+Built `RogueSquadron64Recomp` and ran the existing same-build contract pair:
+`zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh
+s2582_m5_step1_contract_pair`. The independent retail oracle passed its
+whole-RDRAM 10,000-callback control and reached title
+`0x00790400 @ 1024` and hangar `0x006AB400 @ 512`. Silent and image port arms
+both reached title and hangar. The image arm had 2,922 title and 1,798 hangar
+image-stage rows, while silent had zero; image also generated DMA ranges,
+establishing an image-owned execution edge. Both arms still had zero
+output/yield fields and identical zero-valued PCM samples: title source/consumer
+45/45 each, hangar 47/47 silent and 43/43 image. Neither arm produced slot,
+voice, or reap rows. The image arm had no crash; silent reproduced the known
+wild-ROM PI-DMA crash in `recomp::do_rom_read`, from guest PC `0x80001B08`.
+
+This selects `H-ContractGap` at the current observable boundary and rules out
+route-only reachability as the explanation for the image arm's absence. It does
+not prove that zero PCM is invalid, nor authorize task/output/gate changes or
+a mitigation. The next unit obtains independent retail writer/value evidence
+for the candidate output/PCM ranges. Artifact:
+`scratch/agent/s2582_m5_step1_contract_pair/audit.md`.
