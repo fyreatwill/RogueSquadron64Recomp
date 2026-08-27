@@ -1,41 +1,42 @@
-# NEXT work unit (s2833) — qualify current M5 image against silent control
+# NEXT work unit (s2834) — continue generated-symbol renaming sweep
 
-HYPOTHESIS-ID: m5-audio-destub-step1-qualification
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Run the Step 1 same-build qualification described in
-`docs/M5-AUDIO-PLAN.md`: build once, then compare the image arm and
-`ROGUESQ_AUDIO_UCODE=0` silent arm with phase-gated controls. Do not change
-runtime behavior in this unit.
+Apply the persistent bounded rename batch for three short main-overlay
+records: `fake_func_8001C3FC`, `fake_func_80023968`, and
+`fake_func_80024128` → `data_gap_*`. These records immediately precede named
+functions in the companion map, so the selected names make their
+non-callable status explicit. Do not run the game or regenerate the external
+tree in this unit.
 
 ## Competing hypotheses and discriminator
 
-- H-audio-degenerate-paths: the current silent/stubbed paths plausibly cause
-  recurring audio-related crashes or state corruption, so at least one planned
-  de-stub has a concrete validation discriminator.
-- H-audio-boundary-independent: the active stubs are not on the named crash or
-  publication paths, so the plan must preserve them as controls and identify
-  the evidence needed before de-stubbing.
-- H-contract-unknown: a stub lacks enough contract evidence for safe execution,
-  so it must remain parked behind a ground-truth or microcode prerequisite.
+- H-companion-gap: each selected fake record is a non-callable fragment and
+  can safely use an explicit `data_gap_*` name.
+- H-real-function: at least one selected record is a callable function whose
+  placeholder must be retained until a semantic name is established.
+- H-stale-snapshot: the external generated snapshot no longer contains one
+  or more selected placeholders, so the batch is already synchronized there.
 
-The discriminator is the complete inventory-to-step matrix in the new plan:
-every active stub maps to either a bounded de-stub step with a measurable
-outcome, an explicit control, or a named prerequisite. Missing mappings mean
-the survey is incomplete.
+The discriminator is one bounded selector run plus an independent generated
+tree scan: the selector must report exactly the three selected mappings and
+nonzero replacements, and the scan must find all three `data_gap_*` names with
+no corresponding `fake_func_*` references. Any missing replacement selects
+H-stale-snapshot for that entry; a callable body or non-adjacent companion
+layout rejects H-companion-gap and stops further renaming of that entry.
 
 ## Exact commands
 
 ```sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_s2774_m5_step1_pair.sh
-rg -n -E 'oracle_gate=|--- (image|silent) ---|\[(audtask-dispatch|audtask-abi|audtask-dma-row|audtask-image-stage|audio-return|audio-route|audio-sp-route|pcm-boundary-source|pcm-boundary-consumer|CRASH|ABORT)\]=' scratch/agent/s2774_m5_step1_pair/driver.log
+python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs \
+  --start-address 0x8001C3FC --end-address 0x80024130 --limit 32 \
+  --require-rename
+rg -n -E 'data_gap_8001C3FC|data_gap_80023968|data_gap_80024128|fake_func_8001C3FC|fake_func_80023968|fake_func_80024128' \
+  ../N64Recomp/RecompiledFuncs
 git diff --check
 ```
 
-The existing pair recipe launches the retail oracle first, then launches image
-and silent arms concurrently from the same executable. Expected discriminators:
-stub has dispatch/return but no image DMEM or DMA rows; image has nonzero
-image-stage/DMA and `Broke` plus SP completion. A downstream service/slot/PCM
-join selects a contract edge; route-only or pre-target output is unevaluable.
+No build or soak is needed: this is a regeneration-safe symbol-clarity
+batch, and the generated snapshot is external to this checkout.

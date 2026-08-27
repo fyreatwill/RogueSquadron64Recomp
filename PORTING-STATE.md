@@ -120126,3 +120126,17 @@ found. This rules out the stale status-shim description as current evidence,
 but does not establish a PCM publication edge. The next work unit is the
 same-build image-versus-silent Step 1 qualification with the whole-RDRAM
 retail positive control and phase-gated downstream joins.
+## Session 2833 (2026-08-27) — renamed three generated data-gap records
+
+Pivoted from the unevaluable M5 Step 1 qualification to the mandatory
+generated-symbol-renaming sweep. Added regeneration-safe mappings for
+`fake_func_8001C3FC`, `fake_func_80023968`, and `fake_func_80024128`, whose
+companion entries immediately precede named routines and are therefore
+classified as non-callable short records. Applied the bounded selector to the
+external generated snapshot; it renamed 9 references across five files.
+Independent verification found each `data_gap_*` name in the generated
+declaration/body/overlay-registration surfaces and no stale placeholder
+references. `git diff --check` passed. This is symbol-clarity evidence only;
+it provides no M5 or runtime evidence. The next sweep should classify the
+next short data-gap batch without inventing names for ambiguous callable
+placeholders.

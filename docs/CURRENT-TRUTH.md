@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2832 (2026-08-27).
+Current maintenance marker: Session 2833 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -238,6 +238,15 @@ generated files; companion semantic candidates in the same range were already
 synchronized or ambiguous. This is symbol clarity only, not runtime or M5
 evidence.
 
+Session 2833 renamed three additional short main-overlay fragments
+(`0x8001C3FC`, `0x80023968`, and `0x80024128`) to explicit `data_gap_*`
+names through the regeneration-safe selector and external generated snapshot.
+The selector changed 9 references in five generated files; an independent
+scan found all three names in declarations, bodies, and overlay registration
+with no stale placeholder references. Their companion entries immediately
+precede named routines, so this is symbol clarity only, not runtime or M5
+evidence.
+
 ## Next steps
 
 Priority follows the user directive: maintenance, then M5, then systematic M3,
@@ -263,7 +272,7 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    edge; a route-only difference selects neither. Do not land a behavior
    change from this qualification alone.
 
-3. **Generated-symbol renaming sweep — next bounded interval.** The full
+3. **Generated-symbol renaming sweep — next bounded batch.** The full
    Debug target now links after the fake/data collision repair, but the
    phase-gated validation still stalled before the target phases. Sessions
    2800–2809 closed intervals through `0x8014B000`; each had either
@@ -282,7 +291,10 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    candidates, and an empty independent placeholder scan. Session 2823
    closed `0x80165000..0x80167000` with zero selected references, no
    companion candidates, and an empty independent placeholder scan. Preserve
-   ambiguous/data entries and continue with `0x8016B000..0x8016D000`.
+   ambiguous/data entries. The latest source-backed batch renamed three short
+   main-overlay fragments at `0x8001C3FC`, `0x80023968`, and `0x80024128`.
+   Continue with the next explicitly classified short data-gap batch; do not
+   invent semantic names for callable-ambiguous placeholders.
    Session 2826 added five source-backed mechanical data-gap mappings for
    short defined records at `0x80093E74`, `0x80094348`, `0x8009711C`,
    `0x800EC6EC`, and `0x800ECE04`; the external generated snapshot changed
