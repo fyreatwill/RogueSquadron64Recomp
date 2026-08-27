@@ -118206,6 +118206,25 @@ the upstream edge. No build, run, runtime watch, writeback, remap, or
 mitigation was performed. Detailed table:
 `scratch/agent/s2700_m5_queue_boundary/audit.md`.
 
+## Session 2702 (2026-08-27) — audited M5 AI-source allocation writers
+
+Ran the bounded generated-source audit of every writer and alias that can
+target the AI worker allocation at `0x801496B0`. `runAiAudioStreamPlaybackLoop`
+allocates `0x3000`, stores the base pointer, derives sixteen `+0x300` buffer
+aliases, clears the entire span, and submits the buffers to AI. No generated
+scalar store, copy, transform, DMA destination, or rendered-output source
+writes that span. Other `-0x6950` hits are voice-table reads or unrelated
+object-relative fields; `shutdownAudioEngine` only reads the pointer. The
+adjacent `serviceAudioOutputBuffers` body is only a load, and no direct
+generated caller or named payload producer was found.
+
+This selects `H-ai-clear-only` for the named generated surface and rejects
+`H-ai-stream-writer` and `H-ai-render-writer`; an indirect or external producer
+is not established. The independent companion map confirms the two audio
+entry symbols and the generated overlay table registers the AI loop body. No
+build or run was needed, and no runtime watch, writeback, remap, or mitigation
+was added. Detailed table: `scratch/agent/s2702_m5_ai_source_writers/audit.md`.
+
 ## Session 2701 (2026-08-27) — audited the M5 queue-publication boundary
 
 Ran the bounded source-only audit of the Factor 5 queue at `0x80149990`,

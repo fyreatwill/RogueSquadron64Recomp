@@ -290,6 +290,19 @@ source evidence). The MORT-to-PCM publication edge remains unresolved; no
 runtime watch, writeback, remap, or mitigation is authorized. Detailed table:
 `scratch/agent/s2700_m5_queue_boundary/audit.md`.
 
+s2702 audited every generated-source writer and alias of the AI worker
+allocation at `0x801496B0`. `runAiAudioStreamPlaybackLoop` allocates `0x3000`,
+stores the base in the global, derives sixteen `+0x300` aliases, clears the
+whole span, and submits those aliases to AI. No generated scalar store, copy,
+transform, DMA destination, or rendered-output source writes the span; the
+other `-0x6950` matches are voice-table reads or unrelated object-relative
+fields. The adjacent `serviceAudioOutputBuffers` body is only a load, and no
+direct generated caller or named payload producer was found. This selects
+`H-ai-clear-only` for the named generated surface and rejects
+`H-ai-stream-writer`/`H-ai-render-writer`; an indirect or external producer is
+not established. No runtime watch, writeback, remap, or mitigation is
+authorized. Detailed table: `scratch/agent/s2702_m5_ai_source_writers/audit.md`.
+
 s2701 completed the bounded queue-publication audit requested for the M5 CPU
 boundary. `0x80149990` is a capacity-one recursive-mutex/token queue with
 storage at `0x801499A8`; initialization, mutex acquire/release, and the
@@ -329,9 +342,13 @@ This is one monotonic sequence; #1 is the next campaign priority.
    AI-source publication. s2698 audited the host AI bridge and found exact
    pointer preservation into SDL, with no host remap or gate. s2701 audited
    the complete `0x80149990` queue and found a zero-token mutex service with
-   no payload or AI join. Next: enumerate every generated-source writer and
-   alias of the AI worker's `0x801496B0` allocation, then classify each writer
-   as clear, stream input, rendered output, or unresolved. Do not add a
+   no payload or AI join. s2702 found only allocation/alias setup, a full
+   clear, and AI submissions for the generated `0x801496B0` surface; no named
+   rendered or stream writer exists. Next: audit the indirect registration and
+   call path for `runAiAudioStreamPlaybackLoop` and
+   `serviceAudioOutputBuffers`, including thread-entry tables and
+   function-pointer stores/loads, to determine whether an external/opaque
+   producer can reach the AI aliases. Do not add a
    runtime watch until a legitimate destination and ordering edge are named,
    and do not repeat completed queue/service, renderer, mixer, or host bodies.
 2. **Generated-symbol renaming sweep.** Reconcile one bounded address region
