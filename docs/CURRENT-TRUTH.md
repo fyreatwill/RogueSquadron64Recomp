@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2726 (2026-08-27).
+Current maintenance marker: Session 2727 (2026-08-27).
 
 The s2726 generated-symbol sweep covered `0x800AB000..0x800AE000`. Its
 complete decision table evaluated 21 companion candidates: semantic entries
@@ -603,8 +603,12 @@ unsynchronized companion names. The next unexamined bounded interval is
    covered `0x800AB000..0x800AE000` and evaluated 21 candidates: semantic
    entries and the `fake_func_800AD378` alias were already synchronized, with
    zero references changed and no parser or duplicate-destination rejection.
-   This rules out `H-exact-matches` for that interval; the next unexamined
-   region is `0x800B6000..0x800B9000`.
+   This rules out `H-exact-matches` for that interval. s2727 covered
+   `0x800B6000..0x800B9000` and evaluated 23 candidates: 21 semantic entries
+   were already synchronized and two address-only/fake entries were preserved
+   as ambiguous-or-fake; zero references changed in zero files, with no parser
+   or duplicate-destination rejection. This rules out `H-exact-matches` for
+   that interval; continue with `0x800B9000..0x800BC000`.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
