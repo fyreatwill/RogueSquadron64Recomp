@@ -1,9 +1,17 @@
 # M5 — audio de-stubbing plan
 
-Refreshed in session 2791 (2026-08-27). This is the design gate for M5.
+Refreshed in session 2832 (2026-08-27). This is the design gate for M5.
 Session 2791 completed the SP-yield request lifecycle by clearing stale request
 state when a new task starts; task interruption and resumption remain out of
 scope.
+
+Session 2832 re-surveyed the checked-in audio/runtime sources and the available
+fixup surface. The document was already present, so this refresh reconciles it
+with the current tree rather than opening a second plan. The external
+`RecompiledFuncs/` snapshot is not present in this checkout; generated audio
+behavior therefore remains represented by the checked-in anchors and fixup
+scripts. The survey found no new active audio stub or gate outside this
+inventory.
 
 ## Boundary and current policy
 
@@ -71,7 +79,7 @@ without naming the writer and proving the value is legitimate.
 | A13 | `drainAudioAndFinalizeSpeechBuffer` | The injected `tickMusyXIfActive` is now opt-in; `ROGUESQ_DRAIN_INLOOP_TICK=1` enables the rollback/control arm. A 10,000,000-iteration timeout logs and forces idle. | Slot status writers own the terminal state. The injected tick and forced idle are host-port hatches, not retail behavior. | Validate default-off against the explicit tick-on control. A named status writer followed by clean drain return is required; timeout fire is failure. |
 | A14 | `shutdownMusyXVoices` status-`03` loop | Call 3 can spin waiting for `D_80154620` to be cleared; no default timeout/yield is added. | `stopVoiceSlotSynced` writes `03`; `serviceVoicePoolFrame` is the candidate zeroing writer. The writer must be observed before any force-clear. | Trace worker entry and status-zero store. Positive control is worker entry → zero store → shutdown return. No skip or forced zero is authorized. |
 | A15 | `ROGUESQ_SPIN_YIELD` at menu/audio spins | Opt-in host yield every 100,000 iterations can allow external VI/SI messages to drain. Default is off. | This is scheduler fairness, not MusyX work. The legitimate host event source is `external_messages`; hardware would preempt the guest spin. | Use only as a route control. It must change host message progress without being counted as audio output. |
-| A16 | `librecomp/src/ai.cpp` shims | `osAiGetStatus_recomp` returns zero; `osAiSetNextBuffer_recomp` queues and returns zero; `osAiGetLength_recomp` reports host buffered bytes. | Retail uses `__osAiDeviceBusy` inside set-next; on the covered route it does not take the FIFO-full branch and the caller ignores v0. These are already sampled as observationally equivalent at that scope. | Do not change them. Control is whole-RDRAM plus retail busy/success and port source/consumer PCM joins. |
+| A16 | `librecomp/src/ai.cpp` shims | `osAiGetStatus_recomp` returns `AI_STATUS_FIFO_FULL` (`0x40000000`) when host audio is buffered and zero otherwise; `osAiSetNextBuffer_recomp` queues and returns zero; `osAiGetLength_recomp` reports host buffered bytes. | Retail uses `__osAiDeviceBusy` inside set-next; on the covered route it does not take the FIFO-full branch and the caller ignores v0. The status/length shims are currently unexercised by the qualified port route, so their contract is not a PCM explanation. | Do not change them in the first de-stub step. Control is whole-RDRAM plus retail busy/success and port source/consumer PCM joins; a future AI change requires a positive caller and nonzero source PCM. |
 | A17 | `ultramodern/src/audio.cpp` and `main.cpp` host bridge | Callbacks are registered; SDL device failure leaves no device. `queue_audio_buffer` converts bytes to sample count, and `queue_samples` now passes `samples*sizeof(int16_t)` to SDL. | RSP/guest produces PCM; host owns buffering. The former sample/byte mismatch was fixed and is not a remaining de-stub target. | Keep the fix. Validate nonzero PCM independently of SDL device creation; a device-open message is not a PCM control. |
 | A18 | `DmemGuard` and `g_lle_task_mutex` | All RSP DMEM users, including audio, serialize on the shared DMEM lock. | One emulated RSP owns one DMEM; without serialization audio staging can trample graphics state. | Keep as an invariant. Positive control is a graphics DMEM canary surviving an audio task; never parallelize as an audio optimization. |
 | A19 | `unknown_task_stub` and task-thread failure path | Unknown task types return `Broke`; a failed task causes quick exit. | This handles malformed/uninitialized types, not `M_AUDTASK`, and must not hide an image `UnhandledJumpTarget`. | Keep out of M5 treatment. Control is distinct task-type logging plus normal M_AUDTASK dispatch/exit. |

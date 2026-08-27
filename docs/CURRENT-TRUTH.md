@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2830 (2026-08-27).
+Current maintenance marker: Session 2832 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -244,12 +244,26 @@ Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked. The
 generated-symbol sweep is also subject to the 15-title revisit rule.
 
-1. **M5 audio de-stubbing — write the design doc.** Survey every active audio
-   stub, trap, and gate, then create `docs/M5-AUDIO-PLAN.md` with an
-   incremental de-stubbing sequence and a phase-qualified validation soak for
-   each step. Do not change runtime behavior in the design-doc work unit.
+1. **M5 audio de-stubbing — design gate complete (s2832).** The refreshed
+   `docs/M5-AUDIO-PLAN.md` inventories the active task, RSP, SP, guest-gate,
+   voice, wait, AI, host, and MORT boundaries. The source survey found no new
+   active audio stub or gate; it corrected the plan's stale description of
+   `osAiGetStatus_recomp` to match its FIFO-full-bit implementation. The
+   external generated snapshot is absent from this checkout, so generated
+   audio behavior remains represented by checked-in anchors and fixup scripts.
+   Do not change runtime behavior until Step 1's same-build qualification.
 
-2. **Generated-symbol renaming sweep — next bounded interval.** The full
+2. **M5 audio de-stubbing — Step 1 same-build qualification.** Build the
+   current Debug target once, then run image and `ROGUESQ_AUDIO_UCODE=0`
+   silent arms from that same build with the phase-gated driver. Require the
+   whole-RDRAM retail positive control, port route transition, task fields,
+   DMEM/DMA, image exit, SP completion, service/slot/voice, MORT, and PCM
+   source/consumer rows. A real image task without downstream joins selects
+   H-ContractGap; a matching downstream row selects the next named contract
+   edge; a route-only difference selects neither. Do not land a behavior
+   change from this qualification alone.
+
+3. **Generated-symbol renaming sweep — next bounded interval.** The full
    Debug target now links after the fake/data collision repair, but the
    phase-gated validation still stalled before the target phases. Sessions
    2800–2809 closed intervals through `0x8014B000`; each had either
@@ -292,7 +306,7 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    ambiguous/data entries remain preserved. No build or game soak was needed.
    Continue with `0x80175000..0x80177000`.
 
-3. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
+4. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still
    stalls before the target phases. Preserve the lifecycle change; do not infer
    task interruption or audio progress from the reset alone.

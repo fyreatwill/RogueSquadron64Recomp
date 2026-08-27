@@ -120106,3 +120106,23 @@ M4 join window. It rules out neither a live index join nor an index mismatch;
 it does rule out treating this run's zero M4 rows as evidence about either.
 The M4 accumulator boundary remains parked pending a phase-qualified title
 or hangar route.
+
+## Session 2832 (2026-08-27) — refreshed the M5 audio de-stubbing design gate
+
+The required M5 design unit was completed as a source survey and plan refresh;
+no runtime behavior was changed and no game experiment was run. The survey
+covered the checked-in task dispatch, `musyx_stub`, stock `aspMain`, Factor 5
+image/fixup path, SP task/yield lifecycle, guest audio gate and voice guards,
+wait/drain/reaping hatches, AI shims, SDL bridge, DMEM serialization, unknown
+task fallback, and CPU-side MORT boundary. The generated `RecompiledFuncs/`
+snapshot is absent from this checkout, so generated audio behavior remains
+represented by checked-in anchors and fixup scripts.
+
+The plan already contained the complete inventory and incremental sequence; it
+was refreshed to correct A16: `osAiGetStatus_recomp` returns
+`AI_STATUS_FIFO_FULL` (`0x40000000`) when host audio is buffered, rather than
+unconditionally returning zero. No new active audio stub, trap, or gate was
+found. This rules out the stale status-shim description as current evidence,
+but does not establish a PCM publication edge. The next work unit is the
+same-build image-versus-silent Step 1 qualification with the whole-RDRAM
+retail positive control and phase-gated downstream joins.
