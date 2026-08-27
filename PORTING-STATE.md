@@ -117021,3 +117021,22 @@ the first three match the address-coded dispatch names; no placeholder or
 overlay collision remained at the lead. No source-map edit or runtime change
 was made. This selects `H-CompanionExact` as already resolved and advances the
 next bounded lead to `0x800C7358`.
+
+## Session 2630 (2026-08-27) — audited the 800C7358 symbol region
+
+The bounded generated-symbol sweep audited `0x800C7358` and the adjacent
+objective-dispatch region against the mission companion symbols, generated
+body, overlay table, repository TOML, and callers. The comparison table was:
+
+| address | companion | span | generated/caller evidence | result |
+|---|---|---:|---|---|
+| `0x800C7320` | `calculateFriendliesSaved` | `0x38` | exact generated name; adjacent body | already resolved |
+| `0x800C7358` | `checkComplexObjectives` | `0x38` | exact generated name; caller `0x800FA940` | already resolved |
+| `0x800C7390` | `dealDamagetoDatItem` | `0x174` | exact next boundary; generated body begins there | next lead |
+
+The target body spans `0x800C7358` through `0x800C738F`, and both the overlay
+table and repository TOML agree on its name and size. No placeholder,
+boundary-only ambiguity, or overlay collision remained, so no source-map or
+runtime change was made. This selects `H-CompanionExact` as already resolved,
+rules out a rename at the lead, and advances the next bounded lead to
+`0x800C7390`.

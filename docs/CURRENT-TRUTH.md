@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2629 (2026-08-27).
+Current maintenance marker: Session 2630 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -283,6 +283,19 @@ adjacent `0x800C713C` row is already the exact
 `accumulateVectorInObjectFrame` mapping. No placeholder or collision remained,
 so no rename or runtime change was made. This selects `H-CompanionExact` as
 already resolved and moves the next bounded lead to `0x800C722C`.
+
+## Session 2630 result
+
+The bounded sweep audited `0x800C7358` and its adjacent objective-dispatch
+region. The mission companion names the target `checkComplexObjectives`; the
+generated body starts at `0x800C7358` and spans the exact `0x38` bytes to
+`0x800C7390`, while the overlay table and repository TOML carry the same name
+and size. Generated caller `0x800FA940` invokes the resolved symbol. The
+adjacent `calculateFriendliesSaved` entry at `0x800C7320` is also exact, and
+`0x800C7390` is the distinct `dealDamagetoDatItem` boundary. No placeholder,
+boundary-only ambiguity, or overlay collision remained, so no source-map or
+runtime change was made. This selects `H-CompanionExact` as already resolved;
+the next bounded lead is `0x800C7390`.
 
 ## Superseded conclusions
 
