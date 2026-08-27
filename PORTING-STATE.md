@@ -116425,3 +116425,37 @@ placeholder. No generated source, runtime build, or game run was performed.
 This selects `H-BoundaryOnly`, leaves the placeholder unchanged, and advances
 the sweep to `0x800E8A34`. See
 `scratch/agent/s2604_symbol_census_audit.md`.
+
+## Session 2605 (2026-08-26) — restored convertMat3x4ToN64Mtx jr-t9 host return
+
+Fifteen consecutive sweep sessions forced a revisit of the blocked M5 route
+instead of classifying `0x800E8A34`. s2586/s2587 aborted at first 640 with
+`Failed to find function at 0x800155EC` inside `convertMat3x4ToN64Mtx`. That
+address is the continuation of the `0x800155E4` JAL, not a function.
+
+Static discriminator: `convertMat3x4ToN64Mtx` copies `$ra` into `$t9` and
+tails with `LOOKUP_FUNC(ctx->r25)`. The durable fixup was supposed to replace
+that lookup with a host `return`, but s2190 runs first and inserts
+`rs64_m5_writer_parity` immediately before `SD`, so the regex missed and the
+lookup remained. `H-BrokenJrT9Patch` selected; `H-NewCallsite` and
+`H-GetFunctionPolicy` rejected at this callsite.
+
+ORIGIN: `0x800155EC` is the JAL continuation written by the s2475 callsite
+patch. Looking it up is a recompiler lowering defect, not a legitimate game
+call. Restoring the host return restores the known s385/s2475 continuation
+contract.
+
+Changed `../N64Recomp/fixup_game_funcs.py` to accept the optional s2190 line
+and to fail the fixup if `LOOKUP_FUNC(ctx->r25)` remains. Applied the same
+replacement to the current `funcs_4.c` (sentinel blocks a second full fixup
+pass). Canary: `tools/check_jr_t9_host_return.py`.
+
+Same-build AUTOPILOT run (`ROGUESQ_LLE_FORCE=1`, `SPIN_YIELD=1`,
+`LLE_UNGATED=1`, `LLE_SOLO=1`, hangar schedule, `STOP_WIDTH=512`, 45s then
+SIGKILL): zero `Failed to find function`, zero `[CRASH]`. Phases: 640 at
+5.0s, title `1024 @ 0x00790400` at 13.5s, hangar `512 @ 0x006AB400` at 21.8s.
+Positive control: the converter path ran through menu/title/hangar without
+the s2586 abort. Artifact: `scratch/agent/s2605_jrt9_host_return.log`.
+
+The generated-symbol census at `0x800E8A34` is unchanged and remains the next
+sweep span. M5 writer-call-path evaluation can resume on this restored route.

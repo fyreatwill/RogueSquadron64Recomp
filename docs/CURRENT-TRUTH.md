@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2604 (2026-08-26).
+Current maintenance marker: Session 2605 (2026-08-26).
+
+- **s2605 — the s2586/s2587 640 abort was a broken jr-$t9 host return, not a
+  missing audio writer.** `convertMat3x4ToN64Mtx` copies `$ra` into `$t9` and
+  tail-dispatches with `LOOKUP_FUNC(ctx->r25)`. The `0x800155E4` JAL supplies
+  `$ra=0x800155EC`, a continuation address, not a function. s2190 inserts
+  `rs64_m5_writer_parity` before `SD`, so the durable jr-$t9 regex missed and
+  `get_function(0x800155EC)` asserted. Restored the optional s2190 line in
+  `fixup_game_funcs.py` and fail the fixup if that lookup remains. Same-build
+  AUTOPILOT run: zero `Failed to find function` / `[CRASH]`; title
+  `1024 @ 0x00790400` at 13.5s and hangar `512 @ 0x006AB400` at 21.8s. This
+  selects `H-BrokenJrT9Patch` and unblocks the M5 hangar route. ORIGIN:
+  `0x800155EC` is the JAL continuation of `convertMat3x4ToN64Mtx`'s caller;
+  looking it up is a recompiler lowering defect, not a legitimate game call.
+  Artifact: `scratch/agent/s2605_jrt9_host_return.log`.
 
 - **s2604 — the next generated-symbol span is a boundary-only fragment.**
   `0x800E71C8–0x800E71CF` contains only `lhu v0, 0x14(v1)` and
@@ -534,9 +548,10 @@ the active backlog:
   renamed through `tools/rename/build_redefs.py`.
 - s2578 established one live M4 producer/consumer join; broader coverage is
   optional and remains lower priority than M5.
-- s2579–s2587 left M5 contract-writer qualification blocked by the current
-  pre-title scene-graph boundary; no audio gate, store, task field, output
-  pointer, or mitigation was promoted.
+- s2579–s2587 left M5 contract-writer qualification blocked by the
+  pre-title scene-graph boundary; s2605 closed that abort as a broken
+  jr-$t9 host return. No audio gate, store, task field, output pointer, or
+  mitigation was promoted from the aborted runs.
 
 For exact commands, artifacts, and failed experiments, use the corresponding
 session entry in `PORTING-STATE.md`.
@@ -544,14 +559,14 @@ session entry in `PORTING-STATE.md`.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 named retail writer/value boundary — blocked at the current qualified
-   route boundary.** s2587 reproduced s2586's pre-title/640 scene-graph
-   `get_function` abort with writer-entry logging disabled, so the writer
-   census cannot be evaluated from this route. Do not treat the absent rows as
-   writer evidence or change task/output fields, stores, or gates. The next
-   M5 unit must use a genuinely new boundary-qualification angle or execute a
-   documented incremental de-stub step; retain `ROGUESQ_AUDIO_UCODE=0` as the
-   silent control and rollback.
+1. **M5 named retail writer/value boundary — route unblocked.** s2605 restored
+   the `convertMat3x4ToN64Mtx` jr-$t9 host return; the s2586/s2587
+   `get_function(0x800155EC)` abort is closed at that callsite. The qualified
+   AUTOPILOT route again reaches title and hangar. Resume the s2586 writer
+   call-path census on this restored route (do not treat s2586/s2587 nulls as
+   writer evidence). Do not change task/output fields, stores, or gates from
+   those aborted runs. Retain `ROGUESQ_AUDIO_UCODE=0` as the silent control
+   and rollback.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
