@@ -332,6 +332,15 @@ Current maintenance marker: Session 2547 (2026-08-26).
   generator emitted the expected mapping. No generated C or runtime behavior
   changed. Artifact: `scratch/agent/s2547_symbol_rename/audit.md`.
 
+- **s2548 — the next bounded generated-symbol region had no defensible
+  mapping.** The complete `0x800C5898–0x800C589F` span is an 8-byte fragment
+  containing only `lui at,0x801A` and `addu at,at,a0`, between
+  `tickSongAssetLoadWorker` and `menuOverlayInit`. The active generated and
+  overlay tables, companion symbol file, prototype-only m2c context, and
+  exact-address/source/caller searches provide no human candidate. It remains
+  unchanged as a data/boundary artifact candidate. Artifact:
+  `scratch/agent/s2548_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -348,7 +357,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
   Next work unit: continue the bounded generated-symbol renaming sweep at
-  `0x800B47C4`.
+  `0x800C6968`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
@@ -385,7 +394,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   left `0x800AEC54–0x800AEC5F` unchanged as a trap-only data boundary; s2546
   left `0x800B2628–0x800B262F` unchanged as an eight-byte data-boundary
   fragment; s2547 renamed the `0x800B47C4` three-instruction setup fragment
-  to `menuControllerInputPreamble`. Continue at `0x800C5898`.
+  to `menuControllerInputPreamble`; s2548 left `0x800C5898–0x800C589F`
+  unchanged as an 8-byte boundary fragment. Continue at `0x800C6968`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index

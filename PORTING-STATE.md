@@ -115487,3 +115487,18 @@ name and leaves no runtime behavior changed.
 
 ORIGIN: semantic rename of an executable boundary fragment; no mitigation or
 runtime behavior changed.
+
+## Session 2548 (2026-08-26) — censused generated-symbol menu boundary
+
+Ran the bounded generated-symbol census at `0x800C5898`. The complete span is
+eight bytes (`0x800C5898–0x800C589F`) containing only `lui at,0x801A` and
+`addu at,at,a0`, between `tickSongAssetLoadWorker` and `menuOverlayInit`. The
+active generated declaration/body/overlay table and companion symbol input
+retain `fake_func_800C5898`; companion m2c context has only a prototype, and
+exact-address, source, and caller searches found no human candidate. With no
+prologue, return, jump, or complete callable body, renaming it would be
+speculative. Selected `H-data-boundary` / `H-no-match` and left it unchanged.
+Artifact: `scratch/agent/s2548_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.
