@@ -116629,3 +116629,34 @@ a title-versus-hangar PCM conclusion, and no audio behavior was changed.
 
 Artifacts: `scratch/agent/s2610_m5_pcm_baseline.log`,
 `scratch/agent/s2610_m5_pcm_channel_store.log`.
+
+## Session 2611 (2026-08-27) — re-baselined Factor-5 audio task contract
+
+Ran the required retail ground-truth preflight before the Debug build. The
+oracle whole-RDRAM positive control reached 10,000 write callbacks and its
+independent VI trace reached title `1024` and hangar `512 @ 0x006ab400`.
+The two consistency checks passed and the Debug target built successfully.
+
+The first concurrent port driver used focus-delivered input; it was not
+evaluated because only its silent arm reached hangar. The fixed same-build
+pair used the validated in-process AUTOPILOT route, `LLE_FORCE`,
+`SPIN_YIELD`, `LLE_UNGATED`, `LLE_SOLO`, and `C88=0` rollback, then was
+SIGKILLed after 90 seconds. Both arms reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`, with zero crash, abort, or missing-function rows.
+
+The silent arm produced 1,817 ABI rows, 1,821 task rows, 523 audio returns,
+and no image-stage rows or image DMA ranges. Its task joins had
+`dmem_changed=0`, `dma_count=0`, and `complete=0`. The image arm produced
+2,180 ABI rows, 2,189 task rows, 9,218 image-stage rows, 4,565 DMA ranges,
+527 audio returns, and image completions at `break_pc=0x1328`; its joins had
+positive DMEM changes, `source_matches=1`, and `complete=1`. PCM source and
+consumer controls fired in both arms, but all sampled title and hangar PCM
+payloads were `nz=0`. The image dispatch, task staging, DMEM/DMA, image exit,
+and SP return edges are therefore live, while the output-to-nonzero-PCM edge
+remains open. This selects `H-ContractGap` and refutes
+`H-SilentPathNotIndependent`; it does not justify a guest-writer change.
+
+Artifacts: `scratch/agent/s2611_oracle_positive.log` and
+`scratch/agent/s2611_m5_audio_contract_rebaseline/`. The modified historical
+driver now launches its two arms concurrently; its first focus-delivery
+attempt remains documented as a failed route qualification, not evidence.

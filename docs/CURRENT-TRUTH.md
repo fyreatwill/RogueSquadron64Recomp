@@ -4,7 +4,27 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2610 (2026-08-27).
+Current maintenance marker: Session 2611 (2026-08-27).
+
+- **s2611 — Factor-5 image task contract is live, but its downstream PCM
+  join remains incomplete.** The required retail oracle control fired in this
+  iteration (10,000 whole-RDRAM write callbacks) and independently reached
+  title `1024` and hangar `512 @ 0x006AB400`. A fixed same-build concurrent
+  AUTOPILOT pair reached both port phases with zero crash/abort/missing-function
+  rows. The silent arm had 1,817 ABI rows, 1,821 task rows, zero image-stage
+  rows and zero image DMA ranges; the image arm had 2,180 ABI rows, 2,189 task
+  rows, 9,218 image-stage rows, 4,565 DMA ranges, 10,513 image completions at
+  `break_pc=0x1328`, and 527 audio returns. Image `audtask-join` rows showed
+  `dmem_changed>0`, `source_matches=1`, and `complete=1`; silent rows showed
+  `dmem_changed=0`, `dma_count=0`, and `complete=0`. PCM source and consumer
+  rows were live in both arms but all sampled payloads were `nz=0`, including
+  title and hangar. This selects `H-ContractGap`: the image dispatch/DMEM/DMA/
+  exit/SP edges are positive, while the output-to-nonzero-PCM edge is absent.
+  It refutes `H-SilentPathNotIndependent`; the silent arm produced no image
+  work. The first focus-delivery pair was not used for the conclusion because
+  only its silent arm reached hangar; the fixed in-process AUTOPILOT pair is
+  the evaluated run. Artifacts: `scratch/agent/s2611_m5_audio_contract_rebaseline/`
+  and `scratch/agent/s2611_oracle_positive.log`.
 
 - **s2610 — title PCM positive control did not reproduce in either marker arm.**
   A same-build concurrent run compared the s2608 marker set with the added
@@ -641,15 +661,15 @@ session entry in `PORTING-STATE.md`.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 audio task/output contract re-baseline.** The title PCM positive
-   control is nondeterministic under the validated C88=1 route: s2610's
-   same-build baseline and channel-witness arms both reached title and had
-   live controls, but both sampled `nz=0`. Re-run the plan's complete
-   Factor-5-image versus silent-control matrix before changing another guest
-   writer: dispatch, task fields, DMEM/DMA, image exit, SP completion, service,
-   slot/voice, MORT, and PCM source/consumer joins. Keep the AUTOPILOT title /
-   hangar route and require a whole-RDRAM oracle control before interpreting
-   narrow retail nulls. `ROGUESQ_AUDIO_UCODE=0` is the rollback.
+1. **M5 image output/PCM contract edge.** s2611 closed the Step 1
+   re-baseline: the image arm has positive DMEM mutation, DMA ranges,
+   `break_pc=0x1328`, `Broke`/SP return, and complete image task joins, while
+   the silent arm has none of that image work. Both arms' PCM source/consumer
+   payloads remain zero, so the next unit must identify one proven image
+   output/writeback-to-PCM relation before changing a guest writer. Use the
+   phase-keyed `audtask-image-stage` and `audtask-join` fields to select the
+   edge; do not treat `canary_ok=0` or a zero payload alone as the explanation.
+   Keep `ROGUESQ_AUDIO_UCODE=0` as rollback/control.
 2. **M5 hangar PCM writer/value boundary.** s2608 made the guest C88
    store the default. Title PCM is briefly fully nonzero; hangar PCM
    stays `nz=0` even though the gate is `0x01` and `startSongSequence`
