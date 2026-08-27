@@ -213,6 +213,13 @@ independent generated-tree placeholder scan found no `func_8016*` or
 selected; ambiguous/data entries remain preserved. No build or game soak was
 needed. This is symbol-clarity evidence only.
 
+Session 2825 closed generated-symbol interval `0x80169000..0x8016B000`.
+The bounded selector changed zero references in zero files, and the
+independent generated-tree placeholder scan found no `func_8016*` or
+`fake_func_8016*` definitions or references. No companion candidates were
+selected; ambiguous/data entries remain preserved. No build or game soak was
+needed. This is symbol-clarity evidence only.
+
 Session 2819 renamed four source-backed non-callable main-overlay fragments
 (`0x80005568`, `0x8000595C`, `0x80006BFC`, and `0x8000751C`) to explicit
 `data_gap_*` names across the regeneration-safe selector and external
@@ -245,7 +252,7 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    candidates, and an empty independent placeholder scan. Session 2823
    closed `0x80165000..0x80167000` with zero selected references, no
    companion candidates, and an empty independent placeholder scan. Preserve
-   ambiguous/data entries and continue with `0x80169000..0x8016B000`.
+   ambiguous/data entries and continue with `0x8016B000..0x8016D000`.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still
