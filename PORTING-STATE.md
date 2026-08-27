@@ -117129,3 +117129,24 @@ identity, or boundary-only mapping required an action. No rename, build, or
 runtime change was warranted. This rules out an actionable rename in this
 bounded lead, not the broader symbol-sweep hypothesis. The next bounded lead
 is `0x800C7978`.
+
+## Session 2637 (2026-08-27) — audited the 800C7978 symbol lead
+
+Ran the bounded generated-symbol-renaming sweep required by
+`scratch/agent/NEXT.md`. The comparison table covered the lead and adjacent
+mission-overlay entries through `0x800C7FF8`:
+
+| address | companion/generated identity | span/call evidence | result |
+|---|---|---|---|
+| `0x800C7978` | `spawnEffectOnNamedDatItem` | `0x78`, generated body and 4 caller files agree | exact, already named |
+| `0x800C79F0` | `initActorTowardNamedDatItem` | `0xC0`, generated body and 1 caller file agree | exact, already named |
+| `0x800C7AB0` | `initAnchoredActorTowardNamedDatItem` | `0xB0`, generated body and 3 caller files agree | exact, already named |
+| `0x800C7B60` / `0x800C7C28` | `getDatItemHealth` / `getDatItemHealthPercentage` | `0xC8` / `0x60`, exact TOML and generated boundaries | exact, already named |
+| `0x800C7C88`–`0x800C7D98` | named DAT, scalar, voice, HUD, stage, and cue wrappers | exact contiguous spans and resolved generated calls | exact, already named |
+| `0x800C7DB4` | `fake_func_800C7DB4` | 12-byte fragment; companion explicitly preserves it | boundary-only, retain placeholder |
+| `0x800C7DC0` | `initNpcActorFromSpawnMessage` | `0x238`, exact generated body and caller | exact, already named |
+
+No placeholder, duplicate overlay identity, or boundary-only mapping beyond the
+preserved fragment required an action. No rename, build, or runtime change was
+warranted. This rules out an actionable rename in this bounded lead, not the
+broader symbol-sweep hypothesis. The next bounded lead is `0x800C7FF8`.

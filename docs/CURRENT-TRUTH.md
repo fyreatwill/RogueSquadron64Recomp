@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2636 (2026-08-27).
+Current maintenance marker: Session 2637 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -227,6 +227,19 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
   required an action. No rename or build was warranted; the next bounded sweep
   lead is `0x800C7978`.
 
+- **s2637 — the `0x800C7978` sweep region was already exact.** The bounded
+  census through `0x800C7FF8` found matching companion, generated, TOML, and
+  overlay-table identities for `spawnEffectOnNamedDatItem`,
+  `initActorTowardNamedDatItem`, `initAnchoredActorTowardNamedDatItem`,
+  `getDatItemHealth`, `getDatItemHealthPercentage`,
+  `despawnEffectOnNamedDatItem`, `setLevelObjectTrackingScalar`, both objective
+  voice wrappers, `dispatchHudEffectUpdate`, `delegateToLevelStageTick`,
+  `triggerNamedAssetCue`, `triggerSoundCueByType`, and
+  `initNpcActorFromSpawnMessage`, with exact adjacent spans. `fake_func_800C7DB4`
+  is an explicitly preserved 12-byte companion fragment, not a defensible
+  semantic rename. No placeholder, duplicate overlay identity, or boundary-only
+  mapping required an action; the next bounded lead is `0x800C7FF8`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -248,7 +261,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C7978` next using companion symbols, exact spans, and callers;
+   Audit `0x800C7FF8` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
