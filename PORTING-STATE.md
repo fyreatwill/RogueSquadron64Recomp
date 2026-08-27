@@ -117905,3 +117905,21 @@ runtime watch, writeback, remap, or mitigation. No build, run, or runtime
 behavior changed. Next unit: trace the caller-provided renderer buffer bases
 through `updateVoiceChannelParams`, `consumeVoiceSamples`, and streaming
 service code.
+## Session 2683 (2026-08-27) — audited voice renderer buffer contracts
+
+Ran the prescribed bounded static audit of `serviceStreamingVoice`,
+`consumeVoiceSamples`, `updateVoiceChannelParams`, `decodeAndFillVoiceBlock`,
+and `renderVoiceAudioBlock`, including generated call sites and companion
+symbol comments. The recovered table is in
+`scratch/agent/s2683_renderer_buffer_audit/RESULT.md`.
+
+The named `dmaVoiceSampleAndSignal` callback passes stream input from
+`slot+0x194+offset` to slot storage at `slot+0x1A0+aligned-offset`, then
+signals the slot queue. `consumeVoiceSamples` advances cursors only;
+`updateVoiceChannelParams` receives caller-owned filter/delay arrays; and
+`renderVoiceAudioBlock` keeps mixed output in the voice object at `+0x140` and
+stage offsets. No static evidence names an ordered renderer-to-AI publication
+writer or joins it to the candidate AI span. This selects
+`H-unresolved-address`, rules out the audited `H-renderer-buffer` and
+`H-copy-edge` contracts, and leaves runtime watch/writeback/remap work
+unauthorized. No build or soak was run.

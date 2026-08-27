@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2682 (2026-08-27).
+Current maintenance marker: Session 2683 (2026-08-27).
 
 ## Live result
 
@@ -71,6 +71,15 @@ The latest qualified M5 evidence is:
   identifies an AI publication writer or destination; this selects
   `H-unresolved-address` for the proposed join and forbids a runtime watch or
   writeback based on these sites.
+- s2683's static pointer audit recovered the service contract: named
+  `dmaVoiceSampleAndSignal` transfers stream input from
+  `slot+0x194+offset` into slot storage at `slot+0x1A0+aligned-offset` and
+  signals the slot queue. `consumeVoiceSamples` only advances slot cursors;
+  `updateVoiceChannelParams` consumes caller-provided filter/delay arrays;
+  and `renderVoiceAudioBlock` keeps mixed output in the voice object at
+  `+0x140`/stage offsets. No audited path joins that output to the AI-source
+  span or names an ordered publication copy, selecting `H-unresolved-address`
+  and keeping runtime watches, writeback, and remap unauthorized.
 
 Retail is the independent witness for game-side memory claims. A narrow null
 is unevaluable unless the whole-RDRAM positive control fires first and the
@@ -85,10 +94,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    separates the live renderer span from the AI-source span but does not name
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.
-   Trace the caller-provided `a1/a2` bases from `updateVoiceChannelParams`
-   through `consumeVoiceSamples`/stream service to a named source or copy,
-   with exact address arithmetic and ordering; do not repeat the filter,
-   persistent-object, task-field, ring, shared-stack, or Step 1 arm census.
+   s2683 shows the named DMA callback is stream-to-slot, not renderer-to-AI.
+   Audit the remaining `updateVoiceChannelParams` indirect-call setup and
+   the `voice object+0x140` consumer path for a caller-owned destination or
+   service boundary, using companion address/name evidence; do not repeat the
+   filter, persistent-object, task-field, ring, shared-stack, or DMA callback
+   census.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
