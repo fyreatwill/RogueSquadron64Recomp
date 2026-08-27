@@ -1,48 +1,41 @@
-# NEXT work unit (s2583) — retail writer/value boundary for M5 contract
+# NEXT work unit (s2584) — port-side writer/value correspondence for M5
 
 HYPOTHESIS-ID: m5-audio-contract-gap
 
 ## Single work unit
 
-Run one retail-oracle capture that attributes the existing candidate output/PCM
-ranges by writer PC and post-store value, phase-gated to title and hangar.
-Do not alter the port or promote any task/output field.
+Run one bounded port capture using the existing phase-gated PCM
+writer/source instrumentation, and correlate its writer callsites and values
+against the retail PCs/ranges from s2583. Do not alter the port or promote any
+task/output field.
 
 ## Competing hypotheses and discriminator
 
-- `H-RetailLegitZero`: retail reaches the same boundary and legitimately writes
-  zero/empty values; the port's zero PCM is not evidence of a missing producer.
-- `H-RetailWriterMissing`: retail has a nonzero writer/value event in the target
-  phase that the port does not reproduce.
-- `H-RetailAddressMismatch`: retail writes a nonzero value, but to a different
-  candidate range or through a different phase-owned address than the port
-  observer uses.
+- `H-PortWriterMatch`: the port reaches the same phase-owned ranges with a
+  matching writer callsite and nonzero value; the missing PCM join is later.
+- `H-PortWriterMissing`: retail's named writer/value event has no port-side
+  counterpart in the same phase.
+- `H-PortAddressMismatch`: the port writes nonzero data, but outside the two
+  retail candidate ranges or under a different phase key.
 
-The discriminator is one phase-keyed oracle table for watches at `0xA0F50`,
-`0x141AD0`, and `0x1498A`, including first hits, writer-PC histograms, and
-post-store nonzero/FNV summaries. Whole-RDRAM callbacks must reach 10,000 and
-VI must include title `0x00790400 @ 1024` and hangar `0x006AB400 @ 512`;
-otherwise the capture is unevaluable. A phase-matched nonzero retail writer
-selects `H-RetailWriterMissing`; a zero retail table selects `H-RetailLegitZero`;
-a nonzero writer absent from all three watches selects `H-RetailAddressMismatch`
-and requires a new bounded address census.
+The discriminator is one phase-keyed table of port writer callsite,
+destination range, post-store value polarity, PCM source/consumer join, and
+route phase, with `audtask-dispatch`, image completion, and title/hangar VI as
+positive controls. A matching writer/value selects `H-PortWriterMatch`; no
+matching event selects `H-PortWriterMissing`; nonzero output only outside the
+retail ranges selects `H-PortAddressMismatch`. If a phase control is absent,
+the capture is unevaluable.
 
 ## Exact command
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 120 --watch-write 0x0:0x800000 \
-  --watch-write 0xA0F50:0xA0F54 --watch-write 0x141AD0:0x141AF0 \
-  --watch-write 0x1498A:0x1498B \
-  --first-watch 1 --first-watch 2 --first-watch 3 \
-  --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-watch 3 \
-  --post-value-watch 1 --post-value-watch 2 --post-value-watch 3 \
-  --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  --vi-trace > scratch/agent/s2583_m5_retail_writer_value.log 2>&1
+env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
+  ROGUESQ_LLE_SOLO=1 ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
+  ROGUESQ_AUTOPILOT_STOP_WIDTH=512 ROGUESQ_LOG_M5_PCM_WRITER=1 \
+  ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_AUDTASK=1 \
+  ./build/Debug/RogueSquadron64Recomp > scratch/agent/s2584_m5_port_writer_value.log 2>&1
 ```
 
-Record the oracle result before any port-side instrumentation or mitigation.
+Use the existing phase controls and kill the process group with SIGKILL after
+the target phases are present. Record whether every positive control fired
+before interpreting the port table.

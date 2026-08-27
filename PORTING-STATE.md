@@ -116106,3 +116106,17 @@ not prove that zero PCM is invalid, nor authorize task/output/gate changes or
 a mitigation. The next unit obtains independent retail writer/value evidence
 for the candidate output/PCM ranges. Artifact:
 `scratch/agent/s2582_m5_step1_contract_pair/audit.md`.
+
+## Session 2583 (2026-08-26) — attributed retail M5 writer/value boundary
+
+Ran the prescribed retail-oracle capture before adding port instrumentation.
+The whole-RDRAM positive control reached 10,000 callbacks; title
+`0x00790400 @ 1024` and hangar `0x006AB400 @ 512` phases were both observed.
+The phase-keyed watches showed nonzero retail contract activity: `0xA0F50`
+had `0x8008ED48` as a title/hangar writer and post-store `0x01000000`, while
+`0x141AD0` had hangar writer `0x80094648` (24 phase hits) and nonzero values
+including `0x7F7F7F7F`. `0x1498A` had zero writes. This selects
+`H-RetailWriterMissing` and rejects a legitimately zero retail contract at
+the current boundary. It is single-source oracle evidence; it does not
+authorize changing a task field, output pointer, gate, or store. Next is a
+phase-gated port-side writer/value correspondence capture.

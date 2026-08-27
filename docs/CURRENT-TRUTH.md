@@ -6,6 +6,19 @@ authoritative for exact commands and probe rows.
 
 Current maintenance marker: Session 2582 (2026-08-26).
 
+- **s2583 — retail writer/value evidence selects `H-RetailWriterMissing` at
+  the M5 contract boundary.** The required whole-RDRAM control reached 10,000
+  callbacks, and the oracle reached title (`0x00790400 @ 1024`) and hangar
+  (`0x006AB400 @ 512`). Retail wrote nonzero values in the candidate ranges:
+  `0xA0F50` had writer PC `0x8008ED48` in title and hangar phases with
+  post-store `0x01000000`; `0x141AD0` had hangar writer PC `0x80094648` with
+  24 phase hits and nonzero values including `0x7F7F7F7F`. `0x1498A` had no
+  writes. This rejects `H-RetailLegitZero` and selects
+  `H-RetailWriterMissing` at the current observable boundary. It is
+  single-source oracle evidence: no task/output/gate/store promotion or
+  mitigation is authorized until a port-side comparison maps the writers and
+  values. Artifact: `scratch/agent/s2583_m5_retail_writer_value/audit.md`.
+
 - **s2582 — the same-build M5 contract pair selects `H-ContractGap` at the
   current observable boundary.** The retail oracle first passed the required
   whole-RDRAM 10,000-callback control and reached title and hangar. Silent and
