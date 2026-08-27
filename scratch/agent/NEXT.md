@@ -1,14 +1,14 @@
-# NEXT work unit (s2622) — bounded generated-symbol sweep while M5 is blocked
+# NEXT work unit (s2623) — bounded generated-symbol sweep while M5 is blocked
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit one bounded symbol region centered on `0x800BF790` and its neighboring
-`0x800BF498`/`0x800BF4A0` boundary using companion symbols, generated bodies,
-callers, and overlay sizes. Rename only a symbol whose identity is supported
-by exact companion and span/caller evidence; unresolved fragments stay
-placeholders. Do not change runtime behavior.
+Audit one bounded symbol region centered on `0x800C41B0` and its neighboring
+`0x800C41AC` boundary using companion symbols, generated bodies, callers, and
+overlay sizes. Rename only a symbol whose identity is supported by exact
+companion and span/caller evidence; unresolved fragments stay placeholders.
+Do not change runtime behavior.
 
 ## Competing hypotheses and discriminator
 
@@ -26,7 +26,7 @@ the identity is exact or boundary-only. One exact row selects a rename.
 
 1. Inspect `syms/rogue_squadron.syms.toml`, companion
    `symbol_files/mission_overlay.txt`, and the generated symbol/body around
-   `0x800BF790`; use `rg` and bounded `sed` windows.
+   `0x800C41B0`; use `rg` and bounded `sed` windows.
 2. Compare adjacent addresses and sizes and enumerate generated callers. Run
    `python tools/rename/build_redefs.py` only if an exact supported rename is
    selected, then verify the resulting redef line.

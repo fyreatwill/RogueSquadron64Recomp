@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2621 (2026-08-27).
+Current maintenance marker: Session 2622 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -117,6 +117,16 @@ publication boundary. The M5 mapping remains an open dependency; the next
 action is the local generated-symbol sweep. Artifact:
 `scratch/agent/unblock_s2621/oracle.log`.
 
+## s2622 symbol-sweep result
+
+The `0x800BF790` lead is already resolved: the companion symbol and generated
+overlay table agree on `updateHudHealthIndicator` at `0x800BF790`, size
+`0x634`, and `handleHUD` contains an in-tree caller. The neighboring
+`0x800BF784` and `0x800BF498` entries are 12-byte and 8-byte generated
+fragments; `0x800BF4A0` is the previously documented duplicate-symbol
+boundary. No new defensible rename exists in this region. The next sweep lead
+is `0x800C41AC/0x800C41B0`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -138,8 +148,9 @@ action is the local generated-symbol sweep. Artifact:
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Continue bounded companion-supported naming work; unresolved fragments stay
-   placeholders under `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
+   Audit `0x800C41AC/0x800C41B0` next using companion symbols, exact spans, and
+   callers; unresolved fragments stay placeholders under
+   `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
    independent mapping from retail PC `0x800078EC` (and the secondary-span
    writers) to the port-side writer or CPU MORT publication boundary, including

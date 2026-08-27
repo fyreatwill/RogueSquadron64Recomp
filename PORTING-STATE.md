@@ -116898,3 +116898,19 @@ leaving M5 as an explicit open dependency. This rules out treating the generic
 `rs_memset` attribution as authorization for writeback, remapping, gate
 changes, or another title-zero census. No runtime behavior changed. Artifact:
 `scratch/agent/unblock_s2621/oracle.log` and `scratch/agent/UNBLOCK.md`.
+
+## Session 2622 (2026-08-27) — audited the 800BF790 symbol boundary
+
+Ran the bounded generated-symbol census for `0x800BF498..0x800BFDC4` using the
+companion mission symbols, generated overlay table, generated bodies, and
+caller search. The exact companion row for `0x800BF790` is
+`updateHudHealthIndicator`, size `0x634`; the generated tree has the same name
+and `handleHUD` contains the call. The adjacent rows are an 8-byte
+`fake_func_800BF498`, the already-classified 0x2E4 duplicate-symbol body at
+`0x800BF4A0`, a 12-byte `fake_func_800BF784`, and the named `0x800BF790` body.
+
+This selects `H-CompanionExact` only as verification of a rename already
+present in the generated tree; it provides no new rename to land. It rules out
+renaming the two short fragments from boundary evidence alone and confirms the
+next sweep lead as `0x800C41AC/0x800C41B0`. No runtime behavior changed and no
+M5 claim was altered.
