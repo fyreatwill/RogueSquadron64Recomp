@@ -115606,3 +115606,20 @@ Artifact: `scratch/agent/s2553_symbol_census/audit.md`.
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
+
+## Session 2555 (2026-08-26) — censused generated-symbol mission boundary
+
+Ran the bounded generated-symbol census at `0x800E406C`. The complete span is
+four bytes (`0x800E406C–0x800E406F`) containing only `sw $a0,0x20($sp)`,
+between the epilogue of `playDualTextureAttachmentCueMode1` and the prologue
+of the independently named `handleRayShieldedNpcDestroy` at `0x800E4070`. The
+companion symbol input, active TOML, generated declaration/body, and overlay
+registration retain `fake_func_800E406C`; exact-address, source, m2c, and caller
+searches found no human mapping or independent call site. Renaming it to either
+neighbor would absorb an established function boundary. Selected
+`H-data-boundary` / `H-no-match` and left the placeholder unchanged. The next
+unresolved placeholder is `0x800E447C`.
+Artifact: `scratch/agent/s2555_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.

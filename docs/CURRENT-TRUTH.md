@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2553 (2026-08-26).
+Current maintenance marker: Session 2555 (2026-08-26).
 
 ## Current state
 
@@ -394,6 +394,18 @@ Current maintenance marker: Session 2553 (2026-08-26).
   This selects `H-data-boundary` / `H-no-match`; no generated code changed.
   Artifact: `scratch/agent/s2553_symbol_census/audit.md`.
 
+- **s2555 — the next bounded generated-symbol region is a 4-byte mission
+  boundary fragment with no rename candidate.** The complete
+  `0x800E406C–0x800E406F` span contains only `sw $a0,0x20($sp)`, between the
+  epilogue of `playDualTextureAttachmentCueMode1` and the prologue of the
+  independently named `handleRayShieldedNpcDestroy` at `0x800E4070`. The
+  companion symbol input, active TOML, generated declaration/body, and overlay
+  registration retain `fake_func_800E406C`; exact-address, source, m2c, and
+  caller searches found no human mapping or independent call site. Renaming it
+  to either neighbor would absorb an established function boundary. This
+  selects `H-data-boundary` / `H-no-match`; no generated code changed. Artifact:
+  `scratch/agent/s2555_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -460,8 +472,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   fragments at `0x800D2C98`, `0x800D4EC4`, `0x800DD2C4`, and `0x800DFB8C`
   through the symbol inputs and generated declarations/implementations/
   overlay table. Their names encode the companion-map duplicate-collision
-  relationship, not independent game functions; the next unresolved
-  placeholder is `0x800E406C`.
+  relationship, not independent game functions. s2555 left
+  `0x800E406C–0x800E406F` unchanged as a four-byte boundary fragment; the
+  next unresolved placeholder is `0x800E447C`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index
