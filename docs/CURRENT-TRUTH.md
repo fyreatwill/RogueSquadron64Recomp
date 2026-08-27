@@ -270,6 +270,16 @@ Current maintenance marker: Session 2540 (2026-08-26).
   question. No mitigation or port instrument was added. Artifact:
   `scratch/agent/s2539_m4_retail_boundary/audit.md`.
 
+- **s2542 — the next generated-symbol region is a boundary fragment, not a
+  rename candidate.** `0x800AAADC–0x800AAADF` is the complete four-byte fake
+  span containing only `sh $a0,0x1A($v1)`, immediately before the independently
+  named `playerSnowSpeederInit` at `0x800AAAE0`. The active generated
+  declaration, implementation, overlay table, companion symbol input, and
+  exact-address/source/m2c/caller searches provide no defensible human name.
+  Renaming it to the neighboring function would absorb a real function
+  boundary, so it remains unchanged. This is a static, single-source result.
+  Artifact: `scratch/agent/s2542_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -316,7 +326,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   immediately before `npcPredictedRangeCheck`; companion/source/m2c/caller
   searches supplied no defensible mapping, and the fragment has no complete
   callable body. It remains unchanged as a data/boundary artifact candidate.
-  Next is `0x800AAADC`.
+  s2542 left `0x800AAADC` unchanged as a four-byte store/boundary fragment
+  before `playerSnowSpeederInit`; the next unresolved region is `0x800AD378`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index

@@ -115386,3 +115386,19 @@ callable body, renaming it to either neighbor would be speculative. Selected
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
+
+## Session 2542 (2026-08-26) — censused generated-symbol mission boundary
+
+Ran the bounded generated-symbol census at `0x800AAADC`. The complete
+generated/project span is four bytes (`0x800AAADC–0x800AAADF`) containing only
+`sh $a0,0x1A($v1)`, immediately before the independently named
+`playerSnowSpeederInit` at `0x800AAAE0`. The active generated declaration,
+implementation, overlay table, and companion symbol input all retain the fake
+name. Exact-address, source, m2c, and caller searches found no defensible human
+mapping. Because the fragment has no prologue, return, jump, or complete
+callable body, renaming it to the neighboring function would be speculative.
+Selected `H-data-boundary` / `H-no-match` and left it unchanged. Artifact:
+`scratch/agent/s2542_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.
