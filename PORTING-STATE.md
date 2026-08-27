@@ -115874,3 +115874,20 @@ experiment was run because the work unit was explicitly static-only. The next
 unresolved placeholder is `0x80105B54`.
 
 Artifact: `scratch/agent/s2568_symbol_census/audit.md`.
+
+## Session 2569 (2026-08-26) — censused generated-symbol object-tracking boundary
+
+Ran the prescribed static generated-symbol census for
+`0x80105B54–0x80105B5F`. The complete generated span contains
+`addu v1,v1,a0` and two `lwc1` field loads, between the complete
+`lv9_calculateFriendliesSaved` and `lva_initializeObjectTracking` bodies. The
+active project and generated tables retain `fake_func_80105B54`; the companion
+symbol file explicitly retains that placeholder and identifies
+`lva_initializeObjectTracking` as the following real function. Exact-address,
+source, m2c, and caller searches found no human candidate. Selected
+`H-data-or-boundary` and left the placeholder unchanged. This is a static,
+single-source result: it does not prove reachability or explain the fragment's
+origin. No build or runtime experiment was run because the work unit was
+explicitly static-only. The next unresolved placeholder is `0x8010619C`.
+
+Artifact: `scratch/agent/s2569_symbol_census/audit.md`.

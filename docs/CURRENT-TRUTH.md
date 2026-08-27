@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2567 (2026-08-26).
+Current maintenance marker: Session 2569 (2026-08-26).
 
 ## Current state
 
@@ -148,6 +148,15 @@ Current maintenance marker: Session 2567 (2026-08-26).
   address, source, m2c, and caller searches found no human candidate. This is
   a static, single-source boundary classification, so the placeholder remains
   unchanged. Artifact: `scratch/agent/s2568_symbol_census/audit.md`.
+
+- **s2569 — the next generated-symbol region is an object-tracking boundary
+  with no defensible mapping.** The complete `0x80105B54–0x80105B5F` span
+  contains `addu v1,v1,a0` and two `lwc1` field loads between the complete
+  `lv9_calculateFriendliesSaved` and `lva_initializeObjectTracking` bodies.
+  The companion explicitly retains `fake_func_80105B54`; exact-address,
+  source, m2c, and caller searches found no human candidate. This is a static,
+  single-source boundary classification, so the placeholder remains
+  unchanged. Artifact: `scratch/agent/s2569_symbol_census/audit.md`.
 
 ## Latest evidence
 
@@ -620,8 +629,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   boundary; s2565 left `0x80103D08–0x80103D0F` unchanged as a two-instruction
   objective boundary; s2566 left `0x80104208–0x8010420F` unchanged as a two-
   instruction objective boundary; s2568 left `0x801044D8–0x801044DF`
-  unchanged as a two-instruction objective boundary; the next unresolved
-  placeholder is `0x80105B54`. s2557 left
+  unchanged as a two-instruction objective boundary; s2569 left
+  `0x80105B54–0x80105B5F` unchanged as a three-instruction object-tracking
+  boundary; the next unresolved placeholder is `0x8010619C`. s2557 left
   `0x800E447C–0x800E447F` unchanged as a one-instruction boundary fragment
   and advanced to `0x800E71C8`; s2558 revalidated that span as an unchanged
   orphan two-instruction boundary fragment and pivots the next unit to the
