@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2560 (2026-08-26).
+Current maintenance marker: Session 2561 (2026-08-26).
 
 ## Current state
 
@@ -69,6 +69,17 @@ Current maintenance marker: Session 2560 (2026-08-26).
   from consumer-dead, and does not select index-alias or index-no-join. The
   next discriminator is route/branch reachability. Artifact:
   `scratch/agent/s2560_m4_index_join/audit.md`.
+
+- **s2561 — the next generated-symbol region had no defensible mapping.** The
+  complete `0x8009C2C8–0x8009C2CF` span is an eight-byte floating-point
+  accumulation fragment (`mul.s` / `add.s`) between the complete named
+  functions `stopVoice` and `computeVoicePanCoefficients`. The active
+  generated declaration, implementation, overlay table, and project symbol
+  input retain `fake_func_8009C2C8`; the companion symbol file and exact
+  source/m2c/caller searches provide no human candidate. This is a static,
+  single-source boundary classification, not a reachability proof. No
+  generated code changed. Artifact:
+  `scratch/agent/s2561_symbol_census/audit.md`.
 
 ## Latest evidence
 
@@ -479,17 +490,19 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2559's staged pair adds a positive image execution control but no distinct
   downstream audio edge. Do not promote the image arm or alter task/output
   fields without a newly named contract writer and independent retail
-  evidence. Next work unit: run the phase-gated M4 producer-slot/consumer-index
-  join described in `scratch/agent/NEXT.md`; the generated-symbol sweep remains
-  parked after s2558's repeated orphan-boundary result.
+  evidence. The next work unit is the bounded generated-symbol sweep described
+  in `scratch/agent/NEXT.md`; M4 remains parked until the sweep is inapplicable.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
 3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
-4. **Generated-symbol renaming — parked after three consecutive no-edit
-  discriminators.** Resume only after the M4 pivot produces no new
-  discriminator or the campaign is explicitly restarted. s2558 revalidated
+4. **Generated-symbol renaming — active bounded sweep.** M5 has no newly named
+  contract writer and M3 is parked pending a complete idiom audit, so s2561
+  resumed the sweep. The `0x8009C2C8–0x8009C2CF` fragment is unchanged because
+  its two floating-point instructions form no callable body and no
+  companion/source/m2c mapping was found. Continue only with a complete
+  bounded span and leave unresolved placeholders unchanged. s2558 revalidated
   `0x800E71C8–0x800E71CF` as an unchanged orphan two-instruction boundary
   fragment. Earlier sweep results remain recorded below. Resume with
   one bounded address-region census and only names supported by the companion

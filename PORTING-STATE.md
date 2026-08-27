@@ -115740,3 +115740,19 @@ safe probe remains in `tools/fixup_factor5_ucode.py`, with implementation in
 `src/rsp/dpc_bridge.cpp`; no mitigation or behavior change was made.
 
 Artifact: `scratch/agent/s2560_m4_index_join/audit.md`.
+
+## Session 2561 (2026-08-26) — censused generated-symbol voice-pan boundary
+
+Ran the bounded generated-symbol census at `0x8009C2C8`. The complete
+project/generated span is eight bytes (`0x8009C2C8–0x8009C2CF`) containing only
+`mul.s $f2,$f2,$f4` and `add.s $f0,$f0,$f2`, between the complete named
+functions `stopVoice` and `computeVoicePanCoefficients`. The active generated
+declaration, implementation, overlay table, and companion symbol input all
+retain `fake_func_8009C2C8`; exact-address, source, m2c, and caller searches
+found no defensible human mapping. The fragment has no callable prologue or
+return, so renaming it to either neighbor would be speculative. Selected
+`H-data-or-boundary` / `H-no-match`; no generated code changed. This is a
+static, single-source result and does not prove reachability.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
