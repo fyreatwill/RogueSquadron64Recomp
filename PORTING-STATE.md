@@ -115552,3 +115552,19 @@ The next unresolved menu-overlay placeholder is `0x800CC038`.
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
+
+## Session 2552 (2026-08-26) — censused generated-symbol mission boundary
+
+Ran the bounded generated-symbol census at `0x800CEF1C`. The complete span is
+four bytes (`0x800CEF1C–0x800CEF1F`) containing only `sw $s1,0x44($sp)`,
+immediately before the complete `advanceAtStEffectPhaseSound` at `0x800CEF20`.
+The active generated declaration/body/overlay table and companion symbol input
+retain `fake_func_800CEF1C`; exact-address, source, m2c, and caller searches
+found no human candidate. The companion file explicitly deletes the following
+split label in favor of `advanceAtStEffectPhaseSound`, so borrowing that name
+would be speculative. Selected `H-data-boundary` / `H-no-match` and left the
+placeholder unchanged. The next unresolved placeholder is `0x800D2C98`.
+Artifact: `scratch/agent/s2552_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.

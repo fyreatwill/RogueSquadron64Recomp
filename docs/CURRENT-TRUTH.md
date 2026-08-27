@@ -374,6 +374,16 @@ Current maintenance marker: Session 2551 (2026-08-26).
   `H-data-boundary` / `H-no-match`; no generated code changed. Artifact:
   `scratch/agent/s2551_symbol_census/audit.md`.
 
+- **s2552 — the next bounded generated-symbol region is an incomplete mission
+  boundary with no defensible mapping.** The complete `0x800CEF1C–0x800CEF1F`
+  span is a lone `sw $s1,0x44($sp)` fragment immediately before the complete
+  `advanceAtStEffectPhaseSound` at `0x800CEF20`. The active generated
+  declaration/body/overlay table and companion symbol input retain
+  `fake_func_800CEF1C`; exact-address, source, m2c, and caller searches found
+  no human candidate. Borrowing the neighboring function name would be
+  speculative, so the placeholder remains unchanged. Artifact:
+  `scratch/agent/s2552_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -433,8 +443,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
   to `menuControllerInputPreamble`; s2548 left `0x800C5898–0x800C589F`
   unchanged as an 8-byte boundary fragment. s2550 left `0x800CC038–0x800CC03F`
   unchanged as an overlay-shared boundary fragment, and s2551 classified
-  `0x800CC3D4–0x800CC9B7` as a menu data boundary with no rename candidate.
-  The next unresolved placeholder is `0x800CEF1C` in the mission overlay.
+  `0x800CC3D4–0x800CC9B7` as a menu data boundary with no rename candidate;
+  s2552 left `0x800CEF1C–0x800CEF1F` unchanged as an incomplete mission
+  boundary fragment. The next unresolved placeholder is `0x800D2C98` in the
+  mission overlay.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index
