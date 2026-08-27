@@ -1,51 +1,52 @@
-# NEXT work unit (s2666) — execute M5 Step 0 ground-truth reconciliation
+# NEXT work unit (s2667) — make the Step 0 pair control independent
 
 HYPOTHESIS-ID: m5-audio-step0-contract-reconciliation
 
 ## Work unit
 
-Run one same-build, phase-gated reconciliation of the independent retail
-oracle and the port's current image/silent audio arms. Do not change behavior.
-The row must cover the whole-RDRAM oracle control, retail gate/task/voice/status
-writer observations, port task fields/DMEM/DMA/exit/SP completion, service,
-slot/voice, MORT, PCM source/consumer, and title/hangar phase identity. Do not
-repeat the already-closed output-field census or named texture-writer audit.
+Repair `run_s2288_m5_audio_default_step2.sh`, which the Step 0 entry point
+now invokes, so the oracle still gates qualification but the silent and image
+port arms launch independently (concurrently or image launch is otherwise
+not gated on silent-hangar success). Preserve SIGKILL cleanup, the existing
+`PROBE_PHASE_WIDTH=1024` / `PROBE_KEYS_FROM_PHASE=1` settings, and all current
+marker categories. Then run the repaired Step 0 entry point once. Do not
+change runtime behavior or add a new runtime instrument.
 
 ## Competing hypotheses and discriminator
 
-- `H-Step0-closes-contract`: the existing controls and oracle watches produce a
-  complete row naming the next legitimate de-stub edge.
-- `H-Step0-still-unmapped`: controls pass but no writer, destination/value, or
-  ordering join closes; behavior must remain unchanged and the next probe must
-  target the missing boundary.
-- `H-Step0-control-invalid`: whole-RDRAM or phase controls fail, making all
-  narrow nulls unevaluable and requiring recipe repair before M5 changes.
+- `H-Step0-closes-contract`: with both arms actually observed, the phase-keyed
+  table names a legitimate writer/value/order edge sufficient to select one
+  M5 behavior change.
+- `H-Step0-still-unmapped`: both arms reach the target phases and controls,
+  but no same-event retail writer/value plus port ordering join closes; retain
+  the current image/stub policy.
+- `H-Step0-port-control-invalid`: the independent oracle control passes but
+  one or both port arms still fail title/hangar or their positive controls;
+  repair only the driver/control next.
 
-The discriminator is the single phase-keyed table described in
-`docs/M5-AUDIO-PLAN.md`: whole-RDRAM positive control; retail writer/value;
-port dispatch/task fields/DMEM/DMA/exit/SP; service/status/slot/voice; MORT;
-PCM source/consumer; and route phase. A complete writer-plus-legitimacy-plus-
-ordering join selects the first hypothesis; a complete control with no join
-selects the second; any missing positive control selects the third.
+The discriminator is one table per arm and phase: oracle whole-RDRAM/title/
+hangar controls; port dispatch, task fields/source, DMEM/DMA, image exit/SP
+completion, service, slot/status/voice/reap, MORT, PCM source/consumer, and
+route phase. A complete legitimate writer/value/order join selects the first
+hypothesis; complete controls without that join select the second; any
+missing port phase/control selects the third. A `Broke` or branch count alone
+does not close the row.
 
 ## Exact commands
 
-1. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
-2. `zsh scratch/agent/run_s2277_m5_step0_ground_truth.sh`
-3. Inspect only bounded outputs under its result directory with `grep -c`,
-   `grep -n`, and `tail -50`; do not read a full run log.
+1. Edit `scratch/agent/run_s2288_m5_audio_default_step2.sh` with
+   `apply_patch` to remove the sequential `stub_hangar` gate and launch both
+   arms under the existing oracle gate, retaining bounded watchdogs and
+   SIGKILL cleanup.
+2. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
+3. `zsh scratch/agent/run_s2277_m5_step0_ground_truth.sh`
+4. Inspect only `scratch/agent/s2277_m5_step0_ground_truth/driver.log` and
+   bounded `grep -c`/`tail -50` slices of its logs.
 
-Use the recipe's existing oracle and port controls, phase-gate with
-`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`, and terminate game
-processes with SIGKILL. If the recipe's positive control or phase setup is
-stale, repair that recipe in this iteration and report `H-Step0-control-invalid`
-instead of interpreting narrow nulls.
-
-## Expected outcomes
-
-- Complete named writer/value/order join: select `H-Step0-closes-contract`
-  and write the next one-edge behavior change into a new NEXT file.
-- Controls pass but join remains absent: select `H-Step0-still-unmapped`; no
-  writeback, remap, gate bypass, or guard relaxation is allowed.
-- Any missing whole-RDRAM or phase control: select
-  `H-Step0-control-invalid`; repair only the recipe/control next.
+Expected outcomes: both arm phase controls plus the oracle positive control
+and a complete join select `H-Step0-closes-contract` only if the writer,
+legitimacy, and ordering evidence is present; otherwise select
+`H-Step0-still-unmapped` when all controls pass, or
+`H-Step0-port-control-invalid` when a port control remains absent. No
+writeback, remap, gate bypass, wait relaxation, or guard change is allowed
+from destination overlap or a null row.

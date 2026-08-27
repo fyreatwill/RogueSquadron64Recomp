@@ -4,7 +4,26 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2664 (2026-08-27).
+Current maintenance marker: Session 2666 (2026-08-27).
+
+## Session 2666 result
+
+The required M5 Step 0 reconciliation initially used a stale entry-point
+recipe that launched only the silent arm. Its same-run control reached only
+320/640-width phases, emitted 52 audio-task dispatch rows, and emitted no
+task-ABI, DMA, SP, audio-return, or PCM rows; its title/hangar controls were
+therefore unevaluable. The entry point was repaired to use the existing
+oracle-plus-stub/image driver, and the repaired run passed the independent
+oracle whole-RDRAM positive control (`10000` callbacks), title phase, and
+hangar phase. The port stub arm reached title but not hangar, then recorded
+36 crash markers; it produced 65 dispatch, 265 audio-return, 795 SP-route,
+52 PCM-source, 52 PCM-consumer, and 512 gate rows, with no task-ABI, DMA, or
+SP rows. The image arm was never launched because the sequential driver gates
+it on stub-hangar success. This selects `H-Step0-control-invalid`: the oracle
+control is valid, but the port route/paired-arm control is not. It does not
+select `H-Step0-closes-contract` or `H-Step0-still-unmapped`, and it does not
+authorize an audio contract change. The next action is to repair the driver
+so both port arms run independently/concurrently after the oracle gate.
 
 ## Session 2665 result
 
@@ -22,6 +41,20 @@ runtime code, generated function, gate, writeback, or remap changed, and no
 soak was run because this was the required design-only unit.
 
 ## Decision-relevant evidence
+
+- **s2666 — the first Step 0 recipe was stale and the repaired pair was
+  control-invalid.** The original `run_s2277...` entry point launched only
+  `ROGUESQ_AUDIO_UCODE=0`; its run reached no title/hangar phase and had no
+  ABI/DMA/SP/PCM evidence beyond dispatch. After delegation to the existing
+  oracle-plus-pair driver, the oracle passed whole-RDRAM (`10000` callbacks),
+  title, and hangar controls. The port stub reached title but not hangar,
+  crashed 36 times, and the sequential driver consequently never launched
+  the image arm. The captured stub counts were 65 dispatch, 265 audio-return,
+  795 SP-route, 52 PCM-source, 52 PCM-consumer, and 512 gate rows, with zero
+  task-ABI, DMA, and SP rows. This selects `H-Step0-control-invalid`; the
+  missing image arm makes contract closure and port-side unmapped conclusions
+  unevaluable. The recipe repair is a diagnostic harness change only; no
+  runtime behavior, writeback, remap, gate, wait, or generated code changed.
 
 - **s2664 — the named retail writer call-sites are utility/texture paths, not
   a closed MORT edge.** The companion symbol file and active generated tree

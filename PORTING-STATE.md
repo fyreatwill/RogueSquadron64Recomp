@@ -117610,3 +117610,23 @@ runtime code, generated function, gate, writeback, remap, or guard changed.
 The next work unit is the phase-gated Step 0 retail/port ground-truth
 reconciliation; its discriminator and exact recipe are in
 `scratch/agent/NEXT.md`.
+
+## Session 2666 (2026-08-27) — repaired and ran the M5 Step 0 reconciliation
+
+The Debug build completed cleanly. The prescribed `run_s2277...` entry point
+was stale: it launched only the silent arm, reached neither title nor hangar,
+and emitted 52 dispatch rows but no task-ABI, DMA, audio-return, SP, or PCM
+rows. I repaired that entry point to invoke the existing oracle-plus-pair
+driver, then reran the exact command. The independent retail oracle passed
+its whole-RDRAM positive control (`10000` callbacks), title phase, and hangar
+phase. The port stub arm reached title but not hangar, recorded 36 crash
+markers, and produced 65 dispatch, 265 audio-return, 795 SP-route, 52
+PCM-source, 52 PCM-consumer, and 512 gate rows; task-ABI, DMA, and SP rows
+were zero. Because the pair driver gates image launch on stub-hangar success,
+the image arm was not run. The result selects `H-Step0-control-invalid`:
+retail ground truth is qualified, but the port paired-arm/route control is
+not, so contract closure and an unmapped-writer conclusion are unevaluable.
+The run rules out interpreting the original recipe's narrow nulls, not any
+audio contract hypothesis. No runtime behavior, generated code, writeback,
+remap, gate, wait, or guard changed. The next unit is to make both port arms
+run independently/concurrently after the oracle gate.
