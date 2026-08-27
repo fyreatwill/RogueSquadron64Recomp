@@ -546,3 +546,13 @@ and selects `H-callback-unrelated` for that edge (static source evidence);
 generic DMA service remains the next unresolved consumer. No runtime watch,
 writeback, remap, or mitigation is authorized. Detailed table:
 `scratch/agent/s2696_mort_callback_boundary/audit.md`.
+
+s2713 continued the generated-symbol sweep after the required last-15-title
+check did not trigger. The bounded `0x800AA000..0x800AD000` region contained
+26 companion candidates: 24 semantic entries were already synchronized and
+two address-only/fake entries (`0x800AA6CC` and `0x800AAADC`) were preserved
+as ambiguous-or-fake. Zero references changed in zero generated files, and
+the tool exited successfully without parser or duplicate-destination
+rejection. This selects `H-already-synchronized`/`H-ambiguous-or-fake` for
+the region and rules out `H-exact-matches` there; no build or game run was
+warranted.
