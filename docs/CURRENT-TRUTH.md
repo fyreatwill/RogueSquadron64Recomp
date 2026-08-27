@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2774 (2026-08-27).
+Current maintenance marker: Session 2775 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -54,12 +54,13 @@ The latest durable M5 chain is:
   only speech metadata and performs asset DMA, `initMusyXVoiceSlot` initializes
   slot pointers/state, and `consumeVoiceSamples` advances counters/status. It
   has no PCM/AI-visible payload writer or new ordering edge.
-- Session 2774 retried the same-build image/silent pair with C88 unset and
-  the qualified AUTOPILOT route. The retail whole-RDRAM positive control
-  passed, but both the eight-event and fixed eleven-Start recipes stalled at
-  VI 640; neither reached title 1024 or hangar `0x006AB400`. Image dispatch
-  counts diverged from silent as expected, but all target-phase audio/PCM
-  rows are invalid and select no publication hypothesis.
+- Session 2775 retried the same-build image/silent pair with C88 unset and
+  the phase-gated driver, but its recipe still supplied no phase-relative
+  probe-key schedule. The retail whole-RDRAM positive control passed and
+  reached title 1024 plus hangar `0x006AB400`; both port arms stalled at VI
+  640/origin `0x0066A500`. Image dispatch controls diverged from silent as
+  expected, but all target-phase audio/PCM rows are invalid and select no
+  publication hypothesis.
 - `osAiGetStatus_recomp` now reports runtime buffered-audio state instead of
   unconditionally returning zero. The Debug target compiled and linked;
   the same-build image/silent validation emitted positive set-next and
@@ -79,12 +80,14 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **M5 Step 1 recipe repair — phase control still required.** Session 2774
-   passed the retail whole-RDRAM control and fired every AUTOPILOT event in
-   both arms, but both recipes stalled at VI 640. Retry the same-build pair
-   using the known phase-gated `PROBE_KEYS_FROM_PHASE` input path (C88 unset),
-   with all target-phase controls already enabled; do not interpret downstream
-   nulls unless both title `1024` and hangar `0x006AB400` are observed.
+1. **M5 Step 1 recipe repair — phase control still required.** Session 2775
+   passed the retail whole-RDRAM control and showed both port arms stalled at
+   VI 640 because the driver did not actually launch phase-relative probe
+   keys. Run the same-build image/silent pair with the known
+   `PROBE_KEYS_FROM_PHASE=1` schedule explicitly wired through `tools/probe.sh`
+   (C88 unset), retaining all target-phase controls. Do not interpret
+   downstream nulls unless both title `1024` and hangar `0x006AB400` are
+   observed in both arms.
 
 2. **Generated-symbol renaming sweep — next bounded fallback.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
@@ -320,5 +323,11 @@ ledger. The current late-chain checkpoints are:
   AUTOPILOT arms stalled at VI 640 under both the original and eleven-Start
   schedules. Target-phase audio/PCM rows are invalid; no M5 hypothesis was
   selected, and the next step is input-recipe repair.
+- s2775: the retail oracle whole-RDRAM control passed and reached title plus
+  hangar, but the phase-gated port driver still did not launch phase-relative
+  probe keys; both image and silent arms stalled at VI 640/origin `0x0066A500`.
+  Image/silent dispatch controls were positive, while target-phase rows were
+  invalid. The next recipe must explicitly wire `PROBE_KEYS` into
+  `tools/probe.sh` with `PROBE_KEYS_FROM_PHASE=1`.
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

@@ -1,25 +1,27 @@
-# NEXT work unit (s2775) — repair the phase-gated M5 input recipe
+# NEXT work unit (s2776) — explicitly wire phase-relative probe keys
 
 HYPOTHESIS-ID: m5-step1-qualified-rebaseline
 
 ## Work unit
 
-Run one compiled Debug build with the same image/silent arms, but use the
-known phase-gated `PROBE_KEYS_FROM_PHASE=1` / `PROBE_KEYS` path that previously
-reached title and hangar. Keep C88 unset and retain the existing phase-keyed
-task/audio/PCM controls. Run both arms concurrently, with the retail oracle
-whole-RDRAM positive control first, and SIGKILL after the bounded window.
-This is recipe repair only: do not interpret downstream nulls unless both
-port arms reach title `VI 1024` and hangar origin `0x006AB400`.
+Run one compiled Debug build with concurrent image and silent arms, explicitly
+launching `tools/probe.sh` for each arm with
+`PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start'`,
+`PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and `PROBE_LEAVE_OK=1`.
+Keep C88 unset and retain the existing phase/M5 controls. Run the retail
+oracle whole-RDRAM positive control first, then both port arms, and SIGKILL
+the remaining process group after the bounded window. Do not interpret
+downstream nulls unless both title `1024` and hangar origin `0x006AB400` are
+observed in both arms.
 
 ## Competing hypotheses and discriminator
 
-- H-InputRepair: both arms reach title 1024 and hangar origin with the probe
-  key path, making the image/silent comparison valid.
+- H-InputRepair: both arms reach title 1024 and hangar origin with the
+  explicitly wired probe-key path, making the image/silent comparison valid.
 - H-RouteInvalid: either arm still stalls before both target phases, so no
   audio-contract conclusion is valid.
-- H-InputPathMismatch: only the probe-key path reaches the phases while the
-  AUTOPILOT path does not; this identifies input routing as the blocker.
+- H-InputPathMismatch: an arm reaches the phases only after the probe-key
+  schedule is active, identifying the prior driver wiring as the blocker.
 
 The discriminator is one same-build table keyed by arm and phase: target-phase
 reachability, image DMEM/DMA/completion counts, silent-arm zero controls, and
@@ -28,10 +30,9 @@ missing target phases select recipe-invalid and require another input repair.
 
 ## Exact commands
 
-1. Use `tools/probe.sh` semantics with `PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start'`,
-   `PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and
-   `PROBE_LEAVE_OK=1`; launch both arms concurrently from `build/` and
-   SIGKILL after 90 seconds.
+1. Use a self-contained two-arm driver based on `tools/probe.sh`; verify its
+   logs contain the phase-gate line before any key is sent. Launch both arms
+   concurrently from `build/` and SIGKILL after 90 seconds.
 2. Preserve `ROGUESQ_M5_C88_VALUE` unset, set `ROGUESQ_AUDIO_UCODE=1` only on
    the image arm and `0` only on the control, and retain the existing
    phase/M5 logging variables.

@@ -119370,3 +119370,18 @@ positive (`48`, `real_ucode=1`) and silent controls were positive (`48`,
 `real_ucode=0`), proving the arm toggle and instrumentation ran; they are not
 target-phase evidence. The next unit repairs the input recipe using the
 phase-gated `PROBE_KEYS_FROM_PHASE` path. `git diff --check` passed.
+
+## Session 2775 (2026-08-27) — M5 phase-gated recipe still omitted probe keys
+
+The retail oracle whole-RDRAM positive control passed (`10000` callbacks) and
+independently reached title `VI 1024` plus hangar origin `0x006AB400`. The
+same-build image (`ROGUESQ_AUDIO_UCODE=1`) and silent (`=0`) port arms both
+ran without crashes, but both stalled at VI 640/origin `0x0066A500`; neither
+reached title or hangar. Image dispatch was positive with `real_ucode=1`
+while silent dispatch was positive with `real_ucode=0`, so arm selection and
+the instrumentation were live. The driver set `PROBE_KEYS_FROM_PHASE=1` but
+did not set or send `PROBE_KEYS`; its AUTOPILOT events therefore did not
+constitute the known phase-relative input path. Target-phase audio/PCM rows
+are invalid and no M5 publication hypothesis is selected. The next unit must
+explicitly wire `PROBE_KEYS` through `tools/probe.sh`; `git diff --check`
+passed.
