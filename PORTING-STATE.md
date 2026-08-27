@@ -120157,3 +120157,19 @@ window), with no crash or abort, but both stopped at pre-title VI 640 / origin
 interpretable. This rules out neither audio degeneracy nor a contract gap: the
 route discriminator did not arm. The next M5 unit needs a genuinely new route
 angle; repeating the same input schedules is not informative.
+
+## Session 2835 (2026-08-27) — M5 route diverged between image and silent arms
+
+Ran the independent retail ground-truth control first. The whole-RDRAM watch
+passed its 10,000-hit positive control, and retail reached title
+`1024 @ 0x00790400` plus hangar `512 @ 0x006AB400`. The Debug target rebuilt
+successfully before the same-build pair.
+
+The pair used the continued Start schedule and full M5 marker set. Both arms
+had positive audio-dispatch controls and no crash or abort. The silent arm
+reached VI 640 / origin `0x0066A500`; the image arm remained at VI 320. Neither
+reached title or hangar, so target-phase service, slot, MORT, and PCM rows are
+unevaluable. This selects an audio-route divergence in this window and rules
+out a matching route-independent 640 stall, but does not identify whether
+launch order or another scheduling effect caused the split. The next test
+inverts image/silent launch order.

@@ -269,9 +269,20 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    degeneracy, mixed-pipeline, or gate hypothesis was selected. The next M5
    unit needs a genuinely new route angle, not another target-phase null.
 
-2. **M5 audio de-stubbing — Step 1 route repair / qualification.** Use one
-   genuinely new, phase-qualified route angle that can move both same-build
-   arms past VI 640, while retaining the whole-RDRAM retail control. Once the
+   Session 2835 reran the independent retail whole-RDRAM control and reached
+   title `1024 @ 0x00790400` plus hangar `512 @ 0x006AB400`. In the same-build
+   pair, the silent arm reached VI 640 / origin `0x0066A500`, while the image
+   arm stayed at VI 320; both had positive audio-dispatch controls and no
+   crash or abort. This selects an audio-route divergence in this window, but
+   neither arm reached title or hangar, so all target-phase service, slot,
+   MORT, and PCM rows remain unevaluable. The launch order/scheduling
+   contribution is unresolved.
+
+2. **M5 audio de-stubbing — Step 1 route repair / qualification.** Test one
+   new same-build launch-order/scheduling angle, retaining the whole-RDRAM
+   retail control. The image arm's VI-320 stall versus silent VI-640 result
+   must be reproduced or refuted before any target-phase rows are interpreted.
+   Once the
    title/hangar phases are reached, require the task-field, DMEM/DMA, image
    exit, SP completion, service/slot/voice, MORT, and PCM source/consumer
    rows. Do not land a behavior change from another pre-target null.
