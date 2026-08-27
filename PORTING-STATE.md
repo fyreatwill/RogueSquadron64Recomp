@@ -118886,3 +118886,21 @@ Evidence: `scratch/agent/s2738_generated_symbol_sweep/decision-table.txt`.
   evidence of request consumption, task interruption, or completion. No build,
   run, behavior change, mitigation, or writeback was performed.
 - Evidence: `scratch/agent/s2741_yield_callsite_census.txt`.
+## Session 2742 (2026-08-27) — audited the named MORT publication boundary
+
+The required M5 static audit enumerated the bounded named post-mix path from
+`renderVoiceAudioBlock`/the synth output through streamed-voice helpers, the
+AI worker, host AI bridge, and PI service. The complete source/destination
+table found that the renderer writes only `voice+0x140`, the synth output is
+caller-owned, and `copyFourHalfwordsWriteback` copies only four halfwords
+within a streamed-voice descriptor. `runAiAudioStreamPlaybackLoop` allocates
+and clears `0x801496B0:0x8014C6B0` and submits its aliases directly; the host
+bridge preserves the pointer. `sendServiceMessage`, `piDmaWorker`, and the PI
+bridge carry generic request fields and never name the audio output. The
+companion census added no alternate source implementation.
+
+This selects `H-publish-edge-absent` for the bounded named path and rules out a
+complete or partial edge at these sites. It leaves an opaque indirect or
+data-driven producer unevaluable. No runtime instrumentation, writeback,
+remap, or mitigation was added. Detailed evidence:
+`scratch/agent/s2742_mort_publication_audit.md`.

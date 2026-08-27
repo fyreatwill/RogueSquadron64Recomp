@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2741 (2026-08-27).
+Current maintenance marker: Session 2742 (2026-08-27).
+
+Session 2742 completed the bounded static audit of the named CPU-side MORT
+publication path. `renderVoiceAudioBlock` writes only back to `voice+0x140`,
+the synth output remains caller-owned, and the only concrete copy is the
+four-halfword descriptor-local streamed-voice copy. The AI worker allocates
+and clears `0x801496B0:0x8014C6B0`, then submits aliases directly through the
+pointer-preserving host AI bridge; the service/PI path carries only DMA
+descriptors. No named source/destination/order edge joins renderer or synth
+output to the AI span, selecting `H-publish-edge-absent` for this bounded
+surface. An opaque indirect/data-driven producer remains unevaluable, so no
+runtime watch, writeback, remap, or mitigation is authorized. Evidence:
+`scratch/agent/s2742_mort_publication_audit.md`.
 
 Session 2741 completed the bounded generated-source census requested after
 s2740. The only generated references to the SP yield APIs are
@@ -635,7 +647,15 @@ files, with no parser or duplicate-destination failure. Session 2739 then
 confirmed `0x800DA000..0x800E0000` is also synchronized; symbol sweep work is
 parked until a future regeneration exposes a new exact companion match.
 
-1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
+1. **M5 CPU-side MORT PCM publication.** Session 2742 completed the named
+   post-mix/source/service table and selected `H-publish-edge-absent`: no
+   source/destination/order edge exists in the audited renderer, synth,
+   streamed-voice, AI-worker, host-AI, or PI-service sites. The only concrete
+   copy is descriptor-local; the AI span is allocation/clear plus direct
+   submission. Continue only by naming a genuinely new opaque
+   indirect/data-driven producer or consumer relation; do not repeat those
+   audits or add a runtime watch without a legitimate destination and order.
+   The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.
