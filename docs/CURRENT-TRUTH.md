@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2767 (2026-08-27).
+Current maintenance marker: Session 2768 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -80,8 +80,9 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    `0x800FB000..0x800FF000` sweep renamed the two known invalid data gaps as
    `data_gap_800FBE14` and `data_gap_800FEF04`. The
    `0x80101000..0x80103000` interval is now synchronized; continue with
-   `0x80105000..0x80107000` is now synchronized. Continue with
-   `0x80107000..0x80109000`, preserving ambiguous/fake/address-only symbols.
+   `0x80105000..0x80107000` and `0x80107000..0x80109000` are now synchronized.
+   Continue with `0x80109000..0x8010B000`, preserving
+   ambiguous/fake/address-only symbols.
 
 2. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
@@ -265,5 +266,12 @@ ledger. The current late-chain checkpoints are:
   selection changed zero references; an independent scan confirmed no stale
   semantic placeholder in the interval, and `git diff --check` passed. The
   next interval is `0x80107000..0x80109000`.
+- s2768: the generated-symbol interval `0x80107000..0x80109000` had 23
+  semantic companion candidates, all already synchronized. The three
+  placeholders `fake_func_8010721C`, `fake_func_80107EA4`, and
+  `fake_func_80108B8C` were preserved as ambiguous/fake. The regeneration-safe
+  selection changed zero references; an independent scan confirmed no stale
+  semantic placeholder in the interval, and `git diff --check` passed. The
+  next interval is `0x80109000..0x8010B000`.
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.
