@@ -114888,6 +114888,21 @@ or mitigation changed. Artifact:
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2520 (2026-08-26) — censused third generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x80005570–0x8000595C` after
+the required sweep preflight. It contains exactly one placeholder,
+`fake_func_8000595C`, whose generated body is a single `addu v0, zero, zero`
+fragment between the named DMA cluster and `initMemoryPack`. The companion
+`main_overlay.txt` retains the fake name, and a source-wide companion search
+found no human symbol or m2c definition at that address. The complete region
+therefore selects `H-no-match`; no rename or regeneration-safe build was
+warranted. This is a single-source/static result and does not prove the
+fragment is dead or permanently unnameable. No generated code, runtime, or
+mitigation changed.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or mitigation-shaped behavior changed.
+
 ## Session 2519 (2026-08-26) — censused second generated-symbol sweep region
 
 Enumerated the complete main-overlay interval `0x80003424–0x80005568` after

@@ -1,14 +1,13 @@
-# NEXT work unit (s2520) — generated-symbol renaming sweep, next bounded region
+# NEXT work unit (s2521) — generated-symbol renaming sweep, next bounded region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-The previous region `0x80003424–0x80005568` was completely censused and had
-three isolated placeholders with no companion mapping. Continue the same sweep
-with exactly one new bounded region: main-overlay `0x80005570–0x8000595C`,
-including the next unresolved placeholder at `0x8000595C` and any placeholder
-whose entry address is inside that interval. Before starting, run:
+The previous region `0x80005570–0x8000595C` was completely censused and had
+one isolated placeholder with no companion mapping. Continue the same sweep
+with exactly one new bounded region around the next unresolved placeholder:
+main-overlay `0x80006BFC–0x80006BFC`. Before starting, run:
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
@@ -42,7 +41,7 @@ matches selects `H-no-match`; a failed regeneration-safe validation selects
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
-rg -n '^void func_|^static .*func_|func_0x[0-9A-Fa-f]+' RecompiledFuncs/funcs_*.c | head -200
+rg -n '^void func_|^static .*func_|func_0x[0-9A-Fa-f]+' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -200
 rg --files /Users/williambuckley/Documents/Tools/rogue_squadron64 | head -100
 ```
 

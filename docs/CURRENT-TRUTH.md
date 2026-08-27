@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2518 (2026-08-26).
+Current maintenance marker: Session 2520 (2026-08-26).
 
 ## Current state
 
@@ -88,6 +88,13 @@ Current maintenance marker: Session 2518 (2026-08-26).
   Nearby DMA functions have distinct named entries, so no alias was inferred.
   This is a single-source/static result and no generated code changed.
   Artifact: `scratch/agent/s2519_symbol_census/audit.md`.
+- **s2520 — the third bounded generated-symbol region had no defensible
+  mapping.** The complete main-overlay interval `0x80005570–0x8000595C`
+  contains one placeholder, `fake_func_8000595C`; its generated body is a
+  single `addu v0, zero, zero` fragment between the named DMA cluster and
+  `initMemoryPack`. The companion symbol file retains the fake name and a
+  source-wide search found no human symbol or m2c definition. No generated
+  code changed. Artifact: `scratch/agent/s2520_symbol_census/audit.md`.
 
 ## Active backlog
 
@@ -105,7 +112,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
   Next work unit: continue the bounded generated-symbol renaming sweep around
-  the next unresolved main-overlay placeholder at `0x8000595C`.
+  the next unresolved main-overlay placeholder at `0x80006BFC`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
