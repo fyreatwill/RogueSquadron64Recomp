@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2709 (2026-08-27).
+Current maintenance marker: Session 2710 (2026-08-27).
 
 ## Live result
 
@@ -396,6 +396,14 @@ tool exited successfully without parser or duplicate-destination rejection.
 This selects `H-already-synchronized` for the semantic candidates in this
 region and rules out `H-exact-matches`; no build or game run was needed.
 
+The s2710 generated-symbol sweep covered `0x800A1000..0x800A4000` and
+found eight companion candidates: seven address-only/fake entries were
+preserved as ambiguous-or-fake, while `junk_800A1784` was already
+synchronized. Zero references changed in zero generated files; the tool
+exited successfully without parser or duplicate-destination rejection.
+This selects `H-already-synchronized`/`H-ambiguous-or-fake` for the region
+and rules out `H-exact-matches` there. No build or game run was needed.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -437,7 +445,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
    `0x80095000..0x80098000`, s2707 found no exact rename in
    `0x80098000..0x8009B000`, and s2708 found no exact rename in
    `0x8009B000..0x8009E000`, and s2709 found no exact rename in
-   `0x8009E000..0x800A1000`. Continue with one adjacent bounded region only
+   `0x8009E000..0x800A1000`, while s2710 found no exact rename in
+   `0x800A1000..0x800A4000`. Continue with one adjacent bounded region only
    while exact companion/source evidence remains available;
    preserve address-only or fake fragments and do not infer names from
    implementation shape alone.
