@@ -115502,3 +115502,18 @@ Artifact: `scratch/agent/s2548_symbol_census/audit.md`.
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
+
+## Session 2549 (2026-08-26) — censused generated-symbol JFIF boundary
+
+Ran the bounded generated-symbol census at `0x800C6968`. The complete span is
+eight bytes (`0x800C6968–0x800C696F`) containing only `addu sp,fp,zero` and
+`lw ra,0x24(sp)`, with no return or complete callable body, immediately before
+the normal `loadJfifAsset` prologue at `0x800C6970`. The active generated
+declaration/body/overlay table and companion symbol input retain
+`fake_func_800C6968`; exact-address, source, and caller searches found no human
+candidate. Renaming it or borrowing a neighboring function name would be
+speculative. Selected `H-data-boundary` / `H-no-match` and left it unchanged.
+The next unresolved menu-overlay placeholder is `0x800CC038`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.

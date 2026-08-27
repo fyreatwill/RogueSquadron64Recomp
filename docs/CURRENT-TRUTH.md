@@ -341,6 +341,15 @@ Current maintenance marker: Session 2548 (2026-08-26).
   unchanged as a data/boundary artifact candidate. Artifact:
   `scratch/agent/s2548_symbol_census/audit.md`.
 
+- **s2549 — the next bounded generated-symbol region had no defensible
+  mapping.** The complete `0x800C6968–0x800C696F` span is an 8-byte fragment
+  containing `addu sp,fp,zero` and `lw ra,0x24(sp)`, with no return or complete
+  callable body, immediately before `loadJfifAsset`. The active generated and
+  overlay tables and companion symbol input retain `fake_func_800C6968`; exact
+  address, source, and caller searches found no human candidate. It remains
+  unchanged as a data/boundary artifact candidate. Artifact:
+  `scratch/agent/s2549_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -357,7 +366,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
   Next work unit: continue the bounded generated-symbol renaming sweep at
-  `0x800C6968`.
+  `0x800C6968`; s2549 left `0x800C6968–0x800C696F` unchanged as an
+  incomplete epilogue/boundary fragment. Continue at `0x800CC038`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
