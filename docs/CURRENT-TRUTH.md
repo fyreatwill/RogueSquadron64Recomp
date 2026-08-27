@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2704 (2026-08-27).
+Current maintenance marker: Session 2705 (2026-08-27).
 
 ## Live result
 
@@ -343,6 +343,17 @@ This selects `H-already-synchronized` and rules out `H-exact-matches` for this
 region, without naming the protected placeholders or resolving MORT-to-PCM.
 No build, run, runtime watch, writeback, remap, or mitigation was needed.
 
+s2705 continued the generated-symbol sweep after the required last-15-title
+check did not trigger a revisit. The bounded `0x80091C80..0x80095000` region
+contained companion candidates but no exact unsynchronized semantic rename:
+the tool selected zero renames in zero generated files, classified semantic
+candidates as already synchronized, and preserved address-only and fake
+entries as ambiguous-or-fake. There was no parser or duplicate-name rejection.
+This selects `H-already-synchronized` for the region and rules out
+`H-exact-matches` there; it does not resolve the MORT-to-PCM publication edge.
+The external generated worktree had pre-existing changes in three files; this
+run did not modify them. No build or game run was needed.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -379,7 +390,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
    or host audits. Do not add a runtime watch until a legitimate destination
    and ordering edge are named.
 2. **Generated-symbol renaming sweep.** s2704 found all 19 candidates in
-   `0x8008ED6C..0x80091C80` already synchronized. Continue with one adjacent
+   `0x8008ED6C..0x80091C80` already synchronized, and s2705 found no exact
+   rename in `0x80091C80..0x80095000`. Continue with one adjacent bounded
    bounded region only while exact companion/source evidence remains available;
    preserve address-only or fake fragments and do not infer names from
    implementation shape alone.

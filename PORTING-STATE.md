@@ -118285,3 +118285,22 @@ rules out this queue as the MORT-to-PCM publication edge but leaves the
 upstream writer unresolved. No build, run, runtime watch, writeback, remap,
 or mitigation was performed. Detailed table:
 `scratch/agent/s2700_m5_queue_boundary/audit.md`.
+
+## Session 2705 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger the sweep revisit rule: the
+titles were mixed M5 and rename work, not 15 consecutive sweep-only sessions.
+I ran the bounded rename tool for the half-open region
+`0x80091C80..0x80095000` against the external generated snapshot and the
+companion `symbol_files`.
+
+The complete decision table is
+`scratch/agent/s2705_generated_symbol_sweep/decision-table.txt`. The tool
+reported zero renamed references in zero files. Semantic candidates were
+already synchronized; address-only and fake entries were classified
+ambiguous-or-fake. There was no parser or duplicate-destination rejection.
+This selects `H-already-synchronized` for this region and rules out
+`H-exact-matches` there. The external N64Recomp worktree had pre-existing
+changes in funcs_4.c, funcs_13.c, and funcs_30.c; this run did not touch them.
+No build or game run was needed, and no M5 edge, runtime watch, writeback,
+remap, or mitigation was added.
