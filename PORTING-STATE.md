@@ -117458,3 +117458,28 @@ attribute guest stores before handoff. No writeback, remap, gate, or
 defensive behavior changed. The task producer remains open; the next useful
 measurement is an independent PC-attributed watch on the task output fields.
 Artifact: `scratch/agent/s2657_m5_task_init_boundary/`.
+
+## Session 2658 (2026-08-27) — attributed retail task output fields
+
+The first capture recipe was discarded because its oracle log reported no
+video plugin and stayed at 320. A Rice-corrected recipe then reached title
+and hangar but omitted the oracle execution watch, so its task-row null was
+also discarded. The final corrected same-run capture attached Rice, retained
+the whole-RDRAM positive control, watched `0x80033FCC`, and watched physical
+task fields `0x149498:0x14949C` and `0x14949C:0x1494A0`.
+
+Retail produced 10,000 whole-RDRAM writes, reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and recorded 983
+phase-gated type-2 task executions for `0x80149470`. Both narrow field
+watches recorded zero writes, and every sampled row retained
+`output_buff=0` and `output_buff_size=0`. The paired port image/silent run
+reached the route; image showed DMEM/DMA/SP completion before the existing
+descriptor crash, while silent showed unchanged DMEM and no DMA. Both port
+arms retained zero output fields.
+
+This selects `H-RetailKeepsFieldsZero` for the fixed-object writer hypothesis
+and rules out a retail writer on that object/route. It does not rule out
+another task object or another output contract. The result rules out adding
+task-field writeback and moves the next M5 action to the named output/PCM or
+CPU-MORT boundary. No writeback, remap, gate, or defensive behavior changed.
+Artifacts: `scratch/agent/s2658_m5_task_output_fields_retry/`.

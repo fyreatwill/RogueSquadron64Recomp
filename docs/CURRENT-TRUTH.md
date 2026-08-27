@@ -4,9 +4,25 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2657 (2026-08-27).
+Current maintenance marker: Session 2658 (2026-08-27).
 
 ## Decision-relevant evidence
+
+- **s2658 — retail keeps the dispatched task output fields zero.** The fixed
+  oracle run passed the whole-RDRAM control with 10,000 writes, reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and recorded 983
+  phase-gated type-2 executions at `0x80033FCC` for task `0x80149470`.
+  Physical watches on `0x149498:0x14949C` (`output_buff`) and
+  `0x14949C:0x1494A0` (`output_buff_size`) recorded zero writes; sampled task
+  rows retained both fields at zero. The same-build port image/silent pair
+  retained zero fields while image showed DMEM/DMA/SP completion and silent
+  showed the zero-work control. This selects `H-RetailKeepsFieldsZero` for
+  the fixed-object writer hypothesis and rules out a retail writer on that
+  object/route. It does not rule out another task object or another output
+  contract. Two recipe attempts were discarded: one had no video plugin and
+  the next omitted the execution watch, so their nulls are not evidence. No
+  writeback, remap, gate, or defensive behavior changed. Artifact:
+  `scratch/agent/s2658_m5_task_output_fields_retry/`.
 
 - **s2656 — producer/dispatch snapshots keep the retail audio contract zero.**
   The retail oracle passed the whole-RDRAM control with 1,030 hits, reached
@@ -388,15 +404,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    port-side writer or CPU MORT publication boundary, including destination,
    legitimate payload polarity, and ordering relative to image completion and
    PCM consumption. The s2655 dispatch capture found both output fields zero
-   on every qualified task, so trace the guest task producer/allocator and the
-   exact fields it supplies before `osSpTaskStartGo`. The s2656 direct-store
-   census found no guest `OSTask+0x28/+0x2C` store and the same task pointer
-   remains zero at load and start; trace the allocator/initialization or
-   generic task-copy boundary. Do not repeat the
-   title-zero census or revisit the hangar
-   `0x80094648` relation. The s2657 boundary run did not attribute a
-   pre-handoff writer; obtain independent PC-attributed watches on the task
-   output fields before adding another port hook. Keep C88=`0` and
+   on every qualified task, and s2658 found no retail writes to those fields
+   on the repeatedly dispatched task, so do not repeat that field census or
+   add output writeback. Trace the next named output contract edge: correlate
+   retail writer destinations and port image DMA/PCM spans, or prove the CPU
+   MORT publication boundary, before changing behavior. Do not revisit the
+   hangar `0x80094648` relation. Keep C88=`0` and
    `ROGUESQ_AUDIO_UCODE=0` as
    rollbacks/controls.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
