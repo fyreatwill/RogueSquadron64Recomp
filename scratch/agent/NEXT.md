@@ -1,54 +1,48 @@
-# NEXT work unit (s2662) — map the M5 output publication boundary
+# NEXT work unit (s2663) — attribute retail output-span writers by phase
 
-HYPOTHESIS-ID: m5-output-publication-boundary
+HYPOTHESIS-ID: m5-retail-output-writer-attribution
 
 ## Work unit
 
-Run one ground-truth-first, phase-gated M5 mapping capture using the existing
-retail oracle and port image arm. Correlate the retail writer PCs for the
-`0x166450:0x169450` and `0x1798B0:0x179A48` spans with the port's image DMA
-ranges, PCM source/consumer rows, task ordinal, and completion ordering. Do
-not change output fields, writeback, remap, gates, waits, or generated code.
+Run one oracle-only, phase-gated ground-truth capture that adds writer-PC and
+post-store value attribution for both output spans, while retaining the whole-
+RDRAM control and title/hangar transitions. Correlate those rows after the run
+with the existing s2662 port image/PCM artifact. Do not change port behavior,
+task fields, writeback, remap, gates, waits, or generated code.
 
 ## Competing hypotheses and discriminator
 
-- `H-RetailWriterIsImageEdge`: a retail writer destination/payload maps to a
-  nonzero port image DMA span before PCM consumption.
-- `H-RetailWriterIsCpuMortEdge`: the retail writer maps to a CPU-side MORT
-  publication/descriptor edge, independent of image DMA completion.
-- `H-DifferentContract`: neither span maps to the observed image or MORT rows;
-  the port-side contract remains unidentified.
+- `H-RetailWriterIsImageEdge`: a named retail writer in a target phase writes
+  the same legitimate destination/payload class as the port image stage.
+- `H-RetailWriterIsCpuMortEdge`: a named retail writer instead publishes a
+  CPU-side MORT descriptor/sample buffer, independent of image completion.
+- `H-RetailWriterIsUnresolved`: writer PCs or values remain mixed/ambiguous, so
+  the s2662 destination overlap cannot select an edge.
 
-The discriminator is one phase-keyed table with retail writer PC, physical
-destination, value polarity, port task ordinal, image DMA destination and
-payload nonzero count, MORT descriptor class, PCM source/consumer ordinal, and
-ordering relative to image completion. A whole-RDRAM oracle control, retail
-title/hangar transitions, and port image positive controls must all pass. A
-writer count or destination overlap without payload and ordering is
-unevaluable.
+The discriminator is one table keyed by phase and watch span containing writer
+PC, physical address, post-store value/polarity, hit count, and phase bucket.
+The whole-RDRAM watch and title/hangar transitions are mandatory controls. A
+writer count without phase and value is unevaluable; select an edge only when
+the writer, legitimate value, destination class, and ordering can be tied to
+the s2662 port row.
 
 ## Exact commands
 
-1. Reuse the established oracle recipe and its whole-RDRAM positive control;
-   inspect the existing phase-gated driver before editing any instrumentation:
-   `sed -n '1,220p' scratch/agent/run_s2335_m5_descriptor_filter_boundary.sh`.
-2. Create one self-contained capture recipe under
-   `scratch/agent/soak_queue/` only after confirming the existing probes cover
-   all table columns; otherwise add the complete table in one build through
-   the fixup/runtime instrumentation path.
-3. Run the oracle and image arm from `build/`, with
-   `PROBE_PHASE_WIDTH=1 PROBE_KEYS_FROM_PHASE=1`, and terminate the process
-   group with SIGKILL. Collect the table and positive-control summary.
-4. Select exactly one hypothesis from the table. Do not land behavior unless
-   `H-RetailWriterIsImageEdge` or `H-RetailWriterIsCpuMortEdge` names a
-   legitimate writer, payload, destination, and ordering.
+1. Inspect the oracle options: `sed -n '1,180p' tools/oracle/README.md`.
+2. Use one oracle invocation from the established driver with
+   `--watch-write 0x0:0x800000`, both output-span watches,
+   `--pc-hist-watch` for each span, `--pc-hist-phase 0x00790400:1024`,
+   `--pc-hist-phase 0x006AB400:512`, and `--post-value-watch` for each span;
+   retain the verified Start schedule and `--vi-trace`.
+3. Require whole-RDRAM hits, both span watches, both target origins, and the
+   oracle execution controls before interpreting any narrow result.
+4. Produce the phase/writer/value table and compare it to
+   `scratch/agent/s2662_m5_output_publication_boundary_fixed/`; select exactly
+   one hypothesis. No behavior change is authorized by this capture alone.
 
 ## Expected outcomes
 
-- A nonzero, ordered image-DMA match selects `H-RetailWriterIsImageEdge` and
-  identifies the next contract edge without changing it.
-- An independent MORT descriptor/publication match selects
-  `H-RetailWriterIsCpuMortEdge` and keeps RSP task dispatch unchanged.
-- Passing controls with no complete mapping selects `H-DifferentContract`;
-  leave all behavior unchanged and pivot only after documenting the missing
-  edge.
+- A phase-matched named writer with legitimate payload and port ordering selects
+  `H-RetailWriterIsImageEdge` or `H-RetailWriterIsCpuMortEdge`.
+- Mixed writers, zero/ambiguous values, or no ordering selects
+  `H-RetailWriterIsUnresolved`; keep all runtime behavior unchanged.

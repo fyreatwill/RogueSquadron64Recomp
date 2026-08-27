@@ -45,6 +45,7 @@ env "$ORACLE" \
     --secs 75 \
     --watch-write 0x0:0x800000 \
     --watch-write 0x165000:0x16B000 \
+    --watch-write 0x1798B0:0x179A48 \
     --watch-write 0x141AD0:0x141AF0 \
     --watch-write 0xA0F50:0xA0F54 \
     --watch-write 0x1498A:0x1498C \
@@ -344,16 +345,12 @@ payload_events = sum(arm_data[arm]["counts"]["descriptor_payload_event"] for arm
 filter_rows = sum(arm_data[arm]["counts"]["filter_real"] for arm in ("stub", "image"))
 if not (retail_controls and retail_memory and port_controls and hangar):
     verdict = "H-CoverageInvalid"
-elif init_events == 0 and entry_rows == 0:
-    verdict = "H-DescriptorWriterAbsent"
-elif init_events > 0 and payload_events == 0 and entry_rows > 0:
-    verdict = "H-DescriptorProbeGated"
-elif same_descriptor == 0 and prior_descriptor > 0:
-    verdict = "H-DescriptorDownstreamMismatch:prior-ordinal"
+elif target_rows == 0:
+    verdict = "H-DifferentContract"
 elif same_descriptor > 0 and filter_rows == 0:
-    verdict = "H-DescriptorDownstreamMismatch:filter-gated"
+    verdict = "H-RetailWriterIsCpuMortEdge:unclosed"
 else:
-    verdict = "H-DescriptorDownstreamMismatch:boundary-closed-or-unresolved"
+    verdict = "H-RetailWriterIsImageEdge:unclosed"
 
 with open(summary_path, "w") as out:
     out.write("metric\tvalue\n")

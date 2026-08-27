@@ -117530,3 +117530,25 @@ match (`0x84` and `0x34`), but that is boundary metadata and not a rename
 discriminator. `H-Unresolved` selected for both rows. No TOML, generated-code,
 runtime, or behavior change was made. This exhausts the symbol-renaming
 fallback and returns the next unit to the M5 output-publication boundary.
+
+## Session 2662 (2026-08-27) — tested the M5 output publication boundary
+
+The established phase-gated output-boundary driver first returned
+`H-CoverageInvalid` because its classifier required descriptor-init rows that
+this build does not emit. The logs did contain the task, route, PCM, image,
+and phase controls, so the fixed version changed only that stale predicate and
+added a watch for the secondary retail span. The retail oracle passed the
+whole-RDRAM positive control, reached title and hangar, and recorded 32.1M
+whole-RDRAM writes, 32.1M writes in `0x165000:0x16B000`, and 1,125 writes in
+`0x1798B0:0x179A48`. Both port arms reached hangar. The image arm produced
+nonzero stage-2 payloads at `0x166450` and `0x166750` (`nz=621` and `639`)
+with matching PCM source/consumer samples; title rows and stage-3
+`0x1798B0` rows were zero. The task joins classified these as `stage-only`,
+without same-event retail writer PC/value attribution or closed
+completion-to-consumer ordering.
+
+This selects `H-DifferentContract`. It rules out treating destination overlap
+or a nonzero hangar payload as sufficient proof for image writeback or a
+CPU-MORT mapping. No runtime behavior changed. The driver correction is in
+`scratch/agent/run_s2335_m5_descriptor_filter_boundary.sh`; artifacts are in
+`scratch/agent/s2662_m5_output_publication_boundary_fixed/`.

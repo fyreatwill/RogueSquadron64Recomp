@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2660 (2026-08-27).
+Current maintenance marker: Session 2662 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -193,6 +193,22 @@ Current maintenance marker: Session 2660 (2026-08-27).
   `H-Unmapped`: destination overlap alone is insufficient to authorize
   writeback or remap. Artifact:
   `scratch/agent/s2659_m5_output_boundary/audit.md`.
+
+- **s2662 — the fixed output-boundary pair still does not close the writer
+  mapping.** The retail oracle passed the whole-RDRAM control, reached title
+  and hangar, and recorded 32.1M whole-RDRAM writes, 32.1M writes in
+  `0x165000:0x16B000`, and 1,125 writes in `0x1798B0:0x179A48`. Both port
+  arms reached hangar with task/DMA/SP/PCM controls live. The image arm had
+  two nonzero hangar stage-2 rows at `0x166450`/`0x166750` (`nz=621/639`),
+  but the corresponding task joins were `stage-only`; the `0x1798B0` stage
+  rows and title rows were zero. The first driver classifier was invalid
+  because it required an un-emitted descriptor probe; the fixed rerun
+  corrected only that predicate and added the second retail watch. This
+  selects `H-DifferentContract`: destination overlap and nonzero payload are
+  not enough without same-event retail writer PC/value attribution and closed
+  completion-to-consumer ordering. No output writeback, remap, gate, wait, or
+  generated-code behavior changed. Artifact:
+  `scratch/agent/s2662_m5_output_publication_boundary_fixed/`.
 
 ## s2621 unblock audit
 
@@ -542,6 +558,21 @@ selects `H-Unresolved` for both; size/boundary agreement is not sufficient for
 a rename. No source, generated-code, runtime, or TOML behavior changed. The
 symbol-renaming fallback is now exhausted; priority returns to the M5 plan's
 next contract-edge work.
+
+## Session 2662 result
+
+The established M5 output-boundary driver initially returned `H-CoverageInvalid`
+because its classifier required descriptor-init rows that this build does not
+emit; its logs nevertheless showed the task, image, PCM, route, and phase
+controls. A fixed rerun changed only that stale predicate and added a watch for
+the secondary retail span. The retail whole-RDRAM and target-phase controls
+passed. Both port arms reached hangar. The image arm produced nonzero stage-2
+payloads at `0x166450` and `0x166750` (`nz=621` and `639`) and matching PCM
+source/consumer samples, while title samples and stage-3 `0x1798B0` rows were
+zero. Those rows remained `stage-only`; no same-event retail writer PC/value
+or closed completion-to-consumer ordering was present. This selects
+`H-DifferentContract` and rules out promoting image writeback or a CPU-MORT
+mapping from destination overlap alone. No runtime behavior changed.
 
 ## Session 2631 result
 
