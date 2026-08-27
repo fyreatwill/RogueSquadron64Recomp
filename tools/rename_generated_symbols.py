@@ -61,6 +61,7 @@ RENAMES = {
     "fake_func_80064294": "data_gap_80064294",
     "fake_func_80064934": "data_gap_80064934",
     "fake_func_80065A5C": "data_gap_80065A5C",
+    "fake_func_800663AC": "data_gap_800663AC",
     # These main-overlay entries are isolated instruction fragments with no
     # companion semantic symbol; make their non-callable status explicit.
     "fake_func_80005568": "data_gap_80005568",

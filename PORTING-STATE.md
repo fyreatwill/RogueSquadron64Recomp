@@ -120412,3 +120412,17 @@ empty. The `--require-rename` invocation failed closed as expected. This rules
 out a defensible source-backed data-gap rename in the interval without
 assigning meanings to callable-ambiguous records. No build or game run was
 needed. The next sweep interval is `0x80058000..0x80059000`.
+
+## Session 2853 (2026-08-27) — renamed generated data-gap record before audio loader
+
+The prescribed `0x80058000..0x80059000` interval and its immediate neighboring
+`0x80059000..0x8005B000` interval were already synchronized or ambiguous, so
+the selector correctly failed closed there. A bounded source-backed batch at
+`0x80066000..0x80066500` identified the companion record `0x800663AC` as a
+four-byte fake record immediately before `loadSndFiles` at `0x800663B0`. The
+regeneration-safe rename map now maps `fake_func_800663AC` to
+`data_gap_800663AC`; the selector changed three references in `funcs_15.c`,
+`funcs.h`, and `recomp_overlays.inl`. The final scan showed the new name in
+all three generated locations and no stale old name. This is symbol-clarity
+evidence only: it does not explain or alter M5 audio behavior, and no build or
+game run was needed. The next sweep interval is `0x80066500..0x80067500`.

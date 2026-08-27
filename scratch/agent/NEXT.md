@@ -1,40 +1,35 @@
-# NEXT work unit (s2853) — generated-symbol-renaming-sweep
+# NEXT work unit (s2854) — generated-symbol-renaming-sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Apply the next bounded source-backed data-gap rename batch after the closed
-`0x80057000..0x80058000` interval. Inspect `0x80058000..0x80059000` with
-the regeneration-safe selector and apply only a mechanically source-backed
-data-gap rename; preserve callable-ambiguous records.
+Run the next bounded source-backed symbol sweep over `0x80066500..0x80067500`.
+Apply only exact companion semantic renames or mechanically proven data-gap
+renames; preserve callable-ambiguous records. The previous batch renamed
+`fake_func_800663AC` to `data_gap_800663AC` in three generated references.
 
 ## Competing hypotheses and discriminator
 
-- H-source-backed-gap: a record in the interval is a defined short gap
-  immediately before a named routine and can be renamed mechanically to
-  `data_gap_<address>`.
-- H-callable: the selected record is callable and must remain a placeholder.
-- H-already-synchronized: the interval has no selected placeholder, so the
-  batch is stale and must fail closed.
+- H-source-backed-gap: the interval contains a defined short non-callable
+  record that can be renamed to `data_gap_<address>`.
+- H-callable: a placeholder is callable or semantically unresolved and must
+  remain unchanged.
+- H-already-synchronized: no selected placeholder remains in the interval.
 
-The discriminator is the selector decision table plus stale-reference scan:
-the selected entry with nonzero replacements and zero old-name references after
-the pass selects H-source-backed-gap; callable/ambiguous classification
-selects H-callable; zero replacements selects H-already-synchronized.
+The discriminator is the selector decision table plus the final stale-name
+scan. Nonzero replacements with no old-name hits selects H-source-backed-gap;
+ambiguous/callable preservation selects H-callable; zero replacements selects
+H-already-synchronized.
 
 ## Exact commands
 
 ```sh
 python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x80058000 --end-address 0x80059000 --limit 8 --require-rename
-rg -n 'data_gap_80058|fake_func_80058' \
+  --start-address 0x80066500 --end-address 0x80067500 --limit 8 --require-rename
+rg -n 'data_gap_8006(6|7)|fake_func_8006(6|7)' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 ```
 
-The selector must report each candidate's classification; a rename selects
-H-source-backed-gap only when replacements are nonzero and the old-name scan
-is empty. Callable/ambiguous classification selects H-callable; zero
-replacements selects H-already-synchronized. The final scan must show no stale
-old names for any renamed address. No game run is required.
+No build or game run is required for this source-backed rename unit.

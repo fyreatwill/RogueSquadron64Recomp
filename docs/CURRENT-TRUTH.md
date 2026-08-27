@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2852 (2026-08-27).
+Current maintenance marker: Session 2853 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -852,3 +852,11 @@ semantic candidates as already synchronized and preserved
 references and the final scan found only that preserved placeholder. No build
 or game run was needed. The next bounded interval is
 `0x80054000..0x80055000`.
+
+Session 2853 examined `0x80066000..0x80066500`. The companion map identifies
+`0x800663AC` as a four-byte fake record immediately before the real
+`loadSndFiles` entry at `0x800663B0`; the regeneration-safe selector renamed
+its three generated references to `data_gap_800663AC` in the declaration,
+body, and overlay registration. Callable and already-synchronized entries
+were preserved. This is symbol clarity only, not M5 or runtime evidence. The
+next bounded sweep is `0x80066500..0x80067500`.
