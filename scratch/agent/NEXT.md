@@ -1,14 +1,14 @@
-# NEXT work unit (s2539) — generated-symbol renaming sweep, next bounded region
+# NEXT work unit (s2540) — generated-symbol renaming sweep, next bounded region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Resume the sweep at the next unresolved main-overlay placeholder,
+Resume the bounded sweep at the next unresolved main-overlay placeholder,
 `0x8009D7CC`. Enumerate its complete generated span, inspect companion
 symbol/m2c/source and caller evidence, and rename only an unambiguous match
 through the regeneration-safe symbol path. Leave it unchanged if evidence is
-absent. Do not repeat the M4 alias audit or already-closed sweep regions.
+absent. Do not repeat the M4 alias audit or the s2539 retail boundary capture.
 
 ## Competing hypotheses and discriminator
 

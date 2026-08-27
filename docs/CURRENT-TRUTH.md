@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2538 (2026-08-26).
+Current maintenance marker: Session 2539 (2026-08-26).
 
 ## Current state
 
@@ -260,6 +260,16 @@ Current maintenance marker: Session 2538 (2026-08-26).
   entries agree. Neither rename asserts that the fragments are independently
   callable game functions.
 
+- **s2539 — retail boundary ranges were active but did not join to M4.** The
+  oracle whole-RDRAM positive control reached 10,000 callbacks and the run
+  reached title 1024 and hangar 512. Retail writer histograms showed activity
+  in `0x166000:0x16A000`, `0x167000:0x169B00`, and `0x179800:0x179B00`, with
+  distinct phase-gated writer PCs. The oracle cannot observe RSP DMEM,
+  `ACCH:ACCM:ACCL`, or consumer reads, so this selects active-but-unjoined at
+  the observed RDRAM boundary and does not close the M4 index/provenance
+  question. No mitigation or port instrument was added. Artifact:
+  `scratch/agent/s2539_m4_retail_boundary/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -275,8 +285,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2517 found no new legitimate edge; do not add a writeback/remap or repeat
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
-  Next work unit: continue the bounded generated-symbol renaming sweep around
-  the next unresolved main-overlay placeholder after `0x80079CD8`.
+  Next work unit: continue the bounded generated-symbol renaming sweep at
+  `0x8009D7CC`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
@@ -297,7 +307,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   census at `0x80099C4C` found only a 4-byte `sw s2,0x38(sp)` fragment and no
   defensible human mapping; the placeholder remains. s2538 classified
   `0x80099FDC–0x80099FDF` as the four-byte boundary before `aspMainTextStart`
-  and left it unchanged. Next is `0x8009D7CC`.
+  and left it unchanged. s2539's retail boundary revisit found active writer
+  ranges but no M4 source/consumer join, so no port-side change is authorized.
+  Next is `0x8009D7CC`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index
