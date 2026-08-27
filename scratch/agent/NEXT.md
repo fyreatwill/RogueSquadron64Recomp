@@ -26,13 +26,13 @@ entries, ambiguous-or-fake entries, and parser/duplicate-name failures.
 ## Exact command
 
 ```sh
-mkdir -p scratch/agent/s2736_generated_symbol_sweep
+mkdir -p scratch/agent/s2737_generated_symbol_sweep
 python3 tools/rename_generated_symbols.py \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
   --start-address 0x800D4000 --end-address 0x800D7000 --limit 32 \
   --require-rename \
-> scratch/agent/s2736_generated_symbol_sweep/decision-table.txt
+> scratch/agent/s2737_generated_symbol_sweep/decision-table.txt
 ```
 
 Create `scratch/agent/s2736_generated_symbol_sweep/` before running the

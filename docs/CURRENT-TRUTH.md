@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2735 (2026-08-27).
+Current maintenance marker: Session 2736 (2026-08-27).
 
 Session 2735's generated-symbol sweep covered `0x800CE000..0x800D1000` and
 evaluated 13 companion candidates: eight semantic entries were already
