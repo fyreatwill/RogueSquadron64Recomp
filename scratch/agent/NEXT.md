@@ -1,30 +1,29 @@
-# NEXT work unit (s2819) — sweep generated symbols at 0x8015D000..0x8015F000
+# NEXT work unit (s2820) — sweep generated symbols at 0x8015F000..0x80161000
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
 Run the regeneration-safe companion selector for
-`0x8015D000..0x8015F000`, independently scan the generated tree for
-placeholders in that interval, and apply only source-backed semantic names.
-Preserve ambiguous/data entries. This is a bounded rename work unit; do not
-run a game soak.
+`0x8015F000..0x80161000`, independently scan the generated tree for
+placeholders in that interval, and apply only source-backed semantic names or
+mechanical `data_gap_*` classifications for proven non-callable fragments.
+Preserve unresolved entries and do not run a game soak.
 
 ## Competing hypotheses and discriminator
 
-- H-semantic-placeholder: a companion semantic symbol maps to a generated
-  placeholder in this interval, so a bounded regeneration-safe rename is
-  justified.
-- H-ambiguous-data: candidates are fake/data or otherwise ambiguous, so no
-  rename is safe and the interval must be closed without changes.
-- H-already-synchronized: the generated tree has no placeholder definitions or
-  references in the interval, so the selector should make no changes.
+- H-callable-semantic: a companion semantic symbol maps to a generated
+  placeholder, so a semantic rename is justified.
+- H-explicit-data-gap: a placeholder is proven to be a non-callable fragment,
+  so a mechanical `data_gap_*` rename is justified.
+- H-unresolved: candidates are ambiguous or callable semantics are not
+  defensible, so their address-encoded names remain.
 
 The discriminator is the complete selector decision table plus the
-independent generated-tree placeholder scan. A selected semantic rename and
-matching generated references selects H-semantic-placeholder; preserved
-ambiguous entries with zero selected references selects H-ambiguous-data; an
-empty placeholder scan selects H-already-synchronized.
+independent generated-tree scan and each selected body: matching semantic
+references select H-callable-semantic; a renamed isolated fragment with no
+old-name references selects H-explicit-data-gap; preserved candidates select
+H-unresolved.
 
 ## Exact commands
 
@@ -32,7 +31,7 @@ empty placeholder scan selects H-already-synchronized.
 python3 tools/rename_generated_symbols.py \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x8015D000 --end-address 0x8015F000 --limit 32
+  --start-address 0x8015F000 --end-address 0x80161000 --limit 32
 rg -n 'func_8015|fake_func_8015' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 git diff --check

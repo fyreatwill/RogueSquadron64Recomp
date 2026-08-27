@@ -119933,3 +119933,23 @@ ambiguous/data entries remain intentionally preserved. No build or game soak
 was needed.
 
 The next bounded interval is `0x8015D000..0x8015F000`.
+
+## Session 2819 (2026-08-27) — renamed isolated generated data-gap fragments
+
+The prescribed `0x8015D000..0x8015F000` interval was already synchronized,
+so the bounded sweep pivot selected four remaining source-backed non-callable
+main-overlay fragments: `0x80005568`, `0x8000595C`, `0x80006BFC`, and
+`0x8000751C`. The regeneration-safe map renamed them to
+`data_gap_80005568`, `data_gap_8000595C`, `data_gap_80006BFC`, and
+`data_gap_8000751C`, changing 12 references in four generated files. The
+independent scan found the new names in declarations, definitions, and
+overlay registrations with no old-name hits. The companion table offered no
+semantic names for these entries; this is a mechanical symbol-clarity change,
+not a behavioral or M5 result. `git diff --check` passed; no game soak was
+needed.
+
+ORIGIN: generated-symbol sweep. These are isolated generated fragments with
+no proven callable semantics; the new names state that limitation and do not
+claim a runtime writer or legitimate audio payload.
+
+The next bounded sweep interval is `0x8015F000..0x80161000`.
