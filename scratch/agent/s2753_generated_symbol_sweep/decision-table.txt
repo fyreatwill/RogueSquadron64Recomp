@@ -1,0 +1,28 @@
+Session 2753 generated-symbol sweep decision table
+
+Command:
+python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800E9000 --end-address 0x800EB000 --limit 32 --require-rename
+
+Result: exit 2; renamed 0 references in 0 files.
+
+| Address | Companion entry | Decision |
+|---|---|---|
+| 0x800E9B10 | func_800E9B10 | ambiguous-or-fake; preserved |
+| 0x800E9B10 | initObjectAnimAndDetail | already-synchronized |
+| 0x800EA470 | npcAtPtPlaySkywalkerErrorCallout | already-synchronized |
+| 0x800EA5E0 | npcAtPtUpdate | already-synchronized |
+| 0x800E9AD8 | fake_func_800E9AD8 | ambiguous-or-fake; preserved |
+| 0x800E9AE0 | func_800E9AE0 | ambiguous-or-fake; preserved |
+| 0x800E9A84 | initNpcHealthAndDetailFromChild | already-synchronized |
+| 0x800E9BF4 | playStateGatedDestroySound | already-synchronized |
+| 0x800E9D74 | spawnObjectImpactEffectWithSound | already-synchronized |
+| 0x800E9EC4 | computeNpcOrientationFromAimVectors | already-synchronized |
+
+Discriminator: H4-synchronized. All defensible companion names in the
+bounded interval were already present in funcs.h, funcs_39.c, and/or
+recomp_overlays.inl. The address-only/ambiguous placeholders were preserved.
+The next bounded interval is 0x800EB000..0x800ED000.
+
+Verification:
+rg found the synchronized names in funcs.h, funcs_39.c, and
+recomp_overlays.inl; no stale semantic placeholder reference was changed.

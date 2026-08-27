@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2752 (2026-08-27).
+Current maintenance marker: Session 2753 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -67,9 +67,10 @@ Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
 1. **Generated-symbol renaming sweep — active fallback.** The bounded
-   `0x800E7000..0x800E9000` table was fully synchronized apart from preserved
-   fake/address-only placeholders at `0x800E71C8` and `0x800E8A34`. Continue
-   with `0x800E9000..0x800EB000`; preserve ambiguous/fake/address-only symbols.
+   `0x800E9000..0x800EB000` table was fully synchronized apart from preserved
+   ambiguous/address-only placeholders at `0x800E9AD8`, `0x800E9AE0`, and
+   `0x800E9B10`. Continue with `0x800EB000..0x800ED000`; preserve
+   ambiguous/fake/address-only symbols.
 
 2. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
@@ -184,6 +185,9 @@ ledger. The current late-chain checkpoints are:
 - s2752: the generated-symbol interval `0x800E7000..0x800E9000` was fully
   synchronized; two fake/address-only placeholders were preserved and the
   next interval was advanced to `0x800E9000..0x800EB000`.
+- s2753: the generated-symbol interval `0x800E9000..0x800EB000` was fully
+  synchronized; three ambiguous/address-only placeholders were preserved and
+  the next interval was advanced to `0x800EB000..0x800ED000`.
 
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

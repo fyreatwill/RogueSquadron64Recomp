@@ -119052,3 +119052,17 @@ placeholders and were preserved. The command returned status 2 with zero
 renamed references in zero files. This selects H4-synchronized and rules out
 an exact rename in this interval; the next bounded region is
 `0x800E9000..0x800EB000`. Evidence: `scratch/agent/s2752_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2753 (2026-08-27) — bounded the next synchronized generated-symbol region
+
+Ran the companion-backed generated-symbol decision table over
+`0x800E9000..0x800EB000` with `--require-rename`. The command returned status
+2 with zero renamed references in zero files. Six semantic companion entries
+were already synchronized; the three placeholder entries at `0x800E9AD8`,
+`0x800E9AE0`, and `0x800E9B10` were ambiguous/address-only and preserved.
+The bounded textual verification found the synchronized declarations and
+overlay references in `funcs.h`, `funcs_39.c`, and `recomp_overlays.inl`.
+
+This selects H4-synchronized and rules out an exact rename in this interval;
+the next bounded region is `0x800EB000..0x800ED000`. Evidence:
+`scratch/agent/s2753_generated_symbol_sweep/decision-table.txt`.
