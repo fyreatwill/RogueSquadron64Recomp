@@ -118135,3 +118135,23 @@ This rejects `H-callback-publishes` for the MORT-to-PCM edge and selects
 No build or run was performed because the static table did not identify a
 concrete runtime discriminator. No watch, writeback, remap, or mitigation was
 added. Detailed table: `scratch/agent/s2696_mort_callback_boundary/audit.md`.
+
+## Session 2697 (2026-08-27) — audited the M5 DMA-service consumer boundary
+
+Ran the prescribed source-only audit of `sendServiceMessage` (`0x80006F78`),
+`dispatchPendingPiDmaToWorker` (`0x800058C0`), `piDmaWorker` (`0x80005570`),
+and the host `osPiStartDma_recomp` bridge. `sendServiceMessage` only finds the
+registered worker queue, annotates the message header, and enqueues a wakeup.
+The PI worker ignores the message body, consumes 20-byte entries from the ring
+at `0x801112B0`, and passes each entry's device address, DRAM address, and size
+to generic `osPiStartDma`; completion marks the entry and signals its return
+queue. The host bridge calls generic `do_dma`. No audited stage reads the
+per-frame synth output, writes the AI worker's `0x801496B0` allocation, calls
+`osAiSetNextBuffer`, or provides an ordering edge between those paths.
+
+This selects `H-service-unrelated` and rejects `H-service-publishes` and
+`H-service-indirect` for the named service path (static source evidence). The
+MORT-to-PCM publication edge remains unresolved. No build or run was performed
+because the complete table did not identify a concrete runtime discriminator;
+no runtime watch, writeback, remap, or mitigation was added. Detailed table:
+`scratch/agent/s2697_mort_dma_service_boundary/audit.md`.

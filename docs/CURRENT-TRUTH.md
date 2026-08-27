@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2694 (2026-08-27).
+Current maintenance marker: Session 2697 (2026-08-27).
 
 ## Live result
 
@@ -238,6 +238,20 @@ publication edge (static evidence); the unresolved callback is the next
 bounded source-read target. No runtime watch, writeback, remap, or mitigation
 is authorized. Detailed table: `scratch/agent/s2695_mort_postmix_boundary/audit.md`.
 
+s2697 completed the named DMA-service consumer audit. `sendServiceMessage`
+only resolves a registered worker queue, annotates the message header, and
+enqueues the wakeup. `piDmaWorker` ignores that message body, consumes the
+20-byte PI ring entries at `0x801112B0`, and passes their device address, DRAM
+address, and size unchanged to `osPiStartDma`; completion only marks the ring
+entry and signals its return queue. The host PI bridge likewise performs only
+generic `do_dma`. No stage reads the synth output block, writes the AI worker's
+`0x801496B0` allocation, calls `osAiSetNextBuffer`, or supplies an ordering edge
+between them. This selects `H-service-unrelated` and rejects
+`H-service-publishes`/`H-service-indirect` for this named path (static source
+evidence); the MORT-to-PCM publication edge remains unresolved. No runtime
+watch, writeback, remap, or mitigation is authorized. Detailed table:
+`scratch/agent/s2697_mort_dma_service_boundary/audit.md`.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -256,9 +270,14 @@ This is one monotonic sequence; #1 is the next campaign priority.
    and cursor/status updates. s2695 audited the post-mix chain: named
    consumers are state/service/timing operations, and the only concrete copy
    is descriptor-local `copyFourHalfwordsWriteback`; the indirect callback at
-   `0x80091684` remains unresolved. Next: source-read that callback's target
-   table and immediate consumers only, looking for a legitimate output-block
-   or AI-source publication edge. Do not repeat the completed bodies.
+   `0x80091684` is now resolved to `submitDmaRequestBatch`, whose named
+   consumer is the generic PI DMA service. s2697 audited `sendServiceMessage`,
+   `piDmaWorker`, and the host PI bridge: they carry only descriptor fields,
+   generic ROM-to-DRAM DMA, and completion messages, with no synth-output or
+   AI-source publication. Next: identify the next unresolved CPU-side writer
+   or publication boundary using a complete source-level consumer table; do
+   not add a runtime watch until a legitimate destination and ordering edge
+   are named, and do not repeat completed service/renderer/mixer bodies.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
