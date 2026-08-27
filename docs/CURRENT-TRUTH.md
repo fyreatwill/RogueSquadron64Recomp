@@ -97,7 +97,7 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    input-recipe repair is now exhausted at this discriminator: boot-time
    probe keys, phase-relative probe keys, and the existing autopilot all
    failed to move the qualified port arms beyond VI 640 in this iteration.
-   Audit `0x80119000..0x8011B000`, preserving ambiguous/data entries and
+   Audit `0x8011D000..0x8011F000`, preserving ambiguous/data entries and
    applying only source-backed names. The `0x80113000..0x80115000` census
    found one ambiguous-or-fake candidate, selected zero renames, and found
    zero generated placeholder references.
@@ -109,8 +109,11 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    definitions in the interval. Session 2781 closed
    `0x80119000..0x8011B000`: three ambiguous-or-fake candidates were
    preserved, the selector changed zero references, and the corrected
-   independent symbol inventory found zero placeholder definitions. Continue
-   with the next bounded interval after `0x8011B000`.
+   independent symbol inventory found zero placeholder definitions. Session
+   2782 closed `0x8011B000..0x8011D000`: no candidates were found, the
+   selector changed zero references, and the independent symbol inventory
+   found zero placeholder definitions. Continue with
+   `0x8011D000..0x8011F000`.
 
 2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
