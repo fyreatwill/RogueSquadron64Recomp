@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2776 (2026-08-27).
+Current maintenance marker: Session 2777 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -77,6 +77,10 @@ The latest durable M5 chain is:
   source census independently finds no caller for either query. The shim's
   live/empty semantics are therefore not exercised; do not treat this API as
   the PCM blocker.
+- Session 2777 corrected the AI status shim's nonzero result from boolean `1`
+  to the N64 `AI_STATUS_FIFO_FULL` bit (`0x40000000`). This is a contract
+  correction, not a publication-edge explanation; the generated source census
+  still finds no qualified status caller, so runtime status remains unexercised.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -93,8 +97,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    input-recipe repair is now exhausted at this discriminator: boot-time
    probe keys, phase-relative probe keys, and the existing autopilot all
    failed to move the qualified port arms beyond VI 640 in this iteration.
-   Audit the next interval after `0x80111000`, preserving ambiguous/data
-   entries and applying only source-backed names.
+   Audit `0x80113000..0x80115000`, preserving ambiguous/data entries and
+   applying only source-backed names. The `0x80111000..0x80113000` census
+   found 17 already-synchronized or ambiguous/data candidates and selected
+   zero renames.
 
 2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified

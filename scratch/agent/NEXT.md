@@ -1,14 +1,15 @@
-# NEXT work unit (s2777) — audit the next generated-symbol interval
+# NEXT work unit (s2778) — audit the next generated-symbol interval
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
 Run the regeneration-safe companion census for the next 0x2000-byte interval
-after the closed `0x8010F000..0x80111000` region: start at `0x80111000` and
-end at `0x80113000`. Preserve data, fake, ambiguous, and already-synchronized
+after the closed `0x80111000..0x80113000` region: start at `0x80113000` and
+end at `0x80115000`. Preserve data, fake, ambiguous, and already-synchronized
 entries. Apply only exact source-backed semantic renames through the existing
-rename tooling; do not hand-edit generated C.
+rename tooling; do not hand-edit generated C. If this interval also selects
+none, retain the synchronized result and do not invent names.
 
 ## Competing hypotheses and discriminator
 
@@ -28,15 +29,15 @@ selector selects H-tooling-gap and requires a tooling fix in this same unit.
 ## Exact commands
 
 ```sh
-mkdir -p scratch/agent/s2777_generated_rename
+mkdir -p scratch/agent/s2778_generated_rename
 python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs \
   --companion-dir ../rogue_squadron64/symbol_files \
-  --start-address 0x80111000 --end-address 0x80113000 --limit 32 \
+  --start-address 0x80113000 --end-address 0x80115000 --limit 32 \
   --require-rename \
-  > scratch/agent/s2777_generated_rename/decision-table.txt 2>&1
+  > scratch/agent/s2778_generated_rename/decision-table.txt 2>&1
 rg -n 'func_8011|fake_func_8011|0x8011' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c \
-  > scratch/agent/s2777_generated_rename/generated-scan.txt || true
+  > scratch/agent/s2778_generated_rename/generated-scan.txt || true
 git diff --check
 ```
 

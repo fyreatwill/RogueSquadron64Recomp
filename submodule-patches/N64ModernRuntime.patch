@@ -173,10 +173,10 @@ index b0d6bef..a693bbc 100644
  
  namespace recomp {
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..5434475 100644
+index 0195f2b..29b51e0 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -1,11 +1,52 @@
+@@ -1,10 +1,52 @@
  #include "recomp.h"
  #include <cstdio>
 +#include <cstdlib>
@@ -185,7 +185,8 @@ index 0195f2b..5434475 100644
  #include <ultramodern/ultramodern.hpp>
  
  #define VI_NTSC_CLOCK 48681812
- 
++#define AI_STATUS_FIFO_FULL 0x40000000u
++
 +extern "C" uint32_t rs64_phase_ord();
 +extern "C" uint32_t rs64_vi_committed_width();
 +extern "C" uint32_t rs64_vi_committed_origin();
@@ -225,11 +226,10 @@ index 0195f2b..5434475 100644
 +        std::fflush(stderr);
 +    }
 +}
-+
+ 
  extern "C" void osAiSetFrequency_recomp(uint8_t* rdram, recomp_context* ctx) {
      uint32_t freq = ctx->r4;
-     // This makes actual audio frequency more accurate to console, but may not be desirable
-@@ -18,12 +59,20 @@ extern "C" void osAiSetFrequency_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -18,12 +60,20 @@ extern "C" void osAiSetFrequency_recomp(uint8_t* rdram, recomp_context* ctx) {
  extern "C" void osAiSetNextBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
      ultramodern::queue_audio_buffer(rdram, ctx->r4, ctx->r5);
      ctx->r2 = 0;
@@ -247,9 +247,9 @@ index 0195f2b..5434475 100644
  
  extern "C" void osAiGetStatus_recomp(uint8_t* rdram, recomp_context* ctx) {
 -    ctx->r2 = 0x00000000; // Pretend the audio DMAs finish instantly
-+    // AI_STATUS_FIFO_FULL is represented by buffered output still awaiting playback.
++    // The hardware status register exposes FIFO full as bit 30.
 +    const uint32_t buffered = ultramodern::get_remaining_audio_bytes();
-+    ctx->r2 = buffered != 0 ? 1 : 0;
++    ctx->r2 = buffered != 0 ? AI_STATUS_FIFO_FULL : 0;
 +    rs64_log_ai_status("get-status", ctx->r2, buffered, 0, 0);
  }
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp

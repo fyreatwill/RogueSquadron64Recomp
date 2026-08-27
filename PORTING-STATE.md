@@ -18,6 +18,21 @@ writers remain open. The result is single-source static evidence with an
 independent companion-symbol cross-check; no mitigation or behavior change
 was made. H-channel-context-field-unclassified remains selected.
 
+## Session 2777 (2026-08-27) — corrected AI FIFO-full status contract
+
+The required generated-symbol census for `0x80111000..0x80113000` found 17
+already-synchronized or ambiguous/data candidates and selected zero renames;
+the independent generated scan found no placeholder in that interval. Rather
+than inventing names, the M5 pivot de-stubbed `osAiGetStatus_recomp`: a
+nonzero buffered-audio result now returns the N64 `AI_STATUS_FIFO_FULL` bit
+`0x40000000`, not boolean `1`. This is a contract correction, not evidence of
+the unresolved PCM publication edge; the status/length caller census remains
+empty on the qualified route. Exported the runtime submodule patch and built
+the Debug target successfully (`RogueSquadron64Recomp`). The next rename
+interval is `0x80113000..0x80115000`. Evidence:
+`scratch/agent/s2777_generated_rename/decision-table.txt` and
+`scratch/agent/s2777_generated_rename/build.log`.
+
 # Rogue Squadron 64 Recomp — build/fix state (2026-07-09)
 
 Goal: build MikeSemicolonD/RogueSquadron64Recomp on macOS and fix the documented
