@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2697 (2026-08-27).
+Current maintenance marker: Session 2698 (2026-08-27).
 
 ## Live result
 
@@ -252,6 +252,20 @@ evidence); the MORT-to-PCM publication edge remains unresolved. No runtime
 watch, writeback, remap, or mitigation is authorized. Detailed table:
 `scratch/agent/s2697_mort_dma_service_boundary/audit.md`.
 
+s2698 audited the complete host AI boundary. `osAiSetNextBuffer_recomp`
+forwards the game RDRAM pointer and byte count unchanged to
+`ultramodern::queue_audio_buffer`; the runtime converts that pointer with
+`TO_PTR`, derives the sample count, and passes the exact host span plus the
+original RDRAM address to the registered callback. The main callback queues
+that span directly into SDL with the corrected byte length. No host copy from
+another source, RDRAM destination, payload transform, queue drop/defer path,
+or completion callback exists; `osAiGetStatus_recomp` reports zero and the
+length query only observes SDL queue depth. This selects `H-host-preserves`
+and rejects `H-host-remaps`/`H-host-gates` at the named host boundary (static
+source evidence). The MORT-to-PCM publication edge remains upstream and
+unresolved; no runtime watch, writeback, remap, or mitigation is authorized.
+Detailed table: `scratch/agent/s2698_mort_host_ai_boundary/audit.md`.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -274,7 +288,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
    consumer is the generic PI DMA service. s2697 audited `sendServiceMessage`,
    `piDmaWorker`, and the host PI bridge: they carry only descriptor fields,
    generic ROM-to-DRAM DMA, and completion messages, with no synth-output or
-   AI-source publication. Next: identify the next unresolved CPU-side writer
+   AI-source publication. s2698 audited the host AI bridge and found exact
+   pointer preservation into SDL, with no host remap or gate. Next: identify the next unresolved CPU-side writer
    or publication boundary using a complete source-level consumer table; do
    not add a runtime watch until a legitimate destination and ordering edge
    are named, and do not repeat completed service/renderer/mixer bodies.

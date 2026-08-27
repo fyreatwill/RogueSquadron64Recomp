@@ -118155,3 +118155,22 @@ MORT-to-PCM publication edge remains unresolved. No build or run was performed
 because the complete table did not identify a concrete runtime discriminator;
 no runtime watch, writeback, remap, or mitigation was added. Detailed table:
 `scratch/agent/s2697_mort_dma_service_boundary/audit.md`.
+
+## Session 2698 (2026-08-27) — audited the M5 host AI boundary
+
+Ran the prescribed source-only audit of `osAiSetNextBuffer_recomp`,
+`ultramodern::queue_audio_buffer`, the registered SDL callback, and the
+remaining-length/status calls. The recomp bridge forwards the game RDRAM
+pointer and byte count unchanged. Ultramodern converts the pointer with
+`TO_PTR`, derives the sample count, and passes the exact host span plus the
+original RDRAM address to the callback. The main callback queues that span
+directly into SDL with the corrected byte length; no alternate source,
+RDRAM destination, payload transform, drop/defer path, or completion callback
+exists. `osAiGetStatus_recomp` reports zero and the length query only observes
+SDL queue depth.
+
+This selects `H-host-preserves` and rejects `H-host-remaps` and `H-host-gates`
+for the named host boundary (static source evidence). The MORT-to-PCM
+publication edge remains unresolved upstream. No build or run was performed,
+and no runtime watch, writeback, remap, or mitigation was added. Detailed
+table: `scratch/agent/s2698_mort_host_ai_boundary/audit.md`.
