@@ -114869,6 +114869,27 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2534 (2026-08-26) — censused fourteenth generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x8009711C–0x8009711F` after
+the required sweep preflight. It contains exactly one 4-byte placeholder,
+`fake_func_8009711C`, whose generated body is `j 0x8009713C`. The jump target
+is inside the named `bindMacroIdsToSoundGroup` function at `0x80097130`; the
+neighboring `resetSongSubsystemCounter` begins at `0x80097120`. The active
+generated files, project symbol input, and companion symbol file retain the
+fake name, and exact-address, source, m2c, and caller searches found no human
+rename candidate.
+
+This selects `H-no-match` and rules out a defensible rename or
+regeneration-safe build for this entry. Naming the fragment after either
+neighbor would be speculative boundary rewriting. The next unresolved
+placeholder is `0x80097D58`. No generated code, runtime, submodule, or
+mitigation changed. Artifact:
+`scratch/agent/s2534_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
+
 ## Session 2531 (2026-08-26) — renamed two generated boundary fragments
 
 The mandated pivot landed a bounded generated-symbol change. The complete
