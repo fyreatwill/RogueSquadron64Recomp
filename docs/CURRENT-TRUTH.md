@@ -312,7 +312,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2540 found `0x8009D7CC–0x8009D7CF` is a four-byte `mtc1 $zero,$f4`
   fragment immediately before `filterVoiceSampleBlock`; companion/source/
   caller searches supplied no defensible mapping, so it remains unchanged.
-  Next is `0x800AA6CC`.
+  s2541 found `0x800AA6CC–0x800AA6CF` is a four-byte `lw v0,0x24(fp)` fragment
+  immediately before `npcPredictedRangeCheck`; companion/source/m2c/caller
+  searches supplied no defensible mapping, and the fragment has no complete
+  callable body. It remains unchanged as a data/boundary artifact candidate.
+  Next is `0x800AAADC`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index

@@ -115370,3 +115370,19 @@ symbol input, runtime, or behavior changed. Artifact:
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2541 (2026-08-26) — censused generated-symbol mission boundary
+
+Ran the bounded generated-symbol census at `0x800AA6CC`. The complete
+generated/project span is four bytes (`0x800AA6CC–0x800AA6CF`) containing only
+`lw v0,0x24(fp)`, immediately before the independently named
+`npcPredictedRangeCheck` at `0x800AA6D0`. The active generated declaration,
+implementation, overlay table, and companion symbol input all retain the fake
+name. Exact-address, source, m2c, and caller searches found no defensible
+human mapping. Because the fragment has no return, jump, prologue, or complete
+callable body, renaming it to either neighbor would be speculative. Selected
+`H-data-boundary` / `H-no-match` and left it unchanged. Artifact:
+`scratch/agent/s2541_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.
