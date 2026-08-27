@@ -119618,3 +119618,14 @@ lies in the interval. No ambiguous or fake candidate was renamed. `git diff
 --check` passed; no build or regeneration was needed. This closes the interval
 and rules out stale generated placeholders there, not the remaining rename
 sweep. The next interval is `0x80131000..0x80133000`.
+
+## Session 2795 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The regeneration-safe companion census for `0x80131000..0x80133000` found 31
+entries already synchronized. The bounded selector changed zero generated
+references in zero files, and the independent generated-tree inventory found
+zero `func_8013...` or `fake_func_8013...` placeholders whose numeric suffix
+lies in the interval. No ambiguous or fake candidate was renamed. `git diff
+--check` passed; no build or regeneration was needed. This closes the interval
+and rules out stale generated placeholders there, not the remaining rename
+sweep. The next interval is `0x80133000..0x80135000`.
