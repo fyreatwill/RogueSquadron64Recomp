@@ -1,49 +1,49 @@
-# NEXT work unit (s2619) — establish the title PCM positive control
+# NEXT work unit (s2620) — select the first proven M5 contract edge
 
-HYPOTHESIS-ID: m5-title-publication-boundary
+HYPOTHESIS-ID: m5-destub-contract-edge
 
 ## Single work unit
 
-Perform one bounded M5 title-publication investigation using the existing
-phase-gated image/silent pair and the already-qualified controls. Do not
-revisit the hangar indexed writer until the image arm has a same-run nonzero
-title PCM control. Add no output remap, writeback, gate bypass, or forced slot
-state.
+Perform one bounded Step 3 contract audit from `docs/M5-AUDIO-PLAN.md`: use
+the collected retail writer spans and generated Factor 5 image-stage/DMA rows
+to select exactly one proven output/publication edge that can be changed
+safely. This is a selection/design unit, not another title-zero runtime
+census. If no edge has a named writer, legitimate value, destination, and
+ordering, stop without a behavior change and mark the item blocked on that
+missing contract fact rather than inventing writeback.
 
 ## Competing hypotheses and discriminator
 
-- `H-TitlePublicationMissing`: title image-stage output or its PCM
-  publication edge remains zero while the silent control remains separated.
-- `H-TitlePhaseMisjoin`: title PCM exists, but current phase/origin or source /
-  consumer sampling fails to join it.
-- `H-TitleWriterEdge`: a legitimate nonzero title writer/source edge is found
-  and orders before the exact PCM consumer span.
+- `H-ImageOutputEdge`: the Factor 5 image has a legitimate, named output
+  destination/writeback edge missing from the port contract.
+- `H-CPU-MORT-Edge`: title PCM is owned by the CPU MORT path, so image-task
+  writeback would be the wrong boundary.
+- `H-Unproven`: existing rows do not establish a legitimate edge; no behavior
+  change is authorized.
 
-The discriminator is one phase-gated title table joining image-stage/DMA
-payload, source and consumer span, nonzero count, writer PC/destination/value,
-C88, and arm. A nonzero title source/consumer join selects
-`H-TitleWriterEdge`; a nonzero row that fails the phase/span join selects
-`H-TitlePhaseMisjoin`; title-zero image output with the silent separation
-selects `H-TitlePublicationMissing`.
+The discriminator is one evidence table mapping each candidate to retail
+writer PC, port writer/consumer, physical destination span, payload polarity,
+phase, and ordering relative to image completion and PCM consumer. One
+complete legitimate mapping selects that edge; an image-stage-only candidate
+remains unproven.
 
 ## Exact checks
 
-1. Ask the retail oracle for the already-established title writer/destination
-   ground truth before adding any new port probe. Then, in one rebuilt binary,
-   run image and silent arms with `ROGUESQ_M5_C88_VALUE=0`,
-   `PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and
-   `PROBE_LEAVE_OK=1`; batch the existing stage, DMA, task, writer, and PCM
-   join logs. Compare title rows only; retain hangar rows as a secondary
-   control.
-2. A joined nonzero title row selects `H-TitleWriterEdge`; a nonzero row with
-   a failed span/phase join selects `H-TitlePhaseMisjoin`; title-zero image
-   output with silent separation selects `H-TitlePublicationMissing` and
-   requires a pivot to the M5 de-stubbing plan rather than another identical
-   null chase.
+1. Read the existing oracle artifact and `docs/M5-AUDIO-PLAN.md`; search the
+   generated/fixup image-stage, DMA, MORT, and PCM boundary callsites as one
+   candidate table. Do not add an instrument until the whole-RDRAM control and
+   retail title writer rows are present.
+2. Record writer identity, destination, value legitimacy, phase, and
+   producer-before-consumer ordering for every candidate. A missing field is
+   `H-Unproven` and must not be implemented.
+3. If one edge is complete, write its exact rollback and one-build A/B recipe
+   here for the next iteration. Do not build or run a guessed edge in this
+   unit.
 
 ## Expected outcomes
 
-- Legitimate hangar edge: record it and queue one validation soak; do not add
-  writeback or remapping.
-- Non-audio or absent edge: record the joined table and pivot without changing
-  behavior.
+- Legitimate image edge: record it and queue one validation soak; do not add
+  broad writeback or remapping.
+- CPU MORT edge: move the next unit to the named CPU-side boundary.
+- No complete edge: record the evidence table and ask for the missing ground
+  truth; do not repeat the same null experiment.

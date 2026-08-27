@@ -116835,3 +116835,26 @@ for image-arm hangar output separation, but it does not select
 writer was not observed. It rules out treating the hangar-only PCM as proof of
 that indexed writer relation. Artifact:
 `scratch/agent/s2618_m5_hangar_pcm_boundary_rerun/`.
+
+## Session 2619 (2026-08-27) — selected the title publication gap
+
+Ran the retail oracle first with the whole-RDRAM positive control and the
+established PCM spans. It produced 23,005 whole-RDRAM writes, all 12,288
+writes in `0x166450:0x169450`, 635 title VI callbacks at origin
+`0x00790400`, and the dominant title-span writer was PC `0x800078EC`.
+
+Rebuilt once and ran the image/silent port arms concurrently with
+`ROGUESQ_M5_C88_VALUE=0`, the qualified LLE controls, `ROGUESQ_AUTOPILOT=1`,
+`PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and
+`PROBE_LEAVE_OK=1`. Both reached title `1024 @ 0x00790400`. The image arm's
+positive image-stage control produced 6,627 rows, including 1,027 title
+image-DMA joins; the silent arm produced zero image-stage and image-DMA rows.
+The title PCM table nevertheless stayed zero: image had 110 source/consumer
+rows and silent had 106, every row reporting `nz=0`. The image arm later hit a
+host bus error during capture; the silent arm remained alive for its capture.
+
+This selects `H-TitlePublicationMissing` over a phase misjoin and rules out
+another identical title-zero census as the next action. It does not identify
+a legitimate port writer or authorize writeback/remapping. The next unit
+pivots to the M5 de-stubbing plan's Step 3 contract-edge selection. Artifact:
+`scratch/agent/s2619_title_pcm_boundary/`.

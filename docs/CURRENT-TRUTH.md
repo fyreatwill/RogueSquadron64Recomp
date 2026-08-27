@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2618 (2026-08-27).
+Current maintenance marker: Session 2619 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -78,6 +78,21 @@ Current maintenance marker: Session 2618 (2026-08-27).
   `H-HangarWriterLegitimate`, `H-HangarWriterNonPCM`, or
   `H-HangarPublicationGap`.
 
+- **s2619 — title PCM remains absent after an oracle-grounded same-build
+  recheck.** The retail oracle passed the whole-RDRAM control with 23,005
+  writes, including all 12,288 writes to `0x166450:0x169450`; title was live
+  for 635 VI callbacks and the dominant writer was again PC `0x800078EC`.
+  The rebuilt port image/silent pair both reached title `1024 @ 0x00790400`.
+  The image positive control emitted 6,627 image-stage rows and 1,027 title
+  image-DMA joins; the silent arm emitted no image-stage or image-DMA rows.
+  Despite that separation, title PCM joins were all zero: image had 110
+  source/consumer rows and silent had 106, with `nz=0` in every row. This
+  selects `H-TitlePublicationMissing` over a missing phase join and requires
+  pivoting to the M5 de-stubbing sequence; it does not authorize writeback or
+  identify a legitimate port writer. The image arm later hit a host bus-error
+  during capture; that is a failure signal, not the title discriminator.
+  Artifact: `scratch/agent/s2619_title_pcm_boundary/`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -98,10 +113,13 @@ Current maintenance marker: Session 2618 (2026-08-27).
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 title PCM publication boundary.** Explain the missing title positive
-   control before revisiting the hangar `0x80094648` relation. Keep C88=`0`
-   and `ROGUESQ_AUDIO_UCODE=0` as rollbacks/controls; do not infer a writer
-   from the hangar-only image output.
+1. **M5 de-stubbing sequence — next contract edge.** The title discriminator
+   selected a missing output/publication edge. Follow `docs/M5-AUDIO-PLAN.md`
+   Step 3 and select one proven image-task contract edge before changing
+   behavior; do not repeat the title-zero census or revisit the hangar
+   `0x80094648` relation. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as
+   rollbacks/controls, and require a named legitimate writer plus a same-run
+   nonzero title PCM join before promotion.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
