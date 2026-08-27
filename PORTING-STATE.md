@@ -118205,3 +118205,22 @@ rules out the queue as the MORT-to-PCM publication edge, but does not resolve
 the upstream edge. No build, run, runtime watch, writeback, remap, or
 mitigation was performed. Detailed table:
 `scratch/agent/s2700_m5_queue_boundary/audit.md`.
+
+## Session 2701 (2026-08-27) — audited the M5 queue-publication boundary
+
+Ran the bounded source-only audit of the Factor 5 queue at `0x80149990`,
+including initialization, mutex acquire/release, `factor5QueueBlock`,
+`factor5QueueSignal`, and the `musyxSynthFrame` caller. The capacity-one
+queue uses storage at `0x801499A8` and carries only a zero token: sends pass
+`msg=0`, while receives pass a null destination, so no receiver interprets a
+message word. The separate AI worker queue is at `0x80149670` and its cleared
+buffer span begins at `0x801496B0`.
+
+No queue site reads rendered output, writes the AI span, calls
+`osAiSetNextBuffer`, or names another PCM destination. This selects
+`H-queue-services` and rejects `H-queue-publishes` and
+`H-queue-unresolved` for the queue (static generated-source evidence). It
+rules out this queue as the MORT-to-PCM publication edge but leaves the
+upstream writer unresolved. No build, run, runtime watch, writeback, remap,
+or mitigation was performed. Detailed table:
+`scratch/agent/s2700_m5_queue_boundary/audit.md`.

@@ -290,6 +290,20 @@ source evidence). The MORT-to-PCM publication edge remains unresolved; no
 runtime watch, writeback, remap, or mitigation is authorized. Detailed table:
 `scratch/agent/s2700_m5_queue_boundary/audit.md`.
 
+s2701 completed the bounded queue-publication audit requested for the M5 CPU
+boundary. `0x80149990` is a capacity-one recursive-mutex/token queue with
+storage at `0x801499A8`; initialization, mutex acquire/release, and the
+`musyxSynthFrame` block/signal pair all pass a zero message or a null receive
+destination. The token is never interpreted as audio data. The only direct
+block and signal caller is `musyxSynthFrame` (`0x8009123C`), and the separate
+AI worker queue is at `0x80149670` while its cleared buffer allocation is
+`0x801496B0`. No queue site reads rendered output, writes that allocation,
+calls `osAiSetNextBuffer`, or names another PCM destination. This selects
+`H-queue-services` and rejects `H-queue-publishes` and `H-queue-unresolved`
+for this boundary (static generated-source evidence); the MORT-to-PCM edge
+remains unresolved and no runtime watch, writeback, remap, or mitigation is
+authorized. Detailed table: `scratch/agent/s2700_m5_queue_boundary/audit.md`.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -313,11 +327,13 @@ This is one monotonic sequence; #1 is the next campaign priority.
    `piDmaWorker`, and the host PI bridge: they carry only descriptor fields,
    generic ROM-to-DRAM DMA, and completion messages, with no synth-output or
    AI-source publication. s2698 audited the host AI bridge and found exact
-   pointer preservation into SDL, with no host remap or gate. Next: identify the next unresolved CPU-side writer
-   or publication boundary using a complete source-level consumer table; do
-   not add a runtime watch until a legitimate destination and ordering edge
-   are named, and do not repeat completed queue/service, renderer, or mixer
-   bodies.
+   pointer preservation into SDL, with no host remap or gate. s2701 audited
+   the complete `0x80149990` queue and found a zero-token mutex service with
+   no payload or AI join. Next: enumerate every generated-source writer and
+   alias of the AI worker's `0x801496B0` allocation, then classify each writer
+   as clear, stream input, rendered output, or unresolved. Do not add a
+   runtime watch until a legitimate destination and ordering edge are named,
+   and do not repeat completed queue/service, renderer, mixer, or host bodies.
 2. **Generated-symbol renaming sweep.** Reconcile one bounded address region
    against companion source/m2c evidence; rename only exact, unique matches
    and preserve address-only or fake fragments. Do not infer names from
