@@ -1,37 +1,41 @@
-# NEXT work unit (s2668) — continue generated-symbol-renaming-sweep
+# NEXT work unit (s2669) — isolate the pre-hangar control crash
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-audio-step0-control-qualification
 
 ## Work unit
 
-Use `tools/rename_generated_symbols.py` after each generated-tree refresh.
-The seven-name batch from s2668 is complete; select the next batch only after
-comparing the generated definitions with `syms/rogue_squadron.syms.toml` and
-the companion `../rogue_squadron64/symbol_files/`. Do not invent names: leave
-an address generic when the companion evidence is absent or ambiguous.
+Make one bounded control-only change to the Step 0 driver: retain the oracle
+gate and all phase/probe settings, but run the silent/default arms in separate
+isolated launches with the same input schedule and collect both summaries in
+one iteration. Do not alter runtime behavior, audio routing, gates, or guards.
+The purpose is to determine whether the shared `slotDispatcherIter+3508`
+failure is caused by paired-process interference or is intrinsic to each arm.
 
 ## Competing hypotheses and discriminator
 
-- `H-symbol-map-complete`: every generated placeholder in the selected batch
-  has an exact companion address/name match and can be renamed safely.
-- `H-symbol-map-partial`: only some placeholders have exact matches; rename
-  those and leave the remainder generic.
-- `H-symbol-tree-stale`: the generated tree has no matching placeholders, so
-  the batch must be deferred until regeneration rather than forcing edits.
+- `H-shared-process-interference`: isolated arms reach hangar; the paired
+  concurrent control is invalid because two instances contend for a host-side
+  resource.
+- `H-common-prehangar-crash`: isolated arms reproduce the same crash before
+  hangar; the failure is intrinsic to the current control route and the
+  contract remains unevaluable.
+- `H-isolation-driver-invalid`: an isolated arm loses title or its positive
+  control; the recipe cannot discriminate the crash and needs driver repair.
 
-The discriminator is one address-keyed census of generated definitions joined
-to both symbol sources. Exact address/name agreement selects a rename;
-missing or conflicting names select a documented hold. The post-edit check
-must show zero old-name references and exactly one definition for each new
-name.
+The discriminator is the same-build, oracle-qualified table with independent
+title/hangar phase rows and terminal host/guest crash attribution for both
+arms. Hangar reach in isolation selects interference; repeated pre-hangar
+crashes select the common crash; missing controls select driver invalidity.
 
 ## Exact commands
 
-1. `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs`
-2. `rg -n 'fake_func_800(82268|825C8|AD378|D2C98|D4EC4|DD2C4|DFB8C)' ../N64Recomp/RecompiledFuncs`
-3. `rg -n 'cheatCodeConstantPreamble|rspbootTextPreamble|storeTrackedObjectAuxiliaryFields|duplicateSymbolPrefixForNpcInitWithMotionParams|duplicateSymbolPrefixForNpcInitChildLinkedToParent|duplicateSymbolPrefixForNpcInitFullModel|duplicateSymbolPrefixForApplyCraftAnimAndDetailParams' ../N64Recomp/RecompiledFuncs/funcs.h ../N64Recomp/RecompiledFuncs/funcs_*.c`
+1. Edit only `scratch/agent/run_s2288_m5_audio_default_step2.sh` with
+   `apply_patch` to use isolated bounded arm launches while preserving
+   SIGKILL cleanup and all existing marker categories.
+2. `zsh scratch/agent/run_s2277_m5_step0_ground_truth.sh`
+3. Inspect only `scratch/agent/s2277_m5_step0_ground_truth/driver.log` and
+   bounded `grep -c`/`tail -50` slices of its logs.
 
-Expected outcome: the first command reports seven renamed batches with no
-missing targets; the second returns no matches; the third reports one
-definition and all callsites for each replacement. No runtime behavior or
-audio contract is changed.
+Expected: the oracle positive control remains present. Both isolated arms
+  either reach hangar or reproduce the common crash; do not change audio
+  behavior based on a control-invalid result.

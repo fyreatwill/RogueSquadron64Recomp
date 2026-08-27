@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2667 (2026-08-27).
+Current maintenance marker: Session 2668 (2026-08-27).
+
+## Session 2668 result
+
+The repaired Step 0 wrapper now launches silent and default image arms
+concurrently after the oracle gate. The oracle independently passed the
+whole-RDRAM positive control (`10000`) and title/hangar phases. Both port arms
+reached title and emitted task/DMEM controls, but neither reached hangar:
+both recorded 36 crash markers with the same `slotDispatcherIter+3508` host
+path and guest PC `0x80022160`. The stub produced 1,050 ABI/DMA rows and no
+image-stage rows; the default produced 977 ABI/DMA rows and 6,395 image-stage
+rows. This selects `H-Step0-port-control-invalid`; the concurrent launch is
+qualified, but the shared pre-hangar crash makes the M5 contract table
+unevaluable. No audio behavior, gate, writeback, remap, or runtime guard
+changed.
 
 ## Session 2667 result
 
@@ -54,6 +68,19 @@ runtime code, generated function, gate, writeback, or remap changed, and no
 soak was run because this was the required design-only unit.
 
 ## Decision-relevant evidence
+
+- **s2668 — concurrent Step 0 arms remain control-invalid.** The oracle passed
+  its whole-RDRAM positive control (`10000`) and title/hangar phases. The
+  repaired wrapper launched both port arms concurrently after that gate. Stub
+  and default each reached title but not hangar and each recorded 36 crash
+  markers at `slotDispatcherIter+3508`, guest PC `0x80022160`. Stub counts
+  were 63 dispatch, 1,050 ABI/DMA, 263 audio-return, 789 SP-route, 53 PCM
+  source/consumer, and zero image-stage rows; default counts were 60
+  dispatch, 977 ABI/DMA, 6,395 image-stage, 262 audio-return, 786 SP-route,
+  and 54 PCM source/consumer rows. This rules out the prior sequential-driver
+  omission and selects `H-Step0-port-control-invalid`; it does not identify
+  an audio writer or authorize a contract change. The first repair attempt
+  also exposed and was fixed for a one-shot retention-deadline reset.
 
 - **s2666 — the first Step 0 recipe was stale and the repaired pair was
   control-invalid.** The original `run_s2277...` entry point launched only
@@ -515,13 +542,12 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **Generated-symbol renaming sweep — primary active thread.** The seven
-  exact companion mappings from s2667 are landed through the checked-in
-  rename tool and applied to the generated C/header/overlay outputs. Continue
-  with one address-keyed batch per iteration, using only exact agreement
-  between the project TOML and companion symbol files; leave ambiguous
-  placeholders generic. Return to M5 de-stubbing after this bounded sweep
-  produces no exact candidates or a new independent discriminator.
+1. **M5 Step 0 control repair — primary active thread.** Both concurrent port
+  arms now reach title but share a pre-hangar `slotDispatcherIter+3508`
+  crash, so the contract table is still unevaluable. Qualify the control with
+  the smallest driver/runtime-independent repair or switch to the known
+  stable phase driver; do not interpret missing hangar rows or change audio
+  behavior until both arms reach the target phase.
 2. **M5 de-stubbing sequence — secondary active thread.** Obtain an independent
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
@@ -532,11 +558,14 @@ This is one monotonic sequence; #1 is the next campaign priority.
    add output writeback. Trace the next named output contract edge before
    changing behavior. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as
    rollbacks/controls.
-3. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+3. **Generated-symbol renaming sweep — parked fallback.** Resume only after
+  the M5 control qualifies or is blocked by a new discriminator; use exact
+  companion address/name agreement and leave ambiguous placeholders generic.
+4. **M3 crash work — parked.** Resume only as a complete idiom-class audit
   with a named discriminator; passive recurrence belongs in the soak queue.
-4. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
+5. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
   H3 is unavailable because the oracle cannot screenshot the LLE path.
-5. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
+6. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
   established; broader slot coverage is optional and lower priority than M5.
 
 ## Durable boundaries

@@ -134,32 +134,40 @@ wait_for_hangar() {
     return 1
 }
 
-print "arms_staged=stub_then_default_after_stub_hangar" >> "$OUT/driver.log"
+print "arms_staged=concurrent_stub_and_default_after_oracle_gate" >> "$OUT/driver.log"
 launch_arm stub stub
-if ! wait_for_hangar stub "$STUB_PID"; then
-    print "pair_gate=failed stub_hangar_missing; default_not_launched" | tee -a "$OUT/driver.log"
-    exit 6
-fi
-
-print "pair_gate=passed stub_hangar=1; launching_default" | tee -a "$OUT/driver.log"
 launch_arm default default
 
+stub_target=0
 default_target=0
+retention_started=0
 pair_deadline=$((SECONDS + 220))
 while (( SECONDS < pair_deadline )); do
+    if (( stub_target == 0 )) && grep -a -q '^\[phase\] vi_width=512 .*origin=0x006AB400' "$OUT/stub.log"; then
+        stub_target=1
+        print "stub_hangar=observed" | tee -a "$OUT/driver.log"
+    fi
     if (( default_target == 0 )) && grep -a -q '^\[phase\] vi_width=512 .*origin=0x006AB400' "$OUT/default.log"; then
         default_target=1
-        print "default_hangar=observed; retaining_15s" | tee -a "$OUT/driver.log"
+        print "default_hangar=observed" | tee -a "$OUT/driver.log"
+    fi
+    stub_live=0
+    default_live=0
+    kill -0 "$STUB_PID" 2>/dev/null && stub_live=1
+    kill -0 "$DEFAULT_PID" 2>/dev/null && default_live=1
+    if (( stub_target == 1 && default_target == 1 && retention_started == 0 )); then
+        retention_started=1
         pair_deadline=$((SECONDS + 15))
     fi
-    default_live=0
-    kill -0 "$DEFAULT_PID" 2>/dev/null && default_live=1
-    if (( default_target == 1 && default_live == 0 )); then
+    if (( stub_target == 1 && default_target == 1 && stub_live == 0 && default_live == 0 )); then
         break
     fi
     sleep 1
 done
 
+if (( stub_target == 0 )); then
+    print "stub_hangar=timeout_or_exit; SIGKILL" | tee -a "$OUT/driver.log"
+fi
 if (( default_target == 0 )); then
     print "default_hangar=timeout_or_exit; SIGKILL" | tee -a "$OUT/driver.log"
 fi
@@ -209,7 +217,7 @@ emit_arm_summary() {
 emit_arm_summary stub
 emit_arm_summary default
 
-if (( default_target == 0 )); then
+if (( stub_target == 0 || default_target == 0 )); then
     exit 7
 fi
 exit 0

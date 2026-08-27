@@ -117646,3 +117646,20 @@ and overlay-table references. This selects `H-symbol-map-complete` for the
 batch and rules out a stale-tree or ambiguous-map explanation for these seven
 addresses. No runtime, audio, gate, writeback, or remap behavior changed.
 The next unit is the next exact-match batch under the same sweep slug.
+
+## Session 2668 (2026-08-27) — qualified concurrent M5 arms as control-invalid
+
+The repaired `run_s2288_m5_audio_default_step2.sh` launched the silent and
+default image arms concurrently after the oracle gate. The oracle passed its
+whole-RDRAM positive control (`10000`) and title/hangar transitions. Both port
+arms reached title, but neither reached hangar: each produced 36 crash markers
+at host `slotDispatcherIter+3508` with guest PC `0x80022160`. Stub produced
+63 dispatch, 1,050 ABI/DMA, 263 audio-return, 789 SP-route, and 53 PCM
+source/consumer rows, with zero image-stage rows. Default produced 60
+dispatch, 977 ABI/DMA, 6,395 image-stage, 262 audio-return, 786 SP-route,
+and 54 PCM source/consumer rows. The first repair attempt had a watchdog
+deadline-reset bug; it was killed with SIGKILL and fixed before the qualifying
+retry. This selects `H-Step0-port-control-invalid`, rules out the former
+sequential-arm omission, and leaves the writer/value/order contract
+unevaluable. No runtime, audio, gate, writeback, remap, or guard behavior
+changed.
