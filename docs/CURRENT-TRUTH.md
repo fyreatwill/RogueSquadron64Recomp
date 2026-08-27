@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2624 (2026-08-27).
+Current maintenance marker: Session 2625 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -153,6 +153,19 @@ The `0x800C63C0` row remains an intentional overlay collision: mission
 have distinct bodies and overlay-table entries at the same VRAM address. The
 `0x800C64A4` fragment remains `fake_func_800C64A4`. No runtime behavior changed.
 
+## s2625 symbol-sweep result
+
+The bounded region immediately after `0x800C64B0` produced no new rename.
+`0x800C64C8` is already emitted as `unlockLevelsAndCraftsBasedOnMedalsEarned`:
+the menu companion names it exactly, the generated body has the matching
+`0x198` span, and generated caller `0x800C09F0` invokes that name. The
+mission-overlay body beginning at `0x800C64B0` overlaps this menu-overlay
+address, so the two context-specific identities must not be collapsed.
+`0x800C65CC` (`tickHangarDisplayItemAnimations`) and `0x800C68A0`
+(`hangarVehicleDisplayNpcHandler`) are already named with matching companion
+entries. `0x800C64A4` remains a 12-byte collision fragment with no defensible
+semantic identity. No runtime behavior changed.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -174,7 +187,7 @@ have distinct bodies and overlay-table entries at the same VRAM address. The
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C63C0` next using companion symbols, exact spans, and callers;
+   Audit `0x800C68A0` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an

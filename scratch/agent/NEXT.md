@@ -1,22 +1,21 @@
-# NEXT work unit (s2625) — bounded generated-symbol sweep while M5 is blocked
+# NEXT work unit (s2626) — bounded generated-symbol sweep while M5 is blocked
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit one bounded symbol region immediately following `0x800C64B0` using
-companion symbols, generated bodies, callers, and overlay sizes. Rename only a
-symbol whose identity is supported by exact companion and span/caller evidence;
-unresolved fragments stay placeholders.
-Do not change runtime behavior.
+Audit the next bounded symbol region at `0x800C68A0` using companion symbols,
+generated bodies, callers, and overlay sizes. Rename only a placeholder whose
+identity is supported by exact companion and span/caller evidence; unresolved
+fragments stay placeholders. Do not change runtime behavior.
 
 ## Competing hypotheses and discriminator
 
-- `H-CompanionExact`: one placeholder has an exact companion name and matching
+- `H-CompanionExact`: a placeholder has an exact companion name and matching
   function span, so a supported rename can be landed.
 - `H-BoundaryOnly`: evidence identifies only an adjacent or duplicate boundary;
   retain the placeholder.
-- `H-OverlayCollision`: same VRAM has distinct overlay bodies; retain
+- `H-OverlayCollision`: the same VRAM has distinct overlay bodies; retain
   context-specific names and do not collapse them.
 - `H-Unproven`: no defensible mapping exists in this region.
 
@@ -26,18 +25,15 @@ the identity is exact or boundary-only. One exact row selects a rename.
 
 ## Exact checks
 
-1. Inspect `syms/rogue_squadron.syms.toml`, companion
-   `symbol_files/mission_overlay.txt`, and the generated symbol/body around
-   `0x800C41B0`; use `rg` and bounded `sed` windows.
-2. Compare adjacent addresses and sizes and enumerate generated callers. Run
-   `python tools/rename/build_redefs.py` only if an exact supported rename is
-   selected, then verify the resulting redef line.
+1. Inspect the mission and menu companion symbol files, the repository TOML,
+   generated body, overlay table, and callers around `0x800C68A0`.
+2. Compare adjacent addresses and sizes. Run `python tools/rename/build_redefs.py`
+   only if an exact supported rename is selected, then verify the redef line.
 3. Land at most one companion-supported rename; do not invent names from
    semantics alone.
 
 ## Expected outcomes
 
 An exact mapping lands a regeneration-safe rename and advances the sweep. A
-boundary-only or unresolved result records why the placeholder remains and
-selects the next bounded region. Do not return to the blocked M5 null
-experiment.
+boundary-only, collision, or unresolved result records why the placeholder
+remains and selects the next bounded region.

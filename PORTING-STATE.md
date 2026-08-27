@@ -116954,3 +116954,16 @@ four-byte `0x800C64A4` fragment remains `fake_func_800C64A4`. This selects
 `H-CompanionExact`, rules out collapsing the `0x800C63C0` collision, and changes
 no runtime behavior; no build or soak was required. The next sweep audits the
 next unresolved/colliding region.
+
+## Session 2625 (2026-08-27) — audited the post-800C64B0 symbol region
+
+The bounded census covered `0x800C64C8`, `0x800C65CC`, `0x800C68A0`, and the
+`0x800C64A4` fragment. `0x800C64C8` is already an exact
+`unlockLevelsAndCraftsBasedOnMedalsEarned` mapping: the menu companion and
+generated overlay entry agree on the name and `0x198` span, and generated
+caller `0x800C09F0` invokes it. `0x800C65CC` and `0x800C68A0` are likewise
+already named with companion entries. The 12-byte `0x800C64A4` fragment has no
+defensible semantic identity. The overlapping mission/menu bodies at
+`0x800C64B0`/`0x800C64C8` rule out collapsing the overlay-specific names.
+No build or soak was required; no runtime behavior changed. The next bounded
+lead is `0x800C68A0`.
