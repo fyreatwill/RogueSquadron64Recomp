@@ -117054,3 +117054,18 @@ changing runtime behavior. The adjacent `0x800AD378` gap filler remains
 address-coded because the companion source supplies no semantic identity.
 This selects `H-CompanionExact`, rules out boundary-only renames for the five
 rows, and advances the next bounded lead to `0x800C7540`.
+
+## Session 2632 (2026-08-27) — audited the 800C7540 symbol region
+
+The bounded census covered the objective helper family from `0x800C7540`
+through `0x800C7718`. The companion mission symbols, generated definitions,
+repository TOML, and mission overlay table agree on exact names and spans for
+`setObjectiveBoolean`, `setObjectiveBooleans`, `getObjectiveBoolean`,
+`setObjectiveCount`, `increaseObjectiveCount`, `getObjectiveCount`,
+`getAndSetByteAtLevelStateTable`, `setObjectiveHiddenFlag`,
+`activateObjectiveCompleteFlag`, `getObjectiveTimer`, and `setObjectiveTimer`.
+Generated mission callers use the resolved names. The generated JPEG entries
+`parseJfifDHTMarker` and `paserJfifSOSMarker` overlap this VRAM range only as a
+separate overlay identity; this is an overlay collision, not a rename target.
+No source-map or runtime change was made. This rules out a new rename in the
+region and advances the next lead to `0x800C7718`.

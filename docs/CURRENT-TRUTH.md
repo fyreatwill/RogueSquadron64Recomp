@@ -211,7 +211,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C7540` next using companion symbols, exact spans, and callers;
+   Audit `0x800C7718` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
@@ -325,3 +325,16 @@ batch was synchronized to those names. The neighboring `0x800AD378` fragment
 remains `fake_func_800AD378` because its companion entry is also a gap filler,
 not a semantic identity. This selects `H-CompanionExact` for the five-row
 batch and advances the next bounded lead to `0x800C7540`.
+
+## Session 2632 result
+
+The bounded `0x800C7540` census found no new rename. The companion mission
+symbols, generated definitions, repository TOML, and mission overlay table
+agree on exact names and spans for the objective helper family through
+`setObjectiveTimer` at `0x800C76FC`; generated mission callers use the
+resolved names. The generated JPEG entries `parseJfifDHTMarker` and
+`paserJfifSOSMarker` overlap this VRAM range only as a separate overlay
+identity, so they remain an overlay collision and must not be collapsed with
+the mission helpers. No source-map or runtime change was warranted. This
+selects `H-BoundaryOnly`/`H-OverlayCollision` for the remaining ambiguity and
+advances the next bounded lead to `0x800C7718`.
