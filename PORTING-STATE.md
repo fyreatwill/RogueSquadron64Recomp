@@ -115687,3 +115687,34 @@ same static census. Artifact: `scratch/agent/s2558_symbol_census/audit.md`.
 
 ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
 added; this session only recorded a bounded generated-symbol boundary.
+
+## Session 2559 (2026-08-26) — ran M5 stub-image contract checkpoint
+
+HYPOTHESIS-ID: m5-audio-destubbing-contract
+
+Before the build, I defined four competing outcomes: audio degeneracy would
+produce a new downstream edge in the image arm; an image contract gap would
+show image execution without that edge; route-only variation would show
+matched phases without an audio delta; and image instability would prevent a
+valid target window. The Debug target built successfully. The staged recipe
+ran the retail oracle first, then the silent arm before the image arm, with
+phase-gated title and hangar controls.
+
+The independent retail whole-RDRAM control reached 10,000 callbacks and
+recorded both title (`1024 @ 0x00790400`) and hangar (`512 @ 0x006AB400`). Both
+port arms reached title and hangar and ended by SIGKILL with zero `[CRASH]` and
+`[ABORT]` markers. The silent arm recorded 1,472 ABI/DMA rows, zero generated
+DMA ranges, and unchanged DMEM. The image arm recorded 1,136 ABI/DMA rows,
+2,328 generated DMA ranges, and repeated positive ABI rows with `changed=1597`,
+`break_pc=0x1328`, `exit=1`, and `dma_count=3`. Both arms reported PCM source
+and consumer boundary rows (94/94 silent; 88/88 image), so the image arm did
+not produce a distinct downstream PCM edge in this capture.
+
+This selects `H-contract-gap` at the current observable boundary: image
+execution and generated DMA are proven, but the checkpoint does not close a
+new task/output/service/slot/voice/PCM edge. `H-image-instability` is ruled out
+for this target window; `H-audio-degeneracy` is not selected because the
+downstream discriminator was not image-specific. `H-route-only` remains a
+possible confound for shared PCM controls, so this is not evidence for
+promotion. No task field, output pointer, gate, guard, or mitigation changed.
+Artifact: `scratch/agent/s2559_m5_step1_contract_pair/driver.log`.

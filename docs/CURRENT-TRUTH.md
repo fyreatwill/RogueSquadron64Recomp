@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2558 (2026-08-26).
+Current maintenance marker: Session 2559 (2026-08-26).
 
 ## Current state
 
@@ -46,6 +46,19 @@ Current maintenance marker: Session 2558 (2026-08-26).
   Whole-RDRAM, phase, task/status, and named-PC controls must pass before a
   retail null is interpreted. It reaches attract, title, and hangar, not a
   mission.
+
+- **s2559 — the M5 Step 1 stub/image checkpoint did not authorize promotion.**
+  The retail whole-RDRAM control reached its 10,000-write threshold and title
+  and hangar VI phases. Staged silent and image arms both reached title and
+  hangar without crash or abort markers. The image arm positively executed
+  `factor5_ucode_b` (`changed=1597`, `break_pc=0x1328`, and 3 generated DMA
+  ranges), while the silent arm had no DMEM change or generated DMA. Both arms
+  nevertheless reported PCM source/consumer boundary activity, so this run did
+  not isolate a new downstream audio edge attributable to the image arm. This
+  selects `H-contract-gap` at the current observable boundary (with
+  `H-route-only` still not fully separable from existing shared controls), and
+  leaves image dispatch opt-in. No task field, output pointer, gate, or guard
+  was changed. Artifact: `scratch/agent/s2559_m5_step1_contract_pair/driver.log`.
 
 ## Latest evidence
 
@@ -442,7 +455,7 @@ Current maintenance marker: Session 2558 (2026-08-26).
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 Step 3 contract edge — closed at the current route scope.** The direct load boundary,
+1. **M5 Step 1 contract checkpoint — image execution is proven, promotion is not.** The direct load boundary,
    SP completion/consumption, image DMEM work, generated DMA, and PCM
    consumer are live under qualified controls. Runtime joins show image
    stage-2 destinations equal generated AI-table entries, but the legitimate
@@ -453,9 +466,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2517 found no new legitimate edge; do not add a writeback/remap or repeat
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
-  Next work unit: run the phase-gated M4 producer-slot/consumer-index join
-  described in `scratch/agent/NEXT.md`; the generated-symbol sweep is parked
-  after s2558's repeated orphan-boundary result.
+  s2559's staged pair adds a positive image execution control but no distinct
+  downstream audio edge. Do not promote the image arm or alter task/output
+  fields without a newly named contract writer and independent retail
+  evidence. Next work unit: run the phase-gated M4 producer-slot/consumer-index
+  join described in `scratch/agent/NEXT.md`; the generated-symbol sweep remains
+  parked after s2558's repeated orphan-boundary result.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
