@@ -117772,3 +117772,18 @@ PCM consumer was established. This selects `H-MORT-unmapped` at the measured
 boundary and leaves the image-edge hypothesis unproven. No runtime, audio,
 gate, writeback, remap, or guard behavior changed. Full table:
 `scratch/agent/s2675_m5_cpu_mort_publication_audit.md`.
+
+## Session 2676 (2026-08-27) — audited the MORT filter destination
+
+Source inspection identified the `0x8009D740` callee's 40-byte output as a
+stack temporary at `0x8011C7B0` in the qualified port frame. The corrected
+batched retail oracle passed the whole-RDRAM positive control (`244,964`
+writes), reached the driven 512/hangar phase, and recorded `234,964` writes
+to physical `0x11C7B0:0x11C7D8`. The callsite execution watch recorded `1,984`
+hits, all preceded by `0x8009D73C`. The destination writer histogram included
+the filter's `0x8009D87C` (`39,680`) and `0x8009D8A4` (`12,930`) stores, but
+also generic stack users; the sampled span had 25 nonzero bytes. This
+strengthens `H-MORT-unmapped`: the candidate is shared temporary storage and
+does not join the live call to persistent PCM consumption. It rules out using
+this overlap as a writeback/remap basis, but does not establish
+`H-image-edge`. Full table: `scratch/agent/s2676_m5_mort_destination_oracle.md`.

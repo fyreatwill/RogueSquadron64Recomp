@@ -4,7 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2675 (2026-08-27).
+Current maintenance marker: Session 2676 (2026-08-27).
+
+## Session 2676 result
+
+The source-derived `filterVoiceSampleBlock` output candidate for the live
+`0x8009D740` boundary is the 40-byte stack span `0x8011C7B0` (physical
+`0x11C7B0`). The corrected batched retail oracle passed the whole-RDRAM
+positive control (`244,964` writes), reached the driven 512/hangar route, and
+recorded `234,964` writes to that candidate plus `1,984` executions of
+`0x8009D740`, all from `0x8009D73C`. Writer attribution included the filter's
+own `0x8009D87C` and `0x8009D8A4` stores but also many unrelated stack users;
+the sampled span was nonzero (25 bytes). The destination is therefore a real
+shared temporary, not a persistent PCM publication edge. This strengthens
+`H-MORT-unmapped`; it does not establish `H-MORT-edge` or `H-image-edge` and
+authorizes no writeback or remap. Full table:
+[`s2676_m5_mort_destination_oracle.md`](../scratch/agent/s2676_m5_mort_destination_oracle.md).
 
 ## Session 2675 result
 
@@ -661,9 +676,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **M5 CPU-side MORT publication boundary — primary active thread.**
   The s2672/s2673 audits leave both image-ring and stage-3 destinations
-  unmapped to a legitimate publication edge. Audit named MORT/voice callsites
-  and their source/destination/order contract; do not repeat the task-field or
-  ring-destination census, or add writeback/remap from overlap alone.
+  unmapped, and s2676 shows the live `0x8009D740` output is shared stack
+  storage rather than persistent PCM. Audit the next downstream named voice
+  consumer and its source/destination/order contract; do not repeat the
+  task-field, ring-destination, or shared-stack census, or add writeback/remap
+  from overlap alone.
 2. **M5 de-stubbing sequence — secondary active thread.** Obtain an independent
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
