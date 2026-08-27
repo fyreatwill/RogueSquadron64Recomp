@@ -111,6 +111,22 @@ catalog and day-to-day state: `CURRENT-TRUTH.md`.
 
 ## 4. The recurring hurdles
 
+### 4.0 M5 audio/image investigation through s2515
+
+The current M5 image arm is a qualified Factor 5 image-task path, while the
+silent `M_AUDTASK` `Broke` path remains its control. Independent retail and
+port controls established the direct type-2 load boundary, runtime SP
+completion/consumption, image DMEM work, generated DMA, and PCM consumption.
+The image-stage DMA destinations also join the generated sixteen-entry AI
+table at runtime. Static and runtime work through s2514 did not authorize a
+task/output remap or mitigation: the nonzero image payload is selected at the
+observable PCM consumer boundary, but the generic DMA observer loses the
+stage marker before the shared writeback helper, so exact stage-2 DMA-event
+attribution remains unresolved. Staggered startup separated an earlier
+paired-route failure from the later image-arm crash. The next bounded step is
+one proven Step 3 contract edge with old/new arms and phase-scoped writer,
+task, SP, service, and PCM controls.
+
 These are the patterns that cost the most time, in rough order of total damage.
 
 ### 4.1 Instruments that lie — the single biggest time sink

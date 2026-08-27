@@ -114818,3 +114818,16 @@ This selects `H-observer-contract` as an instrumentation limitation. It does
 not distinguish a missing stage-2 observer from a later overwrite, and does
 not name a writer or authorize a mitigation. The image-stage and PCM controls
 were positive. Artifact: scratch/agent/s2514_m5_dma_attribution/audit.md.
+
+## Session 2515 (2026-08-26) — compacted current truth for maintenance
+
+The maintenance gate fired because `docs/CURRENT-TRUTH.md` was 60,315 bytes
+and 924 lines. No experiment or build was run. The operational state was
+compacted to 152 lines, retaining the qualified route, latest M5 evidence,
+active monotonic backlog, durable boundaries, superseded labels, and safety
+rules. Durable s2420–s2514 M5 context was condensed into
+`docs/PROJECT-OVERVIEW.md`, and the next work unit remains the proven Step 3
+image contract edge with old/new arms.
+
+This rules out no new runtime hypothesis; it closes documentation maintenance
+only. The 772-line net reduction is the required maintenance advancement.
