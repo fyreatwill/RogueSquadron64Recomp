@@ -116219,6 +116219,8 @@ successfully and added no mapping. This selects `H-BoundaryOnly`, leaves the
 placeholder unchanged, and advances the sweep to `0x800B2628`. It rules out
 only a renameable companion mapping for this span; no runtime hypothesis was
 
+tested. Artifact: `scratch/agent/s2589_symbol_census_audit.md`.
+
 ## Session 2590 (2026-08-26) — classified the next generated-symbol boundary
 
 Audited the next complete placeholder span at `0x800B2628–0x800B262F`.
