@@ -1,35 +1,42 @@
-# NEXT work unit (s2746) — audit the streaming-voice consumer boundary
+# NEXT work unit (s2747) — continue the generated-symbol renaming sweep
 
-HYPOTHESIS-ID: m5-mort-pcm-publication
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Perform one bounded static audit of `serviceStreamingVoice` at `0x8009BF14`
-and its immediate named caller/consumers. It must not repeat the renderer,
-synth, command-list, allocation, host-AI, queue, PI-service, or
-`serviceVoicePoolFrame` surfaces already closed. Do not add runtime
-instrumentation or a writeback/remap.
+Select one adjacent bounded address region containing a verified rename batch
+from existing `tools/rename/build_redefs.py` mappings or a previously audited
+semantic boundary. Apply it to `../N64Recomp/RecompiledFuncs` with the
+fail-closed helper. Do not invent names from implementation shape, regenerate
+the whole tree, or run the game.
 
 ## Competing hypotheses and discriminator
 
-- H-stream-edge-found: the routine names a complete source, destination,
-  ownership, and ordering edge from voice/MORT output to the AI source span.
-- H-stream-edge-partial: it names a candidate stream handoff, but source,
-  destination, ownership, or ordering remains unproven.
-- H-stream-edge-absent: it only advances/reaps streamed voice state and has no
-  relation to renderer/synth output or the AI source span.
+- H-verified-fragments-remain: the next region contains existing, defensible
+  mappings whose generated placeholders can be renamed.
+- H-already-synchronized: companion names exist, but generated references in
+  the region already use them.
+- H-ambiguous-or-fake: only fake/address-only fragments remain and no audited
+  semantic mapping is available.
 
-The discriminator is a complete source/destination/ownership/order table for
-the routine, its named caller, and immediate consumers. Each possible result
-selects a full edge, a partial edge, or no edge. Static evidence alone does
-not establish retail legitimacy or payload polarity.
+The discriminator is the complete candidate table for one bounded region:
+each candidate must be selected, already synchronized, or preserved as
+ambiguous-or-fake. A selected candidate must produce a nonzero generated-file
+diff; otherwise choose another adjacent region before stopping.
 
 ## Exact commands
 
-Session 2745 ruled out `serviceVoicePoolFrame` at `0x8009B5A8`: it services
-four slot records, starts/reaps streamed voices, and signals a zero-token
-cadence queue, with no MORT/renderer/AI publication edge. Use the generated
-snapshot and companion symbols to classify every read, write, call, and
-immediate caller/consumer of `serviceStreamingVoice`. Write the complete table
-before any build or run; no runtime probe is justified unless this audit names
-a legitimate destination and ordering edge.
+1. Check the last 15 ledger titles:
+   `grep -n '^## Session ' PORTING-STATE.md | tail -15`
+2. Inspect the next adjacent region and existing mappings without writing:
+   `python3 - <<'PY'` using `tools/rename_generated_symbols.py`'s
+   `companion_renames` over the selected address interval.
+3. Apply one bounded batch:
+   `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --start-address START --end-address END --limit 32 --require-rename`
+4. Verify the old names are absent and the new names occur in the expected
+   generated files; record the full decision table in a new scratch artifact.
+
+Expected outcomes: a nonzero rename selects H-verified-fragments-remain and
+lands a generated-symbol change; zero selected candidates selects either
+H-already-synchronized or H-ambiguous-or-fake and requires moving to the next
+adjacent region in this same work unit.

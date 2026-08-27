@@ -118950,3 +118950,19 @@ Callback-table contents, runtime reachability, retail writer identity, and
 payload legitimacy remain unevaluable; this is static single-source evidence.
 No runtime instrumentation, writeback, remap, force-clear, or wait change was
 authorized. Full table: `scratch/agent/s2745_service_voice_pool_audit.md`.
+
+## Session 2746 (2026-08-27) — renamed a verified generated-symbol batch
+
+The mandated no-churn pivot resumed the generated-symbol sweep. The bounded
+batch used five semantic fragment mappings already present in the standard
+redef generator: `fake_func_8005C61C` →
+`checkTrackedNpcProximityForCuePreamble`, `fake_func_8005EE64` →
+`steerOrientationTowardTargetPreamble`, `fake_func_800613B8` →
+`loadCharTextureSetPreamble`, `fake_func_80069AEC` →
+`collideSegmentAgainstObjectNodesPreamble`, and `fake_func_8006ACA4` →
+`transformObjectColliderCenterPreamble`. The bounded helper changed 15
+references across five generated files and passed `--require-rename`. This
+lands generated code naming without relying on a runtime run or an inferred
+semantic name. It rules out a no-op for this interval; the remaining
+placeholder census is still open. Full table:
+`scratch/agent/s2746_generated_symbol_sweep/decision-table.txt`.

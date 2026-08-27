@@ -8,6 +8,11 @@ import sys
 
 
 RENAMES = {
+    "fake_func_8005C61C": "checkTrackedNpcProximityForCuePreamble",
+    "fake_func_8005EE64": "steerOrientationTowardTargetPreamble",
+    "fake_func_800613B8": "loadCharTextureSetPreamble",
+    "fake_func_80069AEC": "collideSegmentAgainstObjectNodesPreamble",
+    "fake_func_8006ACA4": "transformObjectColliderCenterPreamble",
     "fake_func_80082268": "cheatCodeConstantPreamble",
     "fake_func_800825C8": "rspbootTextPreamble",
     "fake_func_800AD378": "storeTrackedObjectAuxiliaryFields",

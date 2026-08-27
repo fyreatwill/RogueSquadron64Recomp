@@ -4,20 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2745 (2026-08-27).
+Current maintenance marker: Session 2746 (2026-08-27).
 
-Session 2745 completed the bounded static audit of `serviceVoicePoolFrame`
-(`0x8009B5A8`). The routine is reached through the four-entry VI callback
-dispatcher, receives and returns a zero-token service queue message, and
-iterates four `0x1228`-byte voice records. Its named work is streaming-state
-servicing, state-to-playing transition, streamed-voice startup, failed-start
-cleanup, and status-03 stream-resource reaping. It does not read
-`voice+0x140`, synth/MORT output, the AI span `0x801496B0:0x8014C6B0`, or call
-an AI/PCM publication routine. This selects `H-service-edge-absent` for the
-bounded surface. Static single-source evidence only; callback-table contents,
-runtime reachability, retail writer identity, and payload legitimacy remain
-unevaluable. No runtime watch, writeback, remap, force-clear, or wait change is
-authorized. Evidence: `scratch/agent/s2745_service_voice_pool_audit.md`.
+Session 2746 resumed the generated-symbol sweep with a verified batch of five
+short boundary fragments: `fake_func_8005C61C` →
+`checkTrackedNpcProximityForCuePreamble`, `fake_func_8005EE64` →
+`steerOrientationTowardTargetPreamble`, `fake_func_800613B8` →
+`loadCharTextureSetPreamble`, `fake_func_80069AEC` →
+`collideSegmentAgainstObjectNodesPreamble`, and `fake_func_8006ACA4` →
+`transformObjectColliderCenterPreamble`. The generated snapshot changed 15
+references across five files; all five mappings were already present in the
+standard redef generator, so no semantic name was inferred. This selects
+`H-verified-fragment-renames` for the bounded batch. Evidence:
+`scratch/agent/s2746_generated_symbol_sweep/decision-table.txt`.
 
 Session 2744 completed the bounded static audit of `musyxBuildVoiceCommandList`
 (`0x80091034`), called from `musyxSynthFrame`. Its input is a selected voice
@@ -731,7 +730,10 @@ parked until a future regeneration exposes a new exact companion match.
    reaping; it selected `H-service-edge-absent`. Continue with the fresh
    `serviceStreamingVoice` boundary; do not repeat the service worker or add
    a runtime watch without a legitimate destination and ordering edge.
-3. **Generated-symbol renaming sweep.** s2718 renamed the three exact
+3. **Generated-symbol renaming sweep.** Session 2746 renamed five verified
+   short boundary fragments in `0x8005C000..0x8006B000`; continue with one
+   bounded batch of exact or previously audited mappings. Do not infer names
+   from implementation shape. s2718 renamed the three exact
    resampling helpers at `0x800927B0..0x80092CF0`; preserve the unresolved
    `0x8000040C` placeholder. Continue with one adjacent bounded region only
    when exact companion/source evidence exists. s2704 found all 19 candidates in

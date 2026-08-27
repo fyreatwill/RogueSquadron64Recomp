@@ -1,0 +1,14 @@
+Session: 2746
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+Command: python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --start-address 0x8005C000 --end-address 0x8006B000 --limit 32 --require-rename
+
+| placeholder | destination | evidence | result |
+|---|---|---|---|
+| fake_func_8005C61C | checkTrackedNpcProximityForCuePreamble | Existing EXTRA_RENAMES mapping in tools/rename/build_redefs.py | renamed 3 references |
+| fake_func_8005EE64 | steerOrientationTowardTargetPreamble | Existing EXTRA_RENAMES mapping in tools/rename/build_redefs.py | renamed 3 references |
+| fake_func_800613B8 | loadCharTextureSetPreamble | Existing EXTRA_RENAMES mapping in tools/rename/build_redefs.py | renamed 3 references |
+| fake_func_80069AEC | collideSegmentAgainstObjectNodesPreamble | Existing EXTRA_RENAMES mapping in tools/rename/build_redefs.py | renamed 3 references |
+| fake_func_8006ACA4 | transformObjectColliderCenterPreamble | Existing EXTRA_RENAMES mapping in tools/rename/build_redefs.py | renamed 3 references |
+
+Result: 15 references renamed across 5 generated files. The fail-closed
+require-rename check passed. No name was inferred from implementation shape.
