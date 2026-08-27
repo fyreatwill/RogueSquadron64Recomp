@@ -116578,3 +116578,32 @@ Hangar-silent PCM remains the next contract gap.
 Artifacts: `scratch/agent/s2608_m5_c88_default.log`,
 `scratch/agent/s2608_m5_c88_rollback.log`,
 `scratch/s2608_m5_c88_default_store_audit.md`.
+## Session 2609 (2026-08-27) — measured indexed M5 channel writer against hangar PCM
+
+Added `rs64_s2609_m5_channel_store` to the live generated helper and
+`fixup_game_funcs.py`. The phase-gated witness records the `0x80094648`
+destination, requested `$a2`, and post-store byte, bounded to the first eight
+rows and every sixteenth thereafter. The Debug target initially failed to
+link because the live `funcs_23.c` helper was absent; adding that regeneration-
+safe counterpart fixed the build. The required checks passed and the target
+built successfully without regeneration.
+
+Ran default and `ROGUESQ_M5_C88_VALUE=0` arms concurrently for 90 seconds with
+the AUTOPILOT hangar route and SIGKILL cleanup. Both reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, with zero crash, abort, or
+missing-function markers. Default `startSongSequence` entered twice and
+`0x80094664` logged 102 rows; the new control fired in both phases. The
+default writer stored `0x7F` at `0x80141AD8` onward through `0x80141B08`, and
+all sampled post-store bytes were `0x7F`. Rollback emitted no `0x80094648`
+rows and no `startSongSequence` rows. Hangar PCM remained `nz=0` in both
+arms, so `H-HangarStoreZero` is refuted and `H-HangarStoreNonzeroNoPcm` is
+selected from the direct writer and PCM lines of evidence. ORIGIN: the writer
+is the legitimate retail-shaped `startSongSequence` store at `0x80094648`;
+the `0x7F` value is not a mitigation or rewrite.
+
+The prescribed title PCM `nz=768` positive control did not fire in either
+rerun; all sampled title PCM rows were `nz=0`. Therefore this iteration does
+not claim a title-versus-hangar PCM contrast, and the next unit must establish
+why that control is absent before using it for comparison. Artifacts:
+`scratch/agent/s2609_m5_hangar_94648.log`,
+`scratch/agent/s2609_m5_hangar_94648_rollback.log`.

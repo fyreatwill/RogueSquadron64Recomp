@@ -4,7 +4,25 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2608 (2026-08-27).
+Current maintenance marker: Session 2609 (2026-08-27).
+
+- **s2609 — hangar `0x80094648` stores a nonzero channel byte, but the PCM
+  join remains zero.** Added a regeneration-safe, phase-gated witness for the
+  indexed `sb $a2,0x1AD8($at)` writer and ran default/rollback arms together.
+  Both reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` with
+  zero crash/abort/missing-function rows. Default wrote `0x7F` to
+  `0x80141AD8..0x80141B08` in both phases (first 8 plus rows 16/32/48), and
+  every post-store read matched `0x7F`; rollback emitted zero writer rows and
+  zero `startSongSequence` rows. Hangar PCM stayed `nz=0` in both arms, so
+  this selects `H-HangarStoreNonzeroNoPcm` and refutes `H-HangarStoreZero`.
+  The prescribed title PCM `nz=768` positive control did not reproduce in
+  either rerun (all sampled title PCM rows were `nz=0`), so no title-versus-
+  hangar PCM contrast is claimed; the direct writer result is still
+  evaluable because the new witness control fired in each phase. ORIGIN:
+  writer is `startSongSequence` at `0x80094648`; `0x7F` is the guest value
+  and is legitimate in the retail-shaped channel table. Artifacts:
+  `scratch/agent/s2609_m5_hangar_94648.log`,
+  `scratch/agent/s2609_m5_hangar_94648_rollback.log`.
 
 - **s2608 — guest C88 store is now the compiled default.** Inverted the
   `0x8008EC88` hatch so unset stores `ctx->r2` and `ROGUESQ_M5_C88_VALUE=0`
@@ -618,8 +636,13 @@ This is one monotonic sequence; #1 is the next campaign priority.
    before the logged branch and so ran, but its `$a2`/dest are unlogged.
    Next is one store-site log at `0x80094648` on the new default image,
    with title PCM `nz=768` as the same-run positive control.
-   `ROGUESQ_M5_C88_VALUE=0` remains the C88 rollback; retain
-   `ROGUESQ_AUDIO_UCODE=0` as the silent control.
+   s2609 directly measured the indexed writer: default stores `0x7F` at
+   `0x80141AD8..0x80141B08` and the post-store byte agrees, while hangar PCM
+   remains zero. The title `nz=768` positive control failed to reproduce in
+   the s2609 rerun, so the next unit must first establish why that control is
+   absent before making a title/hangar output comparison. `ROGUESQ_M5_C88_VALUE=0`
+   remains the C88 rollback; retain `ROGUESQ_AUDIO_UCODE=0` as the silent
+   control.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
@@ -741,6 +764,9 @@ force-zero hatch. s2608's default arm opens the gate and produces title
 PCM. Hangar PCM and a complete slot/voice mapping remain open. Zero-valued
 rows are diagnostically ambiguous; no output remap or mitigation is
 permitted without a named legitimate writer and an `ORIGIN:` line.
+The s2609 indexed channel writer is not zero-valued: it stores `0x7F` at
+`0x80141AD8 + index` in both title and hangar, with matching post-store reads;
+the remaining PCM gap is downstream or a missing title-control condition.
 
 The M4 indirect alias audit adds a static cross-overlay path: overlay 0x1c
 writes B00/B02/B04 pointer entries from `0x670`-derived records, and overlay
