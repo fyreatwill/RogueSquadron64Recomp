@@ -177,6 +177,18 @@ call, or source relation. This selects `H-unresolved-address`, rules out
 evidence), and leaves no legitimate writer or destination for a runtime watch,
 writeback, remap, or mitigation.
 
+s2691 audited every direct named caller and immediate consumer of
+`acquireSampleStreamBlock`. There is one caller, `musyxRenderVoiceSamples`
+(`0x800902DC`): it passes the stream/cache pointer at `s1+0x34`, stores the
+returned block pointer at `s0+0x40`, later reads that field as a cursor/length
+input, and copies `s0+0x40` to `s1+0x40` at `0x80090B68`. The acquire helper
+only reaps or links block descriptors, sets state/owner fields, and returns
+`node+0x8`; it contains no payload copy or transform, queue/service signal,
+AI call, or publication ordering. This selects `H-unresolved-address` for
+the acquire boundary and rules out `H-acquire-publisher` and
+`H-service-boundary` at the audited sites (static source evidence). No
+runtime watch, writeback, remap, or mitigation is authorized.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -190,10 +202,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    publication edge in the mixer callback/state boundary, s2688 found no join
    in the named AI worker, s2689 found that the named ring setup helpers only
    allocate/link metadata and zeroed decode storage, and s2690 found the same
-   for the cache initializer. The next useful work must audit the direct
-   callers of `acquireSampleStreamBlock` and their post-acquire consumers for a
-   named stream/cache-to-AI publication relation, without repeating these
-   initializer, setup, renderer, mixer, or AI-submit body audits.
+   for the cache initializer. The acquire audit found only descriptor
+   ownership/cursor propagation. The next useful work must audit named callers
+   of `musyxRenderVoiceSamples` and immediate post-call consumers of its
+   voice-object fields for a named stream/cache-to-AI publication relation,
+   without repeating these initializer, setup, renderer, mixer, or AI-submit
+   body audits.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.

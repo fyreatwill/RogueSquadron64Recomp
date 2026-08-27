@@ -118038,3 +118038,16 @@ pair. This selects `H-unresolved-address`, rules out `H-cache-producer` and
 runtime watch, writeback, remap, or mitigation. The next bounded work unit is
 the direct callers of `acquireSampleStreamBlock` and their immediate
 post-acquire consumers.
+## Session 2691 (2026-08-27) — audited the M5 acquire-sample caller boundary
+
+The bounded static audit searched the generated functions and companion symbol
+map for every direct named caller of `acquireSampleStreamBlock` and its
+immediate consumers. It found one caller, `musyxRenderVoiceSamples`, at
+`0x800902DC`. The caller passes the stream/cache pointer at `s1+0x34`, stores
+the returned pointer at `s0+0x40`, later reads that field as a cursor/length
+input, and copies `s0+0x40` to `s1+0x40` at `0x80090B68`. The acquire helper
+only reaps or links descriptors, sets state/owner fields, and returns
+`node+0x8`; no payload copy, transform, queue/service signal, AI call, or
+publication ordering is present. This selects `H-unresolved-address` and
+rules out `H-acquire-publisher` and `H-service-boundary` at the audited sites.
+It is static source evidence only; no build or runtime watch was authorized.
