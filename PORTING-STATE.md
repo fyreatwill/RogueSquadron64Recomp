@@ -115995,3 +115995,19 @@ experiment was run because the work unit was explicitly static-only. The next
 unresolved placeholder is `0x80109618`.
 
 Artifact: `scratch/agent/s2576_symbol_census/audit.md`.
+
+## Session 2577 (2026-08-26) — censused generated-symbol object-tracking boundary
+
+Ran the bounded generated-symbol census for `0x80109618`. The complete
+8-byte span contains only `lw v0,0x128(fp)` and `lw v1,0xE8(fp)`, immediately
+before the complete `lvj_initializeObjectTracking` function at `0x80109620`.
+The companion symbol file explicitly retains `fake_func_80109618` and
+identifies the following real function; exact-address, source, m2c, caller,
+and rename-tool searches found no independent human candidate. Selected
+`H-data-or-boundary` and left the placeholder unchanged. This is a static,
+single-source result: it rules out an exact rename at this boundary but does
+not prove reachability or explain the fragment's origin. No build or runtime
+experiment was run because the work unit was explicitly static-only. The next
+unresolved placeholder is `0x800AEC54` in `.ovl.menu`.
+
+Artifact: `scratch/agent/s2577_symbol_census/audit.md`.

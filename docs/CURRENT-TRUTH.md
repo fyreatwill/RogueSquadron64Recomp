@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2576 (2026-08-26).
+Current maintenance marker: Session 2577 (2026-08-26).
+
+- **s2577 — the next generated-symbol region is an object-tracking boundary
+  with no defensible mapping.** The complete `0x80109618–0x8010961F` span is
+  two loads (`lw v0,0x128(fp)` and `lw v1,0xE8(fp)`) immediately before the
+  complete `lvj_initializeObjectTracking` function. The companion explicitly
+  retains `fake_func_80109618` and identifies the following real function;
+  exact-address, source, m2c, caller, and rename-tool searches found no human
+  candidate. This is a static, single-source boundary classification, so the
+  placeholder remains unchanged. The next unresolved placeholder is
+  `0x800AEC54`. Artifact: `scratch/agent/s2577_symbol_census/audit.md`.
 
 - **s2576 — the next generated-symbol region is an objective boundary with no
   defensible mapping.** The complete `0x80109428–0x8010942F` entry is only
