@@ -1,51 +1,50 @@
-# NEXT work unit (s2607) — C88 gate-polarity A/B on the restored hangar route
+# NEXT work unit (s2608) — restore the guest C88 store as the default
 
-HYPOTHESIS-ID: m5-c88-gate-polarity
+HYPOTHESIS-ID: m5-c88-default-store
 
 ## Single work unit
 
-s2606 showed the restored AUTOPILOT route reaches title and hangar, that
-`reapplyDisplayMode` at `0x8008EC88` requests `0x01` but the C88 force-zero
-hatch stores `0x00`, and that `musyxNoopStub` therefore takes the
-`gate==0` early-out and never executes retail's `0x8008ED48` store.
-`startSongSequence` / `0x80094648` never entered; PCM stayed zero.
+s2607 selected `H-C88ForceZeroBlocksGate` on the restored hangar route:
+`ROGUESQ_M5_C88_VALUE=1` stores the guest `0x01` at `0x8008EC88`, the gate
+becomes nonzero, `startSongSequence` / `L_80094640` run, and title PCM is
+briefly `nz=768`. Retail s2583 wrote `0x01000000` at `0xA0F50` from this PC.
+Land M5 plan Step 4's one-writer change: invert the hatch so the default
+store is the guest value.
 
-M5 plan Step 4 is now evaluable. Run both C88 arms in this one iteration on
-the same s2605/s2606 image. Do not change the default store, and do not
-promote a gate value from a single arm.
+Do not full-regen (cache 0x0D). Edit the live generated store and the
+fixup replacement together. Do not touch ED48 (`sb $zero` is a disable).
 
-The generated-symbol census at `0x800E8A34` stays parked.
+ORIGIN for the change: writer is `reapplyDisplayMode` at `0x8008EC88`;
+the guest requested value is `0x01`; retail post-store at this PC is
+`0x01000000`; the force-zero is a port hatch, not a legitimate game store.
 
 ## Competing hypotheses and discriminator
 
-- `H-C88ForceZeroBlocksGate`: `ROGUESQ_M5_C88_VALUE=1` stores the guest
-  requested `0x01` at `0x8008EC88`; title/hangar gate rows become nonzero;
-  `musyxNoopStub` no longer early-outs on `gate==0`; synth/song and/or
-  `0x80094648` and/or nonzero PCM appear in the same phases.
-- `H-C88NotSufficient`: C88=1 stores `0x01` and the gate is nonzero, but
-  `0x80094648` still does not run and PCM stays `nz=0`. The missing writer
-  is then downstream of the gate, not the force-zero hatch.
-- `H-C88RouteAbort`: the C88=1 arm dies before title/hangar, so the table
-  is unevaluable (force-zero may still be a route hatch).
+- `H-DefaultMatchesEnvArm`: after the invert, unset (new default) reproduces
+  the s2607 C88=1 table: title/hangar reached, C88 stored 1, gate 1, song
+  / `L_80094640` live, title PCM `nz=768` then silent, hangar PCM `nz=0`.
+  The `=0` rollback arm reproduces s2607 control (stored 0, gate 0, no song).
+- `H-DefaultRouteAbort`: compiling store-guest as default dies before
+  title/hangar, so the env arm is not a compiled-default equivalent.
+- `H-HangarPcmFollows`: default store-guest makes hangar PCM nonzero in
+  the same run (title PCM remaining the positive control).
 
-The discriminator is two concurrent AUTOPILOT hangar runs of the same image,
-one with `ROGUESQ_M5_C88_VALUE` unset (control; must reproduce s2606:
-requested 1, stored 0, gate 0) and one with `ROGUESQ_M5_C88_VALUE=1`.
-Require title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` as the
-positive control in each arm that is claimed evaluable.
+The discriminator is one rebuilt image, two concurrent AUTOPILOT hangar
+arms: default (unset) vs `ROGUESQ_M5_C88_VALUE=0`. Require title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400` before reading writers.
 
 ## Exact checks
 
-1. Confirm `python3 tools/check_jr_t9_host_return.py` still passes.
-2. Reuse `build/RogueSquadron64Recomp` (s2605 image). Do not regenerate.
-3. From `build/`, ROM present, both arms at once (one game ~50% of one core).
-   Shared flags:
-   `ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LOG_M5_WRITER_ENTRY=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_M5_B40_WRITER=1 ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' ROGUESQ_AUTOPILOT_STOP_WIDTH=512`
-   - control: no `ROGUESQ_M5_C88_VALUE` → `scratch/agent/s2607_m5_c88_control.log`
-   - arm: `ROGUESQ_M5_C88_VALUE=1` → `scratch/agent/s2607_m5_c88_value.log`
-   SIGKILL each at ~90s. Final log component must not start with `.`.
-4. Per arm and per title/hangar: C88 requested/stored, gate byte,
-   `musyxNoopStub` entry vs `0x8008ED48` store, `startSongSequence` /
-   `0x80094648`, PCM `nz`, audio-return arm. The control arm must reproduce
-   s2606 or the comparison is invalid.
-5. Do not change the default C88 hatch this iteration regardless of outcome.
+1. `python3 tools/check_jr_t9_host_return.py` still passes.
+2. In `../N64Recomp/fixup_game_funcs.py` invert the `0x8008EC88` replacement
+   so unset stores `ctx->r2` and env `0` stores `0`. Apply the same invert
+   to the live line in `../N64Recomp/RecompiledFuncs/funcs_23.c`.
+3. Rebuild Debug `RogueSquadron64Recomp` only (no N64Recomp regen).
+4. From `build/`, ROM present, both arms at once, 90s SIGKILL, same shared
+   flags as s2607. Logs:
+   - default unset → `scratch/agent/s2608_m5_c88_default.log`
+   - rollback `ROGUESQ_M5_C88_VALUE=0` → `scratch/agent/s2608_m5_c88_rollback.log`
+5. Per arm and per title/hangar: C88 requested/stored, gate byte, song /
+   `0x80094664`, PCM `nz`, crash/abort. Default must match s2607 C88=1;
+   rollback must match s2607 control. Do not change ED48 or any other gate
+   writer this iteration.

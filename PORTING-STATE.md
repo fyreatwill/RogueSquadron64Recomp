@@ -116504,3 +116504,38 @@ authorized from this census; the next unit is the C88 polarity A/B.
 Artifacts: `scratch/agent/s2606_m5_writer_callpath.log`,
 `scratch/s2606_m5_writer_callpath_audit.md`.
 
+
+## Session 2607 (2026-08-26) — C88 polarity A/B selects force-zero as the gate blocker
+
+Same s2605/s2606 image, no regen, default C88 store unchanged. Concurrent
+90s AUTOPILOT hangar arms, SIGKILL: control `ROGUESQ_M5_C88_VALUE` unset vs
+treatment `=1`. Shared flags as s2606 (LLE_FORCE/SPIN_YIELD/LLE_UNGATED/
+LLE_SOLO, writer/gate/PCM/audio-return/B40-writer logs, hangar schedule,
+STOP_WIDTH=512). jr-$t9 canary still passed.
+
+Both arms reached title `1024 @ 0x00790400` (~12s) and hangar
+`512 @ 0x006AB400` (~20s) with 0 `[CRASH]` / 0 `[ABORT]` / 0 missing
+function, and 258+272 `[audio-return]` `arm=factor5_ucode_b`. Control
+reproduced s2606: C88 requested `0x01` stored `0x00` in both phases; gate
+`0` on 512+512 `[m5-gate]` rows; `musyxNoopStub` title entry took
+`0x8008ED0C`; `startSongSequence` / `0x80094664` never ran; title PCM 43/43
+`nz=0`. One hangar control PCM row was `nz=639` at `0x80167350` then empty
+again — not a stream.
+
+C88=1 stored the requested `0x01` in both phases. Title/hangar gate rows
+became `0x01` after the first synth early-out. Title `0x8008ED48` ran
+(`old=1 stored=0`, `musyxNoopStub` disable). `startSongSequence` entered in
+title and hangar and reached the `L_80094640` loop (`0x80094664` 102×,
+`0x80094690` 100× taken); the `0x80094648` store itself has no s2586 PC
+line but sits in that loop. Title PCM n=0..18 was `nz=768` with distinct
+fnv hashes, then n=19+ empty. Hangar PCM stayed `nz=0` despite a live gate
+and song.
+
+This selects `H-C88ForceZeroBlocksGate` and refutes `H-C88RouteAbort` and
+`H-C88NotSufficient` as stated. Hangar-silent PCM is a downstream gap after
+the gate, not a reason to keep force-zero. No default store/gate/task change
+this iteration.
+
+Artifacts: `scratch/agent/s2607_m5_c88_control.log`,
+`scratch/agent/s2607_m5_c88_value.log`,
+`scratch/s2607_m5_c88_gate_polarity_audit.md`.

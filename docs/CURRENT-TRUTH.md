@@ -4,7 +4,23 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2606 (2026-08-26).
+Current maintenance marker: Session 2607 (2026-08-26).
+
+- **s2607 — C88 polarity A/B selects `H-C88ForceZeroBlocksGate`.** Same
+  s2605/s2606 image, concurrent 90s AUTOPILOT hangar arms, default store
+  unchanged. Both arms reached title `1024 @ 0x00790400` (~12s) and hangar
+  `512 @ 0x006AB400` (~20s) with zero crash/abort/missing-function rows.
+  Control reproduced s2606: C88 requested `0x01` stored `0x00`, gate 0,
+  no song. C88=1 stored `0x01`; gate rows became `0x01`; `startSongSequence`
+  entered in both phases and reached the `L_80094640` loop that contains
+  `0x80094648`; title PCM n=0..18 was `nz=768` with distinct hashes, then
+  silent; hangar PCM stayed `nz=0`. Title `0x8008ED48` ran as a disable
+  (`stored=0`). This refutes `H-C88RouteAbort` and `H-C88NotSufficient` as
+  stated. Hangar-silent PCM is a downstream gap; do not keep force-zero for
+  it. Next is restoring the guest C88 store as the default. Artifacts:
+  `scratch/agent/s2607_m5_c88_control.log`,
+  `scratch/agent/s2607_m5_c88_value.log`,
+  `scratch/s2607_m5_c88_gate_polarity_audit.md`.
 
 - **s2606 — the restored hangar route makes the M5 writer table evaluable and
   selects `H-PortWriterMissing` at the retail store sites.** Same-build
@@ -16,8 +32,8 @@ Current maintenance marker: Session 2606 (2026-08-26).
   entered in title and took the `0x8008ED0C` `gate==0` early-out, so retail's
   `0x8008ED48` store did not run. `startSongSequence` / `0x80094648` never
   entered. PCM source/consumer rows were live and zero. This refutes
-  `H-RouteAbortAgain` and `H-PortWriterReachable`. No store/gate/task/output
-  change is authorized; next is the C88 polarity A/B. Artifacts:
+  `H-RouteAbortAgain` and `H-PortWriterReachable`. s2607 shows those missing
+  writers are the force-zero hatch, not an unreachable call-path. Artifacts:
   `scratch/agent/s2606_m5_writer_callpath.log`,
   `scratch/s2606_m5_writer_callpath_audit.md`.
 
@@ -566,10 +582,10 @@ the active backlog:
 - s2579–s2587 left M5 contract-writer qualification blocked by the
   pre-title scene-graph boundary; s2605 closed that abort as a broken
   jr-$t9 host return. s2606 re-ran the writer table on the restored
-  title/hangar route and selected `H-PortWriterMissing` at `0x8008ED48`
-  and `0x80094648`: C88 requests 1 and stores 0, so `musyxNoopStub`
-  early-outs. No audio gate, store, task field, output pointer, or
-  mitigation was promoted.
+  title/hangar route under force-zero. s2607's C88 polarity A/B selected
+  `H-C88ForceZeroBlocksGate`: storing the guest `0x01` opens the gate,
+  runs `startSongSequence` / `L_80094640`, and produces title PCM.
+  Hangar PCM stayed zero. No default store was promoted.
 
 For exact commands, artifacts, and failed experiments, use the corresponding
 session entry in `PORTING-STATE.md`.
@@ -577,15 +593,16 @@ session entry in `PORTING-STATE.md`.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 named retail writer/value boundary — C88 polarity A/B next.** s2606
-   made the writer table evaluable on the restored hangar route and selected
-   `H-PortWriterMissing` at retail stores `0x8008ED48` and `0x80094648`.
-   `reapplyDisplayMode` `0x8008EC88` requests `0x01` and the C88 hatch stores
-   `0x00`, so `musyxNoopStub` takes the `gate==0` early-out. Next is M5 plan
-   Step 4: same-build `ROGUESQ_M5_C88_VALUE` unset vs `=1` on this route
-   (see `scratch/agent/NEXT.md`). Do not change the default store until that
-   A/B selects it. Retain `ROGUESQ_AUDIO_UCODE=0` as the silent control and
-   rollback.
+1. **M5 named retail writer/value boundary — restore the guest C88 store.**
+   s2607 selected `H-C88ForceZeroBlocksGate`: C88=1 stores the requested
+   `0x01`, the gate becomes nonzero, `startSongSequence` and the
+   `0x80094640` loop run, and title PCM is briefly fully nonzero. Retail
+   s2583 wrote `0x01000000` at `0xA0F50` from this PC. Next is M5 plan
+   Step 4's store change: invert the `0x8008EC88` hatch in
+   `N64Recomp/fixup_game_funcs.py` so unset stores `ctx->r2` and
+   `ROGUESQ_M5_C88_VALUE=0` is the rollback. Do not full-regen. Hangar PCM
+   remaining zero is the following contract gap, not a reason to keep
+   force-zero. Retain `ROGUESQ_AUDIO_UCODE=0` as the silent control.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
@@ -701,12 +718,12 @@ change. Factor 5 mappings and independent controls are in
 
 Direct service entry/exit, service gate/loop, task/AI boundary, image DMEM
 work, generated DMA, reporter association, target-route SP queue consumption,
-and PCM consumption are live on the port. The image arm's downstream identity
-is not yet a complete legitimate slot, voice, PCM, or output mapping. Retail
-proves related ranges and task-field writers, including the second-range
-helper/caller relation, but does not prove a port equivalent. Zero-valued rows
-are diagnostically ambiguous; no output remap or mitigation is permitted
-without a named legitimate writer and an `ORIGIN:` line.
+and PCM consumption are live on the port. The default `0x8008EC88` hatch
+still force-zeros the MusyX gate; s2607 showed that storing the guest `0x01`
+opens the gate and produces title PCM. Hangar PCM and a complete slot/voice
+mapping remain open. Zero-valued rows are diagnostically ambiguous; no output
+remap or mitigation is permitted without a named legitimate writer and an
+`ORIGIN:` line.
 
 The M4 indirect alias audit adds a static cross-overlay path: overlay 0x1c
 writes B00/B02/B04 pointer entries from `0x670`-derived records, and overlay
@@ -754,6 +771,10 @@ controls, but are superseded at their measured scopes:
   and s2587 aborted before title, so no entry rows existed. s2606 shows the
   function enters in title and skips `0x8008ED48` because the gate is already
   0. The store-site absence stands; the missing-call-path claim does not.
+- s2584/s2585/s2606's “`0x80094648` never entered / no matching port writer”
+  label is force-zero-scoped. It was believable because the default C88 hatch
+  left the gate at 0, so `startSongSequence` never ran. s2607 C88=1 reached
+  `L_80094640` (the loop that contains that store) in title and hangar.
 
 ## Evidence and safety rules
 
