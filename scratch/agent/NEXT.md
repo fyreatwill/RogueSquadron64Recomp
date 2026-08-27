@@ -1,34 +1,38 @@
-# NEXT work unit (s2748) — continue the generated-symbol renaming sweep
+# NEXT work unit (s2749) — audit the fresh M5 streaming-voice boundary
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-service-streaming-voice-boundary
 
 ## Work unit
 
-Extend `tools/rename_generated_symbols.py` with the exact fragment mappings
-already present in `tools/rename/build_redefs.py` for the bounded region
-`0x800B4000` (inclusive) through `0x800B6000` (exclusive), then apply that
-batch to `../N64Recomp/RecompiledFuncs`. Do not infer names from implementation
-shape, regenerate the tree, or run the game.
+Perform one bounded static audit of `serviceStreamingVoice` at guest
+`0x8009BAD4` (`../N64Recomp/RecompiledFuncs/funcs_27.c:369`) and its immediate
+named callers/consumers. Enumerate every payload pointer, load/store or copy,
+transform, slot/queue signal, AI destination, and ordering edge. Do not repeat
+the already closed `serviceVoicePoolFrame`, queue, renderer, mixer, AI-worker,
+PI-service, or host-AI surfaces. Do not add a runtime watch or mitigation.
 
 ## Competing hypotheses and discriminator
 
-- H-verified-fragments-remain: the region contains source-backed fragment
-  mappings whose generated placeholders can be renamed.
-- H-already-synchronized: companion semantic entries exist, but generated
-  references already use them.
-- H-ambiguous-or-fake: remaining fragments lack defensible semantic evidence.
+- H-streaming-publishes: the service directly copies or transforms legitimate
+  rendered/audio payload into an AI-visible destination.
+- H-streaming-services: it only advances slot/descriptor state or signals a
+  worker, with no payload publication.
+- H-streaming-opaque-edge: a named indirect callback or data-driven pointer
+  leaves the immediate surface unevaluable and is the only next target.
 
-The discriminator is the complete candidate table for this interval plus the
-`--require-rename` result: a selected mapping must change generated references;
-all other candidates must be explicitly classified as synchronized or
-ambiguous/fake.
+The discriminator is a complete source-level table of all direct callers,
+callee edges, pointer origins/destinations, writes/copies, and queue/AI calls.
+An explicit payload-to-AI/order edge selects H-streaming-publishes; only
+state/cadence operations select H-streaming-services; an unresolved named
+indirect/data-driven edge selects H-streaming-opaque-edge. If no outcome can
+be distinguished, stop and do not add instrumentation.
 
 ## Exact commands
 
-1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
-2. Inspect the interval with `companion_renames` and the checked-in
-   `build_redefs.py` mapping source, without writing.
-3. Add only the selected source-backed mappings to `RENAMES`, then run:
-   `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x800B4000 --end-address 0x800B6000 --limit 32 --require-rename`
-4. Verify old names are absent and new names occur in expected generated
-   files; save the full table under `scratch/agent/s2748_generated_symbol_sweep/`.
+1. Inspect only bounded windows around the definition and direct references:
+   `rg -n -C 35 'serviceStreamingVoice' ../N64Recomp/RecompiledFuncs/funcs_27.c ../N64Recomp/RecompiledFuncs/funcs.h ../N64Recomp/RecompiledFuncs/recomp_overlays.inl`
+2. Enumerate nearby calls, stores, queue symbols, AI symbols, and pointer
+   fields with `rg`; record the complete table in
+   `scratch/agent/s2749_m5_service_streaming_voice/audit.md`.
+3. Append the result to `PORTING-STATE.md`, update `docs/CURRENT-TRUTH.md`
+   next steps, and prepare the next single work unit.

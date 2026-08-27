@@ -118978,3 +118978,16 @@ semantic entries as already synchronized and retained the two address-only
 fake entries at `0x800AA6CC`/`0x800AAADC` as ambiguous-or-fake. This rules out
 a no-op for the selected interval and does not infer any new semantic names.
 Evidence: `scratch/agent/s2747_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2748 (2026-08-27) — compacted current truth maintenance state
+
+The maintenance check found `docs/CURRENT-TRUTH.md` at 60,442 bytes and 935
+lines, above the 60,000-byte threshold. No experiment or build was run. The
+file was compacted to 9,046 bytes and 174 lines: duplicated run history was
+removed, durable material was retained or pointed to `PROJECT-OVERVIEW.md`,
+the backlog was consolidated into one monotonic sequence, and the headline
+was refreshed to Session 2748. The next work unit remains a bounded static
+audit of `serviceStreamingVoice` with three competing hypotheses and an
+explicit discriminator in `scratch/agent/NEXT.md`. This maintenance result
+rules out neither M5 hypothesis; it only restores the operational document
+under the size gate.
