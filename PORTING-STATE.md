@@ -117332,3 +117332,15 @@ name, the body spans `0x154` bytes to the exact `0x800CC2AC` boundary, and the
 TOML and overlay table carry the matching name and ROM size. No placeholder,
 stale mapping, or safe rename remained. No build or runtime behavior changed;
 the next bounded lead is `0x800CC2AC`.
+## Session 2651 (2026-08-27) — audited the 800CC2AC symbol lead
+
+The bounded sweep audited `0x800CC2AC` against the companion mission/menu
+symbols, checked-in TOML, generated `funcs_37.c` and header, generated overlay
+table, and callers. `tickAtAtBodyTransform` is already an exact mission entry:
+the generated definition and header use that name, its body spans `0x70C`
+bytes to the exact `0x800CC9B8` boundary, and the TOML and overlay table carry
+the matching identity and ROM size. Generated callers at `0x800CE160` and
+`0x800CE578` invoke the resolved name. No placeholder, stale mapping, or safe
+rename remained; no runtime or build change was warranted. This selects the
+already-resolved `H-CompanionExact` result and advances the next bounded lead
+to `0x800CC9B8`.

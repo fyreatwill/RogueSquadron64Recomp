@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2650 (2026-08-27).
+Current maintenance marker: Session 2651 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -318,7 +318,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800CC03C` next using companion symbols, exact spans, callers, and
+   Audit `0x800CC9B8` next using companion symbols, exact spans, callers, and
    overlay identity;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
@@ -537,3 +537,16 @@ the matching identity and ROM size. No placeholder, stale mapping, or safe
 rename remained; no runtime or build change was warranted. This selects the
 already-resolved `H-CompanionExact` result and advances the next bounded lead
 to `0x800CC2AC`.
+
+## Session 2651 result
+
+The bounded sweep audited `0x800CC2AC` against the companion mission/menu
+symbols, checked-in TOML, generated `funcs_37.c` and header, generated overlay
+table, and callers. `tickAtAtBodyTransform` is already an exact mission entry:
+the generated definition and header use that name, its body spans `0x70C`
+bytes to the exact `0x800CC9B8` boundary, and the TOML and overlay table carry
+the matching identity and ROM size. Generated callers at `0x800CE160` and
+`0x800CE578` invoke the resolved name. No placeholder, stale mapping, or
+safe rename remained; no runtime or build change was warranted. This selects
+the already-resolved `H-CompanionExact` result and advances the next bounded
+lead to `0x800CC9B8`.
