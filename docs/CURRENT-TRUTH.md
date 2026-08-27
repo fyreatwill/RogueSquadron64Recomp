@@ -189,11 +189,24 @@ the acquire boundary and rules out `H-acquire-publisher` and
 `H-service-boundary` at the audited sites (static source evidence). No
 runtime watch, writeback, remap, or mitigation is authorized.
 
+s2692 implemented the M5 Step 6 runtime change: startup now defaults the
+host-injected `ROGUESQ_DRAIN_INLOOP_TICK` to `0` only when unset, while an
+explicit `=1` preserves the tick-on rollback/control arm. The Debug target
+built successfully. Concurrent same-build tick-off and tick-on probes both
+stopped at VI width `640` and timed out before the required title width
+`1024`, so the A/B discriminator had no positive phase control and selects no
+hypothesis. The change remains unvalidated; no audio or route conclusion is
+drawn.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
+1. **Validate the M5 Step 6 drain-tick de-stub.** Repeat the same-build A/B
+   with a phase gate that reaches the qualified route; the s2692 arms both
+   stopped at width `640` before the `1024` title phase. Require the complete
+   row from `NEXT.md`; do not infer a result from the clean timeout.
+2. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.
@@ -208,17 +221,17 @@ This is one monotonic sequence; #1 is the next campaign priority.
    voice-object fields for a named stream/cache-to-AI publication relation,
    without repeating these initializer, setup, renderer, mixer, or AI-submit
    body audits.
-2. **M5 image task contract edge.** Implement only after a named legitimate
+3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
-3. **Generated-symbol renaming sweep — parked pending regenerated matches.**
+4. **Generated-symbol renaming sweep — parked pending regenerated matches.**
    Preserve `0x8000040C` and `0x800927B0` until companion/source evidence
    supplies defensible names; do not rename by inferred implementation shape.
-4. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+5. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-5. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
+6. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
-6. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
+7. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
    established; broader slot coverage is lower priority than M5.
 
 ## Durable boundaries

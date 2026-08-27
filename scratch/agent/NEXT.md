@@ -1,40 +1,36 @@
-# NEXT work unit (s2692) — audit musyx-render callers and post-call consumers
+# NEXT work unit (s2693) — phase-qualified validation of drain-loop tick de-stub
 
-HYPOTHESIS-ID: m5-cpu-mort-publication
+HYPOTHESIS-ID: m5-drain-tick-destub-validation
 
 ## Work unit
 
-Perform a bounded static audit of every direct named caller of
-`musyxRenderVoiceSamples` and the immediate named consumers of its voice
-object fields after the call. Record caller inputs, fields written by the
-render routine, direct copies/transforms, queue or service signals, and any
-ordering relation toward the AI source. Follow only named calls and direct
-stores/copies; stop at unresolved indirect state. Do not repeat the
-initializer, setup, renderer, mixer, filter, persistent-object, task-field,
-shared-stack, DMA-callback, update/renderer, acquire, AI-submit, or ring-setup
-body audits.
+Validate the s2692 runtime change. The host-injected
+`tickMusyXIfActive` inside `drainAudioAndFinalizeSpeechBuffer` is disabled by
+default; `ROGUESQ_DRAIN_INLOOP_TICK=1` is the rollback/control arm. The prior
+same-build probes were unevaluable because both stopped at VI width 640 before
+the 1024 title phase. Use a phase gate that reaches 1024, then drive through
+the route far enough to observe the complete discriminator.
 
 ## Competing hypotheses and discriminator
 
-- `H-render-publisher`: a render caller or its immediate consumer copies a
-  legitimate rendered/MORT-derived payload toward the AI source or signals
-  its publication.
-- `H-service-boundary`: the render path is a named service boundary, but the
-  payload source or AI relation remains outside the audited caller.
-- `H-unresolved-address`: callers only manage voice state/fields or end at
-  unresolved indirect pointers.
+- `H-drain-injection`: the injected tick is required for slot progress; default
+  off causes a missing status transition or drain return.
+- `H-retail-equivalent`: the injected tick is unnecessary once the real task
+  and worker paths are active; default off preserves the route and controls.
+- `H-route-only`: the tick changes scheduler/route reachability but not the
+  audio contract; only phase or host-message fields move.
 
-The discriminator is a complete caller/source/destination/order table. Each
-outcome must identify the writer and legitimate payload polarity, or explicitly
-show which field is absent. No runtime watch or build is allowed unless that
-table names a ground-truth target and the whole-RDRAM positive control is
-planned in the same run.
+The discriminator is one same-build, phase-keyed A/B row: gate setting,
+drain entry/return, loop/tick counts, named slot/status transitions, task
+dispatch/SP completion, nonzero PCM source and consumer joins, and title/
+hangar route origins. A 640-only timeout is invalid and selects nothing.
 
 ## Exact commands
 
-1. `rg -n -H 'musyxRenderVoiceSamples|0x8008FFAC|0x80090B68|0x8009C240|0x801496' ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`
-2. Read bounded windows for each unique named caller and immediate post-call
-   consumer; follow only named calls or direct stores/copies.
-3. Record the complete caller/source/destination/order table and selected
-   hypothesis in the ledger/current truth; do not add runtime instrumentation
-   from a static unresolved result.
+1. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
+2. Run the existing AUTOPILOT validation with the phase gate widened to allow
+   the known 640→1024 transition, once with `ROGUESQ_DRAIN_INLOOP_TICK=0` and
+   once with `=1` from the same build; capture logs and terminate each process
+   group with SIGKILL.
+3. Compare the complete discriminator row. A 640-only timeout is invalid and
+   must not select a hypothesis.

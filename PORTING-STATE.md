@@ -118051,3 +118051,22 @@ only reaps or links descriptors, sets state/owner fields, and returns
 publication ordering is present. This selects `H-unresolved-address` and
 rules out `H-acquire-publisher` and `H-service-boundary` at the audited sites.
 It is static source evidence only; no build or runtime watch was authorized.
+
+## Session 2692 (2026-08-27) — de-stubbed the M5 drain-loop tick default
+
+Implemented the M5 plan's Step 6 runtime change in `src/main/main.cpp`:
+startup now sets `ROGUESQ_DRAIN_INLOOP_TICK=0` only when the variable is unset,
+so the host-injected drain-loop `tickMusyXIfActive` is no longer the default;
+an explicit `ROGUESQ_DRAIN_INLOOP_TICK=1` remains the rollback/control arm.
+
+ORIGIN: the changed behavior is the existing host injection documented as
+s1976/s1993 in `../N64Recomp/fixup_game_funcs.py`, not a guest store or
+corruption mitigation; no guest value was rewritten.
+
+The Debug target built successfully. Same-build tick-off and tick-on probes
+were launched concurrently with the existing LLE/AUTOPILOT route controls,
+but both remained at VI width 640 and timed out before the required 1024 title
+phase. The positive phase control was absent, so the A/B discriminator was
+unevaluable: this does not select `H-drain-injection`, `H-retail-equivalent`,
+or `H-route-only`, and rules out only the claim that this short recipe reached
+the qualified route. The next work unit is a phase-qualified validation.
