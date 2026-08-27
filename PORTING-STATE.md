@@ -118636,3 +118636,17 @@ address-only in the companion map. No build or game run was warranted for this
 symbol-sweep change. Decision evidence:
 `scratch/agent/s2725_generated_symbol_sweep/decision-table.txt`,
 `decision-table-next.txt`, and `fake-placeholder-decision-table.txt`.
+
+## Session 2726 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger because recent entries
+included M4 and M5 work, so the generated-symbol sweep remained eligible.
+The batch covered `0x800AB000..0x800AE000` in the external generated
+snapshot. Its complete decision table evaluated 21 companion candidates:
+semantic entries and the `fake_func_800AD378` alias were already
+synchronized, with zero renamed references in zero generated files. There
+was no parser, duplicate-destination, or protected-placeholder failure.
+This selects `H-already-synchronized`/`H-ambiguous-or-fake` and rules out
+`H-exact-matches` for this region. No build or game run was warranted for the
+symbol-only batch. Decision evidence:
+`scratch/agent/s2726_generated_symbol_sweep/decision-table.txt`.

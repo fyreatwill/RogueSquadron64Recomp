@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2725 (2026-08-27).
+Current maintenance marker: Session 2726 (2026-08-27).
+
+The s2726 generated-symbol sweep covered `0x800AB000..0x800AE000`. Its
+complete decision table evaluated 21 companion candidates: semantic entries
+and the `fake_func_800AD378` alias were already synchronized, with zero
+renamed references in zero generated files. There was no parser,
+duplicate-destination, or protected-placeholder failure. This rules out
+`H-exact-matches` for the region and preserves the address-only/fake policy;
+no build or game run was warranted. Evidence:
+`scratch/agent/s2726_generated_symbol_sweep/decision-table.txt`.
 
 ## Live result
 
@@ -496,7 +505,10 @@ references changed. The tracked renamer now evaluates both `func_0x...` and
 precomputed generated-name set. The bounded fake-prefix rerun selected no
 rename, so future work continues only where exact companion evidence exists.
 
-This is one monotonic sequence; #1 is the next campaign priority.
+This is one monotonic sequence; #1 is the next campaign priority. The s2726
+batch confirms the covered `0x800AB000..0x800AE000` interval has no exact
+unsynchronized companion names. The next unexamined bounded interval is
+`0x800B6000..0x800B9000`.
 
 1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
@@ -587,7 +599,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    ruled out exact matches with one synchronized semantic candidate and six
    address-only/fake candidates; zero references changed in zero files, with
    no parser or duplicate-name rejection. Continue with the next adjacent
-   region only while exact companion evidence remains available.
+   region only while exact companion evidence remains available. s2726
+   covered `0x800AB000..0x800AE000` and evaluated 21 candidates: semantic
+   entries and the `fake_func_800AD378` alias were already synchronized, with
+   zero references changed and no parser or duplicate-destination rejection.
+   This rules out `H-exact-matches` for that interval; the next unexamined
+   region is `0x800B6000..0x800B9000`.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
