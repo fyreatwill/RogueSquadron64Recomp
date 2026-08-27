@@ -43,8 +43,10 @@ The latest durable M5 chain is:
   reach the target yield phases; a generated call-site census found only the
   generic scheduler's two yield calls, with no audio-specific branch.
 - The fresh `serviceVoicePoolFrame` audit found cadence, slot streaming state,
-  startup, and reaping only. The next bounded M5 surface is
-  `serviceStreamingVoice`.
+  startup, and reaping only. The `serviceStreamingVoice` audit found a
+  legitimate ring write through `decodeAndFillVoiceBlock`, but no direct AI
+  publication; its only unresolved edge is the callback loaded from each
+  descriptor's `+0x194` field.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -57,11 +59,12 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **M5 CPU-side MORT publication — active.** Audit the fresh
-   `serviceStreamingVoice` boundary and its immediate named callers and
-   consumers. Enumerate payload pointers, copies/transforms, slot or queue
-   signals, AI destinations, and ordering. Do not repeat the already audited
-   service worker, queue, renderer, mixer, allocation, PI, host-AI, or
+1. **M5 CPU-side MORT publication — active.** Resolve the indirect callback
+   loaded from voice descriptor `+0x194` at `0x8009C040`. Enumerate every
+   writer, initializer, possible target, callback argument, payload
+   destination, AI/PI/queue call, and ordering edge. Do not repeat the
+   completed `serviceStreamingVoice` body or the already audited service
+   worker, queue, renderer, mixer, allocation, PI, host-AI, or
    `serviceVoicePoolFrame` surfaces. Do not add a runtime watch until a
    legitimate destination and order are named.
 

@@ -118991,3 +118991,17 @@ audit of `serviceStreamingVoice` with three competing hypotheses and an
 explicit discriminator in `scratch/agent/NEXT.md`. This maintenance result
 rules out neither M5 hypothesis; it only restores the operational document
 under the size gate.
+
+## Session 2749 (2026-08-27) — audited the M5 streaming-voice boundary
+
+The bounded static audit of `serviceStreamingVoice` at `0x8009BAD4` found
+one named caller, `serviceVoicePoolFrame`, and no direct AI, PI, or payload
+publication edge. The function receives its per-voice queue, advances ring
+and timing state, decodes into the descriptor-relative `+0x198` ring, and
+zero-fills ring blocks. Initialization establishes `+0x194` as a
+caller-supplied indirect callback field; the callback at `0x8009C040` is the
+only unresolved edge and receives descriptor-derived cursor/queue arguments.
+This selects H-streaming-opaque-edge and rules out direct streaming-service
+publication as the immediate M5 publication explanation. The next unit is a
+writer-to-target audit of `+0x194`; no runtime instrumentation or mitigation
+was added.
