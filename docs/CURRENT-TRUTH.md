@@ -140,6 +140,10 @@ The latest durable M5 chain is:
   The bounded selector found no companion candidates and changed zero
   references in zero files; the independent generated-tree placeholder scan
   was empty. The interval is already synchronized and no build was needed.
+- Session 2807 closed generated-symbol interval `0x80145000..0x80147000`.
+  The bounded selector changed zero references in zero files, and the
+  independent generated-tree placeholder scan was empty. The interval is
+  already synchronized; no build or game soak was needed.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -158,7 +162,7 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    2800–2806 closed intervals through `0x80145000`; each had either
    already-synchronized symbols or preserved ambiguous/data entries, with no
    stale generated placeholders selected. Continue with
-   `0x80145000..0x80147000`, preserving ambiguous/data entries and applying
+   `0x80147000..0x80149000`, preserving ambiguous/data entries and applying
    only source-backed names.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
