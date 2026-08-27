@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2849 (2026-08-27).
+Current maintenance marker: Session 2850 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -303,6 +303,15 @@ and the same census without that guard confirmed the interval state. No
 build or game run was needed. The next bounded interval is
 `0x80055000..0x80056000`.
 
+Session 2850 examined `0x80055000..0x80056000`. The selector classified all
+callable candidates as already synchronized and preserved
+`fake_func_800555E8`, `fake_func_80055698`, and `fake_func_80055A2C` as
+ambiguous-or-fake. It changed zero generated references; the final scan found
+only those preserved placeholders. The `--require-rename` invocation failed
+closed as expected. The recent 15-session title check contained M5 and rename
+entries, so the sweep revisit rule did not apply. No build or game run was
+needed. The next sweep interval is `0x80056000..0x80057000`.
+
 ## Next steps
 
 Priority follows the user directive: maintenance, then M5, then systematic M3,
@@ -371,7 +380,11 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    2800–2809 closed intervals through `0x8014B000`; each had either
    already-synchronized symbols or preserved ambiguous/data entries, with no
    stale generated placeholders selected. Continue with
-   preserving ambiguous/data entries and applying only source-backed names.
+   Session 2850 closed `0x80055000..0x80056000`: all callable candidates were
+   already synchronized and three ambiguous/fake placeholders were preserved;
+   zero generated references were selected. Continue with
+   `0x80056000..0x80057000`, preserving ambiguous/data entries and applying
+   only source-backed names.
    Sessions 2815–2818 closed intervals through `0x8015D000`; all four
    selectors changed zero references in zero files and all independent
    placeholder scans were empty. Session 2819 classified four isolated

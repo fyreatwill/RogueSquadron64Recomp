@@ -120378,3 +120378,17 @@ and the same census without that guard confirmed the interval state. No build
 or game run was needed. This rules out a source-backed data-gap rename in the
 interval without assigning a meaning to the ambiguous placeholder. The next
 sweep interval is `0x80055000..0x80056000`.
+
+## Session 2850 (2026-08-27) — preserved synchronized generated symbols
+
+The bounded source-backed symbol sweep examined `0x80055000..0x80056000`.
+The selector classified all callable candidates as already synchronized and
+preserved `fake_func_800555E8`, `fake_func_80055698`, and
+`fake_func_80055A2C` as ambiguous-or-fake. It changed zero generated
+references; the final scan found only those preserved placeholders. The
+`--require-rename` invocation failed closed as expected. The recent 15-session
+title check contained M5 and rename entries, so the sweep revisit rule did not
+apply. No build or game run was needed. This rules out a source-backed
+data-gap rename in the interval without assigning meanings to callable-
+ambiguous placeholders. The next sweep interval is
+`0x80056000..0x80057000`.
