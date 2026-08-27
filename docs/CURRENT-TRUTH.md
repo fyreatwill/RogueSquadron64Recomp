@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2772 (2026-08-27).
+Current maintenance marker: Session 2773 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -98,8 +98,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    in the interval; ambiguous/data entries were preserved. Session 2772 also
    closed `0x8010D000..0x8010F000`: two candidates were already synchronized
    and five ambiguous/fake entries were preserved, with zero generated
-   references selected. Continue with `0x8010F000..0x80111000`, preserving
-   ambiguous/fake/address-only symbols.
+   references selected. Session 2773 closed `0x8010F000..0x80111000`: 15
+   semantic candidates were already synchronized and 17 ambiguous/fake entries
+   were preserved, with zero generated references selected. Continue with the
+   next bounded interval after this region, preserving ambiguous/data entries.
 
 3. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
@@ -305,5 +307,10 @@ ledger. The current late-chain checkpoints are:
   regeneration-safe selection changed zero references in zero files; no
   generated placeholder was selected. The next interval is
   `0x8010F000..0x80111000`.
+- s2773: the generated-symbol interval `0x8010F000..0x80111000` had 15
+  already-synchronized semantic candidates and 17 ambiguous/fake entries.
+  Zero generated references were selected; an independent placeholder scan was
+  empty. The interval is closed without inventing names; the next rename
+  interval begins after `0x80111000`.
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

@@ -119343,3 +119343,15 @@ status for a zero-selection interval; this is not a tool failure. The complete
 decision table is in `scratch/agent/s2772_generated_rename/decision-table.txt`.
 This closes the interval and rules out stale semantic placeholders there, not
 the remaining sweep. The next interval is `0x8010F000..0x80111000`.
+## Session 2773 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The regeneration-safe companion census for `0x8010F000..0x80111000` found
+15 semantic candidates already synchronized and 17 ambiguous-or-fake data
+candidates. It changed zero generated references in zero files. The
+`--require-rename` command returned the expected nonzero status for a
+zero-selection interval; this is not a tool failure. An independent scan of
+the generated tree found no `func_`/`fake_func_` placeholder in the interval,
+and `git diff --check` passed. The complete decision table is in
+`scratch/agent/s2773_generated_rename/decision-table.txt`. This closes the
+interval without authorizing an invented name; the next rename interval is
+after `0x80111000`.
