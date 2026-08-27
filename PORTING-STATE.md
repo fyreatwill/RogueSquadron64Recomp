@@ -115641,3 +115641,21 @@ state path and is not statically bounded to the producer slots. The result is
 not proven. This is static, single-source evidence; it names no writer and
 authorizes no mitigation. No runtime, generated code, or behavior changed.
 Artifact: `docs/M4-INDEX-PROVENANCE-REVISIT.md`.
+## Session 2557 (2026-08-26) — censused generated-symbol mission boundary
+
+Ran the bounded generated-symbol census at `0x800E447C`. The complete span is
+four bytes (`0x800E447C–0x800E447F`) containing only `lw $v1,0x14($v1)`,
+between the preceding function epilogue and the prologue of the independently
+named `resetCraftInstanceMotionState` at `0x800E4480`. The active generated
+declaration/body/overlay table and companion mission symbol input retain
+`fake_func_800E447C`; the companion explicitly deletes `func_800E4480` as a
+duplicate-symbol collision. Exact-address, source, and caller searches found
+no human mapping or independent call site. The ROM boundary check was not
+available because `build/Debug/rogue_squadron.z64` is absent in this workspace.
+Selected `H-data-boundary` / `H-no-match` and left the placeholder unchanged.
+This rules out renaming it to the neighboring craft-reset function. The next
+unresolved mission-overlay placeholder is `0x800E71C8`.
+Artifact: `scratch/agent/s2557_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.

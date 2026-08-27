@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2556 (2026-08-26).
+Current maintenance marker: Session 2557 (2026-08-26).
 
 ## Current state
 
@@ -416,6 +416,18 @@ Current maintenance marker: Session 2556 (2026-08-26).
   single-source result; no writer or legitimacy claim follows. Artifact:
   [`M4-INDEX-PROVENANCE-REVISIT.md`](M4-INDEX-PROVENANCE-REVISIT.md).
 
+- **s2557 — the next generated-symbol region is a one-instruction boundary
+  fragment with no defensible mapping.** The complete
+  `0x800E447C–0x800E447F` span is only `lw v1,0x14(v1)`, between the prior
+  function epilogue and `resetCraftInstanceMotionState` at `0x800E4480`.
+  The active generated declaration/body/overlay table and companion symbol
+  input retain `fake_func_800E447C`; the companion explicitly deletes the
+  following `func_800E4480` duplicate label, and exact-address/source/caller
+  searches found no human candidate. A ROM check was unavailable because the
+  expected local ROM file was absent. This selects `H-data-boundary` /
+  `H-no-match`; no generated code changed. Artifact:
+  `scratch/agent/s2557_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -484,7 +496,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   overlay table. Their names encode the companion-map duplicate-collision
   relationship, not independent game functions. s2555 left
   `0x800E406C–0x800E406F` unchanged as a four-byte boundary fragment; the
-  next unresolved placeholder is `0x800E447C`. s2556 revisited M4 with a
+  next unresolved placeholder is `0x800E447C`; s2557 left
+  `0x800E447C–0x800E447F` unchanged as a one-instruction boundary fragment
+  and advanced to `0x800E71C8`. s2556 revisited M4 with a
   complete generated producer/consumer index table and found the consumer's
   low-seven-bit index is sourced from runtime state, so the alias remains
   static-only; no runtime or mitigation change was authorized.

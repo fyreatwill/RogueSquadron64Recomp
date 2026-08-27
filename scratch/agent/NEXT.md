@@ -1,11 +1,11 @@
-# NEXT work unit (s2557) — generated-symbol renaming sweep
+# NEXT work unit (s2558) — generated-symbol renaming sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
 Resume the bounded sweep at unresolved mission-overlay placeholder
-`0x800E447C`. Enumerate its complete generated span and inspect companion
+`0x800E71C8`. Enumerate its complete generated span and inspect companion
 symbol, m2c, source, and caller evidence. Rename only an exact or clearly
 local semantic match through the regeneration-safe symbol path; otherwise
 leave it unchanged and record the boundary classification. The M4 revisit is
@@ -30,8 +30,8 @@ stop before editing if the rename path is unsafe.
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
-rg -n 'fake_func_800E447C|800E447C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
-rg -n -C 12 'fake_func_800E447C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n 'fake_func_800E71C8|800E71C8' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
+rg -n -C 12 'fake_func_800E71C8' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
 rg -n -i 'candidate semantic terms' /Users/williambuckley/Documents/Tools/rogue_squadron64/src /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 ```
 
