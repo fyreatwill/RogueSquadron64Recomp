@@ -565,7 +565,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   overlay table. Their names encode the companion-map duplicate-collision
   relationship, not independent game functions. s2555 left
   `0x800E406C–0x800E406F` unchanged as a four-byte boundary fragment; the
-  next unresolved placeholder is `0x800E447C`; s2557 left
+  s2563 left `0x80102A98–0x80102A9F` unchanged as an objective boundary; the
+  next unresolved placeholder is `0x8010357C`. s2557 left
   `0x800E447C–0x800E447F` unchanged as a one-instruction boundary fragment
   and advanced to `0x800E71C8`; s2558 revalidated that span as an unchanged
   orphan two-instruction boundary fragment and pivots the next unit to the
