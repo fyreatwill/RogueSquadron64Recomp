@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2711 (2026-08-27).
+Current maintenance marker: Session 2712 (2026-08-27).
 
 ## Live result
 
@@ -460,7 +460,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    `0x800A4000..0x800A7000`. The tracked tool now rejects conflicting
    semantic names for one generated address rather than choosing by file
    order. Continue with one adjacent bounded region only while exact
-   companion/source evidence remains available;
+   companion/source evidence remains available. s2712 covered
+   `0x800A7000..0x800AA000` and found zero exact renames: semantic candidates
+   were already synchronized and address-only/fake entries were preserved;
+   there was no parser or duplicate-destination rejection. This rules out
+   `H-exact-matches` for that region and retains
+   `H-already-synchronized`/`H-ambiguous-or-fake`;
    preserve address-only or fake fragments and do not infer names from
    implementation shape alone.
 3. **M5 image task contract edge.** Implement only after a named legitimate

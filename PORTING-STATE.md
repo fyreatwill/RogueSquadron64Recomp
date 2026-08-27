@@ -118405,3 +118405,19 @@ as ambiguous. Syntax validation and the bounded rerun passed. This rules out
 `H-exact-matches` for this region, while retaining `H-already-synchronized`
 and `H-ambiguous-or-fake`; it does not justify inventing names for
 `0x8000040C` or `0x800927B0`.
+
+## Session 2712 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger because the recent titles
+were not all sweep-scoped. Ran the tracked rename tool over the adjacent
+`0x800A7000..0x800AA000` companion-symbol region. Its complete decision table
+selected zero renames in zero files: unique semantic candidates were already
+synchronized, while address-only data and other non-semantic entries were
+preserved as ambiguous-or-fake. The tool exited successfully with no parser or
+duplicate-destination rejection. This selects
+`H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
+`H-exact-matches`; no build or game run was warranted.
+
+The full decision table is in
+`scratch/agent/s2712_generated_symbol_sweep/decision-table.txt`. The external
+generated worktree remains dirty from prior work; this run did not modify it.
