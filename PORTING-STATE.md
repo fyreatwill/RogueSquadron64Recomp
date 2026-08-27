@@ -119806,3 +119806,17 @@ because no generated source changed.
 This selects the already-synchronized hypothesis for the interval and rules
 out stale generated semantic placeholders there, not the remaining sweep.
 The next bounded interval is `0x80149000..0x8014B000`.
+
+## Session 2809 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+Ran the regeneration-safe companion selector for `0x80149000..0x8014B000`
+and independently scanned the generated tree for `func_8014*` and
+`fake_func_8014*` placeholders. The selector found one already-synchronized
+candidate at `0x80149470` (`aspTask`) and preserved it; it changed zero
+references in zero files. The independent scan found no matching placeholder
+definitions or references, and `git diff --check` passed. No build or game
+soak was needed because no generated source changed.
+
+This selects the already-synchronized hypothesis for the interval and rules
+out a safe source-backed rename there, not the remaining sweep. The next
+bounded interval is `0x8014B000..0x8014D000`.

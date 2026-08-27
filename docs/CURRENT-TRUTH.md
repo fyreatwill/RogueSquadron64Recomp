@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2808 (2026-08-27).
+Current maintenance marker: Session 2809 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -149,6 +149,12 @@ The latest durable M5 chain is:
   independent generated-tree placeholder scan found no `func_8014*` or
   `fake_func_8014*` definitions or references. The interval is already
   synchronized; no build or game soak was needed.
+- Session 2809 closed generated-symbol interval `0x80149000..0x8014B000`.
+  The bounded selector found one already-synchronized candidate,
+  `0x80149470 aspTask`, changed zero references in zero files, and preserved
+  it. The independent generated-tree placeholder scan found no `func_8014*`
+  or `fake_func_8014*` definitions or references. No build or game soak was
+  needed.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -164,10 +170,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
 1. **Generated-symbol renaming sweep — next bounded interval.** The full
    Debug target now links after the fake/data collision repair, but the
    phase-gated validation still stalled before the target phases. Sessions
-   2800–2808 closed intervals through `0x80149000`; each had either
+   2800–2809 closed intervals through `0x8014B000`; each had either
    already-synchronized symbols or preserved ambiguous/data entries, with no
    stale generated placeholders selected. Continue with
-   `0x80149000..0x8014B000`, preserving ambiguous/data entries and applying
+   `0x8014B000..0x8014D000`, preserving ambiguous/data entries and applying
    only source-backed names.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
