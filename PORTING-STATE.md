@@ -116459,3 +116459,48 @@ the s2586 abort. Artifact: `scratch/agent/s2605_jrt9_host_return.log`.
 
 The generated-symbol census at `0x800E8A34` is unchanged and remains the next
 sweep span. M5 writer-call-path evaluation can resume on this restored route.
+
+## Session 2606 (2026-08-26) — requalified M5 writer call-path on restored hangar route
+
+s2605 restored the `convertMat3x4ToN64Mtx` jr-$t9 host return. This iteration
+re-ran the s2586 writer-entry / gate / PCM table on that route. No store,
+gate, task field, or output pointer was changed. jr-$t9 canary still passed;
+the s2605 image already contained the helper.
+
+Same-build AUTOPILOT image-arm run, SIGKILL at 90s:
+`ROGUESQ_LLE_FORCE=1 SPIN_YIELD=1 LLE_UNGATED=1 LLE_SOLO=1`,
+`ROGUESQ_LOG_M5_WRITER_ENTRY=1`, `ROGUESQ_LOG_M5_GATE_CONTRACT=1`,
+`ROGUESQ_LOG_PCM_BOUNDARY=1`, `ROGUESQ_LOG_AUDIO_RETURN=1`,
+`ROGUESQ_LOG_M5_B40_WRITER=1`, hangar schedule, `STOP_WIDTH=512`.
+
+Positive controls (same run): title `1024 @ 0x00790400` at 11.6s; hangar
+`512 @ 0x006AB400` at 19.8s and still there at kill; 0 `[CRASH]` / 0
+`Failed to find function` / 0 `[ABORT]`; 1067 `[m5-writer]` rows; 1024
+`[m5-gate]` rows; 258 title + 272 hangar `[audio-return]` rows with
+`arm=factor5_ucode_b`; 43/43 title and 55/55 hangar PCM source/consumer rows.
+
+Writer table:
+
+| Site | Title | Hangar |
+|---|---|---|
+| `reapplyDisplayMode` `0x8008EC88` store | 1 writer; requested `0x01` stored `0x00`; gate `0` | same |
+| `musyxNoopStub` entry `0x8008ED00` | 1 entry; `beq` at `0x8008ED0C` taken (`branch=1`, `$v0=0`) | 0 |
+| `musyxNoopStub` store `0x8008ED48` | 0 (early-out to `L_8008ED4C`) | 0 |
+| `startSongSequence` / `0x80094648` | 0 | 0 |
+
+Gate byte `0x800A0F50` was `0` on every title and hangar gate row (512+512).
+PCM samples were zero (`nz=0`, `fnv=0xF59C39C5`) in both phases. The
+s2031/s2107 store instrument fired for `0x8008EC88`, so the ED48/94648 zeros
+are same-run instrument hits, not a dead logger.
+
+This selects `H-PortWriterMissing` at the store sites and refutes
+`H-RouteAbortAgain` and `H-PortWriterReachable`. The new same-run fact is
+that `musyxNoopStub` *is* reachable in title; retail's `0x8008ED48` `sb
+$zero` is skipped because the gate is already 0. That zero is the C88
+force-zero hatch (`requested=0x01 stored=0x00`); it is not a missing
+call-path. `0x80094648` remains unentered. No store or gate change is
+authorized from this census; the next unit is the C88 polarity A/B.
+
+Artifacts: `scratch/agent/s2606_m5_writer_callpath.log`,
+`scratch/s2606_m5_writer_callpath_audit.md`.
+

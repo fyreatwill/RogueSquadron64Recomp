@@ -4,7 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2605 (2026-08-26).
+Current maintenance marker: Session 2606 (2026-08-26).
+
+- **s2606 — the restored hangar route makes the M5 writer table evaluable and
+  selects `H-PortWriterMissing` at the retail store sites.** Same-build
+  AUTOPILOT image-arm run reached title `1024 @ 0x00790400` at 11.6s and
+  hangar `512 @ 0x006AB400` at 19.8s with zero crash/abort/missing-function
+  rows. Writer, gate, audio-return, and PCM instruments all fired.
+  `reapplyDisplayMode` `0x8008EC88` ran in both phases and requested `0x01`
+  but stored `0x00` (C88 force-zero); the gate stayed 0. `musyxNoopStub`
+  entered in title and took the `0x8008ED0C` `gate==0` early-out, so retail's
+  `0x8008ED48` store did not run. `startSongSequence` / `0x80094648` never
+  entered. PCM source/consumer rows were live and zero. This refutes
+  `H-RouteAbortAgain` and `H-PortWriterReachable`. No store/gate/task/output
+  change is authorized; next is the C88 polarity A/B. Artifacts:
+  `scratch/agent/s2606_m5_writer_callpath.log`,
+  `scratch/s2606_m5_writer_callpath_audit.md`.
 
 - **s2605 — the s2586/s2587 640 abort was a broken jr-$t9 host return, not a
   missing audio writer.** `convertMat3x4ToN64Mtx` copies `$ra` into `$t9` and
@@ -550,8 +565,11 @@ the active backlog:
   optional and remains lower priority than M5.
 - s2579–s2587 left M5 contract-writer qualification blocked by the
   pre-title scene-graph boundary; s2605 closed that abort as a broken
-  jr-$t9 host return. No audio gate, store, task field, output pointer, or
-  mitigation was promoted from the aborted runs.
+  jr-$t9 host return. s2606 re-ran the writer table on the restored
+  title/hangar route and selected `H-PortWriterMissing` at `0x8008ED48`
+  and `0x80094648`: C88 requests 1 and stores 0, so `musyxNoopStub`
+  early-outs. No audio gate, store, task field, output pointer, or
+  mitigation was promoted.
 
 For exact commands, artifacts, and failed experiments, use the corresponding
 session entry in `PORTING-STATE.md`.
@@ -559,14 +577,15 @@ session entry in `PORTING-STATE.md`.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 named retail writer/value boundary — route unblocked.** s2605 restored
-   the `convertMat3x4ToN64Mtx` jr-$t9 host return; the s2586/s2587
-   `get_function(0x800155EC)` abort is closed at that callsite. The qualified
-   AUTOPILOT route again reaches title and hangar. Resume the s2586 writer
-   call-path census on this restored route (do not treat s2586/s2587 nulls as
-   writer evidence). Do not change task/output fields, stores, or gates from
-   those aborted runs. Retain `ROGUESQ_AUDIO_UCODE=0` as the silent control
-   and rollback.
+1. **M5 named retail writer/value boundary — C88 polarity A/B next.** s2606
+   made the writer table evaluable on the restored hangar route and selected
+   `H-PortWriterMissing` at retail stores `0x8008ED48` and `0x80094648`.
+   `reapplyDisplayMode` `0x8008EC88` requests `0x01` and the C88 hatch stores
+   `0x00`, so `musyxNoopStub` takes the `gate==0` early-out. Next is M5 plan
+   Step 4: same-build `ROGUESQ_M5_C88_VALUE` unset vs `=1` on this route
+   (see `scratch/agent/NEXT.md`). Do not change the default store until that
+   A/B selects it. Retain `ROGUESQ_AUDIO_UCODE=0` as the silent control and
+   rollback.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
@@ -730,6 +749,11 @@ controls, but are superseded at their measured scopes:
   contract row was target-phase gated and the capture remained in boot/640;
   s2581's all-phase entry/stage/return/SP rows show that the image did run and
   return. The downstream contract gap remains open.
+- s2585's “port writer uninstrumented / missing call-path” label for
+  `musyxNoopStub` is superseded at title. It was believable because s2586
+  and s2587 aborted before title, so no entry rows existed. s2606 shows the
+  function enters in title and skips `0x8008ED48` because the gate is already
+  0. The store-site absence stands; the missing-call-path claim does not.
 
 ## Evidence and safety rules
 
