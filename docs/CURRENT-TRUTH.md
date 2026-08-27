@@ -112,6 +112,11 @@ The latest durable M5 chain is:
   the selector changed zero references, and an independent generated-tree
   scan found no `func_8013*` or `fake_func_8013*` placeholders. No rename or
   build was needed.
+- Session 2801 closed generated-symbol interval `0x80139000..0x8013B000`.
+  The selector classified 18 companion entries: semantic entries were already
+  synchronized and ambiguous/data entries were preserved. It changed zero
+  references in zero files, and the independent generated-tree scan found no
+  matching placeholders. No rename or build was needed.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -133,7 +138,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    closed `0x80137000..0x80139000` with four already-synchronized semantic
    entries, zero selected references, and an empty independent placeholder
    scan. Continue with `0x80139000..0x8013B000`, preserving ambiguous/data
-   entries and applying only source-backed names.
+   entries and applying only source-backed names. Session 2801 closed
+   `0x80139000..0x8013B000` with zero selected references and no generated
+   placeholders. Continue with the next bounded interval
+   `0x8013B000..0x8013D000`.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still
