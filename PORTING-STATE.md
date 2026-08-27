@@ -116373,3 +116373,17 @@ succeeded and emitted the target `func_`, `D_`, and `fake_func_` redefinition
 lines. No regeneration, runtime build, or game run was performed. This
 selects `H-CompanionMapping` and advances the sweep to `0x800DFB8C`. See
 `scratch/agent/s2600_symbol_census_audit.md`.
+## Session 2601 (2026-08-26) — restored the next generated-symbol prefix mapping
+
+Ran the single static generated-symbol rename unit for `0x800DFB8C`. The
+generated span is a four-byte prologue (`addiu sp,sp,-0x18`) immediately
+before the complete `applyCraftAnimAndDetailParams` body at `0x800DFB90`.
+The companion symbol file assigns the exact address
+`duplicateSymbolPrefixForApplyCraftAnimAndDetailParams` and documents the
+following duplicate-symbol deletion. Exact-address source/m2c/caller and
+alternate-name searches found no competing candidate. Added the
+regeneration-safe mapping to `tools/rename/build_redefs.py`; running
+`python3 tools/rename/build_redefs.py` succeeded and emitted the `func_`,
+`D_`, and `fake_func_` target lines. No regeneration, runtime build, or game
+run was performed. This selects `H-CompanionMapping` and advances the sweep
+to `0x800E406C`. See `scratch/agent/s2601_symbol_census_audit.md`.
