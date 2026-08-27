@@ -116813,3 +116813,25 @@ routing change. No build or runtime experiment was run because the static
 census produced no complete candidate requiring one. Next is the bounded
 same-build hangar `0x80094648` writer/value boundary with title PCM as its
 positive control.
+
+## Session 2618 (2026-08-27) — separated hangar image PCM from the title control
+
+Rebuilt `RogueSquadron64Recomp` and ran the image (`ROGUESQ_AUDIO_UCODE=1`)
+and silent (`=0`) arms concurrently from that one binary, with C88=`0`, VI
+phase gating, and the batched task, image-stage, writer, host-boundary, and
+PCM-join diagnostics. Both arms reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`; image produced 4,047 image-stage rows and silent produced
+none, while each produced 512 task handoffs and had no crash or abort marker.
+The image-stage payload was a positive control for the image arm.
+
+Both arms nevertheless had zero PCM rows in title, so the required title
+positive control failed. In hangar, image produced matched nonzero source and
+consumer rows at `0x80168850` and `0x80168B50`, with 621 and 639 nonzero bytes;
+silent remained zero. The indexed `0x80094648` channel-writer diagnostic
+produced no rows in either arm. Thus the run supplies two independent lines
+for image-arm hangar output separation, but it does not select
+`H-HangarWriterLegitimate`, `H-HangarWriterNonPCM`, or
+`H-HangarPublicationGap`, because the title control was absent and the named
+writer was not observed. It rules out treating the hangar-only PCM as proof of
+that indexed writer relation. Artifact:
+`scratch/agent/s2618_m5_hangar_pcm_boundary_rerun/`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2617 (2026-08-27).
+Current maintenance marker: Session 2618 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -65,6 +65,19 @@ Current maintenance marker: Session 2617 (2026-08-27).
   destination witness, not a source/destination edge. This selects
   `H-PortPublicationGap`; no build or runtime arm was warranted.
 
+- **s2618 — hangar PCM is image-arm output, but the indexed-writer test was
+  unevaluable.** The rebuilt same-build image/silent pair reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; image produced 4,047
+  image-stage rows and silent produced none, with 512 task handoffs in each
+  arm and no crash/abort markers. Both arms had zero PCM rows in title. In
+  hangar, image produced matched nonzero source/consumer rows at
+  `0x80168850` and `0x80168B50` (621 and 639 nonzero bytes), while silent
+  remained zero. The `0x80094648` channel-writer tag emitted no rows in
+  either arm. This is a two-line result for image-arm output separation, but
+  the required title positive control failed, so it does not select
+  `H-HangarWriterLegitimate`, `H-HangarWriterNonPCM`, or
+  `H-HangarPublicationGap`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -85,9 +98,10 @@ Current maintenance marker: Session 2617 (2026-08-27).
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 hangar PCM writer/value boundary.** Revisit the `0x80094648` output
-   relation only after the title positive control is established in the same
-   run. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as rollbacks/controls.
+1. **M5 title PCM publication boundary.** Explain the missing title positive
+   control before revisiting the hangar `0x80094648` relation. Keep C88=`0`
+   and `ROGUESQ_AUDIO_UCODE=0` as rollbacks/controls; do not infer a writer
+   from the hangar-only image output.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
