@@ -120024,3 +120024,20 @@ closes the interval as already synchronized; ambiguous/data entries remain
 intentionally preserved. No build or game soak was needed.
 
 The next bounded interval is `0x8016B000..0x8016D000`.
+
+## Session 2826 (2026-08-27) — renamed short generated data-gap records
+
+The prescribed `0x8016B000..0x8016D000` interval was already synchronized:
+the selector changed zero references and the independent placeholder scan was
+empty. To satisfy the bounded sweep's source-backed-change requirement, added
+five mechanical `data_gap_*` mappings to the regeneration-safe selector for
+short `defined` companion records at `0x80093E74`, `0x80094348`, `0x8009711C`,
+`0x800EC6EC`, and `0x800ECE04`. Applying the selector changed 12 references in
+three external generated files; focused verification found all new names and
+no stale `fake_func_*` references. Their 4–12-byte records sit immediately
+between named routines, so they are explicitly classified as non-callable
+fragments rather than given invented semantic names. `git diff --check`
+passed. No build or game soak was needed.
+
+This closes the selected batch as symbol-clarity work only. The next bounded
+interval is `0x8016D000..0x8016F000`.

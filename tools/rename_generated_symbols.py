@@ -67,6 +67,13 @@ RENAMES = {
     "fake_func_8000595C": "data_gap_8000595C",
     "fake_func_80006BFC": "data_gap_80006BFC",
     "fake_func_8000751C": "data_gap_8000751C",
+    # These short defined records sit between named audio or mission
+    # routines in the companion map and are not callable function bodies.
+    "fake_func_80093E74": "data_gap_80093E74",
+    "fake_func_80094348": "data_gap_80094348",
+    "fake_func_8009711C": "data_gap_8009711C",
+    "fake_func_800EC6EC": "data_gap_800EC6EC",
+    "fake_func_800ECE04": "data_gap_800ECE04",
 }
 
 
