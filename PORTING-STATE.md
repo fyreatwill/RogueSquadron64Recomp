@@ -116289,3 +116289,17 @@ The rename generator has no mapping, so no generated file or runtime behavior
 changed. This selects `H-BoundaryOnly` and advances the sweep to `0x800CC038`.
 It rules out only a renameable companion mapping for this span. Artifact:
 `scratch/agent/s2594_symbol_census_audit.md`.
+## Session 2595 (2026-08-26) — classified the next generated-symbol boundary
+
+Ran the single static generated-symbol rename unit for `0x800CC038`. The
+generated body in `RecompiledFuncs/funcs_37.c` is one complete
+`swc1 $f0, 0x40($fp)` instruction immediately before
+`initActorFromSpawnTemplate` at `0x800CC03C`; the following generated
+`addiu` overlaps that next function's entry. The companion
+`menu_overlay.txt` explicitly retains `fake_func_800CC038`, and exact-address
+source, m2c, caller, and alternate-symbol searches found no semantic name.
+`python3 tools/rename/build_redefs.py` completed and emitted no mapping for
+`800CC038`; neighboring mappings remained present. This selects
+`H-BoundaryOnly`, leaves the placeholder unchanged, and rules out both a
+defensible companion mapping and a rename-tool mismatch. Artifact:
+`scratch/agent/s2595_symbol_census_audit.md`.

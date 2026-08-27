@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2594 (2026-08-26).
+Current maintenance marker: Session 2595 (2026-08-26).
+
+- **s2595 — the next generated-symbol span is a duplicate-symbol boundary
+  fragment.** `0x800CC038` is a one-instruction `swc1 $f0, 0x40($fp)` entry
+  immediately before `initActorFromSpawnTemplate` at `0x800CC03C`; the
+  following instruction overlaps that next function's entry. The companion
+  retains `fake_func_800CC038` and documents no semantic name. Exact-address
+  source, m2c, caller, and alternate-symbol searches found no defensible
+  candidate. The rename generator emitted no mapping, so the placeholder
+  remains unchanged. Artifact:
+  `scratch/agent/s2595_symbol_census_audit.md`.
 
 - **s2594 — the next generated-symbol span is a duplicate-symbol boundary
   fragment.** `0x800CA26C` is a one-instruction `lbu v1, 0x11(fp)` stub
