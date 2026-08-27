@@ -118665,3 +118665,17 @@ protected-placeholder failure. This selects
 `H-exact-matches` for this region. No build or game run was warranted for the
 symbol-only batch. Decision evidence:
 `scratch/agent/s2727_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2728 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger because recent entries
+included M4 and M5 work, so the generated-symbol sweep remained eligible.
+The batch covered `0x800B9000..0x800BC000` in the external generated
+snapshot. Its complete decision table evaluated 26 companion candidates:
+23 semantic entries were already synchronized and three address-only/fake
+entries were preserved, with zero renamed references in zero generated files.
+There was no parser, duplicate-destination, or protected-placeholder
+failure. This selects `H-already-synchronized`/`H-ambiguous-or-fake` and
+rules out `H-exact-matches` for this region. No build or game run was
+warranted for the symbol-only batch. Decision evidence:
+`scratch/agent/s2728_generated_symbol_sweep/decision-table.txt`.

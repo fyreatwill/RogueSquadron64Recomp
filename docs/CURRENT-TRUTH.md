@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2727 (2026-08-27).
+Current maintenance marker: Session 2728 (2026-08-27).
+
+The s2728 generated-symbol sweep covered `0x800B9000..0x800BC000`. Its
+complete decision table evaluated 26 companion candidates: 23 semantic
+entries were already synchronized and three address-only/fake entries were
+preserved, with zero renamed references in zero generated files. There was no
+parser, duplicate-destination, or protected-placeholder failure. This rules
+out `H-exact-matches` for the region and preserves the address-only/fake
+policy; no build or game run was warranted. Evidence:
+`scratch/agent/s2728_generated_symbol_sweep/decision-table.txt`.
 
 The s2726 generated-symbol sweep covered `0x800AB000..0x800AE000`. Its
 complete decision table evaluated 21 companion candidates: semantic entries
@@ -505,10 +514,10 @@ references changed. The tracked renamer now evaluates both `func_0x...` and
 precomputed generated-name set. The bounded fake-prefix rerun selected no
 rename, so future work continues only where exact companion evidence exists.
 
-This is one monotonic sequence; #1 is the next campaign priority. The s2726
+This is one monotonic sequence; #1 is the next campaign priority. The s2728
 batch confirms the covered `0x800AB000..0x800AE000` interval has no exact
 unsynchronized companion names. The next unexamined bounded interval is
-`0x800B6000..0x800B9000`.
+`0x800BC000..0x800BF000`.
 
 1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
@@ -608,7 +617,12 @@ unsynchronized companion names. The next unexamined bounded interval is
    were already synchronized and two address-only/fake entries were preserved
    as ambiguous-or-fake; zero references changed in zero files, with no parser
    or duplicate-destination rejection. This rules out `H-exact-matches` for
-   that interval; continue with `0x800B9000..0x800BC000`.
+   that interval. s2728 covered `0x800B9000..0x800BC000` and evaluated 26
+   candidates: 23 semantic entries were already synchronized and three
+   address-only/fake entries were preserved; zero references changed in zero
+   files, with no parser or duplicate-destination rejection. This rules out
+   `H-exact-matches` for that interval; continue with
+   `0x800BC000..0x800BF000`.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
