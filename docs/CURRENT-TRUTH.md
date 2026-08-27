@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2765 (2026-08-27).
+Current maintenance marker: Session 2766 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -250,5 +250,12 @@ ledger. The current late-chain checkpoints are:
   an independent scan confirmed those were the only placeholders in the
   interval, and `git diff --check` passed. The next interval is
   `0x80103000..0x80105000`.
+- s2766: the generated-symbol interval `0x80103000..0x80105000` had only
+  already-synchronized semantic candidates plus four placeholders classified
+  as ambiguous/fake: `fake_func_8010357C`, `fake_func_80103D08`,
+  `fake_func_80104208`, and `fake_func_801044D8`. The regeneration-safe
+  selection changed zero references; an independent scan confirmed no stale
+  semantic placeholder in the interval, and `git diff --check` passed. The
+  next interval is `0x80105000..0x80107000`.
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.
