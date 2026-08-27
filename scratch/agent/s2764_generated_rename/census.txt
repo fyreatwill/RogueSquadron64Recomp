@@ -1,0 +1,26 @@
+Session 2764 bounded generated-symbol census
+Interval: 0x800FF000..0x80101000
+
+Command:
+python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x800FF000 --end-address 0x80101000 --limit 32 --require-rename
+
+Result:
+error: bounded sweep selected no generated references
+renamed 0 references in 0 files
+
+Companion candidates:
+0x80100F40 freePlayerAuxBuffersIfActive: already-synchronized
+0x801007C0 allocateCraftAnimationStateForSlot: already-synchronized
+0x80100FA8 resetCraftAnimationStateForSlot: already-synchronized
+0x800FFE00 resolveCraftAnimationNodeHandles: already-synchronized
+0x801001C8 applyCraftAnimationKeyframePose: already-synchronized
+0x80100594 despawnCraftAnimationSlotNpcs: already-synchronized
+0x801006A8 despawnCraftAnimationSlotNpcsAndMarkStopping: already-synchronized
+0x80100950 tickCraftAnimationSlot: already-synchronized
+
+Independent generated-tree scan:
+rg -n 'func_(800FF|80100)|fake_func_(800FF|80100)' ../N64Recomp/RecompiledFuncs/
+placeholder_count=0 (rg exit 1: no matches)
+
+Verification:
+git diff --check: clean

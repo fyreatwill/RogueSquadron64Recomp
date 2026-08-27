@@ -119212,3 +119212,15 @@ two ambiguous/fake candidates, and six renamed references; `git diff --check`
 passed. This rules out stale semantic names in the widened range, not the
 broader sweep. Evidence: `scratch/agent/s2763_generated_rename/census.txt`.
 Next interval: `0x800FF000..0x80101000`.
+
+## Session 2764 (2026-08-27) — bounded the next generated-symbol interval
+
+Ran the required title check and the regeneration-safe companion census for
+`0x800FF000..0x80101000`. It found eight companion candidates, all already
+synchronized, and selected zero generated references for renaming. An
+independent generated-tree scan found zero `func_` or `fake_func_` placeholder
+references in the interval, and `git diff --check` passed. No build was needed
+because the census made no generated-tree change. This rules out an eligible
+rename in this interval, not the broader sweep. Evidence:
+`scratch/agent/s2764_generated_rename/census.txt`. Next interval:
+`0x80101000..0x80103000`.
