@@ -117279,3 +117279,19 @@ defines `initModelViewer` at `0x800CA638` with size `0xDC`, followed by
 context-specific collision and must not be collapsed. No rename or runtime
 change was warranted. This selects `H-CompanionExact` as already resolved and
 preserves `H-OverlayCollision`; the next bounded lead is `0x800CABD4`.
+
+## Session 2647 (2026-08-27) — audited the 800CABD4 symbol lead
+
+The bounded generated-symbol sweep checked `0x800CABD4` and its exact
+`0x11CC` boundary. The checked-in mission symbol table already names the
+region `npcProbeDriod`, ending at `0x800CBDA0`; adjacent mission entries are
+`findNearestNpcWithinRange`, `initActorFromSpawnTemplate`,
+`tickActorTexturedSoundEffect`, and `tickAtAtBodyTransform`. The menu overlay
+has a distinct overlapping `runModelViewerSoundDemo` identity at
+`0x800CADB8`, so no cross-overlay collapse is valid. A prior bounded ledger
+census independently recorded the generated `funcs_36.c` body, exact return
+boundary, and section-4 overlay span for the same name and size; that tree is
+absent from this workspace but the prior evidence resolves the identity. No
+rename or runtime behavior change was warranted. This rules out an actionable
+placeholder in the checked-in mapping, but does not close the broader sweep;
+the next lead is `0x800CBDA0`.
