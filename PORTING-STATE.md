@@ -114651,3 +114651,19 @@ It rules out an active direct generated payload writer at the corrected table
 boundary, but does not identify the actual writer. No build, runtime behavior,
 address remap, or mitigation changed. Artifact:
 `scratch/agent/s2504_m5_pcm_payload_writer_audit/audit.md`.
+## Session 2505 (2026-08-26) — joined image DMA expressions against the AI table
+
+Ran the prescribed static join census over the active image-arm RSP output,
+generated AI-buffer producer/consumers, and host DMA observer. The image arm's
+stage-2 DMA writes `0x300` bytes from DMEM `0x6F0` to `MEM_W(0x44, r2)`;
+stage 3 writes `0x198` bytes from DMEM `0xCB0` to `MEM_W(0x348) + 0x100`.
+Neither destination expression derives from `D_801496B0[i]`, whose root is the
+dynamic return from `rs_malloc` at `0x8008ED70`. The host stage/DMA functions
+observe runtime destinations and do not populate the AI table; the AI path
+consumes the table through `osAiSetNextBuffer` at `0x8008EE00` and
+`0x8008EE84`. This selects `H-rsp-destination-unresolved`: no static equality
+was found, but dynamic allocator and DMEM values prevent proving inequality.
+It rules out a direct source-expression join and leaves the runtime
+destination/allocator join open. No build, runtime behavior, address remap, or
+mitigation changed. Artifact:
+`scratch/agent/s2505_m5_rsp_destination_join/audit.md`.

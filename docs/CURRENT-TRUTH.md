@@ -85,6 +85,16 @@ Current maintenance marker: Session 2504 (2026-08-26).
   or mitigation changed. Artifact:
   `scratch/agent/s2504_m5_pcm_payload_writer_audit/audit.md`.
 
+- **s2505 — the image-arm RSP destination remains unresolved against the AI
+  table.** The image stages issue `DO_DMA_WRITE` with stage-2 destination
+  `MEM_W(0x44, r2)` and stage-3 destination `MEM_W(0x348) + 0x100`; neither
+  expression derives from `D_801496B0[i]`. The AI root is the dynamic return
+  from `rs_malloc`, while the host image/DMA hooks only observe runtime
+  destinations. This selects `H-rsp-destination-unresolved`, not a joined or
+  distinct destination, because static code cannot compare the runtime DMEM
+  field with the allocator result. No behavior or mitigation changed. Artifact:
+  `scratch/agent/s2505_m5_rsp_destination_join/audit.md`.
+
 - **s2497 — the image-to-AI-buffer handoff is absent at the static boundary.**
   The exhaustive census found two generated `osAiSetNextBuffer_recomp`
   callsites, both in `runAiAudioStreamPlaybackLoop` at `0x8008EE00` and
@@ -711,10 +721,11 @@ Closed investigations are not active work items. This is one monotonic sequence;
    allocates, clears, and lays out the sixteen AI buffers, then submits them
    through both AI calls. It did not identify a nonzero PCM payload writer.
    Next, locate that payload writer. Do not map through `gspTask`, infer an
-   image identity from hashes or timing, or
-   change task/output fields without a named writer and independent retail
-   evidence. s2504 did not find a direct generated payload writer; next join
-   the RSP image-output destination to the AI table.
+   image identity from hashes or timing, or change task/output fields without
+   a named writer and independent retail evidence. s2504 did not find a direct
+   generated payload writer; s2505 found no static RSP-destination equality.
+   The next join must compare runtime DMA destinations and allocator-derived AI
+   entries under the qualified route.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at
