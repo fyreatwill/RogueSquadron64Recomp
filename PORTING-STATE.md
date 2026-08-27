@@ -116387,3 +116387,14 @@ regeneration-safe mapping to `tools/rename/build_redefs.py`; running
 `D_`, and `fake_func_` target lines. No regeneration, runtime build, or game
 run was performed. This selects `H-CompanionMapping` and advances the sweep
 to `0x800E406C`. See `scratch/agent/s2601_symbol_census_audit.md`.
+## Session 2602 (2026-08-26) — classified the next generated-symbol boundary
+
+Ran the single static generated-symbol rename unit for `0x800E406C`. The
+generated span is one instruction (`sw $a0, 0x20($sp)`) between the complete
+`playDualTextureAttachmentCueMode1` and `handleRayShieldedNpcDestroy` bodies.
+The companion symbol file retains only `fake_func_800E406C`; exact-address
+source, m2c, and caller searches found no semantic candidate. Running
+`python3 tools/rename/build_redefs.py` succeeded and emitted no mapping for the
+placeholder. No generated source, runtime build, or game run was performed.
+This selects `H-BoundaryOnly` and advances the sweep to `0x800E447C`. See
+`scratch/agent/s2602_symbol_census_audit.md`.
