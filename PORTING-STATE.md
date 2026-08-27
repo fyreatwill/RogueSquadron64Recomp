@@ -114905,6 +114905,21 @@ or mitigation changed. Artifact:
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2522 (2026-08-26) — censused fifth generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x8006D8FC–0x8006D8FC` after
+the required sweep preflight. It contains exactly one 4-byte placeholder,
+`fake_func_8006D8FC`, whose generated body is the isolated instruction
+`sll v0, v1, 2`. The companion `main_overlay.txt` retains the exact fake
+name, and a repository-wide exact-address search found no named definition,
+caller, or m2c source. The complete region therefore selects `H-no-match`;
+no rename or regeneration-safe build was warranted. This static result does
+not prove the fragment is dead or permanently unnameable. Artifact:
+`scratch/agent/s2522_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
+
 ## Session 2520 (2026-08-26) — censused third generated-symbol sweep region
 
 Enumerated the complete main-overlay interval `0x80005570–0x8000595C` after
@@ -114936,6 +114951,21 @@ rename or regeneration-safe build for these three entries. It does not prove
 the fragments are dead or permanently unnameable. No generated code, runtime,
 or mitigation changed. Artifact:
 `scratch/agent/s2519_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
+
+## Session 2522 (2026-08-26) — censused fifth generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x8006D8FC–0x8006D8FC` after
+the required sweep preflight. It contains exactly one 4-byte placeholder,
+`fake_func_8006D8FC`, whose generated body is the isolated instruction
+`sll v0, v1, 2`. The companion `main_overlay.txt` retains the exact fake
+name, and a repository-wide exact-address search found no named definition,
+caller, or m2c source. The complete region therefore selects `H-no-match`;
+no rename or regeneration-safe build was warranted. This static result does
+not prove the fragment is dead or permanently unnameable. Artifact:
+`scratch/agent/s2522_symbol_census/audit.md`.
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
