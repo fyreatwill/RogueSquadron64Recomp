@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2833 (2026-08-27).
+Current maintenance marker: Session 2834 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -253,7 +253,8 @@ Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked. The
 generated-symbol sweep is also subject to the 15-title revisit rule.
 
-1. **M5 audio de-stubbing — design gate complete (s2832).** The refreshed
+1. **M5 audio de-stubbing — design gate complete (s2832); Step 1 route-gated
+   baseline (s2834).** The refreshed
    `docs/M5-AUDIO-PLAN.md` inventories the active task, RSP, SP, guest-gate,
    voice, wait, AI, host, and MORT boundaries. The source survey found no new
    active audio stub or gate; it corrected the plan's stale description of
@@ -261,16 +262,19 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    external generated snapshot is absent from this checkout, so generated
    audio behavior remains represented by checked-in anchors and fixup scripts.
    Do not change runtime behavior until Step 1's same-build qualification.
+   Session 2834 passed the independent retail whole-RDRAM control and title /
+   hangar route, and the same-build image/silent pair passed dispatch controls
+   but both stalled at pre-title VI 640 / origin `0x0066A500`. All target-phase
+   service, slot, MORT, and PCM nulls are therefore unevaluable; no contract,
+   degeneracy, mixed-pipeline, or gate hypothesis was selected. The next M5
+   unit needs a genuinely new route angle, not another target-phase null.
 
-2. **M5 audio de-stubbing — Step 1 same-build qualification.** Build the
-   current Debug target once, then run image and `ROGUESQ_AUDIO_UCODE=0`
-   silent arms from that same build with the phase-gated driver. Require the
-   whole-RDRAM retail positive control, port route transition, task fields,
-   DMEM/DMA, image exit, SP completion, service/slot/voice, MORT, and PCM
-   source/consumer rows. A real image task without downstream joins selects
-   H-ContractGap; a matching downstream row selects the next named contract
-   edge; a route-only difference selects neither. Do not land a behavior
-   change from this qualification alone.
+2. **M5 audio de-stubbing — Step 1 route repair / qualification.** Use one
+   genuinely new, phase-qualified route angle that can move both same-build
+   arms past VI 640, while retaining the whole-RDRAM retail control. Once the
+   title/hangar phases are reached, require the task-field, DMEM/DMA, image
+   exit, SP completion, service/slot/voice, MORT, and PCM source/consumer
+   rows. Do not land a behavior change from another pre-target null.
 
 3. **Generated-symbol renaming sweep — next bounded batch.** The full
    Debug target now links after the fake/data collision repair, but the

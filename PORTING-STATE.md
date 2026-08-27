@@ -120140,3 +120140,20 @@ references. `git diff --check` passed. This is symbol-clarity evidence only;
 it provides no M5 or runtime evidence. The next sweep should classify the
 next short data-gap batch without inventing names for ambiguous callable
 placeholders.
+
+## Session 2834 (2026-08-27) — M5 Step 1 qualification remained route-gated
+
+Ran the independent retail ground-truth control first with the current
+debugger core: the whole-RDRAM watch exceeded its 10,000-hit positive-control
+threshold, and retail reached title `1024 @ 0x00790400` plus hangar
+`512 @ 0x006AB400`. The current Debug target then built successfully.
+
+The prescribed same-build image/silent pair recipe failed its silent-arm route
+gate before launching the image arm. A fixed same-build pair using the
+in-process AUTOPILOT and the full M5 marker set ran both arms; image and silent
+dispatch controls were positive (42 and 44 rows respectively in the fixed
+window), with no crash or abort, but both stopped at pre-title VI 640 / origin
+`0x0066A500`. No target-phase service, slot, voice, MORT, or PCM rows are
+interpretable. This rules out neither audio degeneracy nor a contract gap: the
+route discriminator did not arm. The next M5 unit needs a genuinely new route
+angle; repeating the same input schedules is not informative.
