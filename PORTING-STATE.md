@@ -119896,3 +119896,14 @@ references in zero files. The independent generated-tree scan found no
 it rules out a source-backed semantic placeholder rename there, while
 ambiguous/data entries remain intentionally preserved. No build or game soak
 was needed.
+
+## Session 2816 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+Ran the regeneration-safe companion selector for `0x80157000..0x80159000`
+against the external `rogue_squadron64` symbol files. It changed zero
+references in zero files. The independent generated-tree scan found no
+`func_8015*` or `fake_func_8015*` definitions or references, and
+`git diff --check` passed. This closes the interval as already synchronized;
+it rules out a source-backed semantic placeholder rename there, while
+ambiguous/data entries remain intentionally preserved. No build or game soak
+was needed.
