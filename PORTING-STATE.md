@@ -118604,3 +118604,19 @@ rejection. This selects
 `H-exact-matches` there. No build or game run was warranted for a symbol-only
 batch. Decision evidence:
 `scratch/agent/s2723_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2724 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger because the recent titles
+included the M4 revisit, the M5 validation, and a prior synchronized-symbol
+rename; the generated-symbol sweep remained the eligible bounded work unit.
+The batch covered `0x800A2000..0x800A5000` in the external generated
+snapshot. Its complete decision table contained seven candidates: one
+semantic entry (`aspMainDataStart`) was already synchronized and six
+address-only/fake `D_` entries were preserved as ambiguous-or-fake. Zero
+references changed in zero generated files; the tool exited successfully
+without parser or duplicate-destination rejection. This selects
+`H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
+`H-exact-matches` there. No build or game run was warranted for a symbol-only
+batch. Decision evidence:
+`scratch/agent/s2724_generated_symbol_sweep/decision-table.txt`.

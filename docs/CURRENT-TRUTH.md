@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2723 (2026-08-27).
+Current maintenance marker: Session 2724 (2026-08-27).
 
 ## Live result
 
@@ -575,7 +575,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    available. s2723 covered `0x8009F000..0x800A2000` and ruled out exact
    matches with three synchronized and 32 ambiguous-or-fake candidates.
    Continue with the next adjacent region only while exact companion
-   evidence remains available.
+   evidence remains available. s2724 covered `0x800A2000..0x800A5000` and
+   ruled out exact matches with one synchronized semantic candidate and six
+   address-only/fake candidates; zero references changed in zero files, with
+   no parser or duplicate-name rejection. Continue with the next adjacent
+   region only while exact companion evidence remains available.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
