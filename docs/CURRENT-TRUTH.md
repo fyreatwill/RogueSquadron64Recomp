@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2666 (2026-08-27).
+Current maintenance marker: Session 2667 (2026-08-27).
+
+## Session 2667 result
+
+The generated tree had seven exact stale placeholder definitions whose
+addresses and human names agree in both `syms/rogue_squadron.syms.toml` and
+the companion symbol files: `0x80082268`, `0x800825C8`, `0x800AD378`,
+`0x800D2C98`, `0x800D4EC4`, `0x800DD2C4`, and `0x800DFB8C`. A checked-in
+`tools/rename_generated_symbols.py` now applies this bounded map to generated
+C, header, and overlay-table outputs. It renamed 21 references in the
+external generated tree; the post-edit census found no old names and one
+definition/declaration/table identity for each replacement. This advances the
+symbol sweep but changes no runtime behavior. The next step remains the next
+address-keyed exact-match batch; ambiguous placeholders stay generic.
 
 ## Session 2666 result
 
@@ -502,33 +515,29 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 de-stubbing sequence — primary active thread.** The generated-symbol
-  renaming fallback is exhausted: the five remaining true `func_` placeholders
-  have no semantic companion identity. Obtain an independent
+1. **Generated-symbol renaming sweep — primary active thread.** The seven
+  exact companion mappings from s2667 are landed through the checked-in
+  rename tool and applied to the generated C/header/overlay outputs. Continue
+  with one address-keyed batch per iteration, using only exact agreement
+  between the project TOML and companion symbol files; leave ambiguous
+  placeholders generic. Return to M5 de-stubbing after this bounded sweep
+  produces no exact candidates or a new independent discriminator.
+2. **M5 de-stubbing sequence — secondary active thread.** Obtain an independent
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
    legitimate payload polarity, and ordering relative to image completion and
    PCM consumption. The s2655 dispatch capture found both output fields zero
    on every qualified task, and s2658 found no retail writes to those fields
    on the repeatedly dispatched task, so do not repeat that field census or
-   add output writeback. Trace the next named output contract edge: correlate
-   retail writer destinations and port image DMA/PCM spans, or prove the CPU
-   MORT publication boundary, before changing behavior. Do not revisit the
-   hangar `0x80094648` relation. The s2659 census leaves the next named edge
-   at the Factor 5 task/output ABI versus CPU-MORT publication boundary; map
-   one of those boundaries before any behavior change. The s2664 static audit
-   rules out the named retail writer call-sites as that edge; do not repeat
-   their utility/texture classification. The audio-plan survey is now complete
-   in `docs/M5-AUDIO-PLAN.md`. The next bounded action is its Step 0
-   ground-truth reconciliation, followed by one behavior change only when a
-   complete task/slot/voice/PCM row identifies the edge. Keep C88=`0` and
-   `ROGUESQ_AUDIO_UCODE=0` as rollbacks/controls.
-2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
-   with a named discriminator; passive recurrence belongs in the soak queue.
-3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
-   H3 is unavailable because the oracle cannot screenshot the LLE path.
-4. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
-   established; broader slot coverage is optional and lower priority than M5.
+   add output writeback. Trace the next named output contract edge before
+   changing behavior. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as
+   rollbacks/controls.
+3. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+  with a named discriminator; passive recurrence belongs in the soak queue.
+4. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
+  H3 is unavailable because the oracle cannot screenshot the LLE path.
+5. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
+  established; broader slot coverage is optional and lower priority than M5.
 
 ## Durable boundaries
 

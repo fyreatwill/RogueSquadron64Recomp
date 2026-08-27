@@ -117630,3 +117630,19 @@ The run rules out interpreting the original recipe's narrow nulls, not any
 audio contract hypothesis. No runtime behavior, generated code, writeback,
 remap, gate, wait, or guard changed. The next unit is to make both port arms
 run independently/concurrently after the oracle gate.
+
+## Session 2667 (2026-08-27) — landed bounded generated-symbol rename batch
+
+The mandatory pivot moved this iteration from the control-invalid M5 driver
+repair to the generated-symbol-renaming sweep. Comparing the checked-in
+project symbol TOML and companion symbol files found seven exact address/name
+pairs still emitted as `fake_func_...`: `0x80082268`, `0x800825C8`,
+`0x800AD378`, `0x800D2C98`, `0x800D4EC4`, `0x800DD2C4`, and `0x800DFB8C`.
+I added `tools/rename_generated_symbols.py`, including generated C, header,
+and `recomp_overlays.inl` coverage, and applied it to the external generated
+tree. It renamed 21 references across five files. The old-name census returned
+no matches, and each replacement has one generated definition plus its header
+and overlay-table references. This selects `H-symbol-map-complete` for the
+batch and rules out a stale-tree or ambiguous-map explanation for these seven
+addresses. No runtime, audio, gate, writeback, or remap behavior changed.
+The next unit is the next exact-match batch under the same sweep slug.
