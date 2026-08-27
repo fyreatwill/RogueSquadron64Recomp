@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2561 (2026-08-26).
+Current maintenance marker: Session 2562 (2026-08-26).
 
 ## Current state
 
@@ -80,6 +80,15 @@ Current maintenance marker: Session 2561 (2026-08-26).
   single-source boundary classification, not a reachability proof. No
   generated code changed. Artifact:
   `scratch/agent/s2561_symbol_census/audit.md`.
+
+- **s2562 — the next generated-symbol region had no defensible mapping.** The
+  complete `0x80101CCC–0x80101CCF` span is a lone `lw a0,0x3C(v0)` between the
+  complete `lv1_checkComplexObjectives` epilogue and the real
+  `lv2_initializeObjectTracking` prologue. The companion explicitly retains
+  `fake_func_80101CCC` and identifies the following real function; exact
+  symbol/source/m2c/caller searches found no human candidate. This is a
+  static, single-source boundary classification. No generated code changed.
+  Artifact: `scratch/agent/s2562_symbol_census/audit.md`.
 
 ## Latest evidence
 
