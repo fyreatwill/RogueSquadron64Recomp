@@ -120272,3 +120272,16 @@ references for each address. The companion map now records the same mechanical
 names. No callable-ambiguous placeholder was renamed, and no game run was
 needed. This is a symbol-clarity code change only; it provides no M5 runtime
 evidence.
+
+## Session 2841 (2026-08-27) — renamed two generated data-gap records
+
+The bounded source-backed symbol sweep selected the companion records at
+`0x80041EEC` and `0x800457CC`, each a four-byte non-callable record immediately
+before a named routine. The regeneration-safe selector added both mappings and
+renamed six generated references across `funcs.h`, `funcs_9.c`, `funcs_10.c`,
+and `recomp_overlays.inl` in the external generated snapshot. The companion
+map now uses `data_gap_80041EEC` and `data_gap_800457CC`; an independent scan
+found no stale placeholder references. The nearby
+`fake_func_8004661C` was classified ambiguous-or-fake and preserved. No build
+or game run was needed. This is symbol clarity only and provides no M5 runtime
+evidence.

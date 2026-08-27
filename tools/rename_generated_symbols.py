@@ -84,6 +84,10 @@ RENAMES = {
     "fake_func_8009711C": "data_gap_8009711C",
     "fake_func_800EC6EC": "data_gap_800EC6EC",
     "fake_func_800ECE04": "data_gap_800ECE04",
+    # These short main-overlay records precede named routines in the
+    # companion map and are not callable function bodies.
+    "fake_func_80041EEC": "data_gap_80041EEC",
+    "fake_func_800457CC": "data_gap_800457CC",
 }
 
 

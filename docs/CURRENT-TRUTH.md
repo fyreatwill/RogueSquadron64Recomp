@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2839 (2026-08-27).
+Current maintenance marker: Session 2841 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -268,6 +268,14 @@ No title/hangar, gate, writer, service, MORT, or PCM rows appeared. This
 rejects a pre-title task-field selector mismatch in this run and selects the
 post-dispatch or scheduling side of the route split; target-phase audio
 behavior remains unevaluable.
+
+Session 2841 renamed two additional source-backed short main-overlay records
+(`0x80041EEC` and `0x800457CC`) to explicit `data_gap_*` names through the
+regeneration-safe selector and companion map. The bounded selector selected
+exactly those two records and changed six generated references across four
+files; an independent scan found no stale placeholder references. The
+callable-ambiguous `fake_func_8004661C` was preserved. This is symbol clarity
+only, not M5 or runtime evidence.
 
 ## Next steps
 
