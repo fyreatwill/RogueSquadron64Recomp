@@ -115402,3 +115402,23 @@ Selected `H-data-boundary` / `H-no-match` and left it unchanged. Artifact:
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
+## Session 2543 (2026-08-26) — renamed tracked-object auxiliary-field fragment
+
+Ran the required generated-symbol sweep preflight and inspected the complete
+`0x800AD378–0x800AD37F` span. It is an eight-byte callable fragment containing
+`sw t1,0x4(v0)` and `sw t2,0x8(v0)`, immediately before the independently named
+`computeTrackedObjectWorldAnchor`. The companion symbol input had no exact
+human or m2c name and no caller attribution, but the complete local semantics
+support the bounded name `storeTrackedObjectAuxiliaryFields` without absorbing
+the neighboring function.
+
+Added the regeneration-safe mapping to `tools/rename/build_redefs.py` and
+synchronized the active companion symbol input plus generated declaration,
+implementation, and overlay dispatch entry. A targeted rename-pipeline check
+and the generated-functions build passed. This rules out leaving this exact
+two-store boundary as an address-only placeholder; it does not establish a
+higher-level game API name. Artifact:
+`scratch/agent/s2543_symbol_rename/audit.md`.
+
+ORIGIN: semantic rename only; the two stores are legitimate generated code,
+and no mitigation, skip, guard, or runtime behavior changed.

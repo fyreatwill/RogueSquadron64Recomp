@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2540 (2026-08-26).
+Current maintenance marker: Session 2543 (2026-08-26).
 
 ## Current state
 
@@ -280,6 +280,16 @@ Current maintenance marker: Session 2540 (2026-08-26).
   boundary, so it remains unchanged. This is a static, single-source result.
   Artifact: `scratch/agent/s2542_symbol_census/audit.md`.
 
+- **s2543 — the next generated-symbol region received a bounded semantic
+  rename.** The complete `0x800AD378–0x800AD37F` span contains two stores,
+  `t1` to `v0+4` and `t2` to `v0+8`, immediately before the independently
+  named `computeTrackedObjectWorldAnchor`. No exact companion decomp name,
+  m2c definition, or caller attribution exists, so the generated boundary
+  was renamed to `storeTrackedObjectAuxiliaryFields` from its complete local
+  semantics. The rename is encoded in `tools/rename/build_redefs.py` and
+  synchronized into the active symbol input and generated outputs. Artifact:
+  `scratch/agent/s2543_symbol_rename/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -327,7 +337,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   searches supplied no defensible mapping, and the fragment has no complete
   callable body. It remains unchanged as a data/boundary artifact candidate.
   s2542 left `0x800AAADC` unchanged as a four-byte store/boundary fragment
-  before `playerSnowSpeederInit`; the next unresolved region is `0x800AD378`.
+  before `playerSnowSpeederInit`; s2543 renamed the complete two-store span
+  at `0x800AD378` to `storeTrackedObjectAuxiliaryFields`. Continue at the
+  next unresolved mission-overlay placeholder.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index

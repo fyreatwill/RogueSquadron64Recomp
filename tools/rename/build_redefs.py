@@ -55,7 +55,16 @@ EXTRA_REVERTS = {
     "setGlobalByte_8011A898":    "func_80017B48",
     "setGlobalFloat_8011A840":   "func_80017B78",
 }
+
+# Short generated fragments still need stable names when their companion
+# project has no symbol entry for the exact boundary.
+EXTRA_RENAMES = {
+    "fake_func_800AD378": "storeTrackedObjectAuxiliaryFields",
+}
 with open(REDEFS, "a", encoding="utf-8") as f:
     for old, new in EXTRA_REVERTS.items():
         f.write(f"{old} {new}\n")
+    for old, new in EXTRA_RENAMES.items():
+        f.write(f"{old} {new}\n")
 print(f"Appended {len(EXTRA_REVERTS)} reverts")
+print(f"Appended {len(EXTRA_RENAMES)} semantic fragment renames")
