@@ -119333,3 +119333,13 @@ interval. `git diff --check` passed, and no build or regeneration was needed.
 This closes the interval and rules out stale generated placeholders there, not
 the remaining rename sweep. Evidence:
 `scratch/agent/s2771_generated_rename/decision-table.txt`.
+## Session 2772 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The regeneration-safe companion census for `0x8010D000..0x8010F000` found
+two candidates already synchronized (`gIdleThread`, `gVideoThread`) and five
+ambiguous-or-fake data candidates. It changed zero generated references in
+zero files. The `--require-rename` command returned the expected nonzero
+status for a zero-selection interval; this is not a tool failure. The complete
+decision table is in `scratch/agent/s2772_generated_rename/decision-table.txt`.
+This closes the interval and rules out stale semantic placeholders there, not
+the remaining sweep. The next interval is `0x8010F000..0x80111000`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2771 (2026-08-27).
+Current maintenance marker: Session 2772 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -95,8 +95,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    names: `lvi/lvk/lvj_objectiveSlot1`. Continue with
    `0x8010B000..0x8010D000` is now synchronized: all six semantic
    candidates were already synchronized and no generated placeholder remained
-   in the interval; ambiguous/data entries were preserved. Continue with
-   `0x8010D000..0x8010F000`, preserving
+   in the interval; ambiguous/data entries were preserved. Session 2772 also
+   closed `0x8010D000..0x8010F000`: two candidates were already synchronized
+   and five ambiguous/fake entries were preserved, with zero generated
+   references selected. Continue with `0x8010F000..0x80111000`, preserving
    ambiguous/fake/address-only symbols.
 
 3. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
@@ -298,5 +300,10 @@ ledger. The current late-chain checkpoints are:
   scan found zero placeholder hits in the interval. The regeneration-safe
   selection changed zero references and no build was needed. The next interval
   is `0x8010D000..0x8010F000`.
+- s2772: the generated-symbol interval `0x8010D000..0x8010F000` had two
+  already-synchronized candidates and five ambiguous/fake candidates. The
+  regeneration-safe selection changed zero references in zero files; no
+  generated placeholder was selected. The next interval is
+  `0x8010F000..0x80111000`.
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

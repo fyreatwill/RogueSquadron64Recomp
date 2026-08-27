@@ -1,0 +1,19 @@
+Session 2772 bounded census: 0x8010D000..0x8010F000
+
+Command:
+python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x8010D000 --end-address 0x8010F000 --limit 32 --require-rename
+
+Result: renamed 0 references in 0 files.
+
+Candidates:
+0x8010D218 gIdleThread already-synchronized
+0x8010D3D0 gVideoThread already-synchronized
+0x8010D580 D_8010D580 ambiguous-or-fake
+0x8010DFD0 D_8010DFD0 ambiguous-or-fake
+0x8010DDA0 D_8010DDA0 ambiguous-or-fake
+0x8010DFD8 D_8010DFD8 ambiguous-or-fake
+0x8010D598 D_8010D598 ambiguous-or-fake
+
+Discriminator: 2 already-synchronized, 5 ambiguous-or-fake, 0 selected;
+--require-rename returned nonzero solely because no generated reference was
+selected. No files were changed.
