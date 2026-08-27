@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2653 (2026-08-27).
+Current maintenance marker: Session 2654 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -105,6 +105,18 @@ Current maintenance marker: Session 2653 (2026-08-27).
   or de-stub behavior change is authorized until an independent mapping names
   the port writer, destination, legitimate value, and ordering.
 
+- **s2654 — static OSTask output audit found no guest construction site.** The
+  runtime ABI defines `output_buff` at task offset `0x28` and
+  `output_buff_size` at `0x2C`. The current generated tree contains no
+  `M_AUDTASK`, `output_buff`, or `output_buff_size` references and only five
+  `osSpTaskStartGo` callsites, all in `spTaskSchedulerThread` dispatching task
+  pointers received from queues. The audit therefore cannot distinguish a
+  null field from a valid field statically; it rules out a direct generated
+  OSTask-construction expression as the next edge and selects a dispatch-time
+  runtime capture of the two fields plus DMA destination/payload. This is a
+  single-source static result; it does not identify the writer or authorize
+  writeback.
+
 ## s2621 unblock audit
 
 The local oracle route passed the whole-RDRAM control with 9,107,853 writes,
@@ -114,7 +126,8 @@ body and zero-fill arguments. The result did not identify a legitimate
 port-side PCM publication destination or producer ordering. The companion
 source also has no complete body for retail `0x8002BEEC` or CPU-MORT
 publication boundary. The M5 mapping remains an open dependency; the next
-action is the local generated-symbol sweep. Artifact:
+action is a phase-gated dispatch-time capture of task fields and DMA output.
+Artifact:
 `scratch/agent/unblock_s2621/oracle.log`.
 
 ## s2622 symbol-sweep result
@@ -325,7 +338,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
    legitimate payload polarity, and ordering relative to image completion and
-   PCM consumption. Do not repeat the title-zero census or revisit the hangar
+   PCM consumption. The static s2654 audit found no generated OSTask
+   construction site, so capture `output_buff`/`output_buff_size` at dispatch
+   and join them to the actual DMA destination/payload. Do not repeat the
+   title-zero census or revisit the hangar
    `0x80094648` relation. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as
    rollbacks/controls.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit

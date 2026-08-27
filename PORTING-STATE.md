@@ -117379,3 +117379,17 @@ duplicate-symbol boundaries and gap-fillers, not candidates for semantic
 renaming. The generated-symbol-renaming sweep is effectively complete: all
 addressable func_→semantic renames from companion sources have been landed.
 Priority shifts to M5 de-stubbing (backlog item #2, strategic priority #2).
+## Session 2654 (2026-08-27) — audited static OSTask output buffer construction
+
+Ran the prescribed build-free M5 static audit against the current generated
+tree at `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs`.
+The runtime `OSTask_s` definition confirms `output_buff` at offset `0x28` and
+`output_buff_size` at `0x2C`. The generated tree has zero references to
+`M_AUDTASK`, `output_buff`, or `output_buff_size`, and exactly five
+`osSpTaskStartGo` callsites, all in `spTaskSchedulerThread`; those callsites
+dispatch task pointers received from queues rather than constructing tasks.
+This rules out a direct generated static construction expression as the next
+edge, but cannot distinguish null from valid runtime field values. The next
+work unit is a phase-gated dispatch-time capture joined to DMA destination and
+payload rows. Single-source static result; no writer, payload legitimacy, or
+writeback authorization established.

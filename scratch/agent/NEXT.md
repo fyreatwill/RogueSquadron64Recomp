@@ -1,64 +1,60 @@
-# NEXT work unit (s2654) — M5 PCM publication edge: static OSTask output_buff audit
+# NEXT work unit (s2655) — M5 dispatch-time OSTask output/DMA join
 
 HYPOTHESIS-ID: m5-pcm-publication-edge
 
-## Context
+## Work unit
 
-The generated-symbol-renaming sweep is CLOSED (s2653). M5 de-stubbing is now
-the active thread (backlog #1). The blocking open question, established by
-s2617–s2620, is: the generated tree has no direct static reference to the
-retail PCM destination spans (`0x166450:0x169450`, `0x1798B0:0x179A48`), and
-the host writer witness returns only zero-valued `kind=2, pc=0` rows. The
-`H-ContractGap` hypothesis is selected but the missing edge is unlocated.
+Run one phase-gated runtime capture of every image-arm `M_AUDTASK` task's
+`output_buff` and `output_buff_size` at dispatch, joined to its generated DMA
+ranges and payload nonzero counts. The s2654 static audit found no generated
+OSTask construction site: `output_buff` is ABI offset `0x28`, size is `0x2C`,
+and the five generated `osSpTaskStartGo` sites only dispatch queued task
+pointers. Do not build a new instrument if the existing dispatch/DMA rows
+already contain these fields; use the existing recipe and parser.
 
 ## Competing hypotheses and discriminator
 
-- `H-OutputBuffNull`: the OSTask `output_buff` field submitted by the guest is
-  null or zero; the Factor 5 image writes to it but the DMA produces zero bytes
-  or an invalid destination, so the host PCM consumer never gets nonzero data.
-- `H-OutputBuffValid`: `output_buff` is a legitimate RDRAM pointer that maps to
-  the retail PCM span; the image DMA actually writes to it; the gap is in the
-  host read-back (PCM consumer join logic) rather than the RSP write.
-- `H-ImagePCMSilent`: the image task computes audio but writes zeros because
-  its input data (voice/sequencer tables) is not populated by the port guest;
-  the image DMA is well-formed but the payload is legitimately zero.
-- `H-PortFuncMissing`: the port-side equivalent of retail `0x800078EC`
-  (`rs_memset` writing the PCM span) is never called because the guest function
-  that submits the OSTask with a valid `output_buff` is blocked or not reached.
+- `H-OutputBuffNull`: dispatch rows show `output_buff=0` or size `0`; no DMA
+  range overlaps a legitimate output buffer.
+- `H-OutputBuffValid`: dispatch rows show a nonzero RDRAM pointer/size, and a
+  DMA range overlaps it; any remaining gap is after the RSP write.
+- `H-ImagePCMSilent`: the pointer is valid but all joined DMA payloads are
+  zero, indicating silent image input/output rather than routing loss.
+- `H-PortFuncMissing`: no qualifying image-arm dispatch row reaches a valid
+  task/output contract, indicating the producer/submission path is absent or
+  blocked.
 
-The discriminating observation is a static read of the OSTask structure fields
-submitted for `M_AUDTASK`: specifically the `output_buff` field value and its
-relation to the known retail PCM span addresses. This distinguishes
-`H-OutputBuffNull` from `H-OutputBuffValid` without a build, and narrows the
-scope of any runtime experiment needed to split the remaining hypotheses.
+The discriminator is the same task ordinal in one run: `output_buff`, size,
+DMA destination overlap, DMA payload nonzero count, image exit, and PCM
+source/consumer rows, separately for title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. A whole-RDRAM oracle control and port phase transitions
+are required; a zero without those controls is unevaluable.
 
-## Exact checks (static analysis — no build needed)
+## Exact commands
 
-1. In the generated mission funcs, find where the OSTask for `M_AUDTASK` is
-   populated. Grep for `osSpTaskLoad\|osCreateMesgQueue\|M_AUDTASK\|0x0007\|
-   musyx.*submit\|musyxSynthFrame\|submitAudioTask` in the generated source.
-2. Read the OSTask struct field layout (from libultra headers or companion
-   source) to identify `output_buff` byte offset within the task block.
-3. Grep the generated funcs for stores at `output_buff` offset from whatever
-   base pointer is used when constructing the audio task. Record the value
-   expression — is it a compile-time constant, a pointer arithmetic expression,
-   or a guest memory address?
-4. Compare the recovered address expression against the retail PCM spans:
-   `0x166450:0x169450` (12 288 bytes) and `0x1798B0:0x179A48` (0x198 bytes),
-   adjusted for RDRAM physical-to-KSEG0 offset (`+0x80000000`).
-5. If a concrete pointer is found, check if it overlaps the RDRAM range that
-   the oracle confirmed receives retail writes. If it is zero or null, that
-   selects `H-OutputBuffNull`.
+1. Verify the existing image/default and silent arms are built from the same
+   executable: `git status --short` and inspect the latest qualifying recipe
+   under `scratch/agent/run_s2346_m5_task_output_provenance.sh`.
+2. Run that recipe from the build directory with its existing
+   `PROBE_PHASE_WIDTH=1`, `PROBE_KEYS_FROM_PHASE=1`, `ROGUESQ_LOG_ALL=1`, and
+   passive breadcrumb variables. If the recipe is not self-contained, enqueue
+   a self-contained wrapper under `scratch/agent/soak_queue/` instead of
+   babysitting it.
+3. Parse the image-arm rows with the recipe's existing parser. Report counts
+   for ABI rows, DMA rows/ranges, nonzero joined payloads, output-buffer/DMA
+   overlaps, image exits, PCM source/consumer rows, and both phase controls.
 
-## Expected discriminating outcomes
+## Expected outcomes
 
-- Static match between `output_buff` and retail span → `H-OutputBuffValid`;
-  the next step is a runtime DMA-payload readback on a title run.
-- Static null/zero `output_buff` → `H-OutputBuffNull`; next step is tracing
-  the guest allocator that should provide it.
-- No static OSTask construction site found → record the search boundary and
-  pivot to the runtime instrument from s2616 (`audtask-dma-*` rows) to read
-  the task fields at dispatch time.
+- Nonzero `output_buff`/size plus an overlapping nonzero DMA payload selects
+  `H-OutputBuffValid` and makes the next work unit the post-DMA PCM consumer
+  edge.
+- Zero pointer/size selects `H-OutputBuffNull` and makes the next unit trace
+  the guest task producer/allocator; do not add writeback.
+- Valid fields with zero payload selects `H-ImagePCMSilent`; next unit is the
+  input/source population contract, not host routing.
+- Missing qualifying dispatch rows selects `H-PortFuncMissing` only if the
+  port route control is positive; otherwise the result is unevaluable.
 
-Do not build anything this iteration. Do not repeat the title-zero census
-(already done in s2619). Do not revisit `0x80094648`.
+Do not repeat the title-zero census, revisit `0x80094648`, or promote any
+writeback/remap/guard without a named writer, legitimate value, and ordering.
