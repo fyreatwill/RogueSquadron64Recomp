@@ -450,6 +450,22 @@ selects `H-already-synchronized`/`H-ambiguous-or-fake` for the region and
 rules out `H-exact-matches` there. No build or game run was needed. Decision
 evidence: `scratch/agent/s2719_generated_symbol_sweep/decision-table.txt`.
 
+s2721 completed the M5 Step 6 same-build validation with the existing
+phase-scoped instrumentation. The independent retail oracle passed the
+whole-RDRAM positive control (`10000`) and reached title `1024 @ 0x00790400`
+and hangar `512 @ 0x006AB400`. The default-off arm reached hangar and
+produced 12 phase-qualified task joins, 12 audio returns, 36 SP-route rows,
+and 22 each of PCM source/consumer rows; the explicit tick-on arm also
+reached hangar and produced the same classes of rows (426 task joins, 258
+returns, 1,557 SP-route rows, and 45 each of PCM source/consumer rows).
+Neither arm crashed or aborted, and every phase-qualified PCM source and
+consumer row had `nz=0`; the validation's `[audio-drain]` marker did not fire
+in either arm. This same-build port A/B rejects `H-tick-required` for route
+and clean task/SP progress at the exercised call shape, while selecting
+`H-audio-edge-unresolved`: the tick does not close the missing nonzero PCM
+publication edge. No further drain change, writeback, remap, or mitigation is
+authorized. Evidence: `scratch/agent/s2721_m5_drain_tick_validation/`.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -487,7 +503,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
    and ordering edge are named. The s2717 M4 revisit independently classified
    the two existing retail candidate ranges as broad structured/allocator
    activity rather than a clean accumulator record; it did not change the M5
-   publication priority.
+   publication priority. s2721 completed Step 6 validation: both drain arms
+   reached hangar with clean task/SP progress, but both retained zero PCM
+   payload, so the next M5 unit requires a genuinely new named publication
+   surface; do not repeat the drain A/B.
 2. **Generated-symbol renaming sweep.** s2718 renamed the three exact
    resampling helpers at `0x800927B0..0x80092CF0`; preserve the unresolved
    `0x8000040C` placeholder. Continue with one adjacent bounded region only

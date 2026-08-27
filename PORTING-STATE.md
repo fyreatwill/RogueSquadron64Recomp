@@ -118555,3 +118555,22 @@ duplicate-destination rejection. This selects
 `H-exact-matches` there. No build or game run was warranted for a symbol-only
 batch. Decision evidence:
 `scratch/agent/s2720_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2721 (2026-08-27) — validated the M5 drain-tick default
+
+The Debug target built successfully. The same-build M5 Step 6 validation ran
+the default-off drain arm and the explicit `ROGUESQ_DRAIN_INLOOP_TICK=1`
+control with the existing phase-scoped instrumentation. The independent
+retail oracle passed its whole-RDRAM positive control (`10000`) and reached
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. Both port arms
+reached the hangar phase without `[CRASH]` or `[ABORT]`. Default-off had 12
+phase-qualified task joins, 12 audio returns, 36 SP-route rows, and 22 each
+of PCM source/consumer rows; tick-on had 426 task joins, 258 returns, 1,557
+SP-route rows, and 45 each of PCM source/consumer rows. Every phase-qualified
+PCM source and consumer row had `nz=0`, and the `[audio-drain]` marker did not
+fire in either arm. This same-build port A/B rejects `H-tick-required` for
+route and clean task/SP progress at the exercised call shape, while selecting
+`H-audio-edge-unresolved`: the injected tick does not close the missing
+nonzero PCM publication edge. The run does not authorize another drain
+change, writeback, remap, or mitigation. Evidence:
+`scratch/agent/s2721_m5_drain_tick_validation/`.

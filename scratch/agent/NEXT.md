@@ -1,13 +1,15 @@
-# NEXT work unit (s2721) — bounded generated-symbol region
+# NEXT work unit (s2722) — bounded generated-symbol region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
 Continue the generated-symbol sweep over the next adjacent region after
-`0x80096000..0x80099000`. Use the companion symbol files and the live
-external generated snapshot. Rename only exact semantic matches; preserve
-address-only, fake, conflicting, or protected placeholders.
+`0x80099000..0x8009C000`. Rename only exact semantic companion matches;
+preserve address-only, fake, conflicting, or protected placeholders. M5
+publication remains unresolved, and s2721 found no drain discriminator or new
+legitimate publication surface, so no further M5 runtime experiment is
+authorized in this iteration.
 
 ## Competing hypotheses and discriminator
 
@@ -16,22 +18,21 @@ address-only, fake, conflicting, or protected placeholders.
 - H-already-synchronized: semantic companion candidates are already named in
   generated output; the tool changes zero references.
 - H-ambiguous-or-fake: remaining candidates are address-only, fake, or
-  conflicting; they must be preserved.
+  conflicting; they are preserved.
 
 The discriminator is the complete tool decision table for one bounded region:
 selected candidates, changed references/files, already-synchronized entries,
-ambiguous-or-fake entries, and parser/duplicate-name failures. A real rename
-batch is the work unit; do not add diagnostic-only fields.
+ambiguous-or-fake entries, and parser/duplicate-name failures.
 
 ## Exact commands
 
 ```sh
-mkdir -p scratch/agent/s2721_generated_symbol_sweep
+mkdir -p scratch/agent/s2722_generated_symbol_sweep
 python3 tools/rename_generated_symbols.py \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x80099000 --end-address 0x8009C000 --limit 32 \
-  > scratch/agent/s2721_generated_symbol_sweep/decision-table.txt
+  --start-address 0x8009C000 --end-address 0x8009F000 --limit 32 \
+  > scratch/agent/s2722_generated_symbol_sweep/decision-table.txt
 ```
 
 Review the decision table and generated diff. Do not build or run the game for
