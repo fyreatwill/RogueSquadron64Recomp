@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2811 (2026-08-27).
+Current maintenance marker: Session 2813 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -179,6 +179,12 @@ maps `0x80064294`, `0x80064934`, and `0x80065A5C` to explicit `data_gap_*`
 names and changed 9 generated references in the external snapshot. This is a
 symbol-clarity change only; it adds no M5 or runtime evidence.
 
+Session 2813 closed generated-symbol interval `0x80151000..0x80153000`.
+The selector found one companion candidate, `0x801529C0 D_801529C0`, and
+classified it as ambiguous-or-fake; it changed zero references in zero files.
+The independent generated-tree placeholder scan found no `func_8015*` or
+`fake_func_8015*` definitions or references. No build or game soak was needed.
+
 ## Next steps
 
 Priority follows the user directive: maintenance, then M5, then systematic M3,
@@ -190,8 +196,11 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    2800–2809 closed intervals through `0x8014B000`; each had either
    already-synchronized symbols or preserved ambiguous/data entries, with no
    stale generated placeholders selected. Continue with
-   `0x8014F000..0x80151000`, preserving ambiguous/data entries and applying
-   only source-backed names.
+   preserving ambiguous/data entries and applying only source-backed names.
+   Session 2813 closed `0x80151000..0x80153000`
+   with one preserved ambiguous-or-fake candidate, zero selected references,
+   and an empty independent placeholder scan. Continue with
+   `0x80153000..0x80155000`.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still

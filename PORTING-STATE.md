@@ -119859,3 +119859,16 @@ references in four generated files (`funcs.h`, `funcs_14.c`, `funcs_15.c`, and
 passed. These records are short non-callable gaps, so this changes symbol
 clarity only and adds no M5 or runtime evidence. The next sweep interval is
 `0x80151000..0x80153000`.
+
+## Session 2813 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The prescribed interval `0x80151000..0x80153000` was already synchronized:
+the regeneration-safe selector found one companion candidate,
+`0x801529C0 D_801529C0`, classified it as ambiguous-or-fake, and changed zero
+references in zero files. The independent generated-tree scan found no
+`func_8015*` or `fake_func_8015*` placeholder definitions or references, and
+`git diff --check` passed. No build or game soak was needed because no
+generated source changed. This selects the already-synchronized/ambiguous
+hypothesis for the interval and rules out stale generated semantic
+placeholders there, not the remaining sweep. The next bounded interval is
+`0x80153000..0x80155000`.
