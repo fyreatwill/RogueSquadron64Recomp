@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2662 (2026-08-27).
+Current maintenance marker: Session 2663 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -209,6 +209,23 @@ Current maintenance marker: Session 2662 (2026-08-27).
   completion-to-consumer ordering. No output writeback, remap, gate, wait, or
   generated-code behavior changed. Artifact:
   `scratch/agent/s2662_m5_output_publication_boundary_fixed/`.
+
+- **s2663 — retail phase attribution still does not close the output edge.**
+  The oracle passed the whole-RDRAM control with 59.05M writes, reached title
+  `633 VI @ 0x00790400` and hangar `1,589 VI @ 0x006AB400`, and recorded
+  59.04M writes in `0x165000:0x16B000` plus 1,125 in
+  `0x1798B0:0x179A48`. The primary span had many phase-gated retail writer
+  PCs, but neither target phase attributed a row to the known `0x800078EC`
+  writer; the secondary span had no phase-gated writer rows. Lifetime
+  attribution still included `0x800078EC` on the secondary span (816 hits),
+  alongside `0x8001E2C0` and `0x8001FAxx–0x8001FD2C`. Phase-gated post-store
+  samples were mixed: primary span 677 samples (116 zero), secondary 256
+  samples (150 zero, 106 nonzero); the selected `0x800078EC` post-store
+  sample was zero for the primary span and mixed for the secondary span.
+  This selects `H-RetailWriterUnresolved`: no writer, legitimate payload,
+  destination class, and ordering can be tied to the s2662 port rows. No
+  writeback, remap, gate, wait, or generated-code behavior changed. Artifact:
+  `scratch/agent/s2663_m5_retail_output_writer_attribution/`.
 
 ## s2621 unblock audit
 

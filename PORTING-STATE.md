@@ -117552,3 +117552,21 @@ or a nonzero hangar payload as sufficient proof for image writeback or a
 CPU-MORT mapping. No runtime behavior changed. The driver correction is in
 `scratch/agent/run_s2335_m5_descriptor_filter_boundary.sh`; artifacts are in
 `scratch/agent/s2662_m5_output_publication_boundary_fixed/`.
+
+## Session 2663 (2026-08-27) — phase-attributed retail output writers
+
+The oracle-only capture passed the whole-RDRAM positive control with 59.05M
+writes, reached title (`633` VI at `0x00790400`) and hangar (`1,589` VI at
+`0x006AB400`), and recorded 59.04M writes in `0x165000:0x16B000` plus 1,125
+in `0x1798B0:0x179A48`. The primary span produced many phase-gated writer PCs,
+but neither target phase attributed a row to the known `0x800078EC` writer;
+the secondary span produced no phase-gated writer rows. Lifetime attribution
+still included `0x800078EC` on the secondary span (816 hits), alongside
+`0x8001E2C0` and `0x8001FAxx–0x8001FD2C`. Phase-gated post-store samples were
+mixed: primary 677 samples (116 zero), secondary 256 (150 zero, 106 nonzero);
+the selected `0x800078EC` sample was zero for primary and mixed for secondary.
+This selects `H-RetailWriterUnresolved` and rules out promoting either
+`H-RetailWriterIsImageEdge` or `H-RetailWriterIsCpuMortEdge`: no writer,
+legitimate payload, destination class, and ordering were tied to the s2662
+port rows. No runtime behavior changed. Artifact:
+`scratch/agent/s2663_m5_retail_output_writer_attribution/`.
