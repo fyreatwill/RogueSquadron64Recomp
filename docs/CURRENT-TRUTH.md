@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2698 (2026-08-27).
+Current maintenance marker: Session 2699 (2026-08-27).
 
 ## Live result
 
@@ -266,11 +266,27 @@ source evidence). The MORT-to-PCM publication edge remains upstream and
 unresolved; no runtime watch, writeback, remap, or mitigation is authorized.
 Detailed table: `scratch/agent/s2698_mort_host_ai_boundary/audit.md`.
 
+Detailed table: `scratch/agent/s2698_mort_host_ai_boundary/audit.md`.
+
+s2699 pivoted to the generated-symbol-renaming sweep as the mandated bounded
+engineering change. The tracked rename tool previously rejected companion
+symbol lines with trailing `//` metadata, so it silently selected zero
+mappings. Its parser now accepts that documented suffix and still fails closed
+on duplicate destinations. Against the current external generated snapshot it
+selected zero semantic renames: the 244 address-named entries are either
+`func_`/`fake_func_` in the companion map or already synchronized human names.
+This is a tool-validation result, not evidence for renaming the protected
+ambiguous functions `0x8000040C` or `0x800927B0`.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
+1. **Generated-symbol renaming sweep.** Reconcile one bounded address region
+   against companion source/m2c evidence; rename only exact, unique matches
+   and preserve address-only or fake fragments. Do not infer names from
+   implementation shape alone.
+2. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.
@@ -293,12 +309,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
    or publication boundary using a complete source-level consumer table; do
    not add a runtime watch until a legitimate destination and ordering edge
    are named, and do not repeat completed service/renderer/mixer bodies.
-2. **M5 image task contract edge.** Implement only after a named legitimate
+3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
-3. **Generated-symbol renaming sweep — parked pending regenerated matches.**
-   Preserve `0x8000040C` and `0x800927B0` until companion/source evidence
-   supplies defensible names; do not rename by inferred implementation shape.
 4. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 5. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;

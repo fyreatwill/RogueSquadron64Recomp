@@ -25,7 +25,8 @@ def companion_renames(symbol_dir: Path, generated_text: str) -> dict[str, str]:
     for symbol_file in sorted(symbol_dir.glob("*.txt")):
         for line in symbol_file.read_text().splitlines():
             match = re.match(
-                r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*0x([0-9A-Fa-f]{8});", line
+                r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*0x([0-9A-Fa-f]{8});(?:\s*//.*)?$",
+                line,
             )
             if not match:
                 continue

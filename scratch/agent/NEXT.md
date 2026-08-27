@@ -1,41 +1,33 @@
-# NEXT work unit (s2699) — audit named post-mix stream consumers
+# NEXT work unit (s2700) — bounded generated-symbol source reconciliation
 
-HYPOTHESIS-ID: m5-mort-publication-cpu-consumer-chain
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Source-read the implementations and direct callers/consumers of
-`flushStreamedVoiceBuffers` and `serviceStreamedVoices`, plus the concrete
-`copyFourHalfwordsWriteback` call chain named by s2695. Establish whether
-either stream path receives the per-frame synth output pointer, copies a
-legitimate payload into the AI worker's `0x801496B0` allocation, signals a
-service/slot edge, or is unrelated bookkeeping. Do not repeat the already
-audited renderer, mixer, DMA-service, or host-AI bodies.
+Reconcile the next bounded generated region, `0x80092000..0x80093000`, against
+companion source/m2c material. Select up to 32 names only when the companion
+gives an exact semantic name for the generated function at the same address
+and the destination is unique. Preserve `func_800927B0`, `func_80092A54`, and
+fake fragments unless source evidence closes their identities.
 
 ## Competing hypotheses and discriminator
 
-- `H-stream-publishes`: a named stream consumer receives or derives the synth
-  output and publishes it into the AI source with ordering.
-- `H-stream-relays`: a stream consumer forwards the output through an
-  unresolved callback or descriptor whose next edge is the discriminator.
-- `H-stream-unrelated`: the named stream functions only reap/clear descriptors
-  or update cursors, with no payload or AI-source relation.
+- `H-region-has-exact-names`: the bounded region contains exact, unique
+  companion/source names and a rename batch can be landed.
+- `H-region-is-address-only`: the region has no defensible human names; leave
+  it unchanged and choose the next region.
+- `H-ambiguous-companion`: companion names collide or already exist; preserve
+  the affected entries and report the collision.
 
-The discriminator is a complete source-level table for every direct caller and
-immediate consumer: input/output pointers, payload copy or transform,
-destination, queue/service signal, and relation to `0x801496B0` and
-`osAiSetNextBuffer`. A named legitimate destination and ordering selects
-`H-stream-publishes`; a concrete unresolved relay selects `H-stream-relays`;
-absence of both selects `H-stream-unrelated`. No runtime watch, writeback,
-remap, or mitigation is authorized unless the table names a legitimate writer
-and destination.
+The discriminator is the bounded source/m2c-to-generated address table plus
+the tool's selected mapping/count: positive count with unique destinations
+selects `H-region-has-exact-names`; no defensible name selects
+`H-region-is-address-only`; a collision/error selects
+`H-ambiguous-companion`.
 
 ## Exact commands
 
-1. Locate all named stream symbols and address references:
-   `rg -n "flushStreamedVoiceBuffers|serviceStreamedVoices|copyFourHalfwordsWriteback|0x801496B0|musyxSynthFrame" RecompiledFuncs docs scratch`
-2. Read bounded windows around each implementation, direct caller, and
-   immediate consumer; write the complete table to
-   `scratch/agent/s2699_mort_stream_consumers/audit.md`.
-3. Do not build or run unless the table identifies a concrete runtime
-   discriminator and a positive-control-compatible phase.
+1. `python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --limit 32`
+2. Verify changed files and remaining placeholder/mapping counts with `git -C
+   /Users/williambuckley/Documents/Tools/N64Recomp diff --stat` and bounded
+   `rg` queries; no game build/run is needed for this metadata-only batch.

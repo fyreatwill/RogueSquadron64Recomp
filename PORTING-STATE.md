@@ -118174,3 +118174,16 @@ for the named host boundary (static source evidence). The MORT-to-PCM
 publication edge remains unresolved upstream. No build or run was performed,
 and no runtime watch, writeback, remap, or mitigation was added. Detailed
 table: `scratch/agent/s2698_mort_host_ai_boundary/audit.md`.
+
+## Session 2699 (2026-08-27) — repaired the generated-symbol matcher
+
+The mandated pivot was the generated-symbol-renaming sweep. The tracked
+`tools/rename_generated_symbols.py` parser required companion mappings to end
+at the semicolon, but the actual symbol files append `//` metadata. Updated
+the parser to accept that suffix while retaining the duplicate-name fail-closed
+check, then reran the bounded batch against the external generated snapshot.
+The command completed successfully and selected zero semantic renames: the
+current address-named entries are companion `func_`/`fake_func_` fragments or
+already synchronized names. This rules out a blind batch rename for this
+snapshot, but does not establish names for protected ambiguous functions. No
+build or game run was needed; no runtime mitigation was added.
