@@ -115964,3 +115964,18 @@ these six fragments, not any runtime reachability claim. The planned
 needed because this work unit changes only the regeneration-safe symbol map.
 
 Artifact: `tools/rename/build_redefs.py` and `/tmp/rs64-redefs-s2574.txt`.
+
+## Session 2575 (2026-08-26) — censused generated-symbol object-tracking boundary
+
+Ran the bounded generated-symbol census for `0x80108B8C`. The complete
+four-byte span is one `lwc1 $f0,0x100($v0)` between the complete
+`lvg_calculateFriendliesSaved` body and `lvh_initializeObjectTracking`. The
+companion symbol file explicitly retains `fake_func_80108B8C`; exact-address,
+source, m2c, caller, and rename-tool searches found no independent human
+candidate. Selected `H-data-or-boundary` and left the placeholder unchanged.
+This is a static, single-source result: it rules out an exact rename at this
+boundary but does not prove reachability or explain the fragment's origin. No
+build or runtime experiment was run because the work unit was explicitly
+static-only. The next unresolved placeholder is `0x80109428`.
+
+Artifact: `scratch/agent/s2575_symbol_census/audit.md`.

@@ -1,10 +1,11 @@
-# NEXT work unit (s2575) — generated-symbol bounded census
+# NEXT work unit (s2576) — generated-symbol bounded census
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next unresolved generated/decomp symbol span after the s2574 batch.
+Audit the next unresolved generated/decomp symbol span after the s2575 census,
+`0x80109428`.
 Inspect its complete generated span, immediate named neighbors, companion
 symbol entry, and exact source/m2c/caller matches. Rename only if the companion
 decomp supplies an exact human mapping. If unresolved, advance to the next
@@ -23,14 +24,27 @@ searches, and semantic candidate. A complete supported candidate selects a
 regeneration-safe rename; an explicit companion placeholder plus no exact
 candidate selects unchanged and advances to the next placeholder.
 
-The s2574 selected batch was supported by explicit companion annotations and
-contiguous overlay entries; continue this same sweep slug rather than rerun
-the completed batch.
+The s2575 selected `H-data-or-boundary` for `0x80108B8C–0x80108B8F`; continue
+this same sweep slug rather than rerun the completed census.
+
+## Pre-build hypothesis record
+
+Before any build, the competing hypotheses and the single discriminator are
+fixed as follows: `H-human-candidate` predicts a complete, exact human symbol
+from the companion, source, m2c, or caller evidence; `H-data-or-boundary`
+predicts an instruction fragment or boundary with no callable name;
+`H-already-mapped` predicts an exact repository name that should replace the
+placeholder; and `H-uncertain` predicts conflicting or insufficient span
+evidence. The discriminator is one bounded table containing the generated
+instructions, both named neighbors, companion entry, exact-address/source/
+m2c/caller search results, and any semantic candidate. A complete exact
+candidate selects one regeneration-safe rename; an explicit companion
+placeholder plus no exact candidate selects unchanged and advances.
 
 ## Exact preflight
 
 ```sh
 wc -c < docs/CURRENT-TRUTH.md
 grep -n '^## Session ' PORTING-STATE.md | tail -15
-rg -n 'fake_func_80108B8C|0x80108B8C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms
+rg -n 'fake_func_80109428|0x80109428' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms
 ```
