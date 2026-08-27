@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2631 (2026-08-27).
+Current maintenance marker: Session 2633 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -190,6 +190,15 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
   no unresolved symbol exists at the lead. No rename or runtime change was
   warranted; the next bounded lead is `0x800C7358`.
 
+- **s2633 — the `0x800C7718` sweep neighborhood was already exact.** The
+  bounded census through `0x800C7864` found companion names, exact generated
+  spans, matching TOML/mission-overlay entries, and generated references for
+  `getGlobalFloatGameState`, `getObjectiveGlobalFloat`, `setHudEnableBit4`,
+  `setHudEnableBit8`, `isLevelStateByteZero`, `setFriendliesSaved`, `randMod`,
+  `addBooleanCountHandleWrapper`, and `addTimerHandleWrapper`. No unresolved
+  placeholder or cross-overlay collision was present, so no rename or build was
+  warranted. The next bounded sweep lead is `0x800C7884`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -211,7 +220,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C7718` next using companion symbols, exact spans, and callers;
+   Audit `0x800C7884` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an

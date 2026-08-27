@@ -117069,3 +117069,18 @@ Generated mission callers use the resolved names. The generated JPEG entries
 separate overlay identity; this is an overlay collision, not a rename target.
 No source-map or runtime change was made. This rules out a new rename in the
 region and advances the next lead to `0x800C7718`.
+
+## Session 2633 (2026-08-27) — audited the 800C7718 symbol neighborhood
+
+Ran the bounded generated-symbol-renaming sweep required by `scratch/agent/NEXT.md`.
+The comparison table covered `0x800C7718` through `0x800C7864`: each candidate
+already had its companion semantic name, an exact generated function span and
+adjacent boundary, a matching repository TOML/mission-overlay entry, and
+generated references where applicable. The candidates were
+`getGlobalFloatGameState`, `getObjectiveGlobalFloat`, `setHudEnableBit4`,
+`setHudEnableBit8`, `isLevelStateByteZero`, `setFriendliesSaved`, `randMod`,
+`addBooleanCountHandleWrapper`, and `addTimerHandleWrapper`. No unresolved
+placeholder or cross-overlay collision was found, so no rename, build, or
+runtime change was warranted. This rules out an actionable rename in that
+neighborhood, not the broader symbol-sweep hypothesis. The next bounded lead
+is `0x800C7884`.
