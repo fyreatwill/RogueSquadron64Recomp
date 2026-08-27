@@ -31,6 +31,17 @@ Current maintenance marker: Session 2506 (2026-08-26).
   stage-2 image DMA destinations to the generated AI table and its PCM
   consumers; the legitimate nonzero payload writer remains unresolved.
 
+- **s2507 — the joined-buffer writer census was blocked before the target
+  route.** The first qualified image-arm attempt reached 640 then crashed in
+  `cutsceneDispatchSlotsByFlag`; the fixed retry reached only 640 and timed
+  out waiting for 1024. Both passed the early AI-table control (16 rows), and
+  the retry emitted 896 real image-arm dispatches, but neither emitted target
+  image-DMA, PCM-consumer, guest-writer, RSP-writer, or host-writer rows. This
+  selects no writer hypothesis: the discriminator is unevaluable because its
+  target controls are absent. It localizes the next M5 question to same-build
+  stub/image route reachability. No behavior or mitigation changed. Artifact:
+  `scratch/agent/s2507_m5_joined_payload_writer/audit.md`.
+
 - **s2500 — no active generated kind=1 PCM-store caller exists.** The sibling
   generated tree has 51 `funcs_*.c` files and zero
   `rs64_m5_pcm_writer_store` callsites or candidate-range literals. Its only
@@ -736,8 +747,10 @@ Closed investigations are not active work items. This is one monotonic sequence;
    a named writer and independent retail evidence. s2504 did not find a direct
    generated payload writer; s2505 found no static RSP-destination equality.
    s2506 performed the runtime join and selected
-   `H-rsp-destination-joined`. The next unit must identify the first legitimate
-   nonzero writer for those joined entries.
+   `H-rsp-destination-joined`. s2507 could not reach the target phase with the
+   writer census: the image arm crashed or stalled at 640 in two attempts.
+   The next unit compares stub/image route reachability before retrying the
+   writer boundary.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at

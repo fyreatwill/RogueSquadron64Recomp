@@ -114682,3 +114682,19 @@ destinations at this boundary. The joined stage-2 payloads were zero, so the
 nonzero payload writer remains open. The process still ended in the known late
 host crash. No audio behavior or mitigation changed. Artifact:
 `scratch/agent/s2506_m5_rsp_destination_runtime_join/audit.md`.
+
+## Session 2507 (2026-08-26) — target writer census blocked before route
+
+Built the Debug target and ran the qualified image arm with all planned
+writer, AI-table, task-contract, image-stage, PCM-boundary, and route-order
+observers in one process. The first attempt reached 640 and crashed in
+`cutsceneDispatchSlotsByFlag` with `last-guest-pc=0x8000834c`. The fixed retry
+also reached only 640 and remained alive until the 180-second wait for VI width
+1024 expired. Both attempts passed the early table control with 16 rows; the
+retry emitted 896 `audtask-dispatch` rows with `real_ucode=1`. Neither reached
+the target image-DMA or PCM-consumer controls, so guest, RSP, and host writer
+hypotheses were not interpretable and no writer was selected. This rules out
+only the idea that the present run data can attribute a writer; it does not
+rule out any writer or prove the joined buffers are unwritten. No audio
+behavior, filter, address remap, or mitigation changed. Artifact:
+`scratch/agent/s2507_m5_joined_payload_writer/audit.md`.

@@ -1,38 +1,41 @@
-# NEXT work unit (s2507) — identify the writer of joined AI-buffer payloads
+# NEXT work unit (s2508) — compare stub/image route reachability
 
-HYPOTHESIS-ID: m5-pcm-payload-writer-provenance
+HYPOTHESIS-ID: m5-audio-arm-route-reachability
 
 ## Single work unit
 
-Run one phase-gated write-provenance census for joined AI-buffer entries
-`0x166450..0x169450`, with image-DMA and PCM-consumer controls enabled.
-Preserve writer PC, address, length/value, route ordinal, and event ordering;
-do not change audio behavior or filter writes. Include the oracle whole-RDRAM
-control only if a retail null is used.
+Run one same-build A/B route-reachability capture with the silent stub
+(`ROGUESQ_AUDIO_UCODE=0`) and Factor 5 image arm
+(`ROGUESQ_AUDIO_UCODE=1`) using the qualified route and identical
+phase-relative key schedule. Keep the existing task dispatch/exit, table,
+image-stage, PCM-boundary, and crash/phase controls enabled. Build both arms
+from the same Debug tree and run them concurrently; do not change the audio
+implementation.
 
 ## Competing hypotheses and discriminator
 
-- `H-payload-guest-writer`: a legitimate generated guest CPU store writes
-  nonzero bytes into a joined entry before AI consumption.
-- `H-payload-rsp-writer`: a legitimate image/RSP DMA is the first nonzero
-  writer into a joined entry before consumption.
-- `H-payload-host-writer`: host-side PCM production writes the joined entry.
-- `H-payload-unresolved`: no writer is observed, or controls/order are absent.
+- `H-image-causes-route-stall`: the image arm fails to reach 1024/512 while
+  the silent stub reaches the same route.
+- `H-route-independent`: both arms reach the same phase boundary or both fail
+  before it; the prior failure is not caused by image-arm behavior.
+- `H-stub-degenerate`: the silent stub alone fails to reach the route, so the
+  image arm is not the route blocker.
 
-The discriminator is one same-run ordered table of all writes overlapping each
-joined entry, followed by the first consumer event. A positive-control row must
-show image DMA and PCM consumer observers firing. The earliest legitimate
-nonzero writer class selects its hypothesis; absent controls or no attributable
-writer selects unresolved.
+The discriminator is the same-build A/B table of first phase transition, last
+phase, target-gate reached, target image-stage/DMA count, PCM-consumer count,
+task completion count, and crash/timeout outcome for each arm. Each arm must
+pass its early table/dispatch control; a target writer conclusion is not
+allowed unless the 1024/512 route and image/PCM controls fire.
 
 ## Exact commands
 
 ```sh
-rg -n 'rs64_m5_pcm_writer|rs64_probe_audio_dma_write|queue_samples|MEM_[BHW].*0x166|166450|169450' src ../N64Recomp/fixup_game_funcs.py ../N64Recomp/RecompiledFuncs/funcs_*.c lib/N64ModernRuntime/librecomp/src
 cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-Use the qualified `tools/probe.sh` route from s2506 with
-`ROGUESQ_LOG_M5_AI_TABLE=1`, `ROGUESQ_LOG_M5_TASK_CONTRACT=1`, and
-`ROGUESQ_LOG_PCM_BOUNDARY=1`; write the result to
-`scratch/agent/s2507_m5_joined_payload_writer/audit.md`.
+Run one `ROGUESQ_AUDIO_UCODE=0` and one `ROGUESQ_AUDIO_UCODE=1` arm
+concurrently, each with a distinct absolute output directory under
+`scratch/agent/s2508_m5_audio_arm_route/`, using the qualified
+`tools/probe.sh` route from s2506 and these controls:
+`ROGUESQ_LOG_M5_AI_TABLE=1`, `ROGUESQ_LOG_M5_TASK_CONTRACT=1`,
+`ROGUESQ_LOG_PCM_BOUNDARY=1`. Summarize both arms in `audit.md`.
