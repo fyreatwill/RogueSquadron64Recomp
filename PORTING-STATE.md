@@ -119124,3 +119124,16 @@ wrong-contract semantics remain unevaluable because the query has no caller.
 The earlier paired-driver attempt was a failed experiment: it used a 5-second
 input cadence and stayed at 640; it was corrected to the qualified 6/11/16...
 schedule before the final run. Evidence: `scratch/agent/s2756_m5_ai_status/`.
+
+## Session 2757 (2026-08-27) — bounded the next generated-symbol interval
+
+The regeneration-safe rename census covered `0x800ED000..0x800EF000` using
+the companion `symbol_files` directory. It found twelve semantic entries
+already synchronized and no stale placeholder eligible for a source-backed
+rename. `fake_func_800ED148` was classified as ambiguous/fake and preserved.
+No unsafe alias case was encountered, and no generated files changed.
+
+This selects H2 for the preserved fake symbol, rules out H1 for this interval,
+and leaves H3 unevaluated as a present case. Evidence:
+`scratch/agent/s2757_generated_rename/decision-table.txt`. The next bounded
+interval is `0x800EF000..0x800F1000`.

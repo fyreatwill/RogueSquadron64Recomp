@@ -1,10 +1,10 @@
-# NEXT work unit (s2757) — synchronize the next generated-symbol interval
+# NEXT work unit (s2758) — synchronize the next generated-symbol interval
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Synchronize the bounded generated-function interval `0x800ED000..0x800EF000`
+Synchronize the bounded generated-function interval `0x800EF000..0x800F1000`
 using companion decomp names and the regeneration-safe rename map. Preserve
 ambiguous, fake, and address-only placeholders; do not invent semantic names.
 
@@ -23,8 +23,8 @@ names in the interval.
 ## Exact commands
 
 1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
-2. `rg -n 'func_(800ED|800EE)' ../N64Recomp/RecompiledFuncs/`
+2. `rg -n 'func_(800EF|800F0)' ../N64Recomp/RecompiledFuncs/`
 3. Run the existing bounded rename census/map tooling for
-   `0x800ED000..0x800EF000`, then apply only source-backed matches.
+   `0x800EF000..0x800F1000`, then apply only source-backed matches.
 4. Verify with `git diff --check` and the rename-tool reference/count check;
    save the census under `scratch/agent/s2757_generated_rename/`.
