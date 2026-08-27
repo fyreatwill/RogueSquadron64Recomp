@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2508 (2026-08-26).
+Current maintenance marker: Session 2509 (2026-08-26).
 
 ## Current state
 
@@ -30,6 +30,18 @@ Current maintenance marker: Session 2508 (2026-08-26).
   The image arm reaches task completion and generated DMA. s2506 joins
   stage-2 image DMA destinations to the generated AI table and its PCM
   consumers; the legitimate nonzero payload writer remains unresolved.
+
+- **s2509 — the image-arm failure is pair-specific in the bounded capture.**
+  A same-build three-arm run launched single-image, paired-image, and
+  paired-silent processes with identical phase-relative input. Single-image
+  passed the target controls and reached phase 10 with 1,636 image-stage rows
+  and no crash marker. Paired-silent reached the target route, while
+  paired-image stalled before the 1024 gate and emitted zero image-task rows.
+  No arm emitted a crash symbol or renderer exception. This selects
+  `H-concurrent-resource` over `H-image-renderer-resource` for the observed
+  failure, but leaves `H-route-input` unresolved because paired-image lacked
+  its positive control. No behavior, mitigation, or writer claim changed.
+  Artifact: `scratch/agent/s2509_m5_image_crash/audit.md`.
 
 - **s2507 — the joined-buffer writer census was blocked before the target
   route.** The first qualified image-arm attempt reached 640 then crashed in
@@ -762,8 +774,12 @@ Closed investigations are not active work items. This is one monotonic sequence;
    writer census: the image arm crashed or stalled at 640 in two attempts.
    s2508's same-build A/B selects the image arm as the route failure: silent
    reached title/hangar while image crashed before title in MetalFramebuffer.
-   Next, isolate and classify that pre-title image-arm crash before retrying
-   the writer boundary.
+   s2509's three-arm capture shows the single image arm reaches the target,
+   while only the concurrent image arm stalls before its positive control;
+   concurrent-resource is selected for this route, with route/input
+   divergence still open. Next, run one same-build concurrency control that
+   keeps the image arm fixed and varies only whether the silent process shares
+   the renderer, using target-phase controls before interpreting any null.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at

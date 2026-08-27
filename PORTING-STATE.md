@@ -114718,3 +114718,24 @@ refutes route-independent and stub-degenerate explanations for this route.
 The target writer discriminator remains unevaluable because image never
 reached it; no behavior, output mapping, guard, or mitigation changed.
 Artifact: `scratch/agent/s2508_m5_audio_arm_route/audit.md`.
+
+## Session 2509 (2026-08-26) — isolated image-arm concurrency failure
+
+Rebuilt the Debug target and ran a same-build three-arm capture with identical
+phase-relative input: single image, paired image, and paired silent. The
+single-image arm passed the target controls, reached 1024 and 512 hangar, and
+recorded 1,636 image-stage rows in phase 10 with no crash marker. The paired
+silent arm also reached the target route. The paired-image arm reached only
+the 640 route, never passed the 1024 gate, and recorded zero image-task rows.
+All three were SIGKILLed by the watchdog; none emitted a crash symbol,
+`MetalFramebuffer`, access violation, missing-function, or `get_function(0)`
+marker.
+
+This selects `H-concurrent-resource` over `H-image-renderer-resource` for the
+observed route failure: the single image arm reached the target instead of
+reproducing the earlier renderer failure. It does not distinguish shared
+renderer pressure from a route/input divergence because the paired-image arm
+failed before its positive control. The zero paired-image target rows are
+therefore unevaluable. No audio behavior, writer mapping, guard, or mitigation
+changed. Artifact:
+`scratch/agent/s2509_m5_image_crash/audit.md`.
