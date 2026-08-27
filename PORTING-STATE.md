@@ -117209,3 +117209,22 @@ The lead was already resolved across the companion symbols, generated body and
 header, repository TOML, and generated overlay table. No placeholder, stale
 mapping, or actionable rename remained. No runtime behavior or build changed;
 the next bounded lead is `0x800C8978`.
+
+## Session 2642 (2026-08-27) — audited the 800C8978 symbol lead
+
+Ran the bounded generated-symbol-renaming sweep required by
+`scratch/agent/NEXT.md`. The comparison table covered the mission lead, its
+adjacent exact functions, and distinct menu-overlay occupants:
+
+| address | companion/generated identity | span/overlay evidence | result |
+|---|---|---|---|
+| `0x800C8978` | `updateNpcOrientationFromMotion` | mission body/header and TOML agree; overlay size `0x518`, ending at `0x800C8E90` | exact, already named |
+| `0x800C8A64` | `allocCellGeometryBuffer` | menu companion and overlay entry; size `0x1B8` | exact distinct overlay identity |
+| `0x800C8C1C` | `buildDebrisMeshFromCells` | menu companion and overlay entry; size `0xE6C` | exact distinct overlay identity |
+| `0x800C8E90` | `setupNpcModelForState` | mission body/header and TOML agree; overlay size `0x100` | exact, already named |
+| `0x800C8F90` | `npcTurretUpdate` | mission body/header and TOML agree; overlay size `0x11FC` | exact, already named |
+
+The lead was already resolved across independent companion-symbol and
+generated-output/configuration lines. No placeholder, stale mapping, or
+actionable rename remained. No runtime behavior or build changed; the next
+bounded lead is `0x800CA18C`.
