@@ -120426,3 +120426,14 @@ regeneration-safe rename map now maps `fake_func_800663AC` to
 all three generated locations and no stale old name. This is symbol-clarity
 evidence only: it does not explain or alter M5 audio behavior, and no build or
 game run was needed. The next sweep interval is `0x80066500..0x80067500`.
+
+## Session 2854 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x80066500..0x80067500`.
+The selector classified all listed companion entries as already-synchronized
+callable names, changed zero generated references, and failed closed under
+`--require-rename`. The independent `rg` scan found no in-range
+`fake_func_*` or `data_gap_*` placeholders. This rules out a source-backed
+rename in the interval without assigning meanings to unresolved records. No
+build or game run was needed. The next bounded sweep is
+`0x80067500..0x80068500`.
