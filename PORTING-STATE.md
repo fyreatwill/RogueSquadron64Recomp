@@ -118070,3 +118070,7 @@ phase. The positive phase control was absent, so the A/B discriminator was
 unevaluable: this does not select `H-drain-injection`, `H-retail-equivalent`,
 or `H-route-only`, and rules out only the claim that this short recipe reached
 the qualified route. The next work unit is a phase-qualified validation.
+
+## Session 2693 (2026-08-27) — validated the M5 drain-loop tick de-stub
+
+Built the Debug target once, then attempted the prescribed same-build tick-off/tick-on validation with the existing external-key recipe. Both arms reached the retail oracle's positive controls, but both port arms stopped at VI 640 before title; this was an invalid phase result. The fixed rerun used the in-process AUTOPILOT route. Retail controls passed in both runs (`10000` whole-RDRAM callbacks, title 1024 and hangar 512 origins). In the phase-qualified silent-control arms, tick-off and tick-on both reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; `drainAudioAndFinalizeSpeechBuffer` returned `v0=1` after one iteration in each. The voice-filter gate matched at `tickn=5`, `jaln=5`, `exitn=5`; PCM source/consumer rows were live but all sampled payloads remained zero-nonzero, and neither arm logged a crash or abort. Single-source same-build evidence selects `H-retail-equivalent` for the exercised drain call and rules out a required in-loop tick there. It does not resolve the MORT-to-PCM publication edge. The first external-key recipe was a documented dead end caused by focus/input delivery, not evidence about the tick.
