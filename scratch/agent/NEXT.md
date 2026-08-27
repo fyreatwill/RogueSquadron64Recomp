@@ -1,48 +1,40 @@
-# NEXT work unit (s2498) — test separate slot/voice-to-PCM contract
+# NEXT work unit (s2499) — audit the kind=2 PCM-ring writer provenance
 
 HYPOTHESIS-ID: m5-generated-image-downstream-join
 
 ## Single work unit
 
-Perform one phase-keyed port/oracle capture of the separate slot/voice-to-PCM
-contract. Use the qualified image arm at width 512 / origin `0x006AB400` with
-the existing positive controls, and join each first nonzero PCM consumer to
-the preceding retail-writer address range and the port's first slot/key-on
-event fields. Use the oracle whole-RDRAM, hangar, and named-PC controls before
-interpreting any retail null. Do not infer an image identity from ordering and
-do not change behavior.
+Perform a bounded static census of every caller of `rs64_pcm_writer_note` and
+the `kind=2` path in `src/main/main.cpp`, then trace the corresponding
+`g_rs64_pcm_last_dma_phys` producer back to the image/audio callback boundary.
+Use the existing s2498 rows as the starting address set; do not add runtime
+fields or change behavior unless the census proves that the current writer
+kind is misclassified.
 
 ## Competing hypotheses and discriminator
 
-- H-slot-writer: the PCM consumer address is written by the retail-equivalent
-  slot/voice path and the port event row identifies that same contract.
-- H-image-independent-voice: the port PCM consumer is valid but is fed by a
-  voice/slot source unrelated to the image-stage ranges and retail writer.
-- H-no-consumer-contract: neither side yields a phase-valid writer-to-consumer
-  join after all controls pass.
+- H-kind2-generated: `kind=2` is the legitimate generated audio/image writer
+  and can be joined to the nonzero PCM buffers by its DMA producer.
+- H-kind2-host: `kind=2` is only a host-side DMA bookkeeping notification and
+  is not a game-side PCM writer.
+- H-kind2-unresolved: the static callers do not identify a legitimate writer
+  or stable DMA-to-consumer relation.
 
-The discriminator is one phase-keyed table containing port consumer address,
-length/hash, guest-writer PC/address/value, first slot/key-on site and event,
-and the corresponding retail writer PC/address/value. A writer/address join
-on both port and retail selects `H-slot-writer`; a valid port consumer with
-nonmatching writer/slot identity selects `H-image-independent-voice`; passed
-controls with no writer-to-consumer join select `H-no-consumer-contract`.
-Build all fields in one capture; do not add another breadcrumb unless this
-table leaves two hypotheses indistinguishable.
+The discriminator is one caller/producer table with caller PC, kind, DMA
+source/destination/length, ring slot, and the first downstream consumer. A
+complete producer-to-nonzero-consumer relation selects H-kind2-generated; a
+host-only callback with no guest writer selects H-kind2-host; an unresolved
+producer or ambiguous relation selects H-kind2-unresolved.
 
 ## Exact commands
 
-Build/run the existing qualified probe with its passive breadcrumbs and the
-port PCM/writer/slot logs enabled; run the matching oracle recipe with its
-whole-RDRAM, hangar, and named-PC controls. Write the joined table and
-conclusion to `scratch/agent/s2498_m5_slot_voice_pcm_join/audit.md`.
-
 ```sh
-rg -n "m5-guest-writer|m5-second-range|pcm-boundary-consumer|audtask-image-downstream|keyon-w40|slot-sb|DebugSetCallbacks|800078EC|166450|169150|1798B0|179A48" src lib tools/oracle
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 PROBE_KEYS="6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start" zsh tools/probe.sh scratch/agent/s2498_m5_slot_voice_pcm_join/port 120 0.5
-zsh scratch/agent/run_s2293_m5_retail_writer_phase_join.sh
+rg -n "rs64_pcm_writer_note|g_rs64_pcm_last_dma_phys|queue_samples|kind=2|pcm_ring" src lib RecompiledFuncs
+sed -n '300,530p' src/main/main.cpp
+sed -n '3100,3190p' src/main/main.cpp
+rg -n "rs64_pcm_writer_note|g_rs64_pcm_last_dma_phys" src lib RecompiledFuncs
 ```
 
-Use the repository's existing oracle recipe with whole-RDRAM, hangar, and
-named-PC controls in the same iteration; kill both runs with SIGKILL.
+Write the table and conclusion to
+`scratch/agent/s2499_m5_kind2_writer_audit/audit.md`. No build is needed
+unless the static census exposes a concrete missing caller or wrong kind.

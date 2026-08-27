@@ -114519,3 +114519,25 @@ Temporal adjacency and payload hashes remain correlation mechanisms, not a
 handoff. No build, runtime behavior, task/output remap, guard, or mitigation
 was made. Artifact:
 `scratch/agent/s2497_m5_image_handoff_audit/audit.md`.
+
+## Session 2498 (2026-08-26) — tested slot/voice-to-PCM writer provenance
+
+The qualified Factor 5 image-arm build succeeded. Two phase-keyed port
+captures reached 512 / `0x006AB400`, passed image-stage, completion, PCM
+consumer, and identity controls, and recorded 91 PCM-boundary consumer rows,
+including nonzero 768-byte buffers. Slot instrumentation also fired, but the
+only image-to-slot downstream join was phase 8, outside the target route. Both
+captures recorded zero candidate `m5-guest-writer` and second-range writer
+rows. The port's `pcm-writer-control` fired only for `kind=2`, which is not a
+candidate guest-writer attribution.
+
+The independent oracle's whole-RDRAM positive control fired 1,508,968 times,
+while target writer, post-sample, and named-PC controls remained zero. Thus the
+required phase-valid writer/address join did not exist after controls passed.
+This selects `H-no-consumer-contract` at the observable writer-to-consumer
+boundary, rules out an unreachable port consumer, and does not establish an
+image-independent voice cause. Both port attempts reproduced the pre-existing
+`recomp::do_rom_read` crash at last guest PC `0x80001B08` after the target rows;
+the crash was not used as audio evidence. No task/output remap, guard, or
+mitigation was made. Artifact:
+`scratch/agent/s2498_m5_slot_voice_pcm_join/audit.md`.

@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2497 (2026-08-26).
+Current maintenance marker: Session 2498 (2026-08-26).
 
 ## Current state
 
@@ -40,6 +40,19 @@ Current maintenance marker: Session 2497 (2026-08-26).
   do not enter this call chain. This selects `H-handoff-absent`, refutes an
   explicit image identity, and does not establish a reconstructed stable
   relation. Artifact: `scratch/agent/s2497_m5_image_handoff_audit/audit.md`.
+
+- **s2498 — no phase-valid slot/voice-to-PCM writer join was found.** The
+  qualified port capture passed phase/image/completion/identity controls and
+  recorded 91 PCM-consumer rows, including nonzero buffers, plus live slot
+  instrumentation. It recorded zero candidate guest-writer and second-range
+  writer rows; its only image-to-slot downstream row was phase 8, outside the
+  target 512 route. The retail oracle whole-RDRAM control fired 1,508,968
+  times, while target writer/post-PC controls remained zero. This selects
+  `H-no-consumer-contract` at the observable writer-to-consumer boundary and
+  does not establish an image-independent voice cause. Both port attempts
+  reproduced a late `do_rom_read` crash after the target rows; no behavior or
+  mitigation change was made. Artifact:
+  `scratch/agent/s2498_m5_slot_voice_pcm_join/audit.md`.
 
 - **s2496 — the first port PCM consumer still has no image identity join.**
   The static census identifies guest `rs_memset` at `0x800078EC` as the retail
@@ -618,14 +631,15 @@ Closed investigations are not active work items. This is one monotonic sequence;
    `0x80149470`; the port now matches those fields at its own load entry. The
    earlier gspTask mismatch was a descriptor-vs-audio-task join error.
 2. **M5 generated image downstream join — active.** s2496 found the first
-   host PCM consumer live without an image identity; s2497 selects
-   `H-handoff-absent` for the generated AI-buffer path. The image-stage
-   destination is not an input to `runAiAudioStreamPlaybackLoop`,
-   `queue_audio_buffer`, or `queue_samples`. The next bounded join must test
-   the separate slot/voice contract against the retail writer, keyed by phase
-   and address rather than ordering. Do not map through `gspTask`, infer an
-   image identity from hashes or timing, or change task/output fields without
-   a named writer and independent retail evidence.
+   host PCM consumer live without an image identity; s2497 selected
+   `H-handoff-absent` for the generated AI-buffer path; s2498 selected
+   `H-no-consumer-contract` because neither the port candidate writer nor the
+   retail target writer joined the consumer under passed controls. The next
+   bounded work must identify the actual legitimate writer feeding the port's
+   nonzero PCM buffers, beginning with the existing `kind=2` writer path and
+   its static callers. Do not map through `gspTask`, infer an image identity
+   from hashes or timing, or change task/output fields without a named writer
+   and independent retail evidence.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at
