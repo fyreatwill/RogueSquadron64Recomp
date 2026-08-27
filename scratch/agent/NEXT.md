@@ -1,42 +1,34 @@
-# NEXT work unit (s2747) — continue the generated-symbol renaming sweep
+# NEXT work unit (s2748) — continue the generated-symbol renaming sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Select one adjacent bounded address region containing a verified rename batch
-from existing `tools/rename/build_redefs.py` mappings or a previously audited
-semantic boundary. Apply it to `../N64Recomp/RecompiledFuncs` with the
-fail-closed helper. Do not invent names from implementation shape, regenerate
-the whole tree, or run the game.
+Extend `tools/rename_generated_symbols.py` with the exact fragment mappings
+already present in `tools/rename/build_redefs.py` for the bounded region
+`0x800B4000` (inclusive) through `0x800B6000` (exclusive), then apply that
+batch to `../N64Recomp/RecompiledFuncs`. Do not infer names from implementation
+shape, regenerate the tree, or run the game.
 
 ## Competing hypotheses and discriminator
 
-- H-verified-fragments-remain: the next region contains existing, defensible
+- H-verified-fragments-remain: the region contains source-backed fragment
   mappings whose generated placeholders can be renamed.
-- H-already-synchronized: companion names exist, but generated references in
-  the region already use them.
-- H-ambiguous-or-fake: only fake/address-only fragments remain and no audited
-  semantic mapping is available.
+- H-already-synchronized: companion semantic entries exist, but generated
+  references already use them.
+- H-ambiguous-or-fake: remaining fragments lack defensible semantic evidence.
 
-The discriminator is the complete candidate table for one bounded region:
-each candidate must be selected, already synchronized, or preserved as
-ambiguous-or-fake. A selected candidate must produce a nonzero generated-file
-diff; otherwise choose another adjacent region before stopping.
+The discriminator is the complete candidate table for this interval plus the
+`--require-rename` result: a selected mapping must change generated references;
+all other candidates must be explicitly classified as synchronized or
+ambiguous/fake.
 
 ## Exact commands
 
-1. Check the last 15 ledger titles:
-   `grep -n '^## Session ' PORTING-STATE.md | tail -15`
-2. Inspect the next adjacent region and existing mappings without writing:
-   `python3 - <<'PY'` using `tools/rename_generated_symbols.py`'s
-   `companion_renames` over the selected address interval.
-3. Apply one bounded batch:
-   `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --start-address START --end-address END --limit 32 --require-rename`
-4. Verify the old names are absent and the new names occur in the expected
-   generated files; record the full decision table in a new scratch artifact.
-
-Expected outcomes: a nonzero rename selects H-verified-fragments-remain and
-lands a generated-symbol change; zero selected candidates selects either
-H-already-synchronized or H-ambiguous-or-fake and requires moving to the next
-adjacent region in this same work unit.
+1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
+2. Inspect the interval with `companion_renames` and the checked-in
+   `build_redefs.py` mapping source, without writing.
+3. Add only the selected source-backed mappings to `RENAMES`, then run:
+   `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x800B4000 --end-address 0x800B6000 --limit 32 --require-rename`
+4. Verify old names are absent and new names occur in expected generated
+   files; save the full table under `scratch/agent/s2748_generated_symbol_sweep/`.

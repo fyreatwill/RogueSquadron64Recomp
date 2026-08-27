@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2746 (2026-08-27).
+Current maintenance marker: Session 2747 (2026-08-27).
+
+Session 2747 continued the generated-symbol sweep with two exact fragment
+renames from the checked-in redef source: `fake_func_800AA6CC` →
+`npcPredictedRangeCheckPreamble` and `fake_func_800AAADC` →
+`playerSnowSpeederInitPreamble`. The bounded helper changed six references
+across three generated files and passed `--require-rename`; the complete
+candidate table retained synchronized semantic entries and two fake boundary
+entries. Evidence: `scratch/agent/s2747_generated_symbol_sweep/decision-table.txt`.
 
 Session 2746 resumed the generated-symbol sweep with a verified batch of five
 short boundary fragments: `fake_func_8005C61C` →
@@ -730,7 +738,11 @@ parked until a future regeneration exposes a new exact companion match.
    reaping; it selected `H-service-edge-absent`. Continue with the fresh
    `serviceStreamingVoice` boundary; do not repeat the service worker or add
    a runtime watch without a legitimate destination and ordering edge.
-3. **Generated-symbol renaming sweep.** Session 2746 renamed five verified
+3. **Generated-symbol renaming sweep.** Session 2747 renamed two verified
+   source-backed fragments in `0x800AA000..0x800AC000`, changing six
+   references across three generated files. Continue with one bounded batch
+   only where exact source or previously audited semantic evidence exists.
+   Session 2746 renamed five verified
    short boundary fragments in `0x8005C000..0x8006B000`; continue with one
    bounded batch of exact or previously audited mappings. Do not infer names
    from implementation shape. s2718 renamed the three exact

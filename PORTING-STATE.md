@@ -118966,3 +118966,15 @@ lands generated code naming without relying on a runtime run or an inferred
 semantic name. It rules out a no-op for this interval; the remaining
 placeholder census is still open. Full table:
 `scratch/agent/s2746_generated_symbol_sweep/decision-table.txt`.
+## Session 2747 (2026-08-27) — renamed the next verified generated-symbol batch
+
+The bounded generated-symbol sweep covered `0x800AA000..0x800AC000` using
+the two exact fragment mappings already present in `tools/rename/build_redefs.py`:
+`fake_func_800AA6CC` → `npcPredictedRangeCheckPreamble` and
+`fake_func_800AAADC` → `playerSnowSpeederInitPreamble`. The helper changed
+six references across `funcs_28.c`, `funcs.h`, and `recomp_overlays.inl`, and
+passed `--require-rename`. Its full candidate table classified the other
+semantic entries as already synchronized and retained the two address-only
+fake entries at `0x800AA6CC`/`0x800AAADC` as ambiguous-or-fake. This rules out
+a no-op for the selected interval and does not infer any new semantic names.
+Evidence: `scratch/agent/s2747_generated_symbol_sweep/decision-table.txt`.

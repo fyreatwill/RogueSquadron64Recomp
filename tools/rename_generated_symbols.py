@@ -8,6 +8,8 @@ import sys
 
 
 RENAMES = {
+    "fake_func_800AA6CC": "npcPredictedRangeCheckPreamble",
+    "fake_func_800AAADC": "playerSnowSpeederInitPreamble",
     "fake_func_8005C61C": "checkTrackedNpcProximityForCuePreamble",
     "fake_func_8005EE64": "steerOrientationTowardTargetPreamble",
     "fake_func_800613B8": "loadCharTextureSetPreamble",
