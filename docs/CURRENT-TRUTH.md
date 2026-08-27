@@ -41,6 +41,17 @@ Current maintenance marker: Session 2498 (2026-08-26).
   explicit image identity, and does not establish a reconstructed stable
   relation. Artifact: `scratch/agent/s2497_m5_image_handoff_audit/audit.md`.
 
+- **s2499 — `kind=2` is an image-DMA observer, not a PCM-ring writer.** The
+  static census found one workspace producer of `rs64_m5_pcm_writer_dma`:
+  `rs64_probe_audio_dma_write` after an image-stage RSP DMA is recorded. The
+  wrapper stores the DMA destination/length and calls `rs64_pcm_writer_note`
+  with `pc=0` and `value=0`; no workspace caller of the guest-store wrapper
+  `rs64_m5_pcm_writer_store` was found. This selects `H-kind2-host` for the
+  requested writer-provenance boundary and rules out treating the `kind=2`
+  control row as a game-side PCM writer. The external generated tree is absent
+  from this workspace, so the actual CPU-store callsite census remains open.
+  Artifact: `scratch/agent/s2499_m5_kind2_writer_audit/audit.md`.
+
 - **s2498 — no phase-valid slot/voice-to-PCM writer join was found.** The
   qualified port capture passed phase/image/completion/identity controls and
   recorded 91 PCM-consumer rows, including nonzero buffers, plus live slot
@@ -634,12 +645,13 @@ Closed investigations are not active work items. This is one monotonic sequence;
    host PCM consumer live without an image identity; s2497 selected
    `H-handoff-absent` for the generated AI-buffer path; s2498 selected
    `H-no-consumer-contract` because neither the port candidate writer nor the
-   retail target writer joined the consumer under passed controls. The next
-   bounded work must identify the actual legitimate writer feeding the port's
-   nonzero PCM buffers, beginning with the existing `kind=2` writer path and
-   its static callers. Do not map through `gspTask`, infer an image identity
-   from hashes or timing, or change task/output fields without a named writer
-   and independent retail evidence.
+   retail target writer joined the consumer under passed controls. s2499
+   identifies `kind=2` as host-side image-DMA bookkeeping, not a game-side PCM
+   writer. The next bounded work must resolve the external generated `kind=1`
+   store callsites and the writer of the AI ring rooted at `0x801096B0`. Do not
+   map through `gspTask`, infer an image identity from hashes or timing, or
+   change task/output fields without a named writer and independent retail
+   evidence.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at

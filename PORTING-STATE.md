@@ -114541,3 +114541,23 @@ image-independent voice cause. Both port attempts reproduced the pre-existing
 the crash was not used as audio evidence. No task/output remap, guard, or
 mitigation was made. Artifact:
 `scratch/agent/s2498_m5_slot_voice_pcm_join/audit.md`.
+
+## Session 2499 (2026-08-26) — audited kind-2 PCM writer provenance
+
+The prescribed static census found one workspace producer of
+`rs64_m5_pcm_writer_dma`: `rs64_probe_audio_dma_write` in the runtime RSP
+image-DMA callback. The wrapper updates the last DMA destination/length and
+calls `rs64_pcm_writer_note` with `kind=2`, `pc=0`, and `value=0`; it is reached
+after the image-stage DMA range has been recorded and hashed. No workspace
+caller of the guest-store wrapper `rs64_m5_pcm_writer_store` was found. The
+first downstream join is `rs64_audio_join_pcm("source", ...)` in
+`ultramodern::queue_audio_buffer`, followed by the host `queue_samples`
+callback; neither receives image-DMA identity.
+
+This selects `H-kind2-host` at the requested writer-provenance boundary and
+rules out treating a `kind=2` control row as a game-side PCM-ring writer. It
+does not resolve the downstream DMA-to-AI-buffer relation, and the external
+generated `RecompiledFuncs` tree is not present in this workspace, so the
+`kind=1` CPU-store census remains open. No build, behavior change, remap,
+guard, or mitigation was made. Artifact:
+`scratch/agent/s2499_m5_kind2_writer_audit/audit.md`.
