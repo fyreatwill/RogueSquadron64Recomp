@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2582 (2026-08-26).
+Current maintenance marker: Session 2584 (2026-08-26).
+
+- **s2584 — the port-side M5 writer/value correspondence selects
+  `H-PortWriterMissing` at the current observable boundary.** The qualified
+  image-arm run passed title (`0x00790400 @ 1024`) and hangar
+  (`0x006AB400 @ 512`) controls, with 48 audio-task dispatches and 64 image
+  runner rows as positive controls. It produced 70 PCM source and 70 consumer
+  rows; all sampled 384-sample buffers were zero and every join row had
+  `writer_pc=0`, `writer_phys=0`, `writer_writes=0`, and value `0`. No port
+  writer row appeared in either phase, so none matched retail's s2583 writers
+  (`0x8008ED48` for `0xA0F50`; `0x80094648` for `0x141AD0`). This is two-line
+  evidence from the port capture and retail oracle. It identifies an absent
+  port-side writer event before the PCM join, but not the responsible store or
+  task contract; no mitigation or data rewrite is authorized. Artifact:
+  `scratch/agent/s2584_m5_port_writer_value/audit.md`.
 
 - **s2583 — retail writer/value evidence selects `H-RetailWriterMissing` at
   the M5 contract boundary.** The required whole-RDRAM control reached 10,000
@@ -699,15 +713,15 @@ Current maintenance marker: Session 2582 (2026-08-26).
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 named retail writer/value boundary — identify the legitimate producer behind the open output/PCM contract.** s2582's
-   same-build phase-gated pair selects `H-ContractGap`: image-stage and DMA
-   execution is image-owned, while output/yield remain zero and silent/image
-   PCM source-consumer samples are identical zero buffers. Do not map through
-   `gspTask`, infer identity from timing or hashes, or change task/output fields
-   without a named writer and independent retail evidence. The next unit is a
-   retail-oracle writer/value capture over the existing candidate output/PCM
-   ranges, with the whole-RDRAM control and title/hangar VI gates in the same
-   run. Later M5 steps remain conditional on a legitimate writer; retain
+1. **M5 named retail writer/value boundary — identify the legitimate producer behind the open output/PCM contract.** s2584's
+   phase-gated port capture selects `H-PortWriterMissing`: the image arm's
+   PCM source/consumer rows are live in title and hangar but remain zero and
+   carry no writer attribution, while s2583 independently named nonzero retail
+   writers. The next unit is a complete static/runtime census of every port
+   writer for the two retail-attributed boundaries and candidate PCM spans.
+   Do not map through `gspTask`, infer identity from timing or hashes, or
+   change task/output fields without a named writer and independent evidence.
+   Later M5 steps remain conditional on a legitimate writer; retain
    `ROGUESQ_AUDIO_UCODE=0` as control and rollback.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the

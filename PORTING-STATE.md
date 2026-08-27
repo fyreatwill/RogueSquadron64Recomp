@@ -116120,3 +116120,20 @@ including `0x7F7F7F7F`. `0x1498A` had zero writes. This selects
 the current boundary. It is single-source oracle evidence; it does not
 authorize changing a task field, output pointer, gate, or store. Next is a
 phase-gated port-side writer/value correspondence capture.
+
+## Session 2584 (2026-08-26) — selected port-side M5 writer/value boundary
+
+Built the configured Debug target and ran the qualified image-arm capture. The
+macOS build emits `build/RogueSquadron64Recomp` and uses
+`build/rogue_squadron.z64`; the first watchdog attempt incorrectly matched
+`width=512` in the autopilot line and was fixed to require exact phase rows.
+The fixed run observed title `0x00790400 @ 1024` and hangar
+`0x006AB400 @ 512`. Positive controls fired: 48 audio-task dispatches and 64
+image/task runner rows. Port PCM instrumentation produced 70 source and 70
+consumer rows, all sampled buffers zero, with zero writer rows and zero
+`writer_pc`, `writer_phys`, `writer_writes`, and `writer_value` fields in both
+phases. This selects `H-PortWriterMissing` against s2583's independent retail
+writers `0x8008ED48` and `0x80094648`; it rules out a later-only PCM consumer
+explanation at this boundary, but does not identify the responsible port store
+or task contract. No behavior or mitigation changed. Artifact:
+`scratch/agent/s2584_m5_port_writer_value/audit.md`.
