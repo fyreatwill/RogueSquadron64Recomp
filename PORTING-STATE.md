@@ -117295,3 +117295,17 @@ absent from this workspace but the prior evidence resolves the identity. No
 rename or runtime behavior change was warranted. This rules out an actionable
 placeholder in the checked-in mapping, but does not close the broader sweep;
 the next lead is `0x800CBDA0`.
+
+## Session 2648 (2026-08-27) — audited the 800CBDA0 symbol lead
+
+The bounded generated-symbol sweep audited `0x800CBDA0`. The companion
+mission symbol names it `findNearestNpcWithinRange`; the available generated
+snapshot emits that same name in `funcs_37.c`, and the generated body is
+followed by `initActorFromSpawnTemplate` at the exact `0x800CC03C` boundary.
+The overlay table independently records the mission entry at ROM offset
+`0x26C70` with size `0x29C`, matching the repository TOML span. The generated
+mission caller uses the resolved name at two call sites, and the menu symbol
+file has no competing identity in this window. No placeholder or safe rename
+remained, so no source or runtime change was warranted. This selects
+`H-CompanionExact` as already resolved and advances the next bounded lead to
+`0x800CC03C`.

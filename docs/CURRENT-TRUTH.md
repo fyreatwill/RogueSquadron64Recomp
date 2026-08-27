@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2647 (2026-08-27).
+Current maintenance marker: Session 2648 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -318,7 +318,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800CBDA0` next using companion symbols, exact spans, callers, and
+   Audit `0x800CC03C` next using companion symbols, exact spans, callers, and
    overlay identity;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
@@ -502,3 +502,15 @@ boundary, and section-4 overlay span for the same name and size; that tree is
 absent from this workspace but the prior evidence resolves the identity. No
 rename or runtime change was warranted; the next bounded lead is
 `0x800CBDA0`.
+
+## Session 2648 result
+
+The bounded sweep audited `0x800CBDA0`. The companion mission symbol names it
+`findNearestNpcWithinRange`; the available generated snapshot emits that same
+name in `funcs_37.c`, and the generated body is followed by
+`initActorFromSpawnTemplate` at the exact `0x800CC03C` boundary. The overlay
+table independently records the mission entry at ROM offset `0x26C70` with
+size `0x29C`, matching the TOML span. The generated mission caller uses the
+resolved name at two call sites, and the menu symbol file has no competing
+identity in this window. No placeholder or safe rename remained, so no source
+or runtime change was warranted; the next bounded lead is `0x800CC03C`.
