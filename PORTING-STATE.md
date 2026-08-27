@@ -117679,3 +117679,17 @@ but the differing paths do not establish a common crash explanation. The
 control is still invalid because neither arm reached hangar; the next unit is
 a smallest stable-driver/control repair. No runtime, audio, gate, writeback,
 remap, wait, or guard behavior changed.
+
+## Session 2670 (2026-08-27) — qualified Step 0 with the stable phase driver
+
+The Step 0 wrapper was changed to invoke the established `s2285` phase
+driver, retaining the oracle gate and probe settings while restoring
+`winctl`-based scheduled input delivery. The oracle passed its whole-RDRAM
+positive control (`10000`) and title/hangar transitions. The silent arm
+reached title and hangar with 1,307 task/DMA rows and zero crash or abort
+markers. The image arm reached title and hangar with 942 task/DMA rows,
+4,417 image-stage rows, and zero crash or abort markers. This selects
+`H-stable-driver-qualifies` and rules out the prior wrapper's missing-input or
+isolated-launch explanation for the pre-hangar loss. It qualifies the Step 1
+contract comparison; no runtime, audio, gate, writeback, remap, wait, or guard
+behavior changed.

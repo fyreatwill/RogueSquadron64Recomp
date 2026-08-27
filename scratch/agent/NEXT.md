@@ -1,39 +1,37 @@
-# NEXT work unit (s2670) — qualify the Step 0 control with the stable driver
+# NEXT work unit (s2671) — run the qualified Step 1 contract rebaseline
 
-HYPOTHESIS-ID: m5-audio-step0-control-qualification
+HYPOTHESIS-ID: m5-audio-step1-contract-rebaseline
 
 ## Work unit
 
-Make one bounded control-only repair: replace the failing isolated-arm launch
-path with the repository's known stable phase-driver recipe, while retaining
-the oracle gate, the same input schedule, and all phase/probe settings. Run
-silent and default controls in one build/run and collect both summaries. Do
-not alter runtime behavior, audio routing, gates, or guards.
+Use the now-qualified `s2285` phase driver for the existing same-build
+silent/image contract comparison. Collect the oracle controls and both arm
+summaries through title and hangar, including task fields, DMEM/DMA, SP
+completion, image-stage, PCM source/consumer, and terminal markers. Do not
+alter runtime behavior, audio routing, gates, writeback, or guards.
 
 ## Competing hypotheses and discriminator
 
-- `H-stable-driver-qualifies`: both arms reach title and hangar with the
-  oracle control intact; the prior wrapper path was the invalid component.
-- `H-port-crash-persists`: the stable driver still loses one or both arms
-  before hangar; the port-side control remains unevaluable.
-- `H-driver-control-invalid`: the replacement loses the oracle/title positive
-  controls or fails to launch one arm; the driver comparison is invalid.
+- `H-contract-separated`: oracle, title, and hangar controls pass; image has
+  the expected DMEM/DMA/SP work while silent has the zero-work control, so the
+  downstream output edge is measurable.
+- `H-contract-not-separated`: both arms reach the phases but the expected
+  image/silent task-work separation is absent, leaving the contract mapping
+  unresolved.
+- `H-step1-control-invalid`: the oracle, title/hangar, or arm controls fail,
+  so the comparison is unevaluable.
 
-The discriminator is the same-build table of oracle positive-control rows,
-independent title/hangar phase rows, and terminal host/guest crash attribution
-for both arms. Both hangar rows select `H-stable-driver-qualifies`; pre-hangar
-loss with intact oracle/title selects `H-port-crash-persists`; missing oracle,
-title, or arm-launch controls selects `H-driver-control-invalid`.
+The discriminator is one same-build table: oracle whole-RDRAM/title/hangar
+controls; title/hangar rows for both arms; silent versus image DMEM/DMA/image
+stage/SP separation; and task/PCM joins. Expected work separation with both
+hangar rows selects `H-contract-separated`; absent separation selects
+`H-contract-not-separated`; missing controls selects `H-step1-control-invalid`.
 
 ## Exact commands
 
-1. Edit only the control-driver entry point with `apply_patch` to invoke the
-   known stable phase-driver recipe, preserving SIGKILL cleanup and marker
-   categories.
-2. `zsh scratch/agent/run_s2277_m5_step0_ground_truth.sh`
-3. Inspect only its `driver.log` and bounded `grep -c`/`tail -50` slices of
+1. `zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2671_m5_step1_contract_rebaseline`
+2. Inspect only its `driver.log` and bounded `grep -c`/`tail -50` slices of
    the arm logs.
 
-Expected: the oracle positive control remains present. Both arms either reach
-hangar, qualifying the M5 contract table for the next step, or fail before
-hangar and leave audio behavior unchanged.
+Expected: the oracle positive control and both hangar rows remain present;
+image shows DMEM/DMA/SP work while silent supplies the zero-work control.

@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2669 (2026-08-27).
+Current maintenance marker: Session 2670 (2026-08-27).
+
+## Session 2670 result
+
+The Step 0 wrapper was changed to invoke the established `s2285` phase
+driver, which retains the oracle gate and probes while using `winctl` and the
+scheduled input delivery. The oracle passed its whole-RDRAM positive control
+(`10000`) and title/hangar transitions. The silent arm reached title and
+hangar, with 1,307 task/DMA rows and no crash or abort markers; the image arm
+also reached title and hangar, with 942 task/DMA rows, 4,417 image-stage rows,
+and no crash or abort markers. This selects `H-stable-driver-qualifies` and
+rules out the prior wrapper's missing-input/isolated-launch explanation for
+the pre-hangar loss. It qualifies the Step 1 contract comparison; no runtime,
+audio, gate, writeback, remap, wait, or guard behavior changed.
 
 ## Session 2669 result
 
@@ -567,12 +580,12 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 Step 0 control repair — primary active thread.** Both isolated port
-  arms now reach title but exit before hangar through different pre-hangar
-  crash paths, so the contract table is still unevaluable. Qualify the
-  control with the smallest driver/runtime-independent repair or switch to
-  the known stable phase driver; do not interpret missing hangar rows or
-  change audio behavior until both arms reach the target phase.
+1. **M5 Step 1 contract rebaseline — primary active thread.** The stable
+  phase driver now qualifies both silent and default image arms through title
+  and hangar. Run the existing same-build contract comparison and use the
+  phase-keyed task/DMEM/DMA/SP/PCM rows to identify the next missing output
+  edge; do not change audio behavior or add writeback from destination overlap
+  alone.
 2. **M5 de-stubbing sequence — secondary active thread.** Obtain an independent
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
