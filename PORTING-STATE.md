@@ -118772,3 +118772,17 @@ This selects `H-already-synchronized` / `H-ambiguous-or-fake` and rules out
 `H-exact-matches` for this interval. No build or game run was warranted for
 the symbol-only sweep. Decision evidence:
 `scratch/agent/s2734_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2735 (2026-08-27) — bounded the next generated-symbol region
+
+The generated-symbol sweep covered `0x800CE000..0x800D1000` in the external
+generated snapshot. Its complete decision table evaluated 13 companion
+candidates: eight semantic entries were already synchronized and five
+address-only/fake entries were preserved as ambiguous-or-fake. The
+`--require-rename` option returned status 2 because zero generated references
+changed in zero files. No parser, duplicate-destination, or
+protected-placeholder failure occurred. This selects
+`H-already-synchronized` / `H-ambiguous-or-fake` and rules out
+`H-exact-matches` for this interval. No build or game run was warranted for
+the symbol-only sweep. Decision evidence:
+`scratch/agent/s2735_generated_symbol_sweep/decision-table.txt`.
