@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2775 (2026-08-27).
+Current maintenance marker: Session 2776 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -61,6 +61,15 @@ The latest durable M5 chain is:
   640/origin `0x0066A500`. Image dispatch controls diverged from silent as
   expected, but all target-phase audio/PCM rows are invalid and select no
   publication hypothesis.
+- Session 2776 repaired the driver twice and ran a same-build concurrent pair:
+  explicit phase-relative keys were first blocked by the 1024 gate, and the
+  restored autopilot plus a boot-time key schedule still left both arms at
+  VI 640/origin `0x0066A500`. Quoting the zsh environment array fixed the
+  launcher, and image/silent dispatch controls were positive (`48`/`47`,
+  `real_ucode=1`/`0`), but neither arm reached title or hangar. The oracle
+  whole-RDRAM control passed (`10000`) and independently reached both phases.
+  The target-phase audio/PCM table is therefore invalid; no M5 publication
+  hypothesis is selected.
 - `osAiGetStatus_recomp` now reports runtime buffered-audio state instead of
   unconditionally returning zero. The Debug target compiled and linked;
   the same-build image/silent validation emitted positive set-next and
@@ -80,16 +89,14 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **M5 Step 1 recipe repair — phase control still required.** Session 2775
-   passed the retail whole-RDRAM control and showed both port arms stalled at
-   VI 640 because the driver did not actually launch phase-relative probe
-   keys. Run the same-build image/silent pair with the known
-   `PROBE_KEYS_FROM_PHASE=1` schedule explicitly wired through `tools/probe.sh`
-   (C88 unset), retaining all target-phase controls. Do not interpret
-   downstream nulls unless both title `1024` and hangar `0x006AB400` are
-   observed in both arms.
+1. **Generated-symbol renaming sweep — next bounded interval.** M5 Step 1
+   input-recipe repair is now exhausted at this discriminator: boot-time
+   probe keys, phase-relative probe keys, and the existing autopilot all
+   failed to move the qualified port arms beyond VI 640 in this iteration.
+   Audit the next interval after `0x80111000`, preserving ambiguous/data
+   entries and applying only source-backed names.
 
-2. **Generated-symbol renaming sweep — next bounded fallback.** The M5
+2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
    route; preserve the shim but do not pursue its unexercised semantics.
    The `0x800F9000..0x800FB000` interval is synchronized. The widened

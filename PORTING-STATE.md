@@ -119385,3 +119385,22 @@ constitute the known phase-relative input path. Target-phase audio/PCM rows
 are invalid and no M5 publication hypothesis is selected. The next unit must
 explicitly wire `PROBE_KEYS` through `tools/probe.sh`; `git diff --check`
 passed.
+
+## Session 2776 (2026-08-27) — M5 probe-key recipe remained route-invalid
+
+The retail oracle whole-RDRAM positive control passed (`10000` callbacks) in
+the same iteration; its trace independently reached title `VI 1024` and
+hangar origin `0x006AB400`. The driver was repaired to launch `tools/probe.sh`
+for both concurrent arms, to leave C88 unset, and to quote the zsh environment
+array so the space-containing `PROBE_KEYS` assignment was not split. The first
+phase-relative run correctly sent no keys before the 1024 gate and both arms
+stalled at VI 640. Restoring the existing autopilot did not change that. A
+final boot-time-key run sent all eleven Start events in both arms, but both
+still stalled at VI 640/origin `0x0066A500`; neither reached title or hangar.
+The image and silent dispatch controls remained positive (`48`/`47`,
+`real_ucode=1`/`0`) and no crash marker appeared. Thus the target-phase
+audio/PCM table is invalid, the three input-recipe variants do not select an
+M5 publication hypothesis, and the qualified port input boundary remains
+unexplained. The next unit pivots to the bounded generated-symbol sweep at
+`0x80111000..0x80113000`. Artifacts:
+`scratch/agent/s2776_m5_step1_recipe_repair_final/`.
