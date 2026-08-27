@@ -118485,3 +118485,24 @@ successfully with no parser or duplicate-destination rejection. This selects
 The decision table is in
 `scratch/agent/s2716_generated_symbol_sweep/decision-table.txt`. The external
 generated worktree remains dirty from prior work; this run did not modify it.
+
+## Session 2717 (2026-08-27) — revisited M4 retail shaded-record values
+
+The required last-15-title check found all recent titles were sweep-scoped,
+so the generated-symbol lead was revisited through the M4 accumulator
+boundary. The corrected retail oracle ran once with post-store value
+histograms for the previously grounded `0x167000:0x169B00` and
+`0x179800:0x179B00` ranges. The whole-RDRAM positive control fired 533,653
+times; title `0x00790400` / width 1024 and hangar `0x006AB400` / width 512
+were both reached.
+
+The first range produced 506,803 writes and was dominated by structured,
+pointer-like values from `0x80015BC8` (title and hangar) and `0x8000F3A0`
+(hangar). The second produced 16,850 writes and mixed zeroes with varied
+small values from multiple hangar writers. The value evidence selects
+`H-allocator-churn` for these broad candidate ranges and retains
+`H-phase-specific-source` as a warning not to merge title and hangar writer
+populations. It does not identify the RSP accumulator source/table index and
+rules out no legitimate port boundary. No build, port instrumentation,
+writeback, remap, or mitigation was performed. Full output:
+`scratch/agent/s2717_m4_retail_record/run.log`.

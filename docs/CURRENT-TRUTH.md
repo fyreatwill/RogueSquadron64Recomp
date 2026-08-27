@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2716 (2026-08-27).
+Current maintenance marker: Session 2717 (2026-08-27).
 
 ## Live result
 
@@ -238,6 +238,19 @@ publication edge (static evidence); the unresolved callback is the next
 bounded source-read target. No runtime watch, writeback, remap, or mitigation
 is authorized. Detailed table: `scratch/agent/s2695_mort_postmix_boundary/audit.md`.
 
+s2717 performed the mandatory M4 revisit after the last 15 ledger titles were
+all sweep-scoped. A single retail-oracle run passed the whole-RDRAM control
+(`533,653` writes), reached title `1024` and hangar `512`, and added
+phase-qualified post-store value samples to the previously grounded
+`0x167000:0x169B00` and `0x179800:0x179B00` ranges. The first range was
+dominated by pointer-like structured values from `0x80015BC8` (title and
+hangar) and `0x8000F3A0` (hangar); the second mixed zeroes and varied small
+values across several hangar writers. This selects `H-allocator-churn` for
+these broad candidate ranges, retains `H-phase-specific-source` as a
+non-merge warning, and does not identify the M4 accumulator source/table
+index. No port instrumentation, writeback, remap, or mitigation is
+authorized. Detailed table: `scratch/agent/s2717_m4_retail_record/audit.md`.
+
 s2697 completed the named DMA-service consumer audit. `sendServiceMessage`
 only resolves a registered worker queue, annotates the message header, and
 enqueues the wakeup. `piDmaWorker` ignores that message body, consumes the
@@ -448,7 +461,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
    bounded CPU publication surface only if a new source/consumer relation can
    be named; do not repeat thread, queue/service, renderer, mixer, allocation,
    or host audits. Do not add a runtime watch until a legitimate destination
-   and ordering edge are named.
+   and ordering edge are named. The s2717 M4 revisit independently classified
+   the two existing retail candidate ranges as broad structured/allocator
+   activity rather than a clean accumulator record; it did not change the M5
+   publication priority.
 2. **Generated-symbol renaming sweep.** s2704 found all 19 candidates in
    `0x8008ED6C..0x80091C80` already synchronized, s2705 found no exact
    rename in `0x80091C80..0x80095000`, and s2706 found no exact rename in

@@ -1,38 +1,38 @@
-# NEXT work unit (s2717) — bounded generated-symbol rename lead
+# NEXT work unit (s2718) — M5 hangar writer/value boundary
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-hangar-c88-publication-boundary
 
 ## Work unit
 
-Run the required last-15-title revisit check. If it still does not force a
-revisit, reconcile exactly one adjacent companion-symbol region
-`0x800B6000..0x800B9000` with the tracked rename tool. Rename only exact,
-unique companion names supported by the companion map; preserve fake,
-ambiguous, and already-human names. This is one bounded rename batch.
+Use the retail oracle to inspect the already identified hangar-side writer at
+guest PC `0x80094648`, with the whole-RDRAM positive control first and the
+hangar origin `0x006AB400:512` phase-gated. Capture its GPR fields and the
+post-store value/destination evidence in one run. This is the remaining M5
+Step-4 ground-truth boundary; do not change the port until the retail writer,
+destination, and value transition are named.
 
 ## Competing hypotheses and discriminator
 
-- `H-exact-matches`: the region contains unique companion names absent from
-  generated output.
-- `H-already-synchronized`: semantic names in the region are already present.
-- `H-ambiguous-or-fake`: candidates lack unique semantic evidence and remain
-  address-only.
-- `H-tool-rejects`: the tool rejects a valid candidate due to parsing or
-  duplicate-destination handling.
+- `H-hangar-c88-writes-pcm`: the PC executes in hangar and its output/value
+  joins the sampled nonzero PCM source or a named voice descriptor.
+- `H-hangar-c88-writes-control`: it executes but writes a status/gate/control
+  field unrelated to PCM publication.
+- `H-hangar-c88-unreached`: the whole-RDRAM control passes but the hangar
+  phase or watched PC does not, so the null is unevaluable.
 
-The discriminator is the complete per-candidate decision table plus the
-generated diff. A non-empty exact rename selects `H-exact-matches`; zero
-selected with explicit synchronized/ambiguous decisions selects the relevant
-zero-result hypothesis; a reproducible parser or destination rejection
-requires fixing the tool in this iteration.
+The discriminator is the complete phase-gated `watch-pc` row: execution count,
+caller/previous PC, GPR arguments/return, mode/field values, and any observed
+destination/value transition joined to the hangar phase. Whole-RDRAM hits plus
+hangar reach are required before interpreting a zero. A PCM/source join selects
+the first hypothesis; a live unrelated field selects the second; absent phase
+or control selects the third.
 
-## Exact commands
+## Exact command
 
-1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
-2. `mkdir -p scratch/agent/s2717_generated_symbol_sweep`
-3. `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --limit 32 --start-address 0x800B6000 --end-address 0x800B9000 > scratch/agent/s2717_generated_symbol_sweep/decision-table.txt 2>&1`
-4. Verify the decision table and generated diff. Do not build or run the game
-   unless a real rename changes output.
+```sh
+mkdir -p scratch/agent/s2718_m5_hangar_writer
+env tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 90 --watch-write 0x0:0x800000 --watch-pc 0x80094648 --pc-phase-log 0x006AB400 --pc-field-dump 0x80094648 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > scratch/agent/s2718_m5_hangar_writer/run.log 2>&1
+```
 
-The M5 publication edge remains unresolved; no runtime watch, writeback,
-remap, or mitigation is authorized.
+No writeback, remap, guard, or mitigation is authorized by this capture
+alone.
