@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2532 (2026-08-26).
+Current maintenance marker: Session 2533 (2026-08-26).
 
 ## Current state
 
@@ -202,6 +202,16 @@ Current maintenance marker: Session 2532 (2026-08-26).
   selects no-match and advances the sweep to `0x80094348`. Artifact:
   `scratch/agent/s2532_symbol_revalidation/audit.md`.
 
+- **s2533 — the next bounded generated-symbol region had no defensible
+  mapping.** The complete `0x80094348–0x8009434F` span is an 8-byte `j
+  0x80094370`/`nop` fragment immediately before the independently named
+  `startSongSequence` at `0x80094350`. The active generated implementation,
+  declaration, overlay table, project TOML, companion symbol file, and
+  exact-address/source/caller searches provide no human or m2c name. Calling
+  it a thunk or alternate entry would be speculative. This selects
+  `H-no-match`; no generated code changed. Artifact:
+  `scratch/agent/s2533_symbol_census/audit.md`.
+
 - **s2531 — two adjacent generated fragments were renamed through the
   regeneration input and generated tables.** `0x80082268` is now
   `cheatCodeConstantPreamble`, an 8-byte constant-load fragment immediately
@@ -241,7 +251,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   `0x8007C298`; s2529 left it unresolved. s2530's `0x80082268` and the
   adjacent `0x800825C8` were renamed in s2531 after their boundaries were
   established. s2532 revalidated `0x80093E74` as an unchanged epilogue
-  fragment; next is `0x80094348`.
+  fragment, and s2533 left `0x80094348` unchanged as a jump fragment; next is
+  `0x8009711C`.
 5. **M4 accumulator-origin work — parked** pending a new boundary idea.
 
 ## Durable boundaries

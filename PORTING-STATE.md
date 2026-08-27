@@ -114907,6 +114907,26 @@ Artifact: `scratch/agent/s2528_symbol_census/audit.md`.
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2533 (2026-08-26) — censused fourteenth generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x80094348–0x8009434F` after
+the required sweep preflight. It contains exactly one 8-byte placeholder,
+`fake_func_80094348`, whose generated body is `j 0x80094370` followed by
+`nop`. The active generated declaration and overlay table, project TOML, and
+companion symbol file agree on the fake name and span. Exact-address, source,
+m2c, and caller searches found no human rename candidate. The jump enters the
+body of the independently named `startSongSequence` at `0x80094350`, but that
+does not establish whether this is a callable alternate entry or a boundary
+artifact.
+
+This selects `H-no-match` and rules out a defensible rename or
+regeneration-safe build for this entry. No generated code, runtime, submodule,
+or mitigation changed. Artifact:
+`scratch/agent/s2533_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
+
 ## Session 2530 (2026-08-26) — censused thirteenth generated-symbol sweep region
 
 Enumerated the complete main-overlay interval `0x80082268–0x8008226F` after
