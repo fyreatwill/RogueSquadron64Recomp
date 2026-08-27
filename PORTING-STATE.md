@@ -117114,3 +117114,18 @@ fragment remaining unnamed. No placeholder, duplicate overlay identity, or
 boundary-only mapping required an action. No rename, build, or runtime change
 was warranted. This rules out an actionable rename in this bounded lead, not
 the broader symbol-sweep hypothesis. The next bounded lead is `0x800C794C`.
+
+## Session 2636 (2026-08-27) — audited the 800C794C symbol lead
+
+Ran the bounded generated-symbol-renaming sweep required by
+`scratch/agent/NEXT.md`. The comparison table covered `0x800C794C` and its
+adjacent region through `0x800C7978`: the lead is already named
+`getScaledPlayerCraftSpeed` in the companion mission symbols, active generated
+body, repository TOML, and generated overlay table. Its generated body spans
+the exact `0x2C` bytes to `0x800C7978`; generated callers at `0x801088D0` and
+`0x80108EBC` invoke the resolved name, and the menu symbol file has no
+competing identity in this bounded region. No placeholder, duplicate overlay
+identity, or boundary-only mapping required an action. No rename, build, or
+runtime change was warranted. This rules out an actionable rename in this
+bounded lead, not the broader symbol-sweep hypothesis. The next bounded lead
+is `0x800C7978`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2634 (2026-08-27).
+Current maintenance marker: Session 2636 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -217,6 +217,16 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
   duplicate overlay identity, or boundary-only mapping was found. No rename or
   build was warranted; the next bounded sweep lead is `0x800C794C`.
 
+- **s2636 — the `0x800C794C` sweep lead was already exact.** The companion
+  mission symbols name it `getScaledPlayerCraftSpeed`; the generated body in
+  `funcs_36.c` spans exactly `0x2C` bytes through `0x800C7978`, and the
+  repository TOML plus generated overlay table agree on name, address, and ROM
+  size. Generated callers at `0x801088D0` and `0x80108EBC` invoke the resolved
+  name, and the menu symbol file has no competing identity in this bounded
+  region. No placeholder, duplicate overlay identity, or boundary-only mapping
+  required an action. No rename or build was warranted; the next bounded sweep
+  lead is `0x800C7978`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -238,7 +248,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C794C` next using companion symbols, exact spans, and callers;
+   Audit `0x800C7978` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
