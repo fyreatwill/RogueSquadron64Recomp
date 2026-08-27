@@ -4,7 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2579 (2026-08-26).
+Current maintenance marker: Session 2580 (2026-08-26).
+
+- **s2580 — the M5 Step 1 image/control checkpoint was unevaluable at the
+  intended contract boundary.** The retail oracle whole-RDRAM control reached
+  10,000 writes plus title and hangar phases, and the silent control reached
+  hangar. In the same build, the image arm dispatched the real Factor 5 image
+  40 times but produced zero task-ABI, DMEM/DMA, image-stage, audio-return,
+  PCM, title, or hangar rows and remained on the boot 320/640 path. A fresh
+  90-second image-only retry with in-process autopilot reproduced exactly
+  40 dispatches and zero contract rows, with no crash/abort; this rules out
+  simultaneous-arm or window-focus orchestration as the blocker. The prior
+  H-AudioDegeneracy/H-ContractGap/H-RouteOnly target discriminator therefore
+  did not run. Do not promote or mitigate task fields, output pointers, or
+  gates from this result. Artifacts:
+  `scratch/agent/s2580_m5_step1_contract_pair/driver.log`,
+  `scratch/agent/s2580_m5_image_isolated/status`.
 
 - **s2579 — refreshed the M5 design gate against the current dispatcher.**
   `docs/M5-AUDIO-PLAN.md` now inventories the active RSP stubs, Factor 5

@@ -116056,3 +116056,23 @@ not establish a new audio contract or authorize promotion of any gate, task
 field, output mapping, or mitigation.
 
 Artifact: `docs/M5-AUDIO-PLAN.md`.
+
+## Session 2580 (2026-08-26) — isolated M5 image first-task stall
+
+Built `RogueSquadron64Recomp` and ran
+`zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh
+s2580_m5_step1_contract_pair`. The retail oracle passed its whole-RDRAM
+10,000-write control and reached title and hangar. The silent control reached
+hangar, but the same-build image arm timed out before title/hangar: it logged
+40 real-image dispatches and zero `audtask-abi`, DMEM/DMA, image-stage,
+audio-return, PCM, or route-target rows. A fixed fresh-process retry using
+in-process autopilot, `zsh scratch/agent/run_s2580_m5_image_isolated.sh
+s2580_m5_image_isolated`, reproduced 40 dispatches and zero contract rows for
+90 seconds without crash or abort. This rules out the paired-arm and window
+focus orchestration explanations, but does not select the intended downstream
+audio hypotheses: the image arm never reached the contract boundary. The next
+unit audits the first image-task entry/loop/host-wait boundary. No runtime
+behavior, task field, output pointer, gate, or mitigation changed.
+
+Artifacts: `scratch/agent/s2580_m5_step1_contract_pair/driver.log`,
+`scratch/agent/s2580_m5_image_isolated/status`.
