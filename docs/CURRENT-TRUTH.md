@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2768 (2026-08-27).
+Current maintenance marker: Session 2769 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -73,7 +73,16 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **Generated-symbol renaming sweep — next bounded fallback.** The M5
+1. **M5 Step 1 re-baseline — phase control still required.** Session 2769
+   ran the retail oracle and both same-build audio arms, but the port stayed
+   in 320/640 cinematic phases and never reached title `1024` or hangar
+   `0x006AB400`; the row is invalid and selects no audio hypothesis. The
+   oracle whole-RDRAM control did pass and independently reached title and
+   hangar. Retry the same image/silent pair with the qualified AUTOPILOT route
+   and the compiled C88 default (do not force `ROGUESQ_M5_C88_VALUE=0`) before
+   interpreting any downstream null.
+
+2. **Generated-symbol renaming sweep — next bounded fallback.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
    route; preserve the shim but do not pursue its unexercised semantics.
    The `0x800F9000..0x800FB000` interval is synchronized. The widened
@@ -84,7 +93,7 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    Continue with `0x80109000..0x8010B000`, preserving
    ambiguous/fake/address-only symbols.
 
-2. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
+3. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
    legitimate destination is the voice ring and its ordering edge is the
    completion queue. `+0x194` is the sample source. Do not repeat this edge or

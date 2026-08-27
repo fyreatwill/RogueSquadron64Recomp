@@ -1,44 +1,51 @@
-# NEXT work unit (s2769) — synchronize the next generated-symbol interval
+# NEXT work unit (s2770) — M5 Step 1 phase-qualified audio-arm re-baseline
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-step1-image-vs-silent-contract
 
 ## Work unit
 
-Synchronize the bounded generated-function interval `0x80109000..0x8010B000`
-using companion decomp names and the regeneration-safe rename map. Preserve
-ambiguous, fake, and address-only placeholders; do not invent semantic names.
+Retry the phase-qualified Step 1 pair from the same checked-in build using the
+fixed recipe `scratch/agent/s2769_m5_step1/run.sh`, after removing its
+`ROGUESQ_M5_C88_VALUE=0` entry so the compiled C88 default is exercised. Keep
+the retail oracle whole-RDRAM control and launch silent
+(`ROGUESQ_AUDIO_UCODE=0`) and Factor 5 image (`ROGUESQ_AUDIO_UCODE=1`) arms
+concurrently with the in-process AUTOPILOT. Do not add instrumentation or a
+contract change.
 
-## Result of s2768
+## Competing hypotheses and discriminator
 
-The interval contained 23 already-synchronized semantic candidates and three
-generated placeholders: `fake_func_8010721C`, `fake_func_80107EA4`, and
-`fake_func_80108B8C`. All three remain preserved as ambiguous/fake. The
-rename tool returned its expected no-rename status, and an independent scan
-found no other placeholder in the interval. `git diff --check` passed.
+- H-AudioDegeneracy: the silent arm is the cause of downstream failure. The
+  image arm must add task completion plus service, slot/voice, or PCM progress
+  after the same title/hangar route; a route-only difference rejects this.
+- H-ContractGap: the image path does real work but its task/output contract is
+  incomplete. The image arm will show nonzero DMEM/DMA and image completion,
+  while task-field, service/slot, or PCM joins remain absent or divergent.
+- H-MixedPipelines: Factor 5 image audio and CPU MORT speech are independent.
+  Image task controls can differ while MORT descriptor/voice and PCM controls
+  remain independently unchanged; no single global audio result explains
+  both.
+- H-GateArtifact: a current gate or safety hatch suppresses legitimate work.
+  This is not selected by a counter alone; it requires a same-run writer/value
+  and downstream transition, so the Step 1 result should leave it unresolved
+  unless those controls appear.
 
-## Competing hypotheses and discriminator for s2769
-
-- H1: every stale placeholder in the interval has a defensible companion/source name.
-- H2: some placeholders are fake/address-only or ambiguous and must remain.
-- H3: an apparent match is a duplicate/alias whose references make renaming unsafe.
-
-The discriminator is the complete interval census: classify every companion
-candidate as source-backed rename, already synchronized, preserved
-ambiguous/fake/address-only, or unsafe alias, then independently scan the
-generated tree for unresolved placeholders. H1 is supported only if a stale
-semantic placeholder is selected; H2 is supported by preserved fake entries;
-H3 is supported only by an unsafe alias classification.
+The discriminating measurement is the complete phase-keyed arm row:
+`dispatch → task fields/source → DMEM/DMA → image exit → SP completion →
+service → status/slot → voice/reap → MORT class → PCM source/consumer →
+title/hangar phase`. The oracle whole-RDRAM threshold, title 1024 phase, and
+hangar 512 origin are mandatory positive controls. If the controls are absent,
+the result is invalid and the experiment must not be interpreted as a null.
 
 ## Exact commands
 
-1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
-2. `rg -n 'func_(80109|8010A)|fake_func_(80109|8010A)' ../N64Recomp/RecompiledFuncs/`
-3. `mkdir -p scratch/agent/s2769_generated_rename`
-4. `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --start-address 0x80109000 --end-address 0x8010B000 --limit 32 --require-rename > scratch/agent/s2769_generated_rename/census.txt 2>&1`
-5. Verify with `git diff --check` and an independent interval placeholder scan; save all census artifacts under `scratch/agent/s2769_generated_rename/`.
+1. `sed -i '' '/ROGUESQ_M5_C88_VALUE=0/d' scratch/agent/s2769_m5_step1/run.sh`
+2. `env zsh scratch/agent/s2769_m5_step1/run.sh s2770_m5_step1`
+3. Inspect only bounded summaries: `sed -n '1,220p' scratch/agent/s2770_m5_step1/driver.log` and marker counts/tails from the two arm logs.
 
-Expected outcomes: a nonzero rename count advances the synchronized region;
-zero stale placeholders closes this interval as already synchronized; fake or
-conflicting entries are preserved and logged with their classification. Do not
-build when the census changes no generated code. Preserve ambiguous, fake, and
-address-only entries.
+Expected outcomes: the oracle gate must pass. The silent arm should show
+dispatch/return but no image DMEM/DMA activity; the image arm should show
+nonzero image DMEM/DMA and `Broke` completion. Downstream differences select
+H-AudioDegeneracy or H-ContractGap; identical downstream rows keep the
+publication edge unresolved and close this re-baseline without authorizing a
+contract change. No build is needed unless the checked-in executable is
+missing or stale.

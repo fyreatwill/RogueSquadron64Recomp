@@ -119286,3 +119286,24 @@ eligible rename in this interval, not the broader sweep. Evidence:
 `scratch/agent/s2768_generated_rename/census.txt` and
 `scratch/agent/s2768_generated_rename/independent_scan.txt`. Next interval:
 `0x80109000..0x8010B000`.
+
+## Session 2769 (2026-08-27) — phase-gated M5 audio-arm re-baseline was invalid
+
+Ran the required M5 Step 1 same-build image-versus-silent pair after fixing
+the copied recipe's relative repository root. The retail oracle's whole-RDRAM
+positive control passed and its independent VI trace reached title `1024` and
+hangar origin `0x006AB400`. The first corrected port invocation used the
+external-key path; both arms reached only early 320/640 cinematic phases. The
+fixed AUTOPILOT invocation armed all eight events, but both arms again stayed
+at 320/640 and never reached title or hangar. Each arm dispatched 55 audio
+tasks (silent `real_ucode=0`, image `real_ucode=1`) without crash markers, but
+the phase gate and downstream audio-row controls were absent: zero
+`audtask-abi`, DMA, image-stage, audio-return, service/slot, and PCM-boundary
+rows in both arms. The positive port route control was absent, so the Step 1
+row is invalid; this selects none of H-AudioDegeneracy, H-ContractGap,
+H-MixedPipelines, or H-GateArtifact and authorizes no contract change. The
+next retry must preserve AUTOPILOT but remove forced
+`ROGUESQ_M5_C88_VALUE=0` so the compiled C88 default is exercised. Evidence:
+`scratch/agent/s2769_m5_step1/driver.log`,
+`scratch/agent/s2769_m5_step1_autopilot/driver.log`, and the bounded arm logs
+under those directories. The copied recipe fix is retained for the retry.
