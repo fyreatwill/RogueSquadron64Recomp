@@ -114869,6 +114869,30 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2536 (2026-08-26) — audited M4 indirect vertex-base alias path
+
+The last 15 ledger titles were all generated-symbol sweep entries, so the
+mandatory REVISIT selected the parked M4 accumulator boundary. Before any
+instrument or build, the ground-truth M4 documents and Factor 5 reference were
+read. The bounded work unit was a static audit of the indirect `L_13D8` path
+across all generated Factor 5 overlays.
+
+The discriminator table is in `docs/M4-INDIRECT-ALIAS-AUDIT.md`. Overlay 0x1c
+has an explicit writer for DMEM `B00/B02/B04`: it sets `r8=0x670`, constructs
+record pointers at `0x670 + {0x0,0x50,0x78,0xA0,0xC8,0xF0,0x140,0x168,0x190,0x230,0x258,0x2F8,0x320,0x3C0}`, stores them into the table, and advances the table slot by six bytes. Overlay 0x20's `L_13D8` loads the three table entries using `(r3 & 0x7f)` and passes them to the shared `L_17F0`. `L_17F0` loads `+0x24`, `+0x1A`, and `+0x18/+0x1C` through those bases, so the indirect path can consume the same producer-record fields that the direct `0x670` path consumes. The other overlays have the shared direct path but no B00/B02/B04 reader/writer pair.
+
+This selects `H-indirect-consumer` at static dataflow/provenance scope and
+rules out the claim that the prior literal-offset audit exhausted possible
+consumers. It does not prove that a specific B00 index was live in the
+qualified scene; that dynamic index join remains open. The initial ucode image
+also contains 12-bit values `0x611` and `0x6B6`, but the explicit runtime
+writer is the stronger provenance line and makes the image bytes alone
+non-authoritative. No runtime, generated code, mitigation, or oracle run was
+needed.
+
+ORIGIN: diagnostic-only static audit. No runtime, generated function,
+submodule, or mitigation-shaped behavior changed.
+
 ## Session 2535 (2026-08-26) — censused fifteenth generated-symbol sweep region
 
 Enumerated the complete main-overlay interval `0x80097D58–0x80097D5F` after

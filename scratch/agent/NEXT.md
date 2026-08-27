@@ -1,15 +1,14 @@
-# NEXT work unit (s2535) — generated-symbol renaming sweep, next bounded region
+# NEXT work unit (s2536) — generated-symbol renaming sweep, next bounded region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Continue the sweep at the next unresolved main-overlay placeholder,
+Resume the sweep at the next unresolved main-overlay placeholder,
 `0x80099C4C`. Enumerate its complete generated span, inspect companion
 symbol/m2c/source and caller evidence, and rename only an unambiguous match
 through the regeneration-safe symbol path. Leave it unchanged if evidence is
-absent. Do not repeat `0x80097D58`, `0x8009711C`, `0x80094348`, `0x80093E74`, or the already-closed
-`0x80082268`/`0x800825C8` pair.
+absent. Do not repeat the M4 alias audit or the already-closed sweep regions.
 
 ## Competing hypotheses and discriminator
 
@@ -22,9 +21,9 @@ absent. Do not repeat `0x80097D58`, `0x8009711C`, `0x80094348`, `0x80093E74`, or
 
 The discriminator is one region table listing every placeholder, span,
 candidate, evidence source, confidence, and resulting diff. An exact match
-plus clean symbol/fixup validation selects `H-named-match`; zero exact matches
-selects `H-no-match`; failed regeneration-safe validation selects
-`H-regeneration-risk`.
+plus clean symbol/fixup validation selects H-named-match; zero exact matches
+select H-no-match; failed regeneration-safe validation selects
+H-regeneration-risk.
 
 ## Exact preflight commands
 

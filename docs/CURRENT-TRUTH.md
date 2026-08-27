@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2535 (2026-08-26).
+Current maintenance marker: Session 2536 (2026-08-26).
 
 ## Current state
 
@@ -231,6 +231,15 @@ Current maintenance marker: Session 2535 (2026-08-26).
   generated code changed. This is a static, single-source result. Artifact:
   `scratch/agent/s2535_symbol_census/audit.md`.
 
+- **s2536 — the M4 indirect vertex-base path is a live static consumer
+  candidate.** Overlay 0x1c writes DMEM `B00/B02/B04` entries from pointers
+  derived from `0x670`; overlay 0x20's `L_13D8` loads those entries and feeds
+  them to `L_17F0`, whose `+0x18/+0x1C` loads consume the producer record
+  fields. This closes the prior literal-offset audit's missing alias path at
+  static provenance scope, but does not prove a particular table index was
+  live in the qualified scene. No runtime or mitigation changed. Artifact:
+  [`M4-INDIRECT-ALIAS-AUDIT.md`](M4-INDIRECT-ALIAS-AUDIT.md).
+
 - **s2531 — two adjacent generated fragments were renamed through the
   regeneration input and generated tables.** `0x80082268` is now
   `cheatCodeConstantPreamble`, an 8-byte constant-load fragment immediately
@@ -272,9 +281,15 @@ This is one monotonic sequence; #1 is the next campaign priority.
   established. s2532 revalidated `0x80093E74` as an unchanged epilogue
   fragment, and s2533 left `0x80094348` unchanged as a jump fragment; s2534
   left `0x8009711C` unchanged as a jump into `bindMacroIdsToSoundGroup`, and
-  s2535 left `0x80097D58` unchanged as an epilogue fragment; next is
-  `0x80099C4C`.
-5. **M4 accumulator-origin work — parked** pending a new boundary idea.
+  s2535 left `0x80097D58` unchanged as an epilogue fragment; s2536's M4
+  revisit found the indirect B00/B02/B04 table path is a static 0x670-derived
+  consumer candidate; next is `0x80099C4C`.
+5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
+   s2536 found overlay 0x1c table writers derived from `0x670` and the
+   overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index
+   join in a qualified scene remains open. Do not add a mitigation or repeat
+   literal-offset audits; only a phase-gated index/provenance capture can
+   close the remaining dynamic question.
 
 ## Durable boundaries
 
@@ -296,6 +311,11 @@ proves related ranges and task-field writers, including the second-range
 helper/caller relation, but does not prove a port equivalent. Zero-valued rows
 are diagnostically ambiguous; no output remap or mitigation is permitted
 without a named legitimate writer and an `ORIGIN:` line.
+
+The M4 indirect alias audit adds a static cross-overlay path: overlay 0x1c
+writes B00/B02/B04 pointer entries from `0x670`-derived records, and overlay
+0x20 can feed those pointers into `L_17F0`. A live table-index join in a
+qualified scene remains open.
 
 ### VI, M3, and generated symbols
 
