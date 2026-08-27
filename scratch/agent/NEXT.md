@@ -1,28 +1,31 @@
-# NEXT work unit (s2682) — audit renderer and AI address arithmetic
+# NEXT work unit (s2683) — trace renderer buffer bases to PCM service
 
 HYPOTHESIS-ID: m5-cpu-renderer-ai-publication-join
 
 ## Work unit
 
-Perform one bounded static audit of the retail/recompiled implementations and
-callers for `0x8009DB2C` and `0x8002A0B8..0x8002A0D8`. Recover the exact base
-pointer, offsets, transfer width, and call ordering for each site. Do not build
-or change runtime behavior unless the audit identifies a concrete named
+Perform one bounded static audit of the caller contracts around
+`updateVoiceChannelParams` (`0x8009C4E8`), `consumeVoiceSamples`
+(`0x8009C240`), and `serviceStreamingVoice` (`0x8009BF14`). Recover where the
+renderer `a1/a2` sample bases originate, which fields/ring are consumed, and
+whether a named copy/DMA writer orders data into the AI source. Do not build or
+change runtime behavior unless the audit identifies a concrete named
 publication writer.
 
 ## Competing hypotheses and discriminator
 
-- `H-renderer-direct`: `0x8009DB2C` writes the AI source directly or via a
-  named fixed copy that the AI-side sequence consumes.
-- `H-copy-edge`: `0x8009DB2C` writes an intermediate and a distinct named copy
-  or DMA writer publishes the AI source before `0x8002A0B8`.
+- `H-renderer-buffer`: renderer `a1/a2` resolve to a persistent voice buffer
+  that the PCM service consumes directly.
+- `H-copy-edge`: a distinct named copy/DMA writer consumes the renderer buffer
+  and publishes the AI source before the AI device sequence.
 - `H-unresolved-address`: the available code/symbol evidence cannot recover a
-  legitimate publication writer, so another runtime watch would be premature.
+  legitimate source or publication writer, so another runtime watch is
+  premature.
 
-The discriminator is the recovered pointer/offset/order table. A direct match
-selects `H-renderer-direct`; a distinct but ordered named writer selects
-`H-copy-edge`; absent or ambiguous address arithmetic selects
-`H-unresolved-address` and parks runtime instrumentation.
+The discriminator is the recovered pointer/offset/order table. A direct
+renderer-to-consumer base match selects `H-renderer-buffer`; a distinct but
+ordered named writer selects `H-copy-edge`; absent or ambiguous arithmetic
+selects `H-unresolved-address` and parks runtime instrumentation.
 
 ## Ground-truth prerequisite
 
@@ -32,9 +35,9 @@ positive control and phase gate before interpreting it.
 
 ## Exact commands
 
-1. Locate the two addresses in the companion symbols/decomp and generated
-   output with bounded `rg` searches; inspect at most 60-line windows around
-   each implementation and caller.
+1. Locate the three functions and all callers in the companion symbols/decomp
+   and generated output with bounded `rg` searches; inspect at most 60-line
+   windows around each implementation and caller.
 2. Write the address/offset/order table to
-   `scratch/agent/s2682_renderer_ai_static_audit/RESULT.md`.
+   `scratch/agent/s2683_renderer_buffer_audit/RESULT.md`.
 3. Do not run a port build or soak unless a concrete writer is identified.

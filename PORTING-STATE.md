@@ -117881,3 +117881,27 @@ The run rules out the prior candidate that the renderer directly publishes
 into `0x166450:0x169450`. It does not rule out a distinct intermediate copy,
 DMA, or source range. Next unit: bounded static address/order audit of
 `0x8009DB2C` and `0x8002A0B8..0x8002A0D8`.
+
+## Session 2682 (2026-08-27) — separated renderer output from bzero sites
+
+Ran the prescribed bounded static audit against the companion symbol files
+and generated recompiled functions. `0x8009DB2C` is not the renderer entry;
+it is the final `sh` in `runVoiceLatticeFilter` at `0x8009D980`, writing one
+filtered s16 to caller-provided `a2 + 2*i`. `renderVoiceAudioBlock` invokes
+that helper in four fixed stages with output spans beginning at `a2+0`,
+`a2+0x1A`, `a2+0x36`, and `a2+0x50`, then restores the voice record state.
+
+`0x8002A0B8` and `0x8002A0D8` are loop-body stores in the named generic
+`bzero` routine at `0x8002A080`, clearing caller-provided 32-byte blocks.
+Visible callers clear a MusyX voice slot, a ring-derived decode buffer, and a
+stack-derived temporary; none is an AI publication operation. The static
+address/offset/order table is in
+`scratch/agent/s2682_renderer_ai_static_audit/RESULT.md`.
+
+This selects `H-unresolved-address` for the proposed renderer-to-AI join and
+rules out interpreting the watched pair as a named publication writer. It
+does not identify the real renderer-buffer-to-PCM edge and authorizes no
+runtime watch, writeback, remap, or mitigation. No build, run, or runtime
+behavior changed. Next unit: trace the caller-provided renderer buffer bases
+through `updateVoiceChannelParams`, `consumeVoiceSamples`, and streaming
+service code.

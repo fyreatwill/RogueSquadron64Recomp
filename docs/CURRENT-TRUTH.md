@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2680 (2026-08-27).
+Current maintenance marker: Session 2682 (2026-08-27).
 
 ## Live result
 
@@ -63,6 +63,14 @@ The latest qualified M5 evidence is:
   source, selecting `H-AI-source-gap` for these candidate ranges (single-source
   retail evidence) and rejecting `H-MORT-PCM` there. The complete publication
   edge remains open; no writeback or remap is authorized.
+- s2682's static audit separated the apparent address pair. `0x8009DB2C` is
+  the final halfword store in `runVoiceLatticeFilter` (`0x8009D980`), writing
+  caller-provided `a2 + 2*i` across four fixed renderer stages. `0x8002A0B8`
+  and `0x8002A0D8` are loop-body stores in generic `bzero` (`0x8002A080`),
+  used for voice-slot, ring-buffer, and stack-temporary clearing. Neither
+  identifies an AI publication writer or destination; this selects
+  `H-unresolved-address` for the proposed join and forbids a runtime watch or
+  writeback based on these sites.
 
 Retail is the independent witness for game-side memory claims. A narrow null
 is unevaluable unless the whole-RDRAM positive control fires first and the
@@ -75,10 +83,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
-   the missing copy/publication edge. Audit the exact address arithmetic and
-   caller contracts of `0x8009DB2C` and `0x8002A0B8` before another runtime
-   probe; do not repeat the filter, persistent-object, task-field, ring,
-   shared-stack, or Step 1 arm census.
+   the missing copy/publication edge. The s2682 audit shows the watched sites
+   are a renderer filter output and generic `bzero`, not the missing copy.
+   Trace the caller-provided `a1/a2` bases from `updateVoiceChannelParams`
+   through `consumeVoiceSamples`/stream service to a named source or copy,
+   with exact address arithmetic and ordering; do not repeat the filter,
+   persistent-object, task-field, ring, shared-stack, or Step 1 arm census.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
