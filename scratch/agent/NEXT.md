@@ -1,4 +1,4 @@
-# NEXT work unit (s2843) — generated-symbol-renaming-sweep
+# NEXT work unit (s2844) — generated-symbol-renaming-sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -29,8 +29,8 @@ selects H-callable; zero replacements selects H-already-synchronized.
 ```sh
 python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x80049000 --end-address 0x8004A000 --limit 8 --require-rename
-rg -n 'data_gap_800496F4|fake_func_800496F4' \
+  --start-address 0x8004A000 --end-address 0x8004B000 --limit 8 --require-rename
+rg -n 'data_gap_8004|fake_func_8004' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 ```
 

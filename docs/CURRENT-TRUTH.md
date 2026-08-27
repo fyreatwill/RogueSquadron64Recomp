@@ -759,3 +759,12 @@ ledger. The current late-chain checkpoints are:
   `tools/probe.sh` with `PROBE_KEYS_FROM_PHASE=1`.
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.
+
+Session 2843 examined the generated-symbol interval
+`0x80049000..0x8004A000`. The only stale companion candidate,
+`fake_func_800496F4`, was classified ambiguous-or-fake and preserved; nearby
+callable entries were already synchronized. The selector changed zero
+generated references and returned its fail-closed no-rename result. This rules
+out a defensible data-gap rename for that candidate without establishing its
+semantic identity. The next sweep interval is
+`0x8004A000..0x8004B000`.

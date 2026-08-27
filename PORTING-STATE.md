@@ -120295,3 +120295,13 @@ references and preserved it. The neighboring callable entries were already
 synchronized. This rules out a defensible data-gap rename for this candidate,
 but does not establish its semantic identity. No build or game run was needed.
 The next sweep interval is `0x8004A000..0x8004B000`.
+
+## Session 2843 (2026-08-27) — preserved ambiguous generated symbol candidate
+
+The bounded source-backed symbol sweep examined `0x80049000..0x8004A000`.
+The selector classified `fake_func_800496F4` as ambiguous-or-fake and
+preserved it; neighboring callable records were already synchronized. It
+changed zero generated references in zero files and returned the expected
+fail-closed no-rename result. This rules out a defensible data-gap rename for
+that candidate, but does not establish its semantic identity. No build or game
+run was needed. The next sweep interval is `0x8004A000..0x8004B000`.
