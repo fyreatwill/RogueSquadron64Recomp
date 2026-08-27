@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2851 (2026-08-27).
+Current maintenance marker: Session 2852 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -283,6 +283,13 @@ Session 2842 continued the regeneration-safe symbol sweep at
 zero references and preserved it. Neighboring callable symbols were already
 synchronized. This is symbol-clarity evidence only; the next interval is
 `0x8004A000..0x8004B000`.
+
+Session 2852 closed `0x80057000..0x80058000`. The selector classified six
+callable entries as already synchronized and selected no generated references;
+the final independent placeholder scan was empty. Its required-rename
+invocation failed closed as expected. No source-backed data-gap rename was
+defensible in this interval, and no build or game run was needed. The next
+sweep interval is `0x80058000..0x80059000`.
 
 Session 2846 closed the `0x8004C000..0x8004D000` interval and the adjacent
 `0x8004D000..0x80052000` callable range with no selected generated

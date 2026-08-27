@@ -120403,3 +120403,12 @@ placeholder. The `--require-rename` invocation failed closed as expected.
 This rules out a source-backed data-gap rename in the interval without
 assigning a meaning to the ambiguous placeholder. No build or game run was
 needed. The next sweep interval is `0x80057000..0x80058000`.
+## Session 2852 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x80057000..0x80058000`.
+The selector classified six callable entries as already synchronized and
+selected no generated references; the final independent placeholder scan was
+empty. The `--require-rename` invocation failed closed as expected. This rules
+out a defensible source-backed data-gap rename in the interval without
+assigning meanings to callable-ambiguous records. No build or game run was
+needed. The next sweep interval is `0x80058000..0x80059000`.
