@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2748 (2026-08-27).
+Current maintenance marker: Session 2750 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -45,8 +45,11 @@ The latest durable M5 chain is:
 - The fresh `serviceVoicePoolFrame` audit found cadence, slot streaming state,
   startup, and reaping only. The `serviceStreamingVoice` audit found a
   legitimate ring write through `decodeAndFillVoiceBlock`, but no direct AI
-  publication; its only unresolved edge is the callback loaded from each
-  descriptor's `+0x194` field.
+  publication. Its callback-edge audit corrected the field identification:
+  `serviceStreamingVoice` loads its indirect target from descriptor `+0x190`,
+  while `+0x194` is the legitimate speech-sample source. The target is the
+  fixed `dmaVoiceSampleAndSignal` routine, which performs sample DMA into the
+  voice ring and sends a completion message; it has no AI publication edge.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -59,14 +62,12 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **M5 CPU-side MORT publication — active.** Resolve the indirect callback
-   loaded from voice descriptor `+0x194` at `0x8009C040`. Enumerate every
-   writer, initializer, possible target, callback argument, payload
-   destination, AI/PI/queue call, and ordering edge. Do not repeat the
-   completed `serviceStreamingVoice` body or the already audited service
-   worker, queue, renderer, mixer, allocation, PI, host-AI, or
-   `serviceVoicePoolFrame` surfaces. Do not add a runtime watch until a
-   legitimate destination and order are named.
+1. **M5 CPU-side MORT publication — active, callback edge closed.** The
+   corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
+   legitimate destination is the voice ring and its ordering edge is the
+   completion queue. `+0x194` is the sample source. Do not repeat this edge or
+   add a runtime watch until a new legitimate AI destination and order are
+   named. The remaining publication boundary is unresolved.
 
 2. **External retail-entry boundary — parked revisit.** Only return with a
    genuinely new, phase-qualified oracle discriminator. The oracle's whole-
@@ -172,6 +173,9 @@ ledger. The current late-chain checkpoints are:
   found.
 - s2746–s2747: verified fragment batches were renamed through the
   regeneration-safe map, changing references in the external generated tree.
+- s2749–s2750: the streaming callback audit corrected the field offset,
+  identified `dmaVoiceSampleAndSignal` as the fixed target, and ruled out AI
+  publication in that callback.
 
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

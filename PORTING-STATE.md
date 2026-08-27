@@ -119005,3 +119005,20 @@ This selects H-streaming-opaque-edge and rules out direct streaming-service
 publication as the immediate M5 publication explanation. The next unit is a
 writer-to-target audit of `+0x194`; no runtime instrumentation or mitigation
 was added.
+
+## Session 2750 (2026-08-27) — corrected the M5 streaming callback edge
+
+The bounded writer-to-target audit corrected the previous field assignment:
+`serviceStreamingVoice` loads its indirect call target at `0x8009C040` from
+descriptor `+0x190`, not `+0x194`. The initializer at `0x8009BEA0` receives the
+fixed `dmaVoiceSampleAndSignal` address (`0x8009BE08`) through the fourth stack
+argument and stores it at `+0x190`; the initializer at `0x8009BE8C` stores the
+legitimate speech-sample source at `+0x194`. The callback performs
+`synchronousDmaTransfer` into the voice ring and signals the completion queue.
+It has no AI, PI-service, renderer, or AI-source publication call/write.
+
+This selects H-callback-services for the corrected edge, refutes
+H-callback-publishes there, and rules out the prior `+0x194` callback premise as
+an offset error. The complete table is in
+`scratch/agent/s2750_m5_streaming_callback/audit.md`. No build, runtime watch,
+or mitigation was added.
