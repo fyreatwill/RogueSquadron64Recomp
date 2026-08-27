@@ -116967,3 +116967,14 @@ defensible semantic identity. The overlapping mission/menu bodies at
 `0x800C64B0`/`0x800C64C8` rule out collapsing the overlay-specific names.
 No build or soak was required; no runtime behavior changed. The next bounded
 lead is `0x800C68A0`.
+
+## Session 2626 (2026-08-27) — audited the 800C68A0 symbol region
+
+The bounded generated-symbol sweep audited `0x800C68A0` against the mission
+companion symbols, generated body, overlay table, repository TOML, and
+callers. `hangarVehicleDisplayNpcHandler` is already an exact mapping: the
+body starts at `0x800C68A0`, spans `0x75C` bytes to `0x800C6FFC`, and the
+overlay table has the matching ROM size. The menu-overlay `0x800C6900`
+identity is a separate overlay collision inside that address range and must
+not be merged. No rename or runtime change was made. This rules out a new
+rename at `0x800C68A0`; the next bounded lead is `0x800C6FFC`.

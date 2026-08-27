@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2625 (2026-08-27).
+Current maintenance marker: Session 2626 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -166,6 +166,17 @@ address, so the two context-specific identities must not be collapsed.
 entries. `0x800C64A4` remains a 12-byte collision fragment with no defensible
 semantic identity. No runtime behavior changed.
 
+## s2626 symbol-sweep result
+
+The bounded `0x800C68A0` census found no new rename because the region is
+already exact in every required source. The mission companion names
+`hangarVehicleDisplayNpcHandler`; its generated body starts at `0x800C68A0`
+and spans `0x75C` bytes to the exact next boundary `0x800C6FFC`, while the
+generated overlay table carries the same name and ROM size. Generated callers
+use the resolved symbol. The menu-overlay `0x800C6900` entry is a distinct
+overlay identity inside the mission body and must not be collapsed. The next
+bounded lead is the adjacent `0x800C6FFC` boundary.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -187,7 +198,7 @@ semantic identity. No runtime behavior changed.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C68A0` next using companion symbols, exact spans, and callers;
+   Audit `0x800C6FFC` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
