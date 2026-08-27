@@ -115568,3 +115568,19 @@ Artifact: `scratch/agent/s2552_symbol_census/audit.md`.
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
+
+## Session 2553 (2026-08-26) — censused generated-symbol tail-call boundary
+
+Ran the bounded generated-symbol census at `0x800D2C98`. The complete span is
+eight bytes (`0x800D2C98–0x800D2C9F`) containing `j 0x800D2CA0` / `nop`, with
+no prologue, return sequence, or independent callable body, immediately before
+`npcInitWithMotionParams` at `0x800D2CA0`. The companion symbol input retains
+`fake_func_800D2C98` and explicitly deletes the duplicate `func_800D2CA0`
+label in favor of `npcInitWithMotionParams`; the active TOML and generated
+overlay table agree on the 8-byte span and the exact caller search found no
+independent use. Selected `H-data-boundary` / `H-no-match` and left the
+placeholder unchanged. The next unresolved placeholder is `0x800D4EC4`.
+Artifact: `scratch/agent/s2553_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.

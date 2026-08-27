@@ -384,6 +384,16 @@ Current maintenance marker: Session 2551 (2026-08-26).
   speculative, so the placeholder remains unchanged. Artifact:
   `scratch/agent/s2552_symbol_census/audit.md`.
 
+- **s2553 — the next bounded generated-symbol region is an 8-byte mission
+  tail-call boundary with no rename candidate.** The complete
+  `0x800D2C98–0x800D2C9F` span is `j 0x800D2CA0`/`nop`, immediately before
+  the independently named `npcInitWithMotionParams` at `0x800D2CA0`. The
+  companion explicitly retains `fake_func_800D2C98` and deletes the duplicate
+  `func_800D2CA0` label in favor of `npcInitWithMotionParams`; the active TOML,
+  generated overlay table, and exact caller search agree on the 8-byte span.
+  This selects `H-data-boundary` / `H-no-match`; no generated code changed.
+  Artifact: `scratch/agent/s2553_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
