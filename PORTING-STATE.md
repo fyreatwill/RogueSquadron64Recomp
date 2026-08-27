@@ -120193,3 +120193,25 @@ rules out a stable image-first launch-order advantage. It does not distinguish
 another scheduling-sensitive route effect from nondeterminism, and it provides
 no authorization for an audio behavior change. The next experiment adds a
 barrier after image initialization before launching silent.
+
+## Session 2837 (2026-08-27) — M5 initialization barrier did not move the route boundary
+
+Ran the independent retail ground-truth control before the port run. The
+whole-RDRAM watch reached 10,000 callbacks, retail reached title
+`1024 @ 0x00790400`, and retail reached hangar `512 @ 0x006AB400`. The Debug
+target rebuilt successfully.
+
+The same-build pair launched the image arm, waited for 40 positive
+`[audtask-dispatch]` rows, and then launched the silent arm with the same
+16-event schedule and M5 marker set. Both arms produced positive dispatch
+controls (image `real_ucode=1`, silent `real_ucode=0`), four phase rows, and no
+crash or abort. Both stopped at pre-title VI 640 / origin `0x0066A500`; title,
+hangar, service, slot, MORT, and PCM rows were absent and are unevaluable
+before the target phases.
+
+The barrier did not select an initialization-race explanation. In combination
+with s2836's image-first 640/640 result, it provides no stable image-route
+advantage over launch-order variation and leaves the route split unresolved.
+It authorizes no audio behavior change and rules out no downstream M5 contract
+hypothesis. The first wrapper attempt failed during cleanup before its
+summary; it was fixed and rerun, and only the fixed run above is evidence.

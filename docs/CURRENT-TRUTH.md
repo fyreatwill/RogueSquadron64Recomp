@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2836 (2026-08-27).
+Current maintenance marker: Session 2837 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -286,12 +286,20 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    stable image-first launch-order advantage and leaves a nondeterministic or
    otherwise scheduling-sensitive route split unresolved.
 
-2. **M5 audio de-stubbing — Step 1 route repair / qualification.** Test one
-   new same-build initialization-barrier angle: launch image, wait for its
-   first dispatch batch, then launch silent, retaining the whole-RDRAM retail
-   control. Compare both arms at the same phase boundaries. The image-320
-   versus silent-640 split and the s2836 640/640 result must be resolved before
-   any target-phase rows are interpreted.
+   Session 2837 inserted a barrier after the image arm reached 40 positive
+   dispatch rows before launching silent. The retail whole-RDRAM control again
+   passed and independently reached title and hangar. Both port arms had
+   positive dispatch controls (`real_ucode=1`/`0`), no crash or abort, and the
+   same pre-title VI 640 / origin `0x0066A500` boundary; neither reached a
+   target phase. The barrier did not select an initialization-race
+   explanation; target-phase audio rows remain unevaluable and no behavior
+   change is authorized.
+
+2. **M5 audio de-stubbing — Step 1 route repair / qualification.** The
+   initialization-barrier angle is exhausted: s2837 waited for 40 image
+   dispatches before launching silent, yet both arms still stopped at VI 640 /
+   origin `0x0066A500`. Use a new source-level dispatch-selection angle before
+   interpreting any target-phase rows.
    Once the
    title/hangar phases are reached, require the task-field, DMEM/DMA, image
    exit, SP completion, service/slot/voice, MORT, and PCM source/consumer

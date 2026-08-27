@@ -1,40 +1,39 @@
-# NEXT work unit (s2837) — barrier image initialization before silent launch
+# NEXT work unit (s2838) — retail gate-writer route discriminator
 
-HYPOTHESIS-ID: m5-audio-route-init-barrier
+HYPOTHESIS-ID: m5-audio-route-gate-writer
 
 ## Work unit
 
-Run one same-build image/silent pair with an initialization barrier: launch
-the image arm first, wait until its log has at least four positive
-`[audtask-dispatch]` rows, then launch the silent arm. Keep the same 16-event
-schedule and all existing phase/audio markers, plus the whole-RDRAM retail
-positive control. Do not change audio behavior or add a guard. This tests
-whether the split depends on whether the second process starts during image
-initialization.
+Run one new same-build image/silent pair while the independent retail oracle
+watches the physical gate span around `0x800A0F50` and reports writer PCs in
+the title/hangar phases. Keep the whole-RDRAM oracle positive control and the
+existing phase/audio marker set. Do not change a gate store or add a guard.
 
 ## Competing hypotheses and discriminator
 
-- H-init-race: delaying silent until image initialization has progressed
-  changes the pair outcome, selecting an initialization race.
-- H-image-route-defect: image remains at VI 320 while silent reaches VI 640
-  with the barrier, selecting an image-route defect.
-- H-schedule-noise: the result is another 640/640 or an unstable split without
-  a repeatable barrier effect, rejecting this scheduling explanation.
+- H-gate-route: the image/silent route split is associated with a divergent
+  guest MusyX gate writer/value, and the oracle identifies a legitimate writer
+  transition that can be compared with the port gate trace.
+- H-gate-unreached: retail writes the gate only in a phase the port pair never
+  reaches, so the gate cannot explain the pre-title split.
+- H-route-independent: retail gate writers/value match the existing port gate
+  contract or remain active without route divergence; the split is upstream or
+  scheduling-sensitive.
 
-The discriminator is one run containing both arms and the retail control.
-Image reaching VI 640/title/hangar after the barrier while the unbarriered
-s2835 image was at VI 320 selects H-init-race; image remaining at VI 320 while
-silent reaches VI 640 selects H-image-route-defect; another 640/640 or an
-unstable split selects H-schedule-noise. Only after a target phase is reached
-may M5 contract rows be interpreted.
+The discriminator is the same-run table of oracle gate writer PC/value/phase
+rows plus port gate value/phase rows, with dispatch controls and route phases.
+A named retail writer/value matching the port divergence selects H-gate-route;
+zero target-phase retail rows or no port/retail correspondence leaves the gate
+unevaluable; matching values with different port routes rejects H-gate-route.
 
 ## Exact commands
 
 ```sh
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_s2837_m5_init_barrier.sh
-grep -a -E 'oracle_gate|title=|hangar=|\[phase\] vi_width=|\[autopilot\]|\[audtask-dispatch\]|\[CRASH\]|\[ABORT\]' scratch/agent/s2837_m5_init_barrier/driver.log
+zsh scratch/agent/run_s2838_m5_gate_writer.sh
+grep -a -E 'oracle_gate|gate-writer|gate-value|title=|hangar=|\[phase\] vi_width=|\[audtask-dispatch\]|\[m5-gate\]|\[CRASH\]|\[ABORT\]' scratch/agent/s2838_m5_gate_writer/driver.log
 ```
 
-The new recipe must SIGKILL its process group and must treat pre-target audio
-nulls as unevaluable.
+The recipe must arm the whole-RDRAM control before the narrow oracle watch,
+phase-gate narrow rows, launch both port arms from `build/`, and SIGKILL its
+process group. Pre-target port or oracle nulls are unevaluable.
