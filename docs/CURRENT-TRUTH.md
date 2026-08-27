@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2587 (2026-08-26).
+Current maintenance marker: Session 2588 (2026-08-26).
+
+- **s2588 — maintenance compaction and a bounded symbol-rename batch.** The
+  redundant pre-s2580 evidence archive was collapsed into a ledger pointer,
+  reducing this file from 60,145 to 35,509 bytes and from 929 to 558 lines.
+  Four companion-defined fragment preambles were added to the regeneration-
+  safe rename generator: `npcPredictedRangeCheckPreamble`,
+  `initDemoPlayStatePreamble`, `updateHudHealthIndicatorPreamble`, and
+  `initHangarDisplayItemTimersPreamble`. The generator emitted all four
+  mappings; no runtime experiment or behavior change was run.
 
 - **s2587 — disabling the writer-entry logger did not clear the 640 boundary.**
   The same-build image-arm run reached neither title nor hangar and produced
@@ -356,395 +365,24 @@ Current maintenance marker: Session 2587 (2026-08-26).
 
 ## Latest evidence
 
-- **s2514 — stage-2/DMA attribution is an observer-contract limitation.**
-  Static audit shows `rs64_audio_image_stage` runs before the shared `L_13B0`
-  `DO_DMA_WRITE`; the generic DMA observer later reconstructs identity from
-  the current route and destination without retaining the stage marker. In
-  s2513 ordinal 606, the nonzero pre-write stage row at `0x168B50` had no
-  matching DMA event; the only joined event was stage 3 at `0x178D80` with
-  zero payload. This does not distinguish missing stage-2 observation from a
-  later overwrite. Image-stage and PCM controls were positive; no writer or
-  mitigation claim is authorized. Artifact:
-  `scratch/agent/s2514_m5_dma_attribution/audit.md`.
-- **s2513 — the qualified image capture selects the RSP/image payload writer
-  at the observable consumer boundary.** Image ordinal 606 produced stage-2
-  output at `0x168B50` with 621 nonzero bytes and FNV `2B9E9631`; an
-  independent PCM source/consumer pair used the same address and fingerprint.
-  Image, DMA, AI-table, task-join, and PCM controls were positive, with no
-  guest CPU writer rows. Exact DMA-event attribution remains open because of
-  the observer limitation above. Artifact:
-  `scratch/agent/s2513_m5_payload_writer/audit.md`.
-- **s2511 — staggered startup separated paired-route failure from the later
-  image-arm crash.** Both staggered image arms passed 1024 and reached hangar;
-  the paired image arm later crashed in `updateHangarBayScene+76424`, the
-  baseline in `do_rom_read+572`, and the silent peer reached its target and
-  was killed without a crash marker. This supports startup-order as the
-  explanation for the earlier pre-target symptom and refutes concurrent
-  resource pressure as sufficient. The later crash writer and exact payload
-  writer remain open. Artifact:
-  `scratch/agent/s2511_m5_staggered_image_concurrency/audit.md`.
-- **s2516 — no Step 3 edge was proven in the title-phase A/B.** The retail
-  whole-RDRAM positive control reached 10,000 callbacks. Stub and image arms
-  both reached `1024 @ 0x790400`; the image had 1,597-byte DMEM changes,
-  `break_pc=0x1328`, and generated DMA, but all observed stage/PCM payloads
-  were zero and no output consumer join or legitimate writer was selected.
-  This selects no-edge at this route scope; route-only variation remains
-  possible against s2513. No behavior change is authorized. Artifact:
-  `scratch/agent/s2516_m5_contract_edge/audit.md`.
-- **s2517 — a new independent retail task/data boundary still did not name a
-  Step 3 edge.** The oracle whole-RDRAM control recorded 359,402 writes and
-  reached title and hangar. It retained 1,227 phase-gated type-2 task rows:
-  title used `data_ptr=0x80171CE0` / `+0x100=0x171DE0`, hangar used
-  `data_ptr=0x80171E70` / `+0x100=0x171F70`, and every row had zero
-  output/yield fields. The watched task-data, `+0x100`, and image spans had
-  positive writer tables and nonzero snapshots, but no writer was shown to be
-  the missing image payload or output consumer. Together with s2516 this
-  selects `H-no-edge` at the current route scope; no behavior change is
-  authorized. Artifact:
-  `scratch/agent/s2517_m5_contract_boundary/audit.md`.
-- **s2518 — the first bounded generated-symbol region had no defensible
-  mappings.** The complete main-overlay interval `0x8000737C–0x80007908`
-  contained four placeholders; the companion symbol file also retains all
-  four `fake_func_*` names and no source search produced a human mapping.
-  Their bodies are isolated one- or two-instruction fragments. No generated
-  code was changed. Artifact:
-  `scratch/agent/s2518_symbol_census/audit.md`.
-- **s2519 — the second bounded generated-symbol region also had no defensible
-  mappings.** The complete main-overlay interval `0x80003424–0x80005568`
-  contained `fake_func_80003424`, `fake_func_8000537C`, and
-  `fake_func_80005568`. The companion symbol file retains all three fake
-  names; source search found no human definition at those exact addresses.
-  Nearby DMA functions have distinct named entries, so no alias was inferred.
-  This is a single-source/static result and no generated code changed.
-  Artifact: `scratch/agent/s2519_symbol_census/audit.md`.
-- **s2520 — the third bounded generated-symbol region had no defensible
-  mapping.** The complete main-overlay interval `0x80005570–0x8000595C`
-  contains one placeholder, `fake_func_8000595C`; its generated body is a
-  single `addu v0, zero, zero` fragment between the named DMA cluster and
-  `initMemoryPack`. The companion symbol file retains the fake name and a
-  source-wide search found no human symbol or m2c definition. No generated
-  code changed. Artifact: `scratch/agent/s2520_symbol_census/audit.md`.
+The detailed pre-maintenance evidence remains in `PORTING-STATE.md`; the
+current, decision-relevant results are summarized in the session bullets above.
+The compact archive below preserves only the conclusions needed to interpret
+the active backlog:
 
-- **s2522 — the fifth bounded generated-symbol region had no defensible
-  mapping.** The complete interval `0x8006D8FC–0x8006D8FC` contains one
-  4-byte placeholder whose body is only `sll v0,v1,2`. The companion symbol
-  file retains `fake_func_8006D8FC`, and an exact-address repository search
-  found no named definition, caller, or m2c source. This is a static,
-  single-source result; no generated code changed. Artifact:
-  `scratch/agent/s2522_symbol_census/audit.md`.
-- **s2523 — the sixth bounded generated-symbol region had no defensible
-  mapping.** The complete interval `0x8006F4AC–0x8006F4AC` contains one
-  four-byte placeholder whose generated body is only `addiu sp,sp,0x30`,
-  immediately between `getSecondaryWeaponCount` and
-  `spawnDestructionDebris`. The companion symbol file retains
-  `fake_func_8006F4AC`; an exact-address search found no named definition,
-  caller, or m2c source. This is a static, single-source result; no generated
-  code changed. Artifact: `scratch/agent/s2523_symbol_census/audit.md`.
-- **s2524 — the seventh bounded generated-symbol region had no defensible
-  mapping.** The complete interval `0x80072CE8–0x80072CE8` contains one
-  8-byte placeholder whose body is only `addiu v1,v1,-0x4160; addu v0,v1,v0`,
-  between `walkDatTreeAndScaleLeafByFloat` and `initWaterSprayParticles`.
-  The companion symbol file retains `fake_func_80072CE8`, and an exact-address
-  repository search found no named definition, caller, or m2c source. This is
-  a static, single-source result; no generated code changed. Artifact:
-  `scratch/agent/s2524_symbol_census/audit.md`.
-- **s2525 — the eighth bounded generated-symbol region had no defensible
-  mapping.** The complete interval `0x80079278–0x80079278` contains one
-  8-byte placeholder consisting only of a `nop` and `lw a0,0x1C(fp)` before
-  the named `heavyMechSubEffectNpcHandler` at `0x80079280`. The companion
-  symbol file retains `fake_func_80079278`; exact-address and semantic
-  searches found no human definition, m2c implementation, caller attribution,
-  or rename candidate. This is a static, single-source result; no generated
-  code changed. Artifact: `scratch/agent/s2525_symbol_census/audit.md`.
-- **s2526 — the ninth bounded generated-symbol region had no defensible
-  mapping.** The complete interval `0x80079CD8–0x80079CD8` contains one
-  8-byte placeholder with `lw v1,0x1C(fp); addu v0,v1,v0`, immediately before
-  the independently named `setNewAndPreviousButtonsPressed` at `0x80079CE0`.
-  The companion symbol file retains the fake name and does not map the
-  fragment to the neighboring function; exact-address/source searches found
-  no human or m2c candidate. This is a static, single-source result; no
-  generated code changed. Artifact:
-  `scratch/agent/s2526_symbol_census/audit.md`.
-- **s2527 — the tenth bounded generated-symbol region had no defensible
-  mapping.** The complete main-overlay interval `0x8007A0E8–0x8007A0E8`
-  contains one 8-byte placeholder with `lw v1,0x7C(fp); sh v0,0(v1)`, between
-  the delay-slot tail of `getControllerStickYPercentage` and
-  `sampleRgbBoxFilter2x2AtSubpixel`. The companion symbol file retains the
-  fake name; exact-address search found no human source, m2c definition, or
-  caller attribution. This is a static, single-source result and does not
-  prove the fragment is dead or permanently unnameable. Artifact:
-  `scratch/agent/s2527_symbol_census/audit.md`.
-- **s2528 — the eleventh bounded generated-symbol region had no defensible
-  mapping.** The complete interval `0x8007A86C–0x8007A86C` contains one
-  4-byte placeholder whose body is only `lw a2,0x2B94(a2)`, immediately before
-  the independently named `allocateNpcMeshVertexBuffer`. The companion symbol
-  file retains `fake_func_8007A86C`; exact-address, source, m2c, and caller
-  searches found no human candidate. This is a static, single-source result;
-  no generated code changed. Artifact:
-  `scratch/agent/s2528_symbol_census/audit.md`.
-- **s2529 — the twelfth bounded generated-symbol region had no defensible
-  mapping.** The complete 8-byte interval `0x8007C298–0x8007C29C` contains
-  `fake_func_8007C298`, whose body is only `sll a1,a2,1; addu a1,a1,a0`.
-  The companion symbol table and generated overlay table agree on the fake
-  name and span; exact-address, source, m2c, caller, and semantic searches
-  found no rename candidate. This is a static, single-source result and does
-  not prove whether the fragment is callable or a boundary artifact. Artifact:
-  `scratch/agent/s2529_symbol_census/audit.md`.
+- s2513–s2517 established the image/PCM and retail task boundaries but did
+  not authorize a task/output remap or mitigation.
+- s2518–s2577 advanced the generated-symbol sweep; unresolved boundary
+  fragments remain placeholders, while defensible preamble fragments are
+  renamed through `tools/rename/build_redefs.py`.
+- s2578 established one live M4 producer/consumer join; broader coverage is
+  optional and remains lower priority than M5.
+- s2579–s2587 left M5 contract-writer qualification blocked by the current
+  pre-title scene-graph boundary; no audio gate, store, task field, output
+  pointer, or mitigation was promoted.
 
-- **s2530 — the thirteenth bounded generated-symbol region had no
-  defensible mapping.** The complete 8-byte interval
-  `0x80082268–0x8008226F` contains `fake_func_80082268`, whose body is only
-  `lui at,0x8005` followed by `lwc1 f2,-0x2E48(at)`, immediately before the
-  independently named `applyCheatCodeFromInput` at `0x80082270`. The
-  generated overlay table and companion symbol file agree on the fake name
-  and span; exact-address, source, m2c, caller, and semantic searches found
-  no rename candidate. This is a static, single-source result and does not
-  prove whether the fragment is callable or a boundary artifact. Artifact:
-  `scratch/agent/s2530_symbol_census/audit.md`.
-
-- **s2532 — the stale next pointer was revalidated.** The complete 12-byte
-  `0x80093E74` epilogue fragment remains `fake_func_80093E74`; companion
-  symbols and exact-address/source searches provide no defensible rename.
-  An older ledger census had already recorded the same result, so this run
-  selects no-match and advances the sweep to `0x80094348`. Artifact:
-  `scratch/agent/s2532_symbol_revalidation/audit.md`.
-
-- **s2533 — the next bounded generated-symbol region had no defensible
-  mapping.** The complete `0x80094348–0x8009434F` span is an 8-byte `j
-  0x80094370`/`nop` fragment immediately before the independently named
-  `startSongSequence` at `0x80094350`. The active generated implementation,
-  declaration, overlay table, project TOML, companion symbol file, and
-  exact-address/source/caller searches provide no human or m2c name. Calling
-  it a thunk or alternate entry would be speculative. This selects
-  `H-no-match`; no generated code changed. Artifact:
-  `scratch/agent/s2533_symbol_census/audit.md`.
-
-- **s2534 — the next bounded generated-symbol region had no defensible
-  mapping.** The complete `0x8009711C–0x8009711F` span is a 4-byte jump to
-  `0x8009713C`, inside `bindMacroIdsToSoundGroup` at `0x80097130`. The
-  companion symbol file retains `fake_func_8009711C`; exact-address, source,
-  m2c, and caller searches found no human candidate. Renaming it to either
-  neighboring function would alter a boundary representation speculatively.
-  This selects `H-no-match`; no generated code changed. Artifact:
-  `scratch/agent/s2534_symbol_census/audit.md`.
-
-- **s2535 — the next bounded generated-symbol region had no defensible
-  mapping.** The complete `0x80097D58–0x80097D5F` span is an 8-byte epilogue
-  fragment (`lw $fp,0x88($sp)` / `addiu $sp,$sp,0x90`) immediately before the
-  independently named `clearStreamedVoiceFlags` at `0x80097D60`. The project
-  symbol input, generated declaration/implementation/overlay table, and
-  companion symbol file retain `fake_func_80097D58`; exact-address/source/m2c/
-  caller searches found no human candidate. This selects `H-no-match`; no
-  generated code changed. This is a static, single-source result. Artifact:
-  `scratch/agent/s2535_symbol_census/audit.md`.
-
-- **s2536 — the M4 indirect vertex-base path is a live static consumer
-  candidate.** Overlay 0x1c writes DMEM `B00/B02/B04` entries from pointers
-  derived from `0x670`; overlay 0x20's `L_13D8` loads those entries and feeds
-  them to `L_17F0`, whose `+0x18/+0x1C` loads consume the producer record
-  fields. This closes the prior literal-offset audit's missing alias path at
-  static provenance scope, but does not prove a particular table index was
-  live in the qualified scene. No runtime or mitigation changed. Artifact:
-  [`M4-INDIRECT-ALIAS-AUDIT.md`](M4-INDIRECT-ALIAS-AUDIT.md).
-
-- **s2538 — the next generated-symbol region is a conversion boundary, not a
-  rename candidate.** `0x80099FDC–0x80099FDF` is the complete four-byte fake
-  span in both symbol inputs. The companion maps place `aspMainTextStart` at
-  `0x80099FE0`; the independent ROM check shows the preceding branch at
-  `0x09ABDC` and the RSP image beginning at `0x09ABE0`, whose first word
-  matches the generated `mfc0` at `0x80099FE0`. The generated fake body has
-  therefore absorbed the RSP image stream. No human function mapping exists
-  and no generated code changed. Artifact:
-  `scratch/agent/s2538_symbol_census/audit.md`.
-
-- **s2531 — two adjacent generated fragments were renamed through the
-  regeneration input and generated tables.** `0x80082268` is now
-  `cheatCodeConstantPreamble`, an 8-byte constant-load fragment immediately
-  before `applyCheatCodeFromInput`; `0x800825C8` is now
-  `rspbootTextPreamble`, the 8-byte fragment immediately before the known
-  `rspbootTextStart` data. The project symbol TOML, companion symbol source,
-  generated declarations, generated implementations, and overlay dispatch
-  entries agree. Neither rename asserts that the fragments are independently
-  callable game functions.
-
-- **s2539 — retail boundary ranges were active but did not join to M4.** The
-  oracle whole-RDRAM positive control reached 10,000 callbacks and the run
-  reached title 1024 and hangar 512. Retail writer histograms showed activity
-  in `0x166000:0x16A000`, `0x167000:0x169B00`, and `0x179800:0x179B00`, with
-  distinct phase-gated writer PCs. The oracle cannot observe RSP DMEM,
-  `ACCH:ACCM:ACCL`, or consumer reads, so this selects active-but-unjoined at
-  the observed RDRAM boundary and does not close the M4 index/provenance
-  question. No mitigation or port instrument was added. Artifact:
-  `scratch/agent/s2539_m4_retail_boundary/audit.md`.
-
-- **s2542 — the next generated-symbol region is a boundary fragment, not a
-  rename candidate.** `0x800AAADC–0x800AAADF` is the complete four-byte fake
-  span containing only `sh $a0,0x1A($v1)`, immediately before the independently
-  named `playerSnowSpeederInit` at `0x800AAAE0`. The active generated
-  declaration, implementation, overlay table, companion symbol input, and
-  exact-address/source/m2c/caller searches provide no defensible human name.
-  Renaming it to the neighboring function would absorb a real function
-  boundary, so it remains unchanged. This is a static, single-source result.
-  Artifact: `scratch/agent/s2542_symbol_census/audit.md`.
-
-- **s2543 — the next generated-symbol region received a bounded semantic
-  rename.** The complete `0x800AD378–0x800AD37F` span contains two stores,
-  `t1` to `v0+4` and `t2` to `v0+8`, immediately before the independently
-  named `computeTrackedObjectWorldAnchor`. No exact companion decomp name,
-  m2c definition, or caller attribution exists, so the generated boundary
-  was renamed to `storeTrackedObjectAuxiliaryFields` from its complete local
-  semantics. The rename is encoded in `tools/rename/build_redefs.py` and
-  synchronized into the active symbol input and generated outputs. Artifact:
-  `scratch/agent/s2543_symbol_rename/audit.md`.
-
-- **s2544 — the next generated-symbol region is an overlay/boundary fragment,
-  not a rename candidate.** `0x800AE3E4–0x800AE3EF` is a complete 12-byte
-  generated/project span containing only three floating-point instructions
-  (`lwc1`, `lwc1`, `mul.s`) with no callable prologue or return. The mission
-  companion input retains `fake_func_800AE3E4`, `initPlayerCraftTrailBuffers`
-  follows at `0x800AE3F0`, and the menu overlay independently registers
-  `tickEasedCameraKeyframeBlend` at the overlapping `0x800AE3EC`. Exact
-  source/m2c/caller searches found no human mapping. This selects
-  `H-data-boundary` / `H-no-match`; no generated code changed. Artifact:
-  `scratch/agent/s2544_symbol_census/audit.md`.
-
-- **s2545 — the next generated-symbol region is a trap-only data boundary, not
-  a rename candidate.** The complete menu-overlay span
-  `0x800AEC54–0x800AEC5F` is 12 bytes between
-  `hangarUpdateSecWeaponIfChanged` and `initCraftSelectScreen`. The active
-  generated body is an explicit trap-only gap filler, while the companion
-  symbol input retains `fake_func_800AEC54`; exact source, m2c, and caller
-  searches found no human mapping. Renaming it to either neighbor would
-  absorb an established function boundary, so it remains unchanged. Artifact:
-  `scratch/agent/s2545_symbol_census/audit.md`.
-
-- **s2546 — the next generated-symbol region has no defensible mapping.** The
-  complete menu-overlay span `0x800B2628–0x800B262F` is an eight-byte fragment
-  containing only `lwc1 f0,-0x5D04(at)` and `swc1 f0,0x168(v0)`, between
-  `playExitSoundAndToggleScreenMeshes` and `buildFormatMessageGlyphBuffer`.
-  The active generated body/declaration/overlay table and companion symbol
-  input retain `fake_func_800B2628`; exact-address, source, m2c, and caller
-  searches found no human candidate. It has no complete callable boundary, so
-  renaming it is speculative. This static, single-source result selects
-  `H-data-boundary` / `H-no-match`; it remains unchanged. Artifact:
-  `scratch/agent/s2546_symbol_census/audit.md`.
-
-- **s2547 — the next generated-symbol region received a regeneration-safe
-  local rename.** The complete menu-overlay span `0x800B47C4–0x800B47CF` is
-  the three-instruction setup immediately before the independently registered
-  `menuControllerInput` body at `0x800B47D0`. The companion controller
-  decomp's large `func_800B47C4` name therefore cannot be applied directly
-  without absorbing the established body boundary. The fragment was named
-  `menuControllerInputPreamble` in `tools/rename/build_redefs.py`; the redef
-  generator emitted the expected mapping. No generated C or runtime behavior
-  changed. Artifact: `scratch/agent/s2547_symbol_rename/audit.md`.
-
-- **s2548 — the next bounded generated-symbol region had no defensible
-  mapping.** The complete `0x800C5898–0x800C589F` span is an 8-byte fragment
-  containing only `lui at,0x801A` and `addu at,at,a0`, between
-  `tickSongAssetLoadWorker` and `menuOverlayInit`. The active generated and
-  overlay tables, companion symbol file, prototype-only m2c context, and
-  exact-address/source/caller searches provide no human candidate. It remains
-  unchanged as a data/boundary artifact candidate. Artifact:
-  `scratch/agent/s2548_symbol_census/audit.md`.
-
-- **s2549 — the next bounded generated-symbol region had no defensible
-  mapping.** The complete `0x800C6968–0x800C696F` span is an 8-byte fragment
-  containing `addu sp,fp,zero` and `lw ra,0x24(sp)`, with no return or complete
-  callable body, immediately before `loadJfifAsset`. The active generated and
-  overlay tables and companion symbol input retain `fake_func_800C6968`; exact
-  address, source, and caller searches found no human candidate. It remains
-  unchanged as a data/boundary artifact candidate. Artifact:
-  `scratch/agent/s2549_symbol_census/audit.md`.
-
-- **s2550 — the next bounded generated-symbol region is an overlay-shared
-  boundary fragment, not a rename candidate.** The complete menu-overlay span
-  `0x800CC038–0x800CC03F` contains only `swc1 $f0,0x40($fp)` and
-  `addiu $v0,$fp,0x20`. The menu symbol input and generated overlay table retain
-  `fake_func_800CC038`, followed by `loadMedalInfo` at `0x800CC040`; the same
-  VRAM window is occupied by the mission overlay's independently named
-  `initActorFromSpawnTemplate` beginning at `0x800CC03C`. Exact-address,
-  companion-source, m2c, and caller searches found no human mapping. Because
-  the fragment has no callable boundary and overlaps another overlay's real
-  function window, renaming it to either neighbor would be speculative. It
-  remains unchanged. Artifact:
-  `scratch/agent/s2550_symbol_census/audit.md`.
-
-- **s2551 — the next bounded generated-symbol region is a menu data boundary,
-  not a rename candidate.** The complete `0x800CC3D4–0x800CC9B7` span is the
-  `0x114C`-byte generated placeholder entry ending exactly before
-  `tickAtAtAudioAndWeaponState` at `0x800CC9B8`. Its active generated body is
-  only a trap-marked gap filler. The companion menu symbol file retains the
-  fake name but declares menu data immediately after it, including hangar
-  state/maps, bridge tables/colors, and menu colors; exact-address, source,
-  m2c, and caller searches found no human function mapping. This selects
-  `H-data-boundary` / `H-no-match`; no generated code changed. Artifact:
-  `scratch/agent/s2551_symbol_census/audit.md`.
-
-- **s2552 — the next bounded generated-symbol region is an incomplete mission
-  boundary with no defensible mapping.** The complete `0x800CEF1C–0x800CEF1F`
-  span is a lone `sw $s1,0x44($sp)` fragment immediately before the complete
-  `advanceAtStEffectPhaseSound` at `0x800CEF20`. The active generated
-  declaration/body/overlay table and companion symbol input retain
-  `fake_func_800CEF1C`; exact-address, source, m2c, and caller searches found
-  no human candidate. Borrowing the neighboring function name would be
-  speculative, so the placeholder remains unchanged. Artifact:
-  `scratch/agent/s2552_symbol_census/audit.md`.
-
-- **s2553 — the next bounded generated-symbol region is an 8-byte mission
-  tail-call boundary with no rename candidate.** The complete
-  `0x800D2C98–0x800D2C9F` span is `j 0x800D2CA0`/`nop`, immediately before
-  the independently named `npcInitWithMotionParams` at `0x800D2CA0`. The
-  companion explicitly retains `fake_func_800D2C98` and deletes the duplicate
-  `func_800D2CA0` label in favor of `npcInitWithMotionParams`; the active TOML,
-  generated overlay table, and exact caller search agree on the 8-byte span.
-  This selects `H-data-boundary` / `H-no-match`; no generated code changed.
-  Artifact: `scratch/agent/s2553_symbol_census/audit.md`.
-
-- **s2555 — the next bounded generated-symbol region is a 4-byte mission
-  boundary fragment with no rename candidate.** The complete
-  `0x800E406C–0x800E406F` span contains only `sw $a0,0x20($sp)`, between the
-  epilogue of `playDualTextureAttachmentCueMode1` and the prologue of the
-  independently named `handleRayShieldedNpcDestroy` at `0x800E4070`. The
-  companion symbol input, active TOML, generated declaration/body, and overlay
-  registration retain `fake_func_800E406C`; exact-address, source, m2c, and
-  caller searches found no human mapping or independent call site. Renaming it
-  to either neighbor would absorb an established function boundary. This
-  selects `H-data-boundary` / `H-no-match`; no generated code changed. Artifact:
-  `scratch/agent/s2555_symbol_census/audit.md`.
-
-- **s2556 — the M4 producer/consumer index remains static-only.** The complete
-  generated producer path writes `DMEM[0xB00/B02/B04 + r7]` at
-  `0x8002642C–0x80026434`, advances `r7` by six, and supplies 0x670-derived
-  pointers. The indirect consumer at `0x80026640–0x8002664C` uses a runtime
-  byte loaded through the `0xC70/0xB74` path, masks it with `0x7F`, and loads
-  those three table fields. The consumer is real, but generated source does
-  not bound its runtime index to a producer slot. This is a static,
-  single-source result; no writer or legitimacy claim follows. Artifact:
-  [`M4-INDEX-PROVENANCE-REVISIT.md`](M4-INDEX-PROVENANCE-REVISIT.md).
-
-- **s2557 — the next generated-symbol region is a one-instruction boundary
-  fragment with no defensible mapping.** The complete
-  `0x800E447C–0x800E447F` span is only `lw v1,0x14(v1)`, between the prior
-  function epilogue and `resetCraftInstanceMotionState` at `0x800E4480`.
-  The active generated declaration/body/overlay table and companion symbol
-  input retain `fake_func_800E447C`; the companion explicitly deletes the
-  following `func_800E4480` duplicate label, and exact-address/source/caller
-  searches found no human candidate. A ROM check was unavailable because the
-  expected local ROM file was absent. This selects `H-data-boundary` /
-  `H-no-match`; no generated code changed. Artifact:
-  `scratch/agent/s2557_symbol_census/audit.md`.
-
-- **s2558 — the next generated-symbol region is an orphan boundary fragment
-  with no defensible mapping.** The complete `0x800E71C8–0x800E71CF` span is
-  only `lhu v0,0x14(v1)` followed by `lw a0,0x58(fp)`, between the complete
-  `npcWaterCraftUpdate` epilogue and `transformCraftAnchorsApplySubFx3`
-  prologue. The active generated tables and companion mission symbols retain
-  `fake_func_800E71C8`; exact-address, source, m2c, and caller searches found
-  no human candidate. This reproduces the earlier boundary classification,
-  so renaming it to either neighbor would be speculative. No generated code
-  changed. Artifact: `scratch/agent/s2558_symbol_census/audit.md`.
-
+For exact commands, artifacts, and failed experiments, use the corresponding
+session entry in `PORTING-STATE.md`.
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -764,7 +402,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
    H3 is unavailable because the oracle cannot screenshot the LLE path.
 4. **Generated-symbol renaming — active bounded sweep.** M5 has no newly named
   contract writer and M3 is parked pending a complete idiom audit, so s2561
-  resumed the sweep. The `0x8009C2C8–0x8009C2CF` fragment is unchanged because
+  resumed the sweep. s2588 added four regeneration-safe preamble mappings for
+  the next companion-defined fragment boundaries. The `0x8009C2C8–0x8009C2CF` fragment is unchanged because
   its two floating-point instructions form no callable body and no
   companion/source/m2c mapping was found. Continue only with a complete
   bounded span and leave unresolved placeholders unchanged. s2558 revalidated

@@ -116192,3 +116192,18 @@ so that helper is not shown to cause the abort. The absence of target-phase
 rows is unevaluable writer evidence and rules out no writer hypothesis. No
 store, task field, output pointer, gate, or mitigation changed. Artifact:
 `scratch/agent/s2587_m5_writer_boundary.log`.
+
+## Session 2588 (2026-08-26) — compacted current truth and landed symbol rename batch
+
+Maintenance triggered because `docs/CURRENT-TRUTH.md` measured 60,145 bytes.
+Collapsed the redundant pre-s2580 evidence archive into a concise ledger
+pointer, shrinking the file from 929 to 568 lines and 60,145 to 36,187 bytes.
+As the required bounded engineering pivot, added four regeneration-safe
+fragment mappings to `tools/rename/build_redefs.py`: the companion-defined
+predecessors of `npcPredictedRangeCheck`, `initDemoPlayState`,
+`updateHudHealthIndicator`, and `initHangarDisplayItemTimers`. The generator
+emitted all four expected redef lines. No game build or runtime experiment ran
+in this maintenance iteration. This rules out no runtime hypothesis; it
+advances only the static symbol-renaming campaign. Next unit: continue that
+campaign with a complete address-span discriminator and the slug
+`generated-symbol-renaming-sweep`.

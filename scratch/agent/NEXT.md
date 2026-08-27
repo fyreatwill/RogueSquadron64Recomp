@@ -1,34 +1,37 @@
-# NEXT work unit (s2588) — execute the first documented M5 de-stub step
+# NEXT work unit (s2589) — continue the generated-symbol renaming sweep
 
-HYPOTHESIS-ID: m5-audio-destub-sequence
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Read `docs/M5-AUDIO-PLAN.md`, select its first still-pending incremental
-de-stub step, and implement only that step through the regeneration-safe build
-path. Keep the silent `ROGUESQ_AUDIO_UCODE=0` arm available as the rollback
-control. Do not change a gate, store, task field, output pointer, or add a
-mitigation to bypass the known scene-graph boundary.
+Select the next complete bounded placeholder span after the s2588 batch and
+rename only fragments with a defensible companion name or clear local
+semantics. Keep unresolved boundary/data fragments unchanged. This is a
+static rename unit; do not run the game or add runtime probes.
 
 ## Competing hypotheses and discriminator
 
-- `H-AudioDegeneracy`: the selected de-stub changes the audio-disabled
-  degenerate path and removes or moves the target failure.
-- `H-UnrelatedBoundary`: the selected de-stub leaves the same
-  `get_function`/scene-graph boundary and target phases remain absent.
-- `H-NewAudioFailure`: the de-stub reaches a new audio-specific trap or crash.
+- `H-CompanionMapping`: the next span has an exact companion-defined semantic
+  name and can be renamed regeneration-safely.
+- `H-BoundaryOnly`: the next span is an incomplete/boundary fragment with no
+  defensible name and must remain a placeholder.
+- `H-ToolMismatch`: the rename input and generated tables disagree, so the
+  mapping cannot be landed until the source-of-truth path is corrected.
 
-The discriminator is a same-build silent-vs-image comparison, phase-gated by
-VI transitions, with positive controls for audio dispatch, image entry/return,
-and the selected step's intended output. Title/hangar reachability or a new
-audio-specific failure splits the hypotheses; an unchanged 640 abort selects
-only the unrelated-boundary hypothesis. Batch every counter needed for this
-table in one build and one run.
+The discriminator is a complete static table for the selected span: exact
+address and instruction span in generated C, companion symbol/comment, source
+or m2c match, and generated-name coverage. A direct companion match selects
+`H-CompanionMapping`; a complete no-match audit selects `H-BoundaryOnly`; any
+input/generated disagreement selects `H-ToolMismatch`. Verify the generator
+emits every selected mapping and no unrelated mapping changes.
 
-## Required preparation
+## Exact preparation and checks
 
-Follow the exact regeneration order in `AGENTS.md` and the plan. Run the
-resulting image and silent arms from `build/`, kill each game with SIGKILL,
-and capture logs under `scratch/agent/` with non-dot final path components.
-Before building, document the selected step's competing hypotheses and
-discriminator here with its exact positive control.
+1. Inspect the next placeholder in `../N64Recomp/RecompiledFuncs/` and the
+   matching `../rogue_squadron64/symbol_files/` entry.
+2. Add only justified mappings to `tools/rename/build_redefs.py` with
+   `apply_patch`.
+3. Run `python3 tools/rename/build_redefs.py` and verify the expected lines in
+   `../rogue_squadron64/build/redefs.txt`.
+4. Do not regenerate or build unless the mapping requires generated output;
+   if it does, use make_elf.py → N64Recomp → fixup_game_funcs.py → CMake.
