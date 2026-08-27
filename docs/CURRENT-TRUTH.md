@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2714 (2026-08-27).
+Current maintenance marker: Session 2715 (2026-08-27).
 
 ## Live result
 
@@ -471,7 +471,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
    again selected zero renames: semantic candidates were already
    synchronized and fake/address-only entries were preserved, with no parser
    or duplicate-destination rejection. This rules out `H-exact-matches` for
-   that region; continue with the next adjacent bounded region.
+   that region. s2715 covered `0x800B0000..0x800B3000`: 23 candidates were
+   already synchronized and three were preserved as ambiguous-or-fake; zero
+   references changed in zero files, with no parser or duplicate-destination
+   rejection. Continue with the next adjacent bounded region.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
