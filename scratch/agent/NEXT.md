@@ -1,11 +1,11 @@
-# NEXT work unit (s2536) — generated-symbol renaming sweep, next bounded region
+# NEXT work unit (s2537) — generated-symbol renaming sweep, next bounded region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
 Resume the sweep at the next unresolved main-overlay placeholder,
-`0x80099C4C`. Enumerate its complete generated span, inspect companion
+`0x80099FDC`. Enumerate its complete generated span, inspect companion
 symbol/m2c/source and caller evidence, and rename only an unambiguous match
 through the regeneration-safe symbol path. Leave it unchanged if evidence is
 absent. Do not repeat the M4 alias audit or the already-closed sweep regions.
@@ -29,9 +29,9 @@ H-regeneration-risk.
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
-rg -n 'fake_func_80099C4C|80099C4C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
-rg -n -C 8 'fake_func_80099C4C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n -i '99C4C|candidate semantic terms' /Users/williambuckley/Documents/Tools/rogue_squadron64/src /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+rg -n 'fake_func_80099FDC|80099FDC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
+rg -n -C 8 'fake_func_80099FDC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -i '99FDC|candidate semantic terms' /Users/williambuckley/Documents/Tools/rogue_squadron64/src /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 ```
 
 Do not build or rename until the complete region and companion evidence are

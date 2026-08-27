@@ -115266,3 +115266,15 @@ was warranted. Artifact:
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+## Session 2537 (2026-08-26) — censused sixteenth generated-symbol sweep region
+
+Ran the bounded generated-symbol census at `0x80099C4C`. The complete
+generated span is four bytes (`0x80099C4C–0x80099C4F`), with ROM bytes
+`af b2 00 38` (`sw s2,0x38(sp)`) at ROM offset `0x9980C`; the next independently
+named function starts at `0x80099C50`. The project symbol input, generated
+declaration/implementation/overlay table, companion symbol file, exact-address
+search, and source/m2c/caller searches provide no defensible human name. The
+fixup report identifies a missing `L_80099C88` label and the active generated
+body is a trap, so this is a conversion/boundary artifact rather than a safe
+rename. Selected `H-no-match`; left all generated code unchanged. Artifact:
+`scratch/agent/s2537_symbol_census/audit.md`. Next target is `0x80099FDC`.
