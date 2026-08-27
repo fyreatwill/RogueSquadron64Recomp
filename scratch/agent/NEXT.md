@@ -1,22 +1,26 @@
-# NEXT work unit (s2518) — generated-symbol renaming sweep, first bounded region
+# NEXT work unit (s2519) — generated-symbol renaming sweep, next bounded region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Before starting, run:
+The previous region `0x8000737C–0x80007908` was completely censused and had
+four isolated placeholders with no companion mapping. Continue the same sweep
+with exactly one new bounded region: main-overlay `0x80003424–0x80005568`, the
+three placeholders in `funcs_1.c` plus any placeholder whose entry address is
+inside that interval. Before starting, run:
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
 ```
 
 If all 15 titles are sweep-scoped, revisit CURRENT-TRUTH Next step #2 or the
-M4 accumulator boundary with a genuinely new angle. Otherwise enumerate one
-bounded address region of placeholder functions in `RecompiledFuncs/funcs_*.c`,
-find matching named functions or m2c output in the companion
-`rogue_squadron64` tree, and rename only unambiguous matches through the
-regeneration-safe symbol/fixup path. Do not invent names or edit unrelated
-generated functions.
+M4 accumulator boundary with a genuinely new angle. Otherwise enumerate the
+complete selected interval, find matching named functions or m2c output in the
+companion `rogue_squadron64` tree, and rename only unambiguous matches through
+the regeneration-safe symbol/fixup path. Do not invent names or edit unrelated
+generated functions. The prior result is in
+`scratch/agent/s2518_symbol_census/audit.md`.
 
 ## Competing hypotheses and discriminator
 
@@ -41,6 +45,6 @@ rg -n '^void func_|^static .*func_|func_0x[0-9A-Fa-f]+' RecompiledFuncs/funcs_*.
 rg --files /Users/williambuckley/Documents/Tools/rogue_squadron64 | head -100
 ```
 
-Do not build or rename until the first region and its companion evidence are
+Do not build or rename until the region and its companion evidence are
 defined. If names are changed, build the affected target and confirm no
 generated placeholder references are left dangling.

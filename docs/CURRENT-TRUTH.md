@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2517 (2026-08-26).
+Current maintenance marker: Session 2518 (2026-08-26).
 
 ## Current state
 
@@ -73,6 +73,13 @@ Current maintenance marker: Session 2517 (2026-08-26).
   selects `H-no-edge` at the current route scope; no behavior change is
   authorized. Artifact:
   `scratch/agent/s2517_m5_contract_boundary/audit.md`.
+- **s2518 — the first bounded generated-symbol region had no defensible
+  mappings.** The complete main-overlay interval `0x8000737C–0x80007908`
+  contained four placeholders; the companion symbol file also retains all
+  four `fake_func_*` names and no source search produced a human mapping.
+  Their bodies are isolated one- or two-instruction fragments. No generated
+  code was changed. Artifact:
+  `scratch/agent/s2518_symbol_census/audit.md`.
 
 ## Active backlog
 
@@ -89,7 +96,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2517 found no new legitimate edge; do not add a writeback/remap or repeat
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
-  Next work unit: begin the bounded generated-symbol renaming sweep.
+  Next work unit: continue the bounded generated-symbol renaming sweep in
+  `0x80003424–0x80005568`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.

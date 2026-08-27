@@ -114868,3 +114868,22 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2518 (2026-08-26) — censused first generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x8000737C–0x80007908` in
+`funcs_2.c` after the required sweep preflight. It contains four placeholders:
+`fake_func_8000737C`, `fake_func_800074D8`, `fake_func_8000751C`, and
+`fake_func_80007908`. The companion `main_overlay.txt` retains each exact
+fake name, and a source-wide companion search found no human symbol or m2c
+implementation for any address. The bodies are isolated one- or two-
+instruction fragments, unlike the named adjacent routines.
+
+This selects `H-no-match` for the bounded region and rules out a defensible
+rename or regeneration-safe build for these four entries. It does not prove
+the fragments are dead or permanently unnameable. No generated code, runtime,
+or mitigation changed. Artifact:
+`scratch/agent/s2518_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
