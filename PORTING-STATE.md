@@ -115933,3 +115933,14 @@ fragment's origin. No build or runtime experiment was run because the work unit
 was explicitly static-only. The next unresolved placeholder is `0x80107EA4`.
 
 Artifact: `scratch/agent/s2572_symbol_census/audit.md`.
+
+## Session 2573 (2026-08-26) — censused generated-symbol object-tracking boundary
+
+Ran the bounded generated-symbol census for `0x80107EA4`. The complete
+12-byte span is `sll a0,v1,16`, `sra v0,a0,16`, and `mtc1 v0,f20`, immediately
+before the complete `lvf_initializeObjectTracking` function at `0x80107EB0`.
+The companion symbol file explicitly retains `fake_func_80107EA4`, and exact
+address, source, m2c, and caller searches found no defensible human mapping.
+The placeholder remains unchanged; this rules out an already-mapped callable
+symbol, not runtime reachability. The next census is `0x80108B8C`.
+Artifact: `scratch/agent/s2573_symbol_census/audit.md`.

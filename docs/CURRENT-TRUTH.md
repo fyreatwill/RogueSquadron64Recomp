@@ -4,9 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2571 (2026-08-26).
+Current maintenance marker: Session 2573 (2026-08-26).
 
 ## Current state
+
+- **s2573 — the next generated-symbol region is an object-tracking boundary
+  with no defensible mapping.** The complete `0x80107EA4–0x80107EAF` span is
+  a 12-byte sign-extension/float-transfer fragment (`sll`, `sra`, `mtc1`)
+  immediately before the complete `lvf_initializeObjectTracking` function.
+  The companion explicitly retains `fake_func_80107EA4`; exact-address,
+  source, m2c, and caller searches found no human candidate. This is a static,
+  single-source boundary classification, so the placeholder remains
+  unchanged. Artifact: `scratch/agent/s2573_symbol_census/audit.md`.
 
 - **s2572 — the next generated-symbol region is an object-tracking boundary
   with no defensible mapping.** The complete `0x8010721C–0x8010721F` span is a
@@ -663,7 +672,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   `0x80106BE8–0x80106BEF` unchanged as a two-instruction object-tracking
   boundary and advanced to `0x8010721C`. s2572 left
   `0x8010721C–0x8010721F` unchanged as a one-instruction object-tracking
-  boundary and advanced to `0x80107EA4`. s2557 left
+  boundary and advanced to `0x80107EA4`. s2573 left
+  `0x80107EA4–0x80107EAF` unchanged as a 12-byte sign-extension/float-transfer
+  fragment and advanced to `0x80108B8C`. s2557 left
   `0x800E447C–0x800E447F` unchanged as a one-instruction boundary fragment
   and advanced to `0x800E71C8`; s2558 revalidated that span as an unchanged
   orphan two-instruction boundary fragment and pivots the next unit to the
