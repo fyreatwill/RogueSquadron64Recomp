@@ -118019,3 +118019,22 @@ the audited helpers and direct caller, and rules out a runtime watch,
 writeback, remap, or mitigation. No build, watch, or soak was run because the
 static table did not name a ground-truth target. The next bounded audit is
 `initSampleStreamBlockCache` and its direct callers.
+## Session 2690 (2026-08-27) — audited the M5 sample-stream cache boundary
+
+The bounded static audit searched the generated functions and companion symbol
+map, then read `initSampleStreamBlockCache` (`0x8008F858`) and its only direct
+named caller, `setupSongRenderBuffers` (`0x8008F2FC`). The caller derives a
+block count from its song-rate calculation, builds the decode-buffer ring, and
+passes only that count to the initializer. The initializer allocates a
+`count*0xC00` byte region and a `count*0x18` descriptor region, invalidates the
+first allocation, and links successive `0x600` blocks through descriptor
+next/previous fields while setting sizes, cursors, and list heads. Its only
+named calls are `rs_malloc` and `osInvalDCache`.
+
+No source payload pointer, copy or transform, queue/service signal, AI call,
+or ordering edge to the `0x3000` AI allocation appears in this caller/helper
+pair. This selects `H-unresolved-address`, rules out `H-cache-producer` and
+`H-service-boundary` for this boundary on static evidence, and rules out a
+runtime watch, writeback, remap, or mitigation. The next bounded work unit is
+the direct callers of `acquireSampleStreamBlock` and their immediate
+post-acquire consumers.

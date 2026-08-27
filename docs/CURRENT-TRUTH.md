@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2689 (2026-08-27).
+Current maintenance marker: Session 2690 (2026-08-27).
 
 ## Live result
 
@@ -163,6 +163,20 @@ therefore selects `H-unresolved-address`, rules out `H-ring-producer` and
 `H-service-boundary` for these helpers/caller, and authorizes no runtime watch,
 writeback, remap, or mitigation.
 
+s2690 audited `initSampleStreamBlockCache` and its only direct named caller,
+`setupSongRenderBuffers` (`0x8008F2FC`). The caller derives the cache-block
+count from the song-rate calculation, calls `buildSongDecodeBufferRing`, then
+passes that count to the initializer; it supplies no MORT/rendered payload
+pointer. The initializer allocates a `count*0xC00` byte region and a
+`count*0x18` descriptor region, invalidates the first allocation, and links
+descriptors to successive `0x600` blocks while initializing next/previous
+links, sizes, cursors, and list heads. Its only named calls are `rs_malloc` and
+`osInvalDCache`; there is no data copy/transform, queue or service signal, AI
+call, or source relation. This selects `H-unresolved-address`, rules out
+`H-cache-producer` and `H-service-boundary` for this boundary (static source
+evidence), and leaves no legitimate writer or destination for a runtime watch,
+writeback, remap, or mitigation.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -174,11 +188,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    s2683 shows the named DMA callback is stream-to-slot, not renderer-to-AI.
    s2686 found no publication edge in the update/renderer path, s2687 found no
    publication edge in the mixer callback/state boundary, s2688 found no join
-   in the named AI worker, and s2689 found that the named ring setup helpers
-   only allocate/link metadata and zeroed decode storage. The next useful work
-   must audit `initSampleStreamBlockCache` and its direct callers for a named
-   stream/cache-to-AI publication relation, without repeating these setup,
-   renderer, mixer, or AI-submit body audits.
+   in the named AI worker, s2689 found that the named ring setup helpers only
+   allocate/link metadata and zeroed decode storage, and s2690 found the same
+   for the cache initializer. The next useful work must audit the direct
+   callers of `acquireSampleStreamBlock` and their post-acquire consumers for a
+   named stream/cache-to-AI publication relation, without repeating these
+   initializer, setup, renderer, mixer, or AI-submit body audits.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
