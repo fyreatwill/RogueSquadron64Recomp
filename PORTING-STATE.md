@@ -119587,3 +119587,12 @@ because existing generated `funcs_43.c` contains a duplicate
 `lv2_initializeObjectTracking` definition. This change rules out stale yield
 state across task starts as an intended contract, but does not establish that
 any audio task yields or that the image task needs interruption/resumption.
+
+## Session 2792 (2026-08-27) — revalidated SP-yield build boundary
+
+The prescribed full Debug target stopped before linking at the same duplicate
+generated `lv2_initializeObjectTracking` definition in `funcs_43.c`.
+`git diff --check` passed. The source diff still contains the task-start reset,
+but this iteration produced no runtime evidence and does not establish task
+interruption/resumption or audio progress. The next bounded work unit is the
+generated-symbol interval `0x8012D000..0x8012F000`.

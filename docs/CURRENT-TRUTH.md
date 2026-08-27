@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2791 (2026-08-27).
+Current maintenance marker: Session 2792 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -87,6 +87,11 @@ The latest durable M5 chain is:
   currently blocked by the pre-existing duplicate generated definition of
   `lv2_initializeObjectTracking` in `funcs_43.c`; no task interruption or
   resumption behavior was added.
+- Session 2792 reran the prescribed full Debug target and `git diff --check`.
+  The build again stopped before linking at the duplicate generated
+  `lv2_initializeObjectTracking` definition in `funcs_43.c`; whitespace
+  validation was clean. This validates the known build boundary only and
+  provides no runtime evidence about SP-yield behavior.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -99,11 +104,11 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **M5 SP-yield lifecycle validation.** Run a phase-qualified same-build
-   image/silent route check with the SP-yield request/status and task-start
-   joins. The source lifecycle now clears a request at each new task start;
-   do not infer task interruption or audio progress from the reset alone.
-   Roll back only the lifecycle line if validation exposes a contract mismatch.
+1. **M5 SP-yield lifecycle validation — blocked at the build boundary.** The
+   source lifecycle now clears a request at each new task start, but the full
+   target cannot be produced until the duplicate generated
+   `lv2_initializeObjectTracking` definition in `funcs_43.c` is resolved. Do
+   not infer task interruption or audio progress from the reset alone.
 
 2. **Generated-symbol renaming sweep — next bounded interval.** M5 Step 1
    input-recipe repair is now exhausted at this discriminator: boot-time
