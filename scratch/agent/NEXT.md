@@ -1,11 +1,11 @@
-# NEXT work unit (s2817) — sweep generated symbols at 0x80159000..0x8015B000
+# NEXT work unit (s2818) — sweep generated symbols at 0x8015B000..0x8015D000
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
 Run the regeneration-safe companion selector for
-`0x80159000..0x8015B000`, independently scan the generated tree for
+`0x8015B000..0x8015D000`, independently scan the generated tree for
 placeholders in that interval, and apply only source-backed semantic names.
 Preserve ambiguous/data entries. This is a bounded rename work unit; do not
 run a game soak.
@@ -32,7 +32,7 @@ empty placeholder scan selects H-already-synchronized.
 python3 tools/rename_generated_symbols.py \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x80159000 --end-address 0x8015B000 --limit 32
+  --start-address 0x8015B000 --end-address 0x8015D000 --limit 32
 rg -n 'func_8015|fake_func_8015' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 git diff --check
