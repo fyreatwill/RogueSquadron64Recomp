@@ -115354,3 +115354,19 @@ runtime, or submodule code changed. Artifact:
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2540 (2026-08-26) — censused generated-symbol voice-filter boundary
+
+Ran the bounded generated-symbol census at `0x8009D7CC`. The complete
+generated/project span is four bytes (`0x8009D7CC–0x8009D7CF`) containing only
+`mtc1 $zero,$f4`, immediately before the independently named
+`filterVoiceSampleBlock` at `0x8009D7D0`. The active generated declaration,
+implementation, overlay table, and companion symbol input all retain the fake
+name. Exact-address, source, m2c, and caller searches found no defensible
+human mapping. The fragment may be a boundary/preamble artifact, but that is
+not proven; selected `H-no-match` and left it unchanged. No generated code,
+symbol input, runtime, or behavior changed. Artifact:
+`scratch/agent/s2540_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.

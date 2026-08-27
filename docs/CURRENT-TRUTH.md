@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2539 (2026-08-26).
+Current maintenance marker: Session 2540 (2026-08-26).
 
 ## Current state
 
@@ -309,7 +309,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
   `0x80099FDC–0x80099FDF` as the four-byte boundary before `aspMainTextStart`
   and left it unchanged. s2539's retail boundary revisit found active writer
   ranges but no M4 source/consumer join, so no port-side change is authorized.
-  Next is `0x8009D7CC`.
+  s2540 found `0x8009D7CC–0x8009D7CF` is a four-byte `mtc1 $zero,$f4`
+  fragment immediately before `filterVoiceSampleBlock`; companion/source/
+  caller searches supplied no defensible mapping, so it remains unchanged.
+  Next is `0x800AA6CC`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index
