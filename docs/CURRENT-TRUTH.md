@@ -395,6 +395,12 @@ Three companion records explicitly classified as short non-callable gaps
 external generated snapshot has three new-name references per address and no
 stale placeholder references. This is symbol clarity only, not M5 evidence.
 
+Session 2841 continued the source-backed batch with `0x80041EEC` and
+`0x800457CC`; six generated references changed in four files and the
+independent scan found no stale placeholders. Preserve
+`fake_func_8004661C` as callable-ambiguous and continue with the next
+explicitly classified short data-gap record.
+
 4. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still
    stalls before the target phases. Preserve the lifecycle change; do not infer
