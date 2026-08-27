@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2590 (2026-08-26).
+Current maintenance marker: Session 2591 (2026-08-26).
+
+- **s2591 — the next generated-symbol span is an unnamed entry/delay-slot
+  boundary fragment.** `0x800C5898–0x800C589F` is the two-instruction
+  `lui/addu` fragment immediately before `menuOverlayInit` at `0x800C58A0`;
+  the preceding body also renders `0x800C5898` as the delay-slot overlap of
+  its `jal`. The companion retains only `fake_func_800C5898`, while m2c has an
+  unimplemented three-argument declaration with no body or semantic name.
+  Exact-address source, caller, and alias searches found no defensible
+  candidate. The rename generator completed with no mapping for the
+  placeholder, so it remains unchanged. Artifact:
+  `scratch/agent/s2591_symbol_census_audit.md`.
 
 - **s2590 — the next generated-symbol span is an unnamed two-instruction
   boundary fragment.** `0x800B2628–0x800B262F` is the complete pair

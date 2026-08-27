@@ -116221,6 +116221,22 @@ only a renameable companion mapping for this span; no runtime hypothesis was
 
 tested. Artifact: `scratch/agent/s2589_symbol_census_audit.md`.
 
+## Session 2591 (2026-08-26) — classified the next generated-symbol boundary
+
+Audited the next complete placeholder span at `0x800C5898–0x800C589F`.
+`funcs_34.c` shows a two-instruction `lui/addu` fragment immediately before
+`menuOverlayInit` at `0x800C58A0`; the preceding body also renders the first
+instruction as the delay slot of its `jal`. The companion symbol file
+explicitly retains `fake_func_800C5898`; the m2c context contains only an
+unimplemented three-argument declaration, and exact-address source, caller,
+and alias searches found no defensible semantic name. Ran
+`python3 tools/rename/build_redefs.py` successfully; it emitted no mapping for
+the placeholder and preserved existing mappings. This selects
+`H-BoundaryOnly`, leaves the placeholder unchanged, and advances the sweep to
+the next placeholder. It rules out only a renameable companion mapping for
+this span; no runtime hypothesis was tested. Artifact:
+`scratch/agent/s2591_symbol_census_audit.md`.
+
 ## Session 2590 (2026-08-26) — classified the next generated-symbol boundary
 
 Audited the next complete placeholder span at `0x800B2628–0x800B262F`.
