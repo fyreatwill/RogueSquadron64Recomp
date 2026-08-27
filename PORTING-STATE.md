@@ -117816,3 +117816,24 @@ mix kernel. This establishes the CPU-side MORT consumer edge with two lines
 of evidence (generated source and retail attribution), but not the later
 PCM/AI publication join; no runtime behavior change or mitigation was made.
 Full table and command: `scratch/agent/s2678_mort_consumer_oracle.md`.
+
+## Session 2679 (2026-08-27) — audited the renderer-to-PCM publication edge
+
+The first oracle launch used a stale duplicated core path and failed before
+emulation; the corrected local path was rerun with the same batched capture.
+The whole-RDRAM positive control fired `29,161` writes and the driven route
+reached title 1024 plus both hangar 512 origins. Retail executed
+`renderVoiceAudioBlock` (`0x8009DB44`, caller `0x8009C4C0`) 496 times,
+`audioMixStereoBlock8` (`0x8009DC98`) 1,984 times, and both
+`osAiSetNextBuffer` (`0x80029E80`) and `__osAiDeviceBusy` (`0x80029F30`)
+6,180 times. The candidate PCM ring `0x166450:0x169450` received 12,288
+writes, but the writer histogram and initial samples attributed them all to
+`rs_memset` at `0x800078EC`; this is initialization/copy evidence, not a
+renderer-to-AI publication join. The secondary range `0x1B4A60:0x1B4B00`
+also remained a mixed renderer/stream range. This strengthens
+`H-MORT-unmapped` at the CPU publication boundary and does not select
+`H-image-edge`; it rules out the candidate ring as a named renderer output
+without explaining its other writers. No runtime behavior, instrumentation,
+writeback, or mitigation changed. Full capture and table:
+`scratch/agent/s2679_m5_renderer_pcm_oracle.log` and
+`scratch/agent/s2679_m5_renderer_pcm_oracle.md`.

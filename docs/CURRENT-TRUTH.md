@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2678 (2026-08-27).
+Current maintenance marker: Session 2679 (2026-08-27).
 
 ## Live result
 
@@ -38,6 +38,15 @@ The latest qualified M5 evidence is:
   were 792 filter, 792 delay, and 198 render executions. This resolves the
   CPU-side consumer edge but not renderer-to-PCM/AI publication; no writeback
   or remap follows from it.
+- s2679's batched retail capture reached title and both driven hangar origins
+  with the whole-RDRAM control (`29,161` writes). `renderVoiceAudioBlock`
+  executed 496 times, `audioMixStereoBlock8` 1,984 times, and
+  `osAiSetNextBuffer`/`__osAiDeviceBusy` 6,180 times. The candidate port ring
+  `0x166450:0x169450` was written 12,288 times, but every sampled writer was
+  `rs_memset` at `0x800078EC`, including boot initialization; the capture did
+  not join renderer/mixer output to that ring or another AI source. This
+  strengthens `H-MORT-unmapped` at the CPU publication boundary and does not
+  select `H-image-edge`.
 
 Retail is the independent witness for game-side memory claims. A narrow null
 is unevaluable unless the whole-RDRAM positive control fires first and the
@@ -48,15 +57,15 @@ target phase is reached. The current corrected oracle reaches attract, title
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 CPU-side MORT PCM publication.** Audit the next named consumer after
-   `renderVoiceAudioBlock`/`audioMixStereoBlock8` through AI source and
-   consumer. Use a phase-gated port/retail table with the whole-RDRAM control;
-   do not repeat the filter, persistent-object, task-field, ring, or
-   shared-stack censuses, and do not add writeback/remap from overlap alone.
-2. **M5 de-stubbing sequence.** After the renderer-to-PCM boundary is mapped
-   or blocked by a genuinely new discriminator, execute the incremental plan
-   in [`M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md), validating each step with a
-   phase-gated soak. Keep `C88=0` and `ROGUESQ_AUDIO_UCODE=0` as controls.
+1. **M5 de-stubbing sequence, Step 1.** The CPU renderer/AI edge remains
+   unmapped after a positive-controlled retail audit, so execute the existing
+   same-build image-versus-silent re-baseline in
+   [`M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md). Keep `C88=0` and
+   `ROGUESQ_AUDIO_UCODE=0` as controls and require task, DMEM/DMA, service,
+   slot, PCM, and route rows in both arms.
+2. **M5 CPU-side MORT PCM publication.** Revisit only with a genuinely new
+   discriminator for the renderer-to-AI destination/order join; do not repeat
+   the filter, persistent-object, task-field, ring, or shared-stack censuses.
 3. **Generated-symbol renaming sweep — parked fallback.** Resume only when
    M5 is closed or blocked by a new discriminator. Use exact companion
    address/name agreement; preserve ambiguous placeholders and overlay

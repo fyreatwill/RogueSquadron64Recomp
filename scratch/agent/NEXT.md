@@ -1,45 +1,39 @@
-# NEXT work unit (s2679) — audit renderer-to-PCM publication
+# NEXT work unit (s2680) — execute M5 Step 1 same-build audio re-baseline
 
-HYPOTHESIS-ID: m5-audio-cpu-mort-publication-boundary
+HYPOTHESIS-ID: m5-audio-destub-step1-contract
 
 ## Work unit
 
-Perform one bounded audit after `renderVoiceAudioBlock` /
-`audioMixStereoBlock8`: identify the next named PCM/AI source and consumer,
-their caller, persistent buffer, and one source-derived destination. Use the
-existing port PCM boundary logs and ask the retail oracle about the matching
-retail destination with the whole-RDRAM positive control and target phase. Do
-not change runtime behavior, add writeback, or repeat filter, persistent-object,
-task-field, image-ring, or shared-stack censuses.
+Run the existing qualified AUTOPILOT driver once with the real Factor 5 image
+arm and once with `ROGUESQ_AUDIO_UCODE=0` silent control, using one build and
+the same phase-gated capture. This is the M5-AUDIO-PLAN Step 1 re-baseline;
+do not change behavior or add a new guard/writeback edge.
 
 ## Competing hypotheses and discriminator
 
-- `H-MORT-edge`: the renderer's persistent voice object reaches a legitimate
-  PCM/AI source and consumer in order.
-- `H-image-edge`: the CPU renderer-to-PCM edge is absent while the Factor 5
-  image has a complete consumer join.
-- `H-MORT-unmapped`: the renderer output remains temporary/shared or lacks a
-  legitimate payload/order join.
+- `H-AudioDegeneracy`: the image arm creates downstream service, slot, voice,
+  or PCM progress that the silent arm lacks.
+- `H-ContractGap`: the image arm has DMEM/DMA and completion activity but no
+  additional downstream contract edge.
+- `H-RouteOnly`: both arms have the same downstream rows and differ only in
+  route timing or reachability.
 
-The discriminator is one table covering renderer/mix caller, persistent input
-and output destination, payload polarity, target-phase retail writer rows,
-port PCM source/consumer events, image completion, and ordering. A complete
-CPU-to-PCM join selects `H-MORT-edge`; a complete image join selects
-`H-image-edge`; missing writer or ordering selects `H-MORT-unmapped`. A narrow
-null is invalid unless the same oracle run visibly fires its whole-RDRAM
-control and reaches the target phase.
+The discriminator is one phase-keyed table containing, for both arms,
+`audtask-dispatch`, task fields, DMEM/DMA, image break/exit, SP completion,
+service return, slot/status transitions, voice/MORT rows, PCM source/consumer,
+and title/hangar route markers. A new downstream image-only row selects
+`H-AudioDegeneracy`; image-only DMEM/DMA with no downstream divergence selects
+`H-ContractGap`; identical downstream rows with the same target phases select
+`H-RouteOnly`. A missing positive route control invalidates the run.
 
 ## Exact commands
 
-1. Use bounded `rg`/`sed` reads of companion mappings, generated source, and
-   existing PCM boundary probes for `renderVoiceAudioBlock`,
-   `audioMixStereoBlock8`, and AI calls.
-2. Read `tools/oracle/README.md`; choose the smallest source-derived retail
-   watch and needed `--watch-pc`. Ask ground truth before adding port
-   instrumentation.
-3. Run one batched oracle capture only after the positive-control and phase
-   gates are armed. Record the table and artifact under `scratch/agent/`.
-
-Expected result: either the renderer yields a legitimate PCM/AI writer and
-complete order join, or its destination remains unmapped. Do not promote an
-address overlap into a mitigation or contract change.
+1. `cmake --build build --config Debug --target RogueSquadron64Recomp`
+2. Run the existing AUTOPILOT capture recipe from `build/`, once with the
+   default image arm and once with `ROGUESQ_AUDIO_UCODE=0`; use
+   `PROBE_PHASE_WIDTH=1 PROBE_KEYS_FROM_PHASE=1 ROGUESQ_LOG_ALL=1` plus the
+   existing M5 task/PCM joins. Launch both arms in the same iteration and
+   terminate each process group with SIGKILL.
+3. Record the complete table and phase-gated verdict under
+   `scratch/agent/s2680_m5_step1_rebaseline/`; enqueue the soak rather than
+   babysitting it.
