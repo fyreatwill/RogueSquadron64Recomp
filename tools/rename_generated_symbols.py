@@ -21,6 +21,7 @@ RENAMES = {
 def companion_renames(symbol_dir: Path, generated_text: str) -> dict[str, str]:
     """Return only semantic companion names for placeholders in the snapshot."""
     result = {}
+    generated_placeholders = set(re.findall(r"\bfunc_([0-9A-Fa-f]{8})\b", generated_text))
     for symbol_file in sorted(symbol_dir.glob("*.txt")):
         for line in symbol_file.read_text().splitlines():
             match = re.match(
@@ -32,7 +33,7 @@ def companion_renames(symbol_dir: Path, generated_text: str) -> dict[str, str]:
             if name.startswith(("D_", "fake_func_", "func_")):
                 continue
             old = f"func_{address.upper()}"
-            if re.search(rf"\b{re.escape(old)}\b", generated_text):
+            if address.upper() in generated_placeholders:
                 result[old] = name
     return result
 

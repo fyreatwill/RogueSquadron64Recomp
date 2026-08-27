@@ -1,35 +1,36 @@
-# NEXT work unit (s2685) — continue the companion-driven rename batch
+# NEXT work unit (s2686) — audit the next M5 CPU publication boundary
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-cpu-mort-publication
 
 ## Work unit
 
-Run the companion-driven rename tool against the generated snapshot after
-checking the current placeholder census. Apply at most 32 exact semantic
-matches from `../rogue_squadron64/symbol_files`; preserve address-named,
-`fake_func_`, overlay-collision, or otherwise ambiguous symbols. Review the
-tool report and generated diff. Do not infer names from implementation shape.
+Perform a bounded static audit of the remaining `updateVoiceChannelParams`
+indirect-call setup and the `voice object+0x140` consumer path. Use companion
+address/name evidence and existing generated callers to identify whether a
+caller-owned destination or ordered service boundary publishes renderer output
+to PCM/AI. Do not add runtime watches, writeback, remaps, or mitigation from
+unresolved pointer shapes.
 
 ## Competing hypotheses and discriminator
 
-- `H-exact-batch`: a regenerated snapshot contains companion semantic names
-  for current `func_XXXXXXXX` placeholders and can be renamed safely.
-- `H-ambiguous`: placeholders remain address-only or collide with existing
-  names, so they must be preserved.
-- `H-tool-regression`: the bounded tool changes a non-matching symbol or
-  exceeds the batch/collision rules.
+- `H-publish-caller`: the audited caller setup names a legitimate destination
+  and ordering edge from rendered voice output toward PCM/AI.
+- `H-service-boundary`: the path reaches a service/slot boundary but the
+  publication destination remains outside the audited caller.
+- `H-unresolved-address`: the remaining callers only pass filter/delay data or
+  temporary voice-object storage, so no legitimate publication edge is named.
 
-The discriminator is the exact old-to-new report plus `git diff --check`: a
-positive semantic match selects `H-exact-batch`; zero matches with the two
-known ambiguous placeholders selects `H-ambiguous`; any out-of-scope edit or
-collision selects `H-tool-regression`.
+The discriminator is a complete caller/destination table for both audited
+paths: each outcome must identify the writer, destination, payload polarity,
+and ordering relation, or explicitly show which field is absent.
 
 ## Ground-truth prerequisite
 
-No runtime watch, build, or soak is authorized for this rename unit.
+No runtime watch, build, or soak is authorized until the static table names a
+ground-truth target.
 
 ## Exact commands
 
-1. `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --limit 32`
-2. `python3 -m py_compile tools/rename_generated_symbols.py && git diff --check`
-3. Record the report and exact placeholder census in the next ledger entry.
+1. `grep -n 'updateVoiceChannelParams\|renderVoiceAudioBlock\|0x8009D' ../N64Recomp/RecompiledFuncs/funcs_*.c | head -200`
+2. Read bounded caller windows and companion symbol/source matches for every hit.
+3. Record the complete destination/order table and selected hypothesis in the ledger.

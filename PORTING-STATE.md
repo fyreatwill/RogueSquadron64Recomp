@@ -117938,3 +117938,17 @@ duplicate or already-present destinations, and fail when the batch exceeds
 `git diff --check`; no generated files changed. This rules out a safe rename
 from the current snapshot, not future matches after regeneration. No build or
 soak was run.
+
+## Session 2685 (2026-08-27) — closed the current generated-symbol lead
+
+The required companion-driven rename unit initially exposed a performance
+problem: the tool repeatedly regex-scanned the full generated snapshot and
+was interrupted after 120 seconds with no report or file changes. A narrow
+tool fix precomputed the generated placeholder address set before scanning
+companion symbols. The same bounded command then completed and reported
+`renamed 0 references in 0 files`; the two remaining placeholders
+(`func_8000040C` and `func_800927B0`) and all eight known mappings were already
+synchronized. Python compilation and `git diff --check` passed, and no
+generated files changed. This selects `H-ambiguous` for the current snapshot,
+rules out `H-tool-regression`, and closes this sweep lead pending regeneration;
+no build, watch, or soak was run.
