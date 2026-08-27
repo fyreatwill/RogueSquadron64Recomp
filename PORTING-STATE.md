@@ -116412,3 +116412,16 @@ rename generator completed successfully with no mapping. This selects
 `H-BoundaryOnly`, leaves the placeholder unchanged, and rules out both an
 available companion mapping and a tool-input mismatch. Artifact:
 `scratch/agent/s2603_symbol_census_audit.md`.
+## Session 2604 (2026-08-26) — classified the next generated-symbol boundary
+
+Ran the single static generated-symbol rename unit for `0x800E71C8`. The
+generated span is the two-instruction fragment `lhu v0, 0x14(v1)` / `lw a0,
+0x58(fp)` immediately before the complete `transformCraftAnchorsApplySubFx3`
+body at `0x800E71D0`. The companion symbol file retains only
+`fake_func_800E71C8`; exact-address source, m2c, caller, and alternate-name
+searches found no semantic candidate. Running `python3
+tools/rename/build_redefs.py` succeeded and emitted no mapping for the
+placeholder. No generated source, runtime build, or game run was performed.
+This selects `H-BoundaryOnly`, leaves the placeholder unchanged, and advances
+the sweep to `0x800E8A34`. See
+`scratch/agent/s2604_symbol_census_audit.md`.

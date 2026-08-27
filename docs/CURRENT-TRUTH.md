@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2603 (2026-08-26).
+Current maintenance marker: Session 2604 (2026-08-26).
+
+- **s2604 — the next generated-symbol span is a boundary-only fragment.**
+  `0x800E71C8–0x800E71CF` contains only `lhu v0, 0x14(v1)` and
+  `lw a0, 0x58(fp)` immediately before the complete
+  `transformCraftAnchorsApplySubFx3` body at `0x800E71D0`. The companion
+  retains `fake_func_800E71C8`; exact-address source, m2c, caller, and
+  alternate-name searches found no defensible candidate. The rename generator
+  completed with no mapping, so the placeholder remains unchanged. Artifact:
+  `scratch/agent/s2604_symbol_census_audit.md`.
 
 - **s2603 — the next generated-symbol span is a duplicate-symbol boundary
   fragment.** `0x800E447C` is the two-instruction fragment `lhu v0, 0x14(v1)`
@@ -553,7 +562,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
   resumed the sweep. s2588 added four regeneration-safe preamble mappings for
   the next companion-defined fragment boundaries. s2593 classified
   `0x800C7DB4–0x800C7DBF` as an unchanged duplicate-symbol boundary fragment;
-  the next census is `0x800CA26C`. The `0x8009C2C8–0x8009C2CF` fragment is unchanged because
+  the next census is `0x800E8A34`. The `0x8009C2C8–0x8009C2CF` fragment is unchanged because
   its two floating-point instructions form no callable body and no
   companion/source/m2c mapping was found. Continue only with a complete
   bounded span and leave unresolved placeholders unchanged. s2558 revalidated
