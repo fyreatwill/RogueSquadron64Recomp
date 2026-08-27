@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2799 (2026-08-27).
+Current maintenance marker: Session 2800 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -106,6 +106,12 @@ The latest durable M5 chain is:
   audio dispatch controls (52 each), no crash/abort, but stalled at VI 640 /
   origin `0x0066A500`. No target-phase SP-yield, task, or PCM rows were
   emitted, so the landed SP-yield lifecycle remains runtime-unvalidated.
+- Session 2800 closed generated-symbol interval `0x80137000..0x80139000`.
+  Four semantic companion entries (`gPlayers`, `gObjectiveCounts`,
+  `gObjectiveBooleans`, and the voice-text fields) were already synchronized;
+  the selector changed zero references, and an independent generated-tree
+  scan found no `func_8013*` or `fake_func_8013*` placeholders. No rename or
+  build was needed.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -123,7 +129,11 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    phase-gated validation still stalled before the target phases. Continue
    with `0x80137000..0x80139000`, preserving ambiguous/data entries and
    applying only source-backed names. Session 2799's oracle and arm controls
-   were positive, but no target-phase lifecycle rows were valid.
+   were positive, but no target-phase lifecycle rows were valid. Session 2800
+   closed `0x80137000..0x80139000` with four already-synchronized semantic
+   entries, zero selected references, and an empty independent placeholder
+   scan. Continue with `0x80139000..0x8013B000`, preserving ambiguous/data
+   entries and applying only source-backed names.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still

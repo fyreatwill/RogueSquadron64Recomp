@@ -119683,3 +119683,18 @@ yield-unused or yield-state-only; it rules out only a successful runtime
 validation with this route. The landed lifecycle remains runtime-unvalidated,
 and the next work unit is the bounded generated-symbol sweep at
 `0x80137000..0x80139000`. Evidence: `scratch/agent/s2799_m5_sp_yield_validation/`.
+
+## Session 2800 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+Ran the regeneration-safe companion selector for `0x80137000..0x80139000`
+and independently scanned the generated tree for `func_8013*` and
+`fake_func_8013*` placeholders. The selector reported four semantic entries
+already synchronized: `gPlayers`, `gObjectiveCounts`, `gObjectiveBooleans`,
+and the voice-text fields (`txtFileHeader`, `languageStringcount`,
+`voiceTxtLanguageOffset`, `voiceTxtString`); it changed zero references in
+zero files. The independent scan was empty and `git diff --check` passed.
+
+This selects the already-synchronized hypothesis for the interval and rules
+out a stale generated semantic placeholder there. No build or game soak was
+needed because no generated source changed. The next bounded interval is
+`0x80139000..0x8013B000`.
