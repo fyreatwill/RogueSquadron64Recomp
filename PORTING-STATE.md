@@ -115806,3 +115806,20 @@ is a static, single-source result and does not prove reachability.
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2565 (2026-08-26) — censused generated-symbol objective boundary
+
+Work unit: performed the required bounded generated-symbol census at the next
+unresolved project placeholder, `0x80103D08`. The generated implementation and
+tables define an 8-byte span containing only `lui a1,0x8010` and
+`addiu a1,a1,-0x6C50`, which loads `0x800F93B0`, between
+`lv4_calculateFriendliesSaved` and `lv5_initializeObjectTracking`. The
+companion symbol file retains `fake_func_80103D08` and explicitly identifies
+the following real function; exact-address, source, m2c, and caller searches
+found no human candidate. Selected `H-data-or-boundary` / `H-no-match` and
+left the placeholder unchanged. This is a static, single-source result and
+does not prove reachability. No build or runtime experiment was run because
+the work unit was explicitly static-only. The next unresolved placeholder is
+`0x80104208`.
+
+Artifact: `scratch/agent/s2565_symbol_census/audit.md`.

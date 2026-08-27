@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2564 (2026-08-26).
+Current maintenance marker: Session 2565 (2026-08-26).
 
 ## Current state
 
@@ -108,6 +108,15 @@ Current maintenance marker: Session 2564 (2026-08-26).
   no human candidate. This is a static, single-source boundary
   classification, so the placeholder remains unchanged. Artifact:
   `scratch/agent/s2564_symbol_census/audit.md`.
+
+- **s2565 — the next generated-symbol region is an objective boundary with no
+  defensible mapping.** The complete `0x80103D08–0x80103D0F` span is only a
+  two-instruction constant-load fragment (`lui/addiu`) between
+  `lv4_calculateFriendliesSaved` and `lv5_initializeObjectTracking`. The
+  companion explicitly retains `fake_func_80103D08`; exact-address, source,
+  m2c, and caller searches found no human candidate. This is a static,
+  single-source boundary classification, so the placeholder remains unchanged.
+  Artifact: `scratch/agent/s2565_symbol_census/audit.md`.
 
 ## Latest evidence
 
@@ -577,7 +586,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   `0x800E406C–0x800E406F` unchanged as a four-byte boundary fragment; the
   s2563 left `0x80102A98–0x80102A9F` unchanged as an objective boundary;
   s2564 left `0x8010357C–0x8010357F` unchanged as a one-instruction objective
-  boundary; the next unresolved placeholder is `0x80103D08`. s2557 left
+  boundary; s2565 left `0x80103D08–0x80103D0F` unchanged as a two-instruction
+  objective boundary; the next unresolved placeholder is `0x80104208`. s2557 left
   `0x800E447C–0x800E447F` unchanged as a one-instruction boundary fragment
   and advanced to `0x800E71C8`; s2558 revalidated that span as an unchanged
   orphan two-instruction boundary fragment and pivots the next unit to the
