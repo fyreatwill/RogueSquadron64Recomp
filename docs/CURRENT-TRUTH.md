@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2683 (2026-08-27).
+Current maintenance marker: Session 2684 (2026-08-27).
 
 ## Live result
 
@@ -86,11 +86,22 @@ is unevaluable unless the whole-RDRAM positive control fires first and the
 target phase is reached. The current corrected oracle reaches attract, title
 (`1024 @ 0x00790400`), and hangar (`512 @ 0x006AB400`), not a mission.
 
+s2684's generated-symbol sweep found only two remaining true `func_`
+placeholders in the generated snapshot (`0x8000040C` and `0x800927B0`), and
+the companion map intentionally leaves both address-named. The tracked rename
+tool now accepts a bounded sibling-symbol batch, applies only exact semantic
+matches, and rejects duplicate destinations; this run preserved both
+ambiguous names rather than inventing identities.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
+1. **Generated-symbol renaming sweep.** Continue the bounded companion-driven
+   sweep when a regenerated snapshot exposes exact semantic matches. Preserve
+   `0x8000040C` and `0x800927B0` until companion/source evidence supplies
+   defensible names; do not rename by inferred implementation shape.
+2. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.
@@ -100,14 +111,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
    service boundary, using companion address/name evidence; do not repeat the
    filter, persistent-object, task-field, ring, shared-stack, or DMA callback
    census.
-2. **M5 image task contract edge.** Implement only after a named legitimate
+3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
-3. **Generated-symbol renaming sweep — parked fallback.** Resume only when
-   M5 is closed or blocked by a new discriminator. Use exact companion
-   address/name agreement; preserve ambiguous placeholders and overlay
-   collisions. The five remaining true `func_` placeholders have no semantic
-   companion identity; intentional `fake_func_` fragments remain generic.
 4. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 5. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;

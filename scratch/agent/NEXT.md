@@ -1,42 +1,35 @@
-# NEXT work unit (s2684) — audit the indirect voice-stage destination boundary
+# NEXT work unit (s2685) — continue the companion-driven rename batch
 
-HYPOTHESIS-ID: m5-cpu-renderer-ai-publication-join
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Perform one bounded static audit of the indirect call setup that supplies the
-caller-owned arrays to `updateVoiceChannelParams` and of consumers of the
-voice object `+0x140` output. Recover every reachable `jalr`/function-pointer
-setup, its base arithmetic, and any destination or ordering edge toward the
-AI source. Do not build or change runtime behavior unless a concrete named
-publication writer is identified.
+Run the companion-driven rename tool against the generated snapshot after
+checking the current placeholder census. Apply at most 32 exact semantic
+matches from `../rogue_squadron64/symbol_files`; preserve address-named,
+`fake_func_`, overlay-collision, or otherwise ambiguous symbols. Review the
+tool report and generated diff. Do not infer names from implementation shape.
 
 ## Competing hypotheses and discriminator
 
-- `H-renderer-buffer`: the indirect caller resolves the renderer arrays or
-  `voice+0x140` to the AI source consumed directly.
-- `H-copy-edge`: a distinct named copy/DMA writer consumes that output and
-  publishes the AI source before the AI device sequence.
-- `H-unresolved-address`: caller setup or destination arithmetic remains
-  ambiguous, so another runtime watch is premature.
+- `H-exact-batch`: a regenerated snapshot contains companion semantic names
+  for current `func_XXXXXXXX` placeholders and can be renamed safely.
+- `H-ambiguous`: placeholders remain address-only or collide with existing
+  names, so they must be preserved.
+- `H-tool-regression`: the bounded tool changes a non-matching symbol or
+  exceeds the batch/collision rules.
 
-The discriminator is the recovered pointer/offset/order table. A direct base
-match selects `H-renderer-buffer`; a distinct ordered named writer selects
-`H-copy-edge`; absent or ambiguous arithmetic selects `H-unresolved-address`
-and parks runtime instrumentation.
+The discriminator is the exact old-to-new report plus `git diff --check`: a
+positive semantic match selects `H-exact-batch`; zero matches with the two
+known ambiguous placeholders selects `H-ambiguous`; any out-of-scope edit or
+collision selects `H-tool-regression`.
 
 ## Ground-truth prerequisite
 
-The s2681 retail control already passed for both hangar origins. If a new
-runtime watch becomes necessary after the audit, repeat the whole-RDRAM
-positive control and phase gate before interpreting it.
+No runtime watch, build, or soak is authorized for this rename unit.
 
 ## Exact commands
 
-1. Locate all `jalr`/function-pointer loads near the voice-stage functions and
-   all references to `+0x140`, `+0x168`, `+0x178`, and `+0x188` with bounded
-   `rg` searches; inspect at most 60-line windows around each hit.
-2. Cross-check names and addresses in `../rogue_squadron64/symbol_files` and
-   write the address/offset/order table to
-   `scratch/agent/s2684_voice_destination_audit/RESULT.md`.
-3. Do not run a port build or soak unless a concrete writer is identified.
+1. `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --limit 32`
+2. `python3 -m py_compile tools/rename_generated_symbols.py && git diff --check`
+3. Record the report and exact placeholder census in the next ledger entry.

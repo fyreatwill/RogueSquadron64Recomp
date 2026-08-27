@@ -117923,3 +117923,18 @@ writer or joins it to the candidate AI span. This selects
 `H-unresolved-address`, rules out the audited `H-renderer-buffer` and
 `H-copy-edge` contracts, and leaves runtime watch/writeback/remap work
 unauthorized. No build or soak was run.
+## Session 2684 (2026-08-27) — bounded generated-symbol sweep
+
+Read the compact current truth, next-work file, and soak tail before choosing
+the mandated renaming pivot. The generated snapshot contains only two true
+`func_XXXXXXXX` placeholders (`func_8000040C` and `func_800927B0`); the
+companion symbol files retain both names, so no exact semantic rename was
+available. The known `fake_func_` fragments were also preserved.
+
+Changed `tools/rename_generated_symbols.py` to accept a bounded
+`--companion-dir` batch, derive only exact semantic companion matches, reject
+duplicate or already-present destinations, and fail when the batch exceeds
+`--limit`. Ran the batch with `--limit 32`, then ran Python compilation and
+`git diff --check`; no generated files changed. This rules out a safe rename
+from the current snapshot, not future matches after regeneration. No build or
+soak was run.
