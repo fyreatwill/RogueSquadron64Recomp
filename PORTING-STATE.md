@@ -116539,3 +116539,42 @@ this iteration.
 Artifacts: `scratch/agent/s2607_m5_c88_control.log`,
 `scratch/agent/s2607_m5_c88_value.log`,
 `scratch/s2607_m5_c88_gate_polarity_audit.md`.
+
+## Session 2608 (2026-08-27) — restored guest C88 store as the default
+
+Inverted the `0x8008EC88` hatch in `N64Recomp/fixup_game_funcs.py` and the
+live `RecompiledFuncs/funcs_23.c` so unset stores `ctx->r2` and
+`ROGUESQ_M5_C88_VALUE=0` restores the old force-zero. No full regen; jr-$t9
+canary still passed. Added `tools/check_c88_default_store.py` so a later
+regen cannot silently restore force-zero. ED48 left as `sb $zero`. Debug
+rebuild only.
+
+ORIGIN: writer is `reapplyDisplayMode` at `0x8008EC88`; the guest requested
+value is `0x01`; retail s2583 post-store at this PC is `0x01000000`; the
+force-zero was a port hatch, not a legitimate game store.
+
+Concurrent 90s AUTOPILOT hangar arms, SIGKILL, shared flags as s2607
+(LLE_FORCE/SPIN_YIELD/LLE_UNGATED/LLE_SOLO, writer/gate/PCM/audio-return/
+B40-writer, hangar schedule, STOP_WIDTH=512). Default: env unset. Rollback:
+`ROGUESQ_M5_C88_VALUE=0`.
+
+Both arms reached title `1024 @ 0x00790400` at 11.6s and hangar
+`512 @ 0x006AB400` at ~20s with 0 `[CRASH]` / 0 `[ABORT]` / 0 missing
+function, last width 512, and 258 title `[audio-return]`
+`arm=factor5_ucode_b`.
+
+Default stored C88 requested `0x01` stored `0x01` in both phases; gate rows
+became `0x01` after one `0x00`; title ED48 disable `old=1 stored=0`;
+`startSongSequence` entered in title and hangar (46×/56× `0x80094664`);
+title PCM n=0..18 `nz=768` with distinct hashes, then silent; hangar PCM
+55/55 `nz=0`. Rollback stored requested `0x01` stored `0x00`; gate 0; title
+`musyxNoopStub` took `0x8008ED0C`; no song; title PCM 43/43 `nz=0`; hangar
+PCM 54× `nz=0` plus one dirty `nz=639` at `0x80167350`.
+
+This selects `H-DefaultMatchesEnvArm` (default = s2607 C88=1; rollback =
+s2607 control) and refutes `H-DefaultRouteAbort` and `H-HangarPcmFollows`.
+Hangar-silent PCM remains the next contract gap.
+
+Artifacts: `scratch/agent/s2608_m5_c88_default.log`,
+`scratch/agent/s2608_m5_c88_rollback.log`,
+`scratch/s2608_m5_c88_default_store_audit.md`.

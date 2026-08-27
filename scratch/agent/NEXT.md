@@ -1,50 +1,58 @@
-# NEXT work unit (s2608) — restore the guest C88 store as the default
+# NEXT work unit (s2609) — hangar 0x80094648 store value vs PCM
 
-HYPOTHESIS-ID: m5-c88-default-store
+HYPOTHESIS-ID: m5-hangar-pcm-writer
 
 ## Single work unit
 
-s2607 selected `H-C88ForceZeroBlocksGate` on the restored hangar route:
-`ROGUESQ_M5_C88_VALUE=1` stores the guest `0x01` at `0x8008EC88`, the gate
-becomes nonzero, `startSongSequence` / `L_80094640` run, and title PCM is
-briefly `nz=768`. Retail s2583 wrote `0x01000000` at `0xA0F50` from this PC.
-Land M5 plan Step 4's one-writer change: invert the hatch so the default
-store is the guest value.
+s2608 made the guest C88 store the default. Title PCM n=0..18 is `nz=768`
+(positive control). Hangar PCM stays `nz=0` even though the gate is `0x01`
+and `startSongSequence` reaches `L_80094640` (56× `0x80094664` in hangar).
+Retail s2583 wrote hangar `0x141AD0` from PC `0x80094648`. That instruction
+is `sb $a2, 0x1AD8($at)` immediately before the logged branch, so it ran;
+the stored `$a2` and dest are unlogged because s2586 only tags branch PCs.
 
-Do not full-regen (cache 0x0D). Edit the live generated store and the
-fixup replacement together. Do not touch ED48 (`sb $zero` is a disable).
+Do not full-regen. Add one store-site row at `0x80094648` (dest, `$a2`
+requested/stored) to the existing writer table in the live
+`startSongSequence` body and the matching fixup. Do not change C88, ED48,
+or any other gate writer.
 
-ORIGIN for the change: writer is `reapplyDisplayMode` at `0x8008EC88`;
-the guest requested value is `0x01`; retail post-store at this PC is
-`0x01000000`; the force-zero is a port hatch, not a legitimate game store.
+ORIGIN if any store/guard changes: writer is `startSongSequence` at
+`0x80094648`; legitimacy is the retail hangar write at this PC.
 
 ## Competing hypotheses and discriminator
 
-- `H-DefaultMatchesEnvArm`: after the invert, unset (new default) reproduces
-  the s2607 C88=1 table: title/hangar reached, C88 stored 1, gate 1, song
-  / `L_80094640` live, title PCM `nz=768` then silent, hangar PCM `nz=0`.
-  The `=0` rollback arm reproduces s2607 control (stored 0, gate 0, no song).
-- `H-DefaultRouteAbort`: compiling store-guest as default dies before
-  title/hangar, so the env arm is not a compiled-default equivalent.
-- `H-HangarPcmFollows`: default store-guest makes hangar PCM nonzero in
-  the same run (title PCM remaining the positive control).
+- `H-HangarStoreZero`: hangar `0x80094648` stores 0 while title stored
+  nonzero. Hangar song loop is live but the channel byte is empty.
+- `H-HangarStoreNonzeroNoPcm`: hangar stores nonzero (retail-shaped dest
+  near `0x80141AD0`/`0x80141AD8`) while sampled PCM buffers stay `nz=0`.
+  The mix/output join is the gap, not the song store.
+- `H-HangarStoreUnlogged`: the new store row still does not fire despite
+  `0x80094664` branches in the same function. The matcher missed the
+  s2190-wrapped `MEM_B` form.
 
-The discriminator is one rebuilt image, two concurrent AUTOPILOT hangar
-arms: default (unset) vs `ROGUESQ_M5_C88_VALUE=0`. Require title
-`1024 @ 0x00790400` and hangar `512 @ 0x006AB400` before reading writers.
+The discriminator is one rebuilt image, one AUTOPILOT hangar run under the
+new C88 default (unset). Require title `1024 @ 0x00790400` with PCM
+`nz=768` and hangar `512 @ 0x006AB400` before reading 94648 dest/value.
+Optional same-build rollback `ROGUESQ_M5_C88_VALUE=0` must show 0 song and
+0 94648 stores (negative control).
 
 ## Exact checks
 
-1. `python3 tools/check_jr_t9_host_return.py` still passes.
-2. In `../N64Recomp/fixup_game_funcs.py` invert the `0x8008EC88` replacement
-   so unset stores `ctx->r2` and env `0` stores `0`. Apply the same invert
-   to the live line in `../N64Recomp/RecompiledFuncs/funcs_23.c`.
+1. `python3 tools/check_jr_t9_host_return.py` and
+   `python3 tools/check_c88_default_store.py` still pass.
+2. In `../N64Recomp/RecompiledFuncs/funcs_25.c` at `0x80094648`, log dest
+   (`ADD32(ctx->r1, 0x1AD8)`), `$a2` (`ctx->r6`), and post-store byte,
+   phase-gated, first 8 plus every 16th. Mirror that in
+   `../N64Recomp/fixup_game_funcs.py` so regen keeps it. Do not use
+   `ROGUESQ_LOG_ALL` or `ROGUESQ_LOG_SUBMIT_GATE_STORES` (that probe is
+   phys-range filtered to `0x11A89F`).
 3. Rebuild Debug `RogueSquadron64Recomp` only (no N64Recomp regen).
-4. From `build/`, ROM present, both arms at once, 90s SIGKILL, same shared
-   flags as s2607. Logs:
-   - default unset → `scratch/agent/s2608_m5_c88_default.log`
-   - rollback `ROGUESQ_M5_C88_VALUE=0` → `scratch/agent/s2608_m5_c88_rollback.log`
-5. Per arm and per title/hangar: C88 requested/stored, gate byte, song /
-   `0x80094664`, PCM `nz`, crash/abort. Default must match s2607 C88=1;
-   rollback must match s2607 control. Do not change ED48 or any other gate
-   writer this iteration.
+4. From `build/`, ROM present, 90s SIGKILL, shared flags as s2608
+   (LLE_FORCE/SPIN_YIELD/LLE_UNGATED/LLE_SOLO, writer/gate/PCM/audio-return/
+   B40-writer, hangar AUTOPILOT, STOP_WIDTH=512). Logs:
+   - default unset → `scratch/agent/s2609_m5_hangar_94648.log`
+   - optional rollback `ROGUESQ_M5_C88_VALUE=0` →
+     `scratch/agent/s2609_m5_hangar_94648_rollback.log`
+5. Per title/hangar: 94648 dest/value/count, C88 stored, gate, song /
+   `0x80094664`, PCM `nz`, crash/abort. Title PCM `nz=768` is the control
+   that the new 94648 logger is not required to explain silence.

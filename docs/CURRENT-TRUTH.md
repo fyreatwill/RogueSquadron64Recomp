@@ -4,7 +4,23 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2607 (2026-08-26).
+Current maintenance marker: Session 2608 (2026-08-27).
+
+- **s2608 — guest C88 store is now the compiled default.** Inverted the
+  `0x8008EC88` hatch so unset stores `ctx->r2` and `ROGUESQ_M5_C88_VALUE=0`
+  is the force-zero rollback. No full regen. Concurrent 90s AUTOPILOT hangar
+  arms, SIGKILL. Both reached title `1024 @ 0x00790400` (11.6s) and hangar
+  `512 @ 0x006AB400` (~20s) with zero crash/abort/missing-function rows.
+  Default matched s2607 C88=1: requested/stored `0x01`, gate `0x01`,
+  `startSongSequence` / `L_80094640` live, title PCM n=0..18 `nz=768` then
+  silent, hangar PCM `nz=0`. Rollback matched s2607 control: stored `0x00`,
+  gate 0, no song. This selects `H-DefaultMatchesEnvArm` and refutes
+  `H-DefaultRouteAbort` and `H-HangarPcmFollows`. ORIGIN: writer is
+  `reapplyDisplayMode` at `0x8008EC88`; guest requested `0x01`; retail
+  s2583 post-store is `0x01000000`; the force-zero was a port hatch.
+  Artifacts: `scratch/agent/s2608_m5_c88_default.log`,
+  `scratch/agent/s2608_m5_c88_rollback.log`,
+  `scratch/s2608_m5_c88_default_store_audit.md`.
 
 - **s2607 — C88 polarity A/B selects `H-C88ForceZeroBlocksGate`.** Same
   s2605/s2606 image, concurrent 90s AUTOPILOT hangar arms, default store
@@ -16,8 +32,8 @@ Current maintenance marker: Session 2607 (2026-08-26).
   `0x80094648`; title PCM n=0..18 was `nz=768` with distinct hashes, then
   silent; hangar PCM stayed `nz=0`. Title `0x8008ED48` ran as a disable
   (`stored=0`). This refutes `H-C88RouteAbort` and `H-C88NotSufficient` as
-  stated. Hangar-silent PCM is a downstream gap; do not keep force-zero for
-  it. Next is restoring the guest C88 store as the default. Artifacts:
+  stated. Hangar-silent PCM is a downstream gap; s2608 promoted the guest
+  store rather than keeping force-zero. Artifacts:
   `scratch/agent/s2607_m5_c88_control.log`,
   `scratch/agent/s2607_m5_c88_value.log`,
   `scratch/s2607_m5_c88_gate_polarity_audit.md`.
@@ -585,7 +601,8 @@ the active backlog:
   title/hangar route under force-zero. s2607's C88 polarity A/B selected
   `H-C88ForceZeroBlocksGate`: storing the guest `0x01` opens the gate,
   runs `startSongSequence` / `L_80094640`, and produces title PCM.
-  Hangar PCM stayed zero. No default store was promoted.
+  s2608 promoted that store to the compiled default; hangar PCM stayed
+  zero on the default arm.
 
 For exact commands, artifacts, and failed experiments, use the corresponding
 session entry in `PORTING-STATE.md`.
@@ -593,16 +610,16 @@ session entry in `PORTING-STATE.md`.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 named retail writer/value boundary — restore the guest C88 store.**
-   s2607 selected `H-C88ForceZeroBlocksGate`: C88=1 stores the requested
-   `0x01`, the gate becomes nonzero, `startSongSequence` and the
-   `0x80094640` loop run, and title PCM is briefly fully nonzero. Retail
-   s2583 wrote `0x01000000` at `0xA0F50` from this PC. Next is M5 plan
-   Step 4's store change: invert the `0x8008EC88` hatch in
-   `N64Recomp/fixup_game_funcs.py` so unset stores `ctx->r2` and
-   `ROGUESQ_M5_C88_VALUE=0` is the rollback. Do not full-regen. Hangar PCM
-   remaining zero is the following contract gap, not a reason to keep
-   force-zero. Retain `ROGUESQ_AUDIO_UCODE=0` as the silent control.
+1. **M5 hangar PCM writer/value boundary.** s2608 made the guest C88
+   store the default. Title PCM is briefly fully nonzero; hangar PCM
+   stays `nz=0` even though the gate is `0x01` and `startSongSequence`
+   reaches `L_80094640` (56× `0x80094664` in hangar). Retail s2583 wrote
+   hangar `0x141AD0` from `0x80094648`. That store sits immediately
+   before the logged branch and so ran, but its `$a2`/dest are unlogged.
+   Next is one store-site log at `0x80094648` on the new default image,
+   with title PCM `nz=768` as the same-run positive control.
+   `ROGUESQ_M5_C88_VALUE=0` remains the C88 rollback; retain
+   `ROGUESQ_AUDIO_UCODE=0` as the silent control.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
@@ -718,12 +735,12 @@ change. Factor 5 mappings and independent controls are in
 
 Direct service entry/exit, service gate/loop, task/AI boundary, image DMEM
 work, generated DMA, reporter association, target-route SP queue consumption,
-and PCM consumption are live on the port. The default `0x8008EC88` hatch
-still force-zeros the MusyX gate; s2607 showed that storing the guest `0x01`
-opens the gate and produces title PCM. Hangar PCM and a complete slot/voice
-mapping remain open. Zero-valued rows are diagnostically ambiguous; no output
-remap or mitigation is permitted without a named legitimate writer and an
-`ORIGIN:` line.
+and PCM consumption are live on the port. The default `0x8008EC88` store
+writes the guest `$v0`; `ROGUESQ_M5_C88_VALUE=0` restores the old
+force-zero hatch. s2608's default arm opens the gate and produces title
+PCM. Hangar PCM and a complete slot/voice mapping remain open. Zero-valued
+rows are diagnostically ambiguous; no output remap or mitigation is
+permitted without a named legitimate writer and an `ORIGIN:` line.
 
 The M4 indirect alias audit adds a static cross-overlay path: overlay 0x1c
 writes B00/B02/B04 pointer entries from `0x670`-derived records, and overlay
@@ -775,6 +792,12 @@ controls, but are superseded at their measured scopes:
   label is force-zero-scoped. It was believable because the default C88 hatch
   left the gate at 0, so `startSongSequence` never ran. s2607 C88=1 reached
   `L_80094640` (the loop that contains that store) in title and hangar.
+- The default `0x8008EC88` force-zero hatch is superseded as shipped policy.
+  It was believable as a boot-stability hatch (s304/s2033). s2608's compiled
+  default stores the guest `$v0`, reaches title and hangar without
+  crash/abort, and reproduces the s2607 C88=1 song/title-PCM table. The
+  `=0` env remains the rollback. Hangar PCM remaining zero is a later
+  contract gap, not a reason to restore force-zero.
 
 ## Evidence and safety rules
 
