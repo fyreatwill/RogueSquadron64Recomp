@@ -1,45 +1,44 @@
-# NEXT work unit (s2673) — obtain the next independent M5 writer/order edge
+# NEXT work unit (s2674) — audit the CPU-side MORT publication boundary
 
-HYPOTHESIS-ID: m5-audio-step3-ring-writer-ground-truth
+HYPOTHESIS-ID: m5-audio-cpu-mort-publication-boundary
 
 ## Work unit
 
-Use the existing independent retail oracle and the qualified port capture to
-map the rotating stage-2 PCM ring (`0x166450:0x169450`) to a named writer and
-ordering edge. Prefer a ground-truth oracle watch/callsite mapping for the
-exact nonzero retail/port addresses; do not change runtime behavior, add
-writeback, or repeat the zero task-field census. If the oracle cannot drive the
-target phase, record that limitation and do not interpret a narrow null.
+Perform one bounded source-and-ground-truth audit of the CPU-side MORT voice
+publication boundary. Start from the named MORT/voice callsites and exact
+retail PCs already identified in `docs/PROJECT-OVERVIEW.md`, then choose one
+new oracle watch that can attribute a specific source/destination write or
+callsite to the target phase. Do not change runtime behavior, add writeback,
+or repeat the task-field/ring-destination census.
 
 ## Competing hypotheses and discriminator
 
-- `H-ring-writer`: a named CPU/MORT writer legitimately produces the rotating
-  `0x166xxx` PCM payload before the port consumer, and its retail PC/value/order
-  can be joined to image completion.
-- `H-image-ring-writer`: the Factor 5 image's stage-2 DMA is the legitimate
-  writer, with retail and port destination/payload/order agreement.
-- `H-ring-unmapped`: neither independent source can provide a legitimate named
-  writer plus destination, payload polarity, and completion-to-consumer order.
+- `H-MORT-edge`: a named CPU-side MORT/voice callsite has a legitimate source,
+  destination, and target-phase order that can be joined to PCM consumption.
+- `H-image-edge`: the apparent CPU-side boundary is actually the Factor 5
+  image contract, with a complete image-to-consumer join.
+- `H-MORT-unmapped`: neither source provides a legitimate MORT publication
+  edge with destination, payload polarity, and order.
 
-The discriminator is one table covering every target-phase nonzero/zero ring
-window observed in the qualified port arm and every corresponding retail watch
-row: address span, writer PC, value/payload polarity, MORT descriptor/type (if
-any), image completion event, PCM source/consumer event, and ordering. A
-complete CPU writer join selects `H-ring-writer`; a complete image-DMA join
-selects `H-image-ring-writer`; otherwise select `H-ring-unmapped`. The oracle
+The discriminator is one table covering each named MORT callsite: retail PC,
+watched source/destination, value/payload polarity, descriptor/type, port
+source/consumer event, image completion event, and ordering. A complete CPU
+join selects `H-MORT-edge`; a complete image join selects `H-image-edge`; any
+missing writer or ordering edge selects `H-MORT-unmapped`. The oracle
 whole-RDRAM watch must fire first as the positive control.
 
 ## Exact commands
 
-1. Inspect `tools/oracle/README.md` and the existing qualified driver/recipe
-   used for s2671; grep the oracle watch configuration and phase keys before
-   changing anything.
-2. Use `rg -n "166450|166D50|167050|queue_samples|MORT|mort|pcm" tools/oracle
-   src docs scratch/agent/s2671_m5_step1_contract_rebaseline` and read only
-   bounded windows.
-3. Run one batched oracle/port capture only if the existing ground-truth
-   driver can arm the whole-RDRAM positive control and target phase; otherwise
-   write the blocker and stop without a runtime build.
+1. Use `rg -n "MORT|mort|voice|filterVoice|startVoice|queue_samples|pcm" src
+   docs/PROJECT-OVERVIEW.md docs/game-architecture.md
+   scratch/agent/s2673_m5_ring_writer_ground_truth.md` and read bounded
+   windows.
+2. Inspect `tools/oracle/README.md` for the smallest new `--watch-pc` or
+   `--watch-write` that can attribute one named MORT edge; ask ground truth
+   before adding any new port instrumentation.
+3. Run one batched oracle/port capture only if the oracle can arm the
+   whole-RDRAM positive control and target phase; otherwise record the
+   limitation without interpreting a narrow null.
 
 Expected: the positive control remains live. Either a named independent writer
 and complete order join closes one ring hypothesis, or the ring remains

@@ -117727,3 +117727,20 @@ MORT output. This selects `H-unmapped-edge` and rules out adding writeback or
 remap from destination overlap alone. Full table:
 `scratch/agent/s2672_m5_output_publication_audit.md`. No runtime behavior or
 generated code changed.
+## Session 2673 (2026-08-27) — bounded M5 ring-writer ground-truth audit
+
+The fixed batched capture passed the independent retail whole-RDRAM positive
+control with 23,087 writes and reached the target `512` / `0x006AB400` phase.
+Retail exact watches recorded 12,288 writes in `0x166450:0x169450`, 717 in
+`0x1798B0:0x179A48`, and 82 in `0x141AD0:0x141AF0`. The known retail PC
+`0x800078EC` executed in phase, but the completed watch table supplied no
+same-event writer-PC/value row, so execution of that PC does not prove ring
+ownership. The port image arm reached hangar with 9,272 image-stage rows,
+4,609 DMA-range rows, 72 PCM-source rows, and 72 PCM-consumer rows, with no
+crash or abort markers. All observed ring stage-2 payloads were zero; the
+only target-phase nonzero image payloads were outside the ring at
+`0x168850`/`0x168B50` (`nz=621/639`). Stage 3 at `0x1798B0` was zero.
+This selects `H-ring-unmapped` and rules out promoting an image writeback or
+remap from destination overlap. Full table:
+`scratch/agent/s2673_m5_ring_writer_ground_truth.md`. No runtime behavior,
+audio route, gate, writeback, remap, or guard changed.

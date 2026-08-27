@@ -4,7 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2672 (2026-08-27).
+Current maintenance marker: Session 2673 (2026-08-27).
+
+## Session 2673 result
+
+The fixed batched Step 3 capture passed the independent retail whole-RDRAM
+control (`23,087` writes) and target phase. Retail exact watches recorded
+`12,288` writes in `0x166450:0x169450` and `717` in `0x1798B0:0x179A48`;
+`0x800078EC` executed in phase, but the completed watch table supplied no
+same-event writer PC/value row. The port image arm reached hangar with 9,272
+image-stage rows and no crash/abort markers. Its observed ring stage-2 windows
+were all zero-valued; the only nonzero image payloads were outside the ring at
+`0x168850`/`0x168B50` (`nz=621/639`), and stage 3 at `0x1798B0` was zero.
+This selects `H-ring-unmapped`: neither source closes a legitimate writer,
+destination, payload, and ordering edge. Full table:
+[`s2673_m5_ring_writer_ground_truth.md`](../scratch/agent/s2673_m5_ring_writer_ground_truth.md).
+No runtime behavior, audio route, gate, writeback, remap, or guard changed.
 
 ## Session 2672 result
 
@@ -619,12 +634,11 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 Step 3 output/publication contract audit — primary active thread.**
-  The s2672 audit found the image stage-2 ring and the stage-3
-  `field348+0x100` relation, but neither closes to a named MORT writer and
-  nonzero PCM publication. Obtain an independent writer/order mapping for the
-  rotating `0x166xxx` ring or a CPU-side MORT output callsite; do not repeat the
-  task-field census or add writeback/remap from destination overlap alone.
+1. **M5 CPU-side MORT publication boundary — primary active thread.**
+  The s2672/s2673 audits leave both image-ring and stage-3 destinations
+  unmapped to a legitimate publication edge. Audit named MORT/voice callsites
+  and their source/destination/order contract; do not repeat the task-field or
+  ring-destination census, or add writeback/remap from overlap alone.
 2. **M5 de-stubbing sequence — secondary active thread.** Obtain an independent
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
