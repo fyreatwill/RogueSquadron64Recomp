@@ -4983,6 +4983,89 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
         stick_y = keyboard_y * (keyboard_x != 0.0f ? diagonal : 1.0f);
     }
 
+    // ---- Autopilot: deterministic in-game input (wasted-run fix, 2026-08-26) --
+    // The game is normally driven to the hangar/mission by synthetic keypresses
+    // posted to the window (winctl -> CGEventPostToPid). Those drop silently
+    // when window focus is lost, so a "driven" run idles at an early VI width
+    // and the probe's phase gate times out, wasting the whole run (s2506 needed
+    // three attempts, 0 presses seen by the game on the failed one). ROGUESQ_
+    // AUTOPILOT injects the same schedule from inside the input poll: no OS
+    // focus/keypost, so delivery is deterministic. It ORs into btn below, so the
+    // existing [pad-host] edge log confirms each press.
+    //   ROGUESQ_AUTOPILOT="3:start,7:start,15:a,..."  comma-sep <seconds>:<key>
+    //     (bare "<sec>" = start). key: start,a,b,z,up,down,left,right.
+    //     Times are from process start (like PROBE_KEYS' default).
+    //   ROGUESQ_AUTOPILOT_HOLD_MS   press hold, default 150 (matches winctl).
+    //   ROGUESQ_AUTOPILOT_STOP_WIDTH  stop all presses once this VI width is
+    //     reached (set 512 to stop at the hangar, avoiding a mash into stubbed
+    //     mission code that blacks the screen).
+    {
+        struct ApEv { double t; uint16_t btn; };
+        static bool     s_init = false;
+        static bool     s_on = false;
+        static ApEv     s_ev[64];
+        static int      s_nev = 0;
+        static int      s_idx = 0;
+        static Uint32   s_t0 = 0;
+        static double   s_hold = 0.150;
+        static uint32_t s_stop_w = 0;
+        static uint16_t s_held = 0;
+        static double   s_release_at = 0.0;
+        if (!s_init) {
+            s_init = true;
+            const char* spec = std::getenv("ROGUESQ_AUTOPILOT");
+            if (spec && *spec) {
+                if (const char* h = std::getenv("ROGUESQ_AUTOPILOT_HOLD_MS"))
+                    s_hold = atof(h) / 1000.0;
+                if (const char* sw = std::getenv("ROGUESQ_AUTOPILOT_STOP_WIDTH"))
+                    s_stop_w = (uint32_t)strtoul(sw, nullptr, 0);
+                auto keybtn = [](const char* n) -> uint16_t {
+                    if (!strcmp(n, "start") || !strcmp(n, "return")) return N64_START_BUTTON;
+                    if (!strcmp(n, "a"))     return N64_A_BUTTON;
+                    if (!strcmp(n, "b"))     return N64_B_BUTTON;
+                    if (!strcmp(n, "z"))     return N64_Z_TRIG;
+                    if (!strcmp(n, "up"))    return N64_U_JPAD;
+                    if (!strcmp(n, "down"))  return N64_D_JPAD;
+                    if (!strcmp(n, "left"))  return N64_L_JPAD;
+                    if (!strcmp(n, "right")) return N64_R_JPAD;
+                    return N64_START_BUTTON;
+                };
+                char buf[512];
+                strncpy(buf, spec, sizeof(buf) - 1);
+                buf[sizeof(buf) - 1] = '\0';
+                char* save = nullptr;
+                for (char* tok = strtok_r(buf, ",", &save);
+                     tok && s_nev < 64; tok = strtok_r(nullptr, ",", &save)) {
+                    double t = 0.0; char kbuf[16]; kbuf[0] = '\0';
+                    if (sscanf(tok, " %lf:%15[a-z]", &t, kbuf) < 1) continue;
+                    s_ev[s_nev].t = t;
+                    s_ev[s_nev].btn = keybtn(kbuf);
+                    s_nev++;
+                }
+                if (s_nev > 0) { s_on = true; s_t0 = SDL_GetTicks(); }
+                fprintf(stderr, "[autopilot] armed: %d events hold=%.0fms stop_width=%u\n",
+                        s_nev, s_hold * 1000.0, s_stop_w);
+                fflush(stderr);
+            }
+        }
+        if (s_on) {
+            const double el = (SDL_GetTicks() - s_t0) / 1000.0;
+            const bool stop = (s_stop_w != 0 && rs64_vi_committed_width() == s_stop_w);
+            if (s_held && el >= s_release_at) s_held = 0;
+            if (!stop && !s_held && s_idx < s_nev && el >= s_ev[s_idx].t) {
+                s_held = s_ev[s_idx].btn;
+                s_release_at = el + s_hold;
+                fprintf(stderr, "[autopilot] fire %d/%d t=%.1f btn=0x%04X vi_width=%u\n",
+                        s_idx + 1, s_nev, el, (unsigned)s_held,
+                        (unsigned)rs64_vi_committed_width());
+                fflush(stderr);
+                s_idx++;
+            }
+            if (stop) s_held = 0;
+            btn |= s_held;
+        }
+    }
+
     *x = stick_x;
     *y = stick_y;
     *buttons = btn;

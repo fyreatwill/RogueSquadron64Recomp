@@ -13,6 +13,28 @@ Current maintenance marker: Session 2524 (2026-08-26).
 - Qualified route: `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
   `ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1`. Spin yield is gated and
   default-off.
+- **Reliable in-game input: `ROGUESQ_AUTOPILOT` (2026-08-26).** Synthetic keys
+  posted to the window (winctl / PROBE_KEYS) drop when window focus is lost, so
+  a "driven" run idles at width 640 with 0 presses seen and the phase gate times
+  out — wasted runs, forcing retries (s2506 took 3 attempts). `ROGUESQ_AUTOPILOT=
+  "<sec>:<key>,..."` (bare `<sec>`=start; keys start/a/b/z/up/down/left/right;
+  times from boot) injects the schedule from INSIDE the input poll
+  (`get_n64_input`, main.cpp) — no OS focus, deterministic, every press seen.
+  `ROGUESQ_AUTOPILOT_HOLD_MS` (default 150) sets the hold; `ROGUESQ_AUTOPILOT_
+  STOP_WIDTH=512` stops all presses once the hangar is reached. VALIDATED 2/2:
+  `ROGUESQ_AUTOPILOT="3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a"
+  ROGUESQ_AUTOPILOT_STOP_WIDTH=512` drives boot→hangar (origin 0x6AB400) with
+  ZERO external input and survives 90s. Prefer this over PROBE_KEYS for any
+  hangar/mission run; it also removes the winctl/raise_game focus dependency.
+- **Crash pc=0x80001b08 = `recomp::do_rom_read` (pi.cpp:65), a PI-DMA with a
+  wild ROM `physical_addr`.** Stack: do_rom_read←do_dma←osPiStartDma←piDmaWorker;
+  `rom_addr = rom.data()+physical_addr-rom_base` has no bounds check, so a garbage
+  addr walks off the ROM buffer (host SIGSEGV, far≈21GB). TRIGGER: pressing
+  Start/A AT the hangar (width 512) starts a mission/asset load into still-stubbed
+  code — input-overshoot, so `STOP_WIDTH=512` avoids it (test survived 90s vs
+  crash at ~50s). GUARDABLE at do_rom_read: reject `physical_addr-rom_base+
+  num_bytes > rom.size()`, drop+log with `ctx->r31` caller. s85/s90 note: one
+  specific caller passes a bad `raw_r7`; that caller (root cause) is still open.
 - Product multi-header freelist restore is on. Garbage-CIMG and wrap-drop
   mitigations are off. Any future mitigation needs a named writer, a
   legitimacy judgment, and an `ORIGIN:` line.
