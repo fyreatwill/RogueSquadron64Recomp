@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2850 (2026-08-27).
+Current maintenance marker: Session 2851 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -383,8 +383,12 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    Session 2850 closed `0x80055000..0x80056000`: all callable candidates were
    already synchronized and three ambiguous/fake placeholders were preserved;
    zero generated references were selected. Continue with
-   `0x80056000..0x80057000`, preserving ambiguous/data entries and applying
-   only source-backed names.
+   Session 2851 closed `0x80056000..0x80057000`: the selector found eight
+   already-synchronized callable entries and preserved
+   `fake_func_80056344` as ambiguous-or-fake; it changed zero generated
+   references and the independent scan found only that preserved placeholder.
+   Continue with `0x80057000..0x80058000`, preserving ambiguous/data entries
+   and applying only source-backed names.
    Sessions 2815–2818 closed intervals through `0x8015D000`; all four
    selectors changed zero references in zero files and all independent
    placeholder scans were empty. Session 2819 classified four isolated
