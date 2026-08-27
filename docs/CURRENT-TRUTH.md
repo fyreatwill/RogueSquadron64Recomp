@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2578 (2026-08-26).
+Current maintenance marker: Session 2579 (2026-08-26).
+
+- **s2579 — refreshed the M5 design gate against the current dispatcher.**
+  `docs/M5-AUDIO-PLAN.md` now inventories the active RSP stubs, Factor 5
+  image arm, guest gate/trap classes, wait and drain hatches, scheduler/DMEM
+  invariants, AI/SDL bridge, and CPU MORT boundary. It corrects the stale
+  policy text: `factor5_ucode_b` is the default `M_AUDTASK` arm and
+  `ROGUESQ_AUDIO_UCODE=0` is the silent control. No runtime behavior changed
+  and no soak ran. The next unit is the same-build, phase-gated image/control
+  contract checkpoint described in `scratch/agent/NEXT.md`.
 
 - **s2578 — the M4 dynamic join is live in the qualified route.** The fixed
   90-second capture had an independent `[ovl-route]` positive control with
@@ -634,7 +643,7 @@ Current maintenance marker: Session 2578 (2026-08-26).
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 Step 1 contract checkpoint — image execution is proven, promotion is not.** The direct load boundary,
+1. **M5 Step 1 contract checkpoint — re-baseline the current default image against the silent control.** The direct load boundary,
    SP completion/consumption, image DMEM work, generated DMA, and PCM
    consumer are live under qualified controls. Runtime joins show image
    stage-2 destinations equal generated AI-table entries, but the legitimate
@@ -643,13 +652,14 @@ This is one monotonic sequence; #1 is the next campaign priority.
   `gspTask`, infer identity from timing or hashes, or change task/output
   fields without a named writer and independent retail evidence. s2516 and
   s2517 found no new legitimate edge; do not add a writeback/remap or repeat
-  the unresolved observer. M5 image execution remains opt-in, and later M5
-  steps remain conditional on a new named retail writer/value boundary.
+  the unresolved observer. The current source defaults to the image arm;
+  later M5 steps remain conditional on a new named retail writer/value
+  boundary, with `ROGUESQ_AUDIO_UCODE=0` retained as the control and rollback.
   s2559's staged pair adds a positive image execution control but no distinct
   downstream audio edge. Do not promote the image arm or alter task/output
   fields without a newly named contract writer and independent retail
-  evidence. The next work unit is the bounded generated-symbol sweep described
-  in `scratch/agent/NEXT.md`; M4 remains parked until the sweep is inapplicable.
+  evidence. The next work unit is the phase-gated paired checkpoint described
+  in `scratch/agent/NEXT.md`; M4 remains parked while M5 has priority.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.

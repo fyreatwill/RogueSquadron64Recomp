@@ -116034,3 +116034,25 @@ family at guest PC 0x8000834c, with no abort marker.
 
 Artifacts: `scratch/agent/s2578_m4_route_branch/audit.md`,
 `scratch/agent/s2578_m4_route_branch.log`.
+
+## Session 2579 (2026-08-26) — refreshed M5 audio de-stubbing design gate
+
+Ran the required source inventory for the M5 design unit, then refreshed
+`docs/M5-AUDIO-PLAN.md` without changing runtime code or running a soak. The
+inventory covers the `M_AUDTASK` stub/image dispatch, stock `aspMain` stub,
+Factor 5 generated/fixup completion path, SP yield shortcut, guest audio gate,
+gate consumers, key-on trap class, voice/list guards, slot and drain wait
+hatches, shutdown reaping, scheduler yield, AI/SDL bridge, DMEM serialization,
+unknown-task failure path, and the separate CPU MORT boundary. It also records
+each contract writer or pending legitimacy requirement and the positive control
+needed before changing it.
+
+The source audit corrected stale design policy: `factor5_ucode_b` is the
+current default `M_AUDTASK` arm and `ROGUESQ_AUDIO_UCODE=0` is the silent
+control. The next unit is a same-build, phase-gated paired contract checkpoint
+with the oracle whole-RDRAM control, not another design pass. This result rules
+out the plan text's former claim that image dispatch was still opt-in; it does
+not establish a new audio contract or authorize promotion of any gate, task
+field, output mapping, or mitigation.
+
+Artifact: `docs/M5-AUDIO-PLAN.md`.

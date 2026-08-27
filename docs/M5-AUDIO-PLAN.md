@@ -1,7 +1,7 @@
 # M5 — audio de-stubbing plan
 
-Refreshed in session 2231 (2026-08-23). This is the design gate for M5. This
-refresh changes no runtime code, flips no audio default, and runs no soak.
+Refreshed in session 2579 (2026-08-26). This is the design gate for M5. This
+refresh changes no runtime code and runs no soak.
 
 ## Boundary and current policy
 
@@ -17,21 +17,21 @@ Rogue Squadron has two audio data paths that must not be conflated:
   validation tool; it is not the runtime audio implementation and does not
   justify a second RSP image.
 
-The default remains deliberately silent: `get_rsp_microcode` routes
-`M_AUDTASK` to `musyx_stub`, which returns `RspExitReason::Broke` without
-touching DMEM. `ROGUESQ_AUDIO_UCODE=1` routes the same task to the opt-in
-Factor 5 image arm. Stock `aspMain` is also a `Broke` stub and is not selected
-by this project's task dispatch. Never use it as a replacement for the retail
-task contract.
+The current default is the Factor 5 image: `get_rsp_microcode` routes
+`M_AUDTASK` to `factor5_ucode_b`. `ROGUESQ_AUDIO_UCODE=0` selects
+`musyx_stub`, which returns `RspExitReason::Broke` without touching DMEM, as
+the silent control arm. Stock `aspMain` is also a `Broke` stub and is not
+selected by this project's task dispatch. Never use it as a replacement for
+the retail task contract.
 
-The image arm is meaningful but not yet a default: it performs DMEM work,
+The image arm performs DMEM work,
 `SP_WR_LEN` DMA writes, and reaches the generated `break 0` completion edge;
 the host accepts only `Broke`. The image-stage canary is inside the generated
 `0xE50..0xFCF` mix-buffer span, so `canary_ok=0` is diagnostic data, not a
 completion or writeback gate. s2220 matched the retail `reapplyDisplayMode`
 (`0x8008EC88`) polarity and reached service, slot completion, and nonzero PCM
-controls with C88=`1`; that arm remains opt-in pending the remaining contract
-and stability work.
+controls with C88=`1`; it remains subject to the remaining contract and
+stability checkpoints below.
 
 ## Complete inventory of active stubs, traps, gates, and safety hatches
 
@@ -42,7 +42,7 @@ without naming the writer and proving the value is legitimate.
 
 | ID | Site | Current behavior | Contract, writer, and legitimacy | Safe next action and positive control |
 |---|---|---|---|---|
-| A1 | `src/main/main.cpp:get_rsp_microcode` → `musyx_stub` | Default `M_AUDTASK` returns `Broke`; `ROGUESQ_AUDIO_UCODE=1` selects `factor5_ucode_b`. | The task must complete its SP/guest contract. The guest submits the `OSTask`; `librecomp/rsp.cpp:run_task` invokes the selected function. This is the primary de-stubbing boundary. | Keep both arms in one build. Before any default flip, require task dispatch/exit, task-field identity, DMA/readback, service return, slot progress, PCM source/consumer joins, and route phases. Roll back by unsetting the env arm. |
+| A1 | `src/main/main.cpp:get_rsp_microcode` → `musyx_stub` / `factor5_ucode_b` | Default `M_AUDTASK` selects `factor5_ucode_b`; `ROGUESQ_AUDIO_UCODE=0` selects the silent `musyx_stub` control. | The task must complete its SP/guest contract. The guest submits the `OSTask`; `librecomp/rsp.cpp:run_task` invokes the selected function. This is the primary de-stubbing boundary. | Keep both arms in one build. Require task dispatch/exit, task-field identity, DMA/readback, service return, slot progress, PCM source/consumer joins, and route phases. Roll back by setting `ROGUESQ_AUDIO_UCODE=0`. |
 | A2 | `src/rsp/aspMain.cpp:aspMain` | Always returns `Broke`; no live RS64 caller selects it. | Stock ASP has a different ABI/format. Retail is the Factor 5/MusyX image, not this stub. | Keep out of dispatch. A future stock-ASP test needs a known-good stock task as its control, never an RS64 task. |
 | A3 | `factor5b_rsp.toml`, generated `factor5_ucode_b`, `tools/fixup_factor5_ucode.py` | The image has real DMEM/DMA work, a generated `break 0` at `0x1328`, and returns `Broke`. Its RSP status/DMA busy polls are modeled by the host helpers; invalid indirect targets return `UnhandledJumpTarget`. | `data_ptr`, `data_size`, `output_buff`, `yield_data_ptr`, and the `data_ptr+0x100` relation are task ABI fields, not guessed PCM destinations. `SP_WR_LEN` is the image writer; host DMA records its actual ranges. | Preserve the generated/fixup path. The positive control is a completing image task with nonzero DMEM/DMA and a matched retail task-field row; a `Broke` return alone is insufficient. |
 | A4 | `librecomp/rsp.cpp:run_task` | Stages the OSTask and `ucode_data` into DMEM, serializes DMEM, calls the selected function, and treats any exit other than `Broke` as failure/assertion. | `Broke` is the current completion convention. `task_thread_func` then sends `sp_complete`; failure invokes the runtime quick-exit path. | Do not weaken the exit assertion or quick-exit path. Control: `run-task-return=1` followed by `sp-complete-enter/return`, with no `UnhandledJumpTarget`. |
@@ -73,7 +73,7 @@ They are useful only when phase-scoped and paired with a positive control.
 | Hypothesis | Prediction if true | Result that would select or reject it |
 |---|---|---|
 | H-AudioDegeneracy | The silent `M_AUDTASK` path and related degenerate gates create the wait, slot, PCM, or voice failures. One real edge produces a new downstream control without merely changing route reachability. | Same-recipe stub/image comparison shows task completion plus predicted service, slot, voice, or PCM progress. A route-only change rejects this explanation. |
-| H-ContractGap | A host return is insufficient because the MusyX task/DMEM/DMA/output ABI is incomplete. | Image DMEM/DMA activity exists but the task-field, output, slot, or PCM joins do not close. This keeps the image arm opt-in and directs work to the missing contract edge. |
+| H-ContractGap | A host return is insufficient because the MusyX task/DMEM/DMA/output ABI is incomplete. | Image DMEM/DMA activity exists but the task-field, output, slot, or PCM joins do not close. This keeps the image arm under contract qualification and directs work to the missing edge. |
 | H-MixedPipelines | Factor 5 image audio and CPU MORT speech are separate pipelines. | RSP task controls can be complete while MORT descriptor/voice controls remain independent, or vice versa. A single global “audio default” cannot be treated as proof for both. |
 | H-GateArtifact | A current guest gate or trap suppresses legitimate work. | Only independent retail writer/value evidence, plus the corresponding port writer and downstream transition, authorizes changing that gate/trap. A guard hit by itself is not evidence. |
 
@@ -98,8 +98,8 @@ SIGKILL.
 | Step | One behavior change | Positive control and expected downstream signal | Phase-gated soak and rollback |
 |---|---|---|---|
 | 0 | No behavior change: reconcile the retail contract and current generated/fixup anchors. | Oracle whole-RDRAM watch fires; retail reaches the target route and names writers for `0xA0F50`, task fields, voice/status words, and AI calls. Port has `audtask-dispatch`, SP completion, and route controls. | Oracle plus the existing port driver, with `PROBE_PHASE_WIDTH`/`PROBE_KEYS_FROM_PHASE=1`. Rollback: none. Do not add an instrument before this control. |
-| 1 | Keep the current image implementation opt-in but make one same-build stub/image validation checkpoint the entry gate for future changes. | Stub: `M_AUDTASK` returns with no DMEM/DMA. Image: nonzero DMEM changes, image completion at `0x1328`, `Broke`, SP completion, and matching task fields. The image must also report the predicted service/slot/PCM rows or explicitly show the missing edge. | Phase-keyed title/hangar run using `ROGUESQ_AUDIO_UCODE=0` and `=1` arms from one build; retain `ROGUESQ_LOG_ALL` and PCM/task joins. Rollback: unset the env arm. |
-| 2 | Promote `factor5_ucode_b` from opt-in to the default `M_AUDTASK` arm only if Step 1 closes task/output/slot/PCM controls. | The default arm reaches the same title/hangar route as the stub control, completes tasks, preserves the gfx DMEM control, and changes the predicted downstream signal; no intermittent cinematic regression or new task failure. | Same recipe, phase-gated at first target, title, and hangar; keep an env escape to stub. Rollback: restore stub dispatch and leave the image opt-in. |
+| 1 | Re-baseline the current default image against the same-build silent control before changing any further contract edge. | Stub: `M_AUDTASK` returns with no DMEM/DMA. Image: nonzero DMEM changes, image completion at `0x1328`, `Broke`, SP completion, and matching task fields. The image must also report the predicted service/slot/PCM rows or explicitly show the missing edge. | Phase-keyed title/hangar run using `ROGUESQ_AUDIO_UCODE=0` and the default image arm from one build; retain `ROGUESQ_LOG_ALL` and PCM/task joins. Rollback: set `ROGUESQ_AUDIO_UCODE=0`. |
+| 2 | Promotion to the default image arm is complete in the current source; do not repeat it as an experiment. | The Step 1 row must still show the default image reaches the same title/hangar route as the stub control, completes tasks, preserves the gfx DMEM control, and identifies any downstream divergence. | Treat this as a completed policy transition, not a new behavior change. The env override remains the rollback path. |
 | 3 | Implement exactly one missing image task/output contract edge identified by Step 1/2, such as a proven `data_ptr+0x100` writeback or output consumer relation. | Retail and port rows agree on the writer PC, destination span, payload polarity, and completion ordering; PCM source/consumer join closes after the change. | One build with old/new contract arms toggled within the same run and both target origins. Rollback the one contract edge; do not add a broad writeback guard. |
 | 4 | Change one `0x800A0F50` writer or one gate consumer, only after independent retail writer/value evidence selects it. | Same-run retail writer and value transition, matching port writer, nonzero gate branch, completed task, and slot/voice downstream transition. | Title and hangar VI phases using the eleven-Start driver. Rollback that exact store/consumer. Any mitigation-shaped diff needs `ORIGIN:` naming the writer and legitimacy. |
 | 5 | Remove or replace the eight key-on early returns as one audited idiom class, only after valid descriptors/divisors are proven. | Normal key-on tail, slot `02` then `00`, no new status-03 hang, and descriptor fields match the retail class. | Hangar `512 @ 0x006AB400`; keep an invalid-input fallback in the same arm. Rollback the generated/fixup class. |
@@ -119,8 +119,9 @@ route phase`.
 
 The summary is invalid if the whole-RDRAM oracle control, port route control,
 or phase transition is absent. Nulls before the target phase are unevaluable.
-The default silent path stays unchanged until a complete row selects a
-behavior change and its rollback condition is satisfied.
+The current default image path stays unchanged until a complete row selects a
+further behavior change and its rollback condition is satisfied; the silent
+arm remains available as the same-build control.
 
 ## Regeneration and safety
 

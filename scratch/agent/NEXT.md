@@ -1,32 +1,40 @@
-# NEXT work unit (s2579) — M5 audio de-stubbing design
+# NEXT work unit (s2580) — M5 Step 1 image/control contract checkpoint
 
-HYPOTHESIS-ID: m5-audio-destub-design
+HYPOTHESIS-ID: m5-audio-destub-step1-contract
 
 ## Single work unit
 
-Create `docs/M5-AUDIO-PLAN.md`. Survey every audio stub, trap, gate, and
-default-off arm currently in force, then define an incremental de-stubbing
-sequence. For each step specify the code surface, expected contract, positive
-controls, phase-gated soak recipe, and promotion/rollback criterion. Do not
-change runtime behavior in this design-only unit.
+Run the existing paired contract checkpoint from one current build, comparing
+the silent `M_AUDTASK` control (`ROGUESQ_AUDIO_UCODE=0`) with the current
+default Factor 5 image arm (`ROGUESQ_AUDIO_UCODE=1`). Do not change runtime
+behavior or task/output fields.
 
 ## Competing hypotheses and discriminator
 
-- `H-complete-audio-gate-map`: all behavior-changing audio stubs and gates can
-  be located in the current tree and classified by contract.
-- `H-hidden-audio-gate`: at least one active gate is outside the obvious audio
-  callback/task paths and needs a broader call/queue search.
-- `H-contract-uncertain`: a stub is visible but its data-flow is not sufficient
-  to define a safe promotion checkpoint.
+- `H-AudioDegeneracy`: the silent task arm suppresses a downstream service,
+  slot, voice, or PCM transition that the image arm restores.
+- `H-ContractGap`: the image task performs DMEM/DMA work and completes but its
+  task/output ABI does not close a downstream join.
+- `H-RouteOnly`: both arms have the same audio contract rows and any observed
+  difference is only route or phase reachability.
 
-The discriminator is one inventory table covering each stub/trap/gate, call
-site, current default, data contract, and independent positive control. A
-complete table plus staged validation sequence selects the design; any
-unclassified active path selects a broader source/queue audit before code.
+The discriminator is one phase-keyed table from the existing script containing
+dispatch and exit, task fields/source hash, DMEM changes, DMA/readback ranges,
+SP completion, service return, slot/status transitions, voice/reap rows, PCM
+source/consumer joins, and title/hangar route phases. Image-only downstream
+progress selects `H-AudioDegeneracy`; image DMEM/DMA without a downstream join
+selects `H-ContractGap`; equal rows with route differences select
+`H-RouteOnly`. Missing oracle or port positive controls makes the row
+unevaluable.
 
 ## Exact commands
 
 ```sh
-rg -n -i 'audio|aspMain|M_AUDTASK|MusyX|MORT|queue_audio|audio_data|waitForAnyAudioSlot|audio.*stub|Broke' src lib tools patches
-rg -n -i 'audio|aspMain|M_AUDTASK|MusyX|MORT|queue_audio|audio_data|waitForAnyAudioSlot|audio.*stub|Broke' docs/CURRENT-TRUTH.md docs/PROJECT-OVERVIEW.md
+cmake --build build --config Debug --target RogueSquadron64Recomp
+zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2580_m5_step1_contract_pair
 ```
+
+The paired driver must pass its whole-RDRAM oracle control before launching
+the port arms, gate on `PROBE_PHASE_WIDTH=1024`/`PROBE_KEYS_FROM_PHASE=1`, and
+use SIGKILL cleanup. Record the row in `PORTING-STATE.md`; no promotion or
+mitigation is authorized from a `Broke` return alone.
