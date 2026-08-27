@@ -550,3 +550,15 @@ the matching identity and ROM size. Generated callers at `0x800CE160` and
 safe rename remained; no runtime or build change was warranted. This selects
 the already-resolved `H-CompanionExact` result and advances the next bounded
 lead to `0x800CC9B8`.
+
+## Session 2652 result
+
+The bounded generated-symbol sweep found two exact source-table mappings that
+were stale in the repository TOML. The companion mission symbols, generated
+definitions and overlay spans, and generated callers agree on
+`initPlayerCraftTrailBuffers` at `0x800AE3F0` (`0x1D4`) and
+`stepObjectOrientationTowardTarget` at `0x800FEF10` (`0xEF0`). The TOML now
+carries those semantic names, so the next regeneration will preserve the
+already-generated identifiers. `0x800E9AE0` remains a placeholder in the
+companion symbol file and was not renamed. No overlay collision or runtime
+behavior changed; the next bounded lead is `0x800CCB1C`.

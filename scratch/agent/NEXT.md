@@ -1,10 +1,10 @@
-# NEXT work unit (s2652) — bounded generated-symbol sweep while M5 is blocked
+# NEXT work unit (s2653) — bounded generated-symbol sweep while M5 is blocked
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next bounded symbol region at `0x800CC9B8` using the companion
+Audit the next bounded symbol region at `0x800CCB1C` using the companion
 mission/menu symbols, the generated snapshot, exact spans, callers, and
 overlay identity. Rename only a placeholder whose identity is supported by
 exact companion and span/caller evidence; unresolved fragments stay
@@ -30,9 +30,11 @@ selects `H-OverlayCollision`; otherwise the region is `H-Unproven`.
 
 1. Inspect companion mission/menu symbols, repository TOML, generated body,
    overlay table, and callers around `0x800CC9B8`.
-2. Compare adjacent addresses and sizes. Run
+2. Compare adjacent addresses and sizes. If an exact unresolved mapping is
+   found, update the repository TOML and run
    `python tools/rename/build_redefs.py` only if an exact supported rename is
-   selected, then verify the redef line.
+   selected, then verify the redef line. Otherwise leave resolved entries
+   unchanged.
 3. Land at most one companion-supported rename or one tightly bounded exact
    batch; do not invent names from semantics alone.
 
