@@ -117265,3 +117265,17 @@ is `fake_func_800AD378` with an `0x8` span immediately before
 `syms/rogue_squadron.syms.toml`; `build_redefs.py` emits all three placeholder
 forms for it. This lands a regeneration-safe rename and rules out a new rename
 at `0x800CA3A4`; no runtime behavior changed. The next lead is `0x800CA560`.
+## Session 2646 (2026-08-27) — audited the 800CA560 symbol lead
+
+The bounded generated-symbol sweep checked `0x800CA560` and the adjacent
+`0x800CA720` boundary against the external companion symbols, repository TOML,
+generated bodies, overlay table, and callers. The mission identities
+`initProbeDroidScatterLaunch` and `updateProbeDroidHopState` are already exact:
+their generated bodies span `0x1C0` and `0x4B4` bytes to the exact next
+boundaries, and the TOML and overlay table carry matching names and ROM sizes.
+Generated callers invoke both resolved symbols. The menu overlay independently
+defines `initModelViewer` at `0x800CA638` with size `0xDC`, followed by
+`buildModelViewerTextPage` at `0x800CA714`; this overlap is an intentional
+context-specific collision and must not be collapsed. No rename or runtime
+change was warranted. This selects `H-CompanionExact` as already resolved and
+preserves `H-OverlayCollision`; the next bounded lead is `0x800CABD4`.

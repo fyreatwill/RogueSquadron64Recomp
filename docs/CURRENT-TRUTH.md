@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2645 (2026-08-27).
+Current maintenance marker: Session 2646 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -318,7 +318,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800CA3A4` next using companion symbols, exact spans, callers, and
+   Audit `0x800CABD4` next using companion symbols, exact spans, callers, and
    overlay identity;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
@@ -473,3 +473,17 @@ it `storeTrackedObjectAuxiliaryFields`, while the generated definition remains
 semantic name, promoting the regeneration-safe mapping from the build redef
 append to the source symbol table. No overlay collision or runtime behavior
 was changed. The next bounded lead is `0x800CA560`.
+
+## Session 2646 result
+
+The bounded sweep audited `0x800CA560` and the adjacent `0x800CA720`
+boundary. The mission companion names `initProbeDroidScatterLaunch` and
+`updateProbeDroidHopState`; the generated bodies start at those exact VRAM
+addresses and span `0x1C0` and `0x4B4` bytes to the exact next boundaries.
+The repository TOML and generated overlay table agree on both names and ROM
+sizes, and generated callers invoke both resolved symbols. The menu overlay
+has a distinct overlapping identity: `initModelViewer` at `0x800CA638`
+through `0x800CA714`, followed by `buildModelViewerTextPage` at `0x800CA714`.
+No placeholder or safe rename remained, so this selects `H-CompanionExact` as
+already resolved and preserves `H-OverlayCollision`; no runtime behavior
+changed. The next bounded lead is `0x800CABD4`.
