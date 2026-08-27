@@ -1,32 +1,26 @@
-# NEXT work unit (s2501) — census the generated AI-ring writer
+# NEXT work unit (s2502) — resolve the AI-ring root address discrepancy
 
-HYPOTHESIS-ID: m5-generated-ai-ring-writer
+HYPOTHESIS-ID: m5-ai-ring-root-identity
 
 ## Single work unit
 
-Perform a bounded static census of every generated store whose effective
-destination is the AI-ring/table root `0x801096B0` or its known derived slots.
-Include direct constants, base-plus-offset stores, and callees reached from
-the two AI consumers at `0x8008EE00` and `0x8008EE84`. Record guest PC, store
-width, raw address expression, physical address/range class, enclosing
-function, and whether the value is an image/task field or a PCM sample. Also
-check the fixup source for any writer rewrite that changes this boundary. Do
-not add runtime fields, enable stale instrumentation, or change behavior.
+Resolve whether the documented AI-ring root `0x801096B0` is a typo for the
+active generated loop's `0x801496B0`, or whether both are legitimate objects.
+Use the companion symbol/decomp sources and the generated input/context files;
+do not infer from runtime values. Record each source's symbol/address,
+allocation/table initialization, and the two AI consumer arguments. No build,
+runtime fields, stale instrumentation, address remap, or behavior change.
 
 ## Competing hypotheses and discriminator
 
-- H-ring-direct: a generated store reaches the ring with a recoverable slot
-  relation and a named enclosing writer.
-- H-ring-callee: the ring is written by a named callee reached from the audio
-  path, but not at the two AI callsites themselves.
-- H-ring-unresolved: candidate stores exist but their effective destination or
-  writer relation cannot be established from available sources.
-- H-ring-absent: no generated store reaches the root or derived ring slots.
+- H-root-typo: independent source material names `0x801496B0` as the AI table.
+- H-root-dual: independent source material proves `0x801096B0` is a separate
+  live object as well as the generated `0x801496B0` table.
+- H-root-unresolved: sources do not identify either address sufficiently.
 
-The discriminator is one complete generated-store/callee table. A recoverable
-direct row selects H-ring-direct; a reachable named callee selects
-H-ring-callee; complete absence selects H-ring-absent; any unresolved address
-or call edge selects H-ring-unresolved.
+The discriminator is an independent symbol/decomp address table: a source
+naming `0x801496B0` as the AI table selects H-root-typo; proof of a second live
+`0x801096B0` object selects H-root-dual; otherwise select H-root-unresolved.
 
 ## Exact commands
 
@@ -37,5 +31,4 @@ rg -n "0x8008EE00|0x8008EE84|80029E80|AI ring|pcm.*ring|audio.*ring" ../N64Recom
 ```
 
 Write the table and conclusion to
-`scratch/agent/s2501_m5_ai_ring_writer_audit/audit.md`. No build is needed
-unless the static census exposes a concrete missing caller or wrong kind.
+`scratch/agent/s2502_m5_ai_ring_root_audit/audit.md`. No build is needed.

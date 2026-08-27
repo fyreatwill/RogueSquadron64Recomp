@@ -40,6 +40,18 @@ Current maintenance marker: Session 2500 (2026-08-26).
   boundary and leaves the direct writer of the AI ring rooted at `0x801096B0`
   open. Artifact: `scratch/agent/s2500_m5_kind1_writer_audit/audit.md`.
 
+- **s2501 — the active generated AI table root is `0x801496B0`, not the
+  documented `0x801096B0`.** The exhaustive store/callee census found no
+  active generated store reaching `0x801096B0` or its derived slots. In
+  `runAiAudioStreamPlaybackLoop`, `0x80150000 - 0x6950` constructs
+  `0x801496B0`; the loop initializes sixteen `0x300`-spaced heap pointers
+  there, and the two AI consumers read those entries. `0x801096B0` appears
+  only as a generated code address in `funcs_49.c`, including an unrelated
+  `sd` at `0x801096B4`. This selects `H-ring-unresolved` rather than claiming
+  the physical ring writer absent; the address identity must be resolved
+  before attribution. Artifact:
+  `scratch/agent/s2501_m5_ai_ring_writer_audit/audit.md`.
+
 - **s2497 — the image-to-AI-buffer handoff is absent at the static boundary.**
   The exhaustive census found two generated `osAiSetNextBuffer_recomp`
   callsites, both in `runAiAudioStreamPlaybackLoop` at `0x8008EE00` and
@@ -658,8 +670,10 @@ Closed investigations are not active work items. This is one monotonic sequence;
    retail target writer joined the consumer under passed controls. s2499
    identifies `kind=2` as host-side image-DMA bookkeeping, not a game-side PCM
    writer. s2500 closes the active generated `kind=1` wrapper census with zero
-   callers; the next bounded work must resolve the writer of the AI ring rooted
-   at `0x801096B0`. Do not map through `gspTask`, infer an image identity from hashes or timing, or
+   callers; s2501 found that the active generated loop actually roots its
+   pointer table at `0x801496B0`, while `0x801096B0` is a code address in the
+   generated tree. Resolve this address discrepancy before attributing a ring
+   writer. Do not map through `gspTask`, infer an image identity from hashes or timing, or
    change task/output fields without a named writer and independent retail
    evidence.
 3. **M5 gate polarity/writer join — closed at current capture scope.**

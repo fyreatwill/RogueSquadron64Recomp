@@ -114580,3 +114580,22 @@ out a direct or indirect writer of the AI ring rooted at `0x801096B0`, which is
 the next boundary. No build, behavior change, remap, guard, or mitigation was
 made. Artifact:
 `scratch/agent/s2500_m5_kind1_writer_audit/audit.md`.
+
+## Session 2501 (2026-08-26) — audited generated AI-ring root and stores
+
+The prescribed static census searched all 51 active generated `funcs_*.c`
+files, the two `osAiSetNextBuffer_recomp` callsites, and the s2308 fixup. No
+active generated store reaches the documented root `0x801096B0` or its derived
+slots. The only active `0x801096B0`/`0x801096B4` references are a generated
+code listing in `funcs_49.c`, including an unrelated `sd $ra, -1($ra)` at
+`0x801096B4`. In `runAiAudioStreamPlaybackLoop`, `lui 0x8015` plus `addiu
+-0x6950` constructs `0x801496B0`; the loop initializes sixteen `0x300`-spaced
+heap-pointer entries there, and the two AI consumers read those entries at
+`0x8008EE08` and `0x8008EE84`.
+
+This selects `H-ring-unresolved`: the physical AI table is evidenced at a
+different address, but the address discrepancy is not independently resolved,
+so `H-ring-absent` is not claimed and no writer attribution or address remap
+is authorized. The fixup's s2308 wrapper is opt-in and adds no active writer.
+No build, runtime instrumentation, behavior change, guard, or mitigation was
+made. Artifact: `scratch/agent/s2501_m5_ai_ring_writer_audit/audit.md`.
