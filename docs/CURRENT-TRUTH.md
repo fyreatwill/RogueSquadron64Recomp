@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2503 (2026-08-26).
+Current maintenance marker: Session 2504 (2026-08-26).
 
 ## Current state
 
@@ -72,6 +72,18 @@ Current maintenance marker: Session 2503 (2026-08-26).
   allocation/table provenance, but the clear is not PCM production; the
   nonzero payload writer remains open. Artifact:
   `scratch/agent/s2503_m5_ai_buffer_writer_audit/audit.md`.
+
+- **s2504 — no nonzero PCM payload writer joins the corrected AI table in the
+  active generated tree.** The exhaustive static census found the allocation,
+  root store, sixteen `0x300`-stride entry stores, `0x3000` zero clear, and
+  both AI consumers at `D_801496B0`; it found no post-clear generated store,
+  copy, or nonzero-producing callee derived from that root. Host
+  `queue_audio_buffer`/`queue_samples` paths consume guest data and do not
+  write the blocks, while the existing RSP-DMA observer has no statically
+  joined destination. This selects `H-payload-unresolved`, not
+  `H-payload-host`: an indirect/RSP output writer remains open. No behavior
+  or mitigation changed. Artifact:
+  `scratch/agent/s2504_m5_pcm_payload_writer_audit/audit.md`.
 
 - **s2497 — the image-to-AI-buffer handoff is absent at the static boundary.**
   The exhaustive census found two generated `osAiSetNextBuffer_recomp`
@@ -701,7 +713,8 @@ Closed investigations are not active work items. This is one monotonic sequence;
    Next, locate that payload writer. Do not map through `gspTask`, infer an
    image identity from hashes or timing, or
    change task/output fields without a named writer and independent retail
-   evidence.
+   evidence. s2504 did not find a direct generated payload writer; next join
+   the RSP image-output destination to the AI table.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at

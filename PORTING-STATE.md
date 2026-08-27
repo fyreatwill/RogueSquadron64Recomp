@@ -114634,3 +114634,20 @@ exhaustive no-generated-producer result. It does not identify a nonzero PCM
 payload writer: the only whole-allocation write found is the zeroing clear.
 The payload-writer boundary remains open. Artifact:
 `scratch/agent/s2503_m5_ai_buffer_writer_audit/audit.md`.
+## Session 2504 (2026-08-26) — censused nonzero PCM payload writers
+
+Ran the prescribed exhaustive static census over the 51 active generated
+`funcs_*.c` files and companion symbols, using the corrected AI table root
+`D_801496B0` rather than the superseded `0x801096B0`. The complete table has
+the generated allocation/root store at `0x8008EDA4`, sixteen `0x300`-stride
+entry stores at `0x8008EDB8`, the `0x3000` zero clear at `0x8008EDDC`, and AI
+consumers at `0x8008EE00` and `0x8008EE84`. No post-clear generated store,
+copy, or nonzero-producing callee was statically joined to the root or its
+derived entries. Host `queue_audio_buffer`/`queue_samples` consume guest
+data; the existing RSP-DMA observer has no joined destination in this static
+census. This selects `H-payload-unresolved`: the result does not establish
+`H-payload-host`, because an indirect/RSP output writer remains possible.
+It rules out an active direct generated payload writer at the corrected table
+boundary, but does not identify the actual writer. No build, runtime behavior,
+address remap, or mitigation changed. Artifact:
+`scratch/agent/s2504_m5_pcm_payload_writer_audit/audit.md`.

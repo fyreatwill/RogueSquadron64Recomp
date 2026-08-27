@@ -1,37 +1,34 @@
-# NEXT work unit (s2504) — identify the nonzero PCM payload writer
+# NEXT work unit (s2505) — join the RSP image-output destination to the AI table
 
 HYPOTHESIS-ID: m5-pcm-payload-writer-provenance
 
 ## Single work unit
 
-Run one exhaustive static dataflow census over the active generated tree and
-companion decomp inputs for writes into the heap-backed AI buffers rooted at
-`0x801496B0`, after the known allocation/clear/layout boundary. Enumerate
-callers and direct stores that can receive `D_801496B0[i]` or
-`D_801496B0 + n*0x300`, and classify each as payload-producing, initialization,
-or unrelated. Do not use the superseded `0x801096B0` address. No build, runtime
-fields, address remap, or behavior change.
+Run one static join census over the image-arm RSP output path. Start at the
+generated audio-task output/data fields and the RSP image-stage/DMA destination
+records, then determine whether any path can equal `D_801496B0[i]` or
+`D_801496B0 + n*0x300`. Do not use the superseded `0x801096B0` address. No
+build, runtime fields, address remap, or behavior change.
 
 ## Competing hypotheses and discriminator
 
-- `H-payload-generated`: an active generated game-side path writes nonzero PCM
-  payload into the allocated blocks.
-- `H-payload-host`: only host/runtime code writes the nonzero payload observed
-  by the AI consumers.
-- `H-payload-unresolved`: candidate generated paths exist, but the static
-  boundary cannot join one to the consumed buffers.
+- `H-rsp-destination-joined`: the RSP image/output destination is provably one
+  of the allocated AI blocks.
+- `H-rsp-destination-distinct`: the image/output destination is provably not
+  one of the allocated AI blocks.
+- `H-rsp-destination-unresolved`: the available static fields do not preserve
+  enough identity to decide.
 
-The discriminator is a complete producer-to-consumer table keyed by guest PC,
-operation/callee, destination expression, and buffer-pointer derivation. A
-joined non-initialization generated writer selects `H-payload-generated`; an
-exhaustive generated zero-result with only host producers selects
-`H-payload-host`; otherwise select `H-payload-unresolved`.
+The discriminator is a complete table keyed by task/output guest PC, image
+ordinal, DMA destination/length, and AI-buffer derivation. Equality to a
+derived AI block selects `H-rsp-destination-joined`; explicit inequality
+selects `H-rsp-destination-distinct`; otherwise select
+`H-rsp-destination-unresolved`.
 
 ## Exact commands
 
 ```sh
-rg -n --glob 'funcs_*.c' -- '801496B0|801496B[0-9A-F]+|0x300|osAiSetNextBuffer_recomp|rs_memset|memcpy|memmove' ../N64Recomp/RecompiledFuncs
-rg -n -i --glob '*.py' --glob '*.c' --glob '*.h' --glob '*.toml' --glob '*.txt' --glob '!RecompiledFuncs.s*/**' --glob '!scratch_batch*/**' -- '801496B0|801496F8|PCM|sample|audio buffer|queue_samples|osAiSetNextBuffer|runAiAudioStreamPlaybackLoop|rs_memset|memcpy|memmove' ../N64Recomp/fixup_game_funcs.py ../N64Recomp ../rogue_squadron64
+rg -n -i --glob '*.c' --glob '*.cpp' --glob '*.h' --glob '*.py' --glob '*.toml' --glob '!RecompiledFuncs.s*/**' --glob '!scratch_batch*/**' 'M_AUDTASK|audio.*(output|dest|dma)|image.*(stage|dest|dma)|dma.*(dest|len)|rs64.*(image|dma)|801496B0|801496F8|osAiSetNextBuffer|queue_samples' ../N64Recomp ../rogue_squadron64 src lib
 ```
 
 Record the payload producer-to-consumer table and conclusion in
