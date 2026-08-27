@@ -118745,3 +118745,17 @@ was warranted for the symbol-only sweep. Decision evidence:
 `scratch/agent/s2732_generated_symbol_sweep/decision-table.txt`,
 `global-decision-table.txt`, `selected-fallback-table.txt`, and
 `require-rename.txt`.
+
+## Session 2733 (2026-08-27) — bounded the next generated-symbol region
+
+The generated-symbol sweep covered `0x800C8000..0x800CB000` in the external
+generated snapshot. Its complete decision table evaluated 27 companion
+candidates: 26 semantic entries were already synchronized and one
+address-only/fake entry (`fake_func_800CA26C`) was preserved. The
+`--require-rename` option returned status 2 because zero generated references
+changed in zero files. No parser, duplicate-destination, or
+protected-placeholder failure occurred. This selects
+`H-already-synchronized` / `H-ambiguous-or-fake` and rules out
+`H-exact-matches` for this region. No build or game run was warranted for the
+symbol-only sweep. Decision evidence:
+`scratch/agent/s2733_generated_symbol_sweep/decision-table.txt`.
