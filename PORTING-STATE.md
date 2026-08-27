@@ -116178,3 +116178,17 @@ next qualified attempt; no behavior, mitigation, store, task field, output
 pointer, or gate changed. Artifacts:
 `scratch/agent/s2586_m5_writer_callpath.log` and
 `scratch/agent/s2586_m5_writer_callpath_retry.log`.
+## Session 2587 (2026-08-26) — reproduced the M5 pre-title boundary with writer entry disabled
+
+Ran the prescribed same-build image-arm capture from `build/` for 90 seconds
+with `ROGUESQ_LOG_M5_WRITER_ENTRY=0`, retaining the M5 pre-target, gate, PCM,
+audio-task, and phase controls. The run produced no title or hangar phase and
+no pre-target, writer, gate, or PCM rows. It aborted in the known scene-graph
+path: `get_function` called by `convertMat3x4ToN64Mtx` and
+`traverseSceneGraphRecursive`, with `[CRASH][last-guest-pc] pc=0x80001f88`.
+
+This reproduces s2586's 640 boundary with the writer-entry helper disabled,
+so that helper is not shown to cause the abort. The absence of target-phase
+rows is unevaluable writer evidence and rules out no writer hypothesis. No
+store, task field, output pointer, gate, or mitigation changed. Artifact:
+`scratch/agent/s2587_m5_writer_boundary.log`.

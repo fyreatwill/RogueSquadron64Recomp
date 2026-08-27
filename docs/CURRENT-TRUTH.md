@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2586 (2026-08-26).
+Current maintenance marker: Session 2587 (2026-08-26).
+
+- **s2587 — disabling the writer-entry logger did not clear the 640 boundary.**
+  The same-build image-arm run reached neither title nor hangar and produced
+  zero `[m5-pretgt]`, writer, gate, PCM, or target-phase rows. It aborted in
+  the known scene-graph `get_function` path through
+  `convertMat3x4ToN64Mtx`/`traverseSceneGraphRecursive`, with last guest PC
+  `0x80001F88`. This reproduces s2586's boundary with the new writer-entry
+  helper disabled, so that helper is not shown to cause the abort; it remains
+  a boundary result, not writer-absence evidence. No M5 behavior or
+  mitigation change is authorized. Artifact:
+  `scratch/agent/s2587_m5_writer_boundary.log`.
 
 - **s2586 — the new M5 writer call-path census was unevaluable at the target
   boundary.** Regeneration, fixup, and Debug build succeeded, and the helper
@@ -738,16 +749,14 @@ Current maintenance marker: Session 2586 (2026-08-26).
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 named retail writer/value boundary — identify the legitimate producer behind the open output/PCM contract.** s2584's
-   phase-gated port capture selects `H-PortWriterMissing`: the image arm's
-   PCM source/consumer rows are live in title and hangar but remain zero and
-   carry no writer attribution, while s2583 independently named nonzero retail
-   writers. The next unit is a complete static/runtime census of every port
-   writer for the two retail-attributed boundaries and candidate PCM spans.
-   Do not map through `gspTask`, infer identity from timing or hashes, or
-   change task/output fields without a named writer and independent evidence.
-   Later M5 steps remain conditional on a legitimate writer; retain
-   `ROGUESQ_AUDIO_UCODE=0` as control and rollback.
+1. **M5 named retail writer/value boundary — blocked at the current qualified
+   route boundary.** s2587 reproduced s2586's pre-title/640 scene-graph
+   `get_function` abort with writer-entry logging disabled, so the writer
+   census cannot be evaluated from this route. Do not treat the absent rows as
+   writer evidence or change task/output fields, stores, or gates. The next
+   M5 unit must use a genuinely new boundary-qualification angle or execute a
+   documented incremental de-stub step; retain `ROGUESQ_AUDIO_UCODE=0` as the
+   silent control and rollback.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
