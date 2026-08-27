@@ -1972,10 +1972,10 @@ index 1cb3f6a..7889099 100644
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
-index ae0f44f..9d7aa3e 100644
+index ae0f44f..85f1da7 100644
 --- a/librecomp/src/sp.cpp
 +++ b/librecomp/src/sp.cpp
-@@ -1,15 +1,20 @@
+@@ -1,15 +1,21 @@
  #include <cstdio>
  #include <fstream>
 +#include <atomic>
@@ -1995,10 +1995,11 @@ index ae0f44f..9d7aa3e 100644
  
 -extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
 +extern "C" __attribute__((weak)) void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
++    g_sp_yield_requested.store(false, std::memory_order_release);
      //printf("[sp] osSpTaskStartGo(0x%08X)\n", (uint32_t)ctx->r4);
      OSTask* task = TO_PTR(OSTask, ctx->r4);
      if (task->t.type == M_GFXTASK) {
-@@ -37,12 +42,14 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -37,12 +43,14 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
  }
  
  extern "C" void osSpTaskYield_recomp(uint8_t* rdram, recomp_context* ctx) {

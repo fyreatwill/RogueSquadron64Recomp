@@ -119570,3 +119570,20 @@ in the interval. `git diff --check` passed. No build or regeneration was
 needed. This closes the interval and rules out stale generated placeholders
 there, not the remaining rename sweep. The next interval is
 `0x8012D000..0x8012F000`.
+
+## Session 2791 (2026-08-27) — completed SP-yield request lifecycle de-stub
+
+The generated-symbol selector for `0x8012D000..0x8012F000` selected zero
+references: 18 companion entries were already synchronized and the independent
+generated-tree scan found zero placeholders in the interval. That interval is
+closed; no names were invented from ambiguous or fake entries.
+
+The M5 de-stub pivot updated `librecomp/src/sp.cpp` so
+`osSpTaskStartGo_recomp` clears the process-local SP-yield request before a
+new task is staged. This makes `osSpTaskYielded_recomp` task-lifecycle scoped;
+it does not interrupt or resume tasks. The focused `librecomp` Debug target
+built successfully. The full `RogueSquadron64Recomp` target did not build
+because existing generated `funcs_43.c` contains a duplicate
+`lv2_initializeObjectTracking` definition. This change rules out stale yield
+state across task starts as an intended contract, but does not establish that
+any audio task yields or that the image task needs interruption/resumption.

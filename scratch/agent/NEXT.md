@@ -1,43 +1,31 @@
-# NEXT work unit (s2791) — audit the next generated-symbol interval
+# NEXT work unit (s2791) — reset SP yield state at task start
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-audio-destub-sp-yield-lifecycle
 
 ## Work unit
 
-Run the regeneration-safe companion census for `0x8012D000..0x8012F000`.
-Preserve data, fake, ambiguous, and already-synchronized entries. Apply only
-exact source-backed semantic renames through the existing rename tooling.
+Make the SP-yield request state task-local in the runtime by clearing it at
+`osSpTaskStartGo_recomp`. Build the Debug target and inspect the diff. Do not
+add probes or change task interruption/resumption behavior.
 
 ## Competing hypotheses and discriminator
 
-- H-placeholder: the interval contains stale generated placeholders with defensible companion names, so the selector applies renames.
-- H-synchronized: the interval has no stale semantic placeholder; candidates are synchronized or preserved.
-- H-tooling-gap: a source-backed mismatch exists but the selector misses it.
+- H-sticky: the process-global request remains set across later task starts,
+  so a later `osSpTaskYielded_recomp` can report a stale request.
+- H-task-lifecycle: starting any new SP task clears the prior request, matching
+  the lifecycle of the task whose yield was requested.
+- H-interruption: correct behavior requires task interruption/resumption, so a
+  reset-only change is insufficient and must not be expanded here.
 
-The discriminator is the complete selector decision table plus an independent
-numeric-suffix scan of generated definitions. Selected renames prove
-H-placeholder; zero selections with no in-range placeholders select
-H-synchronized; a source-backed mismatch missed by the selector selects
-H-tooling-gap and requires a tooling fix in the same unit.
+The discriminator is the runtime state transition: after a yield request,
+`osSpTaskYielded_recomp` reports true until the next
+`osSpTaskStartGo_recomp`; the next task start must make it report false.
+The source-level reset selects H-task-lifecycle. Evidence that a task must be
+interrupted/resumed selects H-interruption and rejects any broader de-stub.
 
 ## Exact commands
 
 ```sh
-mkdir -p scratch/agent/s2791_generated_rename
-python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs \
-  --companion-dir ../rogue_squadron64/symbol_files \
-  --start-address 0x8012D000 --end-address 0x8012F000 --limit 32 \
-  --require-rename \
-  > scratch/agent/s2791_generated_rename/decision-table.txt 2>&1
-rg -n 'func_8012|fake_func_8012|0x8012' \
-  ../N64Recomp/RecompiledFuncs/funcs_*.c \
-  > scratch/agent/s2791_generated_rename/generated-scan.txt || true
-perl -ne 'while (/\b(?:func|fake_func)_([0-9A-Fa-f]{8})\b/g) { $v=hex($1); print "$&\n" if $v >= hex("8012D000") && $v < hex("8012F000") }' \
-  ../N64Recomp/RecompiledFuncs/funcs_*.c | sort -u \
-  > scratch/agent/s2791_generated_rename/generated-placeholder-in-interval.txt
+cmake --build build --config Debug --target RogueSquadron64Recomp
 git diff --check
 ```
-
-If renames are selected, run the existing regeneration-safe map/fixup flow,
-build Debug, and record changed files. If zero selection is returned, record
-the synchronized outcome and continue the sweep without inventing names.

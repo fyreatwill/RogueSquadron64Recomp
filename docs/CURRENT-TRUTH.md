@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2790 (2026-08-27).
+Current maintenance marker: Session 2791 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -81,6 +81,12 @@ The latest durable M5 chain is:
   to the N64 `AI_STATUS_FIFO_FULL` bit (`0x40000000`). This is a contract
   correction, not a publication-edge explanation; the generated source census
   still finds no qualified status caller, so runtime status remains unexercised.
+- Session 2791 completed the SP-yield request lifecycle de-stub: a new
+  `osSpTaskStartGo_recomp` clears the prior request before staging the next
+  task. The Debug `librecomp` target builds successfully. The full target is
+  currently blocked by the pre-existing duplicate generated definition of
+  `lv2_initializeObjectTracking` in `funcs_43.c`; no task interruption or
+  resumption behavior was added.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -93,7 +99,13 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **Generated-symbol renaming sweep — next bounded interval.** M5 Step 1
+1. **M5 SP-yield lifecycle validation.** Run a phase-qualified same-build
+   image/silent route check with the SP-yield request/status and task-start
+   joins. The source lifecycle now clears a request at each new task start;
+   do not infer task interruption or audio progress from the reset alone.
+   Roll back only the lifecycle line if validation exposes a contract mismatch.
+
+2. **Generated-symbol renaming sweep — next bounded interval.** M5 Step 1
    input-recipe repair is now exhausted at this discriminator: boot-time
    probe keys, phase-relative probe keys, and the existing autopilot all
    failed to move the qualified port arms beyond VI 640 in this iteration.
@@ -139,7 +151,7 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    independent generated-tree scan found no placeholder definitions or
    references. Continue with `0x8012D000..0x8012F000`.
 
-2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
+3. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
    route; preserve the shim but do not pursue its unexercised semantics.
    The `0x800F9000..0x800FB000` interval is synchronized. The widened
@@ -160,7 +172,7 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    were preserved, with zero generated references selected. Continue with the
    next bounded interval after this region, preserving ambiguous/data entries.
 
-3. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
+4. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
    legitimate destination is the voice ring and its ordering edge is the
    completion queue. `+0x194` is the sample source. Do not repeat this edge or
@@ -168,20 +180,20 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    named. The speech-loader surface is now closed as service-only; the
    remaining publication boundary is unresolved.
 
-4. **External retail-entry boundary — parked revisit.** Only return with a
+5. **External retail-entry boundary — parked revisit.** Only return with a
    genuinely new, phase-qualified oracle discriminator. The oracle's whole-
    RDRAM positive control is mandatory; it currently does not drive missions.
 
-5. **M4 accumulator origin — parked.** The absolute-DMEM path is localized to
+6. **M4 accumulator origin — parked.** The absolute-DMEM path is localized to
    its known producer, selector state, and indirect consumer. Pointer-relative
    `0xB00/B02/B04` matches are unrelated fields. The dynamic producer-slot /
    consumer-index equality remains unresolved; broad range watches are not a
    substitute.
 
-6. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+7. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator. Passive recurrence belongs in the soak queue.
 
-7. **M5 image task contract and hangar visual artifact — parked.** Implement
+8. **M5 image task contract and hangar visual artifact — parked.** Implement
    no image writeback/remap without a named legitimate image writer and
    destination/order relation. H2 and consumer-mode H1 are refuted; H3 is
    unavailable because the oracle cannot screenshot the LLE path.
