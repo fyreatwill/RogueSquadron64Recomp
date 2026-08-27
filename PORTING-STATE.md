@@ -118574,3 +118574,18 @@ route and clean task/SP progress at the exercised call shape, while selecting
 nonzero PCM publication edge. The run does not authorize another drain
 change, writeback, remap, or mitigation. Evidence:
 `scratch/agent/s2721_m5_drain_tick_validation/`.
+
+## Session 2722 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger because Session 2717 was an
+M4 revisit, so the generated-symbol sweep remained the eligible bounded work
+unit. The batch covered `0x8009C000..0x8009F000` in the external generated
+snapshot. Its complete decision table contained 38 candidates: 16 semantic
+entries were already synchronized and 22 address-only/fake entries were
+preserved as ambiguous-or-fake. Zero references changed in zero generated
+files; the tool exited successfully without parser or duplicate-destination
+rejection. This selects
+`H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
+`H-exact-matches` there. No build or game run was warranted for a symbol-only
+batch. Decision evidence:
+`scratch/agent/s2722_generated_symbol_sweep/decision-table.txt`.

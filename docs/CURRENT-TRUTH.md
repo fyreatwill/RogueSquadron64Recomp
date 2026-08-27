@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2720 (2026-08-27).
+Current maintenance marker: Session 2722 (2026-08-27).
 
 ## Live result
 
@@ -466,6 +466,16 @@ and clean task/SP progress at the exercised call shape, while selecting
 publication edge. No further drain change, writeback, remap, or mitigation is
 authorized. Evidence: `scratch/agent/s2721_m5_drain_tick_validation/`.
 
+s2722 continued the bounded generated-symbol sweep across
+`0x8009C000..0x8009F000`. The complete decision table contained 38
+companion candidates: 16 semantic entries were already synchronized and 22
+address-only/fake entries were preserved as ambiguous-or-fake. Zero
+references changed in zero generated files, and the tool exited successfully
+without parser or duplicate-destination rejection. This selects
+`H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
+`H-exact-matches` there. No build or game run was warranted. Evidence:
+`scratch/agent/s2722_generated_symbol_sweep/decision-table.txt`.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -549,7 +559,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
    ambiguous-or-fake; zero references changed in zero files, with no parser
    or duplicate-destination rejection. These results rule out
    `H-exact-matches` for both regions; continue with `0x80099000..0x8009C000`
-   while exact companion evidence remains available.
+   and s2722's `0x8009C000..0x8009F000` region ruled out exact matches with
+   16 synchronized and 22 ambiguous-or-fake candidates. Continue with the
+   next adjacent region only while exact companion evidence remains
+   available.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
