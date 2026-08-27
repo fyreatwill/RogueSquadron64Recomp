@@ -375,7 +375,17 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    changed zero references in zero files, and the independent generated-tree
    placeholder scan was empty. No companion candidates were selected;
    ambiguous/data entries remain preserved. No build or game soak was needed.
-   Continue with `0x80175000..0x80177000`.
+   Continue with `0x80175000..0x80177000`; that interval is already
+   synchronized, so select the next explicitly source-backed short data-gap
+   batch and preserve callable-ambiguous entries.
+
+Session 2840 pivoted from the pre-title M5 post-dispatch rerun to the required
+generated-symbol sweep because the queued recipe exited at launch (`rc=127`).
+Three companion records explicitly classified as short non-callable gaps
+(`0x800186D8`, `0x80019808`, and `0x80024878`) were renamed to mechanical
+`data_gap_*` names in the regeneration-safe selector and companion map; the
+external generated snapshot has three new-name references per address and no
+stale placeholder references. This is symbol clarity only, not M5 evidence.
 
 4. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still

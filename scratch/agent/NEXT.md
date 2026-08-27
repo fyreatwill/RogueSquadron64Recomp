@@ -1,41 +1,38 @@
-# NEXT work unit (s2840) — post-dispatch audio-route discriminator
+# NEXT work unit (s2841) — generated-symbol-renaming-sweep
 
-HYPOTHESIS-ID: m5-audio-post-dispatch-route
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Run one same-build concurrent image/silent pair with the existing
-`ROGUESQ_LOG_M5_FIRST_TASK=1` boundary census and post-dispatch execution
-markers enabled. Keep the independent retail whole-RDRAM control, physical
-`0x000A0F50` watch, and all passive M5 markers. Compare the first 16 task
-ordinals through image/stub return and SP completion at the common pre-title
-VI 640 boundary. Do not change dispatch behavior or any gate store.
+Apply the next bounded source-backed data-gap rename batch to the external
+generated snapshot: `0x80041EEC` and `0x800457CC`. Update the regeneration-safe
+selector and companion symbol records, then run the bounded selector with
+`--require-rename`. Preserve callable-ambiguous records.
 
 ## Competing hypotheses and discriminator
 
-- H-execution-return: the arms have identical task inputs but diverge in image
-  execution return/exit or SP completion, selecting the post-dispatch bridge.
-- H-scheduling: image/stub return and SP completion are identical through the
-  first 16 tasks, selecting a later queue or scheduler edge.
-- H-unreached: the first-task census is present but post-dispatch markers are
-  absent in both arms; this bridge remains unevaluable.
+- H-source-backed-gap: both records are defined short gaps immediately before
+  named routines and can be renamed mechanically to `data_gap_<address>`.
+- H-callable: a selected record is callable and must remain a placeholder.
+- H-already-synchronized: the generated snapshot has no selected placeholders,
+  so the batch is stale and must fail closed.
 
-The discriminator is one table keyed by arm and audio-task ordinal containing
-the first-task fields, selected function pointer, image/stub enter and return,
-break/exit state, SP completion, VI width/origin, and matching dispatch
-control. A return/completion divergence selects H-execution-return; identical
-post-dispatch rows select H-scheduling; absent post-dispatch rows select
-H-unreached.
+The discriminator is the selector decision table plus stale-reference scan:
+selected entries with nonzero replacements and zero old-name references after
+the pass select H-source-backed-gap; any callable/ambiguous classification
+selects H-callable for that address; zero replacements selects
+H-already-synchronized.
 
 ## Exact commands
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-env ROGUESQ_LOG_M5_FIRST_TASK=1 zsh scratch/agent/run_s2838_m5_gate_writer.sh
-grep -a -E 'positive-control|watch write|\[audtask-dispatch\]|\[audtask-first-boundary\]|\[phase\]|\[m5-gate\]|\[m5-writer\]|\[CRASH\]|\[ABORT\]' scratch/agent/s2838_m5_gate_writer/driver.log
+python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+  --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
+  --start-address 0x80041000 --end-address 0x80047000 --limit 8 --require-rename
+rg -n 'data_gap_80041EEC|data_gap_800457CC|fake_func_80041EEC|fake_func_800457CC' \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 ```
 
-The recipe must launch both arms from `build/`, arm the retail positive
-control before interpreting the narrow watch, phase-gate target rows, and
-terminate all children with SIGKILL. Pre-title nulls are valid only for the
-explicit H-unreached outcome; they do not authorize a behavior change.
+The selector must report two selected records and a nonzero generated
+reference count; the final scan must show only `data_gap_*` names for both
+addresses. No game run is required for this symbol-clarity work unit.

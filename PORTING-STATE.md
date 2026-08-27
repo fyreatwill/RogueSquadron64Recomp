@@ -120258,3 +120258,17 @@ the post-dispatch execution or later scheduling side of the route split. It
 does not identify that edge or authorize a behavior change. The next unit
 must compare image/stub return and SP-completion behavior at the same task
 ordinals.
+
+## Session 2840 (2026-08-27) — renamed three generated data-gap records
+
+The mandated M5 post-dispatch rerun was not selected because the preceding
+route work remained pre-title and the queued validation recipe exited at
+launch (`rc=127`). The generated-symbol pivot selected three companion records
+that are explicitly defined short gaps immediately before named routines:
+`0x800186D8`, `0x80019808`, and `0x80024878`. The regeneration-safe selector
+renamed their generated references to `data_gap_*` in the external snapshot;
+the post-pass scan found zero old placeholder references and three new-name
+references for each address. The companion map now records the same mechanical
+names. No callable-ambiguous placeholder was renamed, and no game run was
+needed. This is a symbol-clarity code change only; it provides no M5 runtime
+evidence.
