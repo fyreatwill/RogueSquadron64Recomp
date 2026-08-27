@@ -115324,3 +115324,33 @@ Selected `H-data-boundary`; left generated code unchanged. Next target is
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2539 (2026-08-26) — revisited M4 with retail RDRAM boundary capture
+
+The last 15 ledger titles were generated-symbol sweep sessions, so the
+mandatory revisit selected the parked M4 accumulator boundary. The required
+ground-truth-first preflight confirmed that the retail oracle cannot observe
+RSP DMEM or `ACCH:ACCM:ACCL`; this work unit therefore measured the stable
+retail RDRAM boundary ranges adjacent to the shaded-emitter path, with a
+whole-RDRAM positive control and VI phase trace in the same run.
+
+The 90-second oracle run reached the whole-RDRAM 10,000-callback positive
+control, completed with 672,327 watch hits and `oracle_rc=0`, and reached
+title 1024 plus hangar 512 at origin `0x006AB400`. The retail writer
+histograms were active in `0x166000:0x16A000`, `0x167000:0x169B00`, and
+`0x179800:0x179B00`. In the `0x167000:0x169B00` range, title phase included
+writer `0x80015BC8` (86,511 phase hits), while hangar included
+`0x8000F3A0` (12,224) and `0x80015BC8` (29,432). Hangar writers in the
+`0x179800:0x179B00` range included `0x8008FE98/A0/A8` (280 each) and
+`0x8008FB64/68/78` (1,318 each).
+
+No RSP-DMEM or accumulator observation, source-table index, or consumer-read
+join was available. This selects `H-active-no-join` at the observed RDRAM
+boundary: retail ownership and phase reachability are proven for these
+ranges, but the M4 DMEM/table-index provenance remains open. The result does
+not explain a port mismatch and authorizes no mitigation. No port, generated,
+runtime, or submodule code changed. Artifact:
+`scratch/agent/s2539_m4_retail_boundary/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
