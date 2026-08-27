@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2798 (2026-08-27).
+Current maintenance marker: Session 2799 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -100,6 +100,12 @@ The latest durable M5 chain is:
   `lv*` fake/data cluster from the prior batch and to the rename map. The
   generated target now builds successfully, with zero duplicate function
   definitions. This is a symbol/compile result, not audio-runtime evidence.
+- Session 2799 rebuilt the full Debug executable successfully after that
+  repair. The same-build retail oracle passed its whole-RDRAM control and
+  independently reached title and hangar; both qualified port arms had live
+  audio dispatch controls (52 each), no crash/abort, but stalled at VI 640 /
+  origin `0x0066A500`. No target-phase SP-yield, task, or PCM rows were
+  emitted, so the landed SP-yield lifecycle remains runtime-unvalidated.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -112,13 +118,20 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **M5 SP-yield lifecycle validation — next.** The generated-target build
-   boundary is now clear: the prior duplicate level-handler definitions were
-   caused by fake/data entries renamed as their following real functions.
-   Build the full Debug target and validate the already-landed lifecycle; do
-   not infer task interruption or audio progress from the reset alone.
+1. **Generated-symbol renaming sweep — next bounded interval.** The full
+   Debug target now links after the fake/data collision repair, but the
+   phase-gated validation still stalled before the target phases. Continue
+   with `0x80137000..0x80139000`, preserving ambiguous/data entries and
+   applying only source-backed names. Session 2799's oracle and arm controls
+   were positive, but no target-phase lifecycle rows were valid.
 
-2. **Generated-symbol renaming sweep — next bounded interval.** M5 Step 1
+2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
+   generated-target build boundary is clear, but the qualified driver still
+   stalls before the target phases. Preserve the lifecycle change; do not infer
+   task interruption or audio progress from the reset alone.
+
+Historical generated-symbol sweep route note: M5 Step 1
+   route note).** M5 Step 1
    input-recipe repair is now exhausted at this discriminator: boot-time
    probe keys, phase-relative probe keys, and the existing autopilot all
    failed to move the qualified port arms beyond VI 640 in this iteration.

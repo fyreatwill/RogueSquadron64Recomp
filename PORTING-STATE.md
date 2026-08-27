@@ -119667,3 +119667,19 @@ successfully. This rules out the generated-symbol collision as the current
 `RecompiledFuncs` build blocker; it does not establish SP interruption,
 resumption, or audio output behavior. The next work unit is full-target M5
 SP-yield lifecycle validation, followed by the next bounded rename interval.
+
+## Session 2799 (2026-08-27) — validated full-target SP-yield boundary
+
+The full Debug target linked successfully after the generated fake/data
+collision repair. The same-build retail oracle passed its whole-RDRAM positive
+control (`10000` callbacks) and independently reached title `VI 1024` and
+hangar origin `0x006AB400`. Both qualified port arms reached only
+`VI 640`/origin `0x0066A500`; image and silent arms each had 52 live
+`audtask-dispatch` controls, and neither produced a crash or abort.
+
+The target-phase SP-yield, task-transition, completion, and PCM rows were
+zero because neither port arm entered the target phases. This does not select
+yield-unused or yield-state-only; it rules out only a successful runtime
+validation with this route. The landed lifecycle remains runtime-unvalidated,
+and the next work unit is the bounded generated-symbol sweep at
+`0x80137000..0x80139000`. Evidence: `scratch/agent/s2799_m5_sp_yield_validation/`.
