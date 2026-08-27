@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2543 (2026-08-26).
+Current maintenance marker: Session 2545 (2026-08-26).
 
 ## Current state
 
@@ -301,6 +301,16 @@ Current maintenance marker: Session 2543 (2026-08-26).
   `H-data-boundary` / `H-no-match`; no generated code changed. Artifact:
   `scratch/agent/s2544_symbol_census/audit.md`.
 
+- **s2545 — the next generated-symbol region is a trap-only data boundary, not
+  a rename candidate.** The complete menu-overlay span
+  `0x800AEC54–0x800AEC5F` is 12 bytes between
+  `hangarUpdateSecWeaponIfChanged` and `initCraftSelectScreen`. The active
+  generated body is an explicit trap-only gap filler, while the companion
+  symbol input retains `fake_func_800AEC54`; exact source, m2c, and caller
+  searches found no human mapping. Renaming it to either neighbor would
+  absorb an established function boundary, so it remains unchanged. Artifact:
+  `scratch/agent/s2545_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -317,7 +327,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
   Next work unit: continue the bounded generated-symbol renaming sweep at
-  `0x8009D7CC`.
+  `0x800B2628`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
@@ -350,8 +360,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2542 left `0x800AAADC` unchanged as a four-byte store/boundary fragment
   before `playerSnowSpeederInit`; s2543 renamed the complete two-store span
   at `0x800AD378` to `storeTrackedObjectAuxiliaryFields`; s2544 left
-  `0x800AE3E4–0x800AE3EF` unchanged as an overlay/boundary fragment. Continue
-  at `0x800AEC54`.
+  `0x800AE3E4–0x800AE3EF` unchanged as an overlay/boundary fragment; s2545
+  left `0x800AEC54–0x800AEC5F` unchanged as a trap-only data boundary.
+  Continue at `0x800B2628`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index

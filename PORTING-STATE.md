@@ -115387,6 +115387,22 @@ callable body, renaming it to either neighbor would be speculative. Selected
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
 
+## Session 2545 (2026-08-26) — censused generated-symbol trap boundary
+
+Ran the bounded generated-symbol census at `0x800AEC54`. The complete
+menu-overlay span is 12 bytes (`0x800AEC54–0x800AEC5F`) between
+`hangarUpdateSecWeaponIfChanged` and `initCraftSelectScreen`. The active
+generated body is an explicit trap-only gap filler, and the companion symbol
+input retains `fake_func_800AEC54`. Exact source, m2c, and caller searches
+found no human mapping. Renaming it to either neighboring function would
+absorb an established function boundary, so it remains unchanged. Selected
+`H-data-boundary` / `H-no-match`.
+
+Artifact: `scratch/agent/s2545_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.
+
 ## Session 2542 (2026-08-26) — censused generated-symbol mission boundary
 
 Ran the bounded generated-symbol census at `0x800AAADC`. The complete
