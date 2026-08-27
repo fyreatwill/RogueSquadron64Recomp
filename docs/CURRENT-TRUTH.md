@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2504 (2026-08-26).
+Current maintenance marker: Session 2506 (2026-08-26).
 
 ## Current state
 
@@ -27,8 +27,9 @@ Current maintenance marker: Session 2504 (2026-08-26).
   mission.
 - The current M5 question is whether the port's generated audio-overlay
   alternate is the legitimate counterpart of retail's second-range consumer.
-  The image arm reaches task completion and generated DMA, but no legitimate
-  downstream slot/voice/output contract has been established.
+  The image arm reaches task completion and generated DMA. s2506 joins
+  stage-2 image DMA destinations to the generated AI table and its PCM
+  consumers; the legitimate nonzero payload writer remains unresolved.
 
 - **s2500 — no active generated kind=1 PCM-store caller exists.** The sibling
   generated tree has 51 `funcs_*.c` files and zero
@@ -94,6 +95,16 @@ Current maintenance marker: Session 2504 (2026-08-26).
   distinct destination, because static code cannot compare the runtime DMEM
   field with the allocator result. No behavior or mitigation changed. Artifact:
   `scratch/agent/s2505_m5_rsp_destination_join/audit.md`.
+
+- **s2506 — image DMA destinations join the generated AI table at runtime.**
+  The same qualified run captured the full table rooted at `0x80166450`, 800
+  image-DMA rows, and 90 PCM-consumer rows. Target stage-2 destinations
+  `0x166A50`, `0x166D50`, and `0x167050` equal table entries 2, 3, and 4;
+  consumers used the table entries with 768-byte buffers. This selects
+  `H-rsp-destination-joined` and refutes a distinct or unresolved destination
+  at this boundary. The joined stage-2 payloads were zero, so this does not
+  identify the nonzero payload writer. Artifact:
+  `scratch/agent/s2506_m5_rsp_destination_runtime_join/audit.md`.
 
 - **s2497 — the image-to-AI-buffer handoff is absent at the static boundary.**
   The exhaustive census found two generated `osAiSetNextBuffer_recomp`
@@ -724,8 +735,9 @@ Closed investigations are not active work items. This is one monotonic sequence;
    image identity from hashes or timing, or change task/output fields without
    a named writer and independent retail evidence. s2504 did not find a direct
    generated payload writer; s2505 found no static RSP-destination equality.
-   The next join must compare runtime DMA destinations and allocator-derived AI
-   entries under the qualified route.
+   s2506 performed the runtime join and selected
+   `H-rsp-destination-joined`. The next unit must identify the first legitimate
+   nonzero writer for those joined entries.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at

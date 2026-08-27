@@ -114667,3 +114667,18 @@ It rules out a direct source-expression join and leaves the runtime
 destination/allocator join open. No build, runtime behavior, address remap, or
 mitigation changed. Artifact:
 `scratch/agent/s2505_m5_rsp_destination_join/audit.md`.
+
+## Session 2506 (2026-08-26) — joined runtime image DMA to AI entries
+
+Added a regeneration-stable generated probe at the active AI table producer.
+The first capture passed the image-DMA and PCM-consumer controls but exposed a
+phase-gating mistake in the new table probe; the corrected capture recorded
+the full sixteen-entry table before the target phase. A same-process target
+capture recorded 800 image-DMA joins and 90 PCM-consumer rows. Its stage-2
+destinations `0x166A50`, `0x166D50`, and `0x167050` matched table entries 2, 3,
+and 4 from root `0x80166450`; consumers used the same 768-byte entry buffers.
+This selects `H-rsp-destination-joined` and rules out distinct/unresolved RSP
+destinations at this boundary. The joined stage-2 payloads were zero, so the
+nonzero payload writer remains open. The process still ended in the known late
+host crash. No audio behavior or mitigation changed. Artifact:
+`scratch/agent/s2506_m5_rsp_destination_runtime_join/audit.md`.

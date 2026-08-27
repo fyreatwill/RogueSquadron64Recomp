@@ -494,6 +494,37 @@ extern "C" void rs64_m5_pcm_writer_dma(uint32_t addr, uint32_t len,
     rs64_pcm_writer_note(g_rs64_pcm_last_dma_phys, len, 0u, 2u, 0u);
 }
 
+extern "C" void rs64_m5_ai_table_row(uint32_t index, uint32_t root,
+                                       uint32_t entry, uint32_t is_root) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_AI_TABLE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+        std::fprintf(stderr, "[m5-ai-table-control] phase=%u width=%u"
+                     " origin=0x%06X\n", rs64_phase_ord(), width, origin);
+    }
+    if (rows++ >= 64u) return;
+    std::fprintf(stderr,
+        "[m5-ai-table-row] phase=%u width=%u origin=0x%06X index=%u"
+        " root=0x%08X entry=0x%08X is_root=%u expected=0x%08X\n",
+        rs64_phase_ord(), width, origin, index, root, entry, is_root,
+        root + index * 0x300u);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_pcm_writer_snapshot(uint32_t addr,
                                                 uint32_t* kind,
                                                 uint32_t* pc,
