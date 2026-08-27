@@ -76,8 +76,8 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
 1. **Generated-symbol renaming sweep — next bounded fallback.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
    route; preserve the shim but do not pursue its unexercised semantics.
-   The `0x800EF000..0x800F1000` interval is synchronized; continue with
-   `0x800F3000..0x800F5000`, preserving ambiguous/fake/address-only symbols.
+   The `0x800F5000..0x800F7000` interval is synchronized; continue with
+   `0x800F7000..0x800F9000`, preserving ambiguous/fake/address-only symbols.
 
 2. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
@@ -217,6 +217,10 @@ ledger. The current late-chain checkpoints are:
   semantic companion entries, all already synchronized. No stale placeholder,
   fake/address-only candidate, or conflicting alias was found; the next
   interval is `0x800F5000..0x800F7000`.
+- s2760: the generated-symbol interval `0x800F5000..0x800F7000` had four
+  semantic companion entries, all already synchronized. No stale placeholder,
+  fake/address-only candidate, or conflicting alias was found; the next
+  interval is `0x800F7000..0x800F9000`.
 
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

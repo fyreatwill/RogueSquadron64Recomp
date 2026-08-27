@@ -119161,3 +119161,15 @@ lines and `git diff --check` passed. This rules out an eligible rename in this
 interval, not the broader sweep. Evidence:
 `scratch/agent/s2759_generated_rename/decision-table.txt`. Next interval:
 `0x800F5000..0x800F7000`.
+## Session 2760 (2026-08-27) — bounded the next generated-symbol interval
+
+Ran the required session-title check, then used the regeneration-safe companion
+rename census for `0x800F5000..0x800F7000`. It found four semantic companion
+entries, all already synchronized, and selected zero generated references for
+renaming. An independent generated-tree scan found zero stale `func_` or
+`fake_func_` placeholders in the interval; no fake/address-only candidate or
+conflicting alias was present. `build_redefs.py` completed with 9,801 redef
+lines and `git diff --check` passed. This rules out an eligible rename in this
+interval, not the broader sweep. Evidence:
+`scratch/agent/s2760_generated_rename/decision-table.txt`. Next interval:
+`0x800F7000..0x800F9000`.
