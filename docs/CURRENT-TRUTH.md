@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2592 (2026-08-26).
+Current maintenance marker: Session 2593 (2026-08-26).
+
+- **s2593 — the next generated-symbol span is a duplicate-symbol boundary
+  fragment.** `0x800C7DB4–0x800C7DBF` is the complete three-instruction
+  `addiu/addu/sll` fragment immediately before the complete
+  `initNpcActorFromSpawnMessage` body at `0x800C7DC0`. The companion retains
+  only `fake_func_800C7DB4` and documents the following duplicate-symbol
+  deletion; exact-address source, m2c, caller, and alternate-name searches
+  found no defensible candidate. The rename generator emitted no mapping, so
+  the placeholder remains unchanged. Artifact:
+  `scratch/agent/s2593_symbol_census_audit.md`.
 
 - **s2592 — removed an unsupported generated-symbol boundary override.** The
   complete `0x800C64A4–0x800C64AF` span is an epilogue (`lw ra`, `lw fp`,
@@ -443,7 +453,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
 4. **Generated-symbol renaming — active bounded sweep.** M5 has no newly named
   contract writer and M3 is parked pending a complete idiom audit, so s2561
   resumed the sweep. s2588 added four regeneration-safe preamble mappings for
-  the next companion-defined fragment boundaries. The `0x8009C2C8–0x8009C2CF` fragment is unchanged because
+  the next companion-defined fragment boundaries. s2593 classified
+  `0x800C7DB4–0x800C7DBF` as an unchanged duplicate-symbol boundary fragment;
+  the next census is `0x800CA26C`. The `0x8009C2C8–0x8009C2CF` fragment is unchanged because
   its two floating-point instructions form no callable body and no
   companion/source/m2c mapping was found. Continue only with a complete
   bounded span and leave unresolved placeholders unchanged. s2558 revalidated

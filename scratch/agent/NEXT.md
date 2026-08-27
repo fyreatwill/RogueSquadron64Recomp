@@ -1,11 +1,11 @@
-# NEXT work unit (s2593) — continue the generated-symbol renaming sweep
+# NEXT work unit (s2594) — continue the generated-symbol renaming sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Select the next complete bounded placeholder span after the s2592 census,
-starting at `0x800C7DB4`, and rename only fragments with a defensible
+Select the next complete bounded placeholder span after the s2593 census,
+starting at `0x800CA26C`, and rename only fragments with a defensible
 companion name or clear local semantics. Keep unresolved boundary/data
 fragments unchanged. This is a static rename unit; do not run the game or add
 runtime probes.
@@ -19,7 +19,7 @@ runtime probes.
 - `H-ToolMismatch`: rename inputs and generated tables disagree, so the
   source-of-truth path must be repaired before mapping.
 
-The discriminator is a complete static table for `0x800C7DB4`: generated
+The discriminator is a complete static table for `0x800CA26C`: generated
 instruction span and neighboring bodies, companion symbol/comment,
 exact-address source/m2c/caller matches, and generated-name coverage. A direct
 companion or independent semantic match selects `H-CompanionMapping`; a

@@ -116267,3 +116267,13 @@ the placeholder and existing mappings were preserved. This selects
 `H-BoundaryOnly`, leaves the placeholder unchanged, and advances the sweep.
 It rules out only a renameable companion mapping for this span; no runtime
 hypothesis was tested. Artifact: `scratch/agent/s2590_symbol_census_audit.md`.
+## Session 2593 (2026-08-26) — classified the next generated-symbol boundary
+
+Ran the bounded generated-symbol census for `0x800C7DB4`. `funcs_36.c` shows a
+complete 12-byte fragment (`addiu v0,v1,-1`; `addu a0,v0,zero`; `sll v1,a0,2`)
+immediately before `initNpcActorFromSpawnMessage` at `0x800C7DC0`. The
+companion symbol file retains only `fake_func_800C7DB4` and documents the
+following duplicate-symbol deletion. Exact-address searches across companion
+source, m2c, symbol data, and callers found no semantic candidate; the rename
+generator emitted no mapping. This selects `H-BoundaryOnly` and leaves the
+placeholder unchanged. No runtime build or experiment ran.
