@@ -407,11 +407,9 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 de-stubbing sequence — now the primary active thread.** The
-  generated-symbol-renaming sweep is now reopened as the active bounded
-  fallback: the companion overlay files provide exact context-qualified names
-  for three main-overlay audio resampling entries and one mission leftover.
-  Obtain an independent
+1. **M5 de-stubbing sequence — primary active thread.** The generated-symbol
+  renaming fallback is exhausted: the five remaining true `func_` placeholders
+  have no semantic companion identity. Obtain an independent
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
    legitimate payload polarity, and ordering relative to image completion and
@@ -530,6 +528,20 @@ Those fragments remain placeholders when the companion, source, m2c, caller,
 and local-semantics searches do not supply a defensible name. Stable companion
 duplicate-prefix and preamble mappings belong in
 `tools/rename/build_redefs.py`.
+
+## Session 2661 result
+
+The bounded fallback sweep audited the two remaining true `func_` leads.
+`0x80092F10` has only the address-coded companion entry and a matching TOML
+size (`0x84`); the companion names the preceding
+`resampleVoiceLutSamplesPacked` but supplies no semantic name for this live
+tail. `0x8000040C` is likewise only the address-coded `0x34` entry symbol,
+explicitly hard-coded by the companion `make_elf.py` entry-segment injection.
+Neither lead has a semantic companion identity or an overlay collision. This
+selects `H-Unresolved` for both; size/boundary agreement is not sufficient for
+a rename. No source, generated-code, runtime, or TOML behavior changed. The
+symbol-renaming fallback is now exhausted; priority returns to the M5 plan's
+next contract-edge work.
 
 ## Session 2631 result
 

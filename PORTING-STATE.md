@@ -117517,3 +117517,16 @@ identities, preserving distinct overlay dispatch names. `0x80092F10` and
 `0x8000040C` remain unresolved. This selects `H-CompanionExact` for the
 batch and rules out only the four address-coded identities, not the broader
 M5 output hypotheses. No runtime behavior changed.
+## Session 2661 (2026-08-27) — exhausted the remaining symbol-sweep leads
+
+The bounded fallback sweep audited `0x80092F10` and `0x8000040C` as one table.
+The companion main-overlay file has only the address-coded
+`func_80092F10` entry at the live tail after the named
+`resampleVoiceLutSamplesPacked`; no semantic identity or competing overlay
+occupant exists. The companion `make_elf.py` explicitly injects
+`func_8000040C` as an address-coded `0x34` entry-segment symbol; it likewise
+has no semantic companion identity or collision. The checked-in TOML sizes
+match (`0x84` and `0x34`), but that is boundary metadata and not a rename
+discriminator. `H-Unresolved` selected for both rows. No TOML, generated-code,
+runtime, or behavior change was made. This exhausts the symbol-renaming
+fallback and returns the next unit to the M5 output-publication boundary.
