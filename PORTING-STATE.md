@@ -118904,3 +118904,18 @@ complete or partial edge at these sites. It leaves an opaque indirect or
 data-driven producer unevaluable. No runtime instrumentation, writeback,
 remap, or mitigation was added. Detailed evidence:
 `scratch/agent/s2742_mort_publication_audit.md`.
+
+## Session 2743 (2026-08-27) — audited the M5 indirect callback boundary
+
+The bounded static audit selected the newly named indirect `jalr` at
+`musyxSynthFrame` PC `0x80091684`. `initN64RspMixer` initializes its callback
+slot `0x801499DC` to `findAndZeroTableSlotMatching` (`0x8000794C`). The
+callback compares the key loaded from `0x80149928` against four words in the
+SI callback table `0x8011A8A4` and zeros a matching entry. It does not read or
+write the voice renderer/synth output, the AI source span
+`0x801496B0:0x8014C6B0`, or any PCM publication call or queue. This selects
+`H-opaque-edge-absent` for this boundary and rules out a callback-mediated
+MORT-to-AI publication edge there. The callback key writer remains outside
+the bounded audit, so this is static single-source evidence; no runtime watch,
+writeback, remap, or mitigation was authorized. Full table:
+`scratch/agent/s2743_mort_opaque_callback_audit.md`.

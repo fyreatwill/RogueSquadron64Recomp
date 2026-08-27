@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2742 (2026-08-27).
+Current maintenance marker: Session 2743 (2026-08-27).
+
+Session 2743 completed the bounded static audit of the newly named indirect
+callback at `musyxSynthFrame` PC `0x80091684`. Its slot resolves to
+`findAndZeroTableSlotMatching`, which compares the callback key from
+`0x80149928` against the four-entry SI callback table at `0x8011A8A4` and
+zeros a match. The target neither reads nor writes `voice+0x140`, synth
+output, the AI span `0x801496B0:0x8014C6B0`, nor an AI call or publication
+queue. This selects `H-opaque-edge-absent` for the bounded surface; the key's
+own writer remains unevaluable, but cannot change the audited destination's
+registration-table semantics. Static single-source evidence only. No runtime
+watch, writeback, remap, or mitigation is authorized. Evidence:
+`scratch/agent/s2743_mort_opaque_callback_audit.md`.
 
 Session 2742 completed the bounded static audit of the named CPU-side MORT
 publication path. `renderVoiceAudioBlock` writes only back to `voice+0x140`,

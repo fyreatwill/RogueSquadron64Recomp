@@ -1,4 +1,4 @@
-# NEXT work unit (s2743) — identify one new opaque M5 publication boundary
+# NEXT work unit (s2744) — identify one new opaque M5 publication boundary
 
 HYPOTHESIS-ID: m5-mort-pcm-publication
 
@@ -26,7 +26,12 @@ conclusion follows without the retail oracle.
 
 ## Exact commands
 
-First locate one genuinely new indirect/data-driven caller or destination
-with bounded searches, then record all competing outcomes in `NEXT.md` before
-any build or run. The previous audit evidence is
-`scratch/agent/s2742_mort_publication_audit.md`.
+Session 2743 ruled out the indirect callback at `0x80091684`: it resolves to
+`findAndZeroTableSlotMatching`, whose complete destination is the four-entry
+SI callback table at `0x8011A8A4`. Do not repeat that surface. The previous
+audit evidence is `scratch/agent/s2743_mort_opaque_callback_audit.md`; select
+one different, genuinely new indirect/data-driven boundary and write its
+2–4 hypotheses plus the complete source/destination/order discriminator here
+before any build or run. If no such boundary can be named from the generated
+source and companion symbols, pivot to the next M5 boundary instead of adding
+instrumentation.
