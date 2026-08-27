@@ -1,10 +1,10 @@
-# NEXT work unit (s2571) — generated-symbol bounded census
+# NEXT work unit (s2572) — generated-symbol bounded census
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next unresolved generated/decomp symbol span at `0x80106BE8`.
+Audit the next unresolved generated/decomp symbol span at `0x8010721C`.
 Inspect its complete generated span, immediate named neighbors, companion
 symbol entry, and exact source/m2c/caller matches. Rename only if the companion
 decomp supplies an exact human mapping. If unresolved, advance to the next
@@ -28,5 +28,5 @@ candidate selects unchanged and advances to the next placeholder.
 ```sh
 wc -c < docs/CURRENT-TRUTH.md
 grep -n '^## Session ' PORTING-STATE.md | tail -15
-rg -n 'fake_func_80106BE8|0x80106BE8' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms
+rg -n 'fake_func_8010721C|0x8010721C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms
 ```

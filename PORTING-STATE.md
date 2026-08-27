@@ -115908,3 +115908,14 @@ the work unit was explicitly static-only. The next unresolved placeholder is
 `0x80106BE8`.
 
 Artifact: `scratch/agent/s2570_symbol_census/audit.md`.
+## Session 2571 (2026-08-26) — censused generated-symbol object-tracking boundary
+
+- Ran the bounded generated-symbol census for `0x80106BE8`.
+- The complete active span is eight bytes containing only `sw $fp,0x10($sp)` and
+  `addu $fp,$sp,$zero`, immediately before `lvc_initializeObjectTracking`.
+- The companion symbol file explicitly retains `fake_func_80106BE8`; exact
+  address/source/m2c/caller searches found no independent human mapping.
+- Selected `H-data-or-boundary`: left the placeholder unchanged and advanced
+  the sweep to `0x8010721C`. This rules out an exact rename at this boundary,
+  but does not prove the fragment is dead or unreachable.
+- Artifact: `scratch/agent/s2571_symbol_census/audit.md`.
