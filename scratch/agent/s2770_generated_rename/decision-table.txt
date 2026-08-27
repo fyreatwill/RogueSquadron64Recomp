@@ -1,0 +1,11 @@
+Session 2770 generated-symbol rename pivot
+Interval: 0x80109000..0x8010B000
+
+Selected semantic mappings in the checked-in symbol map:
+0x801091F8 lvi_801091F8 -> lvi_objectiveSlot1
+0x801095CC lvk_801095CC -> lvk_objectiveSlot1
+0x80109628 lvj_80109628 -> lvj_objectiveSlot1
+
+The companion/generated census showed the generated tree already contained
+all three semantic names, so no external generated file changed. No fake or
+data-gap symbol was renamed. git diff --check passed.

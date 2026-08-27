@@ -119307,3 +119307,17 @@ next retry must preserve AUTOPILOT but remove forced
 `scratch/agent/s2769_m5_step1/driver.log`,
 `scratch/agent/s2769_m5_step1_autopilot/driver.log`, and the bounded arm logs
 under those directories. The copied recipe fix is retained for the retry.
+## Session 2770 (2026-08-27) — reconciled objective-slot symbol batch
+
+The required no-code streak pivot selected the generated-symbol-renaming
+sweep. The bounded census for `0x80109000..0x8010B000` found three exact
+companion mappings whose generated definitions already used semantic names:
+`lvi_801091F8` → `lvi_objectiveSlot1`, `lvk_801095CC` →
+`lvk_objectiveSlot1`, and `lvj_80109628` → `lvj_objectiveSlot1`. Updated the
+checked-in `syms/rogue_squadron.syms.toml` map to match those generated names.
+The ambiguous/fake entries `fake_func_80109428` and `fake_func_80109618`, plus
+data entries, were preserved. `git diff --check` passed; no build or
+regeneration was needed because the generated tree already contained the
+semantic names. This closes the interval and rules out stale checked-in names
+there, not the remaining sweep. Evidence:
+`scratch/agent/s2770_generated_rename/decision-table.txt`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2769 (2026-08-27).
+Current maintenance marker: Session 2770 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -89,8 +89,11 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    `0x800FB000..0x800FF000` sweep renamed the two known invalid data gaps as
    `data_gap_800FBE14` and `data_gap_800FEF04`. The
    `0x80101000..0x80103000` interval is now synchronized; continue with
-   `0x80105000..0x80107000` and `0x80107000..0x80109000` are now synchronized.
-   Continue with `0x80109000..0x8010B000`, preserving
+   `0x80105000..0x80107000`, `0x80107000..0x80109000`, and
+   `0x80109000..0x8010B000` are now synchronized. Session 2770 also
+   reconciled three address-encoded checked-in symbols with their companion
+   names: `lvi/lvk/lvj_objectiveSlot1`. Continue with
+   `0x8010B000..0x8010D000`, preserving
    ambiguous/fake/address-only symbols.
 
 3. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
@@ -282,5 +285,9 @@ ledger. The current late-chain checkpoints are:
   selection changed zero references; an independent scan confirmed no stale
   semantic placeholder in the interval, and `git diff --check` passed. The
   next interval is `0x80109000..0x8010B000`.
+- s2770: the checked-in symbol map reconciled three address-encoded objective
+  slot names at `0x801091F8`, `0x801095CC`, and `0x80109628` with the
+  companion semantic names `lvi/lvk/lvj_objectiveSlot1`. The generated tree
+  already contained those names, so no regeneration or build was needed.
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.
