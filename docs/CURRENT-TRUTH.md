@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2522 (2026-08-26).
+Current maintenance marker: Session 2523 (2026-08-26).
 
 ## Current state
 
@@ -103,6 +103,14 @@ Current maintenance marker: Session 2522 (2026-08-26).
   found no named definition, caller, or m2c source. This is a static,
   single-source result; no generated code changed. Artifact:
   `scratch/agent/s2522_symbol_census/audit.md`.
+- **s2523 — the sixth bounded generated-symbol region had no defensible
+  mapping.** The complete interval `0x8006F4AC–0x8006F4AC` contains one
+  four-byte placeholder whose generated body is only `addiu sp,sp,0x30`,
+  immediately between `getSecondaryWeaponCount` and
+  `spawnDestructionDebris`. The companion symbol file retains
+  `fake_func_8006F4AC`; an exact-address search found no named definition,
+  caller, or m2c source. This is a static, single-source result; no generated
+  code changed. Artifact: `scratch/agent/s2523_symbol_census/audit.md`.
 
 ## Active backlog
 
@@ -120,7 +128,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
   Next work unit: continue the bounded generated-symbol renaming sweep around
-  the next unresolved main-overlay placeholder after `0x80006F4AC`.
+  the next unresolved main-overlay placeholder after `0x80072CE8`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
