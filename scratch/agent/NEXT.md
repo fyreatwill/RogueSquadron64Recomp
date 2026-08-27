@@ -1,39 +1,42 @@
-# NEXT work unit (s2703) — audit indirect AI-worker registration and calls
+# NEXT work unit (s2704) — bounded generated-symbol rename lead
 
-HYPOTHESIS-ID: m5-cpu-publication-boundary
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Perform one bounded source audit of the indirect registration/call path for
-`runAiAudioStreamPlaybackLoop` (`0x8008ED70`) and
-`serviceAudioOutputBuffers` (`0x8008ED6C`). Enumerate all function-pointer
-stores, loads, thread-entry/service-worker registrations, direct calls, and
-dispatch tables that can reach either body. Classify each edge as startup
-registration, AI-buffer consumer, payload producer, opaque/external, or dead.
-Do not repeat the completed allocation, queue, renderer, mixer, DMA-service,
-or host-body audits; do not add runtime instrumentation or behavior changes.
+Before beginning the sweep, run the required last-15-title revisit check. If
+the check does not force a revisit, reconcile one bounded companion-symbol
+region: the main-overlay audio/utility window `0x8008ED6C..0x80091C80`.
+Rename only exact, unique generated placeholders supported by the companion
+map and source/caller evidence; preserve fake, ambiguous, and already-human
+names. This is one bounded rename-tool change or one bounded rename batch, not
+a whole-tree census.
 
 ## Competing hypotheses and discriminator
 
-- `H-ai-no-indirect-producer`: all registrations/calls are the known AI loop
-  and its zero-clear/submission path; no opaque producer is reachable.
-- `H-ai-service-produces`: the adjacent service body or a named caller writes
-  rendered/stream data into the AI aliases before submission.
-- `H-ai-external-producer`: a registered callback, thread entry, or indirect
-  target leaves the producer body outside the generated snapshot.
-- `H-ai-dead-registration`: the apparent entry is not reachable in the live
-  route or its overlay registration is stale/mismatched.
+- `H-exact-matches`: the selected region has unique companion names that are
+  not synchronized into the generated snapshot.
+- `H-already-synchronized`: every companion name in the region is already
+  present or intentionally address-only in generated output.
+- `H-ambiguous-or-fake`: candidates lack unique semantic evidence and must be
+  preserved.
+- `H-tool-rejects`: the tracked tool cannot represent a valid candidate or
+  rejects the batch for a parser/duplicate-destination defect.
 
-The discriminator is a complete pointer-edge table with store/load PC,
-resolved target, caller/registration, destination/source relation, and
-ordering before `osAiSetNextBuffer`. A complete known zero-clear path selects
-`H-ai-no-indirect-producer`; a named payload writer selects
-`H-ai-service-produces`; an unresolved external target selects
-`H-ai-external-producer`; unreachable or mismatched registration selects
-`H-ai-dead-registration`.
+The discriminator is the tool's complete per-candidate decision table plus
+the generated diff: a non-empty exact rename selects `H-exact-matches`; zero
+selected with explicit synchronized/ambiguous reasons selects the applicable
+zero-result hypothesis; a reproducible parser or destination rejection
+selects `H-tool-rejects` and requires fixing it in this iteration.
 
 ## Exact commands
 
-1. `rg -n -- 'runAiAudioStreamPlaybackLoop|serviceAudioOutputBuffers|0x8008ED6C|0x8008ED70|0x0008E92C|0x0008E930|create.*thread|thread.*entry|service.*worker|callback|func_map|get_function' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/src`
-2. Read bounded windows around every candidate and write the complete table to `scratch/agent/s2703_m5_ai_indirect_path/audit.md`.
-3. No build or game run. A future runtime watch still requires the retail whole-RDRAM positive control and a named legitimate destination/order edge.
+1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
+2. Inspect the tracked rename-tool usage: `sed -n '1,260p' tools/rename/README.md` and `rg -n 'argparse|region|mapping|placeholder|duplicate|redef' tools/rename/rename_generated_symbols.py tools/rename/build_redefs.py`.
+3. Run the tool's bounded region/candidate command as documented, capturing
+   its decision table under `scratch/agent/s2704_generated_symbol_sweep/`.
+4. Verify the generated diff and exact unique companion/source evidence; do
+   not build or run the game unless a real rename changes generated code.
+
+The previous M5 unit found no indirect producer and no legitimate AI
+destination edge, so no M5 runtime watch or mitigation is authorized here.

@@ -118206,6 +118206,28 @@ the upstream edge. No build, run, runtime watch, writeback, remap, or
 mitigation was performed. Detailed table:
 `scratch/agent/s2700_m5_queue_boundary/audit.md`.
 
+## Session 2703 (2026-08-27) — audited the M5 AI-worker indirect path
+
+Ran the bounded source audit of all generated and host registration/call edges
+for `runAiAudioStreamPlaybackLoop` (`0x8008ED70`) and
+`serviceAudioOutputBuffers` (`0x8008ED6C`). `initAudioSubsystem` directly
+creates thread object `0x801494B0` with entry `0x8008ED70`, argument zero, and
+priority `0x7A`, then starts it. The host `osCreateThread` bridge preserves
+that entry through the native launch. The adjacent service symbol has only its
+one-instruction load and no caller, callback-table edge, service-worker
+registration, or return. Overlay metadata registers host dispatch entries but
+does not create a game-side producer edge.
+
+The complete table found no indirect target or named payload writer reaching
+the AI aliases before `osAiSetNextBuffer`. This selects
+`H-ai-no-indirect-producer` and rejects `H-ai-service-produces`,
+`H-ai-external-producer`, and `H-ai-dead-registration` at this generated/host
+boundary (static source evidence). It rules out the adjacent service body and
+registration path as the MORT-to-PCM publication edge, but leaves the actual
+upstream publication unresolved. No build or run was performed; no runtime
+watch, writeback, remap, or mitigation was added. Detailed table:
+`scratch/agent/s2703_m5_ai_indirect_path/audit.md`.
+
 ## Session 2702 (2026-08-27) — audited M5 AI-source allocation writers
 
 Ran the bounded generated-source audit of every writer and alias that can

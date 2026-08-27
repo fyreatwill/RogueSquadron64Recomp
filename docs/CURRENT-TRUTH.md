@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2700 (2026-08-27).
+Current maintenance marker: Session 2703 (2026-08-27).
 
 ## Live result
 
@@ -317,6 +317,21 @@ for this boundary (static generated-source evidence); the MORT-to-PCM edge
 remains unresolved and no runtime watch, writeback, remap, or mitigation is
 authorized. Detailed table: `scratch/agent/s2700_m5_queue_boundary/audit.md`.
 
+s2703 audited every generated and host registration/call edge for the AI
+worker. `initAudioSubsystem` directly creates thread object `0x801494B0` with
+entry `0x8008ED70` (`runAiAudioStreamPlaybackLoop`), argument zero, and
+priority `0x7A`, then starts it. The host `osCreateThread` bridge preserves
+that entry through the native thread launch. `serviceAudioOutputBuffers`
+(`0x8008ED6C`) has only its one-instruction load and no caller, callback-table
+edge, service-worker registration, or return; overlay metadata is dispatch
+registration only. No indirect target or named payload writer reaches the AI
+aliases before `osAiSetNextBuffer`. This selects `H-ai-no-indirect-producer`
+and rejects `H-ai-service-produces`, `H-ai-external-producer`, and
+`H-ai-dead-registration` at this audited generated/host surface (static source
+evidence). The MORT-to-PCM edge remains unresolved; no runtime watch,
+writeback, remap, or mitigation is authorized. Detailed table:
+`scratch/agent/s2703_m5_ai_indirect_path/audit.md`.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -344,13 +359,14 @@ This is one monotonic sequence; #1 is the next campaign priority.
    the complete `0x80149990` queue and found a zero-token mutex service with
    no payload or AI join. s2702 found only allocation/alias setup, a full
    clear, and AI submissions for the generated `0x801496B0` surface; no named
-   rendered or stream writer exists. Next: audit the indirect registration and
-   call path for `runAiAudioStreamPlaybackLoop` and
-   `serviceAudioOutputBuffers`, including thread-entry tables and
-   function-pointer stores/loads, to determine whether an external/opaque
-   producer can reach the AI aliases. Do not add a
-   runtime watch until a legitimate destination and ordering edge are named,
-   and do not repeat completed queue/service, renderer, mixer, or host bodies.
+   rendered or stream writer exists. s2703 audited the full generated/host
+   indirect registration path: the AI loop is a direct thread entry, the
+   adjacent one-instruction symbol has no caller or callback edge, and no
+   opaque producer is reachable. Next: pivot to the next independently
+   bounded CPU publication surface only if a new source/consumer relation can
+   be named; do not repeat thread, queue/service, renderer, mixer, allocation,
+   or host audits. Do not add a runtime watch until a legitimate destination
+   and ordering edge are named.
 2. **Generated-symbol renaming sweep.** Reconcile one bounded address region
    against companion source/m2c evidence; rename only exact, unique matches
    and preserve address-only or fake fragments. Do not infer names from
