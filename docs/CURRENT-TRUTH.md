@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2847 (2026-08-27).
+Current maintenance marker: Session 2848 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -419,7 +419,11 @@ stale placeholder references. This is symbol clarity only, not M5 evidence.
    explicitly classified short data-gap record. Session 2847 closed
    `0x80052000..0x80053000` with seven already-synchronized callable entries,
    zero replacements, and no stale placeholders. Continue at
-   `0x80053000..0x80054000`.
+   `0x80053000..0x80054000`. Session 2848 closed that interval with zero
+   replacements: all semantic candidates were already synchronized and
+   `fake_func_800538AC` remained ambiguous-or-fake. Continue with the next
+   bounded interval `0x80054000..0x80055000`, preserving callable-ambiguous
+   entries and applying only source-backed data-gap names.
 
 4. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still
@@ -808,3 +812,10 @@ invalid-data trap. The regeneration-safe selector renamed its three
 generated references to `data_gap_8003DF98`. No build or game run was needed.
 The next sweep interval remains `0x8004C000..0x8004D000` after this bounded
 source-backed correction.
+
+Session 2848 closed `0x80053000..0x80054000`. The selector classified the
+semantic candidates as already synchronized and preserved
+`fake_func_800538AC` as ambiguous-or-fake; it changed zero generated
+references and the final scan found only that preserved placeholder. No build
+or game run was needed. The next bounded interval is
+`0x80054000..0x80055000`.

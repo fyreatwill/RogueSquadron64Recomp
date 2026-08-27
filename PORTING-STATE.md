@@ -120354,3 +120354,15 @@ independent `rg` scan found no `data_gap_80052` or `fake_func_80052` names.
 This rules out a source-backed data-gap rename in this interval but does not
 classify placeholders outside it. No build or game run was needed. The next
 sweep interval is `0x80053000..0x80054000`.
+
+## Session 2848 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x80053000..0x80054000`.
+The selector classified the semantic candidates as already-synchronized
+callable entries and preserved `fake_func_800538AC` as ambiguous-or-fake. It
+changed zero generated references and returned the expected `--require-rename`
+fail-closed result; the independent scan found only that preserved
+placeholder. No build or game run was needed. This rules out a source-backed
+data-gap rename in this interval without assigning a meaning to the
+ambiguous placeholder. The next sweep interval is
+`0x80054000..0x80055000`.
