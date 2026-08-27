@@ -118323,3 +118323,21 @@ and the two address-only companion entries. This selects
 `H-already-synchronized` for this region and rules out `H-exact-matches`
 there. It does not resolve the MORT-to-PCM publication edge. No build or game
 run was needed, and the external generated worktree was not modified.
+## Session 2707 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger the sweep revisit rule: the
+titles were mixed M5 and rename work, not 15 consecutive sweep-only sessions.
+I ran the bounded rename tool for the half-open region
+`0x80098000..0x8009B000` against the external generated snapshot and the
+companion `symbol_files`.
+
+The complete decision table is
+`scratch/agent/s2707_generated_symbol_sweep/decision-table.txt`. The tool
+reported zero renamed references in zero files across 29 candidates. Twenty-
+seven semantic candidates were already synchronized; `0x80099C4C` and
+`0x80099FDC` were classified ambiguous-or-fake and preserved. There was no
+parser or duplicate-destination rejection. This selects
+`H-already-synchronized` for the semantic candidates in this region and rules
+out `H-exact-matches` there. It does not resolve the MORT-to-PCM publication
+edge. No build or game run was needed, and the external generated worktree was
+not modified.

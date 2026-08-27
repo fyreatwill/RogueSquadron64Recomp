@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2705 (2026-08-27).
+Current maintenance marker: Session 2707 (2026-08-27).
 
 ## Live result
 
@@ -366,6 +366,17 @@ fake entries preserved in the companion map. This selects
 it does not resolve the MORT-to-PCM edge. No build or game run was needed, and
 the external generated worktree was not modified.
 
+s2707 continued the generated-symbol sweep after the required last-15-title
+check did not trigger the revisit rule. The bounded `0x80098000..0x8009B000`
+region contained 29 companion candidates. Zero references were renamed in
+zero generated files: 27 semantic entries were already synchronized, while
+`0x80099C4C` and `0x80099FDC` were classified ambiguous-or-fake and preserved.
+There was no parser or duplicate-destination rejection. This selects
+`H-already-synchronized` for the semantic candidates in this region and rules
+out `H-exact-matches` there; it does not resolve the MORT-to-PCM publication
+edge. No build or game run was needed, and the external generated worktree
+was not modified.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -404,8 +415,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
 2. **Generated-symbol renaming sweep.** s2704 found all 19 candidates in
    `0x8008ED6C..0x80091C80` already synchronized, s2705 found no exact
    rename in `0x80091C80..0x80095000`, and s2706 found no exact rename in
-   `0x80095000..0x80098000`. Continue with one adjacent bounded
-   bounded region only while exact companion/source evidence remains available;
+   `0x80095000..0x80098000`, and s2707 found no exact rename in
+   `0x80098000..0x8009B000`. Continue with one adjacent bounded region only
+   while exact companion/source evidence remains available;
    preserve address-only or fake fragments and do not infer names from
    implementation shape alone.
 3. **M5 image task contract edge.** Implement only after a named legitimate
