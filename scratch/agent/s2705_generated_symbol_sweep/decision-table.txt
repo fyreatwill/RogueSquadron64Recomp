@@ -1,0 +1,67 @@
+Command: python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --limit 32 --start-address 0x80091C80 --end-address 0x80095000
+Range: [0x80091C80, 0x80095000)
+
+Result: renamed 0 references in 0 files
+
+0x80091C88 reapplyAudioConfig: already-synchronized
+0x80091FC4 initFactor5Mutex: already-synchronized
+0x80092010 factor5MutexAcquire: already-synchronized
+0x8009205C factor5MutexRelease: already-synchronized
+0x800920A4 factor5QueueBlock: already-synchronized
+0x800920D0 factor5QueueSignal: already-synchronized
+0x80091EB0 waitForMusyXAudioTaskDone: already-synchronized
+0x80092128 musyxInitVoiceFromSample: already-synchronized
+0x800922C4 musyxStoreVoiceAdsrParams: already-synchronized
+0x80092274 musyxStartVoiceRelease: already-synchronized
+0x8009231C musyxTriggerVoiceAttack: already-synchronized
+0x80092368 musyxStopVoice: already-synchronized
+0x80092390 musyxSetVoicePitchBend: already-synchronized
+0x800920FC isAudioSlotActive: already-synchronized
+0x80092388 noopHandler_80092388: already-synchronized
+0x80093E54 truncDouble: already-synchronized
+0x80093E60 ceilDouble: already-synchronized
+0x80093E6C sqrtf_recomp: already-synchronized
+0x80092588 writebackDCacheHalfwords: already-synchronized
+0x80093E80 musyxComputeNotePlaybackRate: already-synchronized
+0x800927B0 func_800927B0: ambiguous-or-fake
+0x80092A54 func_80092A54: ambiguous-or-fake
+0x80092CF0 func_80092CF0: ambiguous-or-fake
+0x80092F94 packFourLutResampledSamples: already-synchronized
+0x80093E74 fake_func_80093E74: ambiguous-or-fake
+0x80094348 fake_func_80094348: ambiguous-or-fake
+0x80094350 startSongSequence: already-synchronized
+0x800934A4 zeroAudioBufferWords: already-synchronized
+0x800934D0 decodeAdpcmSampleBlock: already-synchronized
+0x80093D10 expandBytesToPcm16ViaTable: already-synchronized
+0x80093F18 divideByMixerBaseFrequency: already-synchronized
+0x80093F3C scaleFixedPointByRatioA: already-synchronized
+0x80093F60 scaleFixedPointByRatioB: already-synchronized
+0x80093F84 scaleByPitchTableA: already-synchronized
+0x80093FB4 scaleByPitchTableB: already-synchronized
+0x80093FE4 computeNoteRatePairFromTableA: already-synchronized
+0x8009405C computeNoteRatePairFromTableB: already-synchronized
+0x800940D4 computeVoiceVolumePanCoefficients: already-synchronized
+0x80094958 stepActiveSongTracks: already-synchronized
+0x80094DB4 tickScheduledSongEvents: already-synchronized
+0x80094EE4 stepSongPitchBendLanes: already-synchronized
+0x80091D40 shutdownAudioEngine: already-synchronized
+0x80092120 audioStubReturnZero: already-synchronized
+0x800923E4 setVoiceModulationParams: already-synchronized
+0x8009244C stopVoiceMarkRetrigger: already-synchronized
+0x80092490 beginVoiceFadeRelease: already-synchronized
+0x800924F0 deactivateVoice: already-synchronized
+0x80092510 tickAudioBufferUpdate: already-synchronized
+0x80092530 freeAudioScratchBuffer: already-synchronized
+0x80092564 getVoiceUserField: already-synchronized
+0x800925A8 copyFourHalfwordsWriteback: already-synchronized
+0x800925F4 relocateSndPointer: already-synchronized
+0x8009264C resampleVoicePointTableSamples: already-synchronized
+0x800928D4 resampleVoiceLutSamples: already-synchronized
+0x80092BA8 resampleVoiceConstantSamples: already-synchronized
+0x80092E48 resampleVoiceLutSamplesPacked: already-synchronized
+0x8009314C copyVoiceSamplesS16: already-synchronized
+0x800932C4 copyVoiceSamplesLut: already-synchronized
+
+Verification: the tool reported zero changed generated files. The external
+N64Recomp worktree was already dirty in funcs_4.c, funcs_13.c, and funcs_30.c;
+those pre-existing changes were not touched by this run.
