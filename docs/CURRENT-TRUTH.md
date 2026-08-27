@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2837 (2026-08-27).
+Current maintenance marker: Session 2839 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -257,6 +257,18 @@ service, MORT, or PCM rows. The gate route is therefore unevaluable here; no
 writer change or gate explanation is selected. The new recipe is
 `scratch/agent/run_s2838_m5_gate_writer.sh`.
 
+Session 2839 ran that recipe with the first-task boundary census enabled. The
+retail whole-RDRAM control again fired 10,000 callbacks. Both port arms
+reached the same pre-title VI 640/origin `0x0066A500`, produced 43 dispatch
+controls, and produced the first 16 task-entry rows. For every ordinal, type,
+ucode, ucode data, data pointer/size, output/yield fields, VI state, and task
+staging fields matched; only the task-function pointer differed as the
+intentional image (`real_ucode=1`) versus silent (`real_ucode=0`) arm choice.
+No title/hangar, gate, writer, service, MORT, or PCM rows appeared. This
+rejects a pre-title task-field selector mismatch in this run and selects the
+post-dispatch or scheduling side of the route split; target-phase audio
+behavior remains unevaluable.
+
 ## Next steps
 
 Priority follows the user directive: maintenance, then M5, then systematic M3,
@@ -309,8 +321,11 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    initialization-barrier and gate-writer angles are currently unevaluable:
    s2837 waited for 40 image dispatches, and s2838 independently found retail
    gate writers but no target phase; both port arms still stopped at VI 640 /
-   origin `0x0066A500`. Use a source-level task-field/dispatch-selection
-   discriminator before interpreting any target-phase rows.
+   origin `0x0066A500`. Session 2839 found identical pre-title task fields and
+   staging rows across the image and silent arms; only the intentional task
+   function pointer differed. The selector mismatch hypothesis is rejected
+   for this boundary. The next unit must discriminate post-dispatch execution
+   or scheduling, then qualify the target phases.
    Once the
    title/hangar phases are reached, require the task-field, DMEM/DMA, image
    exit, SP completion, service/slot/voice, MORT, and PCM source/consumer

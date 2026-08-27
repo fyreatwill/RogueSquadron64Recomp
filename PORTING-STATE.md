@@ -120237,3 +120237,24 @@ route effect. It makes the requested target-phase retail/port gate comparison
 unevaluable in this window and authorizes no gate store, guard, or other audio
 behavior change. The next discriminator must inspect task-field/dispatch
 selection at the pre-title boundary.
+
+## Session 2839 (2026-08-27) — M5 pre-title task fields matched across dispatch arms
+
+Ran the independent retail ground-truth probe first. The whole-RDRAM positive
+control fired 10,000 callbacks. The Debug target rebuilt successfully.
+
+The same-build concurrent image/silent pair used the first-task boundary
+census and the full passive M5 marker set. Both arms reached the same pre-title
+VI 640 / origin `0x0066A500`, emitted 43 positive dispatch controls, and
+emitted the first 16 task-entry rows. Across every ordinal, type, ucode, ucode
+data, data pointer/size, output/yield fields, VI state, and staging fields
+matched. Only `ucode_func` differed, as expected from image `real_ucode=1`
+versus silent `real_ucode=0`. Neither arm reached title or hangar; gate,
+writer, service, MORT, and PCM markers remained absent, with no crash or
+abort.
+
+This rejects a pre-title task-field selector mismatch in this run and selects
+the post-dispatch execution or later scheduling side of the route split. It
+does not identify that edge or authorize a behavior change. The next unit
+must compare image/stub return and SP-completion behavior at the same task
+ordinals.

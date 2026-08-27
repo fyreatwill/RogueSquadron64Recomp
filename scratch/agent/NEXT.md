@@ -1,33 +1,31 @@
-# NEXT work unit (s2839) — pre-title task-field dispatch discriminator
+# NEXT work unit (s2840) — post-dispatch audio-route discriminator
 
-HYPOTHESIS-ID: m5-audio-dispatch-selection
+HYPOTHESIS-ID: m5-audio-post-dispatch-route
 
 ## Work unit
 
 Run one same-build concurrent image/silent pair with the existing
-`ROGUESQ_LOG_M5_FIRST_TASK=1` boundary census enabled. Keep the independent
-retail whole-RDRAM control, physical `0x000A0F50` watch, and all passive M5
-markers. Compare the first 16 audio task fields, route phase, dispatch arm,
-and task-function pointer at the common pre-title VI 640 boundary. Do not
-change dispatch behavior or any gate store.
+`ROGUESQ_LOG_M5_FIRST_TASK=1` boundary census and post-dispatch execution
+markers enabled. Keep the independent retail whole-RDRAM control, physical
+`0x000A0F50` watch, and all passive M5 markers. Compare the first 16 task
+ordinals through image/stub return and SP completion at the common pre-title
+VI 640 boundary. Do not change dispatch behavior or any gate store.
 
 ## Competing hypotheses and discriminator
 
-- H-selector-field: image and silent receive different task-field sequences or
-  function pointers before VI 640; the selector/task staging boundary is the
-  route cause.
-- H-selector-only: both arms receive identical task fields and function
-  pointer except for the deliberate image/stub choice; the split is after
-  dispatch or scheduling.
-- H-unreached: the first-task census is absent while dispatch controls remain
-  positive; the task-field boundary is not reached and this route remains
-  unevaluable.
+- H-execution-return: the arms have identical task inputs but diverge in image
+  execution return/exit or SP completion, selecting the post-dispatch bridge.
+- H-scheduling: image/stub return and SP completion are identical through the
+  first 16 tasks, selecting a later queue or scheduler edge.
+- H-unreached: the first-task census is present but post-dispatch markers are
+  absent in both arms; this bridge remains unevaluable.
 
 The discriminator is one table keyed by arm and audio-task ordinal containing
-`type`, `ucode`, `ucode_data`, `data_ptr`, `data_size`, output/yield fields,
-`ucode_func`, VI width/origin, and the matching dispatch control. A field or
-function-pointer divergence selects H-selector-field; identical rows reject
-it; positive dispatch with no boundary rows selects H-unreached.
+the first-task fields, selected function pointer, image/stub enter and return,
+break/exit state, SP completion, VI width/origin, and matching dispatch
+control. A return/completion divergence selects H-execution-return; identical
+post-dispatch rows select H-scheduling; absent post-dispatch rows select
+H-unreached.
 
 ## Exact commands
 
