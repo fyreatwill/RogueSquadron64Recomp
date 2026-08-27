@@ -116978,3 +116978,15 @@ overlay table has the matching ROM size. The menu-overlay `0x800C6900`
 identity is a separate overlay collision inside that address range and must
 not be merged. No rename or runtime change was made. This rules out a new
 rename at `0x800C68A0`; the next bounded lead is `0x800C6FFC`.
+
+## Session 2627 (2026-08-27) — audited the 800C6FFC symbol region
+
+The bounded generated-symbol sweep audited `0x800C6FFC` against the mission
+companion symbols, generated body, overlay table, repository TOML, and callers.
+The companion name is `applyNpcPositionDrift`; the generated body spans `0x124`
+bytes from `0x800C6FFC` to the exact next boundary `0x800C7120`, and the overlay
+table carries the matching name and ROM size. Generated caller `0x800B3DFC`
+invokes it. The adjacent `0x800C7120` row is already the exact
+`getConfigFloatPair` mapping. No placeholder remained to rename, no collision
+was found, and no runtime behavior changed. This rules out a new rename at
+`0x800C6FFC`; the next bounded lead is `0x800C7120`.

@@ -1,10 +1,10 @@
-# NEXT work unit (s2627) — bounded generated-symbol sweep while M5 is blocked
+# NEXT work unit (s2628) — bounded generated-symbol sweep while M5 is blocked
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next bounded symbol region at `0x800C6FFC` using companion symbols,
+Audit the next bounded symbol region at `0x800C7120` using companion symbols,
 generated bodies, callers, and overlay sizes. Rename only a placeholder whose
 identity is supported by exact companion and span/caller evidence; unresolved
 fragments stay placeholders. Do not change runtime behavior.
@@ -21,12 +21,13 @@ fragments stay placeholders. Do not change runtime behavior.
 
 The discriminator is one table containing each candidate's address, companion
 name/comment, exact overlay span, generated placeholder, callers, and whether
-the identity is exact or boundary-only. One exact row selects a rename.
+the identity is exact or boundary-only. One exact unresolved row selects a
+rename.
 
 ## Exact checks
 
 1. Inspect the mission and menu companion symbol files, the repository TOML,
-   generated body, overlay table, and callers around `0x800C6FFC`.
+   generated body, overlay table, and callers around `0x800C7120`.
 2. Compare adjacent addresses and sizes. Run `python tools/rename/build_redefs.py`
    only if an exact supported rename is selected, then verify the redef line.
 3. Land at most one companion-supported rename; do not invent names from
@@ -34,6 +35,7 @@ the identity is exact or boundary-only. One exact row selects a rename.
 
 ## Expected outcomes
 
-An exact mapping lands a regeneration-safe rename and advances the sweep. A
-boundary-only, collision, or unresolved result records why the placeholder
-remains and selects the next bounded region.
+An exact unresolved mapping lands a regeneration-safe rename and advances the
+sweep. An already-resolved mapping, boundary-only result, collision, or
+unresolved result records why the placeholder remains and selects the next
+bounded region.

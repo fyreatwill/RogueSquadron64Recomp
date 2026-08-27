@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2626 (2026-08-27).
+Current maintenance marker: Session 2627 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -198,7 +198,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C6FFC` next using companion symbols, exact spans, and callers;
+   Audit `0x800C7120` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
@@ -246,6 +246,18 @@ the writer and stating whether its value is legitimate.
 - Never run `git submodule update`, `git checkout -- lib/...`, `git clean`, or
   `git reset --hard`. If `lib/` changes, export its patches in the same
   iteration.
+
+## Session 2627 result
+
+The bounded sweep audited `0x800C6FFC` and its adjacent boundary. The mission
+companion names `0x800C6FFC` `applyNpcPositionDrift`; the generated body starts
+at that address and ends at the exact next boundary `0x800C7120`, spanning
+`0x124` bytes. The generated overlay table and repository TOML carry the same
+name and size, and generated caller `0x800B3DFC` invokes it. `0x800C7120` is
+already an exact `getConfigFloatPair` entry, so no placeholder or collision was
+available to rename. This selects `H-CompanionExact` as already resolved,
+rules out a boundary-only interpretation for the lead, and changes no runtime
+behavior. The next bounded lead is `0x800C7120`.
 
 ## Superseded conclusions
 
