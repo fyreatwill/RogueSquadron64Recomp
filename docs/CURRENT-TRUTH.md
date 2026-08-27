@@ -208,6 +208,15 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
   boundary-only mapping was found. No rename or build was warranted; the next
   bounded sweep lead is `0x800C78A0`.
 
+- **s2635 — the `0x800C78A0` sweep lead was already exact.** The companion
+  mission symbols name it `calculateDatItemDistanceToPlayer`; the generated
+  body has the matching `0xAC` span ending at `0x800C794C`, and the repository
+  TOML plus generated overlay table agree on name, address, and ROM size.
+  Generated callers invoke the resolved name (10 call sites); the menu symbol
+  file has no competing entry in this bounded region. No placeholder,
+  duplicate overlay identity, or boundary-only mapping was found. No rename or
+  build was warranted; the next bounded sweep lead is `0x800C794C`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -229,7 +238,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C78A0` next using companion symbols, exact spans, and callers;
+   Audit `0x800C794C` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an

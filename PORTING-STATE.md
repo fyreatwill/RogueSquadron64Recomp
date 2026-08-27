@@ -117098,3 +117098,19 @@ matching TOML/generated overlay sizes; no placeholder or cross-overlay
 collision required an action. No rename, build, or runtime change was
 warranted. This rules out an actionable rename in this bounded lead, not the
 broader symbol-sweep hypothesis. The next bounded lead is `0x800C78A0`.
+
+## Session 2635 (2026-08-27) — audited the 800C78A0 symbol lead
+
+Ran the bounded generated-symbol-renaming sweep required by
+`scratch/agent/NEXT.md`. The comparison table covered `0x800C78A0` and its
+adjacent region through `0x800C7FF8`: the lead is already named
+`calculateDatItemDistanceToPlayer` in the companion mission symbols, active
+generated body, repository TOML, and generated overlay table. Its generated
+body and overlay entry agree on the exact `0xAC` span ending at `0x800C794C`;
+10 generated call sites invoke the resolved name, and the menu symbol file has
+no competing entry in this bounded region. The adjacent entries likewise have
+matching names and spans, with only the intentional `fake_func_800C7DB4`
+fragment remaining unnamed. No placeholder, duplicate overlay identity, or
+boundary-only mapping required an action. No rename, build, or runtime change
+was warranted. This rules out an actionable rename in this bounded lead, not
+the broader symbol-sweep hypothesis. The next bounded lead is `0x800C794C`.
