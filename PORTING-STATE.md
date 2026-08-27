@@ -119846,3 +119846,16 @@ because no generated source changed.
 This selects the already-synchronized hypothesis for the interval and rules
 out stale generated semantic placeholders there, not the remaining sweep.
 The next bounded interval is `0x8014F000..0x80151000`.
+
+## Session 2812 (2026-08-27) — renamed generated data-gap records in the symbol sweep
+
+The prescribed interval `0x8014F000..0x80151000` was already synchronized:
+the selector changed zero references and the independent placeholder scan was
+empty. Under the no-churn pivot, the regeneration-safe selector was extended
+with three companion-map-backed data-gap names at `0x80064294`, `0x80064934`,
+and `0x80065A5C`. The bounded `0x80064000..0x80066000` run changed 9
+references in four generated files (`funcs.h`, `funcs_14.c`, `funcs_15.c`, and
+`recomp_overlays.inl` in the external generated snapshot); `git diff --check`
+passed. These records are short non-callable gaps, so this changes symbol
+clarity only and adds no M5 or runtime evidence. The next sweep interval is
+`0x80151000..0x80153000`.

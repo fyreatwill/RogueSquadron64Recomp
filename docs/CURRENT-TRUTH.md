@@ -173,6 +173,12 @@ legitimate payload, destination, and ordering relation. Any mitigation-shaped
 diff must include an `ORIGIN:` line naming the writer and stating whether its
 value is legitimate.
 
+Session 2812 pivoted from the already-synchronized `0x8014F000..0x80151000`
+interval to a bounded source-backed data-gap rename batch. The selector now
+maps `0x80064294`, `0x80064934`, and `0x80065A5C` to explicit `data_gap_*`
+names and changed 9 generated references in the external snapshot. This is a
+symbol-clarity change only; it adds no M5 or runtime evidence.
+
 ## Next steps
 
 Priority follows the user directive: maintenance, then M5, then systematic M3,
