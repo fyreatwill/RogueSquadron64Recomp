@@ -117837,3 +117837,23 @@ without explaining its other writers. No runtime behavior, instrumentation,
 writeback, or mitigation changed. Full capture and table:
 `scratch/agent/s2679_m5_renderer_pcm_oracle.log` and
 `scratch/agent/s2679_m5_renderer_pcm_oracle.md`.
+
+## Session 2680 (2026-08-27) — re-baselined the M5 image and silent audio arms
+
+The existing Debug build completed successfully. The qualified AUTOPILOT
+recipe ran the Factor 5 image and `ROGUESQ_AUDIO_UCODE=0` silent arms
+concurrently with `C88=0` and phase-gated probes. Both arms passed the port
+route controls, reaching title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`; both were terminated by the recipe's SIGKILL watchdog.
+Neither log contained a crash or abort marker.
+
+The image arm produced 4,764 DMA-range rows and 14,328 image-stage rows,
+including completion at `break_pc=0x1328`; the silent arm produced zero of
+each. Dispatch, audio return, audio/SP route, PCM source/consumer counts, and
+sampled PCM payload polarity were otherwise matched: 77 dispatch, 526 return,
+98/98 PCM rows, and `fnv=F59C39C5 nz=0` in both arms. This selects
+`H-ContractGap` at the measured downstream boundary, rejects
+`H-RouteOnly` and `H-AudioDegeneracy` there, and rules out no named writer or
+legitimate destination. No runtime behavior, writeback, remap, gate, guard,
+or mitigation changed. Full table:
+`scratch/agent/s2680_m5_step1_rebaseline/RESULT.md`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2679 (2026-08-27).
+Current maintenance marker: Session 2680 (2026-08-27).
 
 ## Live result
 
@@ -47,6 +47,14 @@ The latest qualified M5 evidence is:
   not join renderer/mixer output to that ring or another AI source. This
   strengthens `H-MORT-unmapped` at the CPU publication boundary and does not
   select `H-image-edge`.
+- s2680's same-build AUTOPILOT re-baseline reached title and hangar in both
+  port arms. The image arm alone produced 4,764 DMA-range rows and 14,328
+  image-stage rows, with task `break_pc=0x1328`; the silent arm produced none.
+  Both arms nevertheless had matching task dispatch/return, audio/SP route,
+  PCM source/consumer counts (`98/98`) and zero-nonzero PCM payloads
+  (`fnv=F59C39C5`, `nz=0`). This selects `H-ContractGap` at the measured
+  downstream boundary, rejects `H-RouteOnly` and `H-AudioDegeneracy` there,
+  and does not identify a legitimate writer or authorize writeback/remap.
 
 Retail is the independent witness for game-side memory claims. A narrow null
 is unevaluable unless the whole-RDRAM positive control fires first and the
@@ -57,15 +65,14 @@ target phase is reached. The current corrected oracle reaches attract, title
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 de-stubbing sequence, Step 1.** The CPU renderer/AI edge remains
-   unmapped after a positive-controlled retail audit, so execute the existing
-   same-build image-versus-silent re-baseline in
-   [`M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md). Keep `C88=0` and
-   `ROGUESQ_AUDIO_UCODE=0` as controls and require task, DMEM/DMA, service,
-   slot, PCM, and route rows in both arms.
-2. **M5 CPU-side MORT PCM publication.** Revisit only with a genuinely new
-   discriminator for the renderer-to-AI destination/order join; do not repeat
-   the filter, persistent-object, task-field, ring, or shared-stack censuses.
+1. **M5 CPU-side MORT PCM publication.** The Step 1 image-vs-silent control
+   confirms an image contract gap but no downstream divergence. Revisit only
+   with a genuinely new renderer-to-AI destination/order join; do not repeat
+   the filter, persistent-object, task-field, ring, shared-stack, or Step 1
+   arm census.
+2. **M5 image task contract edge.** Implement only after a named legitimate
+   image writer and destination/order relation is independently established;
+   s2680 authorizes no writeback or remap.
 3. **Generated-symbol renaming sweep — parked fallback.** Resume only when
    M5 is closed or blocked by a new discriminator. Use exact companion
    address/name agreement; preserve ambiguous placeholders and overlay

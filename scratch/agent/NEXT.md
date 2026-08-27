@@ -1,39 +1,47 @@
-# NEXT work unit (s2680) — execute M5 Step 1 same-build audio re-baseline
+# NEXT work unit (s2681) — new M5 CPU renderer-to-AI destination/order join
 
-HYPOTHESIS-ID: m5-audio-destub-step1-contract
+HYPOTHESIS-ID: m5-cpu-renderer-ai-publication-join
 
 ## Work unit
 
-Run the existing qualified AUTOPILOT driver once with the real Factor 5 image
-arm and once with `ROGUESQ_AUDIO_UCODE=0` silent control, using one build and
-the same phase-gated capture. This is the M5-AUDIO-PLAN Step 1 re-baseline;
-do not change behavior or add a new guard/writeback edge.
+Run one new, positive-controlled retail oracle capture to join the named
+renderer/mixer output to the AI source and consumer. Do not repeat the ring,
+shared-stack, filter, persistent-object, task-field, or image-vs-silent
+censuses, and do not change runtime behavior.
 
 ## Competing hypotheses and discriminator
 
-- `H-AudioDegeneracy`: the image arm creates downstream service, slot, voice,
-  or PCM progress that the silent arm lacks.
-- `H-ContractGap`: the image arm has DMEM/DMA and completion activity but no
-  additional downstream contract edge.
-- `H-RouteOnly`: both arms have the same downstream rows and differ only in
-  route timing or reachability.
+- `H-MORT-PCM`: a named CPU renderer/mixer writer publishes the PCM consumed by
+  AI on the same destination span and ordered call sequence.
+- `H-AI-source-gap`: renderer/mixer runs, but AI reads a different or
+  unpopulated source; the missing edge is between them.
+- `H-Host-only-gap`: retail has a valid renderer-to-AI join, so any port gap is
+  after AI source publication and must not be fixed in the guest/RSP path.
 
-The discriminator is one phase-keyed table containing, for both arms,
-`audtask-dispatch`, task fields, DMEM/DMA, image break/exit, SP completion,
-service return, slot/status transitions, voice/MORT rows, PCM source/consumer,
-and title/hangar route markers. A new downstream image-only row selects
-`H-AudioDegeneracy`; image-only DMEM/DMA with no downstream divergence selects
-`H-ContractGap`; identical downstream rows with the same target phases select
-`H-RouteOnly`. A missing positive route control invalidates the run.
+The discriminator is one phase-keyed retail table containing whole-RDRAM
+positive-control count, title/hangar route markers, `renderVoiceAudioBlock`,
+`audioMixStereoBlock8`, every writer PC and payload span for the selected
+candidate output ranges, `osAiSetNextBuffer`, `__osAiDeviceBusy`, and source
+address/order/hash/nonzero polarity at each edge. A renderer/mixer writer that
+matches the AI source and precedes its consumer selects `H-MORT-PCM`; distinct
+or zero AI source selects `H-AI-source-gap`; a complete retail join with no
+port join selects `H-Host-only-gap`. Missing whole-RDRAM control or target
+phase invalidates the run.
+
+## Ground-truth prerequisite
+
+Use `tools/oracle/README.md` and the corrected local core path. Arm the
+whole-RDRAM positive control first and require title plus hangar before
+interpreting narrow nulls. No port instrumentation is authorized until this
+oracle control passes.
 
 ## Exact commands
 
-1. `cmake --build build --config Debug --target RogueSquadron64Recomp`
-2. Run the existing AUTOPILOT capture recipe from `build/`, once with the
-   default image arm and once with `ROGUESQ_AUDIO_UCODE=0`; use
-   `PROBE_PHASE_WIDTH=1 PROBE_KEYS_FROM_PHASE=1 ROGUESQ_LOG_ALL=1` plus the
-   existing M5 task/PCM joins. Launch both arms in the same iteration and
-   terminate each process group with SIGKILL.
-3. Record the complete table and phase-gated verdict under
-   `scratch/agent/s2680_m5_step1_rebaseline/`; enqueue the soak rather than
-   babysitting it.
+1. Launch the corrected retail oracle with whole-RDRAM watch, candidate output
+   range watches, renderer/mixer and AI PC watches, VI trace, and the existing
+   AUTOPILOT input; wait for positive control, title, and hangar.
+2. Extract the complete writer/source/order table into
+   `scratch/agent/s2681_mort_pcm_publication_join/`; do not run a port build
+   unless the oracle discriminator identifies a new named edge.
+3. Enqueue any validation soak rather than babysitting it; terminate the
+   oracle/process group with SIGKILL.
