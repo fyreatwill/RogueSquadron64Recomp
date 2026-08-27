@@ -167,6 +167,14 @@ Current maintenance marker: Session 2527 (2026-08-26).
   caller attribution. This is a static, single-source result and does not
   prove the fragment is dead or permanently unnameable. Artifact:
   `scratch/agent/s2527_symbol_census/audit.md`.
+- **s2528 — the eleventh bounded generated-symbol region had no defensible
+  mapping.** The complete interval `0x8007A86C–0x8007A86C` contains one
+  4-byte placeholder whose body is only `lw a2,0x2B94(a2)`, immediately before
+  the independently named `allocateNpcMeshVertexBuffer`. The companion symbol
+  file retains `fake_func_8007A86C`; exact-address, source, m2c, and caller
+  searches found no human candidate. This is a static, single-source result;
+  no generated code changed. Artifact:
+  `scratch/agent/s2528_symbol_census/audit.md`.
 
 ## Active backlog
 
@@ -193,7 +201,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
 4. **Generated-symbol renaming — active after M5 Step 3 closure.** Resume with
   one bounded address-region census and only names supported by the companion
   decomp or clear local semantics; leave unresolved placeholders unchanged.
-  s2527 left `0x8007A0E8` unresolved; next is `0x8007A86C`.
+  s2527 and s2528 left `0x8007A0E8` and `0x8007A86C` unresolved; next is
+  `0x8007C298`.
 5. **M4 accumulator-origin work — parked** pending a new boundary idea.
 
 ## Durable boundaries

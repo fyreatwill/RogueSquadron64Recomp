@@ -114869,6 +114869,25 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2528 (2026-08-26) — censused eleventh generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x8007A86C–0x8007A86C` after
+the required sweep preflight. It contains exactly one 4-byte placeholder,
+`fake_func_8007A86C`, whose generated body is the isolated instruction
+`lw a2, 0x2B94(a2)` immediately before the independently named
+`allocateNpcMeshVertexBuffer` at `0x8007A870`. The generated overlay table and
+companion symbol file agree on the span and retain the fake name. Exact-address,
+source, m2c, and caller searches found no human or semantic rename candidate.
+
+This selects `H-no-match` and rules out a defensible rename or
+regeneration-safe build for this entry. The fragment may be a boundary
+artifact or callable fragment, but this static, single-source result does not
+prove which. No generated code, runtime, submodule, or mitigation changed.
+Artifact: `scratch/agent/s2528_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
+
 ## Session 2527 (2026-08-26) — censused tenth generated-symbol sweep region
 
 Enumerated the complete main-overlay interval `0x8007A0E8–0x8007A0E8` after
