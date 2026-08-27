@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2773 (2026-08-27).
+Current maintenance marker: Session 2774 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -54,6 +54,12 @@ The latest durable M5 chain is:
   only speech metadata and performs asset DMA, `initMusyXVoiceSlot` initializes
   slot pointers/state, and `consumeVoiceSamples` advances counters/status. It
   has no PCM/AI-visible payload writer or new ordering edge.
+- Session 2774 retried the same-build image/silent pair with C88 unset and
+  the qualified AUTOPILOT route. The retail whole-RDRAM positive control
+  passed, but both the eight-event and fixed eleven-Start recipes stalled at
+  VI 640; neither reached title 1024 or hangar `0x006AB400`. Image dispatch
+  counts diverged from silent as expected, but all target-phase audio/PCM
+  rows are invalid and select no publication hypothesis.
 - `osAiGetStatus_recomp` now reports runtime buffered-audio state instead of
   unconditionally returning zero. The Debug target compiled and linked;
   the same-build image/silent validation emitted positive set-next and
@@ -73,14 +79,12 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **M5 Step 1 re-baseline — phase control still required.** Session 2769
-   ran the retail oracle and both same-build audio arms, but the port stayed
-   in 320/640 cinematic phases and never reached title `1024` or hangar
-   `0x006AB400`; the row is invalid and selects no audio hypothesis. The
-   oracle whole-RDRAM control did pass and independently reached title and
-   hangar. Retry the same image/silent pair with the qualified AUTOPILOT route
-   and the compiled C88 default (do not force `ROGUESQ_M5_C88_VALUE=0`) before
-   interpreting any downstream null.
+1. **M5 Step 1 recipe repair — phase control still required.** Session 2774
+   passed the retail whole-RDRAM control and fired every AUTOPILOT event in
+   both arms, but both recipes stalled at VI 640. Retry the same-build pair
+   using the known phase-gated `PROBE_KEYS_FROM_PHASE` input path (C88 unset),
+   with all target-phase controls already enabled; do not interpret downstream
+   nulls unless both title `1024` and hangar `0x006AB400` are observed.
 
 2. **Generated-symbol renaming sweep — next bounded fallback.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
@@ -312,5 +316,9 @@ ledger. The current late-chain checkpoints are:
   Zero generated references were selected; an independent placeholder scan was
   empty. The interval is closed without inventing names; the next rename
   interval begins after `0x80111000`.
+- s2774: the retail oracle whole-RDRAM control passed, while both same-build
+  AUTOPILOT arms stalled at VI 640 under both the original and eleven-Start
+  schedules. Target-phase audio/PCM rows are invalid; no M5 hypothesis was
+  selected, and the next step is input-recipe repair.
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

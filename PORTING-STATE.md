@@ -119355,3 +119355,18 @@ and `git diff --check` passed. The complete decision table is in
 `scratch/agent/s2773_generated_rename/decision-table.txt`. This closes the
 interval without authorizing an invented name; the next rename interval is
 after `0x80111000`.
+
+## Session 2774 (2026-08-27) — M5 phase-qualified pair remained route-invalid
+
+The retail oracle whole-RDRAM positive control passed (`10000` callbacks) and
+independently reported title `VI 1024` plus hangar origin `0x006AB400`. A fresh
+Debug build then ran same-build image (`ROGUESQ_AUDIO_UCODE=1`) and silent
+(`=0`) arms concurrently with C88 unset and the qualified AUTOPILOT schedule.
+Both arms fired all eight scheduled events but stalled at VI 640; neither
+reached title 1024 or hangar, so the target-phase audio/PCM table is invalid
+and selects no M5 publication hypothesis. The fixed eleven-Start AUTOPILOT
+schedule reproduced the same VI-640 stall. Image dispatch controls were
+positive (`48`, `real_ucode=1`) and silent controls were positive (`48`,
+`real_ucode=0`), proving the arm toggle and instrumentation ran; they are not
+target-phase evidence. The next unit repairs the input recipe using the
+phase-gated `PROBE_KEYS_FROM_PHASE` path. `git diff --check` passed.
