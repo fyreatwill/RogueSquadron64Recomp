@@ -119430,3 +119430,13 @@ zero `func_8011` or `fake_func_8011` placeholder references, and `git diff
 --check` passed. No build or regeneration was needed. This closes the interval
 and rules out stale generated placeholders there, not the remaining rename
 sweep. The next interval is `0x80115000..0x80117000`.
+## Session 2779 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The regeneration-safe companion census for `0x80115000..0x80117000` selected
+zero generated references and changed zero files. Its `--require-rename`
+nonzero status was the expected zero-selection result. The independent scan
+found no placeholder function symbols in the interval; its matches were only
+address-immediate comments/assembly references. `git diff --check` passed. No
+build or regeneration was needed. This closes the interval and rules out stale
+generated placeholders there, not the remaining rename sweep. The next interval
+is `0x80117000..0x80119000`.
