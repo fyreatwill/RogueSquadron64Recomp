@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2845 (2026-08-27).
+Current maintenance marker: Session 2847 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -284,6 +284,16 @@ zero references and preserved it. Neighboring callable symbols were already
 synchronized. This is symbol-clarity evidence only; the next interval is
 `0x8004A000..0x8004B000`.
 
+Session 2846 closed the `0x8004C000..0x8004D000` interval and the adjacent
+`0x8004D000..0x80052000` callable range with no selected generated
+references; candidates were already synchronized or ambiguous/fake. A
+source-backed correction elsewhere renamed the defined invalid-data record
+at `0x8003DF98` to `data_gap_8003DF98`, changing three references. Session
+2847 closed `0x80052000..0x80053000`: all seven candidates were already
+synchronized, the selector changed zero references, and the stale-name scan
+was empty. No build or game run was needed; continue with the next bounded
+interval while preserving callable-ambiguous entries.
+
 ## Next steps
 
 Priority follows the user directive: maintenance, then M5, then systematic M3,
@@ -402,11 +412,14 @@ Three companion records explicitly classified as short non-callable gaps
 external generated snapshot has three new-name references per address and no
 stale placeholder references. This is symbol clarity only, not M5 evidence.
 
-Session 2841 continued the source-backed batch with `0x80041EEC` and
-`0x800457CC`; six generated references changed in four files and the
-independent scan found no stale placeholders. Preserve
-`fake_func_8004661C` as callable-ambiguous and continue with the next
-explicitly classified short data-gap record.
+   Session 2841 continued the source-backed batch with `0x80041EEC` and
+   `0x800457CC`; six generated references changed in four files and the
+   independent scan found no stale placeholders. Preserve
+   `fake_func_8004661C` as callable-ambiguous and continue with the next
+   explicitly classified short data-gap record. Session 2847 closed
+   `0x80052000..0x80053000` with seven already-synchronized callable entries,
+   zero replacements, and no stale placeholders. Continue at
+   `0x80053000..0x80054000`.
 
 4. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still

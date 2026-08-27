@@ -120340,3 +120340,17 @@ selector renamed three generated references in `funcs_8.c`, `funcs.h`, and
 documents the non-callable status. No build or game run was needed. This
 rules out a data-gap rename in the queued `0x8004C000` interval, but does not
 classify the remaining ambiguous placeholders.
+
+## Session 2847 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x80052000..0x80053000`.
+The selector classified seven candidates as already-synchronized callable
+entries: `submitActiveEffectObjectRender`, `initEffectObjectDefaults`,
+`spawnEffectObjectAtNpc`, `initEffectObjectFromLevelData`,
+`destroyEffectObjectAndAssets`, `deactivateEffectObject`, and
+`refreshEffectObjectCamerasAndState`. It changed zero generated references
+and returned the expected `--require-rename` fail-closed result; the
+independent `rg` scan found no `data_gap_80052` or `fake_func_80052` names.
+This rules out a source-backed data-gap rename in this interval but does not
+classify placeholders outside it. No build or game run was needed. The next
+sweep interval is `0x80053000..0x80054000`.

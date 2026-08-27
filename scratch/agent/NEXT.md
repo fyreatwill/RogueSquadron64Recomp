@@ -1,13 +1,13 @@
-# NEXT work unit (s2847) — generated-symbol-renaming-sweep
+# NEXT work unit (s2848) — generated-symbol-renaming-sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
 Apply the next bounded source-backed data-gap rename batch after the closed
-`0x8004C000..0x80052000` callable intervals. Inspect the next 0x1000-byte
-interval with the regeneration-safe selector and apply only a mechanically
-source-backed data-gap rename; preserve callable-ambiguous records.
+`0x80052000..0x80053000` interval. Inspect `0x80053000..0x80054000` with
+the regeneration-safe selector and apply only a mechanically source-backed
+data-gap rename; preserve callable-ambiguous records.
 
 ## Competing hypotheses and discriminator
 
@@ -28,8 +28,8 @@ selects H-callable; zero replacements selects H-already-synchronized.
 ```sh
 python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x80052000 --end-address 0x80053000 --limit 8 --require-rename
-rg -n 'data_gap_80052|fake_func_80052' \
+  --start-address 0x80053000 --end-address 0x80054000 --limit 8 --require-rename
+rg -n 'data_gap_80053|fake_func_80053' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 ```
 
