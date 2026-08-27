@@ -6,6 +6,18 @@ commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
 Current maintenance marker: Session 2739 (2026-08-27).
 
+Session 2740 rebuilt the Debug target and ran the planned M5 yield validation
+in both image (`ROGUESQ_AUDIO_UCODE=1`) and silent-control
+(`ROGUESQ_AUDIO_UCODE=0`) arms. The corrected batched run included
+`ROGUESQ_SPIN_YIELD=1`, but both arms still reached only the 640 cinematic
+phase (`origin=0x0066A500`) during the watchdog window. The phase-gated 1024
+and 512 targets therefore had zero descriptor-yield, descriptor-start,
+task-handoff, scheduler-ID, and image-completion rows in both arms. VI/task
+activity was live, so this is not evidence for H-yield-unused or
+H-yield-state-only; it leaves the yield hypotheses unevaluable at the target
+phases and selects a bounded static call-site census as the next M5 unit.
+Evidence: `scratch/agent/soak_results/s2740_m5_yield_validation/`.
+
 Session 2739 landed the first M5 runtime de-stub in the checked-in runtime:
 `osSpTaskYield_recomp` records a real yield request and
 `osSpTaskYielded_recomp` reports it, while task interruption/resumption stays
@@ -613,13 +625,14 @@ files, with no parser or duplicate-destination failure. Session 2739 then
 confirmed `0x800DA000..0x800E0000` is also synchronized; symbol sweep work is
 parked until a future regeneration exposes a new exact companion match.
 
-1. **M5 SP yield contract validation.** Session 2739 de-stubbed
-   `osSpTaskYield_recomp`/`osSpTaskYielded_recomp` so the runtime records and
-   reports a real request state. Validate this with one phase-gated same-build
-   image/silent run, the whole-RDRAM retail positive control, task identity and
-   fields, task exit, SP completion, and downstream PCM joins. A reported state
-   without a task transition is only `H-yield-state-only`; do not infer audio
-   progress from it.
+1. **M5 SP yield call-site census.** The s2740 same-build validation could not
+   reach the target 1024/512 phases: both image and silent arms stopped at the
+   640 cinematic phase even with `ROGUESQ_SPIN_YIELD=1`, so the yield
+   hypotheses remain unevaluable rather than negative. Audit every generated
+   call site of `osSpTaskYield_recomp` and `osSpTaskYielded_recomp`, map each
+   caller to its task/route context, and identify whether any call is reachable
+   from an audio task. Do not add a runtime probe or infer a contract from a
+   call site alone.
 2. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
    the missing copy/publication edge. The s2682 audit shows the watched sites

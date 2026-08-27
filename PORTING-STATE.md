@@ -118851,3 +118851,21 @@ Evidence: `scratch/agent/s2738_generated_symbol_sweep/decision-table.txt`.
 - This rules out only the old unconditional no-op implementation. It does not
   establish audio yield usage, task-contract completeness, PCM publication, or
   a legitimate output writer. No mitigation or writeback was added.
+
+## Session 2740 (2026-08-27) — validated SP yield reachability boundary
+
+- The Debug target rebuilt successfully. The corrected dual-arm run included
+  `ROGUESQ_SPIN_YIELD=1`, all M5-specific contract/completion/task logging, and
+  image/silent arms in the same build. Both arms still reached only 640
+  (`origin=0x0066A500`) during the watchdog window; the whole-RDRAM/VI/task
+  controls were live, but neither target phase (`1024 @ 0x00790400`,
+  `512 @ 0x006AB400`) was reached.
+- Target-phase descriptor-yield, descriptor-start, task-handoff, scheduler-ID,
+  and image-completion rows were zero in both arms. This does not select
+  H-yield-unused or H-yield-state-only because the discriminator phase was
+  absent; it rules out only the claim that this recipe reached the target
+  phases. Evidence is in
+  `scratch/agent/soak_results/s2740_m5_yield_validation/`.
+- The next unit is a bounded static census of every generated yield API call
+  site, classified by audio-task versus non-audio context. No mitigation,
+  writeback, or task-contract conclusion follows.
