@@ -134,43 +134,19 @@ wait_for_hangar() {
     return 1
 }
 
-print "arms_staged=concurrent_stub_and_default_after_oracle_gate" >> "$OUT/driver.log"
-launch_arm stub stub
-launch_arm default default
-
 stub_target=0
 default_target=0
-retention_started=0
-pair_deadline=$((SECONDS + 220))
-while (( SECONDS < pair_deadline )); do
-    if (( stub_target == 0 )) && grep -a -q '^\[phase\] vi_width=512 .*origin=0x006AB400' "$OUT/stub.log"; then
-        stub_target=1
-        print "stub_hangar=observed" | tee -a "$OUT/driver.log"
-    fi
-    if (( default_target == 0 )) && grep -a -q '^\[phase\] vi_width=512 .*origin=0x006AB400' "$OUT/default.log"; then
-        default_target=1
-        print "default_hangar=observed" | tee -a "$OUT/driver.log"
-    fi
-    stub_live=0
-    default_live=0
-    kill -0 "$STUB_PID" 2>/dev/null && stub_live=1
-    kill -0 "$DEFAULT_PID" 2>/dev/null && default_live=1
-    if (( stub_target == 1 && default_target == 1 && retention_started == 0 )); then
-        retention_started=1
-        pair_deadline=$((SECONDS + 15))
-    fi
-    if (( stub_target == 1 && default_target == 1 && stub_live == 0 && default_live == 0 )); then
-        break
-    fi
-    sleep 1
-done
+print "arms_staged=isolated_stub_then_default_after_oracle_gate" >> "$OUT/driver.log"
+launch_arm stub stub
+if wait_for_hangar stub "$STUB_PID"; then
+    stub_target=1
+fi
 
-if (( stub_target == 0 )); then
-    print "stub_hangar=timeout_or_exit; SIGKILL" | tee -a "$OUT/driver.log"
+launch_arm default default
+if wait_for_hangar default "$DEFAULT_PID"; then
+    default_target=1
 fi
-if (( default_target == 0 )); then
-    print "default_hangar=timeout_or_exit; SIGKILL" | tee -a "$OUT/driver.log"
-fi
+
 for pid in "$STUB_PID" "$DEFAULT_PID"; do
     if kill -0 "$pid" 2>/dev/null; then
         kill -9 "$pid" 2>/dev/null

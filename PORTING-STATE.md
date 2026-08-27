@@ -117663,3 +117663,19 @@ retry. This selects `H-Step0-port-control-invalid`, rules out the former
 sequential-arm omission, and leaves the writer/value/order contract
 unevaluable. No runtime, audio, gate, writeback, remap, or guard behavior
 changed.
+
+## Session 2669 (2026-08-27) — isolated M5 arms still fail before hangar
+
+The repaired Step 0 driver retained the oracle gate and all phase/probe
+settings, then ran the silent and default image arms sequentially in isolated
+processes. The oracle passed its whole-RDRAM positive control (`10000`) and
+title/hangar transitions. Both port arms reached title but exited before
+hangar, each with 36 crash markers. Silent ended at host
+`slotDispatcherIter+3508` with guest PC `0x80022160`; default ended at host
+`allocAndInitGridCellArray+1276` with guest PC `0x80001C94`. Silent produced
+1,404 ABI/DMA rows and zero image-stage rows; default produced 1,386 ABI/DMA
+rows and 6,192 image-stage rows. This refutes paired-process interference,
+but the differing paths do not establish a common crash explanation. The
+control is still invalid because neither arm reached hangar; the next unit is
+a smallest stable-driver/control repair. No runtime, audio, gate, writeback,
+remap, wait, or guard behavior changed.

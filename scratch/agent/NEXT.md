@@ -1,41 +1,39 @@
-# NEXT work unit (s2669) — isolate the pre-hangar control crash
+# NEXT work unit (s2670) — qualify the Step 0 control with the stable driver
 
 HYPOTHESIS-ID: m5-audio-step0-control-qualification
 
 ## Work unit
 
-Make one bounded control-only change to the Step 0 driver: retain the oracle
-gate and all phase/probe settings, but run the silent/default arms in separate
-isolated launches with the same input schedule and collect both summaries in
-one iteration. Do not alter runtime behavior, audio routing, gates, or guards.
-The purpose is to determine whether the shared `slotDispatcherIter+3508`
-failure is caused by paired-process interference or is intrinsic to each arm.
+Make one bounded control-only repair: replace the failing isolated-arm launch
+path with the repository's known stable phase-driver recipe, while retaining
+the oracle gate, the same input schedule, and all phase/probe settings. Run
+silent and default controls in one build/run and collect both summaries. Do
+not alter runtime behavior, audio routing, gates, or guards.
 
 ## Competing hypotheses and discriminator
 
-- `H-shared-process-interference`: isolated arms reach hangar; the paired
-  concurrent control is invalid because two instances contend for a host-side
-  resource.
-- `H-common-prehangar-crash`: isolated arms reproduce the same crash before
-  hangar; the failure is intrinsic to the current control route and the
-  contract remains unevaluable.
-- `H-isolation-driver-invalid`: an isolated arm loses title or its positive
-  control; the recipe cannot discriminate the crash and needs driver repair.
+- `H-stable-driver-qualifies`: both arms reach title and hangar with the
+  oracle control intact; the prior wrapper path was the invalid component.
+- `H-port-crash-persists`: the stable driver still loses one or both arms
+  before hangar; the port-side control remains unevaluable.
+- `H-driver-control-invalid`: the replacement loses the oracle/title positive
+  controls or fails to launch one arm; the driver comparison is invalid.
 
-The discriminator is the same-build, oracle-qualified table with independent
-title/hangar phase rows and terminal host/guest crash attribution for both
-arms. Hangar reach in isolation selects interference; repeated pre-hangar
-crashes select the common crash; missing controls select driver invalidity.
+The discriminator is the same-build table of oracle positive-control rows,
+independent title/hangar phase rows, and terminal host/guest crash attribution
+for both arms. Both hangar rows select `H-stable-driver-qualifies`; pre-hangar
+loss with intact oracle/title selects `H-port-crash-persists`; missing oracle,
+title, or arm-launch controls selects `H-driver-control-invalid`.
 
 ## Exact commands
 
-1. Edit only `scratch/agent/run_s2288_m5_audio_default_step2.sh` with
-   `apply_patch` to use isolated bounded arm launches while preserving
-   SIGKILL cleanup and all existing marker categories.
+1. Edit only the control-driver entry point with `apply_patch` to invoke the
+   known stable phase-driver recipe, preserving SIGKILL cleanup and marker
+   categories.
 2. `zsh scratch/agent/run_s2277_m5_step0_ground_truth.sh`
-3. Inspect only `scratch/agent/s2277_m5_step0_ground_truth/driver.log` and
-   bounded `grep -c`/`tail -50` slices of its logs.
+3. Inspect only its `driver.log` and bounded `grep -c`/`tail -50` slices of
+   the arm logs.
 
-Expected: the oracle positive control remains present. Both isolated arms
-  either reach hangar or reproduce the common crash; do not change audio
-  behavior based on a control-invalid result.
+Expected: the oracle positive control remains present. Both arms either reach
+hangar, qualifying the M5 contract table for the next step, or fail before
+hangar and leave audio behavior unchanged.

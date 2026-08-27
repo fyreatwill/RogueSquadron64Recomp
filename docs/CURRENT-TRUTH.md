@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2668 (2026-08-27).
+Current maintenance marker: Session 2669 (2026-08-27).
+
+## Session 2669 result
+
+The repaired Step 0 driver ran the silent and default image arms in isolated
+launches after the qualified oracle gate. The oracle passed its whole-RDRAM
+positive control (`10000`) and title/hangar transitions. Both port arms
+reached title but exited before hangar, each with 36 crash markers. Silent
+ended at `slotDispatcherIter+3508` / guest PC `0x80022160`; default ended at
+`allocAndInitGridCellArray+1276` / guest PC `0x80001C94`. Silent emitted
+1,404 ABI/DMA rows and no image-stage rows; default emitted 1,386 ABI/DMA and
+6,192 image-stage rows. Isolation refutes paired-process interference, but
+the differing pre-hangar crashes leave the Step 0 contract control-invalid
+and do not identify an audio writer or authorize audio behavior changes.
 
 ## Session 2668 result
 
@@ -68,6 +81,18 @@ runtime code, generated function, gate, writeback, or remap changed, and no
 soak was run because this was the required design-only unit.
 
 ## Decision-relevant evidence
+
+- **s2669 — isolated Step 0 arms remain control-invalid.** After the oracle
+  passed the whole-RDRAM positive control (`10000`) and title/hangar phases,
+  the driver ran silent and default sequentially in separate processes. Both
+  reached title but not hangar and each emitted 36 crash markers. Silent ended
+  at `slotDispatcherIter+3508` / guest PC `0x80022160`; default ended at
+  `allocAndInitGridCellArray+1276` / guest PC `0x80001C94`. Silent had 1,404
+  ABI/DMA rows and zero image-stage rows; default had 1,386 ABI/DMA and 6,192
+  image-stage rows. This refutes `H-shared-process-interference`, but the
+  differing paths do not establish a common crash explanation. The control
+  remains invalid because neither arm reached hangar. No runtime, audio,
+  gate, writeback, remap, wait, or guard behavior changed.
 
 - **s2668 — concurrent Step 0 arms remain control-invalid.** The oracle passed
   its whole-RDRAM positive control (`10000`) and title/hangar phases. The
@@ -542,12 +567,12 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 Step 0 control repair — primary active thread.** Both concurrent port
-  arms now reach title but share a pre-hangar `slotDispatcherIter+3508`
-  crash, so the contract table is still unevaluable. Qualify the control with
-  the smallest driver/runtime-independent repair or switch to the known
-  stable phase driver; do not interpret missing hangar rows or change audio
-  behavior until both arms reach the target phase.
+1. **M5 Step 0 control repair — primary active thread.** Both isolated port
+  arms now reach title but exit before hangar through different pre-hangar
+  crash paths, so the contract table is still unevaluable. Qualify the
+  control with the smallest driver/runtime-independent repair or switch to
+  the known stable phase driver; do not interpret missing hangar rows or
+  change audio behavior until both arms reach the target phase.
 2. **M5 de-stubbing sequence — secondary active thread.** Obtain an independent
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
