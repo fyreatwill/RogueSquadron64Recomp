@@ -1,11 +1,11 @@
-# NEXT work unit (s2729) — bounded generated-symbol region
+# NEXT work unit (s2730) — bounded generated-symbol region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
 Continue the generated-symbol sweep over the next unexamined adjacent region
-`0x800BC000..0x800BF000`. Rename only exact semantic companion matches;
+`0x800BF000..0x800C2000`. Rename only exact semantic companion matches;
 preserve address-only, fake, conflicting, or protected placeholders. M5
 publication remains unresolved; no M5 runtime experiment is authorized unless
 a genuinely new named publication surface appears.
@@ -26,12 +26,12 @@ entries, ambiguous-or-fake entries, and parser/duplicate-name failures.
 ## Exact command
 
 ```sh
-mkdir -p scratch/agent/s2729_generated_symbol_sweep
+mkdir -p scratch/agent/s2730_generated_symbol_sweep
 python3 tools/rename_generated_symbols.py \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x800BC000 --end-address 0x800BF000 --limit 32 \
-> scratch/agent/s2729_generated_symbol_sweep/decision-table.txt
+  --start-address 0x800BF000 --end-address 0x800C2000 --limit 32 \
+> scratch/agent/s2730_generated_symbol_sweep/decision-table.txt
 ```
 
 Review the decision table and generated diff. Do not build or run the game

@@ -118679,3 +118679,19 @@ failure. This selects `H-already-synchronized`/`H-ambiguous-or-fake` and
 rules out `H-exact-matches` for this region. No build or game run was
 warranted for the symbol-only batch. Decision evidence:
 `scratch/agent/s2728_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2729 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger because recent entries
+included M4, M5, and symbol-sweep work, so the generated-symbol sweep
+remained eligible. The batch covered `0x800BC000..0x800BF000` in the
+external generated snapshot. Its complete decision table evaluated 32
+companion candidates: 30 semantic entries were already synchronized and two
+address-only/fake entries (`fake_func_800BCC38` and `fake_func_800BEBFC`)
+were preserved as ambiguous-or-fake. Zero renamed references changed in zero
+generated files, and there was no parser, duplicate-destination, or
+protected-placeholder failure. This selects
+`H-already-synchronized`/`H-ambiguous-or-fake` and rules out
+`H-exact-matches` for this region. No build or game run was warranted for the
+symbol-only batch. Decision evidence:
+`scratch/agent/s2729_generated_symbol_sweep/decision-table.txt`.

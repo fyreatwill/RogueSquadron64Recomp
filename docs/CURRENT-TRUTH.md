@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2728 (2026-08-27).
+Current maintenance marker: Session 2729 (2026-08-27).
+
+The s2729 generated-symbol sweep covered `0x800BC000..0x800BF000`. Its
+complete decision table evaluated 32 companion candidates: 30 semantic
+entries were already synchronized and two address-only/fake entries were
+preserved, with zero renamed references in zero generated files. There was
+no parser, duplicate-destination, or protected-placeholder failure. This
+rules out `H-exact-matches` for the region and preserves the
+address-only/fake policy; no build or game run was warranted. Evidence:
+`scratch/agent/s2729_generated_symbol_sweep/decision-table.txt`.
 
 The s2728 generated-symbol sweep covered `0x800B9000..0x800BC000`. Its
 complete decision table evaluated 26 companion candidates: 23 semantic
@@ -623,6 +632,11 @@ unsynchronized companion names. The next unexamined bounded interval is
    files, with no parser or duplicate-destination rejection. This rules out
    `H-exact-matches` for that interval; continue with
    `0x800BC000..0x800BF000`.
+   s2729 covered `0x800BC000..0x800BF000` and evaluated 32 candidates: 30
+   semantic entries were already synchronized and two address-only/fake
+   entries were preserved; zero references changed in zero generated files,
+   with no parser or duplicate-destination rejection. Continue with the next
+   adjacent region only while exact companion evidence remains available.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
