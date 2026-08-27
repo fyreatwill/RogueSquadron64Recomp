@@ -118620,3 +118620,19 @@ without parser or duplicate-destination rejection. This selects
 `H-exact-matches` there. No build or game run was warranted for a symbol-only
 batch. Decision evidence:
 `scratch/agent/s2724_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2725 (2026-08-27) — extended stale fake-symbol detection
+
+The generated-symbol sweep covered `0x800A5000..0x800A8000` and the adjacent
+`0x800A8000..0x800B0000` region. Both tables selected zero exact renames:
+semantic candidates were already synchronized and address-only/fake entries
+were preserved. The tracked renamer was extended to recognize both
+`func_0x...` and `fake_func_0x...` placeholders and to use a precomputed
+generated-name set for membership checks. The bounded fake-prefix rerun
+completed with zero renamed references in zero files, without parser or
+duplicate-destination failure. This rules out an exact companion match in the
+covered regions, but does not justify naming `func_8000040C`, which remains
+address-only in the companion map. No build or game run was warranted for this
+symbol-sweep change. Decision evidence:
+`scratch/agent/s2725_generated_symbol_sweep/decision-table.txt`,
+`decision-table-next.txt`, and `fake-placeholder-decision-table.txt`.

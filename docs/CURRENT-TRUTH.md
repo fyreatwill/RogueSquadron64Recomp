@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2724 (2026-08-27).
+Current maintenance marker: Session 2725 (2026-08-27).
 
 ## Live result
 
@@ -487,6 +487,14 @@ without parser or duplicate-destination rejection. This selects
 `scratch/agent/s2723_generated_symbol_sweep/decision-table.txt`.
 
 ## Next steps
+
+Session 2725 covered `0x800A5000..0x800A8000` and the adjacent
+`0x800A8000..0x800B0000` regions. All semantic candidates were already
+synchronized; address-only/fake candidates were preserved, and zero generated
+references changed. The tracked renamer now evaluates both `func_0x...` and
+`fake_func_0x...` placeholders against exact companion semantics using a
+precomputed generated-name set. The bounded fake-prefix rerun selected no
+rename, so future work continues only where exact companion evidence exists.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 

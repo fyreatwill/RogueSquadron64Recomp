@@ -32,7 +32,12 @@ def companion_renames(
     """Return only semantic companion names for placeholders in the snapshot."""
     result = {}
     decisions = []
-    generated_placeholders = set(re.findall(r"\bfunc_([0-9A-Fa-f]{8})\b", generated_text))
+    generated_placeholders = set(
+        re.findall(r"\b(?:func|fake_func)_([0-9A-Fa-f]{8})\b", generated_text)
+    )
+    generated_names = set(
+        re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", generated_text)
+    )
     for symbol_file in sorted(symbol_dir.glob("*.txt")):
         for line in symbol_file.read_text().splitlines():
             match = re.match(
@@ -47,7 +52,14 @@ def companion_renames(
             if name.startswith(("D_", "fake_func_", "func_")):
                 decisions.append((address.upper(), name, "ambiguous-or-fake"))
                 continue
-            old = f"func_{address.upper()}"
+            old_names = [
+                f"func_{address.upper()}",
+                f"fake_func_{address.upper()}",
+            ]
+            old = next(
+                (candidate for candidate in old_names if candidate in generated_names),
+                old_names[0],
+            )
             if address.upper() in generated_placeholders:
                 previous = result.get(old)
                 if previous is not None and previous != name:
