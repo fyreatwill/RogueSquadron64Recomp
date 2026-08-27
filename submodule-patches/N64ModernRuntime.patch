@@ -173,16 +173,84 @@ index b0d6bef..a693bbc 100644
  
  namespace recomp {
 diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
-index 0195f2b..981d9a9 100644
+index 0195f2b..5434475 100644
 --- a/librecomp/src/ai.cpp
 +++ b/librecomp/src/ai.cpp
-@@ -25,5 +25,6 @@ extern "C" void osAiGetLength_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -1,11 +1,52 @@
+ #include "recomp.h"
+ #include <cstdio>
++#include <cstdlib>
+ #include <string>
+ #include <ultramodern/ultra64.h>
+ #include <ultramodern/ultramodern.hpp>
+ 
+ #define VI_NTSC_CLOCK 48681812
+ 
++extern "C" uint32_t rs64_phase_ord();
++extern "C" uint32_t rs64_vi_committed_width();
++extern "C" uint32_t rs64_vi_committed_origin();
++
++static bool rs64_ai_status_probe_enabled() {
++    static const bool enabled = [] {
++        const char* all = std::getenv("ROGUESQ_LOG_ALL");
++        return all && all[0] && all[0] != '0';
++    }();
++    return enabled;
++}
++
++static void rs64_log_ai_status(const char* api, uint32_t result,
++                               uint32_t buffered, uint32_t arg0,
++                               uint32_t arg1) {
++    if (!rs64_ai_status_probe_enabled()) return;
++    const uint32_t width = rs64_vi_committed_width();
++    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
++    const bool target = (width == 1024u && origin == 0x00790400u) ||
++                        (width == 512u && origin == 0x006AB400u);
++    static uint32_t target_rows = 0;
++    static uint32_t control_rows = 0;
++    if (target) {
++        if (target_rows >= 256u) return;
++        ++target_rows;
++        std::fprintf(stderr,
++                     "[ai-status] api=%s phase=%u width=%u origin=0x%06X"
++                     " result=%u buffered=%u arg0=0x%08X arg1=0x%08X\n",
++                     api, rs64_phase_ord(), width, origin, result, buffered,
++                     arg0, arg1);
++        std::fflush(stderr);
++    } else if (control_rows++ == 0) {
++        std::fprintf(stderr,
++                     "[ai-status-control] api=%s phase=%u width=%u"
++                     " origin=0x%06X result=%u buffered=%u\n",
++                     api, rs64_phase_ord(), width, origin, result, buffered);
++        std::fflush(stderr);
++    }
++}
++
+ extern "C" void osAiSetFrequency_recomp(uint8_t* rdram, recomp_context* ctx) {
+     uint32_t freq = ctx->r4;
+     // This makes actual audio frequency more accurate to console, but may not be desirable
+@@ -18,12 +59,20 @@ extern "C" void osAiSetFrequency_recomp(uint8_t* rdram, recomp_context* ctx) {
+ extern "C" void osAiSetNextBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
+     ultramodern::queue_audio_buffer(rdram, ctx->r4, ctx->r5);
+     ctx->r2 = 0;
++    rs64_log_ai_status("set-next", ctx->r2,
++                       ultramodern::get_remaining_audio_bytes(), ctx->r4,
++                       ctx->r5);
+ }
+ 
+ extern "C" void osAiGetLength_recomp(uint8_t* rdram, recomp_context* ctx) {
+-    ctx->r2 = ultramodern::get_remaining_audio_bytes();
++    const uint32_t buffered = ultramodern::get_remaining_audio_bytes();
++    ctx->r2 = buffered;
++    rs64_log_ai_status("get-length", ctx->r2, buffered, 0, 0);
  }
  
  extern "C" void osAiGetStatus_recomp(uint8_t* rdram, recomp_context* ctx) {
 -    ctx->r2 = 0x00000000; // Pretend the audio DMAs finish instantly
 +    // AI_STATUS_FIFO_FULL is represented by buffered output still awaiting playback.
-+    ctx->r2 = ultramodern::get_remaining_audio_bytes() != 0 ? 1 : 0;
++    const uint32_t buffered = ultramodern::get_remaining_audio_bytes();
++    ctx->r2 = buffered != 0 ? 1 : 0;
++    rs64_log_ai_status("get-status", ctx->r2, buffered, 0, 0);
  }
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
 index 8c8e5d1..0907c36 100644

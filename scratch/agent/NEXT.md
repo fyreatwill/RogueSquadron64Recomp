@@ -1,27 +1,30 @@
-# NEXT work unit (s2756) — validate M5 AI status de-stub
+# NEXT work unit (s2757) — synchronize the next generated-symbol interval
 
-HYPOTHESIS-ID: m5-ai-status-destub-validation
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Validate `osAiGetStatus_recomp` on the qualified route with one phase-gated
-run and both image and `ROGUESQ_AUDIO_UCODE=0` control arms in the same build.
-Join AI status to buffered-byte state, task/SP completion, PCM joins, and route
-phase. Evidence from this change is in
-`scratch/agent/s2755_m5_ai_status/decision-table.txt`.
+Synchronize the bounded generated-function interval `0x800ED000..0x800EF000`
+using companion decomp names and the regeneration-safe rename map. Preserve
+ambiguous, fake, and address-only placeholders; do not invent semantic names.
 
 ## Competing hypotheses and discriminator
 
-- H1-live: status bit 0 tracks non-empty buffered audio and clears when empty.
-- H2-unreachable: the qualified route never reaches the status query.
-- H3-wrong-contract: the query is reached but disagrees with buffered state.
+- H1: every placeholder in the interval has a defensible companion/source name.
+- H2: some placeholders are fake/address-only or ambiguous and must remain.
+- H3: an apparent match is a duplicate/alias whose references make renaming
+  unsafe.
 
-The discriminator is one phase-keyed row containing status, buffered bytes,
-M_AUDTASK dispatch/exit, SP completion, PCM source/consumer, and route phase.
-Both empty and non-empty buffer controls must be present in the same run.
+The discriminator is the interval census: classify every address as a
+source-backed rename, preserved ambiguous/fake/address-only, or unsafe alias;
+selected edits must have matching generated references and no unresolved old
+names in the interval.
 
 ## Exact commands
 
-1. `env PROBE_PHASE_WIDTH=1 PROBE_KEYS_FROM_PHASE=1 ROGUESQ_LOG_ALL=1 zsh <qualified-driver>`
-2. Run the same build with `ROGUESQ_AUDIO_UCODE=0`.
-3. Save the bounded correlation under `scratch/agent/s2756_m5_ai_status/`.
+1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
+2. `rg -n 'func_(800ED|800EE)' ../N64Recomp/RecompiledFuncs/`
+3. Run the existing bounded rename census/map tooling for
+   `0x800ED000..0x800EF000`, then apply only source-backed matches.
+4. Verify with `git diff --check` and the rename-tool reference/count check;
+   save the census under `scratch/agent/s2757_generated_rename/`.

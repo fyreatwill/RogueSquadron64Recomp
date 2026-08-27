@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2755 (2026-08-27).
+Current maintenance marker: Session 2756 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -56,7 +56,11 @@ The latest durable M5 chain is:
   has no PCM/AI-visible payload writer or new ordering edge.
 - `osAiGetStatus_recomp` now reports runtime buffered-audio state instead of
   unconditionally returning zero. The Debug target compiled and linked;
-  route-level reachability and status semantics remain unvalidated.
+  the same-build image/silent validation emitted positive set-next and
+  audio-task controls but no status/length query in either arm. A generated
+  source census independently finds no caller for either query. The shim's
+  live/empty semantics are therefore not exercised; do not treat this API as
+  the PCM blocker.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -69,17 +73,13 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **M5 AI-status validation — next.** Run one phase-gated qualified-route
-   validation with both image and silent control arms, joining AI status to
-   buffered bytes, task/SP completion, PCM, and route phase.
+1. **Generated-symbol renaming sweep — next bounded fallback.** The M5
+   AI-status shim is now validated as unreachable at the generated qualified
+   route; preserve the shim but do not pursue its unexercised semantics.
+   Continue with `0x800ED000..0x800EF000`, preserving ambiguous/fake/address-
+   only symbols.
 
-2. **Generated-symbol renaming sweep — active fallback.** The bounded
-   `0x800EB000..0x800ED000` table was fully synchronized apart from preserved
-   ambiguous/fake placeholders at `0x800EC10C`, `0x800EC6EC`, and
-   `0x800ECE04`. Continue with `0x800ED000..0x800EF000`; preserve
-   ambiguous/fake/address-only symbols.
-
-3. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
+2. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
    legitimate destination is the voice ring and its ordering edge is the
    completion queue. `+0x194` is the sample source. Do not repeat this edge or
@@ -201,6 +201,10 @@ ledger. The current late-chain checkpoints are:
 - s2755: generated-symbol intervals through `0x800F3000` were already
   synchronized, so no rename was selected. The M5 AI status stub was then
   de-stubbed to report buffered-audio state; the Debug target built and linked.
+- s2756: the AI-status validation built image and silent arms together. Both
+  emitted set-next and audio-task controls, but neither called status/length;
+  generated-source census independently found no caller. The status shim is
+  not a qualified-route PCM blocker, and the rename sweep resumes.
 
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

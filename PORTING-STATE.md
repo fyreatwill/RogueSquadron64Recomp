@@ -119097,3 +119097,30 @@ function or output destination was changed. The refreshed
 The Debug target built and linked successfully. This is compile-only evidence:
 reachability, empty/non-empty controls, and downstream PCM effect remain
 unresolved. Evidence: `scratch/agent/s2755_m5_ai_status/decision-table.txt`.
+
+## Session 2756 (2026-08-27) — validated AI-status shim reachability
+
+The retail oracle was run before the port instrumentation. Its whole-RDRAM
+watch reached the 10,000-hit positive-control threshold, and the retail run
+reached title at width 1024/origin `0x00790400` and hangar at width
+512/origin `0x006AB400`. No retail `osAiGetStatus` symbol/call target was
+available for a narrow watch.
+
+One Debug build added a `ROGUESQ_LOG_ALL`-gated trace in
+`librecomp/src/ai.cpp`, recording API, result, buffered bytes, and committed
+VI phase; `osAiSetNextBuffer` supplied the same-run positive control. The
+fixed pair runner launched image and silent arms together with the qualified
+route and phase-gated inputs, then killed both arms with SIGKILL. Both arms
+emitted one set-next control. Audio-task dispatch also fired in both controls:
+silent `real_ucode=0` produced 50 rows and image `real_ucode=1` produced 46.
+Neither arm emitted a status/length query row or reached the target title/
+hangar phase during this run.
+
+A generated-source census independently found no
+`osAiGetStatus_recomp`/`osAiGetLength_recomp` caller, only the host shim
+definitions. This selects H2/unreachable at the generated qualified route and
+rules out using the shim as the PCM explanation. H1 live semantics and H3
+wrong-contract semantics remain unevaluable because the query has no caller.
+The earlier paired-driver attempt was a failed experiment: it used a 5-second
+input cadence and stayed at 640; it was corrected to the qualified 6/11/16...
+schedule before the final run. Evidence: `scratch/agent/s2756_m5_ai_status/`.
