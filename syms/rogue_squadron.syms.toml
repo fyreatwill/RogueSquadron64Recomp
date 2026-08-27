@@ -1712,7 +1712,7 @@ functions = [
     { name = "accumulateClampedFloatField", vram = 0x800C6468, size = 0x30 },
     { name = "getDisplayItemStateByte", vram = 0x800C6498, size = 0xC },
     { name = "fake_func_800C64A4", vram = 0x800C64A4, size = 0xC },
-    { name = "func_800C64B0", vram = 0x800C64B0, size = 0x11C },
+    { name = "initHangarDisplayItemTimers", vram = 0x800C64B0, size = 0x11C },
     { name = "tickHangarDisplayItemAnimations", vram = 0x800C65CC, size = 0x2D4 },
     { name = "hangarVehicleDisplayNpcHandler", vram = 0x800C68A0, size = 0x75C },
     { name = "applyNpcPositionDrift", vram = 0x800C6FFC, size = 0x124 },

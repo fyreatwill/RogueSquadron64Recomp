@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2623 (2026-08-27).
+Current maintenance marker: Session 2624 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -139,6 +139,19 @@ remained address-coded, so it was synchronized to `plotRadarBlipColumn`; the
 regenerated rename table contains `func_`, `D_`, and `fake_func_` mappings for
 the address. This is an exact companion/span/caller result, not a boundary-only
 rename. The next lead is `0x800C63C0`.
+
+## s2624 symbol-sweep result
+
+The bounded `0x800C63C0/0x800C64A4/0x800C64B0` census found one exact rename.
+The mission companion file names `0x800C64B0` `initHangarDisplayItemTimers`;
+the generated body spans `0x11C` bytes through `0x800C65CC`, and the generated
+hangar caller at `0x800C69C4` invokes that name. The repository TOML still had
+an address-coded `func_800C64B0` row, so it was synchronized to the companion
+name and `build_redefs.py` emitted the `func_`, `D_`, and `fake_func_` mappings.
+The `0x800C63C0` row remains an intentional overlay collision: mission
+`getAvailableShipsForLevel` and menu `getAvailablePlayerCraftFlagsIgnoreUnlocks`
+have distinct bodies and overlay-table entries at the same VRAM address. The
+`0x800C64A4` fragment remains `fake_func_800C64A4`. No runtime behavior changed.
 
 ## Current state
 

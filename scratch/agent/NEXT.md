@@ -1,13 +1,13 @@
-# NEXT work unit (s2624) — bounded generated-symbol sweep while M5 is blocked
+# NEXT work unit (s2625) — bounded generated-symbol sweep while M5 is blocked
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit one bounded symbol region centered on `0x800C63C0` and its neighboring
-`0x800C64A4/0x800C64B0` entries using companion symbols, generated bodies,
-callers, and overlay sizes. Rename only a symbol whose identity is supported by exact
-companion and span/caller evidence; unresolved fragments stay placeholders.
+Audit one bounded symbol region immediately following `0x800C64B0` using
+companion symbols, generated bodies, callers, and overlay sizes. Rename only a
+symbol whose identity is supported by exact companion and span/caller evidence;
+unresolved fragments stay placeholders.
 Do not change runtime behavior.
 
 ## Competing hypotheses and discriminator
@@ -16,6 +16,8 @@ Do not change runtime behavior.
   function span, so a supported rename can be landed.
 - `H-BoundaryOnly`: evidence identifies only an adjacent or duplicate boundary;
   retain the placeholder.
+- `H-OverlayCollision`: same VRAM has distinct overlay bodies; retain
+  context-specific names and do not collapse them.
 - `H-Unproven`: no defensible mapping exists in this region.
 
 The discriminator is one table containing each candidate's address, companion

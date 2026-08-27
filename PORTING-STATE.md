@@ -116933,3 +116933,24 @@ and emitted all three expected mappings (`func_`, `D_`, and `fake_func_`) for
 the address. No runtime behavior or generated body changed; no build or soak
 was required. This selects the exact-mapping hypothesis and rules out treating
 the lead as boundary-only. The next sweep lead is `0x800C63C0`.
+
+## Session 2624 (2026-08-27) — synchronized the 800C64B0 hangar-timer symbol
+
+Ran the bounded generated-symbol census for `0x800C63C0/0x800C64A4/0x800C64B0`
+using the companion overlay symbol files, generated bodies, overlay table, and
+caller search. The mission companion names `0x800C64B0`
+`initHangarDisplayItemTimers`; the generated body is exactly `0x11C` bytes and
+the next boundary is `tickHangarDisplayItemAnimations` at `0x800C65CC`. A
+generated caller at `0x800C69C4` invokes the same name. The repository TOML was
+stale (`func_800C64B0`), so it was changed to `initHangarDisplayItemTimers`, and
+`python3 tools/rename/build_redefs.py` emitted the expected `func_`, `D_`, and
+`fake_func_` mappings. The helper's `python` alias was unavailable; `python3`
+completed the identical command.
+
+The `0x800C63C0` entry remains an intentional overlay collision: mission
+`getAvailableShipsForLevel` and menu `getAvailablePlayerCraftFlagsIgnoreUnlocks`
+have distinct bodies and overlay-table entries at the same VRAM address. The
+four-byte `0x800C64A4` fragment remains `fake_func_800C64A4`. This selects
+`H-CompanionExact`, rules out collapsing the `0x800C63C0` collision, and changes
+no runtime behavior; no build or soak was required. The next sweep audits the
+next unresolved/colliding region.
