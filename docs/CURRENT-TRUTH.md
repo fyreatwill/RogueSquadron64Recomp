@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2762 (2026-08-27).
+Current maintenance marker: Session 2763 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -76,8 +76,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
 1. **Generated-symbol renaming sweep — next bounded fallback.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
    route; preserve the shim but do not pursue its unexercised semantics.
-   The `0x800F9000..0x800FB000` interval is synchronized; continue with
-   `0x800FB000..0x800FD000`, preserving ambiguous/fake/address-only symbols.
+   The `0x800F9000..0x800FB000` interval is synchronized. The widened
+   `0x800FB000..0x800FF000` sweep renamed the two known invalid data gaps as
+   `data_gap_800FBE14` and `data_gap_800FEF04`; continue with
+   `0x800FF000..0x80101000`, preserving ambiguous/fake/address-only symbols.
 
 2. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
@@ -230,6 +232,12 @@ ledger. The current late-chain checkpoints are:
   was `fake_func_800FA248`, classified as fake/ambiguous and preserved; no
   stale semantic placeholder or conflicting alias was found. The next interval
   is `0x800FB000..0x800FD000`.
+- s2763: the widened generated-symbol interval `0x800FB000..0x800FF000`
+  contained only already-synchronized semantic entries plus two invalid
+  generated data gaps. The regeneration-safe map renamed those gaps to
+  `data_gap_800FBE14` and `data_gap_800FEF04` across declarations, bodies, and
+  overlay registration; no function body or runtime behavior changed. The next
+  interval is `0x800FF000..0x80101000`.
 
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

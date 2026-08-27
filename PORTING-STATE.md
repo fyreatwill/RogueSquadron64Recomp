@@ -119197,3 +119197,18 @@ stale semantic placeholder or conflicting alias in the interval. This rules
 out an eligible rename in this interval, not the broader sweep. Evidence:
 `scratch/agent/s2762_generated_rename/census.txt`. Next interval:
 `0x800FB000..0x800FD000`.
+
+## Session 2763 (2026-08-27) — renamed generated data-gap entries
+
+Ran the required session-title check and the bounded companion census. The
+requested `0x800FB000..0x800FD000` interval had no stale semantic placeholder;
+its only candidate was `fake_func_800FBE14`, classified as a fake invalid-data
+gap. To keep the actionable sweep moving without inventing a gameplay name,
+the unit widened to `0x800FB000..0x800FF000` and mechanically renamed the two
+invalid generated gap entries to `data_gap_800FBE14` and `data_gap_800FEF04` in
+declarations, bodies, and overlay registration. Their bodies and behavior
+were unchanged. The census found 30 already-synchronized semantic entries,
+two ambiguous/fake candidates, and six renamed references; `git diff --check`
+passed. This rules out stale semantic names in the widened range, not the
+broader sweep. Evidence: `scratch/agent/s2763_generated_rename/census.txt`.
+Next interval: `0x800FF000..0x80101000`.

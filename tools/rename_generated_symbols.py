@@ -26,6 +26,10 @@ RENAMES = {
     "func_800927B0": "interpolatePointTableSamplesToPackedWord",
     "func_80092A54": "interpolateLutSamplesToPackedWord",
     "func_80092CF0": "interpolateConstantSamplesToPackedWord",
+    # These two generated entries decode data-gap bytes as invalid MIPS. Keep
+    # the name mechanical: they are not callable game functions.
+    "fake_func_800FBE14": "data_gap_800FBE14",
+    "fake_func_800FEF04": "data_gap_800FEF04",
 }
 
 
