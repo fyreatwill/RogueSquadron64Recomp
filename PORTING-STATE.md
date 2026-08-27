@@ -117787,3 +117787,15 @@ strengthens `H-MORT-unmapped`: the candidate is shared temporary storage and
 does not join the live call to persistent PCM consumption. It rules out using
 this overlap as a writeback/remap basis, but does not establish
 `H-image-edge`. Full table: `scratch/agent/s2676_m5_mort_destination_oracle.md`.
+
+## Session 2677 (2026-08-27) — compacted current truth documentation
+
+The maintenance gate fired because `docs/CURRENT-TRUTH.md` was 60,353 bytes
+(990 lines), exceeding the 60,000-byte limit. No experiment or build was run.
+The file was compacted to 6,269 bytes (119 lines), retaining the live M5
+publication-boundary state, active backlog, durable safety/evidence rules,
+and superseded-conclusion warnings. A concise s2621–s2676 archive was added
+to `docs/PROJECT-OVERVIEW.md`; exact session evidence remains in this ledger
+and scratch artifacts. This rules out no new runtime hypothesis and changes no
+game behavior. The next work unit remains the downstream MORT voice-consumer
+audit with an oracle positive control.

@@ -4553,3 +4553,44 @@ bytes for retained stage rows; both were exactly zero with matching hashes and
 closing the span-mismatch explanation. The next legitimate work is therefore
 the zero-output writer/consumer contract, as specified in
 `scratch/agent/NEXT.md`.
+
+## 50. M5 publication-boundary archive: s2621–s2676
+
+This compact archive was migrated from `CURRENT-TRUTH.md` during Session 2677.
+Exact commands, counts, and failed recipe details remain in
+`PORTING-STATE.md` and the referenced scratch artifacts.
+
+The M5 task-field and output-boundary work did not produce an authorized
+writeback edge. Retail type-2 task observations and the qualified port arms
+kept the dispatched output fields zero; the fixed-object retail writer census
+also found no legitimate writer for those fields. The image arm nevertheless
+showed live DMEM, DMA, image completion, SP completion, service, AI, and PCM
+consumer activity. The silent `musyx_stub` arm showed the expected absence of
+image work. The same-build pair therefore qualifies the separation between
+image processing and the silent control, but not the publication contract.
+
+The image-output audits found nonzero stage-2 payloads rotating through
+`0x166450:0x169450` in some captures, while title and stage-3 observations
+were zero or stage-only. Retail writer attribution identified utility,
+memset, texture-LUT, and image-metadata paths rather than a complete MORT
+writer/order relation. Destination overlap, task ABI neighborhoods, and
+shared image/PCM rows were explicitly rejected as insufficient evidence for
+writeback or remapping.
+
+The CPU-side MORT audit then followed the named filter boundary. Retail
+execution watches saw `0x8009D740` called from `0x8009D73C` in the driven
+hangar phase. Source-derived analysis identified its 40-byte output as the
+stack span at physical `0x11C7B0:0x11C7D8`; the corrected whole-RDRAM oracle
+recorded `244,964` control writes and `234,964` writes to that span. The
+filter's own stores appeared alongside unrelated stack users, and the span
+was nonzero but not persistent PCM publication. This strengthens
+`H-MORT-unmapped`, leaves `H-image-edge` unproven, and makes the next
+discriminator the next downstream named voice consumer.
+
+The s2622–s2653 generated-symbol sweep was also archived here. It resolved or
+validated exact companion/TOML/generated span identities across the mission
+and menu overlays, synchronized stale semantic names where exact evidence
+existed, and preserved intentional `fake_func_` fragments and overlay
+collisions. The remaining true placeholders have only address-coded
+companion entries and no defensible semantic names, so the sweep is parked
+behind M5.
