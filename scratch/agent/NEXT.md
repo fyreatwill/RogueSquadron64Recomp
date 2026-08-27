@@ -1,11 +1,11 @@
-# NEXT work unit (s2738) — bounded generated-symbol region
+# NEXT work unit (s2739) — bounded generated-symbol region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
 Continue the generated-symbol sweep over the next unexamined adjacent region
-`0x800D7000..0x800DA000`. Rename only exact semantic companion matches;
+`0x800DA000..0x800DD000`. Rename only exact semantic companion matches;
 preserve address-only, fake, conflicting, or protected placeholders. M5 and
 M4 remain unresolved; no runtime experiment is authorized unless a genuinely
 new named publication or accumulator surface appears.
@@ -26,13 +26,13 @@ entries, ambiguous-or-fake entries, and parser/duplicate-name failures.
 ## Exact command
 
 ```sh
-mkdir -p scratch/agent/s2738_generated_symbol_sweep
+mkdir -p scratch/agent/s2739_generated_symbol_sweep
 python3 tools/rename_generated_symbols.py \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x800D7000 --end-address 0x800DA000 --limit 32 \
+  --start-address 0x800DA000 --end-address 0x800DD000 --limit 32 \
   --require-rename \
-> scratch/agent/s2738_generated_symbol_sweep/decision-table.txt
+> scratch/agent/s2739_generated_symbol_sweep/decision-table.txt
 ```
 
 A status 2 from `--require-rename` means the region had no safe rename;

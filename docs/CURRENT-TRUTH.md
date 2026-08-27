@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2737 (2026-08-27).
+Current maintenance marker: Session 2738 (2026-08-27).
+
+Session 2738's generated-symbol sweep covered `0x800D7000..0x800DA000` and
+evaluated 13 companion candidates: all 13 semantic entries were already
+synchronized, with zero renamed references in zero generated files. The
+fail-closed `--require-rename` invocation returned status 2 as expected;
+there was no parser, duplicate-destination, or protected-placeholder
+failure. This rules out `H-exact-matches` for the interval and selects
+`H-already-synchronized`; no build or game run was warranted. Evidence:
+`scratch/agent/s2738_generated_symbol_sweep/decision-table.txt`.
 
 Session 2737 performed the mandated revisit after the last 15 ledger titles
 were all sweep-scoped. A complete generated-source census localized the
@@ -593,7 +602,7 @@ unsynchronized companion names. s2736 covered `0x800D1000..0x800D4000` and
 evaluated 14 candidates: semantic entries were already synchronized and one
 fake/duplicate-prefix entry was preserved; zero references changed in zero
 files, with no parser or duplicate-destination failure. The next unexamined
-bounded interval is `0x800D4000..0x800D7000`.
+bounded interval is `0x800DA000..0x800DD000`.
 
 1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name

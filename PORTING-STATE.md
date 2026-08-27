@@ -118816,3 +118816,15 @@ merge. It does not establish the dynamic producer-slot versus consumer-index
 equality, so no runtime instrumentation, mitigation, writeback, or remap was
 authorized. No build or game run was warranted. Evidence:
 `scratch/agent/s2737_m4_alias_census/audit.md`.
+
+## Session 2738 (2026-08-27) — bounded the next generated-symbol region
+
+Ran the prescribed generated-symbol sweep over `0x800D7000..0x800DA000`
+against the companion symbol files with the fail-closed `--require-rename`
+option. The complete decision table evaluated 13 candidates: all 13 were
+already-synchronized semantic mappings, with zero renamed references in zero
+generated files. The command returned status 2 because no generated
+reference changed; there was no parser, duplicate-destination, or protected
+placeholder failure. This rules out `H-exact-matches` for this interval and
+selects `H-already-synchronized`. No build or game run was warranted.
+Evidence: `scratch/agent/s2738_generated_symbol_sweep/decision-table.txt`.
