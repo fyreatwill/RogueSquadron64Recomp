@@ -114617,3 +114617,20 @@ the address-identity boundary. It does not identify the writer of the
 heap-backed `0x300` buffers or establish an image-to-AI handoff. No build,
 runtime change, address remap, guard, or mitigation was made. Artifact:
 `scratch/agent/s2502_m5_ai_ring_root_audit/audit.md`.
+## Session 2503 (2026-08-26) — identified generated AI-buffer allocation producer
+
+Ran the prescribed s2503 exhaustive static census after correcting the local
+`rg` option ordering (`--glob` must precede `--`). No build or runtime
+instrumentation was used. In active `RecompiledFuncs`,
+`runAiAudioStreamPlaybackLoop` at `0x8008ED70` calls `rs_malloc(0x3000)`,
+stores the result at `D_801496B0` at `0x8008EDA4`, initializes sixteen
+`0x300`-spaced table entries at `0x8008EDB8`, clears the allocation through
+`rs_memset(..., 0, 0x3000)` at `0x8008EDE0`, and submits entry zero or an
+indexed entry via the two `osAiSetNextBuffer_recomp` calls at `0x8008EE00`
+and `0x8008EE84`. Companion `undefined_syms_auto.txt` names `D_801496B0`,
+and `main_overlay.txt` independently names the loop. This selects
+`H-writer-generated` for allocation/table provenance and rules out an
+exhaustive no-generated-producer result. It does not identify a nonzero PCM
+payload writer: the only whole-allocation write found is the zeroing clear.
+The payload-writer boundary remains open. Artifact:
+`scratch/agent/s2503_m5_ai_buffer_writer_audit/audit.md`.

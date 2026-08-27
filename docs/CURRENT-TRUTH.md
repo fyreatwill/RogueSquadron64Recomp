@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2502 (2026-08-26).
+Current maintenance marker: Session 2503 (2026-08-26).
 
 ## Current state
 
@@ -61,6 +61,17 @@ Current maintenance marker: Session 2502 (2026-08-26).
   resolves root identity, but does not identify the heap-buffer writer or
   image-to-AI handoff. Artifact:
   `scratch/agent/s2502_m5_ai_ring_root_audit/audit.md`.
+
+- **s2503 — the active AI-buffer allocation/table producer is generated game
+  code.** The corrected exhaustive static census found one root-table store at
+  `0x8008EDA4`, a sixteen-iteration `0x300`-stride derived-entry store at
+  `0x8008EDB8`, and two consumers at `0x8008EE00`/`0x8008EE84`. The same
+  function allocates and clears the `0x3000`-byte region. Companion symbols
+  independently identify `D_801496B0` and
+  `runAiAudioStreamPlaybackLoop`. This selects `H-writer-generated` for
+  allocation/table provenance, but the clear is not PCM production; the
+  nonzero payload writer remains open. Artifact:
+  `scratch/agent/s2503_m5_ai_buffer_writer_audit/audit.md`.
 
 - **s2497 — the image-to-AI-buffer handoff is absent at the static boundary.**
   The exhaustive census found two generated `osAiSetNextBuffer_recomp`
@@ -683,8 +694,12 @@ Closed investigations are not active work items. This is one monotonic sequence;
    callers; s2501 found that the active generated loop actually roots its
    pointer table at `0x801496B0`, while `0x801096B0` is a code address in the
    generated tree. s2502 selects the root-typo hypothesis from independent
-   companion symbols and closes the address discrepancy. Next, identify the
-   legitimate writer of the heap-backed `0x300` buffers. Do not map through `gspTask`, infer an image identity from hashes or timing, or
+   companion symbols and closes the address discrepancy. s2503 selects
+   `H-writer-generated` for allocation/table provenance: the generated loop
+   allocates, clears, and lays out the sixteen AI buffers, then submits them
+   through both AI calls. It did not identify a nonzero PCM payload writer.
+   Next, locate that payload writer. Do not map through `gspTask`, infer an
+   image identity from hashes or timing, or
    change task/output fields without a named writer and independent retail
    evidence.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
