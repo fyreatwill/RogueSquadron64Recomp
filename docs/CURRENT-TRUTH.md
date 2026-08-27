@@ -6,6 +6,16 @@ authoritative for exact commands and probe rows.
 
 Current maintenance marker: Session 2591 (2026-08-26).
 
+- **s2592 — removed an unsupported generated-symbol boundary override.** The
+  complete `0x800C64A4–0x800C64AF` span is an epilogue (`lw ra`, `lw fp`,
+  stack restore) immediately before `initHangarDisplayItemTimers` at
+  `0x800C64B0`. The companion retains `fake_func_800C64A4` and supplies no
+  exact-address source or m2c name. An existing explicit generator override
+  called it `initHangarDisplayItemTimersPreamble`; that input/generated
+  disagreement was removed rather than treating adjacency as proof. The
+  placeholder remains unchanged. Artifact:
+  `scratch/agent/s2592_symbol_census_audit.md`.
+
 - **s2591 — the next generated-symbol span is an unnamed entry/delay-slot
   boundary fragment.** `0x800C5898–0x800C589F` is the two-instruction
   `lui/addu` fragment immediately before `menuOverlayInit` at `0x800C58A0`;

@@ -116221,6 +116221,23 @@ only a renameable companion mapping for this span; no runtime hypothesis was
 
 tested. Artifact: `scratch/agent/s2589_symbol_census_audit.md`.
 
+## Session 2592 (2026-08-26) — removed unsupported symbol boundary override
+
+Audited the complete placeholder span at `0x800C64A4–0x800C64AF`. The active
+generated implementation contains only the epilogue `lw ra,0x14(sp)`,
+`lw fp,0x10(sp)`, and `addiu sp,sp,0x18`, followed by the named
+`initHangarDisplayItemTimers` entry at `0x800C64B0`. The companion symbol file
+retains `fake_func_800C64A4` and companion source/m2c and exact-address/caller
+searches found no semantic name. The rename generator nevertheless contained
+an explicit `initHangarDisplayItemTimersPreamble` override; removing it repairs
+the input/generated disagreement and leaves the placeholder unchanged. Ran
+`python3 tools/rename/build_redefs.py` successfully; `800C64A4` and the removed
+name are absent from the generated redef table while the other fragment
+mappings remain. This selects `H-ToolMismatch` at the tool boundary and
+`H-BoundaryOnly` for the span. It rules out only this speculative adjacency
+rename; no runtime hypothesis was tested. Artifact:
+`scratch/agent/s2592_symbol_census_audit.md`.
+
 ## Session 2591 (2026-08-26) — classified the next generated-symbol boundary
 
 Audited the next complete placeholder span at `0x800C5898–0x800C589F`.

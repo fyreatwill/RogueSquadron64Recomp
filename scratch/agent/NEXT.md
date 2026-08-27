@@ -1,11 +1,11 @@
-# NEXT work unit (s2592) — continue the generated-symbol renaming sweep
+# NEXT work unit (s2593) — continue the generated-symbol renaming sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Select the next complete bounded placeholder span after the s2591 census,
-starting at `0x800C64A4`, and rename only fragments with a defensible
+Select the next complete bounded placeholder span after the s2592 census,
+starting at `0x800C7DB4`, and rename only fragments with a defensible
 companion name or clear local semantics. Keep unresolved boundary/data
 fragments unchanged. This is a static rename unit; do not run the game or add
 runtime probes.
@@ -19,7 +19,7 @@ runtime probes.
 - `H-ToolMismatch`: rename inputs and generated tables disagree, so the
   source-of-truth path must be repaired before mapping.
 
-The discriminator is a complete static table for `0x800C64A4`: generated
+The discriminator is a complete static table for `0x800C7DB4`: generated
 instruction span and neighboring bodies, companion symbol/comment,
 exact-address source/m2c/caller matches, and generated-name coverage. A direct
 companion or independent semantic match selects `H-CompanionMapping`; a
@@ -28,7 +28,7 @@ disagreement selects `H-ToolMismatch`.
 
 ## Exact checks
 
-1. Inspect `fake_func_800C64A4` in `../N64Recomp/RecompiledFuncs/` and the
+1. Inspect `fake_func_800C7DB4` in `../N64Recomp/RecompiledFuncs/` and the
    matching `../rogue_squadron64/symbol_files/` entry.
 2. Add only justified mappings to `tools/rename/build_redefs.py` with
    `apply_patch`.
