@@ -116722,3 +116722,30 @@ evidence for route reach and write activity; the payload/join result is
 single-source port evidence.
 
 Artifacts: `scratch/agent/s2613_m5_output_edge/`.
+
+## Session 2614 (2026-08-27) — attributed retail PCM-span writers
+
+The required debugger-enabled retail oracle passed the whole-RDRAM positive
+control with 23,413 writes and reached title `1024 @ 0x00790400` plus hangar
+`512 @ 0x006AB400`. It recorded 12,288 writes in physical
+`0x166450:0x169450`, dominated by writer PC `0x800078EC`; the secondary
+`0x1798B0:0x179A48` span recorded 1,125 writes from `0x800078EC`,
+`0x8001E2C0`, `0x80007670`, and `0x8001FAxx–0x8001FD2C`.
+
+The host-return and default-C88 checks passed and the Debug port build
+succeeded. The corrected same-build 90-second image run reached both target
+phases with 454/449 image completion rows, 258/258 audio returns, 456/414
+complete task joins, and 43 PCM source plus 43 consumer rows in each phase.
+Title PCM was nonzero in 19/43 samples at both endpoints; hangar was 0/43.
+Image-stage sources and generated DMA payloads were zero. The host
+`pcm-writer` witness produced 462 title and 431 hangar rows, all `kind=2`,
+`pc=0`, zero-valued; no crash, abort, or missing-function marker occurred.
+
+This selects `H-PortPublicationGap` over an absent retail writer, but does not
+map retail `0x800078EC` to a legitimate port-side writer or authorize a
+writeback/remap. The first two launches were invalid (wrong working directory
+and detached child); their zero-byte captures are documented and excluded.
+The next work unit is a regeneration-safe census of all port writer/copy edges
+covering the retail writer family, with the same phase/task/PCM controls.
+
+Artifacts: `scratch/agent/s2614_m5_pcm_writer/`.

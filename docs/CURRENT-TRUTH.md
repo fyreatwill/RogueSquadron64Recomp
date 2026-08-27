@@ -4,7 +4,24 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2613 (2026-08-27).
+Current maintenance marker: Session 2614 (2026-08-27).
+
+- **s2614 — retail has phase-reached, named PCM-span writers while the port
+  still has only zero-valued host writeback rows.** The debugger-enabled retail
+  oracle passed the whole-RDRAM control with 23,413 writes, reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and recorded 12,288
+  writes in `0x166450:0x169450`, dominated by PC `0x800078EC`; the secondary
+  `0x1798B0:0x179A48` span had 1,125 writes from `0x800078EC`, `0x8001E2C0`,
+  `0x80007670`, and `0x8001FAxx–0x8001FD2C`. The same-build port reached both
+  phases with image completion, audio returns, and task joins live. Port PCM
+  source/consumer rows were 19/43 nonzero in title and 0/43 in hangar;
+  image-stage sources and generated DMA payloads were zero, while the host
+  `pcm-writer` witness saw 893 `kind=2`, `pc=0`, zero-valued rows. This selects
+  `H-PortPublicationGap` over an absent retail writer, but does not yet map
+  retail PC `0x800078EC` to a legitimate port-side store or prove the zero
+  image source is invalid. The first two launch attempts were invalid path/
+  detached-child captures and are excluded. Artifacts:
+  `scratch/agent/s2614_m5_pcm_writer/`.
 
 - **s2613 — the image/DMA source remains zero while the PCM boundary is
   phase-dependent, and the host writer records only zero writes.** The retail
@@ -693,14 +710,14 @@ session entry in `PORTING-STATE.md`.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 image output/PCM contract edge.** s2613 confirms zero image/DMA
-   sources, phase-dependent PCM, and incomplete joins (title 458/1292
-   complete; hangar 417/990); the host writer witness records only zero
-   writes and no guest nonzero writer was observed. The next unit must use a
-   retail narrow-span writer watch plus the port task/event ordering to name
-   the missing publication edge or prove the image span is scratch. Do not
-   treat overlap, `canary_ok=0`, or a zero payload alone as the explanation.
-   Keep `ROGUESQ_AUDIO_UCODE=0` as rollback/control.
+1. **M5 image output/PCM contract edge.** s2614 independently names retail
+   writers for both sampled PCM spans, led by `0x800078EC`, while the port's
+   host writer witness remains zero-valued and image/DMA source payloads remain
+   zero. The next unit must trace the port-side equivalent of retail
+   `0x800078EC` and the secondary `0x80007670`/`0x8001E2C0` writer family in one
+   phase-gated run, retaining the existing task/event and PCM joins. Do not
+   promote a writeback/remap: the port writer identity and legitimacy remain
+   unresolved. Keep `ROGUESQ_AUDIO_UCODE=0` as rollback/control.
 2. **M5 hangar PCM writer/value boundary.** s2608 made the guest C88
    store the default. Title PCM is briefly fully nonzero; hangar PCM
    stays `nz=0` even though the gate is `0x01` and `startSongSequence`
@@ -831,7 +848,12 @@ change. Factor 5 mappings and independent controls are in
 
 Direct service entry/exit, service gate/loop, task/AI boundary, image DMEM
 work, generated DMA, reporter association, target-route SP queue consumption,
-and PCM consumption are live on the port. The default `0x8008EC88` store
+and PCM consumption are live on the port. Retail independently writes the
+sampled PCM spans in target phases, dominated by guest PC `0x800078EC` in the
+first span and including `0x80007670`, `0x8001E2C0`, and `0x8001FAxx–0x8001FD2C`
+in the second. The port's current host writer witness still sees only zero
+`kind=2`, `pc=0` rows, so the corresponding port publication edge is open.
+The default `0x8008EC88` store
 writes the guest `$v0`; `ROGUESQ_M5_C88_VALUE=0` restores the old
 force-zero hatch. s2608's default arm opens the gate and produces title
 PCM. Hangar PCM and a complete slot/voice mapping remain open. Zero-valued
