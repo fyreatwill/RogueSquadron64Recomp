@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2591 (2026-08-26).
+Current maintenance marker: Session 2592 (2026-08-26).
 
 - **s2592 — removed an unsupported generated-symbol boundary override.** The
   complete `0x800C64A4–0x800C64AF` span is an epilogue (`lw ra`, `lw fp`,
