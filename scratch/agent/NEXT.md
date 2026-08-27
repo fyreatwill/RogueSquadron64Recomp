@@ -1,49 +1,44 @@
-# NEXT work unit (s2610) — reproduce the title PCM positive control
+# NEXT work unit (s2611) — re-baseline the Factor-5 audio task contract
 
-HYPOTHESIS-ID: m5-hangar-pcm-writer
+HYPOTHESIS-ID: m5-audio-contract-rebaseline
 
 ## Single work unit
 
-s2609 proved directly that the default `0x80094648` writer stores legitimate
-`0x7F` channel bytes in both title and hangar, while sampled PCM stayed zero.
-However, the required title `nz=768` positive control failed in both s2609
-runs, so the title/hangar PCM contrast is not yet admissible. Determine which
-non-invasive run condition restores the already-known title control, using one
-same-build concurrent A/B: baseline s2608 marker set versus the smallest
-single omitted s2608 logging knob or route condition identified from the
-existing s2608 command evidence. Do not change C88, ED48, `0x80094648`, or any
-audio behavior.
+Run the plan's Step 1 same-build concurrent A/B: current Factor-5 image
+(`ROGUESQ_AUDIO_UCODE=1`, default) versus silent control
+(`ROGUESQ_AUDIO_UCODE=0`). Do not change C88, ED48, `0x80094648`, or any
+audio behavior. Batch the existing dispatch/task/DMEM-DMA/SP/service/
+slot-voice/MORT/PCM controls in one Debug build and phase-gate title and
+hangar observations.
 
 ## Competing hypotheses and discriminator
 
-- `H-ControlConfounded`: one of the added s2609 logging arms changes timing or
-  scheduling enough to suppress the title PCM burst.
-- `H-ControlNondeterministic`: the title PCM burst is not stable under the
-  accepted route, so the s2608 positive control was a one-run artifact.
-- `H-ControlCommandMismatch`: s2609 omitted a required s2608 environment knob,
-  and restoring it brings back `nz=768`.
+- `H-ImageContractHealthy`: image dispatch, task fields, DMEM/DMA, exit, SP
+  completion, service/slot/voice, and PCM joins all close in both target phases.
+- `H-ImageContractGap`: the image runs and completes, but one downstream
+  contract edge is absent while the silent arm remains a valid negative control.
+- `H-SilentPathNotIndependent`: the silent arm unexpectedly shows image-only
+  downstream work, indicating a route/configuration mismatch.
 
-The discriminator is a single build and concurrent A/B run that reaches title
-and hangar: baseline s2608 flags versus the minimally corrected arm. A valid
-result requires `[m5-94648-control]` in both phases and title PCM `nz=768` in
-at least one arm. If only the corrected arm restores it, select
-`H-ControlCommandMismatch`; if neither does, select `H-ControlNondeterministic`;
-if baseline restores it while the prior extra-logging recipe does not, select
-`H-ControlConfounded`. Do not interpret any PCM null without a same-run
-positive control.
+The discriminator is the complete phase-keyed matrix: image-only task/DMEM/DMA
+and downstream rows must be present in the image arm and absent in the silent
+arm. Select `H-ImageContractHealthy` only if all joins close; select
+`H-ImageContractGap` when image controls stop at a named downstream edge;
+select `H-SilentPathNotIndependent` if the silent arm reproduces image-only
+work. A phase transition and whole-RDRAM oracle control are mandatory; a PCM
+null without those controls is unevaluable.
 
 ## Exact checks
 
-1. Preserve the s2609 live probe and run `python3 tools/check_jr_t9_host_return.py`
-   plus `python3 tools/check_c88_default_store.py`.
-2. Identify the smallest command difference from the s2608 marker set using
-   existing s2608 log markers; no new instrumentation is needed.
+1. Before building, arm the oracle whole-RDRAM positive control and record its
+   firing; do not add a runtime instrument before that control exists.
+2. Run `python3 tools/check_jr_t9_host_return.py` and
+   `python3 tools/check_c88_default_store.py`.
 3. Build Debug `RogueSquadron64Recomp` only, with no N64Recomp regeneration.
-4. Run both arms concurrently from `build/` for 90 seconds, SIGKILL both, with
-   `ROGUESQ_AUDIO_UCODE=0`, `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
-   `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, the validated AUTOPILOT and
-   `ROGUESQ_AUTOPILOT_STOP_WIDTH=512`, plus the s2608 logging set and
-   `ROGUESQ_LOG_M5_CHANNEL_STORE=1`. Capture baseline and corrected logs under
-   `scratch/agent/s2610_*.log`.
-5. Report per arm: title/hangar phase, title PCM distribution, new-witness
-   controls and rows, C88/gate/song markers, crash/abort/missing-function.
+4. Run image and silent arms concurrently from `build/` for 90 seconds,
+   SIGKILL both, with the validated AUTOPILOT route, `LLE_FORCE`,
+   `SPIN_YIELD`, `LLE_UNGATED`, `LLE_SOLO`, and the phase-scoped complete
+   logging set. Capture under `scratch/agent/s2611_*.log`.
+5. Report each matrix column per arm and phase: dispatch, task fields/source,
+   DMEM/DMA, image exit, SP completion, service, slot/voice/reap, MORT,
+   PCM source/consumer, route phase, and crash/abort/missing-function.

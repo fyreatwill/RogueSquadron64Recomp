@@ -116607,3 +116607,25 @@ not claim a title-versus-hangar PCM contrast, and the next unit must establish
 why that control is absent before using it for comparison. Artifacts:
 `scratch/agent/s2609_m5_hangar_94648.log`,
 `scratch/agent/s2609_m5_hangar_94648_rollback.log`.
+
+## Session 2610 (2026-08-27) — tested title PCM control against logging confound
+
+Ran the prescribed same-build concurrent A/B after the source checks passed
+and the Debug target built successfully. The baseline arm used the s2608
+phase-scoped marker set; the second arm added only
+`ROGUESQ_LOG_M5_CHANNEL_STORE=1`. Both used the validated AUTOPILOT route,
+`LLE_FORCE`, `SPIN_YIELD`, `LLE_UNGATED`, `LLE_SOLO`, and the C88=1 default.
+Both reached title `1024 @ 0x00790400`; the channel-witness arm also reached
+hangar `512 @ 0x006AB400`. Both had phase, writer, gate, audio-return, and
+PCM source/consumer controls, with 0 crash, abort, or missing-function rows.
+
+The baseline had 0 channel-witness rows, as expected because that instrument
+was disabled; the witness arm fired once at each target phase. PCM source rows
+were all `nz=0` in title and hangar in both arms. Thus the required witness
+controls fired, but the previously observed title `nz=768` burst did not
+recur. This selects `H-ControlNondeterministic` for this route and refutes
+`H-ControlConfounded` for the added logging difference. It does not authorize
+a title-versus-hangar PCM conclusion, and no audio behavior was changed.
+
+Artifacts: `scratch/agent/s2610_m5_pcm_baseline.log`,
+`scratch/agent/s2610_m5_pcm_channel_store.log`.

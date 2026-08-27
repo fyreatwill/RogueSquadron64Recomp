@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2609 (2026-08-27).
+Current maintenance marker: Session 2610 (2026-08-27).
+
+- **s2610 — title PCM positive control did not reproduce in either marker arm.**
+  A same-build concurrent run compared the s2608 marker set with the added
+  `ROGUESQ_LOG_M5_CHANNEL_STORE` witness. Both reached title
+  `1024 @ 0x00790400` and the witness arm reached hangar `512 @ 0x006AB400`;
+  both had live phase, writer, gate, audio-return, and PCM source/consumer
+  controls, with zero crash/abort/missing-function rows. Title and hangar PCM
+  were `nz=0` in both arms. The channel witness fired once in each target
+  phase, so its null counterpart is not a control failure. This selects
+  `H-ControlNondeterministic` for the s2608 title `nz=768` burst and closes
+  `H-ControlConfounded` for this logging difference; no title/hangar PCM
+  contrast is admissible. Artifacts: `scratch/agent/s2610_m5_pcm_baseline.log`,
+  `scratch/agent/s2610_m5_pcm_channel_store.log`.
 
 - **s2609 — hangar `0x80094648` stores a nonzero channel byte, but the PCM
   join remains zero.** Added a regeneration-safe, phase-gated witness for the
@@ -628,7 +641,16 @@ session entry in `PORTING-STATE.md`.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 hangar PCM writer/value boundary.** s2608 made the guest C88
+1. **M5 audio task/output contract re-baseline.** The title PCM positive
+   control is nondeterministic under the validated C88=1 route: s2610's
+   same-build baseline and channel-witness arms both reached title and had
+   live controls, but both sampled `nz=0`. Re-run the plan's complete
+   Factor-5-image versus silent-control matrix before changing another guest
+   writer: dispatch, task fields, DMEM/DMA, image exit, SP completion, service,
+   slot/voice, MORT, and PCM source/consumer joins. Keep the AUTOPILOT title /
+   hangar route and require a whole-RDRAM oracle control before interpreting
+   narrow retail nulls. `ROGUESQ_AUDIO_UCODE=0` is the rollback.
+2. **M5 hangar PCM writer/value boundary.** s2608 made the guest C88
    store the default. Title PCM is briefly fully nonzero; hangar PCM
    stays `nz=0` even though the gate is `0x01` and `startSongSequence`
    reaches `L_80094640` (56× `0x80094664` in hangar). Retail s2583 wrote
@@ -643,12 +665,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    absent before making a title/hangar output comparison. `ROGUESQ_M5_C88_VALUE=0`
    remains the C88 rollback; retain `ROGUESQ_AUDIO_UCODE=0` as the silent
    control.
-2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+3. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
-3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
+4. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
-4. **Generated-symbol renaming — active bounded sweep.** M5 has no newly named
+5. **Generated-symbol renaming — active bounded sweep.** M5 has no newly named
   contract writer and M3 is parked pending a complete idiom audit, so s2561
   resumed the sweep. s2588 added four regeneration-safe preamble mappings for
   the next companion-defined fragment boundaries. s2593 classified
