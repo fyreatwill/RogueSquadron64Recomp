@@ -115823,3 +115823,18 @@ the work unit was explicitly static-only. The next unresolved placeholder is
 `0x80104208`.
 
 Artifact: `scratch/agent/s2565_symbol_census/audit.md`.
+
+## Session 2566 (2026-08-26) — censused generated-symbol objective boundary
+
+Ran the prescribed static generated-symbol census for `0x80104208–0x8010420F`.
+The ROM words decode as `c.eq.s f0,f2` and `lw v0,0x7CE4(v0)`, a two-instruction
+fragment between `lv5_checkComplexObjectives` and `lv6_checkComplexObjectives`.
+The active generated implementation is a trap-only gap filler; the companion
+symbol file retains `fake_func_80104208` and says the real function is
+`lv6_checkComplexObjectives`. Exact-address, source, m2c, and caller searches
+found no independent human mapping. This rules out a defensible callable
+rename for this span; it does not prove reachability or explain the fragment's
+origin. No build or runtime experiment was run because the work unit was
+explicitly static-only. The next unresolved placeholder is `0x801044D8`.
+
+Artifact: `scratch/agent/s2566_symbol_census/audit.md`.
