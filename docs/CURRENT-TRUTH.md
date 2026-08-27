@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2690 (2026-08-27).
+Current maintenance marker: Session 2694 (2026-08-27).
 
 ## Live result
 
@@ -210,6 +210,19 @@ crash/abort. PCM source/consumer rows were live but all sampled payloads had
 needed for route or clean drain return. It does not resolve the MORT-to-PCM
 publication edge or prove behavior beyond this call shape.
 
+s2694 completed the prescribed static audit of every named direct caller of
+`musyxRenderVoiceSamples` and its immediate consumers. There is one direct
+caller, `musyxMixActiveVoices` at `0x80090F00`, reached from three
+`musyxSynthFrame` loop sites. The render kernel writes through caller-provided
+`$a3` into the per-frame output block and mutates voice-local state; after the
+call, the caller only advances cursors, clears/sets voice status, and updates
+loop bookkeeping. No named payload copy, AI call, queue/service signal, or
+ordering edge joins this output to the AI worker's separate `0x801496B0`
+allocation. This selects `H-unresolved-address`, rules out
+`H-caller-publishes` and `H-service-boundary` for the audited chain (static
+source evidence), and authorizes no runtime watch, writeback, remap, or
+mitigation.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -224,11 +237,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    in the named AI worker, s2689 found that the named ring setup helpers only
    allocate/link metadata and zeroed decode storage, and s2690 found the same
    for the cache initializer. The acquire audit found only descriptor
-   ownership/cursor propagation. The next useful work must audit named callers
-   of `musyxRenderVoiceSamples` and immediate post-call consumers of its
-   voice-object fields for a named stream/cache-to-AI publication relation,
-   without repeating these initializer, setup, renderer, mixer, or AI-submit
-   body audits.
+   ownership/cursor propagation. The caller audit found only the mixer caller
+   and cursor/status updates. The next useful work must audit remaining
+   named/indirect consumers after the per-frame output block is handed back to
+   `musyxSynthFrame`, without repeating the caller, renderer, mixer, or
+   AI-submit body audits.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
