@@ -15,6 +15,9 @@ RENAMES = {
     "fake_func_800DD2C4": "duplicateSymbolPrefixForNpcInitFullModel",
     "fake_func_800DFB8C": "duplicateSymbolPrefixForApplyCraftAnimAndDetailParams",
     "func_800E9AE0": "func_mission_overlay_800E9AE0",
+    "func_800927B0": "interpolatePointTableSamplesToPackedWord",
+    "func_80092A54": "interpolateLutSamplesToPackedWord",
+    "func_80092CF0": "interpolateConstantSamplesToPackedWord",
 }
 
 

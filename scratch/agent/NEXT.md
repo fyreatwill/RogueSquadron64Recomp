@@ -1,38 +1,39 @@
-# NEXT work unit (s2718) — M5 hangar writer/value boundary
+# NEXT work unit (s2719) — bounded generated-symbol region
 
-HYPOTHESIS-ID: m5-hangar-c88-publication-boundary
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Use the retail oracle to inspect the already identified hangar-side writer at
-guest PC `0x80094648`, with the whole-RDRAM positive control first and the
-hangar origin `0x006AB400:512` phase-gated. Capture its GPR fields and the
-post-store value/destination evidence in one run. This is the remaining M5
-Step-4 ground-truth boundary; do not change the port until the retail writer,
-destination, and value transition are named.
+Continue the generated-symbol sweep over the next adjacent region after the
+completed audio-resampler batch. Use the companion symbol files and the live
+external generated snapshot. Rename only exact semantic matches; preserve
+address-only, fake, conflicting, or protected placeholders.
 
 ## Competing hypotheses and discriminator
 
-- `H-hangar-c88-writes-pcm`: the PC executes in hangar and its output/value
-  joins the sampled nonzero PCM source or a named voice descriptor.
-- `H-hangar-c88-writes-control`: it executes but writes a status/gate/control
-  field unrelated to PCM publication.
-- `H-hangar-c88-unreached`: the whole-RDRAM control passes but the hangar
-  phase or watched PC does not, so the null is unevaluable.
+- H-exact-matches: the region contains stale `func_0x...` names with unique
+  semantic companion mappings; the tool selects and changes them.
+- H-already-synchronized: semantic companion candidates are already named in
+  generated output; the tool changes zero references.
+- H-ambiguous-or-fake: remaining candidates are address-only, fake, or
+  conflicting; they must be preserved.
 
-The discriminator is the complete phase-gated `watch-pc` row: execution count,
-caller/previous PC, GPR arguments/return, mode/field values, and any observed
-destination/value transition joined to the hangar phase. Whole-RDRAM hits plus
-hangar reach are required before interpreting a zero. A PCM/source join selects
-the first hypothesis; a live unrelated field selects the second; absent phase
-or control selects the third.
+The discriminator is the complete tool decision table for one bounded region:
+selected candidates, changed references/files, already-synchronized entries,
+ambiguous-or-fake entries, and parser/duplicate-name failures. A real rename
+batch is the work unit; do not add diagnostic-only fields.
 
-## Exact command
+## Exact commands
 
 ```sh
-mkdir -p scratch/agent/s2718_m5_hangar_writer
-env tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 90 --watch-write 0x0:0x800000 --watch-pc 0x80094648 --pc-phase-log 0x006AB400 --pc-field-dump 0x80094648 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > scratch/agent/s2718_m5_hangar_writer/run.log 2>&1
+mkdir -p scratch/agent/s2719_generated_symbol_sweep
+python3 tools/rename_generated_symbols.py \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+  --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
+  --start-address 0x80093000 --end-address 0x80096000 --limit 32 \
+  > scratch/agent/s2719_generated_symbol_sweep/decision-table.txt
 ```
 
-No writeback, remap, guard, or mitigation is authorized by this capture
-alone.
+Review the decision table and generated diff. Do not build or run the game for
+a symbol-only change. If the region has no exact match, choose the next
+adjacent region next iteration; do not invent names from implementation shape.

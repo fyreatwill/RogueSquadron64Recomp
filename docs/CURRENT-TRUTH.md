@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2717 (2026-08-27).
+Current maintenance marker: Session 2718 (2026-08-27).
 
 ## Live result
 
@@ -427,6 +427,19 @@ generated file changed, so no build or game run was warranted. This selects
 `H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
 `H-exact-matches` there.
 
+Session 2718 completed a bounded generated-symbol rename batch in the shared
+external snapshot. The three placeholder functions at `0x800927B0`,
+`0x80092A54`, and `0x80092CF0` are called exclusively by the already named
+point-table, LUT, and constant resamplers respectively, and each emits the
+packed interpolated sample word consumed by its caller. They are now named
+`interpolatePointTableSamplesToPackedWord`,
+`interpolateLutSamplesToPackedWord`, and
+`interpolateConstantSamplesToPackedWord` in the regeneration-safe rename map,
+companion symbols, and generated snapshot. The fourth true placeholder,
+`0x8000040C`, remains protected because no semantic mapping exists. The
+post-change bounded rerun selected zero stale references in zero files and
+confirmed all three mappings are synchronized.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -465,7 +478,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
    the two existing retail candidate ranges as broad structured/allocator
    activity rather than a clean accumulator record; it did not change the M5
    publication priority.
-2. **Generated-symbol renaming sweep.** s2704 found all 19 candidates in
+2. **Generated-symbol renaming sweep.** s2718 renamed the three exact
+   resampling helpers at `0x800927B0..0x80092CF0`; preserve the unresolved
+   `0x8000040C` placeholder. Continue with one adjacent bounded region only
+   when exact companion/source evidence exists. s2704 found all 19 candidates in
    `0x8008ED6C..0x80091C80` already synchronized, s2705 found no exact
    rename in `0x80091C80..0x80095000`, and s2706 found no exact rename in
    `0x80095000..0x80098000`, s2707 found no exact rename in

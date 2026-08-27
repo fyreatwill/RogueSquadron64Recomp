@@ -118506,3 +118506,22 @@ populations. It does not identify the RSP accumulator source/table index and
 rules out no legitimate port boundary. No build, port instrumentation,
 writeback, remap, or mitigation was performed. Full output:
 `scratch/agent/s2717_m4_retail_record/run.log`.
+
+## Session 2718 (2026-08-27) — renamed generated audio resampling helpers
+
+The required last-15-title revisit check did not trigger because the recent
+titles were not all sweep-scoped. The mandatory no-churn pivot selected the
+generated-symbol-renaming sweep. Static caller context showed that the three
+remaining audio-region placeholders at `0x800927B0`, `0x80092A54`, and
+`0x80092CF0` are private packing/interpolation helpers called only by the
+already named point-table, LUT, and constant resamplers. Added the
+regeneration-safe mappings `interpolatePointTableSamplesToPackedWord`,
+`interpolateLutSamplesToPackedWord`, and
+`interpolateConstantSamplesToPackedWord`, and applied them to the external
+generated snapshot and companion symbol file. The batch changed 15 generated
+references across three files. A post-change rerun reported zero stale
+references and all three mappings already synchronized; the protected
+`0x8000040C` placeholder remains unresolved. This rules out neither M5
+publication nor the unresolved placeholder, and no build or game run was
+warranted for a symbol-only change. Decision evidence:
+`scratch/agent/s2718_generated_symbol_sweep/verification.txt`.
