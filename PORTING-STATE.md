@@ -115944,3 +115944,23 @@ address, source, m2c, and caller searches found no defensible human mapping.
 The placeholder remains unchanged; this rules out an already-mapped callable
 symbol, not runtime reachability. The next census is `0x80108B8C`.
 Artifact: `scratch/agent/s2573_symbol_census/audit.md`.
+
+## Session 2574 (2026-08-26) — landed batch generated-symbol craft preamble renames
+
+Ran the bounded generated-symbol sweep after the unresolved `0x80108B8C`
+fragment. The companion mission-overlay annotations explicitly associate six
+placeholder fragments with the following named craft initializers:
+`fake_func_800AAADC` → `playerSnowSpeederInit`, `fake_func_800B42BC` →
+`playerXwingInit`, `fake_func_800B58B4` → `playerAwingInit`,
+`fake_func_800B75C4` → `playerYwingInit`, `fake_func_800B89F4` →
+`playerVwingInit`, and `fake_func_800BCC38` → `playerT16Init`. Their generated
+overlay entries are contiguous immediately before the corresponding complete
+initializer bodies, so the regeneration-safe names are the six `Preamble`
+variants. Added all six to `tools/rename/build_redefs.py` and ran the
+generator with `RSR_REDEFS_PATH=/tmp/rs64-redefs-s2574.txt`; all six emitted
+lines were present. This rules out a missing mapping in the rename tool for
+these six fragments, not any runtime reachability claim. The planned
+`0x80108B8C` item remains unresolved and was not renamed. No runtime build was
+needed because this work unit changes only the regeneration-safe symbol map.
+
+Artifact: `tools/rename/build_redefs.py` and `/tmp/rs64-redefs-s2574.txt`.

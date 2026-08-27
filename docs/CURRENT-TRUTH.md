@@ -4,9 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2573 (2026-08-26).
+Current maintenance marker: Session 2574 (2026-08-26).
 
 ## Current state
+
+- **s2574 — landed six regeneration-safe generated-symbol fragment renames.**
+  Companion annotations identify `fake_func_800AAADC`, `fake_func_800B42BC`,
+  `fake_func_800B58B4`, `fake_func_800B75C4`, `fake_func_800B89F4`, and
+  `fake_func_800BCC38` as fragments immediately preceding the named craft
+  initializers `playerSnowSpeederInit`, `playerXwingInit`, `playerAwingInit`,
+  `playerYwingInit`, `playerVwingInit`, and `playerT16Init`. Added stable
+  `Preamble` mappings to `tools/rename/build_redefs.py` and verified the
+  generator emits all six. The unresolved `0x80108B8C` fragment remains
+  unchanged because its companion supplies no exact human candidate.
 
 - **s2573 — the next generated-symbol region is an object-tracking boundary
   with no defensible mapping.** The complete `0x80107EA4–0x80107EAF` span is

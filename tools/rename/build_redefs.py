@@ -66,6 +66,12 @@ EXTRA_RENAMES = {
     "fake_func_800613B8": "loadCharTextureSetPreamble",
     "fake_func_80069AEC": "collideSegmentAgainstObjectNodesPreamble",
     "fake_func_8006ACA4": "transformObjectColliderCenterPreamble",
+    "fake_func_800AAADC": "playerSnowSpeederInitPreamble",
+    "fake_func_800B42BC": "playerXwingInitPreamble",
+    "fake_func_800B58B4": "playerAwingInitPreamble",
+    "fake_func_800B75C4": "playerYwingInitPreamble",
+    "fake_func_800B89F4": "playerVwingInitPreamble",
+    "fake_func_800BCC38": "playerT16InitPreamble",
 }
 with open(REDEFS, "a", encoding="utf-8") as f:
     for old, new in EXTRA_REVERTS.items():

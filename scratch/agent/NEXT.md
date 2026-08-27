@@ -1,10 +1,10 @@
-# NEXT work unit (s2574) — generated-symbol bounded census
+# NEXT work unit (s2575) — generated-symbol bounded census
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next unresolved generated/decomp symbol span at `0x80108B8C`.
+Audit the next unresolved generated/decomp symbol span after the s2574 batch.
 Inspect its complete generated span, immediate named neighbors, companion
 symbol entry, and exact source/m2c/caller matches. Rename only if the companion
 decomp supplies an exact human mapping. If unresolved, advance to the next
@@ -22,6 +22,10 @@ preceding/following symbols, companion result, exact-address/source/m2c/caller
 searches, and semantic candidate. A complete supported candidate selects a
 regeneration-safe rename; an explicit companion placeholder plus no exact
 candidate selects unchanged and advances to the next placeholder.
+
+The s2574 selected batch was supported by explicit companion annotations and
+contiguous overlay entries; continue this same sweep slug rather than rerun
+the completed batch.
 
 ## Exact preflight
 
