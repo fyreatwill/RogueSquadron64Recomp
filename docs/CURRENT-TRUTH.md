@@ -514,3 +514,14 @@ size `0x29C`, matching the TOML span. The generated mission caller uses the
 resolved name at two call sites, and the menu symbol file has no competing
 identity in this window. No placeholder or safe rename remained, so no source
 or runtime change was warranted; the next bounded lead is `0x800CC03C`.
+
+## Session 2649 result
+
+The bounded sweep compared the companion mission/menu symbol files, checked-in
+TOML, generated `funcs_37.c`, generated overlay table, and callers around
+`0x800CC03C`. `initActorFromSpawnTemplate` is already an exact mission entry
+at that address with size `0x11C`, ending at `0x800CC158`; the generated body
+and overlay span agree. The neighboring `fake_func_800CC038` is a distinct
+menu-overlay fragment. No rename or build was warranted. This selects the
+already-resolved `H-CompanionExact` result and preserves the
+`H-OverlayCollision`; the next bounded lead is `0x800CC158`.
