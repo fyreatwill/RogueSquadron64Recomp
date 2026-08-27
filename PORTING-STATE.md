@@ -116358,3 +116358,18 @@ generator succeeded and emitted the target redefinition lines. No regeneration,
 runtime build, or game run was performed. This selects `H-CompanionMapping`
 and advances the sweep to `0x800DD2C4`. See
 `scratch/agent/s2599_symbol_census_audit.md`.
+
+## Session 2600 (2026-08-26) — restored the next generated-symbol prefix mapping
+
+Ran the single static generated-symbol rename unit for `0x800DD2C4`. The
+generated span is a 12-byte fragment (`nop`; `lw v0, 0x74(fp)`; `sw zero,
+0x34(v0)`) immediately before the complete `npcInitFullModel` body at
+`0x800DD2D0`. The companion symbol file assigns the exact address
+`duplicateSymbolPrefixForNpcInitFullModel` and documents the following
+duplicate-symbol deletion. Exact-address source/m2c/caller searches found no
+competing candidate. Added the regeneration-safe mapping to
+`tools/rename/build_redefs.py`; `python3 tools/rename/build_redefs.py`
+succeeded and emitted the target `func_`, `D_`, and `fake_func_` redefinition
+lines. No regeneration, runtime build, or game run was performed. This
+selects `H-CompanionMapping` and advances the sweep to `0x800DFB8C`. See
+`scratch/agent/s2600_symbol_census_audit.md`.

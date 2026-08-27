@@ -6,6 +6,16 @@ authoritative for exact commands and probe rows.
 
 Current maintenance marker: Session 2599 (2026-08-26).
 
+- **s2600 — the next generated-symbol span has a companion-defined duplicate
+  prefix name.** `0x800DD2C4–0x800DD2CF` is a 12-byte fragment (`nop`,
+  `lw v0, 0x74(fp)`, `sw zero, 0x34(v0)`) immediately before the complete
+  `npcInitFullModel` body at `0x800DD2D0`. The companion assigns the exact
+  address `duplicateSymbolPrefixForNpcInitFullModel` and documents the
+  following duplicate-symbol deletion. Added the regeneration-safe mapping
+  to `tools/rename/build_redefs.py`; the generator emitted the target
+  redefinition lines. Artifact:
+  `scratch/agent/s2600_symbol_census_audit.md`.
+
 - **s2599 — the next generated-symbol span has a companion-defined duplicate
   prefix name.** `0x800D4EC4–0x800D4ECF` is a three-instruction fragment
   immediately before the complete `npcInitChildLinkedToParent` body at
