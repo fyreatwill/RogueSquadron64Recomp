@@ -117799,3 +117799,20 @@ to `docs/PROJECT-OVERVIEW.md`; exact session evidence remains in this ledger
 and scratch artifacts. This rules out no new runtime hypothesis and changes no
 game behavior. The next work unit remains the downstream MORT voice-consumer
 audit with an oracle positive control.
+
+## Session 2678 (2026-08-27) — established the downstream MORT voice consumer
+
+The source audit identified `renderVoiceAudioBlock` (`0x8009DB44`) as the
+next named consumer after `applyVoiceDelayFilter`. The fixed batched retail
+oracle passed the whole-RDRAM positive control (`17,295` writes), reached both
+driven 512/hangar origins, and recorded 792 phase-gated filter executions,
+792 delay-filter executions, and 198 renderer executions. Retail used the
+persistent voice object `0x80153420`; its physical delay field at `0x153586`
+was written 1,406 times overall, with 792 attributed to the legitimate
+`applyVoiceDelayFilter` writer `0x8009D8E4`. The renderer executed from
+`0x8009C4C0` against that same object. The sampled `0x1B4A60:0x1B4B00`
+range had 5,889 writes from independent stream/copy writers and the renderer
+mix kernel. This establishes the CPU-side MORT consumer edge with two lines
+of evidence (generated source and retail attribution), but not the later
+PCM/AI publication join; no runtime behavior change or mitigation was made.
+Full table and command: `scratch/agent/s2678_mort_consumer_oracle.md`.

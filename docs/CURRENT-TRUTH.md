@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2677 (2026-08-27).
+Current maintenance marker: Session 2678 (2026-08-27).
 
 ## Live result
 
@@ -30,6 +30,14 @@ The latest qualified M5 evidence is:
   `0x11C7B0:0x11C7D8` is shared stack storage, with unrelated stack writers
   also present. This strengthens `H-MORT-unmapped` and forbids writeback or
   remap from that overlap. `H-image-edge` remains unproven.
+- s2678's corrected retail oracle established the next CPU edge: retail
+  `applyVoiceDelayFilter` writes persistent voice object `0x80153420+0x166`
+  (physical `0x153586`) from `0x8009D8E4`, and `renderVoiceAudioBlock`
+  (`0x8009DB44`, caller `0x8009C4C0`) consumes the same object in both hangar
+  origins. The whole-RDRAM control fired 17,295 times; the phase-gated counts
+  were 792 filter, 792 delay, and 198 render executions. This resolves the
+  CPU-side consumer edge but not renderer-to-PCM/AI publication; no writeback
+  or remap follows from it.
 
 Retail is the independent witness for game-side memory claims. A narrow null
 is unevaluable unless the whole-RDRAM positive control fires first and the
@@ -40,15 +48,14 @@ target phase is reached. The current corrected oracle reaches attract, title
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 CPU-side MORT publication boundary.** Audit the next downstream
-   named voice consumer after `filterVoiceSampleBlock`/
-   `applyVoiceDelayFilter`: caller, persistent input/output structure, and a
-   source-derived destination. Ask the retail oracle about that destination
-   with the whole-RDRAM control. Do not repeat task-field, ring-destination,
-   or shared-stack censuses; do not add writeback/remap from overlap alone.
-2. **M5 de-stubbing sequence.** After the publication boundary is mapped or
-   blocked by a genuinely new discriminator, execute the incremental plan in
-   [`M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md), validating each step with a
+1. **M5 CPU-side MORT PCM publication.** Audit the next named consumer after
+   `renderVoiceAudioBlock`/`audioMixStereoBlock8` through AI source and
+   consumer. Use a phase-gated port/retail table with the whole-RDRAM control;
+   do not repeat the filter, persistent-object, task-field, ring, or
+   shared-stack censuses, and do not add writeback/remap from overlap alone.
+2. **M5 de-stubbing sequence.** After the renderer-to-PCM boundary is mapped
+   or blocked by a genuinely new discriminator, execute the incremental plan
+   in [`M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md), validating each step with a
    phase-gated soak. Keep `C88=0` and `ROGUESQ_AUDIO_UCODE=0` as controls.
 3. **Generated-symbol renaming sweep — parked fallback.** Resume only when
    M5 is closed or blocked by a new discriminator. Use exact companion
