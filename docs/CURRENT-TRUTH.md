@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2589 (2026-08-26).
+Current maintenance marker: Session 2590 (2026-08-26).
+
+- **s2590 — the next generated-symbol span is an unnamed two-instruction
+  boundary fragment.** `0x800B2628–0x800B262F` is the complete pair
+  `lwc1 $f0,-0x5D04($at)` / `swc1 $f0,0x168($v0)` between the complete
+  `playExitSoundAndToggleScreenMeshes` and `buildFormatMessageGlyphBuffer`
+  bodies. The companion explicitly retains `fake_func_800B2628`; exact
+  address, source, m2c, caller, and alternate-symbol searches found no
+  defensible semantic candidate. The rename generator emitted no mapping for
+  it, so the placeholder remains unchanged. Artifact:
+  `scratch/agent/s2590_symbol_census_audit.md`.
 
 - **s2589 — the next generated-symbol span is a trap-only data boundary.**
   The complete `0x800AEC54–0x800AEC5F` span is 12 bytes before the real

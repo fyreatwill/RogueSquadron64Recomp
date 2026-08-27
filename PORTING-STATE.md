@@ -116218,4 +116218,17 @@ found no defensible semantic name. Ran `python3 tools/rename/build_redefs.py`
 successfully and added no mapping. This selects `H-BoundaryOnly`, leaves the
 placeholder unchanged, and advances the sweep to `0x800B2628`. It rules out
 only a renameable companion mapping for this span; no runtime hypothesis was
-tested. Artifact: `scratch/agent/s2589_symbol_census_audit.md`.
+
+## Session 2590 (2026-08-26) — classified the next generated-symbol boundary
+
+Audited the next complete placeholder span at `0x800B2628–0x800B262F`.
+`funcs_30.c` shows an 8-byte two-instruction load/store fragment between the
+complete `playExitSoundAndToggleScreenMeshes` and
+`buildFormatMessageGlyphBuffer` bodies. The companion symbol file explicitly
+retains `fake_func_800B2628`; exact-address, source, m2c, caller, and alternate
+symbol searches found no defensible semantic name. Ran
+`python3 tools/rename/build_redefs.py` successfully; it emitted no mapping for
+the placeholder and existing mappings were preserved. This selects
+`H-BoundaryOnly`, leaves the placeholder unchanged, and advances the sweep.
+It rules out only a renameable companion mapping for this span; no runtime
+hypothesis was tested. Artifact: `scratch/agent/s2590_symbol_census_audit.md`.
