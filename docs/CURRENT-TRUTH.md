@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2826 (2026-08-27).
+Current maintenance marker: Session 2827 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -257,7 +257,11 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    short defined records at `0x80093E74`, `0x80094348`, `0x8009711C`,
    `0x800EC6EC`, and `0x800ECE04`; the external generated snapshot changed
    12 references in three files and has no stale references for that batch.
-   Continue with the next bounded interval `0x8016D000..0x8016F000`.
+   Session 2827 closed `0x8016D000..0x8016F000`: the selector changed zero
+   references in zero files, and the independent generated-tree placeholder
+   scan was empty. No companion candidates were selected; ambiguous/data
+   entries remain preserved. No build or game soak was needed. Continue with
+   the next bounded interval `0x8016F000..0x80171000`.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still

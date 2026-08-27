@@ -120041,3 +120041,15 @@ passed. No build or game soak was needed.
 
 This closes the selected batch as symbol-clarity work only. The next bounded
 interval is `0x8016D000..0x8016F000`.
+
+## Session 2827 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+Ran the regeneration-safe companion selector for `0x8016D000..0x8016F000`
+against the external `rogue_squadron64` symbol files. It changed zero
+references in zero files. The independent generated-tree scan found no
+`func_8016*` or `fake_func_8016*` placeholder definitions or references, and
+the companion search selected no candidates. `git diff --check` passed. This
+closes the interval as already synchronized; ambiguous/data entries remain
+intentionally preserved. No build or game soak was needed.
+
+The next bounded interval is `0x8016F000..0x80171000`.
