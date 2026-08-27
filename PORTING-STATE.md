@@ -115387,6 +115387,28 @@ callable body, renaming it to either neighbor would be speculative. Selected
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
 
+## Session 2554 (2026-08-26) — renamed duplicate-symbol prefix batch
+
+The mandated generated-symbol sweep pivot selected the next bounded region at
+`0x800D4EC4`. The exact companion evidence identifies it, along with adjacent
+`0x800D2C98`, `0x800DD2C4`, and `0x800DFB8C`, as leftover fragments whose
+following labels were deleted for duplicate-symbol collisions. Their generated
+bodies are incomplete prefixes or boundary fragments, not independent game
+functions. Renamed all four through the regeneration input and generated
+declarations, implementations, and overlay dispatch entries:
+`duplicateSymbolPrefixForNpcInitWithMotionParams`,
+`duplicateSymbolPrefixForNpcInitChildLinkedToParent`,
+`duplicateSymbolPrefixForNpcInitFullModel`, and
+`duplicateSymbolPrefixForApplyCraftAnimAndDetailParams`.
+
+The address, size, instruction body, and following real function symbols are
+unchanged. This selects `H-named-match` for artifact-role names and closes the
+four fake labels; it rules out treating any of the fragments as callable game
+functions. The next unresolved placeholder is `0x800E406C`.
+
+ORIGIN: semantic generated-symbol rename only; no mitigation or runtime
+behavior changed.
+
 ## Session 2551 (2026-08-26) — censused generated-symbol menu data boundary
 
 Ran the bounded generated-symbol census at `0x800CC3D4`. The complete

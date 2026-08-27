@@ -456,8 +456,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
   `0x800CC3D4–0x800CC9B7` as a menu data boundary with no rename candidate;
   s2552 left `0x800CEF1C–0x800CEF1F` unchanged as an incomplete mission
   boundary fragment. s2553 left `0x800D2C98–0x800D2C9F` unchanged as a
-  tail-call boundary; the next unresolved placeholder is `0x800D4EC4` in the
-  mission overlay.
+  tail-call boundary. s2554 renamed the four duplicate-symbol prefix
+  fragments at `0x800D2C98`, `0x800D4EC4`, `0x800DD2C4`, and `0x800DFB8C`
+  through the symbol inputs and generated declarations/implementations/
+  overlay table. Their names encode the companion-map duplicate-collision
+  relationship, not independent game functions; the next unresolved
+  placeholder is `0x800E406C`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index
