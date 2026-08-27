@@ -119185,3 +119185,15 @@ conflicting alias was present. `git diff --check` passed. This rules out an
 eligible rename in this interval, not the broader sweep. Evidence:
 `scratch/agent/s2761_generated_rename/census.txt`. Next interval:
 `0x800F9000..0x800FB000`.
+
+## Session 2762 (2026-08-27) — bounded the next generated-symbol interval
+
+Ran the required session-title check, then used the regeneration-safe companion
+rename census for `0x800F9000..0x800FB000`. It found 28 semantic companion
+entries, all already synchronized, and selected zero generated references for
+renaming. The companion placeholder `fake_func_800FA248` was classified as
+fake/ambiguous and preserved. An independent generated-tree scan found no
+stale semantic placeholder or conflicting alias in the interval. This rules
+out an eligible rename in this interval, not the broader sweep. Evidence:
+`scratch/agent/s2762_generated_rename/census.txt`. Next interval:
+`0x800FB000..0x800FD000`.
