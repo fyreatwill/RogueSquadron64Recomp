@@ -114803,3 +114803,18 @@ observable boundary and rules out a fully controlled no-writer result. The
 lower-level DMA join still reported nz=0 for that observer, so exact DMA-event
 attribution remains unresolved. No mitigation or audio behavior change was
 made. Artifact: scratch/agent/s2513_m5_payload_writer/audit.md.
+
+## Session 2514 (2026-08-26) — closed stage-2 DMA attribution attempt
+
+Audited the exact stage/DMA observer path against the s2513 capture. The
+generated image-stage hook runs before the shared `L_13B0` `DO_DMA_WRITE`, and
+the generic DMA observer reconstructs its join from the current route and
+destination/length without carrying the stage marker. For ordinal 606, the
+nonzero stage-2 row at `0x168B50` has no matching DMA event; the only joined
+event is stage 3 at `0x178D80` with zero payload, while the independent PCM
+source/consumer pair still matches `0x168B50` and FNV `2B9E9631`.
+
+This selects `H-observer-contract` as an instrumentation limitation. It does
+not distinguish a missing stage-2 observer from a later overwrite, and does
+not name a writer or authorize a mitigation. The image-stage and PCM controls
+were positive. Artifact: scratch/agent/s2514_m5_dma_attribution/audit.md.

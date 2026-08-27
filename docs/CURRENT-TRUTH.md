@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2513 (2026-08-26).
+Current maintenance marker: Session 2514 (2026-08-26).
 
 ## Current state
 
@@ -30,7 +30,9 @@ Current maintenance marker: Session 2513 (2026-08-26).
   The image arm reaches task completion and generated DMA. s2506 joins
   stage-2 image DMA destinations to the generated AI table and its PCM
   consumers; before s2513, the legitimate nonzero payload writer remained
-  unresolved. Exact DMA-event attribution remains open after s2513.
+  unresolved. s2513 selected the RSP/image payload at the observable consumer
+  boundary; s2514 records exact stage-2 DMA attribution as an observer-contract
+  limitation rather than a writer conclusion.
 
 - **s2513 — the qualified image-arm capture selects the RSP/image payload
   writer at the observable consumer boundary.** Image ordinal 606 produced
@@ -40,6 +42,17 @@ Current maintenance marker: Session 2513 (2026-08-26).
   with no guest CPU writer rows. The lower-level DMA join still reports zero
   nonzero bytes for that observer, so exact DMA-event attribution remains
   open. Artifact: `scratch/agent/s2513_m5_payload_writer/audit.md`.
+
+- **s2514 — the stage-2/DMA join is an observer-contract limitation.** Static
+  audit shows `rs64_audio_image_stage` runs before the shared `L_13B0`
+  `DO_DMA_WRITE`; the generic DMA observer later reconstructs identity from the
+  current route and destination, without the stage marker. In s2513 ordinal
+  606, the nonzero pre-write stage row at `0x168B50` has no matching DMA event;
+  the only joined event is stage 3 at `0x178D80` with zero payload. This does
+  not distinguish a missing stage-2 observation from a later overwrite, so
+  `H-observer-contract` is selected as an instrumentation limitation. The
+  image-stage and PCM controls are positive; no writer or mitigation claim is
+  authorized. Artifact: `scratch/agent/s2514_m5_dma_attribution/audit.md`.
 
 - **s2512 — checkpoint close-out; orphaned loop.sh.new deleted.** The prior
   session left an uncommitted `tools/agent/loop.sh.new` draft. The no-engineering
