@@ -47,6 +47,15 @@ Current maintenance marker: Session 2569 (2026-08-26).
   retail null is interpreted. It reaches attract, title, and hangar, not a
   mission.
 
+- **s2570 — the next generated-symbol region is an object-tracking boundary
+  with no defensible mapping.** The complete `0x8010619C–0x8010619F` span is a
+  lone `lui v1,0x801A` between the complete `lva_checkComplexObjectives` body
+  and `lvb_initializeObjectTracking`. The companion explicitly retains
+  `fake_func_8010619C`; exact source/m2c/caller searches found no human
+  candidate. This is a static, single-source boundary classification, so the
+  placeholder remains unchanged. Artifact:
+  `scratch/agent/s2570_symbol_census/audit.md`.
+
 - **s2559 — the M5 Step 1 stub/image checkpoint did not authorize promotion.**
   The retail whole-RDRAM control reached its 10,000-write threshold and title
   and hangar VI phases. Staged silent and image arms both reached title and
@@ -631,7 +640,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   instruction objective boundary; s2568 left `0x801044D8–0x801044DF`
   unchanged as a two-instruction objective boundary; s2569 left
   `0x80105B54–0x80105B5F` unchanged as a three-instruction object-tracking
-  boundary; the next unresolved placeholder is `0x8010619C`. s2557 left
+  boundary; s2570 left `0x8010619C–0x8010619F` unchanged as a one-instruction
+  object-tracking boundary and advanced to `0x80106BE8`. s2557 left
   `0x800E447C–0x800E447F` unchanged as a one-instruction boundary fragment
   and advanced to `0x800E71C8`; s2558 revalidated that span as an unchanged
   orphan two-instruction boundary fragment and pivots the next unit to the
