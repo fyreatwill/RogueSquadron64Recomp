@@ -1,11 +1,11 @@
-# NEXT work unit (s2563) — generated-symbol bounded census
+# NEXT work unit (s2564) — generated-symbol bounded census
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
 Audit the next unresolved generated/decomp symbol span after the completed
-`0x80101CCC` census. Derive the address from the next placeholder in the
+`0x80102A98` census. Derive the address from the next placeholder in the
 project symbol order, then inspect its complete span and immediate named
 neighbors. This is static work only: no build, runtime probe, or generated-code
 edit.
@@ -35,5 +35,5 @@ edit.
 wc -c < docs/CURRENT-TRUTH.md
 grep -n '^## Session ' PORTING-STATE.md | tail -15
 rg -n 'fake_func_' syms/rogue_squadron.syms.toml | tail -20
-rg -n 'fake_func_80102A98|0x80102A98' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms
+rg -n 'fake_func_8010357C|0x8010357C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms
 ```

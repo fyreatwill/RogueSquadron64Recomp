@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2562 (2026-08-26).
+Current maintenance marker: Session 2563 (2026-08-26).
 
 ## Current state
 
@@ -88,6 +88,15 @@ Current maintenance marker: Session 2562 (2026-08-26).
   `fake_func_80101CCC` and identifies the following real function; exact
   symbol/source/m2c/caller searches found no human candidate. This is a
   static, single-source boundary classification. No generated code changed.
+
+- **s2563 — the next generated-symbol region is an objective boundary with no
+  defensible mapping.** The complete `0x80102A98–0x80102A9F` span is an
+  8-byte trap-only gap filler between `lv2_calculateFriendliesSaved` and
+  `lv3_initializeObjectTracking`. The companion explicitly retains
+  `fake_func_80102A98` and identifies the following real function; exact
+  address, source, m2c, and caller searches found no human candidate. This is
+  a static, single-source boundary classification, so the placeholder remains
+  unchanged. Artifact: `scratch/agent/s2563_symbol_census/audit.md`.
   Artifact: `scratch/agent/s2562_symbol_census/audit.md`.
 
 ## Latest evidence

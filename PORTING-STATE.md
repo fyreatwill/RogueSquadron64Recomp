@@ -114869,6 +114869,22 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2563 (2026-08-26) — censused generated-symbol objective boundary
+
+Ran the bounded generated-symbol census at `0x80102A98`. The complete
+project/generated span is eight bytes (`0x80102A98–0x80102A9F`) between the
+complete `lv2_calculateFriendliesSaved` function and the real
+`lv3_initializeObjectTracking` prologue. The active generated body is a
+trap-only gap filler because the bytes were not valid C; the companion symbol
+input explicitly retains `fake_func_80102A98` and identifies the following
+real function. Exact-address, source, m2c, and caller searches found no
+defensible human mapping. Selected `H-data-or-boundary` / `H-no-match`; the
+placeholder remains unchanged. This is static, single-source evidence and
+does not prove reachability. The next unresolved placeholder is `0x8010357C`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
+
 ## Session 2539 (2026-08-26) — revisited M4 with retail RDRAM boundary capture
 
 The last 15 ledger titles were generated-symbol sweep sessions, so the
