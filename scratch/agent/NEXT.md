@@ -1,10 +1,10 @@
-# NEXT work unit (s2589) — continue the generated-symbol renaming sweep
+# NEXT work unit (s2590) — continue the generated-symbol renaming sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Select the next complete bounded placeholder span after the s2588 batch and
+Select the next complete bounded placeholder span after the s2589 census and
 rename only fragments with a defensible companion name or clear local
 semantics. Keep unresolved boundary/data fragments unchanged. This is a
 static rename unit; do not run the game or add runtime probes.
@@ -27,7 +27,7 @@ emits every selected mapping and no unrelated mapping changes.
 
 ## Exact preparation and checks
 
-1. Inspect the next placeholder in `../N64Recomp/RecompiledFuncs/` and the
+1. Inspect the next placeholder, beginning at `0x800B2628`, in `../N64Recomp/RecompiledFuncs/` and the
    matching `../rogue_squadron64/symbol_files/` entry.
 2. Add only justified mappings to `tools/rename/build_redefs.py` with
    `apply_patch`.

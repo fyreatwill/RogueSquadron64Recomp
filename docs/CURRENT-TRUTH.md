@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2588 (2026-08-26).
+Current maintenance marker: Session 2589 (2026-08-26).
+
+- **s2589 — the next generated-symbol span is a trap-only data boundary.**
+  The complete `0x800AEC54–0x800AEC5F` span is 12 bytes before the real
+  `initCraftSelectScreen` at `0x800AEC60`. The generated placeholder contains
+  only the fixup `__builtin_trap()`, while the companion explicitly retains
+  `fake_func_800AEC54`; exact-address, source, m2c, and caller searches found
+  no defensible human candidate. The generator was run successfully with no
+  mapping added. This selects `H-BoundaryOnly`; the placeholder remains
+  unchanged. Artifact: `scratch/agent/s2589_symbol_census_audit.md`.
 
 - **s2588 — maintenance compaction and a bounded symbol-rename batch.** The
   redundant pre-s2580 evidence archive was collapsed into a ledger pointer,
@@ -436,7 +445,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   before `playerSnowSpeederInit`; s2543 renamed the complete two-store span
   at `0x800AD378` to `storeTrackedObjectAuxiliaryFields`; s2544 left
   `0x800AE3E4–0x800AE3EF` unchanged as an overlay/boundary fragment; s2545
-  left `0x800AEC54–0x800AEC5F` unchanged as a trap-only data boundary; s2546
+  left `0x800AEC54–0x800AEC5F` unchanged as a trap-only data boundary; s2589
+  revalidated that boundary with a complete generated/companion/source audit
+  and advanced to `0x800B2628`; s2546
   left `0x800B2628–0x800B262F` unchanged as an eight-byte data-boundary
   fragment; s2547 renamed the `0x800B47C4` three-instruction setup fragment
   to `menuControllerInputPreamble`; s2548 left `0x800C5898–0x800C589F`

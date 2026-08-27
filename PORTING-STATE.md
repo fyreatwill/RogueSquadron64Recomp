@@ -116207,3 +116207,15 @@ in this maintenance iteration. This rules out no runtime hypothesis; it
 advances only the static symbol-renaming campaign. Next unit: continue that
 campaign with a complete address-span discriminator and the slug
 `generated-symbol-renaming-sweep`.
+
+## Session 2589 (2026-08-26) — classified the next generated-symbol boundary
+
+Audited the next complete placeholder span at `0x800AEC54–0x800AEC5F`.
+`funcs_29.c` shows a 12-byte trap-only gap filler immediately before the real
+`initCraftSelectScreen` at `0x800AEC60`. The companion symbol file explicitly
+retains `fake_func_800AEC54`; exact-address, source, m2c, and caller searches
+found no defensible semantic name. Ran `python3 tools/rename/build_redefs.py`
+successfully and added no mapping. This selects `H-BoundaryOnly`, leaves the
+placeholder unchanged, and advances the sweep to `0x800B2628`. It rules out
+only a renameable companion mapping for this span; no runtime hypothesis was
+tested. Artifact: `scratch/agent/s2589_symbol_census_audit.md`.
