@@ -119953,3 +119953,14 @@ no proven callable semantics; the new names state that limitation and do not
 claim a runtime writer or legitimate audio payload.
 
 The next bounded sweep interval is `0x8015F000..0x80161000`.
+
+## Session 2820 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+Ran the regeneration-safe companion selector for `0x8015F000..0x80161000`
+against the external `rogue_squadron64` symbol files. It changed zero
+references in zero files. The independent generated-tree scan found no
+`func_8015*` or `fake_func_8015*` placeholder definitions or references, and
+`git diff --check` passed. This closes the interval as already synchronized;
+ambiguous/data entries remain intentionally preserved. No build or game soak
+was needed because no generated source changed. The next bounded interval is
+`0x80161000..0x80163000`.

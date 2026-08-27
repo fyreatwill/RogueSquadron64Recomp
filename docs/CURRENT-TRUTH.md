@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2819 (2026-08-27).
+Current maintenance marker: Session 2820 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -228,10 +228,11 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    preserving ambiguous/data entries and applying only source-backed names.
    Sessions 2815–2818 closed intervals through `0x8015D000`; all four
    selectors changed zero references in zero files and all independent
-   placeholder scans were empty. Preserve ambiguous/data entries and continue
-   with the next bounded interval, `0x8015D000..0x8015F000`. Session 2819
-   classified four isolated main-overlay fragments as explicit `data_gap_*`
-   names; continue with `0x8015F000..0x80161000`.
+   placeholder scans were empty. Session 2819 classified four isolated
+   main-overlay fragments as explicit `data_gap_*` names. Session 2820 closed
+   `0x8015F000..0x80161000` with zero selected references and an empty
+   independent placeholder scan. Preserve ambiguous/data entries and continue
+   with `0x80161000..0x80163000`.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still
