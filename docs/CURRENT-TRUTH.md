@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2551 (2026-08-26).
+Current maintenance marker: Session 2553 (2026-08-26).
 
 ## Current state
 
@@ -455,7 +455,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   unchanged as an overlay-shared boundary fragment, and s2551 classified
   `0x800CC3D4–0x800CC9B7` as a menu data boundary with no rename candidate;
   s2552 left `0x800CEF1C–0x800CEF1F` unchanged as an incomplete mission
-  boundary fragment. The next unresolved placeholder is `0x800D2C98` in the
+  boundary fragment. s2553 left `0x800D2C98–0x800D2C9F` unchanged as a
+  tail-call boundary; the next unresolved placeholder is `0x800D4EC4` in the
   mission overlay.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
