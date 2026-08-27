@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2854 (2026-08-27).
+Current maintenance marker: Session 2855 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -468,6 +468,13 @@ Historical generated-symbol sweep route note: M5 Step 1
    input-recipe repair is now exhausted at this discriminator: boot-time
    probe keys, phase-relative probe keys, and the existing autopilot all
    failed to move the qualified port arms beyond VI 640 in this iteration.
+
+Session 2855 closed `0x80067500..0x80068500`. The selector classified all
+listed companion entries as already-synchronized callable names, changed zero
+generated references, and failed closed under `--require-rename`. The
+independent placeholder scan found no in-range `fake_func_*` or `data_gap_*`
+names. This is symbol-clarity evidence only; continue with the next bounded
+interval `0x80068500..0x80069500`.
    Audit `0x8011D000..0x8011F000`, preserving ambiguous/data entries and
    applying only source-backed names. The `0x80113000..0x80115000` census
    found one ambiguous-or-fake candidate, selected zero renames, and found

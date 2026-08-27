@@ -120437,3 +120437,14 @@ callable names, changed zero generated references, and failed closed under
 rename in the interval without assigning meanings to unresolved records. No
 build or game run was needed. The next bounded sweep is
 `0x80067500..0x80068500`.
+
+## Session 2855 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x80067500..0x80068500`.
+The selector classified all listed companion entries as already-synchronized
+callable names, changed zero generated references, and failed closed under
+`--require-rename`. The independent placeholder scan found no in-range
+`fake_func_*` or `data_gap_*` names. This rules out a source-backed rename in
+the interval without assigning meanings to unresolved records. No build or
+game run was needed. The next bounded sweep is
+`0x80068500..0x80069500`.
