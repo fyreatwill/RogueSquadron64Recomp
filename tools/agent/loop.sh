@@ -603,6 +603,71 @@ else:
     fi
   fi
 
+  # --- no-engineering churn guard (2026-08-26): slug-INDEPENDENT ------------
+  # Rule 8 (above) keys on consecutive SAME-slug stalls and resets on ANY
+  # ADVANCED. An M5 thread that only re-runs existing instruments (no code
+  # change) and renames its HYPOTHESIS-ID every session evades it completely:
+  # measured 2026-08-26 at 105/120 ADVANCED, 0 blocks, ~13 distinct m5-* slugs
+  # across 60 sessions, stuck 40+ sessions. This counter fires on the one thing
+  # churn cannot fake: consecutive ADVANCED iterations that landed NO
+  # engineering change (git fact -- no changed code/tool/patch, no NEW
+  # non-scratch file, and not a >=200-line CURRENT-TRUTH compaction). Any real
+  # work resets it. State lives outside the repo so the metered agent cannot
+  # reset its own meter. Tunable via NOENG_PIVOT / NOENG_BLOCK.
+  NOENGSTATE="${TMPDIR:-/tmp}/.rs64-noeng-state"
+  NOENG_PIVOT="${NOENG_PIVOT:-6}"; NOENG_BLOCK="${NOENG_BLOCK:-12}"
+  noeng=0; [ -f "$NOENGSTATE" ] && read -r noeng < "$NOENGSTATE" 2>/dev/null
+  case "${noeng:-0}" in ''|*[!0-9]*) noeng=0 ;; esac
+  eng_change=0
+  if [ -n "$iter_start_head" ] && git diff --name-status "${iter_start_head}..HEAD" 2>/dev/null | awk '
+        $1 ~ /^A/ && $2 !~ /^scratch\// { f=1 }
+        $2 !~ /^scratch\// && $2 != "PORTING-STATE.md" && $2 !~ /^docs\// && $2 != "CLAUDE.md" { f=1 }
+        END { exit(f?0:1) }'; then
+    eng_change=1
+  fi
+  if [ "$eng_change" = "0" ] && [ -n "$iter_start_head" ]; then
+    shrink="$(git diff --numstat "${iter_start_head}..HEAD" 2>/dev/null -- docs/CURRENT-TRUTH.md | awk '{s+=$2-$1} END{print s+0}')"
+    case "$shrink" in ''|*[!0-9-]*) shrink=0 ;; esac
+    [ "$shrink" -ge 200 ] && eng_change=1
+  fi
+  if [ "$outcome" = "ADVANCED" ] && [ "${contract_ok:-0}" = "1" ] && [ "$eng_change" = "0" ]; then
+    noeng=$((noeng+1))
+    log "no-engineering ADVANCED streak: $noeng (iteration changed no code/tool/patch/new-doc)"
+  else
+    noeng=0
+  fi
+  printf '%s\n' "$noeng" > "$NOENGSTATE"
+  if [ "$noeng" -ge "$NOENG_BLOCK" ]; then
+    { echo "# $noeng consecutive ADVANCED iterations with no engineering change, $(date)"; echo;
+      echo "Every one scored ADVANCED but changed no code, tool, patch, or new doc --"
+      echo "only re-ran existing instruments and recorded observations. The forced"
+      echo "bounded-work pivot did not take. Redirect the loop: choose a work unit that"
+      echo "lands code (an M5 de-stub per docs/M5-AUDIO-PLAN.md, or the"
+      echo "generated-symbol-renaming sweep), or re-scope scratch/agent/NEXT.md."
+      echo "Reset the counter: rm ${NOENGSTATE}. Then delete this file and rerun."; } > "$AG/BLOCKED.md"
+    notify_blocked
+    exit 2
+  fi
+  if [ "$noeng" -ge "$NOENG_PIVOT" ]; then
+    log "no-engineering churn: $noeng consecutive code-free ADVANCED iterations - forcing bounded-work pivot"
+    { echo "## MANDATORY PIVOT (no-engineering churn guard, loop-enforced)"
+      echo "The last $noeng ADVANCED iterations changed NO code, tool, patch, or doc --"
+      echo "they only re-ran existing instruments and recorded observations, and"
+      echo "renaming the HYPOTHESIS-ID each session hid this from rule 8. Iron rule 14:"
+      echo "an instrument re-run that selects nothing is churn, not progress."
+      echo
+      echo "THIS iteration you MUST land a committed CODE change, one of:"
+      echo "  (a) De-stub the next concrete step in docs/M5-AUDIO-PLAN.md and commit the"
+      echo "      generated/runtime change -- a real edit, not another log probe; or"
+      echo "  (b) Switch to the generated-symbol-renaming sweep: set"
+      echo "      HYPOTHESIS-ID: generated-symbol-renaming-sweep and rename a batch of"
+      echo "      func_0x... symbols (ITERATION.md strategic priority 4). It lands code"
+      echo "      every session and is always actionable."
+      echo "Another observation-only audit under scratch/ does NOT satisfy this and"
+      echo "extends the streak toward a loop block at $NOENG_BLOCK."
+      echo; } >> "$AG/PIVOT.md"
+  fi
+
   run_soak_queue
 done
 log "iteration cap ($ITER_CAP) reached $(date)"
