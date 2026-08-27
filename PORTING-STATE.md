@@ -116344,3 +116344,17 @@ placeholder; adding the explicit mapping repaired that source-of-truth gap.
 `D_`, and `fake_func_` lines for the address. No regeneration or runtime run
 was performed. This selects `H-CompanionMapping`. See
 `scratch/agent/s2598_symbol_census_audit.md`.
+## Session 2599 (2026-08-26) — restored the next generated-symbol prefix mapping
+
+Ran the single static generated-symbol rename unit for `0x800D4EC4`. The
+generated span is a three-instruction fragment (`lw v1, 0x20(fp)`;
+`lw a0, 4(v1)`; `addiu v1, a0, 8`) immediately before the complete
+`npcInitChildLinkedToParent` body at `0x800D4ED0`. The companion symbol file
+assigns the exact address `duplicateSymbolPrefixForNpcInitChildLinkedToParent`
+and documents the following duplicate-symbol deletion. Exact-address source,
+m2c, caller, and alternate-name searches found no competing candidate. Added
+the regeneration-safe mapping to `tools/rename/build_redefs.py`; running the
+generator succeeded and emitted the target redefinition lines. No regeneration,
+runtime build, or game run was performed. This selects `H-CompanionMapping`
+and advances the sweep to `0x800DD2C4`. See
+`scratch/agent/s2599_symbol_census_audit.md`.

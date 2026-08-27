@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2598 (2026-08-26).
+Current maintenance marker: Session 2599 (2026-08-26).
+
+- **s2599 — the next generated-symbol span has a companion-defined duplicate
+  prefix name.** `0x800D4EC4–0x800D4ECF` is a three-instruction fragment
+  immediately before the complete `npcInitChildLinkedToParent` body at
+  `0x800D4ED0`. The companion assigns the exact address
+  `duplicateSymbolPrefixForNpcInitChildLinkedToParent` and documents the
+  following duplicate-symbol deletion. Exact-address source/m2c/caller and
+  alternate-name searches found no competing candidate. Added the
+  regeneration-safe mapping to `tools/rename/build_redefs.py`; the generator
+  emitted the target redefinition lines. Artifact:
+  `scratch/agent/s2599_symbol_census_audit.md`.
 
 - **s2598 — the next generated-symbol span has a companion-defined duplicate
   prefix name.** `0x800D2C98–0x800D2C9F` is an 8-byte jump veneer into the
@@ -548,8 +559,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2552 left `0x800CEF1C–0x800CEF1F` unchanged as an incomplete mission
   boundary fragment. s2553 left `0x800D2C98–0x800D2C9F` unchanged as a
   tail-call boundary. s2598 restored the regeneration-safe mapping for the
-  companion-defined duplicate-symbol prefix at `0x800D2C98`; the next census
-  is `0x800D4EC4`. s2554 had previously recorded this same family as renamed,
+  companion-defined duplicate-symbol prefix at `0x800D2C98`, and s2599 restored
+  the matching mapping at `0x800D4EC4`; the next census is `0x800DD2C4`.
+  s2554 had previously recorded this same family as renamed,
   but the current generated table still carried the placeholder and the
   mapping was absent from the generator, so the current source was repaired.
   s2554 renamed the four duplicate-symbol prefix
