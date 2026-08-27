@@ -117192,3 +117192,20 @@ overlay table at `0x800C8178`, with the exact `0x38C` span ending at
 `decodeDeltaCellCounts` (`0x800C83E4`, `0x13C`) are likewise exact and must
 remain distinct overlay identities. No runtime behavior or build changed;
 the next bounded lead is `0x800C8504`.
+
+## Session 2641 (2026-08-27) — audited the 800C8504 symbol lead
+
+Ran the bounded generated-symbol-renaming sweep required by
+`scratch/agent/NEXT.md`. The comparison table covered the mission lead and
+the distinct menu-overlay occupants:
+
+| address | companion/generated identity | span/overlay evidence | result |
+|---|---|---|---|
+| `0x800C8504` | `spawnNpcImpactEffectVariant` | mission body/header and TOML agree; overlay offset `0x233D4`, size `0x474`, ending at `0x800C8978` | exact, already named |
+| `0x800C8520` | `allocDebrisCellTable` | menu companion and overlay entry; size `0x1A8` | exact distinct overlay identity |
+| `0x800C86C8` | `buildCellSlotTableAndFindFree` | menu companion and overlay entry; size `0xE8` | exact distinct overlay identity |
+
+The lead was already resolved across the companion symbols, generated body and
+header, repository TOML, and generated overlay table. No placeholder, stale
+mapping, or actionable rename remained. No runtime behavior or build changed;
+the next bounded lead is `0x800C8978`.

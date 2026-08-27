@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2640 (2026-08-27).
+Current maintenance marker: Session 2641 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -267,6 +267,15 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
   identities. This is an overlay collision-aware resolved region, not an
   actionable placeholder rename; the next bounded lead is `0x800C8504`.
 
+- **s2641 — the `0x800C8504` sweep region was already exact.** The mission
+  companion names `spawnNpcImpactEffectVariant`; its generated body/header,
+  repository TOML, and mission overlay table agree on address `0x800C8504`
+  and size `0x474`, ending at `0x800C8978`. The same VRAM window contains the
+  distinct menu-overlay `allocDebrisCellTable` at `0x800C8520` and
+  `buildCellSlotTableAndFindFree` at `0x800C86C8`; these are not mission
+  siblings to collapse. No placeholder or stale mapping was found, so no
+  rename or build was warranted; the next bounded lead is `0x800C8978`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -288,7 +297,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C8178` next using companion symbols, exact spans, callers, and
+   Audit `0x800C8978` next using companion symbols, exact spans, callers, and
    overlay identity;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
