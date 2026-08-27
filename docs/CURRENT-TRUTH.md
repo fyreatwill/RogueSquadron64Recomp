@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2783 (2026-08-27).
+Current maintenance marker: Session 2788 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -127,7 +127,11 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    definitions or references. Session 2787 closed
    `0x80125000..0x80127000`: the selector changed zero references in zero
    files, and the independent generated-tree scan found no placeholder
-   definitions or references. Continue with `0x80127000..0x80129000`.
+   definitions or references. Session 2788 closed
+   `0x80127000..0x80129000`: the selector changed zero references in zero
+   files, two companion entries were preserved as ambiguous/fake, and the
+   independent generated-tree scan found no placeholder definitions or
+   references. Continue with `0x80129000..0x8012B000`.
 
 2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
