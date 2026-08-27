@@ -119872,3 +119872,17 @@ generated source changed. This selects the already-synchronized/ambiguous
 hypothesis for the interval and rules out stale generated semantic
 placeholders there, not the remaining sweep. The next bounded interval is
 `0x80153000..0x80155000`.
+
+## Session 2814 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+The prescribed interval `0x80153000..0x80155000` was already synchronized:
+the regeneration-safe selector found one companion candidate,
+`0x80153420 D_80153420`, classified it as ambiguous-or-fake, and found three
+semantic entries already synchronized (`numSpeechSamples`,
+`speechSampleOffsets`, and `speechFile`). It changed zero references in zero
+files. The independent generated-tree scan found no `func_8015*` or
+`fake_func_8015*` placeholder definitions or references, and `git diff --check`
+passed. No build or game soak was needed because no generated source changed.
+This selects the already-synchronized/ambiguous hypothesis for the interval
+and rules out stale generated semantic placeholders there, not the remaining
+sweep. The next bounded interval is `0x80155000..0x80157000`.
