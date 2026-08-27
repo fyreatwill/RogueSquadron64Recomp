@@ -115857,3 +115857,20 @@ runtime reachability or audio behavior.
 
 Artifact: `tools/rename/build_redefs.py` and `/tmp/rs64-redefs.txt` (verification
 output, not committed).
+
+## Session 2568 (2026-08-26) — censused generated-symbol objective boundary
+
+Ran the prescribed static generated-symbol census for
+`0x801044D8–0x801044DF`. The complete generated span contains
+`sh v1,0x10C(v0)` and its delay-slot `addu a0,zero,zero`, between
+`lv6_dispatchStageTick` and `lv7_checkComplexObjectives`. The active project
+and generated tables retain `fake_func_801044D8`; the companion symbol file
+explicitly retains that placeholder and identifies `lv7_checkComplexObjectives`
+as the following real function. Exact-address, source, m2c, and caller searches
+found no human candidate. Selected `H-data-or-boundary` and left the
+placeholder unchanged. This is a static, single-source result: it does not
+prove reachability or explain the fragment's origin. No build or runtime
+experiment was run because the work unit was explicitly static-only. The next
+unresolved placeholder is `0x80105B54`.
+
+Artifact: `scratch/agent/s2568_symbol_census/audit.md`.

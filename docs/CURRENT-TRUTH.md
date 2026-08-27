@@ -139,6 +139,16 @@ Current maintenance marker: Session 2567 (2026-08-26).
   no human candidate. This was a source-of-truth tool change; no runtime build
   was needed.
 
+- **s2568 — the next generated-symbol region is an objective boundary with no
+  defensible mapping.** The complete `0x801044D8–0x801044DF` span contains
+  `sh v1,0x10C(v0)` followed by its delay-slot `addu a0,zero,zero`, between
+  `lv6_dispatchStageTick` and `lv7_checkComplexObjectives`. The companion
+  explicitly retains `fake_func_801044D8` and identifies the following real
+  function; active project/generated tables retain the placeholder, and exact
+  address, source, m2c, and caller searches found no human candidate. This is
+  a static, single-source boundary classification, so the placeholder remains
+  unchanged. Artifact: `scratch/agent/s2568_symbol_census/audit.md`.
+
 ## Latest evidence
 
 - **s2514 — stage-2/DMA attribution is an observer-contract limitation.**
@@ -609,8 +619,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2564 left `0x8010357C–0x8010357F` unchanged as a one-instruction objective
   boundary; s2565 left `0x80103D08–0x80103D0F` unchanged as a two-instruction
   objective boundary; s2566 left `0x80104208–0x8010420F` unchanged as a two-
-  instruction objective boundary; the next unresolved placeholder is
-  `0x801044D8`. s2557 left
+  instruction objective boundary; s2568 left `0x801044D8–0x801044DF`
+  unchanged as a two-instruction objective boundary; the next unresolved
+  placeholder is `0x80105B54`. s2557 left
   `0x800E447C–0x800E447F` unchanged as a one-instruction boundary fragment
   and advanced to `0x800E71C8`; s2558 revalidated that span as an unchanged
   orphan two-instruction boundary fragment and pivots the next unit to the
