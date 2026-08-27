@@ -1,39 +1,46 @@
-# NEXT work unit (s2517) — M5: obtain a new independent contract boundary
+# NEXT work unit (s2518) — generated-symbol renaming sweep, first bounded region
 
-HYPOTHESIS-ID: m5-contract-edge
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Do not change runtime behavior or add another stage/DMA join field. The s2516
-title-phase A/B proved image execution but no legitimate missing edge. Identify
-one genuinely new retail-visible contract boundary (writer PC plus destination
-span and ordering) that can be paired with an existing port control; if none
-is available, stop M5 Step 3 rather than repeating the unresolved observer.
-The image arm remains opt-in.
+Before starting, run:
+
+```sh
+grep -n '^## Session ' PORTING-STATE.md | tail -15
+```
+
+If all 15 titles are sweep-scoped, revisit CURRENT-TRUTH Next step #2 or the
+M4 accumulator boundary with a genuinely new angle. Otherwise enumerate one
+bounded address region of placeholder functions in `RecompiledFuncs/funcs_*.c`,
+find matching named functions or m2c output in the companion
+`rogue_squadron64` tree, and rename only unambiguous matches through the
+regeneration-safe symbol/fixup path. Do not invent names or edit unrelated
+generated functions.
 
 ## Competing hypotheses and discriminator
 
-- `H-proven-edge`: a legitimate selected edge closes the task/output/PCM
-  boundary when enabled.
-- `H-no-edge`: current evidence does not name a legitimate missing edge, so no
-  behavior change is authorized.
-- `H-route-only`: apparent downstream movement is route/stability drift and
-  does not close the output contract.
+- `H-named-match`: the selected region has exact companion names and can be
+  renamed without changing generated behavior.
+- `H-no-match`: the complete region census has no defensible mappings, so
+  placeholders stay.
+- `H-regeneration-risk`: apparent names are not connected to the active
+  generation/fixup path, requiring a tooling repair before renaming.
 
-The discriminator is one phase-scoped old/new table containing selected writer
-PC, destination/span, task completion, SP completion, service/slot progress,
-and PCM source/consumer identity. A matching legitimate writer plus new
-downstream contract selects `H-proven-edge`; unchanged controls select
-`H-no-edge`; route-only movement selects `H-route-only`.
+The discriminator is the complete region table of every placeholder address,
+candidate symbol, evidence source, confidence, and resulting diff. An exact
+match plus clean symbol/fixup validation selects `H-named-match`; zero exact
+matches selects `H-no-match`; a failed regeneration-safe validation selects
+`H-regeneration-risk`.
 
-## Exact commands
+## Exact preflight commands
 
 ```sh
-rg -n "data_ptr|output_buff|yield_data_ptr|rs64_m5_pcm_writer|queue_audio_buffer" \
-  src/main/main.cpp lib/N64ModernRuntime/librecomp/src/rsp.cpp
-rg -n -C 4 "Step 3|Implement exactly one missing" docs/M5-AUDIO-PLAN.md
+grep -n '^## Session ' PORTING-STATE.md | tail -15
+rg -n '^void func_|^static .*func_|func_0x[0-9A-Fa-f]+' RecompiledFuncs/funcs_*.c | head -200
+rg --files /Users/williambuckley/Documents/Tools/rogue_squadron64 | head -100
 ```
 
-Any mitigation-shaped change requires an `ORIGIN:` line naming a legitimate
-writer. The s2514 observer-contract and s2516 title-phase no-edge results are
-not evidence for a new writer.
+Do not build or rename until the first region and its companion evidence are
+defined. If names are changed, build the affected target and confirm no
+generated placeholder references are left dangling.

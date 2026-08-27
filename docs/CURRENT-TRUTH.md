@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2515 (2026-08-26).
+Current maintenance marker: Session 2517 (2026-08-26).
 
 ## Current state
 
@@ -62,33 +62,42 @@ Current maintenance marker: Session 2515 (2026-08-26).
   This selects no-edge at this route scope; route-only variation remains
   possible against s2513. No behavior change is authorized. Artifact:
   `scratch/agent/s2516_m5_contract_edge/audit.md`.
+- **s2517 — a new independent retail task/data boundary still did not name a
+  Step 3 edge.** The oracle whole-RDRAM control recorded 359,402 writes and
+  reached title and hangar. It retained 1,227 phase-gated type-2 task rows:
+  title used `data_ptr=0x80171CE0` / `+0x100=0x171DE0`, hangar used
+  `data_ptr=0x80171E70` / `+0x100=0x171F70`, and every row had zero
+  output/yield fields. The watched task-data, `+0x100`, and image spans had
+  positive writer tables and nonzero snapshots, but no writer was shown to be
+  the missing image payload or output consumer. Together with s2516 this
+  selects `H-no-edge` at the current route scope; no behavior change is
+  authorized. Artifact:
+  `scratch/agent/s2517_m5_contract_boundary/audit.md`.
 
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 generated image downstream join — active, edge unproven.** The direct load boundary,
+1. **M5 Step 3 contract edge — closed at the current route scope.** The direct load boundary,
    SP completion/consumption, image DMEM work, generated DMA, and PCM
    consumer are live under qualified controls. Runtime joins show image
    stage-2 destinations equal generated AI-table entries, but the legitimate
    nonzero payload writer is only selected at the observable consumer
-   boundary and exact DMA attribution is still open. Do not map through
-   `gspTask`, infer identity from timing or hashes, or change task/output
-   fields without a named writer and independent retail evidence. Next work
-   unit: choose one proven M5 Step 3 contract edge and validate old/new arms
-   together with phase-scoped writer, task, SP, service, and PCM controls. The
-  s2516 title-phase A/B found no new legitimate edge; do not add a
-  writeback/remap or repeat the same unresolved observer. Next work unit:
-  obtain a genuinely new independent retail contract boundary before any
-  Step 3 behavior change.
+  boundary and exact DMA attribution is still open. Do not map through
+  `gspTask`, infer identity from timing or hashes, or change task/output
+  fields without a named writer and independent retail evidence. s2516 and
+  s2517 found no new legitimate edge; do not add a writeback/remap or repeat
+  the unresolved observer. M5 image execution remains opt-in, and later M5
+  steps remain conditional on a new named retail writer/value boundary.
+  Next work unit: begin the bounded generated-symbol renaming sweep.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
 3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
-4. **Generated-symbol renaming — parked.** Resume only after M5 closes or
-   M3 obtains a new discriminator; do not invent names for unresolved
-   placeholders.
+4. **Generated-symbol renaming — active after M5 Step 3 closure.** Resume with
+  one bounded address-region census and only names supported by the companion
+  decomp or clear local semantics; leave unresolved placeholders unchanged.
 5. **M4 accumulator-origin work — parked** pending a new boundary idea.
 
 ## Durable boundaries

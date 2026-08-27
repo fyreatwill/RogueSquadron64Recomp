@@ -114847,3 +114847,24 @@ s2513 possible. It rules out neither the image implementation nor the
 observer limitation globally. No code, default, guard, writeback, or output
 mapping changed; the image remains opt-in. Artifact:
 `scratch/agent/s2516_m5_contract_edge/audit.md`.
+## Session 2517 (2026-08-26) — M5 independent task/data boundary remained unresolved
+
+Ran one new independent retail-oracle boundary capture before considering any
+port change. The whole-RDRAM positive control recorded 359,402 writes, and the
+retail route reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`.
+The registered task dump recorded 1,227 phase-gated type-2 rows with zero
+invalid pointers or overflow. Title task rows used
+`data_ptr=0x80171CE0` / `+0x100=0x171DE0`; hangar rows used
+`data_ptr=0x80171E70` / `+0x100=0x171F70`. Every row had zero output and yield
+fields. The task-data, `+0x100`, and existing image spans all had positive
+writer tables and nonzero snapshots, but no writer was identified as a
+legitimate missing image payload or output-consumer edge.
+
+This selects `H-no-edge` at the current route scope and, with s2516's same-build
+port A/B, rules out authorizing a Step 3 writeback, remap, task-field change,
+guard, or default. It does not rule out route-only variation elsewhere. M5
+Step 3 is closed pending a genuinely new named retail boundary; the image arm
+remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
