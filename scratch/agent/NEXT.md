@@ -1,28 +1,29 @@
-# NEXT work unit (s2687) — audit the M5 mixer callback boundary
+# NEXT work unit (s2688) — identify the next downstream M5 PCM consumer
 
 HYPOTHESIS-ID: m5-cpu-mort-publication
 
 ## Work unit
 
-Perform a bounded static audit of `initN64RspMixer` and the callback table at
-`0x801499D0..0x801499E0`, then follow every named callback consumer far enough
-to determine whether it is the first service boundary after the voice object's
-`+0x140` mixed output. Use companion address/name evidence and generated
-callers. Do not add runtime watches, writeback, remaps, or mitigation from
-unresolved pointer shapes.
+Perform a bounded static audit outside the already-closed mixer-table boundary:
+start from the named consumers of `voice+0x140` and the audio service functions
+that call `osAiSetNextBuffer`, then identify the first named function that can
+copy or publish those mixed words toward the AI source. Use companion
+address/name evidence and generated callers. Do not repeat the mixer-table,
+filter, persistent-object, task-field, ring, shared-stack, DMA callback, or
+update/renderer audits. Do not add runtime watches, writeback, remaps, or
+mitigation from unresolved pointer shapes.
 
 ## Competing hypotheses and discriminator
 
-- `H-mixer-publish`: the callback table or its consumers names a legitimate
-  destination and ordering edge from rendered voice output toward PCM/AI.
-- `H-service-boundary`: the path reaches a service/slot boundary but the
-  publication destination remains outside the audited caller.
-- `H-unresolved-address`: the table is initialization-only or its callbacks do
-  not consume the rendered voice object, so no legitimate publication edge is
-  named.
+- `H-direct-publish`: a named downstream function copies the legitimate
+  `voice+0x140` output into a PCM/AI destination and its ordering is visible.
+- `H-service-boundary`: a named service/slot boundary is reached, but the
+  publication destination remains outside that caller.
+- `H-unresolved-address`: all reachable downstream callers remain unrelated
+  to the rendered voice object or end at unresolved indirect state.
 
-The discriminator is a complete callback/destination table for all eight table
-entries: each outcome must identify the callback writer, destination, payload
+The discriminator is a complete caller/destination table for every named
+downstream consumer: each outcome must identify writer, destination, payload
 polarity, and ordering relation, or explicitly show which field is absent.
 
 ## Ground-truth prerequisite
@@ -32,6 +33,6 @@ ground-truth target.
 
 ## Exact commands
 
-1. `rg -n -H 'initN64RspMixer|0x801499D0|0x801499E0|0x8009189C' ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`
-2. Read bounded windows for the initializer and every callback consumer; use companion names/source matches for each entry.
-3. Record the complete eight-entry destination/order table and selected hypothesis in the ledger.
+1. `rg -n -H 'voice\\+0x140|osAiSetNextBuffer|audioMixStereoBlock8|renderVoiceAudioBlock|dmaVoiceSampleAndSignal|consumeVoiceSamples' ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`
+2. Read bounded windows for each unique caller and follow only named calls or direct stores/copies.
+3. Record the complete downstream destination/order table and selected hypothesis in the ledger.

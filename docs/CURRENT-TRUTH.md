@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2685 (2026-08-27).
+Current maintenance marker: Session 2687 (2026-08-27).
 
 ## Live result
 
@@ -117,6 +117,24 @@ rules out `H-publish-caller` and `H-service-boundary` at these sites (static
 source evidence only); no runtime watch, writeback, remap, or mitigation is
 authorized.
 
+s2687 audited `initN64RspMixer` and the adjacent callback/state words. The
+initializer writes five callback slots: `0x801499D0=0x8001A058`
+(`postViThreadCommand`), `0x801499D4=0x8000569C`
+(`submitDmaRequestBatch`), `0x801499D8=0x80007910`
+(`registerSiCallback`), `0x801499DC=0x8000794C`
+(`findAndZeroTableSlotMatching`), and `0x801499E0=0x8000591C`
+(`getAssetRamAddress`). The requested `D0..E0` range is five words; the
+adjacent `E4..EC` words are not initialized by this routine and are used as
+separate audio allocator/list state in generated callers. The named
+consumers use `D4` only for the initializer's callback re-arm, `D8` in
+`waitForMusyXAudioTaskDone` and `shutdownAudioEngine`, and `E0` in
+`relocateSndPointer`; their arguments are scheduler/pointer values, not the
+voice object's `+0x140` mixed words. No callback writer, PCM destination,
+queue publication, or AI ordering edge is identified. This selects
+`H-unresolved-address` for the mixer boundary, rules out `H-mixer-publish`
+and `H-service-boundary` at these sites, and remains static source evidence;
+no runtime watch, writeback, remap, or mitigation is authorized.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -126,11 +144,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.
    s2683 shows the named DMA callback is stream-to-slot, not renderer-to-AI.
-   s2686 found no publication edge in the update/renderer path. Audit the
-   `initN64RspMixer` callback table at `0x801499D0..0x801499E0` and every named
-   callback consumer for the first service boundary after the voice object's
-   `+0x140` output. Do not repeat the filter, persistent-object, task-field,
-   ring, shared-stack, DMA callback, or update/renderer census.
+   s2686 found no publication edge in the update/renderer path, and s2687
+   found no publication edge in the mixer callback/state boundary. The next
+   useful work must identify a downstream named consumer outside these
+   callbacks, without repeating the filter, persistent-object, task-field,
+   ring, shared-stack, DMA callback, update/renderer, or mixer-table census.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.

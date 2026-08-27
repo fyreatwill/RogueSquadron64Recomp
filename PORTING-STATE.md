@@ -117971,3 +117971,23 @@ caller/destination table therefore selects `H-unresolved-address`, rules out
 `H-publish-caller` and `H-service-boundary` at this boundary, and leaves the
 static result independent of the existing retail runtime evidence. No build,
 watch, writeback, remap, or mitigation was run.
+## Session 2687 (2026-08-27) — audited the M5 mixer callback boundary
+
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, and the soak-result
+tail. The prescribed static audit found that `initN64RspMixer` populates five
+words, not eight: `0x801499D0..0x801499E0` resolve respectively to
+`postViThreadCommand` (`0x8001A058`), `submitDmaRequestBatch` (`0x8000569C`),
+`registerSiCallback` (`0x80007910`), `findAndZeroTableSlotMatching`
+(`0x8000794C`), and `getAssetRamAddress` (`0x8000591C`). The adjacent
+`0x801499E4..0x801499EC` words are separate audio allocator/list state in
+generated callers, not additional initialized mixer callbacks.
+
+The named indirect consumers are the initializer re-arm through `D4`, the
+MusyX wait and shutdown dispatches through `D8`, and pointer relocation through
+`E0`. Their arguments are scheduler or pointer values; none reads or writes
+the voice object's `+0x140` mixed words, names a PCM destination, signals a
+queue, or orders an AI submission. This selects `H-unresolved-address` and
+rules out `H-mixer-publish` and `H-service-boundary` at this boundary. It also
+rules out the premise that an eight-entry callback table was present in the
+requested range. This is static source evidence only; no build, runtime watch,
+writeback, remap, mitigation, or soak was run.
