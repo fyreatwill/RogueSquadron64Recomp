@@ -114869,6 +114869,25 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2530 (2026-08-26) — censused thirteenth generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x80082268–0x8008226F` after
+the required sweep preflight. It contains exactly one 8-byte placeholder,
+`fake_func_80082268`, whose generated body is only `lui at,0x8005` followed by
+`lwc1 f2,-0x2E48(at)`. The generated overlay table and companion symbol file
+agree on the fake name and span; exact-address, source, m2c, caller, and
+semantic searches found no human rename candidate. The next independently
+named function is `applyCheatCodeFromInput` at `0x80082270`.
+
+This selects `H-no-match` and rules out a defensible rename or
+regeneration-safe build for this entry. The fragment may be a boundary
+artifact or callable fragment, but this static, single-source result does not
+prove which. No generated code, runtime, or mitigation changed. Artifact:
+`scratch/agent/s2530_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
+
 ## Session 2528 (2026-08-26) — censused eleventh generated-symbol sweep region
 
 Enumerated the complete main-overlay interval `0x8007A86C–0x8007A86C` after

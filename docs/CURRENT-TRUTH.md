@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2529 (2026-08-26).
+Current maintenance marker: Session 2530 (2026-08-26).
 
 ## Current state
 
@@ -184,6 +184,17 @@ Current maintenance marker: Session 2529 (2026-08-26).
   not prove whether the fragment is callable or a boundary artifact. Artifact:
   `scratch/agent/s2529_symbol_census/audit.md`.
 
+- **s2530 — the thirteenth bounded generated-symbol region had no
+  defensible mapping.** The complete 8-byte interval
+  `0x80082268–0x8008226F` contains `fake_func_80082268`, whose body is only
+  `lui at,0x8005` followed by `lwc1 f2,-0x2E48(at)`, immediately before the
+  independently named `applyCheatCodeFromInput` at `0x80082270`. The
+  generated overlay table and companion symbol file agree on the fake name
+  and span; exact-address, source, m2c, caller, and semantic searches found
+  no rename candidate. This is a static, single-source result and does not
+  prove whether the fragment is callable or a boundary artifact. Artifact:
+  `scratch/agent/s2530_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -210,7 +221,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   one bounded address-region census and only names supported by the companion
   decomp or clear local semantics; leave unresolved placeholders unchanged.
   s2527 and s2528 left `0x8007A0E8` and `0x8007A86C` unresolved; next is
-  `0x8007C298`; s2529 left it unresolved. Next is `0x80082268`.
+  `0x8007C298`; s2529 left it unresolved. s2530 left `0x80082268`
+  unresolved. Next is `0x800825C8`.
 5. **M4 accumulator-origin work — parked** pending a new boundary idea.
 
 ## Durable boundaries
