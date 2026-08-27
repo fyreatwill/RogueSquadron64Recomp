@@ -350,6 +350,19 @@ Current maintenance marker: Session 2548 (2026-08-26).
   unchanged as a data/boundary artifact candidate. Artifact:
   `scratch/agent/s2549_symbol_census/audit.md`.
 
+- **s2550 — the next bounded generated-symbol region is an overlay-shared
+  boundary fragment, not a rename candidate.** The complete menu-overlay span
+  `0x800CC038–0x800CC03F` contains only `swc1 $f0,0x40($fp)` and
+  `addiu $v0,$fp,0x20`. The menu symbol input and generated overlay table retain
+  `fake_func_800CC038`, followed by `loadMedalInfo` at `0x800CC040`; the same
+  VRAM window is occupied by the mission overlay's independently named
+  `initActorFromSpawnTemplate` beginning at `0x800CC03C`. Exact-address,
+  companion-source, m2c, and caller searches found no human mapping. Because
+  the fragment has no callable boundary and overlaps another overlay's real
+  function window, renaming it to either neighbor would be speculative. It
+  remains unchanged. Artifact:
+  `scratch/agent/s2550_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -367,7 +380,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
   steps remain conditional on a new named retail writer/value boundary.
   Next work unit: continue the bounded generated-symbol renaming sweep at
   `0x800C6968`; s2549 left `0x800C6968–0x800C696F` unchanged as an
-  incomplete epilogue/boundary fragment. Continue at `0x800CC038`.
+  incomplete epilogue/boundary fragment. Continue at `0x800CC3D4`.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
@@ -405,7 +418,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   left `0x800B2628–0x800B262F` unchanged as an eight-byte data-boundary
   fragment; s2547 renamed the `0x800B47C4` three-instruction setup fragment
   to `menuControllerInputPreamble`; s2548 left `0x800C5898–0x800C589F`
-  unchanged as an 8-byte boundary fragment. Continue at `0x800C6968`.
+  unchanged as an 8-byte boundary fragment. s2550 left `0x800CC038–0x800CC03F`
+  unchanged as an overlay-shared boundary fragment. Continue at `0x800CC3D4`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index

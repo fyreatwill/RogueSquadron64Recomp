@@ -115387,6 +115387,24 @@ callable body, renaming it to either neighbor would be speculative. Selected
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
 
+## Session 2550 (2026-08-26) — censused generated-symbol overlay boundary
+
+Ran the bounded generated-symbol census at `0x800CC038`. The complete
+menu-overlay span is eight bytes (`0x800CC038–0x800CC03F`) containing only
+`swc1 $f0,0x40($fp)` and `addiu $v0,$fp,0x20`. The active menu symbol input and
+generated overlay table retain `fake_func_800CC038`, followed by
+`loadMedalInfo` at `0x800CC040`; the same shared VRAM window contains the
+mission overlay's independently named `initActorFromSpawnTemplate` beginning
+at `0x800CC03C`, with its preceding mission function ending at `0x800CC038`.
+Exact-address, companion-source, m2c, and caller searches found no human
+mapping. The fragment has no callable boundary, so borrowing either neighbor's
+name would be speculative. Selected `H-data-boundary` / `H-no-match` and left
+it unchanged. The next unresolved menu-overlay placeholder is `0x800CC3D4`.
+Artifact: `scratch/agent/s2550_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.
+
 ## Session 2545 (2026-08-26) — censused generated-symbol trap boundary
 
 Ran the bounded generated-symbol census at `0x800AEC54`. The complete
