@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2757 (2026-08-27).
+Current maintenance marker: Session 2758 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -76,8 +76,8 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
 1. **Generated-symbol renaming sweep — next bounded fallback.** The M5
    AI-status shim is now validated as unreachable at the generated qualified
    route; preserve the shim but do not pursue its unexercised semantics.
-   Continue with `0x800EF000..0x800F1000`, preserving ambiguous/fake/address-
-   only symbols.
+   The `0x800EF000..0x800F1000` interval is synchronized; continue with
+   `0x800F3000..0x800F5000`, preserving ambiguous/fake/address-only symbols.
 
 2. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
@@ -209,6 +209,10 @@ ledger. The current late-chain checkpoints are:
   placeholders eligible for renaming. Twelve semantic symbols were already
   synchronized; `fake_func_800ED148` was preserved as ambiguous/fake. The
   next interval is `0x800EF000..0x800F1000`.
+- s2758: the generated-symbol interval `0x800EF000..0x800F1000` had no stale
+  placeholders eligible for renaming. Semantic companion entries were already
+  synchronized; `fake_func_800EFD74` and `fake_func_800EFDDC` were preserved
+  as ambiguous/fake. The next interval is `0x800F3000..0x800F5000`.
 
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.

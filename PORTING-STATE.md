@@ -119137,3 +119137,14 @@ This selects H2 for the preserved fake symbol, rules out H1 for this interval,
 and leaves H3 unevaluated as a present case. Evidence:
 `scratch/agent/s2757_generated_rename/decision-table.txt`. The next bounded
 interval is `0x800EF000..0x800F1000`.
+## Session 2758 (2026-08-27) — bounded the next generated-symbol interval
+
+Ran the required session-title check, then censused generated symbols in
+`0x800EF000..0x800F1000` with the companion rename tool and an independent
+`rg` scan over generated C, headers, and overlay tables. The tool selected no
+rename: all semantic companion entries were already synchronized, while
+`fake_func_800EFD74` and `fake_func_800EFDDC` were classified
+`ambiguous-or-fake` and preserved. The independent scan found zero stale
+placeholders in the interval; `build_redefs.py` completed with 9,801 redef
+lines and `git diff --check` passed. This rules out an eligible rename in this
+interval, not the broader sweep. Next interval: `0x800F3000..0x800F5000`.
