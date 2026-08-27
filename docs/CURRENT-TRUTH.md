@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2658 (2026-08-27).
+Current maintenance marker: Session 2659 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -181,6 +181,18 @@ Current maintenance marker: Session 2658 (2026-08-27).
   output contract reaches dispatch. It does not identify the guest producer or
   authorize writeback; the next edge is task construction/allocation before
   `osSpTaskStartGo`.
+
+- **s2659 — the observed retail and port output spans do not yet map to one
+  legitimate publication edge.** The retail oracle reached title and hangar
+  and attributed `0x166450:0x169450` primarily to guest PC `0x800078EC`, with
+  mixed writers in `0x1798B0:0x179A48`. The same-build port image arm emitted
+  live stage-2 DMA across the `0x166xxx` ring and stage-3 DMA to
+  `0x1798B0:0x179A48`, but every sampled payload was zero and the host writer
+  witness had `kind=2`, `pc=0`. Port source/consumer rows did not supply a
+  stable nonzero producer or runtime MORT descriptor class. This selects
+  `H-Unmapped`: destination overlap alone is insufficient to authorize
+  writeback or remap. Artifact:
+  `scratch/agent/s2659_m5_output_boundary/audit.md`.
 
 ## s2621 unblock audit
 
@@ -409,7 +421,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
    add output writeback. Trace the next named output contract edge: correlate
    retail writer destinations and port image DMA/PCM spans, or prove the CPU
    MORT publication boundary, before changing behavior. Do not revisit the
-   hangar `0x80094648` relation. Keep C88=`0` and
+   hangar `0x80094648` relation. The s2659 census leaves the next named edge
+   at the Factor 5 task/output ABI versus CPU-MORT publication boundary; map
+   one of those boundaries before any behavior change. Keep C88=`0` and
    `ROGUESQ_AUDIO_UCODE=0` as
    rollbacks/controls.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit

@@ -117483,3 +117483,20 @@ another task object or another output contract. The result rules out adding
 task-field writeback and moves the next M5 action to the named output/PCM or
 CPU-MORT boundary. No writeback, remap, gate, or defensive behavior changed.
 Artifacts: `scratch/agent/s2658_m5_task_output_fields_retry/`.
+## Session 2659 (2026-08-27) — censused the M5 output-boundary mapping
+
+The read-only census used the qualified s2614/s2619 artifacts. The retail
+oracle passed the whole-RDRAM control, reached title and hangar, and attributed
+the `0x166450:0x169450` span primarily to guest PC `0x800078EC`, with mixed
+writers in `0x1798B0:0x179A48`. The same-build port image arm had live DMEM,
+DMA, and completion controls: stage-2 DMA rotated through the `0x166xxx`
+ring and stage-3 DMA wrote `0x1798B0:0x179A48`. Every sampled payload was
+zero, while the host writer witness was `kind=2`, `pc=0`; no runtime MORT
+descriptor-class row or stable nonzero port producer was present. The silent
+arm remained the zero-work control.
+
+This selects `H-Unmapped`. Destination overlap alone does not identify a
+legitimate writer, payload, or ordering, so no writeback, remap, gate, or
+mitigation was added. It leaves the Factor 5 task/output ABI versus CPU-MORT
+publication boundary open. Full table:
+`scratch/agent/s2659_m5_output_boundary/audit.md`.
