@@ -120305,3 +120305,14 @@ changed zero generated references in zero files and returned the expected
 fail-closed no-rename result. This rules out a defensible data-gap rename for
 that candidate, but does not establish its semantic identity. No build or game
 run was needed. The next sweep interval is `0x8004A000..0x8004B000`.
+
+## Session 2844 (2026-08-27) — preserved synchronized generated symbols
+
+The bounded source-backed symbol sweep examined `0x8004A000..0x8004B000`.
+The selector classified `0x8004A6C0 transformWorldPosToGridSpace` and
+`0x8004AA94 mapCellGeometryToGridSpace` as already-synchronized callable
+entries. It changed zero generated references in zero files and returned the
+expected `--require-rename` fail-closed result. This rules out a source-backed
+data-gap rename in this interval but does not add semantic evidence about any
+other placeholder. No build or game run was needed. The next sweep interval
+is `0x8004B000..0x8004C000`.

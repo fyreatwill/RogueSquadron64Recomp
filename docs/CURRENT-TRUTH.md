@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2841 (2026-08-27).
+Current maintenance marker: Session 2844 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -768,3 +768,11 @@ generated references and returned its fail-closed no-rename result. This rules
 out a defensible data-gap rename for that candidate without establishing its
 semantic identity. The next sweep interval is
 `0x8004A000..0x8004B000`.
+
+Session 2844 examined `0x8004A000..0x8004B000`. The only companion
+candidates, `0x8004A6C0 transformWorldPosToGridSpace` and
+`0x8004AA94 mapCellGeometryToGridSpace`, were already synchronized callable
+names. The regeneration-safe selector changed zero generated references and
+returned its required-rename fail-closed result; no data-gap or ambiguous
+placeholder was renamed. The next sweep interval is
+`0x8004B000..0x8004C000`.
