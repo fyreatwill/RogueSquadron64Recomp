@@ -1,11 +1,11 @@
-# NEXT work unit (s2719) — bounded generated-symbol region
+# NEXT work unit (s2720) — bounded generated-symbol region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Continue the generated-symbol sweep over the next adjacent region after the
-completed audio-resampler batch. Use the companion symbol files and the live
+Continue the generated-symbol sweep over the next adjacent region after
+`0x80093000..0x80096000`. Use the companion symbol files and the live
 external generated snapshot. Rename only exact semantic matches; preserve
 address-only, fake, conflicting, or protected placeholders.
 
@@ -26,12 +26,12 @@ batch is the work unit; do not add diagnostic-only fields.
 ## Exact commands
 
 ```sh
-mkdir -p scratch/agent/s2719_generated_symbol_sweep
+mkdir -p scratch/agent/s2720_generated_symbol_sweep
 python3 tools/rename_generated_symbols.py \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x80093000 --end-address 0x80096000 --limit 32 \
-  > scratch/agent/s2719_generated_symbol_sweep/decision-table.txt
+  --start-address 0x80096000 --end-address 0x80099000 --limit 32 \
+  > scratch/agent/s2720_generated_symbol_sweep/decision-table.txt
 ```
 
 Review the decision table and generated diff. Do not build or run the game for

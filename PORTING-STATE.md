@@ -118525,3 +118525,18 @@ references and all three mappings already synchronized; the protected
 publication nor the unresolved placeholder, and no build or game run was
 warranted for a symbol-only change. Decision evidence:
 `scratch/agent/s2718_generated_symbol_sweep/verification.txt`.
+
+## Session 2719 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger because Session 2717 was an
+M4 revisit, so the generated-symbol sweep remained the highest-information
+bounded work unit. The batch covered `0x80093000..0x80096000` in the external
+generated snapshot. Its complete decision table contained 37 candidates: 35
+semantic entries were already synchronized and `0x80093E74` plus
+`0x80094348` were preserved as address-only/fake ambiguous entries. Zero
+references changed in zero generated files; the tool exited successfully
+without parser or duplicate-destination rejection. This selects
+`H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
+`H-exact-matches` there. No build or game run was warranted for a symbol-only
+batch. Decision evidence:
+`scratch/agent/s2719_generated_symbol_sweep/decision-table.txt`.
