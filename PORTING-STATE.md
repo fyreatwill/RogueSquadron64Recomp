@@ -117181,3 +117181,14 @@ independent ELF artifacts; no placeholder, stale mapping, or overlay collision
 required an action. No rename, build, or runtime change was warranted. This
 rules out an actionable rename in this bounded lead, not the broader
 symbol-sweep hypothesis. The next bounded lead is `0x800C8178`.
+## Session 2640 (2026-08-27) — audited the 800C8178 symbol lead
+
+The bounded generated-symbol census found no new rename. Mission
+`spawnNpcDestructionEffect` is already named consistently in the companion
+mission symbols, generated body/header, repository TOML, and generated
+overlay table at `0x800C8178`, with the exact `0x38C` span ending at
+`0x800C8504`. The intervening menu-overlay entries
+`buildDebrisCellBitfield` (`0x800C821C`, `0x1C8`) and
+`decodeDeltaCellCounts` (`0x800C83E4`, `0x13C`) are likewise exact and must
+remain distinct overlay identities. No runtime behavior or build changed;
+the next bounded lead is `0x800C8504`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2638 (2026-08-27).
+Current maintenance marker: Session 2640 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -257,6 +257,15 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
   placeholder or stale mapping was found, so no rename or build was warranted.
   This rules out an actionable rename in this bounded lead, not the broader
   symbol-sweep hypothesis. The next bounded lead is `0x800C8178`.
+
+- **s2640 — the `0x800C8178` sweep region was already exact.** The mission
+  companion names `spawnNpcDestructionEffect`; its generated body starts at
+  `0x800C8178` and spans exactly `0x38C` bytes to `0x800C8504`, matching the
+  repository TOML and generated overlay table. The intervening menu-overlay
+  entries `buildDebrisCellBitfield` (`0x800C821C`, `0x1C8`) and
+  `decodeDeltaCellCounts` (`0x800C83E4`, `0x13C`) are also exact, distinct
+  identities. This is an overlay collision-aware resolved region, not an
+  actionable placeholder rename; the next bounded lead is `0x800C8504`.
 
 ## Current state
 
