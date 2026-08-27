@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2744 (2026-08-27).
+Current maintenance marker: Session 2745 (2026-08-27).
+
+Session 2745 completed the bounded static audit of `serviceVoicePoolFrame`
+(`0x8009B5A8`). The routine is reached through the four-entry VI callback
+dispatcher, receives and returns a zero-token service queue message, and
+iterates four `0x1228`-byte voice records. Its named work is streaming-state
+servicing, state-to-playing transition, streamed-voice startup, failed-start
+cleanup, and status-03 stream-resource reaping. It does not read
+`voice+0x140`, synth/MORT output, the AI span `0x801496B0:0x8014C6B0`, or call
+an AI/PCM publication routine. This selects `H-service-edge-absent` for the
+bounded surface. Static single-source evidence only; callback-table contents,
+runtime reachability, retail writer identity, and payload legitimacy remain
+unevaluable. No runtime watch, writeback, remap, force-clear, or wait change is
+authorized. Evidence: `scratch/agent/s2745_service_voice_pool_audit.md`.
 
 Session 2744 completed the bounded static audit of `musyxBuildVoiceCommandList`
 (`0x80091034`), called from `musyxSynthFrame`. Its input is a selected voice
@@ -713,7 +726,11 @@ parked until a future regeneration exposes a new exact companion match.
    publication priority. s2721 completed Step 6 validation: both drain arms
    reached hangar with clean task/SP progress, but both retained zero PCM
    payload, so the next M5 unit requires a genuinely new named publication
-   surface; do not repeat the drain A/B.
+   surface; do not repeat the drain A/B. s2745 audited `serviceVoicePoolFrame`
+   and found only callback cadence, per-slot streaming state, startup, and
+   reaping; it selected `H-service-edge-absent`. Continue with the fresh
+   `serviceStreamingVoice` boundary; do not repeat the service worker or add
+   a runtime watch without a legitimate destination and ordering edge.
 3. **Generated-symbol renaming sweep.** s2718 renamed the three exact
    resampling helpers at `0x800927B0..0x80092CF0`; preserve the unresolved
    `0x8000040C` placeholder. Continue with one adjacent bounded region only

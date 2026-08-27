@@ -118934,3 +118934,19 @@ at this surface. Evidence is static single-source generated snapshot plus
 companion symbols; no runtime instrumentation, writeback, remap, or
 mitigation was authorized. Full table:
 `scratch/agent/s2744_mort_command_list_audit.md`.
+
+## Session 2745 (2026-08-27) — audited the voice-pool service boundary
+
+The required M5 bounded static audit selected `serviceVoicePoolFrame`
+(`0x8009B5A8`). The routine is reached through the four-entry VI callback
+dispatcher, receives and returns a zero-token service queue message, and
+iterates four `0x1228`-byte voice records. Its named work is streaming-state
+servicing, state-to-playing transition, streamed-voice startup, failed-start
+cleanup, and status-03 stream-resource reaping. It does not read
+`voice+0x140`, synth/MORT output, the AI span `0x801496B0:0x8014C6B0`, or call
+an AI/PCM publication routine. This selects `H-service-edge-absent` for the
+bounded surface and rules out a service-worker-mediated MORT-to-AI edge there.
+Callback-table contents, runtime reachability, retail writer identity, and
+payload legitimacy remain unevaluable; this is static single-source evidence.
+No runtime instrumentation, writeback, remap, force-clear, or wait change was
+authorized. Full table: `scratch/agent/s2745_service_voice_pool_audit.md`.
