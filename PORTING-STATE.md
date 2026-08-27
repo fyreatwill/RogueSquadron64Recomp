@@ -116692,3 +116692,33 @@ in the Factor-5 image DMA spans; the intervening nonzero PCM writer remains
 unidentified and must be named before any mitigation.
 
 Artifacts: `scratch/agent/s2612_m5_output_edge/`.
+
+## Session 2613 (2026-08-27) — qualified image payload against phase PCM handoff
+
+Ran the retail oracle first with Rice video, the validated Start schedule, and
+the whole-RDRAM positive control. It produced 10,000 write callbacks and
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The host-return
+and C88 checks passed and the Debug target built successfully.
+
+Ran one compiled-default image arm from `build/` with `LLE_FORCE=1`,
+`SPIN_YIELD=1`, `LLE_UNGATED=1`, `LLE_SOLO=1`, phase-gated M5 contract/output
+instrumentation, and in-process AUTOPILOT. It reached title at 11.6s and
+hangar at 19.8s before SIGKILL. There were zero crash, abort, missing-function,
+or assertion markers.
+
+The phase-keyed table was: title image-stage 1,783 rows / 881 valid
+destinations / 0 nonzero image or DMA payload rows; hangar 1,734 / 866 / 0.
+Title PCM source and consumer each had 19 nonzero rows out of 43; hangar had
+0/43 for both. Joins closed for 458/1292 title rows and 417/990 hangar rows.
+The positive host writer control fired, but its observed `pcm-writer` rows
+were `kind=2`, `pc=0`, and zero-valued; no `m5-guest-writer` nonzero row fired.
+
+This strengthens the unresolved PCM consumer/publication-order gap and does
+not prove the zero image payload is legitimate. It rules out a simple
+currently-observed nonzero guest writer at the sampled PCM spans, but does not
+authorize a writeback or remap. The next discriminator is a retail narrow-span
+writer watch joined to port task/event ordering. The oracle is independent
+evidence for route reach and write activity; the payload/join result is
+single-source port evidence.
+
+Artifacts: `scratch/agent/s2613_m5_output_edge/`.

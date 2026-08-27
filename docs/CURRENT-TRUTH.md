@@ -4,7 +4,23 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2612 (2026-08-27).
+Current maintenance marker: Session 2613 (2026-08-27).
+
+- **s2613 — the image/DMA source remains zero while the PCM boundary is
+  phase-dependent, and the host writer records only zero writes.** The retail
+  oracle again fired 10,000 whole-RDRAM callbacks and reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The single compiled-
+  default image run reached title at 11.6s and hangar at 19.8s, with zero
+  crash/abort/missing-function markers. Image-stage rows were 1,783 title and
+  1,734 hangar; valid destinations were 881/866, but image/DMA source payloads
+  were zero throughout. Title PCM source and consumer controls each had 19/43
+  nonzero samples; hangar had 0/43. Joins closed for 458/1292 title rows and
+  417/990 hangar rows. The host `pcm-writer` witness observed only
+  `kind=2, pc=0` zero-valued writes, and no guest nonzero writer row fired.
+  This strengthens `H-PCMConsumerJoinGap` / an unresolved publication-order
+  boundary, but does not prove that zero image payload is legitimate or name
+  a guest writer; no writeback change is authorized. Artifacts:
+  `scratch/agent/s2613_m5_output_edge/`.
 
 - **s2612 — image output destinations overlap the PCM boundary, but the
   image payload itself is zero and the task join is incomplete.** The retail
@@ -677,13 +693,14 @@ session entry in `PORTING-STATE.md`.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 image output/PCM contract edge.** s2612 found that image-stage
-   destinations overlap the PCM boundary, but image DMA payloads are zero and
-   source/consumer joins are incomplete (title 479/1349 complete; hangar
-   200/478). The next unit must name the exact task/output-to-consumer handoff
-   that is missing, including its writer and payload legitimacy, before any
-   writeback change. Do not treat overlap, `canary_ok=0`, or a zero payload
-   alone as the explanation. Keep `ROGUESQ_AUDIO_UCODE=0` as rollback/control.
+1. **M5 image output/PCM contract edge.** s2613 confirms zero image/DMA
+   sources, phase-dependent PCM, and incomplete joins (title 458/1292
+   complete; hangar 417/990); the host writer witness records only zero
+   writes and no guest nonzero writer was observed. The next unit must use a
+   retail narrow-span writer watch plus the port task/event ordering to name
+   the missing publication edge or prove the image span is scratch. Do not
+   treat overlap, `canary_ok=0`, or a zero payload alone as the explanation.
+   Keep `ROGUESQ_AUDIO_UCODE=0` as rollback/control.
 2. **M5 hangar PCM writer/value boundary.** s2608 made the guest C88
    store the default. Title PCM is briefly fully nonzero; hangar PCM
    stays `nz=0` even though the gate is `0x01` and `startSongSequence`
