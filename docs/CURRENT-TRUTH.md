@@ -290,6 +290,17 @@ Current maintenance marker: Session 2543 (2026-08-26).
   synchronized into the active symbol input and generated outputs. Artifact:
   `scratch/agent/s2543_symbol_rename/audit.md`.
 
+- **s2544 — the next generated-symbol region is an overlay/boundary fragment,
+  not a rename candidate.** `0x800AE3E4–0x800AE3EF` is a complete 12-byte
+  generated/project span containing only three floating-point instructions
+  (`lwc1`, `lwc1`, `mul.s`) with no callable prologue or return. The mission
+  companion input retains `fake_func_800AE3E4`, `initPlayerCraftTrailBuffers`
+  follows at `0x800AE3F0`, and the menu overlay independently registers
+  `tickEasedCameraKeyframeBlend` at the overlapping `0x800AE3EC`. Exact
+  source/m2c/caller searches found no human mapping. This selects
+  `H-data-boundary` / `H-no-match`; no generated code changed. Artifact:
+  `scratch/agent/s2544_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -338,8 +349,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   callable body. It remains unchanged as a data/boundary artifact candidate.
   s2542 left `0x800AAADC` unchanged as a four-byte store/boundary fragment
   before `playerSnowSpeederInit`; s2543 renamed the complete two-store span
-  at `0x800AD378` to `storeTrackedObjectAuxiliaryFields`. Continue at the
-  next unresolved mission-overlay placeholder.
+  at `0x800AD378` to `storeTrackedObjectAuxiliaryFields`; s2544 left
+  `0x800AE3E4–0x800AE3EF` unchanged as an overlay/boundary fragment. Continue
+  at `0x800AEC54`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index

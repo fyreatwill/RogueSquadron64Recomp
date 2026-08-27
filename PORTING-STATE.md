@@ -115422,3 +115422,20 @@ higher-level game API name. Artifact:
 
 ORIGIN: semantic rename only; the two stores are legitimate generated code,
 and no mitigation, skip, guard, or runtime behavior changed.
+
+## Session 2544 (2026-08-26) — censused generated-symbol overlay boundary
+
+Ran the bounded generated-symbol census at `0x800AE3E4`. The complete
+generated/project span is 12 bytes (`0x800AE3E4–0x800AE3EF`) containing only
+`lwc1 f0,0x58(fp)`, `lwc1 f2,0xC4(fp)`, and `mul.s f0,f0,f2`; it has no
+prologue, return, jump, or complete callable body. The mission companion
+symbol input, generated declaration, and overlay table retain the fake name;
+`initPlayerCraftTrailBuffers` follows at `0x800AE3F0`. The menu overlay also
+independently registers `tickEasedCameraKeyframeBlend` at overlapping
+`0x800AE3EC`, confirming that address-only naming across overlay registrations
+would be unsafe. Exact source, m2c, and caller searches found no defensible
+human mapping. Selected `H-data-boundary` / `H-no-match` and left it unchanged.
+Artifact: `scratch/agent/s2544_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.
