@@ -119224,3 +119224,18 @@ because the census made no generated-tree change. This rules out an eligible
 rename in this interval, not the broader sweep. Evidence:
 `scratch/agent/s2764_generated_rename/census.txt`. Next interval:
 `0x80101000..0x80103000`.
+
+## Session 2765 (2026-08-27) — bounded the next generated-symbol interval
+
+Ran the required session-title check and the regeneration-safe companion
+census for `0x80101000..0x80103000`. It found only already-synchronized
+semantic candidates plus `fake_func_80101CCC` and `fake_func_80102A98`, both
+classified as ambiguous/fake and preserved. The `--require-rename` selection
+changed zero generated references and returned its expected no-rename status.
+An independent generated-tree scan confirmed those two were the only
+placeholders in the interval, and `git diff --check` passed. No build was
+needed because the census made no generated-tree change. This rules out an
+eligible rename in this interval, not the broader sweep. Evidence:
+`scratch/agent/s2765_generated_rename/census.txt` and
+`scratch/agent/s2765_generated_rename/independent-placeholder-scan.txt`.
+Next interval: `0x80103000..0x80105000`.

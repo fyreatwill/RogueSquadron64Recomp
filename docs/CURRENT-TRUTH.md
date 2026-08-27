@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2764 (2026-08-27).
+Current maintenance marker: Session 2765 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -78,8 +78,9 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    route; preserve the shim but do not pursue its unexercised semantics.
    The `0x800F9000..0x800FB000` interval is synchronized. The widened
    `0x800FB000..0x800FF000` sweep renamed the two known invalid data gaps as
-   `data_gap_800FBE14` and `data_gap_800FEF04`; continue with
-   `0x80101000..0x80103000`, preserving ambiguous/fake/address-only symbols.
+   `data_gap_800FBE14` and `data_gap_800FEF04`. The
+   `0x80101000..0x80103000` interval is now synchronized; continue with
+   `0x80103000..0x80105000`, preserving ambiguous/fake/address-only symbols.
 
 2. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
@@ -238,10 +239,16 @@ ledger. The current late-chain checkpoints are:
   `data_gap_800FBE14` and `data_gap_800FEF04` across declarations, bodies, and
   overlay registration; no function body or runtime behavior changed. The next
   interval is `0x800FF000..0x80101000`.
-- s2764: the generated-symbol interval `0x800FF000..0x80101000` contained
-  eight companion candidates, all already synchronized. The independent
-  generated-tree scan found zero placeholder references, so no rename or build
-  was needed. The next interval is `0x80101000..0x80103000`.
-
+- s2764: the generated-symbol interval `0x800FF000..0x80101000` had eight
+  companion candidates, all already synchronized. An independent generated-tree
+  scan found no placeholder in the interval, so no generated-tree change or
+  build was needed. The next interval is `0x80101000..0x80103000`.
+- s2765: the generated-symbol interval `0x80101000..0x80103000` had only
+  already-synchronized semantic candidates plus `fake_func_80101CCC` and
+  `fake_func_80102A98`, both preserved as ambiguous/fake. The regeneration-safe
+  selection changed zero references and returned its expected no-rename status;
+  an independent scan confirmed those were the only placeholders in the
+  interval, and `git diff --check` passed. The next interval is
+  `0x80103000..0x80105000`.
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.
