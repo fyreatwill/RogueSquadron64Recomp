@@ -54,12 +54,20 @@ Current maintenance marker: Session 2515 (2026-08-26).
   resource pressure as sufficient. The later crash writer and exact payload
   writer remain open. Artifact:
   `scratch/agent/s2511_m5_staggered_image_concurrency/audit.md`.
+- **s2516 — no Step 3 edge was proven in the title-phase A/B.** The retail
+  whole-RDRAM positive control reached 10,000 callbacks. Stub and image arms
+  both reached `1024 @ 0x790400`; the image had 1,597-byte DMEM changes,
+  `break_pc=0x1328`, and generated DMA, but all observed stage/PCM payloads
+  were zero and no output consumer join or legitimate writer was selected.
+  This selects no-edge at this route scope; route-only variation remains
+  possible against s2513. No behavior change is authorized. Artifact:
+  `scratch/agent/s2516_m5_contract_edge/audit.md`.
 
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 generated image downstream join — active.** The direct load boundary,
+1. **M5 generated image downstream join — active, edge unproven.** The direct load boundary,
    SP completion/consumption, image DMEM work, generated DMA, and PCM
    consumer are live under qualified controls. Runtime joins show image
    stage-2 destinations equal generated AI-table entries, but the legitimate
@@ -68,7 +76,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    `gspTask`, infer identity from timing or hashes, or change task/output
    fields without a named writer and independent retail evidence. Next work
    unit: choose one proven M5 Step 3 contract edge and validate old/new arms
-   together with phase-scoped writer, task, SP, service, and PCM controls.
+   together with phase-scoped writer, task, SP, service, and PCM controls. The
+  s2516 title-phase A/B found no new legitimate edge; do not add a
+  writeback/remap or repeat the same unresolved observer. Next work unit:
+  obtain a genuinely new independent retail contract boundary before any
+  Step 3 behavior change.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.

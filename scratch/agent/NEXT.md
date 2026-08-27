@@ -1,14 +1,15 @@
-# NEXT work unit (s2516) — M5 Step 3: implement one proven image contract edge
+# NEXT work unit (s2517) — M5: obtain a new independent contract boundary
 
 HYPOTHESIS-ID: m5-contract-edge
 
 ## Single work unit
 
-Choose one proven missing image task/output contract edge from Step 3 of
-`docs/M5-AUDIO-PLAN.md`, after naming the guest writer, destination span,
-legitimacy, and independent retail/port controls. Build old/new arms together
-and run one phase-gated validation capture. If no edge is proven, document that
-finding and leave the image arm opt-in; do not add more stage/DMA join fields.
+Do not change runtime behavior or add another stage/DMA join field. The s2516
+title-phase A/B proved image execution but no legitimate missing edge. Identify
+one genuinely new retail-visible contract boundary (writer PC plus destination
+span and ordering) that can be paired with an existing port control; if none
+is available, stop M5 Step 3 rather than repeating the unresolved observer.
+The image arm remains opt-in.
 
 ## Competing hypotheses and discriminator
 
@@ -34,4 +35,5 @@ rg -n -C 4 "Step 3|Implement exactly one missing" docs/M5-AUDIO-PLAN.md
 ```
 
 Any mitigation-shaped change requires an `ORIGIN:` line naming a legitimate
-writer. The s2514 observer-contract result is not evidence for a new writer.
+writer. The s2514 observer-contract and s2516 title-phase no-edge results are
+not evidence for a new writer.

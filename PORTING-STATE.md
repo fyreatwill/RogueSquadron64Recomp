@@ -114831,3 +114831,19 @@ image contract edge with old/new arms.
 
 This rules out no new runtime hypothesis; it closes documentation maintenance
 only. The 772-line net reduction is the required maintenance advancement.
+## Session 2516 (2026-08-26) — M5 title-phase contract-edge A/B
+
+Ran the independent retail oracle first with its whole-RDRAM positive control;
+the watch reached 10,000 callbacks in 8 emulated seconds (`oracle_rc=0`, 479
+VI). Then ran stub/image arms concurrently from one port binary using the
+qualified LLE route, the established phase-gated input schedule, and all M5
+diagnostics. Both reached title phase `1024 @ 0x790400`. The stub produced
+1,423+ task handoffs with zero DMEM/DMA and zero PCM payload. The image
+produced 919+ task handoffs, 1,597 changed DMEM bytes, `break_pc=0x1328`, and
+2–3 generated DMA events, but every observed stage and PCM payload was zero;
+no output consumer join or legitimate writer was selected. This rules out a
+proven Step 3 edge at this route scope and leaves route-only variation against
+s2513 possible. It rules out neither the image implementation nor the
+observer limitation globally. No code, default, guard, writeback, or output
+mapping changed; the image remains opt-in. Artifact:
+`scratch/agent/s2516_m5_contract_edge/audit.md`.
