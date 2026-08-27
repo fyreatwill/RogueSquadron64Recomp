@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2596 (2026-08-26).
+Current maintenance marker: Session 2597 (2026-08-26).
+
+- **s2597 — the next generated-symbol span is a duplicate-symbol boundary
+  fragment.** `0x800CEF1C` is the single instruction `sw $s1, 0x44($sp)`
+  immediately before the complete `advanceAtStEffectPhaseSound` body at
+  `0x800CEF20`. The companion retains `fake_func_800CEF1C` and documents the
+  following body as a deleted duplicate-symbol entry. Exact-address source,
+  m2c, caller, and alternate-name searches found no defensible candidate; the
+  rename generator emitted no mapping. The placeholder remains unchanged.
+  Artifact: `scratch/agent/s2597_symbol_census_audit.md`.
 
 - **s2596 — the final menu-overlay placeholder is a boundary-only gap.**
   `0x800CC3D4` follows the complete generated `calculateShotAccuracy` body

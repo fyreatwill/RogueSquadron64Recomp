@@ -116317,3 +116317,14 @@ and emitted no mapping for the target. This selects `H-BoundaryOnly`, leaves
 the placeholder unchanged, and rules out both a defensible companion mapping
 and a rename-tool mismatch. Artifact:
 `scratch/agent/s2596_symbol_census_audit.md`.
+## Session 2597 (2026-08-26) — classified the next generated-symbol boundary
+
+Ran the bounded generated-symbol census for the first unresolved placeholder
+after `0x800CC3D4`. `0x800CEF1C` in `RecompiledFuncs/funcs_37.c` is a complete
+one-instruction `sw $s1, 0x44($sp)` fragment immediately before the complete
+`advanceAtStEffectPhaseSound` body at `0x800CEF20`. The companion symbol file
+retains `fake_func_800CEF1C` and documents `func_800CEF20` as a deleted
+duplicate-symbol entry. Exact-address source, m2c, caller, and alternate-name
+searches found no candidate, and `tools/rename/build_redefs.py` emitted no
+mapping for the placeholder. This selects `H-BoundaryOnly`; no generated code
+or runtime behavior changed. See `scratch/agent/s2597_symbol_census_audit.md`.
