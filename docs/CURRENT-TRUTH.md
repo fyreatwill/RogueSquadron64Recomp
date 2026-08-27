@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2575 (2026-08-26).
+Current maintenance marker: Session 2576 (2026-08-26).
+
+- **s2576 — the next generated-symbol region is an objective boundary with no
+  defensible mapping.** The complete `0x80109428–0x8010942F` entry is only
+  `c.lt.s $f0,$f2` plus its `nop` delay slot, immediately before the complete
+  `lvk_checkComplexObjectives` function. The companion explicitly retains
+  `fake_func_80109428` and identifies that following function; exact-address,
+  source, m2c, caller, and rename-tool searches found no independent human
+  candidate. This is a static, single-source boundary classification, so the
+  placeholder remains unchanged. Artifact:
+  `scratch/agent/s2576_symbol_census/audit.md`.
 
 ## Current state
 
@@ -15,7 +25,7 @@ Current maintenance marker: Session 2575 (2026-08-26).
   retains `fake_func_80108B8C`; exact-address, source, m2c, caller, and rename-
   tool searches found no human candidate. This is a static, single-source
   boundary classification, so the placeholder remains unchanged. The next
-  unresolved placeholder is `0x80109428`. Artifact:
+  unresolved placeholder is `0x80109618`. Artifact:
   `scratch/agent/s2575_symbol_census/audit.md`.
 
 - **s2574 — landed six regeneration-safe generated-symbol fragment renames.**
@@ -696,7 +706,7 @@ This is one monotonic sequence; #1 is the next campaign priority.
   `0x80107EA4–0x80107EAF` unchanged as a 12-byte sign-extension/float-transfer
   fragment and advanced to `0x80108B8C`; s2575 left `0x80108B8C–0x80108B8F`
   unchanged as a one-instruction object-tracking boundary and advanced to
-  `0x80109428`. s2557 left
+  `0x80109428`. s2576 left
   `0x800E447C–0x800E447F` unchanged as a one-instruction boundary fragment
   and advanced to `0x800E71C8`; s2558 revalidated that span as an unchanged
   orphan two-instruction boundary fragment and pivots the next unit to the

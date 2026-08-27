@@ -1,11 +1,11 @@
-# NEXT work unit (s2576) — generated-symbol bounded census
+# NEXT work unit (s2577) — generated-symbol bounded census
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next unresolved generated/decomp symbol span after the s2575 census,
-`0x80109428`.
+Audit the next unresolved generated/decomp symbol span after the s2576 census,
+`0x80109618`.
 Inspect its complete generated span, immediate named neighbors, companion
 symbol entry, and exact source/m2c/caller matches. Rename only if the companion
 decomp supplies an exact human mapping. If unresolved, advance to the next
@@ -24,7 +24,7 @@ searches, and semantic candidate. A complete supported candidate selects a
 regeneration-safe rename; an explicit companion placeholder plus no exact
 candidate selects unchanged and advances to the next placeholder.
 
-The s2575 selected `H-data-or-boundary` for `0x80108B8C–0x80108B8F`; continue
+The s2576 selected `H-data-or-boundary` for `0x80109428–0x8010942F`; continue
 this same sweep slug rather than rerun the completed census.
 
 ## Pre-build hypothesis record
@@ -46,5 +46,5 @@ placeholder plus no exact candidate selects unchanged and advances.
 ```sh
 wc -c < docs/CURRENT-TRUTH.md
 grep -n '^## Session ' PORTING-STATE.md | tail -15
-rg -n 'fake_func_80109428|0x80109428' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms
+rg -n 'fake_func_80109618|0x80109618' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms
 ```

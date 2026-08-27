@@ -115979,3 +115979,19 @@ build or runtime experiment was run because the work unit was explicitly
 static-only. The next unresolved placeholder is `0x80109428`.
 
 Artifact: `scratch/agent/s2575_symbol_census/audit.md`.
+
+## Session 2576 (2026-08-26) — censused generated-symbol objective boundary
+
+Ran the bounded generated-symbol census for `0x80109428`. The complete
+8-byte ROM entry contains only `c.lt.s $f0,$f2` and its `nop` delay slot,
+immediately before the complete `lvk_checkComplexObjectives` body. The
+companion symbol file explicitly retains `fake_func_80109428` and identifies
+the following real function; exact-address, source, m2c, caller, and
+rename-tool searches found no independent human candidate. Selected
+`H-data-or-boundary` and left the placeholder unchanged. This is a static,
+single-source result: it rules out an exact rename at this boundary but does
+not prove reachability or explain the fragment's origin. No build or runtime
+experiment was run because the work unit was explicitly static-only. The next
+unresolved placeholder is `0x80109618`.
+
+Artifact: `scratch/agent/s2576_symbol_census/audit.md`.
