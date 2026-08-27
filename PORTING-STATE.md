@@ -118119,3 +118119,19 @@ unresolved indirect callback is the next bounded source-read target. No build
 or run was performed because the table did not identify a concrete runtime
 discriminator. No runtime watch, writeback, remap, or mitigation was added.
 Full table: `scratch/agent/s2695_mort_postmix_boundary/audit.md`.
+
+## Session 2696 (2026-08-27) — resolved the M5 post-mix callback target
+
+Ran the prescribed source-only callback audit. `musyxSynthFrame`'s indirect
+load at `0x80091670` reads `0x801499DC`; `initN64RspMixer:0x800918F0` writes
+`0x8000569C` there, resolving the target as `submitDmaRequestBatch`, not
+`findAndZeroTableSlotMatching`. The callback copies DMA request descriptors
+into the PI ring at `0x801112B0`, updates ring state, and signals
+`sendServiceMessage`. It does not read the per-frame synth output block, touch
+the AI source allocation, or call `osAiSetNextBuffer`.
+
+This rejects `H-callback-publishes` for the MORT-to-PCM edge and selects
+`H-callback-unrelated` there; generic DMA-service consumers remain unresolved.
+No build or run was performed because the static table did not identify a
+concrete runtime discriminator. No watch, writeback, remap, or mitigation was
+added. Detailed table: `scratch/agent/s2696_mort_callback_boundary/audit.md`.

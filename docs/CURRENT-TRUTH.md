@@ -327,3 +327,16 @@ image ring/stage destinations not a publication edge; named retail utility
 writers not a MORT edge; and the live MORT filter output is shared temporary
 stack storage. The next legitimate discriminator is the sample-stream cache
 boundary; the named ring setup path is metadata-only.
+
+s2696 resolved and audited the indirect callback. `musyxSynthFrame` loads
+`0x801499DC` at `0x80091670`; `initN64RspMixer:0x800918F0` initializes that
+slot to `submitDmaRequestBatch` (`0x8000569C`). The callback copies request
+descriptor fields into the PI DMA ring at `0x801112B0`, updates head/tail
+state, and signals `sendServiceMessage`; it does not read the synth `$a3`
+output block, touch the AI worker's `0x801496B0` allocation, or call
+`osAiSetNextBuffer`. `findAndZeroTableSlotMatching` is a separate direct call
+at `0x8009BD28`. This rejects `H-callback-publishes` for the MORT-to-PCM edge
+and selects `H-callback-unrelated` for that edge (static source evidence);
+generic DMA service remains the next unresolved consumer. No runtime watch,
+writeback, remap, or mitigation is authorized. Detailed table:
+`scratch/agent/s2696_mort_callback_boundary/audit.md`.
