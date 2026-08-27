@@ -114561,3 +114561,22 @@ generated `RecompiledFuncs` tree is not present in this workspace, so the
 `kind=1` CPU-store census remains open. No build, behavior change, remap,
 guard, or mitigation was made. Artifact:
 `scratch/agent/s2499_m5_kind2_writer_audit/audit.md`.
+
+## Session 2500 (2026-08-26) — audited active generated kind-1 PCM callers
+
+The prescribed static census found the sibling active generated tree at
+`../N64Recomp/RecompiledFuncs` with 51 `funcs_*.c` files. It contains zero
+`rs64_m5_pcm_writer_store` callsites and zero candidate-range literals for
+`0x167000..0x169B00`. Its only two `osAiSetNextBuffer_recomp` consumers are in
+`funcs_23.c` at guest PCs `0x8008EE00` and `0x8008EE84`; neither invokes the
+kind=1 wrapper. The only active `0x801096B4` hit is an s2190 parity probe in
+`funcs_49.c`, not a PCM-ring writer. The fixup source confirms that s2308 is
+opt-in under `RS64_S2308_M5_PCM_WRITER=1`; historical backup helper copies are
+not active runtime callers.
+
+This selects `H-kind1-absent` at the active generated boundary and rules out
+using stale helper-definition occurrences as a caller table. It does not rule
+out a direct or indirect writer of the AI ring rooted at `0x801096B0`, which is
+the next boundary. No build, behavior change, remap, guard, or mitigation was
+made. Artifact:
+`scratch/agent/s2500_m5_kind1_writer_audit/audit.md`.

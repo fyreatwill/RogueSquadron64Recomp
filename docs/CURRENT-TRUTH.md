@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2498 (2026-08-26).
+Current maintenance marker: Session 2500 (2026-08-26).
 
 ## Current state
 
@@ -29,6 +29,16 @@ Current maintenance marker: Session 2498 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA, but no legitimate
   downstream slot/voice/output contract has been established.
+
+- **s2500 — no active generated kind=1 PCM-store caller exists.** The sibling
+  generated tree has 51 `funcs_*.c` files and zero
+  `rs64_m5_pcm_writer_store` callsites or candidate-range literals. Its only
+  two AI consumers are `osAiSetNextBuffer_recomp` at `0x8008EE00` and
+  `0x8008EE84`; the s2308 wrapper insertion is an opt-in fixup pass and is not
+  present in the active output. Historical backup helper copies are not
+  runtime callers. This selects `H-kind1-absent` at the active generated
+  boundary and leaves the direct writer of the AI ring rooted at `0x801096B0`
+  open. Artifact: `scratch/agent/s2500_m5_kind1_writer_audit/audit.md`.
 
 - **s2497 — the image-to-AI-buffer handoff is absent at the static boundary.**
   The exhaustive census found two generated `osAiSetNextBuffer_recomp`
@@ -647,9 +657,9 @@ Closed investigations are not active work items. This is one monotonic sequence;
    `H-no-consumer-contract` because neither the port candidate writer nor the
    retail target writer joined the consumer under passed controls. s2499
    identifies `kind=2` as host-side image-DMA bookkeeping, not a game-side PCM
-   writer. The next bounded work must resolve the external generated `kind=1`
-   store callsites and the writer of the AI ring rooted at `0x801096B0`. Do not
-   map through `gspTask`, infer an image identity from hashes or timing, or
+   writer. s2500 closes the active generated `kind=1` wrapper census with zero
+   callers; the next bounded work must resolve the writer of the AI ring rooted
+   at `0x801096B0`. Do not map through `gspTask`, infer an image identity from hashes or timing, or
    change task/output fields without a named writer and independent retail
    evidence.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
