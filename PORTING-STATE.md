@@ -117393,3 +117393,19 @@ edge, but cannot distinguish null from valid runtime field values. The next
 work unit is a phase-gated dispatch-time capture joined to DMA destination and
 payload rows. Single-source static result; no writer, payload legitimacy, or
 writeback authorization established.
+
+## Session 2655 (2026-08-27) — captured dispatch-time OSTask output metadata
+
+Ran the existing same-build M5 four-arm dispatch/DMA recipe with phase-gated
+title and hangar controls. All four arms passed both controls. The silent arms
+had no image-stage rows; image arms produced 224/159 phase-filtered image-stage
+rows, 2,127/4,562 DMA ranges, and 2,098/2,527 render rows. Across every
+qualified joined task in every arm, `audtask-abi` reported
+`output_buff=0x00000000` and `output_buff_size=0x00000000`; no output-buffer/DMA
+overlap was found. PCM source and consumer controls fired; sequence payloads
+were all zero in `image_c0`, while `image_c1` had 21 nonzero sequence rows.
+This selects `H-OutputMetadataWriterAbsent`: the image route is live, but no
+valid output metadata reaches dispatch. It rules out a valid dispatch output
+buffer as the immediate post-DMA edge, but does not identify the guest producer
+or authorize writeback. The next unit is a producer/allocation timeline before
+`osSpTaskStartGo`.

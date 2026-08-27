@@ -117,6 +117,20 @@ Current maintenance marker: Session 2654 (2026-08-27).
   single-source static result; it does not identify the writer or authorize
   writeback.
 
+- **s2655 — dispatch-time output metadata is absent on every qualified task.**
+  The same-build four-arm capture passed title and hangar controls in all arms.
+  Image arms produced 224/159 phase-filtered image-stage rows, 2,127/4,562
+  DMA ranges, and 2,098/2,527 render rows; silent arms produced no image-stage
+  rows. Yet every joined `audtask-abi` row in all arms had
+  `output_buff=0x00000000` and `output_buff_size=0x00000000`, yielding zero
+  output-buffer/DMA overlaps. PCM source and consumer rows were present as
+  controls but all sequence payload nonzero counts were zero in `image_c0`;
+  `image_c1` had 21 nonzero sequence rows. This selects
+  `H-OutputMetadataWriterAbsent`: the image task route is live, but no valid
+  output contract reaches dispatch. It does not identify the guest producer or
+  authorize writeback; the next edge is task construction/allocation before
+  `osSpTaskStartGo`.
+
 ## s2621 unblock audit
 
 The local oracle route passed the whole-RDRAM control with 9,107,853 writes,
@@ -338,9 +352,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
    legitimate payload polarity, and ordering relative to image completion and
-   PCM consumption. The static s2654 audit found no generated OSTask
-   construction site, so capture `output_buff`/`output_buff_size` at dispatch
-   and join them to the actual DMA destination/payload. Do not repeat the
+   PCM consumption. The s2655 dispatch capture found both output fields zero
+   on every qualified task, so trace the guest task producer/allocator and the
+   exact fields it supplies before `osSpTaskStartGo`. Do not repeat the
    title-zero census or revisit the hangar
    `0x80094648` relation. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as
    rollbacks/controls.
