@@ -117952,3 +117952,22 @@ synchronized. Python compilation and `git diff --check` passed, and no
 generated files changed. This selects `H-ambiguous` for the current snapshot,
 rules out `H-tool-regression`, and closes this sweep lead pending regeneration;
 no build, watch, or soak was run.
+
+## Session 2686 (2026-08-27) — audited the M5 update and renderer boundary
+
+Read the compact current truth, next-work file, and soak tail before choosing
+the mandated static M5 audit. The normal `updateVoiceChannelParams` path calls
+`filterVoiceSampleBlock` and `applyVoiceDelayFilter` with stack-built arrays;
+the large path has the same contract in both four-iteration loops. The filter
+writes those temporary arrays, the delay helper writes voice object `+0x166`,
+and neither exposes a caller-owned PCM destination. The normal path then calls
+`renderVoiceAudioBlock` with the same voice object.
+
+The renderer reads eight words from `voice+0x140`, dispatches only its internal
+sample-mix/companding helpers, and writes the eight mixed words back to
+`voice+0x140`. No audited path reaches an AI call, PCM-source span, queue
+signal, service boundary, or ordered publication copy. The complete
+caller/destination table therefore selects `H-unresolved-address`, rules out
+`H-publish-caller` and `H-service-boundary` at this boundary, and leaves the
+static result independent of the existing retail runtime evidence. No build,
+watch, writeback, remap, or mitigation was run.

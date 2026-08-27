@@ -102,6 +102,21 @@ snapshot, then the fixed version completed successfully. This closes the
 current sweep lead without selecting a rename; future regeneration may expose
 new exact matches.
 
+s2686 completed the prescribed static M5 caller/consumer audit. The normal
+`updateVoiceChannelParams` path and both loops in the large path pass
+stack-built filter and delay arrays to `filterVoiceSampleBlock` and
+`applyVoiceDelayFilter`; those helpers write only the temporary arrays and the
+voice object's `+0x166` delay field. The normal path then calls
+`renderVoiceAudioBlock` with the same voice object. The renderer reads eight
+words from `voice+0x140`, combines them through its internal mix/companding
+helpers, and writes eight words back to `voice+0x140`; its indirect calls are
+only the eight internal mix-function dispatches. No caller-owned destination,
+PCM-source span, AI call, queue signal, or ordered publication copy appears in
+this path. This selects `H-unresolved-address` for the audited boundary and
+rules out `H-publish-caller` and `H-service-boundary` at these sites (static
+source evidence only); no runtime watch, writeback, remap, or mitigation is
+authorized.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -111,11 +126,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.
    s2683 shows the named DMA callback is stream-to-slot, not renderer-to-AI.
-   Audit the remaining `updateVoiceChannelParams` indirect-call setup and
-   the `voice object+0x140` consumer path for a caller-owned destination or
-   service boundary, using companion address/name evidence; do not repeat the
-   filter, persistent-object, task-field, ring, shared-stack, or DMA callback
-   census.
+   s2686 found no publication edge in the update/renderer path. Audit the
+   `initN64RspMixer` callback table at `0x801499D0..0x801499E0` and every named
+   callback consumer for the first service boundary after the voice object's
+   `+0x140` output. Do not repeat the filter, persistent-object, task-field,
+   ring, shared-stack, DMA callback, or update/renderer census.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.

@@ -1,28 +1,29 @@
-# NEXT work unit (s2686) — audit the next M5 CPU publication boundary
+# NEXT work unit (s2687) — audit the M5 mixer callback boundary
 
 HYPOTHESIS-ID: m5-cpu-mort-publication
 
 ## Work unit
 
-Perform a bounded static audit of the remaining `updateVoiceChannelParams`
-indirect-call setup and the `voice object+0x140` consumer path. Use companion
-address/name evidence and existing generated callers to identify whether a
-caller-owned destination or ordered service boundary publishes renderer output
-to PCM/AI. Do not add runtime watches, writeback, remaps, or mitigation from
+Perform a bounded static audit of `initN64RspMixer` and the callback table at
+`0x801499D0..0x801499E0`, then follow every named callback consumer far enough
+to determine whether it is the first service boundary after the voice object's
+`+0x140` mixed output. Use companion address/name evidence and generated
+callers. Do not add runtime watches, writeback, remaps, or mitigation from
 unresolved pointer shapes.
 
 ## Competing hypotheses and discriminator
 
-- `H-publish-caller`: the audited caller setup names a legitimate destination
-  and ordering edge from rendered voice output toward PCM/AI.
+- `H-mixer-publish`: the callback table or its consumers names a legitimate
+  destination and ordering edge from rendered voice output toward PCM/AI.
 - `H-service-boundary`: the path reaches a service/slot boundary but the
   publication destination remains outside the audited caller.
-- `H-unresolved-address`: the remaining callers only pass filter/delay data or
-  temporary voice-object storage, so no legitimate publication edge is named.
+- `H-unresolved-address`: the table is initialization-only or its callbacks do
+  not consume the rendered voice object, so no legitimate publication edge is
+  named.
 
-The discriminator is a complete caller/destination table for both audited
-paths: each outcome must identify the writer, destination, payload polarity,
-and ordering relation, or explicitly show which field is absent.
+The discriminator is a complete callback/destination table for all eight table
+entries: each outcome must identify the callback writer, destination, payload
+polarity, and ordering relation, or explicitly show which field is absent.
 
 ## Ground-truth prerequisite
 
@@ -31,6 +32,6 @@ ground-truth target.
 
 ## Exact commands
 
-1. `grep -n 'updateVoiceChannelParams\|renderVoiceAudioBlock\|0x8009D' ../N64Recomp/RecompiledFuncs/funcs_*.c | head -200`
-2. Read bounded caller windows and companion symbol/source matches for every hit.
-3. Record the complete destination/order table and selected hypothesis in the ledger.
+1. `rg -n -H 'initN64RspMixer|0x801499D0|0x801499E0|0x8009189C' ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`
+2. Read bounded windows for the initializer and every callback consumer; use companion names/source matches for each entry.
+3. Record the complete eight-entry destination/order table and selected hypothesis in the ledger.
