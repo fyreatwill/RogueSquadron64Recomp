@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2620 (2026-08-27).
+Current maintenance marker: Session 2621 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -105,6 +105,18 @@ Current maintenance marker: Session 2620 (2026-08-27).
   or de-stub behavior change is authorized until an independent mapping names
   the port writer, destination, legitimate value, and ordering.
 
+## s2621 unblock audit
+
+The local oracle route passed the whole-RDRAM control with 9,107,853 writes,
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and its
+phase-gated `--watch-pc 0x800078EC` rows confirmed the companion `rs_memset`
+body and zero-fill arguments. The result did not identify a legitimate
+port-side PCM publication destination or producer ordering. The companion
+source also has no complete body for retail `0x8002BEEC` or CPU-MORT
+publication boundary. The M5 mapping remains an open dependency; the next
+action is the local generated-symbol sweep. Artifact:
+`scratch/agent/unblock_s2621/oracle.log`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -125,22 +137,20 @@ Current maintenance marker: Session 2620 (2026-08-27).
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 de-stubbing sequence — blocked on contract ground truth.** Obtain an
+1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
+   Continue bounded companion-supported naming work; unresolved fragments stay
+   placeholders under `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
+2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
    independent mapping from retail PC `0x800078EC` (and the secondary-span
    writers) to the port-side writer or CPU MORT publication boundary, including
    destination, legitimate payload polarity, and ordering relative to image
    completion and PCM consumption. Do not repeat the title-zero census or
    revisit the hangar `0x80094648` relation. Keep C88=`0` and
    `ROGUESQ_AUDIO_UCODE=0` as rollbacks/controls.
-2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+3. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
+4. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
-4. **Generated-symbol renaming — bounded fallback.** If M5 is inapplicable,
-   continue one companion-supported batch under
-   `HYPOTHESIS-ID: generated-symbol-renaming-sweep`; unresolved boundary
-   fragments stay placeholders. Session 2615 added the supported duplicate
-   prefix at `0x800E8A34`.
 5. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
    established; broader slot coverage is optional and lower priority than M5.
 

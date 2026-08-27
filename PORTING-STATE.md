@@ -116878,3 +116878,23 @@ gate changes, or another title-zero census. No runtime code or lib submodule
 was changed. The next unit is blocked pending an independent retail-to-port
 contract attribution; a watch/decomp mapping tying `0x800078EC` to a named
 port writer or CPU publication destination would refute the block.
+
+## Session 2621 (2026-08-27) — re-scoped the M5 block to local symbol work
+
+The unblock audit tested routes 1 and 2 before re-scoping. Read the oracle
+help/source and ran its built-in `--watch-pc 0x800078EC` with phase-gated
+title/hangar buckets, primary and secondary PCM-span watches, the established
+Start schedule, and the whole-RDRAM positive control. The control passed with
+9,107,853 writes; retail reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. The PC watch confirmed the companion identity
+`rs_memset` and sampled zero-fill arguments, but did not map a legitimate
+port-side PCM publication destination or producer ordering. Companion search
+also found no complete body for retail `0x8002BEEC` or CPU-MORT publication
+boundary.
+
+Thus routes 1 and 2 did not refute or locally satisfy the M5 dependency. Route
+3 re-scopes the project to the local generated-symbol renaming sweep while
+leaving M5 as an explicit open dependency. This rules out treating the generic
+`rs_memset` attribution as authorization for writeback, remapping, gate
+changes, or another title-zero census. No runtime behavior changed. Artifact:
+`scratch/agent/unblock_s2621/oracle.log` and `scratch/agent/UNBLOCK.md`.

@@ -1,48 +1,41 @@
-# NEXT work unit (s2621) — obtain the missing M5 contract mapping
+# NEXT work unit (s2622) — bounded generated-symbol sweep while M5 is blocked
 
-HYPOTHESIS-ID: m5-destub-contract-edge
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Acquire the missing independent contract mapping for retail PC `0x800078EC`
-and the secondary-span writers. It must identify the port-side writer or CPU
-MORT publication boundary, destination span, legitimate payload polarity, and
-ordering relative to image completion and PCM consumption. Do not repeat the
-title-zero census and do not change runtime behavior.
+Audit one bounded symbol region centered on `0x800BF790` and its neighboring
+`0x800BF498`/`0x800BF4A0` boundary using companion symbols, generated bodies,
+callers, and overlay sizes. Rename only a symbol whose identity is supported
+by exact companion and span/caller evidence; unresolved fragments stay
+placeholders. Do not change runtime behavior.
 
 ## Competing hypotheses and discriminator
 
-- `H-ImageOutputEdge`: the Factor 5 image has a legitimate, named output
-  destination/writeback edge missing from the port contract.
-- `H-CPU-MORT-Edge`: title PCM is owned by the CPU MORT path, so image-task
-  writeback would be the wrong boundary.
-- `H-Unproven`: existing rows do not establish a legitimate edge; no behavior
-  change is authorized.
+- `H-CompanionExact`: one placeholder has an exact companion name and matching
+  function span, so a supported rename can be landed.
+- `H-BoundaryOnly`: evidence identifies only an adjacent or duplicate boundary;
+  retain the placeholder.
+- `H-Unproven`: no defensible mapping exists in this region.
 
-The discriminator is one evidence table mapping each candidate to retail
-writer PC, port writer/consumer, physical destination span, payload polarity,
-phase, and ordering relative to image completion and PCM consumer. One
-complete legitimate mapping selects that edge; an image-stage-only candidate
-remains unproven. Existing evidence selects `H-Unproven`.
+The discriminator is one table containing each candidate's address, companion
+name/comment, exact overlay span, generated placeholder, callers, and whether
+the identity is exact or boundary-only. One exact row selects a rename.
 
 ## Exact checks
 
-1. Obtain independent oracle/decomp attribution of the retail writer PC(s) to
-   the logical audio publication contract; whole-RDRAM and title controls must
-   be present before any narrow retail null is interpreted.
-2. Search the companion/source/fixup tree for the corresponding port writer or
-   CPU MORT output boundary and record writer identity, destination, value
-   legitimacy, phase, and producer-before-consumer ordering for every candidate.
-3. If one edge is complete, write its exact rollback and one-build A/B recipe
-   here. If no mapping is complete, remain blocked; do not build or run a
-   guessed edge.
+1. Inspect `syms/rogue_squadron.syms.toml`, companion
+   `symbol_files/mission_overlay.txt`, and the generated symbol/body around
+   `0x800BF790`; use `rg` and bounded `sed` windows.
+2. Compare adjacent addresses and sizes and enumerate generated callers. Run
+   `python tools/rename/build_redefs.py` only if an exact supported rename is
+   selected, then verify the resulting redef line.
+3. Land at most one companion-supported rename; do not invent names from
+   semantics alone.
 
 ## Expected outcomes
 
-- Legitimate image edge: record it and queue one validation soak; do not add
-  broad writeback or remapping.
-- CPU MORT edge: move the next unit to the named CPU-side boundary.
-- No complete edge: remain blocked on the missing independent ground truth; do
-  not repeat the same null experiment. The single refuting experiment is an
-  oracle watch/companion attribution tying `0x800078EC` to a named port writer
-  or CPU publication destination with valid payload ordering.
+An exact mapping lands a regeneration-safe rename and advances the sweep. A
+boundary-only or unresolved result records why the placeholder remains and
+selects the next bounded region. Do not return to the blocked M5 null
+experiment.
