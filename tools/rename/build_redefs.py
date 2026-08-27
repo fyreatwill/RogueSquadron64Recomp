@@ -60,6 +60,7 @@ EXTRA_REVERTS = {
 # project has no symbol entry for the exact boundary.
 EXTRA_RENAMES = {
     "fake_func_800AD378": "storeTrackedObjectAuxiliaryFields",
+    "fake_func_800B47C4": "menuControllerInputPreamble",
 }
 with open(REDEFS, "a", encoding="utf-8") as f:
     for old, new in EXTRA_REVERTS.items():

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2545 (2026-08-26).
+Current maintenance marker: Session 2547 (2026-08-26).
 
 ## Current state
 
@@ -322,6 +322,16 @@ Current maintenance marker: Session 2545 (2026-08-26).
   `H-data-boundary` / `H-no-match`; it remains unchanged. Artifact:
   `scratch/agent/s2546_symbol_census/audit.md`.
 
+- **s2547 — the next generated-symbol region received a regeneration-safe
+  local rename.** The complete menu-overlay span `0x800B47C4–0x800B47CF` is
+  the three-instruction setup immediately before the independently registered
+  `menuControllerInput` body at `0x800B47D0`. The companion controller
+  decomp's large `func_800B47C4` name therefore cannot be applied directly
+  without absorbing the established body boundary. The fragment was named
+  `menuControllerInputPreamble` in `tools/rename/build_redefs.py`; the redef
+  generator emitted the expected mapping. No generated C or runtime behavior
+  changed. Artifact: `scratch/agent/s2547_symbol_rename/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -374,7 +384,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   `0x800AE3E4–0x800AE3EF` unchanged as an overlay/boundary fragment; s2545
   left `0x800AEC54–0x800AEC5F` unchanged as a trap-only data boundary; s2546
   left `0x800B2628–0x800B262F` unchanged as an eight-byte data-boundary
-  fragment. Continue at `0x800B47C4`.
+  fragment; s2547 renamed the `0x800B47C4` three-instruction setup fragment
+  to `menuControllerInputPreamble`. Continue at `0x800C5898`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index

@@ -115472,3 +115472,18 @@ body, renaming it would be speculative. Selected `H-data-boundary` /
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
+## Session 2547 (2026-08-26) — renamed generated-symbol controller preamble
+
+The bounded menu-overlay region `0x800B47C4–0x800B47CF` is a 12-byte,
+three-instruction setup fragment immediately before the established
+`menuControllerInput` body at `0x800B47D0`. The companion decomp names a large
+function at `func_800B47C4`, but the active generated and companion symbol
+tables explicitly preserve the body boundary at `0x800B47D0`; applying the
+large name would be speculative and collide with that body. Added the
+regeneration-safe local name `menuControllerInputPreamble` to
+`tools/rename/build_redefs.py`. The standard redef generator emitted the
+expected mapping. This rules out direct reuse of the large companion function
+name and leaves no runtime behavior changed.
+
+ORIGIN: semantic rename of an executable boundary fragment; no mitigation or
+runtime behavior changed.
