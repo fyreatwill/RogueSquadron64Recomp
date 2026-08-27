@@ -277,6 +277,13 @@ files; an independent scan found no stale placeholder references. The
 callable-ambiguous `fake_func_8004661C` was preserved. This is symbol clarity
 only, not M5 or runtime evidence.
 
+Session 2842 continued the regeneration-safe symbol sweep at
+`0x80049000..0x8004A000`. The only stale companion candidate,
+`fake_func_800496F4`, was classified ambiguous-or-fake; the selector changed
+zero references and preserved it. Neighboring callable symbols were already
+synchronized. This is symbol-clarity evidence only; the next interval is
+`0x8004A000..0x8004B000`.
+
 ## Next steps
 
 Priority follows the user directive: maintenance, then M5, then systematic M3,

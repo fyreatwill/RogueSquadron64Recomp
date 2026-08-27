@@ -120285,3 +120285,13 @@ found no stale placeholder references. The nearby
 `fake_func_8004661C` was classified ambiguous-or-fake and preserved. No build
 or game run was needed. This is symbol clarity only and provides no M5 runtime
 evidence.
+
+## Session 2842 (2026-08-27) — preserved ambiguous generated symbol candidate
+
+The bounded source-backed symbol sweep examined `0x80049000..0x8004A000`.
+The only stale companion candidate, `fake_func_800496F4`, was classified
+ambiguous-or-fake; the regeneration-safe selector changed zero generated
+references and preserved it. The neighboring callable entries were already
+synchronized. This rules out a defensible data-gap rename for this candidate,
+but does not establish its semantic identity. No build or game run was needed.
+The next sweep interval is `0x8004A000..0x8004B000`.
