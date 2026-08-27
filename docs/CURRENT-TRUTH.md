@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2557 (2026-08-26).
+Current maintenance marker: Session 2558 (2026-08-26).
 
 ## Current state
 
@@ -428,6 +428,16 @@ Current maintenance marker: Session 2557 (2026-08-26).
   `H-no-match`; no generated code changed. Artifact:
   `scratch/agent/s2557_symbol_census/audit.md`.
 
+- **s2558 — the next generated-symbol region is an orphan boundary fragment
+  with no defensible mapping.** The complete `0x800E71C8–0x800E71CF` span is
+  only `lhu v0,0x14(v1)` followed by `lw a0,0x58(fp)`, between the complete
+  `npcWaterCraftUpdate` epilogue and `transformCraftAnchorsApplySubFx3`
+  prologue. The active generated tables and companion mission symbols retain
+  `fake_func_800E71C8`; exact-address, source, m2c, and caller searches found
+  no human candidate. This reproduces the earlier boundary classification,
+  so renaming it to either neighbor would be speculative. No generated code
+  changed. Artifact: `scratch/agent/s2558_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -443,17 +453,19 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2517 found no new legitimate edge; do not add a writeback/remap or repeat
   the unresolved observer. M5 image execution remains opt-in, and later M5
   steps remain conditional on a new named retail writer/value boundary.
-  Next work unit: continue the bounded generated-symbol renaming sweep at
-  `0x800C6968`; s2549 left `0x800C6968–0x800C696F` unchanged as an
-  incomplete epilogue/boundary fragment. s2551 then classified
-  `0x800CC3D4–0x800CC9B7` as a menu data boundary with no rename candidate;
-  continue at `0x800CEF1C` in the mission overlay.
+  Next work unit: run the phase-gated M4 producer-slot/consumer-index join
+  described in `scratch/agent/NEXT.md`; the generated-symbol sweep is parked
+  after s2558's repeated orphan-boundary result.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
 3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
-4. **Generated-symbol renaming — active after M5 Step 3 closure.** Resume with
+4. **Generated-symbol renaming — parked after three consecutive no-edit
+  discriminators.** Resume only after the M4 pivot produces no new
+  discriminator or the campaign is explicitly restarted. s2558 revalidated
+  `0x800E71C8–0x800E71CF` as an unchanged orphan two-instruction boundary
+  fragment. Earlier sweep results remain recorded below. Resume with
   one bounded address-region census and only names supported by the companion
   decomp or clear local semantics; leave unresolved placeholders unchanged.
   s2527 and s2528 left `0x8007A0E8` and `0x8007A86C` unresolved; next is
@@ -498,7 +510,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   `0x800E406C–0x800E406F` unchanged as a four-byte boundary fragment; the
   next unresolved placeholder is `0x800E447C`; s2557 left
   `0x800E447C–0x800E447F` unchanged as a one-instruction boundary fragment
-  and advanced to `0x800E71C8`. s2556 revisited M4 with a
+  and advanced to `0x800E71C8`; s2558 revalidated that span as an unchanged
+  orphan two-instruction boundary fragment and pivots the next unit to the
+  dynamic M4 producer-slot/consumer-index join. s2556 revisited M4 with a
   complete generated producer/consumer index table and found the consumer's
   low-seven-bit index is sourced from runtime state, so the alias remains
   static-only; no runtime or mitigation change was authorized.

@@ -115659,3 +115659,31 @@ Artifact: `scratch/agent/s2557_symbol_census/audit.md`.
 
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
+## Session 2558 (2026-08-26) — censused generated-symbol orphan boundary
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 37,783 bytes, so this was not a
+maintenance iteration. The last-15 title check contained s2556's M4 revisit,
+so the sweep remained eligible for this unit. The required region table for
+`0x800E71C8` was completed before any build decision.
+
+The active generated implementation, declaration, TOML, and overlay table
+all retain `fake_func_800E71C8` over the exact 8-byte span
+`0x800E71C8–0x800E71CF`. Its body is only `lhu $v0,0x14($v1)` and
+`lw $a0,0x58($fp)`, with no callable prologue or return. The preceding
+`npcWaterCraftUpdate` ends at `0x800E71C7`; the following
+`transformCraftAnchorsApplySubFx3` begins at `0x800E71D0`. Companion-symbol,
+source, m2c, and exact-address caller searches found no human mapping or
+independent call site. The generated/table boundary and companion/source
+view agree, but this remains a static single-source classification rather
+than proof of reachability.
+
+This selects `H-data-boundary` / `H-no-match`; no speculative rename, build,
+runtime change, mitigation, or game run was made. The exact result reproduces
+the earlier orphan-fragment classification, so the next unit pivots to the
+phase-gated M4 producer-slot/consumer-index join rather than repeating the
+same static census. Artifact: `scratch/agent/s2558_symbol_census/audit.md`.
+
+ORIGIN: no mitigation, skip, guard, restore, or game-value machinery was
+added; this session only recorded a bounded generated-symbol boundary.
