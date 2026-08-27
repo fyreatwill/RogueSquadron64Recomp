@@ -119753,3 +119753,20 @@ No build or game soak was needed because no generated source changed.
 This selects the already-synchronized hypothesis for the interval and rules
 out stale generated semantic placeholders there, not the remaining sweep.
 The next bounded interval is `0x80141000..0x80143000`.
+
+## Session 2805 (2026-08-27) — renamed generated data-gap records
+
+The regeneration-safe selector was extended with four companion-map-backed
+data-gap names at `0x8000537C`, `0x8000737C`, `0x800074D8`, and `0x80007908`.
+Each companion entry is marked `fake_func_*`/`defined:true` and is immediately
+followed by a named function, so the generated record is a short non-callable
+gap rather than a semantic function. Running the bounded selector over
+`0x80005000..0x80008000` with `--require-rename` changed 12 references in four
+generated files: `funcs.h`, `funcs_1.c`, `funcs_2.c`, and
+`recomp_overlays.inl`. `git diff --check` passed. The generated snapshot is in
+the separate N64Recomp checkout, which already contains unrelated uncommitted
+regeneration work; only the regeneration-safe mapping is committed here.
+
+This advances symbol clarity and rules out treating these four records as
+callable generated functions. It provides no runtime or M5 audio evidence;
+the next bounded sweep is `0x80143000..0x80145000`.

@@ -44,6 +44,18 @@ RENAMES = {
     "fake_func_80108B8C": "data_gap_80108B8C",
     "fake_func_80109428": "data_gap_80109428",
     "fake_func_80109618": "data_gap_80109618",
+    # The companion map marks these defined fake entries immediately before
+    # named functions; their short overlay records are data gaps, not callable
+    # game routines.
+    "fake_func_800027B8": "data_gap_800027B8",
+    "fake_func_8000337C": "data_gap_8000337C",
+    "fake_func_80003424": "data_gap_80003424",
+    # The companion map marks these short fake records immediately before
+    # named functions; keep their generated names explicit as data gaps.
+    "fake_func_8000537C": "data_gap_8000537C",
+    "fake_func_8000737C": "data_gap_8000737C",
+    "fake_func_800074D8": "data_gap_800074D8",
+    "fake_func_80007908": "data_gap_80007908",
 }
 
 
