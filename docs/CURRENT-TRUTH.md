@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2512 (2026-08-26).
+Current maintenance marker: Session 2513 (2026-08-26).
 
 ## Current state
 
@@ -29,7 +29,17 @@ Current maintenance marker: Session 2512 (2026-08-26).
   alternate is the legitimate counterpart of retail's second-range consumer.
   The image arm reaches task completion and generated DMA. s2506 joins
   stage-2 image DMA destinations to the generated AI table and its PCM
-  consumers; the legitimate nonzero payload writer remains unresolved.
+  consumers; before s2513, the legitimate nonzero payload writer remained
+  unresolved. Exact DMA-event attribution remains open after s2513.
+
+- **s2513 — the qualified image-arm capture selects the RSP/image payload
+  writer at the observable consumer boundary.** Image ordinal 606 produced
+  stage-2 output at `0x168B50` with 621 nonzero bytes and FNV `2B9E9631`; an
+  independent PCM source/consumer pair used the same address and fingerprint.
+  The capture had image, DMA, AI-table, task-join, and PCM positive controls,
+  with no guest CPU writer rows. The lower-level DMA join still reports zero
+  nonzero bytes for that observer, so exact DMA-event attribution remains
+  open. Artifact: `scratch/agent/s2513_m5_payload_writer/audit.md`.
 
 - **s2512 — checkpoint close-out; orphaned loop.sh.new deleted.** The prior
   session left an uncommitted `tools/agent/loop.sh.new` draft. The no-engineering

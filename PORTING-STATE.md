@@ -114788,3 +114788,18 @@ NEXT.md set to resume the m5-image-payload-writer-provenance work unit.
 **No experiment ran; no conclusion changed.** Next: resume the qualified staggered-
 startup image-arm capture for PCM payload writer provenance (scratch/agent/NEXT.md,
 session s2513).
+## Session 2513 (2026-08-26) — selected RSP image payload writer
+
+Built the current target successfully and ran the staggered s2513 capture. The
+first attempt omitted `ROGUESQ_LOG_PCM_BOUNDARY`, so its missing consumer
+control was unevaluable; the driver was corrected and rerun in this iteration.
+The corrected paired-image arm passed AI-table, image-stage, image-DMA,
+task-join, and PCM source/consumer controls. Image ordinal 606 produced
+stage-2 output at 0x168B50 with 621 nonzero bytes and FNV 2B9E9631, followed by
+a PCM source/consumer pair at the same address and fingerprint. There were
+zero guest CPU writer and second-range writer rows; writer rows were kind 2
+image/DMA observations. This selects the RSP/image payload writer at the
+observable boundary and rules out a fully controlled no-writer result. The
+lower-level DMA join still reported nz=0 for that observer, so exact DMA-event
+attribution remains unresolved. No mitigation or audio behavior change was
+made. Artifact: scratch/agent/s2513_m5_payload_writer/audit.md.

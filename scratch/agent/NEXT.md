@@ -1,70 +1,52 @@
-# NEXT work unit (s2513) — qualified image-arm PCM payload writer provenance capture
+# NEXT work unit (s2514) — resolve image-stage/DMA payload attribution
 
-HYPOTHESIS-ID: m5-image-payload-writer-provenance
+HYPOTHESIS-ID: m5-rsp-image-payload-validation
 
 ## Context
 
-s2512 was a close-out iteration: it applied the pending no-engineering churn guard
-to tools/agent/loop.sh (65 lines added). No experiment ran.
-
-The active work unit is the image-to-PCM payload writer provenance capture from
-the prior NEXT.md. s2511 showed that staggered startup separates the pre-target
-paired failure from the later crash — so the staggered-startup approach is now the
-qualified recipe. Use it for the payload writer capture.
+s2513 selected the RSP/image payload path: image ordinal 606 had nonzero
+stage-2 output at `0x168B50` matching a PCM source/consumer pair, with no
+guest CPU writer. The lower-level image-DMA join nevertheless reported
+`nz=0`, so the exact event attribution is unresolved.
 
 ## Single work unit
 
-Run one qualified image-arm capture under the staggered-startup recipe. The
-baseline single-image arm must reach 1024 first (positive control), then start
-the paired arms. Capture must include ALL of: image-stage, DMA-join, AI-table,
-PCM-consumer, guest-store, RSP-writer, and host-writer controls active. Do not
-interpret a null unless ALL those controls fire.
+Perform one bounded static/runtime attribution audit of the stage-2 DMA
+observer. Trace the exact `rs64_m5_pcm_writer_dma` call and its
+`audtask-image-dma-join` publication, then determine whether the nonzero
+stage-row payload at `0x168B50` is the same transfer or a later overwrite.
+Use the existing s2513 log and source paths first; if a code-level mismatch
+is found, make one bounded instrumentation fix and rebuild. No mitigation or
+audio behavior change is authorized.
 
 ## Competing hypotheses and discriminator
 
-- `H-guest-payload-writer`: a generated guest CPU store writes nonzero bytes to
-  an image-joined AI-table destination before the first PCM consumer.
-- `H-rsp-payload-writer`: the Factor 5 image/RSP path writes the nonzero payload,
-  visible in RSP/DMA controls with a destination joining the AI table.
-- `H-host-payload-writer`: host audio plumbing writes the AI blocks after the
-  guest/RSP boundary and before queue consumption.
-- `H-no-observable-writer`: all positive controls fire but none of the three
-  writer classes joins a nonzero consumer buffer in the target phase.
+- `H-same-dma`: stage-row and DMA-join payload fingerprints identify one RSP
+  transfer at the same destination and event.
+- `H-later-overwrite`: the stage row is a later-memory snapshot and the DMA
+  observer saw a different zero payload.
+- `H-observer-contract`: the DMA observer drops or mislabels nonzero metadata.
 
-The discriminator is one phase-scoped table keyed by AI-table entry and image
-ordinal: first nonzero writer class/PC or RSP event, destination, byte count,
-payload fingerprint, image-DMA completion, and first PCM-consumer event. A
-guest/RSP/host join selects its hypothesis; a fully controlled null selects
-`H-no-observable-writer`; missing image or consumer controls makes the result
-unevaluable.
+The discriminator is one phase-scoped table keyed by image ordinal and
+destination containing stage event, DMA event, stage/DMA FNV and nonzero count,
+and first matching PCM source/consumer event. Same-event identity selects
+`H-same-dma`; differing event or payload selects `H-later-overwrite`; a
+reproducible metadata mismatch with source confirmation selects
+`H-observer-contract`.
 
 ## Exact commands
 
 ```sh
-# 1. Build (if not already current):
-cmake --build build --target RogueSquadron64Recomp
-
-# 2. Run (staggered startup: baseline arm first, wait for 1024, then pair):
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
-ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_PHASE=1 \
-ROGUESQ_LOG_AUDIO_RETURN=1 ROGUESQ_LOG_M5_TASK_CONTRACT=1 \
-ROGUESQ_LOG_M5_GATE_CONTRACT=1 zsh scratch/agent/run_s2513_m5_payload_writer.sh
+rg -n "rs64_m5_pcm_writer_dma|audtask-image-dma-join|rs64_audio_join_image_dma" \
+  src/main/main.cpp lib/N64ModernRuntime/librecomp/src/rsp.cpp
+grep -a -E '^\[(audtask-image-stage-row|audtask-image-dma-join|pcm-boundary-(source|consumer))\]' \
+  scratch/agent/s2513_m5_payload_writer/pair-image/run.log | grep -E '168B50|ordinal=606'
 ```
 
-The driver script should:
-- Launch one baseline (image-arm) process and wait until it logs phase=1024
-- Then start the paired capture arm (image + all payload-writer controls active)
-- Phase-gate the pair at 1024 then 512 with phase-relative keys
-- SIGKILL all processes after the bounded capture (≤300 s)
-- Write audit to scratch/agent/s2513_m5_payload_writer/
+Do not infer a writer from a missing DMA row; preserve the existing positive
+controls and phase gates if a follow-up capture is needed.
 
-If the qualified staggered recipe crashes before reaching 512, document the
-crash site and do NOT attempt mitigation — record the crash location and the
-discriminating controls that fired/didn't.
-
-## Budget rule
-
-This is iteration 1 on slug m5-image-payload-writer-provenance with the
-staggered-startup recipe. If 3 consecutive iterations produce no discriminating
-result (writer table unevaluable), stop and write BLOCKED with the specific
-missing positive control.
+This is iteration 1 on slug `m5-rsp-image-payload-validation`. If the DMA
+event cannot be joined after one audit, stop adding fields and pivot to the
+next M5 de-stubbing step with the mismatch recorded as an observer-contract
+limitation.
