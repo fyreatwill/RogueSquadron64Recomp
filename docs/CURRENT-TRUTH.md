@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2595 (2026-08-26).
+Current maintenance marker: Session 2596 (2026-08-26).
+
+- **s2596 — the final menu-overlay placeholder is a boundary-only gap.**
+  `0x800CC3D4` follows the complete generated `calculateShotAccuracy` body
+  ending at `0x800CC3D0`; the current generated body is trap-only, and the
+  next named body starts at `0x800CC9B8`. The companion retains
+  `fake_func_800CC3D4` without a semantic name. Exact source/m2c/caller and
+  alternate-symbol searches found no candidate; `build_redefs.py` completed
+  with no mapping. The placeholder remains unchanged and the sweep moves on
+  from the menu-overlay list. Artifact:
+  `scratch/agent/s2596_symbol_census_audit.md`.
 
 - **s2595 — the next generated-symbol span is a duplicate-symbol boundary
   fragment.** `0x800CC038` is a one-instruction `swc1 $f0, 0x40($fp)` entry

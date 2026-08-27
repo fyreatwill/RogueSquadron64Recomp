@@ -116303,3 +116303,17 @@ source, m2c, caller, and alternate-symbol searches found no semantic name.
 `H-BoundaryOnly`, leaves the placeholder unchanged, and rules out both a
 defensible companion mapping and a rename-tool mismatch. Artifact:
 `scratch/agent/s2595_symbol_census_audit.md`.
+
+## Session 2596 (2026-08-26) — classified the final menu-overlay placeholder
+
+Ran the single static generated-symbol rename unit for `0x800CC3D4`. The
+generated `calculateShotAccuracy` body at `0x800CC374` ends at
+`0x800CC3D0`; the target is emitted as a trap-only gap-filler, and the next
+named body starts at `0x800CC9B8`. The companion symbol file explicitly keeps
+`fake_func_800CC3D4` and provides no semantic name. Exact source, m2c, caller,
+and alternate-symbol searches found no candidate. `python3
+tools/rename/build_redefs.py` completed successfully, wrote 9792 redef lines,
+and emitted no mapping for the target. This selects `H-BoundaryOnly`, leaves
+the placeholder unchanged, and rules out both a defensible companion mapping
+and a rename-tool mismatch. Artifact:
+`scratch/agent/s2596_symbol_census_audit.md`.
