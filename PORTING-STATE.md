@@ -118341,3 +118341,20 @@ parser or duplicate-destination rejection. This selects
 out `H-exact-matches` there. It does not resolve the MORT-to-PCM publication
 edge. No build or game run was needed, and the external generated worktree was
 not modified.
+
+## Session 2708 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title revisit check did not trigger: the recent titles
+were not all sweep-scoped. Ran the tracked bounded rename tool for companion
+candidates in `0x8009B000..0x8009E000`. Its complete decision table contained
+41 candidates: 35 were already synchronized and six were preserved as
+ambiguous-or-fake (`0x8009C2C8`, `0x8009D7CC`, `0x8009DE60`, `0x8009DEB4`,
+`0x8009DEC0`, `0x8009DED0`). It selected zero renames in zero files and exited
+successfully, with no parser or duplicate-destination rejection. Spot checks
+confirmed synchronized names in generated output and preserved placeholders.
+This selects `H-already-synchronized` for the semantic candidates and rules
+out `H-exact-matches` in this region. No build or game run was warranted.
+
+The full decision table is in
+`scratch/agent/s2708_generated_symbol_sweep/decision-table.txt`. The external
+generated worktree remains dirty from prior work; this run did not modify it.

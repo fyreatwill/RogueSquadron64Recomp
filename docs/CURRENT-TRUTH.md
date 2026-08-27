@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2707 (2026-08-27).
+Current maintenance marker: Session 2708 (2026-08-27).
 
 ## Live result
 
@@ -377,6 +377,16 @@ out `H-exact-matches` there; it does not resolve the MORT-to-PCM publication
 edge. No build or game run was needed, and the external generated worktree
 was not modified.
 
+s2708 continued the generated-symbol sweep after the required last-15-title
+check did not trigger a revisit. The bounded `0x8009B000..0x8009E000` region
+contained 41 companion candidates: 35 semantic entries were already
+synchronized, while six address-only/fake entries (`0x8009C2C8`, `0x8009D7CC`,
+`0x8009DE60`, `0x8009DEB4`, `0x8009DEC0`, and `0x8009DED0`) were preserved as
+ambiguous-or-fake. Zero references changed in zero generated files, and the
+tool exited successfully without parser or duplicate-destination rejection.
+This selects `H-already-synchronized` for the semantic candidates in this
+region and rules out `H-exact-matches`; no build or game run was needed.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -415,8 +425,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
 2. **Generated-symbol renaming sweep.** s2704 found all 19 candidates in
    `0x8008ED6C..0x80091C80` already synchronized, s2705 found no exact
    rename in `0x80091C80..0x80095000`, and s2706 found no exact rename in
-   `0x80095000..0x80098000`, and s2707 found no exact rename in
-   `0x80098000..0x8009B000`. Continue with one adjacent bounded region only
+   `0x80095000..0x80098000`, s2707 found no exact rename in
+   `0x80098000..0x8009B000`, and s2708 found no exact rename in
+   `0x8009B000..0x8009E000`. Continue with one adjacent bounded region only
    while exact companion/source evidence remains available;
    preserve address-only or fake fragments and do not infer names from
    implementation shape alone.
