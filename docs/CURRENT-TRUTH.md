@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2577 (2026-08-26).
+Current maintenance marker: Session 2578 (2026-08-26).
+
+- **s2578 — the M4 dynamic join is live in the qualified route.** The fixed
+  90-second capture had an independent `[ovl-route]` positive control with
+  25,164 rows. In phase 6, task 208 entered overlay 0x20 target `0x13D8`;
+  256 `r3 >> 6` evaluations included two `r4 == 2` branches. The same
+  phase produced 128 producer rows at slot `0x00` and 128 consumer rows at
+  index `0x00`, so the observed producer/consumer join is real. This corrects
+  s2560's phase-filtered null; it does not prove every slot or scene, and no
+  mitigation or data rewrite is authorized. Artifact:
+  `scratch/agent/s2578_m4_route_branch/audit.md`.
 
 - **s2577 — the next generated-symbol region is an object-tracking boundary
   with no defensible mapping.** The complete `0x80109618–0x8010961F` span is
@@ -136,15 +146,10 @@ Current maintenance marker: Session 2577 (2026-08-26).
   leaves image dispatch opt-in. No task field, output pointer, gate, or guard
   was changed. Artifact: `scratch/agent/s2559_m5_step1_contract_pair/driver.log`.
 
-- **s2560 — the M4 dynamic join endpoints were absent in the qualified route.**
-  The corrected regeneration-safe probe reached the title and hangar phases,
-  while the independent F5 fetch control fired 514 times. The retail oracle's
-  whole-RDRAM control reached 10,000 writes and the same title/hangar phases.
-  Neither the overlay-0x1c B00/B02/B04 producer nor the overlay-0x20 0x13D8
-  consumer emitted a target-phase row. This does not distinguish producer-dead
-  from consumer-dead, and does not select index-alias or index-no-join. The
-  next discriminator is route/branch reachability. Artifact:
-  `scratch/agent/s2560_m4_index_join/audit.md`.
+- **s2560 — superseded by s2578.** Its target-phase null was caused by the
+  probe's title/hangar VI filter; s2578's all-phase bucket observed the route,
+  branch, producer, and consumer in phase 6. The original result remains
+  useful only as evidence that the old filter was too narrow.
 
 - **s2561 — the next generated-symbol region had no defensible mapping.** The
   complete `0x8009C2C8–0x8009C2CF` span is an eight-byte floating-point
@@ -724,16 +729,15 @@ This is one monotonic sequence; #1 is the next campaign priority.
   complete generated producer/consumer index table and found the consumer's
   low-seven-bit index is sourced from runtime state, so the alias remains
   static-only; no runtime or mitigation change was authorized.
-5. **M4 accumulator-origin work — dynamic index join remains open.** s2536
+5. **M4 accumulator-origin work — observed join established; broader coverage
+   remains open.** s2536
    found overlay 0x1c table writers derived from `0x670`; s2556 exhaustively
    identified the overlay-0x20 indirect consumer and its runtime index source,
-   but could not bound that index to a producer slot. Do not add a mitigation
-   or repeat static literal audits; only a phase-gated producer-slot/consumer-
-   index capture can close the remaining dynamic question. s2560's corrected
-   capture had positive port and retail controls but zero producer and 0x13D8
-   consumer rows, so the next unit must instrument route entry and the
-   `r4 == 2` branch as one reachability table; do not infer a dead producer or
-   consumer from the current null.
+   but could not bound that index to a producer slot. s2578's phase-6 capture
+   observed the route, two `r4 == 2` branches, producer slot `0x00`, and
+   consumer index `0x00`, establishing one live dynamic join. Do not add a
+   mitigation or data rewrite; broader slot/scene coverage is optional and M5
+   now has strategic priority.
 
 ## Durable boundaries
 

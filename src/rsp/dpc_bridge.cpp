@@ -1069,9 +1069,6 @@ extern "C" void rs64_m4_index_probe(uint32_t kind, uint32_t slot,
     const uint32_t phase = rs64_phase_ord();
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin();
-    const bool title = width == 1024 && origin == 0x00790400u;
-    const bool hangar = width == 512 && (origin == 0x006AB400u || origin == 0x006AB800u);
-    if (!title && !hangar) return;
     static uint32_t phase_seen = 0xFFFFFFFFu;
     static uint32_t lines = 0;
     if (phase != phase_seen) {
@@ -1091,6 +1088,34 @@ extern "C" void rs64_m4_index_probe(uint32_t kind, uint32_t slot,
         fprintf(stderr, "[m4-index] phase=%u task=%u kind=consumer index=0x%02X masked=0x%02X c=0x%X/0x%X/0x%X source=0x%X/0x%X/0x%X\n",
                 phase, g_e9prov.task, index, masked, c0, c1, c2, p0, p1, p2);
     }
+    fflush(stderr);
+}
+
+extern "C" void rs64_m4_branch_probe(uint32_t r3, uint32_t r4,
+                                      uint32_t expected, uint32_t resident,
+                                      uint32_t target) {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_M4_INDEX");
+        return e && *e && *e != '0';
+    }();
+    if (!enabled) return;
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin();
+    const bool title = width == 1024 && origin == 0x00790400u;
+    const bool hangar = width == 512 && (origin == 0x006AB400u || origin == 0x006AB800u);
+    static uint32_t phase_seen = 0xFFFFFFFFu;
+    static uint32_t lines = 0;
+    if (phase != phase_seen) {
+        phase_seen = phase;
+        lines = 0;
+        fprintf(stderr, "[m4-route-control] phase=%u width=%u origin=0x%06X task=%u resident=0x%02X target=0x%04X\n",
+                phase, width, origin, g_e9prov.task, resident, target);
+    }
+    if (lines++ >= 256) return;
+    fprintf(stderr, "[m4-route] phase=%u task=%u r3=0x%02X r4=0x%X expected=0x%X taken=%u\n",
+            phase, g_e9prov.task, r3 & 0xFFu, r4, expected,
+            r4 == expected ? 1u : 0u);
     fflush(stderr);
 }
 

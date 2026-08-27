@@ -1,50 +1,32 @@
-# NEXT work unit (s2578) — generated-symbol bounded census
+# NEXT work unit (s2579) — M5 audio de-stubbing design
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-audio-destub-design
 
 ## Single work unit
 
-Audit the next unresolved generated/decomp symbol span after the s2577 census,
-`0x800AEC54` in the menu overlay.
-Inspect its complete generated span, immediate named neighbors, companion
-symbol entry, and exact source/m2c/caller matches. Rename only if the companion
-decomp supplies an exact human mapping. If unresolved, advance to the next
-placeholder; do not invent a name for a fragment.
+Create `docs/M5-AUDIO-PLAN.md`. Survey every audio stub, trap, gate, and
+default-off arm currently in force, then define an incremental de-stubbing
+sequence. For each step specify the code surface, expected contract, positive
+controls, phase-gated soak recipe, and promotion/rollback criterion. Do not
+change runtime behavior in this design-only unit.
 
 ## Competing hypotheses and discriminator
 
-- `H-human-candidate`: companion symbols, m2c/source, or clear local semantics identify a defensible human name.
-- `H-data-or-boundary`: the span is an instruction fragment or data boundary, so no callable human name is justified.
-- `H-already-mapped`: an exact existing repository name should replace the placeholder.
-- `H-uncertain`: evidence conflicts or the span cannot be bounded.
+- `H-complete-audio-gate-map`: all behavior-changing audio stubs and gates can
+  be located in the current tree and classified by contract.
+- `H-hidden-audio-gate`: at least one active gate is outside the obvious audio
+  callback/task paths and needs a broader call/queue search.
+- `H-contract-uncertain`: a stub is visible but its data-flow is not sufficient
+  to define a safe promotion checkpoint.
 
-The discriminator is one table covering the exact span and instructions,
-preceding/following symbols, companion result, exact-address/source/m2c/caller
-searches, and semantic candidate. A complete supported candidate selects a
-regeneration-safe rename; an explicit companion placeholder plus no exact
-candidate selects unchanged and advances to the next placeholder.
+The discriminator is one inventory table covering each stub/trap/gate, call
+site, current default, data contract, and independent positive control. A
+complete table plus staged validation sequence selects the design; any
+unclassified active path selects a broader source/queue audit before code.
 
-The s2577 selected `H-data-or-boundary` for `0x80109618–0x8010961F`; continue
-this same sweep slug rather than rerun the completed census.
-
-## Pre-build hypothesis record
-
-Before any build, the competing hypotheses and the single discriminator are
-fixed as follows: `H-human-candidate` predicts a complete, exact human symbol
-from the companion, source, m2c, or caller evidence; `H-data-or-boundary`
-predicts an instruction fragment or boundary with no callable name;
-`H-already-mapped` predicts an exact repository name that should replace the
-placeholder; and `H-uncertain` predicts conflicting or insufficient span
-evidence. The discriminator is one bounded table containing the generated
-instructions, both named neighbors, companion entry, exact-address/source/
-m2c/caller search results, and any semantic candidate. A complete exact
-candidate selects one regeneration-safe rename; an explicit companion
-placeholder plus no exact candidate selects unchanged and advances.
-
-## Exact preflight
+## Exact commands
 
 ```sh
-wc -c < docs/CURRENT-TRUTH.md
-grep -n '^## Session ' PORTING-STATE.md | tail -15
-rg -n 'fake_func_800AEC54|0x800AEC54' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms
+rg -n -i 'audio|aspMain|M_AUDTASK|MusyX|MORT|queue_audio|audio_data|waitForAnyAudioSlot|audio.*stub|Broke' src lib tools patches
+rg -n -i 'audio|aspMain|M_AUDTASK|MusyX|MORT|queue_audio|audio_data|waitForAnyAudioSlot|audio.*stub|Broke' docs/CURRENT-TRUTH.md docs/PROJECT-OVERVIEW.md
 ```

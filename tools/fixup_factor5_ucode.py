@@ -3148,6 +3148,34 @@ if is_main_ucode and M4_INDEX_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 22: phase-gated M4 route/branch reachability (s2578).
+# ---------------------------------------------------------------------------
+M4_ROUTE_MARKER = "/* fixup: M4 route branch reachability v1 */"
+if is_main_ucode and M4_ROUTE_MARKER not in text:
+    decl_anchor = re.compile(
+        r'(extern "C" void rs64_m4_index_probe\([^\n]*\n)')
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_m4_branch_probe(uint32_t r3, uint32_t r4, '
+        'uint32_t expected, uint32_t resident, uint32_t target);  ' +
+        M4_ROUTE_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 22 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    branch = re.compile(
+        r'(OVL20_133C:\n[\s\S]*?'
+        r'    r4 = S32\(U32\(r3\) >> 6\);\n)')
+    text, n_branch = branch.subn(
+        lambda m: m.group(1) +
+        '    rs64_m4_branch_probe(r3, r4, r2, 0x20, 0x13D8);  ' +
+        M4_ROUTE_MARKER + "\n",
+        text, count=1)
+    if n_branch != 1:
+        print("fixup_factor5_ucode: FIXUP 22 ANCHOR FAILED (branch).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 TRIGEN_RETURN_MARKER = "/* fixup: TriGen L_11B0 return audit v1 */"
 if is_main_ucode and TRIGEN_RETURN_MARKER not in text:
     decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_trigen_branch[^\n]*\n)")

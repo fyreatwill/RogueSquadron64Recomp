@@ -116011,3 +116011,26 @@ experiment was run because the work unit was explicitly static-only. The next
 unresolved placeholder is `0x800AEC54` in `.ovl.menu`.
 
 Artifact: `scratch/agent/s2577_symbol_census/audit.md`.
+
+## Session 2578 (2026-08-26) — established M4 route/branch dynamic join
+
+The sweep revisit guard required a new M4 angle. Added a regeneration-safe
+probe after overlay-0x20 `OVL20_133C` computes `r4 = r3 >> 6`, recording the
+phase, branch inputs, and whether `r4 == 2`; retained the existing producer and
+consumer probes in the same per-phase table. The first 90-second launch used
+the nonexistent macOS path `build/Debug/RogueSquadron64Recomp.exe` and was
+discarded after the shell reported `No such file or directory`. The fixed run
+used `build/RogueSquadron64Recomp` from `build/` and was SIGKILLed at 90s.
+
+The independent `[ovl-route]` positive control fired 25,164 times. Phase 6,
+task 208 entered resident 0x20 target 0x13D8; the capped table recorded 256
+branch evaluations, two `r4 == 2` decisions, 128 producer rows at slot 0x00,
+and 128 consumer rows at index 0x00. This selects `H-consumer-reached` and
+establishes one live producer-slot/consumer-index join. It rules out the
+earlier interpretation that the endpoints were dead; s2560's null was caused
+by its title/hangar VI filter. It does not establish all slots or scenes and
+authorizes no mitigation or data rewrite. The run also hit the recurring crash
+family at guest PC 0x8000834c, with no abort marker.
+
+Artifacts: `scratch/agent/s2578_m4_route_branch/audit.md`,
+`scratch/agent/s2578_m4_route_branch.log`.
