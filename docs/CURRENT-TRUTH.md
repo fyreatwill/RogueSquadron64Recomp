@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2642 (2026-08-27).
+Current maintenance marker: Session 2644 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -318,7 +318,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800CA270` next using companion symbols, exact spans, callers, and
+   Audit `0x800CA3A4` next using companion symbols, exact spans, callers, and
    overlay identity;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
@@ -446,3 +446,16 @@ identity, so they remain an overlay collision and must not be collapsed with
 the mission helpers. No source-map or runtime change was warranted. This
 selects `H-BoundaryOnly`/`H-OverlayCollision` for the remaining ambiguity and
 advances the next bounded lead to `0x800C7718`.
+
+## Session 2644 result
+
+The bounded sweep audited `0x800CA270`. The companion mission symbols name
+the function `initNpcActorVariant`; the generated body in `funcs_36.c` starts
+at that address and ends at the exact next boundary `0x800CA3A4`, spanning
+`0x134` bytes. The repository TOML and generated overlay table carry the same
+name and ROM size. The companion's deleted `func_800CA270` note identifies an
+overlapping duplicate-symbol collision, so it does not create a second
+identity to collapse. No generated caller was found in the available tree.
+This selects `H-CompanionExact` as already resolved, with the collision
+preserved; no rename or runtime change was warranted. The next bounded lead is
+`0x800CA3A4`.

@@ -117240,3 +117240,14 @@ checked-in mapping. The external generated-function tree was absent from this
 workspace, so the fresh generated-body/caller line could not be inspected;
 this is a single-source companion/configuration result. No rename, build, or
 runtime change was warranted. The next bounded lead is `0x800CA270`.
+## Session 2644 (2026-08-27) — audited the 800CA270 symbol lead
+
+The bounded generated-symbol sweep checked `0x800CA270` against the companion
+mission symbols, repository TOML, generated body, overlay table, and callers.
+`initNpcActorVariant` is already exact: the generated body spans `0x134` bytes
+to the exact `0x800CA3A4` boundary, and the TOML and overlay table agree on the
+name and ROM size. The companion marks a deleted overlapping
+`func_800CA270` as a duplicate-symbol collision, so the identities remain
+context-specific. No generated caller was found in the available tree. This
+rules out an actionable rename at the lead and advances the sweep to
+`0x800CA3A4`; no runtime behavior changed.
