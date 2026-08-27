@@ -1,34 +1,36 @@
-# NEXT work unit (s2502) — resolve the AI-ring root address discrepancy
+# NEXT work unit (s2503) — identify the legitimate writer of the active AI buffers
 
-HYPOTHESIS-ID: m5-ai-ring-root-identity
+HYPOTHESIS-ID: m5-ai-buffer-writer-provenance
 
 ## Single work unit
 
-Resolve whether the documented AI-ring root `0x801096B0` is a typo for the
-active generated loop's `0x801496B0`, or whether both are legitimate objects.
-Use the companion symbol/decomp sources and the generated input/context files;
-do not infer from runtime values. Record each source's symbol/address,
-allocation/table initialization, and the two AI consumer arguments. No build,
-runtime fields, stale instrumentation, address remap, or behavior change.
+Run one exhaustive static census over the active generated tree and companion
+symbol/decomp inputs for the heap-backed AI buffers rooted at `0x801496B0`.
+Enumerate every store to the root, every store to its derived table entries,
+and every producer of the `0x300`-byte buffers passed to
+`osAiSetNextBuffer_recomp`. Do not use the superseded `0x801096B0` address.
+No build, runtime fields, address remap, or behavior change.
 
 ## Competing hypotheses and discriminator
 
-- H-root-typo: independent source material names `0x801496B0` as the AI table.
-- H-root-dual: independent source material proves `0x801096B0` is a separate
-  live object as well as the generated `0x801496B0` table.
-- H-root-unresolved: sources do not identify either address sufficiently.
+- `H-writer-generated`: an active generated game-side store produces the
+  buffers or table entries consumed by the AI calls.
+- `H-writer-host`: only host/runtime code produces the buffers observed by
+  the consumers; no active generated producer exists.
+- `H-writer-unresolved`: generated stores exist, but the static boundary does
+  not prove which one produces the consumed buffers.
 
-The discriminator is an independent symbol/decomp address table: a source
-naming `0x801496B0` as the AI table selects H-root-typo; proof of a second live
-`0x801096B0` object selects H-root-dual; otherwise select H-root-unresolved.
+The discriminator is a complete producer-to-consumer table keyed by guest PC,
+destination expression, and buffer pointer derivation. A joined generated
+store selects `H-writer-generated`; an exhaustive zero-store result with only
+host producers selects `H-writer-host`; otherwise select `H-writer-unresolved`.
 
 ## Exact commands
 
 ```sh
-test -d ../N64Recomp/RecompiledFuncs; printf 'generated status=%s\n' "$?"
-rg -n "0x801096B0|0x801096B4|0x6950|0x694C|osAiSetNextBuffer_recomp" ../N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
-rg -n "0x8008EE00|0x8008EE84|80029E80|AI ring|pcm.*ring|audio.*ring" ../N64Recomp/fixup_game_funcs.py ../N64Recomp --glob '*.py' --glob '*.c' --glob '*.h' --glob '*.toml' --glob '!RecompiledFuncs.s*/**'
+rg -n -- "801496B0|801496B[0-9A-F]+|0x6950|0x300|osAiSetNextBuffer_recomp" ../N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
+rg -n -i "801496B0|801496F8|AI buffer|audio buffer|queue_samples|osAiSetNextBuffer|runAiAudioStreamPlaybackLoop" ../N64Recomp/fixup_game_funcs.py ../N64Recomp ../rogue_squadron64 --glob '*.py' --glob '*.c' --glob '*.h' --glob '*.toml' --glob '*.txt' --glob '!RecompiledFuncs.s*/**' --glob '!scratch_batch*/**'
 ```
 
-Write the table and conclusion to
-`scratch/agent/s2502_m5_ai_ring_root_audit/audit.md`. No build is needed.
+Record the producer-to-consumer table and conclusion in
+`scratch/agent/s2503_m5_ai_buffer_writer_audit/audit.md`.

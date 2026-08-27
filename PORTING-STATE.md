@@ -114599,3 +114599,21 @@ so `H-ring-absent` is not claimed and no writer attribution or address remap
 is authorized. The fixup's s2308 wrapper is opt-in and adds no active writer.
 No build, runtime instrumentation, behavior change, guard, or mitigation was
 made. Artifact: `scratch/agent/s2501_m5_ai_ring_writer_audit/audit.md`.
+
+## Session 2502 (2026-08-26) — resolved the AI-ring root address discrepancy
+
+The prescribed independent symbol/decomp audit found `D_801496B0` in
+`../rogue_squadron64/undefined_syms_auto.txt`, with adjacent globals in the
+main-overlay audio region. The companion map names the routines at
+`0x8008ED6C`/`0x8008ED70`, and the active generated loop constructs
+`0x801496B0` from `0x80150000 - 0x6950`, initializes sixteen four-byte table
+entries with `0x300` spacing, and passes those entries to the two
+`osAiSetNextBuffer` callsites. Conversely, `0x801096B0` is instruction content
+in the generated mission-overlay output; the companion inventory only lists a
+nearby `D_801096B9` byte.
+
+This selects `H-root-typo` and rules out a second AI table at `0x801096B0` at
+the address-identity boundary. It does not identify the writer of the
+heap-backed `0x300` buffers or establish an image-to-AI handoff. No build,
+runtime change, address remap, guard, or mitigation was made. Artifact:
+`scratch/agent/s2502_m5_ai_ring_root_audit/audit.md`.

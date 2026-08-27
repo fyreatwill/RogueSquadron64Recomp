@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2500 (2026-08-26).
+Current maintenance marker: Session 2502 (2026-08-26).
 
 ## Current state
 
@@ -51,6 +51,16 @@ Current maintenance marker: Session 2500 (2026-08-26).
   the physical ring writer absent; the address identity must be resolved
   before attribution. Artifact:
   `scratch/agent/s2501_m5_ai_ring_writer_audit/audit.md`.
+
+- **s2502 — the documented `0x801096B0` AI-ring root is an address typo.**
+  Independent companion symbols identify `D_801496B0` in the main-overlay
+  audio region, while the active generated loop constructs that address and
+  initializes sixteen `0x300`-spaced AI-buffer pointers there. The companion
+  map and active generated output place `0x801096B0` in mission-overlay code;
+  only a nearby `D_801096B9` byte is listed. This selects `H-root-typo` and
+  resolves root identity, but does not identify the heap-buffer writer or
+  image-to-AI handoff. Artifact:
+  `scratch/agent/s2502_m5_ai_ring_root_audit/audit.md`.
 
 - **s2497 — the image-to-AI-buffer handoff is absent at the static boundary.**
   The exhaustive census found two generated `osAiSetNextBuffer_recomp`
@@ -672,8 +682,9 @@ Closed investigations are not active work items. This is one monotonic sequence;
    writer. s2500 closes the active generated `kind=1` wrapper census with zero
    callers; s2501 found that the active generated loop actually roots its
    pointer table at `0x801496B0`, while `0x801096B0` is a code address in the
-   generated tree. Resolve this address discrepancy before attributing a ring
-   writer. Do not map through `gspTask`, infer an image identity from hashes or timing, or
+   generated tree. s2502 selects the root-typo hypothesis from independent
+   companion symbols and closes the address discrepancy. Next, identify the
+   legitimate writer of the heap-backed `0x300` buffers. Do not map through `gspTask`, infer an image identity from hashes or timing, or
    change task/output fields without a named writer and independent retail
    evidence.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
