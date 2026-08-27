@@ -118919,3 +118919,18 @@ MORT-to-AI publication edge there. The callback key writer remains outside
 the bounded audit, so this is static single-source evidence; no runtime watch,
 writeback, remap, or mitigation was authorized. Full table:
 `scratch/agent/s2743_mort_opaque_callback_audit.md`.
+
+## Session 2744 (2026-08-27) — audited the M5 voice command-list boundary
+
+The required M5 bounded static audit selected `musyxBuildVoiceCommandList`
+(`0x80091034`), called by `musyxSynthFrame` at `0x80091330`. Its complete
+source/destination/order table shows a selected voice-array input and count,
+construction of a rotating `0x30`-byte command-descriptor list, scheduling
+fields, and a conditional `musyxKeyOnVoice` call. It has no sample copy or
+transform, no access to `voice+0x140`/synth output, no access to the AI span
+`0x801496B0:0x8014C6B0`, and no AI, queue, or publication call. This selects
+`H-command-list-absent` and rules out a command-list-mediated MORT-to-AI edge
+at this surface. Evidence is static single-source generated snapshot plus
+companion symbols; no runtime instrumentation, writeback, remap, or
+mitigation was authorized. Full table:
+`scratch/agent/s2744_mort_command_list_audit.md`.

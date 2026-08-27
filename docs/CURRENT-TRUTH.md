@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2743 (2026-08-27).
+Current maintenance marker: Session 2744 (2026-08-27).
+
+Session 2744 completed the bounded static audit of `musyxBuildVoiceCommandList`
+(`0x80091034`), called from `musyxSynthFrame`. Its input is a selected voice
+array and count; its writes initialize a rotating `0x30`-byte command-
+descriptor list and scheduling fields, with `musyxKeyOnVoice` as its only
+callee. It does not read/write `voice+0x140`, synth output, the AI span
+`0x801496B0:0x8014C6B0`, or an AI/queue publication call. This selects
+`H-command-list-absent` for the bounded surface. Static single-source
+evidence only; no runtime watch, writeback, remap, or mitigation is
+authorized. Evidence: `scratch/agent/s2744_mort_command_list_audit.md`.
 
 Session 2743 completed the bounded static audit of the newly named indirect
 callback at `musyxSynthFrame` PC `0x80091684`. Its slot resolves to
