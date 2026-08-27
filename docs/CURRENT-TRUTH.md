@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2566 (2026-08-26).
+Current maintenance marker: Session 2567 (2026-08-26).
 
 ## Current state
 
@@ -128,6 +128,16 @@ Current maintenance marker: Session 2566 (2026-08-26).
   is a static, single-source boundary classification, so the placeholder
   remains unchanged. Artifact:
   `scratch/agent/s2566_symbol_census/audit.md`.
+
+- **s2567 — landed a regeneration-safe batch of five generated fragment
+  renames.** Companion annotations identify `fake_func_8005C61C`,
+  `fake_func_8005EE64`, `fake_func_800613B8`, `fake_func_80069AEC`, and
+  `fake_func_8006ACA4` as setup fragments immediately preceding named
+  functions. Added explicit `build_redefs.py` mappings to stable `Preamble`
+  names and verified the generator emits all five mappings. The unresolved
+  `0x801044D8` target remains unchanged because its companion entry provides
+  no human candidate. This was a source-of-truth tool change; no runtime build
+  was needed.
 
 ## Latest evidence
 

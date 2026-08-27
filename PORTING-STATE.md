@@ -115838,3 +115838,22 @@ origin. No build or runtime experiment was run because the work unit was
 explicitly static-only. The next unresolved placeholder is `0x801044D8`.
 
 Artifact: `scratch/agent/s2566_symbol_census/audit.md`.
+
+## Session 2567 (2026-08-26) — landed batch generated-symbol preamble renames
+
+The mandated no-churn pivot selected the generated-symbol renaming sweep after
+the next target, `0x801044D8–0x801044DF`, was confirmed to remain an explicit
+companion placeholder with no human candidate. Added seven total explicit
+fragment mappings to `tools/rename/build_redefs.py`, including five new
+companion-annotated setup fragments: `fake_func_8005C61C` →
+`checkTrackedNpcProximityForCuePreamble`, `fake_func_8005EE64` →
+`steerOrientationTowardTargetPreamble`, `fake_func_800613B8` →
+`loadCharTextureSetPreamble`, `fake_func_80069AEC` →
+`collideSegmentAgainstObjectNodesPreamble`, and `fake_func_8006ACA4` →
+`transformObjectColliderCenterPreamble`. The isolated generator run emitted
+all five new mappings. This rules out an unresolved-target rename in this
+unit, but lands a regeneration-safe code/tool change; it does not prove any
+runtime reachability or audio behavior.
+
+Artifact: `tools/rename/build_redefs.py` and `/tmp/rs64-redefs.txt` (verification
+output, not committed).
