@@ -118799,3 +118799,20 @@ This selects `H-already-synchronized` / `H-ambiguous-or-fake` and rules out
 `H-exact-matches` for this interval. No build or game run was warranted for
 the symbol-only sweep. Decision evidence:
 `scratch/agent/s2736_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2737 (2026-08-27) — localized the M4 absolute-DMEM path
+
+The generated-symbol sweep was initially attempted for
+`0x800D4000..0x800D7000`, but the required last-15-title check showed that
+all 15 recent sessions were sweep-scoped, so the mandatory revisit condition
+selected M4. The complete generated-source alias census found one
+absolute-DMEM M4 table producer at `0x8002642C..0x80026434`, selector-state
+writes/reads at `0xC70/0xB74`, and one indirect consumer at
+`0x80026644..0x8002664C`. Other `0xB00/B02/B04` hits were pointer-relative
+object fields, not aliases of the M4 table.
+
+This selects `H-known-M4-path-localized` and rules out the proposed alias
+merge. It does not establish the dynamic producer-slot versus consumer-index
+equality, so no runtime instrumentation, mitigation, writeback, or remap was
+authorized. No build or game run was warranted. Evidence:
+`scratch/agent/s2737_m4_alias_census/audit.md`.

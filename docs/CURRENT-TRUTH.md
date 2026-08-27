@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2736 (2026-08-27).
+Current maintenance marker: Session 2737 (2026-08-27).
+
+Session 2737 performed the mandated revisit after the last 15 ledger titles
+were all sweep-scoped. A complete generated-source census localized the
+absolute-DMEM M4 path to the known producer at
+`0x8002642C..0x80026434`, selector state at `0xC70/0xB74`, and indirect
+consumer at `0x80026644..0x8002664C`; other `0xB00/B02/B04` hits were
+pointer-relative object fields. This selects `H-known-M4-path-localized`,
+rules out the proposed alias merge, and leaves only the dynamic producer-slot
+versus consumer-index equality unresolved. No runtime instrumentation,
+mitigation, writeback, or remap was authorized. Evidence:
+`scratch/agent/s2737_m4_alias_census/audit.md`.
 
 Session 2735's generated-symbol sweep covered `0x800CE000..0x800D1000` and
 evaluated 13 companion candidates: eight semantic entries were already
@@ -705,7 +716,11 @@ bounded interval is `0x800D4000..0x800D7000`.
 5. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;
    H3 is unavailable because the oracle cannot screenshot the LLE path.
 6. **M4 accumulator origin — parked.** One phase-6 producer/consumer join is
-   established; broader slot coverage is lower priority than M5.
+   established. The s2737 complete alias census localized the absolute-DMEM
+   path to the known producer, selector state, and indirect consumer and
+   ruled out merging pointer-relative `0xB00/B02/B04` fields from unrelated
+   objects. The dynamic selector/slot equality remains unmeasured; broader
+   slot coverage is lower priority than M5.
 
 ## Durable boundaries
 
