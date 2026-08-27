@@ -1,20 +1,20 @@
-# NEXT work unit (s2752) — bounded generated-symbol rename batch
+# NEXT work unit (s2753) — bounded generated-symbol rename batch
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-The M5 speech-loader surface was audited in
-`scratch/agent/s2751_m5_speech_loader/audit.md` and selected service-only:
-there is no new source-backed CPU publication edge to de-stub. Resume the
-generated-symbol sweep with one bounded source-backed batch. Before changing
-anything, run the required revisit check; the last 15 ledger titles are not
-all sweep titles, so the sweep remains eligible.
+The `0x800E7000..0x800E9000` interval was fully synchronized in
+`scratch/agent/s2752_generated_symbol_sweep/decision-table.txt`, with fake or
+address-only placeholders preserved. Resume the sweep with the next bounded
+source-backed batch `0x800E9000..0x800EB000`. Before changing anything, run
+the required revisit check; the last 15 ledger titles are not all sweep
+titles, so the sweep remains eligible.
 
-Use the rename tool's companion-backed decision table to select the next
-contiguous region, apply only exact source/m2c-backed mappings, and preserve
-address-only, fake, and ambiguous symbols. This is a real rename change, not a
-diagnostic census.
+Use the companion-backed decision table against the external generated tree
+for `0x800E9000..0x800EB000`, apply only exact source/m2c-backed mappings, and
+preserve address-only, fake, and ambiguous symbols. This is a real rename
+change, not a diagnostic census.
 
 ## Competing hypotheses and discriminator
 
@@ -40,4 +40,4 @@ region with the next address interval identified.
 3. Run the tool's dry-run/decision-table mode, then apply only exact mappings
    from that same table.
 4. Verify changed symbols and references, and save the table under
-   `scratch/agent/s2752_generated_symbol_sweep/`.
+   `scratch/agent/s2753_generated_symbol_sweep/`.

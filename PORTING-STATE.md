@@ -119041,3 +119041,14 @@ missing M5 AI publication writer, without justifying a runtime watch, guard,
 writeback, remap, or build. The remaining M5 publication boundary is
 unresolved, so the next unit switches to the ready generated-symbol rename
 fallback.
+
+## Session 2752 (2026-08-27) — bounded the synchronized generated-symbol region
+
+Ran the companion-backed generated-symbol decision table over
+`0x800E7000..0x800E9000` with `--require-rename`. All nine candidate entries
+were classified: seven semantic entries were already synchronized, and the
+two remaining entries (`0x800E71C8` and `0x800E8A34`) were fake/address-only
+placeholders and were preserved. The command returned status 2 with zero
+renamed references in zero files. This selects H4-synchronized and rules out
+an exact rename in this interval; the next bounded region is
+`0x800E9000..0x800EB000`. Evidence: `scratch/agent/s2752_generated_symbol_sweep/decision-table.txt`.
