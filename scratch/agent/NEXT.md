@@ -1,14 +1,14 @@
-# NEXT work unit (s2537) — generated-symbol renaming sweep, next bounded region
+# NEXT work unit (s2539) — generated-symbol renaming sweep, next bounded region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
 Resume the sweep at the next unresolved main-overlay placeholder,
-`0x80099FDC`. Enumerate its complete generated span, inspect companion
+`0x8009D7CC`. Enumerate its complete generated span, inspect companion
 symbol/m2c/source and caller evidence, and rename only an unambiguous match
 through the regeneration-safe symbol path. Leave it unchanged if evidence is
-absent. Do not repeat the M4 alias audit or the already-closed sweep regions.
+absent. Do not repeat the M4 alias audit or already-closed sweep regions.
 
 ## Competing hypotheses and discriminator
 
@@ -16,12 +16,15 @@ absent. Do not repeat the M4 alias audit or the already-closed sweep regions.
   renamed without changing generated behavior.
 - `H-no-match`: the complete region has no defensible mapping, so the
   placeholder remains.
+- `H-data-boundary`: the region is an embedded-data or conversion boundary,
+  not an independently callable game function.
 - `H-regeneration-risk`: an apparent name is found but the active symbol or
   fixup path cannot safely carry it.
 
-The discriminator is one region table listing every placeholder, span,
-candidate, evidence source, confidence, and resulting diff. An exact match
-plus clean symbol/fixup validation selects H-named-match; zero exact matches
+The discriminator is one region table listing every placeholder, complete
+span, candidate, evidence source, confidence, and resulting diff. An exact
+human function match plus clean symbol/fixup validation selects H-named-match;
+a data/boundary classification selects H-data-boundary; zero exact matches
 select H-no-match; failed regeneration-safe validation selects
 H-regeneration-risk.
 
@@ -29,9 +32,9 @@ H-regeneration-risk.
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
-rg -n 'fake_func_80099FDC|80099FDC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
-rg -n -C 8 'fake_func_80099FDC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n -i '99FDC|candidate semantic terms' /Users/williambuckley/Documents/Tools/rogue_squadron64/src /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+rg -n 'fake_func_8009D7CC|8009D7CC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
+rg -n -C 8 'fake_func_8009D7CC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -i '9D7CC|candidate semantic terms' /Users/williambuckley/Documents/Tools/rogue_squadron64/src /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 ```
 
 Do not build or rename until the complete region and companion evidence are

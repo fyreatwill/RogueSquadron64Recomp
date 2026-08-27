@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2537 (2026-08-26).
+Current maintenance marker: Session 2538 (2026-08-26).
 
 ## Current state
 
@@ -240,6 +240,16 @@ Current maintenance marker: Session 2537 (2026-08-26).
   live in the qualified scene. No runtime or mitigation changed. Artifact:
   [`M4-INDIRECT-ALIAS-AUDIT.md`](M4-INDIRECT-ALIAS-AUDIT.md).
 
+- **s2538 — the next generated-symbol region is a conversion boundary, not a
+  rename candidate.** `0x80099FDC–0x80099FDF` is the complete four-byte fake
+  span in both symbol inputs. The companion maps place `aspMainTextStart` at
+  `0x80099FE0`; the independent ROM check shows the preceding branch at
+  `0x09ABDC` and the RSP image beginning at `0x09ABE0`, whose first word
+  matches the generated `mfc0` at `0x80099FE0`. The generated fake body has
+  therefore absorbed the RSP image stream. No human function mapping exists
+  and no generated code changed. Artifact:
+  `scratch/agent/s2538_symbol_census/audit.md`.
+
 - **s2531 — two adjacent generated fragments were renamed through the
   regeneration input and generated tables.** `0x80082268` is now
   `cheatCodeConstantPreamble`, an 8-byte constant-load fragment immediately
@@ -285,7 +295,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   revisit found the indirect B00/B02/B04 table path is a static 0x670-derived
   consumer candidate; the dynamic table-index join remains open. The sweep
   census at `0x80099C4C` found only a 4-byte `sw s2,0x38(sp)` fragment and no
-  defensible human mapping; the placeholder remains. Next is `0x80099FDC`.
+  defensible human mapping; the placeholder remains. s2538 classified
+  `0x80099FDC–0x80099FDF` as the four-byte boundary before `aspMainTextStart`
+  and left it unchanged. Next is `0x8009D7CC`.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index

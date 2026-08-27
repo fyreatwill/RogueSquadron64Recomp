@@ -115278,3 +115278,19 @@ fixup report identifies a missing `L_80099C88` label and the active generated
 body is a trap, so this is a conversion/boundary artifact rather than a safe
 rename. Selected `H-no-match`; left all generated code unchanged. Artifact:
 `scratch/agent/s2537_symbol_census/audit.md`. Next target is `0x80099FDC`.
+
+## Session 2538 (2026-08-26) — censused generated-symbol audio-image boundary
+
+Ran the bounded generated-symbol census at `0x80099FDC`. The complete
+companion/project-symbol span is four bytes (`0x80099FDC–0x80099FDF`), with
+`aspMainTextStart` beginning at `0x80099FE0`. The independent ROM check found
+the preceding branch at `0x09ABDC` and the Factor 5 image beginning at
+`0x09ABE0`; its first word matches the generated `mfc0` shown at
+`0x80099FE0`. The generated fake body therefore absorbs the RSP image stream
+at a conversion boundary and supplies no callable human-name candidate.
+Selected `H-data-boundary`; left generated code unchanged. Next target is
+`0x8009D7CC`. Artifact:
+`scratch/agent/s2538_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
