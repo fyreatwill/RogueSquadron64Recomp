@@ -119886,3 +119886,13 @@ passed. No build or game soak was needed because no generated source changed.
 This selects the already-synchronized/ambiguous hypothesis for the interval
 and rules out stale generated semantic placeholders there, not the remaining
 sweep. The next bounded interval is `0x80155000..0x80157000`.
+## Session 2815 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+Ran the regeneration-safe companion selector for `0x80155000..0x80157000`
+against the external `rogue_squadron64` symbol files. It changed zero
+references in zero files. The independent generated-tree scan found no
+`func_8015*` or `fake_func_8015*` definitions or references, and
+`git diff --check` passed. This closes the interval as already synchronized;
+it rules out a source-backed semantic placeholder rename there, while
+ambiguous/data entries remain intentionally preserved. No build or game soak
+was needed.

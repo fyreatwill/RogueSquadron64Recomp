@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2814 (2026-08-27).
+Current maintenance marker: Session 2815 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -193,6 +193,12 @@ files. The independent generated-tree placeholder scan found no
 `func_8015*` or `fake_func_8015*` definitions or references. No build or game
 soak was needed.
 
+Session 2815 closed generated-symbol interval `0x80155000..0x80157000`.
+The bounded selector changed zero references in zero files, and the
+independent generated-tree placeholder scan found no `func_8015*` or
+`fake_func_8015*` definitions or references. No build or game soak was
+needed.
+
 ## Next steps
 
 Priority follows the user directive: maintenance, then M5, then systematic M3,
@@ -205,10 +211,10 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    already-synchronized symbols or preserved ambiguous/data entries, with no
    stale generated placeholders selected. Continue with
    preserving ambiguous/data entries and applying only source-backed names.
-   Session 2814 closed `0x80153000..0x80155000`
-   with one preserved ambiguous-or-fake candidate, zero selected references,
-   and an empty independent placeholder scan. Continue with
-   `0x80155000..0x80157000`.
+   Session 2815 closed `0x80155000..0x80157000`; the selector changed zero
+   references in zero files and the independent placeholder scan was empty.
+   Continue with `0x80157000..0x80159000`, preserving ambiguous/data entries
+   and applying only source-backed names.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
    generated-target build boundary is clear, but the qualified driver still
