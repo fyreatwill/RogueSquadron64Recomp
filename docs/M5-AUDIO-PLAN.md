@@ -1,6 +1,6 @@
 # M5 — audio de-stubbing plan
 
-Refreshed in session 2579 (2026-08-26). This is the design gate for M5. This
+Refreshed in session 2665 (2026-08-27). This is the design gate for M5. This
 refresh changes no runtime code and runs no soak.
 
 ## Boundary and current policy
@@ -33,6 +33,17 @@ completion or writeback gate. s2220 matched the retail `reapplyDisplayMode`
 controls with C88=`1`. s2608 made that guest store the compiled default
 (`ROGUESQ_M5_C88_VALUE=0` is the force-zero rollback). Hangar PCM and the
 remaining slot/voice checkpoints below are still open.
+
+The s2665 source survey covered `src/`, `patches/`, the checked-in runtime,
+the generated-function snapshot where available, and
+`tools/fixup_factor5_ucode.py`. `patches/` contains no audio override or
+audio host stub. The fixup script owns the regeneration-safe image return,
+iteration-cap, and image-stage probe insertions; those are represented by A3
+and the diagnostic inventory below. The generated game-function fixups are
+outside this checkout, so their active audio behavior is represented by the
+checked-in generated anchors and the existing fixup-controlled guards rather
+than by hand edits. No additional active audio stub, trap, gate, or safety
+hatch was found outside the inventory below.
 
 ## Complete inventory of active stubs, traps, gates, and safety hatches
 

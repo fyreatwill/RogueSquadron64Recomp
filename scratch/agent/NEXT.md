@@ -1,47 +1,51 @@
-# NEXT work unit (s2665) — write the M5 audio de-stubbing plan
+# NEXT work unit (s2666) — execute M5 Step 0 ground-truth reconciliation
 
-HYPOTHESIS-ID: m5-audio-destub-plan
+HYPOTHESIS-ID: m5-audio-step0-contract-reconciliation
 
 ## Work unit
 
-Create `docs/M5-AUDIO-PLAN.md`. Survey every audio stub, immediate-return
-trap, disabled route, and defensive gate currently in force in `src/`,
-`patches/`, the generated fixups, and the runtime integration. For each item,
-record its symbol/site, current behavior, retail contract if known, risk,
-rollback, and a phase-gated validation soak. Order the smallest incremental
-de-stubbing steps so each step has an independent positive control and does
-not conflate MusyX RSP with the CPU MORT speech boundary. Do not implement a
-de-stub in this work unit.
+Run one same-build, phase-gated reconciliation of the independent retail
+oracle and the port's current image/silent audio arms. Do not change behavior.
+The row must cover the whole-RDRAM oracle control, retail gate/task/voice/status
+writer observations, port task fields/DMEM/DMA/exit/SP completion, service,
+slot/voice, MORT, PCM source/consumer, and title/hangar phase identity. Do not
+repeat the already-closed output-field census or named texture-writer audit.
 
 ## Competing hypotheses and discriminator
 
-- `H-Plan-covers-all-gates`: the survey enumerates every active audio stub/trap/
-  gate and can assign each one a bounded validation step.
-- `H-Plan-misses-live-edge`: at least one active audio behavior is absent from
-  the survey or cannot be assigned a contract and positive control.
-- `H-Plan-conflates-contracts`: the proposed sequence mixes MusyX RSP task
-  execution with CPU MORT publication and therefore lacks a valid rollback or
-  discriminator.
+- `H-Step0-closes-contract`: the existing controls and oracle watches produce a
+  complete row naming the next legitimate de-stub edge.
+- `H-Step0-still-unmapped`: controls pass but no writer, destination/value, or
+  ordering join closes; behavior must remain unchanged and the next probe must
+  target the missing boundary.
+- `H-Step0-control-invalid`: whole-RDRAM or phase controls fail, making all
+  narrow nulls unevaluable and requiring recipe repair before M5 changes.
 
-The discriminator is one completeness table: every active stub/trap/gate must
-have a named owner, current branch behavior, retail/port contract, positive
-control, expected phase-gated signal, rollback, and soak recipe. A complete,
-separated table selects `H-Plan-covers-all-gates`; any missing site or mixed
-contract selects the corresponding hypothesis and requires repairing the plan
-before implementation.
+The discriminator is the single phase-keyed table described in
+`docs/M5-AUDIO-PLAN.md`: whole-RDRAM positive control; retail writer/value;
+port dispatch/task fields/DMEM/DMA/exit/SP; service/status/slot/voice; MORT;
+PCM source/consumer; and route phase. A complete writer-plus-legitimacy-plus-
+ordering join selects the first hypothesis; a complete control with no join
+selects the second; any missing positive control selects the third.
 
 ## Exact commands
 
-1. `rg -n -i 'stub|noop|no-op|Broke|AUDIO_UCODE|MORT|MusyX|audio' src patches tools ../N64Recomp/RecompiledFuncs/funcs_*.c`
-2. Inspect bounded windows around each unique active site and the canonical
-   env-var catalog before recording it.
-3. Write `docs/M5-AUDIO-PLAN.md` with the complete discriminator table and
-   exact one-run-per-step validation recipes. No build or runtime run is
-   required for the design-only unit.
+1. `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
+2. `zsh scratch/agent/run_s2277_m5_step0_ground_truth.sh`
+3. Inspect only bounded outputs under its result directory with `grep -c`,
+   `grep -n`, and `tail -50`; do not read a full run log.
+
+Use the recipe's existing oracle and port controls, phase-gate with
+`PROBE_PHASE_WIDTH=1024` and `PROBE_KEYS_FROM_PHASE=1`, and terminate game
+processes with SIGKILL. If the recipe's positive control or phase setup is
+stale, repair that recipe in this iteration and report `H-Step0-control-invalid`
+instead of interpreting narrow nulls.
 
 ## Expected outcomes
 
-- A complete, separated table selects `H-Plan-covers-all-gates`.
-- An unlisted active site selects `H-Plan-misses-live-edge`.
-- A step that lacks contract separation, rollback, or positive control selects
-  `H-Plan-conflates-contracts`.
+- Complete named writer/value/order join: select `H-Step0-closes-contract`
+  and write the next one-edge behavior change into a new NEXT file.
+- Controls pass but join remains absent: select `H-Step0-still-unmapped`; no
+  writeback, remap, gate bypass, or guard relaxation is allowed.
+- Any missing whole-RDRAM or phase control: select
+  `H-Step0-control-invalid`; repair only the recipe/control next.

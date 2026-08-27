@@ -6,6 +6,21 @@ and probe rows remain in the ledger.
 
 Current maintenance marker: Session 2664 (2026-08-27).
 
+## Session 2665 result
+
+The M5 design gate was refreshed in [`M5-AUDIO-PLAN.md`](M5-AUDIO-PLAN.md)
+after surveying `src/`, `patches/`, the checked-in runtime, the available
+generated anchors, and `tools/fixup_factor5_ucode.py`. The inventory covers the
+live `M_AUDTASK` image/stub selector, stock `aspMain` stub, RSP completion and
+yield shims, MusyX gate/tick paths, key-on and pointer guard classes,
+wait/pump/drain/reaping hatches, AI/SDL bridges, DMEM serialization, unknown
+task handling, and the CPU-side MORT boundary. No audio override or host stub
+exists under `patches/`, and no additional active audio behavior was found in
+the fixup/runtime survey. The plan's completeness table selects
+`H-Plan-covers-all-gates`; MORT and Factor 5 remain separate contracts. No
+runtime code, generated function, gate, writeback, or remap changed, and no
+soak was run because this was the required design-only unit.
+
 ## Decision-relevant evidence
 
 - **s2664 — the named retail writer call-sites are utility/texture paths, not
@@ -470,11 +485,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    at the Factor 5 task/output ABI versus CPU-MORT publication boundary; map
    one of those boundaries before any behavior change. The s2664 static audit
    rules out the named retail writer call-sites as that edge; do not repeat
-   their utility/texture classification. The next bounded action is the M5
-   audio-plan survey, starting from every active stub/trap/gate and its first
-   validation control. Keep C88=`0` and
-   `ROGUESQ_AUDIO_UCODE=0` as
-   rollbacks/controls.
+   their utility/texture classification. The audio-plan survey is now complete
+   in `docs/M5-AUDIO-PLAN.md`. The next bounded action is its Step 0
+   ground-truth reconciliation, followed by one behavior change only when a
+   complete task/slot/voice/PCM row identifies the edge. Keep C88=`0` and
+   `ROGUESQ_AUDIO_UCODE=0` as rollbacks/controls.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 3. **Hangar visual artifact — parked.** H2 and consumer-mode H1 are refuted;

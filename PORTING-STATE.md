@@ -117591,3 +117591,22 @@ and ordering relation to the s2662 port rows. The s2662 stage-only result is
 therefore unchanged. No build or runtime run was needed; no port behavior,
 task-field writeback, remap, gate, wait, or generated code changed. Full table:
 `scratch/agent/s2664_m5_retail_writer_callsite_audit.md`.
+
+## Session 2665 (2026-08-27) — refreshed the M5 audio de-stubbing design gate
+
+The required design-only M5 work unit refreshed `docs/M5-AUDIO-PLAN.md` after
+surveying `src/`, `patches/`, the checked-in runtime, available generated
+anchors, and `tools/fixup_factor5_ucode.py`. The completeness inventory covers
+the live `M_AUDTASK` image/stub selector, stock `aspMain` stub, RSP completion
+and yield shims, MusyX gate/tick paths, key-on and pointer guard classes,
+wait/pump/drain/reaping hatches, AI/SDL bridges, DMEM serialization, unknown
+task handling, and the CPU-side MORT boundary. `patches/` contains no audio
+override or host stub, and the survey found no additional active audio
+behavior outside the inventory. The table selects `H-Plan-covers-all-gates`
+and keeps Factor 5 RSP and CPU MORT as separate contracts.
+
+No build or soak was run because this was the prescribed design unit. No
+runtime code, generated function, gate, writeback, remap, or guard changed.
+The next work unit is the phase-gated Step 0 retail/port ground-truth
+reconciliation; its discriminator and exact recipe are in
+`scratch/agent/NEXT.md`.
