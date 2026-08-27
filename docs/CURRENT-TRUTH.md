@@ -4,9 +4,28 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2654 (2026-08-27).
+Current maintenance marker: Session 2656 (2026-08-27).
 
 ## Decision-relevant evidence
+
+- **s2656 — producer/dispatch snapshots keep the retail audio contract zero.**
+  The retail oracle passed the whole-RDRAM control with 1,030 hits, reached
+  title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and retained 477
+  phase-gated type-2 task rows at task pointer `0x80149470`; all sampled retail
+  `output_buff` and `output_buff_size` fields were zero. The rebuilt port
+  image/silent pair independently reached both target phases. In each arm,
+  existing producer-side `osSpTaskLoad` snapshots for task `0x80149470`
+  remained `output_buff=0` and `output_size=0` across title and hangar, while
+  image tasks supplied a nonzero output contract, proving the snapshot path is
+  live. The generated tree has no direct `M_AUDTASK`, `output_buff`, or
+  `output_buff_size` references and no fixed task-field stores; the scheduler
+  passes the received task pointer through unchanged. This selects
+  `H-ProducerNeverSetsOutput` for the direct-store class and refutes
+  `H-TaskPointerMismatch` at dispatch. It does not distinguish missing
+  producer initialization from a generic structure copy, so that case remains
+  open. No writeback, remap, gate, or defensive behavior changed. Oracle and
+  port captures are independent sources; the static store census is a separate
+  single-source qualification.
 
 - **s2616 — same-build Step 1 rebaseline selects the image output contract
   gap.** The retail oracle passed the whole-RDRAM control at 10,000 writes and
@@ -354,7 +373,10 @@ This is one monotonic sequence; #1 is the next campaign priority.
    legitimate payload polarity, and ordering relative to image completion and
    PCM consumption. The s2655 dispatch capture found both output fields zero
    on every qualified task, so trace the guest task producer/allocator and the
-   exact fields it supplies before `osSpTaskStartGo`. Do not repeat the
+   exact fields it supplies before `osSpTaskStartGo`. The s2656 direct-store
+   census found no guest `OSTask+0x28/+0x2C` store and the same task pointer
+   remains zero at load and start; trace the allocator/initialization or
+   generic task-copy boundary. Do not repeat the
    title-zero census or revisit the hangar
    `0x80094648` relation. Keep C88=`0` and `ROGUESQ_AUDIO_UCODE=0` as
    rollbacks/controls.

@@ -117409,3 +117409,30 @@ valid output metadata reaches dispatch. It rules out a valid dispatch output
 buffer as the immediate post-DMA edge, but does not identify the guest producer
 or authorize writeback. The next unit is a producer/allocation timeline before
 `osSpTaskStartGo`.
+
+## Session 2656 (2026-08-27) — traced OSTask producer/dispatch fields
+
+First ran the retail oracle with whole-RDRAM and phase-gated task controls.
+The oracle positive control recorded 1,030 writes, reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and retained 477 type-2
+task rows at `0x80149470`; sampled `output_buff` and `output_buff_size` were
+zero. A first attempt used a nonexistent core path and exited before loading
+the ROM; it produced no hits and was corrected in this iteration.
+
+Built `RogueSquadron64Recomp` and ran one same-build image/silent pair with
+the existing phase-gated producer/dispatch hooks. Both arms reached title and
+hangar. For task `0x80149470`, `osSpTaskLoad` snapshots stayed zero in both
+phases and both arms, across the observed data pointers `0x80171CE0`,
+`0x80171E70`, `0x80173B20`, and `0x80173CB0`. Image tasks supplied nonzero
+output metadata, proving the host snapshot/ABI path is live. The generated
+static census found no direct `M_AUDTASK`, `output_buff`, or
+`output_buff_size` references or fixed task-field stores; the scheduler passes
+the received task pointer through unchanged.
+
+This selects `H-ProducerNeverSetsOutput` for the direct-store class and rules
+out `H-TaskPointerMismatch` at dispatch. It does not distinguish missing
+initialization from a generic structure copy, and does not identify a host
+clear writer. No output writeback, remap, gate, or defensive behavior changed.
+Evidence is two-source for the retail/port field result, with the static store
+census explicitly single-source. Artifacts:
+`scratch/agent/s2656_m5_task_producer/`.
