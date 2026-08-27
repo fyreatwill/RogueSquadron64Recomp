@@ -79,6 +79,7 @@ EXTRA_RENAMES = {
     "fake_func_800D4EC4": "duplicateSymbolPrefixForNpcInitChildLinkedToParent",
     "fake_func_800DD2C4": "duplicateSymbolPrefixForNpcInitFullModel",
     "fake_func_800DFB8C": "duplicateSymbolPrefixForApplyCraftAnimAndDetailParams",
+    "fake_func_800E8A34": "duplicateSymbolPrefixForRunDestructionPhaseSequence",
 }
 with open(REDEFS, "a", encoding="utf-8") as f:
     for old, new in EXTRA_REVERTS.items():

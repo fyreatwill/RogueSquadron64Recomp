@@ -116749,3 +116749,19 @@ The next work unit is a regeneration-safe census of all port writer/copy edges
 covering the retail writer family, with the same phase/task/PCM controls.
 
 Artifacts: `scratch/agent/s2614_m5_pcm_writer/`.
+
+## Session 2615 (2026-08-27) — compacted truth and landed symbol rename
+
+Maintenance was triggered because `docs/CURRENT-TRUTH.md` measured 60,516
+bytes. Replaced its redundant session archive with a compact decision record;
+the file is now 7,241 bytes and 132 lines. Durable current M5 conclusions,
+backlog, safety rules, and references to the append-only ledger remain.
+
+As the required engineering pivot, added the companion-supported mapping
+`fake_func_800E8A34` → `duplicateSymbolPrefixForRunDestructionPhaseSequence`
+to `tools/rename/build_redefs.py`. The companion identifies the following
+`runDestructionPhaseSequence` entry as a deleted duplicate-symbol collision,
+so this is a symbol rename rather than a guessed callable name. No build or
+runtime experiment was run in this maintenance iteration. The next unit is the
+generated-symbol sweep continuation described in `scratch/agent/NEXT.md`; M5
+remains the higher-priority behavioral backlog after this bounded pivot.
