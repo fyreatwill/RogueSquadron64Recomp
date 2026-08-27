@@ -4,7 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2671 (2026-08-27).
+Current maintenance marker: Session 2672 (2026-08-27).
+
+## Session 2672 result
+
+The bounded Step 3 audit found a real image-task relation but no complete
+publication edge. In the qualified s2671 image arm, stage-2 writes rotate
+through `0x166450:0x169450` with `0x300`-byte payloads; only three DMA rows were
+nonzero, including one source/consumer pair at `0x166D50` (`nz=621`). Stage 3
+uses `0x1798B0:0x179A48` in hangar, where `dest=field348+0x100`, but its 318
+rows were zero and no PCM row uses that span. The task ABI's `data_ptr+0x100`
+also resolves to task-data neighborhoods, not these destinations; all 987 ABI
+rows retained zero output fields and no field write event. The independent
+retail writer audit classifies the secondary span's named writers as memset or
+texture/image metadata. This selects `H-unmapped-edge`: destination overlap is
+not sufficient to authorize writeback or remap. Full table:
+[`s2672_m5_output_publication_audit.md`](../scratch/agent/s2672_m5_output_publication_audit.md).
 
 ## Session 2671 result
 
@@ -605,12 +620,11 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **M5 Step 3 output/publication contract audit — primary active thread.**
-  Step 1 now qualifies the silent/image separation through title and hangar:
-  image has real DMEM/DMA/image-stage work while silent is the zero-work
-  control, but both retain zero task output fields and zero PCM payloads.
-  Trace one named output edge with existing task/DMA/PCM artifacts and the
-  retail writer evidence before changing behavior; do not add writeback from
-  destination overlap alone.
+  The s2672 audit found the image stage-2 ring and the stage-3
+  `field348+0x100` relation, but neither closes to a named MORT writer and
+  nonzero PCM publication. Obtain an independent writer/order mapping for the
+  rotating `0x166xxx` ring or a CPU-side MORT output callsite; do not repeat the
+  task-field census or add writeback/remap from destination overlap alone.
 2. **M5 de-stubbing sequence — secondary active thread.** Obtain an independent
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,

@@ -1,40 +1,46 @@
-# NEXT work unit (s2672) — audit the named M5 output/publication edge
+# NEXT work unit (s2673) — obtain the next independent M5 writer/order edge
 
-HYPOTHESIS-ID: m5-audio-step3-output-publication-audit
+HYPOTHESIS-ID: m5-audio-step3-ring-writer-ground-truth
 
 ## Work unit
 
-Perform one bounded, static contract-edge audit using the qualified s2671
-artifacts and the existing retail writer evidence. Trace the image arm's
-phase-keyed DMA destinations and zero payloads through the known CPU MORT/PCM
-source-consumer call chain, and identify whether `data_ptr+0x100`, an output
-field, or a CPU writer is the next legitimate publication edge. Do not build,
-change runtime behavior, add writeback, alter gates, or remove guards.
+Use the existing independent retail oracle and the qualified port capture to
+map the rotating stage-2 PCM ring (`0x166450:0x169450`) to a named writer and
+ordering edge. Prefer a ground-truth oracle watch/callsite mapping for the
+exact nonzero retail/port addresses; do not change runtime behavior, add
+writeback, or repeat the zero task-field census. If the oracle cannot drive the
+target phase, record that limitation and do not interpret a narrow null.
 
 ## Competing hypotheses and discriminator
 
-- `H-image-contract-edge`: the image task's existing `data_ptr+0x100`/DMA
-  relation names a legitimate port publication edge and its destination/order
-  can be joined to PCM consumption.
-- `H-cpu-mort-edge`: the missing nonzero PCM is produced by a CPU-side MORT
-  writer after task completion, independent of the image DMA destinations.
-- `H-unmapped-edge`: neither path can be joined to a named writer, legitimate
-  destination/value, and completion-to-consumer order from current evidence.
+- `H-ring-writer`: a named CPU/MORT writer legitimately produces the rotating
+  `0x166xxx` PCM payload before the port consumer, and its retail PC/value/order
+  can be joined to image completion.
+- `H-image-ring-writer`: the Factor 5 image's stage-2 DMA is the legitimate
+  writer, with retail and port destination/payload/order agreement.
+- `H-ring-unmapped`: neither independent source can provide a legitimate named
+  writer plus destination, payload polarity, and completion-to-consumer order.
 
-The discriminator is one table, for every observed s2671 image DMA range and
-PCM source/consumer row: task ordinal and phase, destination span, payload
-nonzero/hash, candidate writer/function, MORT descriptor/type, and ordering
-relative to image completion and consumer. A complete named image join selects
-`H-image-contract-edge`; a complete CPU writer join selects `H-cpu-mort-edge`;
-otherwise `H-unmapped-edge`. A missing positive-control row makes the audit
-unevaluable rather than a null result.
+The discriminator is one table covering every target-phase nonzero/zero ring
+window observed in the qualified port arm and every corresponding retail watch
+row: address span, writer PC, value/payload polarity, MORT descriptor/type (if
+any), image completion event, PCM source/consumer event, and ordering. A
+complete CPU writer join selects `H-ring-writer`; a complete image-DMA join
+selects `H-image-ring-writer`; otherwise select `H-ring-unmapped`. The oracle
+whole-RDRAM watch must fire first as the positive control.
 
 ## Exact commands
 
-1. `rg -n "data_ptr|0x100|pcm-boundary|MORT|mort|audtask-(dma|image-stage)|pcm-(source|consumer)" src patches tools docs scratch/agent/s2671_m5_step1_contract_rebaseline`
-2. Inspect bounded windows around the matched generated/fixup callsites and
-   `tail -50` of the s2671 arm logs; write the table to a new scratch audit.
+1. Inspect `tools/oracle/README.md` and the existing qualified driver/recipe
+   used for s2671; grep the oracle watch configuration and phase keys before
+   changing anything.
+2. Use `rg -n "166450|166D50|167050|queue_samples|MORT|mort|pcm" tools/oracle
+   src docs scratch/agent/s2671_m5_step1_contract_rebaseline` and read only
+   bounded windows.
+3. Run one batched oracle/port capture only if the existing ground-truth
+   driver can arm the whole-RDRAM positive control and target phase; otherwise
+   write the blocker and stop without a runtime build.
 
-Expected: the s2671 positive controls remain valid, image DMA/image-stage work
-is present, and the audit either names one complete publication edge or keeps
-the edge explicitly unmapped without changing behavior.
+Expected: the positive control remains live. Either a named independent writer
+and complete order join closes one ring hypothesis, or the ring remains
+explicitly unmapped. Do not promote a mitigation from address overlap.

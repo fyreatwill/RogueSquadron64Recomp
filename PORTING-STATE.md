@@ -117709,3 +117709,21 @@ the next missing edge is output/publication. It rules out an invalid pair
 driver as the explanation for this comparison, but does not explain the
 silent arm's later crash or authorize output writeback. No runtime, audio,
 gate, writeback, remap, or guard behavior changed.
+## Session 2672 (2026-08-27) — audited the M5 image publication edge
+
+The bounded Step 3 static audit used the qualified s2671 image-arm artifact.
+The same-build positive control was live: 987 task-ABI rows, 2,132 DMA-range
+rows, 4,399 image-stage rows, 975 image-stage joins, `break_pc=0x1328`, and
+`exit=1`; the silent control had no image-stage rows. Stage 2 rotated through
+`0x166450:0x169450` in `0x300`-byte windows. Only three DMA rows were nonzero,
+including `0x166D50` (`nz=621`) and `0x167050` (`nz=639`) in one task. Stage 3
+used `0x1798B0:0x179A48` in hangar with `dest=field348+0x100`, but its 318
+rows were zero and no PCM row used that span. The task ABI's `data_ptr+0x100`
+resolved to task-data neighborhoods; all 987 rows retained zero output fields
+and no field write event. PCM source/consumer joins were live but zero-valued
+except the isolated matching pair. The prior independent retail writer audit
+identifies the secondary span's named writers as memset/texture metadata, not
+MORT output. This selects `H-unmapped-edge` and rules out adding writeback or
+remap from destination overlap alone. Full table:
+`scratch/agent/s2672_m5_output_publication_audit.md`. No runtime behavior or
+generated code changed.
