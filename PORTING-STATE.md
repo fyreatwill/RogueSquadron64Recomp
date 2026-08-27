@@ -117320,3 +117320,15 @@ and overlay span agree. The neighboring `fake_func_800CC038` is a distinct
 menu-overlay fragment. No rename or build was warranted. This selects the
 already-resolved `H-CompanionExact` result and preserves the
 `H-OverlayCollision`; the next bounded lead is `0x800CC158`.
+
+## Session 2650 (2026-08-27) — audited the 800CC158 symbol lead
+
+Ran the bounded generated-symbol-renaming sweep required by
+`scratch/agent/NEXT.md`. The comparison covered the companion mission/menu
+symbol files, checked-in TOML, generated `funcs_37.c` and header, generated
+overlay table, and callers around `0x800CC158`. `tickActorTexturedSoundEffect`
+is already an exact mission entry: the generated body and header use that
+name, the body spans `0x154` bytes to the exact `0x800CC2AC` boundary, and the
+TOML and overlay table carry the matching name and ROM size. No placeholder,
+stale mapping, or safe rename remained. No build or runtime behavior changed;
+the next bounded lead is `0x800CC2AC`.

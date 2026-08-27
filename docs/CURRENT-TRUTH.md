@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2648 (2026-08-27).
+Current maintenance marker: Session 2650 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -525,3 +525,15 @@ and overlay span agree. The neighboring `fake_func_800CC038` is a distinct
 menu-overlay fragment. No rename or build was warranted. This selects the
 already-resolved `H-CompanionExact` result and preserves the
 `H-OverlayCollision`; the next bounded lead is `0x800CC158`.
+
+## Session 2650 result
+
+The bounded sweep audited `0x800CC158` against the companion mission/menu
+symbols, checked-in TOML, generated `funcs_37.c` and header, generated overlay
+table, and callers. `tickActorTexturedSoundEffect` is already an exact mission
+entry: the generated body and header use that name, its body spans `0x154`
+bytes to the exact `0x800CC2AC` boundary, and the TOML and overlay table carry
+the matching identity and ROM size. No placeholder, stale mapping, or safe
+rename remained; no runtime or build change was warranted. This selects the
+already-resolved `H-CompanionExact` result and advances the next bounded lead
+to `0x800CC2AC`.
