@@ -115789,3 +115789,20 @@ unresolved placeholder in project-symbol order is `0x80102A98`.
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2564 (2026-08-26) — censused generated-symbol objective boundary
+
+Ran the bounded generated-symbol census at `0x8010357C`. The complete
+project/generated span is four bytes (`0x8010357C–0x8010357F`) containing only
+`lwc1 $f2, -0x6C94($at)`, between the complete
+`lv3_calculateFriendliesSaved` epilogue and the real
+`lv4_initializeObjectTracking` prologue. The active generated declaration,
+implementation, overlay table, and companion symbol input retain
+`fake_func_8010357C`; exact-address, source, m2c, and caller searches found no
+defensible human mapping. This is a one-instruction boundary fragment with no
+callable prologue or return, so renaming it would be speculative. Selected
+`H-data-or-boundary` / `H-no-match`; the placeholder remains unchanged. This
+is a static, single-source result and does not prove reachability.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
