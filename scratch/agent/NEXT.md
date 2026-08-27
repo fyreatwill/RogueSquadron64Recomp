@@ -1,45 +1,50 @@
-# NEXT work unit (s2585) — identify the missing port-side writer contract for M5
+# NEXT work unit (s2586) — locate the missing M5 writer call path
 
 HYPOTHESIS-ID: m5-audio-contract-gap
 
 ## Single work unit
 
-Run one bounded static/runtime census of the port-side writers for the two
-retail-attributed boundaries (`0xA0F50` writer PC `0x8008ED48` and `0x141AD0`
-writer PC `0x80094648`). First enumerate every generated/patch function that
-writes those guest addresses or the PCM candidate spans, then instrument the
-complete writer class in one build so the qualified image run records
-callsite, destination, post-store value, and phase. Do not change behavior or
-promote any task/output field.
+Add regeneration-safe, phase-gated entry/branch/return diagnostics for every
+function containing the seven direct `0x800A0F50` stores and the indexed
+`0x80141AD8+index` store: `setDisplayMode`, `reapplyDisplayMode`,
+`shutdownMusyXEngine`, `musyxNoopStub`, and the channel-array writer function
+containing `0x80094648`. Preserve behavior. Build once and run one qualified
+image arm with the existing writer, PCM, task, image, and VI controls.
 
 ## Competing hypotheses and discriminator
 
-- `H-PortWriterReachable`: a named port writer reaches one of the retail
-  boundaries with a matching phase and value; the join is later.
-- `H-PortWriterUninstrumented`: static enumeration finds a writer class, but
-  the run shows no corresponding callsite/value row.
-- `H-PortContractElsewhere`: the complete enumerated writer class fires, but
-  writes another destination or polarity than retail.
+- `H-WriterNeverEntered`: a complete entry census has no row for the
+  retail-attributed function/site in title or hangar.
+- `H-StoreBranchSkipped`: the attributed function entry fires, but its
+  branch/return census shows the store path is not taken.
+- `H-DispatchAlias`: entry fires under an unexpected generated function or
+  route, indicating a dispatch/overlay binding mismatch.
 
-The discriminator is one phase-keyed table covering every statically
-enumerated writer callsite, destination, post-store value polarity, PCM
-source/consumer join, and route phase, with `audtask-dispatch`, image
-completion, and title/hangar VI as positive controls. A matching row selects
-`H-PortWriterReachable`; a complete census with no row selects
-`H-PortWriterUninstrumented`; only off-range/nonmatching writes select
-`H-PortContractElsewhere`. If a phase control or census control is absent,
-the capture is unevaluable.
+The discriminator is one phase-keyed table with an entry row, every branch
+that can bypass each target store, each target store row, and the return row,
+joined to route ordinal, task dispatch, image completion, PCM source/consumer,
+and title/hangar controls. No entry selects `H-WriterNeverEntered`; an entry
+without its store selects `H-StoreBranchSkipped`; an entry under the wrong
+function/route selects `H-DispatchAlias`. Missing phase or control rows make
+the capture unevaluable.
 
-## Exact command
+## Required implementation and command
+
+Put the diagnostics in the companion `N64Recomp/fixup_game_funcs.py` (not
+generated C), regenerate/fix up the affected output in the documented order,
+then:
 
 ```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+cd build
 env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
   ROGUESQ_LLE_SOLO=1 ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
   ROGUESQ_AUTOPILOT_STOP_WIDTH=512 ROGUESQ_LOG_M5_PCM_WRITER=1 \
-  ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_AUDTASK=1 \
-  ./build/RogueSquadron64Recomp > scratch/agent/s2585_m5_port_writer_census.log 2>&1
+  ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_PCM_BOUNDARY=1 \
+  ROGUESQ_LOG_AUDTASK=1 ROGUESQ_LOG_M5_WRITER_ENTRY=1 \
+  ./RogueSquadron64Recomp > ../scratch/agent/s2586_m5_writer_callpath.log 2>&1
 ```
 
-Use the existing phase controls and kill the process group with SIGKILL after
-the target phases are present. Record whether every positive control fired
-before interpreting the port table.
+Run from `build/`, verify exact title/hangar phase rows and all positive
+controls, then SIGKILL the game PID at the bound. Do not promote a store,
+task field, output pointer, or gate from the result.

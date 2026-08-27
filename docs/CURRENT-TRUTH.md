@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2584 (2026-08-26).
+Current maintenance marker: Session 2585 (2026-08-26).
+
+- **s2585 — the complete port-side M5 writer census leaves the retail-named
+  writers absent at runtime.** Static enumeration found seven direct gate
+  stores (`0x8008E9F8`, `0x8008EA34`, `0x8008EB40`, `0x8008EB7C`,
+  `0x8008EC88`, `0x8008ECEC`, `0x8008ED48`), six fixed channel-byte stores,
+  and the indexed `0x80094648` store. The qualified image run passed title and
+  hangar plus audio-dispatch and PCM source/consumer controls. Only
+  `0x8008EC88` ran in both target phases; neither retail-attributed
+  `0x8008ED48` nor `0x80094648` ran, and no PCM guest-writer rows appeared.
+  This selects `H-PortWriterUninstrumented`/missing at the current boundary,
+  rejecting a reachable matching port writer, but does not identify the
+  missing call path or authorize a store/task/output/gate change. Artifact:
+  `scratch/agent/s2585_m5_port_writer_census/audit.md`.
 
 - **s2584 — the port-side M5 writer/value correspondence selects
   `H-PortWriterMissing` at the current observable boundary.** The qualified

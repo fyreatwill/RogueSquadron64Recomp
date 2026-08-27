@@ -116137,3 +116137,23 @@ writers `0x8008ED48` and `0x80094648`; it rules out a later-only PCM consumer
 explanation at this boundary, but does not identify the responsible port store
 or task contract. No behavior or mitigation changed. Artifact:
 `scratch/agent/s2584_m5_port_writer_value/audit.md`.
+
+## Session 2585 (2026-08-26) — censused port-side M5 writers
+
+The independent s2583 retail result was used as ground truth before the
+runtime capture. Static enumeration found seven direct gate stores, six fixed
+channel-byte stores, and the indexed channel-span store at `0x80094648`; no
+patch-side store was present. The Debug build succeeded. The first launch was
+unevaluable because macOS lacks `setsid`; the fixed direct-PID run was then
+SIGKILLed at 110 seconds.
+
+The fixed qualified image run reached title `0x00790400 @ 1024` and hangar
+`0x006AB400 @ 512`. Audio dispatch reached at least 4608 and PCM source and
+consumer controls fired through row 1664. The phase-gated complete writer
+census saw only `0x8008EC88` in the two target phases, with post-store gate
+zero. It saw neither retail-attributed `0x8008ED48` nor `0x80094648`, and no
+PCM guest-writer rows; sampled PCM remained zero. This selects
+`H-PortWriterUninstrumented`/missing at the current boundary and rules out a
+reachable matching port writer in these phases. It does not identify the
+missing call path or authorize a store, task, output-pointer, or gate change.
+Artifact: `scratch/agent/s2585_m5_port_writer_census/audit.md`.
