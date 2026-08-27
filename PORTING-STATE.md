@@ -120173,3 +120173,23 @@ unevaluable. This selects an audio-route divergence in this window and rules
 out a matching route-independent 640 stall, but does not identify whether
 launch order or another scheduling effect caused the split. The next test
 inverts image/silent launch order.
+
+## Session 2836 (2026-08-27) — M5 image-first launch order did not stabilize the route
+
+Ran the independent retail ground-truth control first. The whole-RDRAM watch
+passed its 10,000-hit positive control, and retail independently reached title
+`1024 @ 0x00790400` plus hangar `512 @ 0x006AB400`. The Debug target rebuilt
+successfully before the pair.
+
+The same-build pair launched the image arm first, then the silent arm, with the
+same 16-event AUTOPILOT schedule and M5 marker set. Both arms produced positive
+dispatch controls (64 phase rows each; image `real_ucode=1`, silent
+`real_ucode=0`) and no crash or abort, but both stopped at pre-title VI 640 /
+origin `0x0066A500`. Title, hangar, service, slot, MORT, and PCM rows were all
+absent and are unevaluable before the target phases.
+
+Compared with s2835's image-at-VI-320 versus silent-at-VI-640 split, this run
+rules out a stable image-first launch-order advantage. It does not distinguish
+another scheduling-sensitive route effect from nondeterminism, and it provides
+no authorization for an audio behavior change. The next experiment adds a
+barrier after image initialization before launching silent.

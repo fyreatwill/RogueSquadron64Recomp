@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2834 (2026-08-27).
+Current maintenance marker: Session 2836 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -278,10 +278,20 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    MORT, and PCM rows remain unevaluable. The launch order/scheduling
    contribution is unresolved.
 
+   Session 2836 inverted the pair launch order, starting image before silent.
+   The independent retail control again passed (`whole_rdram=10000`, title,
+   and hangar). Both port arms had positive dispatch controls and no crash or
+   abort, but both stopped at pre-title VI 640 / origin `0x0066A500`; all
+   target-phase rows remain unevaluable. Relative to s2835, this refutes a
+   stable image-first launch-order advantage and leaves a nondeterministic or
+   otherwise scheduling-sensitive route split unresolved.
+
 2. **M5 audio de-stubbing — Step 1 route repair / qualification.** Test one
-   new same-build launch-order/scheduling angle, retaining the whole-RDRAM
-   retail control. The image arm's VI-320 stall versus silent VI-640 result
-   must be reproduced or refuted before any target-phase rows are interpreted.
+   new same-build initialization-barrier angle: launch image, wait for its
+   first dispatch batch, then launch silent, retaining the whole-RDRAM retail
+   control. Compare both arms at the same phase boundaries. The image-320
+   versus silent-640 split and the s2836 640/640 result must be resolved before
+   any target-phase rows are interpreted.
    Once the
    title/hangar phases are reached, require the task-field, DMEM/DMA, image
    exit, SP completion, service/slot/voice, MORT, and PCM source/consumer
