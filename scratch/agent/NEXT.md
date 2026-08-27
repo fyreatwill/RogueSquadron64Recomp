@@ -1,32 +1,27 @@
-# NEXT work unit (s2755) — bounded generated-symbol rename batch
+# NEXT work unit (s2756) — validate M5 AI status de-stub
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-ai-status-destub-validation
 
 ## Work unit
 
-Continue the source-backed generated-symbol sweep with the bounded interval
-`0x800ED000..0x800EF000`. Run the required revisit check first. Use the
-companion-backed decision table, apply only exact mappings from that table,
-and preserve ambiguous, fake, and address-only placeholders. This is a real
-rename batch; no CMake build is required for a source-only generated-symbol
-change.
+Validate `osAiGetStatus_recomp` on the qualified route with one phase-gated
+run and both image and `ROGUESQ_AUDIO_UCODE=0` control arms in the same build.
+Join AI status to buffered-byte state, task/SP completion, PCM joins, and route
+phase. Evidence from this change is in
+`scratch/agent/s2755_m5_ai_status/decision-table.txt`.
 
 ## Competing hypotheses and discriminator
 
-- H2-exact: at least one stale placeholder has an exact companion/source-backed
-  semantic name, so the tool renames it.
-- H3-ambiguous: candidates exist but evidence is insufficient; preserve them
-  and record the ambiguity.
-- H4-synchronized: every defensible candidate is already synchronized; preserve
-  placeholders and advance to the next bounded interval.
+- H1-live: status bit 0 tracks non-empty buffered audio and clears when empty.
+- H2-unreachable: the qualified route never reaches the status query.
+- H3-wrong-contract: the query is reached but disagrees with buffered state.
 
-The discriminator is the single bounded tool decision table plus bounded
-reference verification. Any exact mapping selects H2; candidates all marked
-ambiguous select H3; no stale semantic placeholder selects H4.
+The discriminator is one phase-keyed row containing status, buffered bytes,
+M_AUDTASK dispatch/exit, SP completion, PCM source/consumer, and route phase.
+Both empty and non-empty buffer controls must be present in the same run.
 
 ## Exact commands
 
-1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
-2. `python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800ED000 --end-address 0x800EF000 --limit 32 --require-rename`
-3. Verify changed symbols and references with bounded `rg`, then save the
-   decision table under `scratch/agent/s2755_generated_symbol_sweep/`.
+1. `env PROBE_PHASE_WIDTH=1 PROBE_KEYS_FROM_PHASE=1 ROGUESQ_LOG_ALL=1 zsh <qualified-driver>`
+2. Run the same build with `ROGUESQ_AUDIO_UCODE=0`.
+3. Save the bounded correlation under `scratch/agent/s2756_m5_ai_status/`.

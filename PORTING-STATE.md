@@ -119080,3 +119080,20 @@ overlay references in the generated tree.
 This selects H4-synchronized and rules out an exact rename in this interval;
 the next bounded region is `0x800ED000..0x800EF000`. Evidence:
 `scratch/agent/s2754_generated_symbol_sweep/decision-table.txt`.
+
+## Session 2755 (2026-08-27) — de-stubbed AI status from buffered audio state
+
+The required generated-symbol sweep over `0x800ED000..0x800EF000`, followed by
+the next two bounded intervals through `0x800F3000`, selected no rename:
+semantic entries were already synchronized and fake/address-only entries were
+preserved. The work therefore pivoted to the next concrete M5 de-stub.
+
+`librecomp/src/ai.cpp` now reports status bit 0 when
+`get_remaining_audio_bytes()` is nonzero instead of always returning zero.
+The writer is the runtime audio-buffer accounting path; no generated guest
+function or output destination was changed. The refreshed
+`submodule-patches/N64ModernRuntime.patch` carries the edit.
+
+The Debug target built and linked successfully. This is compile-only evidence:
+reachability, empty/non-empty controls, and downstream PCM effect remain
+unresolved. Evidence: `scratch/agent/s2755_m5_ai_status/decision-table.txt`.

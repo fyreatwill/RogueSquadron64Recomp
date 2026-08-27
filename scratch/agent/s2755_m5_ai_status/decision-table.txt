@@ -1,0 +1,13 @@
+Work unit: de-stub osAiGetStatus_recomp
+
+Grounded choice: the previous implementation unconditionally returned zero,
+while the runtime already exposes get_remaining_audio_bytes(). The change
+reports status bit 0 when buffered output remains and zero when empty.
+
+Validation status: compile-only. The Debug target built and linked
+successfully; no game soak was run.
+
+Next validation outcomes: buffered bytes with status 1 selects a live status
+path; empty bytes with status 0 selects the empty-buffer path; a reached query
+with a mismatched pair selects a wrong contract; no query after the target
+phase selects unreachable.

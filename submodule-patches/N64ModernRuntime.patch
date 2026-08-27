@@ -172,6 +172,18 @@ index b0d6bef..a693bbc 100644
  }
  
  namespace recomp {
+diff --git a/librecomp/src/ai.cpp b/librecomp/src/ai.cpp
+index 0195f2b..981d9a9 100644
+--- a/librecomp/src/ai.cpp
++++ b/librecomp/src/ai.cpp
+@@ -25,5 +25,6 @@ extern "C" void osAiGetLength_recomp(uint8_t* rdram, recomp_context* ctx) {
+ }
+ 
+ extern "C" void osAiGetStatus_recomp(uint8_t* rdram, recomp_context* ctx) {
+-    ctx->r2 = 0x00000000; // Pretend the audio DMAs finish instantly
++    // AI_STATUS_FIFO_FULL is represented by buffered output still awaiting playback.
++    ctx->r2 = ultramodern::get_remaining_audio_bytes() != 0 ? 1 : 0;
+ }
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
 index 8c8e5d1..0907c36 100644
 --- a/librecomp/src/overlays.cpp

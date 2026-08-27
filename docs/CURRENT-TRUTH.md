@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2754 (2026-08-27).
+Current maintenance marker: Session 2755 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -54,6 +54,9 @@ The latest durable M5 chain is:
   only speech metadata and performs asset DMA, `initMusyXVoiceSlot` initializes
   slot pointers/state, and `consumeVoiceSamples` advances counters/status. It
   has no PCM/AI-visible payload writer or new ordering edge.
+- `osAiGetStatus_recomp` now reports runtime buffered-audio state instead of
+  unconditionally returning zero. The Debug target compiled and linked;
+  route-level reachability and status semantics remain unvalidated.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -66,13 +69,17 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **Generated-symbol renaming sweep — active fallback.** The bounded
+1. **M5 AI-status validation — next.** Run one phase-gated qualified-route
+   validation with both image and silent control arms, joining AI status to
+   buffered bytes, task/SP completion, PCM, and route phase.
+
+2. **Generated-symbol renaming sweep — active fallback.** The bounded
    `0x800EB000..0x800ED000` table was fully synchronized apart from preserved
    ambiguous/fake placeholders at `0x800EC10C`, `0x800EC6EC`, and
    `0x800ECE04`. Continue with `0x800ED000..0x800EF000`; preserve
    ambiguous/fake/address-only symbols.
 
-2. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
+3. **M5 CPU-side MORT publication — unresolved, callback edge closed.** The
    corrected `+0x190` callback edge is `dmaVoiceSampleAndSignal`; its
    legitimate destination is the voice ring and its ordering edge is the
    completion queue. `+0x194` is the sample source. Do not repeat this edge or
@@ -80,20 +87,20 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    named. The speech-loader surface is now closed as service-only; the
    remaining publication boundary is unresolved.
 
-3. **External retail-entry boundary — parked revisit.** Only return with a
+4. **External retail-entry boundary — parked revisit.** Only return with a
    genuinely new, phase-qualified oracle discriminator. The oracle's whole-
    RDRAM positive control is mandatory; it currently does not drive missions.
 
-4. **M4 accumulator origin — parked.** The absolute-DMEM path is localized to
+5. **M4 accumulator origin — parked.** The absolute-DMEM path is localized to
    its known producer, selector state, and indirect consumer. Pointer-relative
    `0xB00/B02/B04` matches are unrelated fields. The dynamic producer-slot /
    consumer-index equality remains unresolved; broad range watches are not a
    substitute.
 
-5. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+6. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator. Passive recurrence belongs in the soak queue.
 
-6. **M5 image task contract and hangar visual artifact — parked.** Implement
+7. **M5 image task contract and hangar visual artifact — parked.** Implement
    no image writeback/remap without a named legitimate image writer and
    destination/order relation. H2 and consumer-mode H1 are refuted; H3 is
    unavailable because the oracle cannot screenshot the LLE path.
@@ -191,6 +198,9 @@ ledger. The current late-chain checkpoints are:
 - s2754: the generated-symbol interval `0x800EB000..0x800ED000` was fully
   synchronized; three fake/address-only placeholders were preserved and the
   next interval was advanced to `0x800ED000..0x800EF000`.
+- s2755: generated-symbol intervals through `0x800F3000` were already
+  synchronized, so no rename was selected. The M5 AI status stub was then
+  de-stubbed to report buffered-audio state; the Debug target built and linked.
 
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.
