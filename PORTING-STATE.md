@@ -115919,3 +115919,17 @@ Artifact: `scratch/agent/s2570_symbol_census/audit.md`.
   the sweep to `0x8010721C`. This rules out an exact rename at this boundary,
   but does not prove the fragment is dead or unreachable.
 - Artifact: `scratch/agent/s2571_symbol_census/audit.md`.
+## Session 2572 (2026-08-26) — censused generated-symbol object-tracking boundary
+
+Ran the bounded generated-symbol census for `0x8010721C`. The complete active
+span is four bytes containing only `addiu $sp,$sp,-0x58`, immediately before
+`lvd_initializeObjectTracking` at `0x80107220`, whose own prologue starts a
+separate `0x70`-byte function. The companion symbol file explicitly retains
+`fake_func_8010721C`; exact-address, source, m2c, and caller searches found no
+independent human mapping. Selected `H-data-or-boundary` and left the
+placeholder unchanged. This is a static, single-source result: it rules out an
+exact rename at this boundary but does not prove reachability or explain the
+fragment's origin. No build or runtime experiment was run because the work unit
+was explicitly static-only. The next unresolved placeholder is `0x80107EA4`.
+
+Artifact: `scratch/agent/s2572_symbol_census/audit.md`.
