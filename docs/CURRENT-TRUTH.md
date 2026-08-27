@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2585 (2026-08-26).
+Current maintenance marker: Session 2586 (2026-08-26).
+
+- **s2586 — the new M5 writer call-path census was unevaluable at the target
+  boundary.** Regeneration, fixup, and Debug build succeeded, and the helper
+  was present for `setDisplayMode`, `reapplyDisplayMode`,
+  `shutdownMusyXEngine`, `musyxNoopStub`, and `startSongSequence`. Two
+  same-build qualified image-arm attempts reached only boot/640 phases and
+  produced 40 audio-task dispatch controls but no title/hangar, writer, gate,
+  PCM, or image rows; both aborted at the known scene-graph `get_function`
+  path with last guest PC `0x80001F88`. This is not writer evidence and does
+  not select any hypothesis or authorize a store/task/gate change. Artifacts:
+  `scratch/agent/s2586_m5_writer_callpath.log` and
+  `scratch/agent/s2586_m5_writer_callpath_retry.log`.
 
 - **s2585 — the complete port-side M5 writer census leaves the retail-named
   writers absent at runtime.** Static enumeration found seven direct gate

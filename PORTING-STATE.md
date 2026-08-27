@@ -116157,3 +116157,24 @@ PCM guest-writer rows; sampled PCM remained zero. This selects
 reachable matching port writer in these phases. It does not identify the
 missing call path or authorize a store, task, output-pointer, or gate change.
 Artifact: `scratch/agent/s2585_m5_port_writer_census/audit.md`.
+
+## Session 2586 (2026-08-26) — added M5 writer call-path census
+
+The existing generated output was regenerated with the companion
+`fixup_game_funcs.py`, which added a regeneration-safe, phase-gated
+`[m5-writer]` helper and entry/branch/store/return coverage to
+`setDisplayMode`, `reapplyDisplayMode`, `shutdownMusyXEngine`,
+`musyxNoopStub`, and `startSongSequence` (the indexed `0x80094648` writer).
+The Debug build succeeded. Two same-build qualified image-arm attempts were
+then run with the prescribed autopilot and SIGKILL bound. Both reached only
+boot/640 phases, fired 40 audio-task dispatch controls, produced no target
+title/hangar, writer, gate, PCM, or image rows, and aborted in the known
+scene-graph `get_function` path with last guest PC `0x80001F88`.
+
+This is an unevaluable writer discriminator, not evidence that a writer is
+absent. It rules out neither writer-call-path hypothesis because the required
+phase controls did not fire. The new instrumentation is retained for the
+next qualified attempt; no behavior, mitigation, store, task field, output
+pointer, or gate changed. Artifacts:
+`scratch/agent/s2586_m5_writer_callpath.log` and
+`scratch/agent/s2586_m5_writer_callpath_retry.log`.
