@@ -577,9 +577,12 @@ precomputed generated-name set. The bounded fake-prefix rerun selected no
 rename, so future work continues only where exact companion evidence exists.
 
 This is one monotonic sequence; #1 is the next campaign priority. The s2729
-through s2734 batches confirm their covered intervals have no exact
-unsynchronized companion names. The next unexamined bounded interval is
-`0x800CE000..0x800D1000`.
+through s2735 batches confirm their covered intervals have no exact
+unsynchronized companion names. s2736 covered `0x800D1000..0x800D4000` and
+evaluated 14 candidates: semantic entries were already synchronized and one
+fake/duplicate-prefix entry was preserved; zero references changed in zero
+files, with no parser or duplicate-destination failure. The next unexamined
+bounded interval is `0x800D4000..0x800D7000`.
 
 1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
