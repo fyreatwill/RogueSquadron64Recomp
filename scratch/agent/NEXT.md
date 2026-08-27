@@ -1,43 +1,40 @@
-# NEXT work unit (s2797) — close generated-symbol interval 0x80137000..0x80139000
+# NEXT work unit (s2798) — repair the generated 0x80101CCC data-gap rename
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Run the bounded generated-symbol selector for guest interval
-`0x80137000..0x80139000`. Apply only source-backed companion names, preserve
-ambiguous/data entries, then independently scan the generated tree for
-placeholder definitions/references in the same interval. This is one rename
-interval; do not repair the unrelated duplicate generated definition or add
-runtime probes.
+The previous sweep renamed the companion's four-byte fake/data entry at
+`0x80101CCC` to the name of the following real function, creating duplicate
+`lv2_initializeObjectTracking` declarations/definitions. Correct that
+generated-symbol batch by naming the non-callable entry
+`data_gap_80101CCC`, and update the rename map so the correction survives the
+next generated-symbol reconciliation. Do not alter the real function at
+`0x80101CD0`.
 
 ## Competing hypotheses and discriminator
 
-- H-no-placeholders: the interval has no generated placeholder definitions or
-  references, so the selector should make zero changes.
-- H-synchronized: the interval has companion entries, but all generated
-  symbols are already human-mapped; the selector should preserve them and
-  still make zero changes.
-- H-source-backed-renames: the interval contains unambiguous companion names
-  for generated placeholders; the selector should change those references.
-- H-ambiguous-data: candidate entries are data, fake, or ambiguous; they must
-  be reported and preserved rather than renamed.
+- H-data-gap: `0x80101CCC` is the companion's explicit four-byte fake/data
+  entry, so a mechanical `data_gap_80101CCC` name removes the collision.
+- H-real-function: the four-byte entry is actually part of the following
+  callable function, so renaming it would damage dispatch and the duplicate
+  should instead be handled by regeneration metadata.
+- H-stale-generated: only checked-in generated output is stale; updating the
+  output without the rename map would let the duplicate return on the next
+  sweep.
 
-The discriminator is the complete interval table: selector changes by file,
-independent placeholder-definition/reference counts, and preserved
-ambiguous/data candidates. A nonzero source-backed change selects
-H-source-backed-renames; zero placeholders selects H-no-placeholders; existing
-human mappings with zero changes selects H-synchronized; preserved candidates
-selects H-ambiguous-data for those entries.
+The discriminator is the same-build symbol/build check: the companion size
+and name at `0x80101CCC`, exactly one declaration/definition of
+`lv2_initializeObjectTracking`, exactly one data-gap entry, and a successful
+`RecompiledFuncs`/Debug compile. A duplicate after the map update selects
+H-stale-generated; a clean compile with the real function still at
+`0x80101CD0` selects H-data-gap; altered dispatch/body bytes select
+H-real-function.
 
 ## Exact commands
 
 ```sh
-  python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
-    --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-    --start-address 0x80137000 --end-address 0x80139000 --limit 32
-  # Independently count placeholders in the same generated snapshot.
-  python3 -c 'from pathlib import Path; import re; p=Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs"); xs=sorted(set(x for f in list(p.glob("funcs_*.c"))+[p/"funcs.h",p/"recomp_overlays.inl"] if f.exists() for x in re.findall(r"\\b(?:func|fake_func)_([0-9A-Fa-f]{8})\\b",f.read_text()) if 0x80137000<=int(x,16)<0x80139000)); print("\\n".join(("func_"+x for x in xs))); print("placeholder_unique="+str(len(xs)))'
+  rg -n "80101CCC|lv2_initializeObjectTracking|data_gap_80101CCC" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/{funcs.h,funcs_43.c,recomp_overlays.inl}
+  cmake --build build --config Debug --target RecompiledFuncs -j
   git diff --check
-git status --short
 ```

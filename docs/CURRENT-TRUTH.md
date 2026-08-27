@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2797 (2026-08-27).
+Current maintenance marker: Session 2798 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -92,6 +92,14 @@ The latest durable M5 chain is:
   `lv2_initializeObjectTracking` definition in `funcs_43.c`; whitespace
   validation was clean. This validates the known build boundary only and
   provides no runtime evidence about SP-yield behavior.
+- Session 2798 corrected the generated-symbol batch that caused that build
+  boundary. The companion map explicitly marks `0x80101CCC` as a four-byte
+  fake/data entry before the real `lv2_initializeObjectTracking` at
+  `0x80101CD0`; the generated declaration, definition, and overlay entry now
+  use `data_gap_80101CCC`. The same correction was applied to the 13-entry
+  `lv*` fake/data cluster from the prior batch and to the rename map. The
+  generated target now builds successfully, with zero duplicate function
+  definitions. This is a symbol/compile result, not audio-runtime evidence.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -104,10 +112,10 @@ value is legitimate.
 Priority follows the user directive: maintenance, then M5, then systematic M3,
 then generated-symbol renaming when M5 is closed and M3 is parked.
 
-1. **M5 SP-yield lifecycle validation — blocked at the build boundary.** The
-   source lifecycle now clears a request at each new task start, but the full
-   target cannot be produced until the duplicate generated
-   `lv2_initializeObjectTracking` definition in `funcs_43.c` is resolved. Do
+1. **M5 SP-yield lifecycle validation — next.** The generated-target build
+   boundary is now clear: the prior duplicate level-handler definitions were
+   caused by fake/data entries renamed as their following real functions.
+   Build the full Debug target and validate the already-landed lifecycle; do
    not infer task interruption or audio progress from the reset alone.
 
 2. **Generated-symbol renaming sweep — next bounded interval.** M5 Step 1
@@ -171,7 +179,14 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    two companion entries (`hmpFile` and `gDoublyLinkedNodePool12`) were
    already synchronized, the selector changed zero references in zero files,
    and the independent generated-tree scan found zero placeholder definitions
-   or references. Continue with `0x80137000..0x80139000`.
+   or references. Session 2798 repaired the prior 14-entry level-handler
+   batch's fake/data collisions: the entries at `0x80101CCC`, `0x80102A98`,
+   `0x8010357C`, `0x80103D08`, `0x80104208`, `0x801044D8`, `0x80105B54`,
+   `0x8010619C`, `0x80106BE8`, `0x8010721C`, `0x80107EA4`, `0x80108B8C`,
+   `0x80109428`, and `0x80109618` now have mechanical `data_gap_*` names;
+   the real following functions retain their semantic names. The generated
+   target has zero duplicate definitions. Continue with
+   `0x80137000..0x80139000` after full-target M5 validation.
 
 3. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified

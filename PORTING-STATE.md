@@ -119650,3 +119650,20 @@ definitions or references in the interval. `git diff --check` passed. No build
 or regeneration was needed. This closes the interval and rules out stale
 generated placeholders there, not the remaining rename sweep. The next
 interval is `0x80137000..0x80139000`.
+
+## Session 2798 (2026-08-27) — repaired fake/data symbol collisions in generated level handlers
+
+The prior generated-symbol batch had incorrectly assigned the companion name
+of each following real level-handler function to a preceding fake/data entry.
+That produced duplicate declarations, definitions, and overlay registrations,
+including the known `lv2_initializeObjectTracking` build failure. The
+companion map and generated snapshot now name the 14 non-callable entries with
+mechanical `data_gap_*` identifiers, including `data_gap_80101CCC`, while
+preserving each real function name and body at its actual start address.
+
+The independent duplicate-definition scan returned zero entries, and
+`cmake --build build --config Debug --target RecompiledFuncs -j` completed
+successfully. This rules out the generated-symbol collision as the current
+`RecompiledFuncs` build blocker; it does not establish SP interruption,
+resumption, or audio output behavior. The next work unit is full-target M5
+SP-yield lifecycle validation, followed by the next bounded rename interval.
