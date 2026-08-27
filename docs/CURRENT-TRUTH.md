@@ -245,5 +245,5 @@ retains every exact session entry and scratch artifact. The current decision
 chain is: task-field census unresolved; image/silent separation qualified;
 image ring/stage destinations not a publication edge; named retail utility
 writers not a MORT edge; and the live MORT filter output is shared temporary
-stack storage. The next legitimate discriminator is the next downstream
-named voice consumer.
+stack storage. The next legitimate discriminator is the sample-stream cache
+boundary; the named ring setup path is metadata-only.
