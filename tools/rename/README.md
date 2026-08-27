@@ -40,7 +40,9 @@ python tools/rename_generated_symbols.py <generated-dir> \
 ```
 
 The end address is exclusive. The command prints each companion candidate's
-decision and fails closed on duplicate destination names.
+decision and fails closed on duplicate destination names. Add
+`--require-rename` when a no-op must be surfaced as a nonzero result instead
+of being mistaken for a completed batch.
 
 ### `find_callers.py`
 Lists every function in the recompiled C that calls a given target. Used

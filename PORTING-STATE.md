@@ -118725,3 +118725,23 @@ failure. This selects `H-already-synchronized`/`H-ambiguous-or-fake` and
 rules out `H-exact-matches` for this region. No build or game run was
 warranted for the symbol-only batch. Decision evidence:
 `scratch/agent/s2731_generated_symbol_sweep/decision-table.txt`.
+## Session 2732 (2026-08-27) — hardened exhausted generated-symbol sweep
+
+The required last-15-title check did not trigger because recent entries
+included M4, M5, and symbol-sweep work, so the generated-symbol sweep
+remained eligible. The planned batch covered `0x800C5000..0x800C8000` in the
+external generated snapshot. Its complete decision table found zero safe
+semantic renames: synchronized companion candidates were already named and
+fake/address-only entries were preserved. No generated references or files
+changed, and no parser, duplicate-destination, or protected-placeholder
+failure occurred. This selects `H-already-synchronized` /
+`H-ambiguous-or-fake` and rules out `H-exact-matches` for this region.
+
+Because a silent no-op cannot count as progress, `tools/rename_generated_symbols.py`
+now accepts `--require-rename` and returns status 2 when the bounded selection
+changes no generated references. The option was syntax-checked and exercised
+against this region; it returned status 2 as expected. No build or game run
+was warranted for the symbol-only sweep. Decision evidence:
+`scratch/agent/s2732_generated_symbol_sweep/decision-table.txt`,
+`global-decision-table.txt`, `selected-fallback-table.txt`, and
+`require-rename.txt`.

@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2731 (2026-08-27).
+Current maintenance marker: Session 2732 (2026-08-27).
+
+Session 2732's generated-symbol sweep covered `0x800C5000..0x800C8000` and
+found zero safe semantic renames: synchronized companion candidates were
+already named and fake/address-only entries were preserved. The same bounded
+selection was rerun with the new `--require-rename` fail-closed option, which
+returned status 2 when no generated reference changed. This makes an
+exhausted region explicit and prevents a silent no-op from being treated as
+progress. Evidence: `scratch/agent/s2732_generated_symbol_sweep/`.
 
 The s2731 generated-symbol sweep covered `0x800C2000..0x800C5000`. Its
 complete decision table evaluated 38 companion candidates: 37 semantic

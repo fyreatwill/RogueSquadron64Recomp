@@ -4,6 +4,7 @@
 from pathlib import Path
 import argparse
 import re
+import sys
 
 
 RENAMES = {
@@ -88,6 +89,11 @@ def main() -> int:
     parser.add_argument(
         "--limit", type=int, default=32, help="maximum companion renames per run"
     )
+    parser.add_argument(
+        "--require-rename",
+        action="store_true",
+        help="fail if the bounded selection changes no generated references",
+    )
     parser.add_argument("--start-address", type=lambda value: int(value, 0))
     parser.add_argument("--end-address", type=lambda value: int(value, 0))
     args = parser.parse_args()
@@ -149,6 +155,9 @@ def main() -> int:
     for old, count in counts.items():
         state = "updated" if count else "already synchronized"
         print(f"{old} -> {renames[old]}: {count} ({state})")
+    if args.require_rename and not changed:
+        print("error: bounded sweep selected no generated references", file=sys.stderr)
+        return 2
     return 0
 
 
