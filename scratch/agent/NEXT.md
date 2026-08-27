@@ -1,13 +1,13 @@
-# NEXT work unit (s2524) — generated-symbol renaming sweep, next bounded region
+# NEXT work unit (s2525) — generated-symbol renaming sweep, next bounded region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-The region `0x8006F4AC–0x8006F4AC` was completely censused and had one
+The region `0x80072CE8–0x80072CE8` was completely censused and had one
 isolated placeholder with no companion mapping. Continue the same sweep with
 exactly one new bounded region around the next unresolved main-overlay
-placeholder after `0x8006F4AC` (currently `0x80072CE8`). Before starting, run:
+placeholder after `0x80072CE8` (currently `0x80079278`). Before starting, run:
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
@@ -23,7 +23,8 @@ generated functions. The prior results are in
 `scratch/agent/s2519_symbol_census/audit.md`, and
 `scratch/agent/s2521_symbol_census/audit.md`,
 `scratch/agent/s2522_symbol_census/audit.md`, and
-`scratch/agent/s2523_symbol_census/audit.md`.
+`scratch/agent/s2523_symbol_census/audit.md` and
+`scratch/agent/s2524_symbol_census/audit.md`.
 
 ## Competing hypotheses and discriminator
 

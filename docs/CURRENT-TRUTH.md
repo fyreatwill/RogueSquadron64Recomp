@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2523 (2026-08-26).
+Current maintenance marker: Session 2524 (2026-08-26).
 
 ## Current state
 
@@ -111,6 +111,14 @@ Current maintenance marker: Session 2523 (2026-08-26).
   `fake_func_8006F4AC`; an exact-address search found no named definition,
   caller, or m2c source. This is a static, single-source result; no generated
   code changed. Artifact: `scratch/agent/s2523_symbol_census/audit.md`.
+- **s2524 — the seventh bounded generated-symbol region had no defensible
+  mapping.** The complete interval `0x80072CE8–0x80072CE8` contains one
+  8-byte placeholder whose body is only `addiu v1,v1,-0x4160; addu v0,v1,v0`,
+  between `walkDatTreeAndScaleLeafByFloat` and `initWaterSprayParticles`.
+  The companion symbol file retains `fake_func_80072CE8`, and an exact-address
+  repository search found no named definition, caller, or m2c source. This is
+  a static, single-source result; no generated code changed. Artifact:
+  `scratch/agent/s2524_symbol_census/audit.md`.
 
 ## Active backlog
 
