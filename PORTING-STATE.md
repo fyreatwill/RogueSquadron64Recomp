@@ -116328,3 +116328,19 @@ duplicate-symbol entry. Exact-address source, m2c, caller, and alternate-name
 searches found no candidate, and `tools/rename/build_redefs.py` emitted no
 mapping for the placeholder. This selects `H-BoundaryOnly`; no generated code
 or runtime behavior changed. See `scratch/agent/s2597_symbol_census_audit.md`.
+
+## Session 2598 (2026-08-26) — restored a generated-symbol prefix mapping
+
+Ran the single static generated-symbol rename unit for `0x800D2C98`. The
+generated span is an 8-byte jump veneer (`j 0x800D2CA0` plus `nop`) into the
+complete `npcInitWithMotionParams` body. The companion symbol file assigns
+the exact address `duplicateSymbolPrefixForNpcInitWithMotionParams` and
+documents the following duplicate-symbol deletion. Exact-address source,
+m2c, caller, and alternate-name searches found no competing candidate.
+Although an older ledger entry recorded this family as renamed, the current
+generator lacked the mapping and the generated overlay table still used the
+placeholder; adding the explicit mapping repaired that source-of-truth gap.
+`python3 tools/rename/build_redefs.py` succeeded and emitted the `func_`,
+`D_`, and `fake_func_` lines for the address. No regeneration or runtime run
+was performed. This selects `H-CompanionMapping`. See
+`scratch/agent/s2598_symbol_census_audit.md`.

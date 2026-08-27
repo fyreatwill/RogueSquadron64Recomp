@@ -75,6 +75,7 @@ EXTRA_RENAMES = {
     "fake_func_800AA6CC": "npcPredictedRangeCheckPreamble",
     "fake_func_800BEBFC": "initDemoPlayStatePreamble",
     "fake_func_800BF784": "updateHudHealthIndicatorPreamble",
+    "fake_func_800D2C98": "duplicateSymbolPrefixForNpcInitWithMotionParams",
 }
 with open(REDEFS, "a", encoding="utf-8") as f:
     for old, new in EXTRA_REVERTS.items():

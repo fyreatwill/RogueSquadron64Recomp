@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2597 (2026-08-26).
+Current maintenance marker: Session 2598 (2026-08-26).
+
+- **s2598 — the next generated-symbol span has a companion-defined duplicate
+  prefix name.** `0x800D2C98–0x800D2C9F` is an 8-byte jump veneer into the
+  complete `npcInitWithMotionParams` body at `0x800D2CA0`. The companion
+  assigns the exact address `duplicateSymbolPrefixForNpcInitWithMotionParams`
+  and documents the following duplicate-symbol deletion. Exact-address
+  source/m2c/caller searches found no competing name. Added the
+  regeneration-safe mapping to `tools/rename/build_redefs.py`; the generator
+  emitted all three expected redefinition lines. Artifact:
+  `scratch/agent/s2598_symbol_census_audit.md`.
 
 - **s2597 — the next generated-symbol span is a duplicate-symbol boundary
   fragment.** `0x800CEF1C` is the single instruction `sw $s1, 0x44($sp)`
@@ -537,7 +547,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
   `0x800CC3D4–0x800CC9B7` as a menu data boundary with no rename candidate;
   s2552 left `0x800CEF1C–0x800CEF1F` unchanged as an incomplete mission
   boundary fragment. s2553 left `0x800D2C98–0x800D2C9F` unchanged as a
-  tail-call boundary. s2554 renamed the four duplicate-symbol prefix
+  tail-call boundary. s2598 restored the regeneration-safe mapping for the
+  companion-defined duplicate-symbol prefix at `0x800D2C98`; the next census
+  is `0x800D4EC4`. s2554 had previously recorded this same family as renamed,
+  but the current generated table still carried the placeholder and the
+  mapping was absent from the generator, so the current source was repaired.
+  s2554 renamed the four duplicate-symbol prefix
   fragments at `0x800D2C98`, `0x800D4EC4`, `0x800DD2C4`, and `0x800DFB8C`
   through the symbol inputs and generated declarations/implementations/
   overlay table. Their names encode the companion-map duplicate-collision
