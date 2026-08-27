@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2699 (2026-08-27).
+Current maintenance marker: Session 2700 (2026-08-27).
 
 ## Live result
 
@@ -278,15 +278,23 @@ selected zero semantic renames: the 244 address-named entries are either
 This is a tool-validation result, not evidence for renaming the protected
 ambiguous functions `0x8000040C` or `0x800927B0`.
 
+s2700 audited every in-tree use of the audio queue at `0x80149990`, including
+`factor5QueueSignal` (`0x800920D0`) and its direct mutex helpers. The queue is
+created with capacity one and seeded with a zero token; acquire/block receive
+and release/signal send only that token. The synth caller invokes signal after
+its timing/state work. No message payload, receiver, or immediate consumer
+reads rendered output, touches `0x801496B0`, calls `osAiSetNextBuffer`, or
+names another PCM destination. This selects `H-queue-services` and rejects
+`H-queue-publishes` and `H-queue-unresolved` for this queue (static generated
+source evidence). The MORT-to-PCM publication edge remains unresolved; no
+runtime watch, writeback, remap, or mitigation is authorized. Detailed table:
+`scratch/agent/s2700_m5_queue_boundary/audit.md`.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **Generated-symbol renaming sweep.** Reconcile one bounded address region
-   against companion source/m2c evidence; rename only exact, unique matches
-   and preserve address-only or fake fragments. Do not infer names from
-   implementation shape alone.
-2. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
+1. **M5 CPU-side MORT PCM publication.** The renderer-to-AI candidate join
    separates the live renderer span from the AI-source span but does not name
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.
@@ -308,7 +316,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    pointer preservation into SDL, with no host remap or gate. Next: identify the next unresolved CPU-side writer
    or publication boundary using a complete source-level consumer table; do
    not add a runtime watch until a legitimate destination and ordering edge
-   are named, and do not repeat completed service/renderer/mixer bodies.
+   are named, and do not repeat completed queue/service, renderer, or mixer
+   bodies.
+2. **Generated-symbol renaming sweep.** Reconcile one bounded address region
+   against companion source/m2c evidence; rename only exact, unique matches
+   and preserve address-only or fake fragments. Do not infer names from
+   implementation shape alone.
 3. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.

@@ -118187,3 +118187,21 @@ current address-named entries are companion `func_`/`fake_func_` fragments or
 already synchronized names. This rules out a blind batch rename for this
 snapshot, but does not establish names for protected ambiguous functions. No
 build or game run was needed; no runtime mitigation was added.
+
+## Session 2700 (2026-08-27) — audited the M5 audio mutex queue boundary
+
+Ran the bounded source-only audit of every in-tree use of
+`0x80149990` (`0x80150000 - 0x6670`), including `factor5QueueSignal`
+(`0x800920D0`), its mutex helpers, and the synth caller. The queue is created
+with capacity one and seeded with a zero token. Acquire/block receive and
+release/signal send only that token; the synth signal occurs after timing and
+state work. No message payload or immediate consumer reads rendered output,
+touches `0x801496B0`, calls `osAiSetNextBuffer`, or names another PCM
+destination.
+
+This selects `H-queue-services` and rejects `H-queue-publishes` and
+`H-queue-unresolved` for this queue (static generated-source evidence). It
+rules out the queue as the MORT-to-PCM publication edge, but does not resolve
+the upstream edge. No build, run, runtime watch, writeback, remap, or
+mitigation was performed. Detailed table:
+`scratch/agent/s2700_m5_queue_boundary/audit.md`.

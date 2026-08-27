@@ -1,33 +1,39 @@
-# NEXT work unit (s2700) — bounded generated-symbol source reconciliation
+# NEXT work unit (s2700) — bounded M5 queue-publication audit
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-cpu-publication-boundary
 
 ## Work unit
 
-Reconcile the next bounded generated region, `0x80092000..0x80093000`, against
-companion source/m2c material. Select up to 32 names only when the companion
-gives an exact semantic name for the generated function at the same address
-and the destination is unique. Preserve `func_800927B0`, `func_80092A54`, and
-fake fragments unless source evidence closes their identities.
+Audit the complete in-tree sender/receiver chain for the audio queue at
+`0x80149990` (`0x80150000 - 0x6670`), centered on
+`factor5QueueSignal` (`0x800920D0`) and its direct receiver(s). Classify every
+message payload and immediate consumer as rendered-PCM publication,
+stream/descriptor service, scheduler-only, or unresolved. Do not add runtime
+instrumentation or change behavior unless the source audit names a legitimate
+PCM destination and ordering edge.
 
 ## Competing hypotheses and discriminator
 
-- `H-region-has-exact-names`: the bounded region contains exact, unique
-  companion/source names and a rename batch can be landed.
-- `H-region-is-address-only`: the region has no defensible human names; leave
-  it unchanged and choose the next region.
-- `H-ambiguous-companion`: companion names collide or already exist; preserve
-  the affected entries and report the collision.
+- `H-queue-publishes`: the queue message or its immediate consumer carries a
+  rendered payload into the AI-source allocation or another named PCM span.
+- `H-queue-services`: the queue only signals scheduler/stream/descriptor work;
+  no payload or AI-source relation exists.
+- `H-queue-unresolved`: an indirect callback or opaque message field prevents
+  a complete classification, so a new source boundary is selected without a
+  runtime watch.
 
-The discriminator is the bounded source/m2c-to-generated address table plus
-the tool's selected mapping/count: positive count with unique destinations
-selects `H-region-has-exact-names`; no defensible name selects
-`H-region-is-address-only`; a collision/error selects
-`H-ambiguous-companion`.
+The discriminator is the complete queue table: every send/receive site,
+message address/length, payload reads/writes, downstream calls, and any join
+to `0x801496B0` or `osAiSetNextBuffer`. A named payload-to-AI edge selects
+`H-queue-publishes`; exhaustive service-only operations select
+`H-queue-services`; an unresolved indirect/body edge selects
+`H-queue-unresolved`.
 
 ## Exact commands
 
-1. `python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --limit 32`
-2. Verify changed files and remaining placeholder/mapping counts with `git -C
-   /Users/williambuckley/Documents/Tools/N64Recomp diff --stat` and bounded
-   `rg` queries; no game build/run is needed for this metadata-only batch.
+1. `rg -n -- "-0X6670|-0x6670|factor5QueueSignal|0x800920D0|80149990|801496B0|osAiSetNextBuffer" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/main_overlay.txt`
+2. Read bounded windows around every hit and write the classified table to
+   `scratch/agent/s2700_m5_queue_boundary/audit.md`.
+3. No build or game run: this is a source-level boundary audit, not a runtime
+   measurement. The independent retail positive control remains required
+   before any future narrow watch.
