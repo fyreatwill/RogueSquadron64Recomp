@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2628 (2026-08-27).
+Current maintenance marker: Session 2629 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -177,6 +177,19 @@ use the resolved symbol. The menu-overlay `0x800C6900` entry is a distinct
 overlay identity inside the mission body and must not be collapsed. The next
 bounded lead is the adjacent `0x800C6FFC` boundary.
 
+- **s2629 — the `0x800C722C` sweep lead was already exact.** The repository
+  TOML maps `0x800C722C` to `getConfigFloatValue` with size `0x10`; the
+  generated body is the matching 16-byte load-and-return fragment. Adjacent
+  generated bodies and TOML entries match `findNamedEntryInCurrentObject`
+  (`0x800C723C`, `0x2C`), `copyCurrentObjectMatrix` (`0x800C7268`, `0x48`),
+  `initializeObjectiveTracking` (`0x800C72B0`, `0x38`),
+  `dispatchObjectiveSlot1` (`0x800C72E8`, `0x38`),
+  `calculateFriendliesSaved` (`0x800C7320`, `0x38`), and
+  `checkComplexObjectives` (`0x800C7358`, `0x38`). Generated callers invoke
+  the placeholder forms for `0x800C722C`, `0x800C723C`, and `0x800C7268`, while
+  no unresolved symbol exists at the lead. No rename or runtime change was
+  warranted; the next bounded lead is `0x800C7358`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -198,7 +211,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C722C` next using companion symbols, exact spans, and callers;
+   Audit `0x800C7358` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an

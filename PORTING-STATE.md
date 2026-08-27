@@ -117003,3 +117003,21 @@ The adjacent `0x800C713C` row is already the exact
 remained, so no rename or runtime behavior change was made. This selects
 `H-CompanionExact` as already resolved and moves the next bounded lead to
 `0x800C722C`.
+
+## Session 2629 (2026-08-27) — audited the 800C722C symbol region
+
+The bounded generated-symbol sweep audited `0x800C722C` and its adjacent
+objective-helper region against the repository symbol table, generated body,
+exact spans, and callers. `0x800C722C` is already named
+`getConfigFloatValue`, with a matching `0x10` span and a generated body that
+loads the configuration float at `0x8010A200` and returns it. The adjacent
+entries are also exact: `findNamedEntryInCurrentObject` at `0x800C723C`
+(`0x2C`), `copyCurrentObjectMatrix` at `0x800C7268` (`0x48`),
+`initializeObjectiveTracking` at `0x800C72B0` (`0x38`),
+`dispatchObjectiveSlot1` at `0x800C72E8` (`0x38`),
+`calculateFriendliesSaved` at `0x800C7320` (`0x38`), and
+`checkComplexObjectives` at `0x800C7358` (`0x38`). Generated callers for
+the first three match the address-coded dispatch names; no placeholder or
+overlay collision remained at the lead. No source-map edit or runtime change
+was made. This selects `H-CompanionExact` as already resolved and advances the
+next bounded lead to `0x800C7358`.
