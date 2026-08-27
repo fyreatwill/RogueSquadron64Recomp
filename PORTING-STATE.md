@@ -117500,3 +117500,20 @@ legitimate writer, payload, or ordering, so no writeback, remap, gate, or
 mitigation was added. It leaves the Factor 5 task/output ABI versus CPU-MORT
 publication boundary open. Full table:
 `scratch/agent/s2659_m5_output_boundary/audit.md`.
+
+## Session 2660 (2026-08-27) — synchronized overlay-qualified audio symbols
+
+The planned M5 Step 3 behavior change remained unevaluable because the
+s2659 evidence still lacks a named port writer, legitimate payload, and
+ordering relation for the observed output spans. No output writeback, remap,
+gate, wait, or mitigation change was authorized. The mandated generated-symbol
+fallback then compared the remaining audio-resampling placeholders and the
+mission leftover against the companion symbol files. Exact companion entries
+identified `0x800927B0`, `0x80092A54`, and `0x80092CF0` as
+`func_main_800927B0`, `func_main_80092A54`, and `func_main_80092CF0`, and
+identified `0x800E9AE0` as `func_mission_overlay_800E9AE0`; their TOML sizes
+were unchanged. The source map now carries those four overlay-qualified
+identities, preserving distinct overlay dispatch names. `0x80092F10` and
+`0x8000040C` remain unresolved. This selects `H-CompanionExact` for the
+batch and rules out only the four address-coded identities, not the broader
+M5 output hypotheses. No runtime behavior changed.

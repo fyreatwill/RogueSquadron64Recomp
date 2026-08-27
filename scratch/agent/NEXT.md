@@ -1,50 +1,42 @@
-# NEXT work unit (s2660) — map the Factor 5 output ABI boundary
+# NEXT work unit (s2661) — continue generated-symbol renaming sweep
 
-HYPOTHESIS-ID: m5-factor5-output-abi
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Perform one static Factor 5 ABI census of the generated ucode and its fixup
-pipeline: map the task's `data_ptr`, the `data_ptr+0x100` relation, DMEM
-source spans, and each `SP_WR_LEN` destination against the s2659 observed
-`0x166xxx` and `0x1798B0:0x179A48` ranges. Do not add a task-field watch and
-do not change runtime behavior.
+Audit the next bounded group of address-coded generated symbols after the
+audio-resampling batch. Use only exact companion symbol entries plus matching
+generated/TOML spans; preserve overlay-qualified names and do not infer names
+from address boundaries alone. Land the next exact batch in
+`syms/rogue_squadron.syms.toml` and, when needed, refresh the rename mapping.
 
 ## Competing hypotheses and discriminator
 
-- `H-Factor5OutputContract`: the generated image's task/data relation defines
-  the observed output spans, and the missing edge is an ABI/data staging
-  defect.
-- `H-CPU-MORTPublication`: the image spans are only a separate stage; the
-  legitimate retail writer belongs to the CPU MORT path.
-- `H-GenericStage`: the observed DMA ranges are staging buffers with no PCM
-  contract, so neither output hypothesis is supported.
-- `H-Unresolved`: the static sources do not identify a complete ownership and
-  ordering relation.
+- `H-CompanionExact`: the companion symbol file supplies an exact semantic or
+  overlay-qualified identity with a matching generated span.
+- `H-OverlayCollision`: the address is occupied by distinct overlay identities
+  and must remain context-qualified rather than collapsed.
+- `H-Unresolved`: no independent companion identity or exact span exists.
 
-The discriminator is one static table keyed by task field/DMEM source/DMA
-destination containing source address, length, task-field origin, generated
-instruction or fixup site, destination range, and whether the relation is
-legitimate PCM or generic staging. A complete `data_ptr+0x100`/DMA mapping
-selects `H-Factor5OutputContract`; no relation or a generic-only relation
-selects the applicable remaining hypothesis. No build or runtime arm is
-required unless the census finds an existing diagnostic source that can be
-changed regeneration-safely.
+The discriminator is one table keyed by VRAM address with companion name,
+overlay, generated definition, size/end boundary, TOML identity, and caller
+evidence. Only `H-CompanionExact` rows are renamed; collision and unresolved
+rows remain unchanged.
 
 ## Exact commands
 
-1. Read `docs/F5-UCODE-REFERENCE.md` and inspect the generated Factor 5
-   source/fixup entries for `data_ptr`, `0x100`, and `SP_WR_LEN`.
-2. Build no code unless the census identifies a diagnostic source already in
-   the fixup pipeline. Do not add another task-field watch.
-3. Write the complete table and selected/unevaluable hypothesis to
-   `scratch/agent/s2660_m5_factor5_output_abi/audit.md`.
+1. Inspect the next address-coded region in the companion symbol files and the
+   checked-in TOML; use `rg` and bounded `sed` windows only.
+2. Apply one bounded rename batch with `apply_patch`.
+3. Verify TOML rows and run the repository rename-map check if its sibling
+   companion checkout is available. Do not build or run the game for a symbol
+   map-only change.
+4. Record the table and selected hypothesis in the next ledger entry.
 
 ## Expected outcomes
 
-- A complete task/data/DMA relation selects `H-Factor5OutputContract` and
-  defines one behavior change with rollback.
-- A generic staging relation with no PCM ownership keeps the CPU-MORT edge
-  open without changing dispatch.
-- Missing/ambiguous static ownership selects `H-Unresolved`; do not implement
-  mitigation or writeback.
+- Exact companion/span rows select `H-CompanionExact` and land a rename batch.
+- Distinct overlay occupants select `H-OverlayCollision` and leave names
+  context-qualified.
+- Missing evidence selects `H-Unresolved`; choose a later address window and
+  do not invent a semantic name.

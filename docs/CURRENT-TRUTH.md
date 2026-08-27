@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2659 (2026-08-27).
+Current maintenance marker: Session 2660 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -408,10 +408,10 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **M5 de-stubbing sequence — now the primary active thread.** The
-   generated-symbol-renaming sweep is CLOSED: only 5 true `func_` placeholders
-   remain across all generated files (`func_8000040C`, `func_800927B0`,
-   `func_80092A54`, `func_80092CF0`, `func_800E9AE0`), and none has a semantic
-   companion name — all are genuinely unresolvable. Obtain an independent
+  generated-symbol-renaming sweep is now reopened as the active bounded
+  fallback: the companion overlay files provide exact context-qualified names
+  for three main-overlay audio resampling entries and one mission leftover.
+  Obtain an independent
    mapping from retail PC `0x800078EC` (and the secondary-span writers) to the
    port-side writer or CPU MORT publication boundary, including destination,
    legitimate payload polarity, and ordering relative to image completion and
@@ -501,6 +501,20 @@ adjacent `calculateFriendliesSaved` entry at `0x800C7320` is also exact, and
 boundary-only ambiguity, or overlay collision remained, so no source-map or
 runtime change was made. This selects `H-CompanionExact` as already resolved;
 the next bounded lead is `0x800C7390`.
+
+## Session 2660 result
+
+The M5 Step 3 behavior change remained unevaluable: s2659 still has no named
+port writer, legitimate payload, or ordering relation that authorizes output
+writeback, remap, gate, or wait changes. The mandated fallback sweep used the
+companion symbol files as an independent source and found exact
+overlay-qualified mappings for `0x800927B0`, `0x80092A54`, `0x80092CF0`, and
+`0x800E9AE0`, with the checked-in TOML sizes unchanged. The first three are
+`func_main_*` entries in the companion main overlay; the last is
+`func_mission_overlay_*` in the companion mission overlay. The TOML now uses
+those four identities, preserving overlay context. This selects
+`H-CompanionExact` for the batch and leaves `0x80092F10` and
+`0x8000040C` unresolved. No runtime behavior changed.
 
 ## Superseded conclusions
 
