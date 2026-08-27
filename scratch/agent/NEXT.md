@@ -1,13 +1,13 @@
-# NEXT work unit (s2526) — generated-symbol renaming sweep, next bounded region
+# NEXT work unit (s2527) — generated-symbol renaming sweep, next bounded region
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-The region `0x80079278–0x80079278` was completely censused and had one
+The region `0x80079CD8–0x80079CD8` was completely censused and had one
 8-byte boundary placeholder with no companion mapping. Continue the same
 sweep with exactly one new bounded region around the next unresolved
-main-overlay placeholder after `0x80079278` (currently `0x80079CD8`). Before
+main-overlay placeholder after `0x80079CD8` (currently `0x8007A0E8`). Before
 starting, run:
 
 ```sh
@@ -47,9 +47,9 @@ matches selects `H-no-match`; a failed regeneration-safe validation selects
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
-rg -n 'func_0x80079CD8|fake_func_80079CD8|80079CD8' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
-rg -n -C 8 'fake_func_80079CD8' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n -i '79CD8|candidate semantic terms' /Users/williambuckley/Documents/Tools/rogue_squadron64/src /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+rg -n 'func_0x8007A0E8|fake_func_8007A0E8|8007A0E8' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
+rg -n -C 8 'fake_func_8007A0E8' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -i '7A0E8|candidate semantic terms' /Users/williambuckley/Documents/Tools/rogue_squadron64/src /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 ```
 
 Do not build or rename until the region and its companion evidence are

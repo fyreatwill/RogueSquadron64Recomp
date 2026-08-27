@@ -115029,3 +115029,23 @@ not prove the fragment is dead or permanently unnameable. Artifact:
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+## Session 2526 (2026-08-26) — censused ninth generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x80079CD8–0x80079CD8` after
+the required sweep preflight. It contains exactly one 8-byte placeholder,
+`fake_func_80079CD8`, whose generated body is `lw v1, 0x1C(fp)` followed by
+`addu v0, v1, v0`. It ends immediately before the independently named
+`setNewAndPreviousButtonsPressed` at `0x80079CE0`. The generated overlay table
+and companion symbol file agree on the fragment span and retain the fake name;
+the companion comment identifies the neighboring real function but does not
+map this fragment to it. Exact-address and source searches found no human or
+m2c candidate.
+
+This selects `H-no-match` for the bounded region and rules out a defensible
+rename or regeneration-safe build. The fragment may be a boundary artifact or
+callable fragment, but this static, single-source result does not prove which.
+No generated code, runtime, or mitigation changed. Artifact:
+`scratch/agent/s2526_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
