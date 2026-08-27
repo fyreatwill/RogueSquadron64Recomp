@@ -626,7 +626,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..054ac10 100644
+index 1cb3f6a..7889099 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -640,7 +640,7 @@ index 1cb3f6a..054ac10 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +36,933 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1250 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -1574,7 +1574,42 @@ index 1cb3f6a..054ac10 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +973,252 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+     RspUcodeFunc* ucode_func = rsp_callbacks.get_rsp_microcode(task);
+ 
++    static std::atomic<uint32_t> s_first_task_probe_n{0};
++    const bool first_task_probe_enabled = [] {
++        const char* e = std::getenv("ROGUESQ_LOG_M5_FIRST_TASK");
++        return e && e[0] && e[0] != '0';
++    }();
++    const uint32_t first_task_probe_n =
++        first_task_probe_enabled && task->t.type == M_AUDTASK
++            ? s_first_task_probe_n.fetch_add(1, std::memory_order_relaxed)
++            : UINT32_MAX;
++    const bool first_task_probe = first_task_probe_n < 16u;
++    if (first_task_probe) {
++        fprintf(stderr,
++                "[audtask-first-boundary] n=%u edge=run-task-enter"
++                " phase=%u width=%u origin=0x%06X type=%" PRIu32
++                " ucode=0x%08X ucode_data=0x%08X ucode_data_size=0x%X"
++                " data_ptr=0x%08X data_size=0x%X output=0x%08X output_size=0x%X"
++                " yield=0x%08X yield_size=0x%X ucode_func=%p\n",
++                first_task_probe_n, rs64_phase_ord(),
++                rs64_vi_committed_width(), rs64_vi_committed_origin(),
++                task->t.type, static_cast<uint32_t>(task->t.ucode),
++                static_cast<uint32_t>(task->t.ucode_data),
++                static_cast<uint32_t>(task->t.ucode_data_size),
++                static_cast<uint32_t>(task->t.data_ptr),
++                static_cast<uint32_t>(task->t.data_size),
++                static_cast<uint32_t>(task->t.output_buff),
++                static_cast<uint32_t>(task->t.output_buff_size),
++                static_cast<uint32_t>(task->t.yield_data_ptr),
++                static_cast<uint32_t>(task->t.yield_data_size),
++                reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(ucode_func)));
++        fflush(stderr);
++    }
++
+     if (ucode_func == nullptr) {
+         fprintf(stderr, "No registered RSP ucode for %" PRIu32 " (returned `nullptr`)\n", task->t.type);
          return false;
      }
  
@@ -1589,6 +1624,17 @@ index 1cb3f6a..054ac10 100644
      // Load the ucode data into DMEM
      dma_rdram_to_dmem(rdram, 0x0000, task->t.ucode_data, 0xF80 - 1);
  
++    if (first_task_probe) {
++        fprintf(stderr,
++                "[audtask-first-boundary] n=%u edge=staged"
++                " phase=%u width=%u origin=0x%06X dmem_task=0xFC0"
++                " ucode_data_size=0x%X\n",
++                first_task_probe_n, rs64_phase_ord(),
++                rs64_vi_committed_width(), rs64_vi_committed_origin(),
++                static_cast<uint32_t>(task->t.ucode_data_size));
++        fflush(stderr);
++    }
++
 +    // The OSTask occupies DMEM[0xFC0..0xFFF] and the ucode-data DMA ends at
 +    // 0xF7F. Keep a canary in the intervening reserved gap while validating
 +    // the opt-in audio runner; a change proves the runner touched that area.
@@ -1697,10 +1743,28 @@ index 1cb3f6a..054ac10 100644
 +        audio_dma_probe.ranges.reserve(64);
 +        g_audio_dma_probe = &audio_dma_probe;
 +    }
++    if (first_task_probe) {
++        fprintf(stderr,
++                "[audtask-first-boundary] n=%u edge=image-enter"
++                " phase=%u width=%u origin=0x%06X\n",
++                first_task_probe_n, rs64_phase_ord(),
++                rs64_vi_committed_width(), rs64_vi_committed_origin());
++        fflush(stderr);
++    }
      RspExitReason exit_reason = ucode_func(rdram, task->t.ucode);
 +    g_audio_dma_probe = previous_audio_probe;
 +    const uint32_t audio_break_pc =
 +        rs64_audio_image_break_pc ? rs64_audio_image_break_pc() : 0u;
++
++    if (first_task_probe) {
++        fprintf(stderr,
++                "[audtask-first-boundary] n=%u edge=image-return"
++                " phase=%u width=%u origin=0x%06X break_pc=0x%04X exit=%d\n",
++                first_task_probe_n, rs64_phase_ord(),
++                rs64_vi_committed_width(), rs64_vi_committed_origin(),
++                audio_break_pc, static_cast<int>(exit_reason));
++        fflush(stderr);
++    }
 +
 +    if (probe_audio && audio_probe_row) {
 +        audio_dma_probe.break_pc = audio_break_pc;
@@ -2031,7 +2095,7 @@ index 3198be0..e35819c 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..89c25df 100644
+index 149e770..e1e8813 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,6 +8,9 @@
@@ -2044,12 +2108,15 @@ index 149e770..89c25df 100644
  
  #include "blockingconcurrentqueue.h"
  
-@@ -20,6 +23,333 @@
+@@ -20,6 +23,336 @@
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
 +extern "C" __attribute__((weak)) void rs64_audio_route_log(const char* edge,
 +                                                              uint32_t result);
++extern "C" uint32_t rs64_phase_ord();
++extern "C" uint32_t rs64_vi_committed_width();
++extern "C" uint32_t rs64_vi_committed_origin();
 +extern "C" __attribute__((weak)) void rs64_vi_boundary_log(const char* edge,
 +                                                             uint32_t requested_fb,
 +                                                             uint32_t committed_origin,
@@ -2378,7 +2445,7 @@ index 149e770..89c25df 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -30,6 +360,7 @@ struct SpTaskAction {
+@@ -30,6 +363,7 @@ struct SpTaskAction {
  
  struct ScreenUpdateAction {
      ultramodern::renderer::ViRegs regs;
@@ -2386,7 +2453,7 @@ index 149e770..89c25df 100644
  };
  
  struct UpdateConfigAction {
-@@ -39,6 +370,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
+@@ -39,6 +373,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
  
  struct ViState {
      const OSViMode* mode;
@@ -2394,7 +2461,7 @@ index 149e770..89c25df 100644
      PTR(void) framebuffer;
      PTR(OSMesg) mq;
      OSMesg msg;
-@@ -65,11 +397,15 @@ static struct {
+@@ -65,11 +400,15 @@ static struct {
          ViState* get_cur_state() {
              return &states[cur_state];
          }
@@ -2412,7 +2479,7 @@ index 149e770..89c25df 100644
              PTR(void) framebuffer = osVirtualToPhysical(next_state->framebuffer);
              PTR(void) origin = framebuffer + field_regs->origin;
  
-@@ -85,6 +421,17 @@ static struct {
+@@ -85,6 +424,17 @@ static struct {
                  origin = framebuffer;
              }
  
@@ -2430,7 +2497,7 @@ index 149e770..89c25df 100644
              // TODO implement osViFade
  
              // Update VI registers.
-@@ -101,7 +448,21 @@ static struct {
+@@ -101,7 +451,21 @@ static struct {
              regs.VI_X_SCALE_REG = common_regs->xScale; // TODO implement osViSetXScale
              regs.VI_Y_SCALE_REG = yScale; // TODO implement osViSetYScale
              regs.VI_STATUS_REG = next_state->control;
@@ -2453,7 +2520,7 @@ index 149e770..89c25df 100644
              // Swap VI states.
              cur_state ^= 1;
              *get_next_state() = *get_cur_state();
-@@ -140,6 +501,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +504,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -2462,7 +2529,7 @@ index 149e770..89c25df 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -165,9 +528,18 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
+@@ -165,9 +531,18 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
      next_state->mq = mq_;
      next_state->msg = msg;
      next_state->retrace_count = retrace_count;
@@ -2481,7 +2548,7 @@ index 149e770..89c25df 100644
  
  
  extern std::atomic_bool exited;
-@@ -209,19 +581,41 @@ void vi_thread_func() {
+@@ -209,19 +584,41 @@ void vi_thread_func() {
          }
          total_vis = new_total_vis;
  
@@ -2526,7 +2593,7 @@ index 149e770..89c25df 100644
  
          // If the game has started, handle sending VI and AI events.
          if (ultramodern::is_game_started()) {
-@@ -231,6 +625,17 @@ void vi_thread_func() {
+@@ -231,6 +628,17 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -2544,7 +2611,7 @@ index 149e770..89c25df 100644
                      // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
                      // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
                      ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
-@@ -252,12 +657,14 @@ void vi_thread_func() {
+@@ -252,12 +660,14 @@ void vi_thread_func() {
  void sp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
@@ -2559,12 +2626,28 @@ index 149e770..89c25df 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -281,13 +688,23 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -281,13 +691,39 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
          // pointer's contents (DMA, etc).
          const uint32_t task_type = task->t.type;
  
 -        if (!ultramodern::rsp::run_task(PASS_RDRAM task)) {
 +        const bool task_ok = ultramodern::rsp::run_task(PASS_RDRAM task);
++        if (task_type == M_AUDTASK) {
++            static const bool first_task_probe_enabled = [] {
++                const char* e = std::getenv("ROGUESQ_LOG_M5_FIRST_TASK");
++                return e && e[0] && e[0] != '0';
++            }();
++            static uint32_t first_task_probe_n = 0;
++            if (first_task_probe_enabled && first_task_probe_n < 16u) {
++                fprintf(stderr,
++                        "[audtask-first-boundary] n=%u edge=sp-task-return"
++                        " phase=%u width=%u origin=0x%06X ok=%u\n",
++                        first_task_probe_n++, rs64_phase_ord(),
++                        rs64_vi_committed_width(), rs64_vi_committed_origin(),
++                        task_ok ? 1u : 0u);
++                fflush(stderr);
++            }
++        }
 +        if (task_type == M_AUDTASK && rs64_audio_route_log != nullptr) {
 +            rs64_audio_route_log("run-task-return", task_ok ? 1u : 0u);
 +        }
@@ -2584,7 +2667,7 @@ index 149e770..89c25df 100644
  
          (void)task_type;
      }
-@@ -394,6 +811,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -394,6 +830,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
              }
              else if (const auto* screen_update_action = std::get_if<ScreenUpdateAction>(&action)) {
                  events_context.vi.update_screen_regs = screen_update_action->regs;
@@ -2595,7 +2678,7 @@ index 149e770..89c25df 100644
                  renderer_context->update_screen();
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
-@@ -456,6 +877,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +896,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -2603,7 +2686,7 @@ index 149e770..89c25df 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -473,6 +895,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +914,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;

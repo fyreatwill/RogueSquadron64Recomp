@@ -4,7 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2580 (2026-08-26).
+Current maintenance marker: Session 2581 (2026-08-26).
+
+- **s2581 — the first-task boundary is live; the prior s2580 null was an
+  observability miss, not an image/host stall.** The required retail oracle
+  control produced 10,000 whole-RDRAM callbacks and 461 VI. In the fresh
+  image run, all 16 bounded first tasks reached `run-task-enter`, staging,
+  image entry, image return (`break_pc=0x1328`, `exit=1`), and SP-task return
+  (`ok=1`); the run reached hangar `512 @ 0x006AB400`. The exact task shape
+  was type 2, ucode `0x80099FE0`, ucode data `0x800A4E00/0x800`, data size
+  1–3, and zero output/yield fields. Existing ABI/return diagnostics added
+  1,163 task rows and target-phase returns, supplying an independent second
+  line from the new boundary table. `H-ImageLoop` and `H-HostWait` are
+  rejected at this boundary; `H-TaskShape` is not a blocker for these tasks.
+  This does not authorize any task/output/gate promotion: stage/PCM rows
+  remain contract evidence, not proof of correct audio. Artifact:
+  `scratch/agent/s2581_m5_image_first_task_stall/audit.md`.
 
 - **s2580 — the M5 Step 1 image/control checkpoint was unevaluable at the
   intended contract boundary.** The retail oracle whole-RDRAM control reached
@@ -821,6 +836,11 @@ controls, but are superseded at their measured scopes:
   s2497's image-handoff-absent shorthand, and s2505's static destination
   non-join; later direct port-load and runtime table joins superseded those
   labels at their inspected boundaries.
+- s2580's “image arm never reached the contract boundary” label is superseded
+  at the first-task boundary. It was believable because every existing
+  contract row was target-phase gated and the capture remained in boot/640;
+  s2581's all-phase entry/stage/return/SP rows show that the image did run and
+  return. The downstream contract gap remains open.
 
 ## Evidence and safety rules
 

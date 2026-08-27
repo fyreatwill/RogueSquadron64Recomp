@@ -1,37 +1,43 @@
-# NEXT work unit (s2581) — M5 image first-task stall boundary
+# NEXT work unit (s2582) — M5 Step 1 image/control contract checkpoint
 
-HYPOTHESIS-ID: m5-audio-image-first-task-stall
+HYPOTHESIS-ID: m5-audio-contract-gap
 
 ## Single work unit
 
-Audit and instrument the first real Factor 5 image task boundary, then run one
-fresh image-only 90-second capture. Do not change runtime behavior or task,
-output, gate, or wait values. Identify whether execution stalls inside the
-generated image before its first return, in the host `run_task`/DMA wait around
-the image, or because the first task shape is not a valid image task.
+Run the existing same-build silent/image Step 1 contract pair, with the
+independent retail oracle control, now that the first-task boundary is proven
+live. Do not change runtime behavior or task, output, gate, or wait values.
+Compare the complete phase-keyed row for silent versus image at title and
+hangar.
 
 ## Competing hypotheses and discriminator
 
-- `H-ImageLoop`: the generated image enters and remains in a microcode loop
-  before the generated `break 0`/return.
-- `H-HostWait`: the image returns or reaches a host boundary, but the host
-  task/DMA/status wait prevents the next task-contract row.
-- `H-TaskShape`: the first dispatched task has a field combination that is not
-  a valid Factor 5 image task, so the image's first input path cannot complete.
+- `H-AudioDegeneracy`: the real image adds a downstream service, slot, voice,
+  or PCM edge relative to the silent control.
+- `H-ContractGap`: image DMEM/DMA/return completes but the task/output/PCM
+  contract remains unclosed relative to the silent control and retail rows.
+- `H-RouteOnly`: image and silent differ only in route reachability or shared
+  phase behavior; no image-owned downstream edge appears.
 
-The discriminator is one first-task table with image entry, generated
-microcode progress/return, host wait/DMA/status progress, exact task fields,
-and route phase. Image progress without return selects `H-ImageLoop`; image
-return/host wait progress without a task row selects `H-HostWait`; a stable
-first-task field shape with no image entry/progress selects `H-TaskShape`.
-Missing image dispatch or autopilot positive controls makes the capture
-unevaluable.
+The discriminator is one same-phase table containing dispatch, task fields,
+DMEM/DMA, image return/SP completion, service, slot/status, voice/reap, PCM
+source/consumer, and route phase for both arms. A new image-only downstream
+edge selects `H-AudioDegeneracy`; equal image/stub completion with an open
+output/PCM join selects `H-ContractGap`; equal complete rows with only route
+variation selects `H-RouteOnly`. Missing oracle whole-RDRAM/title/hangar or
+port autopilot/route controls makes the capture unevaluable.
+
+The independent retail whole-RDRAM control must first report at least 10,000
+write callbacks and nonzero VI. The port capture is valid only if its table
+has the autopilot key presses, an image-dispatch row, and at least one boundary
+row; otherwise classify it as unevaluable and do not promote any ABI or gate
+interpretation.
 
 ## Exact commands
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
-zsh scratch/agent/run_s2580_m5_image_isolated.sh s2581_m5_image_first_task_stall
+zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s2582_m5_step1_contract_pair
 ```
 
 Use the existing retail oracle positive-control recipe before adding any new

@@ -116076,3 +116076,11 @@ behavior, task field, output pointer, gate, or mitigation changed.
 
 Artifacts: `scratch/agent/s2580_m5_step1_contract_pair/driver.log`,
 `scratch/agent/s2580_m5_image_isolated/status`.
+## Session 2581 (2026-08-26) — resolved M5 image first-task boundary
+
+Ran the required independent retail oracle positive control first:
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom "$PWD/rogue_squadron.z64" --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 8 --watch-write 0x0:0x800000`; it reached the 10,000 callback threshold and reported 461 VI. Added the bounded `ROGUESQ_LOG_M5_FIRST_TASK` table to the runtime, rebuilt, and ran `env ROGUESQ_LOG_M5_FIRST_TASK=1 zsh scratch/agent/run_s2580_m5_image_isolated.sh s2581_m5_image_first_task_stall`.
+
+The image run logged 16/16 first-task rows through `run-task-enter`, `staged`, `image-enter`, `image-return`, and `sp-task-return`; each image returned `break_pc=0x1328`, `exit=1`, and `ok=1`. Existing ABI diagnostics recorded 1,163 rows, target-phase audio returns were present, autopilot fired, and the run reached hangar `512 @ 0x006AB400`. This rejects `H-ImageLoop` and `H-HostWait` at the first-task boundary and shows the prior s2580 zero-row result was caused by target-phase observability gating. The exact first task shape was stable (type 2, ucode `0x80099FE0`, ucode data `0x800A4E00` size `0x800`, data size 1–3, output/yield zero); it is not a blocker for these tasks. The downstream image/PCM contract gap remains open. No behavior, task field, output, gate, or wait value changed.
+
+Artifacts: `scratch/agent/s2581_m5_image_first_task_stall/audit.md`, `scratch/agent/s2581_m5_image_first_task_stall/run.log`.
