@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2530 (2026-08-26).
+Current maintenance marker: Session 2532 (2026-08-26).
 
 ## Current state
 
@@ -195,6 +195,13 @@ Current maintenance marker: Session 2530 (2026-08-26).
   prove whether the fragment is callable or a boundary artifact. Artifact:
   `scratch/agent/s2530_symbol_census/audit.md`.
 
+- **s2532 — the stale next pointer was revalidated.** The complete 12-byte
+  `0x80093E74` epilogue fragment remains `fake_func_80093E74`; companion
+  symbols and exact-address/source searches provide no defensible rename.
+  An older ledger census had already recorded the same result, so this run
+  selects no-match and advances the sweep to `0x80094348`. Artifact:
+  `scratch/agent/s2532_symbol_revalidation/audit.md`.
+
 - **s2531 — two adjacent generated fragments were renamed through the
   regeneration input and generated tables.** `0x80082268` is now
   `cheatCodeConstantPreamble`, an 8-byte constant-load fragment immediately
@@ -233,7 +240,8 @@ This is one monotonic sequence; #1 is the next campaign priority.
   s2527 and s2528 left `0x8007A0E8` and `0x8007A86C` unresolved; next is
   `0x8007C298`; s2529 left it unresolved. s2530's `0x80082268` and the
   adjacent `0x800825C8` were renamed in s2531 after their boundaries were
-  established. Next is `0x80093E74`.
+  established. s2532 revalidated `0x80093E74` as an unchanged epilogue
+  fragment; next is `0x80094348`.
 5. **M4 accumulator-origin work — parked** pending a new boundary idea.
 
 ## Durable boundaries

@@ -115165,3 +115165,18 @@ prove which. No generated code, runtime, or mitigation changed. Artifact:
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+## Session 2532 (2026-08-26) — revalidated stale generated-symbol sweep pointer
+
+Re-ran the bounded sweep census for `0x80093E74` as prescribed by NEXT. The
+complete `0xC` span is a three-instruction function epilogue (`lw ra`, `lw fp`,
+`addiu sp`) between the named `sqrtf_recomp` and
+`musyxComputeNotePlaybackRate`. The active generated files, project TOML, and
+companion symbol file retain the fake name; exact-address/source searches found
+no human, m2c, or caller mapping. This selects `H-no-match` and leaves the
+fragment unchanged. An older ledger entry had already recorded the same
+census, revealing that the NEXT pointer was stale; no rename or regeneration
+was warranted. Artifact:
+`scratch/agent/s2532_symbol_revalidation/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
