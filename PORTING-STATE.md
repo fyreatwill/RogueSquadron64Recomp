@@ -115718,3 +115718,25 @@ downstream discriminator was not image-specific. `H-route-only` remains a
 possible confound for shared PCM controls, so this is not evidence for
 promotion. No task field, output pointer, gate, guard, or mitigation changed.
 Artifact: `scratch/agent/s2559_m5_step1_contract_pair/driver.log`.
+
+## Session 2560 (2026-08-26) — audited M4 producer-consumer route reachability
+
+I defined four outcomes before building: a same-phase producer/consumer index
+join would select `H-index-alias`; live unjoined endpoints would select
+`H-index-no-join`; producer-only or consumer-only activity would select the
+corresponding dead endpoint. The first build used a broad consumer anchor at
+overlay-0x20 `0x1390`; its target table was empty, so I corrected the fixup to
+anchor after the actual `0x13D8` B00/B02/B04 loads, rebuilt, and reran the same
+route. The final capture reached title and hangar, and the independent F5 fetch
+control fired 514 times, but producer rows and consumer rows were both zero.
+
+The retail oracle was run with a whole-RDRAM positive control in the same
+iteration; it reached the 10,000-hit cap and recorded title and hangar VI
+phases. Thus the target route and control machinery were live, but both M4
+endpoints were absent. This result does not distinguish producer-dead from
+consumer-dead and does not select either index hypothesis. It rules out only
+the claim that a qualified target-phase join was observed. The regeneration-
+safe probe remains in `tools/fixup_factor5_ucode.py`, with implementation in
+`src/rsp/dpc_bridge.cpp`; no mitigation or behavior change was made.
+
+Artifact: `scratch/agent/s2560_m4_index_join/audit.md`.

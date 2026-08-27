@@ -987,6 +987,11 @@ extern "C" void rs64_inline_probe_dispatch(uint32_t r17, uint32_t w0, uint32_t t
         opcode == 0xBD ? 16 : 8;
 }
 
+extern "C" void rs64_m4_index_probe(uint32_t kind, uint32_t slot,
+                                      uint32_t p0, uint32_t p1, uint32_t p2,
+                                      uint32_t index, uint32_t masked,
+                                      uint32_t c0, uint32_t c1, uint32_t c2);
+
 extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
     static const bool enabled = [] {
         const char *e = std::getenv("ROGUESQ_LOG_F5_STATE");
@@ -994,6 +999,8 @@ extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
     }();
     if (!enabled) return;
     const uint32_t opcode = w0 >> 24;
+
+    rs64_m4_index_probe(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     static uint32_t phase_seen = 0xFFFFFFFFu;
     static uint32_t fetch_n = 0;
@@ -1048,6 +1055,43 @@ extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
         fputc('\n', stderr);
         fflush(stderr);
     }
+}
+
+extern "C" void rs64_m4_index_probe(uint32_t kind, uint32_t slot,
+                                      uint32_t p0, uint32_t p1, uint32_t p2,
+                                      uint32_t index, uint32_t masked,
+                                      uint32_t c0, uint32_t c1, uint32_t c2) {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_M4_INDEX");
+        return e && *e && *e != '0';
+    }();
+    if (!enabled) return;
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin();
+    const bool title = width == 1024 && origin == 0x00790400u;
+    const bool hangar = width == 512 && (origin == 0x006AB400u || origin == 0x006AB800u);
+    if (!title && !hangar) return;
+    static uint32_t phase_seen = 0xFFFFFFFFu;
+    static uint32_t lines = 0;
+    if (phase != phase_seen) {
+        phase_seen = phase;
+        lines = 0;
+        fprintf(stderr, "[m4-index-control] phase=%u width=%u origin=0x%06X task=%u\n",
+                phase, width, origin, g_e9prov.task);
+    }
+    if (lines++ >= 256) return;
+    if (kind == 0) {
+        fprintf(stderr, "[m4-index-control] phase=%u width=%u origin=0x%06X task=%u\n",
+                phase, width, origin, g_e9prov.task);
+    } else if (kind == 1) {
+        fprintf(stderr, "[m4-index] phase=%u task=%u kind=producer slot=0x%X p=0x%X/0x%X/0x%X\n",
+                phase, g_e9prov.task, slot, p0, p1, p2);
+    } else {
+        fprintf(stderr, "[m4-index] phase=%u task=%u kind=consumer index=0x%02X masked=0x%02X c=0x%X/0x%X/0x%X source=0x%X/0x%X/0x%X\n",
+                phase, g_e9prov.task, index, masked, c0, c1, c2, p0, p1, p2);
+    }
+    fflush(stderr);
 }
 
 extern "C" void rs64_inline_probe_route(uint32_t r17, uint32_t target, uint32_t line) {

@@ -3093,6 +3093,61 @@ if is_shade_ucode and M4_ACCUM_MARKER not in text and not m4_migrated:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 21: phase-gated M4 producer-slot / consumer-index join (s2560).
+# ---------------------------------------------------------------------------
+M4_INDEX_MARKER = "/* fixup: M4 producer consumer index join v1 */"
+# Migrate the first pass's broad r13 anchor to the actual indirect consumer;
+# the earlier r13 in OVL20_1390 is a different path and is not the index load.
+if is_main_ucode and M4_INDEX_MARKER in text and text.count('rs64_m4_index_probe(2,') == 1:
+    text = text.replace(
+        '    rs64_m4_index_probe(2, 0, r3, r2, r8, r3 & 0x7F, r2, r11, r12, r13);  ' + M4_INDEX_MARKER + '\n',
+        '', 1)
+    consumer_fix = re.compile(
+        r'(OVL20_13D8:\n[\s\S]*?'
+        r'    r13 = RSP_MEM_HU_LOAD\(0XB04, r2\);\n)'
+    )
+    text, n_consumer_fix = consumer_fix.subn(
+        lambda m: m.group(1) +
+        '    rs64_m4_index_probe(2, 0, r3, r2, r8, r3 & 0x7F, r2, r11, r12, r13);  ' +
+        M4_INDEX_MARKER + '\n',
+        text, count=1)
+    if n_consumer_fix != 1:
+        print("fixup_factor5_ucode: FIXUP 21 migration FAILED (consumer).", file=sys.stderr)
+        sys.exit(1)
+if is_main_ucode and M4_INDEX_MARKER not in text:
+    decl_anchor = re.compile(
+        r'(extern "C" void rs64_f5_state_probe\(uint32_t r17, uint32_t w0, uint32_t w1\);  /\* fixup: F5 state census v1 \*/\n)'
+    )
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_m4_index_probe(uint32_t kind, uint32_t slot, '
+        'uint32_t p0, uint32_t p1, uint32_t p2, uint32_t index, '
+        'uint32_t masked, uint32_t c0, uint32_t c1, uint32_t c2);  ' +
+        M4_INDEX_MARKER + "\n",
+        text, count=1)
+    producer = re.compile(
+        r'(    RSP_MEM_H_STORE\(0XB00, r7, r2\);\n)'
+        r'(    // sh          \$3, 0xB02\(\$7\)\n)'
+        r'(    RSP_MEM_H_STORE\(0XB02, r7, r3\);\n)'
+        r'(    // sh          \$4, 0xB04\(\$7\)\n)'
+        r'(    RSP_MEM_H_STORE\(0XB04, r7, r4\);\n)'
+    )
+    text, n_producer = producer.subn(
+        lambda m: m.group(1) + m.group(2) + m.group(3) + m.group(4) + m.group(5) +
+        '    rs64_m4_index_probe(1, r7, r2, r3, r4, 0, 0, 0, 0, 0);  ' +
+        M4_INDEX_MARKER + "\n",
+        text, count=1)
+    consumer = re.compile(r'(    r13 = RSP_ADD32\(r12, 0X28\);\n)')
+    text, n_consumer = consumer.subn(
+        lambda m: m.group(1) +
+        '    rs64_m4_index_probe(2, 0, r3, r2, r8, r3 & 0x7F, r2, r11, r12, r13);  ' +
+        M4_INDEX_MARKER + "\n",
+        text, count=1)
+    if (n_decl, n_producer, n_consumer) != (1, 1, 1):
+        print(f"fixup_factor5_ucode: FIXUP 21 ANCHOR FAILED (decl={n_decl} producer={n_producer} consumer={n_consumer}).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 TRIGEN_RETURN_MARKER = "/* fixup: TriGen L_11B0 return audit v1 */"
 if is_main_ucode and TRIGEN_RETURN_MARKER not in text:
     decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_trigen_branch[^\n]*\n)")

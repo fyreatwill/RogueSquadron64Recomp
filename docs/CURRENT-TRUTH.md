@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2559 (2026-08-26).
+Current maintenance marker: Session 2560 (2026-08-26).
 
 ## Current state
 
@@ -59,6 +59,16 @@ Current maintenance marker: Session 2559 (2026-08-26).
   `H-route-only` still not fully separable from existing shared controls), and
   leaves image dispatch opt-in. No task field, output pointer, gate, or guard
   was changed. Artifact: `scratch/agent/s2559_m5_step1_contract_pair/driver.log`.
+
+- **s2560 — the M4 dynamic join endpoints were absent in the qualified route.**
+  The corrected regeneration-safe probe reached the title and hangar phases,
+  while the independent F5 fetch control fired 514 times. The retail oracle's
+  whole-RDRAM control reached 10,000 writes and the same title/hangar phases.
+  Neither the overlay-0x1c B00/B02/B04 producer nor the overlay-0x20 0x13D8
+  consumer emitted a target-phase row. This does not distinguish producer-dead
+  from consumer-dead, and does not select index-alias or index-no-join. The
+  next discriminator is route/branch reachability. Artifact:
+  `scratch/agent/s2560_m4_index_join/audit.md`.
 
 ## Latest evidence
 
@@ -537,7 +547,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    identified the overlay-0x20 indirect consumer and its runtime index source,
    but could not bound that index to a producer slot. Do not add a mitigation
    or repeat static literal audits; only a phase-gated producer-slot/consumer-
-   index capture can close the remaining dynamic question.
+   index capture can close the remaining dynamic question. s2560's corrected
+   capture had positive port and retail controls but zero producer and 0x13D8
+   consumer rows, so the next unit must instrument route entry and the
+   `r4 == 2` branch as one reachability table; do not infer a dead producer or
+   consumer from the current null.
 
 ## Durable boundaries
 
