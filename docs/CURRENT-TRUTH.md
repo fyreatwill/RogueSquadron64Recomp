@@ -135,6 +135,21 @@ queue publication, or AI ordering edge is identified. This selects
 and `H-service-boundary` at these sites, and remains static source evidence;
 no runtime watch, writeback, remap, or mitigation is authorized.
 
+s2688 audited the next downstream boundary. `renderVoiceAudioBlock` is called
+from `updateVoiceChannelParams` at `0x8009C4C0`, reads eight words from
+`voice+0x140`, and writes the mixed words back to that same object at
+`0x8009DC38..0x8009DC54`; no caller-owned PCM destination or publication call
+appears after it. `audioMixStereoBlock8` only reads the voice sample fields and
+returns packed results in registers to the enclosing renderer. The named AI
+worker at `0x8008ED70` independently allocates sixteen `0x300`-byte buffers
+within a `0x3000` region, clears them, and submits the base/current buffer to
+`osAiSetNextBuffer` with length `0x300`; its only visible post-submit ordering
+is the message receive loop. No named writer or direct copy joins that ring to
+`voice+0x140`. This selects `H-unresolved-address` for the downstream consumer
+table (static source evidence), rules out `H-direct-publish` and
+`H-service-boundary` at the audited sites, and authorizes no runtime watch,
+writeback, remap, or mitigation.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -144,11 +159,12 @@ This is one monotonic sequence; #1 is the next campaign priority.
    the missing copy/publication edge. The s2682 audit shows the watched sites
    are a renderer filter output and generic `bzero`, not the missing copy.
    s2683 shows the named DMA callback is stream-to-slot, not renderer-to-AI.
-   s2686 found no publication edge in the update/renderer path, and s2687
-   found no publication edge in the mixer callback/state boundary. The next
-   useful work must identify a downstream named consumer outside these
-   callbacks, without repeating the filter, persistent-object, task-field,
-   ring, shared-stack, DMA callback, update/renderer, or mixer-table census.
+   s2686 found no publication edge in the update/renderer path, s2687 found no
+   publication edge in the mixer callback/state boundary, and s2688 found no
+   join in the named AI worker. The next useful work must audit the named
+   producers and setup helpers for the AI worker's 16-buffer ring, starting
+   with `setupSongRenderBuffers`, `buildSongDecodeBufferRing`, and their direct
+   callers, without repeating the renderer or AI-submit body audit.
 2. **M5 image task contract edge.** Implement only after a named legitimate
    image writer and destination/order relation is independently established;
    s2680 authorizes no writeback or remap.
