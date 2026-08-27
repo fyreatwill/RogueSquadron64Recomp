@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2622 (2026-08-27).
+Current maintenance marker: Session 2623 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -127,6 +127,19 @@ fragments; `0x800BF4A0` is the previously documented duplicate-symbol
 boundary. No new defensible rename exists in this region. The next sweep lead
 is `0x800C41AC/0x800C41B0`.
 
+## s2623 symbol-sweep result
+
+The `0x800C41B0` lead is resolved. The companion mission symbol file names it
+`plotRadarBlipColumn`; the generated body spans `0x1AC` bytes from
+`0x800C41B0` through `0x800C4358`, with `plotRadarBlipRow` beginning at the
+exact next boundary `0x800C435C`. The generated radar path has three callers
+at `0x800C4540`, `0x800C60C8`, and `0x800C60E8`, and the generated overlay
+table carries the same name and `0x1AC` ROM size. The repository TOML had
+remained address-coded, so it was synchronized to `plotRadarBlipColumn`; the
+regenerated rename table contains `func_`, `D_`, and `fake_func_` mappings for
+the address. This is an exact companion/span/caller result, not a boundary-only
+rename. The next lead is `0x800C63C0`.
+
 ## Current state
 
 - The qualified route is `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
@@ -148,8 +161,8 @@ is `0x800C41AC/0x800C41B0`.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C41AC/0x800C41B0` next using companion symbols, exact spans, and
-   callers; unresolved fragments stay placeholders under
+   Audit `0x800C63C0` next using companion symbols, exact spans, and callers;
+   unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
    independent mapping from retail PC `0x800078EC` (and the secondary-span

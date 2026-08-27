@@ -1,12 +1,12 @@
-# NEXT work unit (s2623) — bounded generated-symbol sweep while M5 is blocked
+# NEXT work unit (s2624) — bounded generated-symbol sweep while M5 is blocked
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit one bounded symbol region centered on `0x800C41B0` and its neighboring
-`0x800C41AC` boundary using companion symbols, generated bodies, callers, and
-overlay sizes. Rename only a symbol whose identity is supported by exact
+Audit one bounded symbol region centered on `0x800C63C0` and its neighboring
+`0x800C64A4/0x800C64B0` entries using companion symbols, generated bodies,
+callers, and overlay sizes. Rename only a symbol whose identity is supported by exact
 companion and span/caller evidence; unresolved fragments stay placeholders.
 Do not change runtime behavior.
 

@@ -116914,3 +116914,22 @@ present in the generated tree; it provides no new rename to land. It rules out
 renaming the two short fragments from boundary evidence alone and confirms the
 next sweep lead as `0x800C41AC/0x800C41B0`. No runtime behavior changed and no
 M5 claim was altered.
+## Session 2623 (2026-08-27) — synchronized the 800C41B0 radar-column symbol
+
+The planned work unit was one bounded generated-symbol audit over
+`0x800C41AC/0x800C41B0`, with competing hypotheses exact companion mapping,
+boundary-only collision, or unresolved placeholder. The companion mission
+symbol file names `0x800C41B0` `plotRadarBlipColumn`. The generated body in
+`funcs_33.c` spans `0x1AC` bytes, starts at `0x800C41B0`, ends at
+`0x800C4358`, and is followed by `plotRadarBlipRow` at `0x800C435C`; generated
+callers at `0x800C4540`, `0x800C60C8`, and `0x800C60E8` invoke the body in the
+radar path. The generated overlay table independently carries the same name
+and `0x1AC` ROM size. The adjacent `fake_func_800C41AC` is a four-byte FPU
+fragment and remains a fragment.
+
+The repository TOML was stale (`func_800C41B0`), so it was changed to
+`plotRadarBlipColumn`. `build_redefs.py` regenerated the companion rename table
+and emitted all three expected mappings (`func_`, `D_`, and `fake_func_`) for
+the address. No runtime behavior or generated body changed; no build or soak
+was required. This selects the exact-mapping hypothesis and rules out treating
+the lead as boundary-only. The next sweep lead is `0x800C63C0`.

@@ -1697,7 +1697,7 @@ functions = [
     { name = "getPlayerHealthPercentage", vram = 0x800C40AC, size = 0x4C },
     { name = "probeNumberedAssetFilename", vram = 0x800C40F8, size = 0xB4 },
     { name = "fake_func_800C41AC", vram = 0x800C41AC, size = 0x4 },
-    { name = "func_800C41B0", vram = 0x800C41B0, size = 0x1AC },
+    { name = "plotRadarBlipColumn", vram = 0x800C41B0, size = 0x1AC },
     { name = "plotRadarBlipRow", vram = 0x800C435C, size = 0x174 },
     { name = "initializeRadar", vram = 0x800C44D0, size = 0x8BC },
     { name = "updateCraftSelectAnimState", vram = 0x800C4D8C, size = 0x454 },
