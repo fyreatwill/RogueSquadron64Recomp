@@ -155,6 +155,11 @@ The latest durable M5 chain is:
   it. The independent generated-tree placeholder scan found no `func_8014*`
   or `fake_func_8014*` definitions or references. No build or game soak was
   needed.
+- Session 2810 closed generated-symbol interval `0x8014B000..0x8014D000`.
+  The bounded selector changed zero references in zero files, and the
+  independent generated-tree placeholder scan found no `func_8014*` or
+  `fake_func_8014*` definitions or references. No build or game soak was
+  needed.
 
 The M5 publication edge remains unresolved. No writeback, remap, forced slot
 state, gate bypass, or mitigation is authorized without a named writer,
@@ -173,7 +178,7 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    2800–2809 closed intervals through `0x8014B000`; each had either
    already-synchronized symbols or preserved ambiguous/data entries, with no
    stale generated placeholders selected. Continue with
-   `0x8014B000..0x8014D000`, preserving ambiguous/data entries and applying
+   `0x8014D000..0x8014F000`, preserving ambiguous/data entries and applying
    only source-backed names.
 
 2. **M5 SP-yield lifecycle validation — parked pending a new route angle.** The
