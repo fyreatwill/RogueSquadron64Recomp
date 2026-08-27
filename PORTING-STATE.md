@@ -119964,3 +119964,15 @@ references in zero files. The independent generated-tree scan found no
 ambiguous/data entries remain intentionally preserved. No build or game soak
 was needed because no generated source changed. The next bounded interval is
 `0x80161000..0x80163000`.
+
+## Session 2821 (2026-08-27) — closed generated-symbol interval with no selected renames
+
+Ran the regeneration-safe companion selector for `0x80161000..0x80163000`
+against the external `rogue_squadron64` symbol files. It changed zero
+references in zero files. The independent generated-tree scan found no
+`func_8016*` or `fake_func_8016*` placeholder definitions or references, and
+the companion search found no candidates in the interval. `git diff --check`
+passed. This closes the interval as already synchronized; ambiguous/data
+entries remain intentionally preserved. No build or game soak was needed.
+
+The next bounded interval is `0x80163000..0x80165000`.
