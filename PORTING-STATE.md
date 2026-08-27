@@ -114739,3 +114739,21 @@ failed before its positive control. The zero paired-image target rows are
 therefore unevaluable. No audio behavior, writer mapping, guard, or mitigation
 changed. Artifact:
 `scratch/agent/s2509_m5_image_crash/audit.md`.
+
+## Session 2510 (2026-08-26) — repeated image concurrency control
+
+Repaired the missing s2510 driver, rebuilt the Debug target, and ran one
+same-build three-arm capture with identical phase-relative input: single
+image, image-plus-silent, and silent control. The single-image arm passed its
+target positive controls, reached 1024/0x790400 and 512/0x6AB400, and emitted
+image-stage and DMA/join rows without a crash marker. The image-plus-silent arm
+remained at 640 and emitted 36 crash rows at
+`cutsceneDispatchSlotsByFlag+10804`, with `last-guest-pc=0x8000834c`, before
+its target positive control. The silent control also failed to reach 1024 in
+this capture. This supports `H-concurrent-resource` over
+`H-image-renderer-resource` for the paired-image failure, but does not
+separate shared renderer pressure from route/input or startup-order divergence
+because the paired controls missed the target. Their target nulls are
+unevaluable. No audio behavior, writer mapping, guard, or mitigation changed.
+Artifact:
+`scratch/agent/s2510_m5_image_concurrency/audit.md`.

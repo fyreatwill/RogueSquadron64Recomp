@@ -4,7 +4,7 @@ Operational front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history through s2403 is summarized in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md);
 the append-only ledger remains authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2509 (2026-08-26).
+Current maintenance marker: Session 2510 (2026-08-26).
 
 ## Current state
 
@@ -30,6 +30,21 @@ Current maintenance marker: Session 2509 (2026-08-26).
   The image arm reaches task completion and generated DMA. s2506 joins
   stage-2 image DMA destinations to the generated AI table and its PCM
   consumers; the legitimate nonzero payload writer remains unresolved.
+
+- **s2510 — the paired-image route failure persists, but the concurrency
+  control is incomplete.** A same-build three-arm capture launched
+  single-image, image-plus-silent, and silent-control processes with identical
+  phase-relative input. Single-image passed its target controls and reached
+  1024/512 with image-stage and DMA/join rows. Image-plus-silent remained at
+  640 and emitted 36 crash rows at
+  `cutsceneDispatchSlotsByFlag+10804`, `last-guest-pc=0x8000834c`, before its
+  target positive control. Silent-control also failed to reach 1024 in this
+  capture. This supports `H-concurrent-resource` over
+  `H-image-renderer-resource` for the paired-image failure, but does not
+  separate shared renderer pressure from route/input or startup-order
+  divergence because the paired controls missed the target. No writer or
+  mitigation claim is authorized. Artifact:
+  `scratch/agent/s2510_m5_image_concurrency/audit.md`.
 
 - **s2509 — the image-arm failure is pair-specific in the bounded capture.**
   A same-build three-arm run launched single-image, paired-image, and
@@ -777,9 +792,12 @@ Closed investigations are not active work items. This is one monotonic sequence;
    s2509's three-arm capture shows the single image arm reaches the target,
    while only the concurrent image arm stalls before its positive control;
    concurrent-resource is selected for this route, with route/input
-   divergence still open. Next, run one same-build concurrency control that
-   keeps the image arm fixed and varies only whether the silent process shares
-   the renderer, using target-phase controls before interpreting any null.
+   divergence still open. s2510 reproduced the paired-image pre-target
+   failure, but the paired-silent control also missed 1024, so shared renderer
+   pressure versus route/input or startup-order divergence remains open. Next,
+   run a staggered-start same-build control: single-image, then
+   image-plus-silent after the image arm has passed 1024, retaining target-phase
+   positive controls before interpreting any null.
 3. **M5 gate polarity/writer join — closed at current capture scope.**
 4. **M5 payload-transformation provenance — closed at current capture scope.**
 5. **M5 A1 retail flag semantics and pre-target route boundary — closed at
