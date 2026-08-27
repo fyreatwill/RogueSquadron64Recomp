@@ -115088,3 +115088,23 @@ No generated code, runtime, or mitigation changed. Artifact:
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2529 (2026-08-26) — censused twelfth generated-symbol sweep region
+
+Enumerated the complete main-overlay interval `0x8007C298–0x8007C29C` after
+the required sweep preflight. It contains exactly one 8-byte placeholder,
+`fake_func_8007C298`, whose generated body is `sll a1, a2, 1` followed by
+`addu a1, a1, a0`. The generated overlay table and companion symbol file
+agree on the span and retain the fake name; exact-address, source, m2c,
+caller, and semantic searches found no human rename candidate. The next
+independently named function is `initNpcTexturedEffectFromTemplate` at
+`0x8007C2A0`.
+
+This selects `H-no-match` and rules out a defensible rename or
+regeneration-safe build for this entry. The fragment may be a boundary
+artifact or callable fragment, but this static, single-source result does
+not prove which. No generated code, runtime, submodule, or mitigation
+changed. Artifact: `scratch/agent/s2529_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.
