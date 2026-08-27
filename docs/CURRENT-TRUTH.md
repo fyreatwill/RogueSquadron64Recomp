@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2844 (2026-08-27).
+Current maintenance marker: Session 2845 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -776,3 +776,11 @@ names. The regeneration-safe selector changed zero generated references and
 returned its required-rename fail-closed result; no data-gap or ambiguous
 placeholder was renamed. The next sweep interval is
 `0x8004B000..0x8004C000`.
+
+Session 2845 examined `0x8004B000..0x8004C000`. The selector classified
+`0x8004B1E4 scaleObjectPosToGridUnits`, `0x8004B644 unpackGridVertexBytes`,
+and `0x8004B930 buildGridCellMesh` as already-synchronized callable names.
+It changed zero generated references and returned the expected
+`--require-rename` fail-closed result. No source-backed data-gap or ambiguous
+placeholder was selected; the next sweep interval is
+`0x8004C000..0x8004D000`.

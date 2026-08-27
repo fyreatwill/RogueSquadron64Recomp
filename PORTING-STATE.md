@@ -120316,3 +120316,14 @@ expected `--require-rename` fail-closed result. This rules out a source-backed
 data-gap rename in this interval but does not add semantic evidence about any
 other placeholder. No build or game run was needed. The next sweep interval
 is `0x8004B000..0x8004C000`.
+
+## Session 2845 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x8004B000..0x8004C000`.
+The selector classified `0x8004B1E4 scaleObjectPosToGridUnits`,
+`0x8004B644 unpackGridVertexBytes`, and `0x8004B930 buildGridCellMesh` as
+already-synchronized callable entries. It changed zero generated references
+in zero files and returned the expected `--require-rename` fail-closed result.
+This rules out a source-backed data-gap rename in this interval but does not
+add semantic evidence about other placeholders. No build or game run was
+needed. The next sweep interval is `0x8004C000..0x8004D000`.
