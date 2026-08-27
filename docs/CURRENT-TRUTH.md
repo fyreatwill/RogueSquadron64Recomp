@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2548 (2026-08-26).
+Current maintenance marker: Session 2551 (2026-08-26).
 
 ## Current state
 
@@ -363,6 +363,17 @@ Current maintenance marker: Session 2548 (2026-08-26).
   remains unchanged. Artifact:
   `scratch/agent/s2550_symbol_census/audit.md`.
 
+- **s2551 — the next bounded generated-symbol region is a menu data boundary,
+  not a rename candidate.** The complete `0x800CC3D4–0x800CC9B7` span is the
+  `0x114C`-byte generated placeholder entry ending exactly before
+  `tickAtAtAudioAndWeaponState` at `0x800CC9B8`. Its active generated body is
+  only a trap-marked gap filler. The companion menu symbol file retains the
+  fake name but declares menu data immediately after it, including hangar
+  state/maps, bridge tables/colors, and menu colors; exact-address, source,
+  m2c, and caller searches found no human function mapping. This selects
+  `H-data-boundary` / `H-no-match`; no generated code changed. Artifact:
+  `scratch/agent/s2551_symbol_census/audit.md`.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -380,7 +391,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   steps remain conditional on a new named retail writer/value boundary.
   Next work unit: continue the bounded generated-symbol renaming sweep at
   `0x800C6968`; s2549 left `0x800C6968–0x800C696F` unchanged as an
-  incomplete epilogue/boundary fragment. Continue at `0x800CC3D4`.
+  incomplete epilogue/boundary fragment. s2551 then classified
+  `0x800CC3D4–0x800CC9B7` as a menu data boundary with no rename candidate;
+  continue at `0x800CEF1C` in the mission overlay.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence breadcrumbs belong in the
    soak queue.
@@ -419,7 +432,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   fragment; s2547 renamed the `0x800B47C4` three-instruction setup fragment
   to `menuControllerInputPreamble`; s2548 left `0x800C5898–0x800C589F`
   unchanged as an 8-byte boundary fragment. s2550 left `0x800CC038–0x800CC03F`
-  unchanged as an overlay-shared boundary fragment. Continue at `0x800CC3D4`.
+  unchanged as an overlay-shared boundary fragment, and s2551 classified
+  `0x800CC3D4–0x800CC9B7` as a menu data boundary with no rename candidate.
+  The next unresolved placeholder is `0x800CEF1C` in the mission overlay.
 5. **M4 accumulator-origin work — static indirect-consumer candidate found.**
    s2536 found overlay 0x1c table writers derived from `0x670` and the
    overlay-0x20 `L_13D8` reader feeding `L_17F0`; the specific live table-index

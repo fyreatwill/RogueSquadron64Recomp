@@ -115387,6 +115387,23 @@ callable body, renaming it to either neighbor would be speculative. Selected
 ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
 mitigation-shaped behavior changed.
 
+## Session 2551 (2026-08-26) — censused generated-symbol menu data boundary
+
+Ran the bounded generated-symbol census at `0x800CC3D4`. The complete
+menu-overlay span is `0x800CC3D4–0x800CC9B7` (`0x114C` bytes), ending exactly
+before `tickAtAtAudioAndWeaponState` at `0x800CC9B8`. The active generated body
+is only a trap-marked gap filler. The companion menu symbol input retains
+`fake_func_800CC3D4` but declares menu data immediately after it, including
+hangar state/maps, bridge tables/colors, and menu colors. Exact-address,
+source, m2c, and caller searches found no human function mapping. Selected
+`H-data-boundary` / `H-no-match` and left it unchanged. The next unresolved
+placeholder is `0x800CEF1C` in the mission overlay.
+
+Artifact: `scratch/agent/s2551_symbol_census/audit.md`.
+
+ORIGIN: diagnostic-only. No generated code, symbol input, runtime, or
+mitigation-shaped behavior changed.
+
 ## Session 2550 (2026-08-26) — censused generated-symbol overlay boundary
 
 Ran the bounded generated-symbol census at `0x800CC038`. The complete
