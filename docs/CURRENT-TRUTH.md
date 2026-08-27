@@ -195,6 +195,16 @@ Current maintenance marker: Session 2530 (2026-08-26).
   prove whether the fragment is callable or a boundary artifact. Artifact:
   `scratch/agent/s2530_symbol_census/audit.md`.
 
+- **s2531 — two adjacent generated fragments were renamed through the
+  regeneration input and generated tables.** `0x80082268` is now
+  `cheatCodeConstantPreamble`, an 8-byte constant-load fragment immediately
+  before `applyCheatCodeFromInput`; `0x800825C8` is now
+  `rspbootTextPreamble`, the 8-byte fragment immediately before the known
+  `rspbootTextStart` data. The project symbol TOML, companion symbol source,
+  generated declarations, generated implementations, and overlay dispatch
+  entries agree. Neither rename asserts that the fragments are independently
+  callable game functions.
+
 ## Active backlog
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -221,8 +231,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
   one bounded address-region census and only names supported by the companion
   decomp or clear local semantics; leave unresolved placeholders unchanged.
   s2527 and s2528 left `0x8007A0E8` and `0x8007A86C` unresolved; next is
-  `0x8007C298`; s2529 left it unresolved. s2530 left `0x80082268`
-  unresolved. Next is `0x800825C8`.
+  `0x8007C298`; s2529 left it unresolved. s2530's `0x80082268` and the
+  adjacent `0x800825C8` were renamed in s2531 after their boundaries were
+  established. Next is `0x80093E74`.
 5. **M4 accumulator-origin work — parked** pending a new boundary idea.
 
 ## Durable boundaries

@@ -114869,6 +114869,25 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2531 (2026-08-26) — renamed two generated boundary fragments
+
+The mandated pivot landed a bounded generated-symbol change. The complete
+8-byte region at `0x80082268` is now `cheatCodeConstantPreamble`; its two
+instructions load the floating-point constant immediately before the named
+`applyCheatCodeFromInput` function at `0x80082270`. The complete 8-byte region
+at `0x800825C8` is now `rspbootTextPreamble`; it immediately precedes the
+known `rspbootTextStart` data at `0x800825D0`. Updated the project symbol TOML,
+companion symbol source, generated declarations/implementations, and overlay
+dispatch entries. A repository-wide reference check found no remaining use of
+either old placeholder in the active generated tables.
+
+This selects `H-named-boundary-fragment` for both entries, while explicitly
+leaving open whether either fragment is independently callable. It rules out
+the previous placeholder names as useful identifiers, not any runtime audio,
+RSP, or rendering behavior. No runtime mitigation was added.
+
+Artifact: `scratch/agent/s2531_symbol_rename/audit.md`.
+
 ## Session 2528 (2026-08-26) — censused eleventh generated-symbol sweep region
 
 Enumerated the complete main-overlay interval `0x8007A86C–0x8007A86C` after
