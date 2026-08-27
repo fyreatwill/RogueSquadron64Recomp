@@ -116660,3 +116660,35 @@ Artifacts: `scratch/agent/s2611_oracle_positive.log` and
 `scratch/agent/s2611_m5_audio_contract_rebaseline/`. The modified historical
 driver now launches its two arms concurrently; its first focus-delivery
 attempt remains documented as a failed route qualification, not evidence.
+
+## Session 2612 (2026-08-27) — qualified Factor-5 image output against PCM spans
+
+Ran the retail oracle first with the whole-RDRAM positive control: it reached
+10,000 write callbacks and independently reached title `1024 @ 0x00790400`
+and hangar `512 @ 0x006AB400`. The host-return and C88 checks passed and the
+Debug target built successfully.
+
+The first image launch set `ROGUESQ_M5_C88_VALUE=0`, which is the force-zero
+rollback and prevented hangar coverage; it was rejected as an invalid
+measurement. A corrected default-C88 launch still carried
+`AUTOPILOT_STOP_WIDTH=512` and likewise stopped before hangar. The fixed
+90-second image run removed that stop gate, reached title at 12.4s and hangar
+at 20.7s, and was SIGKILLed by the watchdog.
+
+In the valid run, image-stage destinations overlapped PCM source/consumer
+spans in both phases. Every sampled image-stage/DMA payload was zero-valued.
+Title PCM rows were mixed (38 nonzero and 48 zero samples); hangar PCM rows
+were all zero (82). The task join had 479/1349 complete title rows and
+200/478 complete hangar rows; source/consumer matches were incomplete in the
+remaining rows. The run had 0 crash, abort, or missing-function markers.
+
+This selects `H-PCMConsumerJoinGap`: the destination relation exists, but the
+existing source/consumer publication/order join does not close consistently.
+It rejects `H-OutputWritebackGap` as an absent-address relation. It does not
+select `H-ZeroPayloadLegitimate`, because title PCM was independently
+nonzero. No runtime behavior or guest writer was changed, and no writer
+legitimacy claim is authorized. ORIGIN: the observed zero payloads originate
+in the Factor-5 image DMA spans; the intervening nonzero PCM writer remains
+unidentified and must be named before any mitigation.
+
+Artifacts: `scratch/agent/s2612_m5_output_edge/`.

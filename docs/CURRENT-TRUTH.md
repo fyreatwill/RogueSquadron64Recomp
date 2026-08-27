@@ -4,7 +4,23 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
 authoritative for exact commands and probe rows.
 
-Current maintenance marker: Session 2611 (2026-08-27).
+Current maintenance marker: Session 2612 (2026-08-27).
+
+- **s2612 — image output destinations overlap the PCM boundary, but the
+  image payload itself is zero and the task join is incomplete.** The retail
+  oracle control fired 10,000 whole-RDRAM callbacks and reached title
+  `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The valid default-C88
+  image run reached both phases, with zero crash/abort/missing-function rows.
+  Phase-scoped image-stage destinations overlapped the sampled PCM spans in
+  both title and hangar; image-stage DMA hashes were zero-valued in every
+  sampled row. Title PCM had mixed zero/nonzero samples, while hangar PCM was
+  zero throughout. `audtask-join` closed for 479/1349 title rows and 200/478
+  hangar rows; incomplete source/consumer matches remained. This selects
+  `H-PCMConsumerJoinGap` over an absent destination relation, but does not
+  identify a legitimate writer or authorize a writeback change. The initial
+  C88=0 launch was invalid for hangar coverage because it was the rollback
+  hatch and was superseded by the default-C88 rerun. Artifacts:
+  `scratch/agent/s2612_m5_output_edge/`.
 
 - **s2611 — Factor-5 image task contract is live, but its downstream PCM
   join remains incomplete.** The required retail oracle control fired in this
@@ -661,15 +677,13 @@ session entry in `PORTING-STATE.md`.
 
 This is one monotonic sequence; #1 is the next campaign priority.
 
-1. **M5 image output/PCM contract edge.** s2611 closed the Step 1
-   re-baseline: the image arm has positive DMEM mutation, DMA ranges,
-   `break_pc=0x1328`, `Broke`/SP return, and complete image task joins, while
-   the silent arm has none of that image work. Both arms' PCM source/consumer
-   payloads remain zero, so the next unit must identify one proven image
-   output/writeback-to-PCM relation before changing a guest writer. Use the
-   phase-keyed `audtask-image-stage` and `audtask-join` fields to select the
-   edge; do not treat `canary_ok=0` or a zero payload alone as the explanation.
-   Keep `ROGUESQ_AUDIO_UCODE=0` as rollback/control.
+1. **M5 image output/PCM contract edge.** s2612 found that image-stage
+   destinations overlap the PCM boundary, but image DMA payloads are zero and
+   source/consumer joins are incomplete (title 479/1349 complete; hangar
+   200/478). The next unit must name the exact task/output-to-consumer handoff
+   that is missing, including its writer and payload legitimacy, before any
+   writeback change. Do not treat overlap, `canary_ok=0`, or a zero payload
+   alone as the explanation. Keep `ROGUESQ_AUDIO_UCODE=0` as rollback/control.
 2. **M5 hangar PCM writer/value boundary.** s2608 made the guest C88
    store the default. Title PCM is briefly fully nonzero; hangar PCM
    stays `nz=0` even though the gate is `0x01` and `startSongSequence`
