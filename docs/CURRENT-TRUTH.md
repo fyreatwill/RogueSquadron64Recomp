@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands
 and probe rows remain in the ledger.
 
-Current maintenance marker: Session 2630 (2026-08-27).
+Current maintenance marker: Session 2631 (2026-08-27).
 
 ## Decision-relevant evidence
 
@@ -211,7 +211,7 @@ bounded lead is the adjacent `0x800C6FFC` boundary.
 This is one monotonic sequence; #1 is the next campaign priority.
 
 1. **Generated-symbol renaming sweep — active fallback while M5 is blocked.**
-   Audit `0x800C7358` next using companion symbols, exact spans, and callers;
+   Audit `0x800C7540` next using companion symbols, exact spans, and callers;
    unresolved fragments stay placeholders under
    `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
 2. **M5 de-stubbing sequence — open dependency, not a project stop.** Obtain an
@@ -311,3 +311,17 @@ Those fragments remain placeholders when the companion, source, m2c, caller,
 and local-semantics searches do not supply a defensible name. Stable companion
 duplicate-prefix and preamble mappings belong in
 `tools/rename/build_redefs.py`.
+
+## Session 2631 result
+
+The bounded generated-symbol sweep found five exact companion mappings whose
+repository TOML entries were still address-coded: `computeTrackedObjectWorldAnchor`
+(`0x800AD380`), `updateHangarBayScene` (`0x800AB658`),
+`buildFormatMessageGlyphBuffer` (`0x800B2630`),
+`buildLevelSelectTextTextures` (`0x800B3824`), and `menuOverlayInit`
+(`0x800C58A0`). Each companion name matched the generated function definition;
+the existing generated bodies therefore required no regeneration. The TOML
+batch was synchronized to those names. The neighboring `0x800AD378` fragment
+remains `fake_func_800AD378` because its companion entry is also a gap filler,
+not a semantic identity. This selects `H-CompanionExact` for the five-row
+batch and advances the next bounded lead to `0x800C7540`.

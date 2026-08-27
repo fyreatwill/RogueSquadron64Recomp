@@ -1,13 +1,14 @@
-# NEXT work unit (s2631) — bounded generated-symbol sweep while M5 is blocked
+# NEXT work unit (s2632) — bounded generated-symbol sweep while M5 is blocked
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next bounded symbol region at `0x800C7390` using companion symbols,
-generated bodies, callers, and overlay sizes. Rename only a placeholder whose
-identity is supported by exact companion and span/caller evidence; unresolved
-fragments stay placeholders. Do not change runtime behavior.
+Audit the next bounded symbol region at `0x800C7540` using companion symbols,
+generated bodies, exact spans, callers, and overlay identity. Rename only a
+placeholder whose identity is supported by exact companion and span/caller
+evidence; unresolved fragments stay placeholders. Do not change runtime
+behavior.
 
 ## Competing hypotheses and discriminator
 
@@ -26,12 +27,12 @@ rename.
 
 ## Exact checks
 
-1. Inspect the mission and menu companion symbol files, the repository TOML,
-   generated body, overlay table, and callers around `0x800C7390`.
+1. Inspect mission and menu companion symbol files, repository TOML, generated
+   bodies, overlay table, and callers around `0x800C7540`.
 2. Compare adjacent addresses and sizes. Run `python tools/rename/build_redefs.py`
    only if an exact supported rename is selected, then verify the redef line.
-3. Land at most one companion-supported rename; do not invent names from
-   semantics alone.
+3. Land at most one companion-supported rename or one tightly bounded exact
+   batch; do not invent names from semantics alone.
 
 ## Expected outcomes
 

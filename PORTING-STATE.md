@@ -117040,3 +117040,17 @@ boundary-only ambiguity, or overlay collision remained, so no source-map or
 runtime change was made. This selects `H-CompanionExact` as already resolved,
 rules out a rename at the lead, and advances the next bounded lead to
 `0x800C7390`.
+
+## Session 2631 (2026-08-27) — synchronized a five-symbol rename batch
+
+The generated-symbol sweep found five repository TOML entries that remained
+address-coded despite exact companion and generated-definition identities:
+`computeTrackedObjectWorldAnchor` at `0x800AD380`, `updateHangarBayScene` at
+`0x800AB658`, `buildFormatMessageGlyphBuffer` at `0x800B2630`,
+`buildLevelSelectTextTextures` at `0x800B3824`, and `menuOverlayInit` at
+`0x800C58A0`. The generated tree already contains each human name, so this
+iteration synchronized the canonical TOML source map without regenerating or
+changing runtime behavior. The adjacent `0x800AD378` gap filler remains
+address-coded because the companion source supplies no semantic identity.
+This selects `H-CompanionExact`, rules out boundary-only renames for the five
+rows, and advances the next bounded lead to `0x800C7540`.
