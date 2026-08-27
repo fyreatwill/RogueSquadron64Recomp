@@ -1,4 +1,4 @@
-# NEXT work unit (s2706) — bounded generated-symbol rename lead
+# NEXT work unit (s2707) — bounded generated-symbol rename lead
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -6,7 +6,7 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Run the required last-15-title revisit check. If it still does not force a
 revisit, reconcile the next adjacent companion-symbol region
-`0x80095000..0x80098000` with the bounded rename tool. Rename only exact,
+`0x80098000..0x8009B000` with the bounded rename tool. Rename only exact,
 unique generated placeholders supported by the companion map; preserve fake,
 ambiguous, and already-human names. This is one bounded rename batch, not a
 whole-tree census.
@@ -33,7 +33,7 @@ selects `H-tool-rejects` and requires fixing it in this iteration.
 1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
 2. Inspect the tracked rename-tool usage: `sed -n '1,260p' tools/rename/README.md` and `rg -n 'argparse|region|mapping|placeholder|duplicate|redef' tools/rename/rename_generated_symbols.py tools/rename/build_redefs.py`.
 3. Run:
-   `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --limit 32 --start-address 0x80095000 --end-address 0x80098000`
+   `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs --companion-dir ../rogue_squadron64/symbol_files --limit 32 --start-address 0x80098000 --end-address 0x8009B000`
    and capture its decision table under
    `scratch/agent/s2706_generated_symbol_sweep/`.
 4. Verify the generated diff and exact unique companion/source evidence; do

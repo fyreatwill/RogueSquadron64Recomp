@@ -118304,3 +118304,22 @@ This selects `H-already-synchronized` for this region and rules out
 changes in funcs_4.c, funcs_13.c, and funcs_30.c; this run did not touch them.
 No build or game run was needed, and no M5 edge, runtime watch, writeback,
 remap, or mitigation was added.
+
+## Session 2706 (2026-08-27) — bounded the next generated-symbol region
+
+The required last-15-title check did not trigger the sweep revisit rule: the
+titles were mixed M5 and rename work, not 15 consecutive sweep-only sessions.
+I ran the bounded rename tool for the half-open region
+`0x80095000..0x80098000` against the external generated snapshot and the
+companion `symbol_files`.
+
+The complete decision table is
+`scratch/agent/s2706_generated_symbol_sweep/decision-table.txt`. The tool
+reported zero renamed references in zero files. Semantic candidates were
+already synchronized; `0x8009711C` and `0x80097D58` were classified
+ambiguous-or-fake and preserved. There was no parser or duplicate-destination
+rejection. Independent spot-checks confirmed synchronized generated names
+and the two address-only companion entries. This selects
+`H-already-synchronized` for this region and rules out `H-exact-matches`
+there. It does not resolve the MORT-to-PCM publication edge. No build or game
+run was needed, and the external generated worktree was not modified.

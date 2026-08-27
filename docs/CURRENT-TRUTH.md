@@ -354,6 +354,18 @@ This selects `H-already-synchronized` for the region and rules out
 The external generated worktree had pre-existing changes in three files; this
 run did not modify them. No build or game run was needed.
 
+s2706 continued the generated-symbol sweep after the required last-15-title
+check did not trigger the revisit rule. The bounded `0x80095000..0x80098000`
+region produced 45 companion candidates. Zero references were renamed in
+zero generated files: semantic entries were already synchronized, while
+`0x8009711C` and `0x80097D58` remained ambiguous-or-fake address-only
+entries. There was no parser or duplicate-destination rejection. Independent
+spot-checks found the expected human names in generated output and the two
+fake entries preserved in the companion map. This selects
+`H-already-synchronized` for the region and rules out `H-exact-matches` there;
+it does not resolve the MORT-to-PCM edge. No build or game run was needed, and
+the external generated worktree was not modified.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -390,8 +402,9 @@ This is one monotonic sequence; #1 is the next campaign priority.
    or host audits. Do not add a runtime watch until a legitimate destination
    and ordering edge are named.
 2. **Generated-symbol renaming sweep.** s2704 found all 19 candidates in
-   `0x8008ED6C..0x80091C80` already synchronized, and s2705 found no exact
-   rename in `0x80091C80..0x80095000`. Continue with one adjacent bounded
+   `0x8008ED6C..0x80091C80` already synchronized, s2705 found no exact
+   rename in `0x80091C80..0x80095000`, and s2706 found no exact rename in
+   `0x80095000..0x80098000`. Continue with one adjacent bounded
    bounded region only while exact companion/source evidence remains available;
    preserve address-only or fake fragments and do not infer names from
    implementation shape alone.
