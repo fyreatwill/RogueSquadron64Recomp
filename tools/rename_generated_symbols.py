@@ -30,6 +30,20 @@ RENAMES = {
     # the name mechanical: they are not callable game functions.
     "fake_func_800FBE14": "data_gap_800FBE14",
     "fake_func_800FEF04": "data_gap_800FEF04",
+    "fake_func_80101CCC": "lv2_initializeObjectTracking",
+    "fake_func_80102A98": "lv3_initializeObjectTracking",
+    "fake_func_8010357C": "lv4_initializeObjectTracking",
+    "fake_func_80103D08": "lv5_initializeObjectTracking",
+    "fake_func_80104208": "lv6_checkComplexObjectives",
+    "fake_func_801044D8": "lv7_checkComplexObjectives",
+    "fake_func_80105B54": "lva_initializeObjectTracking",
+    "fake_func_8010619C": "lvb_initializeObjectTracking",
+    "fake_func_80106BE8": "lvc_initializeObjectTracking",
+    "fake_func_8010721C": "lvd_initializeObjectTracking",
+    "fake_func_80107EA4": "lvf_initializeObjectTracking",
+    "fake_func_80108B8C": "lvh_initializeObjectTracking",
+    "fake_func_80109428": "lvk_checkComplexObjectives",
+    "fake_func_80109618": "lvj_initializeObjectTracking",
 }
 
 

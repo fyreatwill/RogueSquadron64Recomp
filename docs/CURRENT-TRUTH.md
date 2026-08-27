@@ -115,8 +115,11 @@ then generated-symbol renaming when M5 is closed and M3 is parked.
    found zero placeholder definitions. Continue with
    `0x8011D000..0x8011F000`: the selector changed zero references in zero
    files, and the independent generated-tree scan found no placeholder
-   definitions or references in the interval. Continue with
-   `0x8011F000..0x80121000`.
+   definitions or references in the interval. Session 2784 applied 14
+   source-backed level-handler renames (`lv2` through `lvj`) at
+   `0x80101CCC..0x80109618`, changing 42 generated references in 8 files;
+   the companion comments explicitly identify each function. Continue with
+   `0x80121000..0x80123000`.
 
 2. **M5 Step 1 phase-qualified pair — parked pending a new input angle.** The M5
    AI-status shim is now validated as unreachable at the generated qualified

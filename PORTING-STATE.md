@@ -119488,3 +119488,16 @@ suffix lies in the interval. `git diff --check` passed. No build or
 regeneration was needed. This closes the interval and rules out stale
 generated placeholders there, not the remaining rename sweep. The next
 interval is `0x8011F000..0x80121000`.
+
+## Session 2784 (2026-08-27) — applied source-backed level-handler rename batch
+
+The prescribed `0x8011F000..0x80121000` companion census selected zero
+references; its independent generated-placeholder scan was empty, so that
+interval is synchronized and does not identify a rename. To satisfy the
+bounded-work pivot, the existing regeneration-safe rename tool was extended
+with 14 exact names explicitly identified by companion comments at
+`0x80101CCC..0x80109618`: `lv2` through `lvj` level object-tracking and
+objective handlers. Applying the map changed 42 generated references in 8
+files. `git diff --check` passed. The map is source-backed, and this is a
+symbol-only change; it does not alter runtime behavior. The next interval is
+`0x80121000..0x80123000`.
