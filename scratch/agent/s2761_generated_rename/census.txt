@@ -1,0 +1,22 @@
+# Session 2761 generated-symbol interval census
+
+Interval: `0x800F7000..0x800F9000` (end exclusive)
+
+The regeneration-safe companion census found three semantic entries:
+
+| Address | Companion name | Classification |
+|---|---|---|
+| `0x800F8398` | `executeActorType4Effect` | already synchronized |
+| `0x800F7130` | `renderNpcAnchoredProceduralEffect` | already synchronized |
+| `0x800F7C74` | `spawnAndUpdateEffectActors` | already synchronized |
+
+The rename tool changed zero references in zero files. An independent `rg`
+scan found zero stale `func_800F7*`, `func_800F8*`, `fake_func_800F7*`, or
+`fake_func_800F8*` references in the generated snapshot. The three semantic
+names were independently found in generated C, `funcs.h`, and
+`recomp_overlays.inl`.
+
+Decision: no stale placeholder instance was present to select; no
+fake/address-only candidate or conflicting alias was present in this
+interval. The interval is synchronized and the next census advances to
+`0x800F9000..0x800FB000`.

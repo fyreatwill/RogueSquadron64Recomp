@@ -1,0 +1,11 @@
+# Session 2761 decision table
+
+| Candidate class | Observed | Decision |
+|---|---:|---|
+| source-backed stale placeholder | 0 | no rename |
+| already-synchronized semantic companion | 3 | retain |
+| fake/address-only placeholder | 0 | none to preserve |
+| conflicting/unsafe alias | 0 | none to preserve |
+
+Controls: the rename tool returned `renamed 0 references in 0 files`; the
+independent generated-tree placeholder scan returned no matches.

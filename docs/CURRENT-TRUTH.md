@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2759 (2026-08-27).
+Current maintenance marker: Session 2761 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -221,6 +221,10 @@ ledger. The current late-chain checkpoints are:
   semantic companion entries, all already synchronized. No stale placeholder,
   fake/address-only candidate, or conflicting alias was found; the next
   interval is `0x800F7000..0x800F9000`.
+- s2761: the generated-symbol interval `0x800F7000..0x800F9000` had three
+  semantic companion entries, all already synchronized. No stale placeholder,
+  fake/address-only candidate, or conflicting alias was found; the next
+  interval is `0x800F9000..0x800FB000`.
 
 Exact counts, evidence tables, and rejected hypotheses are authoritative in
 the corresponding scratch directories and ledger entries.
