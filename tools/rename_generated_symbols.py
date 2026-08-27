@@ -46,8 +46,17 @@ def companion_renames(
                 continue
             old = f"func_{address.upper()}"
             if address.upper() in generated_placeholders:
-                result[old] = name
-                decisions.append((address.upper(), name, "selected"))
+                previous = result.get(old)
+                if previous is not None and previous != name:
+                    result.pop(old)
+                    decisions.append(
+                        (address.upper(), name, f"ambiguous-conflicting-with-{previous}")
+                    )
+                elif old not in result:
+                    result[old] = name
+                    decisions.append((address.upper(), name, "selected"))
+                else:
+                    decisions.append((address.upper(), name, "ambiguous-duplicate"))
             else:
                 decisions.append((address.upper(), name, "already-synchronized"))
     return result, decisions

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact
 commands, counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2710 (2026-08-27).
+Current maintenance marker: Session 2711 (2026-08-27).
 
 ## Live result
 
@@ -404,6 +404,16 @@ exited successfully without parser or duplicate-destination rejection.
 This selects `H-already-synchronized`/`H-ambiguous-or-fake` for the region
 and rules out `H-exact-matches` there. No build or game run was needed.
 
+s2711 continued the generated-symbol sweep across `0x800A4000..0x800A7000`.
+The complete decision table selected zero renames: semantic companion names
+were already synchronized and address-only/fake entries were preserved. The
+tracked rename tool was hardened to fail closed when one generated address is
+given conflicting semantic companion names, instead of allowing the last
+symbol file to win. Syntax validation and the bounded rerun passed; no
+generated file changed, so no build or game run was warranted. This selects
+`H-already-synchronized`/`H-ambiguous-or-fake` for the region and rules out
+`H-exact-matches` there.
+
 ## Next steps
 
 This is one monotonic sequence; #1 is the next campaign priority.
@@ -446,8 +456,11 @@ This is one monotonic sequence; #1 is the next campaign priority.
    `0x80098000..0x8009B000`, and s2708 found no exact rename in
    `0x8009B000..0x8009E000`, and s2709 found no exact rename in
    `0x8009E000..0x800A1000`, while s2710 found no exact rename in
-   `0x800A1000..0x800A4000`. Continue with one adjacent bounded region only
-   while exact companion/source evidence remains available;
+   `0x800A1000..0x800A4000`, and s2711 found no exact rename in
+   `0x800A4000..0x800A7000`. The tracked tool now rejects conflicting
+   semantic names for one generated address rather than choosing by file
+   order. Continue with one adjacent bounded region only while exact
+   companion/source evidence remains available;
    preserve address-only or fake fragments and do not infer names from
    implementation shape alone.
 3. **M5 image task contract edge.** Implement only after a named legitimate

@@ -118389,3 +118389,19 @@ duplicate-destination rejection. This selects `H-already-synchronized` and
 `H-ambiguous-or-fake` for the region and rules out `H-exact-matches` there.
 No build or game run was warranted. The external generated worktree remains
 dirty from prior work; this run did not modify it.
+## Session 2711 (2026-08-27) — hardened bounded symbol rename selection
+
+The required last-15-title revisit check did not trigger because the recent
+titles were not all sweep-scoped. Ran the tracked rename tool over the
+adjacent `0x800A4000..0x800A7000` companion-symbol region. Its complete
+decision table selected zero renames: semantic candidates were already
+synchronized and address-only/fake entries were preserved. No generated file
+changed, so no build or game run was warranted.
+
+The engineering change was to make conflicting semantic companion names for
+one generated address fail closed rather than letting sorted file order choose
+the last name; duplicate/conflicting candidates are now explicitly recorded
+as ambiguous. Syntax validation and the bounded rerun passed. This rules out
+`H-exact-matches` for this region, while retaining `H-already-synchronized`
+and `H-ambiguous-or-fake`; it does not justify inventing names for
+`0x8000040C` or `0x800927B0`.
