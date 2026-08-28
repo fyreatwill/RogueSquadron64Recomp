@@ -948,7 +948,7 @@ functions = [
     { name = "loadSongAssetByName", vram = 0x8006657C, size = 0x160 },
     { name = "updateAudioListenerVelocity", vram = 0x800666DC, size = 0x1B4 },
     { name = "teardownAudioListenerNode", vram = 0x80066890, size = 0x20 },
-    { name = "func_800668B0", vram = 0x800668B0, size = 0x68 },
+    { name = "waitForAnyAudioSlot", vram = 0x800668B0, size = 0x68 },
     { name = "parseLoadedSndSection", vram = 0x80066918, size = 0x48 },
     { name = "freeAudioCacheEntry", vram = 0x80066960, size = 0xB8 },
     { name = "findAudioChannelById", vram = 0x80066A18, size = 0x38 },

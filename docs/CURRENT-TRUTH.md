@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3029 (2026-08-28).
+Current maintenance marker: Session 3030 (2026-08-28).
 
 ## Current state
 
@@ -45,6 +45,15 @@ Target-phase audio nulls are unevaluable; this run selects neither the
 live-image nor silent-equivalence hypothesis and leaves the route-repair
 dependency open. Evidence:
 scratch/agent/s3028_m5_step1_contract_pair/RESULTS.md.
+
+Session 3030 completed the bounded generated-symbol audit at `0x800668B0`.
+The companion map names the unique callable `waitForAnyAudioSlot`; its
+standalone generated `0x68`-byte body, three generated callers, header
+declaration, and main-overlay registration agree. Synchronized the stale
+project symbol TOML and built `RecompiledFuncs` successfully. This rules out
+an ambiguous placeholder, data-gap classification, and local duplicate
+callable for this address. Evidence:
+`scratch/agent/s3030_generated_symbol_rename/source-table.md`.
 
 Session 3027 completed the bounded generated-symbol audit at `0x80053F7C`.
 The companion map names the unique callable `updateAnimatedTextureStreaming`;
@@ -773,7 +782,8 @@ a new discriminator; continue the generated-symbol sweep while M5 is blocked.
    `slotDispatcherIter`, and `0x80040218` as `getNextSlotNpcTypeId` in the
    project map. Continue at `0x80062B04` and keep the M5 route
    dependency open below. `0x80062B04` is now synchronized as
-   `advancePlayerAnimationPhase`; audit `0x800668B0` next.
+   `advancePlayerAnimationPhase`, and `0x800668B0` is synchronized as
+   `waitForAnyAudioSlot`; audit `0x80066A90` next.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the

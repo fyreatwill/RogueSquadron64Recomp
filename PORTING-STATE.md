@@ -123322,3 +123322,14 @@ callable for this address. The M5 route review found no untried in-tree
 repair: the existing 4-to-5-to-0 host transition driver was already rejected,
 while current producer hooks are observation-only. Evidence:
 `scratch/agent/s3029_generated_symbol_rename/source-table.md`.
+
+## Session 3030 (2026-08-28) — synchronized waitForAnyAudioSlot
+
+Completed the bounded generated-symbol audit at `0x800668B0`. The companion
+map names the unique callable `waitForAnyAudioSlot`; its standalone generated
+`0x68`-byte body, three generated callers, header declaration, and
+main-overlay registration agree. Synchronized the stale project symbol TOML
+and built `RecompiledFuncs` successfully. This rules out an ambiguous
+placeholder, data-gap classification, and local duplicate callable for this
+address. Evidence:
+scratch/agent/s3030_generated_symbol_rename/source-table.md.
