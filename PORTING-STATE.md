@@ -122752,7 +122752,7 @@ entry-fragment convention therefore selected `initPlayerStructsPreamble`.
 Synchronized the companion map, project symbol TOML, generated C/header/overlay
 artifacts, and regeneration-safe rename mapping. The `RecompiledFuncs` target
 built successfully. This rules out treating the fragment as a standalone
-function or data gap; `0x80056344` was already classified as
-callable-ambiguous in Session 2916, so the next unclassified candidate is
-`0x80059B4C`. Evidence:
+function or data gap. The remaining generated placeholder candidates are
+already covered by earlier ledger classifications, so the next unit returns
+to the M5 route-repair/independent-handoff blocker. Evidence:
 `scratch/agent/s2987_generated_symbol_rename/source-table.md`.

@@ -1,38 +1,32 @@
-# NEXT work unit (s2988) — classify the next generated-symbol fragment
+# NEXT work unit (s2988) — M5 route repair or independent handoff
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
-Resume the regeneration-safe symbol sweep at the lowest remaining placeholder:
-`0x80059B4C`. Inspect one bounded entry in `../N64Recomp/RecompiledFuncs`, its
-callers, predecessor/successor boundaries, and the companion
-`../rogue_squadron64/symbol_files` map. Rename only if the exact semantic
-identity is independently supported; otherwise record it as ambiguous and
-leave the generated symbol unchanged.
+Design and run one genuinely new port-side route repair or independent handoff
+probe tied to the retail `bufferArbiterProducerMark` route. Retain the same-run
+whole-RDRAM positive control and title/hangar phase gates; do not repeat the
+stalled s2972–s2978 capture unchanged.
 
 ## Competing hypotheses and discriminator
 
-- `H-semantic-fragment`: the candidate is a real entry/preamble with a
-  companion-supported semantic name, so a regeneration-safe rename is justified.
-- `H-boundary-gap`: it is a data/fixup or invalid-decode gap bounded by complete
-  routines, so it should receive only a `data_gap_*` classification.
-- `H-ambiguous-fragment`: it is executable but lacks a standalone contract or
-  exact companion identity, so the placeholder must remain.
+- `H-port-route-repair`: the new handoff/repair reaches title or hangar and
+  makes the M5 Step 1 audio discriminator evaluable.
+- `H-port-route-equivalent`: it reaches the target phase but still shows the
+  same port-side route behavior as the retail handoff.
+- `H-port-route-blocked`: it remains pre-title, so audio downstream nulls stay
+  unevaluable and the repair angle is rejected.
 
-The discriminator is one table combining generated body disassembly,
-predecessor/successor boundaries, generated callers, companion symbols, and
-independent lookup. A complete callable contract plus exact companion name
-selects the rename; a mechanically proven non-callable gap selects the data
-classification; otherwise preserve the placeholder.
+The discriminator is one same-run table containing whole-RDRAM control,
+handoff/route rows, VI phase gates, target-phase producer rows, and
+crash/abort markers. Target-phase rows select a qualified route; a pre-title
+stop leaves audio downstream outcomes unevaluable.
 
 ## Commands
 
-`rg -n 'func_[0-9A-Fa-f]{8}' ../N64Recomp/RecompiledFuncs --glob 'funcs_*.c'`
-
-Inspect bounded windows around `0x80059B4C`, update the companion map,
-project TOML, and regeneration-safe rename path only when selected. If a
-rename is selected, run the bounded `rename_generated_symbols.py` command with
-the candidate's exact address range, then build
-`cmake --build build --config Debug --target RecompiledFuncs -j`. Record the
-source table under `scratch/agent/s2988_generated_symbol_rename/`.
+Inspect the existing route/phase probe and retail handoff artifacts, choose one
+new port-side repair or independent handoff, then run its same-build paired
+arms with the whole-RDRAM positive control. Build using the project’s Debug
+configuration before launching from `build/`; capture results under a new
+`scratch/agent/s2988_m5_route_repair/` directory.

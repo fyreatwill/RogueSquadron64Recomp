@@ -113,9 +113,10 @@ callers target the successor rather than the fragment. Following the
 project's established entry-fragment convention, synchronized the companion
 map, project symbol TOML, generated C/header/overlay artifacts, and
 regeneration-safe rename machinery to `initPlayerStructsPreamble`.
-The `RecompiledFuncs` target built successfully. The next sweep candidate is
-`0x80059B4C`; `0x80056344` was already preserved as callable-ambiguous in
-Session 2916. Evidence:
+The `RecompiledFuncs` target built successfully. The remaining generated
+placeholder candidates are already covered by earlier ledger classifications,
+so the next unit returns to the M5 route-repair/independent-handoff blocker.
+Evidence:
 `scratch/agent/s2987_generated_symbol_rename/source-table.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
@@ -345,13 +346,11 @@ on audio de-stubbing but is re-scoped pending a route repair; M3 is parked
 pending a new discriminator. The sweep is active under the stable slug
 `generated-symbol-renaming-sweep`.
 
-1. **Generated-symbol renaming sweep — continue bounded semantic fragments.**
-   This is the next executable unit while M5 lacks a target-phase route. Start
-   at the lowest remaining placeholder and classify one bounded fragment using
-   generated body shape, successor boundaries, callers, and the companion map;
-   rename only when the semantic name is independently supported. The next
-   candidate is `0x80059B4C`; skip `0x80056344`, already classified in Session
-   2916.
+1. **M5 route repair/handoff — resume target-phase qualification.** Use a
+   genuinely new port-side repair or independent handoff tied to the retail
+   `bufferArbiterProducerMark` route, retaining the same-run whole-RDRAM
+   positive control and title/hangar phase gates. Do not repeat the stalled
+   s2972–s2978 route captures unchanged.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a
