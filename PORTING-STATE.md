@@ -121535,3 +121535,23 @@ generated files, or rename-table entries changed. This rules out a
 source-backed semantic rename and a mechanically proven data-gap rename for
 this interval, but does not rule out a split callable fragment. Complete
 evidence table: `scratch/agent/s2919_generated_symbol_rename/source-table.md`.
+
+## Session 2920 (2026-08-27) — reconciled steer-orientation preamble symbol
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 38,432
+bytes, so this was not a maintenance iteration. The bounded generated-symbol
+sweep inspected `0x8005EE64..0x8005EE70`. The 12-byte record at `0x8005EE64`
+contains `j 0x8005EE74`, its delay-slot `nop`, and `lui $at,0x8005`; the
+generated `do_break` represents the jump target entering the complete
+`steerOrientationTowardTarget` body at `0x8005EE70`. It has no standalone
+return or independent caller. The generated snapshot, overlay metadata, and
+rename tool already used `steerOrientationTowardTargetPreamble`, while the
+companion and project maps still used `fake_func_8005EE64`. The discriminator
+selected H-CallableSemantic for the established preamble name. Those two maps
+were reconciled; the rename tool reported zero generated references because
+the generated tree was already synchronized. Exact searches found no old
+placeholder outside the intentional rename-table key. The Debug
+`RecompiledFuncs` target built successfully. This rules out leaving the map
+entries inconsistent and closes this bounded interval; it does not classify
+the unrelated callable-ambiguous `0x8005C61C` record. Complete evidence table:
+`scratch/agent/s2920_generated_symbol_rename/source-table.md`.

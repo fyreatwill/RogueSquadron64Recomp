@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2919 (2026-08-27).
+Current maintenance marker: Session 2920 (2026-08-27).
+
+The s2920 generated-symbol sweep reconciled `0x8005EE64..0x8005EE70`. The
+12-byte record is the jump/delay-slot/constant fragment immediately before
+the complete `steerOrientationTowardTarget` body. The generated snapshot and
+rename table already identified it as `steerOrientationTowardTargetPreamble`,
+so the stale companion/project map entries were updated to match. The
+bounded reconciliation changed zero generated references, and the Debug
+`RecompiledFuncs` target built successfully. Complete table:
+`scratch/agent/s2920_generated_symbol_rename/source-table.md`.
 
 The s2919 generated-symbol sweep inspected `0x8005C61C..0x8005C620`. The
 four-byte record contains one valid `addu $v1,$v1,$a0` between the complete
@@ -537,8 +546,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x8005A11C..0x8005A120` as a bounded isolated-load data gap between
    `isPointWithinBoundingBox` and `loadTopCloudsAsset`. The s2919 candidate at
    `0x8005C61C` remains callable-ambiguous because its valid instruction does
-   not prove a data gap; continue with the next remaining placeholder after
-   `0x8005C620`.
+   not prove a data gap. s2920 reconciled `0x8005EE64` to the established
+   `steerOrientationTowardTargetPreamble` name; continue with the next
+   remaining placeholder after `0x8005EE70`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
