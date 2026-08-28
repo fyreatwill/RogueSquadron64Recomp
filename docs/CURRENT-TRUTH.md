@@ -82,6 +82,16 @@ stale `playerYwingInitPreamble` entries from both regeneration-safe rename
 tables so a future reconciliation cannot apply that unsupported name. Artifact:
 `scratch/agent/s2963_generated_symbol_rename/source-table.md`.
 
+Session 2965 classified `0x800BCC38` as a mechanically proven 8-byte data/fixup
+gap: `playerTieInterceptorUpdate` ends at that address, the generated body is
+only `bc1f` plus its delay-slot `nop`, and `playerT16Init` begins at
+`0x800BCC40` with its own stack prologue. The companion map independently
+records `data_gap_800BCC38` and the same successor boundary. The regeneration-
+safe maps already used `data_gap_800BCC38`; removed the stale
+`playerT16InitPreamble` override from `build_redefs.py` and regenerated the
+companion redefs. `RecompiledFuncs` built successfully. Artifact:
+`scratch/agent/s2965_generated_symbol_rename/source-table.md`.
+
 Session 2964 classified `0x800B89F4` as the next ambiguous three-instruction
 executable fragment. Its `bnel` targets `L_800B8AD0`, its delay slot increments
 `s2`, and its fall-through continues at `0x800B8A00`; there is no standalone
@@ -139,7 +149,7 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
 
 3. **Generated-symbol renaming sweep — active bounded campaign.** Continue
    from the next unparked placeholder after `0x800B89F4`, currently expected
-   to be `0x800BCC38` subject to the census. Exact companion semantic names
+   to be `0x800EC6EC` subject to the census. Exact companion semantic names
    and mechanically proven short data gaps may be renamed across every map
    and generated artifact. Valid executable fragments without callable proof
    remain unchanged. Keep HYPOTHESIS-ID

@@ -122383,3 +122383,16 @@ Next candidate is `0x800BCC38`. Complete table:
 
 ORIGIN: naming-only classification. The stale rename entries were removed
 because adjacency to `playerVwingInit` did not prove a callable preamble.
+## Session 2965 (2026-08-28) — reconciled the 0x800BCC38 data gap
+
+Classified the next generated placeholder after the preserved `0x800B89F4`
+fragment. The project map and companion mission-overlay map identify
+`0x800BCC38` as an 8-byte data/fixup gap; `playerTieInterceptorUpdate` ends
+there, the generated body contains only `bc1f` and its delay-slot `nop`, and
+`playerT16Init` begins at `0x800BCC40` with its own stack-frame prologue.
+There are no callers or independent lookups of the candidate. Retained the
+mechanical `data_gap_800BCC38` name and removed the contradictory stale
+`playerT16InitPreamble` entry from `tools/rename/build_redefs.py`; regenerated
+the companion redefs and built `RecompiledFuncs` successfully. This rules out
+the candidate being a callable preamble or a separately nameable function.
+Evidence table: `scratch/agent/s2965_generated_symbol_rename/source-table.md`.
