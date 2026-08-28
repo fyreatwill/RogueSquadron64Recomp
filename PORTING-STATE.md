@@ -121837,3 +121837,14 @@ stale as `func_main_80092A54`. Changed the project map to the exact semantic
 name without changing the size or generated code. This rules out a missing
 semantic mapping at this address; no runtime experiment was needed. Evidence:
 `scratch/agent/s2935_generated_symbol_rename/source-table.md`.
+## Session 2936 (2026-08-27) — reconciled constant-sample interpolation symbol
+
+Ran the bounded generated-symbol discriminator for `0x80092CF0`. The
+companion map names it `interpolateConstantSamplesToPackedWord`; generated C,
+the header, and overlay metadata already agree that it is a complete
+`0x158`-byte constant-sample interpolation loop, with generated callers at
+`0x80092C18` and `0x80092C24`. The project symbol map alone was stale, naming
+it `func_main_80092CF0`. Updated the project map to the exact companion name,
+preserving the `0x158` extent. This rules out a missing semantic mapping at
+this address; no runtime experiment was needed. Evidence table:
+`scratch/agent/s2936_generated_symbol_rename/source-table.md`.

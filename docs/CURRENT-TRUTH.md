@@ -4,7 +4,14 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2935 (2026-08-27).
+Current maintenance marker: Session 2936 (2026-08-27).
+
+The s2936 generated-symbol sweep reconciled `0x80092CF0` to
+`interpolateConstantSamplesToPackedWord`. The complete `0x158`-byte
+constant-sample interpolation loop has two generated callers, and the
+companion map, generated C/header, overlay registration, and rename helper
+already used that exact semantic name; only the project symbol map was stale.
+Complete table: `scratch/agent/s2936_generated_symbol_rename/source-table.md`.
 
 The s2935 generated-symbol sweep reconciled `0x80092A54` to
 `interpolateLutSamplesToPackedWord`. The complete `0x154`-byte LUT
@@ -685,8 +692,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `data_gap_8007A86C`; s2932 reconciled `0x80085CD8` to
    `compareHalfwordAtOffset4`; s2933 reconciled `0x8008ED6C` to
    `serviceAudioOutputBuffers` and corrected its stale `0x154` project-map
-   extent to `0x4`. Continue with the next remaining placeholder after
-   `0x8008ED6C`.
+   extent to `0x4`. s2936 reconciled `0x80092CF0` to
+   `interpolateConstantSamplesToPackedWord`; continue with the next remaining
+   placeholder after `0x80092CF0`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
