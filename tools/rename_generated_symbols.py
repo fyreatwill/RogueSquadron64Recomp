@@ -81,6 +81,9 @@ RENAMES = {
     "fake_func_80005568": "data_gap_80005568",
     "fake_func_8000595C": "data_gap_8000595C",
     "fake_func_80006BFC": "data_gap_80006BFC",
+    # This generated tail is the return sequence already belonging to
+    # signalServiceWorkerStop; the false split does not define a callable.
+    "static_3_80007064": "data_gap_80007064",
     "fake_func_8000751C": "data_gap_8000751C",
     # These short mission/menu-overlay fragments are contiguous preambles
     # before established callable bodies; the companion map and redefs agree

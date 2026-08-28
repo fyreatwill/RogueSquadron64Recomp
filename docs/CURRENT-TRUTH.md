@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2897 (2026-08-27).
+Current maintenance marker: Session 2898 (2026-08-27).
 
 ## Live result
 
@@ -324,7 +324,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    s2896 classified `0x80005568` and `0x8000595C` as bounded non-callable
    fragments before `piDmaWorker` and `initMemoryPack`; s2897 classified
    `0x80006BFC..0x80006C00` as a bounded isolated store fragment after
-   `initMemoryPack`; continue after `0x80006C00`.
+   `initMemoryPack`; s2898 classified the false split tail at `0x80007064`
+   and four short records through `0x80007910` as data gaps; continue after
+   `0x80007910`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

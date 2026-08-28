@@ -121159,3 +121159,19 @@ The complete source table is in
 
 This rules out a source-backed callable rename in this interval. It does not
 bear on runtime behavior or the M5 route/audio hypotheses.
+
+## Session 2898 (2026-08-27) — reconciled five main-text data gaps after 0x80006C00
+
+Inspected the complete generated-symbol interval `0x80006C00..0x80007910`.
+The five unresolved records were the false split tail at `0x80007064` and
+short fragments at `0x8000737C`, `0x800074D8`, `0x8000751C`, and `0x80007908`.
+Generated bodies and exact neighboring boundaries show no callable prologue,
+returning body, or independent call/lookup target; the companion map also
+identifies the `0x80007064` split as unreal. Classified all five as H-DataGap.
+Reconciled the project and companion maps to `data_gap_*`; the generated
+snapshot already matched four names and the regeneration-safe tool changed two
+`static_3_80007064` references. No build or runtime soak was needed because
+this was a naming-only change. H-Callable and H-Ambiguous are ruled out for
+this interval. Complete table:
+`scratch/agent/s2898_generated_symbol_rename/source-table.md`.
+The next unresolved placeholder is after `0x80007910`.
