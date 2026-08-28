@@ -71,6 +71,13 @@ RENAMES = {
     # This eight-byte zlib record is an isolated store/halfword-load fragment
     # immediately before inflateReset; it is not a callable function body.
     "fake_func_80026B98": "data_gap_80026B98",
+    # These short zlib-overlay records are isolated instruction fragments
+    # immediately before established callable bodies; they are not functions.
+    "fake_func_8002851C": "data_gap_8002851C",
+    "fake_func_80028D58": "data_gap_80028D58",
+    "fake_func_800290D8": "data_gap_800290D8",
+    "fake_func_80029B14": "data_gap_80029B14",
+    "fake_func_80029D14": "data_gap_80029D14",
     # These eight-byte main-overlay records contain only an isolated
     # instruction fragment immediately before named routines.
     "fake_func_80079278": "data_gap_80079278",

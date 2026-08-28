@@ -1,9 +1,9 @@
-# NEXT work unit (s2901) — generated-symbol renaming sweep
+# NEXT work unit (s2902) — generated-symbol renaming sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Inspect the next bounded unresolved placeholder interval beginning after
-`0x80026B98`, ending at the next established symbol boundary. Reconcile only
+`0x80029D20`, ending at the next established symbol boundary. Reconcile only
 source-backed callable names or mechanically proven non-callable data gaps;
 leave ambiguous records unchanged. Record a complete source table.
 
@@ -21,7 +21,7 @@ evidence; all other rows remain unchanged.
 
 ## Exact commands
 
-1. Inspect the next placeholder after `0x80026B98` through the next established boundary in the generated
+1. Inspect the next placeholder after `0x80029D20` through the next established boundary in the generated
    snapshot and companion maps; write the complete source table before editing.
 2. Add only table-selected mappings to `tools/rename_generated_symbols.py` and
    reconcile with `--start-address <start> --end-address <next-boundary>`.

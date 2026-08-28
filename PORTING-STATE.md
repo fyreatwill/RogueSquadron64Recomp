@@ -121208,3 +121208,22 @@ This rules out a callable semantic rename for the record; it does not bear on
 runtime behavior or the M5 route/audio hypotheses. No build or soak was needed
 because the change is mechanical and does not alter executable behavior. The
 next unresolved placeholder is `0x8002851C`.
+## Session 2901 (2026-08-27) — reconciled five zlib data gaps after 0x80029D20
+
+Inspected the next unresolved generated-symbol interval after `0x80026B98`,
+through the established `osAiSetFrequency` boundary at `0x80029D20`. The five
+candidates were short records at `0x8002851C` (one `lwc1`), `0x80028D58`
+(two `swc1` stores), `0x800290D8` (two `lw` loads), `0x80029B14` (an isolated
+`mul.s`/`sub.s`/`swc1` tail), and `0x80029D14` (an isolated
+`lwc1`/`sub.s`/`swc1` tail). Each sits immediately before an established zlib
+or audio callable body, and exact generated searches found no call or lookup
+references outside overlay metadata. The complete source table is
+`scratch/agent/s2901_generated_symbol_rename/source-table.md`.
+
+Classified all five as H-DataGap and renamed them to `data_gap_*` in the
+companion source/map, project symbol map, generated C/header, overlay metadata,
+and regeneration-safe rename table. The reconciliation changed 15 generated
+references in three generated files. This rules out callable semantic renames
+for these records; it does not bear on runtime behavior or M5 hypotheses. No
+build or soak was needed because the change is mechanical and does not alter
+executable behavior. The next unresolved placeholder is after `0x80029D20`.

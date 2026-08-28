@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2900 (2026-08-27).
+Current maintenance marker: Session 2901 (2026-08-27).
 
 ## Live result
 
@@ -21,6 +21,15 @@ generated call or lookup references and was renamed to `data_gap_80026B98` in
 the companion source/map, project symbol map, generated C/header, overlay
 metadata, and regeneration-safe rename table. Complete source table:
 `scratch/agent/s2900_generated_symbol_rename/source-table.md`.
+
+The s2901 sweep classified the five short zlib-overlay records at
+`0x8002851C`, `0x80028D58`, `0x800290D8`, `0x80029B14`, and `0x80029D14` as
+isolated instruction fragments immediately before established callable
+bodies. None has generated call or lookup references beyond overlay metadata;
+all five were renamed to `data_gap_*` in the companion map, project symbol
+map, generated C/header, overlay metadata, and regeneration-safe rename
+table. Complete source table:
+`scratch/agent/s2901_generated_symbol_rename/source-table.md`.
 
 The qualified port route is `ROGUESQ_LLE_FORCE=1`,
 `ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1`. `ROGUESQ_SPIN_YIELD=1`
@@ -342,8 +351,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    and four short records through `0x80007910` as data gaps; s2899 classified
    `0x80024A0C..0x80024A10` as a data gap before `gspF3DEXTextStart`; continue
    s2900 classified `0x80026B98..0x80026BA0` as a data gap before
-   `inflateReset`; continue with the next remaining placeholder after
-   `0x80026B98`.
+   `inflateReset`; s2901 then classified the five zlib fragments through
+   `0x80029D20` as data gaps. Continue with the next remaining placeholder
+   after `0x80029D20`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
