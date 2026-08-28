@@ -122945,3 +122945,18 @@ duplicate check found one generated definition, and
 This rules out an unresolved identity or duplicate-definition problem at this
 address; it does not provide runtime evidence about M5 audio or route behavior.
 Evidence: `scratch/agent/s3001_generated_symbol_rename/source-table.md`.
+
+## Session 3002 (2026-08-28) — synchronized renderUnlitMeshFaces
+
+Ran the bounded generated-symbol audit for `0x80011C9C`. The companion map,
+generated definition, header, overlay registration, and two direct callers
+identify the unique callable entry as `renderUnlitMeshFaces`; no duplicate
+generated definition was found. The generated tree was already synchronized,
+so only the project symbol TOML was stale. Synchronized it and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+The placeholder-only scanner stopped because it cannot resume from an already
+human-named generated entry; that is a tooling limitation, not an identity
+conflict. This rules out the ambiguous-placeholder and duplicate-definition
+hypotheses for this address. No runtime, audio, or route behavior changed.
+The next candidate is `0x80015548`. Evidence:
+`scratch/agent/s3002_generated_symbol_rename/source-table.md`.

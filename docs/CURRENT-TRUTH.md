@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3001 (2026-08-28).
+Current maintenance marker: Session 3002 (2026-08-28).
 
 ## Current state
 
@@ -257,6 +257,15 @@ generated-functions target built successfully. The next sweep candidate is
 than treated as an identity conflict. Evidence:
 `scratch/agent/s3001_generated_symbol_rename/source-table.md`.
 
+Session 3002 audited `0x80011C9C` as `renderUnlitMeshFaces`. The companion map,
+generated definition, header, overlay registration, and two direct callers
+agree, with no duplicate generated definition. The generated tree was already
+renamed, so only the project symbol TOML was stale; synchronized it and built
+`RecompiledFuncs` successfully. The scanner's placeholder-only stop is a
+tooling limitation, not an identity conflict. The next sweep candidate is
+`0x80015548`. Evidence:
+`scratch/agent/s3002_generated_symbol_rename/source-table.md`.
+
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
 `musyx_stub`; stock `aspMain` and `unknown_task_stub` are not valid RS64
@@ -486,7 +495,7 @@ blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
    `0x8000E0BC` is confirmed as `selectRenderPresetByIndex` and was already
-   synchronized; audit the next placeholder `0x80011C9C` when generated
+   synchronized; audit the next placeholder `0x80015548` when generated
    callers/body and the companion map agree.
    Do not invent names for ambiguous fragments. Keep the M5 route dependency
    open below and return to it only with a new grounded edge.

@@ -218,7 +218,7 @@ functions = [
     { name = "renderLitTexturedMeshFaces", vram = 0x8000F624, size = 0x9F0 },
     { name = "submitSceneNodeRender", vram = 0x80010014, size = 0x1078 },
     { name = "renderFlatMeshFaceGroup", vram = 0x8001108C, size = 0xC10 },
-    { name = "func_80011C9C", vram = 0x80011C9C, size = 0x440 },
+    { name = "renderUnlitMeshFaces", vram = 0x80011C9C, size = 0x440 },
     { name = "resetVertexCacheSlot", vram = 0x800120DC, size = 0x32C },
     { name = "buildOrientedFaceGeometry", vram = 0x80012408, size = 0xBC8 },
     { name = "renderLitMeshFaceGroup", vram = 0x80012FD0, size = 0x1E10 },
