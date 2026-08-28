@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2856 (2026-08-27).
+Current maintenance marker: Session 2858 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -893,3 +893,13 @@ the independent generated-tree scan found no in-range `fake_func_*` or
 `data_gap_*` placeholders. This rules out a defensible source-backed rename
 in the interval without assigning meaning to the ambiguous record. No build
 or game run was needed. The next bounded sweep is `0x8006A500..0x8006B500`.
+
+Session 2858 examined `0x8006A500..0x8006B500`. The selector classified all
+callable candidates as already synchronized and preserved
+`fake_func_8006ACA4` as ambiguous-or-fake; it changed zero generated
+references and failed closed under `--require-rename`. The independent
+generated-tree scan found no in-range `fake_func_*` or `data_gap_*` names;
+the only `fake_func_8006B704` hit is outside the interval. This rules out a
+defensible source-backed rename in the interval without assigning meaning
+to the ambiguous record. No build or game run was needed. The next bounded
+sweep is `0x8006B500..0x8006C500`.
