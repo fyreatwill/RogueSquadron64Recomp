@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3058 (2026-08-28).
+Current maintenance marker: Session 3059 (2026-08-28).
 
 ## Current state
 
@@ -51,6 +51,17 @@ exists, but the s3056 same-build capture showed it submitting width 640 rather
 than 1024. This selects `H-RequestDescriptor`, rejects a missing direct
 caller, and does not by itself prove why the descriptor source differs.
 Evidence: `scratch/agent/s3058_m5_vi_request_attribution/AUDIT.md`.
+
+Session 3059 completed the bounded static descriptor-source audit. The
+`applyPendingViChanges` callsite at `0x8001B8DC` selects from the four-record
+table at `0x80128D50`, with the width-bearing field at `+8`. Retail's title
+request uses `0x80128DA0` (the `+0x50` record, width 1024), while the
+qualified port capture used `0x80128DF0` (the `+0xA0` record, width 640).
+`initVideoSubsystem` populates all four records through its existing copy
+loop, and the port passes the selected pointer unchanged to `osViSetMode`.
+This selects `H-SourceSelection`, rejecting a missing writer and pointer
+aliasing at this boundary; the selector-state divergence remains open.
+Evidence: `scratch/agent/s3059_m5_vi_descriptor_source/AUDIT.md`.
 
 Session 3040 ran the M5 Step-1 image/silent qualification after an independent
 retail ground-truth preflight. Retail passed the whole-RDRAM positive control
@@ -265,14 +276,7 @@ route-blocked at pre-title VI 640; event registration/completion is live in the
 port and the next unit must use a different handoff edge. M3 is
 parked pending a new discriminator.
 
-1. **M5 VI-mode stall — audit the descriptor source behind `applyPendingViChanges`.**
-   Session 3058 attributes retail's 1024 request to `0x8001B8DC` in
-   `applyPendingViChanges`, while the port's corresponding path submits 640.
-   Trace the exact retail descriptor pointer/record selected immediately
-   before that callsite, then compare the generated port loads and their
-   writers. Keep this static and bounded; do not change behavior until a
-   specific source or writer divergence is identified.
-2. **Generated-symbol sweep — continue only with exact companion identities.**
+1. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
    placeholders for fragments, data gaps, and unresolved boundaries; do not
    invent semantic names. Resume at the next candidate only after auditing
@@ -280,6 +284,13 @@ parked pending a new discriminator.
    project TOML, and local duplicates. If the sweep becomes a revisit under
    the rule in the user instructions, use the external retail-entry or M4
    boundary instead.
+
+2. **M5 VI-mode stall — identify the selector-state divergence.** Session
+   3059 found retail selecting `0x80128DA0` while the port selected
+   `0x80128DF0`; both are populated by `initVideoSubsystem` and the pointer
+   is passed unchanged. Continue only with a bounded static audit or
+   retail-grounded selector-state attribution that can name the divergent
+   producer/state.
 
 3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only after the route boundary is repaired or a target-phase route

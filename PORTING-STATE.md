@@ -123827,3 +123827,22 @@ legitimate retail descriptor request through the oracle and compared it with
 the existing port callsite.
 
 Evidence: `scratch/agent/s3058_m5_vi_request_attribution/AUDIT.md`.
+
+## Session 3059 (2026-08-28) — audited VI descriptor source selection
+
+Ran the prescribed bounded static audit; no build or runtime experiment was
+needed. `applyPendingViChanges` forms the four-record table at `0x80128D50`
+and passes its selected pointer unchanged at `0x8001B8DC`. The records are
+`0x80128D50`, `0x80128DA0`, `0x80128DF0`, and `0x80128E40`, with width at
+offset `+8`. Retail's title request uses `0x80128DA0` at width 1024, while
+the qualified port capture used `0x80128DF0` at width 640.
+
+`initVideoSubsystem` populates all four records in its copy loop at
+`0x8001B680–0x8001B6D4`; `applyPendingViChanges` is only a selector and
+consumer. The generated body, project TOML, and companion symbol map agree
+on the function/callsite and copy structure, and the host path does not
+adjust the pointer. This selects `H-SourceSelection`, rejecting a missing
+writer and pointer aliasing at this boundary. The selector-state producer
+remains open; no behavior changed.
+
+Evidence: `scratch/agent/s3059_m5_vi_descriptor_source/AUDIT.md`.
