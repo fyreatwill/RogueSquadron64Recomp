@@ -122610,3 +122610,19 @@ H-port-predicate-mismatch. It rules out nothing. The retail side (s2976) is
 still the only ground truth for this capture. The next session must implement
 and run the port probe from scratch; all NEXT.md commands remain as written.
 HYPOTHESIS-ID: m5-route-preparation-port-comparison.
+
+## Session 2978 (2026-08-28) — refuted turn-limit block; port route capture unevaluable
+
+Ran the existing `rs64_m5_route_prepare_inputs` probe with the requested
+autopilot, LLE, and phase-gate settings. The prior block claim was false: the
+experiment ran and produced `scratch/agent/s2978_m5_route_port/RESULTS.md`,
+with 1,028 route-preparation rows and 3,454 LLE-task positive-control rows.
+The port reached only boot/pre-title VI 320 at `0x006DD280`; title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400` gates both fired zero times.
+All sampled route rows were non-target, so this does not select a port route
+hypothesis and does not justify changing the predicate. The run ended through
+the existing signal-6 termination path; no runtime code or guard was changed.
+The route comparison is parked pending a new local repair or independent
+handoff that changes the VI-640 stall. The next unit is the M5 audio
+de-stubbing design survey.
+HYPOTHESIS-ID: m5-audio-destub-design.

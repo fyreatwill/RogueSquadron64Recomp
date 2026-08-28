@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2976 (2026-08-28).
+Current maintenance marker: Session 2978 (2026-08-28).
 
 ## Current state
 
@@ -39,6 +39,15 @@ hangar rows at `512 @ 0x006AB400` for route PC `0x80019CD8` (all predecessor
 evidence and rules out the absent-retail-route and debugger-overhead
 explanations for this capture; it does not establish a port mismatch.
 Artifact: `scratch/agent/s2976_m5_route_oracle/RESULTS.md`.
+
+Session 2978 ran the existing port-side route-preparation probe from scratch.
+The prior turn-limit block was false: the run produced 1,028 route rows and
+3,454 LLE-task positive-control rows. The port remained at boot/pre-title VI
+320 (`0x006DD280`), with zero title `1024 @ 0x00790400` or hangar
+`512 @ 0x006AB400` phase gates, so the route comparison was unevaluable and
+does not select a port route hypothesis. The next unit is the M5 audio
+de-stubbing design survey rather than a repeat of this stalled capture.
+Artifact: `scratch/agent/s2978_m5_route_port/RESULTS.md`.
 
 Session 2975 attempted the independent retail route-preparation discriminator
 at guest PC `0x80019CD8`. The fixed command used the locally built debugger
@@ -257,13 +266,12 @@ on the route-preparation target predicate; M3 is parked pending a new
 discriminator. The sweep is active under the stable slug
 `generated-symbol-renaming-sweep`.
 
-1. **M5 route preparation — phase-scoped port comparison.** The s2976 retail
-   oracle capture passed its positive control and found route-PC executions in
-   both title and hangar target phases. Add the equivalent phase-scoped route
-   probe to the port, retaining its positive control, and compare predecessor,
-   arguments, and live VI fields in one run. Do not change the predicate from
-   retail evidence alone. Any mitigation requires an `ORIGIN:` naming the
-   writer and whether the value is legitimate.
+1. **M5 audio de-stubbing — design survey.** Produce `docs/M5-AUDIO-PLAN.md`
+   by inventorying active audio stubs/traps/gates and their MORT task, DMA,
+   queue, slot, and PCM contracts. Select an incremental first replacement
+   only if its inputs are locally present; otherwise record the exact open
+   dependency and pivot. Include a same-build positive-control soak for the
+   proposed step. No runtime behavior change in the design unit.
 
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.

@@ -1,65 +1,43 @@
-# NEXT work unit (s2978) — RESUME of s2977
+# NEXT work unit (s2979) — M5 audio de-stubbing design
 
-HYPOTHESIS-ID: m5-route-preparation-port-comparison
-
-## Context
-
-s2977 was cut off before any experiment ran. This is a full restart of the
-same work unit. No s2977 artifact exists; start from scratch.
+HYPOTHESIS-ID: m5-audio-destub-design
 
 ## Unit
 
-Implement one bounded phase-scoped port measurement for route preparation at
-the port-side guest PC. Retain the same-run positive control. Capture route
-predecessor, arguments, and live VI width/origin in title (`1024 @
-0x00790400`) and hangar (`512 @ 0x006AB400`) phases. Do not change the
-predicate.
-
-The existing port instrument is `rs64_m5_route_prepare_inputs` in
-`src/main/upstream_compat.cpp:846`, driven by `ROGUESQ_LOG_M5_ROUTE_PREPARE`.
-Check whether it already logs predecessor and phase fields adequate to compare
-with the s2976 retail table (all 5,204 rows had predecessor `0x80033300`). If
-so, no new probe is needed — just run with the env var set, a title+hangar
-phase gate, and the positive control.
+Create `docs/M5-AUDIO-PLAN.md`, a bounded design document for the first
+incremental M5 audio de-stubbing step. Survey every active audio stub, trap,
+early return, and environment gate in `src/main/main.cpp`,
+`src/rsp/aspMain.cpp`, and the maintained runtime/audio paths. For each one,
+record its current contract, whether it is Factor 5 MORT or stock ASP, the
+smallest safe replacement, and a same-build validation soak with a positive
+control. Do not change runtime behavior in this unit.
 
 ## Competing hypotheses and discriminator
 
-- H-port-route-matches: port executes the route call in both title/hangar
-  phases with predecessor matching retail `0x80033300`.
-- H-port-route-absent: port route call never fires in title/hangar despite
-  reaching those phases (matching s2972/s2973 results).
-- H-port-predicate-mismatch: port executes the route call but predecessor or
-  argument fields differ from the retail row.
+- `H-audio-stubs-are-independent`: each stub can be replaced and validated as
+  a separate contract; the survey identifies an ordered first step.
+- `H-audio-stubs-share-one-contract`: the stubs are coupled through task,
+  DMA, slot, or queue state; the survey must identify the shared invariant
+  before any replacement.
+- `H-audio-path-is-not-locally-actionable`: required MORT inputs or code are
+  absent from the maintained tree; the plan must document the exact external
+  dependency and choose a non-audio follow-up.
 
-The discriminator: one same-run table of port route-PC executions filtered to
-target phases, compared against s2976's retail table. Phase controls must be
-reached (title and hangar VI must fire). Positive control must pass.
+The discriminator is a complete table of all active gates/stubs and their
+callers/data contracts, cross-checked against the ROM/configuration symbols:
+an ordered locally implementable first step selects the first hypothesis, a
+shared state invariant selects the second, and a missing required input
+selects the third. The document must include the positive-control marker and
+phase-gated soak recipe for the proposed first step.
 
-## Commands
+## Evidence commands
 
-1. Read `src/main/upstream_compat.cpp` around line 846 to confirm the
-   existing route-prep log format (does it include predecessor and phase?).
+```sh
+rg -n -i 'audio|musyx|mort|aspMain|AUDTASK|audio_ucode|audio.*stub|return.*Broke|RspExitReason::Broke' src lib include syms tools
+sed -n '1,260p' src/main/main.cpp
+sed -n '1,220p' src/rsp/aspMain.cpp
+rg -n 'M_AUDTASK|submit_rsp_task|audio' docs README.md tools
+```
 
-2. If the existing instrument is sufficient:
-   ```
-   ROGUESQ_LOG_M5_ROUTE_PREPARE=1 ROGUESQ_AUTOPILOT=1 \
-   ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-   ROGUESQ_PROBE_PHASE_WIDTH=1 \
-   zsh tools/lle_soak.sh 120
-   ```
-   Save to `scratch/agent/s2978_m5_route_port/`.
-
-3. If the existing instrument lacks predecessor or phase: add those fields,
-   export the submodule patch (`./submodule-patches/export.sh`), rebuild
-   (`DEVELOPER_DIR=... cmake --build build --target RecompiledFuncs`), then
-   run the same soak.
-
-4. Record the positive-control count, phase-gate fires, route rows, and
-   selected hypothesis in `scratch/agent/s2978_m5_route_port/RESULTS.md`.
-
-## Expected discriminating outcomes
-
-- Phase controls reached + zero route rows → selects H-port-route-absent.
-- Phase controls reached + rows with predecessor `0x80033300` → selects H-port-route-matches.
-- Phase controls reached + rows with different predecessor → selects H-port-predicate-mismatch.
-- Positive control fires but phase controls not reached → unevaluable (route stall persists).
+Do not run the route-preparation capture again unless a new local repair or
+ground-truth handoff changes the measured VI-640 stall.

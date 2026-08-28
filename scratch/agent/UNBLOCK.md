@@ -1,16 +1,13 @@
-Route taken: 3 — re-scope.
+Route taken: 1 — refute the block claim.
 
-The local oracle help and source expose `--watch-pc` register arguments and
-phase-gated width/origin buckets. A run with the whole-RDRAM positive control,
-primary/secondary PCM-span watches, `0x800078EC`, and the established Start
-schedule passed with 9,107,853 writes and reached title
-`1024 @ 0x00790400` plus hangar `512 @ 0x006AB400`. It confirmed that
-`0x800078EC` is generic `rs_memset` and sampled zero-fill arguments, but did
-not identify a legitimate port publication destination or ordering. Companion
-search likewise found no complete `0x8002BEEC` body or CPU-MORT publication
-mapping.
+The claimed dependency was a turn/usage limit preventing the port experiment
+from running. The same unit was run this iteration and produced
+`scratch/agent/s2978_m5_route_port/RESULTS.md` plus a captured log. It recorded
+1,028 route-preparation rows and 3,454 LLE-task positive-control rows.
+Therefore the block is false as stated.
 
-Routes 1 and 2 therefore did not refute or satisfy the M5 dependency. Route 3
-makes the block false as a project stop: M5 is recorded as an open dependency,
-and the next unit is the local generated-symbol sweep. No runtime behavior,
-writeback, remap, gate, or guard was changed.
+The route discriminator itself was unevaluable: title and hangar phase gates
+both remained at zero because this port run stopped at boot/pre-title VI 320.
+That measured stall is carried forward as an open investigation, not as a
+route-predicate conclusion. No dependency on software installation, network
+access, billing, permissions, or weakened guards was used.
