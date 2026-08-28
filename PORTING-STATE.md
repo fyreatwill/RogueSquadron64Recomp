@@ -121574,3 +121574,19 @@ target built successfully. This closes the bounded interval and rules out
 leaving the companion/project maps inconsistent; it does not classify the
 next placeholder at `0x80064294`. Complete evidence table:
 `scratch/agent/s2921_generated_symbol_rename/source-table.md`.
+## Session 2922 (2026-08-27) — reconciled lookup-table data-gap symbol
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 39,698
+bytes, so this was not a maintenance iteration. The bounded generated-symbol
+sweep inspected `0x80064294..0x800642A0`. The 12-byte record contains an
+isolated `sh $v1,0x28($v0)`, `lw $v0,0x1C($fp)`, and
+`addiu $v1,$zero,0x20` fragment immediately before the complete
+`findLookupEntryByKey` body at `0x800642A0`; it has no generated call or lookup
+references beyond its definition and overlay registration. The companion map
+has no semantic name and the exact boundaries prove this is a non-callable
+data gap, so it was reconciled as `data_gap_80064294` in the companion and
+project maps. The generated snapshot and regeneration-safe rename table were
+already synchronized, so no generated references changed. Exact old-name
+searches found no remaining placeholder in the reconciled maps or generated
+snapshot. No build was needed because generated code was unchanged. Complete
+evidence table: `scratch/agent/s2922_generated_symbol_rename/source-table.md`.

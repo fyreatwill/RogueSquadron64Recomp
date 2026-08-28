@@ -915,7 +915,7 @@ functions = [
     { name = "getPlayerSlotSpanShort", vram = 0x800641F0, size = 0x30 },
     { name = "setPlayerSlotEnabledFlag", vram = 0x80064220, size = 0x28 },
     { name = "invokeMenuOverlayHeaderCallback", vram = 0x80064248, size = 0x4C },
-    { name = "fake_func_80064294", vram = 0x80064294, size = 0xC },
+    { name = "data_gap_80064294", vram = 0x80064294, size = 0xC },
     { name = "findLookupEntryByKey", vram = 0x800642A0, size = 0x124 },
     { name = "removeLookupTableEntry", vram = 0x800643C4, size = 0xC4 },
     { name = "rebuildActiveDisplayObjectList", vram = 0x80064488, size = 0x144 },

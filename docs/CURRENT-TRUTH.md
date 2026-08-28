@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2921 (2026-08-27).
+Current maintenance marker: Session 2922 (2026-08-27).
+
+The s2922 generated-symbol sweep reconciled `0x80064294..0x800642A0`. The
+12-byte record is an isolated `sh`/`lw`/`addiu` fragment immediately before
+the complete `findLookupEntryByKey` body, with no generated callers or
+independent lookup. The generated snapshot and rename table were already
+synchronized; the stale companion and project maps were updated to
+`data_gap_80064294`. Complete table:
+`scratch/agent/s2922_generated_symbol_rename/source-table.md`.
 
 The s2921 generated-symbol sweep reconciled `0x800613B8..0x800613C0`.
 The 8-byte record is the `lwc1`/`c.lt.s` entry fragment immediately before
@@ -556,8 +564,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x8005C61C` remains callable-ambiguous because its valid instruction does
    not prove a data gap. s2920 reconciled `0x8005EE64` to the established
    `steerOrientationTowardTargetPreamble` name; s2921 reconciled
-   `0x800613B8..0x800613C0` to `loadCharTextureSetPreamble`; continue with the
-   next remaining placeholder after `0x800613C0`.
+   `0x800613B8..0x800613C0` to `loadCharTextureSetPreamble`; s2922 classified
+   `0x80064294..0x800642A0` as `data_gap_80064294`; continue with the next
+   remaining placeholder after `0x800642A0`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
