@@ -1,13 +1,14 @@
-Route taken: 1 — refute the block claim.
+# Unblock result
 
-The claimed dependency was a turn/usage limit preventing the port experiment
-from running. The same unit was run this iteration and produced
-`scratch/agent/s2978_m5_route_port/RESULTS.md` plus a captured log. It recorded
-1,028 route-preparation rows and 3,454 LLE-task positive-control rows.
-Therefore the block is false as stated.
+Route taken: 3 — re-scope.
 
-The route discriminator itself was unevaluable: title and hangar phase gates
-both remained at zero because this port run stopped at boot/pre-title VI 320.
-That measured stall is carried forward as an open investigation, not as a
-route-predicate conclusion. No dependency on software installation, network
-access, billing, permissions, or weakened guards was used.
+Evidence: the retail oracle independently passed its whole-RDRAM positive
+control and reached title/hangar, while the current port's array-based
+same-build silent/image run dispatched 42 audio tasks per arm but stopped at
+pre-title VI 320/640 with zero target phases. The legacy wrapper's first
+failure was fixed as a field-order match defect; the corrected gate still did
+not launch reliably, so the array-based driver supplied the arm measurement.
+
+The M5 route repair/handoff is not locally obtainable in this tree. The block
+is made false as a loop stopper by selecting the independent regeneration-safe
+generated-symbol sweep, which does not require title/hangar audio phases.

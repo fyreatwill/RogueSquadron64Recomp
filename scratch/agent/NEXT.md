@@ -1,48 +1,36 @@
-# NEXT work unit (s2981) — qualify M5 Step 1 after a new route repair
+# NEXT work unit (s2982) — classify the next generated-symbol fragment
 
-HYPOTHESIS-ID: m5-audio-destub-step1
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
-Do not build until a concrete route repair or independent handoff is added or
-provided. Then build once and run the existing same-build M5 Step 1
-image/silent qualification. Preserve the silent control
-(`ROGUESQ_AUDIO_UCODE=0`) and Factor 5 image arm (`=1`) in one build/run pair.
-The current tree has no such repair; this is the human handoff required to
-unblock the unit.
+Resume the regeneration-safe symbol sweep at the lowest remaining placeholder
+after the already classified `0x8000040C` record. Inspect one bounded entry in
+`../N64Recomp/RecompiledFuncs`, its callers, successor boundaries, and the
+companion `../rogue_squadron64/symbol_files` map. Rename only if the exact
+semantic identity is independently supported; otherwise record it as
+ambiguous and leave the generated symbol unchanged.
 
 ## Competing hypotheses and discriminator
 
-- `H-port-route-repair`: a new local route repair reaches title/hangar and
-  makes the audio task contract measurable.
-- `H-audio-degeneracy`: once the route reaches a target phase, the silent arm
-  lacks task/DMEM/DMA/SP/service/slot/PCM progress that the image arm supplies.
-- `H-image-contract-gap`: both arms reach the target phase, but the image's
-  real DMEM/DMA activity fails to close a named downstream task/output edge.
+- `H-semantic-fragment`: the candidate is a real entry/preamble with a
+  companion-supported semantic name, so a regeneration-safe rename is justified.
+- `H-boundary-gap`: it is a data/fixup or invalid-decode gap bounded by complete
+  routines, so it should receive only a `data_gap_*` classification.
+- `H-ambiguous-fragment`: it is executable but lacks a standalone contract or
+  exact companion identity, so the placeholder must remain.
 
-The discriminating measurement is one same-build phase-keyed table containing,
-for both arms: VI target transition; `M_AUDTASK` dispatch; task fields; DMEM
-and DMA activity; image break/exit; `run-task-return`; SP completion; guest
-service and slot/status transitions; voice/reap; MORT descriptor class; and
-PCM source/consumer joins. A missing target VI selects route-repair blockage
-and leaves audio nulls unevaluable. Target-phase silent-vs-image divergence
-selects audio degeneracy. Matching route plus real image activity without a
-downstream close selects an image contract gap.
+The discriminator is the one-source table combining body disassembly,
+successor/predecessor boundaries, generated callers, companion symbols, and
+independent lookup. A complete callable contract plus exact companion name
+selects the rename; a mechanically proven non-callable gap selects the data
+classification; otherwise preserve the placeholder.
 
-## Required checks
+## Commands
 
-Before building, obtain a genuinely new route angle or ground-truth handoff;
-do not add a diagnostic field to the old route-preparation probe. Build all
-arms together, retain the positive controls, run from `build/` with the ROM,
-phase-gate on `PROBE_PHASE_WIDTH`/`PROBE_KEYS_FROM_PHASE=1`, and terminate with
-SIGKILL. If no new route repair or handoff is available, stop and ask for one
-instead of spending a third stalled route iteration.
+`rg -n 'func_[0-9A-Fa-f]{8}' ../N64Recomp/RecompiledFuncs --glob 'funcs_*.c'`
 
-Expected outcomes:
-
-- target phase absent: record the exact phase gate and do not interpret audio
-  nulls; pivot to the generated-symbol sweep or request a route repair.
-- target phase present and silent/image differ: select the first downstream
-  edge and design one behavior change with a named writer/consumer.
-- target phase present but image contract remains open: identify exactly one
-  missing task/output edge; no broad guard, forced status, or writeback.
+Then inspect bounded windows around the lowest candidate, update the
+regeneration-safe rename table and generated artifacts only when selected, run
+the generated-functions build, and record the source table under
+`scratch/agent/s2982_generated_symbol_rename/`.

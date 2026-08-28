@@ -122661,3 +122661,24 @@ in-tree route repair for this iteration; it does not explain the VI-640 stop
 or justify an audio mitigation. Requires a human-supplied route repair or
 independent handoff before the next M5 qualification.
 HYPOTHESIS-ID: m5-audio-destub-step1.
+
+## Session 2981 (2026-08-28) — re-scoped M5 block to symbol sweep
+
+Tested the M5 block's claim in order. The first existing Step 1 wrapper did
+not launch its arms because its oracle phase predicate expected `width` before
+`origin`; after correcting that harness defect, the array-based arm driver
+provided the independent control. The retail oracle passed its whole-RDRAM
+positive control at 10,000 callbacks and reached title `1024 @ 0x00790400`
+and hangar `512 @ 0x006ab400`. The current port executable, run from `build/`,
+put silent (`ROGUESQ_AUDIO_UCODE=0`) and image (`=1`) arms through the audio
+dispatch control at 42 tasks each, but stopped before target phase: silent at
+VI 320 and image at VI 640 (`0x0066A500`). Neither arm emitted title/hangar
+gates; neither emitted a crash or abort marker. Thus route 1 did not refute
+the dependency, and route 2 found no local route repair or handoff. The M5
+audio discriminator remains unevaluable, without authorizing an audio change.
+
+Route 3 resolves the loop block by re-scoping the next unit to the independent
+regeneration-safe generated-symbol sweep. The exact run and counts are in
+`scratch/agent/s2981_unblock_step1_arms/RESULTS.md`; the open M5 dependency is
+recorded in `docs/CURRENT-TRUTH.md` and the next unit is `NEXT.md`.
+HYPOTHESIS-ID: generated-symbol-renaming-sweep.

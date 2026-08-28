@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2980 (2026-08-28).
+Current maintenance marker: Session 2981 (2026-08-28).
 
 ## Current state
 
@@ -58,6 +58,16 @@ Because the Step 1 discriminator requires target-phase rows, no build or A/B
 soak was run and all audio downstream hypotheses remain unevaluable. This
 iteration is blocked on a concrete route repair or independent handoff, not on
 an audio conclusion.
+
+Session 2981 tested that block instead of accepting it as fact. The oracle
+control reached title and hangar, but the current port executable reproduced
+the pre-title stop under both silent and image arms: the array-based driver
+reached VI 640 (`0x0066A500`) and no target phase. Both arms dispatched 42
+audio tasks, with no crash or abort. A first legacy-wrapper failure was only a
+field-order/string-match defect; the independent array-based driver then
+reproduced the route stop. M5 target-phase audio remains unevaluable, so the
+next unit is re-scoped to the independent generated-symbol sweep while the
+route repair or handoff remains an open M5 dependency.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -282,26 +292,25 @@ remain under `scratch/agent/soak_results/` and in `SOAK-RESULTS.md`.
 
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete for this iteration. M5 remains active
-on audio de-stubbing, with the design survey complete; M3 is parked pending a new
-discriminator. The sweep is active under the stable slug
+on audio de-stubbing but is re-scoped pending a route repair; M3 is parked
+pending a new discriminator. The sweep is active under the stable slug
 `generated-symbol-renaming-sweep`.
 
-1. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+1. **Generated-symbol renaming sweep — continue bounded semantic fragments.**
+   This is the next executable unit while M5 lacks a target-phase route. Start
+   at the lowest remaining placeholder and classify one bounded fragment using
+   generated body shape, successor boundaries, callers, and the companion map;
+   rename only when the semantic name is independently supported.
+
+2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a
    new route repair or independent handoff that reaches title/hangar so the
    same-build image/silent positive-control row is evaluable. Only then make
    one contract change selected by task → SP → service/slot → PCM evidence.
    Do not repeat the s2978 route capture unchanged.
 
-2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+3. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-
-3. **Generated-symbol renaming sweep — continue bounded semantic fragments.**
-   Session 2974 renamed three defensible entry fragments to
-   `initVoiceSubtitleSystemPreamble`, `initWaterSprayParticlesPreamble`, and
-   `filterVoiceSampleBlockPreamble`. Continue with the next bounded batch only
-   when successor boundaries and body shape support a semantic name; preserve
-   `func_8000040C` and other ambiguous records.
 
 4. **M4 accumulator origin — blocked at route qualification.** The latest
    revisit had live generic controls but zero M4 stage-1 positive-control rows
