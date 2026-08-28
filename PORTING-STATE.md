@@ -122930,3 +122930,18 @@ This rules out the ambiguous-placeholder and duplicate-definition hypotheses
 for this address. No runtime, audio, or route behavior changed. The next
 candidate is `0x8000E0BC`. Evidence:
 `scratch/agent/s3000_generated_symbol_rename/source-table.md`.
+
+## Session 3001 (2026-08-28) — audited selectRenderPresetByIndex
+
+Ran the bounded generated-symbol audit for `0x8000E0BC`. The companion map,
+project symbol TOML, generated header, overlay registration, unique generated
+definition, and ten direct callers agree on `selectRenderPresetByIndex`. The
+symbol was already synchronized, so no generated or TOML rename was needed.
+The placeholder-only scanner could not resolve the already-named entry, which
+was a tooling limitation rather than an identity conflict. The direct
+duplicate check found one generated definition, and
+`cmake --build build --config Debug --target RecompiledFuncs` passed.
+
+This rules out an unresolved identity or duplicate-definition problem at this
+address; it does not provide runtime evidence about M5 audio or route behavior.
+Evidence: `scratch/agent/s3001_generated_symbol_rename/source-table.md`.
