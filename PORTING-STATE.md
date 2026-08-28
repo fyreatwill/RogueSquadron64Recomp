@@ -121190,3 +121190,21 @@ regeneration-safe rename table. Reconciliation changed three generated
 references in three files. This rules out a callable semantic rename for this
 record; it is a mechanically bounded pre-segment fragment. No build or soak
 was required because the change does not alter runtime behavior or dispatch.
+## Session 2900 (2026-08-27) — reconciled zlib data gap at 0x80026B98
+
+Inspected the next unresolved generated-symbol interval after `0x80024A10`.
+The sole candidate was the eight-byte record at `0x80026B98`, containing only
+`sw $a0, 0x40($v0)` and `lhu $v0, 0x34($fp)`. The companion zlib map places
+`inflateReset` at `0x80026BA0`, labels this record a fake split before that
+routine, and provides no semantic callable name. No generated call or lookup
+references the candidate. The complete source table is
+`scratch/agent/s2900_generated_symbol_rename/source-table.md`.
+
+Classified the candidate as H-DataGap and renamed `fake_func_80026B98` to
+`data_gap_80026B98` in the companion source/map, project symbol map, generated
+C/header, overlay metadata, and regeneration-safe rename table. Exact checks
+found zero old-name references in the checked generated and companion trees.
+This rules out a callable semantic rename for the record; it does not bear on
+runtime behavior or the M5 route/audio hypotheses. No build or soak was needed
+because the change is mechanical and does not alter executable behavior. The
+next unresolved placeholder is `0x8002851C`.

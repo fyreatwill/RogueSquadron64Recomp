@@ -68,6 +68,9 @@ RENAMES = {
     # This four-byte main-overlay record precedes the F3DEX text segment at
     # 0x80024A10 and is not a callable game function.
     "fake_func_80024A0C": "data_gap_80024A0C",
+    # This eight-byte zlib record is an isolated store/halfword-load fragment
+    # immediately before inflateReset; it is not a callable function body.
+    "fake_func_80026B98": "data_gap_80026B98",
     # These eight-byte main-overlay records contain only an isolated
     # instruction fragment immediately before named routines.
     "fake_func_80079278": "data_gap_80079278",

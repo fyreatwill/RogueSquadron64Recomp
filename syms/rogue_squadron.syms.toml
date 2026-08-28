@@ -384,7 +384,7 @@ functions = [
     { name = "swizzleTextureRowsToTmem", vram = 0x80024880, size = 0x18C },
     { name = "data_gap_80024A0C", vram = 0x80024A0C, size = 0x4 },
     { name = "adler32", vram = 0x800269B0, size = 0x1E8 },
-    { name = "fake_func_80026B98", vram = 0x80026B98, size = 0x8 },
+    { name = "data_gap_80026B98", vram = 0x80026B98, size = 0x8 },
     { name = "inflateReset", vram = 0x80026BA0, size = 0x64 },
     { name = "inflateEnd", vram = 0x80026C04, size = 0x78 },
     { name = "inflateInit2_", vram = 0x80026C7C, size = 0x200 },
