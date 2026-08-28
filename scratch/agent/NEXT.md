@@ -1,4 +1,4 @@
-# NEXT work unit — classify `0x8001BB6C`
+# NEXT work unit — classify `0x8001C260`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -6,15 +6,15 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 - `H-exact-companion-name`: the address has an exact companion identity that
   can be synchronized.
-- `H-data-gap-or-fragment`: the 8-byte entry is not a named standalone
-  function in the companion project; retain the placeholder or classify it as
-  a gap only if independent boundaries support that conclusion.
+- `H-data-gap-or-fragment`: the entry is not a named standalone function in
+  the companion project; retain the placeholder or classify it as a gap only
+  if independent boundaries support that conclusion.
 - `H-overlay-collision`: more than one generated callable definition or
   conflicting registration exists and requires manual review.
 
 The discriminating measurement is one bounded static audit: compare the
 companion symbol/m2c sources, generated body and boundaries, all generated
-callers, overlay registration, and duplicate definitions for `0x8001BB6C`.
+callers, overlay registration, and duplicate definitions for `0x8001C260`.
 An exact companion name plus one coherent callable selects synchronization;
 a complete but unnamed callable selects no invented rename; a boundary-only
 fragment or collision selects a documented non-rename/manual review.
@@ -22,9 +22,9 @@ fragment or collision selects a documented non-rename/manual review.
 ## Exact commands
 
 ```sh
-rg -n '8001BB6C|func_8001BB6C' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
-rg -n -C 20 '8001BB6C|func_8001BB6C' ../N64Recomp/RecompiledFuncs/funcs_*.c
-python3 tools/sweep_scan_candidates.py func_8001BB6C
+rg -n '8001C260|func_8001C260' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
+rg -n -C 20 '8001C260|func_8001C260' ../N64Recomp/RecompiledFuncs/funcs_*.c
+python3 tools/sweep_scan_candidates.py func_8001C260
 ```
 
 If the sources agree on an exact identity, synchronize the project symbol

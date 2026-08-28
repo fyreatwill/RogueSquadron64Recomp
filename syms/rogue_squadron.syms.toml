@@ -273,7 +273,7 @@ functions = [
     { name = "clearPendingViChanges", vram = 0x8001B7D8, size = 0x18 },
     { name = "applyPendingViChanges", vram = 0x8001B7F0, size = 0x2AC },
     { name = "swapBufferWithViMode", vram = 0x8001BA9C, size = 0xD0 },
-    { name = "func_8001BB6C", vram = 0x8001BB6C, size = 0xDC },
+    { name = "selectAndApplyViMode", vram = 0x8001BB6C, size = 0xDC },
     { name = "computeFramebufferByteSize", vram = 0x8001BC48, size = 0x58 },
     { name = "readBufferSwapState", vram = 0x8001BCA0, size = 0x44 },
     { name = "bufferArbiterProducerMark", vram = 0x8001BCE4, size = 0x19C },

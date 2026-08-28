@@ -123153,3 +123153,17 @@ This rules out an unnamed data gap and a local duplicate callable for this
 address. No runtime, audio, or route behavior changed. The next sweep
 candidate is `0x8001BB6C`. Evidence:
 `scratch/agent/s3017_generated_symbol_rename/source-table.md`.
+## Session 3018 (2026-08-28) — synchronized selectAndApplyViMode
+
+Completed the bounded generated-symbol audit at `0x8001BB6C`. The companion
+map names the unique generated callable `selectAndApplyViMode`; its 0xDC-byte
+body selects/copies a VI mode and calls `osViSetMode_recomp` and
+`waitOnVideoQueue`. The generated caller, header, and overlay registration
+agree, with no local duplicate callable or conflicting registration.
+Synchronized the stale project symbol TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out an unnamed data gap and a local duplicate callable for this
+address. No runtime, audio, or route behavior changed. The next sweep
+candidate is `0x8001C260`, which requires a fresh ambiguity audit because the
+scanner found no standalone generated prologue match. Evidence:
+`scratch/agent/s3018_generated_symbol_rename/source-table.md`.
