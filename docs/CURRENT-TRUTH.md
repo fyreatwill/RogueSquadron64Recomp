@@ -4,20 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2947 (2026-08-28).
+Current maintenance marker: Session 2948 (2026-08-28).
 
-Session 2947 is a checkpoint close-out of s2946. Session 2946 added a
-regeneration-owned port probe at the oracle-qualified `0x80019CD8` scheduler
-handoff and rebuilt the Debug target successfully. The corrected in-process-autopilot
-run used the documented LLE recipe with `PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180`;
-the `[f5-fetch-control]` positive control fired 8 times across phases 2 and 4. The
-candidate hook fired 0 times. This selects H-RoutePreTitle (the route stops at
-pre-title VI 640, valid positive control), refutes H-RouteReachesTarget for this
-recipe, and leaves H-RouteState/H-RouteInput unevaluable. The next discriminator is
-the route-prepare rejection condition: s2905 found `key_match=1`/`accepted=0` and
-s2882 found `route_valid=0` — the route-prepare receives a matching key but is
-rejected; the specific failing field is unknown. Artifact:
-`scratch/agent/s2946_m5_route_state_final_20260828/RESULTS.md`.
+Session 2948 added a regeneration-owned full-input route-preparation probe at
+`0x80019CD8` and rebuilt the Debug target successfully. The fixed run emitted
+771 `[route-prep]` rows and the same-run `[f5-fetch-control]` positive control
+fired 8 times. Every row had `accepted=0` at pre-title VI widths 320 or 640;
+the route never reached title 1024 or hangar 512, and the candidate hook fired
+0 times. The scheduler registers and message branch values were populated, so
+the probe is live, but no input-field mismatch can be selected without a
+retail target-phase tuple. This selects H-RoutePreTitle, rules out a missing
+scheduler invocation, and leaves H-PrepareFieldBad/H-PrepareTimingBad/
+H-PrepareLogicBad unevaluable. Artifact:
+`scratch/agent/s2948_route_prepare_rejection/RESULTS.md`.
 
 Session 2945's corrected retail-oracle route-state census phase-gated the
 candidate range `0x80019C00..0x8001A000` in the verified Start schedule. The
@@ -721,10 +720,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    exists. The s2946 candidate probe (positive control: 8 fetch rows) selects
    H-RoutePreTitle and refutes H-RouteReachesTarget for the current recipe; the
    route-prepare receives key_match=1 but accepted=0 (s2905) and route_valid=0
-   (s2882) — the rejection cause is the next discriminator. The next unit must
-   probe the specific failing route-prepare field at VI 640 in one batched
-   build/run (no oracle re-run needed; s2945 already ground-truthed the candidate
-   range). The s2904 Step 6 drain-tick A/B also stopped at the same pre-title
+   (s2882). s2948 logged the full scheduler tuple and message branches, but
+   still stopped before target phase; the specific input field is not selected.
+   The next unit must ground-truth the same message/branch tuple at retail
+   title/hangar before another port-side field probe. The s2904 Step 6 drain-tick A/B also stopped at the same pre-title
    route, so it does not validate the default-off change. Ground truth must
    precede any port instrumentation. The s2873 pivot did not change this
    unresolved M5 ordering; its next audio behavior change still requires a named

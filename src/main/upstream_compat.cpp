@@ -843,6 +843,50 @@ extern "C" void rs64_m5_route_candidate(uint8_t* rdram, uint32_t pc,
     ++rows;
 }
 
+extern "C" void rs64_m5_route_prepare_inputs(
+    uint8_t* rdram, uint32_t pc, uint32_t caller, uint32_t sp,
+    uint32_t s0, uint32_t s1, uint32_t s2, uint32_t s3, uint32_t s4,
+    uint32_t s5, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t v0,
+    uint32_t message_type) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_PREPARE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || rdram == nullptr) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != bucket) { bucket = key; rows = 0; }
+    if (rows >= 256u) return;
+    const uint32_t route_target =
+        ((width == 1024u && origin == 0x00790400u) ||
+         (width == 512u && origin == 0x006AB400u)) ? 1u : 0u;
+    const uint32_t branch = message_type == 2u ? 2u :
+                            message_type >= 3u ? 3u :
+                            message_type == 1u ? 1u : 0u;
+    uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &ordinal, &route_row, &exit_reason, &arm);
+    std::fprintf(stderr,
+        "[route-prep] n=%u phase=%u width=%u origin=0x%06X target=%u "
+        "accepted=%u pc=0x%08X caller=0x%08X sp=0x%08X "
+        "s0=0x%08X s1=0x%08X s2=0x%08X s3=0x%08X s4=0x%08X s5=0x%08X "
+        "a0=0x%08X a1=0x%08X a2=0x%08X v0=0x%08X msg=0x%02X branch=%u "
+        "active=%u ordinal=%u row=%u exit=%d\n",
+        rows, rs64_phase_ord(), width, origin, route_target, route_target,
+        pc, caller, sp, s0, s1, s2, s3, s4, s5, a0, a1, a2, v0,
+        message_type, branch, active ? 1u : 0u, ordinal, route_row,
+        exit_reason);
+    std::fflush(stderr);
+    ++rows;
+}
+
 extern "C" void rs64_m5_b40_read(uint8_t* /*rdram*/, uint32_t read_pc,
                                   uint32_t value, uint32_t branch_pc,
                                   uint32_t branch_taken) {

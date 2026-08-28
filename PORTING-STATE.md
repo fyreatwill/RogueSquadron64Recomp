@@ -122039,3 +122039,28 @@ unit must capture the specific rejection condition at VI 640 — a probe that lo
 failing route-prepare field (the first input that differs from the accepted retail
 value) in one batched build/run. This does not require a new oracle run; retail
 already qualified the candidate range in s2945.
+## Session 2948 (2026-08-28) — full scheduler tuple still stops pre-title
+
+The prescribed route-prepare work unit was implemented in the regeneration-owned
+external `N64Recomp/fixup_game_funcs.py` and `src/main/upstream_compat.cpp`.
+The fresh make-ELF -> N64Recomp -> fixup pipeline materialized the hook at
+`0x80019CD8`, and the Debug target built successfully. The first launch command
+was invalid because this macOS host has no `timeout` utility; it produced no
+game output. The fixed background-watchdog run was then used and all remaining
+game processes were SIGKILLed.
+
+The completed log had 771 `[route-prep]` rows, 8 `[f5-fetch-control]` rows as a
+same-run positive control, four VI transitions ending at pre-title 640
+(`0x0066A500`), zero target-phase candidate rows, and no crash/abort markers.
+All route rows had `accepted=0` with non-target widths 320 or 640. The full
+scheduler tuple was populated (`s0/s1/s2/s3/s4/s5`, `a0/a1/a2/v0`, stack
+pointer), and message types `0x01`, `0x02`, and `0x81` exercised the logged
+branch classes. The launcher returned 127 while its child continued logging;
+counts were recomputed only after the child was killed, so the initial summary
+was discarded.
+
+This selects H-RoutePreTitle and rules out a missing scheduler invocation. It
+does not select H-PrepareFieldBad, H-PrepareTimingBad, or H-PrepareLogicBad:
+the port never reached the retail-qualified 1024/512 keys, so no accepted
+retail tuple exists for comparison. No behavior or mitigation change was made.
+Complete artifact: `scratch/agent/s2948_route_prepare_rejection/RESULTS.md`.
