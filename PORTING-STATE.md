@@ -120566,3 +120566,26 @@ boundaries and ordered backlog, and migrated the durable s2677–s2865 summary
 to `docs/PROJECT-OVERVIEW.md`. No experiment, build, or game run was made by
 design. This closes maintenance and leaves the next unit as the bounded
 `0x80074500..0x80075500` generated-symbol sweep.
+
+## Session 2867 (2026-08-27) — ruled out broad main-text retail-entry window
+
+The mandatory all-sweep-title REVISIT rule applied, so this iteration used the
+retail oracle for a new external retail-entry angle rather than another symbol
+sweep. The exact competing hypotheses and discriminator were recorded in
+`scratch/agent/NEXT.md` before the run. The oracle ran the known Rice/input
+recipe for 70 seconds with a whole-RDRAM positive control and a PC-range watch
+over `0x8003D000..0x80040000`.
+
+The positive control reached 10,000 callbacks and was removed with `rc=0`,
+proving the watch instrument was live. The same run reached title 1024 at
+origin `0x00790400` and hangar 512 at origin `0x006AB400`, so the target route
+was qualified. The broad PC range produced 938,889 lifetime execution hits,
+but no phase-gated target rows were emitted for the requested title/hangar
+buckets. This selects H-known-loop-only / no-new-boundary for this recipe: the
+range is too broad and its observed rows did not discriminate a new dispatcher.
+It rules out H-route-invalid for this run, but does not explain the port
+boundary. This is single-source oracle evidence; no two-source causal claim is
+entered. Do not repeat the range recipe.
+
+The next unit is a genuinely new M5 post-dispatch/scheduling discriminator,
+with the retail ground-truth observation identified before any port build.

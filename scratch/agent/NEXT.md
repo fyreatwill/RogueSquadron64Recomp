@@ -1,34 +1,32 @@
-# NEXT work unit (s2867) — generated-symbol-renaming-sweep
+# NEXT work unit (s2868) — M5-post-dispatch-discriminator
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: M5-post-dispatch-discriminator
 
 ## Work unit
 
-Run the next bounded source-backed symbol sweep over `0x80074500..0x80075500`.
-Apply only exact companion semantic renames or mechanically proven data-gap
-renames; preserve callable-ambiguous records.
+Design and run one new M5 post-dispatch/scheduling discriminator that can
+separate a real audio publication edge from route failure. Qualify the
+title/hangar route first with the same-run oracle control; do not interpret
+service, slot, MORT, or PCM nulls until the target phase is live.
 
 ## Competing hypotheses and discriminator
 
-- H-source-backed-gap: the interval contains a defined short non-callable
-  record that can be renamed to `data_gap_<address>`.
-- H-callable: a placeholder is callable or semantically unresolved and must
-  remain unchanged.
-- H-already-synchronized: no selected placeholder remains in the interval.
+- H-post-dispatch-edge: a new phase-qualified discriminator shows a distinct
+  retail post-dispatch producer/consumer ordering at title or hangar.
+- H-route-failure: the whole-RDRAM control fires but the qualified target phase
+  is absent, so audio nulls remain unevaluable.
+- H-no-new-edge: the target phase is qualified but the new discriminator is
+  unchanged across the relevant lifecycle, ruling out that angle.
 
-The discriminator is the selector decision table plus the final bounded
-stale-name scan. Nonzero replacements with no old-name hits selects
-H-source-backed-gap; ambiguous/callable preservation selects H-callable; zero
-replacements selects H-already-synchronized.
+The discriminator must be a complete same-run table of positive-control hits,
+VI phases, and the selected post-dispatch ordering/producer observations.
+Before building, identify the exact retail ground-truth observation and its
+port counterpart; new ordering selects H-post-dispatch-edge, missing phase
+selects H-route-failure, and qualified unchanged ordering selects
+H-no-new-edge.
 
 ## Exact commands
 
-```sh
-python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
-  --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x80074500 --end-address 0x80075500 --limit 8
-rg -n 'data_gap_8007|fake_func_8007' \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
-```
-
-No build or game run is required for this source-backed rename unit.
+No exact command is authorized yet: first ask the retail oracle for the
+ground-truth address/ordering that the new discriminator will measure, then
+batch all port counters and A/B arms in one build/run.

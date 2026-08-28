@@ -34,6 +34,15 @@ ring and signals completion; it does not publish AI data. Speech loading,
 slot initialization, cursor advancement, queue, PI, host-AI, mixer, and named
 renderer audits likewise found no publication edge.
 
+The mandatory external-boundary revisit (single-source oracle evidence)
+qualified the known retail route in one run: the whole-RDRAM positive control
+reached 10,000 callbacks and was removed, while VI transitions reached title
+1024 (`0x00790400`) and hangar 512 (`0x006AB400`). A broad main-text execution
+watch over `0x8003D000..0x80040000` produced 938,889 lifetime hits but no
+phase-gated target rows, so it did not identify a new retail-entry dispatcher;
+do not repeat this range recipe. This is a measurement of the oracle route,
+not a two-source explanation of the port boundary.
+
 SP-yield state is real API state and the request lifecycle now clears the
 previous request before staging the next task. The generic scheduler has two
 yield call sites, but no audio-specific generated branch was found. Target
@@ -49,12 +58,12 @@ symbol sweep. The sweep remains eligible while M5 is open and M3 is parked;
 apply only source-backed renames and preserve callable-ambiguous records.
 
 1. **M5 Step 1 route repair / qualification.** The barrier, launch-order,
-   boot-time-key, phase-relative-key, autopilot, gate-writer, and pre-title
-   task-field angles are exhausted at the current discriminator. The next M5
-   unit needs a genuinely new post-dispatch or scheduling discriminator and
-   must qualify title/hangar before interpreting service, slot, MORT, or PCM
-   nulls. Do not land a behavior change without a named legitimate writer and
-   ordering edge.
+   boot-time-key, phase-relative-key, autopilot, gate-writer, pre-title
+   task-field, and broad main-text retail-entry angles are exhausted at the
+   current discriminator. The next M5 unit needs a genuinely new
+   post-dispatch or scheduling discriminator and must qualify title/hangar
+   before interpreting service, slot, MORT, or PCM nulls. Do not land a
+   behavior change without a named legitimate writer and ordering edge.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 3. **Generated-symbol renaming sweep.** The next bounded source-backed batch
