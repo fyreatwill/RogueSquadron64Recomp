@@ -123140,3 +123140,16 @@ address. No runtime, audio, or route behavior changed. The next sweep
 candidate is `0x8001B7F0`, which needs a fresh ambiguity audit because the
 scanner found no standalone generated prologue match. Evidence:
 `scratch/agent/s3016_generated_symbol_rename/source-table.md`.
+## Session 3017 (2026-08-28) — synchronized applyPendingViChanges
+
+Completed the bounded generated-symbol audit at `0x8001B7F0`. The companion
+map names the unique generated callable `applyPendingViChanges`; its 0x2AC-
+byte body applies pending VI feature bits, selects the mode structure, and
+calls `osViSetMode_recomp`. The generated caller, header, and overlay
+registration agree, with no local duplicate callable or conflicting
+registration. Synchronized the stale project symbol TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out an unnamed data gap and a local duplicate callable for this
+address. No runtime, audio, or route behavior changed. The next sweep
+candidate is `0x8001BB6C`. Evidence:
+`scratch/agent/s3017_generated_symbol_rename/source-table.md`.

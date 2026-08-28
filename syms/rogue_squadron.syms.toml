@@ -271,7 +271,7 @@ functions = [
     { name = "requestViFeatureChange", vram = 0x8001B7B8, size = 0x10 },
     { name = "beginSceneRenderFrame", vram = 0x8001B7C8, size = 0x10 },
     { name = "clearPendingViChanges", vram = 0x8001B7D8, size = 0x18 },
-    { name = "func_8001B7F0", vram = 0x8001B7F0, size = 0x2AC },
+    { name = "applyPendingViChanges", vram = 0x8001B7F0, size = 0x2AC },
     { name = "swapBufferWithViMode", vram = 0x8001BA9C, size = 0xD0 },
     { name = "func_8001BB6C", vram = 0x8001BB6C, size = 0xDC },
     { name = "computeFramebufferByteSize", vram = 0x8001BC48, size = 0x58 },

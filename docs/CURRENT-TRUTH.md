@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3016 (2026-08-28).
+Current maintenance marker: Session 3017 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,17 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3017 completed the bounded generated-symbol audit at `0x8001B7F0`.
+The companion map names the unique generated callable
+`applyPendingViChanges`; its 0x2AC-byte body applies pending VI feature bits,
+selects the mode structure, and calls `osViSetMode_recomp`. The generated
+caller, header, and overlay registration agree, with no local duplicate
+callable or conflicting registration. Synchronized the stale project symbol
+TOML and built `RecompiledFuncs` successfully. This rules out an unnamed data
+gap and a local duplicate callable for this address. The next sweep candidate
+is `0x8001BB6C`. Evidence:
+`scratch/agent/s3017_generated_symbol_rename/source-table.md`.
 
 Session 3016 completed the bounded generated-symbol audit at `0x8001B7D8`.
 The companion map names the unique generated callable
@@ -625,7 +636,8 @@ blocker-free workstream until a new M5 route edge is available.
    `data_gap_80019808`; do not invent a semantic name for it. `0x8001B7B8`
    was synchronized as `requestViFeatureChange`, `0x8001B7C8` as
    `beginSceneRenderFrame`, and `0x8001B7D8` as
-   `clearPendingViChanges`. Audit the next candidate `0x8001B7F0` for a
+   `clearPendingViChanges`, and `0x8001B7F0` as
+   `applyPendingViChanges`. Audit the next candidate `0x8001BB6C` for a
    defensible companion identity. Do not invent
    names for ambiguous fragments. Keep the M5 route dependency open below and
    return to it only with a new grounded edge.
