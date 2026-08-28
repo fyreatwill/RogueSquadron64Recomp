@@ -224,7 +224,7 @@ functions = [
     { name = "renderLitMeshFaceGroup", vram = 0x80012FD0, size = 0x1E10 },
     { name = "processMeshdef1ForLod", vram = 0x80014DE0, size = 0x1C0 },
     { name = "processSceneNode", vram = 0x80014FA0, size = 0x5A8 },
-    { name = "func_80015548", vram = 0x80015548, size = 0x1C0 },
+    { name = "traverseSceneGraphRecursive", vram = 0x80015548, size = 0x1C0 },
     { name = "drawTextGlyphRect", vram = 0x80015708, size = 0x2AC },
     { name = "drawSubtitleText", vram = 0x800159B4, size = 0x1290 },
     { name = "setupCameraMatrices", vram = 0x80016C44, size = 0xE4C },

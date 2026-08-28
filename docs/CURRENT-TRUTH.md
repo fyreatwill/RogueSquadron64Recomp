@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3002 (2026-08-28).
+Current maintenance marker: Session 3003 (2026-08-28).
 
 ## Current state
 
@@ -257,6 +257,15 @@ generated-functions target built successfully. The next sweep candidate is
 than treated as an identity conflict. Evidence:
 `scratch/agent/s3001_generated_symbol_rename/source-table.md`.
 
+Session 3003 audited `0x80015548` as `traverseSceneGraphRecursive`. The
+companion map, generated body, header, overlay registration, and caller set
+agree on the unique scene-graph walker; the generated tree was already
+renamed, so only the project symbol TOML was stale. Synchronized it and built
+`RecompiledFuncs` successfully. The scanner's overlay-reuse warning did not
+correspond to a duplicate callable definition. No runtime, audio, or route
+behavior changed. The next sweep candidate is `0x80017AB0`.
+Evidence: `scratch/agent/s3003_generated_symbol_rename/source-table.md`.
+
 Session 3002 audited `0x80011C9C` as `renderUnlitMeshFaces`. The companion map,
 generated definition, header, overlay registration, and two direct callers
 agree, with no duplicate generated definition. The generated tree was already
@@ -494,9 +503,9 @@ pending a new discriminator. The generated-symbol sweep is the active
 blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   `0x8000E0BC` is confirmed as `selectRenderPresetByIndex` and was already
-   synchronized; audit the next placeholder `0x80015548` when generated
-   callers/body and the companion map agree.
+   `0x80015548` is synchronized as `traverseSceneGraphRecursive`; audit the
+   next placeholder `0x80017AB0` when generated callers/body and the companion
+   map agree.
    Do not invent names for ambiguous fragments. Keep the M5 route dependency
    open below and return to it only with a new grounded edge.
 

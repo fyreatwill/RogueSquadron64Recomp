@@ -122960,3 +122960,18 @@ conflict. This rules out the ambiguous-placeholder and duplicate-definition
 hypotheses for this address. No runtime, audio, or route behavior changed.
 The next candidate is `0x80015548`. Evidence:
 `scratch/agent/s3002_generated_symbol_rename/source-table.md`.
+
+## Session 3003 (2026-08-28) — synchronized traverseSceneGraphRecursive
+
+Completed the bounded generated-symbol audit at `0x80015548`. The companion
+map identifies the entry exactly as `traverseSceneGraphRecursive`, and the
+generated definition, header, overlay registration, and recursive caller set
+agree. A concrete definition search found one generated callable definition;
+the scanner's generic overlay-reuse warning did not indicate a duplicate.
+The generated tree was already synchronized, so only the project symbol TOML
+was stale. Synchronized it and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime, audio, or route behavior changed. The next
+candidate is `0x80017AB0`. Evidence:
+`scratch/agent/s3003_generated_symbol_rename/source-table.md`.
