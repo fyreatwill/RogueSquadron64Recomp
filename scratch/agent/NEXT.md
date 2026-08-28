@@ -1,10 +1,10 @@
-# NEXT work unit — audit `0x80017B28`
+# NEXT work unit — audit `0x80017B48`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Competing hypotheses and discriminator
 
-- `H-exact-companion-name`: the generated entry at `0x80017B28` has an exact
+- `H-exact-companion-name`: the generated entry at `0x80017B48` has an exact
   human identity in the companion map and can be synchronized.
 - `H-ambiguous-placeholder`: the generated body or call context does not
   support that name; leave the placeholder and record why.
@@ -13,7 +13,7 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 The discriminating measurement is one bounded static audit: compare the
 companion map, generated definition, and all generated callers for
-`0x80017B28`, then check for duplicate generated definitions. An exact map
+`0x80017B48`, then check for duplicate generated definitions. An exact map
 match plus a unique callable definition and coherent caller use selects the
 rename; any missing or conflicting source selects no-op/manual review. No
 runtime phase or route repair is required.
@@ -21,8 +21,8 @@ runtime phase or route repair is required.
 ## Exact commands
 
 ```sh
-rg -n '80017B28|func_80017B28' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs
-python3 tools/sweep_scan_candidates.py func_80017B28
+rg -n '80017B48|func_80017B48' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs
+python3 tools/sweep_scan_candidates.py func_80017B48
 ```
 
 If the three-source check agrees, update `syms/rogue_squadron.syms.toml`,
