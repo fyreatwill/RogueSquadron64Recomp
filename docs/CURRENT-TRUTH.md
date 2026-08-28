@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2920 (2026-08-27).
+Current maintenance marker: Session 2921 (2026-08-27).
+
+The s2921 generated-symbol sweep reconciled `0x800613B8..0x800613C0`.
+The 8-byte record is the `lwc1`/`c.lt.s` entry fragment immediately before
+the complete `loadCharTextureSet` body. The generated snapshot and rename
+table already used `loadCharTextureSetPreamble`; the companion and project
+maps were updated to match. The bounded rename tool changed zero generated
+references, and the Debug `RecompiledFuncs` target built successfully.
+Complete table: `scratch/agent/s2921_generated_symbol_rename/source-table.md`.
 
 The s2920 generated-symbol sweep reconciled `0x8005EE64..0x8005EE70`. The
 12-byte record is the jump/delay-slot/constant fragment immediately before
@@ -547,8 +555,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `isPointWithinBoundingBox` and `loadTopCloudsAsset`. The s2919 candidate at
    `0x8005C61C` remains callable-ambiguous because its valid instruction does
    not prove a data gap. s2920 reconciled `0x8005EE64` to the established
-   `steerOrientationTowardTargetPreamble` name; continue with the next
-   remaining placeholder after `0x8005EE70`.
+   `steerOrientationTowardTargetPreamble` name; s2921 reconciled
+   `0x800613B8..0x800613C0` to `loadCharTextureSetPreamble`; continue with the
+   next remaining placeholder after `0x800613C0`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

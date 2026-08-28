@@ -121555,3 +121555,22 @@ placeholder outside the intentional rename-table key. The Debug
 entries inconsistent and closes this bounded interval; it does not classify
 the unrelated callable-ambiguous `0x8005C61C` record. Complete evidence table:
 `scratch/agent/s2920_generated_symbol_rename/source-table.md`.
+
+## Session 2921 (2026-08-27) — reconciled load-character-texture preamble symbol
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 39,100
+bytes, so this was not a maintenance iteration. The bounded generated-symbol
+sweep inspected `0x800613B8..0x800613C0`. The 8-byte record contains the
+`lwc1 $f2,0x60($fp)` and `c.lt.s $f2,$f0` entry fragment immediately before
+the complete `loadCharTextureSet` body at `0x800613C0`. The generated
+snapshot and regeneration-safe rename table already used
+`loadCharTextureSetPreamble`; the companion map and project symbol map still
+used `fake_func_800613B8`. The reconciliation classified the established
+contiguous fragment as H-CallableSemantic and updated those two maps. The
+bounded rename tool changed zero generated references because the generated
+tree was already synchronized. Exact searches found no old placeholder in
+the reconciled maps or generated snapshot. The Debug `RecompiledFuncs`
+target built successfully. This closes the bounded interval and rules out
+leaving the companion/project maps inconsistent; it does not classify the
+next placeholder at `0x80064294`. Complete evidence table:
+`scratch/agent/s2921_generated_symbol_rename/source-table.md`.

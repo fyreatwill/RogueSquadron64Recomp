@@ -875,7 +875,7 @@ functions = [
     { name = "spawnRandomScaleColoredEffectAltVariant", vram = 0x800612E0, size = 0x5C },
     { name = "spawnRandomScaleColoredEffectFromCaller", vram = 0x8006133C, size = 0x44 },
     { name = "spawnMinimalRandomNpc", vram = 0x80061380, size = 0x38 },
-    { name = "fake_func_800613B8", vram = 0x800613B8, size = 0x8 },
+    { name = "loadCharTextureSetPreamble", vram = 0x800613B8, size = 0x8 },
     { name = "loadCharTextureSet", vram = 0x800613C0, size = 0x6C8 },
     { name = "loadFontAsset", vram = 0x80061A88, size = 0x1EC },
     { name = "activateAnimationKeyframe", vram = 0x80061C74, size = 0x2C0 },

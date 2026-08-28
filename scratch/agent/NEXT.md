@@ -1,8 +1,8 @@
-# NEXT work unit (s2921) — generated-symbol sweep at 0x800613B8
+# NEXT work unit (s2922) — generated-symbol sweep at 0x80064294
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Inspect the next bounded placeholder interval `0x800613B8..0x800613C0`.
+Inspect the next bounded placeholder interval `0x80064294..0x800642A0`.
 Reconcile only source-backed semantic names or mechanically proven
 non-callable `data_gap_*` records in the companion/project maps, generated
 snapshot, and regeneration-safe rename table. Leave callable-ambiguous and
