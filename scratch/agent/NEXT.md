@@ -1,34 +1,37 @@
-# NEXT work unit — classify `0x8001818C`
+# NEXT work unit — classify `0x80018ED4`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Competing hypotheses and discriminator
 
-- `H-exact-companion-name`: the generated entry at `0x8001818C` has an exact
-  human identity in the companion map and can be synchronized.
-- `H-ambiguous-placeholder`: the generated body or call context does not
-  support that name; leave the placeholder and record why.
-- `H-overlay-collision`: the address has multiple generated definitions, so it
-  requires manual review rather than an automatic rename.
+- `H-exact-companion-name`: the address has an exact companion identity that
+  can be synchronized.
+- `H-data-gap-or-fragment`: the 32-byte cache-clearing loop is not a named
+  standalone function in the companion project; retain the placeholder or
+  classify it as a gap only if independent boundaries support that conclusion.
+- `H-overlay-collision`: more than one generated callable definition or
+  conflicting registration exists and requires manual review.
 
 The discriminating measurement is one bounded static audit: compare the
-companion map, generated definition, and all generated callers for
-`0x8001818C`, then check for duplicate generated definitions. An exact map
-match plus a unique callable definition and coherent caller use selects the
-rename; any missing or conflicting source selects no-op/manual review. No
-runtime phase or route repair is required.
+companion symbol/m2c sources, generated body and boundaries, all generated
+callers, overlay registration, and duplicate definitions for `0x80018ED4`.
+An exact companion name plus one coherent callable selects synchronization;
+a complete but unnamed callable selects no invented rename; a boundary-only
+fragment or collision selects a documented non-rename/manual review.
 
 ## Exact commands
 
 ```sh
-rg -n '8001818C|func_8001818C' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs
-python3 tools/sweep_scan_candidates.py func_8001818C
+rg -n '80018ED4|func_80018ED4' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
+sed -n '33640,33705p' ../N64Recomp/RecompiledFuncs/funcs_4.c
+python3 tools/sweep_scan_candidates.py func_80018ED4
 ```
 
-If the three-source check agrees, update `syms/rogue_squadron.syms.toml`,
-build `cmake --build build --config Debug --target RecompiledFuncs`, and
-record the result. Do not invent a name for an ambiguous fragment and do not
-modify audio or route behavior while the M5 route dependency remains open.
+If the sources agree on an exact identity, synchronize the project symbol
+TOML and build `cmake --build build --config Debug --target RecompiledFuncs`.
+If they do not, leave the placeholder unchanged, record the evidence, and
+build nothing beyond any required static checks. Do not modify audio or route
+behavior.
 
 ## Open dependency
 

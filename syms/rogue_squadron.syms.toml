@@ -238,7 +238,7 @@ functions = [
     { name = "resetMaterialPoolWrapper", vram = 0x80017B58, size = 0x20 },
     { name = "setRenderViewScaleFloat", vram = 0x80017B78, size = 0x10 },
     { name = "buildAndRegisterDefaultMaterial", vram = 0x80017B88, size = 0x604 },
-    { name = "func_8001818C", vram = 0x8001818C, size = 0x2DC },
+    { name = "advanceVideoFrame", vram = 0x8001818C, size = 0x2DC },
     { name = "initVideoBootWrapper", vram = 0x80018468, size = 0x1E8 },
     { name = "freeRenderSubsystemResources", vram = 0x80018650, size = 0x88 },
     { name = "fake_func_800186D8", vram = 0x800186D8, size = 0x8 },

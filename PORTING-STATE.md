@@ -123064,3 +123064,15 @@ This rules out the ambiguous-placeholder and duplicate-definition hypotheses
 for this address. No runtime, audio, or route behavior changed. The next
 sweep candidate is `0x8001818C`. Evidence:
 `scratch/agent/s3010_generated_symbol_rename/source-table.md`.
+## Session 3011 (2026-08-28) — synchronized advanceVideoFrame
+
+Completed the bounded generated-symbol audit at `0x8001818C`. The companion
+map, generated definition, sole direct caller, and overlay registration
+identify the unique callable entry as `advanceVideoFrame`; the project symbol
+TOML alone was stale. Synchronized the TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime, audio, or route behavior changed. The next
+sweep candidate is `0x80018ED4`, which has no companion-map semantic entry
+and requires a fresh ambiguity audit.
+Evidence: `scratch/agent/s3011_generated_symbol_rename/source-table.md`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3010 (2026-08-28).
+Current maintenance marker: Session 3011 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,16 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3011 completed the bounded generated-symbol audit at `0x8001818C`.
+The companion map, generated definition, sole direct caller, and overlay
+registration identify the unique callable entry as `advanceVideoFrame`; only
+the project symbol TOML was stale. Synchronized the TOML and built
+`RecompiledFuncs` successfully. This rules out the ambiguous-placeholder and
+duplicate-definition hypotheses for this address. No runtime, audio, or route
+behavior changed. The next sweep candidate is `0x80018ED4`, which requires a
+fresh ambiguity audit because it has no companion-map semantic entry.
+Evidence: `scratch/agent/s3011_generated_symbol_rename/source-table.md`.
 
 Session 3010 completed the bounded generated-symbol audit at `0x80017B88`.
 The companion map, generated definition, two direct callers, and overlay
@@ -564,9 +574,10 @@ pending a new discriminator. The generated-symbol sweep is the active
 blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   `0x80017B88` is synchronized as `buildAndRegisterDefaultMaterial`; audit
-   the next candidate `0x8001818C` when generated callers/body and the
-   companion map agree.
+   `0x8001818C` is synchronized as `advanceVideoFrame`; audit the next
+   candidate `0x80018ED4` for a defensible companion identity. Its generated
+   body is a small cache-clearing loop and currently has no companion-map
+   entry, so do not invent a name.
    Do not invent names for ambiguous fragments. Keep the M5 route dependency
    open below and return to it only with a new grounded edge.
 
