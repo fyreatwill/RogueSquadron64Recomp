@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3030 (2026-08-28).
+Current maintenance marker: Session 3031 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,15 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3031 completed the bounded generated-symbol audit at `0x80066A90`.
+The companion map names the unique callable `initSpeechSubsystem`; its
+standalone generated `0x170`-byte body, six generated callers, header,
+overlay registration, and project symbol TOML agree. No placeholder or local
+duplicate definition remains, so no synchronization was needed. This rules
+out an ambiguous placeholder, inline-fragment classification, and local
+duplicate callable for this address. Evidence:
+`scratch/agent/s3031_generated_symbol_rename/source-table.md`.
 
 Session 3028 built the Debug target and ran a same-build concurrent M5
 Step-1 image/silent baseline with the independent retail oracle. The oracle

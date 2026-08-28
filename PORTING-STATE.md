@@ -123333,3 +123333,15 @@ and built `RecompiledFuncs` successfully. This rules out an ambiguous
 placeholder, data-gap classification, and local duplicate callable for this
 address. Evidence:
 scratch/agent/s3030_generated_symbol_rename/source-table.md.
+
+## Session 3031 (2026-08-28) — audited initSpeechSubsystem symbol
+
+Completed the bounded generated-symbol audit at `0x80066A90`. The companion
+map names the unique callable `initSpeechSubsystem`; its standalone
+`0x170`-byte generated body, six generated callers, header declaration,
+main-overlay registration, and project symbol TOML agree. No
+`func_80066A90` placeholder or local duplicate definition remains, so no
+synchronization was needed. This rules out an ambiguous placeholder,
+inline-fragment classification, and local duplicate callable for this
+address. The next sweep candidate is `0x8006ACA4` (`fake_func_8006ACA4`).
+Evidence: `scratch/agent/s3031_generated_symbol_rename/source-table.md`.
