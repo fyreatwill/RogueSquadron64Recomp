@@ -1,39 +1,38 @@
-# NEXT work unit (s2871) — M5-route-repair-discriminator
+# NEXT work unit (s2872) — M5-new-route-state-discriminator
 
-HYPOTHESIS-ID: M5-route-repair-discriminator
+HYPOTHESIS-ID: M5-new-route-state-discriminator
 
 ## Work unit
 
-Use one bounded source/configuration audit to identify a new, testable
-post-dispatch route discriminator for the persistent port stop at VI 640.
-Compare the exact image-arm launch environment and phase/input gating against
-the last qualified hangar recipe, then select one changed route control to
-test next. Do not interpret downstream audio nulls or change behavior in this
-unit.
+Use one source audit and one batched instrument to identify and test a new
+post-dispatch route-state discriminator for the persistent port stop at VI
+640. The prior recipe drift was restored in both arms and did not reach
+hangar. Do not repeat launch/configuration comparisons or interpret downstream
+audio nulls.
 
 ## Competing hypotheses and discriminator
 
-- H-config-drift: the current launch recipe differs from the last qualified
-  route in a concrete environment, working-directory, binary, ROM, or input
-  control.
-- H-route-state: the recipe matches, so the stop is caused by a state/control
-  boundary not covered by the exhausted route angles.
-- H-input-gate: the image arm reaches the input path but the phase-relative
-  schedule is not delivered at the expected caller or width.
+- H-route-state: a new state/control boundary is responsible for the VI-640
+  stop.
+- H-dispatch-order: dispatch reaches the known marker but its ordering or
+  predecessor differs before the target phase.
+- H-input-gate: the restored route still fails because phase-relative input is
+  not delivered at the expected caller.
 
-The discriminator is a single audit table with one row per launch/control
-field and an explicit last-qualified value, current value, and source. A
-concrete mismatch selects H-config-drift; no mismatch selects H-route-state;
-an input-delivery mismatch selects H-input-gate. The next run must test the
-selected field in both arms of one build if an A/B is warranted.
+The discriminator is one source-backed table of every post-dispatch state
+write/read and predecessor around the VI-640-to-512 transition, with a
+phase-scoped positive-control row from the existing dispatch marker. A new
+state edge in both arms selects H-route-state; a changed predecessor/order
+selects H-dispatch-order; a missing phase-relative input row selects
+H-input-gate. If the table has no new edge, pivot to the next distinct source
+class rather than adding another diagnostic field.
 
 ## Exact command
 
-Inspect before building or running:
+    rg -n 'm5-route-state|m5-b40-route|ROGUESQ_M4_Y8000_WIDTH|VI 640|VI 512' src RecompiledFuncs tools scratch/agent/s2871_m5_route_repair_discriminator
+    rg -n 'post-dispatch|route-state|VI 640|VI 512' docs/CURRENT-TRUTH.md docs/PROJECT-OVERVIEW.md
 
-    rg -n 'ROGUESQ_|PROBE_|AUTOPILOT|RogueSquadron64Recomp|rogue_squadron.z64' scratch/agent/run_s2285_m5_step1_contract_pair.sh tools/probe.sh docs/REGRESSION-HARNESS.md
-    stat -f '%N %z %m' build/RogueSquadron64Recomp build/rogue_squadron.z64
-
-Then build/run only if the audit selects a concrete changed control; record
-the two-arm command and phase-gated outcome under
-`scratch/agent/s2871_m5_route_repair_discriminator/`.
+Then batch the selected state instrumentation into one Debug build and run
+both audio arms concurrently with `PROBE_PHASE_WIDTH=512
+PROBE_KEYS_FROM_PHASE=1`. Record the state table and phase-gated outcome under
+`scratch/agent/s2872_m5_new_route_state_discriminator/`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2869 (2026-08-27).
+Current maintenance marker: Session 2871 (2026-08-27).
 
 ## Live result
 
@@ -71,6 +71,16 @@ were present, but no target-phase task, audio-return, SP, queue, or PCM rows
 could be evaluated. This independently reproduces H-route-failure for the
 current port recipe and does not select an M5 publication explanation.
 
+The route-repair audit found concrete drift from the last successful hangar
+recipe: the active pair had changed the phase gate to 1024, omitted
+`PROBE_LEAVE_OK=1` and `ROGUESQ_M4_Y8000_WIDTH=512`, and used a different
+driver. A one-build concurrent silent/image A/B restored all three controls.
+Both arms reached the positive pre-title checkpoint `VI 640 @ 0x0066A500`
+with 47 audio-dispatch markers each, but neither reached hangar
+`VI 512 @ 0x006AB400` before the bounded capture was SIGKILLed; neither
+crashed or aborted. This rejects configuration drift as sufficient and selects
+H-route-state. Downstream audio nulls remain unevaluable.
+
 SP-yield state is real API state and the request lifecycle now clears the
 previous request before staging the next task. The generic scheduler has two
 yield call sites, but no audio-specific generated branch was found. Target
@@ -98,8 +108,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    status-table poll / `0x80094648` alignment angle is now exhausted: it
    reached both target phases but produced no discrete scheduling edge. The
    long-schedule image requalification also reproduced the pre-title route
-   stop; the next unit must change the route discriminator or repair the route
-   before interpreting downstream nulls.
+   stop. The route-control audit restored the concrete recipe drift but both
+   arms still stopped at VI 640, selecting H-route-state; the next unit must
+   test a new post-dispatch route-state discriminator before interpreting
+   downstream nulls.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 3. **Generated-symbol renaming sweep.** The next bounded source-backed batch
@@ -159,7 +171,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Archived progression
 
-Sessions s2677–s2870 established the current M5 boundaries, repaired the
+Sessions s2677–s2871 established the current M5 boundaries, repaired the
 generated duplicate-symbol collision that blocked the full Debug link,
 validated the AI-status and SP-yield shims at compile/link scope, and advanced
 the regeneration-safe generated-symbol sweep through

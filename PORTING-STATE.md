@@ -120656,3 +120656,23 @@ neither an M5 publication edge nor a specific route cause. No behavior or
 mitigation changed.
 
 Artifact: `scratch/agent/s2870_route_requalification/run.log`.
+
+## Session 2871 (2026-08-27) — restored route controls without hangar reachability
+
+The required audit found that the active pair had drifted from the last
+successful hangar recipe: it gated at VI 1024 instead of 512, omitted
+`PROBE_LEAVE_OK=1` and `ROGUESQ_M4_Y8000_WIDTH=512`, and used a different
+driver. The Debug target rebuilt successfully. The first two wrapper attempts
+failed before launch: command substitution made the background PIDs
+non-waitable, then unquoted zsh array expansion split the key schedule. Both
+defects were fixed before the measured rerun. A single concurrent silent/image
+A/B restored those controls and used phase-relative input.
+
+Both arms reached the positive pre-title checkpoint VI 640 at origin
+`0x0066A500` and emitted 47 `[audtask-dispatch]` markers each. Neither reached
+hangar VI 512 at `0x006AB400` before the bounded capture was SIGKILLed; neither
+emitted a crash or abort marker. This rejects configuration drift as
+sufficient and selects H-route-state. Downstream audio nulls remain
+unevaluable, and no behavior change was made.
+
+Artifact: `scratch/agent/s2871_m5_route_repair_discriminator/`.
