@@ -121961,3 +121961,17 @@ ground-truth instrument was live. Next is the already-grounded batched port
 join, with `[f5-fetch-control]` as its same-run positive control. No behavior
 change or mitigation was made. Artifact:
 `scratch/agent/s2943_m4_accumulator_boundary/RESULTS.md`.
+
+## Session 2944 (2026-08-28) — M4 port join stopped before target phase
+
+Built the Debug target and ran the batched M4 producer/index join with the
+phase gate. The probe exited with `probe_rc=5` after 180 seconds because VI
+width 1024 never arrived; the last width was 640. The existing
+`[m4-y8000]` flush-site control fired, including width-640 heartbeat rows, but
+the required `[f5-fetch-control]` control fired zero times. All target-phase
+M4 rows were zero: no producer `B00/B02/B04`, consumer `B74`, or joined
+`tri_total` rows. This is not evidence for H-SharedSlot,
+H-IndependentIndex, or H-IrrelevantWriter: the target phase and required
+control were absent, so the discriminator was unevaluable. No behavior,
+mitigation, or runtime source change was made. Complete result:
+`scratch/agent/s2944_m4_accumulator_boundary/RESULTS.md`.

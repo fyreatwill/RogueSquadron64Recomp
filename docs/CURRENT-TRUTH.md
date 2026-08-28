@@ -6,6 +6,13 @@ remain in the ledger and scratch artifacts.
 
 Current maintenance marker: Session 2943 (2026-08-28).
 
+Session 2944's batched M4 port join built and ran for 180 seconds, but the
+phase gate stopped at VI width 640 (`probe_rc=5`); title 1024 and hangar 512
+were never reached. The existing `[m4-y8000]` flush-site control fired, but
+the required `[f5-fetch-control]` control and all target-phase producer/
+consumer rows were absent. The M4 hypotheses are therefore unevaluable, not
+selected. Artifact: `scratch/agent/s2944_m4_accumulator_boundary/RESULTS.md`.
+
 The s2943 mandatory revisit ran the retail oracle before any new port
 instrumentation. Its whole-RDRAM positive control reached 10,000 writes, and
 the verified Rice schedule reached title 1024 (`0x00790400`) and hangar 512
@@ -777,8 +784,11 @@ apply only source-backed renames and preserve callable-ambiguous records.
    No mitigation or table rewrite is authorized. s2943 first validated the
    independent retail oracle control and target-phase reachability (10,000
    whole-RDRAM writes; title 1024 and hangar 512), but confirmed that the
-   oracle cannot observe DMEM `0xC70/0xB74`; the next unit is the batched port
-   join now that this ground-truth preflight is complete.
+   oracle cannot observe DMEM `0xC70/0xB74`. The s2944 port join stopped at
+   width 640, despite the flush-site control firing; `[f5-fetch-control]` and
+   all target-phase rows were absent, so no M4 hypothesis was selected. Do not
+   interpret this null as a producer or consumer result; a future revisit needs
+   a new route qualification and the required fetch control.
 8. **M5 image task contract / hangar artifact — parked.** No writeback,
    remap, forced state, or mitigation without an `ORIGIN:` naming the writer
    and stating whether its value is legitimate.

@@ -1,42 +1,45 @@
-# NEXT work unit (s2944) — batched port M4 producer/index join
+# NEXT work unit (s2945) — ground-truth M5 route-state handoff census
 
-HYPOTHESIS-ID: m4-accumulator-boundary-revisit
+HYPOTHESIS-ID: m5-route-state-repair
 
-The s2943 retail ground-truth preflight passed its whole-RDRAM control and
-reached title/hangar, but cannot observe RSP DMEM. Run the already-grounded
-port-side join in one build/run. Do not change behavior or add a mitigation.
+M5 remains the strategic priority, while the current port route is invalid
+for title/hangar audio interpretation. Run one independent retail-oracle
+census for a new post-dispatch route-state handoff, using the verified Rice
+video and Start schedule. Do not add port instrumentation or change behavior
+in this work unit.
 
 ## Competing hypotheses and discriminator
 
-- H-SharedSlot: producer `B00/B02/B04` rows and consumer `B74` rows align by
-  task and phase, with consumer `index & 0x7F` equal to a producer slot and
-  ordering showing the producer publication first.
-- H-IndependentIndex: both endpoints are live but consumer index/value is
-  derived independently of producer slot; repeated equality is incidental or
-  comes from another state source.
-- H-IrrelevantWriter: producer or consumer endpoint is absent in the qualified
-  target phase, or the observed B74 value does not select the producer table.
+- H-RouteState: a distinct retail CPU handoff/return changes the route into
+  title or hangar; its execution and return fields differ between the verified
+  Start-driven route and the undriven control.
+- H-RouteInput: the handoff is reached identically, and only input delivery or
+  timing differs; route-state fields do not explain the port stop.
+- H-RouteAbsent: the candidate handoff is not executed in the target phase, so
+  this candidate cannot repair the route explanation.
 
-The discriminator is one complete phase/task-keyed table of every bounded
-producer row (`slot`, p0/p1/p2), consumer row (`index`, masked, selected
-c0/c1/c2, source), branch result, and ordering. A positive `[f5-fetch-control]`
-row in the same target phase is mandatory. Aligned producer-before-consumer
-rows select H-SharedSlot; live independent rows select H-IndependentIndex;
-missing/nonselecting rows select H-IrrelevantWriter. No behavior change is
-authorized.
+The discriminator is one phase-keyed table containing the candidate PC,
+previous PC, `$v0/$s1/$a0/$a2`, VI width/origin, and execution counts for both
+the undriven and verified Start schedules, with the whole-RDRAM watch as the
+same-run positive control. H-RouteState requires a target-phase execution and
+distinct handoff fields; identical fields select H-RouteInput; no target-phase
+execution selects H-RouteAbsent. A missing whole-RDRAM control invalidates the
+run.
 
-## Exact commands
+## Exact command
 
 ```sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
-mkdir -p scratch/agent/s2944_m4_accumulator_boundary
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-  ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_M4_INDEX=1 \
-  PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 \
-  PROBE_LEAVE_OK=1 zsh tools/probe.sh \
-  scratch/agent/s2944_m4_accumulator_boundary 180 2
+mkdir -p scratch/agent/s2945_m5_route_state
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --secs 60 --watch-write 0x0:0x800000 \
+  --watch-pc-range 0x80019C00:0x8001A000 \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  > scratch/agent/s2945_m5_route_state/RESULTS.md 2>&1
 ```
 
-Require the positive-control mark before interpreting any M4 null. Record the
-joined table and verdict at
-`scratch/agent/s2944_m4_accumulator_boundary/RESULTS.md`.
+Record the control count, target phases, and candidate-PC table in
+`RESULTS.md`. If the selected range is not a genuinely new handoff after the
+static audit, stop and replace it before running.
