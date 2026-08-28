@@ -120506,3 +120506,13 @@ checked-in symbol map, companion map, and generated snapshot now use
 no old references. This rules out treating either fragment as a callable game
 function; no audio behavior or runtime evidence changed. The next bounded
 sweep is `0x8006F500..0x80070500`.
+
+## Session 2861 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x8006F500..0x80070500`.
+The selector classified `npcDebris1Update`, `orientedNpcHandler`, and
+`multiEventTemplateNpcHandler` as already-synchronized callable entries and
+changed zero generated references in zero files. The independent stale-name
+scan found no placeholder in the target interval. This rules out a
+source-backed rename there without inventing a semantic name; no build or game
+run was needed. The next bounded sweep is `0x80070500..0x80071500`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2859 (2026-08-27).
+Current maintenance marker: Session 2861 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -436,6 +436,13 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    Continue with `0x80175000..0x80177000`; that interval is already
    synchronized, so select the next explicitly source-backed short data-gap
    batch and preserve callable-ambiguous entries.
+
+   Session 2861 examined `0x8006F500..0x80070500`. The selector found three
+   callable companion entries (`npcDebris1Update`, `orientedNpcHandler`, and
+   `multiEventTemplateNpcHandler`), all already synchronized, and changed zero
+   generated references. The independent stale-name scan found no placeholder
+   in the target interval. No source-backed rename was selected; no build or
+   game run was needed. Continue with `0x80070500..0x80071500`.
 
 Session 2840 pivoted from the pre-title M5 post-dispatch rerun to the required
 generated-symbol sweep because the queued recipe exited at launch (`rc=127`).
