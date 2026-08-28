@@ -1,41 +1,45 @@
-# NEXT work unit (s2975)
+# NEXT work unit (s2976)
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-route-preparation-target-predicate
 
 ## Unit
 
-Perform the next bounded generated-symbol rename batch. Inspect unresolved
-placeholder records after `0x8009D7CC` in the generated tree and companion
-symbol files. Rename only entries with a complete successor boundary and
-enough body/caller evidence for a semantic name; leave ambiguous fragments
-unchanged. Propagate each selected name through the companion map,
-`tools/rename_generated_symbols.py`, and generated C/header/overlay artifacts.
+Implement one bounded phase-aware oracle measurement for route preparation at
+guest PC `0x80019CD8`. Retain a whole-RDRAM positive control, but avoid
+breaking on the high-frequency boot loop and arm/log the route breakpoint only
+after a target VI boundary. Do not change the port predicate until retail
+target rows are available.
 
 ## Competing hypotheses and discriminator
 
-- H-semantic-batch: the next records have defensible companion semantic names
-  and can be renamed without changing code behavior.
-- H-ambiguous-boundary: the next records are fragments/data gaps without a
-  defensible standalone meaning and must remain placeholders.
-- H-source-mismatch: the companion map and generated snapshot disagree, so the
-  batch must stop until the source-of-truth boundary is reconciled.
+- H-retail-target-predicate: retail calls route preparation only after the
+  target VI width/origin is committed; target rows occur at
+  `1024/0x00790400` or `512/0x006AB400`.
+- H-retail-precommit-order: retail calls route preparation before VI commit;
+  target identity is carried by a pending mode/buffer field, so a target row
+  has a differing live VI.
+- H-port-predicate-mismatch: retail and port agree on ordering, but accepted
+  target identity differs.
 
-The discriminator is one bounded source table containing each candidate
-address, generated body shape, successor/predecessor boundaries, companion
-name/comment, and generated references. A row with an exact semantic successor
-and matching source selects H-semantic-batch; a row lacking that evidence
-selects H-ambiguous-boundary; disagreement selects H-source-mismatch. The
-rename script must report a positive changed-reference count.
+The discriminator is one same-run table of route-PC executions joined to the
+next target VI boundary, with live width/origin and GPR fields. The whole-
+RDRAM control must fire. Target rows select one of the first two hypotheses;
+matching retail target fields with the port's zero target rows selects
+H-port-predicate-mismatch. No target phase is unevaluable.
 
 ## Commands
 
-1. Enumerate the next placeholders with bounded `rg`/`sed` windows in
-   `../N64Recomp/RecompiledFuncs` and `../rogue_squadron64/symbol_files`.
-2. Write the candidate table to
-   `scratch/agent/s2975_generated_symbol_rename/source-table.md` before edits.
-3. Apply one bounded rename batch with
-   `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs
-   --companion-dir ../rogue_squadron64/symbol_files --start-address ...
-   --end-address ... --limit 4 --require-rename`.
-4. Build `cmake --build build --target RecompiledFuncs -j2` and verify no
-   selected placeholder remains in the generated snapshot.
+After implementing the phase-aware arm, run from the repo root with the local
+debugger core and retail ROM:
+
+    tools/oracle/build/rs64_oracle \
+      --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+      --rom ../rogue_squadron64/rogue_squadron.z64 --secs 45 \
+      --watch-write 0x0:0x800000 --watch-pc 0x80019CD8 \
+      --pc-phase-log-width 0x00790400:1024 \
+      --pc-phase-log-width 0x006AB400:512 \
+      --press 8:start --press 14:start --press 20:start --press 26:start \
+      --press 32:start --press 38:start --hit-cap 10000
+
+Save output to `scratch/agent/s2976_m5_route_oracle/` and record the control
+count, phases, route rows, and selected hypothesis.

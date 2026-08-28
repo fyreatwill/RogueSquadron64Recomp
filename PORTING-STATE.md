@@ -122559,3 +122559,20 @@ H-semantic-batch and rules out H-ambiguous-boundary for these three rows and
 H-source-mismatch for this batch. It does not rename the remaining ambiguous
 fragments or change runtime behavior. Evidence:
 `scratch/agent/s2974_generated_symbol_rename/source-table.md`.
+
+## Session 2975 (2026-08-28) — retail route discriminator remained unevaluable
+
+Attempted the independent retail-oracle route-preparation capture at guest PC
+`0x80019CD8`. The fixed command used the locally built debugger core, armed
+the whole-RDRAM write positive control and route-PC watch in the same run, and
+passed the positive control at 10,000 callbacks. The route-PC watch fired 64
+times, but every logged row remained boot-width `320 @ 0x006DD280`; debugger
+breakpoints on the high-frequency route loop made the 45-second capture
+unusable before title or hangar. Earlier malformed-option and pre-emulation
+core-path attempts were discarded.
+
+This does not select a route hypothesis or justify a target-predicate change.
+It rules out treating the boot-only null as retail ground truth. The next
+discriminator is a phase-aware breakpoint arm retaining the same-run positive
+control. Evidence:
+`scratch/agent/s2975_m5_route_oracle/RESULTS.md`.

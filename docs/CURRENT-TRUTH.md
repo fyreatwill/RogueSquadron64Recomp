@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2974 (2026-08-28).
+Current maintenance marker: Session 2975 (2026-08-28).
 
 ## Current state
 
@@ -28,6 +28,16 @@ MORT speech are separate contracts. A `Broke` return proves task completion,
 not PCM correctness.
 
 ## Latest results
+
+Session 2975 attempted the independent retail route-preparation discriminator
+at guest PC `0x80019CD8`. The fixed command used the locally built debugger
+core, passed the whole-RDRAM positive control at 10,000 callbacks, and logged
+64 route-PC executions, but all were boot-width `320 @ 0x006DD280`; the
+per-execution debugger watch prevented the 45-second capture from reaching
+title or hangar. This is unevaluable, not evidence for a predicate mismatch;
+the next route unit needs a phase-aware breakpoint arm retaining the same-run
+positive control. Artifact:
+`scratch/agent/s2975_m5_route_oracle/RESULTS.md`.
 
 Session 2974 resumed the regeneration-safe generated-symbol sweep after the
 mandatory pivot from route preparation. Three short records were identified as
@@ -236,13 +246,13 @@ on the route-preparation target predicate; M3 is parked pending a new
 discriminator. The sweep is active under the stable slug
 `generated-symbol-renaming-sweep`.
 
-1. **M5 route preparation — target predicate is absent at the VI-640 boundary.**
-   The s2973 same-build pair selected `H-route-prep-absent`: route preparation
-   fires, but target is zero for every row in both arms. Audit the existing
-   route-preparation target predicate and its legitimate writer/ordering edge
-   against the retail route, then make one bounded route repair before any
-   audio de-stub. Any mitigation requires an `ORIGIN:` naming the writer and
-   whether the value is legitimate.
+1. **M5 route preparation — phase-aware retail discriminator required.** The
+   s2975 oracle capture passed its positive control and route-PC control but
+   remained at boot width because the per-execution watch was too expensive.
+   Add one phase-aware breakpoint-arm capability or equivalent bounded oracle
+   route measurement before changing the predicate. Do not interpret the
+   boot-only null as a route result. Any mitigation requires an `ORIGIN:`
+   naming the writer and whether the value is legitimate.
 
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
