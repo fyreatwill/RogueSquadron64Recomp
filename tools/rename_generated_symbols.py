@@ -65,6 +65,9 @@ RENAMES = {
     "fake_func_8000737C": "data_gap_8000737C",
     "fake_func_800074D8": "data_gap_800074D8",
     "fake_func_80007908": "data_gap_80007908",
+    # This four-byte main-overlay record precedes the F3DEX text segment at
+    # 0x80024A10 and is not a callable game function.
+    "fake_func_80024A0C": "data_gap_80024A0C",
     # These eight-byte main-overlay records contain only an isolated
     # instruction fragment immediately before named routines.
     "fake_func_80079278": "data_gap_80079278",

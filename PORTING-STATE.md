@@ -121175,3 +121175,18 @@ this was a naming-only change. H-Callable and H-Ambiguous are ruled out for
 this interval. Complete table:
 `scratch/agent/s2898_generated_symbol_rename/source-table.md`.
 The next unresolved placeholder is after `0x80007910`.
+## Session 2899 (2026-08-27) — reconciled main-text data gap at 0x80024A0C
+
+Inspected the next unresolved generated-symbol interval after `0x80007910`.
+The sole candidate was the four-byte record at `0x80024A0C`, containing only
+`sw $a0, 0x18($fp)`. The companion symbol file places
+`gspF3DEXTextStart` at `0x80024A10`, and generated overlay metadata agrees on
+that boundary; no generated call or lookup references the candidate. The
+complete source table is `scratch/agent/s2899_generated_symbol_rename/source-table.md`.
+
+Renamed `fake_func_80024A0C` to `data_gap_80024A0C` in the companion map,
+project symbol map, generated C/header, overlay metadata, and the
+regeneration-safe rename table. Reconciliation changed three generated
+references in three files. This rules out a callable semantic rename for this
+record; it is a mechanically bounded pre-segment fragment. No build or soak
+was required because the change does not alter runtime behavior or dispatch.
