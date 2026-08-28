@@ -6,6 +6,14 @@ remain in the ledger and scratch artifacts.
 
 Current maintenance marker: Session 2922 (2026-08-27).
 
+The s2923 generated-symbol sweep reconciled `0x80064934..0x80064940`.
+The 12-byte record is an isolated `lhu`/`lw`/`slt` fragment immediately
+before the complete `load_dat_file_assets` body, with no generated callers or
+independent lookup. The generated snapshot and rename table were already
+synchronized; the stale companion and project maps were updated to
+`data_gap_80064934`. Complete table:
+`scratch/agent/s2923_generated_symbol_rename/source-table.md`.
+
 The s2922 generated-symbol sweep reconciled `0x80064294..0x800642A0`. The
 12-byte record is an isolated `sh`/`lw`/`addiu` fragment immediately before
 the complete `findLookupEntryByKey` body, with no generated callers or
@@ -565,8 +573,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    not prove a data gap. s2920 reconciled `0x8005EE64` to the established
    `steerOrientationTowardTargetPreamble` name; s2921 reconciled
    `0x800613B8..0x800613C0` to `loadCharTextureSetPreamble`; s2922 classified
-   `0x80064294..0x800642A0` as `data_gap_80064294`; continue with the next
-   remaining placeholder after `0x800642A0`.
+   `0x80064294..0x800642A0` as `data_gap_80064294`; s2923 classified
+   `0x80064934..0x80064940` as `data_gap_80064934`; continue with the next
+   remaining placeholder after `0x80064940`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

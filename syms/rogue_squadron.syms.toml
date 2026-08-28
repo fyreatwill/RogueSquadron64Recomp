@@ -926,7 +926,7 @@ functions = [
     { name = "relocateLookupEntryToNewKey", vram = 0x800646F8, size = 0xE8 },
     { name = "load_asset_with_malloc_flags", vram = 0x800647E0, size = 0xAC },
     { name = "load_asset", vram = 0x8006488C, size = 0xA8 },
-    { name = "fake_func_80064934", vram = 0x80064934, size = 0xC },
+    { name = "data_gap_80064934", vram = 0x80064934, size = 0xC },
     { name = "load_dat_file_assets", vram = 0x80064940, size = 0xA74 },
     { name = "setupNpcUpdateFunctions", vram = 0x800653B4, size = 0x300 },
     { name = "spawnDatStructureNpcByType", vram = 0x800656B4, size = 0xDC },

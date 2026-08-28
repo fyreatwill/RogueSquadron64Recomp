@@ -121590,3 +121590,24 @@ already synchronized, so no generated references changed. Exact old-name
 searches found no remaining placeholder in the reconciled maps or generated
 snapshot. No build was needed because generated code was unchanged. Complete
 evidence table: `scratch/agent/s2922_generated_symbol_rename/source-table.md`.
+
+## Session 2923 (2026-08-27) — reconciled asset-loader data-gap symbol
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 40,229
+bytes, so this was not a maintenance iteration. The bounded generated-symbol
+sweep inspected `0x80064934..0x80064940`. The 12-byte record contains an
+isolated `lhu $v0,-0x6086($v0)`, `lw $v1,0x2C($fp)`, and
+`slt $v0,$v1,$v0`, immediately before the complete `load_dat_file_assets`
+body at `0x80064940`; it has no generated call or lookup references beyond
+its definition and overlay registration. The companion map had no semantic
+name, so the exact boundaries and non-callable fragment structure selected
+`data_gap_80064934`. The generated snapshot and regeneration-safe rename
+table were already synchronized; the companion and project maps were
+reconciled. The bounded rename tool reported zero generated references
+changed and classified the companion candidate `ambiguous-or-fake`; exact
+old-name searches found no remaining placeholder in the reconciled maps or
+generated snapshot. No build was needed because generated code was unchanged.
+This rules out a source-backed semantic rename for this interval and closes
+it as a mechanically proven data gap; it does not classify the next
+placeholder. Complete evidence table:
+`scratch/agent/s2923_generated_symbol_rename/source-table.md`.
