@@ -120934,3 +120934,16 @@ behavior changed, and no further generated placeholder was found above
 `scratch/agent/s2884_generated_symbol_rename/source-table.md`.
 
 The next eligible unit is a ground-truth-first M5 route/contract discriminator.
+## Session 2885 (2026-08-27) — refreshed the M5 audio de-stubbing design gate
+
+The mandated M5 first unit was a design/inventory pass. `docs/M5-AUDIO-PLAN.md`
+was already present, so it was reconciled with the checked-in dispatch, RSP,
+fixup, AI/SDL, drain, gate, slot, voice, and CPU-MORT surfaces. The active
+production `M_AUDTASK` choices remain `factor5_ucode_b` and the explicit
+`musyx_stub`; stock `aspMain`, `unknown_task_stub`, and non-`Broke` handling are
+not valid de-stubbing targets. The default drain tick is forced off at startup,
+and the remaining canary/route/PCM/MORT machinery is diagnostic or validation
+surface, not a hidden implementation. No build or soak was run: the same-build
+s2881–s2884 port pair remains pre-title VI 640, so downstream audio nulls are
+unevaluable. This rules out adding an unowned de-stub or gate bypass as the
+next step; a route-qualified writer/contract discriminator is still required.

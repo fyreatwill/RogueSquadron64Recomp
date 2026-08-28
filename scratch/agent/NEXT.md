@@ -1,6 +1,9 @@
-# NEXT work unit (s2885) — M5 route/contract discriminator
+# NEXT work unit (s2886) — M5 route/contract discriminator
 
 HYPOTHESIS-ID: m5-route-contract-discriminator
+
+The M5 design gate is now current in `docs/M5-AUDIO-PLAN.md`; no audio
+behavior change is authorized by the inventory alone.
 
 ## Work unit
 

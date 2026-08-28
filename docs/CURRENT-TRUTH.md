@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2884 (2026-08-27).
+Current maintenance marker: Session 2885 (2026-08-27).
 
 ## Live result
 
@@ -206,10 +206,11 @@ Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. The sweep remains eligible while M5 is open and M3 is parked;
 apply only source-backed renames and preserve callable-ambiguous records.
 
-1. **M5 audio de-stubbing plan, then Step 1.** Before another route or audio
-   experiment, create `docs/M5-AUDIO-PLAN.md` by surveying every active audio
-   stub, trap, and gate, then specify an incremental de-stubbing sequence with
-   a validation soak for each step. The barrier, launch-order,
+1. **M5 audio de-stubbing — plan complete, execution gated by route.**
+   `docs/M5-AUDIO-PLAN.md` now contains the current inventory of every active
+   audio stub, trap, gate, and safety hatch plus the incremental validation
+   sequence. The s2885 survey found no additional production audio path. The
+   barrier, launch-order,
    boot-time-key, phase-relative-key, autopilot, gate-writer, pre-title
    task-field, and broad main-text retail-entry angles are exhausted at the
    current discriminator. The next M5 unit needs a genuinely new

@@ -1,17 +1,28 @@
 # M5 — audio de-stubbing plan
 
-Refreshed in session 2832 (2026-08-27). This is the design gate for M5.
+Refreshed in session 2885 (2026-08-27). This is the design gate for M5.
 Session 2791 completed the SP-yield request lifecycle by clearing stale request
 state when a new task starts; task interruption and resumption remain out of
 scope.
 
-Session 2832 re-surveyed the checked-in audio/runtime sources and the available
-fixup surface. The document was already present, so this refresh reconciles it
-with the current tree rather than opening a second plan. The external
+Session 2885 re-surveyed the checked-in audio/runtime sources and the available
+fixup surface after the route-invalid s2881–s2884 experiments. The document was
+already present, so this refresh reconciles it with the current tree rather than
+opening a second plan. The external
 `RecompiledFuncs/` snapshot is not present in this checkout; generated audio
 behavior therefore remains represented by the checked-in anchors and fixup
 scripts. The survey found no new active audio stub or gate outside this
 inventory.
+
+The survey also closes the planning question for the first M5 unit: the only
+production `M_AUDTASK` choices remain the real Factor 5 image and the explicit
+silent `musyx_stub` control; `aspMain`, `unknown_task_stub`, and the RSP
+non-`Broke` failure path are not valid de-stubbing targets. The default drain
+tick is forced off at process startup, and the image canary, route identity,
+PCM joins, gate/slot traces, and MORT decoder are diagnostic or validation
+surfaces rather than hidden audio implementations. Because the current
+same-build pair is stopping at pre-title VI 640, no downstream null is a
+de-stubbing discriminator yet.
 
 ## Boundary and current policy
 
