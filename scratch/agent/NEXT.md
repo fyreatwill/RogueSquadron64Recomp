@@ -1,10 +1,10 @@
-# NEXT work unit (s2933) — bounded generated-symbol reconciliation at 0x8008ED6C
+# NEXT work unit (s2934) — bounded generated-symbol reconciliation at 0x800927B0
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 M5 remains route-gated, M3 is parked, and the s2927 M4 revisit resolved its
-static register-lifetime question. Inspect `0x8008ED6C`, the next remaining
-placeholder after the reconciled `0x80085CD8`, as one bounded
+static register-lifetime question. Inspect `0x800927B0`, the next remaining
+placeholder after the reconciled `0x8008ED6C`, as one bounded
 source-backed rename/data-gap classification. Do not add runtime probes or
 change behavior.
 
@@ -18,7 +18,7 @@ change behavior.
 - H-Ambiguous: valid instructions or incomplete boundaries leave callability
   unresolved; preserve the placeholder and record why.
 
-The discriminator is a complete bounded table for `0x8008ED6C`: address/size,
+The discriminator is a complete bounded table for `0x800927B0`: address/size,
 generated body, predecessor and successor boundaries, companion/m2c name,
 generated callers/lookups, and whether a callable prologue/return or invalid
 data filler is present. A semantic companion match selects H-CallableSemantic;
@@ -33,5 +33,5 @@ rg -n -C 12 'fake_func_8008ED6C|func_8008ED6C|8008ED6C' ../N64Recomp/RecompiledF
 ```
 
 Record the complete table at
-`scratch/agent/s2933_generated_symbol_rename/source-table.md`. No game run is
+`scratch/agent/s2934_generated_symbol_rename/source-table.md`. No game run is
 needed unless a regeneration mismatch is discovered.

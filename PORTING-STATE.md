@@ -121802,3 +121802,16 @@ behavior changed. Complete evidence table:
 `scratch/agent/s2932_generated_symbol_rename/source-table.md`.
 
 ORIGIN: static semantic reconciliation; no mitigation-shaped behavior changed.
+
+## Session 2933 (2026-08-27) — reconciled audio output symbol at 0x8008ED6C
+
+Ran the bounded generated-symbol discriminator for `0x8008ED6C`. The
+companion map names it `serviceAudioOutputBuffers`; generated C, the header,
+and overlay metadata already agree that it is a 4-byte one-instruction
+record, with no generated caller or independent lookup. The project symbol
+map alone was stale, naming `func_8008ED6C` with size `0x154` and overlapping
+`runAiAudioStreamPlaybackLoop` at `0x8008ED70`. Updated the project map to the
+companion name and `0x4` extent. This rules out the placeholder as an
+unresolved callable and closes the map mismatch; it does not establish a
+runtime audio producer or change audio behavior. Evidence table:
+`scratch/agent/s2933_generated_symbol_rename/source-table.md`.

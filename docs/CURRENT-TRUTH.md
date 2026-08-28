@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2932 (2026-08-27).
+Current maintenance marker: Session 2933 (2026-08-27).
+
+The s2933 generated-symbol sweep reconciled `0x8008ED6C` to
+`serviceAudioOutputBuffers`. The companion map, generated C/header, and
+overlay registration already identified a 4-byte one-instruction record; the
+project symbol map alone incorrectly called it `func_8008ED6C` with size
+`0x154`, overlapping `runAiAudioStreamPlaybackLoop` at `0x8008ED70`. The
+project map is now synchronized. Complete table:
+`scratch/agent/s2933_generated_symbol_rename/source-table.md`.
 
 The s2932 generated-symbol sweep reconciled `0x80085CD8` to
 `compareHalfwordAtOffset4`. It is a complete 16-byte comparator body
@@ -661,8 +669,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    callable-ambiguous valid fragment; s2929 likewise preserved the valid
    fragment at `0x80072CE8`; s2930 classified `0x8007A86C` as
    `data_gap_8007A86C`; s2932 reconciled `0x80085CD8` to
-   `compareHalfwordAtOffset4`. Continue with the next remaining placeholder
-   after `0x80085CD8`.
+   `compareHalfwordAtOffset4`; s2933 reconciled `0x8008ED6C` to
+   `serviceAudioOutputBuffers` and corrected its stale `0x154` project-map
+   extent to `0x4`. Continue with the next remaining placeholder after
+   `0x8008ED6C`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
