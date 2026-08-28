@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2971 (2026-08-28).
+Current maintenance marker: Session 2972 (2026-08-28).
 
 ## Current state
 
@@ -51,6 +51,17 @@ hangar (primarily predecessor `0x8000C628`). This selects
 `H-retail-handoff` and rules out an absent candidate or stale route for this
 capture as single-source oracle evidence. It does not establish a port
 difference. Artifact: `scratch/agent/s2971_m5_route_qualification/RESULTS.md`.
+
+Session 2972 reran the M5 Step 1 same-build silent/image baseline after the
+retail handoff qualification. The first reused wrapper exited before launching
+the arms; a corrected wrapper then launched both arms from the successful
+Debug build. Both dispatched audio (`59` silent, `49` image) but stopped at
+port VI 640 (`0x0066A500`), with no title/hangar phase, task-contract,
+DMEM/DMA, service, slot/voice, or PCM rows and no crash/abort markers. The
+retail oracle in the same artifact passed its whole-RDRAM positive control and
+reached title/hangar. This selects `H-port-route` for this capture; all
+downstream audio nulls remain unevaluable and no audio behavior changed.
+Artifact: `scratch/agent/s2972_m5_step1_qualified_route/RESULTS.md`.
 
 Session 2968 ran the M5 Step 1 same-build pair after a successful Debug
 rebuild. The independent retail oracle passed its whole-RDRAM positive
@@ -199,13 +210,15 @@ remain under `scratch/agent/soak_results/` and in `SOAK-RESULTS.md`.
 
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete for this iteration. M5 is paused after
-repeated route-invalid runs; M3 is parked pending a new discriminator.
+another route-invalid port baseline despite a qualified retail route; M3 is
+parked pending a new discriminator.
 
-1. **M5 audio de-stubbing — plan complete, execution gated by route.**
+1. **M5 audio de-stubbing — plan complete, execution gated by port route.**
    `docs/M5-AUDIO-PLAN.md` inventories every active audio stub, trap, gate, and
    safety hatch. Do not interpret service, slot, MORT, or PCM nulls until a
-   same-build port run qualifies title/hangar. Do not change behavior without
-   an `ORIGIN:` naming the legitimate writer and ordering edge.
+   same-build port run qualifies title/hangar. The s2972 pair still stops at
+   VI 640, so do not interpret downstream nulls or change audio behavior
+   without an `ORIGIN:` naming the legitimate writer and ordering edge.
 
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
@@ -243,11 +256,12 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
    forced state, or mitigation without an `ORIGIN:` naming the writer and
    stating whether its value is legitimate.
 
-9. **M5 route handoff — newly grounded, port arm next.** Retail positively
-   executes `bufferArbiterProducerMark` at `0x8001BCE4` in title and hangar.
-   Build one phase-gated port probe for this PC plus its predecessor/state
-   tuple, retaining the existing positive control; do not infer a mismatch
-   from the oracle alone.
+9. **M5 route handoff — retail grounded, port route still missing.** Retail
+   positively executes `bufferArbiterProducerMark` at `0x8001BCE4` in title
+   and hangar, while s2972's port pair never reaches that phase. The next
+   route unit must use a genuinely new port-side repair/probe angle tied to
+   this handoff and retain the positive control; do not infer a mismatch from
+   the oracle alone.
 
 ## Durable boundaries
 

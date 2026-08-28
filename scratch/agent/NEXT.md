@@ -1,54 +1,46 @@
-# NEXT work unit (s2971)
+# NEXT work unit (s2973)
 
-HYPOTHESIS-ID: m5-route-qualification
+HYPOTHESIS-ID: m5-port-route-preparation
 
 ## Unit
 
-Perform one new M5 route-qualification investigation. Ground-truth the
-previously unqualified framebuffer-arbiter producer handoff
-`bufferArbiterProducerMark` at guest PC `0x8001BCE4` in retail, using the
-verified title/hangar input route. Do not repeat the rejected s2903 candidate
-PCs, broad main-text range, or the route-invalid s2949/s2950 field probe. Do
-not add port instrumentation unless this watch is positively attributed in a
-target phase.
+Run one phase-gated port route-preparation census using the existing
+regeneration-safe M5 route probes. Launch silent and image arms concurrently
+from one Debug build, with the validated AUTOPILOT and the retail oracle's
+positive-control recipe retained. Add no new instrumentation and change no
+behavior. Capture pre-target route preparation, VI-commit transition,
+identity-edge, route-state, and target-candidate rows, keyed by arm and VI
+phase, to explain the s2972 port stop at VI 640.
 
 ## Competing hypotheses and discriminator
 
-- H-retail-handoff: the independent oracle attributes `0x8001BCE4` in one or
-  both target phases, making this a live route handoff for a later port join.
-- H-port-handoff: the oracle's whole-RDRAM and title/hangar controls pass, but
-  `0x8001BCE4` has zero target-phase executions; this candidate is not the
-  target boundary and receives no port instrumentation.
-- H-stale-route: the oracle fails its whole-RDRAM positive control or misses
-  the title/hangar controls, so this run cannot evaluate the candidate.
+- H-route-prep-absent: after the port reaches VI 640, no route-preparation
+  row has `target=1`; the target handoff is never prepared on the port.
+- H-route-identity-stale: target preparation rows exist, but the subsequent
+  VI transition or identity-edge rows do not commit the requested title/hangar
+  origin; the port route state is stale or rejected before presentation.
+- H-audio-arm-route: the route-preparation/identity table diverges between
+  silent and image arms, making the audio dispatch arm part of the route stop.
 
-The discriminator is the same-run retail oracle table: whole-RDRAM positive
-control, title and hangar phase controls, and phase-gated execution rows for
-`0x8001BCE4`. A target-phase hit selects H-retail-handoff; healthy controls
-with zero target-phase hits select H-port-handoff; a failed control selects
-H-stale-route.
+The discriminator is one complete table of all route-prepare rows (including
+`target` and requested width/origin), VI-transition rows, identity-edge rows,
+route-state rows, target-candidate rows, and phase transitions for both arms.
+Target preparation with no commit selects H-route-identity-stale; no target
+preparation in either arm selects H-route-prep-absent; an arm-only difference
+selects H-audio-arm-route. A missing phase transition keeps downstream audio
+rows unevaluable but does not erase pre-target route evidence.
 
 ## Commands
 
-1. Run `grep -n '^## Session ' PORTING-STATE.md | tail -15`; if all 15 titles
-   are sweep-scoped, perform the mandated external retail-entry or M4
-   accumulator-boundary revisit instead of another sweep step.
-2. Run the retail oracle with its whole-RDRAM positive control and the new
-   execution watch, using SIGKILL and a capture path under
-   `scratch/agent/s2971_m5_route_qualification/`:
-   `tools/oracle/build/rs64_oracle --core /opt/homebrew/opt/mupen64plus/lib/
-   libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/
-   rogue_squadron64/rogue_squadron.z64 --secs 180 --video
-   /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib
-   --watch-write 0x0:0x800000 --watch-pc 0x8001BCE4
-   --pc-phase-log-width 1024,512 --press 6:start,11:start,16:start,21:start,
-   26:start,31:start,36:start,41:start,46:start,51:start,56:start`.
-3. Only if the oracle positively attributes the handoff, design the paired port
-   measurement for the next iteration; otherwise record the negative result
-   without adding runtime instrumentation.
-4. Write the oracle table under `scratch/agent/s2971_m5_route_qualification/`.
-
-Expected outcomes: a positive oracle PC attribution selects H-retail-handoff;
-an otherwise healthy oracle that misses the candidate selects H-port-handoff;
-and a failed positive control selects H-stale-route. Do not add port code on a
-negative or stale-route result.
+1. Build once: `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+2. Run the existing corrected pair wrapper from
+   `scratch/agent/s2972_m5_step1_qualified_route/run_pair.sh`, copied or
+   parameterized into a new s2973 artifact directory. Add
+   `ROGUESQ_LOG_M5_ROUTE_PREPARE=1`, `ROGUESQ_LOG_M5_ROUTE_TRANSITION=1`,
+   `ROGUESQ_LOG_M5_IDENTITY_EDGES=1`, `ROGUESQ_LOG_M5_ROUTE_STATE=1`, and
+   `ROGUESQ_LOG_M5_ROUTE_CANDIDATE=1` to both arms. Keep
+   `PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and
+   `PROBE_LEAVE_OK=1`; terminate the oracle and both game process groups with
+   SIGKILL.
+3. Summarize every arm's route table and select exactly one hypothesis. Do
+   not interpret service/slot/PCM nulls unless a target phase is observed.

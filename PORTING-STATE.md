@@ -122503,3 +122503,23 @@ prove a port mismatch. The next discriminator is one same-build, phase-gated
 port probe of this PC and its predecessor/state tuple with an existing positive
 control. No runtime behavior or mitigation changed. Complete artifact:
 `scratch/agent/s2971_m5_route_qualification/RESULTS.md`.
+
+## Session 2972 (2026-08-28) — reran M5 Step 1 after retail route qualification
+
+The Debug target built successfully. The reused pair wrapper failed its
+pre-arm polling and exited before launching the port arms; its captured
+oracle had already passed the whole-RDRAM positive control and reached title
+and hangar. A corrected wrapper was run in the same iteration and launched
+silent (`ROGUESQ_AUDIO_UCODE=0`) and Factor 5 image (`=1`) arms from that same
+build. The silent arm emitted 59 dispatch rows and the image arm 49. Both
+reached only port VI 640 at `0x0066A500`; neither reached title `1024` or
+hangar `512`, and both had zero task-contract/DMEM/DMA/service/slot/voice/
+PCM rows and zero crash/abort markers.
+
+This selects `H-port-route` for this capture. It rules out neither audio
+degeneracy nor an image contract gap because the downstream discriminator was
+never phase-eligible. It does rule out interpreting the downstream nulls as
+audio evidence. No behavior change or port instrumentation was added. The
+fixed wrapper and run data are at
+`scratch/agent/s2972_m5_step1_qualified_route/`; the concise result table is
+`scratch/agent/s2972_m5_step1_qualified_route/RESULTS.md`.
