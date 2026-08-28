@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3044 (2026-08-28).
+Current maintenance marker: Session 3045 (2026-08-28).
 
 ## Current state
 
@@ -82,6 +82,17 @@ a copy; this is single-source evidence and requires independent temporal
 ground truth before changing behavior. Evidence:
 `scratch/agent/s3044_m5_task_handoff_audit/AUDIT.md`.
 
+Session 3045 added and ran a regeneration-safe submit-to-consume descriptor
+lifetime table. The independent retail oracle passed its whole-RDRAM control,
+reached the 512 hangar, and attributed 1,013 type-2 `osSpTaskStartGo` rows to
+task `0x80149470` / data `0x80171E70` (`data_size` `1–2`), with callers
+`0x80019DEC` and `0x80019D68`. The port lifetime instrument had active phase
+logging but zero accepted title/hangar routes and therefore zero lifetime
+rows; its positive control did not arm. This selects
+`H-MeasurementInsufficient` for the port capture, not descriptor immutability,
+reuse, or ordering. No behavior change was justified. Evidence:
+`scratch/agent/s3045_m5_task_lifetime/AUDIT.md`.
+
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
 Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
@@ -116,13 +127,12 @@ route-blocked at pre-title VI 640; the VI-commit ordering edge is now audited,
 so the next M5 unit must use a genuinely new audio-task handoff angle. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — test descriptor lifetime/reuse at the queue boundary.**
-   Session 3044 found the host publication and consumer path complete, but the
-   queue carries an RDRAM `OSTask*` rather than a descriptor copy. The next
-   unit must obtain an independent retail attribution or a same-build temporal
-   measurement that distinguishes immutable descriptor data from mutation or
-   reuse between `osSpTaskStartGo` and `run_task`; do not change behavior from
-   the static concern alone. See `scratch/agent/NEXT.md`.
+1. **M5 route repair/handoff — identify a different producer/signal edge.**
+   The descriptor lifetime table is implemented but route-blocked: the port
+   remained at VI 640 `0x0066A500`, so no target-phase enqueue/consume rows
+   could arm. Retail independently reaches the target and reuses task
+   `0x80149470`. Use a genuinely new port-side handoff angle with positive
+   route controls; do not infer descriptor behavior from this null.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve

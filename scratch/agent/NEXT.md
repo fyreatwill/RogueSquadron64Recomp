@@ -1,39 +1,36 @@
-# NEXT work unit — bounded audio-task descriptor lifetime/reuse measurement
+# NEXT work unit — bounded M5 route producer/signal audit
 
-HYPOTHESIS-ID: m5-route-task-lifetime
+HYPOTHESIS-ID: m5-route-new-producer-edge
 
-Perform one bounded measurement of whether the guest `OSTask` descriptor is
-mutated or reused after `osSpTaskStartGo` submits its pointer and before the SP
-task thread reaches `run_task`. Ask independent retail ground truth first;
-only then add one batched, phase-gated same-build probe if the oracle can name
-the relevant task/PC boundary. Do not change behavior from pointer lifetime
-concern alone.
+Perform one new route-handoff measurement tied to the retail-attributed
+ProducerMark callers (`0x80019DEC`/`0x80019D68` precede the SP submit path).
+Ask retail ground truth first, then add one batched port probe only if the
+oracle identifies a distinct producer/signal edge. Retain whole-RDRAM and
+target-phase route controls; do not change behavior from a route-null alone.
 
 Competing hypotheses and the discriminator:
 
-- H-DescriptorImmutable: the descriptor fields are unchanged between submit
-  and consume; pointer transport is correct and the route failure is elsewhere.
-- H-DescriptorReused: the game reuses or rewrites the RDRAM descriptor before
-  consumption; the observed task is not the submitted task.
-- H-DescriptorOrdering: the pointer is stable but a producer/consumer memory
-  ordering edge is insufficient for descriptor contents.
-- H-MeasurementInsufficient: the oracle cannot attribute the target task, so
-  no port conclusion is justified.
+- H-ProducerSignalMissing: a port producer/signal edge needed for the VI
+  transition is absent or not delivered.
+- H-ProducerSignalWrongOrder: the edge exists but arrives in an order that
+  prevents the target VI commit.
+- H-ProducerSignalEquivalent: the port edge matches retail and the blocker is
+  elsewhere.
+- H-MeasurementInsufficient: retail cannot independently attribute a new edge
+  or the port positive control fails to arm.
 
-The single discriminator is a submit-to-consume identity table keyed by the
-retail-grounded target transition: submitted task pointer, task fields at
-submit, first consumer pointer/fields, and any intervening guest writes. A
-stable pointer and fields select H-DescriptorImmutable; changed fields or
-pointer select H-DescriptorReused; stable fields with a visibility mismatch
-select H-DescriptorOrdering; absent retail attribution selects
-H-MeasurementInsufficient. Do not infer audio behavior from VI-640
-`accepted=0`.
+The single discriminator is a retail-vs-port producer/signal event table keyed
+to the next VI transition: producer PC, signal/queue address, event payload,
+consumer PC, and phase transition order. Missing producer/signal selects
+H-ProducerSignalMissing; matching events in the wrong order selects
+H-ProducerSignalWrongOrder; matching events and target transition select
+H-ProducerSignalEquivalent; absent retail attribution or an unarmed port
+control selects H-MeasurementInsufficient.
 
-Exact commands from the repo root:
+Exact pre-instrument commands from the repo root:
 
-    sed -n '1,220p' tools/oracle/README.md
-    rg -n -C 25 'osSpTaskStartGo|osSpTaskLoad|M_AUDTASK|audio task|task_ptr' tools/oracle /Users/williambuckley/Documents/Tools/rogue_squadron64
+    rg -n -C 25 'bufferArbiterProducerMark|0x80019DEC|0x80019D68|VI|queue|signal' tools/oracle /Users/williambuckley/Documents/Tools/rogue_squadron64
     git diff -- src lib syms tools
 
 Record the complete table and decision in
-`scratch/agent/s3045_m5_task_lifetime/`.
+`scratch/agent/s3046_m5_route_producer_edge/`.

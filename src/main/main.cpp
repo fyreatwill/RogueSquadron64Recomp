@@ -1427,6 +1427,52 @@ static void rs64_audio_route_prepare(const char* arm) {
 static std::atomic<uint32_t> g_rs64_m5_descriptor_event_payload{0};
 static std::atomic<uint32_t> g_rs64_m5_descriptor_yield_ptr{0};
 
+static bool rs64_m5_descriptor_phase(uint32_t* phase, uint32_t* width,
+                                     uint32_t* origin, const char** arm);
+
+extern "C" void rs64_m5_task_lifetime_edge(const char* edge,
+                                             uint32_t task_ptr,
+                                             const OSTask* task) {
+    static const bool enabled = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_TASK_LIFETIME");
+        return e && e[0] && e[0] != '0';
+    }();
+    if (!enabled || !task || task->t.type != M_AUDTASK) return;
+    uint32_t phase = 0, width = 0, origin = 0;
+    const char* arm = nullptr;
+    if (!rs64_m5_descriptor_phase(&phase, &width, &origin, &arm)) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    static uint32_t seq = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+    }
+    const uint32_t ordinal = seq++;
+    if (rows++ >= 512u) return;
+    const uint32_t words[16] = {
+        (uint32_t)task->t.type, (uint32_t)task->t.flags,
+        (uint32_t)task->t.ucode_boot, (uint32_t)task->t.ucode_boot_size,
+        (uint32_t)task->t.ucode, (uint32_t)task->t.ucode_size,
+        (uint32_t)task->t.ucode_data, (uint32_t)task->t.ucode_data_size,
+        (uint32_t)task->t.dram_stack, (uint32_t)task->t.dram_stack_size,
+        (uint32_t)task->t.output_buff, (uint32_t)task->t.output_buff_size,
+        (uint32_t)task->t.data_ptr, (uint32_t)task->t.data_size,
+        (uint32_t)task->t.yield_data_ptr, (uint32_t)task->t.yield_data_size,
+    };
+    std::fprintf(stderr,
+        "[m5-task-lifetime] edge=%s phase=%u width=%u origin=0x%06X arm=%s "
+        "seq=%u task_ptr=0x%08X words=",
+        edge, phase, width, origin, arm ? arm : "n/a", ordinal, task_ptr);
+    for (uint32_t i = 0; i < 16; ++i)
+        std::fprintf(stderr, "%s%08X", i ? "," : "", words[i]);
+    std::fprintf(stderr, "\n");
+    std::fflush(stderr);
+}
+
 static void rs64_m5_task_handoff(const OSTask* task) {
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");

@@ -123528,3 +123528,20 @@ descriptor lifetime/reuse as the only static concern. This is single-source
 evidence because the companion retail libultra entry points are assembly
 includes without bodies in the available C tree; no behavior change or build
 was justified. Full table: `scratch/agent/s3044_m5_task_handoff_audit/AUDIT.md`.
+
+## Session 3045 (2026-08-28) — measured audio-task descriptor lifetime boundary
+
+Ran the bounded descriptor-lifetime work unit after an independent retail
+preflight. The retail oracle passed the whole-RDRAM positive control, reached
+the 512 hangar, and attributed 1,013 type-2 executions at `osSpTaskStartGo`
+(`0x80033FCC`) to task `0x80149470` and data `0x80171E70`; `data_size` was
+`0x1` or `0x2`, with execution predecessors `0x80019DEC` and `0x80019D68`.
+The port build added `[m5-task-lifetime]` enqueue/consume rows containing the
+guest pointer and all 16 descriptor words. Its phase logger was active, but
+the qualified AUTOPILOT run stopped at VI 640 `0x0066A500`: zero accepted
+title/hangar routes and zero lifetime rows. Because the port instrument's
+target-phase positive control did not arm, this selects
+`H-MeasurementInsufficient`, not immutable, reused, or ordering-defective
+descriptors. No behavior change was justified. Full table:
+`scratch/agent/s3045_m5_task_lifetime/AUDIT.md`. Next work moves to a different
+route producer/signal edge.
