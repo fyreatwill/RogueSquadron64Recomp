@@ -1,39 +1,35 @@
-# NEXT work unit — attribute retail game-side 1024 mode request
+# NEXT work unit — audit the descriptor source behind applyPendingViChanges
 
 HYPOTHESIS-ID: m5-vi-mode-stall
 
 ## Single work unit
 
-Run one retail-grounded oracle capture that watches `osViSetMode`
-(`0x800352D0`) and the surrounding VI context path, with the whole-RDRAM
-positive control, Rice video, and the validated Start schedule. Use the
-`exec-prev` histogram for the 1024 request to identify the game-side jal site.
-Then map that site to the retail symbol/decomp and the corresponding port
-function. Do not modify behavior or add a port instrument in this unit.
+Perform one bounded static audit of the descriptor selected by retail's
+`applyPendingViChanges` callsite at `0x8001B8DC`. Start from the generated body
+and companion m2c/symbol data, enumerate the loads feeding the `osViSetMode`
+argument, then enumerate their writers and compare the corresponding port
+addresses/functions. Do not modify behavior or add instrumentation.
 
 ## Competing hypotheses
 
-- H-RequestMissing: the retail 1024 request's game-side jal site has no
-  corresponding port execution before VI-640.
-- H-RequestAliased: the corresponding port path executes but resolves through
-  the wrong overlay/generated function.
-- H-RequestDescriptor: the corresponding port path executes and submits a
-  descriptor, but its width differs from retail's legitimate 1024 descriptor.
+- H-SourceWriter: the selected retail descriptor is written by a game-side
+  producer that is absent or inactive in the port.
+- H-SourceAlias: the producer exists in the port, but a generated/overlay
+  mapping sends the load to a different record or function.
+- H-SourceSelection: the producer and mapping agree, but the runtime selects a
+  different legitimate descriptor record before the call.
 
 ## Discriminating measurement
 
-The oracle's `exec-prev` row for the retail width-1024 `osViSetMode` execution
-must identify the jal site. If that site has no corresponding port execution,
-H-RequestMissing wins; if it executes through a different generated body,
-H-RequestAliased wins; if it executes and submits a non-1024 mode,
-H-RequestDescriptor wins. A consumer PC or symbol identity alone cannot select
-one of these.
+The audit must identify the retail source record and at least one writer. If
+the writer has no corresponding port body/call path, H-SourceWriter wins; if
+the port mapping points elsewhere, H-SourceAlias wins; if both agree and the
+port selects a different record, H-SourceSelection wins. A function-name
+match alone cannot select among them.
 
 ## Exact commands
 
-1. `tools/oracle/build/rs64_oracle --core "$HOME/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" --rom "$HOME/Documents/Tools/rogue_squadron64/rogue_squadron.z64" --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --watch-write 0x0:0x800000 --watch-pc 0x800352D0,0x80035550 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`
-2. Grep the captured output for the 1024 `osViSetMode` execution and its
-   `exec-prev` histogram; map the identified jal site with bounded `rg`/`sed`
-   windows in the retail symbol/decomp and port generated files.
-3. Record the classification and evidence in
-   `scratch/agent/s3058_m5_vi_request_attribution/AUDIT.md`.
+1. `rg -n 'applyPendingViChanges|8001B8DC|osViSetMode_recomp|80128C90|80128DF0|80128E40' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms`
+2. Read bounded windows around the generated body, companion symbol entries,
+   and each identified writer; record the source record, writer, and port
+   mapping in `scratch/agent/s3059_m5_vi_descriptor_source/AUDIT.md`.

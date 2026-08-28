@@ -123796,3 +123796,34 @@ not select descriptor corruption because no 1024 descriptor was submitted.
 The remaining question is which retail game-side call/state requests 1024 and
 why the port does not reach it. No behavior changed. Evidence:
 `scratch/agent/s3057_m5_vi_writer_mapping/AUDIT.md`.
+
+## Session 3058 (2026-08-28) — attributed retail 1024 VI request
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 21,258 bytes, so maintenance did
+not trigger. The planned work unit was the retail-grounded attribution of the
+game-side request that produces the title's width-1024 VI mode. No port code or
+instrumentation was changed.
+
+The oracle passed the whole-RDRAM positive control at 10,000 writes, reached
+the retail title transition `640 -> 1024` at about 17.2 seconds, and reached
+the hangar transition `1024 -> 512` at about 38.4 seconds. Its `osViSetMode`
+execution watch recorded 153 calls. The `exec-prev` histogram attributed
+142 calls to `prev=0x8001B8DC`, with 6 from `0x8001B720` and 5 from
+`0x8001BB54`. The companion symbol file and generated tree identify
+`0x8001B8DC` as the direct callsite in `applyPendingViChanges`.
+
+The corresponding port function and callsite exist, while the same-build
+s3056 capture recorded only widths 320, 2, 640, and 640 and no width-1024
+request. This selects `H-RequestDescriptor`: the direct caller is not missing,
+but the descriptor selected by the port path differs from retail's legitimate
+1024 descriptor. The oracle attribution and generated/port mapping are two
+independent lines of evidence; the port width comparison is carried forward
+from s3056 because this unit intentionally did not add a port probe. It rules
+out only the missing-caller hypothesis and does not yet identify the source
+writer or selection divergence.
+
+ORIGIN: this iteration made no corruption mitigation; it attributed a
+legitimate retail descriptor request through the oracle and compared it with
+the existing port callsite.
+
+Evidence: `scratch/agent/s3058_m5_vi_request_attribution/AUDIT.md`.

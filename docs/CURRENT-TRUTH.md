@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3057 (2026-08-28).
+Current maintenance marker: Session 3058 (2026-08-28).
 
 ## Current state
 
@@ -40,6 +40,17 @@ exists for the consumer to commit. This rejects missing-writer and aliasing at
 the runtime boundary and does not select descriptor corruption. The upstream
 game-side mode-selection call/state that should request 1024 remains open.
 Evidence: `scratch/agent/s3057_m5_vi_writer_mapping/AUDIT.md`.
+
+Session 3058 ran the retail-grounded VI request attribution. The oracle
+passed the whole-RDRAM positive control, reached title at width 1024 and
+hangar at width 512, and its `exec-prev` histogram attributed the 1024-capable
+`osViSetMode` path to `0x8001B8DC` (142 calls), with only 6 calls from
+`0x8001B720` and 5 from `0x8001BB54`. The companion map and generated tree
+identify `0x8001B8DC` as `applyPendingViChanges`; the corresponding port path
+exists, but the s3056 same-build capture showed it submitting width 640 rather
+than 1024. This selects `H-RequestDescriptor`, rejects a missing direct
+caller, and does not by itself prove why the descriptor source differs.
+Evidence: `scratch/agent/s3058_m5_vi_request_attribution/AUDIT.md`.
 
 Session 3040 ran the M5 Step-1 image/silent qualification after an independent
 retail ground-truth preflight. Retail passed the whole-RDRAM positive control
@@ -254,15 +265,13 @@ route-blocked at pre-title VI 640; event registration/completion is live in the
 port and the next unit must use a different handoff edge. M3 is
 parked pending a new discriminator.
 
-1. **M5 VI-mode stall — attribute the retail game-side call that requests 1024.**
-   Session 3057 closed the consumer boundary: `0x80035798` is
-   `__osViSwapContext`, and the port has the equivalent commit. Use one
-   retail-grounded oracle run watching `osViSetMode` and the surrounding
-   libultra VI path with the positive whole-RDRAM control, Rice, and the
-   validated Start schedule. Use `exec-prev` to identify the retail jal site
-   that submits the 1024 descriptor, then map that site to a game function and
-   compare its port execution. Do not change behavior or add a port probe
-   until the oracle supplies a specific missing edge.
+1. **M5 VI-mode stall — audit the descriptor source behind `applyPendingViChanges`.**
+   Session 3058 attributes retail's 1024 request to `0x8001B8DC` in
+   `applyPendingViChanges`, while the port's corresponding path submits 640.
+   Trace the exact retail descriptor pointer/record selected immediately
+   before that callsite, then compare the generated port loads and their
+   writers. Keep this static and bounded; do not change behavior until a
+   specific source or writer divergence is identified.
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
    placeholders for fragments, data gaps, and unresolved boundaries; do not
