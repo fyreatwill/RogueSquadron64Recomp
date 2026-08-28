@@ -1,14 +1,19 @@
-# Unblock result
+# Unblock result — Session 2993
 
-Route taken: 3 — re-scope.
+Route taken: 2, then 3.
 
-Evidence: the retail oracle independently passed its whole-RDRAM positive
-control and reached title/hangar, while the current port's array-based
-same-build silent/image run dispatched 42 audio tasks per arm but stopped at
-pre-title VI 320/640 with zero target phases. The legacy wrapper's first
-failure was fixed as a field-order match defect; the corrected gate still did
-not launch reliably, so the array-based driver supplied the arm measurement.
+The oracle README/help and source showed that the required video/RSP plugins,
+phase gates, execution watches, and whole-RDRAM positive control are already
+available locally. A new locally grounded edge was then added at the retail-
+dominant `0x8000C628 -> bufferArbiterProducerMark` callsite through the
+regeneration fixup. The Debug build succeeded. In one same-build concurrent
+capture, both silent and image arms produced 45 audio-task positive-control
+rows and no crash/abort markers, but neither reached title/hangar and both
+produced zero target rows. That result is unevaluable, so route qualification
+remains an open dependency.
 
-The M5 route repair/handoff is not locally obtainable in this tree. The block
-is made false as a loop stopper by selecting the independent regeneration-safe
-generated-symbol sweep, which does not require title/hangar audio phases.
+Route 3 is resolved by re-scoping the next unit to static symbol work. The
+companion map, generated definition, and four generated callers independently
+identify `0x80001354` as `runVideoFrameTick`; that semantic name was
+synchronized into `syms/rogue_squadron.syms.toml`. The next work unit does not
+require target-phase execution or human-supplied route repair.

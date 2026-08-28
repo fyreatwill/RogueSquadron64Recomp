@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2992 (2026-08-28).
+Current maintenance marker: Session 2993 (2026-08-28).
 
 ## Current state
 
@@ -25,7 +25,8 @@ capture.
 The original overlay-dispatch explanation is no longer the current blocker:
 qualified runs reach title and hangar boundaries. Factor 5 image tasks and CPU
 MORT speech are separate contracts. A `Broke` return proves task completion,
-not PCM correctness.
+not PCM correctness. The M5 route dependency remains open, but it no longer
+blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
 
@@ -175,6 +176,18 @@ crash/abort markers. The target null is unevaluable; the generated-call audit
 does select the prior edge premise as mislabeled and rules out treating
 `0x8000C0C4` as ProducerMark. Artifact:
 `scratch/agent/s2992_m5_producer_signal/RESULTS.md`.
+
+Session 2993 tested a genuinely new locally available route edge: the retail
+oracle's dominant `bufferArbiterProducerMark` predecessor `0x8000C628`.
+Added the regeneration-safe s2993 probe and built the Debug executable. Silent
+and image arms ran concurrently from that same build; both produced 45
+audio-task positive-control rows, but both remained before the title gate and
+recorded zero target C628 rows, with no crash or abort. The target result is
+unevaluable, so this does not refute the port-route dependency. The block was
+re-scoped to static symbol work. Independently, `0x80001354` was confirmed by
+the companion map, generated definition, and four generated callers as
+`runVideoFrameTick`; the project TOML now carries that semantic name.
+Artifacts: `scratch/agent/s2993_m5_c628_handoff/` and the s2993 session entry.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -400,10 +413,16 @@ remain under `scratch/agent/soak_results/` and in `SOAK-RESULTS.md`.
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete for this iteration. M5 remains active
 on audio de-stubbing but is re-scoped pending a route repair; M3 is parked
-pending a new discriminator. The generated-symbol sweep is parked because
-its remaining placeholder candidates are already classified.
+pending a new discriminator. The generated-symbol sweep is the active
+blocker-free workstream until a new M5 route edge is available.
 
-1. **M5 route repair/handoff — identify a different producer/signal edge.** The
+1. **Generated-symbol sweep — continue only with exact companion identities.**
+   `0x80001354` is now synchronized as `runVideoFrameTick`; select the next
+   placeholder only when generated callers/body and the companion map agree.
+   Do not invent names for ambiguous fragments. Keep the M5 route dependency
+   open below and return to it only with a new grounded edge.
+
+2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
    port to VI 320 in the paired run. The s2989 READY, s2990 wait-on-video, and
    s2991 alloc probes are unevaluable because the port stopped at VI 640; do
@@ -414,17 +433,17 @@ its remaining placeholder candidates are already classified.
    ground-truth edge, retaining the same-run task positive control plus
    title/hangar phase gates.
 
-2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a
    new route repair or independent handoff that reaches title/hangar so the
    same-build image/silent positive-control row is evaluable. Only then make
    one contract change selected by task → SP → service/slot → PCM evidence.
    Do not repeat the s2978 route capture unchanged.
 
-3. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+4. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 
-4. **M4 accumulator origin — blocked at route qualification.** The latest
+5. **M4 accumulator origin — blocked at route qualification.** The latest
    revisit had live generic controls but zero M4 stage-1 positive-control rows
    and no 512 hangar phase. Do not interpret its M4 nulls. Resume only with a
    genuinely new route repair or an independent ground-truth handoff that can

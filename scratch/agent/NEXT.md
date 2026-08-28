@@ -1,35 +1,40 @@
-# NEXT work unit — new M5 route repair or independent handoff
+# NEXT work unit — synchronize coalesceFreeHeapBlocks
 
-HYPOTHESIS-ID: m5-route-repair-blocked
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-## Blocker
+## Competing hypotheses and discriminator
 
-Do not repeat the current route-edge probe family. A human must supply or
-approve one genuinely new route repair/signal, or an independent retail-
-grounded handoff whose port-side producer can execute before the title/hangar
-phase gates. The existing host transition repair regressed boot, and the last
-three generated-edge probes all stopped at VI 640.
+- `H-exact-companion-name`: the companion symbol map's
+  `coalesceFreeHeapBlocks` is the semantic name for generated entry
+  `0x800022F8`; synchronize it into the project TOML.
+- `H-ambiguous-placeholder`: the generated body or call context does not
+  support that name; leave the placeholder and record why.
+- `H-overlay-collision`: the address has multiple generated definitions, so
+  it requires manual review rather than an automatic rename.
 
-## Evidence table
+The discriminating measurement is one bounded static audit: compare the
+companion map, generated definition, and all generated callers for
+`0x800022F8`, then check for duplicate generated definitions. An exact map
+match plus a unique callable definition and coherent caller use selects the
+rename; any missing or conflicting source selects no-op/manual review. No
+runtime phase or route repair is required.
 
-| Iteration | Edge | Same-run controls | Target phase | Target rows | Outcome |
-|---|---|---:|---|---:|---|
-| s2990 | waitOnVideoQueue | positive | none; VI 640 | 0 | unevaluable |
-| s2991 | bufferArbiterAllocSlot | 4,806 LLE + filter/shade | none; VI 640 | 0 | unevaluable |
-| s2992 | bufferArbiterProducerMark at 0x8000BFE8 | 80 LLE/audio | none; VI 640 | 0 | unevaluable |
+## Exact commands
 
-The s2992 generated audit also corrected the prior edge premise:
-`0x8000C0C4` is the READY call, not ProducerMark. The single discriminating
-measurement for the next unit must include an independent ground-truth row,
-all same-build positive controls, VI transitions, target route rows, and
-crash/abort markers. A target null is valid only when target phase fires.
+```sh
+rg -n '800022F8|func_800022F8|coalesceFreeHeapBlocks' \
+  ../rogue_squadron64 ../N64Recomp/RecompiledFuncs
+python3 tools/sweep_scan_candidates.py func_800022F8
+```
 
-## Exact entry condition
+If the three-source check agrees, update `syms/rogue_squadron.syms.toml`,
+build `cmake --build build --config Debug --target RecompiledFuncs`, and
+record the result. Do not invent a name for an ambiguous fragment and do not
+modify audio or route behavior while the M5 route dependency remains open.
 
-After a new edge or repair is approved, document its retail PC/predicate in
-this file, add one regeneration-safe probe, build with
-`cmake --build build --config Debug --target RogueSquadron64Recomp`, and run
-from `build/` with `tools/probe.sh`, `PROBE_PHASE_WIDTH=1024`,
-`PROBE_KEYS_FROM_PHASE=1`, `PROBE_LEAVE_OK=1`, the qualified LLE/image/task
-controls, and SIGKILL/watchdog cleanup. Do not change audio behavior until a
-target-phase Step 1 comparison is evaluable.
+## Open dependency
+
+M5 still needs a new route repair or independent handoff that reaches title
+and hangar. The s2993 C628 probe passed its same-run task controls but stayed
+pre-title, so its target null was unevaluable; retain that dependency for a
+future genuinely new route angle.

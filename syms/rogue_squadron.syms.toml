@@ -24,7 +24,7 @@ functions = [
     { name = "mainBootstrapWorker", vram = 0x80000C68, size = 0x16C },
     { name = "partitionFramebufferMemory", vram = 0x80000DD4, size = 0x2B4 },
     { name = "thread3_video_handle", vram = 0x80001088, size = 0x2CC },
-    { name = "func_80001354", vram = 0x80001354, size = 0x2C8 },
+    { name = "runVideoFrameTick", vram = 0x80001354, size = 0x2C8 },
     { name = "main", vram = 0x8000161C, size = 0x90 },
     { name = "preNmiResetThread", vram = 0x800016AC, size = 0xF4 },
     { name = "idle_thread_handle", vram = 0x800017A0, size = 0x80 },

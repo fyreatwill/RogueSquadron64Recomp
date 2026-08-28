@@ -122822,3 +122822,21 @@ unevaluable, not evidence of a missing producer edge. This rules out treating
 edge outcome; it does not select `H-producer-missing` or identify the route
 repair. No guest behavior or mitigation was changed. Artifact:
 `scratch/agent/s2992_m5_producer_signal/RESULTS.md`.
+
+## Session 2993 (2026-08-28) — C628 handoff remained unevaluable; re-scoped block
+
+Read the block and tool documentation first. The oracle already supports the
+required video/RSP selection, phase-gated execution watches, and whole-RDRAM
+positive control, so the dependency was not a missing local tool capability.
+Used the retail-grounded dominant predecessor `0x8000C628` of
+`bufferArbiterProducerMark` as a new route edge. Added the regeneration-safe
+s2993 fixup and its live generated diagnostic, then built the Debug target.
+The concurrent silent and image arms each produced 45 audio-task positive
+control rows, but both remained before title/hangar and produced zero target
+C628 rows; neither had crash or abort markers. The target null is
+unevaluable, so the route dependency remains open and no audio behavior was
+changed. Re-scoped the next unit to blocker-free static symbol work. As a
+separate bounded rename, the companion map and generated definition/callers
+identify `0x80001354` as `runVideoFrameTick`; synchronized that name into the
+project symbol TOML. Artifacts: `scratch/agent/s2993_m5_c628_handoff/` and
+`../N64Recomp/fixup_game_funcs.py`.
