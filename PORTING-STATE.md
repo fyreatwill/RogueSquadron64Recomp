@@ -121227,3 +121227,19 @@ references in three generated files. This rules out callable semantic renames
 for these records; it does not bear on runtime behavior or M5 hypotheses. No
 build or soak was needed because the change is mechanical and does not alter
 executable behavior. The next unresolved placeholder is after `0x80029D20`.
+
+## Session 2902 (2026-08-27) — completed empty interval after 0x80029D20
+
+Inspected the complete generated-symbol interval `0x80029D20..0x8002A080`
+using the generated snapshot and the zlib/libultra companion maps. The
+interval contains only the established callable entries `osAiSetFrequency`,
+`osAiSetNextBuffer`, `__osAiDeviceBusy`, and `bcmp`; an independent generated
+definition scan found zero `func_*` or `fake_func_*` placeholders there. The
+complete source table is
+`scratch/agent/s2902_generated_symbol_rename/source-table.md`.
+
+This selected no rename and changed no regeneration mapping. It rules out a
+callable or data-gap candidate in this interval, but says nothing about the
+next unresolved placeholder at `0x8003DF98`. No build or soak was needed
+because the work unit was a bounded source classification with no executable
+change.

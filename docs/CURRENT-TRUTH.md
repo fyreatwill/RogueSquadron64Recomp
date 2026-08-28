@@ -31,6 +31,12 @@ map, generated C/header, overlay metadata, and regeneration-safe rename
 table. Complete source table:
 `scratch/agent/s2901_generated_symbol_rename/source-table.md`.
 
+The s2902 sweep inspected the complete `0x80029D20..0x8002A080` interval
+between established zlib/libultra symbols. It found zero generated
+placeholder definitions, so no rename or mapping change was selected. The
+next unresolved placeholder is `0x8003DF98`; the complete interval table is
+`scratch/agent/s2902_generated_symbol_rename/source-table.md`.
+
 The qualified port route is `ROGUESQ_LLE_FORCE=1`,
 `ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1`. `ROGUESQ_SPIN_YIELD=1`
 is diagnostic. `ROGUESQ_AUTOPILOT` is the reliable in-process driver.
@@ -352,8 +358,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80024A0C..0x80024A10` as a data gap before `gspF3DEXTextStart`; continue
    s2900 classified `0x80026B98..0x80026BA0` as a data gap before
    `inflateReset`; s2901 then classified the five zlib fragments through
-   `0x80029D20` as data gaps. Continue with the next remaining placeholder
-   after `0x80029D20`.
+   `0x80029D20` as data gaps. s2902 inspected the following
+   `0x80029D20..0x8002A080` established-symbol interval and found no
+   placeholders; continue with `0x8003DF98`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
