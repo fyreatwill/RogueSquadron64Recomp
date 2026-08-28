@@ -157,6 +157,9 @@ RENAMES = {
     # This eight-byte generated trap is an invalid decode between the complete
     # freeListEntryPointers and tickWrappingTimerAccumulatorList bodies.
     "fake_func_80054648": "data_gap_80054648",
+    # This eight-byte record is an isolated load/increment fragment between
+    # initPlayerStructs and loadTxtFile; it is not a callable function body.
+    "fake_func_80055698": "data_gap_80055698",
     # These four-byte records contain only non-returning instruction
     # fragments immediately before named routines; they are not callable
     # function bodies.

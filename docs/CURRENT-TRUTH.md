@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2913 (2026-08-27).
+Current maintenance marker: Session 2914 (2026-08-27).
+
+The s2914 generated-symbol sweep classified `0x80055698..0x800556A0` as an
+8-byte non-callable load/increment fragment between `initPlayerStructs` and
+`loadTxtFile`. It has no generated callers or address lookups and no companion
+semantic name, so it was renamed to `data_gap_80055698` in the companion map,
+project symbol map, generated C/header/overlay metadata, and regeneration-safe
+rename table. The Debug target rebuilt successfully. Complete table:
+`scratch/agent/s2914_generated_symbol_rename/source-table.md`.
 
 The s2913 generated-symbol sweep inspected `0x800555E8..0x800555F0`. The
 8-byte record at `0x800555E8` is a callable jump veneer into
@@ -476,8 +484,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x800538AC..0x800538B0` as a bounded non-callable data gap before
    `trackResourceListWithMappingTables`; s2912 classified
    `0x80054648..0x80054650` as a bounded invalid-data gap before
-   `tickWrappingTimerAccumulatorList`. Continue with the next remaining
-   placeholder after `0x80054650`.
+   `tickWrappingTimerAccumulatorList`; s2914 then classified
+   `0x80055698..0x800556A0` as a bounded load/increment data gap between
+   `initPlayerStructs` and `loadTxtFile`. Continue with the next remaining
+   placeholder after `0x800556A0`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

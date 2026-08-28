@@ -121432,3 +121432,22 @@ references. This rules out a mechanically proven data-gap rename and does not
 authorize inventing a semantic name; the symbol remains unchanged. No build
 was needed because generated files did not change. Complete table:
 `scratch/agent/s2913_generated_symbol_rename/source-table.md`.
+
+## Session 2914 (2026-08-27) — reconciled main-text load-fragment data gap at 0x80055698
+
+The planned bounded generated-symbol sweep examined `0x80055698..0x800556A0`.
+The sole placeholder, `fake_func_80055698`, is an 8-byte record containing
+only `lbu $v1, 0x19($v0)` and `addiu $a0, $v1, 1`, with no prologue, return, or
+standalone callable body. It lies between the complete `initPlayerStructs`
+and `loadTxtFile` entries; generated caller and address-lookup searches found
+no independent references. The companion map supplied no semantic name, so
+this is a mechanically proven non-callable record and was reconciled as
+`data_gap_80055698` in the companion map, project symbol map,
+regeneration-safe rename table, and generated C/header/overlay metadata.
+
+The generated snapshot contains no stale `fake_func_80055698` or
+`func_80055698` references. The full Debug `RogueSquadron64Recomp` target
+rebuilt and linked successfully, with only pre-existing format/sign and
+deployment-target warnings. This closes the interval and rules out a
+source-backed semantic rename there; the next bounded sweep is
+`0x80055A2C..0x80055A30`.
