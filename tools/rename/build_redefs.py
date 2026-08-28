@@ -67,7 +67,6 @@ EXTRA_RENAMES = {
     "fake_func_80069AEC": "collideSegmentAgainstObjectNodesPreamble",
     "fake_func_8006ACA4": "transformObjectColliderCenterPreamble",
     "fake_func_800AAADC": "playerSnowSpeederInitPreamble",
-    "fake_func_800B42BC": "playerXwingInitPreamble",
     "fake_func_800B58B4": "playerAwingInitPreamble",
     "fake_func_800B75C4": "playerYwingInitPreamble",
     "fake_func_800B89F4": "playerVwingInitPreamble",

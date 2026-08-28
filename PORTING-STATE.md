@@ -122264,3 +122264,28 @@ this address, and advances the sweep to the next census candidate after
 `0x800B2628`.
 
 Artifact: `scratch/agent/s2959_generated_symbol_rename/source-table.md`.
+
+## Session 2960 (2026-08-28) — reconciled the already-parked 0x800B42BC fragment
+
+Ran the bounded generated-symbol source-table audit for the next apparent
+placeholder after `0x800B2628`. Re-census showed `fake_func_800B42BC` was
+already classified in the companion mission map as a four-byte orphan before
+`playerXwingInit`, so it was not an unclassified sweep lead.
+
+The generated body is one valid instruction, `lw $v0, 0x2C($fp)`, with no
+standalone prologue, return, generated caller, or independent lookup. The
+preceding `advancePitchTowardTarget` has a complete epilogue and the following
+`playerXwingInit` begins with its own stack-frame prologue. The companion map
+retains the fake entry and separately names `playerXwingInit` at `0x800B42C0`.
+This selects H-Fragment, rules out H-Callable and H-DataGap, and preserves
+`fake_func_800B42BC`.
+
+Removed stale `EXTRA_RENAMES` entries from both regeneration-safe local rename
+tables that incorrectly mapped this fragment to `playerXwingInitPreamble`.
+The Debug `RecompiledFuncs` target built successfully. Next candidate is
+`0x800B47C4`.
+
+Artifact: `scratch/agent/s2960_generated_symbol_rename/source-table.md`.
+
+ORIGIN: naming-only. No runtime, generated instruction, submodule, or
+mitigation-shaped behavior changed.

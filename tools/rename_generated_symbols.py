@@ -103,7 +103,6 @@ RENAMES = {
     # These short mission/menu-overlay fragments are contiguous preambles
     # before established callable bodies; the companion map and redefs agree
     # on the adjacent body names and exact boundaries.
-    "fake_func_800B42BC": "playerXwingInitPreamble",
     "fake_func_800B47C4": "menuControllerInputPreamble",
     "fake_func_800B58B4": "playerAwingInitPreamble",
     "fake_func_800B75C4": "playerYwingInitPreamble",
