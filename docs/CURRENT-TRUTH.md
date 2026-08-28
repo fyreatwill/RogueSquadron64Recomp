@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2988 (2026-08-28).
+Current maintenance marker: Session 2989 (2026-08-28).
 
 ## Current state
 
@@ -129,6 +129,19 @@ task dispatch is a positive control, while the phase divergence selects
 `H-repair-harmful` for this implementation and rejects this forced transition
 driver as the route repair. It does not identify the missing writer/signal.
 Artifact: `scratch/agent/s2988_m5_buffer_repair_ab/RESULTS.md`.
+
+Session 2989 first ran the independent retail oracle with a whole-RDRAM
+positive control. Retail reached title and hangar and executed
+`bufferArbiterMarkSlotReady` (`0x8001BEC8`) 3,815 times,
+`waitOnVideoQueue` (`0x8001BE80`) 11 times, and `bufferArbiterAllocSlot`
+(`0x8001BF20`) 7,654 times in target phases; `viRetraceHandlerThread` direct
+entry was not observed. This grounds the READY transition and its
+`0x8001A2F8` caller as a new port edge. The regeneration-safe probe and
+generated output built successfully. The port run passed positive controls
+(570 LLE task rows, one filter-voice control, eight shade-DMA controls) but
+stayed at VI 640 origin `0x0066A500`, with zero target READY rows and no
+crash/abort markers. The target null is unevaluable, not evidence of a port
+mismatch. Artifact: `scratch/agent/s2989_m5_new_handoff/RESULTS.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -362,8 +375,10 @@ its remaining placeholder candidates are already classified.
    port to VI 320 in the paired run. Use a genuinely new port-side handoff
    candidate tied to retail `bufferArbiterProducerMark`, with independent
    ground-truth attribution before adding instrumentation and the same-run
-   task positive control plus title/hangar phase gates. Do not repeat this
-   driver or the stalled s2972–s2978 captures.
+   task positive control plus title/hangar phase gates. The s2989 READY probe
+   is also unevaluable because the port stopped at VI 640; do not repeat that
+   probe unchanged. Select a different producer/signal edge and obtain ground
+   truth before instrumenting it.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a

@@ -122759,3 +122759,23 @@ to the M5 route-repair/independent-handoff blocker. Evidence:
 ## Session 2988 (2026-08-28) — tested buffer-arbiter retrace repair
 
 Ran a successful Debug build and a corrected same-build paired port capture. The control used the qualified LLE/image path with the task, route, and phase diagnostics; the treatment additionally enabled `ROGUESQ_FORCE_BUFFER_PROGRESS=1`, the existing host-side 4→5→0 retrace transition driver. The task-dispatch positive control fired in both arms (45 control, 57 treatment). Control reached VI 640 (`0x0066A500`) with five route-state rows; treatment stalled at boot VI 320 (`0x006DD280`) with zero route-state or target rows. Neither reached title/hangar or emitted crash/abort markers. This selects the treatment-degraded/harmful outcome for this implementation and rejects the forced transition driver as the M5 route repair. It rules out this specific repair angle, not the underlying missing writer/signal. Artifact: `scratch/agent/s2988_m5_buffer_repair_ab/RESULTS.md`. The first wrapper launch failed on the local `build/Debug` path before emulation; the fixed wrapper used the actual `build/` path.
+
+## Session 2989 (2026-08-28) — qualified READY handoff but port stayed pre-title
+
+Ran the independent retail oracle first with a whole-RDRAM positive control and
+four execution watches. The control reached 10,000 write callbacks, title, and
+hangar. Retail executed `bufferArbiterMarkSlotReady` (`0x8001BEC8`) 3,815
+times, `waitOnVideoQueue` (`0x8001BE80`) 11 times, and
+`bufferArbiterAllocSlot` (`0x8001BF20`) 7,654 times in the requested target
+phases; `viRetraceHandlerThread` direct entry was not observed. This grounds
+the READY transition and selects its `0x8001A2F8` caller as the next port
+probe edge.
+
+Added the callsite probe to the regeneration-safe `../N64Recomp/fixup_game_funcs.py`
+and generated `funcs_5.c`, then built Debug successfully. The port capture
+passed in-process positive controls (570 LLE task rows, one filter-voice
+control row, and eight shade-DMA control rows) but remained at VI 640 origin
+`0x0066A500`; it produced zero target READY rows and zero crash/abort markers.
+The target null is therefore unevaluable, not evidence that the port lacks the
+handoff. This rules out interpreting this pre-title capture as a handoff
+mismatch. Artifact: `scratch/agent/s2989_m5_new_handoff/RESULTS.md`.

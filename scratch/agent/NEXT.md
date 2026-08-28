@@ -1,38 +1,45 @@
-# NEXT work unit (s2989) — M5 independent buffer-arbiter signal handoff
+# NEXT work unit (s2990) — M5 wait-on-video signal edge
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-independent-buffer-arbiter-handoff
 
 ## Unit
 
-Use a new, independently grounded port-side handoff candidate in the
-`bufferArbiterProducerMark` call/signal chain. Keep the rejected
-`ROGUESQ_FORCE_BUFFER_PROGRESS` driver disabled. First use the retail oracle
-and static map to select one producer or signal edge; then batch one
-phase-scoped probe for that edge and run the existing route capture only if
-the candidate has a concrete port callsite.
+Use the already grounded retail `waitOnVideoQueue` edge as a different
+producer/signal candidate. The oracle saw 11 target-phase executions, mostly
+from predecessor `0x8000BFFC`; static recomp maps that to the call at
+`0x8000BFFC` before `waitOnVideoQueue` (`0x8001BE80`). First add one
+phase-scoped callsite probe there through the regeneration-safe fixup path,
+then build and run the existing port capture. Keep
+`ROGUESQ_FORCE_BUFFER_PROGRESS=0`; do not repeat the s2989 READY probe or the
+s2988 forced transition driver.
 
 ## Competing hypotheses and discriminator
 
-- `H-new-handoff-equivalent`: the candidate executes at the port’s VI-640
-  boundary and matches the retail handoff/state tuple; the missing route is
+- `H-wait-equivalent`: the port reaches the same target phase and executes the
+  wait edge with a matching queue/register/state tuple; the missing route is
   elsewhere.
-- `H-new-handoff-missing`: retail executes the candidate in title/hangar but
-  the port has no corresponding target-phase execution, selecting this edge as
-  the next repair boundary.
-- `H-new-handoff-route`: a bounded change at the selected edge reaches title or
-  hangar without degrading the task positive control.
+- `H-wait-missing`: retail executes this wait edge in title/hangar but the port
+  has no target-phase execution, selecting this signal boundary.
+- `H-wait-repair`: a bounded change at this signal edge reaches title/hangar
+  without degrading the LLE task positive control.
 
-The discriminator is one table with retail PC attribution, port candidate
-rows, LLE audio-task positive-control counts, VI phase transitions, target
-route rows, and crash/abort markers. A candidate must pass its positive control
-and phase gate before any route conclusion is accepted.
+The one discriminating table must contain retail PC/predecessor attribution,
+port wait-callsite rows, the same-run positive-control rows, VI transitions,
+target route rows, and crash/abort markers. A port null is valid only if the
+positive controls and target phase both fire.
 
 ## Commands
 
-Inspect `tools/oracle/README.md`,
-`scratch/agent/s2971_m5_route_qualification/RESULTS.md`, and the existing
-buffer-arbiter call chain. Do not build until the candidate and outcomes are
-written here. Then build Debug and run a new capture under
-`scratch/agent/s2989_m5_new_handoff/`, using SIGKILL/watchdog semantics and
-`PROBE_PHASE_WIDTH=512 PROBE_KEYS_FROM_PHASE=1`.
+Ground truth is already recorded in
+`scratch/agent/s2989_m5_new_handoff/oracle.log` and `RESULTS.md`. Inspect the
+existing `waitOnVideoQueue` call at `../N64Recomp/RecompiledFuncs/funcs_3.c`
+and its callers. Add the probe to `../N64Recomp/fixup_game_funcs.py` and the
+generated output, build with:
 
+`cmake --build build --config Debug --target RogueSquadron64Recomp`
+
+Run from the repo root with `tools/probe.sh`, using
+`PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1` plus the
+qualified LLE/image, task, route, phase, and passive breadcrumb variables.
+Use SIGKILL/watchdog semantics and write results under
+`scratch/agent/s2990_m5_wait_signal/`.
