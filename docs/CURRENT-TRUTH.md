@@ -177,7 +177,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Archived progression
 
-Sessions through 3038 established the current M5 boundaries, qualified the
+Sessions through 3041 established the current M5 boundaries, qualified the
 rendering route, and advanced the regeneration-safe symbol sweep. Exact
 interval results, counts, and run outcomes are preserved in
 `PORTING-STATE.md` and `docs/PROJECT-OVERVIEW.md`.
