@@ -122106,3 +122106,20 @@ repair. The next unit is the bounded generated-symbol classification at
 `0x80099FDC`. Artifacts: `scratch/agent/s2950_port_route_sourceword/RESULTS.md`
 and `scratch/agent/s2950_port_route_sourceword.log`.
 Artifact: `scratch/agent/s2949_retail_route_message/RESULTS.md`.
+
+## Session 2951 (2026-08-28) — classified the already-fake 0x80099FDC aspMain boundary
+
+Performed the bounded generated-symbol census for `0x80099FDC`. The project
+map and generated overlay record this as a four-byte `fake_func_80099FDC`
+entry, immediately before `aspMainTextStart` at `0x80099FE0`; the generated
+body then absorbs and misdecodes the RSP text through `0x8009AF5C` before the
+next callable `findVoiceSlotByAge` at `0x8009AF60`. The companion map likewise
+keeps the branch word as already-fake and gives no CPU-function name. No
+independent generated caller or lookup exists. The retail branch word
+`0x14400003` and following `mfc0` word match this boundary.
+
+H-Fragment was selected. H-Callable is ruled out by the RSP-text boundary and
+absence of a callable entry/caller. H-DataGap was not selected because the
+word is a real branch in the ROM stream and the independent map intentionally
+preserves it as an already-fake record. No rename or build was justified.
+Complete table: `scratch/agent/s2951_generated_symbol_rename/source-table.md`.

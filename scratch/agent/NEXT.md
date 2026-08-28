@@ -1,22 +1,21 @@
-# NEXT work unit (s2951) — classify generated placeholder at 0x80099FDC
+# NEXT work unit (s2952) — classify the next unparked generated placeholder
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Context
 
-s2950 passed the F5 control and live route hook but stopped pre-title; the M5
-source-word discriminator is paused until a genuinely new route repair. The
-next unresolved generated placeholder after s2942 is `0x80099FDC` in
-`RecompiledFuncs/funcs_26.c`.
+s2951 confirmed `0x80099FDC` is the already-fake branch word before
+`aspMainTextStart`; it remains parked. M5 is paused after the pre-title route
+stop, so continue the generated-symbol sweep at the next unparked candidate.
 
 ## Competing hypotheses and discriminator
 
-- H-Callable: it is a standalone callable function and must retain a callable
-  symbol or receive an exact companion semantic name.
+- H-Callable: the next candidate is a standalone callable function with an
+  exact companion semantic name.
 - H-Fragment: it is a callable-ambiguous split executable fragment; leave all
   names unchanged.
-- H-DataGap: it is a proven non-callable gap/fixup artifact; rename it to
-  `data_gap_80099FDC` across every generated and source map.
+- H-DataGap: it is a proven non-callable gap/fixup artifact; rename it to a
+  `data_gap_...` name across every generated and source map.
 
 Discriminate with one bounded source table: inspect the complete generated
 body and exact predecessor/successor boundaries, then search all generated
@@ -28,12 +27,12 @@ record authorizes a data-gap rename.
 
 ## Exact work
 
-1. Read the bounded body around `0x80099FDC` in
-   `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c`.
-2. Search the project map, companion symbol file, generated callers, and
-   regeneration-safe rename table for `80099FDC` and its placeholder name.
-3. Write the complete classification to
-   `scratch/agent/s2951_generated_symbol_rename/source-table.md`.
-4. If and only if the table proves H-DataGap or supplies an exact semantic
-   name, apply the bounded rename through the existing rename tooling and
-   build the Debug `RecompiledFuncs` target; otherwise leave code unchanged.
+1. Identify the next unparked placeholder after `0x80099FDC` in the project
+   symbol map and generated overlay order.
+2. Inspect its complete body and exact predecessor/successor boundaries;
+   search generated callers, independent lookups, and the companion map.
+3. Write the complete classification to a new
+   `scratch/agent/s2952_generated_symbol_rename/source-table.md`.
+4. Apply a bounded rename and build `RecompiledFuncs` only if an exact
+   semantic name or mechanically proven data gap is found; otherwise preserve
+   the placeholder.

@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2950 (2026-08-28).
+Current maintenance marker: Session 2951 (2026-08-28).
+
+Session 2951 completed the bounded generated-symbol census at `0x80099FDC`.
+The record is the real retail branch immediately before `aspMainTextStart` at
+`0x80099FE0`; generated recompilation incorrectly absorbs the following RSP
+text through `0x8009AF5C`. The companion map supplies no CPU-function name,
+and no independent caller exists. H-Fragment is selected: preserve the
+already-fake name and do not rename it to a data gap. Artifact:
+`scratch/agent/s2951_generated_symbol_rename/source-table.md`.
 
 Session 2950 extended the regeneration-owned route-preparation probe with the
 oracle-equivalent source-word, source-byte, and branch-state samples. The
@@ -750,7 +758,8 @@ apply only source-backed renames and preserve callable-ambiguous records.
    but still stopped at pre-title 640; the pointed fields were guarded to zero
    on invalid port pointers, so field/timing/logic remain unevaluable. Pause
    this exact discriminator until a genuinely new route repair exists. Continue
-   the generated-symbol sweep from the next unresolved placeholder.
+   the generated-symbol sweep from the next unparked placeholder after the
+   already-fake `0x80099FDC` boundary.
    The s2904 Step 6 drain-tick A/B also stopped at the same pre-title
    route, so it does not validate the default-off change. Ground truth must
    precede any port instrumentation. The s2873 pivot did not change this
