@@ -122695,3 +122695,18 @@ ambiguous rather than a callable preamble or mechanically proven data gap; the
 placeholder remains unchanged. This rules out a justified rename or
 `data_gap_*` classification for this candidate. Evidence:
 `scratch/agent/s2982_generated_symbol_rename/source-table.md`.
+
+## Session 2984 (2026-08-28) — classified 0x8001C3FC as data gap
+
+The bounded generated-symbol sweep inspected `0x8001C3FC`. Its generated body
+contains only `addiu $v0, $v1, 0x20`, with no stack frame, return, memory
+operation, generated caller, or standalone callable contract. It is bounded by
+the complete `dpInterruptHandlerThread` epilogue at `0x8001C3F8` and the
+independent `sinfApprox` entry at `0x8001C400`. The companion map's defined
+fake entry supplied no semantic identity. The discriminator therefore selected
+the mechanically proven boundary-gap classification. Synchronized the
+companion map, project symbol TOML, generated C/header/overlay artifacts, and
+the existing regeneration-safe rename mapping to `data_gap_8001C3FC`.
+The generated-functions target built successfully. This rules out a justified
+semantic rename for this record and leaves `0x80023968` as the next candidate.
+Evidence: `scratch/agent/s2984_generated_symbol_rename/source-table.md`.

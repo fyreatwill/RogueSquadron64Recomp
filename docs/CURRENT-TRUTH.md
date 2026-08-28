@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2982 (2026-08-28).
+Current maintenance marker: Session 2984 (2026-08-28).
 
 ## Current state
 
@@ -76,6 +76,15 @@ companion semantic name; the companion map intentionally retains
 `fake_func_800027B8`. The placeholder remains unchanged. The next sweep
 candidate is `0x8001C3FC`. Evidence:
 `scratch/agent/s2982_generated_symbol_rename/source-table.md`.
+
+Session 2984 classified `0x8001C3FC` as a mechanically proven one-instruction
+data/fixup gap between the complete `dpInterruptHandlerThread` epilogue and
+`sinfApprox` prologue. There is no generated caller or exact companion
+semantic name; the companion's defined fake entry was synchronized to
+`data_gap_8001C3FC` across the project map, generated C/header/overlay files,
+and regeneration-safe rename machinery. The generated-functions target built
+successfully. The next sweep candidate is `0x80023968`.
+Evidence: `scratch/agent/s2984_generated_symbol_rename/source-table.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent

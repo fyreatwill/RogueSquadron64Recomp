@@ -287,7 +287,7 @@ functions = [
     { name = "clearPostSwapPendingFlags", vram = 0x8001C2F8, size = 0x18 },
     { name = "setGfxTaskYieldParams", vram = 0x8001C310, size = 0x18 },
     { name = "dpInterruptHandlerThread", vram = 0x8001C328, size = 0xD4 },
-    { name = "fake_func_8001C3FC", vram = 0x8001C3FC, size = 0x4 },
+    { name = "data_gap_8001C3FC", vram = 0x8001C3FC, size = 0x4 },
     { name = "sinfApprox", vram = 0x8001C400, size = 0x1CC },
     { name = "constMinusSinfApprox", vram = 0x8001C5CC, size = 0x28 },
     { name = "atan2Approx", vram = 0x8001C5F4, size = 0x180 },
