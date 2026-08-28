@@ -1,11 +1,11 @@
-# NEXT work unit — exact companion identity after `0x80017AE0`
+# NEXT work unit — exact companion identity after `0x80017B28`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
 Resume the generated-symbol sweep at the next candidate after the synchronized
-`0x80017AE0` region. Select one candidate with an exact companion identity,
+`0x80017B28` region. Select one candidate with an exact companion identity,
 then audit its companion symbol entry, generated body, callers, header,
 overlay registration, project TOML, and local duplicates. Rename only if the
 identity and semantics agree; otherwise record why the placeholder remains.
@@ -33,4 +33,10 @@ audit documenting why no rename is justified.
    generated `RecompiledFuncs/funcs_*.c`, `funcs.h`, `recomp_overlays.inl`,
    and `syms/rogue_squadron.syms.toml`.
 3. Record the six-surface comparison in
-   `scratch/agent/s3061_generated_symbol_rename/AUDIT.md`.
+   `scratch/agent/s3062_generated_symbol_rename/AUDIT.md`.
+
+The next candidate is `0x80017B48` (`setMissionLevelInitByte` in the project
+symbol TOML). Expected outcomes are unchanged: exact agreement selects
+`H-ExactIdentity` and permits a regeneration-safe rename if still needed;
+a fragment/data gap selects `H-BoundaryOnly`; any disagreement selects
+`H-MappingDrift` and requires synchronization before renaming.

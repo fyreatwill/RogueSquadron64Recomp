@@ -123858,3 +123858,15 @@ extent, and the current generated tree has one definition with no leftover
 placeholder or duplicate definition. This selects H-ExactIdentity and rules
 out a fragment/data boundary and metadata drift. No rename or code change was
 needed. Evidence: `scratch/agent/s3060_generated_symbol_rename/AUDIT.md`.
+
+## Session 3061 (2026-08-28) — audited 0x80017B28 generated symbol
+
+Completed the bounded six-surface generated-symbol audit for `0x80017B28`.
+The companion symbol file, generated body, sole caller, generated header,
+overlay registration, and project symbol TOML agree on
+`setViewStateTripletBytes`, its `0x20`-byte extent, and its three-byte state
+setter semantics. The generated tree already uses the regeneration-safe name,
+so no rename was needed. This selects H-ExactIdentity and rejects both a
+boundary/data fragment and mapping drift for this candidate. The next sweep
+candidate is `0x80017B48`. Evidence:
+`scratch/agent/s3061_generated_symbol_rename/AUDIT.md`.
