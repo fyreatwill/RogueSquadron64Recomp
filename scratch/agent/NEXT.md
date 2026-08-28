@@ -1,45 +1,31 @@
-# NEXT work unit (s2945) — ground-truth M5 route-state handoff census
+# NEXT work unit (s2946) — port-side route-state handoff match
 
 HYPOTHESIS-ID: m5-route-state-repair
 
-M5 remains the strategic priority, while the current port route is invalid
-for title/hangar audio interpretation. Run one independent retail-oracle
-census for a new post-dispatch route-state handoff, using the verified Rice
-video and Start schedule. Do not add port instrumentation or change behavior
-in this work unit.
+M5 remains the strategic priority. Match the oracle-qualified candidate range
+`0x80019C00..0x8001A000` in the port using one batched probe and the existing
+phase/positive-control gates. Do not change behavior or de-stub audio in this
+unit.
 
 ## Competing hypotheses and discriminator
 
-- H-RouteState: a distinct retail CPU handoff/return changes the route into
-  title or hangar; its execution and return fields differ between the verified
-  Start-driven route and the undriven control.
-- H-RouteInput: the handoff is reached identically, and only input delivery or
-  timing differs; route-state fields do not explain the port stop.
-- H-RouteAbsent: the candidate handoff is not executed in the target phase, so
-  this candidate cannot repair the route explanation.
+- H-RouteState: the port reaches the candidate with a different phase-keyed
+  handoff/return state than retail, explaining the route stop.
+- H-RouteInput: port and retail handoff state match; input/timing remains the
+  route difference.
+- H-RouteAbsent: the port never executes the candidate before its stop.
 
-The discriminator is one phase-keyed table containing the candidate PC,
-previous PC, `$v0/$s1/$a0/$a2`, VI width/origin, and execution counts for both
-the undriven and verified Start schedules, with the whole-RDRAM watch as the
-same-run positive control. H-RouteState requires a target-phase execution and
-distinct handoff fields; identical fields select H-RouteInput; no target-phase
-execution selects H-RouteAbsent. A missing whole-RDRAM control invalidates the
-run.
+The discriminator is a phase-keyed table for candidate PC/caller, return
+value, `$s1/$a0/$a2`, and the route-state words corresponding to the oracle's
+`a1/a2` families, with `[f5-fetch-control]` as the same-run positive control.
+Target-phase rows with a port/retail state mismatch select H-RouteState;
+matching rows select H-RouteInput; zero candidate rows with a firing control
+select H-RouteAbsent. A missing control invalidates the run.
 
-## Exact command
+## Exact work
 
-```sh
-mkdir -p scratch/agent/s2945_m5_route_state
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 60 --watch-write 0x0:0x800000 \
-  --watch-pc-range 0x80019C00:0x8001A000 \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s2945_m5_route_state/RESULTS.md 2>&1
-```
-
-Record the control count, target phases, and candidate-PC table in
-`RESULTS.md`. If the selected range is not a genuinely new handoff after the
-static audit, stop and replace it before running.
+Locate the existing phase-gated port probe and add the complete candidate table
+in one build. Run the Debug binary from `build/` with its established 180 s
+route recipe and capture to
+`scratch/agent/s2946_m5_route_state/RESULTS.md`. Build every candidate field
+in the same binary; do not run one field at a time.

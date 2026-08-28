@@ -121975,3 +121975,24 @@ H-IndependentIndex, or H-IrrelevantWriter: the target phase and required
 control were absent, so the discriminator was unevaluable. No behavior,
 mitigation, or runtime source change was made. Complete result:
 `scratch/agent/s2944_m4_accumulator_boundary/RESULTS.md`.
+
+## Session 2945 (2026-08-28) — ground-truthed post-dispatch route-state handoff
+
+Ran the planned retail-oracle census with the verified Rice video and
+Start-driven schedule. The first capture omitted phase gating and therefore
+provided only a lifetime range count; it is retained as a failed command
+variant. The fixed capture used explicit title and hangar phase buckets. Its
+whole-RDRAM positive control reached 10,000 writes. The candidate range
+`0x80019C00..0x8001A000` executed 69,372 times at title width 1024, origin
+`0x00790400`, and 25,420 times at hangar width 512, origin `0x006AB400`.
+Representative PC `0x80019CD8` showed phase-distinct `a1/a2` state families
+while `v0/s1/s0` stayed stable for the route loop.
+
+This provisionally selects H-RouteState and rules out H-RouteAbsent for this
+candidate: the handoff is live in both target phases. It does not distinguish
+a causal route-state difference from ordinary phase/input state, and the
+capture is single-source evidence. No port behavior or instrumentation
+changed. The next unit is a batched port-side probe of this candidate using
+the existing phase and positive-control gates. Complete artifacts:
+`scratch/agent/s2945_m5_route_state/RESULTS.md` and
+`RESULTS-phase-gated.md`.

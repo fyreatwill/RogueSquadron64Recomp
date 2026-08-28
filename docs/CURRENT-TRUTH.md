@@ -6,6 +6,19 @@ remain in the ledger and scratch artifacts.
 
 Current maintenance marker: Session 2943 (2026-08-28).
 
+Session 2945's corrected retail-oracle route-state census phase-gated the
+candidate range `0x80019C00..0x8001A000` in the verified Start schedule. The
+whole-RDRAM positive control reached 10,000 writes; the candidate range
+executed 69,372 times during title width 1024/origin `0x00790400` and 25,420
+times during hangar width 512/origin `0x006AB400`. Representative handoff
+rows at `0x80019CD8` carried phase-distinct `a1/a2` state while the route-loop
+registers remained stable. This provisionally selects H-RouteState and rules
+out H-RouteAbsent for this candidate, but is single-source oracle evidence and
+does not establish causality in the port. The next unit is a batched port
+probe of this candidate with the existing route/phase controls. Artifacts:
+`scratch/agent/s2945_m5_route_state/RESULTS.md` and
+`RESULTS-phase-gated.md`.
+
 Session 2944's batched M4 port join built and ran for 180 seconds, but the
 phase gate stopped at VI width 640 (`probe_rc=5`); title 1024 and hangar 512
 were never reached. The existing `[m4-y8000]` flush-site control fired, but
@@ -675,7 +688,11 @@ apply only source-backed renames and preserve callable-ambiguous records.
    before interpreting service, slot, MORT, or PCM nulls. The first
    post-dispatch table is ground-truth-qualified but its matching port pair
    was route-invalid; repair or replace the route before reading downstream
-   nulls. Do not land a
+   nulls. Session 2945 now ground-truths a genuinely new candidate range: it
+   is live in both title and hangar and carries phase-distinct handoff state,
+   selecting H-RouteState provisionally. This single-source result does not
+   justify an audio behavior change; match the candidate in the port first.
+   Do not land a
    behavior change without a named legitimate writer and ordering edge. The
    status-table poll / `0x80094648` alignment angle is now exhausted: it
    reached both target phases but produced no discrete scheduling edge. The
