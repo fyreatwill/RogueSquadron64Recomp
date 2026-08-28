@@ -1,32 +1,35 @@
-# NEXT work unit (s2988) — M5 route repair or independent handoff
+# NEXT work unit (s2988) — M5 buffer-arbiter route repair A/B
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
-Design and run one genuinely new port-side route repair or independent handoff
-probe tied to the retail `bufferArbiterProducerMark` route. Retain the same-run
-whole-RDRAM positive control and title/hangar phase gates; do not repeat the
-stalled s2972–s2978 capture unchanged.
+Run one same-build paired port capture with the existing host-side retrace
+transition repair enabled only in the treatment arm:
+`ROGUESQ_FORCE_BUFFER_PROGRESS=1`. Keep the control identical with that
+variable unset. Retain LLE/task positive controls, title/hangar VI phase gates,
+route-state and target-contract logs, and crash/abort markers.
 
 ## Competing hypotheses and discriminator
 
-- `H-port-route-repair`: the new handoff/repair reaches title or hangar and
-  makes the M5 Step 1 audio discriminator evaluable.
-- `H-port-route-equivalent`: it reaches the target phase but still shows the
-  same port-side route behavior as the retail handoff.
-- `H-port-route-blocked`: it remains pre-title, so audio downstream nulls stay
-  unevaluable and the repair angle is rejected.
+- `H-buffer-repair`: forced 4→5→0 retrace transitions unblock the route; the
+  treatment reaches title or hangar while control remains at pre-title VI 640.
+- `H-repair-irrelevant`: both arms have the same phase boundary and route rows;
+  the transition driver is not the missing handoff.
+- `H-repair-harmful`: the treatment crashes, aborts, or loses the task-positive
+  control before a target phase, showing this repair is unsafe for this route.
 
-The discriminator is one same-run table containing whole-RDRAM control,
-handoff/route rows, VI phase gates, target-phase producer rows, and
-crash/abort markers. Target-phase rows select a qualified route; a pre-title
-stop leaves audio downstream outcomes unevaluable.
+The discriminating measurement is a single table comparing each arm’s LLE task
+positive-control count, phase widths/origins, `bufferArbiterProducerMark`
+route/target rows, and crash/abort markers. A target phase in treatment selects
+`H-buffer-repair`; equal pre-title phases select `H-repair-irrelevant`;
+degraded treatment selects `H-repair-harmful`.
 
 ## Commands
 
-Inspect the existing route/phase probe and retail handoff artifacts, choose one
-new port-side repair or independent handoff, then run its same-build paired
-arms with the whole-RDRAM positive control. Build using the project’s Debug
-configuration before launching from `build/`; capture results under a new
-`scratch/agent/s2988_m5_route_repair/` directory.
+1. Build `Debug` target `RogueSquadron64Recomp`.
+2. Run `scratch/agent/run_s2988_m5_buffer_repair_ab.sh`, which launches both
+   arms from `build/` and writes results under
+   `scratch/agent/s2988_m5_buffer_repair_ab/`.
+3. Summarize both logs and phase/task controls in the session ledger.
+

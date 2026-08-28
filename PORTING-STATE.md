@@ -122756,3 +122756,6 @@ function or data gap. The remaining generated placeholder candidates are
 already covered by earlier ledger classifications, so the next unit returns
 to the M5 route-repair/independent-handoff blocker. Evidence:
 `scratch/agent/s2987_generated_symbol_rename/source-table.md`.
+## Session 2988 (2026-08-28) — tested buffer-arbiter retrace repair
+
+Ran a successful Debug build and a corrected same-build paired port capture. The control used the qualified LLE/image path with the task, route, and phase diagnostics; the treatment additionally enabled `ROGUESQ_FORCE_BUFFER_PROGRESS=1`, the existing host-side 4→5→0 retrace transition driver. The task-dispatch positive control fired in both arms (45 control, 57 treatment). Control reached VI 640 (`0x0066A500`) with five route-state rows; treatment stalled at boot VI 320 (`0x006DD280`) with zero route-state or target rows. Neither reached title/hangar or emitted crash/abort markers. This selects the treatment-degraded/harmful outcome for this implementation and rejects the forced transition driver as the M5 route repair. It rules out this specific repair angle, not the underlying missing writer/signal. Artifact: `scratch/agent/s2988_m5_buffer_repair_ab/RESULTS.md`. The first wrapper launch failed on the local `build/Debug` path before emulation; the fixed wrapper used the actual `build/` path.

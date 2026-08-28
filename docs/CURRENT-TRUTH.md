@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2987 (2026-08-28).
+Current maintenance marker: Session 2988 (2026-08-28).
 
 ## Current state
 
@@ -118,6 +118,17 @@ placeholder candidates are already covered by earlier ledger classifications,
 so the next unit returns to the M5 route-repair/independent-handoff blocker.
 Evidence:
 `scratch/agent/s2987_generated_symbol_rename/source-table.md`.
+
+Session 2988 ran a same-build paired port capture of the existing host-side
+buffer-arbiter retrace transition driver. The control reached pre-title VI 640
+(`0x0066A500`) with 45 real Factor 5 audio-task dispatches and five route-state
+rows; the treatment (`ROGUESQ_FORCE_BUFFER_PROGRESS=1`) stalled at boot VI 320
+(`0x006DD280`) with 57 dispatches and zero route-state or target rows. Neither
+arm reached title/hangar, and neither produced crash/abort markers. The shared
+task dispatch is a positive control, while the phase divergence selects
+`H-repair-harmful` for this implementation and rejects this forced transition
+driver as the route repair. It does not identify the missing writer/signal.
+Artifact: `scratch/agent/s2988_m5_buffer_repair_ab/RESULTS.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -346,11 +357,13 @@ on audio de-stubbing but is re-scoped pending a route repair; M3 is parked
 pending a new discriminator. The generated-symbol sweep is parked because
 its remaining placeholder candidates are already classified.
 
-1. **M5 route repair/handoff — resume target-phase qualification.** Use a
-   genuinely new port-side repair or independent handoff tied to the retail
-   `bufferArbiterProducerMark` route, retaining the same-run whole-RDRAM
-   positive control and title/hangar phase gates. Do not repeat the stalled
-   s2972–s2978 route captures unchanged.
+1. **M5 route repair/handoff — identify a different producer/signal edge.** The
+   s2988 forced 4→5→0 host transition driver is rejected: it regressed the
+   port to VI 320 in the paired run. Use a genuinely new port-side handoff
+   candidate tied to retail `bufferArbiterProducerMark`, with independent
+   ground-truth attribution before adding instrumentation and the same-run
+   task positive control plus title/hangar phase gates. Do not repeat this
+   driver or the stalled s2972–s2978 captures.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a
@@ -390,10 +403,10 @@ its remaining placeholder candidates are already classified.
 
 9. **M5 route handoff — retail grounded, port route still missing.** Retail
    positively executes `bufferArbiterProducerMark` at `0x8001BCE4` in title
-   and hangar, while s2972's port pair never reaches that phase. The next
-   route unit must use a genuinely new port-side repair/probe angle tied to
-   this handoff and retain the positive control; do not infer a mismatch from
-   the oracle alone.
+   and hangar, while s2988's control reaches only VI 640 and its forced
+   transition treatment regresses to VI 320. The next route unit must use a
+   genuinely new port-side repair/probe angle tied to this handoff and retain
+   the positive control; do not infer a mismatch from the oracle alone.
 
 ## Durable boundaries
 
