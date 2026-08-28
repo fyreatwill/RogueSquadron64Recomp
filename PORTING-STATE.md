@@ -120816,3 +120816,39 @@ unevaluable for target phases. This rules out no downstream audio cause and
 authorizes no behavior change. The probe is
 `tools/apply_s2879_m5_route_probe.py`; logs are in
 `scratch/agent/s2879_m5_new_route_state/`.
+## Session 2880 (2026-08-27) — renamed three data-gap gap-fillers in 0x80099C4C–0x800AF6A8 sweep
+
+This iteration was triggered as a checkpoint close-out after s2879's exit
+contract was flagged as diagnostic-only. The planned work unit was to create
+`docs/M5-AUDIO-PLAN.md`; the document was found already present and current
+from session 2832, so no new document was needed.
+
+The route investigation continues to stall at pre-title VI 640 (`0x0066A500`),
+and M5 Step 1 (re-baseline image vs. silent) requires a route-qualified run that
+the port is not producing. The sweep was advanced instead, as the next eligible
+priority.
+
+The bounded sweep covered `0x8007C300..0x800AF700`. Eight placeholder records
+were examined. Three had `__builtin_trap()` bodies with the fixup annotation
+"gap-filler decoded from data bytes; body was invalid C": `fake_func_80099C4C`
+(4 bytes, before `transformVec3ByAffineMatrix`), `fake_func_800AEC54` (12
+bytes, before `initCraftSelectScreen`), and `fake_func_800AF6A8` (4 bytes,
+before `handleCraftSelectInput`). All three had no callers — only overlay
+dispatch and declaration entries. These are renamed to `data_gap_80099C4C`,
+`data_gap_800AEC54`, and `data_gap_800AF6A8` in `tools/rename_generated_symbols.py`
+and applied to the generated snapshot. H-data-gap SELECTED for these three;
+H-callable REFUTED by the invalid-body proof.
+
+Five remaining records were executable instruction fragments with no source-backed
+name: `0x80097D58` (epilogue), `0x80099FDC` (branch before `aspMainTextStart`),
+`0x8009C2C8` (FP), `0x8009D7CC` (FP before `filterVoiceSampleBlock`), and
+`0x800AE3E4` (FP). All remain unchanged as ambiguous-or-fake; no callable name
+is inferred. The full source table is at
+`scratch/agent/s2880_generated_symbol_rename/source-table.md`. The renamed 9
+generated references in 4 files (funcs.h, recomp_overlays.inl, funcs_26.c,
+funcs_29.c).
+
+The next discriminating work unit for the generated-symbol sweep is the range
+starting after `0x800AF700`. For M5, the route must reach title/hangar before
+Step 1 can be evaluated; the next route discriminator is identifying what change
+since the last qualified run broke the pre-title progression.

@@ -1,36 +1,54 @@
-# NEXT work unit (s2880) — m5-audio-plan
+# NEXT work unit (s2881) — generated-symbol-renaming-sweep
 
-HYPOTHESIS-ID: m5-audio-destub-plan
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Create the first M5 design document, `docs/M5-AUDIO-PLAN.md`. Survey every
-audio stub, trap, early return, disabled ucode path, and host-side gate that is
-currently active. Separate the Factor 5 image/audio-RSP arm from the CPU MORT
-speech boundary, then define a strictly incremental de-stubbing sequence with
-one validation soak and positive control per step. This is documentation and
-design only; do not change runtime behavior or build the game.
+Continue the generated-symbol renaming sweep starting at `0x800AF700`. Run
+the rename script in discovery mode over a bounded interval, classify each
+placeholder record (data-gap, callable-ambiguous, or source-backed name), and
+rename only records with mechanical proof or companion-backed semantic names.
 
 ## Competing hypotheses and discriminator
 
-- H-degenerate-audio: the active stubs and traps create degenerate paths that
-  plausibly account for the recurring audio crash families.
-- H-independent-audio: the current guards are not on the relevant contracts;
-  de-stubbing audio would not address the observed failures.
-- H-mixed-contracts: image-stage and CPU MORT paths have separate blockers and
-  require separate validation gates.
+- H-data-gap: the placeholder in the interval covers non-callable data bytes
+  (proven by `__builtin_trap()` fixup annotation, or by fewer than 2 useful
+  instructions with no caller).
+- H-callable-ambiguous: the record has executable instructions but no
+  source-backed name; leave unchanged.
+- H-source-backed: the companion provides a semantic name matching the
+  generated body; rename unconditionally.
 
-The discriminating deliverable is an exhaustive table mapping each active
-stub/trap/gate to its caller or task path, contract status, expected legitimate
-writer/producer, safe first change, positive control, phase gate, and failure
-signal. A row without a named contract edge remains blocked and is not a
-candidate for implementation. The document must also state the exact soak
-recipe and expected outcomes for each proposed step.
+The discriminating deliverable is a source table (`source-table.md` in the
+session scratch directory) mapping each candidate to one of these three
+classifications, with evidence cited for each rename decision. An unchanged
+entry requires a stated reason; an unnamed reason is not a reason.
 
 ## Exact next commands
 
-1. `rg -n "aspMain|musyx|MORT|AUDIO_UCODE|audio|PCM|voice|Broke|stub|trap|waitForAnyAudioSlot|filterVoiceSampleBlock" src lib tools /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c`
-2. Inspect bounded source windows for every hit and read the existing M5
-   artifacts referenced by `docs/CURRENT-TRUTH.md`.
-3. Write `docs/M5-AUDIO-PLAN.md`, run `git diff --check`, and do not build or
-   launch the game in this iteration.
+1. Find the next unresolved placeholder after `0x800AF700`:
+   ```
+   python3 tools/rename_generated_symbols.py \
+     --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
+     --start-address 0x800AF700 \
+     --end-address 0x800B4000 \
+     --limit 10 \
+     /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/
+   ```
+2. For each `ambiguous-or-fake` candidate: read 20 lines of context around
+   the function body in RecompiledFuncs/; check the overlay rom_size; check
+   for callers (`grep -rn "fake_func_ADDR"`); classify.
+3. Rename only mechanically-proven data-gaps or companion-named callables;
+   add entries to the RENAMES dict in `tools/rename_generated_symbols.py`.
+4. Apply: re-run `rename_generated_symbols.py` with `--start-address` and
+   `--end-address` scoped to the renamed entries.
+5. Write source table to `scratch/agent/s2881_generated_symbol_rename/source-table.md`.
+
+## Expected discriminating outcomes
+
+- Zero renames found → document as such and advance the start address; NOT
+  ADVANCED-worthy alone; pivot to a different range or a different angle.
+- One or more renames → engineering change lands; ADVANCED. Session entry
+  must name H-data-gap SELECTED or H-source-backed SELECTED for each rename.
+- All ambiguous → document as such; ADVANCED only if the source table is new
+  evidence. Do not rename callable-ambiguous entries.

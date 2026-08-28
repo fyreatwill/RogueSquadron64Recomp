@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2877 (2026-08-27).
+Current maintenance marker: Session 2880 (2026-08-27).
 
 ## Live result
 
@@ -106,11 +106,11 @@ instruction fragments immediately before named routines. They are now named
 `data_gap_*` in the companion map, project symbol map, and generated snapshot;
 the rename is recorded in `tools/rename_generated_symbols.py` for regeneration.
 
-The s2874 bounded sweep inspected `0x8007A86C` and `0x8007C298`. Their generated
-sizes and isolated instruction fragments are consistent with gaps, but the
-companion map supplies only `fake_func_*` plus `defined:true`, with no
-source-backed classification. Both remain ambiguous-or-fake and unchanged;
-the source table is `scratch/agent/s2874_generated_symbol_rename/source-table.md`.
+The s2874 bounded sweep inspected `0x8007A86C` and `0x8007C298`; both remain
+ambiguous-or-fake and unchanged. The s2880 sweep covered `0x8007C300..0x800AF700`:
+three `__builtin_trap()` gap-fillers renamed to `data_gap_*`, five ambiguous
+executable fragments left unchanged. Source table:
+`scratch/agent/s2880_generated_symbol_rename/source-table.md`.
 
 The s2875 retail-first state-arbiter probe was instrument-valid: the
 whole-RDRAM control reached 10,000 callbacks, and the driven retail run reached
@@ -198,11 +198,13 @@ apply only source-backed renames and preserve callable-ambiguous records.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 3. **Generated-symbol renaming sweep.** The s2873 batch completed
-   `0x80079278..0x8007A0F0`: three proven data gaps were renamed and no
-   callable names were inferred. Continue with the next bounded unresolved
-   interval only when M5 has no writer-backed behavior edge; exact companion
-   semantic names and mechanically proven short data-gap names are allowed,
-   while callable-ambiguous and data-ambiguous entries stay unchanged.
+   `0x80079278..0x8007A0F0`. The s2880 sweep covered `0x8007C300..0x800AF700`:
+   three `__builtin_trap()` gap-fillers (`0x80099C4C`, `0x800AEC54`, `0x800AF6A8`)
+   were renamed to `data_gap_*`; five ambiguous executable fragments were left
+   unchanged. Continue with the next bounded interval after `0x800AF700` only
+   when M5 has no writer-backed behavior edge; exact companion semantic names
+   and mechanically proven short data-gap names are allowed, while
+   callable-ambiguous and data-ambiguous entries stay unchanged.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
