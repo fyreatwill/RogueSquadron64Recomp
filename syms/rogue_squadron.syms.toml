@@ -102,7 +102,7 @@ functions = [
     { name = "resolveAssetRamAddress", vram = 0x800052F4, size = 0x48 },
     { name = "getDmaSlotMutex", vram = 0x8000533C, size = 0x10 },
     { name = "setDmaWorkerPriority", vram = 0x8000534C, size = 0x30 },
-    { name = "fake_func_8000537C", vram = 0x8000537C, size = 0x4 },
+    { name = "data_gap_8000537C", vram = 0x8000537C, size = 0x4 },
     { name = "initRsMallocHeap", vram = 0x80005380, size = 0x70 },
     { name = "getRsHeapMaxAllocSize", vram = 0x800053F0, size = 0x24 },
     { name = "allocRsHeapBlock", vram = 0x80005414, size = 0xB0 },

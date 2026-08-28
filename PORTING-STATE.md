@@ -121112,3 +121112,22 @@ already synchronized, so no generated references changed. Complete table:
 
 This rules out a callable-name selection for this interval; it does not alter
 runtime behavior and required no build or soak.
+
+## Session 2895 (2026-08-27) — reconciled main-text data gap at 0x8000537C
+
+Ran the bounded generated-symbol sweep from `0x80003430` through the next
+established boundary at `0x80005380`. The complete interval table found one
+placeholder, `0x8000537C` (size `0x4`). Its generated body is a fixup
+`__builtin_trap()` for invalid/data bytes, with no callable prologue, return,
+or generated `jal`/`LOOKUP_FUNC` reference. The companion map supplies no
+semantic callable name and documents that treating this record as code creates
+a false reference that splits the real `0x8000703C` body. It was classified
+H-DataGap and renamed `data_gap_8000537C` in the companion and project maps.
+
+The regeneration-safe rename table and generated snapshot were reconciled;
+three generated references changed across `funcs_1.c`, `funcs.h`, and
+`recomp_overlays.inl`, and exact searches found no stale generated
+`fake_func_8000537C` reference. No build or runtime soak was needed because
+this is a naming-only change. H-Callable and H-Ambiguous are ruled out for
+this interval. Complete table: `scratch/agent/s2895_generated_symbol_rename/source-table.md`.
+The next unresolved placeholder is after `0x80005380`.
