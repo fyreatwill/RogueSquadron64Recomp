@@ -105,7 +105,6 @@ RENAMES = {
     # on the adjacent body names and exact boundaries.
     "fake_func_800B47C4": "menuControllerInputPreamble",
     "fake_func_800B58B4": "playerAwingInitPreamble",
-    "fake_func_800B75C4": "playerYwingInitPreamble",
     "fake_func_800B89F4": "playerVwingInitPreamble",
     # These short mission-overlay records are non-callable fragments between
     # established function boundaries.

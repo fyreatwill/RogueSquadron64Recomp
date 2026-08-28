@@ -1,12 +1,12 @@
-# NEXT work unit (s2963)
+# NEXT work unit (s2964)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
 Classify the next unparked generated placeholder after the preserved
-`0x800B58B4` fragment. Re-census the maps first; the next address is expected
-to be `0x800B75C4`, subject to current synchronization. This is one bounded
+`0x800B75C4` fragment. Re-census the maps first; the next address is expected
+to be `0x800B89F4`, subject to current synchronization. This is one bounded
 source-table audit. Do not run the game or M5 instrumentation.
 
 ## Competing hypotheses and discriminator
@@ -32,7 +32,7 @@ record authorizes a data-gap rename. Otherwise preserve the placeholder.
    project symbols, companion symbols/m2c, and rename tables.
 3. Search all generated/source callers and independent lookups.
 4. Write the complete table to
-   `scratch/agent/s2962_generated_symbol_rename/source-table.md`.
+   `scratch/agent/s2964_generated_symbol_rename/source-table.md`.
 5. If authorized, apply the regeneration-safe rename and build
    `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RecompiledFuncs`.
 

@@ -114906,6 +114906,30 @@ Complete table: `scratch/agent/s2954_generated_symbol_rename/source-table.md`.
 ORIGIN: naming-only. No runtime, generated instruction, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2963 (2026-08-28) — preserved the 0x800B75C4 branch fragment
+
+Ran the bounded generated-symbol source-table audit for the next placeholder
+after `0x800B58B4`. The active generated tree defines `fake_func_800B75C4` as
+three valid instructions: `lui $at,0x8005`, `lwc1 $f2,0xC58($at)`, and
+`mul.s $f0,$f0,$f2`. The preceding `findLockOnTarget` routine branches to
+`0x800B75C4` internally and ends at `0x800B75C0`; the next entry,
+`playerYwingInit`, starts at `0x800B75D0` with its own stack prologue.
+
+The generated tree has no independent call or lookup of the fake symbol, and
+the companion/project map supplies no exact semantic name for this address.
+The two independent lines of evidence select H-Fragment: the valid
+instructions rule out H-DataGap, while the internal branch target and absence
+of a callable boundary rule out H-Callable. Preserved `fake_func_800B75C4`.
+
+Removed stale `playerYwingInitPreamble` entries from
+`tools/rename_generated_symbols.py` and `tools/rename/build_redefs.py`; no
+generated function or runtime behavior changed, so no build or run was needed.
+Next candidate is `0x800B89F4`. Complete table:
+`scratch/agent/s2963_generated_symbol_rename/source-table.md`.
+
+ORIGIN: naming-only classification. The stale rename entries were removed
+because the candidate is an internal branch fragment, not a callable preamble.
+
 ## Session 2961 (2026-08-28) — preserved ambiguous 0x800B47C4 fragment
 
 Ran the bounded generated-symbol source-table audit for the next placeholder
