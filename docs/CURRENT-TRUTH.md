@@ -29,6 +29,13 @@ not PCM correctness.
 
 ## Latest results
 
+Session 2957 classified `0x800AE3E4` as an ambiguous three-instruction
+overlay-boundary fragment. Its final word overlaps the menu overlay's named
+`tickEasedCameraKeyframeBlend` entry at `0x800AE3EC`; there is no prologue,
+return, caller, independent lookup, or exact companion name. It remains
+`fake_func_800AE3E4` with no rename. Artifact:
+`scratch/agent/s2957_generated_symbol_rename/source-table.md`.
+
 Session 2955 classified `0x800AAADC` as the four-byte entry preamble for
 `playerSnowSpeederInit` at `0x800AAAE0`. The body is only `sh a0, 0x1A(v1)`;
 there is no standalone prologue, return, independent caller, or lookup. It
@@ -75,8 +82,8 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
    with a named discriminator; passive recurrence belongs in the soak queue.
 
 3. **Generated-symbol renaming sweep — active bounded campaign.** Continue
-   from the next unparked placeholder after `0x800AAADC`, currently expected
-   to be `0x800AE3E4` subject to the census. Exact companion semantic names
+   from the next unparked placeholder after `0x800AE3E4`, currently expected
+   to be `0x800AEC54` subject to the census. Exact companion semantic names
    and mechanically proven short data gaps may be renamed across every map
    and generated artifact. Valid executable fragments without callable proof
    remain unchanged. Keep HYPOTHESIS-ID

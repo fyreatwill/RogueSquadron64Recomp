@@ -122217,3 +122217,19 @@ a data-gap classification, and changes no behavior. Complete table:
 
 ORIGIN: naming-only. No runtime, generated instruction, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2957 (2026-08-28) — preserved the overlapping 0x800AE3E4 fragment
+
+Ran the bounded generated-symbol census at `0x800AE3E4`. The candidate is a
+three-instruction executable fragment (`lwc1`, `lwc1`, `mul.s`) with no
+standalone prologue, return, generated caller, or independent lookup. Its final
+word at `0x800AE3EC` overlaps the companion menu overlay's named
+`tickEasedCameraKeyframeBlend` entry, while the mission map retains the
+candidate as `fake_func_800AE3E4`. No exact semantic name exists for the
+candidate. This selects H-Fragment: preserve the placeholder and make no
+generated or map rename. The result is static, single-source evidence and does
+not establish runtime reachability. Complete table:
+`scratch/agent/s2957_generated_symbol_rename/source-table.md`.
+
+ORIGIN: naming-only. No runtime, generated instruction, submodule, or
+mitigation-shaped behavior changed.
