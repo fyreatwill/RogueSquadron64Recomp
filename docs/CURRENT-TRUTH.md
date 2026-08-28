@@ -122,6 +122,17 @@ and early one-offs); it stopped at VI 640 with route preparation
 `H-MeasurementInsufficient`; missingness and ordering remain unevaluable.
 Evidence: `scratch/agent/s3048_m5_dp_event_boundary/AUDIT.md`.
 
+Session 3049 audited event registration and DP completion wiring. Retail's
+whole-RDRAM control fired, reached title and hangar, and saw `osSetEventMesg`
+only for SI/AI plus zero executions of `dpInterruptHandlerThread`; its target
+phase still reached the DP consumer at `0x8001C38C` on queue `0x8011A408`.
+The same-build port positively registered DP event 9 to that queue with
+message zero and produced repeated DP completion rows, but remained at VI 640
+`0x0066A500`. This is a route-wiring divergence closest to
+`H-EventDeliveryWrong`, not a missing port registration or an unevaluable
+measurement. No behavior change was justified. Evidence:
+`scratch/agent/s3049_m5_event_registration_edge/AUDIT.md`.
+
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
 Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
@@ -152,18 +163,17 @@ contract gap from that result.
 
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete. M5 design is complete, but Step 1 is
-route-blocked at pre-title VI 640; the VI-commit ordering edge is now audited,
-so the next M5 unit must use a genuinely new non-ProducerMark handoff angle. M3 is
+route-blocked at pre-title VI 640; event registration/completion is live in the
+port and the next unit must use a genuinely new direct-producer angle. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — audit event registration/wiring before the DP consumer.**
-   The descriptor lifetime table is implemented but route-blocked: the port
-   remained at VI 640 `0x0066A500`, so no target-phase enqueue/consume rows
-   could arm. Retail independently reaches the target and reuses task
-   `0x80149470`. Session 3048 likewise found a live DP queue wrapper but no
-   target phase; use the event-registration/wiring boundary before the DP
-   consumer as a new angle with positive route controls. Do not repeat the
-   s3048 queue-consumer null or infer event ordering from it.
+1. **M5 route repair/handoff — audit direct target-phase producers for queue `0x8011A408`.**
+   Session 3049 found the port's DP registration and completion path live, but
+   retail reached the same target-phase consumer without the watched DP-handler
+   registration path. Watch the retail `osSendMesg` entry and attribute its
+   target-phase callers/messages, alongside the whole-RDRAM and VI controls;
+   compare against the port's target-phase send table if the port reaches it.
+   Do not repeat the registration or consumer-only watches.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve

@@ -123596,3 +123596,26 @@ title/hangar phases or the retail target caller. This selects
 cannot discriminate missing registration, delivery order, or equivalence at
 the target phase. No queue or route behavior was changed. Evidence:
 `scratch/agent/s3048_m5_dp_event_boundary/AUDIT.md`.
+
+## Session 3049 (2026-08-28) — audited event registration and DP completion wiring
+
+Ran the bounded M5 event-registration/wiring unit after the required retail
+ground-truth preflight. The retail oracle used Rice, the driven Start schedule,
+VI tracing, and a whole-RDRAM positive control; the control reached 10,000
+callbacks, and retail reached title `1024 @ 0x00790400` and hangar `512 @
+0x006AB400`. A full-run execution watch saw `osSetEventMesg` only twice: SI
+event 5 from `0x80002E50` and AI event 6 from `0x80091BA0`. It saw zero
+`dpInterruptHandlerThread` (`0x8001C328`) entries. A phase-gated arm independently
+showed the retail DP consumer at `0x8001C38C` from `0x8001C388` on queue
+`0x8011A408` in target phases.
+
+Built the same Debug port target and ran it from `build/` with LLE-only
+AUTOPILOT and batched event/phase/route diagnostics. The port positively
+registered DP event 9 to queue `0x8011A408`, message zero, and emitted repeated
+DP completion rows, but remained at VI 640 origin `0x0066A500` with route
+preparation `accepted=0`; no title or hangar phase appeared. This selects a
+route-wiring divergence closest to `H-EventDeliveryWrong`: the port event path
+is live, while retail reaches the consumer without the watched DP-handler
+registration path. It rules out a missing port registration and an
+unevaluable-control explanation. No behavior change was justified. Full
+evidence: `scratch/agent/s3049_m5_event_registration_edge/AUDIT.md`.
