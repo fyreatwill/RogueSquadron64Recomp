@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2926 (2026-08-27).
+Current maintenance marker: Session 2927 (2026-08-27).
+
+The s2927 mandatory revisit selected the parked M4 accumulator boundary with
+a new static register-lifetime angle. `OVL1C_1DDC` resets producer `r7` and
+`OVL1C_1F04` advances it by six after the `B00/B02/B04` stores, while
+`OVL20_1320` derives a separate consumer `r7` and `OVL20_133C` derives the
+table index from runtime `DMEM[0xC70]`/`DMEM[0xB74]`. No generated assignment
+connects those values. This selects H-IndependentState, rules out a shared
+register-lifetime explanation, and leaves the dynamic `B74` writer/value to
+producer-slot join unresolved. The s2578 positive-control trace independently
+confirms the consumer path is live. Artifact:
+`scratch/agent/s2927_m4_register_lifetime/audit.md`.
 
 The s2926 generated-symbol sweep reconciled `0x80069AEC..0x80069AF0` to
 `collideSegmentAgainstObjectNodesPreamble`. The one-instruction record is an
@@ -612,11 +623,13 @@ apply only source-backed renames and preserve callable-ambiguous records.
    repeat this candidate set or the exhausted broad main-text range. The
    oracle does not drive missions; any future revisit needs a genuinely new
    boundary derived from a different static handoff.
-7. **M4 accumulator origin — next revisit.** The producer, selector, and indirect
-   consumer are localized; equality remains unresolved and broad watches are
-   not a substitute. Use the existing batched producer-slot/consumer-index
-   join as one phase-gated port instrument with its independent positive
-   control; no mitigation is authorized.
+7. **M4 accumulator origin — producer/index equality unresolved.** The s2927
+   register-lifetime audit showed producer `r7` and consumer `r7`/`r3&0x7F`
+   have independent derivations; the existing s2578 dynamic trace proves one
+   live `slot=0/index=0` pair but not why it is equal. The next revisit must
+   use one batched phase/task-keyed port probe joining the `B74` writer/value,
+   producer slot, and consumer index, with the existing positive-control mark.
+   No mitigation or table rewrite is authorized.
 8. **M5 image task contract / hangar artifact — parked.** No writeback,
    remap, forced state, or mitigation without an `ORIGIN:` naming the writer
    and stating whether its value is legitimate.

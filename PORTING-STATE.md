@@ -121666,3 +121666,29 @@ reconciled maps or generated snapshot. No build was needed because generated
 code was unchanged. This selects the source-backed callable-preamble
 hypothesis and rules out a proven data-gap classification for this interval.
 Complete evidence table: `scratch/agent/s2926_generated_symbol_rename/source-table.md`.
+## Session 2927 (2026-08-27) — separated M4 producer and consumer register lifetimes
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 42,434
+bytes, so this was not a maintenance iteration. The last 15 ledger titles
+were all generated-symbol sweep entries, so the mandatory REVISIT selected the
+parked M4 accumulator boundary. Ground-truth preflight confirmed that the
+retail oracle cannot observe RSP DMEM or `ACCH:ACCM:ACCL`; no new retail watch
+was added.
+
+The bounded generated-source audit found that `OVL1C_1DDC` resets producer
+`r7`, `OVL1C_1ED4` stores `B00/B02/B04 + r7`, and `OVL1C_1F04` advances the
+producer slot by six. Separately, `OVL20_1320` derives consumer `r7` from
+`r10*40`, while `OVL20_133C` derives the indirect table index from runtime
+`DMEM[0xC70]`/`DMEM[0xB74]` and `OVL20_13D8` loads `B00/B02/B04 + (r3&0x7F)`.
+No generated assignment connects the producer slot to the consumer index.
+
+This selects `H-IndependentState` and rules out a shared register-lifetime
+explanation. The prior s2578 dynamic positive-control trace independently
+shows that the consumer path is live and observed one `slot=0/index=0` pair,
+but it does not explain the equality. The unresolved discriminator is now the
+`B74` writer/value to producer-slot join; no mitigation or table rewrite was
+authorized. No code, build, or game run changed. Complete evidence table:
+`scratch/agent/s2927_m4_register_lifetime/audit.md`.
+
+ORIGIN: diagnostic-only static audit. No runtime, generated function,
+submodule, or mitigation-shaped behavior changed.

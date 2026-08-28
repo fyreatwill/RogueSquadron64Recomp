@@ -1,32 +1,41 @@
-# NEXT work unit (s2927) — generated-symbol sweep after 0x80069AF0
+# NEXT work unit (s2927) — M4 producer/consumer register-lifetime audit
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m4-accumulator-boundary-revisit
 
-Inspect the next bounded placeholder interval after `0x80069AF0`.
-Reconcile only source-backed semantic names or mechanically proven
-non-callable `data_gap_*` records in the companion/project maps, generated
-snapshot, and regeneration-safe rename table. Leave callable-ambiguous and
-data-ambiguous records unchanged.
+The sweep revisit rule selects the parked M4 boundary. Perform one bounded
+static audit of the producer slot register and the indirect consumer's index
+register in the checked-in Factor 5 generated source. Do not add probes,
+change runtime behavior, or repeat the rejected retail boundary watch.
 
 ## Competing hypotheses and discriminator
 
-- H-CallableSemantic: companion m2c/source evidence supports a human symbol name.
-- H-DataGap: exact boundaries, a short fragment/trap body, and no callers/lookups prove a non-callable record.
-- H-Ambiguous: evidence cannot separate a callable trampoline from a split/data artifact; leave it unchanged.
+- H-SharedRegisterState: producer `r7` and consumer `r7`/`r3&0x7f` share a
+  task-local state path, so static lifetime proves the equality or its reset.
+- H-IndependentState: producer slot and consumer index are independently
+  derived; static source cannot prove equality and the dynamic join remains
+  open.
+- H-ConsumerNeverReaches: the consumer branch has no complete path from the
+  resident overlay entry, contradicting the existing positive-control trace.
 
-The discriminator is the complete interval table: generated body size and
-instructions, target location if any, companion symbol boundaries, source/m2c
-name, generated callers and lookups, and the selected action.
+The discriminator is a complete table of every assignment to producer `r7`
+from the producer entry through its B00/B02/B04 stores, every assignment to
+consumer `r7`, `r3`, and `r2` before `0x13D8`, all DMEM reset/task boundaries,
+and whether the existing s2578 dynamic producer/consumer rows can be explained
+by that static path. H-SharedRegisterState requires an explicit shared/reset
+edge; H-IndependentState is selected if the paths remain distinct; a missing
+consumer path would select H-ConsumerNeverReaches.
 
 ## Exact commands
 
-Run `python3 tools/rename_generated_symbols.py --help`, inspect the bounded
-interval and companion sources, then use the reconciliation workflow. Build
-the Debug target if generated files change. Record the complete table at
-`scratch/agent/s2927_generated_symbol_rename/source-table.md`. Verify exact
-old-name searches and preserve the rename-table entry for regeneration.
+Use the already-qualified ground-truth result (oracle cannot observe RSP DMEM)
+and inspect only the bounded generated regions:
 
-Expected discriminator outcomes: a companion-backed semantic name selects
-H-CallableSemantic; a short body with proven non-callable boundaries selects
-H-DataGap; valid executable evidence without a semantic name selects
-H-Ambiguous and preserves the placeholder.
+```sh
+sed -n '4680,5020p' build/factor5_ucode/factor5_ucode_recompiled.c
+sed -n '5180,5445p' build/factor5_ucode/factor5_ucode_recompiled.c
+rg -n 'r7 =|r3 =|r2 =|0XB00|0XB02|0XB04|0XC70|0XB74|OVL20_13D8' build/factor5_ucode/factor5_ucode_recompiled.c
+```
+
+Record the complete table at
+`scratch/agent/s2927_m4_register_lifetime/audit.md`. No build or game run is
+needed unless the source audit discovers a regeneration mismatch.
