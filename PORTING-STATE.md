@@ -121145,3 +121145,17 @@ references. No build or runtime soak was needed because this was a naming-only
 change. H-Callable and H-Ambiguous are ruled out for this interval. Complete
 table: `scratch/agent/s2896_generated_symbol_rename/source-table.md`.
 The next unresolved placeholder is after `0x80005960`.
+## Session 2897 (2026-08-27) — reconciled main-text data gap at 0x80006BFC
+
+Inspected the complete generated-symbol interval `0x80005960..0x80006C00`.
+Its sole placeholder, `0x80006BFC`, is a four-byte isolated `sw $v0, 0x18($fp)`
+fragment after `initMemoryPack`'s return sequence and before
+`initServiceRegistry`. The generated census found no call or lookup reference,
+and the companion map supplied no semantic callable name. Classified it as
+H-DataGap and reconciled `fake_func_80006BFC` to `data_gap_80006BFC` in the
+project map and companion map; the generated snapshot was already synchronized.
+The complete source table is in
+`scratch/agent/s2897_generated_symbol_rename/source-table.md`.
+
+This rules out a source-backed callable rename in this interval. It does not
+bear on runtime behavior or the M5 route/audio hypotheses.
