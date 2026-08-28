@@ -121047,3 +121047,19 @@ zero old-name matches. No build or runtime soak was needed for this symbol-only
 change and no game behavior changed. The next unresolved project placeholder
 is `0x80101CCC`. Evidence:
 `scratch/agent/s2890_generated_symbol_rename/source-table.md`.
+
+## Session 2891 (2026-08-27) — reconciled 14 generated mission-overlay data gaps
+
+Ran the next bounded generated-symbol sweep from `0x80101CCC` through the
+next mission-overlay boundary at `0x80109620`. The complete interval table
+classified 14 placeholders as H-DataGap: each is a 4-, 8-, or 12-byte isolated
+instruction fragment or fixup-generated trap immediately before an established
+mission routine. None has a callable prologue, semantic companion name, or
+independent call evidence, so H-Callable and H-Ambiguous were rejected for all
+14 records. Evidence: `scratch/agent/s2891_generated_symbol_rename/source-table.md`.
+
+The generated snapshot was already synchronized to `data_gap_*` names. Updated
+the project and companion symbol maps for all 14 records and verified zero old
+`fake_func_*` references in both maps and the generated snapshot. No build or
+runtime soak was needed for this symbol-only reconciliation; no game behavior
+changed. The mission-overlay `0x8010` placeholder run is complete.
