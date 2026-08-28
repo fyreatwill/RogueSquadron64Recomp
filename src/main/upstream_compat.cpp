@@ -36,8 +36,23 @@
 #include "ultramodern/ultramodern.hpp"
 
 extern "C" uint32_t rs64_phase_ord(void);
+extern "C" volatile uint32_t g_rs64_last_guest_pc;
+extern "C" void rs64_m5_vi_commit_handoff(uint32_t caller, uint32_t requested_width,
+                                            uint32_t mode_ptr);
 
 namespace {
+
+struct M5ViCommitSnapshot {
+    std::atomic<uint32_t> next_sequence{0};
+    std::atomic<uint32_t> latest_sequence{0xFFFFFFFFu};
+    std::atomic<uint32_t> caller{0};
+    std::atomic<uint32_t> requested_width{0};
+    std::atomic<uint32_t> width{0};
+    std::atomic<uint32_t> origin{0};
+    std::atomic<uint32_t> phase{0};
+};
+
+static M5ViCommitSnapshot g_m5_vi_commit;
 
 enum class ViBoundaryEdge : uint32_t {
     Swap = 0,
@@ -426,6 +441,7 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     }
     extern void osViSetMode(uint8_t* rdram, int32_t modePtr);
     osViSetMode(rdram, (int32_t)ctx->r4);
+    rs64_m5_vi_commit_handoff(static_cast<uint32_t>(g_rs64_last_guest_pc), width, mode_ptr);
 }
 
 extern "C" uint32_t rs64_vi_committed_width() {
@@ -437,6 +453,72 @@ extern "C" uint32_t rs64_vi_committed_origin() {
 }
 
 extern "C" uint32_t rs64_phase_ord(void);
+
+extern "C" void rs64_m5_vi_commit_handoff(uint32_t caller,
+                                            uint32_t requested_width,
+                                            uint32_t mode_ptr) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_TRANSITION");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+
+    const auto* vi = ultramodern::renderer::get_vi_regs();
+    const uint32_t seq = g_m5_vi_commit.next_sequence.fetch_add(1, std::memory_order_relaxed);
+    if (seq >= 128u) return;
+    g_m5_vi_commit.latest_sequence.store(seq, std::memory_order_release);
+    g_m5_vi_commit.caller.store(caller, std::memory_order_relaxed);
+    g_m5_vi_commit.requested_width.store(requested_width, std::memory_order_relaxed);
+    g_m5_vi_commit.width.store(vi->VI_WIDTH_REG, std::memory_order_relaxed);
+    g_m5_vi_commit.origin.store(vi->VI_ORIGIN_REG & 0x00FFFFFFu, std::memory_order_relaxed);
+    g_m5_vi_commit.phase.store(rs64_phase_ord(), std::memory_order_relaxed);
+    std::fprintf(stderr,
+        "[m5-route-transition] edge=vi-commit seq=%u caller=0x%08X "
+        "mode_ptr=0x%08X requested_width=%u committed_width=%u "
+        "committed_origin=0x%06X phase=%u\n",
+        seq, caller, mode_ptr, requested_width, vi->VI_WIDTH_REG,
+        vi->VI_ORIGIN_REG & 0x00FFFFFFu, rs64_phase_ord());
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_route_prepare_handoff(uint32_t prepare_seq,
+                                                uint32_t phase,
+                                                uint32_t width,
+                                                uint32_t origin,
+                                                uint32_t accepted) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_TRANSITION");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    static std::mutex mutex;
+    static uint32_t row_phase = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (row_phase != phase) {
+        row_phase = phase;
+        rows = 0;
+    }
+    if (rows++ >= 32u) return;
+    const uint32_t key = (width << 24) ^ (origin & 0x00FFFFFFu);
+    const uint32_t commit_key = (g_m5_vi_commit.width.load(std::memory_order_acquire) << 24) ^
+                                g_m5_vi_commit.origin.load(std::memory_order_relaxed);
+    std::fprintf(stderr,
+        "[m5-route-transition] edge=route-prepare seq=%u phase=%u width=%u "
+        "origin=0x%06X accepted=%u commit_seq=%u commit_caller=0x%08X "
+        "commit_width=%u commit_origin=0x%06X commit_phase=%u key_match=%u\n",
+        prepare_seq, phase, width, origin & 0x00FFFFFFu, accepted,
+        g_m5_vi_commit.latest_sequence.load(std::memory_order_acquire),
+        g_m5_vi_commit.caller.load(std::memory_order_relaxed),
+        g_m5_vi_commit.width.load(std::memory_order_relaxed),
+        g_m5_vi_commit.origin.load(std::memory_order_relaxed),
+        g_m5_vi_commit.phase.load(std::memory_order_relaxed), key == commit_key ? 1u : 0u);
+    std::fflush(stderr);
+}
 
 namespace {
 

@@ -121275,3 +121275,20 @@ H-DrainDefaultSafe versus H-DrainTickRequired unevaluable. It rules out no
 drain behavior and authorizes no de-stub, guard, or mitigation. The next M5
 unit is a new VI-commit-to-route handoff producer census; the closed scheduler
 ID table is not repeated.
+## Session 2905 (2026-08-27) — bounded M5 VI-commit route-transition census
+
+Ran the driven retail oracle first with a whole-RDRAM positive control and
+verified title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, and VI-swap
+predecessors `0x8001BE24` / `0x80019B14`. Built one Debug target containing a
+bounded post-`osViSetMode` producer snapshot and route-prepare key join, then
+ran identical image and silent arms concurrently. Both instruments positively
+fired; producer attribution used the runtime guest-PC tracker after the
+initial wrapper-`r31` attempt proved invalid.
+
+Both port arms stopped at pre-title `VI 640 @ 0x0066A500`. They recorded
+`key_match=1` after the pre-title 640 commit, but all route prepares were
+`accepted=0`; neither reached title/hangar and neither crashed or aborted.
+This selects H-RouteInvalid for the recipe. It leaves target-phase key match
+versus divergence unevaluable, rules out neither target hypothesis, and
+authorizes no audio behavior change or mitigation. Full details:
+`scratch/agent/s2905_m5_route_transition/RESULTS.md`.

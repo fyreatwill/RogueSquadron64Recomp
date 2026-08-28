@@ -12,6 +12,10 @@
 
 #include "ultramodern/ultra64.h"
 #include "ultramodern/ultramodern.hpp"
+
+extern "C" void rs64_m5_route_prepare_handoff(uint32_t prepare_seq,
+                                                uint32_t phase, uint32_t width,
+                                                uint32_t origin, uint32_t accepted);
 #include "ultramodern/events.hpp"
 #include "librecomp/game.hpp"
 #include "librecomp/rsp.hpp"
@@ -1355,8 +1359,10 @@ static void rs64_audio_route_prepare(const char* arm) {
     static const bool order_probe_enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_ORDER");
+        const char* transition = std::getenv("ROGUESQ_LOG_M5_ROUTE_TRANSITION");
         return (all && all[0] && all[0] != '0') ||
-               (own && own[0] && own[0] != '0');
+               (own && own[0] && own[0] != '0') ||
+               (transition && transition[0] && transition[0] != '0');
     }();
     const uint32_t prepare_seq = order_probe_enabled ?
         g_rs64_audio_prepare_seq.fetch_add(1, std::memory_order_relaxed) :
@@ -1372,6 +1378,8 @@ static void rs64_audio_route_prepare(const char* arm) {
     const bool target_phase =
         (width == 1024u && origin == 0x00790400u) ||
         (width == 512u && origin == 0x006AB400u);
+    rs64_m5_route_prepare_handoff(prepare_seq, phase, width, origin,
+                                  target_phase ? 1u : 0u);
     rs64_m5_identity_edge("prepare-clear", before_clear, prepare_seq, clear_seq,
                           phase, width, origin);
     g_rs64_audio_last_prepare_accepted = target_phase ? 1u : 0u;

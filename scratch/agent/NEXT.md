@@ -1,36 +1,31 @@
-# NEXT work unit (s2905) — new M5 route-transition producer census
+# NEXT work unit (s2906) — generated-symbol sweep after 0x8003DF98
 
-HYPOTHESIS-ID: m5-route-transition-producer-census
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Add one bounded, source-backed port diagnostic at the VI commit/route handoff
-that records the producer callsite, committed width/origin, phase ordinal,
-route-prepare sequence, and whether the next audio dispatch observes the same
-key. Run it with the retail oracle whole-RDRAM positive control and both image
-and silent arms in one build/run. This is a route-qualification probe, not an
-audio behavior change; do not repeat the closed scheduler-ID table or add a
-downstream audio field.
+Inspect the next bounded placeholder interval after `0x8003DF98` in main
+text. Reconcile only source-backed semantic names or mechanically proven
+non-callable `data_gap_*` records in the companion/project maps, generated
+snapshot, and regeneration-safe rename table. Leave callable-ambiguous and
+data-ambiguous records unchanged. Do not repeat the M5 route probe: s2905
+positively matched the pre-title key but did not qualify target phases.
 
 ## Competing hypotheses and discriminator
 
-- H-TransitionKeyMatches: the port's VI transition producer and subsequent
-  audio route prepare share the expected phase key, identifying a valid route
-  handoff boundary.
-- H-TransitionKeyDiverges: the port commits a phase but the route/audio
-  consumer sees a different key or stale origin, identifying the handoff as
-  the route failure boundary.
-- H-NoTransitionProducer: the port never emits a target transition producer;
-  the route failure is upstream of this handoff and needs a different census.
-- H-InstrumentAbsent: the oracle whole-RDRAM control or same-run positive
-  transition control fails, making the rows unevaluable.
+- H-CallableSemantic: companion m2c/source evidence supports a human symbol
+  name for the next placeholder.
+- H-DataGap: exact boundaries and a short fragment/trap body prove a
+  non-callable record, so `data_gap_*` is the defensible reconciliation.
+- H-Ambiguous: evidence cannot separate callable code from a split/data
+  artifact; leave the placeholder unchanged.
 
-The discriminator is one phase-keyed handoff table for both arms containing
-the VI producer tuple, route-prepare tuple, first following audio-dispatch
-tuple, key equality, and crash/abort markers. The oracle must first show
-10,000 whole-RDRAM writes and title/hangar transitions; a target transition
-control is mandatory before interpreting a port null.
+The discriminator is the complete interval table: generated body size and
+instructions, companion symbol boundaries, source/m2c name, generated callers
+and lookups, and the selected action for every placeholder in the interval.
 
 ## Exact commands
 
-Build and run the new bounded probe script from `build/Debug`; launch the
-oracle and both port arms concurrently, and use SIGKILL cleanup. Do not run
-the old Step 6 recipe again until this handoff qualifies the route.
+Run `python tools/rename_generated_symbols.py --help`, inspect the next
+interval after `0x8003DF98`, and use the project reconciliation workflow.
+Record the complete table at
+`scratch/agent/s2906_generated_symbol_rename/source-table.md`. Verify exact
+old-name searches and build the Debug target if generated files change.
