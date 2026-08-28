@@ -1,6 +1,32 @@
-# NEXT work unit — VI-mode stall: identify osViSetMode(1024) caller
+# NEXT work unit — restore oracle prerequisites for VI-mode discriminator
 
 HYPOTHESIS-ID: m5-vi-mode-stall
+
+## Single work unit
+
+Build or install the debugger-enabled mupen64plus core and Rice video plugin
+required by `tools/oracle/README.md`, then rerun the retail-vs-port VI-mode
+discriminator. Do not add another port instrument until the retail arm has a
+positive whole-RDRAM control and reaches title/hangar.
+
+## Competing hypotheses after prerequisites are repaired
+
+- H-TitleOsViNotCalled: retail calls `osViSetMode(1024)` but the corresponding
+  port caller never executes.
+- H-TitleOsViCalledWrongMode: the caller executes in port but supplies a mode
+  whose width is not 1024.
+- H-TitleOsViSuppressed: port logs a width-1024 call but the VI register is
+  blocked or overwritten before route preparation.
+
+## Discriminating measurement
+
+One oracle run and one port run, with all controls armed. The oracle must
+show whole-RDRAM positive-control hits, VI 640→1024, and the writer PC for
+the width-1024 VI-register change. The port must show its complete
+`osViSetMode` call table, including caller/site and width. Retail width-1024
+plus port zero width-1024 selects H-TitleOsViNotCalled; the same caller with a
+wrong port width selects H-TitleOsViCalledWrongMode; a port width-1024 call
+without the corresponding VI transition selects H-TitleOsViSuppressed.
 
 ## Background
 
@@ -58,34 +84,48 @@ port shows a width=1024 call but the VI register doesn't update.
 
 ## Exact next commands
 
-1. Identify the retail osViSetMode physical address:
+1. From the repo root, repair the documented oracle dependencies:
+   ```
+   tools/oracle/build_core.sh
+   tools/oracle/build.sh
+   ```
+   Confirm the debugger-enabled core and Rice plugin paths before running.
+
+2. Identify the retail osViSetMode physical address:
    From the oracle README, watch VI_WIDTH_REG physical address 0x04400008 for
    writes. The PC attributing the write that changes width to 1024 is the
    osViSetMode body. Alternatively use the oracle's -watchpc on the known
    retail PC for osViSetMode from an existing MAP file.
 
-2. Run the oracle:
+3. Run the oracle:
    ```
-   cd tools/oracle && python3 run_oracle.py \
-     --watch-write 0x04400008 \
-     --positive-rdram \
-     --plugin rice \
-     --timeout 90 \
-     2>&1 | tee /tmp/retail_osvisetmode.log
+   tools/oracle/build/rs64_oracle \
+     --core <debugger-enabled-libmupen64plus.dylib> \
+     --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+     --secs 90 \
+     --watch-write 0x0:0x800000 \
+     --watch-write 0x04400008:0x0440000c \
+     --vi-trace \
+     --video <mupen64plus-video-rice.dylib> \
+     --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+     > /tmp/retail_osvisetmode.log 2>&1
    ```
-   Expected: see at least one write with value=1024 at ~45s. The writing PC
-   is the retail osViSetMode body (or its inlined caller).
+   Expected: the whole-RDRAM watch fires, and at least one VI-register write
+   changes width to 1024. The writing PC is the retail osViSetMode body (or
+   its inlined caller).
 
-3. Run port capture concurrently:
+4. Run port capture concurrently:
    ```
    cd build && env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
      ROGUESQ_AUTOPILOT=1 \
-     timeout 90 ./RogueSquadron64Recomp ROM.z64 \
-     2>&1 | grep "\[osViSetMode" > /tmp/port_osvisetmode.log
-   kill %1
+     ./RogueSquadron64Recomp > /tmp/port_osvisetmode.log 2>&1
+   ```
+   Run it under a watchdog that sends SIGKILL after 90 seconds, then:
+   ```
+   grep "\[osViSetMode" /tmp/port_osvisetmode.log
    ```
 
-4. Compare: grep /tmp/port_osvisetmode.log for width=1024. Count total calls
+5. Compare: grep /tmp/port_osvisetmode.log for width=1024. Count total calls
    and widths. Compare against retail.
 
 ## Exit criterion

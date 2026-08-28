@@ -123747,3 +123747,20 @@ call site executes in port AUTOPILOT runs. If the retail caller PC maps to a
 named recompiled function, check whether that function is called at all in
 port. No behavior changed. New evidence: osViSetMode call-count data in
 `scratch/agent/s3053_m5_gfx_action_order/run.log` (lines 42, 1242, 1249, 1342).
+
+## Session 3055 (2026-08-28) — oracle prerequisite blocked VI-mode discriminator
+
+Ran the planned 90-second LLE-only AUTOPILOT port arm. It logged exactly four
+`osViSetMode` calls: widths 320, 2, 640, and 640, from
+`initVideoSubsystem`, `swapBufferWithViMode`, `initVideoSubsystem`, and
+`applyPendingViChanges`. It recorded zero width-1024 calls and remained at
+VI 640 origin `0x0066A500`.
+
+The first retail command exposed a stale `--positive-rdram` option and exited
+rc 2 before emulation. The corrected command used the supported whole-RDRAM
+watch plus the VI-register watch, but exited rc 1 before emulation because
+the debugger-enabled mupen64plus core was absent at the documented Homebrew
+path; the Rice plugin was also absent from searched local paths. No retail
+positive-control hit, VI trace, or caller PC was obtained. This rules out no
+retail hypothesis and does not turn the port zero into a retail null. No
+behavior changed. Evidence: `scratch/agent/s3055_m5_vi_mode_oracle_setup/AUDIT.md`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3053 (2026-08-28).
+Current maintenance marker: Session 3055 (2026-08-28).
 
 ## Current state
 
@@ -215,6 +215,16 @@ predicate is unreachable when the VI never transitions to 1024. The
 DP-event, ProducerMark, and action-order measurements are all structurally
 downstream of this stall — they were measuring inside a phase that never arms.
 
+Session 3055 attempted the required retail-grounded VI-mode discriminator.
+The 90-second port AUTOPILOT arm reproduced exactly four `osViSetMode` calls
+(widths 320, 2, 640, 640), zero width-1024 calls, and the VI-640 origin
+`0x0066A500`. The corrected oracle arm included the whole-RDRAM positive
+control but exited before emulation because the debugger-enabled mupen core
+was absent at the documented Homebrew path; the initial recipe also exposed
+that this frontend does not support the stale `--positive-rdram` option. No
+retail caller/width attribution was obtained, so no VI hypothesis is selected.
+Evidence: `scratch/agent/s3055_m5_vi_mode_oracle_setup/AUDIT.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
@@ -223,7 +233,7 @@ route-blocked at pre-title VI 640; event registration/completion is live in the
 port and the next unit must use a different handoff edge. M3 is
 parked pending a new discriminator.
 
-1. **M5 VI-mode stall — identify why osViSetMode(width=1024) is never called.**
+1. **M5 VI-mode stall — restore the retail oracle prerequisite, then identify why osViSetMode(width=1024) is never called.**
    Session 3054 determined that the port issues only 4 osViSetMode calls
    (widths 320, 2, 640, 640) and never reaches the width=1024 title-screen
    transition. The route predicate is correct; the game's title state machine
@@ -235,6 +245,9 @@ parked pending a new discriminator.
    data), H-TitleOsViSuppressed (call is made but VI write is blocked).
    Discriminator: compare osViSetMode call count, caller, and width between
    retail and port in a single batched run.
+   Session 3055 could not run the retail arm because the debugger-enabled
+   mupen core and Rice plugin are missing; repair that prerequisite before
+   interpreting the port null or adding another port probe.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
