@@ -120798,3 +120798,21 @@ abort marker. This selects H-autopilot-does-not-repair-route and rejects
 H-arm-divergence for this run; the route is still invalid before the target
 phases, so consumer and downstream audio equivalence remain unevaluable. The
 run logs are in `scratch/agent/s2878_route_autopilot/`.
+## Session 2879 (2026-08-27) — route-source range was pre-title-invalid
+
+Ground truth came first. The retail oracle watched the distinct execution
+range `0x8006D900..0x8006F43C` with the whole-RDRAM positive control. The
+control reached 23,501 writes; the driven run reached title (`1024`) and
+hangar (`512 @ 0x006AB400`), and the range produced target-phase hits, so the
+candidate was interpretable. A regeneration-safe generated-entry census was
+then built once and run concurrently on the silent and Factor 5 image arms.
+
+Both port arms reached only pre-title `VI 640 @ 0x0066A500`. Each emitted nine
+route-source rows: four at boot/320 and five at pre-title/640, with zero
+title/hangar rows. Neither emitted a crash or abort marker. The identical
+image/silent result rejects H-arm-specific divergence at the observed route,
+but the pre-title stop leaves H-route-state versus H-route-equivalent
+unevaluable for target phases. This rules out no downstream audio cause and
+authorizes no behavior change. The probe is
+`tools/apply_s2879_m5_route_probe.py`; logs are in
+`scratch/agent/s2879_m5_new_route_state/`.

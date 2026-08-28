@@ -151,13 +151,28 @@ H-autopilot-does-not-repair-route and rejects H-arm-divergence for this run.
 Downstream consumer and audio rows remain unevaluable. Artifact:
 `scratch/agent/s2878_route_autopilot/`.
 
+The s2879 ground-truth-first route-source census qualified the distinct
+`0x8006D900..0x8006F43C` execution range: the retail oracle's whole-RDRAM
+control reached 23,501 writes, title `1024`, and hangar `512 @ 0x006AB400`,
+with target-phase range hits. The matching same-build image/silent port pair
+both reached only pre-title `VI 640 @ 0x0066A500`; each emitted nine
+route-source rows (four boot/320 and five pre-title/640), zero target-phase
+rows, and no crash or abort. This selects H-route-invalid for this run and
+rejects H-arm-specific divergence at the observed route. It does not compare
+the candidate source class at title/hangar and authorizes no behavior change.
+Artifact: `scratch/agent/s2879_m5_new_route_state/` and
+`tools/apply_s2879_m5_route_probe.py`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. The sweep remains eligible while M5 is open and M3 is parked;
 apply only source-backed renames and preserve callable-ambiguous records.
 
-1. **M5 Step 1 new route-state source class.** The barrier, launch-order,
+1. **M5 audio de-stubbing plan, then Step 1.** Before another route or audio
+   experiment, create `docs/M5-AUDIO-PLAN.md` by surveying every active audio
+   stub, trap, and gate, then specify an incremental de-stubbing sequence with
+   a validation soak for each step. The barrier, launch-order,
    boot-time-key, phase-relative-key, autopilot, gate-writer, pre-title
    task-field, and broad main-text retail-entry angles are exhausted at the
    current discriminator. The next M5 unit needs a genuinely new
