@@ -121630,3 +121630,21 @@ The Debug `RecompiledFuncs` target built successfully. This rules out a
 source-backed semantic rename for this interval and closes it as a
 mechanically proven data gap; it does not classify the next placeholder.
 Complete evidence table: `scratch/agent/s2924_generated_symbol_rename/source-table.md`.
+
+## Session 2925 (2026-08-27) — reconciled SND-loader prefix data-gap symbol
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 41,351
+bytes, so this was not a maintenance iteration. The bounded generated-symbol
+sweep inspected `0x800663AC..0x800663B0`. The four-byte record contains only
+`subu $a0,$a0,$v0`, with no standalone prologue or return, immediately before
+the complete `loadSndFiles` body at `0x800663B0`. There are no generated call
+or lookup references beyond its definition and overlay registration, and the
+companion map has no semantic source-backed name. The exact boundaries and
+non-callable fragment structure selected `data_gap_800663AC`; the stale
+companion and project maps were reconciled. The generated snapshot and
+regeneration-safe rename table were already synchronized, so no generated
+references changed and no build was needed. Exact old-name searches found no
+remaining placeholder in the reconciled maps or generated snapshot. This
+rules out a source-backed semantic rename for this interval and closes it as a
+mechanically proven data gap; it does not classify the next placeholder.
+Complete evidence table: `scratch/agent/s2925_generated_symbol_rename/source-table.md`.

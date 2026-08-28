@@ -4,7 +4,14 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2924 (2026-08-27).
+Current maintenance marker: Session 2925 (2026-08-27).
+
+The s2925 generated-symbol sweep reconciled `0x800663AC..0x800663B0`. The
+four-byte record is an isolated `subu` fragment immediately before the
+complete `loadSndFiles` body, with no generated callers or independent
+lookup. The generated snapshot and rename table were already synchronized;
+the stale companion and project maps were updated to `data_gap_800663AC`.
+Complete table: `scratch/agent/s2925_generated_symbol_rename/source-table.md`.
 
 The s2924 generated-symbol sweep reconciled `0x80065A5C..0x80065A60`.
 The four-byte record is an isolated `addu` fragment immediately before the
@@ -583,8 +590,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x800613B8..0x800613C0` to `loadCharTextureSetPreamble`; s2922 classified
    `0x80064294..0x800642A0` as `data_gap_80064294`; s2923 classified
    `0x80064934..0x80064940` as `data_gap_80064934`; s2924 reconciled
-   `0x80065A5C..0x80065A60` as `data_gap_80065A5C`; continue with the next
-   remaining placeholder after `0x80065A60`.
+   `0x80065A5C..0x80065A60` as `data_gap_80065A5C`; s2925 reconciled
+   `0x800663AC..0x800663B0` as `data_gap_800663AC`; continue with the next
+   remaining placeholder after `0x800663B0`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
