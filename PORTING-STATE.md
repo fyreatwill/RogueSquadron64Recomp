@@ -123277,3 +123277,15 @@ placeholder, data-gap classification, and local duplicate callable for this
 address. The companion's 26-caller annotation differs from the generated
 snapshot's 25 sites but does not create an identity conflict. Evidence:
 `scratch/agent/s3026_generated_symbol_rename/source-table.md`.
+
+## Session 3027 (2026-08-28) — synchronized updateAnimatedTextureStreaming
+
+Completed the bounded generated-symbol audit at `0x80053F7C`. The companion
+map names the unique callable `updateAnimatedTextureStreaming`; its generated
+0x300-byte body has matching start/end boundaries, five generated callers,
+matching header and overlay registration, and no duplicate callable
+definition. Synchronized the stale project symbol TOML and built
+`RecompiledFuncs` successfully. This rules out an ambiguous placeholder,
+data-gap classification, and local duplicate callable for this address. The
+next sweep candidate is `0x80062B04`.
+Evidence: `scratch/agent/s3027_generated_symbol_rename/source-table.md`.

@@ -753,7 +753,7 @@ functions = [
     { name = "data_gap_800538AC", vram = 0x800538AC, size = 0x4 },
     { name = "trackResourceListWithMappingTables", vram = 0x800538B0, size = 0x354 },
     { name = "dispatchOverlaySetupByParentAssetName", vram = 0x80053C04, size = 0x378 },
-    { name = "func_80053F7C", vram = 0x80053F7C, size = 0x300 },
+    { name = "updateAnimatedTextureStreaming", vram = 0x80053F7C, size = 0x300 },
     { name = "attachedMeshOverlayNpcHandler", vram = 0x8005427C, size = 0x178 },
     { name = "load_full_header_image", vram = 0x800543F4, size = 0x10C },
     { name = "allocAndSetupModelInstance", vram = 0x80054500, size = 0x50 },

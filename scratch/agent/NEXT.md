@@ -1,4 +1,4 @@
-# NEXT work unit — classify `0x80053F7C`
+# NEXT work unit — classify `0x80062B04`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -14,21 +14,21 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 The discriminating measurement is one bounded static audit: compare the
 companion symbol/m2c sources, generated body and boundaries, all generated
-callers, overlay registration, and duplicate definitions for `0x80040218`.
+callers, overlay registration, and duplicate definitions for `0x80062B04`.
 An exact companion name plus one coherent callable selects synchronization; a
 complete but unnamed callable selects no invented rename; a boundary-only
 fragment or collision selects a documented non-rename/manual review.
 
-The preceding `0x80040218` audit selected the exact rename
-`getNextSlotNpcTypeId`; its companion and generated callable boundaries were
-coherent. Do not revisit it without new source evidence.
+The preceding `0x80053F7C` audit selected the exact rename
+`updateAnimatedTextureStreaming`; its companion and generated callable
+boundaries were coherent. Do not revisit it without new source evidence.
 
 ## Exact commands
 
 ```sh
-rg -n '80053F7C|func_80053F7C' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
-rg -n -C 20 '80053F7C|func_80053F7C' ../N64Recomp/RecompiledFuncs/funcs_*.c
-python3 tools/sweep_scan_candidates.py func_80053F7C
+rg -n '80062B04|func_80062B04' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
+rg -n -C 20 '80062B04|func_80062B04' ../N64Recomp/RecompiledFuncs/funcs_*.c
+python3 tools/sweep_scan_candidates.py func_80062B04
 ```
 
 If the sources agree on an exact identity, synchronize the project symbol
