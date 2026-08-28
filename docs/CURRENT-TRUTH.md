@@ -884,3 +884,12 @@ independent generated-tree scan found no in-range `fake_func_*` or
 `data_gap_*` placeholders. This closes the interval without assigning names
 to unresolved records; no build or game run was needed. The next bounded
 sweep is `0x80067500..0x80068500`.
+
+Session 2857 examined `0x80069500..0x8006A500`. The selector classified
+`0x80069AEC` as ambiguous-or-fake and `0x80069AF0 collideSegmentAgainstObjectNodes`
+plus `0x800698F4 isTerrainCellBlockedAtWorldXz` as already synchronized. It
+changed zero generated references and failed closed under `--require-rename`;
+the independent generated-tree scan found no in-range `fake_func_*` or
+`data_gap_*` placeholders. This rules out a defensible source-backed rename
+in the interval without assigning meaning to the ambiguous record. No build
+or game run was needed. The next bounded sweep is `0x8006A500..0x8006B500`.
