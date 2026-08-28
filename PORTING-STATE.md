@@ -123764,3 +123764,20 @@ path; the Rice plugin was also absent from searched local paths. No retail
 positive-control hit, VI trace, or caller PC was obtained. This rules out no
 retail hypothesis and does not turn the port zero into a retail null. No
 behavior changed. Evidence: `scratch/agent/s3055_m5_vi_mode_oracle_setup/AUDIT.md`.
+
+## Session 3056 (2026-08-28) — selected retail-grounded VI-mode stall
+
+Rebuilt the debugger-enabled mupen64plus core and oracle frontend, then ran
+the retail oracle and qualified port AUTOPILOT arm together. Retail passed the
+whole-RDRAM positive control with 10,000 callbacks, reached title at width
+1024 around 17.3s, and reached hangar at width 512 around 38.4s. The watched
+VI-register write causing 640→1024 was attributed to `pc=0x80035798`; this is
+a writer boundary, not yet a named caller.
+
+The port's unconditional `osViSetMode` table logged exactly four calls: widths
+320, 2, 640, and 640, from `initVideoSubsystem`, `swapBufferWithViMode`,
+`initVideoSubsystem`, and `applyPendingViChanges`. It logged zero width-1024
+calls and stayed at VI 640 origin `0x0066A500`. This selects
+`H-TitleOsViNotCalled` for the port and rules out port-side VI suppression for
+this capture. No behavior changed. Evidence:
+`scratch/agent/s3056_m5_vi_mode_oracle_setup/AUDIT.md`.

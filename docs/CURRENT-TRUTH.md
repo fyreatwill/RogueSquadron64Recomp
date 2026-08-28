@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3055 (2026-08-28).
+Current maintenance marker: Session 3056 (2026-08-28).
 
 ## Current state
 
@@ -225,6 +225,16 @@ that this frontend does not support the stale `--positive-rdram` option. No
 retail caller/width attribution was obtained, so no VI hypothesis is selected.
 Evidence: `scratch/agent/s3055_m5_vi_mode_oracle_setup/AUDIT.md`.
 
+Session 3056 repaired the debugger-enabled mupen64plus prerequisite and ran
+the retail-vs-port VI-mode discriminator with both positive controls. Retail's
+whole-RDRAM watch reached 10,000 callbacks, then retail reached title at width
+1024 around 17.3s and hangar at width 512 around 38.4s. The VI-register watch
+attributed the 640→1024 transition to `pc=0x80035798`. The concurrent port
+capture logged exactly four `osViSetMode` calls (widths 320, 2, 640, 640), zero
+width-1024 calls, and remained at VI 640 origin `0x0066A500`. This selects
+`H-TitleOsViNotCalled` for the port and rules out port-side VI suppression for
+this capture. Evidence: `scratch/agent/s3056_m5_vi_mode_oracle_setup/AUDIT.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
@@ -233,22 +243,16 @@ route-blocked at pre-title VI 640; event registration/completion is live in the
 port and the next unit must use a different handoff edge. M3 is
 parked pending a new discriminator.
 
-1. **M5 VI-mode stall — restore the retail oracle prerequisite, then identify why osViSetMode(width=1024) is never called.**
-   Session 3054 determined that the port issues only 4 osViSetMode calls
-   (widths 320, 2, 640, 640) and never reaches the width=1024 title-screen
-   transition. The route predicate is correct; the game's title state machine
-   stalls before the mode-set call. Next probe: use the retail oracle to
-   identify which retail PC calls osViSetMode when the VI transitions 640→1024,
-   then check via port osViSetMode logs whether that caller executes in AUTOPILOT
-   runs. Three hypotheses: H-TitleOsViNotCalled (state machine stalls before
-   the caller), H-TitleOsViCalledWrongMode (caller runs but with wrong mode
-   data), H-TitleOsViSuppressed (call is made but VI write is blocked).
-   Discriminator: compare osViSetMode call count, caller, and width between
-   retail and port in a single batched run.
-   Session 3055 could not run the retail arm because the debugger-enabled
-   mupen core and Rice plugin are missing; repair that prerequisite before
-   interpreting the port null or adding another port probe.
-
+1. **M5 VI-mode stall — map the retail 1024-mode writer and audit its port path.**
+   Session 3056 established with independent retail ground truth that the
+   640→1024 transition is written by PC `0x80035798`, while the port issues
+   no width-1024 call. Identify the retail function/symbol containing that PC,
+   map it to the recompiled function and its callers, and check whether the
+   corresponding port path executes before the VI-640 stall. Do not change
+   state-machine behavior until the writer and its legitimate mode descriptor
+   are identified. The route predicate remains correct for width 1024 (title)
+   or 512 (hangar); compare writer identity and call path before adding a
+   probe.
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
    placeholders for fragments, data gaps, and unresolved boundaries; do not
