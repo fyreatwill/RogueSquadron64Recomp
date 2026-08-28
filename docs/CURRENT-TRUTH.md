@@ -25,6 +25,15 @@ service, slot/voice, MORT, and PCM rows are unevaluable, selecting
 H-RouteInvalid for this recipe rather than an audio-contract hypothesis.
 Artifact: `scratch/agent/s2881_m5_step1_rebaseline/RESULTS.md`.
 
+The s2882 route-order/stage-call discriminator was instrument-valid: the
+retail oracle's whole-RDRAM control reached 10,000 writes and independently
+reached title and hangar. Both same-build port arms stopped at pre-title
+`VI 640 @ 0x0066A500`; every route prepare was `accepted=0`. The image arm
+had 68 pre-title-or-earlier stage-call rows, all `route_valid=0`; the silent
+arm had none. This selects H-RouteInvalid for the recipe and leaves
+H-RouteOrder versus H-StageCall unevaluable. Artifact:
+`scratch/agent/s2882_m5_pretitle_route_order/RESULTS.md`.
+
 Qualified runs can reach title (`VI 1024`, origin `0x00790400`) and hangar
 (`VI 512`, origin `0x006AB400`) with the appropriate input path. Recent
 same-build route-validation pairs instead stalled at pre-title `VI 640`,

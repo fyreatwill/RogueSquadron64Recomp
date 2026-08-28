@@ -120876,3 +120876,26 @@ evidence: `scratch/agent/s2881_m5_step1_rebaseline/RESULTS.md`.
 
 The next unit is a distinct ground-truth-first phase-gated route-order and
 stage-call table before another Step 1 interpretation.
+
+## Session 2882 (2026-08-27) — pre-title route-order table remained route-invalid
+
+The planned work unit was a ground-truth-first route-order/stage-call
+discriminator. One Debug build completed successfully. The concurrent run
+used the retail oracle, the Factor 5 image arm, and the silent control arm
+with the same LLE route and autopilot.
+
+The oracle whole-RDRAM positive control reached 10,000 writes, then reached
+title `VI 1024 @ 0x00790400` and hangar `VI 512 @ 0x006AB400`. Both port arms
+reached only pre-title `VI 640 @ 0x0066A500`; image had 2,690 route prepares
+and silent 2,704, all `accepted=0`. Image emitted 68 stage-call rows, all
+`route_valid=0`; silent emitted none. Neither arm crashed or aborted.
+
+This selects H-RouteInvalid for the recipe and leaves route-order versus
+stage-call equivalence unevaluable. The image/silent symmetry rules out
+arm-specific divergence at the observed route, but the oracle does not emit
+the host route table, so no retail equivalence claim is made. Target-phase
+audio rows remain unevaluable. The route probe produced no behavior change;
+full evidence is `scratch/agent/s2882_m5_pretitle_route_order/RESULTS.md`.
+
+The next eligible unit is the bounded generated-symbol sweep after
+`0x800AF700`, subject to the sweep-only revisit check.
