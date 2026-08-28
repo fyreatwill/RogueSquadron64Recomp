@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2866 (2026-08-27).
+Current maintenance marker: Session 2868 (2026-08-27).
 
 ## Live result
 
@@ -43,6 +43,16 @@ phase-gated target rows, so it did not identify a new retail-entry dispatcher;
 do not repeat this range recipe. This is a measurement of the oracle route,
 not a two-source explanation of the port boundary.
 
+The new M5 status-table oracle probe was instrument-valid: its whole-RDRAM
+positive control reached 10,000 callbacks and the same driven retail run
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The status
+poll changed only slots 16/17 continuously in both target phases, while the
+phase-qualified `0x80094648` channel writer ran 256 times with predecessor
+`0x80094644`; no discrete status transition or ordering edge aligned with the
+writer. This is single-source evidence that the status-table scheduling angle
+did not select a port discriminator. It does not explain the M5 publication
+gap or authorize a behavior change.
+
 SP-yield state is real API state and the request lifecycle now clears the
 previous request before staging the next task. The generic scheduler has two
 yield call sites, but no audio-specific generated branch was found. Target
@@ -63,7 +73,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    current discriminator. The next M5 unit needs a genuinely new
    post-dispatch or scheduling discriminator and must qualify title/hangar
    before interpreting service, slot, MORT, or PCM nulls. Do not land a
-   behavior change without a named legitimate writer and ordering edge.
+   behavior change without a named legitimate writer and ordering edge. The
+   status-table poll / `0x80094648` alignment angle is now exhausted: it
+   reached both target phases but produced no discrete scheduling edge.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 3. **Generated-symbol renaming sweep.** The next bounded source-backed batch

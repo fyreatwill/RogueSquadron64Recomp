@@ -1,32 +1,32 @@
-# NEXT work unit (s2868) — M5-post-dispatch-discriminator
+# NEXT work unit (s2869) — M5-new-post-dispatch-angle
 
-HYPOTHESIS-ID: M5-post-dispatch-discriminator
+HYPOTHESIS-ID: M5-new-post-dispatch-angle
 
 ## Work unit
 
-Design and run one new M5 post-dispatch/scheduling discriminator that can
-separate a real audio publication edge from route failure. Qualify the
-title/hangar route first with the same-run oracle control; do not interpret
-service, slot, MORT, or PCM nulls until the target phase is live.
+Choose one genuinely new post-dispatch/scheduling discriminator after the
+status-table angle failed. First use the retail oracle to identify a concrete
+audio-task completion or queue transition and its predecessor; only then add
+one batched port counter set and qualify title/hangar in the same run.
 
 ## Competing hypotheses and discriminator
 
-- H-post-dispatch-edge: a new phase-qualified discriminator shows a distinct
-  retail post-dispatch producer/consumer ordering at title or hangar.
-- H-route-failure: the whole-RDRAM control fires but the qualified target phase
-  is absent, so audio nulls remain unevaluable.
-- H-no-new-edge: the target phase is qualified but the new discriminator is
-  unchanged across the relevant lifecycle, ruling out that angle.
+- H-retail-post-dispatch: a new retail completion/queue predecessor has a
+  phase-qualified transition that can be mapped to a port edge.
+- H-route-failure: the whole-RDRAM control passes but title/hangar do not
+  qualify, making the downstream comparison unevaluable.
+- H-no-edge: title/hangar qualify, but the selected completion/queue event has
+  no distinct ordering relation to the audio work.
 
-The discriminator must be a complete same-run table of positive-control hits,
-VI phases, and the selected post-dispatch ordering/producer observations.
-Before building, identify the exact retail ground-truth observation and its
-port counterpart; new ordering selects H-post-dispatch-edge, missing phase
-selects H-route-failure, and qualified unchanged ordering selects
-H-no-new-edge.
+The discriminator is a same-run table containing the whole-RDRAM positive
+control, VI origins, the selected retail event's PC/predecessor and payload,
+and the corresponding port marker. A new phase-qualified predecessor or
+completion ordering selects H-retail-post-dispatch; missing target phases
+select H-route-failure; qualified unchanged ordering selects H-no-edge.
 
 ## Exact commands
 
-No exact command is authorized yet: first ask the retail oracle for the
-ground-truth address/ordering that the new discriminator will measure, then
-batch all port counters and A/B arms in one build/run.
+Before any port build, inspect the oracle's existing execution-watch and task-
+dump surfaces and run one positive-control-first retail probe. Do not reuse
+the broad `0x8003D000..0x80040000` range or the status-table poll recipe. The
+selected address and command must be written here before building.

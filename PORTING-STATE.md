@@ -120589,3 +120589,25 @@ entered. Do not repeat the range recipe.
 
 The next unit is a genuinely new M5 post-dispatch/scheduling discriminator,
 with the retail ground-truth observation identified before any port build.
+
+## Session 2868 (2026-08-27) — status-table scheduling angle produced no edge
+
+Recorded the competing hypotheses and discriminator in `scratch/agent/NEXT.md`
+before running the retail oracle. The first wrapper failed immediately because
+this macOS host has no `timeout` command (`rc=127`); no emulator process ran.
+The corrected identical run used the oracle's built-in 70-second duration.
+
+The corrected run passed the whole-RDRAM positive control at 10,000 callbacks,
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and fired the
+`0x80094648` execution watch 256 times (predecessor `0x80094644`). The
+18-word status poll was live, but only slots 16 and 17 changed continuously
+through both target phases; no discrete status transition or ordering edge
+aligned with the channel-writer events. This selects H-no-edge for the tested
+status-table scheduling angle and rules out H-route-failure in this run. It is
+single-source oracle evidence, not a causal explanation of the port's M5 gap;
+no port instrumentation or behavior change was authorized. The captured
+artifact is `scratch/agent/s2868_oracle_status_dispatch.log`.
+
+The next unit is a new retail-grounded post-dispatch completion/queue angle;
+the status-table recipe and broad main-text range are closed and must not be
+repeated.
