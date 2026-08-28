@@ -123356,3 +123356,16 @@ synchronization was needed. This rules out an ambiguous placeholder,
 inline-fragment classification, and local duplicate callable for this
 address. The next sweep candidate is `0x8006ACA4` (`fake_func_8006ACA4`).
 Evidence: `scratch/agent/s3031_generated_symbol_rename/source-table.md`.
+
+## Session 3033 (2026-08-28) — audited 0x8006B704 generated symbol boundary
+
+Audited the next generated placeholder at `0x8006B704` using the companion
+symbol map, generated body/header, direct-reference census, overlay
+registration, and project symbol TOML. The companion map has no human
+identity. The generated registration is a `0xC`-byte fragment: `sw a1,0(a0)`
+followed by argument setup and a load, with no return or callable epilogue;
+`loadCraftShadowTextures` begins at `0x8006B710`. There are no direct generated
+callers or duplicate definitions. Preserved `fake_func_8006B704` and built the
+generated-functions target successfully. This rules out an exact companion
+rename and local duplicate callable; the boundary remains mechanically
+unresolved. Evidence: `scratch/agent/s3033_generated_symbol_rename/source-table.md`.

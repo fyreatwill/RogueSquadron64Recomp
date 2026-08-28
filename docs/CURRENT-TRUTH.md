@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3032 (2026-08-28).
+Current maintenance marker: Session 3033 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,17 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3033 audited `0x8006B704`. The companion map has no human identity;
+the generated snapshot emits a `0xC`-byte fragment containing a store and two
+argument-setup instructions, with no return or callable epilogue, immediately
+before `loadCraftShadowTextures`. The token appears only in its generated
+definition, header, overlay registration, and project TOML, with no direct
+generated callers or duplicate definition. Preserved `fake_func_8006B704`
+rather than inventing a callable or data-gap rename. This rules out an exact
+companion rename and local duplicate; the fragment remains mechanically
+unresolved. Evidence:
+`scratch/agent/s3033_generated_symbol_rename/source-table.md`.
 
 Session 3032 classified `0x8006ACA4` as the mechanically supported inline
 fragment `fake_func_8006ACA4`. The companion map has no human identity; the
@@ -805,7 +816,8 @@ a new discriminator; continue the generated-symbol sweep while M5 is blocked.
    `waitForAnyAudioSlot`; `0x80066A90` is synchronized as
    `initSpeechSubsystem`. The `0x8006ACA4` candidate was audited as a
    three-instruction inline fragment and remains `fake_func_8006ACA4`; audit
-   the next placeholder candidate after it.
+   `0x8006B704` was likewise preserved as an unresolved 12-byte fragment;
+   audit the next placeholder candidate `0x8007C298`.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
