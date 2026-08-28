@@ -122779,3 +122779,16 @@ control row, and eight shade-DMA control rows) but remained at VI 640 origin
 The target null is therefore unevaluable, not evidence that the port lacks the
 handoff. This rules out interpreting this pre-title capture as a handoff
 mismatch. Artifact: `scratch/agent/s2989_m5_new_handoff/RESULTS.md`.
+
+## Session 2990 (2026-08-28) — wait-on-video edge remained unevaluable
+
+Added the regeneration-safe callsite probe at `0x8000BFFC` before the call to
+`waitOnVideoQueue` (`0x8001BE80`) using the existing phase-gated route hook.
+The Debug target built successfully. The corrected port capture passed the
+filter-voice host control and eight shade-DMA controls, but its 180-second
+phase wait stopped at VI 640 origin `0x0066A500`; it produced zero target wait
+rows and zero crash/abort markers. This is unevaluable because the target phase
+never fired, not evidence for a missing port wait edge. The initial wrapper
+attempt exited 127 before emulation due to a bad relative script path; the
+fixed launch supplied the result. Artifact:
+`scratch/agent/s2990_m5_wait_signal/RESULTS.md`.
