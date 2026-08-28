@@ -202,7 +202,7 @@ functions = [
     { name = "recordDeferredDrawRefB", vram = 0x8000C81C, size = 0x120 },
     { name = "recordDeferredDrawRefC", vram = 0x8000C93C, size = 0x12C },
     { name = "recordDeferredDrawRefD", vram = 0x8000CA68, size = 0x120 },
-    { name = "func_8000CB88", vram = 0x8000CB88, size = 0x30C },
+    { name = "reserveAndEmitDLEntry", vram = 0x8000CB88, size = 0x30C },
     { name = "reserveAlignedDLSpace", vram = 0x8000CE94, size = 0x140 },
     { name = "heapFreeListDequeue", vram = 0x8000CFD4, size = 0xA00 },
     { name = "emitTexturedFaceGeometry", vram = 0x8000D9D4, size = 0x328 },

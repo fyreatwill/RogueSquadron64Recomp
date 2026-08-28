@@ -122902,3 +122902,17 @@ This rules out the ambiguous-placeholder and duplicate-definition hypotheses
 for this address. No runtime, audio, or route behavior changed. The next
 candidate is `0x8000CB88`, which requires a fresh ambiguity audit. Evidence:
 `scratch/agent/s2998_generated_symbol_rename/source-table.md`.
+
+## Session 2999 (2026-08-28) — synchronized reserveAndEmitDLEntry
+
+Completed the bounded generated-symbol audit at `0x8000CB88`. The companion
+map, generated definition, header, overlay registration, and four direct
+callers identify the unique callable entry as `reserveAndEmitDLEntry`; only
+the project symbol TOML was stale. The candidate scanner reported an
+overlay-reuse warning, but a concrete definition search found no duplicate
+callable definition. Synchronized the TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime, audio, or route behavior changed. The next
+candidate is `0x8000DE70`. Evidence:
+`scratch/agent/s2999_generated_symbol_rename/source-table.md`.

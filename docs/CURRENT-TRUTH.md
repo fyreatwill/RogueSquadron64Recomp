@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2998 (2026-08-28).
+Current maintenance marker: Session 2999 (2026-08-28).
 
 ## Current state
 
@@ -229,6 +229,15 @@ symbol TOML alone was stale. Synchronized the TOML and built `RecompiledFuncs`
 successfully. The next sweep candidate is `0x8000CB88`, which has no usable
 comment/prologue match and requires an ambiguity audit. Evidence:
 `scratch/agent/s2998_generated_symbol_rename/source-table.md`.
+
+Session 2999 completed the bounded generated-symbol audit at `0x8000CB88`.
+The companion map, generated definition, header, overlay registration, and
+four direct callers identify the unique callable entry as
+`reserveAndEmitDLEntry`; only the project symbol TOML was stale. The scanner's
+overlay-reuse warning did not correspond to duplicate callable definitions.
+Synchronized the TOML and built `RecompiledFuncs` successfully. No runtime,
+audio, or route behavior changed. The next sweep candidate is `0x8000DE70`.
+Evidence: `scratch/agent/s2999_generated_symbol_rename/source-table.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -458,8 +467,8 @@ pending a new discriminator. The generated-symbol sweep is the active
 blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   `0x8000C07C` entry is now synchronized as `submitGfxFrame`; audit the
-   next placeholder `0x8000CB88` only when generated callers/body and the
+   `0x8000CB88` is now synchronized as `reserveAndEmitDLEntry`; audit the
+   next placeholder `0x8000DE70` only when generated callers/body and the
    companion map agree.
    Do not invent names for ambiguous fragments. Keep the M5 route dependency
    open below and return to it only with a new grounded edge.
