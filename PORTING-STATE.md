@@ -123114,3 +123114,15 @@ This rules out the ambiguous-placeholder and duplicate-definition hypotheses
 for this address. No runtime, audio, or route behavior changed. The next
 sweep candidate is `0x8001B7C8`. Evidence:
 `scratch/agent/s3014_generated_symbol_rename/source-table.md`.
+
+## Session 3015 (2026-08-28) — synchronized beginSceneRenderFrame
+
+Completed the bounded generated-symbol audit at `0x8001B7C8`. The companion
+map, generated definition, seven generated callers, header, overlay
+registration, and `redefs.txt` identify the unique callable entry as
+`beginSceneRenderFrame`; only the project symbol TOML was stale. Synchronized
+the TOML and built `cmake --build build --config Debug --target
+RecompiledFuncs` successfully. This rules out the ambiguous-placeholder,
+data-gap, and duplicate-callable hypotheses for this address. No runtime,
+audio, or route behavior changed. Evidence:
+`scratch/agent/s3015_generated_symbol_rename/source-table.md`.
