@@ -122975,3 +122975,18 @@ This rules out the ambiguous-placeholder and duplicate-definition hypotheses
 for this address. No runtime, audio, or route behavior changed. The next
 candidate is `0x80017AB0`. Evidence:
 `scratch/agent/s3003_generated_symbol_rename/source-table.md`.
+
+## Session 3004 (2026-08-28) — synchronized setRenderStateFlagByteOne
+
+Completed the bounded generated-symbol audit at `0x80017AB0`. The companion
+map identifies the entry as `setRenderStateFlagByteOne`; the generated body,
+header, overlay registration, and direct callers agree. The body is a unique
+16-byte setter that stores `a0` as one byte at `0x8012A870` and returns 1. A
+direct generated-definition search found no duplicate callable definition.
+The generated tree was already synchronized, so updated only
+`syms/rogue_squadron.syms.toml` and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime, audio, or route behavior changed. The next
+candidate is `0x80017AC0`. Evidence:
+`scratch/agent/s3004_generated_symbol_rename/source-table.md`.

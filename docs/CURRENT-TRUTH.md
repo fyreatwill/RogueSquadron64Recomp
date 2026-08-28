@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3003 (2026-08-28).
+Current maintenance marker: Session 3004 (2026-08-28).
 
 ## Current state
 
@@ -266,6 +266,15 @@ correspond to a duplicate callable definition. No runtime, audio, or route
 behavior changed. The next sweep candidate is `0x80017AB0`.
 Evidence: `scratch/agent/s3003_generated_symbol_rename/source-table.md`.
 
+Session 3004 audited `0x80017AB0` as `setRenderStateFlagByteOne`. The
+companion map, generated body, header, overlay registration, and direct
+callers agree on the unique 16-byte setter that stores `a0` at `0x8012A870`
+and returns 1; no duplicate callable definition exists. The generated tree
+was already renamed, so only the project symbol TOML was stale. Synchronized
+it and built `RecompiledFuncs` successfully. No runtime, audio, or route
+behavior changed. The next sweep candidate is `0x80017AC0`. Evidence:
+`scratch/agent/s3004_generated_symbol_rename/source-table.md`.
+
 Session 3002 audited `0x80011C9C` as `renderUnlitMeshFaces`. The companion map,
 generated definition, header, overlay registration, and two direct callers
 agree, with no duplicate generated definition. The generated tree was already
@@ -503,8 +512,8 @@ pending a new discriminator. The generated-symbol sweep is the active
 blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   `0x80015548` is synchronized as `traverseSceneGraphRecursive`; audit the
-   next placeholder `0x80017AB0` when generated callers/body and the companion
+   `0x80017AB0` is synchronized as `setRenderStateFlagByteOne`; audit the
+   next placeholder `0x80017AC0` when generated callers/body and the companion
    map agree.
    Do not invent names for ambiguous fragments. Keep the M5 route dependency
    open below and return to it only with a new grounded edge.
