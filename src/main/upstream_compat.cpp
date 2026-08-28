@@ -1413,6 +1413,33 @@ extern "C" int32_t osSendMesg(uint8_t* rdram, int32_t mq_, OSMesg mesg, s32 flag
 extern "C" int32_t osRecvMesg(uint8_t* rdram, int32_t mq_, PTR(OSMesg) mesg, s32 flag);
 extern "C" uint32_t rs64_phase_ord(void);
 
+static void log_m5_frame_sync_edge(uint8_t* rdram, const char* edge,
+                                   uint32_t mq_addr, uint32_t msg,
+                                   int32_t flag) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_FRAME_SYNC");
+        return (all && *all && *all != '0') || (own && *own && *own != '0');
+    }();
+    if (!enabled || (mq_addr != 0x80138D10u && mq_addr != 0x80128CF0u)) return;
+    static std::atomic<uint32_t> rows{0};
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
+    if (phase >= 4u && row >= 256u) return;
+    std::fprintf(stderr,
+        "[m5-frame-sync] row=%u phase=%u edge=%s guest_pc=0x%08X mq=0x%08X "
+        "msg=0x%08X flag=%d valid=%d first=%d count=%d\n",
+        row, phase, edge, (unsigned)g_rs64_last_guest_pc, mq_addr, msg,
+        (int)flag, (int)TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))mq_addr)->validCount,
+        (int)TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))mq_addr)->first,
+        (int)TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))mq_addr)->msgCount);
+    std::fflush(stderr);
+    if (row == 0) {
+        std::fprintf(stderr, "[m5-frame-sync-positive] wrapper edge is live\n");
+        std::fflush(stderr);
+    }
+}
+
 static void log_a1_queue_boundary(uint32_t mq_addr, PTR(OSMesg) msg, s32 flag,
                                   int32_t result, const OSMesgQueue& before,
                                   const OSMesgQueue& after) {
@@ -1514,6 +1541,8 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
         }
     }
     const uint32_t mq_addr = (uint32_t)ctx->r4;
+    log_m5_frame_sync_edge(rdram, "send", mq_addr, (uint32_t)ctx->r5,
+                           (s32)ctx->r6);
     if (mq_addr == 0x8011A818u || mq_addr == 0x8011A7E8u || mq_addr == 0x8011A408u) {
         log_submit_boundary(rdram, "send", mq_addr, (uint32_t)ctx->r6);
     }
@@ -1522,6 +1551,8 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
 
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     const uint32_t mq_addr = (uint32_t)ctx->r4;
+    log_m5_frame_sync_edge(rdram, "recv", mq_addr, (uint32_t)ctx->r5,
+                           (s32)ctx->r6);
     if (mq_addr == 0x8011A818u || mq_addr == 0x8011A7E8u || mq_addr == 0x8011A408u) {
         log_submit_boundary(rdram, "recv", mq_addr, (uint32_t)ctx->r6);
     }

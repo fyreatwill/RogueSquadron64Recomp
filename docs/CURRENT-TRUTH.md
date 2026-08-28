@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3046 (2026-08-28).
+Current maintenance marker: Session 3047 (2026-08-28).
 
 ## Current state
 
@@ -103,6 +103,15 @@ signal, payload, or consumer edge appeared. This selects
 route boundary unexplained. Evidence:
 `scratch/agent/s3046_m5_route_producer_edge/AUDIT.md`.
 
+Session 3047 ran a retail-grounded frame-sync edge audit. Retail's whole-RDRAM
+positive control fired, and `0x80019810`/`0x8001983C` executed with callers
+`0x8000BC14`/`0x8000BF38`; retail reached title and hangar. The batched port
+probe was live and logged 164 pre-target `0x80128CF0` wrapper edges, but no
+`0x80138D10` rows and no target-phase route: it stopped at VI 640
+`0x0066A500`. This selects `H-MeasurementInsufficient`; the new edge's
+missingness and ordering remain unevaluable. Evidence:
+`scratch/agent/s3047_m5_frame_sync_edge/AUDIT.md`.
+
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
 Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
@@ -137,13 +146,14 @@ route-blocked at pre-title VI 640; the VI-commit ordering edge is now audited,
 so the next M5 unit must use a genuinely new non-ProducerMark handoff angle. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — audit a non-ProducerMark handoff boundary.**
+1. **M5 route repair/handoff — audit a different non-ProducerMark boundary.**
    The descriptor lifetime table is implemented but route-blocked: the port
    remained at VI 640 `0x0066A500`, so no target-phase enqueue/consume rows
    could arm. Retail independently reaches the target and reuses task
    `0x80149470`. Use a genuinely new port-side handoff angle with positive
    route controls; do not infer descriptor behavior from this null. The s3046
-   retail run found no distinct ProducerMark edge, so do not repeat those PCs.
+   retail run found no distinct ProducerMark edge, and s3047's frame-sync probe
+   was pre-target only. Do not repeat those PCs or interpret that null.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve

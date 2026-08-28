@@ -123561,3 +123561,17 @@ of the known ProducerMark path and validates target-phase oracle operation,
 but does not explain the port VI-640 route boundary. No port instrumentation
 or behavior change was justified. Full table:
 `scratch/agent/s3046_m5_route_producer_edge/AUDIT.md`.
+
+## Session 3047 (2026-08-28) — audited retail frame-sync handoff edge
+
+Ran the bounded M5 non-ProducerMark handoff unit. Retail ground truth used a
+whole-RDRAM write watch as positive control and Rice video; the control reached
+10,000 callbacks, retail executed `0x80019810` from `0x8000BC14` and
+`0x8001983C` from `0x8000BF38`, and reached title 1024 plus hangar 512. A
+single batched port probe was then built and run with its positive marker and
+route controls. It logged 164 pre-target `0x80128CF0` wrapper edges, but no
+`0x80138D10` rows and no target-phase route; the port stopped at VI 640
+`0x0066A500`. This selects `H-MeasurementInsufficient`, not missing or wrong
+ordering of the retail edge. It rules out only an unqualified port-side null;
+the frame-sync behavior remains unevaluable at title/hangar. No behavior
+change was made. Evidence: `scratch/agent/s3047_m5_frame_sync_edge/AUDIT.md`.
