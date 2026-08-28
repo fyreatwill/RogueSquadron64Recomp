@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3008 (2026-08-28).
+Current maintenance marker: Session 3009 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,18 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3009 completed the bounded generated-symbol audit at `0x80017B78`.
+The companion map assigns the exact operation-level name
+`setRenderViewScaleFloat`; the generated definition is a unique 16-byte leaf
+that stores `$f12` to `0x8011A840`, and the header/overlay registration already
+agree. There are no direct generated callers and no duplicate callable
+definition. Synchronized the stale project symbol TOML and built
+`RecompiledFuncs` successfully. This rules out the ambiguous-placeholder and
+duplicate-definition hypotheses for this address; it does not establish a
+more specific meaning for the stored float. No runtime, audio, or route
+behavior changed. The next sweep candidate is `0x80017B88`. Evidence:
+`scratch/agent/s3009_generated_symbol_rename/source-table.md`.
 
 Session 3008 completed the bounded generated-symbol audit at `0x80017B48`.
 The companion map, generated definition, header, overlay registration, and

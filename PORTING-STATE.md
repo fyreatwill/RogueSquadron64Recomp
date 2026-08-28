@@ -123038,3 +123038,18 @@ This rules out the ambiguous-placeholder and duplicate-definition hypotheses
 for this address. No runtime, audio, or route behavior changed. The next
 sweep candidate is `0x80017B78`. Evidence:
 `scratch/agent/s3008_generated_symbol_rename/source-table.md`.
+
+## Session 3009 (2026-08-28) — synchronized setRenderViewScaleFloat
+
+Completed the bounded generated-symbol audit at `0x80017B78`. The companion
+map assigns the exact operation-level name `setRenderViewScaleFloat`; the
+generated body is a unique 16-byte leaf that stores `$f12` to `0x8011A840`,
+with matching generated header and overlay registration. There are no direct
+generated callers and no duplicate callable definition. Synchronized the stale
+project symbol TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address, while leaving the more specific meaning of the stored float
+unresolved. No runtime, audio, or route behavior changed. The next sweep
+candidate is `0x80017B88`. Evidence:
+`scratch/agent/s3009_generated_symbol_rename/source-table.md`.
