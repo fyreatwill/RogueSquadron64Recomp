@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2990 (2026-08-28).
+Current maintenance marker: Session 2991 (2026-08-28).
 
 ## Current state
 
@@ -152,6 +152,16 @@ crash/abort markers. The target null is unevaluable, not evidence for
 `H-wait-missing`; this edge is now instrumented and the next route unit must
 use a different grounded producer/signal or a new repair angle. Artifact:
 `scratch/agent/s2990_m5_wait_signal/RESULTS.md`.
+
+Session 2991 added a regeneration-safe probe at both generated callers of the
+retail-grounded `bufferArbiterAllocSlot` edge (`0x8001A280` and `0x8001C14C`,
+corresponding to retail predecessors `0x8000C13C` and `0x8001C14C`). The Debug
+target built successfully. The port passed same-run controls (4,806 LLE task
+rows, one filter-voice control, and eight shade-DMA controls) but stayed at VI
+640 origin `0x0066A500` through the 180-second title wait, with zero alloc
+target rows and no crash/abort markers. The target null is unevaluable, not
+evidence for `H-alloc-missing`; no behavior repair was attempted. Artifact:
+`scratch/agent/s2991_m5_alloc_signal/RESULTS.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -382,10 +392,11 @@ its remaining placeholder candidates are already classified.
 
 1. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
-   port to VI 320 in the paired run. The s2989 READY and s2990 wait-on-video
-   probes are both unevaluable because the port stopped at VI 640; do not
-   repeat either unchanged. Use a different independently grounded edge,
-   retaining the same-run task positive control plus title/hangar phase gates.
+   port to VI 320 in the paired run. The s2989 READY, s2990 wait-on-video, and
+   s2991 alloc probes are unevaluable because the port stopped at VI 640; do
+   not repeat them unchanged. Use a different independently grounded edge,
+   such as the producer-mark caller at `0x8000C0C4`, retaining the same-run
+   task positive control plus title/hangar phase gates.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a

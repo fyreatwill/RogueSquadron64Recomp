@@ -122792,3 +122792,16 @@ never fired, not evidence for a missing port wait edge. The initial wrapper
 attempt exited 127 before emulation due to a bad relative script path; the
 fixed launch supplied the result. Artifact:
 `scratch/agent/s2990_m5_wait_signal/RESULTS.md`.
+
+## Session 2991 (2026-08-28) — alloc edge remained unevaluable
+
+Added the regeneration-safe `s2991` route probe at both generated callers of
+`bufferArbiterAllocSlot` (`0x8001A280` and `0x8001C14C`), corresponding to the
+retail-grounded predecessors `0x8000C13C` and `0x8001C14C`. The Debug target
+built successfully. The qualified image/LLE capture passed same-run positive
+controls (4,806 LLE task rows, one filter-voice control, and eight shade-DMA
+controls), but stayed at VI 640 origin `0x0066A500` for the full 180-second
+title-phase wait. It produced zero alloc target rows and zero crash/abort
+markers. This is unevaluable because the target phase never fired, not
+evidence for a missing alloc edge; no behavior repair was attempted. Artifact:
+`scratch/agent/s2991_m5_alloc_signal/RESULTS.md`.
