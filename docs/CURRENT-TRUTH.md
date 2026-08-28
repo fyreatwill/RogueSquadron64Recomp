@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2967 (2026-08-28).
+Current maintenance marker: Session 2968 (2026-08-28).
 
 ## Current state
 
@@ -28,6 +28,18 @@ MORT speech are separate contracts. A `Broke` return proves task completion,
 not PCM correctness.
 
 ## Latest results
+
+Session 2968 ran the M5 Step 1 same-build pair after a successful Debug
+rebuild. The independent retail oracle passed its whole-RDRAM positive
+control (`10000` callbacks) and reached title `1024 @ 0x00790400` plus hangar
+`512 @ 0x006AB400`. Both port arms (silent `ROGUESQ_AUDIO_UCODE=0` and Factor
+5 image `=1`) dispatched 66 audio tasks but remained at VI 640; neither
+reached title or hangar. Both had zero task-contract/image-stage,
+audio-return, service/slot, or PCM-boundary rows and zero crash/abort markers.
+The downstream A/B discriminator is therefore unevaluable. The matching
+pre-title stall rules out an audio-arm-specific route difference, but does not
+distinguish audio degeneracy from an image contract gap. No audio behavior
+changed. Artifact: `scratch/agent/s2968_m5_step1_image_vs_silent/audit.md`.
 
 Session 2957 classified `0x800AE3E4` as an ambiguous three-instruction
 overlay-boundary fragment. Its final word overlaps the menu overlay's named
@@ -172,28 +184,27 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
    generated placeholder remains after it in the current tree. Do not invent a
    next address; close this campaign unless regeneration introduces one.
 
-4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
+4. **M4 accumulator origin — next bounded revisit.** Use one phase/task-keyed
+   port probe joining the `B74` writer/value, producer slot, and consumer
+   index, retaining the existing positive-control mark. Compare the complete
+   join table at the qualified hangar phase; do not interpret pre-title nulls
+   as M4 evidence.
+
+5. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 
-5. **M5 CPU-side MORT publication — unresolved; callback edge closed.** The
+6. **M5 CPU-side MORT publication — unresolved; callback edge closed.** The
    corrected edge is `serviceStreamingVoice` descriptor `+0x190` to
    `dmaVoiceSampleAndSignal`; `+0x194` is the legitimate speech source. That
    routine writes the voice ring and signals completion; it does not publish
    AI data. Do not repeat this callback audit without a new destination and
    ordering edge.
 
-6. **External retail-entry boundary — candidate set rejected (s2903).** The
+7. **External retail-entry boundary — candidate set rejected (s2903).** The
    oracle reached title/hangar, but the four watched candidate PCs were
    boot/pre-title only. Do not repeat that set or the exhausted broad main-text
    range; any revisit needs a different static handoff and ground-truth PC
    attribution.
-
-7. **M4 accumulator origin — unresolved.** Producer and consumer registers
-   have independent derivations. A future revisit needs one phase/task-keyed
-   port probe joining the `B74` writer/value, producer slot, and consumer
-   index, with the existing positive-control mark. The oracle cannot observe
-   RSP DMEM `0xC70/0xB74`; do not interpret the s2944 pre-title null as an M4
-   result.
 
 8. **M5 image task contract / hangar artifact — parked.** No writeback, remap,
    forced state, or mitigation without an `ORIGIN:` naming the writer and

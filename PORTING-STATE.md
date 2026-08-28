@@ -122440,3 +122440,17 @@ Evidence table: `scratch/agent/s2967_generated_symbol_rename/source-table.md`.
 ORIGIN: naming-only data-gap reconciliation. The value is not a game-state
 mitigation; the rename reflects a mechanically bounded non-callable fragment.
 Next work returns to M5 Step 1: same-build image-vs-silent audio control.
+## Session 2968 (2026-08-28) — M5 Step 1 pair was route-invalid
+
+Built the Debug target once and ran the independent retail oracle plus the
+same-build silent (`ROGUESQ_AUDIO_UCODE=0`) and Factor 5 image (`=1`) port
+arms. The oracle whole-RDRAM positive control fired (`10000` callbacks) and
+the retail run reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. Both port arms dispatched 66 audio tasks but stalled at
+VI 640, with zero task-contract/image-stage, audio-return, service/slot, or
+PCM-boundary rows; neither reached title or hangar and neither emitted a
+crash/abort marker. This rules out an audio-arm-specific route difference in
+the recipe, but the downstream audio hypotheses remain unevaluable because
+the port phase controls did not fire. No audio behavior changed. The run
+driver and bounded audit are in
+`scratch/agent/s2968_m5_step1_image_vs_silent/`.

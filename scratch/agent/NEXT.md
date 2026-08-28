@@ -1,50 +1,44 @@
-# NEXT work unit (s2968)
+# NEXT work unit (s2969)
 
-HYPOTHESIS-ID: m5-audio-step1-image-vs-silent
+HYPOTHESIS-ID: m4-accumulator-boundary
 
 ## Unit
 
-Execute M5 plan Step 1: same-build, phase-gated comparison of the Factor 5
-audio image arm and the explicit silent `musyx_stub` control. This is one
-experiment with both arms, not two sequential iterations. Use the existing
-AUTOPILOT route and retain all passive breadcrumb instruments. Do not change
-audio behavior or add a new diagnostic field.
+Revisit the M4 accumulator boundary with one complete phase/task-keyed join
+table using the existing `B74`/`C70` instrumentation and positive-control
+mark. Do not change guest or audio behavior. Use the last qualified AUTOPILOT
+route; if the route again stops before a target phase, report the join as
+unevaluable and do not infer M4 from pre-title zeros.
 
 ## Competing hypotheses and discriminator
 
-- H-AudioDegeneracy: the silent path causes downstream wait/slot/voice/PCM
-  failures. The image arm should add the predicted service, slot, voice, or
-  PCM transition while preserving the same route.
-- H-ContractGap: the image runs and completes but its task/DMEM/DMA/output
-  contract is incomplete. The image arm should show dispatch, task fields,
-  DMEM/DMA, image exit, and SP completion, but fail to close a downstream
-  service/slot/voice/PCM join.
-- H-MixedPipelines: RSP image audio and CPU MORT speech are independent. The
-  two arms may have identical RSP rows while MORT descriptor/PCM rows diverge
-  independently.
+- H-M4-B74-Producer: the consumer's accumulator value is written by the
+  producer slot, so the same task/phase row should join `B74` value to that
+  slot and the consumer index.
+- H-M4-B74-OtherWriter: a different guest writer supplies `B74`; the join
+  should show a stable writer/value independent of the presumed producer.
+- H-M4-StaleOrUnreached: the apparent `B74` value is stale or the route never
+  reaches the consumer; the positive control fires but no target-phase join
+  closes.
 
-The discriminating measurement is one phase-keyed row for each arm containing
-`M_AUDTASK` dispatch/exit, task fields and source hash, DMEM change and DMA
-ranges, image completion, SP completion, service entry/return, status/slot
-transitions, voice/reap activity, MORT descriptor class, PCM source/consumer
-joins, and VI route phase (`1024 @ 0x00790400`, `512 @ 0x006AB400`). A whole-
-RDRAM oracle positive control and the port route/phase control must both fire;
-pre-title nulls are unevaluable.
+The discriminator is one row per target phase/task containing `B74` writer PC,
+value, producer slot, consumer index, consumer read PC, and VI origin/width.
+The positive control must visibly fire in the same run; only a closed join at
+the qualified hangar phase selects a producer explanation. A pre-title null
+is unevaluable.
 
 ## Commands
 
-1. Build one binary:
+1. Confirm the existing B74/C70 probe and positive-control mark in source.
+2. Build one binary:
    `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
-2. From `build/Debug`, launch both arms concurrently with the same
-   `ROGUESQ_AUTOPILOT`, `ROGUESQ_LOG_ALL`, `PROBE_PHASE_WIDTH=1`, and
-   `PROBE_KEYS_FROM_PHASE=1` settings; use `ROGUESQ_AUDIO_UCODE=0` for the
-   silent arm and `ROGUESQ_AUDIO_UCODE=1` for the image arm. Capture each arm
-   to a non-dot final path, watchdog it, and SIGKILL the process group.
-3. Check the whole-RDRAM oracle control before interpreting narrow retail or
-   port nulls; summarize both arms in one phase-keyed table.
+3. Run the existing qualified AUTOPILOT from `build/` with
+   `ROGUESQ_LOG_ALL=1`, `PROBE_PHASE_WIDTH=512`, and
+   `PROBE_KEYS_FROM_PHASE=1`; capture to a non-dot final path and SIGKILL the
+   process group at the bounded timeout.
+4. Summarize the whole-RDRAM positive control, route phases, and complete B74
+   join table.
 
-Expected outcomes: image-only downstream progress selects H-AudioDegeneracy;
-image DMEM/DMA/SP progress without service/slot/PCM closure selects
-H-ContractGap; matching RSP rows with independent MORT/PCM divergence selects
-H-MixedPipelines. Rollback/control is `ROGUESQ_AUDIO_UCODE=0`; no source
-change is authorized by a route-only difference.
+Expected outcomes: a producer-slot/B74/consumer join selects H-M4-B74-Producer;
+a different named writer selects H-M4-B74-OtherWriter; positive-control-only
+or pre-title rows select H-M4-StaleOrUnreached and require a new route angle.
