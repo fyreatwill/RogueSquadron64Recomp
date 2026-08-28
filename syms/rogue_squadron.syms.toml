@@ -207,7 +207,7 @@ functions = [
     { name = "heapFreeListDequeue", vram = 0x8000CFD4, size = 0xA00 },
     { name = "emitTexturedFaceGeometry", vram = 0x8000D9D4, size = 0x328 },
     { name = "transformLightByType", vram = 0x8000DCFC, size = 0x174 },
-    { name = "func_8000DE70", vram = 0x8000DE70, size = 0x24C },
+    { name = "appendRdpStateDl", vram = 0x8000DE70, size = 0x24C },
     { name = "selectRenderPresetByIndex", vram = 0x8000E0BC, size = 0x24 },
     { name = "selectSecondaryPresetByIndex", vram = 0x8000E0E0, size = 0x24 },
     { name = "emitMaterialTexturedDL", vram = 0x8000E104, size = 0x6FC },

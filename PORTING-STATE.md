@@ -122916,3 +122916,17 @@ This rules out the ambiguous-placeholder and duplicate-definition hypotheses
 for this address. No runtime, audio, or route behavior changed. The next
 candidate is `0x8000DE70`. Evidence:
 `scratch/agent/s2999_generated_symbol_rename/source-table.md`.
+
+## Session 3000 (2026-08-28) — synchronized appendRdpStateDl
+
+Completed the bounded generated-symbol audit at `0x8000DE70`. The companion
+map identifies the entry exactly as `appendRdpStateDl`; the generated
+definition, header, overlay registration, and six direct callers agree, with
+no duplicate callable definition. The scanner's overlay-reuse warning did not
+correspond to a second callable definition. Synchronized the stale project
+symbol TOML entry and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime, audio, or route behavior changed. The next
+candidate is `0x8000E0BC`. Evidence:
+`scratch/agent/s3000_generated_symbol_rename/source-table.md`.
