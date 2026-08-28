@@ -1,43 +1,46 @@
-# NEXT work unit (s2887) — generated-symbol renaming sweep
+# NEXT work unit (s2888) — generated-symbol renaming sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-M5 remains open but its current route/contract discriminator stalled for three
-iterations. Do not repeat it without a genuinely new route repair. The next
-eligible bounded engineering unit is the placeholder sweep.
+M5 remains open but its current route/contract discriminator is parked after
+three route-invalid iterations. The next eligible bounded engineering unit is
+the placeholder sweep.
 
 ## Work unit
 
-Inspect the next contiguous placeholder interval above `0x800C0000` in the
-generated-function snapshot and companion decomp symbol map. Rename only
+Inspect the complete next placeholder interval `0x800E0000..0x800F0000` in the
+generated snapshot and companion decomp symbol maps. Rename only
 source-backed callable names or mechanically proven non-callable data gaps;
-leave ambiguous records unchanged. Record the bounded source table and update
+leave ambiguous records unchanged. Record a complete source table and update
 all generated references through `tools/rename_generated_symbols.py`.
 
 ## Competing hypotheses and discriminator
 
-- H-Callable: companion code and call/reference structure identify a semantic
-  function name.
-- H-DataGap: the record is a non-callable fragment and can be named as a
-  `data_gap_*` without changing execution.
-- H-Ambiguous: evidence is insufficient; the placeholder must remain.
+- H-Callable: companion code and call/reference structure identify a unique
+  semantic function name.
+- H-DataGap: the exact generated body is a non-callable fragment, invalid
+  decode, or trap/data gap and can be named mechanically.
+- H-Ambiguous: evidence is insufficient or conflicting; retain the placeholder.
 
-The single discriminator is a complete interval table containing each
-placeholder, companion boundaries, generated body shape, call/reference
-evidence, and selected action. Every candidate in the interval must land in
-exactly one of the three classes in one pass.
+The single discriminator is a complete interval table joining every generated
+placeholder to its companion boundary, body shape, and call/reference
+evidence. Each row must receive exactly one of the three classes before any
+rename. A callable selection requires a unique semantic companion name plus
+callable evidence; a data-gap selection requires exact bounded non-callable
+evidence; all other rows remain unchanged.
 
 ## Exact next commands
 
-1. Inspect `tools/rename_generated_symbols.py`, the companion map, and the
-   next interval above `0x800C0000`; do not read the full ledger.
-2. Produce one source table for the whole interval before editing names.
-3. Apply only the table-selected renames and reconcile generated references.
-4. Run the project’s symbol/reference checks and record counts and unchanged
-   ambiguous candidates.
+1. Inspect the generated snapshot and companion maps for the interval and
+   produce the complete source table before editing names.
+2. Add only table-selected mappings to `tools/rename_generated_symbols.py` and
+   reconcile the generated snapshot with `--start-address 0x800e0000
+   --end-address 0x800f0000 --require-rename`.
+3. Update the companion/project symbol maps for selected rows, run symbol and
+   reference checks, and record selected and unchanged counts.
 
 ## Expected outcomes
 
-- Source-backed callable entries are renamed with semantic names.
-- Proven data gaps are renamed mechanically.
-- Ambiguous entries remain placeholders and are explicitly recorded.
+Every candidate is classified as H-Callable, H-DataGap, or H-Ambiguous. Any
+semantic callable or proven data-gap rows are renamed; ambiguous rows remain
+placeholders and are explicitly recorded.

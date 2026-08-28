@@ -120969,3 +120969,21 @@ edge, and no behavior change or mitigation was landed. After three stalled
 iterations on this route hypothesis, the next unit pivots to the bounded
 generated-symbol sweep above `0x800C0000`. Evidence:
 `scratch/agent/s2886_m5_route_contract/RESULTS.md`.
+## Session 2887 (2026-08-27) — renamed nine generated data gaps above 0x800C0000
+
+Ran the required sweep eligibility check; the recent sessions were mixed M5
+and symbol work, so the generated-symbol campaign remained eligible. The
+complete generated placeholder census for `0x800C0000..0x800D0000` found nine
+records. Exact companion boundaries and generated bodies classified all nine
+as non-callable data gaps: eight were short instruction fragments adjacent to
+established bodies, and `0x800CC3D4` was an explicit trap-filled gap. No row
+had a unique semantic callable companion name, so no callable rename was
+attempted and no ambiguous row was changed.
+
+Added the nine `data_gap_*` mappings to `tools/rename_generated_symbols.py`,
+updated the companion/project symbol maps, and reconciled the generated
+snapshot. Verification found 27 generated references renamed across generated
+C, header, and overlay files, with zero old-name matches remaining. No build or
+runtime soak was needed for this symbol-only change; no game behavior changed.
+The next sweep cursor is `0x800D0000`; the next placeholder interval begins at
+`0x800E0000`. Evidence: `scratch/agent/s2887_generated_symbol_rename/source-table.md`.

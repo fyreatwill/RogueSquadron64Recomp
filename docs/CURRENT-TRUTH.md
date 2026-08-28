@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2886 (2026-08-27).
+Current maintenance marker: Session 2887 (2026-08-27).
 
 ## Live result
 
@@ -149,6 +149,15 @@ references across `funcs_32.c`, `funcs_33.c`, `funcs.h`, and
 `0x800C0000`. Source table:
 `scratch/agent/s2884_generated_symbol_rename/source-table.md`.
 
+The s2887 sweep examined the complete `0x800C0000..0x800D0000` interval and
+found nine placeholders. All nine were mechanically classified as non-callable
+data gaps from exact short boundaries, fragment-shaped generated bodies, or an
+explicit trap-filled gap; no unique callable companion name was present. They
+were renamed to `data_gap_*` in the companion maps, project symbol map,
+generated snapshot, and rename tool. The reconciliation changed 27 generated
+references across the generated C, header, and overlay files. Source table:
+`scratch/agent/s2887_generated_symbol_rename/source-table.md`.
+
 The s2886 M5 route/contract discriminator rebuilt the Debug target and ran the
 image and silent arms concurrently. The retail oracle positive control reached
 10,000 callbacks and independently reached title and hangar; its
@@ -251,7 +260,7 @@ apply only source-backed renames and preserve callable-ambiguous records.
    still requires a named legitimate contract edge.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-3. **Generated-symbol renaming sweep — next bounded interval after `0x800C0000`.** The s2873 batch completed
+3. **Generated-symbol renaming sweep — next bounded interval after `0x800D0000`.** The s2873 batch completed
    `0x80079278..0x8007A0F0`. The s2880 sweep covered `0x8007C300..0x800AF700`:
    three `__builtin_trap()` gap-fillers (`0x80099C4C`, `0x800AEC54`, `0x800AF6A8`)
    were renamed to `data_gap_*`; five ambiguous executable fragments were left
@@ -259,8 +268,8 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x800BAA00`; continue with the next bounded interval after `0x800BAA00`
    only when M5 has no writer-backed behavior edge; exact companion semantic names
    and mechanically proven short data-gap names are allowed, while
-   callable-ambiguous and data-ambiguous entries stay unchanged. No generated
-   placeholder remains above `0x800C0000`; return to M5 with a new
+   callable-ambiguous and data-ambiguous entries stay unchanged. The s2887
+   sweep renamed nine data gaps through `0x800D0000`; return to M5 with a new
    writer-backed route or contract discriminator.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.

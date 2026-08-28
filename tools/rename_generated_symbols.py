@@ -121,6 +121,15 @@ RENAMES = {
     "fake_func_80099C4C": "data_gap_80099C4C",
     "fake_func_800AEC54": "data_gap_800AEC54",
     "fake_func_800AF6A8": "data_gap_800AF6A8",
+    "fake_func_800C41AC": "data_gap_800C41AC",
+    "fake_func_800C5898": "data_gap_800C5898",
+    "fake_func_800C64A4": "data_gap_800C64A4",
+    "fake_func_800C6968": "data_gap_800C6968",
+    "fake_func_800C7DB4": "data_gap_800C7DB4",
+    "fake_func_800CA26C": "data_gap_800CA26C",
+    "fake_func_800CC038": "data_gap_800CC038",
+    "fake_func_800CC3D4": "data_gap_800CC3D4",
+    "fake_func_800CEF1C": "data_gap_800CEF1C",
 }
 
 
