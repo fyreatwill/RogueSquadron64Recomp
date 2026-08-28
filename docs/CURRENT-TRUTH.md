@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2912 (2026-08-27).
+Current maintenance marker: Session 2913 (2026-08-27).
+
+The s2913 generated-symbol sweep inspected `0x800555E8..0x800555F0`. The
+8-byte record at `0x800555E8` is a callable jump veneer into
+`initPlayerStructs`, not a mechanically provable data gap. The companion map
+retains `fake_func_800555E8` and supplies no semantic name for the veneer;
+generated references are limited to its definition and overlay registration.
+The bounded reconciliation therefore classified it `ambiguous-or-fake` and
+left all maps and generated files unchanged. Complete table:
+`scratch/agent/s2913_generated_symbol_rename/source-table.md`.
 
 The s2912 generated-symbol sweep classified `0x80054648..0x80054650`.
 `0x80054648` is an 8-byte non-callable record whose generated body is only

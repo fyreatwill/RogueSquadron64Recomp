@@ -121420,3 +121420,15 @@ The generated snapshot contains no stale `fake_func_80054648` or
 rebuilt and linked successfully, with only pre-existing format/sign and
 related warnings. This closes the interval and rules out a source-backed
 semantic rename there; the next bounded sweep is `0x800555E8..0x800555F0`.
+## Session 2913 (2026-08-27) — classified callable veneer at 0x800555E8
+
+The bounded generated-symbol sweep inspected `0x800555E8..0x800555F0`.
+`0x800555E8` is an 8-byte `j 0x800555F0`/`nop` veneer whose generated body
+tail-calls the complete `initPlayerStructs` function. The companion map retains
+`fake_func_800555E8` and provides no semantic name; the generated tree has no
+call or lookup references beyond the definition and overlay registration. The
+reconciliation tool classified it `ambiguous-or-fake` and renamed zero
+references. This rules out a mechanically proven data-gap rename and does not
+authorize inventing a semantic name; the symbol remains unchanged. No build
+was needed because generated files did not change. Complete table:
+`scratch/agent/s2913_generated_symbol_rename/source-table.md`.
