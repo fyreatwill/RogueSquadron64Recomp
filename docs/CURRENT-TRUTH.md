@@ -112,6 +112,19 @@ companion map supplies only `fake_func_*` plus `defined:true`, with no
 source-backed classification. Both remain ambiguous-or-fake and unchanged;
 the source table is `scratch/agent/s2874_generated_symbol_rename/source-table.md`.
 
+The s2875 retail-first state-arbiter probe was instrument-valid: the
+whole-RDRAM control reached 10,000 callbacks, and the driven retail run reached
+title (`634 VI` in `0x00790400:1024`) and hangar (`217 VI` in
+`0x006AB400:512`). The `0x80130B40..0x80130B80` state span had 105 lifetime
+writes; target-phase writers included `0x8006E4B4` in both title and hangar,
+with additional title writers `0x80007628`, `0x8006DC00`, `0x8006DC2C`,
+`0x8006DC38`, and `0x800C5B54`. `mainGameLoop` (`0x8003DFA0`) and its
+`0x8003E010` body entry each executed once at boot only. This selects a retail
+state-writer route lead, not a repeated-loop-entry lead. It does not establish
+port absence because the matching port recipe still stops at pre-title VI 640;
+no behavior change is authorized. Artifact:
+`scratch/agent/s2875_m5_state_arbiter/RESULTS.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
@@ -132,10 +145,13 @@ apply only source-backed renames and preserve callable-ambiguous records.
    reached both target phases but produced no discrete scheduling edge. The
    long-schedule image requalification also reproduced the pre-title route
    stop. The route-control audit restored the concrete recipe drift but both
-   arms still stopped at VI 640, selecting H-route-state; the next unit must
-   test the distinct `gGameSettings`/`mainGameLoop` state-arbiter class
-   (`0x80130B40`, `mainGameLoop=0x8003DFA0`) before interpreting downstream
-   nulls. Ground truth must precede any port instrumentation. The s2873 pivot
+   arms still stopped at VI 640, selecting H-route-state. The s2875 ground
+   truth found target-phase writers in the `0x80130B40` span, led by
+   `0x8006E4B4`, while `mainGameLoop=0x8003DFA0` is boot-only; the loop-entry
+   sub-angle is exhausted, but writer equivalence remains open. The next unit
+   must test a distinct port-side state-arbiter consumer or writer path after
+   ground-truth qualification, before interpreting downstream nulls. Ground
+   truth must precede any port instrumentation. The s2873 pivot
    did not change this unresolved M5 ordering; its next audio behavior change
    still requires a named legitimate contract edge.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit

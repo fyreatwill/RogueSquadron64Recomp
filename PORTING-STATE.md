@@ -120720,6 +120720,28 @@ because this was a bounded naming change, not an audio behavior test.
 
 Artifact: `scratch/agent/s2873_generated_symbol_rename/`.
 
+## Session 2875 (2026-08-27) — qualified retail state-arbiter writer
+
+The retail-first state-arbiter probe used a 50-second Rice run with a
+whole-RDRAM positive control, a physical `0x80130B40..0x80130B80` write watch,
+and execution watches for `mainGameLoop` (`0x8003DFA0`) and its `0x8003E010`
+body entry. The positive control reached 10,000 callbacks; the run reached
+title (`634 VI` in `0x00790400:1024`) and hangar (`217 VI` in
+`0x006AB400:512`), so the phase rows are valid.
+
+The state span had 105 lifetime writes. Target-phase writers included
+`0x8006E4B4` in both title and hangar; title also had `0x80007628` (4),
+`0x8006DC00`, `0x8006DC2C`, `0x8006DC38`, and `0x800C5B54` (one each).
+Post-store samples contained seven values, including `0x11`, `0x41`,
+`0x19B`, and `0x5`. Both execution watches fired once at boot only, ruling
+out repeated target-phase `mainGameLoop` entry as the useful discriminator.
+
+This selects a retail state-writer route lead, especially `0x8006E4B4`, while
+leaving port equivalence open because the current port recipe stops pre-title.
+It rules out interpreting a null target-phase port writer as evidence until the
+route is qualified; no runtime behavior was changed. Artifact:
+`scratch/agent/s2875_m5_state_arbiter/RESULTS.md`.
+
 ## Session 2874 (2026-08-27) — classified two ambiguous main-overlay placeholders
 
 The bounded generated-symbol sweep inspected `0x8007A86C` and `0x8007C298`.
