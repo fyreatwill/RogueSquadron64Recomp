@@ -1,4 +1,4 @@
-# NEXT work unit (s2949) — retail route message/branch ground truth
+# NEXT work unit (s2950) — port route source-word qualification
 
 HYPOTHESIS-ID: m5-route-qualification-repair
 
@@ -6,38 +6,33 @@ HYPOTHESIS-ID: m5-route-qualification-repair
 
 s2948 added a regeneration-owned full-input probe at `0x80019CD8`. The fixed
 port run emitted 771 rows, and its same-run `[f5-fetch-control]` positive
-control fired 8 times. The route still stopped at pre-title VI 640
-(`0x0066A500`), so the accepted retail tuple and message branch remain
-unknown.
+control fired 8 times, but the route stopped at pre-title VI 640
+(`0x0066A500`). s2949's independent retail run reached both target phases and
+found three source-word families at the same PC: `0x02000612`, `0x00000400`,
+and `0x02000800`; sampled `branch_state=0x0010` was constant.
 
 ## Competing hypotheses and discriminator
 
-- H-PrepareFieldBad: one route-preparation input differs between retail and
-  port.
-- H-PrepareTimingBad: the input tuple matches, but phase-relative ordering or
-  timing differs.
-- H-PrepareLogicBad: generated control flow differs at the scheduler boundary.
+- H-PrepareFieldBad: the port's pre-title pointed field/source word differs
+  from the retail route's accepted families.
+- H-PrepareTimingBad: the values match, but phase-relative ordering differs.
+- H-PrepareLogicBad: values and ordering match, but generated control flow
+  still rejects the route.
 
-Run the retail oracle at `0x80019CD8` in title and hangar phases, retaining the
-whole-RDRAM positive control. Compare the target-phase GPR/message/branch tuple
-against s2948's port table. A named differing field selects Field or Timing;
-matching inputs with different control flow selects Logic; absent target rows
-invalidate the oracle run and select nothing.
+Extend the existing regeneration-owned port probe at `0x80019CD8` with the
+pointed source-word/branch fields represented by the oracle field table, in one
+build and one fixed run. The `[f5-fetch-control]` mark must fire. A stable
+pre-title mismatch selects Field; matching values with a different event order
+select Timing; matching values/order with rejection selects Logic. Missing
+positive control or target qualification selects nothing and requires a pivot,
+not a mitigation.
 
 ## Exact work
 
-From the repo root, run:
+From the repo root, update the existing fixup-owned probe, then run:
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core ~/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom ~/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 180 --watch-write 0x0:0x800000 --watch-pc 0x80019CD8 \
-  --pc-phase-log 0x00790400,0x006AB400 \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env ROGUESQ_LOG_F5_STATE=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 \
+  ./build/RogueSquadron64Recomp > scratch/agent/s2950_port_route_sourceword.log 2>&1
 ```
-
-Capture to `scratch/agent/s2949_retail_route_message/`. If the existing oracle
-cannot expose the message byte/branch, add that one ground-truth field in the
-same unit; do not build a new port probe first.

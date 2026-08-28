@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2948 (2026-08-28).
+Current maintenance marker: Session 2949 (2026-08-28).
+
+Session 2949's retail-first route-message run passed the same-run whole-RDRAM
+positive control (10,000 writes), watched `0x80019CD8` 29,874 times, and with
+explicit target-width gates collected 2,312 title rows and 6,558 hangar rows.
+The field table had three phase-specific `source_word` families
+(`0x02000612`, `0x00000400`, `0x02000800`) while sampled `branch_state` stayed
+`0x0010`; callers were overwhelmingly `0x80033300`. The prescribed 640-only
+phase option was invalid for these targets and was corrected before the
+field-enabled run. Retail target coverage is now ground truth, but s2948's
+port still stopped pre-title, so no field/timing/logic hypothesis is selected.
+Artifact: `scratch/agent/s2949_retail_route_message/RESULTS.md`.
 
 Session 2948 added a regeneration-owned full-input route-preparation probe at
 `0x80019CD8` and rebuilt the Debug target successfully. The fixed run emitted
@@ -722,8 +733,14 @@ apply only source-backed renames and preserve callable-ambiguous records.
    route-prepare receives key_match=1 but accepted=0 (s2905) and route_valid=0
    (s2882). s2948 logged the full scheduler tuple and message branches, but
    still stopped before target phase; the specific input field is not selected.
-   The next unit must ground-truth the same message/branch tuple at retail
-   title/hangar before another port-side field probe. The s2904 Step 6 drain-tick A/B also stopped at the same pre-title
+   s2949 now supplies that retail target table: the handler ran in both target
+   phases, with three `source_word` families and constant sampled
+   `branch_state=0x0010`; it rules out retail-handler absence but does not
+   select a port field/timing/logic mismatch because the port has no target
+   tuple. The next unit is one batched port probe adding the matching pointed
+   source-word/branch fields to the existing acceptance and positive-control
+   rows, including pre-title rows needed to explain qualification failure.
+   The s2904 Step 6 drain-tick A/B also stopped at the same pre-title
    route, so it does not validate the default-off change. Ground truth must
    precede any port instrumentation. The s2873 pivot did not change this
    unresolved M5 ordering; its next audio behavior change still requires a named

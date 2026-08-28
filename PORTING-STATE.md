@@ -122064,3 +122064,21 @@ does not select H-PrepareFieldBad, H-PrepareTimingBad, or H-PrepareLogicBad:
 the port never reached the retail-qualified 1024/512 keys, so no accepted
 retail tuple exists for comparison. No behavior or mitigation change was made.
 Complete artifact: `scratch/agent/s2948_route_prepare_rejection/RESULTS.md`.
+## Session 2949 (2026-08-28) — ground-truthed retail route fields
+
+The prescribed retail-oracle command was instrument-valid: its whole-RDRAM
+positive control reached 10,000 writes and the `0x80019CD8` execution watch
+fired 29,860 times, but `--pc-phase-log` only accepts 640-width buckets, so it
+produced no title/hangar rows. The corrected rerun used explicit 1024 and 512
+width buckets and reached both requested origins. The field-enabled rerun also
+passed: 10,000 control writes, 29,874 route-PC hits, 2,312 title rows, 6,558
+hangar rows, three unique field rows, and zero overflow.
+
+Retail `source_word` families were `0x02000612`, `0x00000400`, and
+`0x02000800`; sampled `branch_state` was `0x0010` for all rows, and callers
+were `0x80033300` except for two `0x8002BEEC` executions. This selects
+H-RoutePreTitle for the port recipe and rules out an absent retail route or
+dead oracle watch. It does not select field, timing, or logic mismatch because
+the s2948 port run never produced a target-phase tuple. The next unit is a
+batched port probe adding the matching pointed-field/source-word values.
+Artifact: `scratch/agent/s2949_retail_route_message/RESULTS.md`.
