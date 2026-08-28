@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3039 (2026-08-28).
+Current maintenance marker: Session 3040 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,17 @@ completion, not PCM correctness. The M5 route dependency remains open, but
 static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3040 ran the M5 Step-1 image/silent qualification after an independent
+retail ground-truth preflight. Retail passed the whole-RDRAM positive control
+and reached title/hangar, but both concurrent port arms stopped at VI 640
+(`0x0066A500`) before title; downstream audio rows are unevaluable. The
+driver was corrected in-iteration to launch both arms concurrently, use the
+scheduled AUTOPILOT route, and clean up child processes. The corrected run
+reproduced the same route boundary. Image and silent dispatch controls were
+positive (`44` each, `real_ucode=1/0`), so arm selection and logging ran; no
+audio hypothesis was selected and no audio behavior changed. Evidence:
+`scratch/agent/s3040_m5_step1_contract_pair_final/`.
 
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
@@ -59,8 +70,9 @@ contract gap from that result.
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
-symbol sweep. Maintenance is complete. M5 design is complete; its Step-1
-qualification is next. M3 is parked pending a new discriminator.
+symbol sweep. Maintenance is complete. M5 design is complete, but Step 1 is
+route-blocked at pre-title VI 640; the next M5 unit must use a genuinely new
+route-handoff angle. M3 is parked pending a new discriminator.
 
 1. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Run the same-build image/silent pair at title and hangar with the

@@ -123457,3 +123457,22 @@ bytes, a reduction of 51,776 bytes and 813 lines. No build, run, code change,
 or experiment was performed. This rules out no runtime hypothesis; it closes
 only the documentation-maintenance condition and leaves M5 Step-1
 qualification as the next work unit.
+
+## Session 3040 (2026-08-28) — M5 Step-1 qualification remained route-invalid
+
+Ran the independent retail oracle before the port build. Its whole-RDRAM
+positive control passed and retail reached title `1024 @ 0x00790400` plus
+hangar `512 @ 0x006AB400`. Built the Debug target once. The first same-build
+pair driver was invalid because it serialized the arms and exited before
+launching the image arm when silent missed hangar. The corrected driver
+launched image and silent concurrently, used the scheduled AUTOPILOT route,
+and cleaned up known child processes. Both port arms still stopped at VI 640
+origin `0x0066A500`; neither reached title or hangar. Dispatch controls were
+positive in both arms (`44`, `real_ucode=0/1`), while task-ABI, DMA,
+image-stage, audio-return, service, PCM-boundary, crash, and abort rows were
+zero. The target-phase discriminator is therefore unevaluable: this selects
+RouteFailure for this capture only and selects no audio-degeneracy or
+contract-gap hypothesis. No audio behavior or mitigation changed. The next
+unit uses a new retail-grounded ProducerMark route-handoff boundary rather
+than repeating the input recipe. Evidence:
+`scratch/agent/s3040_m5_step1_contract_pair_final/`.

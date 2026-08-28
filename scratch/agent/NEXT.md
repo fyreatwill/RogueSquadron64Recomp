@@ -1,40 +1,40 @@
-# NEXT work unit — M5 Step-1 image/silent qualification
+# NEXT work unit — M5 producer-mark route-handoff boundary
 
-HYPOTHESIS-ID: m5-audio-step1-contract-qualification
+HYPOTHESIS-ID: m5-route-producer-mark-boundary
 
-Run one same-build, phase-gated qualification of the Factor 5 image arm and
-the silent `musyx_stub` control. Preserve the independent retail-oracle
-positive control. Do not change a gate, wait, voice guard, or output
-destination from this qualification.
+Run one new retail-grounded route-handoff probe centered on
+`bufferArbiterProducerMark` at `0x8001BCE4` and its caller/consumer. Preserve
+the whole-RDRAM positive control and title/hangar VI controls. Do not change a
+gate, wait, voice guard, or output destination.
 
 Competing hypotheses and the discriminator:
 
-- H-AudioDegeneracy: the silent path causes a downstream wait, slot, voice, or
-  PCM failure. The image arm must add the predicted downstream edge.
-- H-ContractGap: the image executes but its task/DMEM/DMA/output contract is
-  incomplete. Image-only activity must fail to close a later join.
-- H-MixedPipelines: Factor 5 RSP audio and CPU MORT speech are independent;
-  one can progress while the other remains absent.
-- H-RouteFailure: a run without title/hangar makes every downstream audio
-  null unevaluable.
+- H-PortMissingMark: retail executes ProducerMark in the target phase but the
+  port has no corresponding producer-mark edge before its 640 stop.
+- H-PortWrongCaller: the port reaches the producer region, but a different
+  caller/consumer or ordering edge prevents the handoff.
+- H-RouteFailure: the port has no target phase, so producer-mark and downstream
+  audio nulls are unevaluable.
+- H-RetailControlFailure: the retail watch or phase controls are absent, so no
+  port conclusion is allowed.
 
-The single discriminator is a phase-keyed table in one build/run covering
-whole-RDRAM/oracle control, route phase, M_AUDTASK dispatch and task fields,
-DMEM/DMA, image break/`Broke`, SP completion, guest service, slot/voice
-transitions, MORT class, and PCM source/consumer joins. No target phase selects
-RouteFailure. DMEM/DMA plus completion without a later join selects
-ContractGap. Independent RSP and MORT progress selects MixedPipelines.
-AudioDegeneracy requires the predicted downstream edge, not merely a return
-counter.
+The single discriminator is one phase-keyed table containing the retail
+ProducerMark execution PC, predecessor, arguments, VI origin/width, the port
+route-state/producer-mark rows and predecessor, and the port title/hangar
+phase controls. Whole-RDRAM and retail title/hangar must both be positive.
+Retail positive plus port mark absent at 640 selects only a route boundary,
+not a causal fix. Port mark present with a different caller/order selects
+PortWrongCaller. Missing target phase selects RouteFailure and leaves target
+rows unevaluable.
 
-Exact command:
+Ground-truth command first:
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp -- -j2
-    env ROGUESQ_AUTOPILOT=1 ROGUESQ_AUDIO_UCODE=0 ROGUESQ_LOG_ALL=1 \
-      PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_PHASE_TIMEOUT=180 \
-      PROBE_LEAVE_OK=1 zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh
+    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 90 --watch-write 0x0:0x800000 --watch-pc 0x8001BCE4 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
 
-Write the phase-keyed result under
-`scratch/agent/s3040_m5_step1_contract_pair/`. If the qualification cannot
-reach target phases, record route failure and leave downstream nulls
-unevaluable.
+Then build once and run a new port-side batched producer-mark capture using
+the existing M5 route controls plus the same phase gates. Store the result in
+`scratch/agent/s3041_m5_producer_mark_boundary/`.
+
+No behavior change is authorized by this probe. If the port remains before
+title, record RouteFailure and pivot the next unit; do not repeat this input
+recipe or interpret audio nulls.

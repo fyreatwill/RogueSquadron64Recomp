@@ -41,6 +41,8 @@ COMMON=(
     ROGUESQ_LOG_M5_PCM_WRITER=1
     ROGUESQ_LOG_M5_B40_ROUTE=1
     ROGUESQ_LOG_M5_ROUTE_STATE=1
+    ROGUESQ_AUTOPILOT='6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start'
+    ROGUESQ_AUTOPILOT_STOP_WIDTH=512
     PROBE_PHASE_WIDTH=1024
     PROBE_KEYS_FROM_PHASE=1
 )
@@ -116,19 +118,6 @@ launch_arm() {
     fi
     local game_pid
     if [[ "$name" == silent ]]; then game_pid="$SILENT_PID"; else game_pid="$IMAGE_PID"; fi
-    (
-        local previous=0
-        local at
-        for at in 6 11 16 21 26 31 36 41 46 51 56; do
-            sleep "$((at - previous))"
-            previous=$at
-            if ! kill -0 "$game_pid" 2>/dev/null; then exit 0; fi
-            "$WINCTL" activate "$game_pid" >/dev/null 2>&1 || true
-            /usr/bin/osascript -e "tell application \"System Events\" to set frontmost of first application process whose unix id is $game_pid to true" >/dev/null 2>&1 || true
-            "$WINCTL" key "$game_pid" 36 >/dev/null 2>&1 || true
-        done
-    ) &
-    KEY_PIDS+=("$!")
 }
 
 wait_for_hangar() {
@@ -153,34 +142,30 @@ wait_for_hangar() {
     return 1
 }
 
-print "arms_staged=silent_then_image_after_silent_hangar" >> "$OUT/driver.log"
+print "arms_staged=concurrent_silent_and_image" >> "$OUT/driver.log"
 launch_arm silent 0
-if ! wait_for_hangar silent "$SILENT_PID"; then
-    print "pair_gate=failed silent_hangar_missing; image_not_launched" | tee -a "$OUT/driver.log"
-    exit 6
-fi
-
-print "pair_gate=passed silent_hangar=1; launching_image" | tee -a "$OUT/driver.log"
 launch_arm image 1
 
+silent_target=0
 image_target=0
 pair_deadline=$((SECONDS + 220))
 while (( SECONDS < pair_deadline )); do
+    if (( silent_target == 0 )) && grep -a -q '^\[phase\] vi_width=512 .*origin=0x006AB400' "$OUT/silent.log"; then
+        silent_target=1
+        print "silent_hangar=observed" | tee -a "$OUT/driver.log"
+    fi
     if (( image_target == 0 )) && grep -a -q '^\[phase\] vi_width=512 .*origin=0x006AB400' "$OUT/image.log"; then
         image_target=1
-        print "image_hangar=observed; retaining_15s" | tee -a "$OUT/driver.log"
-        pair_deadline=$((SECONDS + 15))
+        print "image_hangar=observed" | tee -a "$OUT/driver.log"
     fi
-    image_live=0
-    kill -0 "$IMAGE_PID" 2>/dev/null && image_live=1
-    if (( image_target == 1 && image_live == 0 )); then
+    if (( silent_target == 1 && image_target == 1 )); then
         break
     fi
     sleep 1
 done
 
-if (( image_target == 0 )); then
-    print "image_hangar=timeout_or_exit; SIGKILL" | tee -a "$OUT/driver.log"
+if (( silent_target == 0 || image_target == 0 )); then
+    print "pair_gate=failed silent_hangar=$silent_target image_hangar=$image_target; SIGKILL" | tee -a "$OUT/driver.log"
 fi
 for pid in "$SILENT_PID" "$IMAGE_PID"; do
     if kill -0 "$pid" 2>/dev/null; then
@@ -228,7 +213,7 @@ emit_arm_summary() {
 emit_arm_summary silent
 emit_arm_summary image
 
-if (( image_target == 0 )); then
+if (( silent_target == 0 || image_target == 0 )); then
     exit 7
 fi
 exit 0
