@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2960 (2026-08-28).
+Current maintenance marker: Session 2961 (2026-08-28).
 
 ## Current state
 
@@ -56,6 +56,14 @@ rename-table entries that would have synthesized `playerXwingInitPreamble` on
 future regeneration; `RecompiledFuncs` built successfully. Artifact:
 `scratch/agent/s2960_generated_symbol_rename/source-table.md`.
 
+Session 2961 classified `0x800B47C4` as an ambiguous three-instruction
+executable fragment immediately before `menuControllerInput` at `0x800B47D0`.
+It has no standalone prologue, return, caller, or independent lookup. The
+companion m2c source is keyed to the larger controller routine rather than
+this fragment, so no exact semantic name is justified; the placeholder
+remains unchanged. Artifact:
+`scratch/agent/s2961_generated_symbol_rename/source-table.md`.
+
 Session 2955 classified `0x800AAADC` as the four-byte entry preamble for
 `playerSnowSpeederInit` at `0x800AAAE0`. The body is only `sh a0, 0x1A(v1)`;
 there is no standalone prologue, return, independent caller, or lookup. It
@@ -102,8 +110,8 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
    with a named discriminator; passive recurrence belongs in the soak queue.
 
 3. **Generated-symbol renaming sweep — active bounded campaign.** Continue
-   from the next unparked placeholder after `0x800B42BC`, currently expected
-   to be `0x800B47C4` subject to the census. Exact companion semantic names
+   from the next unparked placeholder after `0x800B47C4`, currently expected
+   to be `0x800B58B4` subject to the census. Exact companion semantic names
    and mechanically proven short data gaps may be renamed across every map
    and generated artifact. Valid executable fragments without callable proof
    remain unchanged. Keep HYPOTHESIS-ID

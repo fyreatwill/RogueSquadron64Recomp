@@ -114906,6 +114906,27 @@ Complete table: `scratch/agent/s2954_generated_symbol_rename/source-table.md`.
 ORIGIN: naming-only. No runtime, generated instruction, submodule, or
 mitigation-shaped behavior changed.
 
+## Session 2961 (2026-08-28) — preserved ambiguous 0x800B47C4 fragment
+
+Ran the bounded generated-symbol source-table audit for the next placeholder
+after `0x800B42BC`. The complete generated body at `0x800B47C4` is three valid
+instructions: `lui $at, 0x8010`, `lwc1 $f0, -0x5B08($at)`, and `swc1 $f0,
+0x120($v0)`. It has no standalone prologue or return. The next entry begins
+at `0x800B47D0` with the `menuControllerInput` stack-frame prologue; the
+companion map separately records the 12-byte fake record and the following
+0x38E4-byte body. Searches found no generated caller or independent lookup of
+the fake symbol. The companion m2c file is keyed to the larger routine and
+does not provide an exact semantic name for this fragment.
+
+Selected H-Fragment: preserve `fake_func_800B47C4`. The valid instructions
+rule out H-DataGap, while the missing callable boundary and exact name rule
+out H-Callable. The sweep advances to `0x800B58B4`.
+
+Artifact: `scratch/agent/s2961_generated_symbol_rename/source-table.md`.
+
+ORIGIN: naming-only. No runtime, generated instruction, submodule, or
+mitigation-shaped behavior changed.
+
 ## Session 2956 (2026-08-28) — compacted current truth maintenance file
 
 This was a maintenance iteration, triggered because `docs/CURRENT-TRUTH.md`
