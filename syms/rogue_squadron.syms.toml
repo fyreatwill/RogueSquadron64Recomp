@@ -1914,7 +1914,7 @@ functions = [
     { name = "createAndInitObject", vram = 0x800EC588, size = 0xFC },
     { name = "clearPendingAndDestroyChildNpc", vram = 0x800EC684, size = 0x3C },
     { name = "destroyObjectOwnedNpcSlot", vram = 0x800EC6C0, size = 0x2C },
-    { name = "fake_func_800EC6EC", vram = 0x800EC6EC, size = 0x4 },
+    { name = "data_gap_800EC6EC", vram = 0x800EC6EC, size = 0x4 },
     { name = "tickCraftMountedAnimationEffect", vram = 0x800EC6F0, size = 0x538 },
     { name = "craftMountedAnimationNpcHandler", vram = 0x800ECC28, size = 0x1B4 },
     { name = "dispatchSlotActionTwelveByGlobalId", vram = 0x800ECDDC, size = 0x28 },

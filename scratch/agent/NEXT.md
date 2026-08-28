@@ -1,12 +1,12 @@
-# NEXT work unit (s2966)
+# NEXT work unit (s2967)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
 Classify the next unparked generated placeholder after the resolved
-`0x800BCC38` data gap. Re-census the maps first; the next address is expected
-to be `0x800EC6EC`, subject to current synchronization. This is one bounded
+`0x800EC6EC` data gap. Re-census the maps first; the next address is expected
+to be `0x800ECE04`, subject to current synchronization. This is one bounded
 source-table audit. Do not run the game or M5 instrumentation.
 
 ## Competing hypotheses and discriminator
@@ -18,15 +18,16 @@ source-table audit. Do not run the game or M5 instrumentation.
 - H-DataGap: it is mechanically bounded non-callable data/fixup; rename it to
   `data_gap_<address>` across every generated and source map.
 
-Discriminate with the complete generated body, exact predecessor/successor
-boundaries, all generated callers and independent lookups, return/prologue
-evidence, and companion m2c/map names. A callable rename requires an exact
-semantic name plus callable evidence. A mechanically proven non-callable
-record authorizes a data-gap rename. Otherwise preserve the placeholder.
+Discriminate with this complete table: generated body and decode; exact
+predecessor/successor boundaries; generated callers and independent lookups;
+return/prologue evidence; companion map and m2c names. A callable rename
+requires an exact semantic name plus callable evidence. A mechanically proven
+non-callable record authorizes a data-gap rename. Otherwise preserve the
+placeholder.
 
 ## Commands
 
-1. Locate the next placeholder after `0x800BCC38` in the project map and
+1. Locate the next placeholder after `0x800EC6EC` in the project map and
    generated overlay order with `rg`.
 2. Read only bounded windows around the candidate in generated C/header,
    project symbols, companion symbols/m2c, and rename tables.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2964 (2026-08-28).
+Current maintenance marker: Session 2966 (2026-08-28).
 
 ## Current state
 
@@ -92,6 +92,16 @@ safe maps already used `data_gap_800BCC38`; removed the stale
 companion redefs. `RecompiledFuncs` built successfully. Artifact:
 `scratch/agent/s2965_generated_symbol_rename/source-table.md`.
 
+Session 2966 classified `0x800EC6EC` as a mechanically proven 4-byte
+data/fixup gap. The generated body is one invalid COP2 word emitted as a
+`do_break`, bounded by the complete `destroyObjectOwnedNpcSlot` epilogue and
+the independent `tickCraftMountedAnimationEffect` prologue. No generated
+caller, independent lookup, or companion semantic name exists. Renamed it to
+`data_gap_800EC6EC` across the project map, companion map, generated C/header/
+overlay files, and regeneration-safe redefs; `RecompiledFuncs` built
+successfully. Artifact:
+`scratch/agent/s2966_generated_symbol_rename/source-table.md`.
+
 Session 2964 classified `0x800B89F4` as the next ambiguous three-instruction
 executable fragment. Its `bnel` targets `L_800B8AD0`, its delay slot increments
 `s2`, and its fall-through continues at `0x800B8A00`; there is no standalone
@@ -148,8 +158,8 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
    with a named discriminator; passive recurrence belongs in the soak queue.
 
 3. **Generated-symbol renaming sweep — active bounded campaign.** Continue
-   from the next unparked placeholder after `0x800B89F4`, currently expected
-   to be `0x800EC6EC` subject to the census. Exact companion semantic names
+   from the next unparked placeholder after `0x800EC6EC`, currently expected
+   to be `0x800ECE04` subject to the census. Exact companion semantic names
    and mechanically proven short data gaps may be renamed across every map
    and generated artifact. Valid executable fragments without callable proof
    remain unchanged. Keep HYPOTHESIS-ID

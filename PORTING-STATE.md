@@ -122396,3 +122396,23 @@ mechanical `data_gap_800BCC38` name and removed the contradictory stale
 the companion redefs and built `RecompiledFuncs` successfully. This rules out
 the candidate being a callable preamble or a separately nameable function.
 Evidence table: `scratch/agent/s2965_generated_symbol_rename/source-table.md`.
+
+## Session 2966 (2026-08-28) — classified 0x800EC6EC data gap
+
+Ran the bounded generated-symbol source-table audit selected by s2965. The
+next placeholder after the resolved `0x800BCC38` was `fake_func_800EC6EC`.
+`funcs_40.c` contains only the invalid COP2 word `0x4B140BE8`, emitted as a
+`do_break`; it is bounded by the complete `destroyObjectOwnedNpcSlot` body
+ending at `0x800EC6E8` and the separate `tickCraftMountedAnimationEffect`
+prologue at `0x800EC6F0`. Searches found no generated caller, independent
+lookup, or companion semantic name. This rules out a callable or semantic
+rename and proves the mechanically bounded data/fixup-gap classification.
+
+Renamed the entry to `data_gap_800EC6EC` in the project TOML, companion
+mission map, generated C/header/overlay artifacts, and regeneration-safe
+rename configuration. `python3 tools/rename/build_redefs.py` regenerated the
+companion redefs, and
+`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build
+--config Debug --target RecompiledFuncs` completed successfully. Existing
+format/pointer-sign/self-comparison warnings were unrelated to this change.
+No game or M5 experiment ran. Next sweep candidate is `0x800ECE04`.
