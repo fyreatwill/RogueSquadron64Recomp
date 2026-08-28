@@ -122682,3 +122682,16 @@ regeneration-safe generated-symbol sweep. The exact run and counts are in
 `scratch/agent/s2981_unblock_step1_arms/RESULTS.md`; the open M5 dependency is
 recorded in `docs/CURRENT-TRUTH.md` and the next unit is `NEXT.md`.
 HYPOTHESIS-ID: generated-symbol-renaming-sweep.
+## Session 2982 (2026-08-28) — classified ambiguous controller fragment
+
+The bounded generated-symbol sweep inspected `0x800027B8`. Its generated body
+contains only two `addu` instructions that overwrite `$a0`, with no stack frame,
+return, memory access, or standalone callable contract. It is bounded by the
+`getOsResetType` return at `0x800027B4` and the independent
+`processPolledControllerData` prologue at `0x800027C0`. A repository-wide search
+found no generated caller or direct `jal` to the address, and the companion map
+retains `fake_func_800027B8` without a semantic name. The fragment is therefore
+ambiguous rather than a callable preamble or mechanically proven data gap; the
+placeholder remains unchanged. This rules out a justified rename or
+`data_gap_*` classification for this candidate. Evidence:
+`scratch/agent/s2982_generated_symbol_rename/source-table.md`.

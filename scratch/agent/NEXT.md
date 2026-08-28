@@ -1,11 +1,11 @@
-# NEXT work unit (s2982) — classify the next generated-symbol fragment
+# NEXT work unit (s2983) — classify the next generated-symbol fragment
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
 Resume the regeneration-safe symbol sweep at the lowest remaining placeholder
-after the already classified `0x8000040C` record. Inspect one bounded entry in
+after the already classified `0x800027B8` record. Inspect one bounded entry in
 `../N64Recomp/RecompiledFuncs`, its callers, successor boundaries, and the
 companion `../rogue_squadron64/symbol_files` map. Rename only if the exact
 semantic identity is independently supported; otherwise record it as
@@ -33,4 +33,4 @@ classification; otherwise preserve the placeholder.
 Then inspect bounded windows around the lowest candidate, update the
 regeneration-safe rename table and generated artifacts only when selected, run
 the generated-functions build, and record the source table under
-`scratch/agent/s2982_generated_symbol_rename/`.
+`scratch/agent/s2983_generated_symbol_rename/`.

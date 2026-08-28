@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2981 (2026-08-28).
+Current maintenance marker: Session 2982 (2026-08-28).
 
 ## Current state
 
@@ -68,6 +68,14 @@ field-order/string-match defect; the independent array-based driver then
 reproduced the route stop. M5 target-phase audio remains unevaluable, so the
 next unit is re-scoped to the independent generated-symbol sweep while the
 route repair or handoff remains an open M5 dependency.
+
+Session 2982 classified `0x800027B8` as an ambiguous two-instruction
+executable fragment between `getOsResetType` and `processPolledControllerData`.
+It has no stack frame, return, memory operation, generated caller, or exact
+companion semantic name; the companion map intentionally retains
+`fake_func_800027B8`. The placeholder remains unchanged. The next sweep
+candidate is `0x8001C3FC`. Evidence:
+`scratch/agent/s2982_generated_symbol_rename/source-table.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
