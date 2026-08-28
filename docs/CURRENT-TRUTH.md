@@ -81,6 +81,17 @@ with 47 audio-dispatch markers each, but neither reached hangar
 crashed or aborted. This rejects configuration drift as sufficient and selects
 H-route-state. Downstream audio nulls remain unevaluable.
 
+The s2872 retail-first route-state discriminator was instrument-valid: the
+whole-RDRAM control reached 10,082 writes, title, and hangar. Retail's
+`0x80141AD0..0x80141AEF` span had 82 writes; target-phase writers were only
+`0x80094648` (24 in each phase), while `0x80019CD0`, `0x80033FCC`, and
+`0x80019F1C` ran and `0x80019E14` did not. The matching port image/silent pair
+again stopped at pre-title `VI 640 @ 0x0066A500` for the full 180-second gate;
+both emitted 73 audio-dispatch and 4 B40-route rows, but no title/hangar,
+crash, or abort. Their five route-state rows were identical and showed zero
+state bytes. This exhausts that state-table discriminator without selecting a
+route explanation or permitting a behavior change.
+
 SP-yield state is real API state and the request lifecycle now clears the
 previous request before staging the next task. The generic scheduler has two
 yield call sites, but no audio-specific generated branch was found. Target
@@ -95,7 +106,7 @@ Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. The sweep remains eligible while M5 is open and M3 is parked;
 apply only source-backed renames and preserve callable-ambiguous records.
 
-1. **M5 Step 1 route repair / qualification.** The barrier, launch-order,
+1. **M5 Step 1 new route-state source class.** The barrier, launch-order,
    boot-time-key, phase-relative-key, autopilot, gate-writer, pre-title
    task-field, and broad main-text retail-entry angles are exhausted at the
    current discriminator. The next M5 unit needs a genuinely new
@@ -110,8 +121,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    long-schedule image requalification also reproduced the pre-title route
    stop. The route-control audit restored the concrete recipe drift but both
    arms still stopped at VI 640, selecting H-route-state; the next unit must
-   test a new post-dispatch route-state discriminator before interpreting
-   downstream nulls.
+   test the distinct `gGameSettings`/`mainGameLoop` state-arbiter class
+   (`0x80130B40`, `mainGameLoop=0x8003DFA0`) before interpreting downstream
+   nulls. Ground truth must precede any port instrumentation.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 3. **Generated-symbol renaming sweep.** The next bounded source-backed batch

@@ -1,38 +1,37 @@
-# NEXT work unit (s2872) — M5-new-route-state-discriminator
+# NEXT work unit (s2873) — M5-game-settings-state-arbiter
 
-HYPOTHESIS-ID: M5-new-route-state-discriminator
+HYPOTHESIS-ID: M5-game-settings-state-arbiter
 
 ## Work unit
 
-Use one source audit and one batched instrument to identify and test a new
-post-dispatch route-state discriminator for the persistent port stop at VI
-640. The prior recipe drift was restored in both arms and did not reach
-hangar. Do not repeat launch/configuration comparisons or interpret downstream
-audio nulls.
+Use the distinct `gGameSettings`/`mainGameLoop` state-arbiter class to test the
+persistent port stop at VI 640. Do not repeat the exhausted route-state table,
+launch/configuration comparisons, or downstream audio interpretation.
 
 ## Competing hypotheses and discriminator
 
-- H-route-state: a new state/control boundary is responsible for the VI-640
-  stop.
-- H-dispatch-order: dispatch reaches the known marker but its ordering or
-  predecessor differs before the target phase.
-- H-input-gate: the restored route still fails because phase-relative input is
-  not delivered at the expected caller.
+- H-settings-state: a `gGameSettings` byte differs or fails to transition on
+  the port before the 640-to-512 boundary.
+- H-main-loop-order: `mainGameLoop` reaches the state checks in a different
+  predecessor/order than retail.
+- H-input-gate: the state table is equivalent but phase-relative input is not
+  delivered at the expected caller.
 
-The discriminator is one source-backed table of every post-dispatch state
-write/read and predecessor around the VI-640-to-512 transition, with a
-phase-scoped positive-control row from the existing dispatch marker. A new
-state edge in both arms selects H-route-state; a changed predecessor/order
-selects H-dispatch-order; a missing phase-relative input row selects
-H-input-gate. If the table has no new edge, pivot to the next distinct source
-class rather than adding another diagnostic field.
+The discriminator is one retail-first watch table for physical
+`0x130B40:0x130B70`, execution at `mainGameLoop=0x8003DFA0`, and its known
+screen-handler callsites, phase-gated at title/hangar. A state-byte transition
+selects H-settings-state; a changed main-loop predecessor/order selects
+H-main-loop-order; equivalent state plus missing input selects H-input-gate.
+If the retail table is positive but the port route remains invalid, do not
+interpret downstream nulls.
 
 ## Exact command
 
-    rg -n 'm5-route-state|m5-b40-route|ROGUESQ_M4_Y8000_WIDTH|VI 640|VI 512' src RecompiledFuncs tools scratch/agent/s2871_m5_route_repair_discriminator
-    rg -n 'post-dispatch|route-state|VI 640|VI 512' docs/CURRENT-TRUTH.md docs/PROJECT-OVERVIEW.md
+    rg -n 'mainGameLoop|gGameSettings|0x80130B40|0x8003DFA0|VI 640|VI 512' docs src syms
+    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 50 --hit-cap 10000 --watch-write 0x0:0x800000 --watch-write 0x130B40:0x130B70 --watch-pc 0x8003DFA0 --pc-phase-log-width 0x006AB400:512 --pc-phase-log-width 0x00790400:1024 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start > scratch/agent/s2873_m5_game_settings_state_arbiter/oracle.log 2>&1
 
-Then batch the selected state instrumentation into one Debug build and run
-both audio arms concurrently with `PROBE_PHASE_WIDTH=512
-PROBE_KEYS_FROM_PHASE=1`. Record the state table and phase-gated outcome under
-`scratch/agent/s2872_m5_new_route_state_discriminator/`.
+Only after the oracle whole-RDRAM control and target phases qualify, batch the
+selected port instrumentation into one Debug build and run both audio arms
+concurrently with `PROBE_PHASE_WIDTH=512 PROBE_KEYS_FROM_PHASE=1`. Record the
+state table and phase-gated outcome under
+`scratch/agent/s2873_m5_game_settings_state_arbiter/`.

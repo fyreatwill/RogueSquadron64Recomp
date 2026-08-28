@@ -120676,3 +120676,26 @@ sufficient and selects H-route-state. Downstream audio nulls remain
 unevaluable, and no behavior change was made.
 
 Artifact: `scratch/agent/s2871_m5_route_repair_discriminator/`.
+## Session 2872 (2026-08-27) — exhausted retail route-state discriminator
+
+Ground truth came first. The retail oracle's whole-RDRAM write watch passed with
+10,082 writes and the driven run reached title (`1024 @ 0x00790400`) and hangar
+(`512 @ 0x006AB400`). Its physical `0x141AD0:0x141AF0` state-span watch recorded
+82 writes; target-phase writer histograms contained only `0x80094648`, with 24
+writes in each target phase. Scheduler handoff `0x80019CD0`, SP start
+`0x80033FCC`, and queue send `0x80019F1C` ran; yield-status `0x80019E14` did
+not. This positive control makes the retail table interpretable.
+
+One Debug build then ran concurrent silent and image arms with the restored LLE,
+M4 width, phase-relative key, and leave controls. Both arms reached the same
+pre-title `VI 640 @ 0x0066A500`, emitted 73 audio-dispatch and 4 B40-route
+markers, and timed out at the 180-second `VI 512` gate. Neither reached title or
+hangar, and neither emitted crash or abort markers. Both produced the same five
+route-state rows, ending in pre-title audio-return/exit with the three sampled
+state bytes zero. The route-state table did not expose a new edge, predecessor,
+or input-gate discriminator; downstream audio nulls remain unevaluable.
+
+This rules out a route-state explanation at the sampled table and scope. It does
+not authorize a writer, consumer, guard, route bypass, or other behavior change.
+The next work unit pivots to the distinct `gGameSettings`/`mainGameLoop`
+state-arbiter class. Artifacts: `scratch/agent/s2872_m5_new_route_state_discriminator/`.
