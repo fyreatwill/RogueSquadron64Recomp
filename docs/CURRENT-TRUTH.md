@@ -41,6 +41,15 @@ companion rename and local duplicate; the fragment remains mechanically
 unresolved. Evidence:
 `scratch/agent/s3033_generated_symbol_rename/source-table.md`.
 
+Session 3034 audited `0x8007C298`. The companion map, generated definition,
+header, overlay registration, and project TOML all agree on
+`fake_func_8007C298`, but the body is only the two-instruction `sll`/`addu`
+fragment immediately before `initNpcTexturedEffectFromTemplate`; it has no
+return or callable epilogue and no generated callers. Preserved the placeholder
+because there is no companion human identity and no safe callable or semantic
+gap rename. Built `RecompiledFuncs` successfully. Evidence:
+`scratch/agent/s3034_generated_symbol_rename/source-table.md`.
+
 Session 3032 classified `0x8006ACA4` as the mechanically supported inline
 fragment `fake_func_8006ACA4`. The companion map has no human identity; the
 generated token is exactly three floating-point instructions with no return or
@@ -817,7 +826,8 @@ a new discriminator; continue the generated-symbol sweep while M5 is blocked.
    `initSpeechSubsystem`. The `0x8006ACA4` candidate was audited as a
    three-instruction inline fragment and remains `fake_func_8006ACA4`; audit
    `0x8006B704` was likewise preserved as an unresolved 12-byte fragment;
-   audit the next placeholder candidate `0x8007C298`.
+   `0x8007C298` was preserved as an unresolved 8-byte fragment; audit the next
+   placeholder candidate `0x80099FDC`.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the

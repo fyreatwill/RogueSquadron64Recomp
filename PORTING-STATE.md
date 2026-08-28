@@ -123369,3 +123369,17 @@ callers or duplicate definitions. Preserved `fake_func_8006B704` and built the
 generated-functions target successfully. This rules out an exact companion
 rename and local duplicate callable; the boundary remains mechanically
 unresolved. Evidence: `scratch/agent/s3033_generated_symbol_rename/source-table.md`.
+
+## Session 3034 (2026-08-28) — audited 0x8007C298 generated symbol boundary
+
+Audited the next generated placeholder at `0x8007C298` using the companion
+symbol map, generated body/header, direct-reference census, overlay
+registration, and project symbol TOML. The companion map has no human
+identity: both maps use `fake_func_8007C298`. The generated body is only
+`sll $a1,$a2,1` and `addu $a1,$a1,$a0`, registered as exactly 8 bytes, and is
+followed immediately by the complete `initNpcTexturedEffectFromTemplate`
+prologue. There are no generated callers. Preserved the placeholder rather
+than inventing a callable or semantic gap rename. Built `RecompiledFuncs`
+successfully. This rules out an exact companion rename and a callable-boundary
+interpretation for this address; it leaves the fragment mechanically
+unresolved. Evidence: `scratch/agent/s3034_generated_symbol_rename/source-table.md`.
