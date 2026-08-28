@@ -114905,6 +114905,22 @@ Complete table: `scratch/agent/s2954_generated_symbol_rename/source-table.md`.
 
 ORIGIN: naming-only. No runtime, generated instruction, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2956 (2026-08-28) — compacted current truth maintenance file
+
+This was a maintenance iteration, triggered because `docs/CURRENT-TRUTH.md`
+was 60,478 bytes. No build, game run, oracle run, or experiment was performed.
+The file was compacted from 952 lines / 60,478 bytes to 150 lines / 7,885
+bytes, preserving the current route, M5/M3/M4 boundaries, evidence rules,
+latest findings, and next-step ordering. The current handoff and active
+symbol-sweep state were migrated into `docs/PROJECT-OVERVIEW.md`; duplicated
+session prose and closed historical detail remain recoverable in this ledger.
+This rules out no technical hypothesis because no technical measurement ran;
+it does establish that the maintenance threshold is cleared and the next
+work unit is the bounded `0x800AE3E4` symbol classification.
+
+ORIGIN: documentation maintenance only. No runtime, generated instruction,
+submodule, or mitigation-shaped behavior changed.
 ## Session 2953 (2026-08-28) — classified the 0x8009D978 audio coefficient gap
 
 Performed the bounded generated-symbol census for `0x8009D978`. The project

@@ -1,926 +1,126 @@
 # Rogue Squadron 64 Recomp — current truth
 
-Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
-is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
-remain in the ledger and scratch artifacts.
+Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
+background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
+recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2955 (2026-08-28).
+Current maintenance marker: Session 2956 (2026-08-28).
+
+## Current state
+
+The qualified port uses `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, and
+`ROGUESQ_LLE_SOLO=1`. `ROGUESQ_SPIN_YIELD=1` is diagnostic and default-off.
+`ROGUESQ_AUTOPILOT` is the reliable in-process driver. The game can render
+attribution, the N64 logo, the intro cinematic, the star flare, the Factor 5
+logo, title-like VI 1024 (`0x00790400`), and hangar VI 512
+(`0x006AB400`) with the validated input path. Hangar visuals still have
+geometry/color artifacts.
+
+M5 currently defaults to the Factor 5 image arm. `ROGUESQ_AUDIO_UCODE=0`
+selects the silent `musyx_stub` control. Retail uses Factor 5 MORT audio, not
+stock `aspMain`; audio is still partly stubbed. M3 is limited to complete
+idiom-class audits. M4 hangar/512 Y=`0x8000` is not live on the first hangar
+capture.
+
+The original overlay-dispatch explanation is no longer the current blocker:
+qualified runs reach title and hangar boundaries. Factor 5 image tasks and CPU
+MORT speech are separate contracts. A `Broke` return proves task completion,
+not PCM correctness.
+
+## Latest results
 
 Session 2955 classified `0x800AAADC` as the four-byte entry preamble for
-`playerSnowSpeederInit` at `0x800AAAE0`. The generated body contains only
-`sh a0, 0x1A(v1)`, with no standalone prologue, return, independent caller,
-or lookup; the companion map preserves the short record immediately before
-the named initializer. It was renamed to
-`playerSnowSpeederInitPreamble` across the project map, companion map, and
-generated artifacts. The Debug `RecompiledFuncs` target built successfully.
+`playerSnowSpeederInit` at `0x800AAAE0`. The body is only `sh a0, 0x1A(v1)`;
+there is no standalone prologue, return, independent caller, or lookup. It
+was renamed to `playerSnowSpeederInitPreamble` across the project map,
+companion map, and generated artifacts. `RecompiledFuncs` built successfully.
 Artifact: `scratch/agent/s2955_generated_symbol_rename/source-table.md`.
 
-Session 2954 classified `0x800AA6CC` as the four-byte entry preamble for
-`npcPredictedRangeCheck` at `0x800AA6D0`. The generated body contains only
-`lw v0, 0x24(fp)`, with no standalone prologue, return, independent caller,
-or lookup; the companion map preserves the same short record immediately
-before the named function. It was renamed to
-`npcPredictedRangeCheckPreamble` across the project map, companion map,
-regeneration-safe rename table, and generated artifacts. The Debug
-`RecompiledFuncs` target built successfully. Artifact:
-`scratch/agent/s2954_generated_symbol_rename/source-table.md`.
-
-Session 2953 classified `0x8009D978` as a mechanically non-callable
-eight-byte audio coefficient table between `applyVoiceDelayFilter` and
-`runVoiceLatticeFilter`. The generated `static_3_8009D978` body is only a
-false branch-target decode of the table words, with no independent caller or
-companion symbol. It was renamed to `data_gap_8009D978` in the project map,
-regeneration-safe rename table, and generated declaration/definition/call;
-the `RecompiledFuncs` target built successfully. Artifact:
-`scratch/agent/s2953_generated_symbol_rename/source-table.md`.
-
-Session 2952 classified `0x8009D8BC` as a valid two-instruction branch-target
-fragment inside `filterVoiceSampleBlock`, followed by `applyVoiceDelayFilter`
-at `0x8009D8C4`. It has no standalone prologue, return, independent caller,
-or companion semantic name, so it remains callable-ambiguous and unchanged.
-Artifact: `scratch/agent/s2952_generated_symbol_rename/source-table.md`.
-
-Session 2951 completed the bounded generated-symbol census at `0x80099FDC`.
-The record is the real retail branch immediately before `aspMainTextStart` at
-`0x80099FE0`; generated recompilation incorrectly absorbs the following RSP
-text through `0x8009AF5C`. The companion map supplies no CPU-function name,
-and no independent caller exists. H-Fragment is selected: preserve the
-already-fake name and do not rename it to a data gap. Artifact:
-`scratch/agent/s2951_generated_symbol_rename/source-table.md`.
-
-Session 2950 extended the regeneration-owned route-preparation probe with the
-oracle-equivalent source-word, source-byte, and branch-state samples. The
-guarded qualified run passed the same-run F5 positive control (8 rows) and
-emitted 1,018 route rows, but stopped at pre-title VI 640 (`0x0066A500`) with
-no title/hangar phase. Invalid pre-title pointers made the guarded samples
-zero, so field, timing, and logic remain unevaluable. An initial unguarded
-attempt crashed in the new `MEM_HU(s1+0x22)` read before the control fired and
-is not evidence. Artifact: `scratch/agent/s2950_port_route_sourceword.log`.
-
-Session 2949's retail-first route-message run passed the same-run whole-RDRAM
-positive control (10,000 writes), watched `0x80019CD8` 29,874 times, and with
-explicit target-width gates collected 2,312 title rows and 6,558 hangar rows.
-The field table had three phase-specific `source_word` families
-(`0x02000612`, `0x00000400`, `0x02000800`) while sampled `branch_state` stayed
-`0x0010`; callers were overwhelmingly `0x80033300`. The prescribed 640-only
-phase option was invalid for these targets and was corrected before the
-field-enabled run. Retail target coverage is now ground truth, but s2948's
-port still stopped pre-title, so no field/timing/logic hypothesis is selected.
-Artifact: `scratch/agent/s2949_retail_route_message/RESULTS.md`.
-
-Session 2948 added a regeneration-owned full-input route-preparation probe at
-`0x80019CD8` and rebuilt the Debug target successfully. The fixed run emitted
-771 `[route-prep]` rows and the same-run `[f5-fetch-control]` positive control
-fired 8 times. Every row had `accepted=0` at pre-title VI widths 320 or 640;
-the route never reached title 1024 or hangar 512, and the candidate hook fired
-0 times. The scheduler registers and message branch values were populated, so
-the probe is live, but no input-field mismatch can be selected without a
-retail target-phase tuple. This selects H-RoutePreTitle, rules out a missing
-scheduler invocation, and leaves H-PrepareFieldBad/H-PrepareTimingBad/
-H-PrepareLogicBad unevaluable. Artifact:
-`scratch/agent/s2948_route_prepare_rejection/RESULTS.md`.
-
-Session 2945's corrected retail-oracle route-state census phase-gated the
-candidate range `0x80019C00..0x8001A000` in the verified Start schedule. The
-whole-RDRAM positive control reached 10,000 writes; the candidate range
-executed 69,372 times during title width 1024/origin `0x00790400` and 25,420
-times during hangar width 512/origin `0x006AB400`. Representative handoff
-rows at `0x80019CD8` carried phase-distinct `a1/a2` state while the route-loop
-registers remained stable. This provisionally selects H-RouteState and rules
-out H-RouteAbsent for this candidate, but is single-source oracle evidence and
-does not establish causality in the port. The next unit is a batched port
-probe of this candidate with the existing route/phase controls. Artifacts:
-`scratch/agent/s2945_m5_route_state/RESULTS.md` and
-`RESULTS-phase-gated.md`.
-
-Session 2944's batched M4 port join built and ran for 180 seconds, but the
-phase gate stopped at VI width 640 (`probe_rc=5`); title 1024 and hangar 512
-were never reached. The existing `[m4-y8000]` flush-site control fired, but
-the required `[f5-fetch-control]` control and all target-phase producer/
-consumer rows were absent. The M4 hypotheses are therefore unevaluable, not
-selected. Artifact: `scratch/agent/s2944_m4_accumulator_boundary/RESULTS.md`.
-
-The s2943 mandatory revisit ran the retail oracle before any new port
-instrumentation. Its whole-RDRAM positive control reached 10,000 writes, and
-the verified Rice schedule reached title 1024 (`0x00790400`) and hangar 512
-(`0x006AB400`). The oracle cannot observe RSP DMEM `0xC70/0xB74` or the
-internal accumulator, so this is valid phase/control evidence but does not
-select shared-slot, independent-index, or irrelevant-writer hypotheses.
-Artifact: `scratch/agent/s2943_m4_accumulator_boundary/RESULTS.md`.
-
-The s2942 generated-symbol sweep classified `0x80099C4C` as a proven
-non-callable four-byte invalid-decode gap between the complete
-`noopHandler_80099C44` stub and `transformVec3ByAffineMatrix`. It has no
-callable body, generated caller, independent lookup, or companion semantic
-name. The generated C/header/overlay metadata and rename helper already used
-`data_gap_80099C4C`; the project TOML and companion map are now synchronized.
-Complete table: `scratch/agent/s2942_generated_symbol_rename/source-table.md`.
-
-The s2941 generated-symbol sweep classified `0x80097D58` as a proven
-non-callable eight-byte frame-restore fragment after the complete
-`playSongById` body and before `clearStreamedVoiceFlags`. It has no standalone
-return, companion semantic name, generated caller, or independent lookup. The
-project map, companion map, generated C/header/overlay metadata, and rename
-helper now use `data_gap_80097D58`. Complete table:
-`scratch/agent/s2941_generated_symbol_rename/source-table.md`.
-
-The s2940 generated-symbol sweep classified `0x8009711C` as a proven
-non-callable four-byte jump fragment immediately after `initSongSequencerPools`.
-Its jump target `0x8009713C` lands inside `bindMacroIdsToSoundGroup`; it has no
-callable prologue, return, companion semantic name, generated caller, or
-independent lookup. The generated C/header/overlay metadata and rename helper
-already used `data_gap_8009711C`; the project TOML and companion map are now
-synchronized. Complete table:
-`scratch/agent/s2940_generated_symbol_rename/source-table.md`.
-
-The s2939 generated-symbol sweep classified `0x80094348` as a proven
-non-callable eight-byte jump fragment immediately before `startSongSequence`.
-Its `j 0x80094370` target lands inside that successor's body; it has no
-prologue, return, companion semantic name, generated caller, or independent
-lookup. The generated C/header/overlay metadata and rename helper already
-used `data_gap_80094348`; the project TOML and companion map are now
-synchronized. Complete table:
-`scratch/agent/s2939_generated_symbol_rename/source-table.md`.
-
-The s2938 generated-symbol sweep classified `0x80093E74` as a proven
-non-callable 12-byte epilogue fragment between complete `sqrtf_recomp` and
-`musyxComputeNotePlaybackRate` bodies. It has no standalone return, generated
-caller, independent lookup, or companion semantic name. The generated
-C/header/overlay metadata and rename helper already used `data_gap_80093E74`;
-the project TOML and companion map were stale and are now synchronized.
-Complete table: `scratch/agent/s2938_generated_symbol_rename/source-table.md`.
-
-The s2937 generated-symbol sweep re-audited `0x80092F10`. The TOML-only
-record is the live internal tail of `resampleVoiceLutSamplesPacked`
-(`0x80092E48..0x80092F90`), ending before the independent
-`packFourLutResampledSamples` function at `0x80092F94`. It has no standalone
-definition, caller, or companion semantic name; because its instructions are
-live code rather than a data gap, it remains an ambiguous/address-encoded
-tail and was not renamed. Complete table:
-`scratch/agent/s2937_generated_symbol_rename/source-table.md`.
-
-The s2936 generated-symbol sweep reconciled `0x80092CF0` to
-`interpolateConstantSamplesToPackedWord`. The complete `0x158`-byte
-constant-sample interpolation loop has two generated callers, and the
-companion map, generated C/header, overlay registration, and rename helper
-already used that exact semantic name; only the project symbol map was stale.
-Complete table: `scratch/agent/s2936_generated_symbol_rename/source-table.md`.
-
-The s2935 generated-symbol sweep reconciled `0x80092A54` to
-`interpolateLutSamplesToPackedWord`. The complete `0x154`-byte LUT
-interpolation loop has two generated callers, and the companion map, generated
-C/header, overlay registration, and rename helper already used that exact
-semantic name; only the project symbol map was stale. Complete table:
-`scratch/agent/s2935_generated_symbol_rename/source-table.md`.
-
-The s2934 generated-symbol sweep reconciled `0x800927B0` to
-`interpolatePointTableSamplesToPackedWord`. The complete 0x124-byte
-interpolation loop has two generated callers, and the companion map, generated
-C/header, overlay registration, and rename helper already used that exact
-semantic name; only the project symbol map was stale. Complete table:
-`scratch/agent/s2934_generated_symbol_rename/source-table.md`.
-
-The s2933 generated-symbol sweep reconciled `0x8008ED6C` to
-`serviceAudioOutputBuffers`. The companion map, generated C/header, and
-overlay registration already identified a 4-byte one-instruction record; the
-project symbol map alone incorrectly called it `func_8008ED6C` with size
-`0x154`, overlapping `runAiAudioStreamPlaybackLoop` at `0x8008ED70`. The
-project map is now synchronized. Complete table:
-`scratch/agent/s2933_generated_symbol_rename/source-table.md`.
-
-The s2932 generated-symbol sweep reconciled `0x80085CD8` to
-`compareHalfwordAtOffset4`. It is a complete 16-byte comparator body
-(`lhu` at offset 4 from each record, then subtract and return), directly
-called by `factor5BucketedTableLookupValue`; the companion map documents the
-same comparator family and its `_v2`/`_v3` duplicates. The project map,
-companion map, generated snapshot, overlay registration, and rename helper are
-now synchronized. Complete table:
-`scratch/agent/s2932_generated_symbol_rename/source-table.md`.
-
-The s2931 generated-symbol sweep re-audited `0x8007C298`. Its valid
-two-instruction `sll`/`addu` fragment lies between complete
-`loadShieldPalette` and `initNpcTexturedEffectFromTemplate` bodies. The
-companion map supplies no semantic name, and repository-wide generated/source
-search found no caller or independent lookup. Because valid instructions do
-not mechanically prove that the fragment is non-callable, it remains
-`ambiguous-or-fake`; no rename was authorized. Complete table:
-`scratch/agent/s2931_generated_symbol_rename/source-table.md`.
-
-The s2930 generated-symbol sweep classified `0x8007A86C` as a proven
-non-callable four-byte load fragment between the complete
-`downscaleImageHalfResBoxFilter` and `allocateNpcMeshVertexBuffer` bodies.
-The companion map supplied no semantic name, and repository-wide generated
-source/reference searches found no caller or independent lookup. It was
-renamed to `data_gap_8007A86C` across the project map, companion map, generated
-snapshot, overlay metadata, and regeneration-safe rename table. Complete
-table: `scratch/agent/s2930_generated_symbol_rename/source-table.md`.
-
-The s2929 generated-symbol sweep re-audited the next placeholder after
-`0x8006B704`, `0x80072CE8`. It is a valid two-instruction fragment
-(`addiu`/`addu`) between the complete `walkDatTreeAndScaleLeafByFloat` body and
-the `initWaterSprayParticles` prologue. The companion map supplies no semantic
-name, and repository-wide generated/reference searches found no caller or
-independent lookup beyond declaration, definition, and overlay registration.
-Because valid instructions do not prove non-callability, it remains
-`ambiguous-or-fake`; no rename was authorized. Complete table:
-`scratch/agent/s2929_generated_symbol_rename/source-table.md`.
-
-The s2928 generated-symbol sweep inspected the next unresolved placeholder
-after `0x80069AF0`, `0x8006B704..0x8006B710`. It is a valid 12-byte
-`sw`/`addiu`/`lw` fragment between the complete `getLevelTimeLimit` return
-and `loadCraftShadowTextures` prologue, with no semantic companion name,
-generated caller, or independent lookup. Because valid instructions do not
-mechanically prove non-callability, it remains `ambiguous-or-fake`; no rename
-was authorized. Complete table:
-`scratch/agent/s2928_generated_symbol_rename/source-table.md`.
-
-The s2927 mandatory revisit selected the parked M4 accumulator boundary with
-a new static register-lifetime angle. `OVL1C_1DDC` resets producer `r7` and
-`OVL1C_1F04` advances it by six after the `B00/B02/B04` stores, while
-`OVL20_1320` derives a separate consumer `r7` and `OVL20_133C` derives the
-table index from runtime `DMEM[0xC70]`/`DMEM[0xB74]`. No generated assignment
-connects those values. This selects H-IndependentState, rules out a shared
-register-lifetime explanation, and leaves the dynamic `B74` writer/value to
-producer-slot join unresolved. The s2578 positive-control trace independently
-confirms the consumer path is live. Artifact:
-`scratch/agent/s2927_m4_register_lifetime/audit.md`.
-
-The s2926 generated-symbol sweep reconciled `0x80069AEC..0x80069AF0` to
-`collideSegmentAgainstObjectNodesPreamble`. The one-instruction record is an
-entry fragment immediately before the complete `collideSegmentAgainstObjectNodes`
-body; the generated snapshot and rename helper were already synchronized, but
-the project and companion maps were stale. There are no placeholder callers or
-lookups. Complete table: `scratch/agent/s2926_generated_symbol_rename/source-table.md`.
-
-The s2925 generated-symbol sweep reconciled `0x800663AC..0x800663B0`. The
-four-byte record is an isolated `subu` fragment immediately before the
-complete `loadSndFiles` body, with no generated callers or independent
-lookup. The generated snapshot and rename table were already synchronized;
-the stale companion and project maps were updated to `data_gap_800663AC`.
-Complete table: `scratch/agent/s2925_generated_symbol_rename/source-table.md`.
-
-The s2924 generated-symbol sweep reconciled `0x80065A5C..0x80065A60`.
-The four-byte record is an isolated `addu` fragment immediately before the
-complete `buildPositionAndCallTransformHelper` body, with no generated callers
-or independent lookup. The generated snapshot and rename table were already
-synchronized; the stale companion and project maps were updated to
-`data_gap_80065A5C`. The Debug `RecompiledFuncs` target built successfully.
-Complete table: `scratch/agent/s2924_generated_symbol_rename/source-table.md`.
-
-The s2923 generated-symbol sweep reconciled `0x80064934..0x80064940`.
-The 12-byte record is an isolated `lhu`/`lw`/`slt` fragment immediately
-before the complete `load_dat_file_assets` body, with no generated callers or
-independent lookup. The generated snapshot and rename table were already
-synchronized; the stale companion and project maps were updated to
-`data_gap_80064934`. Complete table:
-`scratch/agent/s2923_generated_symbol_rename/source-table.md`.
-
-The s2922 generated-symbol sweep reconciled `0x80064294..0x800642A0`. The
-12-byte record is an isolated `sh`/`lw`/`addiu` fragment immediately before
-the complete `findLookupEntryByKey` body, with no generated callers or
-independent lookup. The generated snapshot and rename table were already
-synchronized; the stale companion and project maps were updated to
-`data_gap_80064294`. Complete table:
-`scratch/agent/s2922_generated_symbol_rename/source-table.md`.
-
-The s2921 generated-symbol sweep reconciled `0x800613B8..0x800613C0`.
-The 8-byte record is the `lwc1`/`c.lt.s` entry fragment immediately before
-the complete `loadCharTextureSet` body. The generated snapshot and rename
-table already used `loadCharTextureSetPreamble`; the companion and project
-maps were updated to match. The bounded rename tool changed zero generated
-references, and the Debug `RecompiledFuncs` target built successfully.
-Complete table: `scratch/agent/s2921_generated_symbol_rename/source-table.md`.
-
-The s2920 generated-symbol sweep reconciled `0x8005EE64..0x8005EE70`. The
-12-byte record is the jump/delay-slot/constant fragment immediately before
-the complete `steerOrientationTowardTarget` body. The generated snapshot and
-rename table already identified it as `steerOrientationTowardTargetPreamble`,
-so the stale companion/project map entries were updated to match. The
-bounded reconciliation changed zero generated references, and the Debug
-`RecompiledFuncs` target built successfully. Complete table:
-`scratch/agent/s2920_generated_symbol_rename/source-table.md`.
-
-The s2919 generated-symbol sweep inspected `0x8005C61C..0x8005C620`. The
-four-byte record contains one valid `addu $v1,$v1,$a0` between the complete
-`allocAllInitialNpcSlots` return sequence and `checkTrackedNpcProximityForCue`.
-The generated snapshot already uses `checkTrackedNpcProximityForCuePreamble`,
-but the companion map explicitly retains `fake_func_8005C61C` and provides no
-source-backed semantic name. With no standalone prologue, return, generated
-caller, or independent lookup, it remains callable-ambiguous rather than a
-proven data gap. No maps, generated files, or rename-table entries changed.
-Complete table: `scratch/agent/s2919_generated_symbol_rename/source-table.md`.
-
-The s2918 generated-symbol sweep classified `0x8005A11C..0x8005A120` as a
-four-byte non-callable isolated load between complete
-`isPointWithinBoundingBox` and `loadTopCloudsAsset` bodies. It has no
-companion semantic name, generated caller, or independent lookup, so it was
-renamed to `data_gap_8005A11C` in the project map, companion map, generated
-C/header/overlay metadata, and regeneration-safe rename table. The Debug
-`RecompiledFuncs` target built successfully. Complete table:
-`scratch/agent/s2918_generated_symbol_rename/source-table.md`.
-
-The s2917 generated-symbol sweep inspected `0x80059B4C..0x80059B50`. The
-sole placeholder is a valid 4-byte `sw $fp,0x48($sp)` fragment immediately
-before complete `mat34CrossRowsAndCopyPos`. It has no companion semantic
-name, source/m2c hit, generated caller, or independent address lookup, but a
-valid isolated prologue store does not prove that it is non-callable. The
-bounded reconciliation classified it `ambiguous-or-fake`; maps, generated
-files, and the regeneration-safe rename table are unchanged. Complete table:
-`scratch/agent/s2917_generated_symbol_rename/source-table.md`.
-
-The s2916 generated-symbol sweep inspected `0x80056344..0x80056350`. The
-sole placeholder is a 12-byte `lwc1`/`add.s`/`swc1` fragment between complete
-`clearActiveVoiceLine` and `initNpcBookkeepingTables` bodies. It has no
-prologue, return, generated caller, or independent address lookup, but those
-facts do not prove that a split fragment is non-callable; the companion map
-retains `fake_func_80056344` without a semantic name. It remains
-ambiguous-or-fake and all maps, generated files, and the regeneration-safe
-rename table are unchanged. Complete table:
-`scratch/agent/s2916_generated_symbol_rename/source-table.md`.
-
-The s2915 generated-symbol sweep inspected `0x80055A2C..0x80055A30`. The
-4-byte record contains only `subu $a0,$a0,$v0` between the complete
-`getVoiceTxtStringPtr` and `initVoiceSubtitleSystem` bodies. It has no
-generated callers or independent address lookups, but the instruction is
-valid and the companion map retains `fake_func_80055A2C` without a semantic
-name. This is `ambiguous-or-fake`, not a proven data gap, so all maps,
-generated files, and the regeneration-safe rename table remain unchanged.
-Complete table: `scratch/agent/s2915_generated_symbol_rename/source-table.md`.
-
-The s2914 generated-symbol sweep classified `0x80055698..0x800556A0` as an
-8-byte non-callable load/increment fragment between `initPlayerStructs` and
-`loadTxtFile`. It has no generated callers or address lookups and no companion
-semantic name, so it was renamed to `data_gap_80055698` in the companion map,
-project symbol map, generated C/header/overlay metadata, and regeneration-safe
-rename table. The Debug target rebuilt successfully. Complete table:
-`scratch/agent/s2914_generated_symbol_rename/source-table.md`.
-
-The s2913 generated-symbol sweep inspected `0x800555E8..0x800555F0`. The
-8-byte record at `0x800555E8` is a callable jump veneer into
-`initPlayerStructs`, not a mechanically provable data gap. The companion map
-retains `fake_func_800555E8` and supplies no semantic name for the veneer;
-generated references are limited to its definition and overlay registration.
-The bounded reconciliation therefore classified it `ambiguous-or-fake` and
-left all maps and generated files unchanged. Complete table:
-`scratch/agent/s2913_generated_symbol_rename/source-table.md`.
-
-The s2912 generated-symbol sweep classified `0x80054648..0x80054650`.
-`0x80054648` is an 8-byte non-callable record whose generated body is only
-the invalid-data `__builtin_trap()` gap filler, between the complete
-`freeListEntryPointers` and `tickWrappingTimerAccumulatorList` bodies. It has
-no generated callers or address lookups. It was renamed to
-`data_gap_80054648` in the companion source map, project symbol map,
-generated C/header, overlay metadata, and regeneration-safe rename table; the
-Debug target rebuilt successfully. The complete table is
-`scratch/agent/s2912_generated_symbol_rename/source-table.md`.
-
-The s2911 generated-symbol sweep classified `0x800538AC..0x800538B0`.
-`0x800538AC` is a 4-byte non-callable record containing one isolated
-`lw $v0,0x10($fp)` immediately before the complete
-`trackResourceListWithMappingTables` body, with no generated callers or
-address lookup. It was renamed to `data_gap_800538AC` in the companion source
-map, project symbol map, generated C/header, overlay metadata, and
-regeneration-safe rename table; the Debug target rebuilt successfully. The
-complete table is `scratch/agent/s2911_generated_symbol_rename/source-table.md`.
-
-The s2910 generated-symbol sweep classified `0x8004CCF8..0x8004CD00`.
-`0x8004CCF8` is an 8-byte non-callable record containing two isolated `daddi`
-instructions immediately before the complete `applyPlayerVehicleStateUpdate`
-body, with no generated callers or address lookup. It was renamed to
-`data_gap_8004CCF8` in the companion source map, project symbol map, generated
-C/header, overlay metadata, and regeneration-safe rename table; the Debug
-target rebuilt successfully. The complete table is
-`scratch/agent/s2910_generated_symbol_rename/source-table.md`.
-
-The s2909 generated-symbol sweep classified `0x800496F4..0x80049700`.
-`0x800496F4` is a 12-byte non-callable record containing three isolated
-`sd $ra,-1(...)` fragments immediately before the complete
-`flushPendingGridCellTiles` body, with no generated callers or address lookup.
-It was renamed to `data_gap_800496F4` in the companion source map, project
-symbol map, generated C/header, overlay metadata, and regeneration-safe rename
-table; the Debug target rebuilt successfully. The complete table is
-`scratch/agent/s2909_generated_symbol_rename/source-table.md`.
-
-The s2908 generated-symbol sweep classified `0x8004661C..0x80046620`.
-`0x8004661C` is a four-byte non-callable stack-adjust fragment immediately
-before the complete `parseDatItemCommon` body, with no generated callers or
-address lookup. It was renamed to `data_gap_8004661C` in the companion source
-map, project symbol map, generated C/header, overlay metadata, and
-regeneration-safe rename table; the Debug target rebuilt successfully. The
-complete table is `scratch/agent/s2908_generated_symbol_rename/source-table.md`.
-
-The s2907 generated-symbol sweep classified `0x80040304..0x80040308`.
-`0x80040304` is a 12-byte generated fixup trap for a missing label between
-`destroyTransientNpcSlots` and `allocAndInitParticlePool`. It has no
-companion semantic name, generated caller, or address lookup, so it was
-renamed to `data_gap_80040304` in the companion source map, project symbol
-map, generated C/header, overlay metadata, and regeneration-safe rename
-table. The Debug target rebuilt successfully. The complete table is
-`scratch/agent/s2907_generated_symbol_rename/source-table.md`.
-
-The s2906 generated-symbol sweep classified `0x8003E55C..0x8003E560`.
-`0x8003E55C` is a four-byte branch into the `initNpcSlotList` epilogue, with
-no standalone prologue, return, companion semantic name, generated caller, or
-address lookup. It was renamed to `data_gap_8003E55C` in the companion source
-map, project symbol map, generated C/header, overlay metadata, and
-regeneration-safe rename table; the Debug target rebuilt successfully. The
-complete table is `scratch/agent/s2906_generated_symbol_rename/source-table.md`.
-
-The s2905 M5 route-transition producer census built the Debug target and ran
-the driven retail oracle plus identical same-build image/silent arms. The
-oracle reached 10,000 whole-RDRAM writes, title `1024 @ 0x00790400`, and
-hangar `512 @ 0x006AB400`; its VI-swap predecessors were `0x8001BE24` and
-`0x80019B14`. Both port arms positively fired the new post-commit producer and
-route-prepare join, then stopped at pre-title `VI 640 @ 0x0066A500`. Both had
-pre-title `key_match=1` rows but zero accepted target route prepares, with no
-crash or abort. This selects H-RouteInvalid; target-phase key hypotheses are
-unevaluable and no behavior change is authorized. Artifact:
-`scratch/agent/s2905_m5_route_transition/RESULTS.md`.
-
-The s2904 M5 Step 6 drain-tick validation built the Debug target and ran the
-retail oracle plus same-build tick-off/tick-on arms. The oracle whole-RDRAM
-control reached 10,000 writes, but both port arms stopped at pre-title
-`VI 640 @ 0x0066A500`; each emitted 44 audio-dispatch controls and neither
-emitted target-phase drain, task, DMA, SP, PCM, or audio-return rows. Neither
-crashed or aborted. This selects H-RouteInvalid for the recipe; the default-off
-versus tick-on drain result is unevaluable and authorizes no behavior change.
-Artifact: `scratch/agent/s2904_m5_step6_validation/RESULTS.md`.
-
-The s2903 mandatory retail-entry revisit used a new overlay/state handoff
-census. The whole-RDRAM oracle control produced 10,000 writes and the driven
-retail route independently reached title (`1024`, `0x00790400`) and hangar
-(`512`, `0x006AB400`). `mainGameLoop` (`0x8003DFA0`), `loadOverlay`
-(`0x80000B20`), `runIdleFramesAndLoadSaveData` (`0x8006D900`), and
-`setUnlockBitAndPersist` (`0x8006E360`) each had only boot/pre-title hits and
-zero target-phase rows. This selects H-NoBoundaryHit for this candidate set as
-single-source oracle evidence; it does not identify a retail-entry dispatcher
-or explain the port route.
-
-## Live result
-
-The s2899 generated-symbol sweep classified `0x80024A0C..0x80024A10` as a
-four-byte non-callable record immediately before the companion
-`gspF3DEXTextStart` segment. It had no generated call or lookup references and
-was renamed to `data_gap_80024A0C` in the companion map, project symbol map,
-and generated files; three generated references changed. The complete source
-table is `scratch/agent/s2899_generated_symbol_rename/source-table.md`.
-
-The s2900 sweep classified `0x80026B98..0x80026BA0` as one eight-byte
-non-callable zlib fragment immediately before `inflateReset`. It has no
-generated call or lookup references and was renamed to `data_gap_80026B98` in
-the companion source/map, project symbol map, generated C/header, overlay
-metadata, and regeneration-safe rename table. Complete source table:
-`scratch/agent/s2900_generated_symbol_rename/source-table.md`.
-
-The s2901 sweep classified the five short zlib-overlay records at
-`0x8002851C`, `0x80028D58`, `0x800290D8`, `0x80029B14`, and `0x80029D14` as
-isolated instruction fragments immediately before established callable
-bodies. None has generated call or lookup references beyond overlay metadata;
-all five were renamed to `data_gap_*` in the companion map, project symbol
-map, generated C/header, overlay metadata, and regeneration-safe rename
-table. Complete source table:
-`scratch/agent/s2901_generated_symbol_rename/source-table.md`.
-
-The s2902 sweep inspected the complete `0x80029D20..0x8002A080` interval
-between established zlib/libultra symbols. It found zero generated
-placeholder definitions, so no rename or mapping change was selected. The
-next unresolved placeholder is `0x8003DF98`; the complete interval table is
-`scratch/agent/s2902_generated_symbol_rename/source-table.md`.
-
-The qualified port route is `ROGUESQ_LLE_FORCE=1`,
-`ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1`. `ROGUESQ_SPIN_YIELD=1`
-is diagnostic. `ROGUESQ_AUTOPILOT` is the reliable in-process driver.
-
-M5 defaults to the Factor 5 image arm. `ROGUESQ_AUDIO_UCODE=0` selects the
-silent `musyx_stub` control. Stock `aspMain` is not the retail contract;
-MORT is a separate CPU speech boundary.
-
-The s2881 M5 Step 1 image/silent re-baseline built successfully and ran the
-retail oracle plus both port arms concurrently. The oracle whole-RDRAM control
-hit 10,000 writes but reached only pre-title VI 640; both port arms reached
-the same `0x0066A500` phase and emitted audio-dispatch controls, then stopped
-without title/hangar. No crash or abort occurred. Target-phase task, DMA,
-service, slot/voice, MORT, and PCM rows are unevaluable, selecting
-H-RouteInvalid for this recipe rather than an audio-contract hypothesis.
-Artifact: `scratch/agent/s2881_m5_step1_rebaseline/RESULTS.md`.
-
-The s2882 route-order/stage-call discriminator was instrument-valid: the
-retail oracle's whole-RDRAM control reached 10,000 writes and independently
-reached title and hangar. Both same-build port arms stopped at pre-title
-`VI 640 @ 0x0066A500`; every route prepare was `accepted=0`. The image arm
-had 68 pre-title-or-earlier stage-call rows, all `route_valid=0`; the silent
-arm had none. This selects H-RouteInvalid for the recipe and leaves
-H-RouteOrder versus H-StageCall unevaluable. Artifact:
-`scratch/agent/s2882_m5_pretitle_route_order/RESULTS.md`.
-
-The s2888 generated-symbol sweep completed `0x800E0000..0x800F0000`. All
-nine placeholders were classified as bounded non-callable records: eight
-short fragments and one invalid COP2/trap gap. `0x800E8A34` was renamed to
-the existing duplicate-symbol-prefix name for `runDestructionPhaseSequence`;
-the other eight received mechanical `data_gap_*` names. The reconciliation
-renamed 27 references across generated C, the header, and overlay metadata;
-no callable-ambiguous record changed. Artifact:
-`scratch/agent/s2888_generated_symbol_rename/source-table.md`.
-
-The s2889 sweep found one placeholder in the next interval, `0x800FA248`.
-Its 8-byte generated body is two negative-address `lb` instructions immediately
-before `initMission`, and the companion map provides no semantic callable name.
-It was mechanically renamed to `data_gap_800FA248` in the companion/project
-maps, rename tool, and generated snapshot; three generated references changed
-and no old-name references remain. Artifact:
-`scratch/agent/s2889_generated_symbol_rename/source-table.md`.
-
-The s2892 sweep completed the main-text placeholder interval
-`0x800027B8..0x800027C0`. Its sole 8-byte record contains only an isolated
-`addu`/delay-slot fragment immediately before `processPolledControllerData`,
-with no callable body or semantic companion name; it was reconciled as
-`data_gap_800027B8` in the checked symbol map. The generated snapshot and
-rename table were already synchronized, so no generated references changed.
-Artifact: `scratch/agent/s2892_generated_symbol_rename/source-table.md`.
-
-The s2894 sweep completed the next main-text interval,
-`0x80003380..0x80003430`. Its sole placeholder, the 12-byte record at
-`0x80003424`, is an incomplete three-instruction fragment immediately before
-`rand`; it has no generated call or lookup references and no semantic
-companion name. It was reconciled as `data_gap_80003424` in the companion and
-project maps; the generated snapshot was already synchronized. Artifact:
-`scratch/agent/s2894_generated_symbol_rename/source-table.md`.
-
-The s2891 sweep completed the mission-overlay placeholder interval
-`0x80101CCC..0x80109620`. All 14 records were bounded non-callable fragments
-or fixup trap gaps with no semantic companion or independent caller evidence;
-they were reconciled as `data_gap_*` in the project and companion maps. The
-generated snapshot was already synchronized and exact searches found zero old
-names. Artifact: `scratch/agent/s2891_generated_symbol_rename/source-table.md`.
-
-Qualified runs can reach title (`VI 1024`, origin `0x00790400`) and hangar
-(`VI 512`, origin `0x006AB400`) with the appropriate input path. Recent
-same-build route-validation pairs instead stalled at pre-title `VI 640`,
-origin `0x0066A500`; their target-phase audio rows are invalid. The retail
-oracle independently reaches attract, title, and hangar but not a mission.
-Every narrow retail claim requires the whole-RDRAM positive control first.
-
-The M5 publication edge remains unresolved. Image-stage DMEM/DMA/completion,
-candidate ring destinations, CPU MORT filter state, renderer consumption,
-service cadence, and voice streaming are live in qualified windows, but no
-legitimate writer, payload, destination, and ordering relation has been named
-for the AI source span. The corrected streaming callback edge is
-`serviceStreamingVoice` descriptor `+0x190` -> `dmaVoiceSampleAndSignal`;
-`+0x194` is the legitimate speech-sample source. That routine writes the voice
-ring and signals completion; it does not publish AI data. Speech loading,
-slot initialization, cursor advancement, queue, PI, host-AI, mixer, and named
-renderer audits likewise found no publication edge.
-
-The mandatory external-boundary revisit (single-source oracle evidence)
-qualified the known retail route in one run: the whole-RDRAM positive control
-reached 10,000 callbacks and was removed, while VI transitions reached title
-1024 (`0x00790400`) and hangar 512 (`0x006AB400`). A broad main-text execution
-watch over `0x8003D000..0x80040000` produced 938,889 lifetime hits but no
-phase-gated target rows, so it did not identify a new retail-entry dispatcher;
-do not repeat this range recipe. This is a measurement of the oracle route,
-not a two-source explanation of the port boundary.
-
-The new M5 status-table oracle probe was instrument-valid: its whole-RDRAM
-positive control reached 10,000 callbacks and the same driven retail run
-reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The status
-poll changed only slots 16/17 continuously in both target phases, while the
-phase-qualified `0x80094648` channel writer ran 256 times with predecessor
-`0x80094644`; no discrete status transition or ordering edge aligned with the
-writer. This is single-source evidence that the status-table scheduling angle
-did not select a port discriminator. It does not explain the M5 publication
-gap or authorize a behavior change.
-
-The next post-dispatch oracle probe was instrument-valid after correcting an
-initial 320-only run that omitted Rice video. Retail passed the 10,000-write
-whole-RDRAM control and reached title/hangar. Scheduler handoff `0x80019CD0`,
-SP start `0x80033FCC`, and queue send `0x80019F1C` were active in both target
-phases; yield-status `0x80019E14` was absent. The matching same-build port
-image/silent pair stopped at pre-title `VI 640 @ 0x0066A500`, with dispatch
-controls but no downstream task/audio/SP/queue/PCM markers. This is
-route-failure evidence for this port recipe; the retail event table is not
-interpretable on the port until a route is qualified.
-
-The single-image route requalification then rebuilt the Debug target and used
-the long validated in-process schedule, phase-gated at VI 1024. It stayed at
-pre-title `VI 640 @ 0x0066A500` until the 180-second gate timeout, with no
-crash or abort marker. Four B40-route and one filter-voice diagnostic lines
-were present, but no target-phase task, audio-return, SP, queue, or PCM rows
-could be evaluated. This independently reproduces H-route-failure for the
-current port recipe and does not select an M5 publication explanation.
-
-The route-repair audit found concrete drift from the last successful hangar
-recipe: the active pair had changed the phase gate to 1024, omitted
-`PROBE_LEAVE_OK=1` and `ROGUESQ_M4_Y8000_WIDTH=512`, and used a different
-driver. A one-build concurrent silent/image A/B restored all three controls.
-Both arms reached the positive pre-title checkpoint `VI 640 @ 0x0066A500`
-with 47 audio-dispatch markers each, but neither reached hangar
-`VI 512 @ 0x006AB400` before the bounded capture was SIGKILLed; neither
-crashed or aborted. This rejects configuration drift as sufficient and selects
-H-route-state. Downstream audio nulls remain unevaluable.
-
-The s2872 retail-first route-state discriminator was instrument-valid: the
-whole-RDRAM control reached 10,082 writes, title, and hangar. Retail's
-`0x80141AD0..0x80141AEF` span had 82 writes; target-phase writers were only
-`0x80094648` (24 in each phase), while `0x80019CD0`, `0x80033FCC`, and
-`0x80019F1C` ran and `0x80019E14` did not. The matching port image/silent pair
-again stopped at pre-title `VI 640 @ 0x0066A500` for the full 180-second gate;
-both emitted 73 audio-dispatch and 4 B40-route rows, but no title/hangar,
-crash, or abort. Their five route-state rows were identical and showed zero
-state bytes. This exhausts that state-table discriminator without selecting a
-route explanation or permitting a behavior change.
-
-SP-yield state is real API state and the request lifecycle now clears the
-previous request before staging the next task. The generic scheduler has two
-yield call sites, but no audio-specific generated branch was found. Target
-audio-yield reachability is unvalidated because the qualified driver stalls
-before the target phases. The AI status shim reports the N64 FIFO-full bit
-(`0x40000000`) when buffered audio is full, but no qualified caller was found;
-it is not established as the PCM blocker.
-
-The s2873 generated-symbol sweep classified three main-overlay records at
-`0x80079278`, `0x80079CD8`, and `0x8007A0E8` as non-callable eight-byte
-instruction fragments immediately before named routines. They are now named
-`data_gap_*` in the companion map, project symbol map, and generated snapshot;
-the rename is recorded in `tools/rename_generated_symbols.py` for regeneration.
-
-The s2874 bounded sweep inspected `0x8007A86C` and `0x8007C298`; both remain
-ambiguous-or-fake and unchanged. The s2880 sweep covered `0x8007C300..0x800AF700`:
-three `__builtin_trap()` gap-fillers renamed to `data_gap_*`, five ambiguous
-executable fragments left unchanged. Source table:
-`scratch/agent/s2880_generated_symbol_rename/source-table.md`.
-
-The s2883 sweep examined the next placeholder interval through
-`0x800BAA00`. It left the previously audited `fake_func_800B2628` data
-fragment unchanged, and renamed five source-backed contiguous preambles to
-`playerXwingInitPreamble`, `menuControllerInputPreamble`,
-`playerAwingInitPreamble`, `playerYwingInitPreamble`, and
-`playerVwingInitPreamble`. The reconciliation changed 15 generated
-references across three files. Source table:
-`scratch/agent/s2883_generated_symbol_rename/source-table.md`.
-
-The s2884 sweep examined `0x800BAA00..0x800C0000`. Four short mission-overlay
-records were proven non-callable data gaps by their generated bodies and exact
-companion/TOML boundaries: `0x800BCC38`, `0x800BEBFC`, `0x800BF498`, and
-`0x800BF784`. They are now `data_gap_*` in the companion map, project symbol
-map, generated snapshot, and rename tool; reconciliation changed 12 generated
-references across `funcs_32.c`, `funcs_33.c`, `funcs.h`, and
-`recomp_overlays.inl`. No further generated placeholder was found above
-`0x800C0000`. Source table:
-`scratch/agent/s2884_generated_symbol_rename/source-table.md`.
-
-The s2887 sweep examined the complete `0x800C0000..0x800D0000` interval and
-found nine placeholders. All nine were mechanically classified as non-callable
-data gaps from exact short boundaries, fragment-shaped generated bodies, or an
-explicit trap-filled gap; no unique callable companion name was present. They
-were renamed to `data_gap_*` in the companion maps, project symbol map,
-generated snapshot, and rename tool. The reconciliation changed 27 generated
-references across the generated C, header, and overlay files. Source table:
-`scratch/agent/s2887_generated_symbol_rename/source-table.md`.
-
-The s2886 M5 route/contract discriminator rebuilt the Debug target and ran the
-image and silent arms concurrently. The retail oracle positive control reached
-10,000 callbacks and independently reached title and hangar; its
-`0x8006E4B4` execution watch had six boot-time hits and no phase-gated field
-rows, while the state-span watch had 105 writes. Both port arms stopped at
-pre-title `VI 640 @ 0x0066A500`: image had 66 dispatches, 6,869 rejected route
-preparations, and 68 pre-title stage calls; silent had 66 dispatches and 6,886
-rejected preparations. Neither produced target-phase task, DMA, service, slot,
-MORT, or PCM rows, and neither crashed or aborted. This selects H-RouteInvalid
-again, leaves downstream audio unevaluable, and authorizes no behavior change.
-After three stalled route iterations, the next unit pivots to the bounded
-generated-symbol sweep.
-
-The s2875 retail-first state-arbiter probe was instrument-valid: the
-whole-RDRAM control reached 10,000 callbacks, and the driven retail run reached
-title (`634 VI` in `0x00790400:1024`) and hangar (`217 VI` in
-`0x006AB400:512`). The `0x80130B40..0x80130B80` state span had 105 lifetime
-writes; target-phase writers included `0x8006E4B4` in both title and hangar,
-with additional title writers `0x80007628`, `0x8006DC00`, `0x8006DC2C`,
-`0x8006DC38`, and `0x800C5B54`. `mainGameLoop` (`0x8003DFA0`) and its
-`0x8003E010` body entry each executed once at boot only. This selects a retail
-state-writer route lead, not a repeated-loop-entry lead. It does not establish
-port absence because the matching port recipe still stops at pre-title VI 640;
-no behavior change is authorized. Artifact:
-`scratch/agent/s2875_m5_state_arbiter/RESULTS.md`.
-
-The s2876 retail-vs-port writer-equivalence unit was instrument-valid on the
-retail side (10,105 whole-RDRAM writes, title and hangar reached, six
-`0x8006E4B4` executions). The matching image/silent port pair instead stalled
-at non-target 640 `0x005D4500` phase 4; both had zero state rows and no crash or
-abort. This selects H-route-invalid for this run, so writer equivalence and
-downstream audio remain unevaluable. Artifact:
-`scratch/agent/s2876_m5_state_arbiter/RESULTS.md`.
-
-The s2877 retail-first consumer selection was instrument-valid: the whole-RDRAM
-control reached 10,000 callbacks, retail reached title and hangar, and a
-bounded `0x800B0000..0x800D0000` execution census selected
-`playObjectiveVoiceLine2` (`0x800C7D1C`, caller `0x800C5D40`) as a target-phase
-audio consumer. The same-build image/silent port pair both stopped at
-pre-title 640 `0x0066A500` for the 180-second phase gate, with zero consumer
-rows and no crash or abort. This again selects H-route-invalid for the run;
-consumer equivalence and downstream audio remain unevaluable. Artifact:
-`scratch/agent/s2877_m5_route_state/RESULTS.md`.
-
-The s2878 documented in-process autopilot requalification was run as a
-same-build image/silent pair. Both arms reached the positive pre-title
-checkpoint `VI 640 @ 0x0066A500`, then timed out at the 180-second title gate;
-neither crashed or aborted, and neither reached title or hangar. This selects
-H-autopilot-does-not-repair-route and rejects H-arm-divergence for this run.
-Downstream consumer and audio rows remain unevaluable. Artifact:
-`scratch/agent/s2878_route_autopilot/`.
-
-The s2879 ground-truth-first route-source census qualified the distinct
-`0x8006D900..0x8006F43C` execution range: the retail oracle's whole-RDRAM
-control reached 23,501 writes, title `1024`, and hangar `512 @ 0x006AB400`,
-with target-phase range hits. The matching same-build image/silent port pair
-both reached only pre-title `VI 640 @ 0x0066A500`; each emitted nine
-route-source rows (four boot/320 and five pre-title/640), zero target-phase
-rows, and no crash or abort. This selects H-route-invalid for this run and
-rejects H-arm-specific divergence at the observed route. It does not compare
-the candidate source class at title/hangar and authorizes no behavior change.
-Artifact: `scratch/agent/s2879_m5_new_route_state/` and
-`tools/apply_s2879_m5_route_probe.py`.
+Session 2954 made the same classification for `0x800AA6CC`, the four-byte
+entry preamble of `npcPredictedRangeCheck` at `0x800AA6D0`, and renamed it to
+`npcPredictedRangeCheckPreamble`. Session 2953 classified `0x8009D978` as a
+non-callable four-byte gap in an audio coefficient table and renamed it to
+`data_gap_8009D978`. Session 2952 preserved `0x8009D8BC` as a valid but
+callable-ambiguous branch fragment. These entries and their artifacts are
+recorded in the ledger.
+
+The latest M5 route work still stops at pre-title VI 640
+(`0x0066A500`). Session 2949's retail oracle reached title and hangar and
+observed three phase-specific `source_word` families at the route-message
+handler, with sampled `branch_state=0x0010`; session 2950's matching port
+probe passed the F5 positive control but had invalid guarded pointers and
+never reached target phases. Field, timing, and logic explanations therefore
+remain unevaluable. Pause this exact route discriminator until a genuinely
+new route repair exists.
+
+The soak queue's latest entries are historical failures/terminations, not new
+evidence for the current work unit: s2328 exited after 2 seconds, s2680's
+recipe returned 127 immediately, and older s1972/s1974 runs respectively
+completed 330 seconds and were killed at the 600-second cap. Full details
+remain under `scratch/agent/soak_results/` and in `SOAK-RESULTS.md`.
 
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
-symbol sweep. The sweep remains eligible while M5 is open and M3 is parked;
-apply only source-backed renames and preserve callable-ambiguous records.
+symbol sweep. Maintenance is complete for this iteration. M5 is paused after
+repeated route-invalid runs; M3 is parked pending a new discriminator.
 
-1. **M5 audio de-stubbing — plan complete, execution gated by route.** The
-   s2886 route/contract pair again selected H-RouteInvalid; pause this exact
-   discriminator after three stalled iterations and require a genuinely new
-   route repair before another M5 run.
-   `docs/M5-AUDIO-PLAN.md` now contains the current inventory of every active
-   audio stub, trap, gate, and safety hatch plus the incremental validation
-   sequence. The s2885 survey found no additional production audio path. The
-   barrier, launch-order,
-   boot-time-key, phase-relative-key, autopilot, gate-writer, pre-title
-   task-field, and broad main-text retail-entry angles are exhausted at the
-   current discriminator. The next M5 unit needs a genuinely new
-   post-dispatch or scheduling discriminator and must qualify title/hangar
-   before interpreting service, slot, MORT, or PCM nulls. The first
-   post-dispatch table is ground-truth-qualified but its matching port pair
-   was route-invalid; repair or replace the route before reading downstream
-   nulls. Session 2945 now ground-truths a genuinely new candidate range: it
-   is live in both title and hangar and carries phase-distinct handoff state,
-   selecting H-RouteState provisionally. This single-source result does not
-   justify an audio behavior change; match the candidate in the port first.
-   Do not land a
-   behavior change without a named legitimate writer and ordering edge. The
-   status-table poll / `0x80094648` alignment angle is now exhausted: it
-   reached both target phases but produced no discrete scheduling edge. The
-   long-schedule image requalification also reproduced the pre-title route
-   stop. The route-control audit restored the concrete recipe drift but both
-   arms still stopped at VI 640, selecting H-route-state. The s2875 ground
-   truth found target-phase writers in the `0x80130B40` span, led by
-   `0x8006E4B4`, while `mainGameLoop=0x8003DFA0` is boot-only; the loop-entry
-   sub-angle is exhausted, but writer equivalence remains open. The s2905
-   VI-commit-to-route census positively matched the pre-title key but again
-   failed to qualify title/hangar in both image and silent arms; pause this
-   exact route-transition discriminator until a genuinely new route repair
-   exists. The s2946 candidate probe (positive control: 8 fetch rows) selects
-   H-RoutePreTitle and refutes H-RouteReachesTarget for the current recipe; the
-   route-prepare receives key_match=1 but accepted=0 (s2905) and route_valid=0
-   (s2882). s2948 logged the full scheduler tuple and message branches, but
-   still stopped before target phase; the specific input field is not selected.
-   s2949 now supplies that retail target table: the handler ran in both target
-   phases, with three `source_word` families and constant sampled
-   `branch_state=0x0010`; it rules out retail-handler absence but does not
-   select a port field/timing/logic mismatch because the port has no target
-   tuple. s2950 added those fields with KSEG0 guards and passed the F5 control,
-   but still stopped at pre-title 640; the pointed fields were guarded to zero
-   on invalid port pointers, so field/timing/logic remain unevaluable. Pause
-   this exact discriminator until a genuinely new route repair exists. Continue
-   the generated-symbol sweep from the next unparked placeholder after the
-   already-fake `0x80099FDC` boundary. Session 2955 advanced the sweep through
-   `0x800AAADC`; the next unparked placeholder is `0x800AE3E4`.
-   The s2904 Step 6 drain-tick A/B also stopped at the same pre-title
-   route, so it does not validate the default-off change. Ground truth must
-   precede any port instrumentation. The s2873 pivot did not change this
-   unresolved M5 ordering; its next audio behavior change still requires a named
-   legitimate contract edge.
+1. **M5 audio de-stubbing — plan complete, execution gated by route.**
+   `docs/M5-AUDIO-PLAN.md` inventories every active audio stub, trap, gate, and
+   safety hatch. Do not interpret service, slot, MORT, or PCM nulls until a
+   same-build port run qualifies title/hangar. Do not change behavior without
+   an `ORIGIN:` naming the legitimate writer and ordering edge.
+
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-3. **Generated-symbol renaming sweep — remaining placeholders below `0x8010`.** The s2873 batch completed
-   `0x80079278..0x8007A0F0`. The s2880 sweep covered `0x8007C300..0x800AF700`:
-   three `__builtin_trap()` gap-fillers (`0x80099C4C`, `0x800AEC54`, `0x800AF6A8`)
-   were renamed to `data_gap_*`; five ambiguous executable fragments were left
-   unchanged. The s2883 batch then renamed five proven preambles through
-   `0x800BAA00`; continue with the next bounded interval after `0x800BAA00`
-   only when M5 has no writer-backed behavior edge; exact companion semantic names
-   and mechanically proven short data-gap names are allowed, while
-   callable-ambiguous and data-ambiguous entries stay unchanged. The s2887
-   sweep renamed nine data gaps through `0x800D0000`, and s2888 renamed nine
-   more records through `0x800F0000`, and s2889 renamed the single data gap at
-   `0x800FA248`; s2890 renamed the adjacent data gaps at `0x800FBE14` and
-   `0x800FEF04`; s2891 then reconciled all 14 placeholders through
-   `0x80109620` as bounded data gaps. The s2892 sweep then reconciled the
-   next main-text record at `0x800027B8` as a bounded data gap; s2893
-   reconciled the four-byte `0x8000337C` fragment as `data_gap_8000337C`.
-   Continue with the next remaining placeholder after `0x80097D58` unless M5
-   gets a new writer-backed route or contract discriminator. s2894 classified
-   `0x80003424..0x80003430` as a bounded non-callable data gap; continue after
-   `0x80003430`. s2895 classified `0x8000537C..0x80005380` as a bounded
-   invalid/data gap caused by a false split reference before `initRsMallocHeap`;
-   s2896 classified `0x80005568` and `0x8000595C` as bounded non-callable
-   fragments before `piDmaWorker` and `initMemoryPack`; s2897 classified
-   `0x80006BFC..0x80006C00` as a bounded isolated store fragment after
-   `initMemoryPack`; s2898 classified the false split tail at `0x80007064`
-   and four short records through `0x80007910` as data gaps; s2899 classified
-   `0x80024A0C..0x80024A10` as a data gap before `gspF3DEXTextStart`; continue
-   s2900 classified `0x80026B98..0x80026BA0` as a data gap before
-   `inflateReset`; s2901 then classified the five zlib fragments through
-   `0x80029D20` as data gaps. s2902 inspected the following
-   `0x80029D20..0x8002A080` established-symbol interval and found no
-   placeholders; s2906 then classified `0x8003E55C` as a bounded data gap.
-   s2907 then classified `0x80040304..0x80040308` as a bounded invalid/data
-   gap between established NPC routines. s2908 classified `0x8004661C` as a
-   bounded non-callable data gap; s2909 classified `0x800496F4..0x80049700` as
-   a bounded non-callable data gap before `flushPendingGridCellTiles`; s2910
-   classified `0x8004CCF8..0x8004CD00` as a bounded non-callable data gap
-   before `applyPlayerVehicleStateUpdate`; s2911 then classified
-   `0x800538AC..0x800538B0` as a bounded non-callable data gap before
-   `trackResourceListWithMappingTables`; s2912 classified
-   `0x80054648..0x80054650` as a bounded invalid-data gap before
-   `tickWrappingTimerAccumulatorList`; s2914 then classified
-   `0x80055698..0x800556A0` as a bounded load/increment data gap between
-   `initPlayerStructs` and `loadTxtFile`; s2918 then classified
-   `0x8005A11C..0x8005A120` as a bounded isolated-load data gap between
-   `isPointWithinBoundingBox` and `loadTopCloudsAsset`. The s2919 candidate at
-   `0x8005C61C` remains callable-ambiguous because its valid instruction does
-   not prove a data gap. s2920 reconciled `0x8005EE64` to the established
-   `steerOrientationTowardTargetPreamble` name; s2921 reconciled
-   `0x800613B8..0x800613C0` to `loadCharTextureSetPreamble`; s2922 classified
-   `0x80064294..0x800642A0` as `data_gap_80064294`; s2923 classified
-   `0x80064934..0x80064940` as `data_gap_80064934`; s2924 reconciled
-   `0x80065A5C..0x80065A60` as `data_gap_80065A5C`; s2925 reconciled
-   `0x800663AC..0x800663B0` as `data_gap_800663AC`; s2926 reconciled
-   `0x80069AEC..0x80069AF0` to `collideSegmentAgainstObjectNodesPreamble`;
-   s2928 inspected `0x8006B704..0x8006B710` and preserved it as a
-   callable-ambiguous valid fragment; s2929 likewise preserved the valid
-   fragment at `0x80072CE8`; s2930 classified `0x8007A86C` as
-   `data_gap_8007A86C`; s2932 reconciled `0x80085CD8` to
-   `compareHalfwordAtOffset4`; s2933 reconciled `0x8008ED6C` to
-   `serviceAudioOutputBuffers` and corrected its stale `0x154` project-map
-   extent to `0x4`. s2936 reconciled `0x80092CF0` to
-   `interpolateConstantSamplesToPackedWord`; s2939 classified
-   `0x80094348` as `data_gap_80094348`, synchronizing the project and
-   companion maps; s2940 likewise classified `0x8009711C` as
-   `data_gap_8009711C` and synchronized both maps. Continue with the next
-   remaining placeholder after `0x8009D978`; s2953 classified the candidate
-   as `data_gap_8009D978` and synchronized the generated and source maps;
-   s2954 reconciled `0x800AA6CC` to `npcPredictedRangeCheckPreamble` and
-   synchronized the generated and source maps. Continue with the next
-   remaining placeholder after `0x800AA6CC`.
+
+3. **Generated-symbol renaming sweep — active bounded campaign.** Continue
+   from the next unparked placeholder after `0x800AAADC`, currently expected
+   to be `0x800AE3E4` subject to the census. Exact companion semantic names
+   and mechanically proven short data gaps may be renamed across every map
+   and generated artifact. Valid executable fragments without callable proof
+   remain unchanged. Keep HYPOTHESIS-ID
+   `generated-symbol-renaming-sweep`.
+
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
-5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
-   repeat the closed callback audit until a new legitimate AI destination and
-   ordering edge are named.
+
+5. **M5 CPU-side MORT publication — unresolved; callback edge closed.** The
+   corrected edge is `serviceStreamingVoice` descriptor `+0x190` to
+   `dmaVoiceSampleAndSignal`; `+0x194` is the legitimate speech source. That
+   routine writes the voice ring and signals completion; it does not publish
+   AI data. Do not repeat this callback audit without a new destination and
+   ordering edge.
+
 6. **External retail-entry boundary — candidate set rejected (s2903).** The
-   phase-qualified oracle census passed its whole-RDRAM control and reached
-   title/hangar, but all four candidate PCs were boot/pre-title only. Do not
-   repeat this candidate set or the exhausted broad main-text range. The
-   oracle does not drive missions; any future revisit needs a genuinely new
-   boundary derived from a different static handoff.
-7. **M4 accumulator origin — producer/index equality unresolved.** The s2927
-   register-lifetime audit showed producer `r7` and consumer `r7`/`r3&0x7F`
-   have independent derivations; the existing s2578 dynamic trace proves one
-   live `slot=0/index=0` pair but not why it is equal. The next revisit must
-   use one batched phase/task-keyed port probe joining the `B74` writer/value,
-   producer slot, and consumer index, with the existing positive-control mark.
-   No mitigation or table rewrite is authorized. s2943 first validated the
-   independent retail oracle control and target-phase reachability (10,000
-   whole-RDRAM writes; title 1024 and hangar 512), but confirmed that the
-   oracle cannot observe DMEM `0xC70/0xB74`. The s2944 port join stopped at
-   width 640, despite the flush-site control firing; `[f5-fetch-control]` and
-   all target-phase rows were absent, so no M4 hypothesis was selected. Do not
-   interpret this null as a producer or consumer result; a future revisit needs
-   a new route qualification and the required fetch control.
-8. **M5 image task contract / hangar artifact — parked.** No writeback,
-   remap, forced state, or mitigation without an `ORIGIN:` naming the writer
-   and stating whether its value is legitimate.
+   oracle reached title/hangar, but the four watched candidate PCs were
+   boot/pre-title only. Do not repeat that set or the exhausted broad main-text
+   range; any revisit needs a different static handoff.
+
+7. **M4 accumulator origin — unresolved.** Producer and consumer registers
+   have independent derivations. A future revisit needs one phase/task-keyed
+   port probe joining the `B74` writer/value, producer slot, and consumer
+   index, with the existing positive-control mark. The oracle cannot observe
+   RSP DMEM `0xC70/0xB74`; do not interpret the s2944 pre-title null as an M4
+   result.
+
+8. **M5 image task contract / hangar artifact — parked.** No writeback, remap,
+   forced state, or mitigation without an `ORIGIN:` naming the writer and
+   stating whether its value is legitimate.
 
 ## Durable boundaries
 
-Factor 5 uses the custom command mappings in [`F5-UCODE-REFERENCE.md`](F5-UCODE-REFERENCE.md);
-do not infer its stream semantics from standard F3DEX. The qualified path is
-LLE-only for Factor 5. Existing interpreter safety limits, null-GBI guards,
-and other defensive runtime checks remain safety mechanisms, not explanations.
-
-The historical overlay-dispatch explanation is not the current blocker: the
-qualified path reaches title and hangar boundaries. Factor 5 image tasks and
-CPU MORT speech are separate contracts. A `Broke` return proves task
-completion, not PCM correctness. MusyX is not stock `aspMain`; audio remains
-partly stubbed, so every de-stub must be incremental and phase-qualified with
-a same-run positive control.
+Factor 5 uses the custom command mappings in
+[`F5-UCODE-REFERENCE.md`](F5-UCODE-REFERENCE.md); do not infer stream
+semantics from standard F3DEX. The qualified Factor 5 path is LLE-only.
+Interpreter limits, null-GBI guards, and other defensive runtime checks are
+safety mechanisms, not explanations.
 
 Evidence rules: ask the retail oracle for ground truth before adding port
-instrumentation; batch all discriminator counters in one build and run; scope
+instrumentation; batch every discriminator in one build and run; scope
 budgets to the target phase; use SIGKILL and run from `build/`; follow
-`make_elf.py`, N64Recomp, fixup scripts, then CMake; never hand-edit generated
-game functions for behavior changes. Never run `git submodule update`,
+`make_elf.py` → N64Recomp → `fixup_game_funcs.py` → CMake; never hand-edit
+generated functions for behavior changes. Never run `git submodule update`,
 `git checkout -- lib/...`, `git clean`, or `git reset --hard`. If `lib/`
 changes, export its patches in the same iteration. A mitigation-shaped diff
 requires an `ORIGIN:` line.
@@ -932,7 +132,7 @@ missing-input and wait-return explanations, global-zero image-DMA theory,
 route-wide PCM-gap theory, and force-zero default policy are superseded at
 their measured scopes. They were believable before qualified routes,
 same-build controls, or independent retail attribution existed. Detailed
-failed experiments remain in the append-only ledger and project overview.
+failed experiments are preserved in the ledger and project overview.
 
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
@@ -943,10 +143,8 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 Sessions s2677–s2871 established the current M5 boundaries, repaired the
 generated duplicate-symbol collision that blocked the full Debug link,
-validated the AI-status and SP-yield shims at compile/link scope, and advanced
-the regeneration-safe generated-symbol sweep through
-`0x80073500..0x80074500`. The sweep repeatedly found already-synchronized
-callables or ambiguous/fake records; source-backed data gaps were renamed only
-when their short non-callable structure was proven. Exact interval results,
+validated AI-status and SP-yield shims at compile/link scope, and advanced
+the regeneration-safe symbol sweep. Sessions s2872–s2955 refined the route
+boundary and continued the bounded symbol census. Exact interval results,
 counts, and run outcomes are in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`.

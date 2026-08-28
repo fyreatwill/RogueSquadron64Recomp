@@ -1,40 +1,41 @@
-# NEXT work unit (s2956) — classify the next unparked generated placeholder
+# NEXT work unit (s2957)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-## Context
+## Unit
 
-s2955 reconciled `0x800AAADC` to the exact companion preamble name
-`playerSnowSpeederInitPreamble` and built `RecompiledFuncs`. M5 is paused
-after the pre-title route stop, so continue the generated-symbol sweep at the
-next unparked candidate after `0x800AAADC`.
+Classify the next unparked generated placeholder after `0x800AAADC`;
+expected first candidate is `0x800AE3E4`, subject to the census. This is one
+bounded source-table audit. Do not run the game or M5 instrumentation.
 
 ## Competing hypotheses and discriminator
 
-- H-Callable: the next candidate is a standalone callable function with an
-  exact companion semantic name.
-- H-Fragment: it is a callable-ambiguous split executable fragment; leave all
-  names unchanged.
-- H-DataGap: it is a proven non-callable gap/fixup artifact; rename it to a
-  `data_gap_...` name across every generated and source map.
+- H-Callable: the candidate is a standalone callable function with an exact
+  companion semantic name.
+- H-Fragment: it is a valid but callable-ambiguous executable fragment; leave
+  all names unchanged.
+- H-DataGap: it is mechanically bounded non-callable data/fixup; rename it to
+  `data_gap_<address>` across every generated and source map.
 
-Discriminate with one bounded source table: inspect the complete generated
-body and exact predecessor/successor boundaries, then search all generated
-callers, independent lookups, returns/prologues, and companion m2c/map names.
-Only a standalone return/prologue plus an independent caller/lookup or an
-exact companion semantic name authorizes a callable rename; otherwise valid
-instructions remain ambiguous, while a mechanically bounded non-callable
-record authorizes a data-gap rename.
+Discriminate with the complete generated body, exact predecessor/successor
+boundaries, all generated callers and independent lookups, return/prologue
+evidence, and companion m2c/map names. A callable rename requires an exact
+semantic name plus callable evidence. A mechanically proven non-callable
+record authorizes a data-gap rename. Otherwise preserve the placeholder.
 
-## Exact work
+## Commands
 
-1. Identify the next unparked placeholder after `0x800AAADC` in the project
-   symbol map and generated overlay order; expected first candidate is
-   `0x800AE3E4`, subject to the sweep census.
-2. Inspect its complete body and exact predecessor/successor boundaries;
-   search generated callers, independent lookups, and the companion map.
-3. Write the complete classification to a new
-   `scratch/agent/s2956_generated_symbol_rename/source-table.md`.
-4. Apply a bounded rename and build `RecompiledFuncs` only if an exact
-   semantic name or mechanically proven data gap is found; otherwise preserve
-   the placeholder.
+1. Locate the next placeholder after `0x800AAADC` in the project map and
+   generated overlay order with `rg`.
+2. Read only bounded windows around the candidate in generated C/header,
+   project symbols, companion symbols/m2c, and rename tables.
+3. Search all generated/source callers and independent lookups.
+4. Write the complete table to
+   `scratch/agent/s2957_generated_symbol_rename/source-table.md`.
+5. If authorized, apply the regeneration-safe rename and build
+   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RecompiledFuncs`.
+
+Expected outcomes: exact callable mapping or proven data gap produces a
+bounded rename and successful build; an ambiguous fragment produces no code
+rename but a documented classification. In either case append the result to
+`PORTING-STATE.md`, refresh `CURRENT-TRUTH.md`, and commit the iteration.
