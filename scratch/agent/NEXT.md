@@ -1,11 +1,11 @@
-# NEXT work unit (s2987) — classify the next generated-symbol fragment
+# NEXT work unit (s2988) — classify the next generated-symbol fragment
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
 Resume the regeneration-safe symbol sweep at the lowest remaining placeholder:
-`0x800555E8`. Inspect one bounded entry in `../N64Recomp/RecompiledFuncs`, its
+`0x80059B4C`. Inspect one bounded entry in `../N64Recomp/RecompiledFuncs`, its
 callers, predecessor/successor boundaries, and the companion
 `../rogue_squadron64/symbol_files` map. Rename only if the exact semantic
 identity is independently supported; otherwise record it as ambiguous and
@@ -30,9 +30,9 @@ classification; otherwise preserve the placeholder.
 
 `rg -n 'func_[0-9A-Fa-f]{8}' ../N64Recomp/RecompiledFuncs --glob 'funcs_*.c'`
 
-Inspect bounded windows around `0x800555E8`, update the companion map,
+Inspect bounded windows around `0x80059B4C`, update the companion map,
 project TOML, and regeneration-safe rename path only when selected. If a
 rename is selected, run the bounded `rename_generated_symbols.py` command with
 the candidate's exact address range, then build
 `cmake --build build --config Debug --target RecompiledFuncs -j`. Record the
-source table under `scratch/agent/s2987_generated_symbol_rename/`.
+source table under `scratch/agent/s2988_generated_symbol_rename/`.

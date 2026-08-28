@@ -119,6 +119,7 @@ RENAMES = {
     "fake_func_8001C3FC": "data_gap_8001C3FC",
     "fake_func_80023968": "data_gap_80023968",
     "fake_func_80024128": "data_gap_80024128",
+    "fake_func_800555E8": "initPlayerStructsPreamble",
     # These short main-overlay records are defined gaps immediately before
     # named routines; they are not callable function bodies.
     "fake_func_800186D8": "data_gap_800186D8",

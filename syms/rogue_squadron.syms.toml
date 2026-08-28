@@ -774,7 +774,7 @@ functions = [
     { name = "loadSpriteSheetTextureFrames", vram = 0x800551D8, size = 0x2B0 },
     { name = "full_header_image_offset_convert", vram = 0x80055488, size = 0x50 },
     { name = "loadAndRelocateAsset", vram = 0x800554D8, size = 0x110 },
-    { name = "fake_func_800555E8", vram = 0x800555E8, size = 0x8 },
+    { name = "initPlayerStructsPreamble", vram = 0x800555E8, size = 0x8 },
     { name = "initPlayerStructs", vram = 0x800555F0, size = 0xA8 },
     { name = "data_gap_80055698", vram = 0x80055698, size = 0x8 },
     { name = "loadTxtFile", vram = 0x800556A0, size = 0x1E0 },

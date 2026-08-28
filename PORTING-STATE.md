@@ -122740,3 +122740,19 @@ mapping to `data_gap_80024128`. `RecompiledFuncs` built successfully. This
 rules out a justified semantic rename for this record and leaves
 `0x800555E8` as the next candidate. Evidence:
 `scratch/agent/s2986_generated_symbol_rename/source-table.md`.
+
+## Session 2987 (2026-08-28) — renamed 0x800555E8 as initPlayerStructsPreamble
+
+The bounded generated-symbol sweep inspected `0x800555E8`. Its body is the
+two-instruction tail-call entry `j 0x800555F0; nop`, immediately preceding the
+complete `initPlayerStructs` body. Generated callers target
+`initPlayerStructs` directly, while the companion map identifies that exact
+successor and has no separate semantic name for the fragment. The established
+entry-fragment convention therefore selected `initPlayerStructsPreamble`.
+Synchronized the companion map, project symbol TOML, generated C/header/overlay
+artifacts, and regeneration-safe rename mapping. The `RecompiledFuncs` target
+built successfully. This rules out treating the fragment as a standalone
+function or data gap; `0x80056344` was already classified as
+callable-ambiguous in Session 2916, so the next unclassified candidate is
+`0x80059B4C`. Evidence:
+`scratch/agent/s2987_generated_symbol_rename/source-table.md`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2986 (2026-08-28).
+Current maintenance marker: Session 2987 (2026-08-28).
 
 ## Current state
 
@@ -105,6 +105,18 @@ C/header/overlay artifacts, and regeneration-safe rename machinery to
 candidate is `0x800555E8`. Evidence:
 `scratch/agent/s2986_generated_symbol_rename/source-table.md`.
 Evidence: `scratch/agent/s2985_generated_symbol_rename/source-table.md`.
+
+Session 2987 classified `0x800555E8` as a two-instruction tail-call entry
+(`j 0x800555F0; nop`) immediately preceding the complete `initPlayerStructs`
+body. The companion map identifies the successor exactly, and generated
+callers target the successor rather than the fragment. Following the
+project's established entry-fragment convention, synchronized the companion
+map, project symbol TOML, generated C/header/overlay artifacts, and
+regeneration-safe rename machinery to `initPlayerStructsPreamble`.
+The `RecompiledFuncs` target built successfully. The next sweep candidate is
+`0x80059B4C`; `0x80056344` was already preserved as callable-ambiguous in
+Session 2916. Evidence:
+`scratch/agent/s2987_generated_symbol_rename/source-table.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -338,7 +350,8 @@ pending a new discriminator. The sweep is active under the stable slug
    at the lowest remaining placeholder and classify one bounded fragment using
    generated body shape, successor boundaries, callers, and the companion map;
    rename only when the semantic name is independently supported. The next
-   candidate is `0x800555E8`.
+   candidate is `0x80059B4C`; skip `0x80056344`, already classified in Session
+   2916.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a
