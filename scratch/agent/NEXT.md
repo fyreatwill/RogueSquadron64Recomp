@@ -1,38 +1,39 @@
-# NEXT work unit (s2870) — M5-route-requalification
+# NEXT work unit (s2871) — M5-route-repair-discriminator
 
-HYPOTHESIS-ID: M5-route-requalification
+HYPOTHESIS-ID: M5-route-repair-discriminator
 
 ## Work unit
 
-Re-qualify the known port route with one image arm only, using the longer
-validated autopilot schedule and the same passive route/task/audio markers.
-The current pair's pre-title stop makes its downstream nulls unevaluable;
-this unit is route qualification, not an audio publication conclusion.
+Use one bounded source/configuration audit to identify a new, testable
+post-dispatch route discriminator for the persistent port stop at VI 640.
+Compare the exact image-arm launch environment and phase/input gating against
+the last qualified hangar recipe, then select one changed route control to
+test next. Do not interpret downstream audio nulls or change behavior in this
+unit.
 
 ## Competing hypotheses and discriminator
 
-- H-route-recoverable: a single image arm with the validated long schedule
-  reaches title and hangar and emits task-return/SP-completion markers.
-- H-route-still-failing: it remains at pre-title `VI 640 @ 0x0066A500` despite
-  the known-good schedule and controls.
-- H-route-crash: it reaches a crash/abort before either target phase.
+- H-config-drift: the current launch recipe differs from the last qualified
+  route in a concrete environment, working-directory, binary, ROM, or input
+  control.
+- H-route-state: the recipe matches, so the stop is caused by a state/control
+  boundary not covered by the exhausted route angles.
+- H-input-gate: the image arm reaches the input path but the phase-relative
+  schedule is not delivered at the expected caller or width.
 
-The discriminator is one phase-gated table containing `[phase]`, dispatch,
-task ABI, image-stage, audio-return, audio-SP-route, and crash/abort rows.
-Title plus hangar selects H-route-recoverable; pre-title selects
-H-route-still-failing; a crash marker selects H-route-crash. No downstream
-null is interpretable unless both target phases qualify.
+The discriminator is a single audit table with one row per launch/control
+field and an explicit last-qualified value, current value, and source. A
+concrete mismatch selects H-config-drift; no mismatch selects H-route-state;
+an input-delivery mismatch selects H-input-gate. The next run must test the
+selected field in both arms of one build if an A/B is warranted.
 
 ## Exact command
 
-Build if needed:
+Inspect before building or running:
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp
+    rg -n 'ROGUESQ_|PROBE_|AUTOPILOT|RogueSquadron64Recomp|rogue_squadron.z64' scratch/agent/run_s2285_m5_step1_contract_pair.sh tools/probe.sh docs/REGRESSION-HARNESS.md
+    stat -f '%N %z %m' build/RogueSquadron64Recomp build/rogue_squadron.z64
 
-Run one image arm from `build/` for 120 seconds, using
-`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1`,
-`ROGUESQ_SPIN_YIELD=1`, all existing M5 markers, and autopilot
-`6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start,66:start,76:start`.
-Use `PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1`, capture under
-`scratch/agent/s2870_route_requalification/`, and SIGKILL the game after the
-window.
+Then build/run only if the audit selects a concrete changed control; record
+the two-arm command and phase-gated outcome under
+`scratch/agent/s2871_m5_route_repair_discriminator/`.

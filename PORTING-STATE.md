@@ -120636,3 +120636,23 @@ nor any audio behavior. No behavior or mitigation changed.
 Artifacts: `scratch/agent/s2869_oracle_post_dispatch.log`,
 `scratch/agent/s2869_oracle_post_dispatch_fixed.log`, and
 `scratch/agent/s2869_port_pair/`.
+
+## Session 2870 (2026-08-27) — reproduced pre-title route failure
+
+Recorded the three route hypotheses and phase-gated discriminator in
+`scratch/agent/NEXT.md` before the build/run. The Debug target built
+successfully. A single image arm used the long validated in-process schedule,
+`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, the
+silent-audio control value, all existing M5 route/task/audio markers, and
+`PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1`.
+
+The run stayed at pre-title VI 640, origin `0x0066A500`, through the 180-second
+phase-gate timeout. It emitted no crash or abort marker. Four B40-route and one
+filter-voice diagnostic lines were present, but no title/hangar phase and no
+phase-qualified task ABI, audio-return, SP, queue, or PCM rows occurred. This
+selects H-route-still-failing and independently reproduces the current port
+route stop; it leaves all downstream audio nulls unevaluable and rules out
+neither an M5 publication edge nor a specific route cause. No behavior or
+mitigation changed.
+
+Artifact: `scratch/agent/s2870_route_requalification/run.log`.

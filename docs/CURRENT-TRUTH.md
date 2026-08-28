@@ -63,6 +63,14 @@ controls but no downstream task/audio/SP/queue/PCM markers. This is
 route-failure evidence for this port recipe; the retail event table is not
 interpretable on the port until a route is qualified.
 
+The single-image route requalification then rebuilt the Debug target and used
+the long validated in-process schedule, phase-gated at VI 1024. It stayed at
+pre-title `VI 640 @ 0x0066A500` until the 180-second gate timeout, with no
+crash or abort marker. Four B40-route and one filter-voice diagnostic lines
+were present, but no target-phase task, audio-return, SP, queue, or PCM rows
+could be evaluated. This independently reproduces H-route-failure for the
+current port recipe and does not select an M5 publication explanation.
+
 SP-yield state is real API state and the request lifecycle now clears the
 previous request before staging the next task. The generic scheduler has two
 yield call sites, but no audio-specific generated branch was found. Target
@@ -88,7 +96,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    nulls. Do not land a
    behavior change without a named legitimate writer and ordering edge. The
    status-table poll / `0x80094648` alignment angle is now exhausted: it
-   reached both target phases but produced no discrete scheduling edge.
+   reached both target phases but produced no discrete scheduling edge. The
+   long-schedule image requalification also reproduced the pre-title route
+   stop; the next unit must change the route discriminator or repair the route
+   before interpreting downstream nulls.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 3. **Generated-symbol renaming sweep.** The next bounded source-backed batch
@@ -148,7 +159,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Archived progression
 
-Sessions s2677–s2865 established the current M5 boundaries, repaired the
+Sessions s2677–s2870 established the current M5 boundaries, repaired the
 generated duplicate-symbol collision that blocked the full Debug link,
 validated the AI-status and SP-yield shims at compile/link scope, and advanced
 the regeneration-safe generated-symbol sweep through
