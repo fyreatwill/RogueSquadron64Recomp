@@ -11,10 +11,12 @@ RENAMES = {
     "fake_func_800AA6CC": "npcPredictedRangeCheckPreamble",
     "fake_func_800AAADC": "playerSnowSpeederInitPreamble",
     "fake_func_8005C61C": "checkTrackedNpcProximityForCuePreamble",
+    "fake_func_80055A2C": "initVoiceSubtitleSystemPreamble",
     "fake_func_8005EE64": "steerOrientationTowardTargetPreamble",
     "fake_func_800613B8": "loadCharTextureSetPreamble",
     "fake_func_80069AEC": "collideSegmentAgainstObjectNodesPreamble",
     "fake_func_8006ACA4": "transformObjectColliderCenterPreamble",
+    "fake_func_80072CE8": "initWaterSprayParticlesPreamble",
     "fake_func_80082268": "cheatCodeConstantPreamble",
     "fake_func_800825C8": "rspbootTextPreamble",
     "fake_func_800AD378": "storeTrackedObjectAuxiliaryFields",
@@ -84,6 +86,7 @@ RENAMES = {
     "fake_func_80079CD8": "data_gap_80079CD8",
     "fake_func_8007A0E8": "data_gap_8007A0E8",
     "fake_func_8007A86C": "data_gap_8007A86C",
+    "fake_func_8009D7CC": "filterVoiceSampleBlockPreamble",
     "static_3_80085CD8": "compareHalfwordAtOffset4",
     # The companion map places these short records immediately before named
     # functions; they are data gaps, not callable game routines.

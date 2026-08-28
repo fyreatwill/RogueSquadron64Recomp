@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2973 (2026-08-28).
+Current maintenance marker: Session 2974 (2026-08-28).
 
 ## Current state
 
@@ -28,6 +28,17 @@ MORT speech are separate contracts. A `Broke` return proves task completion,
 not PCM correctness.
 
 ## Latest results
+
+Session 2974 resumed the regeneration-safe generated-symbol sweep after the
+mandatory pivot from route preparation. Three short records were identified as
+entry fragments immediately preceding complete companion-named routines:
+`0x80055A2C` before `initVoiceSubtitleSystem`, `0x80072CE8` before
+`initWaterSprayParticles`, and `0x8009D7CC` before `filterVoiceSampleBlock`.
+They were renamed to the corresponding `*Preamble` names in the companion
+map, rename table, and generated C/header/overlay artifacts. The generated-
+functions target built successfully. No ambiguous fragments or game behavior
+were changed. Artifact:
+`scratch/agent/s2974_generated_symbol_rename/source-table.md`.
 
 Session 2970 completed the bounded generated-symbol census for the lowest
 remaining placeholder, `0x8000040C`. The generated body is a complete `0x34`
@@ -222,7 +233,8 @@ remain under `scratch/agent/soak_results/` and in `SOAK-RESULTS.md`.
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete for this iteration. M5 remains active
 on the route-preparation target predicate; M3 is parked pending a new
-discriminator.
+discriminator. The sweep is active under the stable slug
+`generated-symbol-renaming-sweep`.
 
 1. **M5 route preparation — target predicate is absent at the VI-640 boundary.**
    The s2973 same-build pair selected `H-route-prep-absent`: route preparation
@@ -235,12 +247,12 @@ discriminator.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 
-3. **Generated-symbol renaming sweep — current range exhausted.** Session
-   2970 classified the only remaining generated placeholder not already covered
-   by a regeneration-safe mapping: `func_8000040C` is genuine callable code but
-   remains ambiguous because the companion project supplies no semantic name.
-   Do not invent a next address; close this campaign unless regeneration
-   introduces a new placeholder or a new independent naming source appears.
+3. **Generated-symbol renaming sweep — continue bounded semantic fragments.**
+   Session 2974 renamed three defensible entry fragments to
+   `initVoiceSubtitleSystemPreamble`, `initWaterSprayParticlesPreamble`, and
+   `filterVoiceSampleBlockPreamble`. Continue with the next bounded batch only
+   when successor boundaries and body shape support a semantic name; preserve
+   `func_8000040C` and other ambiguous records.
 
 4. **M4 accumulator origin — blocked at route qualification.** The latest
    revisit had live generic controls but zero M4 stage-1 positive-control rows

@@ -1,46 +1,41 @@
-# NEXT work unit (s2974)
+# NEXT work unit (s2975)
 
-HYPOTHESIS-ID: m5-route-prep-target-predicate
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
-Perform one bounded source audit of the existing M5 route-preparation target
-predicate and its legitimate writer/ordering edge, using the s2973 evidence as
-the baseline. Do not de-stub audio or add another run-lifetime diagnostic.
-Identify the exact state/VI values that make the port predicate remain
-`target=0` at VI 640, compare them with the retail target handoff already
-captured by the oracle, and land one regeneration-safe route repair only if the
-writer is demonstrably producing a stale or incomplete port value. If the
-predicate is intentionally pre-target-only, record the specific missing
-handoff rather than adding a guard.
+Perform the next bounded generated-symbol rename batch. Inspect unresolved
+placeholder records after `0x8009D7CC` in the generated tree and companion
+symbol files. Rename only entries with a complete successor boundary and
+enough body/caller evidence for a semantic name; leave ambiguous fragments
+unchanged. Propagate each selected name through the companion map,
+`tools/rename_generated_symbols.py`, and generated C/header/overlay artifacts.
 
 ## Competing hypotheses and discriminator
 
-- H-target-predicate-stale: the port target predicate reads a stale or
-  incomplete VI/route value; the writer and ordering edge can be named and a
-  minimal repair makes the target predicate true.
-- H-target-handoff-missing: the predicate is correct, but the port never
-  receives or commits the upstream target route handoff; no local predicate
-  change is justified.
-- H-target-definition-mismatch: the port and retail use different legitimate
-  target identity/origin definitions; the mismatch must be resolved from the
-  independent oracle before changing code.
+- H-semantic-batch: the next records have defensible companion semantic names
+  and can be renamed without changing code behavior.
+- H-ambiguous-boundary: the next records are fragments/data gaps without a
+  defensible standalone meaning and must remain placeholders.
+- H-source-mismatch: the companion map and generated snapshot disagree, so the
+  batch must stop until the source-of-truth boundary is reconciled.
 
-The discriminator is the source-level value-flow table: target predicate,
-each input value, its writer, ordering edge, and the corresponding retail
-handoff fields. A stale value with a named writer selects H-target-predicate-
-stale; an absent upstream handoff selects H-target-handoff-missing; a
-legitimate definition mismatch selects H-target-definition-mismatch. Do not
-build or run until this table is written here or in a new artifact.
+The discriminator is one bounded source table containing each candidate
+address, generated body shape, successor/predecessor boundaries, companion
+name/comment, and generated references. A row with an exact semantic successor
+and matching source selects H-semantic-batch; a row lacking that evidence
+selects H-ambiguous-boundary; disagreement selects H-source-mismatch. The
+rename script must report a positive changed-reference count.
 
 ## Commands
 
-1. Inspect the existing route-preparation call sites and handoff definitions:
-   `rg -n "route_target|route_prepare|m5.*route|VI_ORIGIN_REG|VI_WIDTH_REG" src RecompiledPatches build -g '!*.log'`.
-2. Read bounded windows around each predicate and writer. Check the s2973
-   `RESULTS.md` and the oracle route fields; do not read large logs.
-3. If and only if the table identifies a legitimate stale-value writer,
-   patch the smallest regeneration-safe host route handoff, rebuild
-   `RogueSquadron64Recomp`, and run both arms with the existing s2973 wrapper
-   recipe and oracle positive control. Otherwise land the audit artifact and
-   leave behavior unchanged.
+1. Enumerate the next placeholders with bounded `rg`/`sed` windows in
+   `../N64Recomp/RecompiledFuncs` and `../rogue_squadron64/symbol_files`.
+2. Write the candidate table to
+   `scratch/agent/s2975_generated_symbol_rename/source-table.md` before edits.
+3. Apply one bounded rename batch with
+   `python3 tools/rename_generated_symbols.py ../N64Recomp/RecompiledFuncs
+   --companion-dir ../rogue_squadron64/symbol_files --start-address ...
+   --end-address ... --limit 4 --require-rename`.
+4. Build `cmake --build build --target RecompiledFuncs -j2` and verify no
+   selected placeholder remains in the generated snapshot.

@@ -122540,3 +122540,22 @@ The first two wrapper attempts failed before measurement because zsh `set -u`
 and `print` parsed wrapper variables/separators incorrectly. Fixed the wrapper
 and reran the same unit; only the third run is evidence. Artifact:
 `scratch/agent/s2973_m5_route_preparation/RESULTS.md`.
+
+## Session 2974 (2026-08-28) — renamed three generated entry fragments
+
+The mandatory no-churn pivot selected the generated-symbol-renaming sweep.
+Before editing, the bounded source table classified three records with exact
+successor boundaries: `0x80055A2C` is the one-instruction fragment before
+`initVoiceSubtitleSystem`, `0x80072CE8` is the two-instruction fragment before
+`initWaterSprayParticles`, and `0x8009D7CC` is the one-instruction fragment
+before `filterVoiceSampleBlock`. Each successor has an independent prologue or
+entry boundary, while the fragment has no standalone return or callable body.
+
+Renamed them to `initVoiceSubtitleSystemPreamble`,
+`initWaterSprayParticlesPreamble`, and `filterVoiceSampleBlockPreamble` in the
+companion map, regeneration-safe rename table, and generated C/header/overlay
+artifacts. The `RecompiledFuncs` target built successfully. This selects
+H-semantic-batch and rules out H-ambiguous-boundary for these three rows and
+H-source-mismatch for this batch. It does not rename the remaining ambiguous
+fragments or change runtime behavior. Evidence:
+`scratch/agent/s2974_generated_symbol_rename/source-table.md`.
