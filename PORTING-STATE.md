@@ -120494,3 +120494,15 @@ found no in-range `fake_func_*` or `data_gap_*` placeholders. This rules out a
 defensible source-backed rename in the interval without assigning meaning to
 the ambiguous record. No build or game run was needed. The next bounded sweep
 is `0x8006C500..0x8006D500`.
+
+## Session 2860 (2026-08-27) — renamed non-callable generated fragments
+
+The bounded sweep first examined `0x8006C500..0x8006D500`; all 11
+candidates were already synchronized. The adjacent records at `0x8006D8FC`
+and `0x8006F4AC` were verified as four-byte instruction fragments with no
+return, immediately before named routines. The regeneration-safe selector,
+checked-in symbol map, companion map, and generated snapshot now use
+`data_gap_8006D8FC` and `data_gap_8006F4AC`; the final stale-name scan found
+no old references. This rules out treating either fragment as a callable game
+function; no audio behavior or runtime evidence changed. The next bounded
+sweep is `0x8006F500..0x80070500`.

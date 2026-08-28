@@ -911,3 +911,12 @@ references. The independent generated-tree scan found no in-range
 `fake_func_*` or `data_gap_*` placeholders. This closes the interval without
 assigning meaning to the ambiguous record. No build or game run was needed.
 The next bounded sweep is `0x8006C500..0x8006D500`.
+
+Session 2860 examined `0x8006C500..0x8006D500`; all 11 candidates were
+already synchronized. The adjacent records at `0x8006D8FC` and `0x8006F4AC`
+were verified as four-byte non-returning instruction fragments immediately
+before named routines. The regeneration-safe selector, checked-in symbol map,
+companion map, and generated snapshot now call them `data_gap_8006D8FC` and
+`data_gap_8006F4AC`; the final stale-name scan is empty. This is symbol
+clarity only: no audio behavior or runtime evidence changed. The next bounded
+sweep is `0x8006F500..0x80070500`.

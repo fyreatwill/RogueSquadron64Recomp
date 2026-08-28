@@ -92,6 +92,11 @@ RENAMES = {
     # The companion map marks this defined 8-byte record as having no
     # accompanying real function; the generated body is invalid data.
     "fake_func_8003DF98": "data_gap_8003DF98",
+    # These four-byte records contain only non-returning instruction
+    # fragments immediately before named routines; they are not callable
+    # function bodies.
+    "fake_func_8006D8FC": "data_gap_8006D8FC",
+    "fake_func_8006F4AC": "data_gap_8006F4AC",
 }
 
 
