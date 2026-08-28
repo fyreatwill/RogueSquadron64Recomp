@@ -636,7 +636,7 @@ functions = [
     { name = "getNpcContextByIndex", vram = 0x8004013C, size = 0x20 },
     { name = "getNpcContextField8", vram = 0x8004015C, size = 0x2C },
     { name = "findFreeNpcSlotByKey", vram = 0x80040188, size = 0x90 },
-    { name = "func_80040218", vram = 0x80040218, size = 0x44 },
+    { name = "getNextSlotNpcTypeId", vram = 0x80040218, size = 0x44 },
     { name = "getNpcNextSlotIndex", vram = 0x8004025C, size = 0x30 },
     { name = "destroyTransientNpcSlots", vram = 0x8004028C, size = 0x78 },
     { name = "data_gap_80040304", vram = 0x80040304, size = 0xC },

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3025 (2026-08-28).
+Current maintenance marker: Session 3026 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,16 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3026 completed the bounded generated-symbol audit at `0x80040218`.
+The companion map names the unique callable `getNextSlotNpcTypeId`; its
+generated 0x44-byte body follows one NPC-slot link and returns the linked
+type or `0xFFFF`. The generated body, header, overlay registration, and 25
+generated callers agree, with no duplicate callable definition. Synchronized
+the stale project symbol TOML and built `RecompiledFuncs` successfully. This
+rules out an ambiguous placeholder, data-gap classification, and local
+duplicate callable for this address. Evidence:
+`scratch/agent/s3026_generated_symbol_rename/source-table.md`.
 
 Session 3025 completed the bounded generated-symbol audit at `0x8003E8DC`.
 The companion map names the unique callable `slotDispatcherIter`; the
@@ -722,8 +732,9 @@ blocker-free workstream until a new M5 route edge is available.
    `0x80024878` was classified as `data_gap_80024878`; do not invent a
    callable name for it. `0x8002BB34` has no companion identity or generated
    callable boundary and remains a placeholder; do not force a rename or gap
-   label. `0x8003DFA0` was synchronized as `mainGameLoop` and `0x8003E8DC` as
-   `slotDispatcherIter`. Continue at `0x80040218` and keep the M5 route
+   label. `0x8003DFA0` was synchronized as `mainGameLoop`, `0x8003E8DC` as
+   `slotDispatcherIter`, and `0x80040218` as `getNextSlotNpcTypeId` in the
+   project map. Continue at `0x80053F7C` and keep the M5 route
    dependency open below.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The

@@ -1,4 +1,4 @@
-# NEXT work unit — classify `0x80040218`
+# NEXT work unit — classify `0x80053F7C`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -19,16 +19,16 @@ An exact companion name plus one coherent callable selects synchronization; a
 complete but unnamed callable selects no invented rename; a boundary-only
 fragment or collision selects a documented non-rename/manual review.
 
-The preceding `0x8003E8DC` audit selected the exact rename
-`slotDispatcherIter`; its companion and generated callable boundaries were
+The preceding `0x80040218` audit selected the exact rename
+`getNextSlotNpcTypeId`; its companion and generated callable boundaries were
 coherent. Do not revisit it without new source evidence.
 
 ## Exact commands
 
 ```sh
-rg -n '80040218|func_80040218' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
-rg -n -C 20 '80040218|func_80040218' ../N64Recomp/RecompiledFuncs/funcs_*.c
-python3 tools/sweep_scan_candidates.py func_80040218
+rg -n '80053F7C|func_80053F7C' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
+rg -n -C 20 '80053F7C|func_80053F7C' ../N64Recomp/RecompiledFuncs/funcs_*.c
+python3 tools/sweep_scan_candidates.py func_80053F7C
 ```
 
 If the sources agree on an exact identity, synchronize the project symbol

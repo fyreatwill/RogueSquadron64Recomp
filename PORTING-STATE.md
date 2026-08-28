@@ -123265,3 +123265,15 @@ definition was found. Synchronized the stale
 an ambiguous placeholder, data-gap classification, and local duplicate
 callable for this address. The next sweep candidate is `0x80040218`.
 Evidence: `scratch/agent/s3025_generated_symbol_rename/source-table.md`.
+## Session 3026 (2026-08-28) — synchronized getNextSlotNpcTypeId
+
+Completed the bounded generated-symbol audit at `0x80040218`. The companion
+map names the unique callable `getNextSlotNpcTypeId`; its generated 0x44-byte
+body follows one NPC-slot link and returns the linked type or `0xFFFF`. The
+generated body, header, overlay registration, and 25 generated callers agree,
+with no duplicate callable definition. Synchronized the stale project symbol
+TOML and built `RecompiledFuncs` successfully. This rules out an ambiguous
+placeholder, data-gap classification, and local duplicate callable for this
+address. The companion's 26-caller annotation differs from the generated
+snapshot's 25 sites but does not create an identity conflict. Evidence:
+`scratch/agent/s3026_generated_symbol_rename/source-table.md`.
