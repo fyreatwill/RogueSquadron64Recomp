@@ -123619,3 +123619,23 @@ is live, while retail reaches the consumer without the watched DP-handler
 registration path. It rules out a missing port registration and an
 unevaluable-control explanation. No behavior change was justified. Full
 evidence: `scratch/agent/s3049_m5_event_registration_edge/AUDIT.md`.
+## Session 3050 (2026-08-28) — audited direct DP producers
+
+Ran the bounded M5 direct-producer unit after the required independent retail
+preflight. The retail oracle used Rice, the driven Start schedule, VI tracing,
+target-phase buckets, and a whole-RDRAM positive control. The control fired
+82,158 times, the `osSendMesg` watch at `0x80033410` fired 72,158 times, and
+retail reached the hangar. No target-phase watched call had queue argument
+`0x8011A408`; sends to other queues were present.
+
+Built the same Debug port target and ran its existing phase-keyed
+`ROGUESQ_LOG_M5_DP_EVENT` wrapper probe from `build/` with LLE-only AUTOPILOT.
+The wrapper positive marker fired, but the run stopped at VI 640 origin
+`0x0066A500`. It recorded 296 phase-4 receives on `0x8011A408`, from
+`0x8000B650`, and zero phase-4 sends, title, or hangar phase.
+
+Both sources therefore lack a target-phase direct `osSendMesg` producer for
+this queue. This rejects a divergent direct producer and points to external
+DP-queue delivery, but does not identify its writer or prove the port's
+external delivery is wrong. No behavior changed. Evidence:
+`scratch/agent/s3050_m5_direct_dp_producer/AUDIT.md`.

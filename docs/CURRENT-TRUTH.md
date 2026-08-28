@@ -133,6 +133,15 @@ message zero and produced repeated DP completion rows, but remained at VI 640
 measurement. No behavior change was justified. Evidence:
 `scratch/agent/s3049_m5_event_registration_edge/AUDIT.md`.
 
+Session 3050 audited direct `osSendMesg` producers for DP queue
+`0x8011A408`. Retail's positive-controlled oracle reached hangar and recorded
+zero target-phase sends to that queue despite 72,158 watched `osSendMesg`
+executions. The same-build port wrapper positive control fired, but the run
+stopped at VI 640 and recorded zero phase-4 sends, only receives from
+`0x80007904`/`0x8000B650`. This rejects a divergent direct producer and points
+to external DP-queue delivery; the writer/interrupt edge is still unproven.
+Evidence: `scratch/agent/s3050_m5_direct_dp_producer/AUDIT.md`.
+
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
 Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
@@ -164,16 +173,15 @@ contract gap from that result.
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete. M5 design is complete, but Step 1 is
 route-blocked at pre-title VI 640; event registration/completion is live in the
-port and the next unit must use a genuinely new direct-producer angle. M3 is
+port and the next unit must use a genuinely new external-delivery angle. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — audit direct target-phase producers for queue `0x8011A408`.**
-   Session 3049 found the port's DP registration and completion path live, but
-   retail reached the same target-phase consumer without the watched DP-handler
-   registration path. Watch the retail `osSendMesg` entry and attribute its
-   target-phase callers/messages, alongside the whole-RDRAM and VI controls;
-   compare against the port's target-phase send table if the port reaches it.
-   Do not repeat the registration or consumer-only watches.
+1. **M5 route repair/handoff — audit external DP delivery into `0x8011A408`.**
+   Session 3050 found zero target-phase direct sends to this queue in retail
+   and in the port. Identify the retail DP interrupt/external enqueue writer
+   and compare it with the port's `dp_complete`/external-message path, keeping
+   the whole-RDRAM and route positive controls. Do not repeat direct
+   `osSendMesg`, registration, or consumer-only watches.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
