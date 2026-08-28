@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2949 (2026-08-28).
+Current maintenance marker: Session 2950 (2026-08-28).
+
+Session 2950 extended the regeneration-owned route-preparation probe with the
+oracle-equivalent source-word, source-byte, and branch-state samples. The
+guarded qualified run passed the same-run F5 positive control (8 rows) and
+emitted 1,018 route rows, but stopped at pre-title VI 640 (`0x0066A500`) with
+no title/hangar phase. Invalid pre-title pointers made the guarded samples
+zero, so field, timing, and logic remain unevaluable. An initial unguarded
+attempt crashed in the new `MEM_HU(s1+0x22)` read before the control fired and
+is not evidence. Artifact: `scratch/agent/s2950_port_route_sourceword.log`.
 
 Session 2949's retail-first route-message run passed the same-run whole-RDRAM
 positive control (10,000 writes), watched `0x80019CD8` 29,874 times, and with
@@ -737,9 +746,11 @@ apply only source-backed renames and preserve callable-ambiguous records.
    phases, with three `source_word` families and constant sampled
    `branch_state=0x0010`; it rules out retail-handler absence but does not
    select a port field/timing/logic mismatch because the port has no target
-   tuple. The next unit is one batched port probe adding the matching pointed
-   source-word/branch fields to the existing acceptance and positive-control
-   rows, including pre-title rows needed to explain qualification failure.
+   tuple. s2950 added those fields with KSEG0 guards and passed the F5 control,
+   but still stopped at pre-title 640; the pointed fields were guarded to zero
+   on invalid port pointers, so field/timing/logic remain unevaluable. Pause
+   this exact discriminator until a genuinely new route repair exists. Continue
+   the generated-symbol sweep from the next unresolved placeholder.
    The s2904 Step 6 drain-tick A/B also stopped at the same pre-title
    route, so it does not validate the default-off change. Ground truth must
    precede any port instrumentation. The s2873 pivot did not change this

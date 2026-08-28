@@ -122081,4 +122081,28 @@ H-RoutePreTitle for the port recipe and rules out an absent retail route or
 dead oracle watch. It does not select field, timing, or logic mismatch because
 the s2948 port run never produced a target-phase tuple. The next unit is a
 batched port probe adding the matching pointed-field/source-word values.
+
+## Session 2950 (2026-08-28) — qualified route source-word probe still stops pre-title
+
+The route-preparation probe was extended in the regeneration-owned
+`N64Recomp/fixup_game_funcs.py` and `src/main/upstream_compat.cpp` with the
+oracle-equivalent source-word, source-byte, and branch-state samples. The
+first unguarded launch bus-crashed at `MEM_HU(s1+0x22)` while `s1` was the
+invalid pre-title value `0x00000002`; it fired no positive control and was
+discarded as instrumentation-induced. The guarded rerun passed the same-run
+`[f5-fetch-control]` control 8 times and emitted 1,018 route-prep rows, but
+stopped at pre-title VI 640 (`0x0066A500`) with no title or hangar phase.
+Invalid pre-title pointers therefore yielded guarded zero field samples and
+did not select H-PrepareFieldBad, H-PrepareTimingBad, or H-PrepareLogicBad.
+
+ORIGIN: the legitimate pointed fields are sampled from the same `s0`/`s1`
+addresses as the retail oracle; the KSEG0 guard only prevents the diagnostic
+from dereferencing invalid port state and does not alter game behavior.
+
+This rules out an instrument crash as the final-run explanation and confirms
+the route remains unqualified, but it does not compare port and retail target
+tuples. The exact source-word discriminator is paused pending a new route
+repair. The next unit is the bounded generated-symbol classification at
+`0x80099FDC`. Artifacts: `scratch/agent/s2950_port_route_sourceword/RESULTS.md`
+and `scratch/agent/s2950_port_route_sourceword.log`.
 Artifact: `scratch/agent/s2949_retail_route_message/RESULTS.md`.

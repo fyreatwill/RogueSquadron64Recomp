@@ -847,7 +847,8 @@ extern "C" void rs64_m5_route_prepare_inputs(
     uint8_t* rdram, uint32_t pc, uint32_t caller, uint32_t sp,
     uint32_t s0, uint32_t s1, uint32_t s2, uint32_t s3, uint32_t s4,
     uint32_t s5, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t v0,
-    uint32_t message_type) {
+    uint32_t message_type, uint32_t source_word, uint32_t source_byte,
+    uint32_t branch_state) {
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_PREPARE");
@@ -878,11 +879,12 @@ extern "C" void rs64_m5_route_prepare_inputs(
         "accepted=%u pc=0x%08X caller=0x%08X sp=0x%08X "
         "s0=0x%08X s1=0x%08X s2=0x%08X s3=0x%08X s4=0x%08X s5=0x%08X "
         "a0=0x%08X a1=0x%08X a2=0x%08X v0=0x%08X msg=0x%02X branch=%u "
+        "source_word=0x%08X source_byte=0x%02X branch_state=0x%04X "
         "active=%u ordinal=%u row=%u exit=%d\n",
         rows, rs64_phase_ord(), width, origin, route_target, route_target,
         pc, caller, sp, s0, s1, s2, s3, s4, s5, a0, a1, a2, v0,
-        message_type, branch, active ? 1u : 0u, ordinal, route_row,
-        exit_reason);
+        message_type, branch, source_word, source_byte, branch_state,
+        active ? 1u : 0u, ordinal, route_row, exit_reason);
     std::fflush(stderr);
     ++rows;
 }
