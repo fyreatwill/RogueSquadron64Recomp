@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2956 (2026-08-28).
+Current maintenance marker: Session 2958 (2026-08-28).
 
 ## Current state
 
@@ -35,6 +35,13 @@ overlay-boundary fragment. Its final word overlaps the menu overlay's named
 return, caller, independent lookup, or exact companion name. It remains
 `fake_func_800AE3E4` with no rename. Artifact:
 `scratch/agent/s2957_generated_symbol_rename/source-table.md`.
+
+Session 2958 classified `0x800AEC54` as a mechanically proven 12-byte data
+gap: the generated body is an invalid-decode trap, the companion map retains
+the fake entry, and no callable references exist. It was renamed to
+`data_gap_800AEC54` across the project map, companion map, and generated
+artifacts; `RecompiledFuncs` built successfully. Artifact:
+`scratch/agent/s2958_generated_symbol_rename/source-table.md`.
 
 Session 2955 classified `0x800AAADC` as the four-byte entry preamble for
 `playerSnowSpeederInit` at `0x800AAAE0`. The body is only `sh a0, 0x1A(v1)`;
@@ -82,8 +89,8 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
    with a named discriminator; passive recurrence belongs in the soak queue.
 
 3. **Generated-symbol renaming sweep — active bounded campaign.** Continue
-   from the next unparked placeholder after `0x800AE3E4`, currently expected
-   to be `0x800AEC54` subject to the census. Exact companion semantic names
+   from the next unparked placeholder after `0x800AEC54`, currently expected
+   to be `0x800B2628` subject to the census. Exact companion semantic names
    and mechanically proven short data gaps may be renamed across every map
    and generated artifact. Valid executable fragments without callable proof
    remain unchanged. Keep HYPOTHESIS-ID

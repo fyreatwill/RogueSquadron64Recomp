@@ -122233,3 +122233,16 @@ not establish runtime reachability. Complete table:
 
 ORIGIN: naming-only. No runtime, generated instruction, submodule, or
 mitigation-shaped behavior changed.
+## Session 2958 (2026-08-28) — classified 0x800AEC54 as a data gap
+
+Ran the bounded generated-symbol source-table audit for the next placeholder
+after `0x800AE3E4`. The live generated tree shows a 12-byte
+`fake_func_800AEC54` entry whose body is an explicit `__builtin_trap()` gap
+filler; `initCraftSelectScreen` begins at `0x800AEC60` with its normal
+prologue. The companion menu map retains the fake entry and exact-reference
+search found no callable caller or independent lookup. This selects the
+mechanical data-gap hypothesis, rules out a standalone callable and an
+actionable executable fragment, and renames the entry to
+`data_gap_800AEC54` in the project map, companion map, generated header,
+overlay table, and C definition. `RecompiledFuncs` built successfully with
+the repository's existing warnings. Next candidate: `0x800B2628`.

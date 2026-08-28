@@ -2413,7 +2413,7 @@ functions = [
     { name = "initCraftSelectVectors", vram = 0x800AEAF0, size = 0x58 },
     { name = "hangarSetSecondaryWeaponDisplay", vram = 0x800AEB48, size = 0x90 },
     { name = "hangarUpdateSecWeaponIfChanged", vram = 0x800AEBD8, size = 0x7C },
-    { name = "fake_func_800AEC54", vram = 0x800AEC54, size = 0xC },
+    { name = "data_gap_800AEC54", vram = 0x800AEC54, size = 0xC },
     { name = "initCraftSelectScreen", vram = 0x800AEC60, size = 0x760 },
     { name = "tickCraftSelectScreen", vram = 0x800AF3C0, size = 0x2EC },
     { name = "static_5_800AF6AC", vram = 0x800AF6AC, size = 0xA9C },

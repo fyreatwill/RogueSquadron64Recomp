@@ -1,11 +1,11 @@
-# NEXT work unit (s2958)
+# NEXT work unit (s2959)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
-Classify the next unparked generated placeholder after `0x800AE3E4`;
-expected first candidate is `0x800AEC54`, subject to the census. This is one
+Classify the next unparked generated placeholder after `0x800AEC54`;
+expected first candidate is `0x800B2628`, subject to the census. This is one
 bounded source-table audit. Do not run the game or M5 instrumentation.
 
 ## Competing hypotheses and discriminator
@@ -25,7 +25,7 @@ record authorizes a data-gap rename. Otherwise preserve the placeholder.
 
 ## Commands
 
-1. Locate the next placeholder after `0x800AE3E4` in the project map and
+1. Locate the next placeholder after `0x800AEC54` in the project map and
    generated overlay order with `rg`.
 2. Read only bounded windows around the candidate in generated C/header,
    project symbols, companion symbols/m2c, and rename tables.
