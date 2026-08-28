@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3005 (2026-08-28).
+Current maintenance marker: Session 3006 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,16 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3006 completed the bounded generated-symbol audit at `0x80017AE0`.
+The companion map, generated definition, header, overlay registration, and
+two direct callers identify the unique callable entry as
+`setViewStateBytesAndFadeScale`; the project symbol TOML alone was stale.
+Synchronized the TOML and built `RecompiledFuncs` successfully. This rules
+out the ambiguous-placeholder and duplicate-definition hypotheses for this
+address. No runtime, audio, or route behavior changed. The next sweep
+candidate is `0x80017B28`. Evidence:
+`scratch/agent/s3006_generated_symbol_rename/source-table.md`.
 
 Session 2976 completed the phase-aware independent retail route capture after
 the s2975 watch-overhead failure. The oracle now defers execution watches until
@@ -520,8 +530,8 @@ pending a new discriminator. The generated-symbol sweep is the active
 blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   `0x80017AC0` is synchronized as `setRenderStateFlagByteTwo`; audit the
-   next placeholder `0x80017AE0` when generated callers/body and the companion
+   `0x80017AE0` is synchronized as `setViewStateBytesAndFadeScale`; audit the
+   next placeholder `0x80017B28` when generated callers/body and the companion
    map agree.
    Do not invent names for ambiguous fragments. Keep the M5 route dependency
    open below and return to it only with a new grounded edge.

@@ -123001,3 +123001,15 @@ built `RecompiledFuncs` successfully. This rules out identity ambiguity for
 this candidate, but changes no runtime behavior. The next sweep candidate is
 `0x80017AE0`. Evidence:
 `scratch/agent/s3005_generated_symbol_rename/source-table.md`.
+
+## Session 3006 (2026-08-28) — synchronized setViewStateBytesAndFadeScale
+
+Completed the bounded generated-symbol audit at `0x80017AE0`. The companion
+map, generated definition, header, overlay registration, and two direct
+callers identify the unique callable entry as `setViewStateBytesAndFadeScale`;
+the project symbol TOML alone was stale. Synchronized the TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime, audio, or route behavior changed. The next
+sweep candidate is `0x80017B28`. Evidence:
+`scratch/agent/s3006_generated_symbol_rename/source-table.md`.
