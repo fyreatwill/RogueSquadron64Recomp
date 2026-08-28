@@ -6,6 +6,15 @@ remain in the ledger and scratch artifacts.
 
 Current maintenance marker: Session 2914 (2026-08-27).
 
+The s2915 generated-symbol sweep inspected `0x80055A2C..0x80055A30`. The
+4-byte record contains only `subu $a0,$a0,$v0` between the complete
+`getVoiceTxtStringPtr` and `initVoiceSubtitleSystem` bodies. It has no
+generated callers or independent address lookups, but the instruction is
+valid and the companion map retains `fake_func_80055A2C` without a semantic
+name. This is `ambiguous-or-fake`, not a proven data gap, so all maps,
+generated files, and the regeneration-safe rename table remain unchanged.
+Complete table: `scratch/agent/s2915_generated_symbol_rename/source-table.md`.
+
 The s2914 generated-symbol sweep classified `0x80055698..0x800556A0` as an
 8-byte non-callable load/increment fragment between `initPlayerStructs` and
 `loadTxtFile`. It has no generated callers or address lookups and no companion

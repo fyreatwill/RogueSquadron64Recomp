@@ -121451,3 +121451,16 @@ rebuilt and linked successfully, with only pre-existing format/sign and
 deployment-target warnings. This closes the interval and rules out a
 source-backed semantic rename there; the next bounded sweep is
 `0x80055A2C..0x80055A30`.
+
+## Session 2915 (2026-08-27) — classified callable-ambiguous record at 0x80055A2C
+
+The bounded generated-symbol sweep inspected `0x80055A2C..0x80055A30`. The
+4-byte record at `0x80055A2C` contains only `subu $a0,$a0,$v0`, between the
+complete `getVoiceTxtStringPtr` and `initVoiceSubtitleSystem` bodies. The
+companion map retains `fake_func_80055A2C` and has no semantic name. Exact
+generated searches found only its definition, declaration, and overlay
+registration; there were zero generated callers and no independent address
+lookup. Because the instruction is valid and a callable veneer cannot be
+excluded, the candidate was classified `ambiguous-or-fake` and left unchanged.
+No Debug build was needed because generated files did not change. Complete
+table: `scratch/agent/s2915_generated_symbol_rename/source-table.md`.
