@@ -122726,3 +122726,17 @@ overlay artifacts, and the regeneration-safe rename mapping to
 rules out a justified semantic rename for this record and leaves `0x80024128`
 as the next candidate. Evidence:
 `scratch/agent/s2985_generated_symbol_rename/source-table.md`.
+
+## Session 2986 (2026-08-28) — classified 0x80024128 as data gap
+
+Inspected the generated `0x80024128` body, its boundaries, callers, and the
+companion symbol map. It is an eight-byte fragment containing only `lhu v0,
+0(v0)` and `lhu v1, 0(v1)`, between complete `emitProfilerBarSegment` and
+`flushDebugTextOverlay` routines, with no direct generated caller or exact
+companion semantic identity. The discriminator selected the mechanical
+boundary-gap classification. Synchronized the companion map, project symbol
+TOML, generated C/header/overlay artifacts, and regeneration-safe rename
+mapping to `data_gap_80024128`. `RecompiledFuncs` built successfully. This
+rules out a justified semantic rename for this record and leaves
+`0x800555E8` as the next candidate. Evidence:
+`scratch/agent/s2986_generated_symbol_rename/source-table.md`.

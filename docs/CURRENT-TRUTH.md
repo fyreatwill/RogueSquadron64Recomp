@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2985 (2026-08-28).
+Current maintenance marker: Session 2986 (2026-08-28).
 
 ## Current state
 
@@ -94,6 +94,16 @@ semantic identity. Synchronized the companion map, project symbol TOML,
 generated C/header/overlay artifacts, and regeneration-safe rename machinery
 to `data_gap_80023968`; `RecompiledFuncs` built successfully. The next sweep
 candidate is `0x80024128`.
+
+Session 2986 classified `0x80024128` as a mechanically proven eight-byte
+fragment containing only two isolated halfword loads between the complete
+`emitProfilerBarSegment` and `flushDebugTextOverlay` routines. There is no
+direct generated caller, standalone entry contract, or companion semantic
+identity. Synchronized the companion map, project symbol TOML, generated
+C/header/overlay artifacts, and regeneration-safe rename machinery to
+`data_gap_80024128`; `RecompiledFuncs` built successfully. The next sweep
+candidate is `0x800555E8`. Evidence:
+`scratch/agent/s2986_generated_symbol_rename/source-table.md`.
 Evidence: `scratch/agent/s2985_generated_symbol_rename/source-table.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
@@ -328,7 +338,7 @@ pending a new discriminator. The sweep is active under the stable slug
    at the lowest remaining placeholder and classify one bounded fragment using
    generated body shape, successor boundaries, callers, and the companion map;
    rename only when the semantic name is independently supported. The next
-   candidate is `0x80024128`.
+   candidate is `0x800555E8`.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a

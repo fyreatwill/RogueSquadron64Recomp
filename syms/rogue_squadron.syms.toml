@@ -374,7 +374,7 @@ functions = [
     { name = "getTimeSinceLastFrame", vram = 0x80023D08, size = 0x28 },
     { name = "setProfilerBarGate", vram = 0x80023D30, size = 0x10 },
     { name = "emitProfilerBarSegment", vram = 0x80023D40, size = 0x3E8 },
-    { name = "fake_func_80024128", vram = 0x80024128, size = 0x8 },
+    { name = "data_gap_80024128", vram = 0x80024128, size = 0x8 },
     { name = "flushDebugTextOverlay", vram = 0x80024130, size = 0x3DC },
     { name = "queueDebugTextGlyph", vram = 0x8002450C, size = 0x6C },
     { name = "setDebugTextCursor", vram = 0x80024578, size = 0x30 },
