@@ -1918,7 +1918,7 @@ functions = [
     { name = "tickCraftMountedAnimationEffect", vram = 0x800EC6F0, size = 0x538 },
     { name = "craftMountedAnimationNpcHandler", vram = 0x800ECC28, size = 0x1B4 },
     { name = "dispatchSlotActionTwelveByGlobalId", vram = 0x800ECDDC, size = 0x28 },
-    { name = "fake_func_800ECE04", vram = 0x800ECE04, size = 0xC },
+    { name = "data_gap_800ECE04", vram = 0x800ECE04, size = 0xC },
     { name = "datItemActorNpcHandler", vram = 0x800ECE10, size = 0x338 },
     { name = "data_gap_800ED148", vram = 0x800ED148, size = 0x8 },
     { name = "claimSongSlotForCurrentHandle", vram = 0x800ED150, size = 0xB0 },

@@ -122416,3 +122416,27 @@ companion redefs, and
 --config Debug --target RecompiledFuncs` completed successfully. Existing
 format/pointer-sign/self-comparison warnings were unrelated to this change.
 No game or M5 experiment ran. Next sweep candidate is `0x800ECE04`.
+
+## Session 2967 (2026-08-28) — synchronized 0x800ECE04 data gap
+
+Ran the bounded generated-symbol source-table audit for the expected next
+placeholder after `0x800EC6EC`. The project and companion maps bounded
+`0x800ECE04` to 12 bytes between the complete `dispatchSlotActionTwelveByGlobalId`
+epilogue (`0x800ECDDC`–`0x800ECE00`) and the independent
+`datItemActorNpcHandler` prologue at `0x800ECE10`. The generated body contains
+only `srl v0,t1,4`, `addiu v0,v0,0x9F`, and `multu v0,v1`; it has no standalone
+prologue, return, generated caller, independent lookup, or companion semantic
+name. This selects the mechanical data-gap classification and rules out both a
+callable function and a defensible semantic rename.
+
+Synchronized the companion mission map, project TOML, generated C/header/
+overlay artifacts, and regeneration-safe rename configuration to
+`data_gap_800ECE04`; regenerated the companion redefine table. The
+`RecompiledFuncs` target completed successfully. Existing format, pointer-sign,
+and self-comparison warnings were unrelated. No game or M5 experiment ran;
+there are no generated placeholders after this address in the current tree.
+Evidence table: `scratch/agent/s2967_generated_symbol_rename/source-table.md`.
+
+ORIGIN: naming-only data-gap reconciliation. The value is not a game-state
+mitigation; the rename reflects a mechanically bounded non-callable fragment.
+Next work returns to M5 Step 1: same-build image-vs-silent audio control.

@@ -1,43 +1,50 @@
-# NEXT work unit (s2967)
+# NEXT work unit (s2968)
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-audio-step1-image-vs-silent
 
 ## Unit
 
-Classify the next unparked generated placeholder after the resolved
-`0x800EC6EC` data gap. Re-census the maps first; the next address is expected
-to be `0x800ECE04`, subject to current synchronization. This is one bounded
-source-table audit. Do not run the game or M5 instrumentation.
+Execute M5 plan Step 1: same-build, phase-gated comparison of the Factor 5
+audio image arm and the explicit silent `musyx_stub` control. This is one
+experiment with both arms, not two sequential iterations. Use the existing
+AUTOPILOT route and retain all passive breadcrumb instruments. Do not change
+audio behavior or add a new diagnostic field.
 
 ## Competing hypotheses and discriminator
 
-- H-Callable: the candidate is a standalone callable function with an exact
-  companion semantic name.
-- H-Fragment: it is a valid but callable-ambiguous executable fragment; leave
-  all names unchanged.
-- H-DataGap: it is mechanically bounded non-callable data/fixup; rename it to
-  `data_gap_<address>` across every generated and source map.
+- H-AudioDegeneracy: the silent path causes downstream wait/slot/voice/PCM
+  failures. The image arm should add the predicted service, slot, voice, or
+  PCM transition while preserving the same route.
+- H-ContractGap: the image runs and completes but its task/DMEM/DMA/output
+  contract is incomplete. The image arm should show dispatch, task fields,
+  DMEM/DMA, image exit, and SP completion, but fail to close a downstream
+  service/slot/voice/PCM join.
+- H-MixedPipelines: RSP image audio and CPU MORT speech are independent. The
+  two arms may have identical RSP rows while MORT descriptor/PCM rows diverge
+  independently.
 
-Discriminate with this complete table: generated body and decode; exact
-predecessor/successor boundaries; generated callers and independent lookups;
-return/prologue evidence; companion map and m2c names. A callable rename
-requires an exact semantic name plus callable evidence. A mechanically proven
-non-callable record authorizes a data-gap rename. Otherwise preserve the
-placeholder.
+The discriminating measurement is one phase-keyed row for each arm containing
+`M_AUDTASK` dispatch/exit, task fields and source hash, DMEM change and DMA
+ranges, image completion, SP completion, service entry/return, status/slot
+transitions, voice/reap activity, MORT descriptor class, PCM source/consumer
+joins, and VI route phase (`1024 @ 0x00790400`, `512 @ 0x006AB400`). A whole-
+RDRAM oracle positive control and the port route/phase control must both fire;
+pre-title nulls are unevaluable.
 
 ## Commands
 
-1. Locate the next placeholder after `0x800EC6EC` in the project map and
-   generated overlay order with `rg`.
-2. Read only bounded windows around the candidate in generated C/header,
-   project symbols, companion symbols/m2c, and rename tables.
-3. Search all generated/source callers and independent lookups.
-4. Write the complete table to
-   `scratch/agent/s2966_generated_symbol_rename/source-table.md`.
-5. If authorized, apply the regeneration-safe rename and build
-   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RecompiledFuncs`.
+1. Build one binary:
+   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
+2. From `build/Debug`, launch both arms concurrently with the same
+   `ROGUESQ_AUTOPILOT`, `ROGUESQ_LOG_ALL`, `PROBE_PHASE_WIDTH=1`, and
+   `PROBE_KEYS_FROM_PHASE=1` settings; use `ROGUESQ_AUDIO_UCODE=0` for the
+   silent arm and `ROGUESQ_AUDIO_UCODE=1` for the image arm. Capture each arm
+   to a non-dot final path, watchdog it, and SIGKILL the process group.
+3. Check the whole-RDRAM oracle control before interpreting narrow retail or
+   port nulls; summarize both arms in one phase-keyed table.
 
-Expected outcomes: exact callable mapping or proven data gap produces a
-bounded rename and successful build; an ambiguous fragment produces no code
-rename but a documented classification. In either case append the result to
-`PORTING-STATE.md`, refresh `CURRENT-TRUTH.md`, and commit the iteration.
+Expected outcomes: image-only downstream progress selects H-AudioDegeneracy;
+image DMEM/DMA/SP progress without service/slot/PCM closure selects
+H-ContractGap; matching RSP rows with independent MORT/PCM divergence selects
+H-MixedPipelines. Rollback/control is `ROGUESQ_AUDIO_UCODE=0`; no source
+change is authorized by a route-only difference.
