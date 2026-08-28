@@ -123226,3 +123226,19 @@ This closes the exact-name and overlay-collision hypotheses for this address,
 while ruling out an invented standalone callable rename. No runtime, audio,
 or route behavior changed. The next sweep candidate is `0x8002BB34`.
 Evidence: `scratch/agent/s3022_generated_symbol_rename/source-table.md`.
+
+## Session 3023 (2026-08-28) — classified unresolved symbol at 0x8002BB34
+
+Completed the bounded generated-symbol audit at `0x8002BB34`. The companion
+libultra symbol/source tree has no identity for this address, and the generated
+tree has no callable definition, caller, header declaration, or overlay
+registration. The placeholder range overlaps the known `__osException` range
+and ends exactly at `__osEnqueueAndYield`, so it is not an independently
+supported generated function boundary. Preserved `func_8002BB34` rather than
+inventing a semantic rename or `data_gap_*` label. No build or runtime run was
+needed because the static discriminator selected the no-rename branch. This
+rules out the exact-companion-name and overlay-collision hypotheses for this
+address, while leaving the stale symbol-table boundary unexplained. No audio,
+route, or runtime behavior changed. The next sweep candidate is the next
+unresolved placeholder after this scanner stop. Evidence:
+`scratch/agent/s3023_generated_symbol_rename/source-table.md`.

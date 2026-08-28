@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3022 (2026-08-28).
+Current maintenance marker: Session 3023 (2026-08-28).
 
 ## Current state
 
@@ -673,6 +673,15 @@ recipe returned 127 immediately, and older s1972/s1974 runs respectively
 completed 330 seconds and were killed at the 600-second cap. Full details
 remain under `scratch/agent/soak_results/` and in `SOAK-RESULTS.md`.
 
+Session 3023 audited `0x8002BB34`. The companion libultra symbol/source tree
+has no identity for this address, and the generated tree has no callable
+definition, caller, header declaration, or overlay registration. The
+placeholder range overlaps the known `__osException` range and ends at
+`__osEnqueueAndYield`, so it is not an independently supported function
+boundary. Preserved `func_8002BB34` rather than inventing a rename or a
+`data_gap_*` classification. Evidence:
+`scratch/agent/s3023_generated_symbol_rename/source-table.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
@@ -694,8 +703,10 @@ blocker-free workstream until a new M5 route edge is available.
    `0x800233B0` is currently an inline fragment with no callable token, so do
    not force a generated rename. Audit the next placeholder candidate
    `0x80024878` was classified as `data_gap_80024878`; do not invent a
-   callable name for it. Continue at the next unresolved placeholder after
-   the scanner stop, `0x8002BB34`, and keep the M5 route dependency open below.
+   callable name for it. `0x8002BB34` has no companion identity or generated
+   callable boundary and remains a placeholder; do not force a rename or gap
+   label. Continue at the next unresolved placeholder after this audit and
+   keep the M5 route dependency open below.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the

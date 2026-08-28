@@ -1,4 +1,4 @@
-# NEXT work unit — classify `0x8002BB34`
+# NEXT work unit — classify `0x8003DFA0`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -14,17 +14,22 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 The discriminating measurement is one bounded static audit: compare the
 companion symbol/m2c sources, generated body and boundaries, all generated
-callers, overlay registration, and duplicate definitions for `0x8002BB34`.
-An exact companion name plus one coherent callable selects synchronization;
-a complete but unnamed callable selects no invented rename; a boundary-only
+callers, overlay registration, and duplicate definitions for `0x8003DFA0`.
+An exact companion name plus one coherent callable selects synchronization; a
+complete but unnamed callable selects no invented rename; a boundary-only
 fragment or collision selects a documented non-rename/manual review.
+
+The preceding `0x8002BB34` audit selected the no-rename branch: no companion
+identity or generated callable boundary exists, and its placeholder range
+overlaps known libultra symbols. Do not revisit it without new source
+evidence.
 
 ## Exact commands
 
 ```sh
-rg -n '8002BB34|func_8002BB34' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
-rg -n -C 20 '8002BB34|func_8002BB34' ../N64Recomp/RecompiledFuncs/funcs_*.c
-python3 tools/sweep_scan_candidates.py func_8002BB34
+rg -n '8003DFA0|func_8003DFA0' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
+rg -n -C 20 '8003DFA0|func_8003DFA0' ../N64Recomp/RecompiledFuncs/funcs_*.c
+python3 tools/sweep_scan_candidates.py func_8003DFA0
 ```
 
 If the sources agree on an exact identity, synchronize the project symbol
