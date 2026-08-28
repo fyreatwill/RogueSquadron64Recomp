@@ -1,40 +1,35 @@
-# NEXT work unit (s2992) — M5 producer-mark route edge
+# NEXT work unit — new M5 route repair or independent handoff
 
-HYPOTHESIS-ID: m5-independent-buffer-arbiter-handoff
+HYPOTHESIS-ID: m5-route-repair-blocked
 
-## Unit
+## Blocker
 
-Use the next retail-grounded edge, `bufferArbiterProducerMark` (`0x8001BCE4`),
-at dominant predecessor `0x8000C0C4` from the s2989 oracle table. Verify the
-exact generated caller, add one phase-scoped probe through the regeneration-
-safe fixup path, build, and run the qualified port capture with
-`ROGUESQ_FORCE_BUFFER_PROGRESS=0`. Do not repeat the READY, wait-on-video, or
-alloc probes unchanged.
+Do not repeat the current route-edge probe family. A human must supply or
+approve one genuinely new route repair/signal, or an independent retail-
+grounded handoff whose port-side producer can execute before the title/hangar
+phase gates. The existing host transition repair regressed boot, and the last
+three generated-edge probes all stopped at VI 640.
 
-## Competing hypotheses and discriminator
+## Evidence table
 
-- `H-producer-equivalent`: the port reaches target phase and executes the
-  producer edge with a matching route/register tuple; the missing route is
-  elsewhere.
-- `H-producer-missing`: retail executes the producer edge in title/hangar but
-  the port has no target-phase execution, selecting this signal boundary.
-- `H-producer-repair`: a bounded change at this edge reaches title/hangar
-  without degrading the LLE/task positive control.
+| Iteration | Edge | Same-run controls | Target phase | Target rows | Outcome |
+|---|---|---:|---|---:|---|
+| s2990 | waitOnVideoQueue | positive | none; VI 640 | 0 | unevaluable |
+| s2991 | bufferArbiterAllocSlot | 4,806 LLE + filter/shade | none; VI 640 | 0 | unevaluable |
+| s2992 | bufferArbiterProducerMark at 0x8000BFE8 | 80 LLE/audio | none; VI 640 | 0 | unevaluable |
 
-The single table must contain independent retail attribution, all producer
-callsite rows, same-run positive-control rows, VI transitions, target route
-rows, and crash/abort markers. A port null is valid only when positive
-controls and target phase both fire.
+The s2992 generated audit also corrected the prior edge premise:
+`0x8000C0C4` is the READY call, not ProducerMark. The single discriminating
+measurement for the next unit must include an independent ground-truth row,
+all same-build positive controls, VI transitions, target route rows, and
+crash/abort markers. A target null is valid only when target phase fires.
 
-## Commands
+## Exact entry condition
 
-Inspect `../N64Recomp/RecompiledFuncs/funcs_3.c` and
-`scratch/agent/s2989_m5_new_handoff/RESULTS.md`, then add the fixup and
-generated output. Build with:
-
-`cmake --build build --config Debug --target RogueSquadron64Recomp`
-
-Capture under `scratch/agent/s2992_m5_producer_signal/` with `tools/probe.sh`,
-`PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, `PROBE_LEAVE_OK=1`, the
-qualified LLE/image/task/route/passive breadcrumb variables, and SIGKILL /
-watchdog cleanup.
+After a new edge or repair is approved, document its retail PC/predicate in
+this file, add one regeneration-safe probe, build with
+`cmake --build build --config Debug --target RogueSquadron64Recomp`, and run
+from `build/` with `tools/probe.sh`, `PROBE_PHASE_WIDTH=1024`,
+`PROBE_KEYS_FROM_PHASE=1`, `PROBE_LEAVE_OK=1`, the qualified LLE/image/task
+controls, and SIGKILL/watchdog cleanup. Do not change audio behavior until a
+target-phase Step 1 comparison is evaluable.

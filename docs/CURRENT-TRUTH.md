@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2991 (2026-08-28).
+Current maintenance marker: Session 2992 (2026-08-28).
 
 ## Current state
 
@@ -162,6 +162,19 @@ rows, one filter-voice control, and eight shade-DMA controls) but stayed at VI
 target rows and no crash/abort markers. The target null is unevaluable, not
 evidence for `H-alloc-missing`; no behavior repair was attempted. Artifact:
 `scratch/agent/s2991_m5_alloc_signal/RESULTS.md`.
+
+Session 2992 audited the queued ProducerMark premise against the generated
+code before instrumenting it. `0x8000C0C4` calls READY
+(`bufferArbiterMarkSlotReady`, `0x8001BEC8`); the actual ProducerMark
+(`0x8001BCE4`) callers are `0x8000BFE8`, `0x8000C440`, `0x8000C628`, and
+`0x8000C64C`. Added the regeneration-safe probe at the dominant actual caller
+`0x8000BFE8` and built Debug successfully. The qualified capture passed 80
+LLE/audio-task positive-control rows but remained at VI 640 origin
+`0x0066A500`, with zero title/hangar phases, zero target rows, and no
+crash/abort markers. The target null is unevaluable; the generated-call audit
+does select the prior edge premise as mislabeled and rules out treating
+`0x8000C0C4` as ProducerMark. Artifact:
+`scratch/agent/s2992_m5_producer_signal/RESULTS.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -394,9 +407,12 @@ its remaining placeholder candidates are already classified.
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
    port to VI 320 in the paired run. The s2989 READY, s2990 wait-on-video, and
    s2991 alloc probes are unevaluable because the port stopped at VI 640; do
-   not repeat them unchanged. Use a different independently grounded edge,
-   such as the producer-mark caller at `0x8000C0C4`, retaining the same-run
-   task positive control plus title/hangar phase gates.
+   not repeat them unchanged. The `0x8000C0C4` example was verified to be
+   the READY caller, not ProducerMark; the actual ProducerMark caller probe at
+   `0x8000BFE8` was also unevaluable because the port stayed at VI 640.
+   Resume only with a genuinely new handoff/repair angle or independent
+   ground-truth edge, retaining the same-run task positive control plus
+   title/hangar phase gates.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a
