@@ -122710,3 +122710,19 @@ the existing regeneration-safe rename mapping to `data_gap_8001C3FC`.
 The generated-functions target built successfully. This rules out a justified
 semantic rename for this record and leaves `0x80023968` as the next candidate.
 Evidence: `scratch/agent/s2984_generated_symbol_rename/source-table.md`.
+
+## Session 2985 (2026-08-28) — classified 0x80023968 as data gap
+
+The bounded generated-symbol sweep inspected `0x80023968`. Its generated
+body contains only `mul.s $f18, $f5, $f14` and `add.s $f16, $f16, $f17`, with no
+stack frame, return, memory operation, generated caller, or standalone entry
+contract. It is bounded by the complete `getLoadedTextureCount` routine at
+`0x80023950` and the independent `emitMaterialRenderModeDL` prologue at
+`0x80023970`. The companion map supplied no semantic identity. The
+discriminator selected the mechanically proven boundary-gap classification.
+Synchronized the companion map, project symbol TOML, generated C/header/
+overlay artifacts, and the regeneration-safe rename mapping to
+`data_gap_80023968`. The `RecompiledFuncs` target built successfully. This
+rules out a justified semantic rename for this record and leaves `0x80024128`
+as the next candidate. Evidence:
+`scratch/agent/s2985_generated_symbol_rename/source-table.md`.

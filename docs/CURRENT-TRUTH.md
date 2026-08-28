@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2984 (2026-08-28).
+Current maintenance marker: Session 2985 (2026-08-28).
 
 ## Current state
 
@@ -85,6 +85,16 @@ semantic name; the companion's defined fake entry was synchronized to
 and regeneration-safe rename machinery. The generated-functions target built
 successfully. The next sweep candidate is `0x80023968`.
 Evidence: `scratch/agent/s2984_generated_symbol_rename/source-table.md`.
+
+Session 2985 classified `0x80023968` as a mechanically proven eight-byte
+boundary gap. Its body is only `mul.s` followed by `add.s`, between the
+complete `getLoadedTextureCount` and `emitMaterialRenderModeDL` routines;
+there is no generated caller, standalone entry contract, or companion
+semantic identity. Synchronized the companion map, project symbol TOML,
+generated C/header/overlay artifacts, and regeneration-safe rename machinery
+to `data_gap_80023968`; `RecompiledFuncs` built successfully. The next sweep
+candidate is `0x80024128`.
+Evidence: `scratch/agent/s2985_generated_symbol_rename/source-table.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -317,7 +327,8 @@ pending a new discriminator. The sweep is active under the stable slug
    This is the next executable unit while M5 lacks a target-phase route. Start
    at the lowest remaining placeholder and classify one bounded fragment using
    generated body shape, successor boundaries, callers, and the companion map;
-   rename only when the semantic name is independently supported.
+   rename only when the semantic name is independently supported. The next
+   candidate is `0x80024128`.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a

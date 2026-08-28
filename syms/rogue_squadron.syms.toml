@@ -366,7 +366,7 @@ functions = [
     { name = "unpackTlutToRgbaBytes", vram = 0x80023704, size = 0x148 },
     { name = "shiftTlutEntryWithinChunk", vram = 0x8002384C, size = 0x104 },
     { name = "getLoadedTextureCount", vram = 0x80023950, size = 0x18 },
-    { name = "fake_func_80023968", vram = 0x80023968, size = 0x8 },
+    { name = "data_gap_80023968", vram = 0x80023968, size = 0x8 },
     { name = "emitMaterialRenderModeDL", vram = 0x80023970, size = 0x1C8 },
     { name = "emitMaterialRenderModeDLAlt", vram = 0x80023B38, size = 0x188 },
     { name = "recordFrameTimestamp", vram = 0x80023CC0, size = 0x28 },
