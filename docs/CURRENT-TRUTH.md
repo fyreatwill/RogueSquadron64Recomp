@@ -143,6 +143,14 @@ rows and no crash or abort. This again selects H-route-invalid for the run;
 consumer equivalence and downstream audio remain unevaluable. Artifact:
 `scratch/agent/s2877_m5_route_state/RESULTS.md`.
 
+The s2878 documented in-process autopilot requalification was run as a
+same-build image/silent pair. Both arms reached the positive pre-title
+checkpoint `VI 640 @ 0x0066A500`, then timed out at the 180-second title gate;
+neither crashed or aborted, and neither reached title or hangar. This selects
+H-autopilot-does-not-repair-route and rejects H-arm-divergence for this run.
+Downstream consumer and audio rows remain unevaluable. Artifact:
+`scratch/agent/s2878_route_autopilot/`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated

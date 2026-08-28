@@ -1,38 +1,39 @@
-# NEXT work unit (s2878) — m5-route-qualification-autopilot
+# NEXT work unit (s2879) — m5-new-route-state-discriminator
 
-HYPOTHESIS-ID: m5-route-qualification-autopilot
+HYPOTHESIS-ID: m5-new-route-state-discriminator
 
 ## Work unit
 
-The s2877 port pair again failed the title gate while the probe was otherwise
-valid, so its zero rows are not evidence. First run the documented reliable
-in-process `ROGUESQ_AUTOPILOT` route with the existing build and the same
-image/silent arms, phase-gating at title and continuing through hangar. Do not
-add another probe or interpret consumer rows until this route qualification
-passes.
+Choose one genuinely new, ground-truth-first post-dispatch route-state
+discriminator from the documented M5 boundary. The autopilot qualification
+failed symmetrically at pre-title VI 640, so do not interpret downstream audio
+or repeat the consumer census. Before adding port instrumentation, use the
+retail oracle to qualify the candidate address/range and its phase behavior,
+including the whole-RDRAM positive control. Then build one batched port probe
+for all candidate keys and both image/silent arms, only if the oracle selects
+a useful discriminator.
 
 ## Competing hypotheses and discriminator
 
-- H-autopilot-repairs-route: both arms reach title and hangar with the
-  documented autopilot route, making the existing consumer probe interpretable.
-- H-autopilot-does-not-repair-route: both arms still fail before title, so the
-  current blocker is not the probe or phase-relative key driver.
-- H-arm-divergence: image and silent arms differ in title/hangar reachability,
-  selecting an audio-arm route effect for the next discriminator.
+- H-route-state-key: a new retail phase-live scheduler/state key is absent or
+  differs on the port and explains the pre-title route stop.
+- H-route-equivalent: the candidate key is present and phase-equivalent, so it
+  does not explain the route stop and selects a different route-state class.
+- H-arm-specific: image and silent arms differ at the candidate key or phase
+  gate, selecting an audio-arm route effect.
 
-The discriminator is one same-build image/silent table containing phase-gate
-status, title/hangar reachability, crash/abort markers, and the last VI origin.
-Each possible arm outcome selects one hypothesis above.
+The discriminating measurement is a single phase-gated retail/port table with
+whole-RDRAM control count, candidate-key writes/values and PCs, title/hangar
+reachability, last VI width/origin, and crash/abort markers. A positive
+control that does not fire invalidates the table; a port-invalid pre-title
+result leaves the candidate unevaluable rather than supporting H-route-state.
 
-## Exact command
+## Exact next commands
 
-    # Run image/silent arms concurrently from build/ with the documented
-    # in-process driver; gate at title and continue through hangar.
-    env ROGUESQ_AUTOPILOT=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 \
-      ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=0 PROBE_PHASE_WIDTH=1024 \
-      PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
-      zsh tools/probe.sh scratch/agent/s2878_route_autopilot/silent 60 1
-    # Repeat concurrently with ROGUESQ_AUDIO_UCODE=1; no build is needed.
-
-Record the phase table under `scratch/agent/s2878_route_autopilot/`; use SIGKILL,
-run from `build/`, and run `git diff --check` before committing.
+Read `tools/oracle/README.md` and `docs/F5-UCODE-REFERENCE.md`, select a new
+post-dispatch range, then run the oracle positive control and candidate watch
+from its documented launcher. Only after that result qualifies a candidate,
+create the regeneration-safe probe and run both arms concurrently from
+`build/` with SIGKILL watchdog cleanup. Record the table under
+`scratch/agent/s2879_m5_new_route_state/`; run `git diff --check` before
+committing.

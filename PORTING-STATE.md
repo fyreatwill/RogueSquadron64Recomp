@@ -120786,3 +120786,15 @@ H-route-invalid for this run and rules out neither consumer-missing nor
 consumer-equivalent; downstream audio remains unevaluable. The probe script
 and table are in `tools/apply_s2877_m5_route_probe.py` and
 `scratch/agent/s2877_m5_route_state/RESULTS.md`.
+
+## Session 2878 (2026-08-27) — autopilot route qualification failed symmetrically
+
+The existing Debug build was run concurrently with the documented in-process
+autopilot recipe, once with the silent audio arm and once with the Factor 5
+image arm. Both bounded runs reached the same positive pre-title checkpoint,
+VI width 640 at origin `0x0066A500`, then timed out after 180 seconds without
+reaching title width 1024 or hangar width 512. Neither arm emitted a crash or
+abort marker. This selects H-autopilot-does-not-repair-route and rejects
+H-arm-divergence for this run; the route is still invalid before the target
+phases, so consumer and downstream audio equivalence remain unevaluable. The
+run logs are in `scratch/agent/s2878_route_autopilot/`.
