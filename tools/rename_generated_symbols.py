@@ -139,6 +139,9 @@ RENAMES = {
     # This four-byte branch enters the epilogue of the following initializer;
     # it has no standalone prologue, return, caller, or semantic companion.
     "fake_func_8003E55C": "data_gap_8003E55C",
+    # This twelve-byte generated record is a fixup trap for a missing label
+    # between established NPC routines; it has no callable body or references.
+    "fake_func_80040304": "data_gap_80040304",
     # These four-byte records contain only non-returning instruction
     # fragments immediately before named routines; they are not callable
     # function bodies.

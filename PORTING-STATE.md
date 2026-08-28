@@ -121309,3 +121309,21 @@ generated header, overlay metadata, and regeneration-safe rename table. The
 Debug target rebuilt successfully. It rules out a source-backed semantic
 rename for this record but cannot prove that an undocumented indirect entry
 does not exist; no runtime behavior or mitigation was changed.
+
+## Session 2907 (2026-08-27) — reconciled NPC-overlay fixup data gap at 0x80040304
+
+Inspected the complete generated-symbol interval `0x80040304..0x80040308`.
+The sole placeholder, `0x80040304`, is a 12-byte generated `__builtin_trap()`
+from a missing target label `L_80040314`, bounded between
+`destroyTransientNpcSlots` and `allocAndInitParticlePool`. The companion map
+has no source/m2c semantic name, and exact searches found no generated caller
+or address lookup beyond overlay metadata. The complete source table is
+`scratch/agent/s2907_generated_symbol_rename/source-table.md`.
+
+This selects H-DataGap and renames `fake_func_80040304` to
+`data_gap_80040304` in the companion map, project symbol map, generated C,
+generated header, overlay metadata, and regeneration-safe rename table. Exact
+old-name searches returned zero results, and the Debug target rebuilt
+successfully. It rules out a source-backed semantic rename for this record but
+cannot prove that an undocumented indirect entry does not exist; no runtime
+behavior or mitigation was changed.

@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2906 (2026-08-27).
+Current maintenance marker: Session 2907 (2026-08-27).
+
+The s2907 generated-symbol sweep classified `0x80040304..0x80040308`.
+`0x80040304` is a 12-byte generated fixup trap for a missing label between
+`destroyTransientNpcSlots` and `allocAndInitParticlePool`. It has no
+companion semantic name, generated caller, or address lookup, so it was
+renamed to `data_gap_80040304` in the companion source map, project symbol
+map, generated C/header, overlay metadata, and regeneration-safe rename
+table. The Debug target rebuilt successfully. The complete table is
+`scratch/agent/s2907_generated_symbol_rename/source-table.md`.
 
 The s2906 generated-symbol sweep classified `0x8003E55C..0x8003E560`.
 `0x8003E55C` is a four-byte branch into the `initNpcSlotList` epilogue, with
@@ -404,7 +413,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80029D20` as data gaps. s2902 inspected the following
    `0x80029D20..0x8002A080` established-symbol interval and found no
    placeholders; s2906 then classified `0x8003E55C` as a bounded data gap.
-   Continue with the next remaining placeholder at `0x80040304`.
+   s2907 then classified `0x80040304..0x80040308` as a bounded invalid/data
+   gap between established NPC routines. Continue with the next remaining
+   placeholder at `0x8004661C`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

@@ -1,9 +1,9 @@
-# NEXT work unit (s2907) — generated-symbol sweep at 0x80040304
+# NEXT work unit (s2908) — generated-symbol sweep at 0x8004661C
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Inspect the next bounded placeholder interval after the already reconciled
-`0x8003E55C` record: `0x80040304..0x80040308`. Reconcile only
+`0x80040304` record: `0x8004661C..0x80046620`. Reconcile only
 source-backed semantic names or mechanically proven non-callable `data_gap_*`
 records in the companion/project maps, generated snapshot, and
 regeneration-safe rename table. Leave callable-ambiguous and data-ambiguous
@@ -13,9 +13,9 @@ the pre-title key but did not qualify target phases.
 ## Competing hypotheses and discriminator
 
 - H-CallableSemantic: companion m2c/source evidence supports a human symbol
-  name for `0x80040304`.
+  name for `0x8004661C`.
 - H-DataGap: exact boundaries, a short fragment/trap body, and no
-  callers/lookups prove a non-callable record, so `data_gap_80040304` is the
+  callers/lookups prove a non-callable record, so `data_gap_8004661C` is the
   defensible reconciliation.
 - H-Ambiguous: evidence cannot separate a callable trampoline from a split/data
   artifact; leave the placeholder unchanged.
@@ -31,5 +31,5 @@ Run `python3 tools/rename_generated_symbols.py --help`, inspect the bounded
 interval, and use the project reconciliation workflow. Build the Debug target
 if generated files change.
 Record the complete table at
-`scratch/agent/s2906_generated_symbol_rename/source-table.md`. Verify exact
+`scratch/agent/s2907_generated_symbol_rename/source-table.md`. Verify exact
 old-name searches and build the Debug target if generated files change.
