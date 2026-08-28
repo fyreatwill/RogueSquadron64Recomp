@@ -123398,3 +123398,19 @@ placeholder rather than inventing a name for the large unresolved boundary
 and built `RecompiledFuncs` successfully. This rules out an exact companion
 rename and a one-word/data-gap interpretation for this address. Evidence:
 `scratch/agent/s3035_generated_symbol_rename/source-table.md`.
+
+## Session 3036 (2026-08-28) — audited 0x8009C2C8 generated symbol boundary
+
+Audited the next generated placeholder at `0x8009C2C8` using the companion
+symbol map, generated body/header, direct-reference census, overlay
+registration, and project symbol TOML. The companion map has no human
+identity and retains `fake_func_8009C2C8`. The generated body is exactly two
+floating-point instructions, `mul.s $f2,$f2,$f4` and
+`add.s $f0,$f0,$f2`, followed immediately by the standalone
+`computeVoicePanCoefficients` prologue at `0x8009C2D0`; it has no return or
+callable epilogue. There are no direct generated callers. The header,
+overlay registration, and TOML all agree on an 8-byte fragment. Preserved the
+placeholder rather than inventing a callable or semantic gap rename and built
+`RecompiledFuncs` successfully. This rules out an exact companion rename and
+a callable-boundary interpretation for this address. Evidence:
+`scratch/agent/s3036_generated_symbol_rename/source-table.md`.

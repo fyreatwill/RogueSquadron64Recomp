@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3035 (2026-08-28).
+Current maintenance marker: Session 3036 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,17 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3036 audited `0x8009C2C8`. The companion map retains
+`fake_func_8009C2C8` with no human identity. The generated snapshot emits
+exactly two floating-point instructions (`mul.s` and `add.s`) at the address,
+followed immediately by the standalone `computeVoicePanCoefficients`
+prologue at `0x8009C2D0`; there is no return or callable epilogue. No direct
+generated callers reference the placeholder, and its header/overlay/TOML
+entries consistently describe an 8-byte emitted fragment. Preserved the
+placeholder rather than inventing a semantic name and built
+`RecompiledFuncs` successfully. Evidence:
+`scratch/agent/s3036_generated_symbol_rename/source-table.md`.
 
 Session 3035 audited `0x80099FDC`. The companion map has no human identity
 and explicitly retains `fake_func_80099FDC`; the project TOML's `0x4` size is
