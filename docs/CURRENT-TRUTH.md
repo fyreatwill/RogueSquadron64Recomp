@@ -4,7 +4,14 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2933 (2026-08-27).
+Current maintenance marker: Session 2934 (2026-08-27).
+
+The s2934 generated-symbol sweep reconciled `0x800927B0` to
+`interpolatePointTableSamplesToPackedWord`. The complete 0x124-byte
+interpolation loop has two generated callers, and the companion map, generated
+C/header, overlay registration, and rename helper already used that exact
+semantic name; only the project symbol map was stale. Complete table:
+`scratch/agent/s2934_generated_symbol_rename/source-table.md`.
 
 The s2933 generated-symbol sweep reconciled `0x8008ED6C` to
 `serviceAudioOutputBuffers`. The companion map, generated C/header, and
@@ -626,7 +633,7 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80109620` as bounded data gaps. The s2892 sweep then reconciled the
    next main-text record at `0x800027B8` as a bounded data gap; s2893
    reconciled the four-byte `0x8000337C` fragment as `data_gap_8000337C`.
-   Continue with the next remaining placeholder after `0x80003380` unless M5
+   Continue with the next remaining placeholder after `0x800927B0` unless M5
    gets a new writer-backed route or contract discriminator. s2894 classified
    `0x80003424..0x80003430` as a bounded non-callable data gap; continue after
    `0x80003430`. s2895 classified `0x8000537C..0x80005380` as a bounded

@@ -121815,3 +121815,14 @@ companion name and `0x4` extent. This rules out the placeholder as an
 unresolved callable and closes the map mismatch; it does not establish a
 runtime audio producer or change audio behavior. Evidence table:
 `scratch/agent/s2933_generated_symbol_rename/source-table.md`.
+
+## Session 2934 (2026-08-27) — reconciled point-table interpolation symbol
+
+The bounded generated-symbol census for `0x800927B0` found a complete 0x124-byte
+interpolation loop with two generated callers at `0x800926F8` and `0x80092704`.
+The companion map, generated C/header, overlay registration, and rename helper
+already named it `interpolatePointTableSamplesToPackedWord`; only
+`syms/rogue_squadron.syms.toml` was stale as `func_main_800927B0`. Changed the
+project map to the exact semantic name without changing the size or generated
+code. This rules out a missing semantic mapping at this address; no runtime
+experiment was needed. Evidence: `scratch/agent/s2934_generated_symbol_rename/source-table.md`.
