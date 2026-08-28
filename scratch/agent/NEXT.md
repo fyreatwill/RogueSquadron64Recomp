@@ -1,46 +1,46 @@
-# NEXT work unit (s2973)
+# NEXT work unit (s2974)
 
-HYPOTHESIS-ID: m5-port-route-preparation
+HYPOTHESIS-ID: m5-route-prep-target-predicate
 
 ## Unit
 
-Run one phase-gated port route-preparation census using the existing
-regeneration-safe M5 route probes. Launch silent and image arms concurrently
-from one Debug build, with the validated AUTOPILOT and the retail oracle's
-positive-control recipe retained. Add no new instrumentation and change no
-behavior. Capture pre-target route preparation, VI-commit transition,
-identity-edge, route-state, and target-candidate rows, keyed by arm and VI
-phase, to explain the s2972 port stop at VI 640.
+Perform one bounded source audit of the existing M5 route-preparation target
+predicate and its legitimate writer/ordering edge, using the s2973 evidence as
+the baseline. Do not de-stub audio or add another run-lifetime diagnostic.
+Identify the exact state/VI values that make the port predicate remain
+`target=0` at VI 640, compare them with the retail target handoff already
+captured by the oracle, and land one regeneration-safe route repair only if the
+writer is demonstrably producing a stale or incomplete port value. If the
+predicate is intentionally pre-target-only, record the specific missing
+handoff rather than adding a guard.
 
 ## Competing hypotheses and discriminator
 
-- H-route-prep-absent: after the port reaches VI 640, no route-preparation
-  row has `target=1`; the target handoff is never prepared on the port.
-- H-route-identity-stale: target preparation rows exist, but the subsequent
-  VI transition or identity-edge rows do not commit the requested title/hangar
-  origin; the port route state is stale or rejected before presentation.
-- H-audio-arm-route: the route-preparation/identity table diverges between
-  silent and image arms, making the audio dispatch arm part of the route stop.
+- H-target-predicate-stale: the port target predicate reads a stale or
+  incomplete VI/route value; the writer and ordering edge can be named and a
+  minimal repair makes the target predicate true.
+- H-target-handoff-missing: the predicate is correct, but the port never
+  receives or commits the upstream target route handoff; no local predicate
+  change is justified.
+- H-target-definition-mismatch: the port and retail use different legitimate
+  target identity/origin definitions; the mismatch must be resolved from the
+  independent oracle before changing code.
 
-The discriminator is one complete table of all route-prepare rows (including
-`target` and requested width/origin), VI-transition rows, identity-edge rows,
-route-state rows, target-candidate rows, and phase transitions for both arms.
-Target preparation with no commit selects H-route-identity-stale; no target
-preparation in either arm selects H-route-prep-absent; an arm-only difference
-selects H-audio-arm-route. A missing phase transition keeps downstream audio
-rows unevaluable but does not erase pre-target route evidence.
+The discriminator is the source-level value-flow table: target predicate,
+each input value, its writer, ordering edge, and the corresponding retail
+handoff fields. A stale value with a named writer selects H-target-predicate-
+stale; an absent upstream handoff selects H-target-handoff-missing; a
+legitimate definition mismatch selects H-target-definition-mismatch. Do not
+build or run until this table is written here or in a new artifact.
 
 ## Commands
 
-1. Build once: `cmake --build build --config Debug --target RogueSquadron64Recomp`.
-2. Run the existing corrected pair wrapper from
-   `scratch/agent/s2972_m5_step1_qualified_route/run_pair.sh`, copied or
-   parameterized into a new s2973 artifact directory. Add
-   `ROGUESQ_LOG_M5_ROUTE_PREPARE=1`, `ROGUESQ_LOG_M5_ROUTE_TRANSITION=1`,
-   `ROGUESQ_LOG_M5_IDENTITY_EDGES=1`, `ROGUESQ_LOG_M5_ROUTE_STATE=1`, and
-   `ROGUESQ_LOG_M5_ROUTE_CANDIDATE=1` to both arms. Keep
-   `PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and
-   `PROBE_LEAVE_OK=1`; terminate the oracle and both game process groups with
-   SIGKILL.
-3. Summarize every arm's route table and select exactly one hypothesis. Do
-   not interpret service/slot/PCM nulls unless a target phase is observed.
+1. Inspect the existing route-preparation call sites and handoff definitions:
+   `rg -n "route_target|route_prepare|m5.*route|VI_ORIGIN_REG|VI_WIDTH_REG" src RecompiledPatches build -g '!*.log'`.
+2. Read bounded windows around each predicate and writer. Check the s2973
+   `RESULTS.md` and the oracle route fields; do not read large logs.
+3. If and only if the table identifies a legitimate stale-value writer,
+   patch the smallest regeneration-safe host route handoff, rebuild
+   `RogueSquadron64Recomp`, and run both arms with the existing s2973 wrapper
+   recipe and oracle positive control. Otherwise land the audit artifact and
+   leave behavior unchanged.

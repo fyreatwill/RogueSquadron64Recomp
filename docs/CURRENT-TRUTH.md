@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2972 (2026-08-28).
+Current maintenance marker: Session 2973 (2026-08-28).
 
 ## Current state
 
@@ -62,6 +62,17 @@ retail oracle in the same artifact passed its whole-RDRAM positive control and
 reached title/hangar. This selects `H-port-route` for this capture; all
 downstream audio nulls remain unevaluable and no audio behavior changed.
 Artifact: `scratch/agent/s2972_m5_step1_qualified_route/RESULTS.md`.
+
+Session 2973 ran the phase-gated M5 route-preparation census after fixing two
+wrapper-only zsh formatting defects. The retail oracle in the same artifact
+passed its whole-RDRAM positive control and reached title `1024 @ 0x00790400`
+and hangar `512 @ 0x006AB400`. Both port arms reached only VI 640
+(`0x0066A500`) with no crash or abort. Route preparation was active in both
+arms, but every row was non-target (`target=0`, `accepted=0`): 1,027 rows in
+silent and 839 in image. No target-candidate or identity-edge row fired. This
+selects `H-route-prep-absent` and rules out an audio-arm-specific preparation
+divergence for this capture. Downstream audio nulls remain unevaluable.
+Artifact: `scratch/agent/s2973_m5_route_preparation/RESULTS.md`.
 
 Session 2968 ran the M5 Step 1 same-build pair after a successful Debug
 rebuild. The independent retail oracle passed its whole-RDRAM positive
@@ -209,16 +220,17 @@ remain under `scratch/agent/soak_results/` and in `SOAK-RESULTS.md`.
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
-symbol sweep. Maintenance is complete for this iteration. M5 is paused after
-another route-invalid port baseline despite a qualified retail route; M3 is
-parked pending a new discriminator.
+symbol sweep. Maintenance is complete for this iteration. M5 remains active
+on the route-preparation target predicate; M3 is parked pending a new
+discriminator.
 
-1. **M5 audio de-stubbing — plan complete, execution gated by port route.**
-   `docs/M5-AUDIO-PLAN.md` inventories every active audio stub, trap, gate, and
-   safety hatch. Do not interpret service, slot, MORT, or PCM nulls until a
-   same-build port run qualifies title/hangar. The s2972 pair still stops at
-   VI 640, so do not interpret downstream nulls or change audio behavior
-   without an `ORIGIN:` naming the legitimate writer and ordering edge.
+1. **M5 route preparation — target predicate is absent at the VI-640 boundary.**
+   The s2973 same-build pair selected `H-route-prep-absent`: route preparation
+   fires, but target is zero for every row in both arms. Audit the existing
+   route-preparation target predicate and its legitimate writer/ordering edge
+   against the retail route, then make one bounded route repair before any
+   audio de-stub. Any mitigation requires an `ORIGIN:` naming the writer and
+   whether the value is legitimate.
 
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.

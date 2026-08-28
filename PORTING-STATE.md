@@ -122523,3 +122523,20 @@ audio evidence. No behavior change or port instrumentation was added. The
 fixed wrapper and run data are at
 `scratch/agent/s2972_m5_step1_qualified_route/`; the concise result table is
 `scratch/agent/s2972_m5_step1_qualified_route/RESULTS.md`.
+
+## Session 2973 (2026-08-28) — selected absent M5 target route preparation
+
+Built the Debug target successfully and ran the corrected phase-gated M5
+silent/image pair with the retail oracle positive control. The oracle reached
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` after its whole-RDRAM
+watch reached 10,000 callbacks. Both port arms reached only VI 640
+(`0x0066A500`) without crash or abort. Route-preparation logging was positive
+in both arms, but every row was `target=0 accepted=0`: 1,027 silent rows and
+839 image rows. No target-candidate or identity-edge rows fired. This selects
+`H-route-prep-absent` and rules out an audio-arm-specific preparation
+divergence for this capture; downstream audio nulls remain unevaluable.
+
+The first two wrapper attempts failed before measurement because zsh `set -u`
+and `print` parsed wrapper variables/separators incorrectly. Fixed the wrapper
+and reran the same unit; only the third run is evidence. Artifact:
+`scratch/agent/s2973_m5_route_preparation/RESULTS.md`.
