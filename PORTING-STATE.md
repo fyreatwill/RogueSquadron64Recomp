@@ -120699,3 +120699,23 @@ This rules out a route-state explanation at the sampled table and scope. It does
 not authorize a writer, consumer, guard, route bypass, or other behavior change.
 The next work unit pivots to the distinct `gGameSettings`/`mainGameLoop`
 state-arbiter class. Artifacts: `scratch/agent/s2872_m5_new_route_state_discriminator/`.
+
+## Session 2873 (2026-08-27) — renamed three proven main-overlay data gaps
+
+The mandated bounded generated-symbol pivot inspected the companion map and
+generated snapshot for `0x80079278..0x8007A0F0`. The three placeholder records
+at `0x80079278`, `0x80079CD8`, and `0x8007A0E8` are each exactly eight bytes,
+contain only isolated instruction fragments, and immediately precede named
+routines (`heavyMechSubEffectNpcHandler`, `setNewAndPreviousButtonsPressed`,
+and `sampleRgbBoxFilter2x2AtSubpixel`). The companion map's `defined:true`
+entries agreed with the generated declarations and overlay registry. This
+selects H-data-gap and rules out inventing callable semantic names for this
+batch.
+
+The regeneration-safe rename tool, project TOML symbol map, companion symbol
+file, generated `funcs_19.c`, `funcs.h`, and `recomp_overlays.inl` now use the
+three `data_gap_*` names. The tool reported exactly 9 generated references
+changed across 3 generated files; there was no build or runtime experiment
+because this was a bounded naming change, not an audio behavior test.
+
+Artifact: `scratch/agent/s2873_generated_symbol_rename/`.

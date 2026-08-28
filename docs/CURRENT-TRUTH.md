@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2871 (2026-08-27).
+Current maintenance marker: Session 2873 (2026-08-27).
 
 ## Live result
 
@@ -100,6 +100,12 @@ before the target phases. The AI status shim reports the N64 FIFO-full bit
 (`0x40000000`) when buffered audio is full, but no qualified caller was found;
 it is not established as the PCM blocker.
 
+The s2873 generated-symbol sweep classified three main-overlay records at
+`0x80079278`, `0x80079CD8`, and `0x8007A0E8` as non-callable eight-byte
+instruction fragments immediately before named routines. They are now named
+`data_gap_*` in the companion map, project symbol map, and generated snapshot;
+the rename is recorded in `tools/rename_generated_symbols.py` for regeneration.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
@@ -123,13 +129,17 @@ apply only source-backed renames and preserve callable-ambiguous records.
    arms still stopped at VI 640, selecting H-route-state; the next unit must
    test the distinct `gGameSettings`/`mainGameLoop` state-arbiter class
    (`0x80130B40`, `mainGameLoop=0x8003DFA0`) before interpreting downstream
-   nulls. Ground truth must precede any port instrumentation.
+   nulls. Ground truth must precede any port instrumentation. The s2873 pivot
+   did not change this unresolved M5 ordering; its next audio behavior change
+   still requires a named legitimate contract edge.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-3. **Generated-symbol renaming sweep.** The next bounded source-backed batch
-   is `0x80074500..0x80075500` (see `scratch/agent/NEXT.md`). Exact companion
-   semantic names and mechanically proven short data-gap names are allowed;
-   callable-ambiguous and data-ambiguous entries stay unchanged.
+3. **Generated-symbol renaming sweep.** The s2873 batch completed
+   `0x80079278..0x8007A0F0`: three proven data gaps were renamed and no
+   callable names were inferred. Continue with the next bounded unresolved
+   interval only when M5 has no writer-backed behavior edge; exact companion
+   semantic names and mechanically proven short data-gap names are allowed,
+   while callable-ambiguous and data-ambiguous entries stay unchanged.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

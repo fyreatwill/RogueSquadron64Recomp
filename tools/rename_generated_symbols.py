@@ -56,6 +56,11 @@ RENAMES = {
     "fake_func_8000737C": "data_gap_8000737C",
     "fake_func_800074D8": "data_gap_800074D8",
     "fake_func_80007908": "data_gap_80007908",
+    # These eight-byte main-overlay records contain only an isolated
+    # instruction fragment immediately before named routines.
+    "fake_func_80079278": "data_gap_80079278",
+    "fake_func_80079CD8": "data_gap_80079CD8",
+    "fake_func_8007A0E8": "data_gap_8007A0E8",
     # The companion map places these short records immediately before named
     # functions; they are data gaps, not callable game routines.
     "fake_func_80064294": "data_gap_80064294",
