@@ -121517,3 +121517,21 @@ successfully with only pre-existing warnings. This rules out a source-backed
 semantic rename for the record and closes this interval; it does not make any
 claim about the next placeholder. Complete evidence table:
 `scratch/agent/s2918_generated_symbol_rename/source-table.md`.
+
+## Session 2919 (2026-08-27) — preserved callable-ambiguous record at 0x8005C61C
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 37,614
+bytes, so this was not a maintenance iteration. The bounded generated-symbol
+sweep inspected `0x8005C61C..0x8005C620`. Its four-byte body is the valid
+instruction `addu $v1, $v1, $a0`, following the complete
+`allocAllInitialNpcSlots` return sequence and preceding the complete
+`checkTrackedNpcProximityForCue` prologue. The generated snapshot already
+uses `checkTrackedNpcProximityForCuePreamble`, but the companion map still
+explicitly names the record `fake_func_8005C61C` and no companion source or
+m2c mapping supplies a semantic name. Exact searches found no generated caller
+or independent lookup. The reconciliation tool reported `renamed 0 references
+in 0 files` and classified the candidate `ambiguous-or-fake`; no maps,
+generated files, or rename-table entries changed. This rules out a
+source-backed semantic rename and a mechanically proven data-gap rename for
+this interval, but does not rule out a split callable fragment. Complete
+evidence table: `scratch/agent/s2919_generated_symbol_rename/source-table.md`.

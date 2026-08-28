@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2918 (2026-08-27).
+Current maintenance marker: Session 2919 (2026-08-27).
+
+The s2919 generated-symbol sweep inspected `0x8005C61C..0x8005C620`. The
+four-byte record contains one valid `addu $v1,$v1,$a0` between the complete
+`allocAllInitialNpcSlots` return sequence and `checkTrackedNpcProximityForCue`.
+The generated snapshot already uses `checkTrackedNpcProximityForCuePreamble`,
+but the companion map explicitly retains `fake_func_8005C61C` and provides no
+source-backed semantic name. With no standalone prologue, return, generated
+caller, or independent lookup, it remains callable-ambiguous rather than a
+proven data gap. No maps, generated files, or rename-table entries changed.
+Complete table: `scratch/agent/s2919_generated_symbol_rename/source-table.md`.
 
 The s2918 generated-symbol sweep classified `0x8005A11C..0x8005A120` as a
 four-byte non-callable isolated load between complete
@@ -525,8 +535,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80055698..0x800556A0` as a bounded load/increment data gap between
    `initPlayerStructs` and `loadTxtFile`; s2918 then classified
    `0x8005A11C..0x8005A120` as a bounded isolated-load data gap between
-   `isPointWithinBoundingBox` and `loadTopCloudsAsset`. Continue with the
-   next remaining placeholder after `0x8005A120`.
+   `isPointWithinBoundingBox` and `loadTopCloudsAsset`. The s2919 candidate at
+   `0x8005C61C` remains callable-ambiguous because its valid instruction does
+   not prove a data gap; continue with the next remaining placeholder after
+   `0x8005C620`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
