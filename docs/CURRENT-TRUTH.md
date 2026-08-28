@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2975 (2026-08-28).
+Current maintenance marker: Session 2976 (2026-08-28).
 
 ## Current state
 
@@ -28,6 +28,17 @@ MORT speech are separate contracts. A `Broke` return proves task completion,
 not PCM correctness.
 
 ## Latest results
+
+Session 2976 completed the phase-aware independent retail route capture after
+the s2975 watch-overhead failure. The oracle now defers execution watches until
+the first requested target VI bucket while retaining the whole-RDRAM positive
+control. The corrected Rice-backed run passed the control at 10,000 callbacks,
+armed at title `1024 @ 0x00790400`, and recorded 1,352 title rows plus 810
+hangar rows at `512 @ 0x006AB400` for route PC `0x80019CD8` (all predecessor
+`0x80033300`). It supports `H-retail-target-predicate` as single-source
+evidence and rules out the absent-retail-route and debugger-overhead
+explanations for this capture; it does not establish a port mismatch.
+Artifact: `scratch/agent/s2976_m5_route_oracle/RESULTS.md`.
 
 Session 2975 attempted the independent retail route-preparation discriminator
 at guest PC `0x80019CD8`. The fixed command used the locally built debugger
@@ -246,13 +257,13 @@ on the route-preparation target predicate; M3 is parked pending a new
 discriminator. The sweep is active under the stable slug
 `generated-symbol-renaming-sweep`.
 
-1. **M5 route preparation — phase-aware retail discriminator required.** The
-   s2975 oracle capture passed its positive control and route-PC control but
-   remained at boot width because the per-execution watch was too expensive.
-   Add one phase-aware breakpoint-arm capability or equivalent bounded oracle
-   route measurement before changing the predicate. Do not interpret the
-   boot-only null as a route result. Any mitigation requires an `ORIGIN:`
-   naming the writer and whether the value is legitimate.
+1. **M5 route preparation — phase-scoped port comparison.** The s2976 retail
+   oracle capture passed its positive control and found route-PC executions in
+   both title and hangar target phases. Add the equivalent phase-scoped route
+   probe to the port, retaining its positive control, and compare predecessor,
+   arguments, and live VI fields in one run. Do not change the predicate from
+   retail evidence alone. Any mitigation requires an `ORIGIN:` naming the
+   writer and whether the value is legitimate.
 
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.

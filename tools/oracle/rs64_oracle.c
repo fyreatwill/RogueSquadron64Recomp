@@ -100,6 +100,8 @@ struct watch {
     long hits;
     long read_hits;
     long write_hits;
+    int breakpoint_idx;
+    int armed;
 };
 static struct watch g_watch[MAX_WATCHES];
 struct writer_pc {
@@ -217,6 +219,8 @@ static uint32_t g_post_value_pending_origin;
 static long g_vis;
 static int g_verbose;
 static int g_watches_armed;
+static int g_defer_exec_watches;
+static int g_exec_watches_phase_armed;
 static int g_positive_watch_removed;
 static long g_pc_hits;
 static int g_gpr_ctl_printed;
@@ -1235,6 +1239,8 @@ static void core_msg(void *ctx, int level, const char *msg)
 
 /* ---- debugger callbacks ------------------------------------------------ */
 
+static void arm_watch(int i);
+
 /* Installs every --watch-* the user asked for. Split out of dbg_init() (see
  * below) so it can be deferred to first VI instead of running at debugger
  * init. */
@@ -1242,26 +1248,57 @@ static void arm_watches(void)
 {
     int i;
     for (i = 0; i < g_nwatch; i++) {
-        m64p_breakpoint bkp;
-        int idx;
-        bkp.address = g_watch[i].start;
-        /* lookup_breakpoint() tests `address <= endaddr`, i.e. endaddr is
-         * INCLUSIVE. We take ranges half-open like everyone else, so convert
-         * here - otherwise every watch silently covers one extra word and
-         * reports hits from outside the range you asked about. */
-        bkp.endaddr = g_watch[i].end - 1;
-        bkp.flags   = M64P_BKP_FLAG_ENABLED | g_watch[i].flags;
-        idx = pDebugBreakpointCommand(M64P_BKP_CMD_ADD_STRUCT, 0, &bkp);
-        if (idx < 0) {
-            fprintf(stderr, "[oracle] FAILED to add watch %s [0x%08x,0x%08x]\n",
-                    g_watch[i].label, g_watch[i].start, g_watch[i].end);
-        } else {
-            printf("[watch] %s [0x%08x,0x%08x) flags=0x%x idx=%d\n",
-                   g_watch[i].label, g_watch[i].start, g_watch[i].end,
-                   bkp.flags, idx);
-        }
+        if (g_watch[i].flags & M64P_BKP_FLAG_EXEC && g_defer_exec_watches)
+            continue;
+        arm_watch(i);
     }
     fflush(stdout);
+}
+
+static void arm_watch(int i)
+{
+    m64p_breakpoint bkp;
+    int idx;
+
+    if (g_watch[i].armed)
+        return;
+    bkp.address = g_watch[i].start;
+    /* lookup_breakpoint() tests `address <= endaddr`, i.e. endaddr is
+     * INCLUSIVE. We take ranges half-open like everyone else, so convert
+     * here - otherwise every watch silently covers one extra word and
+     * reports hits from outside the range you asked about. */
+    bkp.endaddr = g_watch[i].end - 1;
+    bkp.flags   = M64P_BKP_FLAG_ENABLED | g_watch[i].flags;
+    idx = pDebugBreakpointCommand(M64P_BKP_CMD_ADD_STRUCT, 0, &bkp);
+    if (idx < 0) {
+        fprintf(stderr, "[oracle] FAILED to add watch %s [0x%08x,0x%08x]\n",
+                g_watch[i].label, g_watch[i].start, g_watch[i].end);
+    } else {
+        g_watch[i].breakpoint_idx = idx;
+        g_watch[i].armed = 1;
+        printf("[watch] %s [0x%08x,0x%08x) flags=0x%x idx=%d\n",
+               g_watch[i].label, g_watch[i].start, g_watch[i].end,
+               bkp.flags, idx);
+    }
+}
+
+static void arm_deferred_exec_watches(unsigned width, unsigned origin)
+{
+    int i;
+    if (g_exec_watches_phase_armed || !g_defer_exec_watches)
+        return;
+    for (i = 0; i < g_n_pc_phase_log_origin; i++) {
+        if (width == g_pc_phase_log[i].width &&
+            origin == g_pc_phase_log[i].origin) {
+            g_exec_watches_phase_armed = 1;
+            printf("[phase-arm] width=%u origin=0x%08x\n", width, origin);
+            for (i = 0; i < g_nwatch; i++)
+                if (g_watch[i].flags & M64P_BKP_FLAG_EXEC)
+                    arm_watch(i);
+            fflush(stdout);
+            return;
+        }
+    }
 }
 
 /* Called once, when the debugger is initialised and the CPU is about to run.
@@ -1440,7 +1477,8 @@ static void dbg_update(unsigned int pc)
     if ((flags & M64P_BKP_FLAG_EXEC) && pc_phase_log_match())
         detail_hit = 1;
     if (!g_positive_watch_removed && g_nwatch > 0 && g_watch[0].write_hits == 10000) {
-        int rc = pDebugBreakpointCommand(M64P_BKP_CMD_REMOVE_IDX, 0, NULL);
+        int rc = pDebugBreakpointCommand(M64P_BKP_CMD_REMOVE_IDX,
+                                          g_watch[0].breakpoint_idx, NULL);
         printf("[oracle] positive-control threshold reached: watch index 0 callbacks=%ld; removal rc=%d; watch index 1 remains armed\n",
                g_watch[0].write_hits, rc);
         fflush(stdout);
@@ -1539,6 +1577,7 @@ static void dbg_vi(void)
 
     g_latched_phase_width = pDebugMemRead32(VI_WIDTH_ADDR);
     g_latched_phase_origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+    arm_deferred_exec_watches(g_latched_phase_width, g_latched_phase_origin);
 
     if (g_post_swap_table_enabled) {
         width = pDebugMemRead32(VI_WIDTH_ADDR);
@@ -2109,6 +2148,7 @@ int main(int argc, char **argv)
         else usage();
     }
     if (!rom) usage();
+    g_defer_exec_watches = g_n_pc_phase_log_origin > 0;
     g_state_smoke = getenv("ORACLE_STATE_SMOKE") != NULL;
     g_state_reach = getenv("ORACLE_STATE_REACH") != NULL;
     g_state_path = state_path;

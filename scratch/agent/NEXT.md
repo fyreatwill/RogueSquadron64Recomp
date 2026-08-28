@@ -1,45 +1,35 @@
-# NEXT work unit (s2976)
+# NEXT work unit (s2977)
 
-HYPOTHESIS-ID: m5-route-preparation-target-predicate
+HYPOTHESIS-ID: m5-route-preparation-port-comparison
 
 ## Unit
 
-Implement one bounded phase-aware oracle measurement for route preparation at
-guest PC `0x80019CD8`. Retain a whole-RDRAM positive control, but avoid
-breaking on the high-frequency boot loop and arm/log the route breakpoint only
-after a target VI boundary. Do not change the port predicate until retail
-target rows are available.
+Implement one bounded phase-scoped port measurement for route preparation at
+the corresponding port guest PC. Retain the same-run positive control and
+capture route predecessor, arguments, and live VI width/origin in title and
+hangar. Do not change the predicate yet.
 
 ## Competing hypotheses and discriminator
 
-- H-retail-target-predicate: retail calls route preparation only after the
-  target VI width/origin is committed; target rows occur at
-  `1024/0x00790400` or `512/0x006AB400`.
-- H-retail-precommit-order: retail calls route preparation before VI commit;
-  target identity is carried by a pending mode/buffer field, so a target row
-  has a differing live VI.
-- H-port-predicate-mismatch: retail and port agree on ordering, but accepted
-  target identity differs.
+- H-port-route-matches: port reaches the same route call with predecessor and
+  target-phase fields matching retail.
+- H-port-route-absent: port does not execute the route call in either target
+  phase despite reaching the phase controls.
+- H-port-predicate-mismatch: port executes the route call, but predecessor or
+  argument/state fields differ from retail.
 
-The discriminator is one same-run table of route-PC executions joined to the
-next target VI boundary, with live width/origin and GPR fields. The whole-
-RDRAM control must fire. Target rows select one of the first two hypotheses;
-matching retail target fields with the port's zero target rows selects
-H-port-predicate-mismatch. No target phase is unevaluable.
+The discriminator is one same-run table of port route-PC executions in the
+already-qualified title and hangar phases, compared with s2976's retail table.
+The positive control must fire and both target phase controls must be reached.
+Matching rows select H-port-route-matches; phase-reached zero rows select
+H-port-route-absent; differing rows select H-port-predicate-mismatch.
 
 ## Commands
 
-After implementing the phase-aware arm, run from the repo root with the local
-debugger core and retail ROM:
-
-    tools/oracle/build/rs64_oracle \
-      --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-      --rom ../rogue_squadron64/rogue_squadron.z64 --secs 45 \
-      --watch-write 0x0:0x800000 --watch-pc 0x80019CD8 \
-      --pc-phase-log-width 0x00790400:1024 \
-      --pc-phase-log-width 0x006AB400:512 \
-      --press 8:start --press 14:start --press 20:start --press 26:start \
-      --press 32:start --press 38:start --hit-cap 10000
-
-Save output to `scratch/agent/s2976_m5_route_oracle/` and record the control
-count, phases, route rows, and selected hypothesis.
+Use the port's existing phase-aware trace command from the Debug build, with
+the route PC and positive-control instrumentation batched in one run. Save
+output to `scratch/agent/s2977_m5_route_port/` and record the positive-control
+count, phase controls, route rows, and selected hypothesis. If the port route
+PC is not yet identified, use the existing `bufferArbiterProducerMark`
+handoff probe at `0x8001BCE4` as the route control and document that identity
+mapping in the artifact before interpreting nulls.

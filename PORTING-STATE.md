@@ -122576,3 +122576,21 @@ It rules out treating the boot-only null as retail ground truth. The next
 discriminator is a phase-aware breakpoint arm retaining the same-run positive
 control. Evidence:
 `scratch/agent/s2975_m5_route_oracle/RESULTS.md`.
+## Session 2976 (2026-08-28) — phase-gated retail route preparation capture
+
+Implemented phase-aware execution-watch arming in `tools/oracle/rs64_oracle.c`:
+memory watches still arm at the first VI, while execution watches defer until
+the first requested `(VI origin,width)` bucket. The initial prescribed command
+omitted Rice and reached no target phase, so it was discarded as a setup
+failure. The corrected same-unit Rice-backed capture retained the whole-RDRAM
+positive control, reached 2,625 VI, and passed 10,000 control callbacks before
+removing that watch. It armed at title `1024 @ 0x00790400` and recorded 1,352
+route-PC rows there plus 810 rows in hangar `512 @ 0x006AB400`; all 5,204 route
+rows had predecessor `0x80033300`.
+
+This supports `H-retail-target-predicate` as single-source oracle evidence:
+retail route preparation at `0x80019CD8` is observable in both target phases
+without the boot-loop breakpoint overhead. It rules out an absent retail route
+call and the prior debugger-overhead explanation for this capture. It does not
+establish a port predicate mismatch. Evidence:
+`scratch/agent/s2976_m5_route_oracle/RESULTS.md`.
