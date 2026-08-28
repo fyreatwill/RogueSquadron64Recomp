@@ -1,13 +1,13 @@
-# NEXT work unit (s2954) — classify the next unparked generated placeholder
+# NEXT work unit (s2955) — classify the next unparked generated placeholder
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Context
 
-s2953 classified `0x8009D978` as the mechanically non-callable audio
-coefficient table `data_gap_8009D978` and built `RecompiledFuncs`. M5 is
-paused after the pre-title route stop, so continue the generated-symbol sweep
-at the next unparked candidate after `0x8009D978`.
+s2954 reconciled `0x800AA6CC` to the exact companion name
+`npcPredictedRangeCheckPreamble` and built `RecompiledFuncs`. M5 is paused
+after the pre-title route stop, so continue the generated-symbol sweep at the
+next unparked candidate after `0x800AA6CC`.
 
 ## Competing hypotheses and discriminator
 
@@ -28,9 +28,9 @@ record authorizes a data-gap rename.
 
 ## Exact work
 
-1. Identify the next unparked placeholder after `0x8009D978` in the project
+1. Identify the next unparked placeholder after `0x800AA6CC` in the project
    symbol map and generated overlay order; expected first candidate is
-   `0x800AA6CC`, subject to the sweep census.
+   `0x800AAADC`, subject to the sweep census.
 2. Inspect its complete body and exact predecessor/successor boundaries;
    search generated callers, independent lookups, and the companion map.
 3. Write the complete classification to a new

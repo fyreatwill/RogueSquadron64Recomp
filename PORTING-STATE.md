@@ -114883,6 +114883,28 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2954 (2026-08-28) — reconciled 0x800AA6CC entry preamble
+
+Ran the bounded generated-symbol census at `0x800AA6CC`. The project and
+generated overlay records define a four-byte entry immediately before the
+complete `npcPredictedRangeCheck` body at `0x800AA6D0`; its generated body is
+only `lw $v0, 0x24($fp)`, with no standalone prologue or return. Searches of
+the generated tree found no independent caller or absolute lookup for the
+candidate. The companion mission map preserves the same record as
+`fake_func_800AA6CC` immediately before the named function, while the
+regeneration-safe rename table already supplied the exact semantic
+`npcPredictedRangeCheckPreamble`.
+
+The bounded rename changed the project map, companion map, rename tooling,
+and generated declaration/definition/overlay registration. The Debug
+`RecompiledFuncs` target built successfully with only pre-existing warnings.
+This selects the exact companion preamble name, rules out an independent
+callable function and a data-gap classification, and changes no behavior.
+Complete table: `scratch/agent/s2954_generated_symbol_rename/source-table.md`.
+
+ORIGIN: naming-only. No runtime, generated instruction, submodule, or
+mitigation-shaped behavior changed.
 ## Session 2953 (2026-08-28) — classified the 0x8009D978 audio coefficient gap
 
 Performed the bounded generated-symbol census for `0x8009D978`. The project

@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2953 (2026-08-28).
+Current maintenance marker: Session 2954 (2026-08-28).
+
+Session 2954 classified `0x800AA6CC` as the four-byte entry preamble for
+`npcPredictedRangeCheck` at `0x800AA6D0`. The generated body contains only
+`lw v0, 0x24(fp)`, with no standalone prologue, return, independent caller,
+or lookup; the companion map preserves the same short record immediately
+before the named function. It was renamed to
+`npcPredictedRangeCheckPreamble` across the project map, companion map,
+regeneration-safe rename table, and generated artifacts. The Debug
+`RecompiledFuncs` target built successfully. Artifact:
+`scratch/agent/s2954_generated_symbol_rename/source-table.md`.
 
 Session 2953 classified `0x8009D978` as a mechanically non-callable
 eight-byte audio coefficient table between `applyVoiceDelayFilter` and
@@ -849,7 +859,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    companion maps; s2940 likewise classified `0x8009711C` as
    `data_gap_8009711C` and synchronized both maps. Continue with the next
    remaining placeholder after `0x8009D978`; s2953 classified the candidate
-   as `data_gap_8009D978` and synchronized the generated and source maps.
+   as `data_gap_8009D978` and synchronized the generated and source maps;
+   s2954 reconciled `0x800AA6CC` to `npcPredictedRangeCheckPreamble` and
+   synchronized the generated and source maps. Continue with the next
+   remaining placeholder after `0x800AA6CC`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

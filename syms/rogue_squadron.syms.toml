@@ -1563,7 +1563,7 @@ functions = [
     { name = "addScaledVec3ToVec3", vram = 0x800AA3E0, size = 0x44 },
     { name = "buildRotationMatrixFromEulerAngles", vram = 0x800AA424, size = 0x14C },
     { name = "buildTransformMatrixFromEulerAngles", vram = 0x800AA570, size = 0x158 },
-    { name = "fake_func_800AA6CC", vram = 0x800AA6CC, size = 0x4 },
+    { name = "npcPredictedRangeCheckPreamble", vram = 0x800AA6CC, size = 0x4 },
     { name = "npcPredictedRangeCheck", vram = 0x800AA6D0, size = 0x1A0 },
     { name = "parseDatEventTriggers", vram = 0x800AA870, size = 0x26C },
     { name = "fake_func_800AAADC", vram = 0x800AAADC, size = 0x4 },
