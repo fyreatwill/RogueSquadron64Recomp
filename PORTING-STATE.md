@@ -123053,3 +123053,14 @@ for this address, while leaving the more specific meaning of the stored float
 unresolved. No runtime, audio, or route behavior changed. The next sweep
 candidate is `0x80017B88`. Evidence:
 `scratch/agent/s3009_generated_symbol_rename/source-table.md`.
+## Session 3010 (2026-08-28) — synchronized buildAndRegisterDefaultMaterial
+
+Completed the bounded generated-symbol audit at `0x80017B88`. The companion
+map, generated definition, two direct callers, and overlay registration
+identify the unique callable entry as `buildAndRegisterDefaultMaterial`; the
+project symbol TOML alone was stale. Synchronized the TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime, audio, or route behavior changed. The next
+sweep candidate is `0x8001818C`. Evidence:
+`scratch/agent/s3010_generated_symbol_rename/source-table.md`.
