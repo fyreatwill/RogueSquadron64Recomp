@@ -935,3 +935,11 @@ companion map, and generated snapshot now call them `data_gap_8006D8FC` and
 `data_gap_8006F4AC`; the final stale-name scan is empty. This is symbol
 clarity only: no audio behavior or runtime evidence changed. The next bounded
 sweep is `0x8006F500..0x80070500`.
+
+Session 2863 examined `0x80071500..0x80072500`. The selector classified
+seven companion entries as already-synchronized callable names and changed
+zero generated references in zero files. The independent stale-name scan
+found no placeholder in the target interval; remaining `fake_func_8007*`
+hits are outside the interval. This closes the interval without inventing a
+semantic name; no build or game run was needed. The next bounded sweep is
+`0x80072500..0x80073500`.

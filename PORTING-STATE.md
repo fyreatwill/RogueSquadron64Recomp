@@ -120526,3 +120526,13 @@ and changed zero generated references in zero files. The independent
 generated-tree stale-name scan found no in-range placeholder. This closes the
 interval without inventing a semantic name; no build or game run was needed.
 The next bounded sweep is `0x80071500..0x80072500`.
+
+## Session 2863 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x80071500..0x80072500`.
+The selector classified seven companion entries as already-synchronized
+callable names and changed zero generated references in zero files. The
+independent generated-tree stale-name scan found no placeholder in the target
+interval; remaining `fake_func_8007*` hits are outside the interval. This
+closes the interval without inventing a semantic name; no build or game run
+was needed. The next bounded sweep is `0x80072500..0x80073500`.
