@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2916 (2026-08-27).
+Current maintenance marker: Session 2918 (2026-08-27).
+
+The s2918 generated-symbol sweep classified `0x8005A11C..0x8005A120` as a
+four-byte non-callable isolated load between complete
+`isPointWithinBoundingBox` and `loadTopCloudsAsset` bodies. It has no
+companion semantic name, generated caller, or independent lookup, so it was
+renamed to `data_gap_8005A11C` in the project map, companion map, generated
+C/header/overlay metadata, and regeneration-safe rename table. The Debug
+`RecompiledFuncs` target built successfully. Complete table:
+`scratch/agent/s2918_generated_symbol_rename/source-table.md`.
 
 The s2917 generated-symbol sweep inspected `0x80059B4C..0x80059B50`. The
 sole placeholder is a valid 4-byte `sw $fp,0x48($sp)` fragment immediately
@@ -514,8 +523,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80054648..0x80054650` as a bounded invalid-data gap before
    `tickWrappingTimerAccumulatorList`; s2914 then classified
    `0x80055698..0x800556A0` as a bounded load/increment data gap between
-   `initPlayerStructs` and `loadTxtFile`. Continue with the next remaining
-   placeholder after `0x800556A0`.
+   `initPlayerStructs` and `loadTxtFile`; s2918 then classified
+   `0x8005A11C..0x8005A120` as a bounded isolated-load data gap between
+   `isPointWithinBoundingBox` and `loadTopCloudsAsset`. Continue with the
+   next remaining placeholder after `0x8005A120`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

@@ -121499,3 +121499,21 @@ callable fragment because the isolated instruction is a valid prologue store.
 No generated files, maps, or rename-table entries changed; no build was
 needed. Complete evidence table:
 `scratch/agent/s2917_generated_symbol_rename/source-table.md`.
+
+## Session 2918 (2026-08-27) — reconciled isolated-load data gap at 0x8005A11C
+
+The mandated maintenance check measured `docs/CURRENT-TRUTH.md` at 36,916
+bytes, so this was not a maintenance iteration. The bounded generated-symbol
+sweep inspected `0x8005A11C..0x8005A120`. The four-byte record contains only
+`lw $v1, 0x14($v0)`, follows the complete `isPointWithinBoundingBox` body, and
+precedes the complete `loadTopCloudsAsset` body. The companion map provides no
+semantic name; exact generated searches found only the definition, declaration,
+and overlay registration, with no caller or independent lookup. This proved a
+non-callable isolated record for this bounded reconciliation, so
+`fake_func_8005A11C` was renamed to `data_gap_8005A11C` in the companion/project
+maps, generated C/header/overlay metadata, and rename table. The tool reported
+3 renamed references in 3 files, and the Debug `RecompiledFuncs` target built
+successfully with only pre-existing warnings. This rules out a source-backed
+semantic rename for the record and closes this interval; it does not make any
+claim about the next placeholder. Complete evidence table:
+`scratch/agent/s2918_generated_symbol_rename/source-table.md`.

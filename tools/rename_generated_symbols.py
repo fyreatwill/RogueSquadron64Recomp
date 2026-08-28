@@ -160,6 +160,9 @@ RENAMES = {
     # This eight-byte record is an isolated load/increment fragment between
     # initPlayerStructs and loadTxtFile; it is not a callable function body.
     "fake_func_80055698": "data_gap_80055698",
+    # This four-byte record is an isolated load between complete callable
+    # bodies; it has no standalone entry or independent references.
+    "fake_func_8005A11C": "data_gap_8005A11C",
     # These four-byte records contain only non-returning instruction
     # fragments immediately before named routines; they are not callable
     # function bodies.

@@ -838,7 +838,7 @@ functions = [
     { name = "orthonormalizeFrame", vram = 0x80059F10, size = 0x60 },
     { name = "orthonormalizeFrameAndSnapToZero", vram = 0x80059F70, size = 0x100 },
     { name = "isPointWithinBoundingBox", vram = 0x8005A070, size = 0xAC },
-    { name = "fake_func_8005A11C", vram = 0x8005A11C, size = 0x4 },
+    { name = "data_gap_8005A11C", vram = 0x8005A11C, size = 0x4 },
     { name = "loadTopCloudsAsset", vram = 0x8005A120, size = 0x394 },
     { name = "updateWalkerParticlePositions", vram = 0x8005A4B4, size = 0x680 },
     { name = "loadSkyHorizonHob", vram = 0x8005AB34, size = 0x874 },
