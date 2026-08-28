@@ -122643,6 +122643,7 @@ pair never reached title or hangar, so downstream audio nulls remain
 unevaluable. No runtime behavior changed. Next is one new route repair or
 handoff followed by the phase-gated same-build image/silent qualification.
 Evidence: `docs/M5-AUDIO-PLAN.md`.
+
 HYPOTHESIS-ID: m5-audio-destub-step1.
 
 ## Session 2980 (2026-08-28) — blocked on a new M5 route repair
@@ -123443,3 +123444,16 @@ No behavior change was made. This rules out an incomplete source inventory as
 the reason to postpone M5, but does not select AudioDegeneracy, ContractGap,
 MixedPipelines, or a route failure; those require the phase-keyed qualification
 run. Evidence: `docs/M5-AUDIO-PLAN.md`.
+
+## Session 3039 (2026-08-28) — compacted current truth after maintenance gate
+
+`docs/CURRENT-TRUTH.md` was 60,102 bytes and 969 lines, triggering the
+maintenance iteration. Replaced its repeated session-result ledger with a
+156-line operational summary containing the current configuration, latest
+evidence, ordered backlog, durable boundaries, and superseded conclusions.
+The durable project history remains in `docs/PROJECT-OVERVIEW.md`; detailed
+session evidence remains in this append-only ledger. The file is now 8,326
+bytes, a reduction of 51,776 bytes and 813 lines. No build, run, code change,
+or experiment was performed. This rules out no runtime hypothesis; it closes
+only the documentation-maintenance condition and leaves M5 Step-1
+qualification as the next work unit.

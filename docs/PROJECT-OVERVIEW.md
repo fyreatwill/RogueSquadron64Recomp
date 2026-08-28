@@ -35,7 +35,7 @@ boundary; the image arm is qualified but not fully de-stubbed. M3 is limited
 to idiom-class audits. M4 hangar/512 Y=0x8000 is not live on the first
 hangar capture. See `CURRENT-TRUTH.md`.
 
-**Current handoff (s2956):** the validated route can reach title VI 1024
+**Current handoff (s3039):** the validated route can reach title VI 1024
 (`0x00790400`) and hangar VI 512 (`0x006AB400`), but recent M5 route probes
 stop at pre-title VI 640 (`0x0066A500`). The retail oracle independently
 reaches title/hangar and shows phase-specific route-message fields; the
