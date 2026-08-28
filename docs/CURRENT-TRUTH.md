@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2994 (2026-08-28).
+Current maintenance marker: Session 2995 (2026-08-28).
 
 ## Current state
 
@@ -195,6 +195,15 @@ unique callable entry as `coalesceFreeHeapBlocks`; the generated tree and
 companion map already carried that name, so only the project symbol TOML was
 stale. Synchronized the TOML and built `RecompiledFuncs` successfully. The
 next sweep candidate is `0x80002E10` (`siServiceThread`).
+
+Session 2995 completed the bounded generated-symbol audit at `0x80002E10`.
+The companion map, generated definition, overlay registration, and duplicate
+check agree on the unique callable name `siServiceThread`; only the project
+symbol TOML was stale. Synchronized the TOML and built `RecompiledFuncs`
+successfully. The sweep helper cannot resume from a human name because its
+parser accepts placeholder names only; this is a tooling limitation, not an
+identity conflict. The next placeholder in TOML order is `0x80007D74`.
+Evidence: `scratch/agent/s2995_generated_symbol_rename/source-table.md`.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -424,8 +433,9 @@ pending a new discriminator. The generated-symbol sweep is the active
 blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   `0x800022F8` is now synchronized as `coalesceFreeHeapBlocks`; select the next
-   placeholder only when generated callers/body and the companion map agree.
+   `0x80002E10` is now synchronized as `siServiceThread`; audit the next
+   placeholder `0x80007D74` only when generated callers/body and the companion
+   map agree.
    Do not invent names for ambiguous fragments. Keep the M5 route dependency
    open below and return to it only with a new grounded edge.
 

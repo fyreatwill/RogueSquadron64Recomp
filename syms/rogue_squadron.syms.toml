@@ -52,7 +52,7 @@ functions = [
     { name = "stopRumbleEffect", vram = 0x80002BA8, size = 0xB4 },
     { name = "initRumblePakSlots", vram = 0x80002C5C, size = 0xCC },
     { name = "serviceRumblePakMotors", vram = 0x80002D28, size = 0xE8 },
-    { name = "func_80002E10", vram = 0x80002E10, size = 0x13C },
+    { name = "siServiceThread", vram = 0x80002E10, size = 0x13C },
     { name = "startSiPollingThread", vram = 0x80002F4C, size = 0xA8 },
     { name = "pollControllerInputs", vram = 0x80002FF4, size = 0x110 },
     { name = "bindControllerStatusBuffer", vram = 0x80003104, size = 0x4C },

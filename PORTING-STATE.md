@@ -122851,3 +122851,17 @@ the project TOML and built `cmake --build build --config Debug --target
 RecompiledFuncs` successfully. This rules out the ambiguous-placeholder and
 duplicate-definition hypotheses for this address. No runtime or audio
 behavior changed. The next candidate is `0x80002E10`.
+
+## Session 2995 (2026-08-28) — synchronized siServiceThread
+
+Ran the bounded three-source audit for `0x80002E10`. The companion symbol
+map, generated definition, overlay registration, and duplicate check identify
+one callable entry as `siServiceThread`; the project TOML alone still used
+`func_80002E10`. Synchronized the project TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+The sweep helper cannot resume from a human name because its parser accepts
+placeholder names only; this is a tooling limitation, not an identity
+conflict. This rules out the ambiguous-placeholder and duplicate-definition
+hypotheses for this address. No runtime or audio behavior changed. The next
+candidate is `0x80007D74`. Evidence:
+`scratch/agent/s2995_generated_symbol_rename/source-table.md`.
