@@ -122355,3 +122355,31 @@ Next candidate is `0x800B89F4`. Complete table:
 
 ORIGIN: naming-only classification. The stale rename entries were removed
 because the candidate is an internal branch fragment, not a callable preamble.
+
+## Session 2964 (2026-08-28) — preserved the 0x800B89F4 branch fragment
+
+Ran the bounded generated-symbol source-table audit for the next placeholder
+after `0x800B75C4`. The project map assigns `fake_func_800B89F4` 12 bytes
+immediately before `playerVwingInit` at `0x800B8A00`. The exact words are a
+valid branch fragment: `bnel $v0,$s6,L_800B8AD0`, its delay-slot `addiu
+$s2,$s2,1`, and fall-through `addu $a0,$zero,$zero`. N64Recomp reports the
+same artificial split because the branch target lies outside the declared
+12-byte body; the generated C therefore contains a fixup trap for this fake
+entry.
+
+The generated tree has no caller or independent lookup of the fake symbol.
+The companion mission-overlay map retains the fake entry, comments that the
+real function is `playerVwingInit`, and independently starts that function at
+`0x800B8A00`. No exact companion semantic source names the fragment. These
+two independent evidence lines select H-Fragment: valid instructions rule
+out H-DataGap, while the absent callable boundary and exact name rule out
+H-Callable. Preserved `fake_func_800B89F4`.
+
+Removed stale `playerVwingInitPreamble` entries from
+`tools/rename_generated_symbols.py` and `tools/rename/build_redefs.py`; no
+generated function or runtime behavior changed, so no build or run was needed.
+Next candidate is `0x800BCC38`. Complete table:
+`scratch/agent/s2964_generated_symbol_rename/source-table.md`.
+
+ORIGIN: naming-only classification. The stale rename entries were removed
+because adjacency to `playerVwingInit` did not prove a callable preamble.
