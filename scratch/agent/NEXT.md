@@ -1,36 +1,27 @@
-# NEXT work unit (s2910) — generated-symbol sweep at 0x8004CCF8
+# NEXT work unit (s2911) — generated-symbol sweep at 0x800538AC
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Inspect the next bounded placeholder interval after the already reconciled
-`0x800496F4` record: `0x8004CCF8..0x8004CD00`. Reconcile only source-backed
-semantic names or mechanically proven non-callable `data_gap_*` records in the
-companion/project maps, generated snapshot, and regeneration-safe rename table.
-Leave callable-ambiguous and data-ambiguous records unchanged. Do not repeat
-the M5 route probe: s2905 positively matched the pre-title key but did not
-qualify target phases.
+Inspect the next bounded placeholder interval `0x800538AC..0x800538B0`.
+Reconcile only source-backed semantic names or mechanically proven
+non-callable `data_gap_*` records in the companion/project maps, generated
+snapshot, and regeneration-safe rename table. Leave callable-ambiguous and
+data-ambiguous records unchanged.
 
 ## Competing hypotheses and discriminator
 
-- H-CallableSemantic: companion m2c/source evidence supports a human symbol
-  name for `0x8004CCF8`.
-- H-DataGap: exact boundaries, a short fragment/trap body, and no
-  callers/lookups prove a non-callable record, so `data_gap_8004CCF8` is the
-  defensible reconciliation.
-- H-Ambiguous: evidence cannot separate a callable trampoline from a split/data
-  artifact; leave the placeholder unchanged.
+- H-CallableSemantic: companion m2c/source evidence supports a human symbol name.
+- H-DataGap: exact boundaries, a short fragment/trap body, and no callers/lookups prove a non-callable record.
+- H-Ambiguous: evidence cannot separate a callable trampoline from a split/data artifact; leave it unchanged.
 
-The discriminator is the complete interval table for `0x8004CCF8..0x8004CD00`:
-generated body size and
+The discriminator is the complete interval table: generated body size and
 instructions, target location if any, companion symbol boundaries, source/m2c
-name, generated callers and lookups, and the selected action for the sole
-record.
+name, generated callers and lookups, and the selected action.
 
 ## Exact commands
 
 Run `python3 tools/rename_generated_symbols.py --help`, inspect the bounded
-interval, and use the project reconciliation workflow. Build the Debug target
-if generated files change.
-Record the complete table at
-`scratch/agent/s2909_generated_symbol_rename/source-table.md`. Verify exact
-old-name searches and build the Debug target if generated files change.
+interval and companion sources, then use the reconciliation workflow. Build
+the Debug target if generated files change. Record the complete table at
+`scratch/agent/s2911_generated_symbol_rename/source-table.md`. Verify exact
+old-name searches and preserve the rename-table entry for regeneration.

@@ -121363,3 +121363,23 @@ symbol map; the rename-table entry is intentionally retained for future
 regeneration. The Debug `RogueSquadron64Recomp` target rebuilt successfully;
 only pre-existing format/sign warnings were emitted. This closes the
 `0x800496F4` interval and leaves the next sweep at `0x8004CCF8`.
+
+## Session 2910 (2026-08-27) — reconciled main-text vehicle-prefix data gap at 0x8004CCF8
+
+The bounded generated-symbol sweep inspected `0x8004CCF8..0x8004CD00`. The
+sole placeholder, `fake_func_8004CCF8`, is an 8-byte record containing only
+`daddi $zero,$t0,0` and `daddi $s2,$k1,0x6D5F`, with no prologue, return, or
+independent callable body. It immediately precedes the complete
+`applyPlayerVehicleStateUpdate` function at `0x8004CD00`; generated caller and
+address-lookup searches found no references beyond definition and overlay
+metadata. The companion map supplied no semantic name. I reconciled it as
+`data_gap_8004CCF8` in the companion map, project symbol map,
+regeneration-safe rename table, and generated C/header/overlay metadata. The
+exact evidence is in `scratch/agent/s2910_generated_symbol_rename/source-table.md`.
+
+The exact old-name search found no stale `fake_func_8004CCF8` or
+`func_8004CCF8` references in the generated snapshot, companion map, or project
+symbol map; the rename-table entry is intentionally retained for future
+regeneration. The Debug `RogueSquadron64Recomp` target rebuilt successfully;
+only pre-existing format/sign warnings were emitted. This closes the interval
+and leaves the next sweep after `0x8004CD00`.

@@ -148,6 +148,9 @@ RENAMES = {
     # This twelve-byte record contains only isolated stores immediately before
     # flushPendingGridCellTiles; it has no callable body or independent name.
     "fake_func_800496F4": "data_gap_800496F4",
+    # This eight-byte record contains two isolated daddi instructions immediately
+    # before applyPlayerVehicleStateUpdate; it has no callable body or independent name.
+    "fake_func_8004CCF8": "data_gap_8004CCF8",
     # These four-byte records contain only non-returning instruction
     # fragments immediately before named routines; they are not callable
     # function bodies.

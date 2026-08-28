@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2909 (2026-08-27).
+Current maintenance marker: Session 2910 (2026-08-27).
+
+The s2910 generated-symbol sweep classified `0x8004CCF8..0x8004CD00`.
+`0x8004CCF8` is an 8-byte non-callable record containing two isolated `daddi`
+instructions immediately before the complete `applyPlayerVehicleStateUpdate`
+body, with no generated callers or address lookup. It was renamed to
+`data_gap_8004CCF8` in the companion source map, project symbol map, generated
+C/header, overlay metadata, and regeneration-safe rename table; the Debug
+target rebuilt successfully. The complete table is
+`scratch/agent/s2910_generated_symbol_rename/source-table.md`.
 
 The s2909 generated-symbol sweep classified `0x800496F4..0x80049700`.
 `0x800496F4` is a 12-byte non-callable record containing three isolated
@@ -433,9 +442,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    s2907 then classified `0x80040304..0x80040308` as a bounded invalid/data
    gap between established NPC routines. s2908 classified `0x8004661C` as a
    bounded non-callable data gap; s2909 classified `0x800496F4..0x80049700` as
-   a bounded non-callable data gap before `flushPendingGridCellTiles`; continue
-   with the next remaining placeholder after `0x80049700`, currently
-   `0x8004CCF8`.
+   a bounded non-callable data gap before `flushPendingGridCellTiles`; s2910
+   classified `0x8004CCF8..0x8004CD00` as a bounded non-callable data gap
+   before `applyPlayerVehicleStateUpdate`; continue with the next remaining
+   placeholder after `0x8004CD00`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
