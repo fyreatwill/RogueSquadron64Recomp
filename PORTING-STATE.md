@@ -120556,3 +120556,13 @@ independent stale-name scan found no placeholder in the target interval;
 remaining `fake_func_8007*` hits are outside it. No source-backed rename was
 selected, so no build or game run was needed. The next bounded sweep is
 `0x80074500..0x80075500`.
+
+## Session 2866 (2026-08-27) — compacted current truth and migrated late archive
+
+The maintenance check found `docs/CURRENT-TRUTH.md` at 60,108 bytes and 959
+lines, over the 60,000-byte threshold. Rewrote it as a compact operational
+state, removed duplicated/out-of-order late entries, retained the live M5
+boundaries and ordered backlog, and migrated the durable s2677–s2865 summary
+to `docs/PROJECT-OVERVIEW.md`. No experiment, build, or game run was made by
+design. This closes maintenance and leaves the next unit as the bounded
+`0x80074500..0x80075500` generated-symbol sweep.

@@ -4594,3 +4594,35 @@ existed, and preserved intentional `fake_func_` fragments and overlay
 collisions. The remaining true placeholders have only address-coded
 companion entries and no defensible semantic names, so the sweep is parked
 behind M5.
+
+## 51. Late M5 boundary and generated-symbol sweep archive: s2677–s2865
+
+This compact archive was migrated from `CURRENT-TRUTH.md` during Session 2866.
+Exact interval tables, commands, counts, and recipe outcomes remain in the
+append-only ledger and scratch artifacts.
+
+The M5 chain separated the live Factor 5 image arm from the silent
+`musyx_stub`, then audited image DMEM/DMA/completion, candidate ring ranges,
+renderer and mixer consumers, streamed voice service, AI allocation and host
+bridges, queue/PI paths, CPU MORT filtering, and the speech-loader surface.
+Those audits found no legitimate writer and ordering edge into the AI source
+span. The callback audit corrected the field identification: descriptor
+`+0x190` targets `dmaVoiceSampleAndSignal`, which writes the voice ring and
+signals completion; `+0x194` is the speech-sample source. The AI status shim
+and SP-yield lifecycle were contract/compile changes, but qualified runtime
+reachability of their target branches remains unvalidated because recent
+same-build pairs stalled at pre-title VI 640.
+
+The route-validation chain exhausted barrier, launch-order, boot-time-key,
+phase-relative-key, autopilot, gate-writer, and pre-title task-field angles.
+The retail oracle repeatedly passed its whole-RDRAM positive control and
+reached title/hangar independently, while the port pair did not reach target
+phases in the latest window. No M5 behavior change is authorized from those
+target-phase nulls.
+
+The regeneration-safe symbol sweep repaired the generated fake/data collision
+around the level-handler batch, then closed many intervals through
+`0x80073500..0x80074500`. It synchronized exact companion names and renamed
+mechanically proven short data gaps, while preserving callable-ambiguous and
+fake/address-only placeholders. The next bounded interval is
+`0x80074500..0x80075500`.

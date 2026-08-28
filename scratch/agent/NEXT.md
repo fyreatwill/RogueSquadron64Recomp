@@ -1,4 +1,4 @@
-# NEXT work unit (s2866) — generated-symbol-renaming-sweep
+# NEXT work unit (s2867) — generated-symbol-renaming-sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
