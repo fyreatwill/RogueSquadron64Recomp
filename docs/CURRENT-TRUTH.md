@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2942 (2026-08-27).
+Current maintenance marker: Session 2943 (2026-08-28).
+
+The s2943 mandatory revisit ran the retail oracle before any new port
+instrumentation. Its whole-RDRAM positive control reached 10,000 writes, and
+the verified Rice schedule reached title 1024 (`0x00790400`) and hangar 512
+(`0x006AB400`). The oracle cannot observe RSP DMEM `0xC70/0xB74` or the
+internal accumulator, so this is valid phase/control evidence but does not
+select shared-slot, independent-index, or irrelevant-writer hypotheses.
+Artifact: `scratch/agent/s2943_m4_accumulator_boundary/RESULTS.md`.
 
 The s2942 generated-symbol sweep classified `0x80099C4C` as a proven
 non-callable four-byte invalid-decode gap between the complete
@@ -766,7 +774,11 @@ apply only source-backed renames and preserve callable-ambiguous records.
    live `slot=0/index=0` pair but not why it is equal. The next revisit must
    use one batched phase/task-keyed port probe joining the `B74` writer/value,
    producer slot, and consumer index, with the existing positive-control mark.
-   No mitigation or table rewrite is authorized.
+   No mitigation or table rewrite is authorized. s2943 first validated the
+   independent retail oracle control and target-phase reachability (10,000
+   whole-RDRAM writes; title 1024 and hangar 512), but confirmed that the
+   oracle cannot observe DMEM `0xC70/0xB74`; the next unit is the batched port
+   join now that this ground-truth preflight is complete.
 8. **M5 image task contract / hangar artifact — parked.** No writeback,
    remap, forced state, or mitigation without an `ORIGIN:` naming the writer
    and stating whether its value is legitimate.

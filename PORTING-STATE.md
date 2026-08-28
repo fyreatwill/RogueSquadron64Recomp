@@ -121947,3 +121947,17 @@ were already synchronized. No runtime experiment or build was needed because
 this was a map-only reconciliation. This rules out an independent semantic
 callable rename and does not change runtime behavior. Complete evidence table:
 `scratch/agent/s2942_generated_symbol_rename/source-table.md`.
+## Session 2943 (2026-08-28) — ground-truthed retail M4 target phases
+
+Ran the mandated M4 revisit preflight against the independent retail oracle
+before adding any port instrumentation. The same Rice video and verified Start
+schedule reached title at 1024 (`0x00790400`) and hangar at 512
+(`0x006AB400`); the whole-RDRAM positive control visibly reached its 10,000
+write threshold and was removed. The oracle cannot observe RSP DMEM
+`0xC70/0xB74` or `ACCH:ACCM:ACCL`, and no targeted M4 watch was armed, so the
+run does not select shared-slot, independent-index, or irrelevant-writer.
+It does establish that the retail target phases are reachable and that the
+ground-truth instrument was live. Next is the already-grounded batched port
+join, with `[f5-fetch-control]` as its same-run positive control. No behavior
+change or mitigation was made. Artifact:
+`scratch/agent/s2943_m4_accumulator_boundary/RESULTS.md`.
