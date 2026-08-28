@@ -123846,3 +123846,15 @@ writer and pointer aliasing at this boundary. The selector-state producer
 remains open; no behavior changed.
 
 Evidence: `scratch/agent/s3059_m5_vi_descriptor_source/AUDIT.md`.
+
+## Session 3060 (2026-08-28) — audited 0x80017AE0 generated symbol
+
+Completed the bounded generated-symbol audit at `0x80017AE0`. The companion
+map names `setViewStateBytesAndFadeScale`; the generated body is a coherent
+0x48-byte callable that writes the three view-state bytes and two fade-scale
+values, returns 1, and is called from `funcs_9.c` and `funcs_36.c`. The header,
+overlay registration, and project TOML all agree on the name, address, and
+extent, and the current generated tree has one definition with no leftover
+placeholder or duplicate definition. This selects H-ExactIdentity and rules
+out a fragment/data boundary and metadata drift. No rename or code change was
+needed. Evidence: `scratch/agent/s3060_generated_symbol_rename/AUDIT.md`.

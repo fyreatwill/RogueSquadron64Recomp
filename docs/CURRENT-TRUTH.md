@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3059 (2026-08-28).
+Current maintenance marker: Session 3060 (2026-08-28).
 
 ## Current state
 
@@ -62,6 +62,13 @@ loop, and the port passes the selected pointer unchanged to `osViSetMode`.
 This selects `H-SourceSelection`, rejecting a missing writer and pointer
 aliasing at this boundary; the selector-state divergence remains open.
 Evidence: `scratch/agent/s3059_m5_vi_descriptor_source/AUDIT.md`.
+
+Session 3060 completed the bounded generated-symbol audit at `0x80017AE0`.
+The companion map, generated body, callers, header, overlay registration, and
+project TOML all agree on `setViewStateBytesAndFadeScale`, its `0x48`-byte
+extent, and its callable setter semantics. No rename was needed; the next
+sweep candidate is `0x80017B28`. Evidence:
+`scratch/agent/s3060_generated_symbol_rename/AUDIT.md`.
 
 Session 3040 ran the M5 Step-1 image/silent qualification after an independent
 retail ground-truth preflight. Retail passed the whole-RDRAM positive control
@@ -277,7 +284,7 @@ port and the next unit must use a different handoff edge. M3 is
 parked pending a new discriminator.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   The synchronized region through `0x80017AD0` is complete. Preserve
+   The synchronized region through `0x80017AE0` is complete. Preserve
    placeholders for fragments, data gaps, and unresolved boundaries; do not
    invent semantic names. Resume at the next candidate only after auditing
    companion map, generated body, callers, header, overlay registration,
