@@ -452,6 +452,14 @@ generated-symbol sweep is also subject to the 15-title revisit rule.
    semantic name; no build or game run was needed. Continue with
    `0x80071500..0x80072500`.
 
+   Session 2864 examined `0x80072500..0x80073500`. The selector classified
+   nine companion entries as already-synchronized callable names and
+   preserved `fake_func_80072CE8` as ambiguous-or-fake; it changed zero
+   generated references. The independent generated-tree stale-name scan
+   found only that preserved placeholder in-range. This closes the interval
+   without inventing a semantic name; no build or game run was needed.
+   Continue with `0x80073500..0x80074500`.
+
 Session 2840 pivoted from the pre-title M5 post-dispatch rerun to the required
 generated-symbol sweep because the queued recipe exited at launch (`rc=127`).
 Three companion records explicitly classified as short non-callable gaps
