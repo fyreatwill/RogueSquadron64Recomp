@@ -123025,3 +123025,16 @@ This rules out the ambiguous-placeholder and duplicate-definition hypotheses
 for this address. No runtime, audio, or route behavior changed. The next
 sweep candidate is `0x80017B48`. Evidence:
 `scratch/agent/s3007_generated_symbol_rename/source-table.md`.
+## Session 3008 (2026-08-28) — synchronized setMissionLevelInitByte
+
+Completed the bounded generated-symbol audit at `0x80017B48`. The companion
+map names the entry `setMissionLevelInitByte`; the generated tree has one
+callable definition, five coherent direct callers, matching header and overlay
+registration, and no duplicate callable definition. The companion comment's
+four-caller count is stale, but does not create an identity conflict.
+Synchronized the stale project TOML entry and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime, audio, or route behavior changed. The next
+sweep candidate is `0x80017B78`. Evidence:
+`scratch/agent/s3008_generated_symbol_rename/source-table.md`.

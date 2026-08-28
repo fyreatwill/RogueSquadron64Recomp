@@ -234,7 +234,7 @@ functions = [
     { name = "func_80017AD0", vram = 0x80017AD0, size = 0x10 },
     { name = "setViewStateBytesAndFadeScale", vram = 0x80017AE0, size = 0x48 },
     { name = "setViewStateTripletBytes", vram = 0x80017B28, size = 0x20 },
-    { name = "func_80017B48", vram = 0x80017B48, size = 0x10 },
+    { name = "setMissionLevelInitByte", vram = 0x80017B48, size = 0x10 },
     { name = "resetMaterialPoolWrapper", vram = 0x80017B58, size = 0x20 },
     { name = "func_80017B78", vram = 0x80017B78, size = 0x10 },
     { name = "func_80017B88", vram = 0x80017B88, size = 0x604 },

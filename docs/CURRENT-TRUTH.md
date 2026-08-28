@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3007 (2026-08-28).
+Current maintenance marker: Session 3008 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,18 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3008 completed the bounded generated-symbol audit at `0x80017B48`.
+The companion map, generated definition, header, overlay registration, and
+five direct callers identify the unique callable entry as
+`setMissionLevelInitByte`; the project symbol TOML alone was stale.
+Synchronized the TOML and built `RecompiledFuncs` successfully. The companion
+comment's four-caller count is stale, but the extra generated caller is
+coherent and does not create an identity conflict. This rules out the
+ambiguous-placeholder and duplicate-definition hypotheses for this address.
+No runtime, audio, or route behavior changed. The next sweep candidate is
+`0x80017B78`. Evidence:
+`scratch/agent/s3008_generated_symbol_rename/source-table.md`.
 
 Session 3007 completed the bounded generated-symbol audit at `0x80017B28`.
 The companion map, generated definition, header, overlay registration, and
@@ -530,10 +542,10 @@ pending a new discriminator. The generated-symbol sweep is the active
 blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   `0x80017AE0` and `0x80017B28` are synchronized as
-   `setViewStateBytesAndFadeScale` and `setViewStateTripletBytes`; audit the
-   next placeholder `0x80017B48` when generated callers/body and the companion
-   map agree.
+   `0x80017AE0`, `0x80017B28`, and `0x80017B48` are synchronized as
+   `setViewStateBytesAndFadeScale`, `setViewStateTripletBytes`, and
+   `setMissionLevelInitByte`; audit the next candidate `0x80017B78` when
+   generated callers/body and the companion map agree.
    Do not invent names for ambiguous fragments. Keep the M5 route dependency
    open below and return to it only with a new grounded edge.
 
@@ -564,27 +576,27 @@ blocker-free workstream until a new M5 route edge is available.
    genuinely new route repair or an independent ground-truth handoff that can
    make the M4 control execute.
 
-5. **M5 SP-yield lifecycle validation — parked** pending a route angle that
+6. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 
-6. **M5 CPU-side MORT publication — unresolved; callback edge closed.** The
+7. **M5 CPU-side MORT publication — unresolved; callback edge closed.** The
    corrected edge is `serviceStreamingVoice` descriptor `+0x190` to
    `dmaVoiceSampleAndSignal`; `+0x194` is the legitimate speech source. That
    routine writes the voice ring and signals completion; it does not publish
    AI data. Do not repeat this callback audit without a new destination and
    ordering edge.
 
-7. **External retail-entry boundary — candidate set rejected (s2903).** The
+8. **External retail-entry boundary — candidate set rejected (s2903).** The
    oracle reached title/hangar, but the four watched candidate PCs were
    boot/pre-title only. Do not repeat that set or the exhausted broad main-text
    range; any revisit needs a different static handoff and ground-truth PC
    attribution.
 
-8. **M5 image task contract / hangar artifact — parked.** No writeback, remap,
+9. **M5 image task contract / hangar artifact — parked.** No writeback, remap,
    forced state, or mitigation without an `ORIGIN:` naming the writer and
    stating whether its value is legitimate.
 
-9. **M5 route handoff — retail grounded, port route still missing.** Retail
+10. **M5 route handoff — retail grounded, port route still missing.** Retail
    positively executes `bufferArbiterProducerMark` at `0x8001BCE4` in title
    and hangar, while s2988's control reaches only VI 640 and its forced
    transition treatment regresses to VI 320. The next route unit must use a
