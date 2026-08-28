@@ -120448,3 +120448,14 @@ callable names, changed zero generated references, and failed closed under
 the interval without assigning meanings to unresolved records. No build or
 game run was needed. The next bounded sweep is
 `0x80068500..0x80069500`.
+
+## Session 2856 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x80068500..0x80069500`.
+The selector classified `sampleHmpTileHeightBicubic` and
+`sampleTerrainAtNpcPosition` as already-synchronized callable names, changed
+zero generated references, and failed closed under `--require-rename`. The
+independent placeholder scan found no in-range `fake_func_*` or `data_gap_*`
+names. This rules out a defensible source-backed rename in the interval
+without assigning meanings to unresolved records. No build or game run was
+needed. The next bounded sweep is `0x80069500..0x8006A500`.

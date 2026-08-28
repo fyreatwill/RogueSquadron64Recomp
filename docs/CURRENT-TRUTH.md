@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 history is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact commands,
 counts, and probe rows remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2855 (2026-08-27).
+Current maintenance marker: Session 2856 (2026-08-27).
 
 This file was compacted in Session 2748 because it exceeded the 60,000-byte
 maintenance threshold. Run-by-run history removed here remains in git history,
@@ -468,6 +468,15 @@ Historical generated-symbol sweep route note: M5 Step 1
    input-recipe repair is now exhausted at this discriminator: boot-time
    probe keys, phase-relative probe keys, and the existing autopilot all
    failed to move the qualified port arms beyond VI 640 in this iteration.
+
+Session 2856 examined `0x80068500..0x80069500`. The selector classified
+`sampleHmpTileHeightBicubic` and `sampleTerrainAtNpcPosition` as
+already-synchronized callable names, changed zero generated references, and
+failed closed under `--require-rename`. The independent placeholder scan
+found no in-range `fake_func_*` or `data_gap_*` names. This rules out a
+defensible source-backed rename in the interval without assigning meanings
+to unresolved records. No build or game run was needed. The next bounded
+sweep is `0x80069500..0x8006A500`.
 
 Session 2855 closed `0x80067500..0x80068500`. The selector classified all
 listed companion entries as already-synchronized callable names, changed zero
