@@ -120516,3 +120516,13 @@ changed zero generated references in zero files. The independent stale-name
 scan found no placeholder in the target interval. This rules out a
 source-backed rename there without inventing a semantic name; no build or game
 run was needed. The next bounded sweep is `0x80070500..0x80071500`.
+
+## Session 2862 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x80070500..0x80071500`.
+The selector classified `dispatchDatSubtypeByRandomIndex` and
+`walkDatTreeAndAllocSubtypeBuffers` as already-synchronized callable entries
+and changed zero generated references in zero files. The independent
+generated-tree stale-name scan found no in-range placeholder. This closes the
+interval without inventing a semantic name; no build or game run was needed.
+The next bounded sweep is `0x80071500..0x80072500`.
