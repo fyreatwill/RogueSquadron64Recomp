@@ -1,13 +1,15 @@
-# NEXT work unit (s2980) — qualify M5 Step 1 after a new route repair
+# NEXT work unit (s2981) — qualify M5 Step 1 after a new route repair
 
 HYPOTHESIS-ID: m5-audio-destub-step1
 
 ## Unit
 
-Do one new route-repair or independent handoff work unit that makes the port
-reach a target phase, then run the existing same-build M5 Step 1 image/silent
-qualification. Do not repeat s2978 unchanged. Preserve the silent control
+Do not build until a concrete route repair or independent handoff is added or
+provided. Then build once and run the existing same-build M5 Step 1
+image/silent qualification. Preserve the silent control
 (`ROGUESQ_AUDIO_UCODE=0`) and Factor 5 image arm (`=1`) in one build/run pair.
+The current tree has no such repair; this is the human handoff required to
+unblock the unit.
 
 ## Competing hypotheses and discriminator
 

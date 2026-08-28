@@ -122644,3 +122644,20 @@ unevaluable. No runtime behavior changed. Next is one new route repair or
 handoff followed by the phase-gated same-build image/silent qualification.
 Evidence: `docs/M5-AUDIO-PLAN.md`.
 HYPOTHESIS-ID: m5-audio-destub-step1.
+
+## Session 2980 (2026-08-28) — blocked on a new M5 route repair
+
+Audited the prescribed prerequisite for the M5 Step 1 qualification: a
+genuinely new port route repair or independent handoff that reaches title or
+hangar. The checked-in source contains the existing phase-gated VI/route
+diagnostic handoffs only; `get_rsp_microcode` still exposes the same Factor 5
+image and silent control arms, with no new route producer or behavior change.
+The s2978 artifact provides this iteration's concrete route evidence: 1,028
+route-preparation rows, all pre-title VI 640 (`0x0066A500`), and zero title or
+hangar phase gates. Therefore no build or A/B soak was run: the Step 1 table
+would have no target-phase rows, so audio degeneracy and image-contract
+hypotheses remain unevaluable. This rules out only the availability of a new
+in-tree route repair for this iteration; it does not explain the VI-640 stop
+or justify an audio mitigation. Requires a human-supplied route repair or
+independent handoff before the next M5 qualification.
+HYPOTHESIS-ID: m5-audio-destub-step1.

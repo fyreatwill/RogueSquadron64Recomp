@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2979 (2026-08-28).
+Current maintenance marker: Session 2980 (2026-08-28).
 
 ## Current state
 
@@ -48,6 +48,16 @@ The prior turn-limit block was false: the run produced 1,028 route rows and
 does not select a port route hypothesis. The next unit is the M5 audio
 de-stubbing design survey rather than a repeat of this stalled capture.
 Artifact: `scratch/agent/s2978_m5_route_port/RESULTS.md`.
+
+Session 2980 audited the prescribed M5 Step 1 prerequisite for a genuinely new
+port route repair or independent handoff. The checked-in tree contains only the
+existing phase-gated route/VI handoff diagnostics; no new route behavior,
+handoff, or target-phase producer is available. The latest port evidence still
+stops at VI 640 (`0x0066A500`) while the retail control reaches title/hangar.
+Because the Step 1 discriminator requires target-phase rows, no build or A/B
+soak was run and all audio downstream hypotheses remain unevaluable. This
+iteration is blocked on a concrete route repair or independent handoff, not on
+an audio conclusion.
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
