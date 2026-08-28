@@ -197,7 +197,7 @@ functions = [
     { name = "computeFrameDeltaTime", vram = 0x8000BBB0, size = 0x50 },
     { name = "timeSnapshotFiller", vram = 0x8000BC00, size = 0x360 },
     { name = "bufferArbiterProducerScanWait", vram = 0x8000BF60, size = 0x11C },
-    { name = "func_8000C07C", vram = 0x8000C07C, size = 0x674 },
+    { name = "submitGfxFrame", vram = 0x8000C07C, size = 0x674 },
     { name = "recordDeferredDrawRefA", vram = 0x8000C6F0, size = 0x12C },
     { name = "recordDeferredDrawRefB", vram = 0x8000C81C, size = 0x120 },
     { name = "recordDeferredDrawRefC", vram = 0x8000C93C, size = 0x12C },

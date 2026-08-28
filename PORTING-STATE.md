@@ -122890,3 +122890,15 @@ duplicate generated definition was found. Synchronized the stale project
 symbol TOML entry and built `RecompiledFuncs` successfully. This confirms the
 rename without changing game logic or audio behavior; the remaining M5 route
 dependency is unaffected. Next candidate: `0x8000C07C` (`submitGfxFrame`).
+
+## Session 2998 (2026-08-28) — synchronized submitGfxFrame
+
+Completed the bounded generated-symbol audit at `0x8000C07C`. The companion
+map, generated definition, overlay registration, and 14 direct callers
+identify the unique callable entry as `submitGfxFrame`; the project symbol
+TOML alone was stale. Synchronized the TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime, audio, or route behavior changed. The next
+candidate is `0x8000CB88`, which requires a fresh ambiguity audit. Evidence:
+`scratch/agent/s2998_generated_symbol_rename/source-table.md`.
