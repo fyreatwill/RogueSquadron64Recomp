@@ -122878,3 +122878,15 @@ This rules out the ambiguous-placeholder and duplicate-definition hypotheses
 for this address. No runtime or audio behavior changed. The next candidate is
 `0x8000815C`. Evidence:
 `scratch/agent/s2996_generated_symbol_rename/source-table.md`.
+
+## Session 2997 (2026-08-28) — synchronized drainMeshReleaseQueue
+
+Completed the bounded generated-symbol audit at `0x8000815C`. The companion
+map names the entry `drainMeshReleaseQueue` and documents its deferred-release
+queue drain/reset contract. `RecompiledFuncs/funcs_3.c` contains one matching
+callable definition, already carrying that name, and the generated caller at
+`0x8000C0CC` is consistent with the per-frame graphics cleanup sequence. No
+duplicate generated definition was found. Synchronized the stale project
+symbol TOML entry and built `RecompiledFuncs` successfully. This confirms the
+rename without changing game logic or audio behavior; the remaining M5 route
+dependency is unaffected. Next candidate: `0x8000C07C` (`submitGfxFrame`).

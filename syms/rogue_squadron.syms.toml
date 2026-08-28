@@ -176,7 +176,7 @@ functions = [
     { name = "allocDLBlockToListB", vram = 0x80007F1C, size = 0xC0 },
     { name = "allocDLBlockToListC", vram = 0x80007FDC, size = 0xC0 },
     { name = "allocDLBlockToListD", vram = 0x8000809C, size = 0xC0 },
-    { name = "func_8000815C", vram = 0x8000815C, size = 0x1F4 },
+    { name = "drainMeshReleaseQueue", vram = 0x8000815C, size = 0x1F4 },
     { name = "enqueueMeshForDeferredRelease", vram = 0x80008350, size = 0xB4 },
     { name = "recordDeferredDrawRefVariant", vram = 0x80008404, size = 0x14C },
     { name = "commitMeshDrawBatchRefs", vram = 0x80008550, size = 0x138 },
