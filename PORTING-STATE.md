@@ -123309,3 +123309,16 @@ did not execute. This rules out no audio-contract hypothesis; pre-title nulls
 are unevaluable and the route-repair or independent-handoff dependency
 remains open. Evidence:
 scratch/agent/s3028_m5_step1_contract_pair/RESULTS.md.
+
+## Session 3029 (2026-08-28) — synchronized advancePlayerAnimationPhase
+
+Completed the bounded generated-symbol audit at `0x80062B04`. The companion
+map names the unique callable `advancePlayerAnimationPhase`; its generated
+0x178-byte body, five generated callers, header declaration, and main-overlay
+registration agree, with no duplicate callable definition. Synchronized the
+stale project symbol TOML and built `RecompiledFuncs` successfully. This rules
+out an ambiguous placeholder, data-gap classification, and local duplicate
+callable for this address. The M5 route review found no untried in-tree
+repair: the existing 4-to-5-to-0 host transition driver was already rejected,
+while current producer hooks are observation-only. Evidence:
+`scratch/agent/s3029_generated_symbol_rename/source-table.md`.

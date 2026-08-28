@@ -883,7 +883,7 @@ functions = [
     { name = "measurePlayerSlotTextLayout", vram = 0x80062108, size = 0x4BC },
     { name = "startPlayerSlotAnimationChannelExt", vram = 0x800625C4, size = 0x290 },
     { name = "startPlayerSlotAnimationChannel", vram = 0x80062854, size = 0x2B0 },
-    { name = "func_80062B04", vram = 0x80062B04, size = 0x178 },
+    { name = "advancePlayerAnimationPhase", vram = 0x80062B04, size = 0x178 },
     { name = "initPlayerSlotAnimationChannelFull", vram = 0x80062C7C, size = 0x260 },
     { name = "startPlayerSlotAnimationChannelFlagged", vram = 0x80062EDC, size = 0x194 },
     { name = "startPlayerSlotAnimationChannelLooping", vram = 0x80063070, size = 0x854 },

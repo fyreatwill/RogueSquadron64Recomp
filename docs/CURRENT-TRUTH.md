@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3028 (2026-08-28).
+Current maintenance marker: Session 3029 (2026-08-28).
 
 ## Current state
 
@@ -734,16 +734,27 @@ and built `RecompiledFuncs` successfully. This rules out the ambiguous-
 placeholder and duplicate-definition hypotheses for this address. Evidence:
 `scratch/agent/s3024_generated_symbol_rename/source-table.md`.
 
+Session 3029 completed the bounded generated-symbol audit at `0x80062B04`.
+The companion map names the unique callable `advancePlayerAnimationPhase`;
+its generated 0x178-byte body, five generated callers, header declaration,
+and main-overlay registration agree, with no duplicate callable definition.
+Synchronized the stale project symbol TOML and built `RecompiledFuncs`
+successfully. This rules out an ambiguous placeholder, data-gap
+classification, and local duplicate callable for this address. The M5 route
+review found no untried in-tree repair: the existing 4-to-5-to-0 host
+transition driver was already rejected, while current producer hooks are
+observation-only. Evidence:
+`scratch/agent/s3029_generated_symbol_rename/source-table.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
-symbol sweep. Maintenance is complete for this iteration. M5 remains active
-on route repair/handoff before audio de-stubbing; the s3028 baseline did not
-reach target phases. M3 is parked pending a new discriminator. The generated
-symbol sweep is available only if M5 remains blocked after a genuinely new
-route angle.
+symbol sweep. Maintenance is complete. M5 remains blocked on a new route
+repair/handoff because the s3028 baseline did not reach target phases and
+the s3029 source review found no untried in-tree repair. M3 is parked pending
+a new discriminator; continue the generated-symbol sweep while M5 is blocked.
 
-3. **Generated-symbol sweep — continue only with exact companion identities.**
+1. **Generated-symbol sweep — continue only with exact companion identities.**
    `0x80019808` was mechanically classified and synchronized as
    `data_gap_80019808`; do not invent a semantic name for it. `0x8001B7B8`
    was synchronized as `requestViFeatureChange`, `0x8001B7C8` as
@@ -761,9 +772,10 @@ route angle.
    label. `0x8003DFA0` was synchronized as `mainGameLoop`, `0x8003E8DC` as
    `slotDispatcherIter`, and `0x80040218` as `getNextSlotNpcTypeId` in the
    project map. Continue at `0x80062B04` and keep the M5 route
-   dependency open below.
+   dependency open below. `0x80062B04` is now synchronized as
+   `advancePlayerAnimationPhase`; audit `0x800668B0` next.
 
-1. **M5 route repair/handoff — identify a different producer/signal edge.** The
+2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
    port to VI 320 in the paired run. The s2989 READY, s2990 wait-on-video, and
    s2991 alloc probes are unevaluable because the port stopped at VI 640; do
@@ -774,7 +786,7 @@ route angle.
    ground-truth edge, retaining the same-run task positive control plus
    title/hangar phase gates.
 
-2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a
    new route repair or independent handoff that reaches title/hangar so the
    same-build image/silent positive-control row is evaluable. Only then make

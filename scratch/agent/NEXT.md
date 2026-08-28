@@ -1,42 +1,32 @@
-# NEXT work unit — new M5 route repair or independent handoff edge
+# NEXT work unit — bounded generated-symbol audit at 0x800668B0
 
-HYPOTHESIS-ID: m5-route-repair-handoff
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Competing hypotheses and discriminator
 
-- H-route-producer-missing: the port lacks a producer or handoff needed to
-  leave VI 640, while the retail oracle reaches title and hangar.
-- H-input/driver-invalid: the validated input or autopilot contract is not
-  being delivered in the current recipe.
-- H-audio-route-causal: the selected audio arm changes the route before VI
-  640; silent and image arms should diverge under a valid same-build capture.
+- H-exact-callable: the companion symbol and generated body identify one
+  callable; synchronize the project TOML to the human name.
+- H-inline-fragment: the address is only an inline boundary or data gap; keep
+  the placeholder and record why a rename would be unsafe.
+- H-ambiguous: callers, header, or overlay registration disagree or duplicate
+  the identity; preserve the placeholder and report the conflict.
 
-The discriminator is one new route-edge measurement, grounded by the retail
-whole-RDRAM positive control, that records the named producer/handoff and
-phase transitions for both audio arms in one build. A valid input control with
-matching pre-title dispatch but no producer or target phase selects the
-missing-handoff direction; a producer with no transition selects its
-consumer/ordering contract; an arm-only divergence selects the audio-route
-hypothesis. A null without the positive control or valid input delivery is
-unevaluable.
+The discriminator is one evidence table covering companion symbol/source,
+generated prologue/body boundary, direct callers, header declaration, and
+overlay registration. An exact callable with consistent boundaries selects a
+rename; an inline body selects preservation; any disagreement selects an
+ambiguity audit rather than a rename. The generated snapshot is the positive
+control: its callable token and overlay entry must both visibly exist.
 
 ## Exact commands
 
-First inspect the already available route producer and handoff anchors, then
-add one regeneration-safe or host-side probe only if the measurement is
-capable of distinguishing the hypotheses:
+    rg -n -C 12 '800668B0|func_800668B0' \
+      /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+      /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+    rg -n '800668B0|func_800668B0' syms/rogue_squadron.syms.toml
+    cmake --build build --config Debug --target RecompiledFuncs -- -j2
 
-    rg -n -C 12 'bufferArbiterProducerMark|8001BCE4|route.*handoff|VI 640|0066A500' src tools scratch/agent
-    cmake --build build --config Debug --target RogueSquadron64Recomp -- -j2
-
-Run one same-build paired capture with the retail oracle whole-RDRAM control,
-the documented autopilot, and title/hangar phase gates. Do not repeat the
-s3028 full-log polling recipe; use a monotonic timestamp or bounded
-phase-file checks so the watchdog wall-time is real.
-
-## Constraints
-
-Do not modify audio gates, wait caps, voice guards, AI shims, or writeback
-behavior. The M5 Step-1 image/silent comparison remains unevaluable until a
-port arm reaches title or hangar. Preserve the dispatch positive control and
-record the exact producer PC/value/order if it fires.
+Write the bounded source table under
+`scratch/agent/s3030_generated_symbol_rename/`, synchronize only the project
+symbol TOML if the discriminator selects the exact callable, and build the
+generated-functions target. Do not run the game.
