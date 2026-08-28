@@ -121848,3 +121848,18 @@ it `func_main_80092CF0`. Updated the project map to the exact companion name,
 preserving the `0x158` extent. This rules out a missing semantic mapping at
 this address; no runtime experiment was needed. Evidence table:
 `scratch/agent/s2936_generated_symbol_rename/source-table.md`.
+## Session 2937 (2026-08-27) — classified live tail at 0x80092F10
+
+Ran the bounded generated-symbol census for `0x80092F10`: searched the project
+map, generated C, generated headers/overlay metadata, and the companion symbol
+files, then read the surrounding `funcs_24.c` bodies. The TOML-only record is
+the live internal tail of `resampleVoiceLutSamplesPacked` (`0x80092E48` through
+`0x80092F90`), not an independent generated function; the next independent
+function is `packFourLutResampledSamples` at `0x80092F94`. No standalone
+prologue, generated caller, lookup, or companion semantic name exists. The
+valid instructions are live packing/zero-fill code, so this is not a data gap.
+
+Selected H-Ambiguous: preserve the address-encoded TOML-only tail and make no
+rename or runtime change. This rules out both an independent semantic rename
+and a `data_gap_80092F10` relabel. Complete evidence table:
+`scratch/agent/s2937_generated_symbol_rename/source-table.md`.

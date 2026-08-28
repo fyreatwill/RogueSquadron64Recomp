@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2936 (2026-08-27).
+Current maintenance marker: Session 2937 (2026-08-27).
+
+The s2937 generated-symbol sweep re-audited `0x80092F10`. The TOML-only
+record is the live internal tail of `resampleVoiceLutSamplesPacked`
+(`0x80092E48..0x80092F90`), ending before the independent
+`packFourLutResampledSamples` function at `0x80092F94`. It has no standalone
+definition, caller, or companion semantic name; because its instructions are
+live code rather than a data gap, it remains an ambiguous/address-encoded
+tail and was not renamed. Complete table:
+`scratch/agent/s2937_generated_symbol_rename/source-table.md`.
 
 The s2936 generated-symbol sweep reconciled `0x80092CF0` to
 `interpolateConstantSamplesToPackedWord`. The complete `0x158`-byte
