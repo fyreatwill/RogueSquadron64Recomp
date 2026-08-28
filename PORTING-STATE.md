@@ -123126,3 +123126,17 @@ RecompiledFuncs` successfully. This rules out the ambiguous-placeholder,
 data-gap, and duplicate-callable hypotheses for this address. No runtime,
 audio, or route behavior changed. Evidence:
 `scratch/agent/s3015_generated_symbol_rename/source-table.md`.
+## Session 3016 (2026-08-28) — synchronized clearPendingViChanges
+
+Completed the bounded generated-symbol audit at `0x8001B7D8`. The companion
+map names the unique generated callable `clearPendingViChanges`; its 0x18-byte
+body clears the two pending VI words, and two generated callers, the header,
+and overlay registration agree. The candidate scan reported one tree-wide
+overlay reuse match, but no local duplicate callable or conflicting
+registration. Synchronized the stale project symbol TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out an unnamed data gap and a local duplicate callable for this
+address. No runtime, audio, or route behavior changed. The next sweep
+candidate is `0x8001B7F0`, which needs a fresh ambiguity audit because the
+scanner found no standalone generated prologue match. Evidence:
+`scratch/agent/s3016_generated_symbol_rename/source-table.md`.

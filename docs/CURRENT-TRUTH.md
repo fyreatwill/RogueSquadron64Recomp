@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3015 (2026-08-28).
+Current maintenance marker: Session 3016 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,17 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3016 completed the bounded generated-symbol audit at `0x8001B7D8`.
+The companion map names the unique generated callable
+`clearPendingViChanges`; its 0x18-byte body clears the two pending VI words,
+and two generated callers, the header, and overlay registration agree. The
+project symbol TOML was stale and was synchronized; `RecompiledFuncs` built
+successfully. This rules out an unnamed data gap and a local duplicate
+callable for this address. The next sweep candidate is `0x8001B7F0`, which
+requires a fresh ambiguity audit because the scanner found no standalone
+generated prologue match. Evidence:
+`scratch/agent/s3016_generated_symbol_rename/source-table.md`.
 
 Session 3013 completed the bounded generated-symbol audit at `0x80019808`.
 The companion map and generated artifacts classify it as the same 8-byte
@@ -612,8 +623,9 @@ blocker-free workstream until a new M5 route edge is available.
 1. **Generated-symbol sweep — continue only with exact companion identities.**
    `0x80019808` was mechanically classified and synchronized as
    `data_gap_80019808`; do not invent a semantic name for it. `0x8001B7B8`
-   was synchronized as `requestViFeatureChange`, and `0x8001B7C8` as
-   `beginSceneRenderFrame`. Audit the next candidate `0x8001B7D8` for a
+   was synchronized as `requestViFeatureChange`, `0x8001B7C8` as
+   `beginSceneRenderFrame`, and `0x8001B7D8` as
+   `clearPendingViChanges`. Audit the next candidate `0x8001B7F0` for a
    defensible companion identity. Do not invent
    names for ambiguous fragments. Keep the M5 route dependency open below and
    return to it only with a new grounded edge.
