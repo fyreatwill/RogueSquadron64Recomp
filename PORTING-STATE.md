@@ -123870,3 +123870,16 @@ so no rename was needed. This selects H-ExactIdentity and rejects both a
 boundary/data fragment and mapping drift for this candidate. The next sweep
 candidate is `0x80017B48`. Evidence:
 `scratch/agent/s3061_generated_symbol_rename/AUDIT.md`.
+## Session 3062 (2026-08-28) — renamed generated ship-availability symbol batch
+
+The bounded generated-symbol sweep selected `0x800C63C0` after the nearby
+`0x80017B48` region was already synchronized. Independent companion maps,
+generated body/header/overlay registration, callers, and the project TOML
+agree on `getAvailableShipsForLevel`; the project TOML's stale
+`func_800C63C0` entry was renamed. The regeneration-safe rename tool also
+records the already-confirmed `func_800824F8` → `rs_crc32` and
+`func_800BFDC4` → `setHudSecondaryWeaponInfo` mappings as a bounded batch.
+The duplicate menu-overlay symbol at the same address remains distinct, so
+this does not merge overlay-specific routines. No runtime experiment was
+needed for this static rename work. Evidence:
+`scratch/agent/s3062_generated_symbol_rename/AUDIT.md`.

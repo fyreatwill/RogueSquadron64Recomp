@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3061 (2026-08-28).
+Current maintenance marker: Session 3062 (2026-08-28).
 
 ## Current state
 
@@ -77,6 +77,15 @@ extent, and its three-byte setter semantics. The generated tree already has
 the regeneration-safe semantic name, so no rename was needed. The next sweep
 candidate is `0x80017B48`. Evidence:
 `scratch/agent/s3061_generated_symbol_rename/AUDIT.md`.
+
+Session 3062 landed the first rename in the current sweep batch. Independent
+companion maps, generated body/header/registration, callers, and the project
+TOML identify `0x800C63C0` as `getAvailableShipsForLevel`; the project TOML's
+stale `func_800C63C0` entry was corrected. The rename tool now also preserves
+the confirmed `rs_crc32` and `setHudSecondaryWeaponInfo` identities when a
+regeneration emits their address placeholders. The duplicate menu-overlay
+entry at the same address remains distinct. Evidence:
+`scratch/agent/s3062_generated_symbol_rename/AUDIT.md`.
 
 Session 3040 ran the M5 Step-1 image/silent qualification after an independent
 retail ground-truth preflight. Retail passed the whole-RDRAM positive control
