@@ -935,7 +935,7 @@ functions = [
     { name = "missionCleanupNoopHook", vram = 0x8006590C, size = 0x8 },
     { name = "datItemSetObjectiveBooleanCount", vram = 0x80065914, size = 0x6C },
     { name = "applyDatObjectiveTriggerEffect", vram = 0x80065980, size = 0xDC },
-    { name = "fake_func_80065A5C", vram = 0x80065A5C, size = 0x4 },
+    { name = "data_gap_80065A5C", vram = 0x80065A5C, size = 0x4 },
     { name = "buildPositionAndCallTransformHelper", vram = 0x80065A60, size = 0x438 },
     { name = "projectModelBoundsToScreen", vram = 0x80065E98, size = 0x3A4 },
     { name = "applyDatItemWorldOffset", vram = 0x8006623C, size = 0x64 },

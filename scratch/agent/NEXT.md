@@ -1,8 +1,8 @@
-# NEXT work unit (s2924) — generated-symbol sweep at 0x80065A5C
+# NEXT work unit (s2925) — generated-symbol sweep at 0x800663AC
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Inspect the next bounded placeholder interval `0x80065A5C..0x80065A60`.
+Inspect the next bounded placeholder interval `0x800663AC..0x800663B0`.
 Reconcile only source-backed semantic names or mechanically proven
 non-callable `data_gap_*` records in the companion/project maps, generated
 snapshot, and regeneration-safe rename table. Leave callable-ambiguous and
@@ -23,7 +23,7 @@ name, generated callers and lookups, and the selected action.
 Run `python3 tools/rename_generated_symbols.py --help`, inspect the bounded
 interval and companion sources, then use the reconciliation workflow. Build
 the Debug target if generated files change. Record the complete table at
-`scratch/agent/s2924_generated_symbol_rename/source-table.md`. Verify exact
+`scratch/agent/s2925_generated_symbol_rename/source-table.md`. Verify exact
 old-name searches and preserve the rename-table entry for regeneration.
 
 Expected discriminator outcomes: a companion-backed semantic name selects

@@ -121611,3 +121611,22 @@ This rules out a source-backed semantic rename for this interval and closes
 it as a mechanically proven data gap; it does not classify the next
 placeholder. Complete evidence table:
 `scratch/agent/s2923_generated_symbol_rename/source-table.md`.
+
+## Session 2924 (2026-08-27) — reconciled transform-helper data-gap symbol
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 40,759
+bytes, so this was not a maintenance iteration. The bounded generated-symbol
+sweep inspected `0x80065A5C..0x80065A60`. The four-byte record contains only
+`addu $v1,$v1,$v0`, with no standalone prologue or return, immediately before
+the complete `buildPositionAndCallTransformHelper` body at `0x80065A60`.
+There are no generated call or lookup references beyond its definition and
+overlay registration, and the companion map has no semantic source-backed
+name. The exact boundaries and non-callable fragment structure selected
+`data_gap_80065A5C`; the stale companion and project maps were reconciled.
+The generated snapshot and regeneration-safe rename table were already
+synchronized, so no generated references changed. Exact old-name searches
+found no remaining placeholder in the reconciled maps or generated snapshot.
+The Debug `RecompiledFuncs` target built successfully. This rules out a
+source-backed semantic rename for this interval and closes it as a
+mechanically proven data gap; it does not classify the next placeholder.
+Complete evidence table: `scratch/agent/s2924_generated_symbol_rename/source-table.md`.
