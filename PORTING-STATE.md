@@ -120611,3 +120611,28 @@ artifact is `scratch/agent/s2868_oracle_status_dispatch.log`.
 The next unit is a new retail-grounded post-dispatch completion/queue angle;
 the status-table recipe and broad main-text range are closed and must not be
 repeated.
+
+## Session 2869 (2026-08-27) — post-dispatch table was route-invalid
+
+Recorded the selected event and discriminator in `scratch/agent/NEXT.md`.
+The first retail oracle command omitted Rice video and stayed at 320 despite
+the 10,000 whole-RDRAM positive-control callbacks; it was rejected as an
+invalid route. The fixed Rice run passed the same positive control and reached
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. In retail,
+`0x80019CD0` (predecessor `0x80019CCC`) and `0x80033FCC` (predecessors
+`0x80019D68`/`0x80019DEC`) were active in both target phases, as was the
+queue-send site `0x80019F1C` (predecessor `0x80019F18`); `0x80019E14` had
+zero hits.
+
+The Debug target built successfully. The same-build image/silent port pair
+was SIGKILLed after a 100-second window, but both arms stopped at pre-title
+`VI 640 @ 0x0066A500`. Dispatch controls fired (51 silent, 52 image), while
+all downstream task-ABI, audio-return, SP-completion, queue, gate, and PCM
+markers were zero; neither arm emitted a crash or abort marker. This selects
+H-route-failure for the port comparison, so the retail event table cannot be
+mapped to the port in this run. It rules out neither post-dispatch hypothesis
+nor any audio behavior. No behavior or mitigation changed.
+
+Artifacts: `scratch/agent/s2869_oracle_post_dispatch.log`,
+`scratch/agent/s2869_oracle_post_dispatch_fixed.log`, and
+`scratch/agent/s2869_port_pair/`.

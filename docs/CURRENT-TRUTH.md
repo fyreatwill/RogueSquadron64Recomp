@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2868 (2026-08-27).
+Current maintenance marker: Session 2869 (2026-08-27).
 
 ## Live result
 
@@ -53,6 +53,16 @@ writer. This is single-source evidence that the status-table scheduling angle
 did not select a port discriminator. It does not explain the M5 publication
 gap or authorize a behavior change.
 
+The next post-dispatch oracle probe was instrument-valid after correcting an
+initial 320-only run that omitted Rice video. Retail passed the 10,000-write
+whole-RDRAM control and reached title/hangar. Scheduler handoff `0x80019CD0`,
+SP start `0x80033FCC`, and queue send `0x80019F1C` were active in both target
+phases; yield-status `0x80019E14` was absent. The matching same-build port
+image/silent pair stopped at pre-title `VI 640 @ 0x0066A500`, with dispatch
+controls but no downstream task/audio/SP/queue/PCM markers. This is
+route-failure evidence for this port recipe; the retail event table is not
+interpretable on the port until a route is qualified.
+
 SP-yield state is real API state and the request lifecycle now clears the
 previous request before staging the next task. The generic scheduler has two
 yield call sites, but no audio-specific generated branch was found. Target
@@ -72,7 +82,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    task-field, and broad main-text retail-entry angles are exhausted at the
    current discriminator. The next M5 unit needs a genuinely new
    post-dispatch or scheduling discriminator and must qualify title/hangar
-   before interpreting service, slot, MORT, or PCM nulls. Do not land a
+   before interpreting service, slot, MORT, or PCM nulls. The first
+   post-dispatch table is ground-truth-qualified but its matching port pair
+   was route-invalid; repair or replace the route before reading downstream
+   nulls. Do not land a
    behavior change without a named legitimate writer and ordering edge. The
    status-table poll / `0x80094648` alignment angle is now exhausted: it
    reached both target phases but produced no discrete scheduling edge.

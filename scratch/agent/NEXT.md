@@ -1,32 +1,38 @@
-# NEXT work unit (s2869) — M5-new-post-dispatch-angle
+# NEXT work unit (s2870) — M5-route-requalification
 
-HYPOTHESIS-ID: M5-new-post-dispatch-angle
+HYPOTHESIS-ID: M5-route-requalification
 
 ## Work unit
 
-Choose one genuinely new post-dispatch/scheduling discriminator after the
-status-table angle failed. First use the retail oracle to identify a concrete
-audio-task completion or queue transition and its predecessor; only then add
-one batched port counter set and qualify title/hangar in the same run.
+Re-qualify the known port route with one image arm only, using the longer
+validated autopilot schedule and the same passive route/task/audio markers.
+The current pair's pre-title stop makes its downstream nulls unevaluable;
+this unit is route qualification, not an audio publication conclusion.
 
 ## Competing hypotheses and discriminator
 
-- H-retail-post-dispatch: a new retail completion/queue predecessor has a
-  phase-qualified transition that can be mapped to a port edge.
-- H-route-failure: the whole-RDRAM control passes but title/hangar do not
-  qualify, making the downstream comparison unevaluable.
-- H-no-edge: title/hangar qualify, but the selected completion/queue event has
-  no distinct ordering relation to the audio work.
+- H-route-recoverable: a single image arm with the validated long schedule
+  reaches title and hangar and emits task-return/SP-completion markers.
+- H-route-still-failing: it remains at pre-title `VI 640 @ 0x0066A500` despite
+  the known-good schedule and controls.
+- H-route-crash: it reaches a crash/abort before either target phase.
 
-The discriminator is a same-run table containing the whole-RDRAM positive
-control, VI origins, the selected retail event's PC/predecessor and payload,
-and the corresponding port marker. A new phase-qualified predecessor or
-completion ordering selects H-retail-post-dispatch; missing target phases
-select H-route-failure; qualified unchanged ordering selects H-no-edge.
+The discriminator is one phase-gated table containing `[phase]`, dispatch,
+task ABI, image-stage, audio-return, audio-SP-route, and crash/abort rows.
+Title plus hangar selects H-route-recoverable; pre-title selects
+H-route-still-failing; a crash marker selects H-route-crash. No downstream
+null is interpretable unless both target phases qualify.
 
-## Exact commands
+## Exact command
 
-Before any port build, inspect the oracle's existing execution-watch and task-
-dump surfaces and run one positive-control-first retail probe. Do not reuse
-the broad `0x8003D000..0x80040000` range or the status-table poll recipe. The
-selected address and command must be written here before building.
+Build if needed:
+
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+
+Run one image arm from `build/` for 120 seconds, using
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1`,
+`ROGUESQ_SPIN_YIELD=1`, all existing M5 markers, and autopilot
+`6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start,66:start,76:start`.
+Use `PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1`, capture under
+`scratch/agent/s2870_route_requalification/`, and SIGKILL the game after the
+window.
