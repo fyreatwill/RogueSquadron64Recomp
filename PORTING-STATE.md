@@ -122181,3 +122181,23 @@ runtime reachability. Artifact:
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+## Session 2955 (2026-08-28) — reconciled 0x800AAADC entry preamble
+
+Ran the bounded generated-symbol census at `0x800AAADC`. The project and
+generated overlay records define a four-byte entry immediately before the
+complete `playerSnowSpeederInit` body at `0x800AAAE0`; its generated body is
+only `sh $a0,0x1A($v1)`, with no standalone prologue or return. Searches of
+the generated tree found no independent caller or absolute lookup for the
+candidate. The companion mission map preserves the same record immediately
+before the named initializer, and the regeneration-safe rename table already
+supplied the exact semantic `playerSnowSpeederInitPreamble`.
+
+The bounded rename changed the project map, companion map, and generated
+declaration/definition/overlay registration. The Debug `RecompiledFuncs`
+target built successfully with only pre-existing warnings. This selects the
+exact companion preamble name, rules out an independent callable function and
+a data-gap classification, and changes no behavior. Complete table:
+`scratch/agent/s2955_generated_symbol_rename/source-table.md`.
+
+ORIGIN: naming-only. No runtime, generated instruction, submodule, or
+mitigation-shaped behavior changed.

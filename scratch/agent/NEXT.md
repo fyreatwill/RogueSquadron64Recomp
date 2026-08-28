@@ -1,13 +1,13 @@
-# NEXT work unit (s2955) — classify the next unparked generated placeholder
+# NEXT work unit (s2956) — classify the next unparked generated placeholder
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Context
 
-s2954 reconciled `0x800AA6CC` to the exact companion name
-`npcPredictedRangeCheckPreamble` and built `RecompiledFuncs`. M5 is paused
+s2955 reconciled `0x800AAADC` to the exact companion preamble name
+`playerSnowSpeederInitPreamble` and built `RecompiledFuncs`. M5 is paused
 after the pre-title route stop, so continue the generated-symbol sweep at the
-next unparked candidate after `0x800AA6CC`.
+next unparked candidate after `0x800AAADC`.
 
 ## Competing hypotheses and discriminator
 
@@ -28,13 +28,13 @@ record authorizes a data-gap rename.
 
 ## Exact work
 
-1. Identify the next unparked placeholder after `0x800AA6CC` in the project
+1. Identify the next unparked placeholder after `0x800AAADC` in the project
    symbol map and generated overlay order; expected first candidate is
-   `0x800AAADC`, subject to the sweep census.
+   `0x800AE3E4`, subject to the sweep census.
 2. Inspect its complete body and exact predecessor/successor boundaries;
    search generated callers, independent lookups, and the companion map.
 3. Write the complete classification to a new
-   `scratch/agent/s2954_generated_symbol_rename/source-table.md`.
+   `scratch/agent/s2956_generated_symbol_rename/source-table.md`.
 4. Apply a bounded rename and build `RecompiledFuncs` only if an exact
    semantic name or mechanically proven data gap is found; otherwise preserve
    the placeholder.

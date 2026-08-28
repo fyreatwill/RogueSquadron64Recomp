@@ -1566,7 +1566,7 @@ functions = [
     { name = "npcPredictedRangeCheckPreamble", vram = 0x800AA6CC, size = 0x4 },
     { name = "npcPredictedRangeCheck", vram = 0x800AA6D0, size = 0x1A0 },
     { name = "parseDatEventTriggers", vram = 0x800AA870, size = 0x26C },
-    { name = "fake_func_800AAADC", vram = 0x800AAADC, size = 0x4 },
+    { name = "playerSnowSpeederInitPreamble", vram = 0x800AAADC, size = 0x4 },
     { name = "playerSnowSpeederInit", vram = 0x800AAAE0, size = 0x2F4 },
     { name = "composeEffectObjectTransformMatrix", vram = 0x800AADD4, size = 0x155C },
     { name = "tickEffectObjectMotionAndOrientation", vram = 0x800AC330, size = 0x484 },

@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2954 (2026-08-28).
+Current maintenance marker: Session 2955 (2026-08-28).
+
+Session 2955 classified `0x800AAADC` as the four-byte entry preamble for
+`playerSnowSpeederInit` at `0x800AAAE0`. The generated body contains only
+`sh a0, 0x1A(v1)`, with no standalone prologue, return, independent caller,
+or lookup; the companion map preserves the short record immediately before
+the named initializer. It was renamed to
+`playerSnowSpeederInitPreamble` across the project map, companion map, and
+generated artifacts. The Debug `RecompiledFuncs` target built successfully.
+Artifact: `scratch/agent/s2955_generated_symbol_rename/source-table.md`.
 
 Session 2954 classified `0x800AA6CC` as the four-byte entry preamble for
 `npcPredictedRangeCheck` at `0x800AA6D0`. The generated body contains only
@@ -784,7 +793,8 @@ apply only source-backed renames and preserve callable-ambiguous records.
    on invalid port pointers, so field/timing/logic remain unevaluable. Pause
    this exact discriminator until a genuinely new route repair exists. Continue
    the generated-symbol sweep from the next unparked placeholder after the
-   already-fake `0x80099FDC` boundary.
+   already-fake `0x80099FDC` boundary. Session 2955 advanced the sweep through
+   `0x800AAADC`; the next unparked placeholder is `0x800AE3E4`.
    The s2904 Step 6 drain-tick A/B also stopped at the same pre-title
    route, so it does not validate the default-off change. Ground truth must
    precede any port instrumentation. The s2873 pivot did not change this
