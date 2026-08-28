@@ -120836,8 +120836,9 @@ bytes, before `initCraftSelectScreen`), and `fake_func_800AF6A8` (4 bytes,
 before `handleCraftSelectInput`). All three had no callers — only overlay
 dispatch and declaration entries. These are renamed to `data_gap_80099C4C`,
 `data_gap_800AEC54`, and `data_gap_800AF6A8` in `tools/rename_generated_symbols.py`
-and applied to the generated snapshot. H-data-gap SELECTED for these three;
-H-callable REFUTED by the invalid-body proof.
+and applied to the generated snapshot. This selects H-data-gap and refutes
+H-callable for the three gap-fillers; the invalid-body proof discriminates
+them from ambiguous executable fragments.
 
 Five remaining records were executable instruction fragments with no source-backed
 name: `0x80097D58` (epilogue), `0x80099FDC` (branch before `aspMainTextStart`),
