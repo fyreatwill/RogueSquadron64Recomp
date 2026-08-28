@@ -121764,3 +121764,22 @@ instrumentation or behavior change was performed. Complete evidence table:
 
 ORIGIN: diagnostic/static classification of an isolated generated split; no
 mitigation-shaped behavior changed.
+
+## Session 2931 (2026-08-27) — preserved callable-ambiguous fragment at 0x8007C298
+
+Ran the planned bounded generated-symbol reconciliation for `0x8007C298`.
+The eight-byte record contains valid `sll $a1,$a2,1` and
+`addu $a1,$a1,$a0` instructions between complete `loadShieldPalette` and
+`initNpcTexturedEffectFromTemplate` bodies. The companion map retains
+`fake_func_8007C298` and provides no semantic name. Searches across the
+generated snapshot, checked-in maps, tools, and companion project found only
+the definition, declaration, and overlay registration, with no caller or
+independent lookup. The valid instructions do not prove non-callability, so
+the entry remains `ambiguous-or-fake`; no generated or map rename was made.
+The initial `python` command was unavailable; the identical helper completed
+with `python3` and reported zero renamed references. No build or runtime run
+was needed. Complete evidence table:
+`scratch/agent/s2931_generated_symbol_rename/source-table.md`.
+
+ORIGIN: diagnostic/static classification of a valid isolated fragment; no
+mitigation-shaped behavior changed.

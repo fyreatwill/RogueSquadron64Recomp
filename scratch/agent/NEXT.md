@@ -1,11 +1,11 @@
-# NEXT work unit (s2931) — bounded generated-symbol reconciliation at 0x8007C298
+# NEXT work unit (s2932) — bounded generated-symbol reconciliation at 0x80085CD8
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 The M5 route discriminator remains paused as route-invalid, M3 is parked, and
 the s2927 M4 revisit already resolved its static register-lifetime question.
-Inspect `0x8007C298`, the next remaining placeholder after the reconciled
-`0x8007A86C`, as one bounded source-backed rename/data-gap classification.
+Inspect `0x80085CD8`, the next remaining placeholder after the unresolved
+`0x8007C298`, as one bounded source-backed rename/data-gap classification.
 Do not add runtime probes or change behavior.
 
 ## Competing hypotheses and discriminator
@@ -18,7 +18,7 @@ Do not add runtime probes or change behavior.
 - H-Ambiguous: valid instructions or incomplete boundaries leave callability
   unresolved; preserve the placeholder and record why.
 
-The discriminator is a complete bounded table for `0x8007C298`: address/size,
+The discriminator is a complete bounded table for `0x80085CD8`: address/size,
 generated body, predecessor and successor boundaries, companion/m2c name,
 generated callers/lookups, and whether a callable prologue/return or
 invalid-data filler is present. A semantic companion match selects
@@ -33,5 +33,5 @@ rg -n -C 12 'fake_func_8007C298' ../N64Recomp/RecompiledFuncs/funcs_*.c
 ```
 
 Record the complete table at
-`scratch/agent/s2931_generated_symbol_rename/source-table.md`. No game run is
+`scratch/agent/s2932_generated_symbol_rename/source-table.md`. No game run is
 needed unless a regeneration mismatch is discovered.

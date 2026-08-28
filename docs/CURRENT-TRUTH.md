@@ -6,6 +6,15 @@ remain in the ledger and scratch artifacts.
 
 Current maintenance marker: Session 2930 (2026-08-27).
 
+The s2931 generated-symbol sweep re-audited `0x8007C298`. Its valid
+two-instruction `sll`/`addu` fragment lies between complete
+`loadShieldPalette` and `initNpcTexturedEffectFromTemplate` bodies. The
+companion map supplies no semantic name, and repository-wide generated/source
+search found no caller or independent lookup. Because valid instructions do
+not mechanically prove that the fragment is non-callable, it remains
+`ambiguous-or-fake`; no rename was authorized. Complete table:
+`scratch/agent/s2931_generated_symbol_rename/source-table.md`.
+
 The s2930 generated-symbol sweep classified `0x8007A86C` as a proven
 non-callable four-byte load fragment between the complete
 `downscaleImageHalfResBoxFilter` and `allocateNpcMeshVertexBuffer` bodies.
