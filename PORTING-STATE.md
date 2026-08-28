@@ -122485,3 +122485,21 @@ H-named and H-data-gap were therefore ruled out; H-ambiguous was selected and
 `func_8000040C` remains unchanged. `RecompiledFuncs` built successfully. This
 closes the current generated-placeholder sweep without inventing a name.
 Evidence: `scratch/agent/s2970_generated_symbol_rename/source-table.md`.
+## Session 2971 (2026-08-28) — ground-truthed framebuffer-arbiter producer handoff
+
+Ran the new independent retail-oracle route census for the previously
+unqualified `bufferArbiterProducerMark` handoff at `0x8001BCE4`. The first
+command variant used the Homebrew Mupen core and failed before emulation with
+`DebugSetCallbacks failed`; the fixed rerun used the locally built
+debugger-enabled core required by `tools/oracle/README.md`. The fixed capture
+passed the whole-RDRAM positive control at 10,000 writes, reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and recorded 4,267
+executions of `0x8001BCE4`. Target-phase rows were present in both title and
+hangar; the dominant predecessor was `0x8000C628` (4,243 rows).
+
+This selects `H-retail-handoff` and rules out `H-port-handoff` and
+`H-stale-route` for this capture as single-source oracle evidence. It does not
+prove a port mismatch. The next discriminator is one same-build, phase-gated
+port probe of this PC and its predecessor/state tuple with an existing positive
+control. No runtime behavior or mitigation changed. Complete artifact:
+`scratch/agent/s2971_m5_route_qualification/RESULTS.md`.

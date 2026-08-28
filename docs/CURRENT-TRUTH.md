@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2970 (2026-08-28).
+Current maintenance marker: Session 2971 (2026-08-28).
 
 ## Current state
 
@@ -39,6 +39,18 @@ therefore callable-but-ambiguous, not a data gap; the placeholder remains and
 `RecompiledFuncs` built successfully. This closes the currently generated
 placeholder sweep without inventing an address-coded synonym. Evidence:
 `scratch/agent/s2970_generated_symbol_rename/source-table.md`.
+
+Session 2971 ran the corrected independent retail-oracle capture for the new
+framebuffer-arbiter producer handoff `bufferArbiterProducerMark`
+(`0x8001BCE4`). The first Homebrew-core command failed before emulation with
+`DebugSetCallbacks failed`; the fixed command used the locally built debugger
+core. Its whole-RDRAM positive control reached 10,000 writes, and the retail
+route reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`.
+The candidate executed 4,267 times, with target-phase rows in both title and
+hangar (primarily predecessor `0x8000C628`). This selects
+`H-retail-handoff` and rules out an absent candidate or stale route for this
+capture as single-source oracle evidence. It does not establish a port
+difference. Artifact: `scratch/agent/s2971_m5_route_qualification/RESULTS.md`.
 
 Session 2968 ran the M5 Step 1 same-build pair after a successful Debug
 rebuild. The independent retail oracle passed its whole-RDRAM positive
@@ -230,6 +242,12 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
 8. **M5 image task contract / hangar artifact — parked.** No writeback, remap,
    forced state, or mitigation without an `ORIGIN:` naming the writer and
    stating whether its value is legitimate.
+
+9. **M5 route handoff — newly grounded, port arm next.** Retail positively
+   executes `bufferArbiterProducerMark` at `0x8001BCE4` in title and hangar.
+   Build one phase-gated port probe for this PC plus its predecessor/state
+   tuple, retaining the existing positive control; do not infer a mismatch
+   from the oracle alone.
 
 ## Durable boundaries
 
