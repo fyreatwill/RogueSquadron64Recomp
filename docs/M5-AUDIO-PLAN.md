@@ -1,12 +1,12 @@
 # M5 — audio de-stubbing plan
 
-Refreshed in session 2885 (2026-08-27). This is the design gate for M5.
+Refreshed in session 2979 (2026-08-28). This is the design gate for M5.
 Session 2791 completed the SP-yield request lifecycle by clearing stale request
 state when a new task starts; task interruption and resumption remain out of
 scope.
 
-Session 2885 re-surveyed the checked-in audio/runtime sources and the available
-fixup surface after the route-invalid s2881–s2884 experiments. The document was
+Session 2979 re-surveyed the checked-in audio/runtime sources and the available
+fixup surface after the phase-gated s2978 port-route capture. The document was
 already present, so this refresh reconciles it with the current tree rather than
 opening a second plan. The external
 `RecompiledFuncs/` snapshot is not present in this checkout; generated audio
@@ -20,9 +20,14 @@ silent `musyx_stub` control; `aspMain`, `unknown_task_stub`, and the RSP
 non-`Broke` failure path are not valid de-stubbing targets. The default drain
 tick is forced off at process startup, and the image canary, route identity,
 PCM joins, gate/slot traces, and MORT decoder are diagnostic or validation
-surfaces rather than hidden audio implementations. Because the current
-same-build pair is stopping at pre-title VI 640, no downstream null is a
-de-stubbing discriminator yet.
+surfaces rather than hidden audio implementations. The coupled contract is
+task dispatch → DMEM/DMA and `Broke` → SP completion → guest service/slot
+progress → PCM publication; changing only one stub return cannot validate that
+chain. The s2978 same-build port pair still stops at pre-title VI 640, so all
+downstream nulls remain unevaluable. The first behavior change is therefore
+not authorized by this survey: Step 1 must first be rerun only after a route
+repair reaches a target phase, then Step 3 may implement one named missing
+contract edge.
 
 ## Boundary and current policy
 
@@ -110,6 +115,19 @@ They are useful only when phase-scoped and paired with a positive control.
 | H-MixedPipelines | Factor 5 image audio and CPU MORT speech are separate pipelines. | RSP task controls can be complete while MORT descriptor/voice controls remain independent, or vice versa. A single global “audio default” cannot be treated as proof for both. |
 | H-GateArtifact | A current guest gate or trap suppresses legitimate work. | Only independent retail writer/value evidence, plus the corresponding port writer and downstream transition, authorizes changing that gate/trap. A guard hit by itself is not evidence. |
 
+### s2979 planning result
+
+`H-audio-stubs-share-one-contract` is selected for the design scope. This is
+not a claim that the silent stub caused the VI-640 route stop. The source
+survey shows that an audio task's observable contract is distributed across
+the selected RSP function, `run_task`, `sp_complete`, the guest MusyX service
+and slot state, and the AI/PCM boundary. The image arm already performs real
+DMEM/DMA work; the silent arm is intentionally useful as the no-write control.
+Consequently the first replacement must preserve a same-build silent arm and
+measure the complete chain. The current route stop means that the required
+positive control has not yet run at the target phase, so no gate, wait, voice,
+or writeback mitigation is selected by this plan.
+
 The discriminator is one phase-keyed row containing all of these fields:
 
 `M_AUDTASK` dispatch and exit; task fields and source hash; DMEM change and
@@ -131,7 +149,7 @@ SIGKILL.
 | Step | One behavior change | Positive control and expected downstream signal | Phase-gated soak and rollback |
 |---|---|---|---|
 | 0 | No behavior change: reconcile the retail contract and current generated/fixup anchors. | Oracle whole-RDRAM watch fires; retail reaches the target route and names writers for `0xA0F50`, task fields, voice/status words, and AI calls. Port has `audtask-dispatch`, SP completion, and route controls. | Oracle plus the existing port driver, with `PROBE_PHASE_WIDTH`/`PROBE_KEYS_FROM_PHASE=1`. Rollback: none. Do not add an instrument before this control. |
-| 1 | Re-baseline the current default image against the same-build silent control before changing any further contract edge. | Stub: `M_AUDTASK` returns with no DMEM/DMA. Image: nonzero DMEM changes, image completion at `0x1328`, `Broke`, SP completion, and matching task fields. The image must also report the predicted service/slot/PCM rows or explicitly show the missing edge. | Phase-keyed title/hangar run using `ROGUESQ_AUDIO_UCODE=0` and the default image arm from one build; retain `ROGUESQ_LOG_ALL` and PCM/task joins. Rollback: set `ROGUESQ_AUDIO_UCODE=0`. |
+| 1 | Re-baseline the current default image against the same-build silent control before changing any further contract edge. This is a qualification checkpoint, not a behavior change. | Stub: `M_AUDTASK` returns with no DMEM/DMA. Image: nonzero DMEM changes, image completion at `0x1328`, `Broke`, SP completion, and matching task fields. The image must also report the predicted service/slot/PCM rows or explicitly show the missing edge. | Phase-keyed title/hangar run using `ROGUESQ_AUDIO_UCODE=0` and the default image arm from one build; retain `ROGUESQ_LOG_ALL` and PCM/task joins. Rollback: set `ROGUESQ_AUDIO_UCODE=0`. The run is invalid if both port arms remain before the target phase. |
 | 2 | Promotion to the default image arm is complete in the current source; do not repeat it as an experiment. | The Step 1 row must still show the default image reaches the same title/hangar route as the stub control, completes tasks, preserves the gfx DMEM control, and identifies any downstream divergence. | Treat this as a completed policy transition, not a new behavior change. The env override remains the rollback path. |
 | 3 | Implement exactly one missing image task/output contract edge identified by Step 1/2, such as a proven `data_ptr+0x100` writeback or output consumer relation. | Retail and port rows agree on the writer PC, destination span, payload polarity, and completion ordering; PCM source/consumer join closes after the change. | One build with old/new contract arms toggled within the same run and both target origins. Rollback the one contract edge; do not add a broad writeback guard. |
 | 4 | Change one `0x800A0F50` writer or one gate consumer, only after independent retail writer/value evidence selects it. **C88 default store is done (s2608):** unset writes guest `$v0` at `0x8008EC88`; `ROGUESQ_M5_C88_VALUE=0` is the rollback. Title PCM joins; hangar PCM does not. | Same-run retail writer and value transition, matching port writer, nonzero gate branch, completed task, and slot/voice downstream transition. Remaining: hangar `0x80094648` value/dest vs sampled PCM. | Title and hangar VI phases using AUTOPILOT. Rollback that exact store/consumer. Any mitigation-shaped diff needs `ORIGIN:` naming the writer and legitimacy. |

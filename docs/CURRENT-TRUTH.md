@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2978 (2026-08-28).
+Current maintenance marker: Session 2979 (2026-08-28).
 
 ## Current state
 
@@ -48,6 +48,16 @@ The prior turn-limit block was false: the run produced 1,028 route rows and
 does not select a port route hypothesis. The next unit is the M5 audio
 de-stubbing design survey rather than a repeat of this stalled capture.
 Artifact: `scratch/agent/s2978_m5_route_port/RESULTS.md`.
+
+Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
+audio surface is still the Factor 5 image arm versus the explicit silent
+`musyx_stub`; stock `aspMain` and `unknown_task_stub` are not valid RS64
+de-stubbing targets. The source contracts are coupled through task dispatch,
+DMEM/DMA, `Broke`, SP completion, guest service/slot state, and PCM
+publication, while CPU-side MORT remains a separate speech path. This selects
+the coupled-contract planning hypothesis, but the s2978 VI-640 pre-title stop
+means the downstream positive control has not run and authorizes no gate, wait,
+voice, or writeback change. Artifact: `docs/M5-AUDIO-PLAN.md`.
 
 Session 2975 attempted the independent retail route-preparation discriminator
 at guest PC `0x80019CD8`. The fixed command used the locally built debugger
@@ -262,16 +272,16 @@ remain under `scratch/agent/soak_results/` and in `SOAK-RESULTS.md`.
 
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete for this iteration. M5 remains active
-on the route-preparation target predicate; M3 is parked pending a new
+on audio de-stubbing, with the design survey complete; M3 is parked pending a new
 discriminator. The sweep is active under the stable slug
 `generated-symbol-renaming-sweep`.
 
-1. **M5 audio de-stubbing — design survey.** Produce `docs/M5-AUDIO-PLAN.md`
-   by inventorying active audio stubs/traps/gates and their MORT task, DMA,
-   queue, slot, and PCM contracts. Select an incremental first replacement
-   only if its inputs are locally present; otherwise record the exact open
-   dependency and pivot. Include a same-build positive-control soak for the
-   proposed step. No runtime behavior change in the design unit.
+1. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+   The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a
+   new route repair or independent handoff that reaches title/hangar so the
+   same-build image/silent positive-control row is evaluable. Only then make
+   one contract change selected by task → SP → service/slot → PCM evidence.
+   Do not repeat the s2978 route capture unchanged.
 
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.

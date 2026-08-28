@@ -122626,3 +122626,21 @@ The route comparison is parked pending a new local repair or independent
 handoff that changes the VI-640 stall. The next unit is the M5 audio
 de-stubbing design survey.
 HYPOTHESIS-ID: m5-audio-destub-design.
+
+## Session 2979 (2026-08-28) — refreshed M5 audio de-stubbing design gate
+
+Performed the required M5 source survey and reconciled the existing
+`docs/M5-AUDIO-PLAN.md` with the current tree and s2978 route result. The
+active production `M_AUDTASK` choices are the Factor 5 image arm and the
+explicit silent `musyx_stub`; stock `aspMain` and `unknown_task_stub` are not
+valid RS64 de-stubbing targets. `run_task` stages the task and serializes
+DMEM, then `sp_complete` delivers the completion message; guest MusyX
+service/slot state and the AI/PCM callback are downstream contracts, while
+CPU-side MORT is a separate speech path. This selects the coupled-contract
+planning hypothesis and identifies task → SP → service/slot → PCM as the
+invariant. It does not identify the cause of the VI-640 stall: s2978's port
+pair never reached title or hangar, so downstream audio nulls remain
+unevaluable. No runtime behavior changed. Next is one new route repair or
+handoff followed by the phase-gated same-build image/silent qualification.
+Evidence: `docs/M5-AUDIO-PLAN.md`.
+HYPOTHESIS-ID: m5-audio-destub-step1.
