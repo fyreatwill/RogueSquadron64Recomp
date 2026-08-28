@@ -123089,3 +123089,17 @@ was therefore preserved. This rules out an exact companion rename and a
 mechanically proven data-gap rename for this address; it does not prove the
 helper is never called from outside the generated tree. Evidence:
 `scratch/agent/s3012_generated_symbol_rename/source-table.md`.
+
+## Session 3013 (2026-08-28) — synchronized data-gap symbol at 0x80019808
+
+Ran the prescribed bounded generated-symbol audit for `0x80019808`. The
+companion symbol map already classifies the address as `data_gap_80019808`,
+and the generated body contains only the two-instruction short record
+`lwc1`/`mul.s`, between the complete `projectPointToScreen` and
+`awaitFrameSyncMesgBlock` entries. No generated callers or duplicate callable
+definition were found; the entry is present only in its definition, prototype,
+and overlay registration. Synchronized the stale project symbol TOML from
+`fake_func_80019808` to `data_gap_80019808` and built `RecompiledFuncs`
+successfully. This rules out an exact semantic rename and an ambiguous
+callable identity for this address; it remains a non-callable boundary record.
+Evidence: `scratch/agent/s3013_generated_symbol_rename/source-table.md`.

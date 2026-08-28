@@ -257,7 +257,7 @@ functions = [
     { name = "vec3Cross", vram = 0x80019548, size = 0x4C },
     { name = "quaternionToMat3x4", vram = 0x80019594, size = 0x114 },
     { name = "projectPointToScreen", vram = 0x800196A8, size = 0x160 },
-    { name = "fake_func_80019808", vram = 0x80019808, size = 0x8 },
+    { name = "data_gap_80019808", vram = 0x80019808, size = 0x8 },
     { name = "awaitFrameSyncMesgBlock", vram = 0x80019810, size = 0x2C },
     { name = "signalFrameSyncMesgNonblock", vram = 0x8001983C, size = 0x2C },
     { name = "viRetraceHandlerThread", vram = 0x80019868, size = 0x35C },

@@ -1,4 +1,4 @@
-# NEXT work unit — classify `0x80019808`
+# NEXT work unit — classify `0x8001B7B8`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -14,7 +14,7 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 The discriminating measurement is one bounded static audit: compare the
 companion symbol/m2c sources, generated body and boundaries, all generated
-callers, overlay registration, and duplicate definitions for `0x80019808`.
+callers, overlay registration, and duplicate definitions for `0x8001B7B8`.
 An exact companion name plus one coherent callable selects synchronization;
 a complete but unnamed callable selects no invented rename; a boundary-only
 fragment or collision selects a documented non-rename/manual review.
@@ -22,9 +22,9 @@ fragment or collision selects a documented non-rename/manual review.
 ## Exact commands
 
 ```sh
-rg -n '80019808|fake_func_80019808' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
-rg -n -C 20 '80019808|fake_func_80019808' ../N64Recomp/RecompiledFuncs/funcs_*.c
-python3 tools/sweep_scan_candidates.py fake_func_80019808
+rg -n '8001B7B8|func_8001B7B8' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
+rg -n -C 20 '8001B7B8|func_8001B7B8' ../N64Recomp/RecompiledFuncs/funcs_*.c
+python3 tools/sweep_scan_candidates.py func_8001B7B8
 ```
 
 If the sources agree on an exact identity, synchronize the project symbol

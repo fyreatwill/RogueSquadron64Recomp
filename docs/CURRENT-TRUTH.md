@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3012 (2026-08-28).
+Current maintenance marker: Session 3013 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,15 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3013 completed the bounded generated-symbol audit at `0x80019808`.
+The companion map and generated artifacts classify it as the same 8-byte
+short record `data_gap_80019808`: only `lwc1`/`mul.s`, no generated callers or
+duplicate callable definition, immediately before the complete
+`awaitFrameSyncMesgBlock`. Synchronized the stale project symbol TOML and
+built `RecompiledFuncs` successfully. This rules out an exact semantic rename
+and an ambiguous callable identity for this address. Evidence:
+`scratch/agent/s3013_generated_symbol_rename/source-table.md`.
 
 Session 3012 completed the bounded generated-symbol audit at `0x80018ED4`.
 The companion project has no entry or semantic name; the generated code is a
@@ -583,11 +592,11 @@ pending a new discriminator. The generated-symbol sweep is the active
 blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   `0x80018ED4` was audited and remains an ambiguous cache-helper placeholder:
-   do not rename it. Audit the next candidate `0x80019808` for a defensible
-   companion identity; do not invent a name for an unnamed fragment or gap.
-   Do not invent names for ambiguous fragments. Keep the M5 route dependency
-   open below and return to it only with a new grounded edge.
+   `0x80019808` was mechanically classified and synchronized as
+   `data_gap_80019808`; do not invent a semantic name for it. Audit the next
+   candidate `0x8001B7B8` for a defensible companion identity. Do not invent
+   names for ambiguous fragments. Keep the M5 route dependency open below and
+   return to it only with a new grounded edge.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
