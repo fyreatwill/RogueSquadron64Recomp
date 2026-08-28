@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2891 (2026-08-27).
+Current maintenance marker: Session 2893 (2026-08-27).
 
 ## Live result
 
@@ -306,9 +306,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x800FA248`; s2890 renamed the adjacent data gaps at `0x800FBE14` and
    `0x800FEF04`; s2891 then reconciled all 14 placeholders through
    `0x80109620` as bounded data gaps. The s2892 sweep then reconciled the
-   next main-text record at `0x800027B8` as a bounded data gap; continue with
-   the next remaining placeholder after `0x800027C0` unless M5 gets a new
-   writer-backed route or contract discriminator.
+   next main-text record at `0x800027B8` as a bounded data gap; s2893
+   reconciled the four-byte `0x8000337C` fragment as `data_gap_8000337C`.
+   Continue with the next remaining placeholder after `0x80003380` unless M5
+   gets a new writer-backed route or contract discriminator.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

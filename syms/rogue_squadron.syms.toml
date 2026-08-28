@@ -63,7 +63,7 @@ functions = [
     { name = "waitForSerialIdle", vram = 0x80003284, size = 0x5C },
     { name = "releaseSerialLock", vram = 0x800032E0, size = 0x28 },
     { name = "initSiQueue", vram = 0x80003308, size = 0x74 },
-    { name = "fake_func_8000337C", vram = 0x8000337C, size = 0x4 },
+    { name = "data_gap_8000337C", vram = 0x8000337C, size = 0x4 },
     { name = "setVideoReadyFlag", vram = 0x80003380, size = 0x10 },
     { name = "clearDmaReadyFlag", vram = 0x80003390, size = 0x10 },
     { name = "processOverlayDmaStruct", vram = 0x800033A0, size = 0x84 },

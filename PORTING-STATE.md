@@ -121080,3 +121080,20 @@ were zero generated references to rewrite. Reconciled the checked project
 symbol map to `data_gap_800027B8` and verified zero stale
 `fake_func_800027B8` references there. No build or runtime soak was needed;
 no game behavior changed. The next unresolved placeholder is `0x8000337C`.
+
+## Session 2893 (2026-08-27) — reconciled main-text data gap at 0x8000337C
+
+Ran the bounded generated-symbol sweep from `0x8000337C` through the next
+established boundary at `0x80003380`. The complete interval table classified
+the sole 4-byte placeholder as H-DataGap: its generated body contains only
+`lw $s7, 0x2C($sp)`, with no return or callable epilogue. The exact adjacent
+symbols are `initSiQueue` and `setVideoReadyFlag`; the companion entry had no
+semantic name or independent caller evidence. H-Callable and H-Ambiguous were
+rejected. Evidence: `scratch/agent/s2893_generated_symbol_rename/source-table.md`.
+
+The generated snapshot and rename table were already synchronized, so the
+reconciliation tool rewrote zero generated references. Updated the checked
+project symbol map and companion main-overlay map to `data_gap_8000337C`, and
+verified zero stale `fake_func_8000337C` references in the maps or generated
+snapshot. No build or runtime soak was needed; no game behavior changed. The
+next unresolved placeholder is after `0x80003380`.
