@@ -615,7 +615,7 @@ functions = [
     { name = "allocateNpcSlot", vram = 0x8003E5F8, size = 0x8C },
     { name = "popNpcSlotFromTail", vram = 0x8003E684, size = 0x14C },
     { name = "unregisterAndFreeNpcSlot", vram = 0x8003E7D0, size = 0x10C },
-    { name = "func_8003E8DC", vram = 0x8003E8DC, size = 0x170 },
+    { name = "slotDispatcherIter", vram = 0x8003E8DC, size = 0x170 },
     { name = "slotDispatcherInner", vram = 0x8003EA4C, size = 0x1C4 },
     { name = "reinsertNpcIntoSortedFreeList", vram = 0x8003EC10, size = 0x164 },
     { name = "destroyNpcSlotByIndex", vram = 0x8003ED74, size = 0x180 },

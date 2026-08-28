@@ -123252,3 +123252,16 @@ declaration, and eight generated caller-boundary sites. Synchronized the stale
 built `RecompiledFuncs` successfully. This rules out an ambiguous placeholder,
 data-gap classification, and local duplicate callable for this address. The
 next sweep candidate is `0x8003E8DC`.
+
+## Session 3025 (2026-08-28) — synchronized slotDispatcherIter
+
+Completed the bounded generated-symbol audit at `0x8003E8DC`. The companion
+symbol map identifies `slotDispatcherIter`, and the generated tree contains
+one standalone 0x170-byte definition with the matching header declaration,
+overlay registration, and 146 generated references. No duplicate callable
+definition was found. Synchronized the stale
+`syms/rogue_squadron.syms.toml` entry from `func_8003E8DC` to
+`slotDispatcherIter` and built `RecompiledFuncs` successfully. This rules out
+an ambiguous placeholder, data-gap classification, and local duplicate
+callable for this address. The next sweep candidate is `0x80040218`.
+Evidence: `scratch/agent/s3025_generated_symbol_rename/source-table.md`.

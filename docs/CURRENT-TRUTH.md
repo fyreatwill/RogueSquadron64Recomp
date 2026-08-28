@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3023 (2026-08-28).
+Current maintenance marker: Session 3025 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,15 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3025 completed the bounded generated-symbol audit at `0x8003E8DC`.
+The companion map names the unique callable `slotDispatcherIter`; the
+generated body, header, 0x170-byte overlay registration, and 146 generated
+references agree, with no duplicate callable definition. Synchronized the
+stale project symbol TOML and built `RecompiledFuncs` successfully. This
+rules out an ambiguous placeholder, data-gap classification, and local
+duplicate callable for this address. Evidence:
+`scratch/agent/s3025_generated_symbol_rename/source-table.md`.
 
 Session 3022 classified `0x80024878` as the mechanically supported short
 record `data_gap_80024878` immediately before `swizzleTextureRowsToTmem`.
