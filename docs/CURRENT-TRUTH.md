@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3031 (2026-08-28).
+Current maintenance marker: Session 3032 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,16 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3032 classified `0x8006ACA4` as the mechanically supported inline
+fragment `fake_func_8006ACA4`. The companion map has no human identity; the
+generated token is exactly three floating-point instructions with no return or
+callable epilogue, and its `0xC` overlay registration matches that fragment.
+There are no direct generated callers or duplicate definitions. Preserved the
+placeholder and built `RecompiledFuncs` successfully. This rules out an exact
+companion rename, callable-boundary interpretation, and local duplicate for
+this address. Evidence:
+`scratch/agent/s3032_generated_symbol_rename/source-table.md`.
 
 Session 3031 completed the bounded generated-symbol audit at `0x80066A90`.
 The companion map names the unique callable `initSpeechSubsystem`; its
@@ -792,7 +802,10 @@ a new discriminator; continue the generated-symbol sweep while M5 is blocked.
    project map. Continue at `0x80062B04` and keep the M5 route
    dependency open below. `0x80062B04` is now synchronized as
    `advancePlayerAnimationPhase`, and `0x800668B0` is synchronized as
-   `waitForAnyAudioSlot`; audit `0x80066A90` next.
+   `waitForAnyAudioSlot`; `0x80066A90` is synchronized as
+   `initSpeechSubsystem`. The `0x8006ACA4` candidate was audited as a
+   three-instruction inline fragment and remains `fake_func_8006ACA4`; audit
+   the next placeholder candidate after it.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the

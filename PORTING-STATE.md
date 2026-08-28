@@ -123334,6 +123334,17 @@ placeholder, data-gap classification, and local duplicate callable for this
 address. Evidence:
 scratch/agent/s3030_generated_symbol_rename/source-table.md.
 
+## Session 3032 (2026-08-28) — audited 0x8006ACA4 inline fragment
+
+Completed the bounded generated-symbol audit at `0x8006ACA4`. The companion
+map has only `fake_func_8006ACA4`; the generated token is exactly three
+floating-point instructions with no return or callable epilogue, and its
+`0xC` overlay registration matches the fragment. There are no direct generated
+callers or duplicate definitions. Preserved the placeholder and built
+`RecompiledFuncs` successfully. This rules out an exact companion rename,
+callable-boundary interpretation, and local duplicate for this address.
+Evidence: scratch/agent/s3032_generated_symbol_rename/source-table.md.
+
 ## Session 3031 (2026-08-28) — audited initSpeechSubsystem symbol
 
 Completed the bounded generated-symbol audit at `0x80066A90`. The companion

@@ -1,4 +1,4 @@
-# NEXT work unit — bounded generated-symbol audit at 0x8006ACA4
+# NEXT work unit — bounded generated-symbol audit at 0x8006B704
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -20,13 +20,13 @@ control: its callable token and overlay entry must both visibly exist.
 
 ## Exact commands
 
-    rg -n -C 12 '8006ACA4|fake_func_8006ACA4' \
+    rg -n -C 12 '8006B704|fake_func_8006B704' \
       /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
       /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
-    rg -n '8006ACA4|fake_func_8006ACA4' syms/rogue_squadron.syms.toml
+    rg -n '8006B704|fake_func_8006B704' syms/rogue_squadron.syms.toml
     cmake --build build --config Debug --target RecompiledFuncs -- -j2
 
 Write the bounded source table under
-`scratch/agent/s3032_generated_symbol_rename/`, synchronize only the project
+`scratch/agent/s3033_generated_symbol_rename/`, synchronize only the project
 symbol TOML if the discriminator selects the exact callable, and build the
 generated-functions target. Do not run the game.
