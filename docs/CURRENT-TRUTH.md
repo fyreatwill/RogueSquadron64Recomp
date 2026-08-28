@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3048 (2026-08-28).
+Current maintenance marker: Session 3051 (2026-08-28).
 
 ## Current state
 
@@ -142,6 +142,18 @@ stopped at VI 640 and recorded zero phase-4 sends, only receives from
 to external DP-queue delivery; the writer/interrupt edge is still unproven.
 Evidence: `scratch/agent/s3050_m5_direct_dp_producer/AUDIT.md`.
 
+Session 3051 ran the corrected retail-grounded external DP-delivery watch.
+Retail passed the whole-RDRAM and execution positive controls, reached the
+hangar, and executed `0x8001C38C` (receive from `0x8011A408`) and
+`0x8001C3D4` (forward to `0x8011A7E8`) 243 times each in the target phase.
+The port's existing batched DP-event instrument was live but stopped at
+VI-640 origin `0x0066A500`, so its target-phase delivery remained
+unevaluable. This selects `H-MeasurementInsufficient` for the port capture;
+the retail pair is real, but the missing port handoff is not localized. The
+zero watch at handler entry `0x8001C328` is not interpreted as absence because
+the body PCs were positive in the same run. Evidence:
+`scratch/agent/s3051_m5_external_dp_delivery/AUDIT.md`.
+
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
 Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
@@ -176,12 +188,13 @@ route-blocked at pre-title VI 640; event registration/completion is live in the
 port and the next unit must use a genuinely new external-delivery angle. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — audit external DP delivery into `0x8011A408`.**
-   Session 3050 found zero target-phase direct sends to this queue in retail
-   and in the port. Identify the retail DP interrupt/external enqueue writer
-   and compare it with the port's `dp_complete`/external-message path, keeping
-   the whole-RDRAM and route positive controls. Do not repeat direct
-   `osSendMesg`, registration, or consumer-only watches.
+1. **M5 route repair/handoff — correlate host DP completion with route preparation.**
+   Session 3051 positively established the retail guest receive/forward pair,
+   but the port remains at VI 640 before the comparison phase. Use one new
+   port-side table joining `send_dl` return, `dp_complete`, external-message
+   delivery, and the next live-VI route-preparation attempt; retain route and
+   phase positive controls. Do not repeat direct `osSendMesg`, event
+   registration, or consumer-only watches.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve

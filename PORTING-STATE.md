@@ -123639,3 +123639,25 @@ this queue. This rejects a divergent direct producer and points to external
 DP-queue delivery, but does not identify its writer or prove the port's
 external delivery is wrong. No behavior changed. Evidence:
 `scratch/agent/s3050_m5_direct_dp_producer/AUDIT.md`.
+
+## Session 3051 (2026-08-28) — audited external DP delivery with corrected PC watches
+
+Ran the bounded M5 external-DP-delivery unit after correcting the oracle
+watch syntax to use one comma-separated PC list. The retail oracle used Rice,
+the eleven-Start schedule, VI tracing/polling, and the whole-RDRAM positive
+control. The control fired 10,000 times, the execution control
+`0x800078EC` fired 3,229,215 times, and retail reached the hangar at 512 /
+`0x006AB400`. In the target phase, `0x8001C38C` received from queue
+`0x8011A408` 243 times and `0x8001C3D4` forwarded to `0x8011A7E8` 243 times;
+both had the expected predecessor PCs. The entry watch `0x8001C328` was
+zero, but the positive body watches make that null an entry-mapping issue,
+not evidence that the handler body is absent.
+
+Ran the existing batched port DP-event probe from `build/` with LLE-only
+AUTOPILOT. The probe was live and recorded phase-4 receives from
+`0x8000834C` and `0x8000B650`, but the port stopped at VI 640 /
+`0x0066A500`; no title/hangar phase or target route was reached. This selects
+`H-MeasurementInsufficient` for the port capture: retail establishes the
+guest receive/forward pair, but the port does not enter the comparison phase.
+It rules out neither missing port delivery nor ordering. No behavior changed.
+Evidence: `scratch/agent/s3051_m5_external_dp_delivery/AUDIT.md`.
