@@ -1,36 +1,39 @@
-# NEXT work unit — bounded audio-task publication-to-consumer audit
+# NEXT work unit — bounded audio-task descriptor lifetime/reuse measurement
 
-HYPOTHESIS-ID: m5-route-task-handoff
+HYPOTHESIS-ID: m5-route-task-lifetime
 
-Perform one bounded static audit of the distinct handoff between audio-task
-publication and the first route consumer. Do not add a probe or build unless
-the audit identifies a concrete non-mitigation change.
+Perform one bounded measurement of whether the guest `OSTask` descriptor is
+mutated or reused after `osSpTaskStartGo` submits its pointer and before the SP
+task thread reaches `run_task`. Ask independent retail ground truth first;
+only then add one batched, phase-gated same-build probe if the oracle can name
+the relevant task/PC boundary. Do not change behavior from pointer lifetime
+concern alone.
 
 Competing hypotheses and the discriminator:
 
-- H-TaskPublicationMissing: the pending audio task is not published for the
-  target transition, so route preparation has no correct task to consume.
-- H-TaskPublicationStale: publication and consumption cross a thread/queue
-  boundary without a happens-before edge and the consumer sees stale task
-  metadata.
-- H-TaskConsumerWrong: the first audio route consumer reads the wrong task,
-  arm, or task fields, independently of VI acceptance.
-- H-StaticInsufficient: all task publication and consumption edges are
-  present and ordered, so no behavior change is justified.
+- H-DescriptorImmutable: the descriptor fields are unchanged between submit
+  and consume; pointer transport is correct and the route failure is elsewhere.
+- H-DescriptorReused: the game reuses or rewrites the RDRAM descriptor before
+  consumption; the observed task is not the submitted task.
+- H-DescriptorOrdering: the pointer is stable but a producer/consumer memory
+  ordering edge is insufficient for descriptor contents.
+- H-MeasurementInsufficient: the oracle cannot attribute the target task, so
+  no port conclusion is justified.
 
-The single discriminator is a complete task table: every writer of
-`s_pending_audio_task` and its guest pointer, every queue/event handoff and
-memory-order operation, every first consumer (`rs64_m5_task_handoff` and RSP
-dispatch), and the retail-grounded target transition. A missing writer selects
-the concrete publication edge; a stale handoff selects the exact ordering
-edge; a wrong consumer selects its field/arm boundary; otherwise preserve the
-route-failure boundary. Do not infer audio behavior from VI-640 `accepted=0`.
+The single discriminator is a submit-to-consume identity table keyed by the
+retail-grounded target transition: submitted task pointer, task fields at
+submit, first consumer pointer/fields, and any intervening guest writes. A
+stable pointer and fields select H-DescriptorImmutable; changed fields or
+pointer select H-DescriptorReused; stable fields with a visibility mismatch
+select H-DescriptorOrdering; absent retail attribution selects
+H-MeasurementInsufficient. Do not infer audio behavior from VI-640
+`accepted=0`.
 
 Exact commands from the repo root:
 
-    rg -n -C 35 's_pending_audio_task|pending_audio_task|rs64_m5_task_handoff|M_AUDTASK|audio task|task_ptr|data_ptr' src/main/main.cpp src/main/upstream_compat.cpp lib/N64ModernRuntime
-    rg -n -C 20 'osSendMesg|osRecvMesg|submit_rsp_task|M_AUDTASK|audioTask' /Users/williambuckley/Documents/Tools/rogue_squadron64
+    sed -n '1,220p' tools/oracle/README.md
+    rg -n -C 25 'osSpTaskStartGo|osSpTaskLoad|M_AUDTASK|audio task|task_ptr' tools/oracle /Users/williambuckley/Documents/Tools/rogue_squadron64
     git diff -- src lib syms tools
 
 Record the complete table and decision in
-`scratch/agent/s3044_m5_task_handoff_audit/`.
+`scratch/agent/s3045_m5_task_lifetime/`.

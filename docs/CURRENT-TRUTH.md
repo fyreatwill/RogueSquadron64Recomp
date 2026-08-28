@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3043 (2026-08-28).
+Current maintenance marker: Session 3044 (2026-08-28).
 
 ## Current state
 
@@ -70,6 +70,18 @@ live VI registers and applies the target-pair predicate directly. No route
 behavior change is justified, and the VI-640 route failure remains open.
 Evidence: `scratch/agent/s3043_m5_vi_commit_order_audit/AUDIT.md`.
 
+Session 3044 completed the bounded audio-task publication-to-consumer audit.
+`osSpTaskStartGo` forwards the guest `OSTask*` into the non-GFX SP queue;
+`task_thread_func` consumes that same pointer, `run_task` calls
+`get_rsp_microcode`, and the selected audio arm observes the descriptor on the
+same consumer thread. The queue is the real handoff; the release/acquire
+guest-pointer atomic is diagnostic only. No missing writer, wrong consumer, or
+missing host ordering edge was found. The only remaining static concern is
+descriptor lifetime/reuse because the queue carries a RDRAM pointer rather than
+a copy; this is single-source evidence and requires independent temporal
+ground truth before changing behavior. Evidence:
+`scratch/agent/s3044_m5_task_handoff_audit/AUDIT.md`.
+
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
 Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
@@ -104,12 +116,13 @@ route-blocked at pre-title VI 640; the VI-commit ordering edge is now audited,
 so the next M5 unit must use a genuinely new audio-task handoff angle. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — audit audio-task publication to first consumer.**
-   Session 3043 found the diagnostic VI snapshot early but irrelevant to route
-   selection. The next unit must audit pending-audio-task publication,
-   queue/event ordering, and the first RSP/task consumer as a new handoff
-   angle; do not change behavior until a missing or misordered edge is named.
-   See `scratch/agent/NEXT.md`.
+1. **M5 route repair/handoff — test descriptor lifetime/reuse at the queue boundary.**
+   Session 3044 found the host publication and consumer path complete, but the
+   queue carries an RDRAM `OSTask*` rather than a descriptor copy. The next
+   unit must obtain an independent retail attribution or a same-build temporal
+   measurement that distinguishes immutable descriptor data from mutation or
+   reuse between `osSpTaskStartGo` and `run_task`; do not change behavior from
+   the static concern alone. See `scratch/agent/NEXT.md`.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve

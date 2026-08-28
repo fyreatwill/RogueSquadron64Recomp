@@ -123512,3 +123512,19 @@ ordering defect is telemetry-only and cannot explain VI-640 `accepted=0`.
 This rules out a missing route consumer dependency on `g_m5_vi_commit` and does
 not justify a behavior change. The next unit audits audio-task publication to
 its first consumer. Full table: `scratch/agent/s3043_m5_vi_commit_order_audit/AUDIT.md`.
+
+## Session 3044 (2026-08-28) — audited audio-task publication to consumer
+
+Ran the bounded static audio-task publication-to-consumer audit. The project
+`osSpTaskStartGo` override forwards the guest `OSTask*` into the SP queue;
+non-GFX tasks, including `M_AUDTASK`, are consumed by `task_thread_func`,
+which calls `run_task` and then `get_rsp_microcode` on the same consumer
+thread. `get_rsp_microcode` records the descriptor and selects the image or
+silent arm, and both arms observe that same descriptor. The release/acquire
+guest-pointer atomic is diagnostic only; the queue is the actual handoff.
+No missing writer, wrong consumer, or missing host ordering edge was found.
+The queue carries a RDRAM pointer rather than a descriptor copy, leaving
+descriptor lifetime/reuse as the only static concern. This is single-source
+evidence because the companion retail libultra entry points are assembly
+includes without bodies in the available C tree; no behavior change or build
+was justified. Full table: `scratch/agent/s3044_m5_task_handoff_audit/AUDIT.md`.
