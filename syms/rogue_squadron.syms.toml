@@ -610,7 +610,7 @@ functions = [
     { name = "clearDeferredClearRequest", vram = 0x8003DF78, size = 0x20 },
     { name = "data_gap_8003DF98", vram = 0x8003DF98, size = 0x8 },
     { name = "func_8003DFA0", vram = 0x8003DFA0, size = 0x5BC },
-    { name = "fake_func_8003E55C", vram = 0x8003E55C, size = 0x4 },
+    { name = "data_gap_8003E55C", vram = 0x8003E55C, size = 0x4 },
     { name = "initNpcSlotList", vram = 0x8003E560, size = 0x98 },
     { name = "allocateNpcSlot", vram = 0x8003E5F8, size = 0x8C },
     { name = "popNpcSlotFromTail", vram = 0x8003E684, size = 0x14C },

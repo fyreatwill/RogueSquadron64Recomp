@@ -121292,3 +121292,20 @@ This selects H-RouteInvalid for the recipe. It leaves target-phase key match
 versus divergence unevaluable, rules out neither target hypothesis, and
 authorizes no audio behavior change or mitigation. Full details:
 `scratch/agent/s2905_m5_route_transition/RESULTS.md`.
+
+## Session 2906 (2026-08-27) — reconciled main-text branch data gap at 0x8003E55C
+
+Inspected the complete generated-symbol interval `0x8003DF98..0x8003E560`.
+The prior `0x8003DF98` record was already synchronized as a data gap. The
+sole new placeholder, `0x8003E55C`, is a four-byte branch to `0x8003E5E4`, the
+epilogue store inside `initNpcSlotList`; it has no standalone prologue or
+return, no companion source/m2c semantic name, and no generated callers or
+address lookups. The complete source table is
+`scratch/agent/s2906_generated_symbol_rename/source-table.md`.
+
+This selects H-DataGap and renames `fake_func_8003E55C` to
+`data_gap_8003E55C` in the companion map, project symbol map, generated C,
+generated header, overlay metadata, and regeneration-safe rename table. The
+Debug target rebuilt successfully. It rules out a source-backed semantic
+rename for this record but cannot prove that an undocumented indirect entry
+does not exist; no runtime behavior or mitigation was changed.

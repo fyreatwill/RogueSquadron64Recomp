@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2905 (2026-08-27).
+Current maintenance marker: Session 2906 (2026-08-27).
+
+The s2906 generated-symbol sweep classified `0x8003E55C..0x8003E560`.
+`0x8003E55C` is a four-byte branch into the `initNpcSlotList` epilogue, with
+no standalone prologue, return, companion semantic name, generated caller, or
+address lookup. It was renamed to `data_gap_8003E55C` in the companion source
+map, project symbol map, generated C/header, overlay metadata, and
+regeneration-safe rename table; the Debug target rebuilt successfully. The
+complete table is `scratch/agent/s2906_generated_symbol_rename/source-table.md`.
 
 The s2905 M5 route-transition producer census built the Debug target and ran
 the driven retail oracle plus identical same-build image/silent arms. The
@@ -395,7 +403,8 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `inflateReset`; s2901 then classified the five zlib fragments through
    `0x80029D20` as data gaps. s2902 inspected the following
    `0x80029D20..0x8002A080` established-symbol interval and found no
-   placeholders; continue with `0x8003DF98`.
+   placeholders; s2906 then classified `0x8003E55C` as a bounded data gap.
+   Continue with the next remaining placeholder at `0x80040304`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
