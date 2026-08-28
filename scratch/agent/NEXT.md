@@ -1,37 +1,36 @@
-# NEXT work unit — bounded VI-commit-to-route ordering audit
+# NEXT work unit — bounded audio-task publication-to-consumer audit
 
-HYPOTHESIS-ID: m5-route-vi-commit-order
+HYPOTHESIS-ID: m5-route-task-handoff
 
-Perform one bounded static audit of the different handoff edge between the
-host VI commit writer and the first audio route prepare. Do not add a probe or
-build unless the audit identifies a concrete non-mitigation change.
+Perform one bounded static audit of the distinct handoff between audio-task
+publication and the first route consumer. Do not add a probe or build unless
+the audit identifies a concrete non-mitigation change.
 
 Competing hypotheses and the discriminator:
 
-- H-VICommitMissing: the port never records the target VI commit because the
-  host writer is not reached or does not observe the guest VI state.
-- H-VICommitMisordered: the commit is recorded, but route preparation reads a
-  stale/foreign commit due to caller or thread ordering.
-- H-PrepareConsumerWrong: the commit is valid and ordered, but the first
-  route-prepare consumer selects the wrong task/arm or clears the identity at
-  the wrong edge.
-- H-StaticInsufficient: the sources do not expose a defensible missing or
-  misordered edge, so no behavior change is justified.
+- H-TaskPublicationMissing: the pending audio task is not published for the
+  target transition, so route preparation has no correct task to consume.
+- H-TaskPublicationStale: publication and consumption cross a thread/queue
+  boundary without a happens-before edge and the consumer sees stale task
+  metadata.
+- H-TaskConsumerWrong: the first audio route consumer reads the wrong task,
+  arm, or task fields, independently of VI acceptance.
+- H-StaticInsufficient: all task publication and consumption edges are
+  present and ordered, so no behavior change is justified.
 
-The single discriminator is a complete writer-to-consumer table: every host
-VI commit writer and caller, commit fields and sequence publication, every
-route-prepare consumer, thread-local/atomic handoff, and the corresponding
-retail-grounded target transition. A missing writer selects a concrete host
-edge for later ground-truth-backed work; misordering selects the precise
-publication/consumer edge; a wrong consumer selects its arm/clear boundary;
-otherwise preserve the route-failure boundary and pivot to the generated
-symbol sweep. Do not infer audio behavior from VI-640 `accepted=0`.
+The single discriminator is a complete task table: every writer of
+`s_pending_audio_task` and its guest pointer, every queue/event handoff and
+memory-order operation, every first consumer (`rs64_m5_task_handoff` and RSP
+dispatch), and the retail-grounded target transition. A missing writer selects
+the concrete publication edge; a stale handoff selects the exact ordering
+edge; a wrong consumer selects its field/arm boundary; otherwise preserve the
+route-failure boundary. Do not infer audio behavior from VI-640 `accepted=0`.
 
 Exact commands from the repo root:
 
-    rg -n -C 35 'g_m5_vi_commit|rs64_m5_vi|VI_WIDTH_REG|VI_ORIGIN_REG|vi-commit|route_prepare|route-prepare|audio_current_route_snapshot|identity_edge' src/main/main.cpp src/main/upstream_compat.cpp tools docs
-    rg -n -C 20 'osViSetMode|osViSwapBuffer|rs64_m5_route_prepare_handoff' /Users/williambuckley/Documents/Tools/rogue_squadron64
+    rg -n -C 35 's_pending_audio_task|pending_audio_task|rs64_m5_task_handoff|M_AUDTASK|audio task|task_ptr|data_ptr' src/main/main.cpp src/main/upstream_compat.cpp lib/N64ModernRuntime
+    rg -n -C 20 'osSendMesg|osRecvMesg|submit_rsp_task|M_AUDTASK|audioTask' /Users/williambuckley/Documents/Tools/rogue_squadron64
     git diff -- src lib syms tools
 
 Record the complete table and decision in
-`scratch/agent/s3043_m5_vi_commit_order_audit/`.
+`scratch/agent/s3044_m5_task_handoff_audit/`.

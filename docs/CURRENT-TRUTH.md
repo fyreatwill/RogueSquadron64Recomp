@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3042 (2026-08-28).
+Current maintenance marker: Session 3043 (2026-08-28).
 
 ## Current state
 
@@ -61,6 +61,15 @@ header, overlay registration, project TOML, and companion map agree. Host
 not identify a missing caller or an acceptance bug. No behavior change was
 justified. Evidence: `scratch/agent/s3042_m5_producer_mark_audit/AUDIT.md`.
 
+Session 3043 completed the bounded VI-commit-to-route ordering audit. The
+diagnostic `g_m5_vi_commit` snapshot is published by `osViSetMode_recomp`
+immediately after queuing next-state mode data, before the retrace thread's
+`update_vi` writes the actual VI registers. This is a real telemetry ordering
+mismatch, but route preparation does not consume that snapshot: it reads the
+live VI registers and applies the target-pair predicate directly. No route
+behavior change is justified, and the VI-640 route failure remains open.
+Evidence: `scratch/agent/s3043_m5_vi_commit_order_audit/AUDIT.md`.
+
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
 Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
@@ -91,15 +100,16 @@ contract gap from that result.
 
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete. M5 design is complete, but Step 1 is
-route-blocked at pre-title VI 640; the next M5 unit must use a genuinely new
-route-handoff angle. M3 is parked pending a new discriminator.
+route-blocked at pre-title VI 640; the VI-commit ordering edge is now audited,
+so the next M5 unit must use a genuinely new audio-task handoff angle. M3 is
+parked pending a new discriminator.
 
-1. **M5 route repair/handoff — audit the VI-commit-to-route ordering edge.**
-   Session 3042 found the ProducerMark call chain complete and the host
-   acceptance predicate correctly limited to target VI pairs. The next unit
-   must audit the committed-VI writer, its caller/order metadata, and the
-   first route-prepare consumer as a different handoff angle; do not change
-   behavior until a missing or misordered edge is named. See `scratch/agent/NEXT.md`.
+1. **M5 route repair/handoff — audit audio-task publication to first consumer.**
+   Session 3043 found the diagnostic VI snapshot early but irrelevant to route
+   selection. The next unit must audit pending-audio-task publication,
+   queue/event ordering, and the first RSP/task consumer as a new handoff
+   angle; do not change behavior until a missing or misordered edge is named.
+   See `scratch/agent/NEXT.md`.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
@@ -186,7 +196,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Archived progression
 
-Sessions through 3041 established the current M5 boundaries, qualified the
+Sessions through 3043 established the current M5 boundaries, qualified the
 rendering route, and advanced the regeneration-safe symbol sweep. Exact
 interval results, counts, and run outcomes are preserved in
 `PORTING-STATE.md` and `docs/PROJECT-OVERVIEW.md`.

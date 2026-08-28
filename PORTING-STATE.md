@@ -123499,3 +123499,16 @@ missing handoff. No behavior or mitigation changed. Evidence:
 ## Session 3042 (2026-08-28) — audited ProducerMark call chain
 
 Ran the bounded retail-grounded ProducerMark static audit requested after s3041. The generated tree contains all six direct calls to `0x8001BCE4`: `bufferArbiterProducerScanWait` at `0x8000BFE8`, three sites in `submitGfxFrame` (`0x8000C440`, `0x8000C628`, `0x8000C64C`), `advanceVideoFrame` at `0x80018258`, and `initVideoSubsystem` at `0x8001A300`. The generated body, header, overlay registration, project TOML, and companion map agree. The host route `accepted` bit is computed solely from committed VI `(width, origin)` and cannot reject ProducerMark; VI 640 is intentionally outside the 1024/title and 512/hangar target pairs. This refutes a missing ProducerMark caller, wrong audited probe edge, and ProducerMark-specific acceptance defect. It does not explain why the port fails to reach a target VI commit, so no behavior change or build was justified. Full table: `scratch/agent/s3042_m5_producer_mark_audit/AUDIT.md`. Next work moves to the VI-commit-to-route ordering edge.
+## Session 3043 (2026-08-28) — audited VI commit to route ordering
+
+Ran the bounded static VI-commit-to-route ordering audit. `osViSetMode_recomp`
+queues next-state mode data and then publishes the diagnostic `g_m5_vi_commit`
+record, while the actual VI register writer runs later in the retrace thread's
+`update_vi`. This proves the diagnostic record is published before the actual
+commit. The route consumer does not read that record: `rs64_audio_route_prepare`
+reads the live VI registers and accepts only the 1024/title and 512/hangar
+target pairs. The snapshot is consumed only by transition logging, so the
+ordering defect is telemetry-only and cannot explain VI-640 `accepted=0`.
+This rules out a missing route consumer dependency on `g_m5_vi_commit` and does
+not justify a behavior change. The next unit audits audio-task publication to
+its first consumer. Full table: `scratch/agent/s3043_m5_vi_commit_order_audit/AUDIT.md`.
