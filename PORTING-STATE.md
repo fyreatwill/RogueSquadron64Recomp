@@ -121259,3 +121259,19 @@ This selects H-NoBoundaryHit for this candidate set as single-source oracle
 evidence. It rules out these four PCs as the target-phase retail-entry
 boundary, but does not explain the port route and authorizes no behavior
 change. The exhausted broad `0x8003D000..0x80040000` range was not repeated.
+
+## Session 2904 (2026-08-27) — revalidated M5 drain tick only to route boundary
+
+Built the Debug target and ran the existing Step 6 drain-tick validation with
+the retail oracle plus same-build tick-off and tick-on arms. The oracle
+whole-RDRAM positive control reached its 10,000-write threshold. Both port arms
+reached only pre-title `VI 640 @ 0x0066A500`, each emitted 44 audio-dispatch
+controls, and neither emitted target-phase drain, task, DMA, SP, PCM, or
+audio-return rows. Neither crashed or aborted. The complete bounded summary is
+in `scratch/agent/s2904_m5_step6_validation/RESULTS.md`.
+
+This selects H-RouteInvalid for the recipe and leaves
+H-DrainDefaultSafe versus H-DrainTickRequired unevaluable. It rules out no
+drain behavior and authorizes no de-stub, guard, or mitigation. The next M5
+unit is a new VI-commit-to-route handoff producer census; the closed scheduler
+ID table is not repeated.

@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2903 (2026-08-27).
+Current maintenance marker: Session 2904 (2026-08-27).
+
+The s2904 M5 Step 6 drain-tick validation built the Debug target and ran the
+retail oracle plus same-build tick-off/tick-on arms. The oracle whole-RDRAM
+control reached 10,000 writes, but both port arms stopped at pre-title
+`VI 640 @ 0x0066A500`; each emitted 44 audio-dispatch controls and neither
+emitted target-phase drain, task, DMA, SP, PCM, or audio-return rows. Neither
+crashed or aborted. This selects H-RouteInvalid for the recipe; the default-off
+versus tick-on drain result is unevaluable and authorizes no behavior change.
+Artifact: `scratch/agent/s2904_m5_step6_validation/RESULTS.md`.
 
 The s2903 mandatory retail-entry revisit used a new overlay/state handoff
 census. The whole-RDRAM oracle control produced 10,000 writes and the driven
@@ -333,7 +342,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x8006E4B4`, while `mainGameLoop=0x8003DFA0` is boot-only; the loop-entry
    sub-angle is exhausted, but writer equivalence remains open. The next unit
    must first use a distinct route-state discriminator or repaired route
-   qualification before interpreting downstream nulls. Ground
+   qualification before interpreting downstream nulls. The s2904 Step 6
+   drain-tick A/B also stopped at the same pre-title route, so it does not
+   validate the default-off change. Ground
    truth must precede any port instrumentation. The s2873 pivot
    did not change this unresolved M5 ordering; its next audio behavior change
    still requires a named legitimate contract edge.
