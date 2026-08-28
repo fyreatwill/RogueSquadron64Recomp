@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2941 (2026-08-27).
+Current maintenance marker: Session 2942 (2026-08-27).
+
+The s2942 generated-symbol sweep classified `0x80099C4C` as a proven
+non-callable four-byte invalid-decode gap between the complete
+`noopHandler_80099C44` stub and `transformVec3ByAffineMatrix`. It has no
+callable body, generated caller, independent lookup, or companion semantic
+name. The generated C/header/overlay metadata and rename helper already used
+`data_gap_80099C4C`; the project TOML and companion map are now synchronized.
+Complete table: `scratch/agent/s2942_generated_symbol_rename/source-table.md`.
 
 The s2941 generated-symbol sweep classified `0x80097D58` as a proven
 non-callable eight-byte frame-restore fragment after the complete

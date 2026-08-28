@@ -121930,3 +121930,20 @@ Debug `RecompiledFuncs` target passed with existing warnings. This rules out
 an independent semantic callable rename and does not change runtime behavior.
 Complete evidence table:
 `scratch/agent/s2941_generated_symbol_rename/source-table.md`.
+
+## Session 2942 (2026-08-27) — renamed invalid-decode gap at 0x80099C4C
+
+Ran the bounded generated-symbol census for `0x80099C4C`: searched the
+project map, generated C/header/overlay metadata, companion symbol map, and
+rename helper, then read the surrounding `funcs_26.c` bodies. The four-byte
+record is an explicit generated `__builtin_trap()` invalid-decode gap between
+the complete `noopHandler_80099C44` stub and `transformVec3ByAffineMatrix`.
+It has no callable prologue, return, semantic companion name, generated
+caller, or independent lookup.
+
+Selected H-DataGap and synchronized the project TOML and companion map to
+`data_gap_80099C4C`; the generated C/header/overlay metadata and rename helper
+were already synchronized. No runtime experiment or build was needed because
+this was a map-only reconciliation. This rules out an independent semantic
+callable rename and does not change runtime behavior. Complete evidence table:
+`scratch/agent/s2942_generated_symbol_rename/source-table.md`.

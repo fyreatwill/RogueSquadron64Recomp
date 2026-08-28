@@ -1503,7 +1503,7 @@ functions = [
     { name = "update3DAudioFrame", vram = 0x800998E8, size = 0x344 },
     { name = "reset3DAudioLists", vram = 0x80099C2C, size = 0x18 },
     { name = "noopHandler_80099C44", vram = 0x80099C44, size = 0x8 },
-    { name = "fake_func_80099C4C", vram = 0x80099C4C, size = 0x4 },
+    { name = "data_gap_80099C4C", vram = 0x80099C4C, size = 0x4 },
     { name = "transformVec3ByAffineMatrix", vram = 0x80099C50, size = 0xAC },
     { name = "normalizeVec3", vram = 0x80099CFC, size = 0x6C },
     { name = "crossProductVec3", vram = 0x80099D68, size = 0x64 },
