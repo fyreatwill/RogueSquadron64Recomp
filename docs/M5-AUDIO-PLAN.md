@@ -1,11 +1,11 @@
 # M5 — audio de-stubbing plan
 
-Refreshed in session 2979 (2026-08-28). This is the design gate for M5.
+Refreshed in session 3038 (2026-08-28). This is the design gate for M5.
 Session 2791 completed the SP-yield request lifecycle by clearing stale request
 state when a new task starts; task interruption and resumption remain out of
 scope.
 
-Session 2979 re-surveyed the checked-in audio/runtime sources and the available
+Session 3038 re-surveyed the checked-in audio/runtime sources and the available
 fixup surface after the phase-gated s2978 port-route capture. The document was
 already present, so this refresh reconciles it with the current tree rather than
 opening a second plan. The external
@@ -23,11 +23,21 @@ PCM joins, gate/slot traces, and MORT decoder are diagnostic or validation
 surfaces rather than hidden audio implementations. The coupled contract is
 task dispatch → DMEM/DMA and `Broke` → SP completion → guest service/slot
 progress → PCM publication; changing only one stub return cannot validate that
-chain. The s2978 same-build port pair still stops at pre-title VI 640, so all
-downstream nulls remain unevaluable. The first behavior change is therefore
-not authorized by this survey: Step 1 must first be rerun only after a route
-repair reaches a target phase, then Step 3 may implement one named missing
-contract edge.
+chain. The current qualified port configuration can reach title and hangar,
+but the s3028 pair used a driver that remained at pre-title VI 640, so that
+pair's downstream nulls remain unevaluable. The first behavior change is
+therefore still not authorized by this survey: Step 1 must run with the
+validated AUTOPILOT/phase-gated route, then Step 3 may implement one named
+missing contract edge.
+
+The source-level inventory was checked directly in `main.cpp`,
+`librecomp/rsp.cpp`, `librecomp/ai.cpp`, `ultramodern/audio.cpp`,
+`src/rsp/aspMain.cpp`, and the Factor 5 audio fixup/generated image. It found
+no additional production audio stub or gate beyond A1–A20 below. In
+particular, `musyx_stub` is the only explicit silent M_AUDTASK control,
+`factor5_ucode_b` is the selected real image, `aspMain` is not a live RS64
+route, and `Broke` remains the required task completion edge. This is a design
+survey result, not evidence that either audio arm produces correct PCM.
 
 ## Boundary and current policy
 

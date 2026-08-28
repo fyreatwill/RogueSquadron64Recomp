@@ -1,32 +1,36 @@
-# NEXT work unit — bounded generated-symbol audit at `0x800AF6A8`
+# NEXT work unit — M5 Step-1 image/silent qualification at title and hangar
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-audio-step1-contract-qualification
 
 ## Competing hypotheses and discriminator
 
-- H-exact-callable: the companion symbol and generated body identify one
-  callable; synchronize the project TOML to the human name.
-- H-inline-fragment: the address is only an inline boundary or data gap; keep
-  the placeholder and record why a rename would be unsafe.
-- H-ambiguous: callers, header, or overlay registration disagree or duplicate
-  the identity; preserve the placeholder and report the conflict.
+- H-AudioDegeneracy: the silent path is responsible for a downstream wait,
+  slot, voice, or PCM failure; the image arm should add the predicted edge.
+- H-ContractGap: the image executes but its task/DMEM/DMA/output contract is
+  incomplete; image-only activity will fail to close a later join.
+- H-MixedPipelines: Factor 5 RSP audio and CPU MORT speech are independent;
+  one can progress while the other remains absent.
+- H-RouteFailure: a run that never reaches title/hangar makes every downstream
+  audio null unevaluable; the validated route should be present in this unit.
 
-The discriminator is one evidence table covering companion symbol/source,
-generated prologue/body boundary, direct callers, header declaration, and
-overlay registration. An exact callable with consistent boundaries selects a
-rename; an inline body selects preservation; any disagreement selects an
-ambiguity audit rather than a rename. The generated snapshot's callable token
-and overlay entry are the positive control and must both visibly exist.
+The discriminator is one phase-keyed table for both arms in one build/run:
+whole-RDRAM/oracle control and route phase; M_AUDTASK dispatch and task fields;
+DMEM/DMA and image break/`Broke`; SP completion; guest service and slot/voice
+transitions; MORT class; and PCM source/consumer joins. If title/hangar is
+absent, RouteFailure is selected and downstream audio is unevaluable. If the
+image has DMEM/DMA plus completion but no later join, ContractGap is selected.
+If MORT and RSP rows progress independently, MixedPipelines is selected. A
+silent/image difference only selects AudioDegeneracy when it includes the
+predicted downstream edge, not merely a return counter.
 
 ## Exact commands
 
-    rg -n -C 12 '800AF6A8|fake_func_800AF6A8' \
-      /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
-      /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
-    rg -n '800AF6A8|fake_func_800AF6A8' syms/rogue_squadron.syms.toml
-    cmake --build build --config Debug --target RecompiledFuncs -- -j2
+    cmake --build build --config Debug --target RogueSquadron64Recomp -- -j2
+    env ROGUESQ_AUTOPILOT=1 ROGUESQ_AUDIO_UCODE=0 ROGUESQ_LOG_ALL=1 \
+      PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_PHASE_TIMEOUT=180 \
+      PROBE_LEAVE_OK=1 zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh
 
-Write the bounded source table under
-`scratch/agent/s3038_generated_symbol_rename/`, synchronize only the project
-symbol TOML if the discriminator selects the exact callable, and build the
-generated-functions target. Do not run the game.
+The script must launch both image and silent arms from the same build and
+retain the independent oracle positive control. Write the phase-keyed result
+under `scratch/agent/s3039_m5_step1_contract_pair/`; do not change a gate,
+wait, voice guard, or output destination from this qualification alone.

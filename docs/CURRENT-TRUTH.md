@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3037 (2026-08-28).
+Current maintenance marker: Session 3038 (2026-08-28).
 
 ## Current state
 
@@ -39,6 +39,17 @@ alone retained `func_80017AD0`. Synchronized the TOML and built
 and `0x80017AC0` provides a positive structural control. This rules out an
 ambiguous boundary or duplicate definition for the third render-state byte
 setter. Evidence: `scratch/agent/s3037_generated_symbol_rename/source-table.md`.
+
+Session 3038 refreshed the M5 design gate after a direct source survey. The
+active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
+Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
+silent control, `aspMain` and `unknown_task_stub` are not live RS64 audio
+routes, and `Broke` remains the required RSP completion edge. The survey found
+no new production audio stub or gate. It also reconciled the old s3028
+pre-title result with the current qualified configuration, which can reach
+title/hangar: the next qualification must use AUTOPILOT and phase gates. No
+audio gate, wait, voice guard, or output destination was changed. Evidence:
+`docs/M5-AUDIO-PLAN.md`.
 
 Session 3036 audited `0x8009C2C8`. The companion map retains
 `fake_func_8009C2C8` with no human identity. The generated snapshot emits
@@ -828,12 +839,20 @@ observation-only. Evidence:
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
-symbol sweep. Maintenance is complete. M5 remains blocked on a new route
-repair/handoff because the s3028 baseline did not reach target phases and
-the s3029 source review found no untried in-tree repair. M3 is parked pending
-a new discriminator; continue the generated-symbol sweep while M5 is blocked.
+symbol sweep. Maintenance is complete. M5 design is complete; its Step-1
+qualification is next, using the validated AUTOPILOT/phase-gated route. M3 is
+parked pending a new discriminator.
 
-1. **Generated-symbol sweep — continue only with exact companion identities.**
+1. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+   The design survey and complete A1–A20 inventory are in
+   `docs/M5-AUDIO-PLAN.md`. Run the same-build image/silent pair at title and
+   hangar with the whole-RDRAM positive control. If target phases are absent,
+   select route failure and leave downstream audio nulls unevaluable. If the
+   image completes with DMEM/DMA but no later join, select the contract gap;
+   do not change a gate, wait, voice guard, or output destination from the
+   qualification alone.
+
+2. **Generated-symbol sweep — continue only with exact companion identities.**
    `0x80019808` was mechanically classified and synchronized as
    `data_gap_80019808`; do not invent a semantic name for it. `0x8001B7B8`
    was synchronized as `requestViFeatureChange`, `0x8001B7C8` as
@@ -861,7 +880,7 @@ a new discriminator; continue the generated-symbol sweep while M5 is blocked.
    `0x80099FDC` was preserved as a large unresolved indirect-return boundary;
    audit the next placeholder candidate `0x8009C2C8`.
 
-2. **M5 route repair/handoff — identify a different producer/signal edge.** The
+3. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
    port to VI 320 in the paired run. The s2989 READY, s2990 wait-on-video, and
    s2991 alloc probes are unevaluable because the port stopped at VI 640; do
@@ -871,13 +890,6 @@ a new discriminator; continue the generated-symbol sweep while M5 is blocked.
    Resume only with a genuinely new handoff/repair angle or independent
    ground-truth edge, retaining the same-run task positive control plus
    title/hangar phase gates.
-
-3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
-   The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a
-   new route repair or independent handoff that reaches title/hangar so the
-   same-build image/silent positive-control row is evaluable. Only then make
-   one contract change selected by task → SP → service/slot → PCM evidence.
-   Do not repeat the s2978 route capture unchanged.
 
 4. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.

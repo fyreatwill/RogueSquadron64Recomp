@@ -123428,3 +123428,18 @@ successfully. The neighboring `setRenderStateFlagByteOne` and
 rules out an ambiguous boundary and duplicate callable definition for the
 third render-state byte setter. Evidence:
 `scratch/agent/s3037_generated_symbol_rename/source-table.md`.
+## Session 3038 (2026-08-28) — refreshed M5 audio de-stubbing design gate
+
+The required source survey covered the checked-in audio/runtime sources and
+the Factor 5 audio fixup/generated image. `docs/M5-AUDIO-PLAN.md` remains the
+single design artifact and its active inventory is complete at A1–A20: the
+Factor 5 image is the real `M_AUDTASK` route, `musyx_stub` is the explicit
+silent control, `aspMain` and `unknown_task_stub` are not live RS64 audio
+routes, and `Broke` is the required RSP completion edge. No additional
+production audio stub or gate was found. The plan now records that the
+qualified configuration can reach title/hangar while the s3028 pair stopped at
+pre-title VI 640, so the next Step-1 pair must use AUTOPILOT and phase gates.
+No behavior change was made. This rules out an incomplete source inventory as
+the reason to postpone M5, but does not select AudioDegeneracy, ContractGap,
+MixedPipelines, or a route failure; those require the phase-keyed qualification
+run. Evidence: `docs/M5-AUDIO-PLAN.md`.
