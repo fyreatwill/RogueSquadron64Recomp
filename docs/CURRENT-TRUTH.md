@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2881 (2026-08-27).
+Current maintenance marker: Session 2883 (2026-08-27).
 
 ## Live result
 
@@ -130,6 +130,15 @@ three `__builtin_trap()` gap-fillers renamed to `data_gap_*`, five ambiguous
 executable fragments left unchanged. Source table:
 `scratch/agent/s2880_generated_symbol_rename/source-table.md`.
 
+The s2883 sweep examined the next placeholder interval through
+`0x800BAA00`. It left the previously audited `fake_func_800B2628` data
+fragment unchanged, and renamed five source-backed contiguous preambles to
+`playerXwingInitPreamble`, `menuControllerInputPreamble`,
+`playerAwingInitPreamble`, `playerYwingInitPreamble`, and
+`playerVwingInitPreamble`. The reconciliation changed 15 generated
+references across three files. Source table:
+`scratch/agent/s2883_generated_symbol_rename/source-table.md`.
+
 The s2875 retail-first state-arbiter probe was instrument-valid: the
 whole-RDRAM control reached 10,000 callbacks, and the driven retail run reached
 title (`634 VI` in `0x00790400:1024`) and hangar (`217 VI` in
@@ -219,8 +228,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80079278..0x8007A0F0`. The s2880 sweep covered `0x8007C300..0x800AF700`:
    three `__builtin_trap()` gap-fillers (`0x80099C4C`, `0x800AEC54`, `0x800AF6A8`)
    were renamed to `data_gap_*`; five ambiguous executable fragments were left
-   unchanged. Continue with the next bounded interval after `0x800AF700` only
-   when M5 has no writer-backed behavior edge; exact companion semantic names
+   unchanged. The s2883 batch then renamed five proven preambles through
+   `0x800BAA00`; continue with the next bounded interval after `0x800BAA00`
+   only when M5 has no writer-backed behavior edge; exact companion semantic names
    and mechanically proven short data-gap names are allowed, while
    callable-ambiguous and data-ambiguous entries stay unchanged.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that

@@ -73,6 +73,14 @@ RENAMES = {
     "fake_func_8000595C": "data_gap_8000595C",
     "fake_func_80006BFC": "data_gap_80006BFC",
     "fake_func_8000751C": "data_gap_8000751C",
+    # These short mission/menu-overlay fragments are contiguous preambles
+    # before established callable bodies; the companion map and redefs agree
+    # on the adjacent body names and exact boundaries.
+    "fake_func_800B42BC": "playerXwingInitPreamble",
+    "fake_func_800B47C4": "menuControllerInputPreamble",
+    "fake_func_800B58B4": "playerAwingInitPreamble",
+    "fake_func_800B75C4": "playerYwingInitPreamble",
+    "fake_func_800B89F4": "playerVwingInitPreamble",
     # These short main-overlay records precede named routines in the
     # companion map and are not callable function bodies.
     "fake_func_8001C3FC": "data_gap_8001C3FC",

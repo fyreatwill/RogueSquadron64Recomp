@@ -120899,3 +120899,20 @@ full evidence is `scratch/agent/s2882_m5_pretitle_route_order/RESULTS.md`.
 
 The next eligible unit is the bounded generated-symbol sweep after
 `0x800AF700`, subject to the sweep-only revisit check.
+## Session 2883 (2026-08-27) — renamed five generated overlay preambles
+
+Ran the required title check; the last 15 sessions were not sweep-only, so
+the generated-symbol campaign remained eligible. The bounded census examined
+the next interval after `0x800AF700` through `0x800BAA00`. It classified the
+previously audited `fake_func_800B2628` (`0x8` bytes) as an ambiguous data
+fragment and left it unchanged. It classified five contiguous fragments as
+non-callable preambles immediately before established bodies, with companion
+boundaries and existing `build_redefs.py` mappings agreeing: `0x800B42BC`
+before `playerXwingInit`, `0x800B47C4` before `menuControllerInput`,
+`0x800B58B4` before `playerAwingInit`, `0x800B75C4` before `playerYwingInit`,
+and `0x800B89F4` before `playerVwingInit`. Added the five mappings to
+`tools/rename_generated_symbols.py` and ran the bounded reconciliation; it
+renamed 15 references across three generated files. No callable body or game
+behavior changed. This advances the cursor to `0x800BAA00` and rules out only
+these five placeholders as unresolved callable names; `0x800B2628` remains
+parked. Artifact: `scratch/agent/s2883_generated_symbol_rename/source-table.md`.
