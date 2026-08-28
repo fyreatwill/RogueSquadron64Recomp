@@ -6,6 +6,15 @@ remain in the ledger and scratch artifacts.
 
 Current maintenance marker: Session 2916 (2026-08-27).
 
+The s2917 generated-symbol sweep inspected `0x80059B4C..0x80059B50`. The
+sole placeholder is a valid 4-byte `sw $fp,0x48($sp)` fragment immediately
+before complete `mat34CrossRowsAndCopyPos`. It has no companion semantic
+name, source/m2c hit, generated caller, or independent address lookup, but a
+valid isolated prologue store does not prove that it is non-callable. The
+bounded reconciliation classified it `ambiguous-or-fake`; maps, generated
+files, and the regeneration-safe rename table are unchanged. Complete table:
+`scratch/agent/s2917_generated_symbol_rename/source-table.md`.
+
 The s2916 generated-symbol sweep inspected `0x80056344..0x80056350`. The
 sole placeholder is a 12-byte `lwc1`/`add.s`/`swc1` fragment between complete
 `clearActiveVoiceLine` and `initNpcBookkeepingTables` bodies. It has no

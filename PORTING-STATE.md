@@ -121481,3 +121481,21 @@ the `--require-rename` control failed closed with
 `bounded sweep selected no generated references`. No build was needed because
 generated files did not change. Complete table:
 `scratch/agent/s2916_generated_symbol_rename/source-table.md`.
+## Session 2917 (2026-08-27) — preserved callable-ambiguous record at 0x80059B4C
+
+The mandated maintenance check measured `docs/CURRENT-TRUTH.md` at 36,329
+bytes, so this was not a maintenance iteration. The generated-symbol sweep
+bounded `0x80059B4C..0x80059B50` and ran the reconciliation tool with the
+companion symbol directory. The 4-byte generated body at `0x80059B4C` is only
+`sw $fp,0x48($sp)`, immediately before the complete
+`mat34CrossRowsAndCopyPos` body. There is no companion semantic name,
+source/m2c address hit, generated caller, or independent address lookup;
+only the definition and overlay registration reference it. The tool returned
+`renamed 0 references in 0 files` and classified it `ambiguous-or-fake`.
+
+This rules out a source-backed semantic rename and a mechanically proven
+non-callable `data_gap_*` rename for this record. It does not rule out a split
+callable fragment because the isolated instruction is a valid prologue store.
+No generated files, maps, or rename-table entries changed; no build was
+needed. Complete evidence table:
+`scratch/agent/s2917_generated_symbol_rename/source-table.md`.
