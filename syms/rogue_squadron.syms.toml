@@ -701,7 +701,7 @@ functions = [
     { name = "freeGridCellBuffers", vram = 0x8004955C, size = 0x54 },
     { name = "teardownGridLayerWorker", vram = 0x800495B0, size = 0x4C },
     { name = "hudDisplayUpdateWorker", vram = 0x800495FC, size = 0xF8 },
-    { name = "fake_func_800496F4", vram = 0x800496F4, size = 0xC },
+    { name = "data_gap_800496F4", vram = 0x800496F4, size = 0xC },
     { name = "flushPendingGridCellTiles", vram = 0x80049700, size = 0x114 },
     { name = "emitGridCellTileStrip", vram = 0x80049814, size = 0x3A8 },
     { name = "emitGridCellTileStripAdjacent", vram = 0x80049BBC, size = 0x3FC },

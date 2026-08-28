@@ -121344,3 +121344,22 @@ results, and the Debug target rebuilt successfully. It rules out a
 source-backed semantic rename for this record but cannot prove that an
 undocumented indirect entry does not exist; no runtime behavior or mitigation
 was changed.
+## Session 2909 (2026-08-27) — reconciled main-text grid-tile data gap at 0x800496F4
+
+The bounded generated-symbol sweep inspected `0x800496F4..0x80049700`. The
+sole placeholder, `fake_func_800496F4`, is a 12-byte record containing three
+isolated `sd $ra,-1(...)` instructions and no prologue, return, or independent
+callable body. It immediately precedes the complete
+`flushPendingGridCellTiles` function at `0x80049700`; generated caller and
+address-lookup searches found no references beyond overlay metadata. The
+companion map supplied no semantic name. I reconciled it as
+`data_gap_800496F4` in the companion map, project symbol map, regeneration-safe
+rename table, and generated C/header/overlay metadata. The exact evidence is in
+`scratch/agent/s2909_generated_symbol_rename/source-table.md`.
+
+The exact old-name search found no stale `fake_func_800496F4` or
+`func_800496F4` references in the generated snapshot, companion map, or project
+symbol map; the rename-table entry is intentionally retained for future
+regeneration. The Debug `RogueSquadron64Recomp` target rebuilt successfully;
+only pre-existing format/sign warnings were emitted. This closes the
+`0x800496F4` interval and leaves the next sweep at `0x8004CCF8`.
