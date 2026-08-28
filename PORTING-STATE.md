@@ -120987,3 +120987,23 @@ C, header, and overlay files, with zero old-name matches remaining. No build or
 runtime soak was needed for this symbol-only change; no game behavior changed.
 The next sweep cursor is `0x800D0000`; the next placeholder interval begins at
 `0x800E0000`. Evidence: `scratch/agent/s2887_generated_symbol_rename/source-table.md`.
+
+## Session 2888 (2026-08-27) — renamed nine generated data gaps in 0x800E0000–0x800F0000
+
+Ran the required sweep eligibility check; the recent sessions were mixed M5
+and symbol work, so the generated-symbol campaign remained eligible. The
+complete generated placeholder census for `0x800E0000..0x800F0000` found nine
+records. Exact companion boundaries and generated bodies classified all nine
+as bounded non-callable records: eight were short instruction fragments and
+`0x800EC10C` was an invalid COP2 word decoded to a trap. `0x800E8A34` also
+matched the existing duplicate-symbol-prefix evidence for
+`runDestructionPhaseSequence`; no callable-ambiguous record had a semantic
+rename candidate.
+
+Added the nine mappings to `tools/rename_generated_symbols.py`, updated the
+companion/project symbol maps, and reconciled the generated snapshot. The
+reconciliation renamed 27 references across generated C, `funcs.h`, and
+`recomp_overlays.inl`; verification found zero old-name matches remaining.
+No build or runtime soak was needed for this symbol-only change and no game
+behavior changed. The next sweep begins after `0x800F0000`. Evidence:
+`scratch/agent/s2888_generated_symbol_rename/source-table.md`.

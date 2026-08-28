@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2887 (2026-08-27).
+Current maintenance marker: Session 2888 (2026-08-27).
 
 ## Live result
 
@@ -33,6 +33,15 @@ had 68 pre-title-or-earlier stage-call rows, all `route_valid=0`; the silent
 arm had none. This selects H-RouteInvalid for the recipe and leaves
 H-RouteOrder versus H-StageCall unevaluable. Artifact:
 `scratch/agent/s2882_m5_pretitle_route_order/RESULTS.md`.
+
+The s2888 generated-symbol sweep completed `0x800E0000..0x800F0000`. All
+nine placeholders were classified as bounded non-callable records: eight
+short fragments and one invalid COP2/trap gap. `0x800E8A34` was renamed to
+the existing duplicate-symbol-prefix name for `runDestructionPhaseSequence`;
+the other eight received mechanical `data_gap_*` names. The reconciliation
+renamed 27 references across generated C, the header, and overlay metadata;
+no callable-ambiguous record changed. Artifact:
+`scratch/agent/s2888_generated_symbol_rename/source-table.md`.
 
 Qualified runs can reach title (`VI 1024`, origin `0x00790400`) and hangar
 (`VI 512`, origin `0x006AB400`) with the appropriate input path. Recent
@@ -260,7 +269,7 @@ apply only source-backed renames and preserve callable-ambiguous records.
    still requires a named legitimate contract edge.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-3. **Generated-symbol renaming sweep — next bounded interval after `0x800D0000`.** The s2873 batch completed
+3. **Generated-symbol renaming sweep — next bounded interval after `0x800F0000`.** The s2873 batch completed
    `0x80079278..0x8007A0F0`. The s2880 sweep covered `0x8007C300..0x800AF700`:
    three `__builtin_trap()` gap-fillers (`0x80099C4C`, `0x800AEC54`, `0x800AF6A8`)
    were renamed to `data_gap_*`; five ambiguous executable fragments were left
@@ -269,8 +278,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    only when M5 has no writer-backed behavior edge; exact companion semantic names
    and mechanically proven short data-gap names are allowed, while
    callable-ambiguous and data-ambiguous entries stay unchanged. The s2887
-   sweep renamed nine data gaps through `0x800D0000`; return to M5 with a new
-   writer-backed route or contract discriminator.
+   sweep renamed nine data gaps through `0x800D0000`, and s2888 renamed nine
+   more records through `0x800F0000`; continue at the next placeholder after
+   `0x800F0000` unless M5 gets a new writer-backed route or contract
+   discriminator.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
