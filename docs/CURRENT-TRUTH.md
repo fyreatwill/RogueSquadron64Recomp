@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2922 (2026-08-27).
+Current maintenance marker: Session 2923 (2026-08-27).
 
 The s2923 generated-symbol sweep reconciled `0x80064934..0x80064940`.
 The 12-byte record is an isolated `lhu`/`lw`/`slt` fragment immediately
