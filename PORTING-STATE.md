@@ -120769,3 +120769,20 @@ missing nor equivalent writer because the port target phases were not reached;
 downstream audio rows remain unevaluable. The regeneration-safe probe is
 `tools/apply_s2876_m5_state_probe.py`; results are in
 `scratch/agent/s2876_m5_state_arbiter/RESULTS.md`.
+
+## Session 2877 (2026-08-27) — selected phase-live audio consumer, port route failed
+
+The retail-first ground-truth run used Rice, the whole-RDRAM positive control,
+and a bounded execution range over `0x800B0000..0x800D0000`. The control reached
+10,000 callbacks; retail reached title (`0x00790400:1024`) and hangar
+(`0x006AB400:512`). The range census selected `playObjectiveVoiceLine2`
+(`0x800C7D1C`), with caller `0x800C5D40`, as a target-phase consumer candidate.
+
+The same-build image/silent port A/B carried the new regeneration-safe entry
+probe and the phase-relative input recipe. Both stopped at pre-title 640
+`0x0066A500` and timed out at the 180-second title gate. Neither crashed or
+aborted, and neither produced target-phase consumer rows. This selects
+H-route-invalid for this run and rules out neither consumer-missing nor
+consumer-equivalent; downstream audio remains unevaluable. The probe script
+and table are in `tools/apply_s2877_m5_route_probe.py` and
+`scratch/agent/s2877_m5_route_state/RESULTS.md`.

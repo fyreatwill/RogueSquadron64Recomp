@@ -1,35 +1,38 @@
-# NEXT work unit (s2877) — m5-new-route-state-discriminator
+# NEXT work unit (s2878) — m5-route-qualification-autopilot
 
-HYPOTHESIS-ID: m5-new-route-state-discriminator
+HYPOTHESIS-ID: m5-route-qualification-autopilot
 
 ## Work unit
 
-The s2876 port pair was route-invalid, so its zero state rows are not evidence.
-Select one new port-side consumer of the `0x8006E4B4`-updated structure. First
-qualify its retail writer/consumer ordering with the whole-RDRAM positive
-control, then add all consumer/store counters in one regeneration-safe probe,
-rebuild once, and run image/silent arms concurrently. Do not change behavior
-or interpret downstream audio unless both arms reach title and hangar.
+The s2877 port pair again failed the title gate while the probe was otherwise
+valid, so its zero rows are not evidence. First run the documented reliable
+in-process `ROGUESQ_AUTOPILOT` route with the existing build and the same
+image/silent arms, phase-gating at title and continuing through hangar. Do not
+add another probe or interpret consumer rows until this route qualification
+passes.
 
 ## Competing hypotheses and discriminator
 
-- H-consumer-missing: retail shows the consumer ordering but the matching port
-  consumer/store path is absent after route qualification.
-- H-consumer-equivalent: retail and port show the same consumer ordering and
-  state-span sequence in matching target phases.
-- H-route-invalid: either positive control or the matching port pair fails to
-  reach title and hangar, making consumer rows unevaluable.
+- H-autopilot-repairs-route: both arms reach title and hangar with the
+  documented autopilot route, making the existing consumer probe interpretable.
+- H-autopilot-does-not-repair-route: both arms still fail before title, so the
+  current blocker is not the probe or phase-relative key driver.
+- H-arm-divergence: image and silent arms differ in title/hangar reachability,
+  selecting an audio-arm route effect for the next discriminator.
 
-The discriminator is one retail-vs-port phase table containing positive-control
-count, title/hangar reachability, consumer rows, and state-span rows. Each
-outcome selects one hypothesis above.
+The discriminator is one same-build image/silent table containing phase-gate
+status, title/hangar reachability, crash/abort markers, and the last VI origin.
+Each possible arm outcome selects one hypothesis above.
 
 ## Exact command
 
-    sed -n '1,220p' tools/oracle/README.md
-    # Run the retail preflight with --watch-write 0x0:0x800000,
-    # --pc-phase-log-width title/hangar buckets, and the selected consumer PC;
-    # only then add matching port probes and run both arms from build/.
+    # Run image/silent arms concurrently from build/ with the documented
+    # in-process driver; gate at title and continue through hangar.
+    env ROGUESQ_AUTOPILOT=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 \
+      ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=0 PROBE_PHASE_WIDTH=1024 \
+      PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+      zsh tools/probe.sh scratch/agent/s2878_route_autopilot/silent 60 1
+    # Repeat concurrently with ROGUESQ_AUDIO_UCODE=1; no build is needed.
 
-Record the phase table under `scratch/agent/s2877_m5_route_state/`; use SIGKILL,
+Record the phase table under `scratch/agent/s2878_route_autopilot/`; use SIGKILL,
 run from `build/`, and run `git diff --check` before committing.

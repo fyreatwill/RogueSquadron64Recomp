@@ -133,6 +133,16 @@ abort. This selects H-route-invalid for this run, so writer equivalence and
 downstream audio remain unevaluable. Artifact:
 `scratch/agent/s2876_m5_state_arbiter/RESULTS.md`.
 
+The s2877 retail-first consumer selection was instrument-valid: the whole-RDRAM
+control reached 10,000 callbacks, retail reached title and hangar, and a
+bounded `0x800B0000..0x800D0000` execution census selected
+`playObjectiveVoiceLine2` (`0x800C7D1C`, caller `0x800C5D40`) as a target-phase
+audio consumer. The same-build image/silent port pair both stopped at
+pre-title 640 `0x0066A500` for the 180-second phase gate, with zero consumer
+rows and no crash or abort. This again selects H-route-invalid for the run;
+consumer equivalence and downstream audio remain unevaluable. Artifact:
+`scratch/agent/s2877_m5_route_state/RESULTS.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
