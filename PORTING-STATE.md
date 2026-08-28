@@ -123476,3 +123476,23 @@ contract-gap hypothesis. No audio behavior or mitigation changed. The next
 unit uses a new retail-grounded ProducerMark route-handoff boundary rather
 than repeating the input recipe. Evidence:
 `scratch/agent/s3040_m5_step1_contract_pair_final/`.
+
+## Session 3041 (2026-08-28) — M5 ProducerMark boundary remained route-invalid
+
+Ran the prescribed independent retail oracle before the port capture. The
+whole-RDRAM positive control passed at 10,000 writes; retail reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The watched
+`bufferArbiterProducerMark` at `0x8001BCE4` executed 2,470 times, with
+predecessors `0x8000C628` (2,446), `0x8000BFE8` (7), `0x8001A300` (6),
+`0x8000C440` (6), and `0x80018258` (5). Built the Debug target once and ran
+the same-build port capture with AUTOPILOT, VI phase gating, and the full
+route marker set. Positive controls fired: 526 route-prepares, 70
+route-transitions, 5 route-state rows, 4 B40 rows, and 27 real Factor 5 audio
+dispatches. The port reached only VI 640 origin `0x0066A500`; all 640-phase
+route-prepares were `accepted=0`, no producer-mark candidate row appeared,
+and the 512 gate timed out after 90 seconds without crash or abort. This
+selects RouteFailure for this capture and leaves caller/order and downstream
+audio comparisons unevaluable. It rules out missing instrumentation startup
+and retail absence of ProducerMark, but does not identify the port-side
+missing handoff. No behavior or mitigation changed. Evidence:
+`scratch/agent/s3041_m5_producer_mark_boundary/`.

@@ -1,40 +1,40 @@
-# NEXT work unit — M5 producer-mark route-handoff boundary
+# NEXT work unit — bounded ProducerMark call-chain audit
 
 HYPOTHESIS-ID: m5-route-producer-mark-boundary
 
-Run one new retail-grounded route-handoff probe centered on
-`bufferArbiterProducerMark` at `0x8001BCE4` and its caller/consumer. Preserve
-the whole-RDRAM positive control and title/hangar VI controls. Do not change a
-gate, wait, voice guard, or output destination.
+Perform one bounded static audit of the retail-grounded ProducerMark handoff
+before adding or changing runtime behavior. Audit generated bodies, callers,
+headers, overlay registration, and host route-prepare acceptance for
+`0x8001BCE4`, callers `0x8000C628` and `0x8000BFE8`, and the already observed
+port boundary at VI 640 / origin `0x0066A500`.
 
 Competing hypotheses and the discriminator:
 
-- H-PortMissingMark: retail executes ProducerMark in the target phase but the
-  port has no corresponding producer-mark edge before its 640 stop.
-- H-PortWrongCaller: the port reaches the producer region, but a different
-  caller/consumer or ordering edge prevents the handoff.
-- H-RouteFailure: the port has no target phase, so producer-mark and downstream
-  audio nulls are unevaluable.
-- H-RetailControlFailure: the retail watch or phase controls are absent, so no
-  port conclusion is allowed.
+- H-PortProbeWrongEdge: the port has the ProducerMark code, but the existing
+  candidate probe is attached to a different/generated fragment or never
+  observes the real call boundary.
+- H-PortCallerMissing: the port's generated call chain omits or misdispatches
+  one of the retail predecessor classes before route acceptance.
+- H-PortAcceptanceWrong: the call chain exists, but host route preparation
+  rejects the valid producer handoff (`accepted=0`) at the 640 boundary.
+- H-StaticInsufficient: generated/host sources do not expose a defensible
+  correspondence; no behavior change is justified.
 
-The single discriminator is one phase-keyed table containing the retail
-ProducerMark execution PC, predecessor, arguments, VI origin/width, the port
-route-state/producer-mark rows and predecessor, and the port title/hangar
-phase controls. Whole-RDRAM and retail title/hangar must both be positive.
-Retail positive plus port mark absent at 640 selects only a route boundary,
-not a causal fix. Port mark present with a different caller/order selects
-PortWrongCaller. Missing target phase selects RouteFailure and leaves target
-rows unevaluable.
+The single discriminator is a complete table for all three addresses: exact
+generated symbol/body range, every direct caller and call target, overlay/TOML
+registration, probe hook location, and route-prepare acceptance predicate.
+H-ProbeWrongEdge selects only a corrected observational hook; H-CallerMissing
+selects a caller/dispatch repair candidate; H-AcceptanceWrong selects the
+acceptance edge for a later ground-truth-backed probe; H-StaticInsufficient
+preserves the route-failure boundary and pivots to a new source. Do not build
+or run unless the audit identifies a concrete, non-mitigation change; if it
+does, ground truth is already established by s3041 and the change must carry
+all A/B arms in one build.
 
-Ground-truth command first:
+Exact audit commands from the repo root:
 
-    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 90 --watch-write 0x0:0x800000 --watch-pc 0x8001BCE4 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+    rg -n -C 35 '0x8001BCE4|0x8000C628|0x8000BFE8|func_8001BCE4|func_8000C628|func_8000BFE8' RecompiledFuncs src lib tools syms docs
+    rg -n -C 20 '8001BCE4|8000C628|8000BFE8' /Users/williambuckley/Documents/Tools/rogue_squadron64
+    git diff -- src lib RecompiledFuncs syms tools
 
-Then build once and run a new port-side batched producer-mark capture using
-the existing M5 route controls plus the same phase gates. Store the result in
-`scratch/agent/s3041_m5_producer_mark_boundary/`.
-
-No behavior change is authorized by this probe. If the port remains before
-title, record RouteFailure and pivot the next unit; do not repeat this input
-recipe or interpret audio nulls.
+Record the table and decision in `scratch/agent/s3042_m5_producer_mark_audit/`.

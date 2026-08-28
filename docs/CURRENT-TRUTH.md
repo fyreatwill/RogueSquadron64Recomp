@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3040 (2026-08-28).
+Current maintenance marker: Session 3041 (2026-08-28).
 
 ## Current state
 
@@ -41,6 +41,16 @@ positive (`44` each, `real_ucode=1/0`), so arm selection and logging ran; no
 audio hypothesis was selected and no audio behavior changed. Evidence:
 `scratch/agent/s3040_m5_step1_contract_pair_final/`.
 
+Session 3041 ran the new retail-grounded ProducerMark boundary. Retail passed
+the whole-RDRAM positive control, reached title/hangar, and executed
+`0x8001BCE4` 2,470 times; predecessor `0x8000C628` accounted for 2,446 and
+`0x8000BFE8` for 7. The same-build port capture had positive route controls
+but stopped at VI 640 `0x0066A500`: 526 route-prepares were all
+`accepted=0`, with no producer-mark candidate rows, title, or hangar. This
+selects RouteFailure for this capture and leaves the caller/order comparison
+and all downstream audio rows unevaluable. Evidence:
+`scratch/agent/s3041_m5_producer_mark_boundary/`.
+
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
 Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
@@ -74,15 +84,13 @@ symbol sweep. Maintenance is complete. M5 design is complete, but Step 1 is
 route-blocked at pre-title VI 640; the next M5 unit must use a genuinely new
 route-handoff angle. M3 is parked pending a new discriminator.
 
-1. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
-   Run the same-build image/silent pair at title and hangar with the
-   whole-RDRAM positive control. Use the phase-keyed table covering route,
-   M_AUDTASK fields, DMEM/DMA, image break/`Broke`, SP completion, guest
-   service, slot/voice transitions, MORT class, and PCM joins. If target
-   phases are absent, select route failure and leave downstream audio nulls
-   unevaluable. If image DMEM/DMA completes but a later join does not, select
-   the contract gap. Do not change a gate, wait, voice guard, or output
-   destination from qualification alone. See `scratch/agent/NEXT.md`.
+1. **M5 route repair/handoff — audit the ProducerMark call chain.** The
+   s3041 retail-grounded probe confirms the target producer mark and its
+   predecessor classes, while the port stops at VI 640 before any comparable
+   candidate row. The next unit is a bounded static audit of generated
+   `0x8001BCE4`, callers `0x8000C628`/`0x8000BFE8`, and the host route-prepare
+   acceptance edge; do not change behavior until the missing edge is named.
+   See `scratch/agent/NEXT.md`.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
@@ -93,7 +101,14 @@ route-handoff angle. M3 is parked pending a new discriminator.
    the rule in the user instructions, use the external retail-entry or M4
    boundary instead.
 
-3. **M5 route repair/handoff — identify a different producer/signal edge.**
+3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+   Resume only after the route boundary is repaired or a target-phase route
+   is independently reached. Use the phase-keyed table covering route,
+   M_AUDTASK fields, DMEM/DMA, image break/`Broke`, SP completion, guest
+   service, slot/voice transitions, MORT class, and PCM joins. Do not change
+   a gate, wait, voice guard, or output destination from qualification alone.
+
+4. **M5 route repair/handoff — identify a different producer/signal edge.**
    The s2988 forced 4→5→0 host transition regressed to VI 320. The s2989–s2991
    READY, wait-on-video, and allocation probes were unevaluable at VI 640.
    The `0x8000C0C4` example is the READY caller, not ProducerMark; the actual
@@ -101,31 +116,31 @@ route-handoff angle. M3 is parked pending a new discriminator.
    with a genuinely new handoff angle and retain task and phase positive
    controls.
 
-4. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+5. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 
-5. **M4 accumulator origin — blocked at route qualification.** The latest
+6. **M4 accumulator origin — blocked at route qualification.** The latest
    revisit had generic controls but zero M4 stage-1 positive-control rows and
    no 512 hangar phase. Do not interpret those nulls.
 
-6. **M5 SP-yield lifecycle validation — parked** pending a route angle that
+7. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 
-7. **M5 CPU-side MORT publication — unresolved; callback edge closed.** The
+8. **M5 CPU-side MORT publication — unresolved; callback edge closed.** The
    corrected edge is `serviceStreamingVoice` descriptor `+0x190` to
    `dmaVoiceSampleAndSignal`; `+0x194` is the legitimate speech source. Do
    not repeat this callback audit without a new destination/order edge.
 
-8. **External retail-entry boundary — candidate set rejected (s2903).** The
+9. **External retail-entry boundary — candidate set rejected (s2903).** The
    oracle reached title/hangar, but the four watched candidate PCs were
    boot/pre-title only. Any revisit needs a different static handoff and
    ground-truth PC attribution.
 
-9. **M5 image task contract / hangar artifact — parked.** No writeback, remap,
+10. **M5 image task contract / hangar artifact — parked.** No writeback, remap,
    forced state, or mitigation without an `ORIGIN:` naming the writer and
    stating whether its value is legitimate.
 
-10. **M5 route handoff — retail grounded, port route still missing.** Retail
+11. **M5 route handoff — retail grounded, port route still missing.** Retail
     positively executes `bufferArbiterProducerMark` at `0x8001BCE4` in title
     and hangar. The next route unit must use a new port-side repair/probe
     angle tied to this handoff and retain the positive control.
