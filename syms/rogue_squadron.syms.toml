@@ -759,7 +759,7 @@ functions = [
     { name = "allocAndSetupModelInstance", vram = 0x80054500, size = 0x50 },
     { name = "randomizeListEntrySpacing", vram = 0x80054550, size = 0xB0 },
     { name = "freeListEntryPointers", vram = 0x80054600, size = 0x48 },
-    { name = "fake_func_80054648", vram = 0x80054648, size = 0x8 },
+    { name = "data_gap_80054648", vram = 0x80054648, size = 0x8 },
     { name = "tickWrappingTimerAccumulatorList", vram = 0x80054650, size = 0x170 },
     { name = "loadAssetIntoNewSlot", vram = 0x800547C0, size = 0x258 },
     { name = "allocAnimationPhasePool", vram = 0x80054A18, size = 0x64 },

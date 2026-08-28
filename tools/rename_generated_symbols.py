@@ -154,6 +154,9 @@ RENAMES = {
     # This four-byte record is an isolated load fragment immediately before
     # trackResourceListWithMappingTables; it is not a callable function body.
     "fake_func_800538AC": "data_gap_800538AC",
+    # This eight-byte generated trap is an invalid decode between the complete
+    # freeListEntryPointers and tickWrappingTimerAccumulatorList bodies.
+    "fake_func_80054648": "data_gap_80054648",
     # These four-byte records contain only non-returning instruction
     # fragments immediately before named routines; they are not callable
     # function bodies.

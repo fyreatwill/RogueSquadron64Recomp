@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2911 (2026-08-27).
+Current maintenance marker: Session 2912 (2026-08-27).
+
+The s2912 generated-symbol sweep classified `0x80054648..0x80054650`.
+`0x80054648` is an 8-byte non-callable record whose generated body is only
+the invalid-data `__builtin_trap()` gap filler, between the complete
+`freeListEntryPointers` and `tickWrappingTimerAccumulatorList` bodies. It has
+no generated callers or address lookups. It was renamed to
+`data_gap_80054648` in the companion source map, project symbol map,
+generated C/header, overlay metadata, and regeneration-safe rename table; the
+Debug target rebuilt successfully. The complete table is
+`scratch/agent/s2912_generated_symbol_rename/source-table.md`.
 
 The s2911 generated-symbol sweep classified `0x800538AC..0x800538B0`.
 `0x800538AC` is a 4-byte non-callable record containing one isolated
@@ -453,8 +463,12 @@ apply only source-backed renames and preserve callable-ambiguous records.
    bounded non-callable data gap; s2909 classified `0x800496F4..0x80049700` as
    a bounded non-callable data gap before `flushPendingGridCellTiles`; s2910
    classified `0x8004CCF8..0x8004CD00` as a bounded non-callable data gap
-   before `applyPlayerVehicleStateUpdate`; continue with the next remaining
-   placeholder after `0x8004CD00`.
+   before `applyPlayerVehicleStateUpdate`; s2911 then classified
+   `0x800538AC..0x800538B0` as a bounded non-callable data gap before
+   `trackResourceListWithMappingTables`; s2912 classified
+   `0x80054648..0x80054650` as a bounded invalid-data gap before
+   `tickWrappingTimerAccumulatorList`. Continue with the next remaining
+   placeholder after `0x80054650`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

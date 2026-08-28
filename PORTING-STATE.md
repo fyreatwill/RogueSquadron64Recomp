@@ -121401,3 +121401,22 @@ The generated snapshot contains no stale `fake_func_800538AC` or
 rebuilt and linked successfully, with only existing format/sign and related
 warnings. This closes the interval and rules out a source-backed semantic
 rename there; the next bounded sweep is `0x80054648..0x80054650`.
+
+## Session 2912 (2026-08-27) — renamed main-text invalid-data gap at 0x80054648
+
+The planned bounded sweep examined `0x80054648..0x80054650`. The sole
+placeholder was an 8-byte generated body containing only the invalid-data
+`__builtin_trap()` gap filler. The preceding complete `freeListEntryPointers`
+body ends at `0x80054648` and `tickWrappingTimerAccumulatorList` begins at
+`0x80054650`; generated caller and address-lookup searches found no
+independent references beyond the definition, header, and overlay metadata.
+The companion map supplied no semantic callable name, so this is a
+mechanically proven non-callable record and was reconciled as
+`data_gap_80054648` in the companion map, project symbol map,
+regeneration-safe rename table, and generated C/header/overlay metadata.
+
+The generated snapshot contains no stale `fake_func_80054648` or
+`func_80054648` references. The full Debug `RogueSquadron64Recomp` target
+rebuilt and linked successfully, with only pre-existing format/sign and
+related warnings. This closes the interval and rules out a source-backed
+semantic rename there; the next bounded sweep is `0x800555E8..0x800555F0`.
