@@ -1,12 +1,13 @@
-# NEXT work unit (s2952) — classify the next unparked generated placeholder
+# NEXT work unit (s2953) — classify the next unparked generated placeholder
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Context
 
-s2951 confirmed `0x80099FDC` is the already-fake branch word before
-`aspMainTextStart`; it remains parked. M5 is paused after the pre-title route
-stop, so continue the generated-symbol sweep at the next unparked candidate.
+s2952 confirmed `0x8009D8BC` is a valid two-instruction branch-target fragment
+inside `filterVoiceSampleBlock`; it remains callable-ambiguous. M5 is paused
+after the pre-title route stop, so continue the generated-symbol sweep at the
+next unparked candidate after `0x8009D8BC`.
 
 ## Competing hypotheses and discriminator
 
@@ -27,7 +28,7 @@ record authorizes a data-gap rename.
 
 ## Exact work
 
-1. Identify the next unparked placeholder after `0x80099FDC` in the project
+1. Identify the next unparked placeholder after `0x8009D8BC` in the project
    symbol map and generated overlay order.
 2. Inspect its complete body and exact predecessor/successor boundaries;
    search generated callers, independent lookups, and the companion map.

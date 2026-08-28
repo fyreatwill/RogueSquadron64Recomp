@@ -122123,3 +122123,18 @@ absence of a callable entry/caller. H-DataGap was not selected because the
 word is a real branch in the ROM stream and the independent map intentionally
 preserves it as an already-fake record. No rename or build was justified.
 Complete table: `scratch/agent/s2951_generated_symbol_rename/source-table.md`.
+## Session 2952 (2026-08-28) — preserved the ambiguous 0x8009D8BC branch fragment
+
+Ran the bounded generated-symbol census at `0x8009D8BC`. The complete
+eight-byte span is a `lwc1`/unsupported-`scd` fragment emitted as an internal
+branch target inside `filterVoiceSampleBlock`, immediately before the complete
+`applyVoiceDelayFilter` function at `0x8009D8C4`. The only generated reference
+is the dead `bltzal $zero` target from `filterVoiceSampleBlock`; there is no
+standalone prologue, return, independent lookup, or companion semantic name.
+This selects H-Fragment: retain `func_8009D8BC` and make no generated or map
+rename. The result is static, single-source evidence and does not establish
+runtime reachability. Artifact:
+`scratch/agent/s2952_generated_symbol_rename/source-table.md`.
+
+ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
+mitigation-shaped behavior changed.

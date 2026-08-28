@@ -4,7 +4,13 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2951 (2026-08-28).
+Current maintenance marker: Session 2952 (2026-08-28).
+
+Session 2952 classified `0x8009D8BC` as a valid two-instruction branch-target
+fragment inside `filterVoiceSampleBlock`, followed by `applyVoiceDelayFilter`
+at `0x8009D8C4`. It has no standalone prologue, return, independent caller,
+or companion semantic name, so it remains callable-ambiguous and unchanged.
+Artifact: `scratch/agent/s2952_generated_symbol_rename/source-table.md`.
 
 Session 2951 completed the bounded generated-symbol census at `0x80099FDC`.
 The record is the real retail branch immediately before `aspMainTextStart` at
@@ -833,7 +839,8 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80094348` as `data_gap_80094348`, synchronizing the project and
    companion maps; s2940 likewise classified `0x8009711C` as
    `data_gap_8009711C` and synchronized both maps. Continue with the next
-   remaining placeholder after `0x8009711C`.
+   remaining placeholder after `0x8009D8BC`; the s2952 candidate is a valid
+   branch-target fragment and was intentionally not renamed.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
