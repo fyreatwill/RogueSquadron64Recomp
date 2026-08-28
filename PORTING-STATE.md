@@ -122594,3 +122594,19 @@ without the boot-loop breakpoint overhead. It rules out an absent retail route
 call and the prior debugger-overhead explanation for this capture. It does not
 establish a port predicate mismatch. Evidence:
 `scratch/agent/s2976_m5_route_oracle/RESULTS.md`.
+
+## Session 2977 (2026-08-28) — checkpoint: port route probe not run
+
+Intended to add the port-side phase-scoped route-preparation probe, matching
+the discriminator in NEXT.md: one same-run table of port route-PC executions
+in title and hangar phases, compared against s2976's retail table. The session
+hit a turn/usage limit before any experiment ran. A minimal diagnostic
+modification (2 lines) may have been started in a source file but was not
+exported, built, or run; no scratch artifact exists for this session and no
+discrimination was produced.
+
+This does not select or refute H-port-route-matches, H-port-route-absent, or
+H-port-predicate-mismatch. It rules out nothing. The retail side (s2976) is
+still the only ground truth for this capture. The next session must implement
+and run the port probe from scratch; all NEXT.md commands remain as written.
+HYPOTHESIS-ID: m5-route-preparation-port-comparison.
