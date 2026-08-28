@@ -120916,3 +120916,21 @@ renamed 15 references across three generated files. No callable body or game
 behavior changed. This advances the cursor to `0x800BAA00` and rules out only
 these five placeholders as unresolved callable names; `0x800B2628` remains
 parked. Artifact: `scratch/agent/s2883_generated_symbol_rename/source-table.md`.
+## Session 2884 (2026-08-27) — renamed four generated mission-overlay data gaps
+
+Ran the required title check; the last 15 sessions were mixed M5 and symbol
+work, so the generated-symbol campaign remained eligible. The bounded census
+examined `0x800BAA00..0x800C0000` and found four placeholder records. Their
+generated bodies were short non-callable fragments at exact companion/TOML
+boundaries: `0x800BCC38` (8 bytes before `playerT16Init`), `0x800BEBFC` (4
+bytes before `initDemoPlayState`), `0x800BF498` (8 bytes before
+`attached3DSoundEmitterNpcHandler`), and `0x800BF784` (12 bytes before
+`updateHudHealthIndicator`). No companion semantic names existed, so they
+were classified as H-DataGap and renamed to `data_gap_*` in the companion map,
+project symbol map, generated snapshot, and rename tool. The reconciliation
+changed 12 references across four generated files. No callable body or game
+behavior changed, and no further generated placeholder was found above
+`0x800C0000`. This closes the current sweep cursor; evidence is in
+`scratch/agent/s2884_generated_symbol_rename/source-table.md`.
+
+The next eligible unit is a ground-truth-first M5 route/contract discriminator.

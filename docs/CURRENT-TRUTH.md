@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2883 (2026-08-27).
+Current maintenance marker: Session 2884 (2026-08-27).
 
 ## Live result
 
@@ -139,6 +139,16 @@ fragment unchanged, and renamed five source-backed contiguous preambles to
 references across three files. Source table:
 `scratch/agent/s2883_generated_symbol_rename/source-table.md`.
 
+The s2884 sweep examined `0x800BAA00..0x800C0000`. Four short mission-overlay
+records were proven non-callable data gaps by their generated bodies and exact
+companion/TOML boundaries: `0x800BCC38`, `0x800BEBFC`, `0x800BF498`, and
+`0x800BF784`. They are now `data_gap_*` in the companion map, project symbol
+map, generated snapshot, and rename tool; reconciliation changed 12 generated
+references across `funcs_32.c`, `funcs_33.c`, `funcs.h`, and
+`recomp_overlays.inl`. No further generated placeholder was found above
+`0x800C0000`. Source table:
+`scratch/agent/s2884_generated_symbol_rename/source-table.md`.
+
 The s2875 retail-first state-arbiter probe was instrument-valid: the
 whole-RDRAM control reached 10,000 callbacks, and the driven retail run reached
 title (`634 VI` in `0x00790400:1024`) and hangar (`217 VI` in
@@ -224,7 +234,7 @@ apply only source-backed renames and preserve callable-ambiguous records.
    still requires a named legitimate contract edge.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-3. **Generated-symbol renaming sweep.** The s2873 batch completed
+3. **Generated-symbol renaming sweep — interval complete through `0x800C0000`.** The s2873 batch completed
    `0x80079278..0x8007A0F0`. The s2880 sweep covered `0x8007C300..0x800AF700`:
    three `__builtin_trap()` gap-fillers (`0x80099C4C`, `0x800AEC54`, `0x800AF6A8`)
    were renamed to `data_gap_*`; five ambiguous executable fragments were left
@@ -232,7 +242,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x800BAA00`; continue with the next bounded interval after `0x800BAA00`
    only when M5 has no writer-backed behavior edge; exact companion semantic names
    and mechanically proven short data-gap names are allowed, while
-   callable-ambiguous and data-ambiguous entries stay unchanged.
+   callable-ambiguous and data-ambiguous entries stay unchanged. No generated
+   placeholder remains above `0x800C0000`; return to M5 with a new
+   writer-backed route or contract discriminator.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

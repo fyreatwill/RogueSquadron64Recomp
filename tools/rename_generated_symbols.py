@@ -81,6 +81,12 @@ RENAMES = {
     "fake_func_800B58B4": "playerAwingInitPreamble",
     "fake_func_800B75C4": "playerYwingInitPreamble",
     "fake_func_800B89F4": "playerVwingInitPreamble",
+    # These short mission-overlay records are non-callable fragments between
+    # established function boundaries.
+    "fake_func_800BCC38": "data_gap_800BCC38",
+    "fake_func_800BEBFC": "data_gap_800BEBFC",
+    "fake_func_800BF498": "data_gap_800BF498",
+    "fake_func_800BF784": "data_gap_800BF784",
     # These short main-overlay records precede named routines in the
     # companion map and are not callable function bodies.
     "fake_func_8001C3FC": "data_gap_8001C3FC",
