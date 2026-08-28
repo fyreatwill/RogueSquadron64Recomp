@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2929 (2026-08-27).
+Current maintenance marker: Session 2930 (2026-08-27).
+
+The s2930 generated-symbol sweep classified `0x8007A86C` as a proven
+non-callable four-byte load fragment between the complete
+`downscaleImageHalfResBoxFilter` and `allocateNpcMeshVertexBuffer` bodies.
+The companion map supplied no semantic name, and repository-wide generated
+source/reference searches found no caller or independent lookup. It was
+renamed to `data_gap_8007A86C` across the project map, companion map, generated
+snapshot, overlay metadata, and regeneration-safe rename table. Complete
+table: `scratch/agent/s2930_generated_symbol_rename/source-table.md`.
 
 The s2929 generated-symbol sweep re-audited the next placeholder after
 `0x8006B704`, `0x80072CE8`. It is a valid two-instruction fragment
@@ -631,8 +640,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x800663AC..0x800663B0` as `data_gap_800663AC`; s2926 reconciled
    `0x80069AEC..0x80069AF0` to `collideSegmentAgainstObjectNodesPreamble`;
    s2928 inspected `0x8006B704..0x8006B710` and preserved it as a
-   callable-ambiguous valid fragment; continue with the next remaining
-   placeholder after `0x8006B704`.
+   callable-ambiguous valid fragment; s2929 likewise preserved the valid
+   fragment at `0x80072CE8`; s2930 classified `0x8007A86C` as
+   `data_gap_8007A86C`. Continue with the next remaining placeholder after
+   `0x8007A86C`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

@@ -1144,7 +1144,7 @@ functions = [
     { name = "data_gap_8007A0E8", vram = 0x8007A0E8, size = 0x8 },
     { name = "sampleRgbBoxFilter2x2AtSubpixel", vram = 0x8007A0F0, size = 0x170 },
     { name = "downscaleImageHalfResBoxFilter", vram = 0x8007A260, size = 0x60C },
-    { name = "fake_func_8007A86C", vram = 0x8007A86C, size = 0x4 },
+    { name = "data_gap_8007A86C", vram = 0x8007A86C, size = 0x4 },
     { name = "allocateNpcMeshVertexBuffer", vram = 0x8007A870, size = 0x158 },
     { name = "transformMeshVerticesForNpc", vram = 0x8007A9C8, size = 0x368 },
     { name = "npcDeformingMeshUpdate", vram = 0x8007AD30, size = 0x1C8 },

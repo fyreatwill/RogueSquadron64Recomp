@@ -121740,3 +121740,27 @@ not prove the fragment is uncallable. Complete evidence table:
 
 ORIGIN: diagnostic-only static reconciliation. No runtime, generated function,
 submodule, or mitigation-shaped behavior changed.
+## Session 2930 (2026-08-27) — renamed non-callable fragment at 0x8007A86C
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 44,592
+bytes, so this was not a maintenance iteration. M5 remains route-gated, M3
+remains parked, and the generated-symbol sweep was the eligible work thread.
+
+The bounded source table classified `0x8007A86C` as a proven non-callable
+four-byte `lw $a2,0x2B94($a2)` fragment. It lies between the complete
+`downscaleImageHalfResBoxFilter` return sequence and the
+`allocateNpcMeshVertexBuffer` stack prologue. The companion map supplied no
+semantic or m2c name, and repository-wide searches found no generated caller
+or independent lookup beyond declaration, definition, and overlay
+registration. This selects `H-DataGap`; the placeholder was renamed to
+`data_gap_8007A86C` in the project map, companion map, generated C/header,
+overlay metadata, and regeneration-safe rename table. The bounded rename
+tool changed three generated references in three files.
+
+This rules out a source-backed semantic rename and callable interpretation for
+this isolated record under the current discriminator. No runtime
+instrumentation or behavior change was performed. Complete evidence table:
+`scratch/agent/s2930_generated_symbol_rename/source-table.md`.
+
+ORIGIN: diagnostic/static classification of an isolated generated split; no
+mitigation-shaped behavior changed.
