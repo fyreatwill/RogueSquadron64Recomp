@@ -123242,3 +123242,13 @@ address, while leaving the stale symbol-table boundary unexplained. No audio,
 route, or runtime behavior changed. The next sweep candidate is the next
 unresolved placeholder after this scanner stop. Evidence:
 `scratch/agent/s3023_generated_symbol_rename/source-table.md`.
+## Session 3024 (2026-08-28) — synchronized mainGameLoop
+
+Completed the bounded generated-symbol audit at `0x8003DFA0`. The companion
+symbol map identifies `mainGameLoop`, and the generated tree contains one
+standalone definition with the expected `0x5BC` overlay registration, header
+declaration, and eight generated caller-boundary sites. Synchronized the stale
+`syms/rogue_squadron.syms.toml` entry from `func_8003DFA0` to `mainGameLoop` and
+built `RecompiledFuncs` successfully. This rules out an ambiguous placeholder,
+data-gap classification, and local duplicate callable for this address. The
+next sweep candidate is `0x8003E8DC`.

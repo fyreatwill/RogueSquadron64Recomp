@@ -682,6 +682,14 @@ boundary. Preserved `func_8002BB34` rather than inventing a rename or a
 `data_gap_*` classification. Evidence:
 `scratch/agent/s3023_generated_symbol_rename/source-table.md`.
 
+Session 3024 completed the bounded generated-symbol audit at `0x8003DFA0`.
+The companion map, generated body, header, eight generated caller-boundary
+sites, and overlay registration identify the unique callable entry as
+`mainGameLoop`; only the project symbol TOML was stale. Synchronized the TOML
+and built `RecompiledFuncs` successfully. This rules out the ambiguous-
+placeholder and duplicate-definition hypotheses for this address. Evidence:
+`scratch/agent/s3024_generated_symbol_rename/source-table.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
@@ -705,8 +713,8 @@ blocker-free workstream until a new M5 route edge is available.
    `0x80024878` was classified as `data_gap_80024878`; do not invent a
    callable name for it. `0x8002BB34` has no companion identity or generated
    callable boundary and remains a placeholder; do not force a rename or gap
-   label. Continue at the next unresolved placeholder after this audit and
-   keep the M5 route dependency open below.
+   label. `0x8003DFA0` was synchronized as `mainGameLoop`. Continue at
+   `0x8003E8DC` and keep the M5 route dependency open below.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
