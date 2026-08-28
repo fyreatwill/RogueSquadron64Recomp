@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3011 (2026-08-28).
+Current maintenance marker: Session 3012 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,15 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3012 completed the bounded generated-symbol audit at `0x80018ED4`.
+The companion project has no entry or semantic name; the generated code is a
+valid 0x20-byte cache-invalidation loop emitted as a label inside
+`packMtxRowFloatToFixed`, with no direct callers or overlay registration.
+Preserved the `func_80018ED4` placeholder rather than inventing a name. This
+rules out an exact companion rename and a mechanically proven data-gap rename
+for this address. Evidence:
+`scratch/agent/s3012_generated_symbol_rename/source-table.md`.
 
 Session 3011 completed the bounded generated-symbol audit at `0x8001818C`.
 The companion map, generated definition, sole direct caller, and overlay
@@ -574,10 +583,9 @@ pending a new discriminator. The generated-symbol sweep is the active
 blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   `0x8001818C` is synchronized as `advanceVideoFrame`; audit the next
-   candidate `0x80018ED4` for a defensible companion identity. Its generated
-   body is a small cache-clearing loop and currently has no companion-map
-   entry, so do not invent a name.
+   `0x80018ED4` was audited and remains an ambiguous cache-helper placeholder:
+   do not rename it. Audit the next candidate `0x80019808` for a defensible
+   companion identity; do not invent a name for an unnamed fragment or gap.
    Do not invent names for ambiguous fragments. Keep the M5 route dependency
    open below and return to it only with a new grounded edge.
 

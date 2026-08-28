@@ -123076,3 +123076,16 @@ for this address. No runtime, audio, or route behavior changed. The next
 sweep candidate is `0x80018ED4`, which has no companion-map semantic entry
 and requires a fresh ambiguity audit.
 Evidence: `scratch/agent/s3011_generated_symbol_rename/source-table.md`.
+
+## Session 3012 (2026-08-28) — preserved ambiguous cache-helper placeholder
+
+Completed the bounded generated-symbol audit at `0x80018ED4`. The companion
+symbol files and source/m2c material contain no entry or semantic name. The
+generated code is a valid 0x20-byte cache-invalidation loop with a `jr $ra`,
+but it is emitted as label `L_80018ED4` inside `packMtxRowFloatToFixed`, not as
+a standalone `RECOMP_FUNC`. No direct generated caller or overlay registration
+references it; only the local loop back-edge does. The project TOML placeholder
+was therefore preserved. This rules out an exact companion rename and a
+mechanically proven data-gap rename for this address; it does not prove the
+helper is never called from outside the generated tree. Evidence:
+`scratch/agent/s3012_generated_symbol_rename/source-table.md`.
