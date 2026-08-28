@@ -171,7 +171,7 @@ functions = [
     { name = "heapWalker", vram = 0x800079F0, size = 0x2C8 },
     { name = "countDisplayListChunks", vram = 0x80007CB8, size = 0x24 },
     { name = "reclaimDisplayListChunk", vram = 0x80007CDC, size = 0x98 },
-    { name = "func_80007D74", vram = 0x80007D74, size = 0xE8 },
+    { name = "allocateDisplayListBuffer", vram = 0x80007D74, size = 0xE8 },
     { name = "allocDLBlockToFillRectList", vram = 0x80007E5C, size = 0xC0 },
     { name = "allocDLBlockToListB", vram = 0x80007F1C, size = 0xC0 },
     { name = "allocDLBlockToListC", vram = 0x80007FDC, size = 0xC0 },

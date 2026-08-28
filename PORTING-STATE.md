@@ -122865,3 +122865,16 @@ conflict. This rules out the ambiguous-placeholder and duplicate-definition
 hypotheses for this address. No runtime or audio behavior changed. The next
 candidate is `0x80007D74`. Evidence:
 `scratch/agent/s2995_generated_symbol_rename/source-table.md`.
+## Session 2996 (2026-08-28) — synchronized allocateDisplayListBuffer
+
+Ran the bounded three-source audit for `0x80007D74`. The companion map,
+generated definition, and 96 generated callers identify the unique callable
+entry as `allocateDisplayListBuffer`; its body allocates a display-list node
+from the free pool and falls back to `findAndUnlinkSmallestEntry`. No duplicate
+generated definition was present. The project symbol TOML alone still used
+`func_80007D74`, so synchronized it and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime or audio behavior changed. The next candidate is
+`0x8000815C`. Evidence:
+`scratch/agent/s2996_generated_symbol_rename/source-table.md`.
