@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2927 (2026-08-27).
+Current maintenance marker: Session 2928 (2026-08-27).
+
+The s2928 generated-symbol sweep inspected the next unresolved placeholder
+after `0x80069AF0`, `0x8006B704..0x8006B710`. It is a valid 12-byte
+`sw`/`addiu`/`lw` fragment between the complete `getLevelTimeLimit` return
+and `loadCraftShadowTextures` prologue, with no semantic companion name,
+generated caller, or independent lookup. Because valid instructions do not
+mechanically prove non-callability, it remains `ambiguous-or-fake`; no rename
+was authorized. Complete table:
+`scratch/agent/s2928_generated_symbol_rename/source-table.md`.
 
 The s2927 mandatory revisit selected the parked M4 accumulator boundary with
 a new static register-lifetime angle. `OVL1C_1DDC` resets producer `r7` and
@@ -611,7 +620,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80065A5C..0x80065A60` as `data_gap_80065A5C`; s2925 reconciled
    `0x800663AC..0x800663B0` as `data_gap_800663AC`; s2926 reconciled
    `0x80069AEC..0x80069AF0` to `collideSegmentAgainstObjectNodesPreamble`;
-   continue with the next remaining placeholder after `0x80069AF0`.
+   s2928 inspected `0x8006B704..0x8006B710` and preserved it as a
+   callable-ambiguous valid fragment; continue with the next remaining
+   placeholder after `0x8006B704`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

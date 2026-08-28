@@ -121692,3 +121692,26 @@ authorized. No code, build, or game run changed. Complete evidence table:
 
 ORIGIN: diagnostic-only static audit. No runtime, generated function,
 submodule, or mitigation-shaped behavior changed.
+
+## Session 2928 (2026-08-27) — preserved callable-ambiguous fragment at 0x8006B704
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 43,305
+bytes, so this was not a maintenance iteration. M5 remains paused because its
+current route discriminator is route-invalid, M3 remains parked, and the
+s2927 mandatory M4 revisit already resolved its static register-lifetime
+question. The eligible generated-symbol sweep therefore inspected the next
+placeholder after `0x80069AF0`.
+
+The bounded source table found `0x8006B704..0x8006B710` as a 12-byte valid
+`sw $a1,0($a0)` / `addiu $a2,$fp,0x28` / `lw $a0,0x5C($fp)` fragment. It lies
+between the complete `getLevelTimeLimit` return and the
+`loadCraftShadowTextures` stack prologue. The companion/project map retains
+`fake_func_8006B704`; repository-wide reference search found no generated
+caller or independent lookup and no semantic companion/m2c name. The valid
+instructions prevent a mechanical data-gap proof, so this selects
+`ambiguous-or-fake`; no rename, build, or game run was performed.
+
+This rules out only a source-backed semantic rename and a mechanically proven
+data-gap rename for this interval. It does not prove the fragment is
+uncallable. Complete evidence table:
+`scratch/agent/s2928_generated_symbol_rename/source-table.md`.
