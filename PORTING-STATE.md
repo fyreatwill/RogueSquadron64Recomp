@@ -123414,3 +123414,17 @@ placeholder rather than inventing a callable or semantic gap rename and built
 `RecompiledFuncs` successfully. This rules out an exact companion rename and
 a callable-boundary interpretation for this address. Evidence:
 `scratch/agent/s3036_generated_symbol_rename/source-table.md`.
+
+## Session 3037 (2026-08-28) — synchronized 0x80017AD0 generated symbol
+
+Completed a bounded generated-symbol synchronization at `0x80017AD0` using
+the companion symbol map, generated body/callers/header, overlay registration,
+and project symbol TOML. The companion map names the exact callable
+`setRenderStateFlagByteThree`; generated `funcs_4.c`, callers, header, and
+overlay registration already use that name, while the project TOML alone
+retained `func_80017AD0`. Synchronized the TOML and built `RecompiledFuncs`
+successfully. The neighboring `setRenderStateFlagByteOne` and
+`setRenderStateFlagByteTwo` setters are the positive structural control. This
+rules out an ambiguous boundary and duplicate callable definition for the
+third render-state byte setter. Evidence:
+`scratch/agent/s3037_generated_symbol_rename/source-table.md`.

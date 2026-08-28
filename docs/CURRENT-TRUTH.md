@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3036 (2026-08-28).
+Current maintenance marker: Session 3037 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,16 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3037 completed a bounded generated-symbol synchronization at
+`0x80017AD0`. The companion map names the exact callable
+`setRenderStateFlagByteThree`; generated `funcs_4.c`, callers, header, and
+overlay registration already use that name, while the project symbol TOML
+alone retained `func_80017AD0`. Synchronized the TOML and built
+`RecompiledFuncs` successfully. The neighboring setter pair at `0x80017AB0`
+and `0x80017AC0` provides a positive structural control. This rules out an
+ambiguous boundary or duplicate definition for the third render-state byte
+setter. Evidence: `scratch/agent/s3037_generated_symbol_rename/source-table.md`.
 
 Session 3036 audited `0x8009C2C8`. The companion map retains
 `fake_func_8009C2C8` with no human identity. The generated snapshot emits

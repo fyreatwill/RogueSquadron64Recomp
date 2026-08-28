@@ -231,7 +231,7 @@ functions = [
     { name = "setFrameLevelStateBytes", vram = 0x80017A90, size = 0x20 },
     { name = "setRenderStateFlagByteOne", vram = 0x80017AB0, size = 0x10 },
     { name = "setRenderStateFlagByteTwo", vram = 0x80017AC0, size = 0x10 },
-    { name = "func_80017AD0", vram = 0x80017AD0, size = 0x10 },
+    { name = "setRenderStateFlagByteThree", vram = 0x80017AD0, size = 0x10 },
     { name = "setViewStateBytesAndFadeScale", vram = 0x80017AE0, size = 0x48 },
     { name = "setViewStateTripletBytes", vram = 0x80017B28, size = 0x20 },
     { name = "setMissionLevelInitByte", vram = 0x80017B48, size = 0x10 },
