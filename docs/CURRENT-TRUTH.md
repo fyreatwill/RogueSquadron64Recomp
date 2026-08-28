@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2895 (2026-08-27).
+Current maintenance marker: Session 2896 (2026-08-27).
 
 ## Live result
 
@@ -321,7 +321,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80003424..0x80003430` as a bounded non-callable data gap; continue after
    `0x80003430`. s2895 classified `0x8000537C..0x80005380` as a bounded
    invalid/data gap caused by a false split reference before `initRsMallocHeap`;
-   continue after `0x80005380`.
+   s2896 classified `0x80005568` and `0x8000595C` as bounded non-callable
+   fragments before `piDmaWorker` and `initMemoryPack`; continue after
+   `0x80005960`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

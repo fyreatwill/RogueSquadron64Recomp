@@ -121131,3 +121131,17 @@ three generated references changed across `funcs_1.c`, `funcs.h`, and
 this is a naming-only change. H-Callable and H-Ambiguous are ruled out for
 this interval. Complete table: `scratch/agent/s2895_generated_symbol_rename/source-table.md`.
 The next unresolved placeholder is after `0x80005380`.
+
+## Session 2896 (2026-08-27) — reconciled main-text data gaps at 0x80005568 and 0x8000595C
+
+Inspected the complete generated-symbol interval `0x80005380..0x80005960`.
+The two unresolved records were `0x80005568` (an isolated split-off
+instruction fragment immediately before `piDmaWorker`) and `0x8000595C` (a
+single `addu $v0, $zero, $zero` immediately before `initMemoryPack`). Neither
+had a semantic companion name or generated call/lookup reference. Renamed
+both to `data_gap_*` in the project symbol map and companion map; the generated
+snapshot was already synchronized, and exact searches found no stale generated
+references. No build or runtime soak was needed because this was a naming-only
+change. H-Callable and H-Ambiguous are ruled out for this interval. Complete
+table: `scratch/agent/s2896_generated_symbol_rename/source-table.md`.
+The next unresolved placeholder is after `0x80005960`.
