@@ -2035,7 +2035,7 @@ functions = [
     { name = "initializeObjectiveHandles", vram = 0x800FA134, size = 0x28 },
     { name = "addBooleanCountHandle", vram = 0x800FA15C, size = 0x80 },
     { name = "addTimerHandle", vram = 0x800FA1DC, size = 0x6C },
-    { name = "fake_func_800FA248", vram = 0x800FA248, size = 0x8 },
+    { name = "data_gap_800FA248", vram = 0x800FA248, size = 0x8 },
     { name = "initMission", vram = 0x800FA250, size = 0x454 },
     { name = "runInMissionFrame", vram = 0x800FA6A4, size = 0x748 },
     { name = "flashMissionAlertObjectsAndPrint", vram = 0x800FADEC, size = 0x120 },

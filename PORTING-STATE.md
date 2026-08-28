@@ -121007,3 +121007,24 @@ reconciliation renamed 27 references across generated C, `funcs.h`, and
 No build or runtime soak was needed for this symbol-only change and no game
 behavior changed. The next sweep begins after `0x800F0000`. Evidence:
 `scratch/agent/s2888_generated_symbol_rename/source-table.md`.
+
+## Session 2889 (2026-08-27) — renamed generated mission-overlay data gap at 0x800FA248
+
+Ran the required sweep eligibility check; the recent sessions were mixed M5
+and symbol work, so the generated-symbol campaign remained eligible. The
+complete placeholder census after `0x800F0000` through the next boundary
+found one record at `0x800FA248`. Its generated body is exactly two
+negative-address `lb` instructions in an 8-byte record immediately before
+`initMission`; the companion map has no semantic callable name and no
+call/reference evidence identified it as a routine. The complete table
+therefore selected H-DataGap and rejected H-Callable and H-Ambiguous for this
+record.
+
+Added the mechanical `data_gap_800FA248` mapping to
+`tools/rename_generated_symbols.py`, updated the companion/project symbol
+maps, and reconciled the generated snapshot. The tool renamed three
+references across generated C, `funcs.h`, and `recomp_overlays.inl`; the
+follow-up search found zero old-name references. No build or runtime soak was
+needed for this symbol-only change and no game behavior changed. The next
+sweep cursor is `0x800FA248`; the next placeholder is after that boundary.
+Evidence: `scratch/agent/s2889_generated_symbol_rename/source-table.md`.

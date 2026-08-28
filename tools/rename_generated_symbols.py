@@ -139,6 +139,10 @@ RENAMES = {
     "fake_func_800CC038": "data_gap_800CC038",
     "fake_func_800CC3D4": "data_gap_800CC3D4",
     "fake_func_800CEF1C": "data_gap_800CEF1C",
+    # This eight-byte mission-overlay record decodes as two invalid
+    # negative-address loads immediately before initMission; it is not
+    # callable game code.
+    "fake_func_800FA248": "data_gap_800FA248",
 }
 
 

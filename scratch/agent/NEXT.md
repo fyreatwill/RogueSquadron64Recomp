@@ -1,14 +1,14 @@
-# NEXT work unit (s2889) — generated-symbol renaming sweep
+# NEXT work unit (s2890) — generated-symbol renaming sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 M5 remains open but its current route/contract discriminator is parked after
 three route-invalid iterations. The next eligible bounded engineering unit
-is the next placeholder interval after `0x800F0000`.
+is the next placeholder interval after `0x800FA248`.
 
 ## Work unit
 
-Inspect the complete next placeholder interval beginning after `0x800F0000`
+Inspect the complete next placeholder interval beginning after `0x800FA248`
 in the generated snapshot and companion decomp symbol maps. Rename only
 source-backed callable names or mechanically proven non-callable data gaps;
 leave ambiguous records unchanged. Record a complete source table and update
@@ -31,7 +31,7 @@ evidence; all other rows remain unchanged.
 1. Inspect the generated snapshot and companion maps for the next interval and
    produce the complete source table before editing names.
 2. Add only table-selected mappings to `tools/rename_generated_symbols.py` and
-   reconcile the generated snapshot with `--start-address 0x800f0000
+   reconcile the generated snapshot with `--start-address 0x80100000
    --end-address <next-boundary> --require-rename`.
 3. Update the companion/project symbol maps, run symbol/reference checks, and
    record selected and unchanged counts.
