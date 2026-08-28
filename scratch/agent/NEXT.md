@@ -1,37 +1,35 @@
-# NEXT work unit (s2876) — m5-state-arbiter-port-equivalence
+# NEXT work unit (s2877) — m5-new-route-state-discriminator
 
-HYPOTHESIS-ID: m5-state-arbiter-port-equivalence
+HYPOTHESIS-ID: m5-new-route-state-discriminator
 
 ## Work unit
 
-Use the newly established retail writer `0x8006E4B4` as the next bounded
-port-side discriminator. First rerun the retail oracle with the same
-whole-RDRAM control and a phase-qualified execution watch for `0x8006E4B4` plus
-the `0x80130B40:0x80130B80` write histogram. Only if that control again reaches
-title and hangar, add one batch of port probes for the generated equivalent of
-the `0x8006E4B4` call/store site and the same state span, then run the matching
-image/silent pair. Do not change behavior or interpret downstream audio nulls.
+The s2876 port pair was route-invalid, so its zero state rows are not evidence.
+Select one new port-side consumer of the `0x8006E4B4`-updated structure. First
+qualify its retail writer/consumer ordering with the whole-RDRAM positive
+control, then add all consumer/store counters in one regeneration-safe probe,
+rebuild once, and run image/silent arms concurrently. Do not change behavior
+or interpret downstream audio unless both arms reach title and hangar.
 
 ## Competing hypotheses and discriminator
 
-- H-writer-missing: the retail `0x8006E4B4` writer is phase-qualified but the
-  matching port writer/store is absent before or during its target phases.
-- H-writer-equivalent: retail and port both show the writer and state-span
-  sequence in matching target phases, ruling out this writer class at scope.
-- H-route-invalid: the retail positive control fails or the matching port pair
-  does not reach title and hangar, making writer rows unevaluable.
+- H-consumer-missing: retail shows the consumer ordering but the matching port
+  consumer/store path is absent after route qualification.
+- H-consumer-equivalent: retail and port show the same consumer ordering and
+  state-span sequence in matching target phases.
+- H-route-invalid: either positive control or the matching port pair fails to
+  reach title and hangar, making consumer rows unevaluable.
 
-The discriminator is one retail-vs-port phase table: positive-control count,
-title/hangar reachability, `0x8006E4B4` phase rows, and state-span writer/value
-histograms. Each outcome selects one hypothesis above; no downstream audio
-counter is interpreted on H-route-invalid.
+The discriminator is one retail-vs-port phase table containing positive-control
+count, title/hangar reachability, consumer rows, and state-span rows. Each
+outcome selects one hypothesis above.
 
 ## Exact command
 
     sed -n '1,220p' tools/oracle/README.md
-    # Run the retail preflight first; use the exact command in the prior
-    # artifact, replacing --watch-pc with 0x8006E4B4 and retaining both phase
-    # buckets and the whole-RDRAM control.
+    # Run the retail preflight with --watch-write 0x0:0x800000,
+    # --pc-phase-log-width title/hangar buckets, and the selected consumer PC;
+    # only then add matching port probes and run both arms from build/.
 
-Record the phase table under `scratch/agent/s2876_m5_state_arbiter/`; use
-SIGKILL, run from `build/`, and run `git diff --check` before committing.
+Record the phase table under `scratch/agent/s2877_m5_route_state/`; use SIGKILL,
+run from `build/`, and run `git diff --check` before committing.

@@ -120756,3 +120756,16 @@ defensible rename at this scope, not the possibility that future source work
 will resolve them. Checks passed: `py_compile` and `git diff --check`.
 
 Artifact: `scratch/agent/s2874_generated_symbol_rename/`.
+
+## Session 2876 (2026-08-27) — tested state-arbiter writer equivalence
+
+The retail-first oracle control passed with 10,105 whole-RDRAM writes, 635
+title VIs, 210 hangar VIs, and six executions of `0x8006E4B4`. The same-build
+image/silent port A/B both stalled at non-target 640 `0x005D4500` phase 4 for
+the bounded 190-second run. Neither reached title or hangar, and neither
+emitted a crash or abort marker; the new phase-gated state-span probes emitted
+zero rows. This selects H-route-invalid for this run. It rules out neither a
+missing nor equivalent writer because the port target phases were not reached;
+downstream audio rows remain unevaluable. The regeneration-safe probe is
+`tools/apply_s2876_m5_state_probe.py`; results are in
+`scratch/agent/s2876_m5_state_arbiter/RESULTS.md`.

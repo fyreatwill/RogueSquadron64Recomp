@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2875 (2026-08-27).
+Current maintenance marker: Session 2876 (2026-08-27).
 
 ## Live result
 
@@ -125,6 +125,14 @@ port absence because the matching port recipe still stops at pre-title VI 640;
 no behavior change is authorized. Artifact:
 `scratch/agent/s2875_m5_state_arbiter/RESULTS.md`.
 
+The s2876 retail-vs-port writer-equivalence unit was instrument-valid on the
+retail side (10,105 whole-RDRAM writes, title and hangar reached, six
+`0x8006E4B4` executions). The matching image/silent port pair instead stalled
+at non-target 640 `0x005D4500` phase 4; both had zero state rows and no crash or
+abort. This selects H-route-invalid for this run, so writer equivalence and
+downstream audio remain unevaluable. Artifact:
+`scratch/agent/s2876_m5_state_arbiter/RESULTS.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
@@ -149,8 +157,8 @@ apply only source-backed renames and preserve callable-ambiguous records.
    truth found target-phase writers in the `0x80130B40` span, led by
    `0x8006E4B4`, while `mainGameLoop=0x8003DFA0` is boot-only; the loop-entry
    sub-angle is exhausted, but writer equivalence remains open. The next unit
-   must test a distinct port-side state-arbiter consumer or writer path after
-   ground-truth qualification, before interpreting downstream nulls. Ground
+   must first use a distinct route-state discriminator or repaired route
+   qualification before interpreting downstream nulls. Ground
    truth must precede any port instrumentation. The s2873 pivot
    did not change this unresolved M5 ordering; its next audio behavior change
    still requires a named legitimate contract edge.
