@@ -51,6 +51,14 @@ maps, rename tool, and generated snapshot; three generated references changed
 and no old-name references remain. Artifact:
 `scratch/agent/s2889_generated_symbol_rename/source-table.md`.
 
+The s2892 sweep completed the main-text placeholder interval
+`0x800027B8..0x800027C0`. Its sole 8-byte record contains only an isolated
+`addu`/delay-slot fragment immediately before `processPolledControllerData`,
+with no callable body or semantic companion name; it was reconciled as
+`data_gap_800027B8` in the checked symbol map. The generated snapshot and
+rename table were already synchronized, so no generated references changed.
+Artifact: `scratch/agent/s2892_generated_symbol_rename/source-table.md`.
+
 The s2891 sweep completed the mission-overlay placeholder interval
 `0x80101CCC..0x80109620`. All 14 records were bounded non-callable fragments
 or fixup trap gaps with no semantic companion or independent caller evidence;
@@ -297,9 +305,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    more records through `0x800F0000`, and s2889 renamed the single data gap at
    `0x800FA248`; s2890 renamed the adjacent data gaps at `0x800FBE14` and
    `0x800FEF04`; s2891 then reconciled all 14 placeholders through
-   `0x80109620` as bounded data gaps. Continue with the next remaining
-   placeholder below `0x8010` unless M5 gets a new writer-backed route or
-   contract discriminator.
+   `0x80109620` as bounded data gaps. The s2892 sweep then reconciled the
+   next main-text record at `0x800027B8` as a bounded data gap; continue with
+   the next remaining placeholder after `0x800027C0` unless M5 gets a new
+   writer-backed route or contract discriminator.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

@@ -121063,3 +121063,20 @@ the project and companion symbol maps for all 14 records and verified zero old
 `fake_func_*` references in both maps and the generated snapshot. No build or
 runtime soak was needed for this symbol-only reconciliation; no game behavior
 changed. The mission-overlay `0x8010` placeholder run is complete.
+
+## Session 2892 (2026-08-27) — reconciled main-text data gap at 0x800027B8
+
+Ran the bounded generated-symbol sweep from `0x800027B8` through the next
+established boundary at `0x800027C0`. The complete interval table classified
+the sole 8-byte placeholder as H-DataGap: the historical generated body is
+only an isolated `addu $a0, $s3, $zero` plus delay-slot `nop`, with no callable
+prologue or return. The exact next symbol is `processPolledControllerData`,
+and no semantic companion or independent caller evidence identifies a
+function. H-Callable and H-Ambiguous were rejected. Evidence:
+`scratch/agent/s2892_generated_symbol_rename/source-table.md`.
+
+The generated snapshot and rename table were already synchronized, so there
+were zero generated references to rewrite. Reconciled the checked project
+symbol map to `data_gap_800027B8` and verified zero stale
+`fake_func_800027B8` references there. No build or runtime soak was needed;
+no game behavior changed. The next unresolved placeholder is `0x8000337C`.

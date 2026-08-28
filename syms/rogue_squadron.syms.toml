@@ -46,7 +46,7 @@ functions = [
     { name = "getViModeType", vram = 0x8000273C, size = 0x10 },
     { name = "setViModeType", vram = 0x8000274C, size = 0x5C },
     { name = "getOsResetType", vram = 0x800027A8, size = 0x10 },
-    { name = "fake_func_800027B8", vram = 0x800027B8, size = 0x8 },
+    { name = "data_gap_800027B8", vram = 0x800027B8, size = 0x8 },
     { name = "processPolledControllerData", vram = 0x800027C0, size = 0x31C },
     { name = "startRumbleEffect", vram = 0x80002ADC, size = 0xCC },
     { name = "stopRumbleEffect", vram = 0x80002BA8, size = 0xB4 },
