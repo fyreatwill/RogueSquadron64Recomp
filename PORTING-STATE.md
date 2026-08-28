@@ -123103,3 +123103,14 @@ and overlay registration. Synchronized the stale project symbol TOML from
 successfully. This rules out an exact semantic rename and an ambiguous
 callable identity for this address; it remains a non-callable boundary record.
 Evidence: `scratch/agent/s3013_generated_symbol_rename/source-table.md`.
+## Session 3014 (2026-08-28) — synchronized requestViFeatureChange
+
+Completed the bounded generated-symbol audit at `0x8001B7B8`. The companion
+map, generated definition, six generated callers, header, and overlay
+registration identify the unique callable entry as `requestViFeatureChange`;
+the project symbol TOML alone was stale. Synchronized the TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out the ambiguous-placeholder and duplicate-definition hypotheses
+for this address. No runtime, audio, or route behavior changed. The next
+sweep candidate is `0x8001B7C8`. Evidence:
+`scratch/agent/s3014_generated_symbol_rename/source-table.md`.

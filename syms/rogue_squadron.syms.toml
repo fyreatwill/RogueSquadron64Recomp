@@ -268,7 +268,7 @@ functions = [
     { name = "yieldFromGfxFrame", vram = 0x8001A038, size = 0x20 },
     { name = "postViThreadCommand", vram = 0x8001A058, size = 0x40 },
     { name = "initVideoSubsystem", vram = 0x8001A098, size = 0x1720 },
-    { name = "func_8001B7B8", vram = 0x8001B7B8, size = 0x10 },
+    { name = "requestViFeatureChange", vram = 0x8001B7B8, size = 0x10 },
     { name = "func_8001B7C8", vram = 0x8001B7C8, size = 0x10 },
     { name = "func_8001B7D8", vram = 0x8001B7D8, size = 0x18 },
     { name = "func_8001B7F0", vram = 0x8001B7F0, size = 0x2AC },
