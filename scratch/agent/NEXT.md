@@ -1,38 +1,43 @@
-# NEXT work unit (s2903) — generated-symbol renaming sweep
+# NEXT work unit (s2904) — M4 producer/consumer index join
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m4-accumulator-boundary-revisit
 
-Inspect the next bounded unresolved placeholder at `0x8003DF98` through the
-next established companion symbol boundary. Reconcile only source-backed
-callable names or mechanically proven non-callable data gaps; leave ambiguous
-records unchanged. Record a complete source table.
+Run the existing phase-gated M4 producer/consumer index join in one Debug
+build/run. Capture the complete table of producer slot writes at overlay-0x1c
+`B00/B02/B04`, the overlay-0x20 consumer index from the `C70/B74` path, and
+the resulting selected slot, with the independent M4 arithmetic positive
+control in the same run. Use the qualified LLE-only route and hangar origin;
+do not add a new field or re-watch the closed `0x688:0x710`/`0xD60` source
+questions.
 
 ## Competing hypotheses and discriminator
 
-- H-Callable: companion code and call/reference structure identify a unique semantic function name.
-- H-DataGap: the exact generated body is a non-callable fragment, invalid decode, or trap/data gap and can be named mechanically.
-- H-Ambiguous: evidence is insufficient or conflicting; retain the placeholder.
+- H-IndexMatches: the consumer low-seven-bit index equals a producer slot in
+  the target phase and the join reaches the shared consumer path.
+- H-IndexMisses: producer slots are populated but the consumer index never
+  matches them, explaining the unresolved accumulator boundary.
+- H-NoProducer: the consumer path is live but no producer slot is published in
+  the target phase.
+- H-InstrumentAbsent: the independent arithmetic positive control fails; all
+  M4 join nulls are unevaluable.
 
-The single discriminator is a complete interval table joining every generated
-placeholder to its companion boundary, body shape, and call/reference
-evidence. A callable selection requires a unique semantic companion name plus
-callable evidence; a data-gap selection requires exact bounded non-callable
-evidence; all other rows remain unchanged.
+The single discriminator is one phase-keyed row set containing every producer
+slot/value, every consumer index, selected-slot result, and the arithmetic
+positive-control tuple. A nonzero changing arithmetic control is mandatory;
+the producer and consumer rows must be compared in the same task/phase key.
 
 ## Exact commands
 
-1. Inspect `0x8003DF98` through the next established companion symbol boundary
-   in the generated snapshot and companion maps; write the complete source
-   table before editing.
-2. Add only table-selected mappings to `tools/rename_generated_symbols.py` and
-   reconcile with `--start-address 0x8003DF98 --end-address <next-boundary>`.
-3. Update `syms/rogue_squadron.syms.toml` and the companion symbol map, then
-   run exact old-name/reference checks and record selected and unchanged counts.
+```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_LOG_M4_INDEX=1 ROGUESQ_LOG_M4_ACCUM=1 \
+  ROGUESQ_M4_Y8000_WIDTH=512 ROGUESQ_AUTOPILOT=1 \
+  ./build/Debug/RogueSquadron64Recomp.exe > scratch/agent/s2904_m4_index_join/run.log 2>&1
+```
 
-## Expected outcomes
-
-Every candidate is classified as H-Callable, H-DataGap, or H-Ambiguous. Any
-semantic callable or proven data-gap rows are renamed; ambiguous rows remain
-placeholders and are explicitly recorded. No runtime build or soak is needed
-unless the source table identifies a callable rename that changes generated
-dispatch references.
+Expected outcomes: positive-control rows select the instrument-valid branch;
+matching producer/consumer keys select H-IndexMatches, producer rows without
+a match select H-IndexMisses, consumer-only rows select H-NoProducer, and a
+missing arithmetic control selects H-InstrumentAbsent. A mitigation or value
+rewrite is forbidden without an `ORIGIN:` naming the legitimate writer.

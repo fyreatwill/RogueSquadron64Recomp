@@ -121243,3 +121243,19 @@ callable or data-gap candidate in this interval, but says nothing about the
 next unresolved placeholder at `0x8003DF98`. No build or soak was needed
 because the work unit was a bounded source classification with no executable
 change.
+## Session 2903 (2026-08-27) — rejected retail overlay/state handoff candidate set
+
+The mandatory retail-entry revisit ran one new phase-qualified oracle census
+watching `mainGameLoop` (`0x8003DFA0`), `loadOverlay` (`0x80000B20`),
+`runIdleFramesAndLoadSaveData` (`0x8006D900`), and
+`setUnlockBitAndPersist` (`0x8006E360`). The same invocation watched all
+physical RDRAM as the positive control. It produced 10,000 whole-RDRAM writes,
+reached title (`1024`, `0x00790400`) and hangar (`512`, `0x006AB400`), and
+showed only 1, 4, 1, and 1 lifetime hits respectively, all boot/pre-title;
+each candidate had zero target-phase rows. The complete table and raw capture
+are in `scratch/agent/s2903_retail_entry_boundary/RESULTS.md` and `oracle.log`.
+
+This selects H-NoBoundaryHit for this candidate set as single-source oracle
+evidence. It rules out these four PCs as the target-phase retail-entry
+boundary, but does not explain the port route and authorizes no behavior
+change. The exhausted broad `0x8003D000..0x80040000` range was not repeated.

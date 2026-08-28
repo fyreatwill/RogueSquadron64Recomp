@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2901 (2026-08-27).
+Current maintenance marker: Session 2903 (2026-08-27).
+
+The s2903 mandatory retail-entry revisit used a new overlay/state handoff
+census. The whole-RDRAM oracle control produced 10,000 writes and the driven
+retail route independently reached title (`1024`, `0x00790400`) and hangar
+(`512`, `0x006AB400`). `mainGameLoop` (`0x8003DFA0`), `loadOverlay`
+(`0x80000B20`), `runIdleFramesAndLoadSaveData` (`0x8006D900`), and
+`setUnlockBitAndPersist` (`0x8006E360`) each had only boot/pre-title hits and
+zero target-phase rows. This selects H-NoBoundaryHit for this candidate set as
+single-source oracle evidence; it does not identify a retail-entry dispatcher
+or explain the port route.
 
 ## Live result
 
@@ -366,11 +376,17 @@ apply only source-backed renames and preserve callable-ambiguous records.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
    repeat the closed callback audit until a new legitimate AI destination and
    ordering edge are named.
-6. **External retail-entry boundary — parked.** Return only with a new,
-   phase-qualified oracle discriminator; the oracle does not drive missions.
-7. **M4 accumulator origin — parked.** The producer, selector, and indirect
+6. **External retail-entry boundary — candidate set rejected (s2903).** The
+   phase-qualified oracle census passed its whole-RDRAM control and reached
+   title/hangar, but all four candidate PCs were boot/pre-title only. Do not
+   repeat this candidate set or the exhausted broad main-text range. The
+   oracle does not drive missions; any future revisit needs a genuinely new
+   boundary derived from a different static handoff.
+7. **M4 accumulator origin — next revisit.** The producer, selector, and indirect
    consumer are localized; equality remains unresolved and broad watches are
-   not a substitute.
+   not a substitute. Use the existing batched producer-slot/consumer-index
+   join as one phase-gated port instrument with its independent positive
+   control; no mitigation is authorized.
 8. **M5 image task contract / hangar artifact — parked.** No writeback,
    remap, forced state, or mitigation without an `ORIGIN:` naming the writer
    and stating whether its value is legitimate.
