@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3056 (2026-08-28).
+Current maintenance marker: Session 3057 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,17 @@ completion, not PCM correctness. The M5 route dependency remains open, but
 static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3057 mapped retail PC `0x80035798` to libultra
+`__osViSwapContext` (`0x80035550–0x800358AC`), the VI-register commit
+consumer, not a missing game overlay writer. The port has the corresponding
+`events.cpp::update_vi` implementation and its `osViSetMode` publication path.
+All four generated game-side VI callsites are present, but the s3056 port log
+contains only requests of widths 320, 2, 640, and 640, so no 1024 descriptor
+exists for the consumer to commit. This rejects missing-writer and aliasing at
+the runtime boundary and does not select descriptor corruption. The upstream
+game-side mode-selection call/state that should request 1024 remains open.
+Evidence: `scratch/agent/s3057_m5_vi_writer_mapping/AUDIT.md`.
 
 Session 3040 ran the M5 Step-1 image/silent qualification after an independent
 retail ground-truth preflight. Retail passed the whole-RDRAM positive control
@@ -243,16 +254,15 @@ route-blocked at pre-title VI 640; event registration/completion is live in the
 port and the next unit must use a different handoff edge. M3 is
 parked pending a new discriminator.
 
-1. **M5 VI-mode stall — map the retail 1024-mode writer and audit its port path.**
-   Session 3056 established with independent retail ground truth that the
-   640→1024 transition is written by PC `0x80035798`, while the port issues
-   no width-1024 call. Identify the retail function/symbol containing that PC,
-   map it to the recompiled function and its callers, and check whether the
-   corresponding port path executes before the VI-640 stall. Do not change
-   state-machine behavior until the writer and its legitimate mode descriptor
-   are identified. The route predicate remains correct for width 1024 (title)
-   or 512 (hangar); compare writer identity and call path before adding a
-   probe.
+1. **M5 VI-mode stall — attribute the retail game-side call that requests 1024.**
+   Session 3057 closed the consumer boundary: `0x80035798` is
+   `__osViSwapContext`, and the port has the equivalent commit. Use one
+   retail-grounded oracle run watching `osViSetMode` and the surrounding
+   libultra VI path with the positive whole-RDRAM control, Rice, and the
+   validated Start schedule. Use `exec-prev` to identify the retail jal site
+   that submits the 1024 descriptor, then map that site to a game function and
+   compare its port execution. Do not change behavior or add a port probe
+   until the oracle supplies a specific missing edge.
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
    placeholders for fragments, data gaps, and unresolved boundaries; do not

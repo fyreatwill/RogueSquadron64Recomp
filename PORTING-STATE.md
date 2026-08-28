@@ -123781,3 +123781,18 @@ calls and stayed at VI 640 origin `0x0066A500`. This selects
 `H-TitleOsViNotCalled` for the port and rules out port-side VI suppression for
 this capture. No behavior changed. Evidence:
 `scratch/agent/s3056_m5_vi_mode_oracle_setup/AUDIT.md`.
+
+## Session 3057 (2026-08-28) — mapped retail VI register writer
+
+Ran the prescribed bounded M5 static VI-writer mapping audit. Retail PC
+`0x80035798` falls inside libultra `__osViSwapContext`
+(`0x80035550–0x800358AC`), not inside `osViSetMode` and not inside a game
+overlay. The port has the equivalent `events.cpp::update_vi` consumer and the
+unchanged `osViSetMode` next-state publication. The generated game-side
+callsites are present at `0x8001B720`, `0x8001B8DC`, `0x8001BB54`, and
+`0x8001BC28`; the s3056 port log shows four requests (320, 2, 640, 640) and
+zero 1024 requests. This rejects a missing or aliased runtime writer and does
+not select descriptor corruption because no 1024 descriptor was submitted.
+The remaining question is which retail game-side call/state requests 1024 and
+why the port does not reach it. No behavior changed. Evidence:
+`scratch/agent/s3057_m5_vi_writer_mapping/AUDIT.md`.
