@@ -67,7 +67,7 @@ functions = [
     { name = "setVideoReadyFlag", vram = 0x80003380, size = 0x10 },
     { name = "clearDmaReadyFlag", vram = 0x80003390, size = 0x10 },
     { name = "processOverlayDmaStruct", vram = 0x800033A0, size = 0x84 },
-    { name = "fake_func_80003424", vram = 0x80003424, size = 0xC },
+    { name = "data_gap_80003424", vram = 0x80003424, size = 0xC },
     { name = "rand", vram = 0x80003430, size = 0x30 },
     { name = "setRngSeed", vram = 0x80003460, size = 0x10 },
     { name = "submitDmaSlot", vram = 0x80003480, size = 0x1B8 },

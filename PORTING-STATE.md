@@ -121097,3 +121097,18 @@ project symbol map and companion main-overlay map to `data_gap_8000337C`, and
 verified zero stale `fake_func_8000337C` references in the maps or generated
 snapshot. No build or runtime soak was needed; no game behavior changed. The
 next unresolved placeholder is after `0x80003380`.
+## Session 2894 (2026-08-27) — reconciled main-text data gap at 0x80003424
+
+The bounded generated-symbol sweep covered `0x80003380..0x80003430`, ending at
+the established `rand` body. Its sole placeholder, `0x80003424` (size `0xC`),
+contains only `addiu a0,-0x960`, `lui a1,0x801A`, and `addiu a1,-0xB18`, with no
+prologue, return, or complete callable sequence. The generated tree contains
+no `jal` or `LOOKUP_FUNC` reference to it, and the companion map supplies no
+semantic name. It was classified H-DataGap and reconciled as
+`data_gap_80003424` in `../rogue_squadron64/symbol_files/main_overlay.txt` and
+`syms/rogue_squadron.syms.toml`; the generated snapshot and rename table were
+already synchronized, so no generated references changed. Complete table:
+`scratch/agent/s2894_generated_symbol_rename/source-table.md`.
+
+This rules out a callable-name selection for this interval; it does not alter
+runtime behavior and required no build or soak.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2893 (2026-08-27).
+Current maintenance marker: Session 2894 (2026-08-27).
 
 ## Live result
 
@@ -58,6 +58,14 @@ with no callable body or semantic companion name; it was reconciled as
 `data_gap_800027B8` in the checked symbol map. The generated snapshot and
 rename table were already synchronized, so no generated references changed.
 Artifact: `scratch/agent/s2892_generated_symbol_rename/source-table.md`.
+
+The s2894 sweep completed the next main-text interval,
+`0x80003380..0x80003430`. Its sole placeholder, the 12-byte record at
+`0x80003424`, is an incomplete three-instruction fragment immediately before
+`rand`; it has no generated call or lookup references and no semantic
+companion name. It was reconciled as `data_gap_80003424` in the companion and
+project maps; the generated snapshot was already synchronized. Artifact:
+`scratch/agent/s2894_generated_symbol_rename/source-table.md`.
 
 The s2891 sweep completed the mission-overlay placeholder interval
 `0x80101CCC..0x80109620`. All 14 records were bounded non-callable fragments
@@ -309,7 +317,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    next main-text record at `0x800027B8` as a bounded data gap; s2893
    reconciled the four-byte `0x8000337C` fragment as `data_gap_8000337C`.
    Continue with the next remaining placeholder after `0x80003380` unless M5
-   gets a new writer-backed route or contract discriminator.
+   gets a new writer-backed route or contract discriminator. s2894 classified
+   `0x80003424..0x80003430` as a bounded non-callable data gap; continue after
+   `0x80003430`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
