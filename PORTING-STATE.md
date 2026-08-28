@@ -123710,3 +123710,40 @@ supports internal pre-target ordering and asynchronous delivery after enqueue,
 but does not establish that action ordering causes the boundary or compare
 host callbacks against retail. No behavior changed. Evidence:
 `scratch/agent/s3053_m5_gfx_action_order/AUDIT.md`.
+
+## Session 3054 (2026-08-28) — checkpoint: identified VI-mode stall as route root cause
+
+Stop-gate retry. No new experiment was run. Analyzed the s3053 run.log data
+that the original session entry omitted.
+
+`osViSetMode_recomp` logs unconditionally. The s3053 run.log contains exactly
+4 `osViSetMode` calls: #1 width=320 (initVideoSubsystem, line 42), #2 width=2
+(swapBufferWithViMode, line 1242 — suspicious/corrupt data), #3 width=640
+(initVideoSubsystem, line 1249), #4 width=640 (applyPendingViChanges,
+line 1342). The game never calls osViSetMode with width=1024.
+
+The route predicate at `src/main/main.cpp:1376–1380` reads VI_WIDTH_REG via
+`rs64_vi_committed_width()` and fires only when width==1024 (title) or
+width==512 (hangar). PORTING-STATE history confirms this is correct: older
+runs show "vi_width=1024 (was 640) origin=0x00790400 at 45.3s" and
+"vi_width=512 (was 1024) origin=0x006AB400 at 74.4s" as the expected
+transition signature. The route predicate is not wrong — it was calibrated
+against actual retail behavior.
+
+The M4 summary at the end of the s3053 run shows `viw=640 origin=0x005D4500`
+as the steady-state VI, confirming the game renders ~10 seconds of content at
+width=640 without ever issuing a width=1024 mode change. This selects
+`H-TitleOsViNotCalled` as the most specific hypothesis: the game code path
+that calls osViSetMode(width=1024) is never reached in current AUTOPILOT runs.
+
+This is a pre-title state-machine stall, not a DP-event ordering or
+ProducerMark issue. It explains why all target-phase measurements in sessions
+3040–3053 returned `H-MeasurementInsufficient`: the route predicate is
+structurally unreachable if the VI mode never transitions to 1024.
+
+Next discriminating probe: use the retail oracle to capture the PC that calls
+osViSetMode(1024) in retail, then check via port osViSetMode logs whether that
+call site executes in port AUTOPILOT runs. If the retail caller PC maps to a
+named recompiled function, check whether that function is called at all in
+port. No behavior changed. New evidence: osViSetMode call-count data in
+`scratch/agent/s3053_m5_gfx_action_order/run.log` (lines 42, 1242, 1249, 1342).

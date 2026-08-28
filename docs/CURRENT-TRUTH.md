@@ -194,17 +194,26 @@ no route behavior change was justified. Evidence:
 
 Session 3053 extended that table to action dequeue, SP completion, and
 display-list callback edges. The retail oracle independently passed its
-whole-RDRAM control and reached title/hangar, with the known
-`osSpTaskStartGo` and DP-consumer watches active. The port table was positive:
+whole-RDRAM control and reached title/hangar. The port table was positive:
 559 action/dequeue and callback rows, 559 DP completion/enqueue rows, and 455
-external deliveries. Pre-target rows consistently ordered action dequeue,
-SP completion, display-list submission, `send_dl` return, DP completion,
-enqueue, parse, and completion callbacks. The port still stopped at VI 640
-origin `0x0066A500`, with no title/hangar phase or accepted route. This is
-`H-MeasurementInsufficient` for the target-phase discriminator: the action
-path is internally ordered before the boundary, but retail does not expose
-these host callbacks, so no cross-runtime ordering conclusion or behavior
-change is justified. Evidence: `scratch/agent/s3053_m5_gfx_action_order/AUDIT.md`.
+external deliveries. Pre-target ordering was internally consistent but the
+port remained at VI 640 with route preparation `accepted=0`. Evidence:
+`scratch/agent/s3053_m5_gfx_action_order/AUDIT.md`.
+
+Session 3054 (checkpoint) analyzed the s3053 run.log `osViSetMode_recomp`
+data. The game issued exactly 4 osViSetMode calls: widths 320, 2 (corrupt),
+640, 640. The game **never called osViSetMode(width=1024)** in the AUTOPILOT
+run. The route predicate at `src/main/main.cpp:1376–1380` fires only when
+`rs64_vi_committed_width()` returns 1024 (title) or 512 (hangar). Older
+successful runs (e.g. PORTING-STATE line 23336) confirm the transition
+"vi_width=1024 (was 640) origin=0x00790400" is the correct title-screen
+signature. The M4 summary shows steady-state VI at width=640, origin=0x005D4500.
+This selects `H-TitleOsViNotCalled`: the game code path that calls
+osViSetMode(width=1024) is not reached in current AUTOPILOT runs. All
+sessions 3040–3053 returned H-MeasurementInsufficient because the route
+predicate is unreachable when the VI never transitions to 1024. The
+DP-event, ProducerMark, and action-order measurements are all structurally
+downstream of this stall — they were measuring inside a phase that never arms.
 
 ## Next steps
 
@@ -214,12 +223,18 @@ route-blocked at pre-title VI 640; event registration/completion is live in the
 port and the next unit must use a different handoff edge. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — identify a new pre-title handoff edge.**
-   Session 3053 positively measured the gfx action path, but the port still
-   stopped at VI 640 and never armed title/hangar. Do not repeat action-order,
-   direct-producer, event-registration, or consumer-only watches. Choose one
-   new producer/signal edge, ground it with the retail oracle, and retain the
-   whole-RDRAM and phase controls.
+1. **M5 VI-mode stall — identify why osViSetMode(width=1024) is never called.**
+   Session 3054 determined that the port issues only 4 osViSetMode calls
+   (widths 320, 2, 640, 640) and never reaches the width=1024 title-screen
+   transition. The route predicate is correct; the game's title state machine
+   stalls before the mode-set call. Next probe: use the retail oracle to
+   identify which retail PC calls osViSetMode when the VI transitions 640→1024,
+   then check via port osViSetMode logs whether that caller executes in AUTOPILOT
+   runs. Three hypotheses: H-TitleOsViNotCalled (state machine stalls before
+   the caller), H-TitleOsViCalledWrongMode (caller runs but with wrong mode
+   data), H-TitleOsViSuppressed (call is made but VI write is blocked).
+   Discriminator: compare osViSetMode call count, caller, and width between
+   retail and port in a single batched run.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
