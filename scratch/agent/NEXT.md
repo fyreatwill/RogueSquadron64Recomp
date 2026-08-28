@@ -1,45 +1,42 @@
-# NEXT work unit — classify `0x80062B04`
+# NEXT work unit — new M5 route repair or independent handoff edge
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-route-repair-handoff
 
 ## Competing hypotheses and discriminator
 
-- `H-exact-companion-name`: the address has an exact companion identity that
-  can be synchronized.
-- `H-data-gap-or-fragment`: the entry is not a named standalone function in
-  the companion project; retain the placeholder or classify it as a gap only
-  if independent boundaries support that conclusion.
-- `H-overlay-collision`: more than one generated callable definition or
-  conflicting registration exists and requires manual review.
+- H-route-producer-missing: the port lacks a producer or handoff needed to
+  leave VI 640, while the retail oracle reaches title and hangar.
+- H-input/driver-invalid: the validated input or autopilot contract is not
+  being delivered in the current recipe.
+- H-audio-route-causal: the selected audio arm changes the route before VI
+  640; silent and image arms should diverge under a valid same-build capture.
 
-The discriminating measurement is one bounded static audit: compare the
-companion symbol/m2c sources, generated body and boundaries, all generated
-callers, overlay registration, and duplicate definitions for `0x80062B04`.
-An exact companion name plus one coherent callable selects synchronization; a
-complete but unnamed callable selects no invented rename; a boundary-only
-fragment or collision selects a documented non-rename/manual review.
-
-The preceding `0x80053F7C` audit selected the exact rename
-`updateAnimatedTextureStreaming`; its companion and generated callable
-boundaries were coherent. Do not revisit it without new source evidence.
+The discriminator is one new route-edge measurement, grounded by the retail
+whole-RDRAM positive control, that records the named producer/handoff and
+phase transitions for both audio arms in one build. A valid input control with
+matching pre-title dispatch but no producer or target phase selects the
+missing-handoff direction; a producer with no transition selects its
+consumer/ordering contract; an arm-only divergence selects the audio-route
+hypothesis. A null without the positive control or valid input delivery is
+unevaluable.
 
 ## Exact commands
 
-```sh
-rg -n '80062B04|func_80062B04' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
-rg -n -C 20 '80062B04|func_80062B04' ../N64Recomp/RecompiledFuncs/funcs_*.c
-python3 tools/sweep_scan_candidates.py func_80062B04
-```
+First inspect the already available route producer and handoff anchors, then
+add one regeneration-safe or host-side probe only if the measurement is
+capable of distinguishing the hypotheses:
 
-If the sources agree on an exact identity, synchronize the project symbol
-TOML and build `cmake --build build --config Debug --target RecompiledFuncs`.
-If they do not, leave the placeholder unchanged, record the evidence, and
-build nothing beyond any required static checks. Do not modify audio or route
-behavior.
+    rg -n -C 12 'bufferArbiterProducerMark|8001BCE4|route.*handoff|VI 640|0066A500' src tools scratch/agent
+    cmake --build build --config Debug --target RogueSquadron64Recomp -- -j2
 
-## Open dependency
+Run one same-build paired capture with the retail oracle whole-RDRAM control,
+the documented autopilot, and title/hangar phase gates. Do not repeat the
+s3028 full-log polling recipe; use a monotonic timestamp or bounded
+phase-file checks so the watchdog wall-time is real.
 
-M5 still needs a new route repair or independent handoff that reaches title
-and hangar. The s2993 C628 probe passed its same-run task controls but stayed
-pre-title, so its target null was unevaluable; retain that dependency for a
-future genuinely new route angle.
+## Constraints
+
+Do not modify audio gates, wait caps, voice guards, AI shims, or writeback
+behavior. The M5 Step-1 image/silent comparison remains unevaluable until a
+port arm reaches title or hangar. Preserve the dispatch positive control and
+record the exact producer PC/value/order if it fires.

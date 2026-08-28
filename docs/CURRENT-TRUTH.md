@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3027 (2026-08-28).
+Current maintenance marker: Session 3028 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,22 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3028 built the Debug target and ran a same-build concurrent M5
+Step-1 image/silent baseline with the independent retail oracle. The oracle
+passed the whole-RDRAM positive control at 10,000 callbacks and reached title
+1024 at origin 0x00790400 plus hangar 512 at origin 0x006AB400. Both port arms
+fired the M_AUDTASK dispatch control 340 times but remained at pre-title VI
+640 (0x0066A500), with no title/hangar phase and no downstream task, return,
+or DMA rows in the captured summaries; neither arm crashed or aborted. The
+first driver omission was corrected in-iteration by adding the documented
+autopilot, but the corrected run still did not reach target phases. Repeated
+full-log scans made the nominal phase waiter exceed its intended wall-time
+budget, so the known processes were SIGKILLed after preserving the capture.
+Target-phase audio nulls are unevaluable; this run selects neither the
+live-image nor silent-equivalence hypothesis and leaves the route-repair
+dependency open. Evidence:
+scratch/agent/s3028_m5_step1_contract_pair/RESULTS.md.
 
 Session 3027 completed the bounded generated-symbol audit at `0x80053F7C`.
 The companion map names the unique callable `updateAnimatedTextureStreaming`;
@@ -722,11 +738,12 @@ placeholder and duplicate-definition hypotheses for this address. Evidence:
 
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete for this iteration. M5 remains active
-on audio de-stubbing but is re-scoped pending a route repair; M3 is parked
-pending a new discriminator. The generated-symbol sweep is the active
-blocker-free workstream until a new M5 route edge is available.
+on route repair/handoff before audio de-stubbing; the s3028 baseline did not
+reach target phases. M3 is parked pending a new discriminator. The generated
+symbol sweep is available only if M5 remains blocked after a genuinely new
+route angle.
 
-1. **Generated-symbol sweep — continue only with exact companion identities.**
+3. **Generated-symbol sweep — continue only with exact companion identities.**
    `0x80019808` was mechanically classified and synchronized as
    `data_gap_80019808`; do not invent a semantic name for it. `0x8001B7B8`
    was synchronized as `requestViFeatureChange`, `0x8001B7C8` as
@@ -746,7 +763,7 @@ blocker-free workstream until a new M5 route edge is available.
    project map. Continue at `0x80062B04` and keep the M5 route
    dependency open below.
 
-2. **M5 route repair/handoff — identify a different producer/signal edge.** The
+1. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
    port to VI 320 in the paired run. The s2989 READY, s2990 wait-on-video, and
    s2991 alloc probes are unevaluable because the port stopped at VI 640; do
@@ -757,7 +774,7 @@ blocker-free workstream until a new M5 route edge is available.
    ground-truth edge, retaining the same-run task positive control plus
    title/hangar phase gates.
 
-3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The design survey is complete in `docs/M5-AUDIO-PLAN.md`. First obtain a
    new route repair or independent handoff that reaches title/hangar so the
    same-build image/silent positive-control row is evaluable. Only then make

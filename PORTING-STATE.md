@@ -123289,3 +123289,23 @@ definition. Synchronized the stale project symbol TOML and built
 data-gap classification, and local duplicate callable for this address. The
 next sweep candidate is `0x80062B04`.
 Evidence: `scratch/agent/s3027_generated_symbol_rename/source-table.md`.
+
+## Session 3028 (2026-08-28) — M5 Step-1 baseline remained unevaluable
+
+Built the Debug target and ran a same-build concurrent Factor 5 image versus
+silent M_AUDTASK baseline with the independent retail oracle. The oracle
+passed the whole-RDRAM positive control at 10,000 callbacks and reached title
+1024 at origin 0x00790400 plus hangar 512 at origin 0x006AB400. The first
+driver attempt omitted the documented autopilot and was invalid; the fixed
+driver added it and reran both arms concurrently. Both port arms produced 340
+audtask-dispatch rows but remained at pre-title VI 640 (0x0066A500), with no
+target phase and no downstream audio-return, task-ABI, or DMA summary rows.
+Neither arm produced a crash or abort. Repeated full-log scans made the
+nominal phase waiter exceed its intended budget, so the known processes were
+SIGKILLed after preserving the capture.
+
+The retail and dispatch controls passed, but the target-phase discriminator
+did not execute. This rules out no audio-contract hypothesis; pre-title nulls
+are unevaluable and the route-repair or independent-handoff dependency
+remains open. Evidence:
+scratch/agent/s3028_m5_step1_contract_pair/RESULTS.md.
