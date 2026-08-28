@@ -978,7 +978,7 @@ functions = [
     { name = "sampleHmpTileHeightBicubic", vram = 0x80068A90, size = 0x2CC },
     { name = "sampleTerrainAtNpcPosition", vram = 0x80068D5C, size = 0xB98 },
     { name = "isTerrainCellBlockedAtWorldXz", vram = 0x800698F4, size = 0x1F8 },
-    { name = "fake_func_80069AEC", vram = 0x80069AEC, size = 0x4 },
+    { name = "collideSegmentAgainstObjectNodesPreamble", vram = 0x80069AEC, size = 0x4 },
     { name = "collideSegmentAgainstObjectNodes", vram = 0x80069AF0, size = 0xE54 },
     { name = "findSegmentObjectSphereHit", vram = 0x8006A944, size = 0x234 },
     { name = "projectPointOntoObjectSphereHit", vram = 0x8006AB78, size = 0x104 },

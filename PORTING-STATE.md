@@ -121648,3 +121648,21 @@ remaining placeholder in the reconciled maps or generated snapshot. This
 rules out a source-backed semantic rename for this interval and closes it as a
 mechanically proven data gap; it does not classify the next placeholder.
 Complete evidence table: `scratch/agent/s2925_generated_symbol_rename/source-table.md`.
+
+## Session 2926 (2026-08-27) — reconciled collision-helper preamble symbol
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 41,865
+bytes, so this was not a maintenance iteration. The bounded generated-symbol
+sweep inspected `0x80069AEC..0x80069AF0`. The four-byte record contains the
+single instruction `sll $v1,$a0,1` immediately before the complete
+`collideSegmentAgainstObjectNodes` prologue at `0x80069AF0`; it has no
+standalone return, generated callers, or address lookups beyond its definition
+and overlay registration. The companion map supplies the adjacent callable
+body name, and the existing generated snapshot and regeneration helper already
+used `collideSegmentAgainstObjectNodesPreamble`. The stale companion and
+project maps were reconciled; the bounded rename tool changed zero generated
+references. Exact old-name searches found no remaining placeholder in the
+reconciled maps or generated snapshot. No build was needed because generated
+code was unchanged. This selects the source-backed callable-preamble
+hypothesis and rules out a proven data-gap classification for this interval.
+Complete evidence table: `scratch/agent/s2926_generated_symbol_rename/source-table.md`.

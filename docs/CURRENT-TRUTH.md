@@ -4,7 +4,14 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2925 (2026-08-27).
+Current maintenance marker: Session 2926 (2026-08-27).
+
+The s2926 generated-symbol sweep reconciled `0x80069AEC..0x80069AF0` to
+`collideSegmentAgainstObjectNodesPreamble`. The one-instruction record is an
+entry fragment immediately before the complete `collideSegmentAgainstObjectNodes`
+body; the generated snapshot and rename helper were already synchronized, but
+the project and companion maps were stale. There are no placeholder callers or
+lookups. Complete table: `scratch/agent/s2926_generated_symbol_rename/source-table.md`.
 
 The s2925 generated-symbol sweep reconciled `0x800663AC..0x800663B0`. The
 four-byte record is an isolated `subu` fragment immediately before the
@@ -591,8 +598,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80064294..0x800642A0` as `data_gap_80064294`; s2923 classified
    `0x80064934..0x80064940` as `data_gap_80064934`; s2924 reconciled
    `0x80065A5C..0x80065A60` as `data_gap_80065A5C`; s2925 reconciled
-   `0x800663AC..0x800663B0` as `data_gap_800663AC`; continue with the next
-   remaining placeholder after `0x800663B0`.
+   `0x800663AC..0x800663B0` as `data_gap_800663AC`; s2926 reconciled
+   `0x80069AEC..0x80069AF0` to `collideSegmentAgainstObjectNodesPreamble`;
+   continue with the next remaining placeholder after `0x80069AF0`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
