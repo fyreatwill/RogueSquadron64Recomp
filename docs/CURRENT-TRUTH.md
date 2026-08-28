@@ -4,7 +4,14 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2934 (2026-08-27).
+Current maintenance marker: Session 2935 (2026-08-27).
+
+The s2935 generated-symbol sweep reconciled `0x80092A54` to
+`interpolateLutSamplesToPackedWord`. The complete `0x154`-byte LUT
+interpolation loop has two generated callers, and the companion map, generated
+C/header, overlay registration, and rename helper already used that exact
+semantic name; only the project symbol map was stale. Complete table:
+`scratch/agent/s2935_generated_symbol_rename/source-table.md`.
 
 The s2934 generated-symbol sweep reconciled `0x800927B0` to
 `interpolatePointTableSamplesToPackedWord`. The complete 0x124-byte

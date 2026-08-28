@@ -121826,3 +121826,14 @@ already named it `interpolatePointTableSamplesToPackedWord`; only
 project map to the exact semantic name without changing the size or generated
 code. This rules out a missing semantic mapping at this address; no runtime
 experiment was needed. Evidence: `scratch/agent/s2934_generated_symbol_rename/source-table.md`.
+## Session 2935 (2026-08-27) — reconciled LUT interpolation symbol at 0x80092A54
+
+The bounded generated-symbol census for `0x80092A54` found a complete
+`0x154`-byte LUT interpolation loop with two generated callers at
+`0x8009299C` and `0x800929A8`. The companion map, generated C/header, overlay
+registration, and rename helper already named it
+`interpolateLutSamplesToPackedWord`; only `syms/rogue_squadron.syms.toml` was
+stale as `func_main_80092A54`. Changed the project map to the exact semantic
+name without changing the size or generated code. This rules out a missing
+semantic mapping at this address; no runtime experiment was needed. Evidence:
+`scratch/agent/s2935_generated_symbol_rename/source-table.md`.
