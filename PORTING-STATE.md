@@ -123496,3 +123496,6 @@ audio comparisons unevaluable. It rules out missing instrumentation startup
 and retail absence of ProducerMark, but does not identify the port-side
 missing handoff. No behavior or mitigation changed. Evidence:
 `scratch/agent/s3041_m5_producer_mark_boundary/`.
+## Session 3042 (2026-08-28) — audited ProducerMark call chain
+
+Ran the bounded retail-grounded ProducerMark static audit requested after s3041. The generated tree contains all six direct calls to `0x8001BCE4`: `bufferArbiterProducerScanWait` at `0x8000BFE8`, three sites in `submitGfxFrame` (`0x8000C440`, `0x8000C628`, `0x8000C64C`), `advanceVideoFrame` at `0x80018258`, and `initVideoSubsystem` at `0x8001A300`. The generated body, header, overlay registration, project TOML, and companion map agree. The host route `accepted` bit is computed solely from committed VI `(width, origin)` and cannot reject ProducerMark; VI 640 is intentionally outside the 1024/title and 512/hangar target pairs. This refutes a missing ProducerMark caller, wrong audited probe edge, and ProducerMark-specific acceptance defect. It does not explain why the port fails to reach a target VI commit, so no behavior change or build was justified. Full table: `scratch/agent/s3042_m5_producer_mark_audit/AUDIT.md`. Next work moves to the VI-commit-to-route ordering edge.
