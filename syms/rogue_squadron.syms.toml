@@ -37,7 +37,7 @@ functions = [
     { name = "rs_free", vram = 0x80001C98, size = 0x2F4 },
     { name = "buildHeapFreeList", vram = 0x80001F8C, size = 0x1C4 },
     { name = "initMainHeap", vram = 0x80002150, size = 0x1A8 },
-    { name = "func_800022F8", vram = 0x800022F8, size = 0x2B8 },
+    { name = "coalesceFreeHeapBlocks", vram = 0x800022F8, size = 0x2B8 },
     { name = "getResetVectorRegion", vram = 0x800025B0, size = 0x24 },
     { name = "fatalErrorHalt", vram = 0x800025D4, size = 0x90 },
     { name = "getUsableRdramSize", vram = 0x80002664, size = 0x28 },

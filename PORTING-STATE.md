@@ -122840,3 +122840,14 @@ separate bounded rename, the companion map and generated definition/callers
 identify `0x80001354` as `runVideoFrameTick`; synchronized that name into the
 project symbol TOML. Artifacts: `scratch/agent/s2993_m5_c628_handoff/` and
 `../N64Recomp/fixup_game_funcs.py`.
+## Session 2994 (2026-08-28) — synchronized coalesceFreeHeapBlocks
+
+Ran the bounded three-source audit for `0x800022F8`. The companion symbol
+map, generated definition, and generated caller identify the unique callable
+entry as `coalesceFreeHeapBlocks`; no overlay collision was present. The
+generated tree and companion map already used that name, while
+`syms/rogue_squadron.syms.toml` alone still used `func_800022F8`. Synchronized
+the project TOML and built `cmake --build build --config Debug --target
+RecompiledFuncs` successfully. This rules out the ambiguous-placeholder and
+duplicate-definition hypotheses for this address. No runtime or audio
+behavior changed. The next candidate is `0x80002E10`.

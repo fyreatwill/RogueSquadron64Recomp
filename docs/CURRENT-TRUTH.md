@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2993 (2026-08-28).
+Current maintenance marker: Session 2994 (2026-08-28).
 
 ## Current state
 
@@ -188,6 +188,13 @@ re-scoped to static symbol work. Independently, `0x80001354` was confirmed by
 the companion map, generated definition, and four generated callers as
 `runVideoFrameTick`; the project TOML now carries that semantic name.
 Artifacts: `scratch/agent/s2993_m5_c628_handoff/` and the s2993 session entry.
+
+Session 2994 completed the bounded generated-symbol audit at `0x800022F8`.
+The companion map, generated definition, and generated caller identify the
+unique callable entry as `coalesceFreeHeapBlocks`; the generated tree and
+companion map already carried that name, so only the project symbol TOML was
+stale. Synchronized the TOML and built `RecompiledFuncs` successfully. The
+next sweep candidate is `0x80002E10` (`siServiceThread`).
 
 Session 2979 refreshed `docs/M5-AUDIO-PLAN.md` from a source survey. The active
 audio surface is still the Factor 5 image arm versus the explicit silent
@@ -417,7 +424,7 @@ pending a new discriminator. The generated-symbol sweep is the active
 blocker-free workstream until a new M5 route edge is available.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   `0x80001354` is now synchronized as `runVideoFrameTick`; select the next
+   `0x800022F8` is now synchronized as `coalesceFreeHeapBlocks`; select the next
    placeholder only when generated callers/body and the companion map agree.
    Do not invent names for ambiguous fragments. Keep the M5 route dependency
    open below and return to it only with a new grounded edge.
