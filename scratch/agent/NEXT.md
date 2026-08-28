@@ -1,10 +1,10 @@
-# NEXT work unit (s2859) — generated-symbol-renaming-sweep
+# NEXT work unit (s2860) — generated-symbol-renaming-sweep
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Work unit
 
-Run the next bounded source-backed symbol sweep over `0x8006B500..0x8006C500`.
+Run the next bounded source-backed symbol sweep over `0x8006C500..0x8006D500`.
 Apply only exact companion semantic renames or mechanically proven data-gap
 renames; preserve callable-ambiguous records.
 
@@ -26,8 +26,8 @@ H-already-synchronized.
 ```sh
 python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  --start-address 0x8006B500 --end-address 0x8006C500 --limit 8 --require-rename
-rg -n 'data_gap_8006C|fake_func_8006C' \
+  --start-address 0x8006C500 --end-address 0x8006D500 --limit 8
+rg -n 'data_gap_8006D|fake_func_8006D' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 ```
 

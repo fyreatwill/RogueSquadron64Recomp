@@ -120484,3 +120484,13 @@ only `fake_func_8006B704` hit is outside the interval. This rules out a
 defensible source-backed rename in the interval without assigning meaning to
 the ambiguous record. No build or game run was needed. The next bounded sweep
 is `0x8006B500..0x8006C500`.
+## Session 2859 (2026-08-27) — closed synchronized generated-symbol interval
+
+The bounded source-backed symbol sweep examined `0x8006B500..0x8006C500`.
+The selector classified seven callable companion entries as
+already-synchronized and preserved `fake_func_8006B704` as ambiguous-or-fake;
+it changed zero generated references. The independent generated-tree scan
+found no in-range `fake_func_*` or `data_gap_*` placeholders. This rules out a
+defensible source-backed rename in the interval without assigning meaning to
+the ambiguous record. No build or game run was needed. The next bounded sweep
+is `0x8006C500..0x8006D500`.
