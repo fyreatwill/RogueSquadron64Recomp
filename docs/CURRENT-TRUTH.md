@@ -6,6 +6,14 @@ remain in the ledger and scratch artifacts.
 
 Current maintenance marker: Session 2937 (2026-08-27).
 
+The s2938 generated-symbol sweep classified `0x80093E74` as a proven
+non-callable 12-byte epilogue fragment between complete `sqrtf_recomp` and
+`musyxComputeNotePlaybackRate` bodies. It has no standalone return, generated
+caller, independent lookup, or companion semantic name. The generated
+C/header/overlay metadata and rename helper already used `data_gap_80093E74`;
+the project TOML and companion map were stale and are now synchronized.
+Complete table: `scratch/agent/s2938_generated_symbol_rename/source-table.md`.
+
 The s2937 generated-symbol sweep re-audited `0x80092F10`. The TOML-only
 record is the live internal tail of `resampleVoiceLutSamplesPacked`
 (`0x80092E48..0x80092F90`), ending before the independent
@@ -656,7 +664,7 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80109620` as bounded data gaps. The s2892 sweep then reconciled the
    next main-text record at `0x800027B8` as a bounded data gap; s2893
    reconciled the four-byte `0x8000337C` fragment as `data_gap_8000337C`.
-   Continue with the next remaining placeholder after `0x800927B0` unless M5
+   Continue with the next remaining placeholder after `0x80093E74` unless M5
    gets a new writer-backed route or contract discriminator. s2894 classified
    `0x80003424..0x80003430` as a bounded non-callable data gap; continue after
    `0x80003430`. s2895 classified `0x8000537C..0x80005380` as a bounded

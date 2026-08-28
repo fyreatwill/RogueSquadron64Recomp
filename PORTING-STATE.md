@@ -121863,3 +121863,19 @@ Selected H-Ambiguous: preserve the address-encoded TOML-only tail and make no
 rename or runtime change. This rules out both an independent semantic rename
 and a `data_gap_80092F10` relabel. Complete evidence table:
 `scratch/agent/s2937_generated_symbol_rename/source-table.md`.
+
+## Session 2938 (2026-08-27) — renamed non-callable fragment at 0x80093E74
+
+Ran the bounded generated-symbol census for `0x80093E74`: searched the
+project map, generated C/header/overlay metadata, companion symbol map, and
+rename helper, then read the surrounding `funcs_25.c` bodies. The 12-byte
+record contains only `lw $ra,0x24($sp)`, `lw $fp,0x20($sp)`, and
+`addiu $sp,$sp,0x28`, with no return instruction. It sits between complete
+`sqrtf_recomp` and `musyxComputeNotePlaybackRate` bodies and has no generated
+caller or independent lookup. The generated surfaces were already named
+`data_gap_80093E74`; the project TOML and companion map were stale.
+
+Selected H-DataGap and synchronized both stale maps. This rules out a
+semantic callable rename and preserves the bounded non-callable classification;
+no runtime experiment or build was needed. Complete evidence table:
+`scratch/agent/s2938_generated_symbol_rename/source-table.md`.
