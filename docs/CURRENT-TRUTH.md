@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2889 (2026-08-27).
+Current maintenance marker: Session 2890 (2026-08-27).
 
 ## Live result
 
@@ -277,7 +277,7 @@ apply only source-backed renames and preserve callable-ambiguous records.
    still requires a named legitimate contract edge.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-3. **Generated-symbol renaming sweep — next bounded interval after `0x800FA248`.** The s2873 batch completed
+3. **Generated-symbol renaming sweep — next bounded interval after `0x800FEF04`.** The s2873 batch completed
    `0x80079278..0x8007A0F0`. The s2880 sweep covered `0x8007C300..0x800AF700`:
    three `__builtin_trap()` gap-fillers (`0x80099C4C`, `0x800AEC54`, `0x800AF6A8`)
    were renamed to `data_gap_*`; five ambiguous executable fragments were left
@@ -288,7 +288,8 @@ apply only source-backed renames and preserve callable-ambiguous records.
    callable-ambiguous and data-ambiguous entries stay unchanged. The s2887
    sweep renamed nine data gaps through `0x800D0000`, and s2888 renamed nine
    more records through `0x800F0000`, and s2889 renamed the single data gap at
-   `0x800FA248`; continue at the next placeholder after `0x800FA248` unless M5 gets a new writer-backed route or contract
+   `0x800FA248`; s2890 renamed the adjacent data gaps at `0x800FBE14` and
+   `0x800FEF04`; continue at the next placeholder after `0x800FEF04` unless M5 gets a new writer-backed route or contract
    discriminator.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.

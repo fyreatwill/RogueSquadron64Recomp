@@ -121028,3 +121028,22 @@ follow-up search found zero old-name references. No build or runtime soak was
 needed for this symbol-only change and no game behavior changed. The next
 sweep cursor is `0x800FA248`; the next placeholder is after that boundary.
 Evidence: `scratch/agent/s2889_generated_symbol_rename/source-table.md`.
+
+## Session 2890 (2026-08-27) — renamed two generated mission-overlay data gaps after 0x800FA248
+
+Ran the prescribed generated-symbol sweep after `0x800FA248`. The complete
+bounded interval through the next callable boundary contained two placeholders:
+`0x800FBE14` and `0x800FEF04`. The first is a 12-byte sequence of invalid/data
+words between complete mission functions; the second is a 12-byte
+fixup-generated trap body between `getHudSecondaryWeponCount` and
+`stepObjectOrientationTowardTarget`. Neither has a callable prologue, return,
+semantic companion name, or independent caller. The table selected H-DataGap
+for both and rejected H-Callable and H-Ambiguous.
+
+Updated both project and companion symbol maps to `data_gap_*`. The generated
+snapshot was already synchronized; running `rename_generated_symbols.py` over
+the bounded interval reported zero stale references, and exact searches found
+zero old-name matches. No build or runtime soak was needed for this symbol-only
+change and no game behavior changed. The next unresolved project placeholder
+is `0x80101CCC`. Evidence:
+`scratch/agent/s2890_generated_symbol_rename/source-table.md`.
