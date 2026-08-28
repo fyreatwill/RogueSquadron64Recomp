@@ -525,6 +525,18 @@ extern "C" void rs64_m5_route_prepare_handoff(uint32_t prepare_seq,
 }
 
 static thread_local uint32_t g_m5_host_current_seq = 0xFFFFFFFFu;
+extern "C" void rs64_m5_host_edge(const char* edge, uint32_t task_seq,
+                                    uint32_t data_ptr, uint32_t mq,
+                                    uint32_t source, uint32_t sent,
+                                    int32_t valid_count, int32_t msg_count);
+
+extern "C" uint32_t rs64_m5_host_action_begin(uint32_t data_ptr) {
+    static std::atomic<uint32_t> next_seq{0};
+    g_m5_host_current_seq = next_seq.fetch_add(1, std::memory_order_relaxed);
+    rs64_m5_host_edge("action-dequeue", g_m5_host_current_seq, data_ptr,
+                      0, 0, 1, -1, -1);
+    return g_m5_host_current_seq;
+}
 
 extern "C" uint32_t rs64_m5_host_send_begin(uint32_t data_ptr) {
     static const bool enabled = [] {
@@ -532,8 +544,6 @@ extern "C" uint32_t rs64_m5_host_send_begin(uint32_t data_ptr) {
         const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_ORDER");
         return (all && *all && *all != '0') || (own && *own && *own != '0');
     }();
-    static std::atomic<uint32_t> next_seq{0};
-    g_m5_host_current_seq = next_seq.fetch_add(1, std::memory_order_relaxed);
     if (enabled) {
         std::fprintf(stderr, "[m5-route-order] edge=send-enter seq=%u data=0x%08X "
                              "phase=%u width=%u origin=0x%06X\n",
@@ -560,19 +570,26 @@ extern "C" void rs64_m5_host_edge(const char* edge, uint32_t task_seq,
     if (!enabled) return;
     static std::mutex mutex;
     static uint32_t phase = 0xFFFFFFFFu;
-    static uint32_t edge_rows[5] = {};
+    static uint32_t edge_rows[12] = {};
     const uint32_t now_phase = rs64_phase_ord();
     std::lock_guard<std::mutex> lock(mutex);
     if (phase != now_phase) {
         phase = now_phase;
         for (uint32_t& count : edge_rows) count = 0;
     }
-    uint32_t edge_index = 4;
-    if (edge && std::strcmp(edge, "send-enter") == 0) edge_index = 0;
-    else if (edge && std::strcmp(edge, "send-return") == 0) edge_index = 1;
-    else if (edge && std::strcmp(edge, "dp-complete") == 0) edge_index = 2;
-    else if (edge && std::strcmp(edge, "external-enqueue") == 0) edge_index = 3;
-    if (edge_rows[edge_index]++ >= (edge_index == 0 ? 2048u : 512u)) return;
+    uint32_t edge_index = 11;
+    if (edge && std::strcmp(edge, "action-dequeue") == 0) edge_index = 0;
+    else if (edge && std::strcmp(edge, "sp-complete-enter") == 0) edge_index = 1;
+    else if (edge && std::strcmp(edge, "sp-complete-return") == 0) edge_index = 2;
+    else if (edge && std::strcmp(edge, "send-enter") == 0) edge_index = 3;
+    else if (edge && std::strcmp(edge, "send-return") == 0) edge_index = 4;
+    else if (edge && std::strcmp(edge, "dp-complete") == 0) edge_index = 5;
+    else if (edge && std::strcmp(edge, "external-enqueue") == 0) edge_index = 6;
+    else if (edge && std::strcmp(edge, "external-delivery") == 0) edge_index = 7;
+    else if (edge && std::strcmp(edge, "displaylist-submitted") == 0) edge_index = 8;
+    else if (edge && std::strcmp(edge, "displaylist-parsed") == 0) edge_index = 9;
+    else if (edge && std::strcmp(edge, "displaylist-completed-enter") == 0) edge_index = 10;
+    if (edge_rows[edge_index]++ >= (edge_index == 3 ? 2048u : 512u)) return;
     std::fprintf(stderr,
         "[m5-route-order] edge=%s seq=%u data=0x%08X mq=0x%08X source=%u "
         "sent=%u valid=%d capacity=%d phase=%u width=%u origin=0x%06X\n",

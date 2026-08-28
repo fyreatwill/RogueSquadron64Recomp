@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3052 (2026-08-28).
+Current maintenance marker: Session 3053 (2026-08-28).
 
 ## Current state
 
@@ -192,22 +192,34 @@ This selects `H-MeasurementInsufficient` for the target-phase discriminator;
 no route behavior change was justified. Evidence:
 `scratch/agent/s3052_m5_route_order/AUDIT.md`.
 
+Session 3053 extended that table to action dequeue, SP completion, and
+display-list callback edges. The retail oracle independently passed its
+whole-RDRAM control and reached title/hangar, with the known
+`osSpTaskStartGo` and DP-consumer watches active. The port table was positive:
+559 action/dequeue and callback rows, 559 DP completion/enqueue rows, and 455
+external deliveries. Pre-target rows consistently ordered action dequeue,
+SP completion, display-list submission, `send_dl` return, DP completion,
+enqueue, parse, and completion callbacks. The port still stopped at VI 640
+origin `0x0066A500`, with no title/hangar phase or accepted route. This is
+`H-MeasurementInsufficient` for the target-phase discriminator: the action
+path is internally ordered before the boundary, but retail does not expose
+these host callbacks, so no cross-runtime ordering conclusion or behavior
+change is justified. Evidence: `scratch/agent/s3053_m5_gfx_action_order/AUDIT.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete. M5 design is complete, but Step 1 is
 route-blocked at pre-title VI 640; event registration/completion is live in the
-port and the next unit must audit gfx action ordering around that handoff. M3 is
+port and the next unit must use a different handoff edge. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — audit gfx action ordering around DP completion.**
-   Session 3052 established the port host order through external delivery but
-   still never reached title/hangar. Audit the single gfx-thread action path
-   that calls `sp_complete`, `send_dl`, `dp_complete`, and display-list
-   callbacks. Use one phase-keyed table covering action dequeue, pre-send
-   `sp_complete`, `send_dl` return, `dp_complete`, DP delivery, and the next
-   route prepare; retain positive controls. Do not repeat direct producers,
-   event registration, or consumer-only watches.
+1. **M5 route repair/handoff — identify a new pre-title handoff edge.**
+   Session 3053 positively measured the gfx action path, but the port still
+   stopped at VI 640 and never armed title/hangar. Do not repeat action-order,
+   direct-producer, event-registration, or consumer-only watches. Choose one
+   new producer/signal edge, ground it with the retail oracle, and retain the
+   whole-RDRAM and phase controls.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve

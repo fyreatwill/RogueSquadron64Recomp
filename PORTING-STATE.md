@@ -123682,3 +123682,31 @@ per-edge budgets and the fixed run was completed. This selects
 `H-MeasurementInsufficient` for the target-phase discriminator and rules out
 no target-phase completion or ordering hypothesis. No behavior change was
 justified. Evidence: `scratch/agent/s3052_m5_route_order/AUDIT.md`.
+## Session 3053 (2026-08-28) — audited gfx action ordering
+
+Ran the bounded M5 gfx action-order unit after an independent retail oracle
+preflight. Retail used Rice, the eleven-Start schedule, VI tracing, watches
+for `osSpTaskStartGo` (`0x80033FCC`) and the DP consumer body
+(`0x8001C38C`/`0x8001C3D4`), plus the whole-RDRAM positive control. The
+control reached its cap; retail reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. The three watched PCs reported 5,341, 1,852, and 1,852
+executions.
+
+Added one phase-keyed host table at action dequeue, SP completion
+entry/return, `send_dl` entry/return, DP completion, DP external
+enqueue/delivery, and display-list submitted/parsed/completed callbacks.
+The Debug target built successfully after fixing a declaration-order error.
+The LLE-only AUTOPILOT port capture positively fired its phase control and
+recorded 559 action/dequeue rows, 559 SP completion pairs, 559 DP
+completion/enqueue rows, 455 external deliveries, and 559 rows for each
+display-list callback edge. Phase-4 rows consistently ordered action dequeue,
+SP completion, display-list submission, `send_dl` return, DP completion,
+enqueue, parse, and completion callbacks.
+
+The port still stopped at VI 640 / `0x0066A500`; title/hangar never armed and
+route preparation stayed `accepted=0`. This is a positive instrument result
+but `H-MeasurementInsufficient` for the target-phase discriminator. It
+supports internal pre-target ordering and asynchronous delivery after enqueue,
+but does not establish that action ordering causes the boundary or compare
+host callbacks against retail. No behavior changed. Evidence:
+`scratch/agent/s3053_m5_gfx_action_order/AUDIT.md`.
