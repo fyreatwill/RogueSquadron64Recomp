@@ -121715,3 +121715,28 @@ This rules out only a source-backed semantic rename and a mechanically proven
 data-gap rename for this interval. It does not prove the fragment is
 uncallable. Complete evidence table:
 `scratch/agent/s2928_generated_symbol_rename/source-table.md`.
+## Session 2929 (2026-08-27) — preserved callable-ambiguous fragment at 0x80072CE8
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 43,949
+bytes, so this was not a maintenance iteration. M5 audio de-stubbing is plan
+complete but route-gated, M3 remains parked, and the generated-symbol sweep is
+the eligible work thread.
+
+The bounded source table re-audited `0x80072CE8..0x80072CF0`. The record is
+eight bytes containing `addiu $v1,$v1,-0x4160` and `addu $v0,$v1,$v0`, between
+the complete `walkDatTreeAndScaleLeafByFloat` body and the
+`initWaterSprayParticles` stack prologue. The companion map retains
+`fake_func_80072CE8` and supplies no semantic/m2c name. Repository-wide
+reference searches found no generated caller or independent lookup beyond the
+declaration, definition, and overlay registration. Valid instructions prevent
+a mechanical data-gap proof, so this selects `ambiguous-or-fake`; no rename,
+build, or game run was performed.
+
+This independently confirms the older no-rename census while adding explicit
+caller/lookup and registration checks. It rules out a source-backed semantic
+rename and a mechanically proven data-gap rename for this interval, but does
+not prove the fragment is uncallable. Complete evidence table:
+`scratch/agent/s2929_generated_symbol_rename/source-table.md`.
+
+ORIGIN: diagnostic-only static reconciliation. No runtime, generated function,
+submodule, or mitigation-shaped behavior changed.
