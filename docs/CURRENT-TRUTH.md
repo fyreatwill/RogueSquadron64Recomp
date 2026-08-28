@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3020 (2026-08-28).
+Current maintenance marker: Session 3021 (2026-08-28).
 
 ## Current state
 
@@ -37,6 +37,18 @@ body performs the material free-list best-fit search and unlink. Synchronized
 the stale project symbol TOML and built `RecompiledFuncs` successfully. This
 rules out an unnamed data gap and a local duplicate callable for this address.
 Evidence: `scratch/agent/s3020_generated_symbol_rename/source-table.md`.
+
+Session 3021 completed the bounded generated-symbol audit at `0x800233B0`.
+The companion map names it `texPackTlutAtAllocSlot`, and its 0x164-byte
+instruction body matches the documented TLUT allocation/packing wrapper.
+The generated snapshot emits that body inline after the preceding callable's
+return, with no standalone generated definition, header declaration, caller,
+or overlay registration; the address occurs once as an instruction label.
+Synchronized the stale project symbol TOML and built `RecompiledFuncs`
+successfully, but did not invent a generated callable rename. This rules out
+an unnamed companion identity and a local duplicate callable while leaving a
+generator function-boundary defect open. Evidence:
+`scratch/agent/s3021_generated_symbol_rename/source-table.md`.
 
 Session 3019 completed the bounded generated-symbol audit at `0x8001C260`.
 The companion map, generated body, caller, header, and overlay registration
@@ -667,9 +679,12 @@ blocker-free workstream until a new M5 route edge is available.
    `beginSceneRenderFrame`, and `0x8001B7D8` as
    `clearPendingViChanges`, and `0x8001B7F0` as
    `applyPendingViChanges`, `0x8001BB6C` as `selectAndApplyViMode`, and
-   `0x8001C260` as `waitForPostSwapAck`, and `0x8002221C` as
-   `findAndUnlinkSmallestEntry`. Audit the next placeholder candidate
-   `0x800233B0` for a defensible companion identity. Do not invent names for
+   `0x8001C260` as `waitForPostSwapAck`, `0x8002221C` as
+   `findAndUnlinkSmallestEntry`, and `0x800233B0` as
+   `texPackTlutAtAllocSlot` in the project map. The generated body for
+   `0x800233B0` is currently an inline fragment with no callable token, so do
+   not force a generated rename. Audit the next placeholder candidate
+   `0x80024878` for a defensible companion identity. Do not invent names for
    ambiguous fragments. Keep the M5 route dependency open below and return to
    it only with a new grounded edge.
 

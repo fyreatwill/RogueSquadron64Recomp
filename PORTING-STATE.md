@@ -123196,3 +123196,19 @@ rules out an unnamed data gap and a local duplicate callable for this address.
 No runtime, audio, or route behavior changed. The next sweep candidate is
 `0x800233B0`. Evidence:
 `scratch/agent/s3020_generated_symbol_rename/source-table.md`.
+
+## Session 3021 (2026-08-28) — synchronized texPackTlutAtAllocSlot
+
+Completed the bounded generated-symbol audit at `0x800233B0`. The companion
+map names the exact entry `texPackTlutAtAllocSlot`, and its 0x164-byte body
+matches the documented TLUT allocation/packing wrapper. The generated
+snapshot emits this body inline after the preceding callable's return, with
+no standalone generated definition, header declaration, caller, or overlay
+registration; the address occurs once as an instruction label. Synchronized
+the stale project symbol TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs -j 4`
+successfully, but did not invent a generated callable rename. This rules out
+an unnamed companion identity and a local duplicate callable while leaving a
+generator function-boundary defect open. No runtime, audio, or route behavior
+changed. The next sweep candidate is `0x80024878`. Evidence:
+`scratch/agent/s3021_generated_symbol_rename/source-table.md`.

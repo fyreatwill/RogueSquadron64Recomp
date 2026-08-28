@@ -360,7 +360,7 @@ functions = [
     { name = "getTextureTlutEntry", vram = 0x8002333C, size = 0x20 },
     { name = "returnOne_8002335C", vram = 0x8002335C, size = 0x8 },
     { name = "getTextureAttrBySlot", vram = 0x80023364, size = 0x4C },
-    { name = "func_800233B0", vram = 0x800233B0, size = 0x164 },
+    { name = "texPackTlutAtAllocSlot", vram = 0x800233B0, size = 0x164 },
     { name = "texPackTlutSlotOrAlloc", vram = 0x80023514, size = 0x164 },
     { name = "texPackTlutAtIndex", vram = 0x80023678, size = 0x8C },
     { name = "unpackTlutToRgbaBytes", vram = 0x80023704, size = 0x148 },
