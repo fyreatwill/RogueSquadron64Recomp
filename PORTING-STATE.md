@@ -123575,3 +123575,24 @@ route controls. It logged 164 pre-target `0x80128CF0` wrapper edges, but no
 ordering of the retail edge. It rules out only an unqualified port-side null;
 the frame-sync behavior remains unevaluable at title/hangar. No behavior
 change was made. Evidence: `scratch/agent/s3047_m5_frame_sync_edge/AUDIT.md`.
+## Session 3048 (2026-08-28) — audited retail DP event consumer boundary
+
+Ran the bounded M5 non-ProducerMark handoff unit. Static search selected the
+DP interrupt consumer at `0x8001C38C` on queue `0x8011A408`, distinct from the
+previous ProducerMark and frame-sync PCs. The retail oracle used Rice, driven
+Start input, a whole-RDRAM positive-control watch, target-phase PC watches, and
+VI tracing. The positive control fired, retail reached title `1024 @
+0x00790400` and hangar `512 @ 0x006AB400`, and the watched consumer executed
+from `0x8001C388` in target phases.
+
+Added one gated, phase-keyed port table in `src/main/upstream_compat.cpp`
+(`ROGUESQ_LOG_M5_DP_EVENT`) capturing send/receive, guest PC, queue/message,
+result, and queue state before/after. The build succeeded and the probe's
+positive control fired. The port recorded 301 receives on the queue, but only
+from alternate pre-target callers (`0x8000B650`, `0x8000834C`, and early
+one-offs); it stopped at VI 640 with route preparation `accepted=0`, without
+title/hangar phases or the retail target caller. This selects
+`H-MeasurementInsufficient`: retail proves the edge is real, but the port run
+cannot discriminate missing registration, delivery order, or equivalence at
+the target phase. No queue or route behavior was changed. Evidence:
+`scratch/agent/s3048_m5_dp_event_boundary/AUDIT.md`.

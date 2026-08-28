@@ -1500,6 +1500,41 @@ static void log_submit_boundary(uint8_t* rdram, const char* kind, uint32_t mq, u
     std::fflush(stderr);
 }
 
+static void log_m5_dp_event_boundary(const char* edge, uint32_t mq_addr,
+                                     uint32_t msg, int32_t flag, int32_t result,
+                                     const OSMesgQueue& before,
+                                     const OSMesgQueue& after) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_DP_EVENT");
+        return (all && *all && *all != '0') || (own && *own && *own != '0');
+    }();
+    if (!enabled || mq_addr != 0x8011A408u) return;
+    static std::atomic<uint32_t> phase_seen{0xFFFFFFFFu};
+    static std::atomic<uint32_t> phase_rows{0};
+    const uint32_t phase = rs64_phase_ord();
+    uint32_t prior = phase_seen.load(std::memory_order_relaxed);
+    if (prior != phase && phase_seen.compare_exchange_strong(
+            prior, phase, std::memory_order_relaxed)) {
+        phase_rows.store(0, std::memory_order_relaxed);
+    }
+    const uint32_t row = phase_rows.fetch_add(1, std::memory_order_relaxed);
+    if (row >= 256u) return;
+    std::fprintf(stderr,
+        "[m5-dp-event] phase=%u row=%u edge=%s guest_pc=0x%08X mq=0x%08X "
+        "msg=0x%08X flag=%d result=%d pre_valid=%d pre_first=%d pre_count=%d "
+        "pre_msg=0x%08X post_valid=%d post_first=%d post_count=%d post_msg=0x%08X\n",
+        phase, row, edge, (unsigned)g_rs64_last_guest_pc, mq_addr, msg, (int)flag,
+        (int)result, before.validCount, before.first, before.msgCount,
+        (uint32_t)before.msg, after.validCount, after.first, after.msgCount,
+        (uint32_t)after.msg);
+    std::fflush(stderr);
+    if (row == 0) {
+        std::fprintf(stderr, "[m5-dp-event-positive] DP queue wrapper is live\n");
+        std::fflush(stderr);
+    }
+}
+
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     static int s_log_stk = -1;
     if (s_log_stk < 0) {
@@ -1546,7 +1581,17 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     if (mq_addr == 0x8011A818u || mq_addr == 0x8011A7E8u || mq_addr == 0x8011A408u) {
         log_submit_boundary(rdram, "send", mq_addr, (uint32_t)ctx->r6);
     }
-    ctx->r2 = osSendMesg(rdram, (int32_t)ctx->r4, (OSMesg)ctx->r5, (s32)ctx->r6);
+    if ((uint32_t)ctx->r4 == 0x8011A408u) {
+        const OSMesgQueue before = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
+        const int32_t result = osSendMesg(rdram, (int32_t)ctx->r4,
+                                          (OSMesg)ctx->r5, (s32)ctx->r6);
+        const OSMesgQueue after = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
+        ctx->r2 = result;
+        log_m5_dp_event_boundary("send", (uint32_t)ctx->r4, (uint32_t)ctx->r5,
+                                 (s32)ctx->r6, result, before, after);
+    } else {
+        ctx->r2 = osSendMesg(rdram, (int32_t)ctx->r4, (OSMesg)ctx->r5, (s32)ctx->r6);
+    }
 }
 
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
@@ -1556,7 +1601,15 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     if (mq_addr == 0x8011A818u || mq_addr == 0x8011A7E8u || mq_addr == 0x8011A408u) {
         log_submit_boundary(rdram, "recv", mq_addr, (uint32_t)ctx->r6);
     }
-    if (mq_addr == 0x8010FEE0u) {
+    if (mq_addr == 0x8011A408u) {
+        const OSMesgQueue before = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
+        const int32_t result = osRecvMesg(rdram, (int32_t)ctx->r4,
+                                          (PTR(OSMesg))ctx->r5, (s32)ctx->r6);
+        const OSMesgQueue after = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
+        ctx->r2 = result;
+        log_m5_dp_event_boundary("recv", mq_addr, (uint32_t)ctx->r5,
+                                 (s32)ctx->r6, result, before, after);
+    } else if (mq_addr == 0x8010FEE0u) {
         const OSMesgQueue before = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
         const int32_t result = osRecvMesg(rdram, (int32_t)ctx->r4,
                                           (PTR(OSMesg))ctx->r5, (s32)ctx->r6);

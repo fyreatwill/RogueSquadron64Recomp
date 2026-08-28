@@ -1,45 +1,44 @@
-# NEXT work unit — bounded M5 non-ProducerMark handoff audit
+# NEXT work unit — bounded M5 event-registration/wiring audit
 
-HYPOTHESIS-ID: m5-route-non-producermark-edge
+HYPOTHESIS-ID: m5-route-event-registration-edge
 
-Perform one new route-handoff measurement at a non-ProducerMark signal or
-queue boundary different from the s3046 ProducerMark PCs and the s3047
-frame-sync PCs. Start with a bounded static search for the next candidate, then
-ask the retail oracle to attribute it before adding one batched port probe.
-Retain whole-RDRAM and target-phase route controls; do not change behavior from
-a route-null alone.
+Audit one new boundary before the DP consumer at `0x8001C38C`: the event
+registration and delivery wiring for `OS_EVENT_DP` / queue `0x8011A408`.
+Session 3048 proved the retail consumer is target-phase-active, while the port
+only reached alternate pre-target queue consumers. Do not repeat the consumer
+watch or infer a missing edge from that route-null.
 
 Competing hypotheses and the discriminator:
 
-- H-NonProducerMarkMissing: a port producer/signal edge needed for the VI
-  transition is absent or not delivered.
-- H-NonProducerMarkWrongOrder: the edge exists but arrives in an order that
-  prevents the target VI commit.
-- H-NonProducerMarkEquivalent: the port edge matches retail and the blocker is
-  elsewhere.
-- H-MeasurementInsufficient: retail cannot independently attribute a new edge
-  or the port positive control fails to arm.
+- H-EventRegistrationMissing: the port does not register the DP event or queue
+  wiring that retail uses.
+- H-EventDeliveryWrong: registration exists, but the delivered event/message or
+  ordering differs before the target VI transition.
+- H-EventRegistrationEquivalent: registration and delivery match; the VI-640
+  boundary is elsewhere.
+- H-MeasurementInsufficient: the retail attribution or port positive control
+  cannot arm for the selected registration edge.
 
-The single discriminator is a retail-vs-port event table keyed to the next VI
-transition: producer PC, signal/queue address, event payload, consumer PC, and
-phase transition order. Missing producer/signal selects
-H-NonProducerMarkMissing; matching events in the wrong order selects
-H-NonProducerMarkWrongOrder; matching events and target transition select
-H-NonProducerMarkEquivalent; absent retail attribution or an unarmed port
+The single discriminator is a retail-vs-port table keyed by event id, queue,
+message, registration site, delivery site, and ordering relative to the next
+VI transition. Missing registration selects H-EventRegistrationMissing;
+matching registration with divergent delivery/order selects H-EventDeliveryWrong;
+matching registration/delivery plus target transition selects
+H-EventRegistrationEquivalent; absent retail attribution or an unarmed port
 control selects H-MeasurementInsufficient.
 
-Begin with a bounded search of the frame/DP/SP event and queue handoff code,
-excluding `0x80019810`, `0x8001983C`, `0x80019868`, `0x8001BCE4`,
-`0x8000C628`, and `0x8000BFE8`. Ask the retail oracle to watch the selected
-candidate with a whole-RDRAM positive control and Rice video. Only then add a
-single batched port probe.
+Commands:
 
-The s3047 result was `H-MeasurementInsufficient`: the port probe positive
-control fired, but the run stopped at VI 640 and produced no target-phase rows.
-Do not reuse that null as evidence about the frame-sync edge.
+1. Bounded static search:
+   `rg -n -C 20 'osSetEventMesg|OS_EVENT_DP|enqueue_external_message_src|events_context.dp|0x8011A408|dpInterruptHandlerThread' src lib /Users/williambuckley/Documents/Tools/rogue_squadron64`
+2. Ask the retail oracle to watch the selected registration/delivery PC(s),
+   always including `--watch-write 0x0:0x800000`, Rice video, the driven Start
+   schedule, `--vi-trace`, and target-phase logging for
+   `0x00790400:1024` and `0x006AB400:512`.
+3. Only if retail attribution is positive, add one batched port probe in
+   `src/main/upstream_compat.cpp`, build with
+   `cmake --build build --config Debug --target RogueSquadron64Recomp`, and run
+   from `build/` with LLE-only AUTOPILOT and `ROGUESQ_LOG_PHASE=1`.
 
-Prior search shape:
-
-    rg -n -C 20 'osViSetMode|osViSwapBuffer|osSendMesg|osRecvMesg|osJamMesg|ProducerMark|queue|signal' src lib /Users/williambuckley/Documents/Tools/rogue_squadron64
-
-Record the complete table and decision in the new session evidence directory.
+Expected outcomes: all four hypotheses must have a named observable outcome;
+no behavior change is justified by a route-null alone.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3047 (2026-08-28).
+Current maintenance marker: Session 3048 (2026-08-28).
 
 ## Current state
 
@@ -112,6 +112,16 @@ probe was live and logged 164 pre-target `0x80128CF0` wrapper edges, but no
 missingness and ordering remain unevaluable. Evidence:
 `scratch/agent/s3047_m5_frame_sync_edge/AUDIT.md`.
 
+Session 3048 ran a retail-grounded DP event boundary audit. Retail's
+whole-RDRAM control fired, reached title and hangar, and executed the DP
+consumer at `0x8001C38C` from `0x8001C388` on queue `0x8011A408` in target
+phases. The batched port probe was live and recorded 301 receives on that
+queue, but only from alternate pre-target callers (`0x8000B650`, `0x8000834C`,
+and early one-offs); it stopped at VI 640 with route preparation
+`accepted=0`, no title/hangar phase, and no target caller row. This selects
+`H-MeasurementInsufficient`; missingness and ordering remain unevaluable.
+Evidence: `scratch/agent/s3048_m5_dp_event_boundary/AUDIT.md`.
+
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
 Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
@@ -146,14 +156,14 @@ route-blocked at pre-title VI 640; the VI-commit ordering edge is now audited,
 so the next M5 unit must use a genuinely new non-ProducerMark handoff angle. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — audit a different non-ProducerMark boundary.**
+1. **M5 route repair/handoff — audit event registration/wiring before the DP consumer.**
    The descriptor lifetime table is implemented but route-blocked: the port
    remained at VI 640 `0x0066A500`, so no target-phase enqueue/consume rows
    could arm. Retail independently reaches the target and reuses task
-   `0x80149470`. Use a genuinely new port-side handoff angle with positive
-   route controls; do not infer descriptor behavior from this null. The s3046
-   retail run found no distinct ProducerMark edge, and s3047's frame-sync probe
-   was pre-target only. Do not repeat those PCs or interpret that null.
+   `0x80149470`. Session 3048 likewise found a live DP queue wrapper but no
+   target phase; use the event-registration/wiring boundary before the DP
+   consumer as a new angle with positive route controls. Do not repeat the
+   s3048 queue-consumer null or infer event ordering from it.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
