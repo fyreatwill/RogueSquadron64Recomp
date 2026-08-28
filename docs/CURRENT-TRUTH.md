@@ -343,8 +343,8 @@ remain under `scratch/agent/soak_results/` and in `SOAK-RESULTS.md`.
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete for this iteration. M5 remains active
 on audio de-stubbing but is re-scoped pending a route repair; M3 is parked
-pending a new discriminator. The sweep is active under the stable slug
-`generated-symbol-renaming-sweep`.
+pending a new discriminator. The generated-symbol sweep is parked because
+its remaining placeholder candidates are already classified.
 
 1. **M5 route repair/handoff — resume target-phase qualification.** Use a
    genuinely new port-side repair or independent handoff tied to the retail
