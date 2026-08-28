@@ -120853,3 +120853,26 @@ The next discriminating work unit for the generated-symbol sweep is the range
 starting after `0x800AF700`. For M5, the route must reach title/hangar before
 Step 1 can be evaluated; the next route discriminator is identifying what change
 since the last qualified run broke the pre-title progression.
+
+## Session 2881 (2026-08-27) — M5 Step 1 pair remained pre-title route-invalid
+
+The strategic M5 priority superseded the stale generated-symbol NEXT. The
+existing `docs/M5-AUDIO-PLAN.md` was already current, so this iteration ran
+its Step 1 image-versus-silent contract re-baseline with one Debug build and
+the existing concurrent oracle/autopilot launcher.
+
+The build completed successfully. The retail oracle whole-RDRAM positive
+control reached 10,000 writes and was removed, but this bounded recipe reached
+only pre-title VI 640. Both port arms reached VI 320, VI 2 at `0x006DD000`,
+and VI 640 at `0x0066A500`; neither reached title or hangar. Both arms emitted
+the positive audio-dispatch control, with rate-limited dispatch logs reaching
+ordinal 1280. Neither crashed or aborted. The expected target-phase task,
+DMA, service, slot/voice, MORT, and PCM rows were absent, so they are
+unevaluable rather than negative audio evidence.
+
+This selects H-RouteInvalid for this recipe and rules out no audio contract
+hypothesis. No de-stub, gate, writeback, or mitigation was landed. Full
+evidence: `scratch/agent/s2881_m5_step1_rebaseline/RESULTS.md`.
+
+The next unit is a distinct ground-truth-first phase-gated route-order and
+stage-call table before another Step 1 interpretation.

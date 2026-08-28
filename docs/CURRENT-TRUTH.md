@@ -16,6 +16,15 @@ M5 defaults to the Factor 5 image arm. `ROGUESQ_AUDIO_UCODE=0` selects the
 silent `musyx_stub` control. Stock `aspMain` is not the retail contract;
 MORT is a separate CPU speech boundary.
 
+The s2881 M5 Step 1 image/silent re-baseline built successfully and ran the
+retail oracle plus both port arms concurrently. The oracle whole-RDRAM control
+hit 10,000 writes but reached only pre-title VI 640; both port arms reached
+the same `0x0066A500` phase and emitted audio-dispatch controls, then stopped
+without title/hangar. No crash or abort occurred. Target-phase task, DMA,
+service, slot/voice, MORT, and PCM rows are unevaluable, selecting
+H-RouteInvalid for this recipe rather than an audio-contract hypothesis.
+Artifact: `scratch/agent/s2881_m5_step1_rebaseline/RESULTS.md`.
+
 Qualified runs can reach title (`VI 1024`, origin `0x00790400`) and hangar
 (`VI 512`, origin `0x006AB400`) with the appropriate input path. Recent
 same-build route-validation pairs instead stalled at pre-title `VI 640`,

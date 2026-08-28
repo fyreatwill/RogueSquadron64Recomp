@@ -1,54 +1,44 @@
-# NEXT work unit (s2881) — generated-symbol-renaming-sweep
+# NEXT work unit (s2882) — M5 pre-title route-order/stage-call discriminator
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-pretitle-route-order
 
 ## Work unit
 
-Continue the generated-symbol renaming sweep starting at `0x800AF700`. Run
-the rename script in discovery mode over a bounded interval, classify each
-placeholder record (data-gap, callable-ambiguous, or source-backed name), and
-rename only records with mechanical proof or companion-backed semantic names.
+Run one ground-truth-first route discriminator to locate the pre-title stop
+that prevented M5 Step 1 from being evaluated. Use the retail oracle positive
+control plus both same-build port arms and record the complete phase-gated
+route-order/stage-call table. Do not change runtime behavior or interpret
+downstream audio nulls unless title or hangar is reached.
 
 ## Competing hypotheses and discriminator
 
-- H-data-gap: the placeholder in the interval covers non-callable data bytes
-  (proven by `__builtin_trap()` fixup annotation, or by fewer than 2 useful
-  instructions with no caller).
-- H-callable-ambiguous: the record has executable instructions but no
-  source-backed name; leave unchanged.
-- H-source-backed: the companion provides a semantic name matching the
-  generated body; rename unconditionally.
+- H-RouteOrder: the pre-title route diverges at a route-order edge; ordering
+  or identity differs before VI 640.
+- H-StageCall: route-order is shared, but one stage-call source/return is
+  absent or reordered in the port.
+- H-RecipeState: route-order and stage-call rows match, so another state/input
+  boundary causes the stop.
 
-The discriminating deliverable is a source table (`source-table.md` in the
-session scratch directory) mapping each candidate to one of these three
-classifications, with evidence cited for each rename decision. An unchanged
-entry requires a stated reason; an unnamed reason is not a reason.
+The single discriminating measurement is one phase-keyed table for retail and
+both port arms containing every route-order and stage-call edge, with caller,
+callee/source, ordinal, return, and VI phase. The whole-RDRAM positive control
+and retail title/hangar transitions must be present; a port pre-title stop is
+the result, not evidence about audio.
 
 ## Exact next commands
 
-1. Find the next unresolved placeholder after `0x800AF700`:
-   ```
-   python3 tools/rename_generated_symbols.py \
-     --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-     --start-address 0x800AF700 \
-     --end-address 0x800B4000 \
-     --limit 10 \
-     /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/
-   ```
-2. For each `ambiguous-or-fake` candidate: read 20 lines of context around
-   the function body in RecompiledFuncs/; check the overlay rom_size; check
-   for callers (`grep -rn "fake_func_ADDR"`); classify.
-3. Rename only mechanically-proven data-gaps or companion-named callables;
-   add entries to the RENAMES dict in `tools/rename_generated_symbols.py`.
-4. Apply: re-run `rename_generated_symbols.py` with `--start-address` and
-   `--end-address` scoped to the renamed entries.
-5. Write source table to `scratch/agent/s2881_generated_symbol_rename/source-table.md`.
+1. Build once: `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+2. Use `scratch/agent/run_s2658_m5_task_output_fields.sh` as the base, add
+   `ROGUESQ_LOG_M5_ROUTE_ORDER=1` and `ROGUESQ_LOG_M5_STAGE_CALLS=1`, and run
+   the oracle plus image/silent arms from `build/`. Use SIGKILL after the
+   bounded capture.
+3. Write the table and selection to
+   `scratch/agent/s2882_m5_pretitle_route_order/RESULTS.md`.
 
-## Expected discriminating outcomes
+## Expected outcomes
 
-- Zero renames found → document as such and advance the start address; NOT
-  ADVANCED-worthy alone; pivot to a different range or a different angle.
-- One or more renames → engineering change lands; ADVANCED. Session entry
-  must name H-data-gap SELECTED or H-source-backed SELECTED for each rename.
-- All ambiguous → document as such; ADVANCED only if the source table is new
-  evidence. Do not rename callable-ambiguous entries.
+- Matching route-order rows with different stage-call rows selects
+  H-StageCall.
+- Matching rows select H-RecipeState.
+- No route match leaves Step 1 audio unevaluable and authorizes no behavior
+  change.
