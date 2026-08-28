@@ -123545,3 +123545,19 @@ target-phase positive control did not arm, this selects
 descriptors. No behavior change was justified. Full table:
 `scratch/agent/s3045_m5_task_lifetime/AUDIT.md`. Next work moves to a different
 route producer/signal edge.
+
+## Session 3046 (2026-08-28) — retail ProducerMark edge remained non-discriminating
+
+Ran the new retail-grounded producer/signal edge audit. The first oracle
+capture omitted Rice video and stayed at VI 320, but its whole-RDRAM positive
+control reached 10,000 callbacks. The corrected Rice capture passed the same
+control, reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and
+observed `0x80019DEC` 3,156 times, `0x80019D68` 1,430 times, and
+`0x8001BCE4` 1,448 times. Its known predecessors were `0x8000C628` 1,424,
+`0x8000BFE8` 7, `0x8001A300` 6, `0x8000C440` 6, and `0x80018258` 5. No
+distinct signal, payload, or consumer edge appeared, so this selects
+`H-MeasurementInsufficient` for the new-edge unit. It rules out retail absence
+of the known ProducerMark path and validates target-phase oracle operation,
+but does not explain the port VI-640 route boundary. No port instrumentation
+or behavior change was justified. Full table:
+`scratch/agent/s3046_m5_route_producer_edge/AUDIT.md`.

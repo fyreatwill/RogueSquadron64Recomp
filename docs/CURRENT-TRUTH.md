@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3045 (2026-08-28).
+Current maintenance marker: Session 3046 (2026-08-28).
 
 ## Current state
 
@@ -93,6 +93,16 @@ rows; its positive control did not arm. This selects
 reuse, or ordering. No behavior change was justified. Evidence:
 `scratch/agent/s3045_m5_task_lifetime/AUDIT.md`.
 
+Session 3046 ran the new retail-grounded producer/signal edge audit. The first
+oracle setup omitted Rice and stayed at VI 320, but its whole-RDRAM control
+fired; the corrected Rice run again passed that control, reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and observed the known
+`0x80019DEC`/`0x80019D68` producers plus `0x8001BCE4` consumers. No distinct
+signal, payload, or consumer edge appeared. This selects
+`H-MeasurementInsufficient` for the new-edge unit and leaves the port VI-640
+route boundary unexplained. Evidence:
+`scratch/agent/s3046_m5_route_producer_edge/AUDIT.md`.
+
 Session 3038 refreshed the M5 design gate after a direct source survey. The
 active inventory remains complete at A1–A20 in `docs/M5-AUDIO-PLAN.md`: the
 Factor 5 image is the real `M_AUDTASK` arm, `musyx_stub` is the only explicit
@@ -124,15 +134,16 @@ contract gap from that result.
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete. M5 design is complete, but Step 1 is
 route-blocked at pre-title VI 640; the VI-commit ordering edge is now audited,
-so the next M5 unit must use a genuinely new audio-task handoff angle. M3 is
+so the next M5 unit must use a genuinely new non-ProducerMark handoff angle. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — identify a different producer/signal edge.**
+1. **M5 route repair/handoff — audit a non-ProducerMark handoff boundary.**
    The descriptor lifetime table is implemented but route-blocked: the port
    remained at VI 640 `0x0066A500`, so no target-phase enqueue/consume rows
    could arm. Retail independently reaches the target and reuses task
    `0x80149470`. Use a genuinely new port-side handoff angle with positive
-   route controls; do not infer descriptor behavior from this null.
+   route controls; do not infer descriptor behavior from this null. The s3046
+   retail run found no distinct ProducerMark edge, so do not repeat those PCs.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve
