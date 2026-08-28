@@ -1,35 +1,38 @@
-# NEXT work unit (s2988) — M5 buffer-arbiter route repair A/B
+# NEXT work unit (s2989) — M5 independent buffer-arbiter signal handoff
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
-Run one same-build paired port capture with the existing host-side retrace
-transition repair enabled only in the treatment arm:
-`ROGUESQ_FORCE_BUFFER_PROGRESS=1`. Keep the control identical with that
-variable unset. Retain LLE/task positive controls, title/hangar VI phase gates,
-route-state and target-contract logs, and crash/abort markers.
+Use a new, independently grounded port-side handoff candidate in the
+`bufferArbiterProducerMark` call/signal chain. Keep the rejected
+`ROGUESQ_FORCE_BUFFER_PROGRESS` driver disabled. First use the retail oracle
+and static map to select one producer or signal edge; then batch one
+phase-scoped probe for that edge and run the existing route capture only if
+the candidate has a concrete port callsite.
 
 ## Competing hypotheses and discriminator
 
-- `H-buffer-repair`: forced 4→5→0 retrace transitions unblock the route; the
-  treatment reaches title or hangar while control remains at pre-title VI 640.
-- `H-repair-irrelevant`: both arms have the same phase boundary and route rows;
-  the transition driver is not the missing handoff.
-- `H-repair-harmful`: the treatment crashes, aborts, or loses the task-positive
-  control before a target phase, showing this repair is unsafe for this route.
+- `H-new-handoff-equivalent`: the candidate executes at the port’s VI-640
+  boundary and matches the retail handoff/state tuple; the missing route is
+  elsewhere.
+- `H-new-handoff-missing`: retail executes the candidate in title/hangar but
+  the port has no corresponding target-phase execution, selecting this edge as
+  the next repair boundary.
+- `H-new-handoff-route`: a bounded change at the selected edge reaches title or
+  hangar without degrading the task positive control.
 
-The discriminating measurement is a single table comparing each arm’s LLE task
-positive-control count, phase widths/origins, `bufferArbiterProducerMark`
-route/target rows, and crash/abort markers. A target phase in treatment selects
-`H-buffer-repair`; equal pre-title phases select `H-repair-irrelevant`;
-degraded treatment selects `H-repair-harmful`.
+The discriminator is one table with retail PC attribution, port candidate
+rows, LLE audio-task positive-control counts, VI phase transitions, target
+route rows, and crash/abort markers. A candidate must pass its positive control
+and phase gate before any route conclusion is accepted.
 
 ## Commands
 
-1. Build `Debug` target `RogueSquadron64Recomp`.
-2. Run `scratch/agent/run_s2988_m5_buffer_repair_ab.sh`, which launches both
-   arms from `build/` and writes results under
-   `scratch/agent/s2988_m5_buffer_repair_ab/`.
-3. Summarize both logs and phase/task controls in the session ledger.
+Inspect `tools/oracle/README.md`,
+`scratch/agent/s2971_m5_route_qualification/RESULTS.md`, and the existing
+buffer-arbiter call chain. Do not build until the candidate and outcomes are
+written here. Then build Debug and run a new capture under
+`scratch/agent/s2989_m5_new_handoff/`, using SIGKILL/watchdog semantics and
+`PROBE_PHASE_WIDTH=512 PROBE_KEYS_FROM_PHASE=1`.
 
