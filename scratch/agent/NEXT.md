@@ -1,41 +1,43 @@
-# NEXT work unit (s2970)
+# NEXT work unit (s2971)
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-route-qualification
 
 ## Unit
 
-Perform one bounded generated-symbol census/rename at the next unresolved
-address in the current generated tree. Reconcile the companion map, project
-TOML, generated artifacts, and regeneration-safe rename table; rename only if
-the function has a defensible semantic identity or mechanically proven data
-gap. Otherwise record the classification and leave the placeholder unchanged.
-Do not touch guest behavior or `lib/`.
+Perform one new M5 route-qualification investigation. Identify a previously
+unwatched static handoff between the qualified retail title/hangar boundary and
+the port's pre-title VI-640 stall, and first obtain an independent retail-oracle
+PC attribution for that handoff before adding port instrumentation. Do not
+repeat the rejected s2903 candidate PCs, broad main-text range, or the
+route-invalid s2949/s2950 field probe.
 
 ## Competing hypotheses and discriminator
 
-- H-named: companion source, caller structure, or exact local semantics give
-  one defensible human name.
-- H-data-gap: the body is a mechanically proven non-callable gap bounded by
-  independent functions/data and should use a `data_gap_...` name.
-- H-ambiguous: the bytes are a callable fragment/preamble without enough
-  evidence for a semantic name and must remain a placeholder.
+- H-retail-handoff: the independent oracle attributes a new PC executing the
+  selected handoff during title/hangar progression.
+- H-port-handoff: the oracle does not reach the handoff, so the candidate is
+  not a useful boundary and must not receive port instrumentation.
+- H-stale-route: the existing oracle recipe or phase classifier is stale, shown
+  by a failed whole-RDRAM positive control or missing title/hangar controls.
 
-The discriminator is the bounded source table for the next unresolved
-placeholder: generated disassembly/body bounds, callers/lookup references,
-companion-map classification, and successor/predecessor boundaries. A rename
-or data-gap reconciliation is a result; an ambiguous classification is also a
-result but must not synthesize a name.
+The discriminator is the same-run retail oracle table: whole-RDRAM positive
+control, title and hangar phase controls, and PC attribution at the newly
+selected static handoff. Each possible outcome selects exactly one hypothesis.
 
 ## Commands
 
 1. Run `grep -n '^## Session ' PORTING-STATE.md | tail -15`; if all 15 titles
    are sweep-scoped, perform the mandated external retail-entry or M4
    accumulator-boundary revisit instead of another sweep step.
-2. Census the next unresolved generated placeholder and its companion-map
-   entry; make any rename through the existing regeneration-safe scripts.
-3. Build the affected generated target and verify the exact changed symbol(s).
-4. Write a source table under `scratch/agent/s2970_generated_symbol_rename/`.
+2. Run the retail oracle with its whole-RDRAM positive control and the new
+   physical watch, using SIGKILL and a capture path under
+   `scratch/agent/s2971_m5_route_qualification/`.
+3. Only if the oracle positively attributes the handoff, design the paired port
+   measurement for the next iteration; otherwise record the negative result
+   without adding runtime instrumentation.
+4. Write the oracle table under `scratch/agent/s2971_m5_route_qualification/`.
 
-Expected outcomes: one defensible semantic rename or data-gap reconciliation
-advances the sweep; otherwise an evidence-backed ambiguous classification parks
-the address without inventing a name.
+Expected outcomes: a positive oracle PC attribution selects H-retail-handoff;
+an otherwise healthy oracle that misses the candidate selects H-port-handoff;
+and a failed positive control selects H-stale-route. Do not add port code on a
+negative or stale-route result.

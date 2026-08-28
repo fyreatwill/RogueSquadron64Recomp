@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2969 (2026-08-28).
+Current maintenance marker: Session 2970 (2026-08-28).
 
 ## Current state
 
@@ -28,6 +28,17 @@ MORT speech are separate contracts. A `Broke` return proves task completion,
 not PCM correctness.
 
 ## Latest results
+
+Session 2970 completed the bounded generated-symbol census for the lowest
+remaining placeholder, `0x8000040C`. The generated body is a complete `0x34`
+-byte callable entry-segment routine that clears caller-supplied memory in
+`0x10`-byte units and issues `cache 0x0D`; `main` calls it at two startup sites.
+The companion project only hardcodes the address and size in `make_elf.py`, with
+no semantic name, independent lookup, or alternate caller contract. It is
+therefore callable-but-ambiguous, not a data gap; the placeholder remains and
+`RecompiledFuncs` built successfully. This closes the currently generated
+placeholder sweep without inventing an address-coded synonym. Evidence:
+`scratch/agent/s2970_generated_symbol_rename/source-table.md`.
 
 Session 2968 ran the M5 Step 1 same-build pair after a successful Debug
 rebuild. The independent retail oracle passed its whole-RDRAM positive
@@ -187,10 +198,12 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 
-3. **Generated-symbol renaming sweep — current range exhausted.** The final
-   unparked placeholder at `0x800ECE04` is synchronized as a data gap, and no
-   generated placeholder remains after it in the current tree. Do not invent a
-   next address; close this campaign unless regeneration introduces one.
+3. **Generated-symbol renaming sweep — current range exhausted.** Session
+   2970 classified the only remaining generated placeholder not already covered
+   by a regeneration-safe mapping: `func_8000040C` is genuine callable code but
+   remains ambiguous because the companion project supplies no semantic name.
+   Do not invent a next address; close this campaign unless regeneration
+   introduces a new placeholder or a new independent naming source appears.
 
 4. **M4 accumulator origin — blocked at route qualification.** The latest
    revisit had live generic controls but zero M4 stage-1 positive-control rows

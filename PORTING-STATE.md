@@ -122469,3 +122469,19 @@ are all unevaluable: the missing M4 control makes the null worthless, and the
 target phase was not reached. This rules out neither accumulator arithmetic nor
 writer provenance, and does not justify a mitigation. Details:
 `scratch/agent/s2969_m4_accumulator_boundary/audit.md`.
+
+## Session 2970 (2026-08-28) — preserved ambiguous entry routine at 0x8000040C
+
+The bounded generated-symbol census inspected `0x8000040C..0x80000440`, the
+lowest unresolved placeholder in the current generated tree. The complete
+`0x34`-byte body is callable code: it rounds the caller's length to 16-byte
+units, issues `cache 0x0D`, clears two doublewords per unit, and returns. It is
+called twice by `main` during startup with caller-supplied base/length values.
+The predecessor is the entry wrapper and the next generated routine is
+`loadOverlay` at `0x80000B20`, with strings/data between them; this is not a
+data gap. The companion project and `make_elf.py` provide only the address-coded
+entry-segment symbol and size, with no semantic name or independent lookup.
+H-named and H-data-gap were therefore ruled out; H-ambiguous was selected and
+`func_8000040C` remains unchanged. `RecompiledFuncs` built successfully. This
+closes the current generated-placeholder sweep without inventing a name.
+Evidence: `scratch/agent/s2970_generated_symbol_rename/source-table.md`.
