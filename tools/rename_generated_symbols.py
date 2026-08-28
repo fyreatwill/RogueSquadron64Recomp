@@ -174,6 +174,9 @@ RENAMES = {
     # These records have __builtin_trap() bodies from the fixup pass, confirming
     # the bytes decoded as invalid MIPS; they are not callable game routines.
     "fake_func_80099C4C": "data_gap_80099C4C",
+    # This eight-byte audio coefficient table is decoded as a false branch
+    # target between complete voice-processing routines; it is not callable.
+    "static_3_8009D978": "data_gap_8009D978",
     "fake_func_800AEC54": "data_gap_800AEC54",
     "fake_func_800AF6A8": "data_gap_800AF6A8",
     "fake_func_800C41AC": "data_gap_800C41AC",

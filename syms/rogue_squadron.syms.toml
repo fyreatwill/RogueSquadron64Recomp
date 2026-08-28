@@ -1537,7 +1537,7 @@ functions = [
     { name = "filterVoiceSampleBlock", vram = 0x8009D7D0, size = 0xEC },
     { name = "func_8009D8BC", vram = 0x8009D8BC, size = 0x8 },
     { name = "applyVoiceDelayFilter", vram = 0x8009D8C4, size = 0xB4 },
-    { name = "func_8009D978", vram = 0x8009D978, size = 0x8 },
+    { name = "data_gap_8009D978", vram = 0x8009D978, size = 0x8 },
     { name = "runVoiceLatticeFilter", vram = 0x8009D980, size = 0x1C4 },
     { name = "renderVoiceAudioBlock", vram = 0x8009DB44, size = 0x154 },
     { name = "audioMixStereoBlock8", vram = 0x8009DC98, size = 0xA4 },

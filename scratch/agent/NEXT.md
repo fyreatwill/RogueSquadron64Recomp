@@ -1,13 +1,13 @@
-# NEXT work unit (s2953) — classify the next unparked generated placeholder
+# NEXT work unit (s2954) — classify the next unparked generated placeholder
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Context
 
-s2952 confirmed `0x8009D8BC` is a valid two-instruction branch-target fragment
-inside `filterVoiceSampleBlock`; it remains callable-ambiguous. M5 is paused
-after the pre-title route stop, so continue the generated-symbol sweep at the
-next unparked candidate after `0x8009D8BC`.
+s2953 classified `0x8009D978` as the mechanically non-callable audio
+coefficient table `data_gap_8009D978` and built `RecompiledFuncs`. M5 is
+paused after the pre-title route stop, so continue the generated-symbol sweep
+at the next unparked candidate after `0x8009D978`.
 
 ## Competing hypotheses and discriminator
 
@@ -28,12 +28,13 @@ record authorizes a data-gap rename.
 
 ## Exact work
 
-1. Identify the next unparked placeholder after `0x8009D8BC` in the project
-   symbol map and generated overlay order.
+1. Identify the next unparked placeholder after `0x8009D978` in the project
+   symbol map and generated overlay order; expected first candidate is
+   `0x800AA6CC`, subject to the sweep census.
 2. Inspect its complete body and exact predecessor/successor boundaries;
    search generated callers, independent lookups, and the companion map.
 3. Write the complete classification to a new
-   `scratch/agent/s2952_generated_symbol_rename/source-table.md`.
+   `scratch/agent/s2954_generated_symbol_rename/source-table.md`.
 4. Apply a bounded rename and build `RecompiledFuncs` only if an exact
    semantic name or mechanically proven data gap is found; otherwise preserve
    the placeholder.

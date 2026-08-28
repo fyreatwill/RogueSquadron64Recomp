@@ -114883,6 +114883,27 @@ remains opt-in. Artifact: `scratch/agent/s2517_m5_contract_boundary/`.
 
 ORIGIN: diagnostic-only. No runtime, generated function, submodule, or
 mitigation-shaped behavior changed.
+## Session 2953 (2026-08-28) — classified the 0x8009D978 audio coefficient gap
+
+Performed the bounded generated-symbol census for `0x8009D978`. The project
+entry was an eight-byte placeholder between the complete
+`applyVoiceDelayFilter` body ending at `0x8009D974` and
+`runVoiceLatticeFilter` beginning at `0x8009D980`. The generated
+`static_3_8009D978` record is reached only by the never-taken PC-capture
+branch in `applyVoiceDelayFilter` and decodes the retail words
+`0x0CCD2CCD 0x53337FFF` as a false `jal`/branch body. No independent caller,
+lookup, prologue, return, or companion symbol exists; the companion audio
+notes identify the bytes as Q15 coefficients.
+
+H-DataGap was selected. The project symbol map, regeneration-safe rename
+table, and external generated declaration/definition/reference now use
+`data_gap_8009D978`. The Debug `RecompiledFuncs` target built successfully;
+existing unrelated compiler warnings remained. No runtime behavior or
+mitigation was changed. Complete table:
+`scratch/agent/s2953_generated_symbol_rename/source-table.md`.
+
+ORIGIN: the renamed record is legitimate ROM coefficient data, not a callable
+function; this is a symbol-classification change only.
 
 ## Session 2563 (2026-08-26) — censused generated-symbol objective boundary
 

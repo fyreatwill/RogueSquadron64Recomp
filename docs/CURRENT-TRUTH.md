@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2952 (2026-08-28).
+Current maintenance marker: Session 2953 (2026-08-28).
+
+Session 2953 classified `0x8009D978` as a mechanically non-callable
+eight-byte audio coefficient table between `applyVoiceDelayFilter` and
+`runVoiceLatticeFilter`. The generated `static_3_8009D978` body is only a
+false branch-target decode of the table words, with no independent caller or
+companion symbol. It was renamed to `data_gap_8009D978` in the project map,
+regeneration-safe rename table, and generated declaration/definition/call;
+the `RecompiledFuncs` target built successfully. Artifact:
+`scratch/agent/s2953_generated_symbol_rename/source-table.md`.
 
 Session 2952 classified `0x8009D8BC` as a valid two-instruction branch-target
 fragment inside `filterVoiceSampleBlock`, followed by `applyVoiceDelayFilter`
@@ -839,8 +848,8 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `0x80094348` as `data_gap_80094348`, synchronizing the project and
    companion maps; s2940 likewise classified `0x8009711C` as
    `data_gap_8009711C` and synchronized both maps. Continue with the next
-   remaining placeholder after `0x8009D8BC`; the s2952 candidate is a valid
-   branch-target fragment and was intentionally not renamed.
+   remaining placeholder after `0x8009D978`; s2953 classified the candidate
+   as `data_gap_8009D978` and synchronized the generated and source maps.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not
