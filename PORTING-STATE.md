@@ -123383,3 +123383,18 @@ than inventing a callable or semantic gap rename. Built `RecompiledFuncs`
 successfully. This rules out an exact companion rename and a callable-boundary
 interpretation for this address; it leaves the fragment mechanically
 unresolved. Evidence: `scratch/agent/s3034_generated_symbol_rename/source-table.md`.
+
+## Session 3035 (2026-08-28) — audited 0x80099FDC generated symbol boundary
+
+Audited the next generated placeholder at `0x80099FDC` using the companion
+symbol map, generated body/header, direct-reference census, overlay
+registration, and project symbol TOML. The companion map has no human
+identity and retains `fake_func_80099FDC`. Although the project TOML records a
+stale `0x4` size, the generated body runs from `0x80099FDC` through
+`0x8009AF5C` and ends with an indirect `jr $t0`/`return`; the next standalone
+callable `findVoiceSlotByAge` begins at `0x8009AF60`. No direct generated
+callers or duplicate definitions resolve the identity. Preserved the
+placeholder rather than inventing a name for the large unresolved boundary
+and built `RecompiledFuncs` successfully. This rules out an exact companion
+rename and a one-word/data-gap interpretation for this address. Evidence:
+`scratch/agent/s3035_generated_symbol_rename/source-table.md`.

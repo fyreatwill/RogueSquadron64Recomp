@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3033 (2026-08-28).
+Current maintenance marker: Session 3035 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,16 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3035 audited `0x80099FDC`. The companion map has no human identity
+and explicitly retains `fake_func_80099FDC`; the project TOML's `0x4` size is
+stale relative to the generated body. The generated routine starts at
+`0x80099FDC`, runs through `0x8009AF5C`, and ends with an indirect `jr $t0`,
+while the next independently prologued callable `findVoiceSlotByAge` begins at
+`0x8009AF60`. There are no direct generated callers or duplicate definitions
+that resolve its identity. Preserved the placeholder rather than inventing a
+name for this large unresolved boundary; built `RecompiledFuncs` successfully.
+Evidence: `scratch/agent/s3035_generated_symbol_rename/source-table.md`.
 
 Session 3033 audited `0x8006B704`. The companion map has no human identity;
 the generated snapshot emits a `0xC`-byte fragment containing a store and two
@@ -826,8 +836,9 @@ a new discriminator; continue the generated-symbol sweep while M5 is blocked.
    `initSpeechSubsystem`. The `0x8006ACA4` candidate was audited as a
    three-instruction inline fragment and remains `fake_func_8006ACA4`; audit
    `0x8006B704` was likewise preserved as an unresolved 12-byte fragment;
-   `0x8007C298` was preserved as an unresolved 8-byte fragment; audit the next
-   placeholder candidate `0x80099FDC`.
+   `0x8007C298` was preserved as an unresolved 8-byte fragment, and
+   `0x80099FDC` was preserved as a large unresolved indirect-return boundary;
+   audit the next placeholder candidate `0x8009C2C8`.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
