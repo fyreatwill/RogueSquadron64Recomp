@@ -122310,3 +122310,24 @@ Artifact: `scratch/agent/s2960_generated_symbol_rename/source-table.md`.
 
 ORIGIN: naming-only. No runtime, generated instruction, submodule, or
 mitigation-shaped behavior changed.
+
+## Session 2962 (2026-08-28) — preserved ambiguous 0x800B58B4 fragment
+
+Ran the bounded generated-symbol source-table audit for the next placeholder
+after `0x800B47C4`. The complete generated body at `0x800B58B4` is three valid
+instructions: `addiu $a3, $zero, 0x7F`, `jal 0x800E9B10`, and its `nop` delay
+slot. It has no standalone prologue or return. The preceding
+`isWeaponSlotReady` body ends at `0x800B58B0`; the next entry begins at
+`0x800B58C0` with the `playerAwingInit` stack-frame prologue. The companion
+map retains the fake record and says the real function is `playerAwingInit`,
+but provides no exact semantic name for this fragment. Searches found no
+generated caller or independent lookup of the fake symbol.
+
+Selected H-Fragment: preserve `fake_func_800B58B4`. The valid instructions
+rule out H-DataGap, while the missing callable boundary and exact name rule
+out H-Callable. The sweep advances to `0x800B75C4`.
+
+Artifact: `scratch/agent/s2962_generated_symbol_rename/source-table.md`.
+
+ORIGIN: naming-only. No runtime, generated instruction, submodule, or
+mitigation-shaped behavior changed.

@@ -1,12 +1,12 @@
-# NEXT work unit (s2962)
+# NEXT work unit (s2963)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
 Classify the next unparked generated placeholder after the preserved
-`0x800B47C4` fragment. Re-census the maps first; the next address is expected
-to be `0x800B58B4`, subject to current synchronization. This is one bounded
+`0x800B58B4` fragment. Re-census the maps first; the next address is expected
+to be `0x800B75C4`, subject to current synchronization. This is one bounded
 source-table audit. Do not run the game or M5 instrumentation.
 
 ## Competing hypotheses and discriminator
@@ -26,7 +26,7 @@ record authorizes a data-gap rename. Otherwise preserve the placeholder.
 
 ## Commands
 
-1. Locate the next placeholder after `0x800B47C4` in the project map and
+1. Locate the next placeholder after `0x800B58B4` in the project map and
    generated overlay order with `rg`.
 2. Read only bounded windows around the candidate in generated C/header,
    project symbols, companion symbols/m2c, and rename tables.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2961 (2026-08-28).
+Current maintenance marker: Session 2962 (2026-08-28).
 
 ## Current state
 
@@ -55,6 +55,15 @@ found it was already parked by the companion map as a one-word orphan before
 rename-table entries that would have synthesized `playerXwingInitPreamble` on
 future regeneration; `RecompiledFuncs` built successfully. Artifact:
 `scratch/agent/s2960_generated_symbol_rename/source-table.md`.
+
+Session 2962 classified `0x800B58B4` as an ambiguous three-instruction
+executable fragment immediately before `playerAwingInit` at `0x800B58C0`.
+It contains `addiu a3, 0x7f`, a cross-address `jal 0x800E9B10`, and its delay
+slot, with no standalone prologue, return, caller, independent lookup, or
+exact companion semantic name. The companion explicitly retains the fake
+entry and identifies the adjacent real function, which is insufficient to
+name the fragment. The placeholder remains unchanged. Artifact:
+`scratch/agent/s2962_generated_symbol_rename/source-table.md`.
 
 Session 2961 classified `0x800B47C4` as an ambiguous three-instruction
 executable fragment immediately before `menuControllerInput` at `0x800B47D0`.
@@ -110,8 +119,8 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
    with a named discriminator; passive recurrence belongs in the soak queue.
 
 3. **Generated-symbol renaming sweep — active bounded campaign.** Continue
-   from the next unparked placeholder after `0x800B47C4`, currently expected
-   to be `0x800B58B4` subject to the census. Exact companion semantic names
+   from the next unparked placeholder after `0x800B58B4`, currently expected
+   to be `0x800B75C4` subject to the census. Exact companion semantic names
    and mechanically proven short data gaps may be renamed across every map
    and generated artifact. Valid executable fragments without callable proof
    remain unchanged. Keep HYPOTHESIS-ID
