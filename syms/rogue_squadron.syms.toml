@@ -1464,7 +1464,7 @@ functions = [
     { name = "isSongHandleFree", vram = 0x80096CE4, size = 0x24 },
     { name = "tickAllActiveSongs", vram = 0x80096D08, size = 0x380 },
     { name = "initSongSequencerPools", vram = 0x80097088, size = 0x94 },
-    { name = "fake_func_8009711C", vram = 0x8009711C, size = 0x4 },
+    { name = "data_gap_8009711C", vram = 0x8009711C, size = 0x4 },
     { name = "resetSongSubsystemCounter", vram = 0x80097120, size = 0x10 },
     { name = "bindMacroIdsToSoundGroup", vram = 0x80097130, size = 0xB8 },
     { name = "registerSndMacroTable", vram = 0x800971E8, size = 0xB8 },

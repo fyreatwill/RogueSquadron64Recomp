@@ -121897,3 +121897,18 @@ Selected H-DataGap and synchronized both stale maps. This rules out a
 semantic callable rename and preserves the bounded non-callable classification;
 no runtime experiment or build was needed. Complete evidence table:
 `scratch/agent/s2938_generated_symbol_rename/source-table.md`.
+## Session 2940 (2026-08-27) — renamed non-callable fragment at 0x8009711C
+
+The bounded generated-symbol sweep inspected the next placeholder after
+`0x80094348`, `0x8009711C`. Its generated body contains only `j 0x8009713C`
+and the recompiler emits a trap because the target is not a standalone body.
+The record follows the complete `initSongSequencerPools` body; its target is
+inside `bindMacroIdsToSoundGroup`. It has no callable prologue, return,
+companion semantic name, generated caller, or independent lookup. This
+selects H-DataGap. The project TOML and companion map were synchronized to
+`data_gap_8009711C`; generated C/header/overlay metadata and the rename helper
+were already synchronized. Complete table:
+`scratch/agent/s2940_generated_symbol_rename/source-table.md`.
+
+This rules out a source-backed callable rename for this record and does not
+change runtime behavior. The next sweep candidate is `0x80097D58`.
