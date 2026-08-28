@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2930 (2026-08-27).
+Current maintenance marker: Session 2932 (2026-08-27).
+
+The s2932 generated-symbol sweep reconciled `0x80085CD8` to
+`compareHalfwordAtOffset4`. It is a complete 16-byte comparator body
+(`lhu` at offset 4 from each record, then subtract and return), directly
+called by `factor5BucketedTableLookupValue`; the companion map documents the
+same comparator family and its `_v2`/`_v3` duplicates. The project map,
+companion map, generated snapshot, overlay registration, and rename helper are
+now synchronized. Complete table:
+`scratch/agent/s2932_generated_symbol_rename/source-table.md`.
 
 The s2931 generated-symbol sweep re-audited `0x8007C298`. Its valid
 two-instruction `sll`/`addu` fragment lies between complete
@@ -651,8 +660,9 @@ apply only source-backed renames and preserve callable-ambiguous records.
    s2928 inspected `0x8006B704..0x8006B710` and preserved it as a
    callable-ambiguous valid fragment; s2929 likewise preserved the valid
    fragment at `0x80072CE8`; s2930 classified `0x8007A86C` as
-   `data_gap_8007A86C`. Continue with the next remaining placeholder after
-   `0x8007A86C`.
+   `data_gap_8007A86C`; s2932 reconciled `0x80085CD8` to
+   `compareHalfwordAtOffset4`. Continue with the next remaining placeholder
+   after `0x80085CD8`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

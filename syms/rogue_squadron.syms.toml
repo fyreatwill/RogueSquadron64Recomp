@@ -1235,7 +1235,7 @@ functions = [
     { name = "factor5BucketedTableInsertEntry", vram = 0x8008588C, size = 0x208 },
     { name = "factor5BucketedTableRemoveEntry", vram = 0x80085A94, size = 0x178 },
     { name = "binarySearchWithComparator", vram = 0x80085C0C, size = 0xCC },
-    { name = "func_80085CD8", vram = 0x80085CD8, size = 0x10 },
+    { name = "compareHalfwordAtOffset4", vram = 0x80085CD8, size = 0x10 },
     { name = "factor5BucketedTableLookupValue", vram = 0x80085CE8, size = 0x128 },
     { name = "compareHalfwordAtOffset8", vram = 0x80085E10, size = 0x10 },
     { name = "factor5SortedTableLookupWidePairRecord", vram = 0x80085E20, size = 0x134 },

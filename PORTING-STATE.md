@@ -121783,3 +121783,22 @@ was needed. Complete evidence table:
 
 ORIGIN: diagnostic/static classification of a valid isolated fragment; no
 mitigation-shaped behavior changed.
+
+## Session 2932 (2026-08-27) — reconciled halfword comparator at 0x80085CD8
+
+Ran the bounded generated-symbol reconciliation for `0x80085CD8`. The
+16-byte record is a complete callable comparator: it loads halfwords at
+offset `+4` from both arguments, subtracts them, and returns. It is directly
+called by `factor5BucketedTableLookupValue`, and the companion project
+documents the matching `compareHalfwordAtOffset4` comparator family, with
+`_v2` and `_v3` compiler duplicates. This selects H-CallableSemantic. The
+project map, companion map, regeneration-safe rename table, generated
+declaration/definition/call, and overlay registration were synchronized. The
+Debug `RecompiledFuncs` target built successfully with existing warnings.
+
+This rules out the placeholder name and the data-gap interpretation for this
+record under the current discriminator. No runtime instrumentation or game
+behavior changed. Complete evidence table:
+`scratch/agent/s2932_generated_symbol_rename/source-table.md`.
+
+ORIGIN: static semantic reconciliation; no mitigation-shaped behavior changed.
