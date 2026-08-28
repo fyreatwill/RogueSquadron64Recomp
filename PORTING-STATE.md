@@ -123167,3 +123167,17 @@ address. No runtime, audio, or route behavior changed. The next sweep
 candidate is `0x8001C260`, which requires a fresh ambiguity audit because the
 scanner found no standalone generated prologue match. Evidence:
 `scratch/agent/s3018_generated_symbol_rename/source-table.md`.
+
+## Session 3019 (2026-08-28) — synchronized waitForPostSwapAck
+
+Completed the bounded generated-symbol audit at `0x8001C260`. The companion
+map names the unique generated callable `waitForPostSwapAck`; its 0x98-byte
+body polls the post-swap flag, receives a message, yields, loops while the
+flag remains set, and clears the flag. The generated caller, header, and
+overlay registration agree, with no local duplicate callable or conflicting
+registration. Synchronized the stale project symbol TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs` successfully.
+This rules out an unnamed data gap and a local duplicate callable for this
+address. No runtime, audio, or route behavior changed. The next sweep
+candidate is `0x8002221C`. Evidence:
+`scratch/agent/s3019_generated_symbol_rename/source-table.md`.

@@ -283,7 +283,7 @@ functions = [
     { name = "acquireFreeBufferSlot", vram = 0x8001C07C, size = 0xB0 },
     { name = "postSwapRdpReset", vram = 0x8001C12C, size = 0x118 },
     { name = "setPostSwapPendingFlags", vram = 0x8001C244, size = 0x1C },
-    { name = "func_8001C260", vram = 0x8001C260, size = 0x98 },
+    { name = "waitForPostSwapAck", vram = 0x8001C260, size = 0x98 },
     { name = "clearPostSwapPendingFlags", vram = 0x8001C2F8, size = 0x18 },
     { name = "setGfxTaskYieldParams", vram = 0x8001C310, size = 0x18 },
     { name = "dpInterruptHandlerThread", vram = 0x8001C328, size = 0xD4 },

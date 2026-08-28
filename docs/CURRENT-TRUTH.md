@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3018 (2026-08-28).
+Current maintenance marker: Session 3019 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,15 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3019 completed the bounded generated-symbol audit at `0x8001C260`.
+The companion map, generated body, caller, header, and overlay registration
+identify the unique callable entry as `waitForPostSwapAck`; its 0x98-byte body
+polls the post-swap flag, receives/yields, and clears the flag. There is no
+second callable definition or conflicting registration. Synchronized the
+stale project symbol TOML and built `RecompiledFuncs` successfully. This
+rules out an unnamed data gap and a local duplicate callable for this address.
+Evidence: `scratch/agent/s3019_generated_symbol_rename/source-table.md`.
 
 Session 3018 completed the bounded generated-symbol audit at `0x8001BB6C`.
 The companion map names the unique generated callable
@@ -649,11 +658,11 @@ blocker-free workstream until a new M5 route edge is available.
    was synchronized as `requestViFeatureChange`, `0x8001B7C8` as
    `beginSceneRenderFrame`, and `0x8001B7D8` as
    `clearPendingViChanges`, and `0x8001B7F0` as
-   `applyPendingViChanges`, and `0x8001BB6C` as `selectAndApplyViMode`. Audit
-   the next candidate `0x8001C260` for a
-   defensible companion identity. Do not invent
-   names for ambiguous fragments. Keep the M5 route dependency open below and
-   return to it only with a new grounded edge.
+   `applyPendingViChanges`, `0x8001BB6C` as `selectAndApplyViMode`, and
+   `0x8001C260` as `waitForPostSwapAck`. Audit the next placeholder candidate
+   `0x8002221C` for a defensible companion identity. Do not invent names for
+   ambiguous fragments. Keep the M5 route dependency open below and return to
+   it only with a new grounded edge.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the
