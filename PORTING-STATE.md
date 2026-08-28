@@ -122454,3 +122454,18 @@ the recipe, but the downstream audio hypotheses remain unevaluable because
 the port phase controls did not fire. No audio behavior changed. The run
 driver and bounded audit are in
 `scratch/agent/s2968_m5_step1_image_vs_silent/`.
+
+## Session 2969 (2026-08-28) — M4 accumulator revisit was route-invalid
+
+Built the Debug target successfully and ran one LLE-solo AUTOPILOT capture
+from `build/` with the existing M4 accumulator/y8000 probes, `PROBE_PHASE_WIDTH=512`,
+and `PROBE_KEYS_FROM_PHASE=1`. Generic VI controls fired, proving the capture
+path was live, but the M4 probe's stage-1 positive-control path produced zero
+rows. The route reached only width 0, 320, transient 2, and 640 at origin
+`0x0066A500`; all eight scheduled inputs fired while it remained at 640, with
+no 512 hangar phase, no `[m4-accum]` row, no y8000 target entry, and no crash or
+abort marker. The M4 producer, other-writer, and stale/unreached hypotheses
+are all unevaluable: the missing M4 control makes the null worthless, and the
+target phase was not reached. This rules out neither accumulator arithmetic nor
+writer provenance, and does not justify a mitigation. Details:
+`scratch/agent/s2969_m4_accumulator_boundary/audit.md`.

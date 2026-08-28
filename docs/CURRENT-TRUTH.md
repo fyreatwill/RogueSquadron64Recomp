@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 2968 (2026-08-28).
+Current maintenance marker: Session 2969 (2026-08-28).
 
 ## Current state
 
@@ -40,6 +40,14 @@ The downstream A/B discriminator is therefore unevaluable. The matching
 pre-title stall rules out an audio-arm-specific route difference, but does not
 distinguish audio degeneracy from an image contract gap. No audio behavior
 changed. Artifact: `scratch/agent/s2968_m5_step1_image_vs_silent/audit.md`.
+
+Session 2969 ran the prescribed M4 accumulator-boundary revisit after a
+successful Debug rebuild. Generic VI controls fired, but the M4 accumulator
+probe's stage-1 positive-control path produced zero rows and the route stopped
+at VI 640 (`0x0066A500`) after the scheduled AUTOPILOT inputs; there was no 512
+hangar phase, no accumulator row, and no crash/abort marker. The M4 hypotheses
+are therefore all unevaluable, not selected. Artifact:
+`scratch/agent/s2969_m4_accumulator_boundary/audit.md`.
 
 Session 2957 classified `0x800AE3E4` as an ambiguous three-instruction
 overlay-boundary fragment. Its final word overlaps the menu overlay's named
@@ -184,11 +192,11 @@ repeated route-invalid runs; M3 is parked pending a new discriminator.
    generated placeholder remains after it in the current tree. Do not invent a
    next address; close this campaign unless regeneration introduces one.
 
-4. **M4 accumulator origin — next bounded revisit.** Use one phase/task-keyed
-   port probe joining the `B74` writer/value, producer slot, and consumer
-   index, retaining the existing positive-control mark. Compare the complete
-   join table at the qualified hangar phase; do not interpret pre-title nulls
-   as M4 evidence.
+4. **M4 accumulator origin — blocked at route qualification.** The latest
+   revisit had live generic controls but zero M4 stage-1 positive-control rows
+   and no 512 hangar phase. Do not interpret its M4 nulls. Resume only with a
+   genuinely new route repair or an independent ground-truth handoff that can
+   make the M4 control execute.
 
 5. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.

@@ -1,44 +1,41 @@
-# NEXT work unit (s2969)
+# NEXT work unit (s2970)
 
-HYPOTHESIS-ID: m4-accumulator-boundary
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Unit
 
-Revisit the M4 accumulator boundary with one complete phase/task-keyed join
-table using the existing `B74`/`C70` instrumentation and positive-control
-mark. Do not change guest or audio behavior. Use the last qualified AUTOPILOT
-route; if the route again stops before a target phase, report the join as
-unevaluable and do not infer M4 from pre-title zeros.
+Perform one bounded generated-symbol census/rename at the next unresolved
+address in the current generated tree. Reconcile the companion map, project
+TOML, generated artifacts, and regeneration-safe rename table; rename only if
+the function has a defensible semantic identity or mechanically proven data
+gap. Otherwise record the classification and leave the placeholder unchanged.
+Do not touch guest behavior or `lib/`.
 
 ## Competing hypotheses and discriminator
 
-- H-M4-B74-Producer: the consumer's accumulator value is written by the
-  producer slot, so the same task/phase row should join `B74` value to that
-  slot and the consumer index.
-- H-M4-B74-OtherWriter: a different guest writer supplies `B74`; the join
-  should show a stable writer/value independent of the presumed producer.
-- H-M4-StaleOrUnreached: the apparent `B74` value is stale or the route never
-  reaches the consumer; the positive control fires but no target-phase join
-  closes.
+- H-named: companion source, caller structure, or exact local semantics give
+  one defensible human name.
+- H-data-gap: the body is a mechanically proven non-callable gap bounded by
+  independent functions/data and should use a `data_gap_...` name.
+- H-ambiguous: the bytes are a callable fragment/preamble without enough
+  evidence for a semantic name and must remain a placeholder.
 
-The discriminator is one row per target phase/task containing `B74` writer PC,
-value, producer slot, consumer index, consumer read PC, and VI origin/width.
-The positive control must visibly fire in the same run; only a closed join at
-the qualified hangar phase selects a producer explanation. A pre-title null
-is unevaluable.
+The discriminator is the bounded source table for the next unresolved
+placeholder: generated disassembly/body bounds, callers/lookup references,
+companion-map classification, and successor/predecessor boundaries. A rename
+or data-gap reconciliation is a result; an ambiguous classification is also a
+result but must not synthesize a name.
 
 ## Commands
 
-1. Confirm the existing B74/C70 probe and positive-control mark in source.
-2. Build one binary:
-   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
-3. Run the existing qualified AUTOPILOT from `build/` with
-   `ROGUESQ_LOG_ALL=1`, `PROBE_PHASE_WIDTH=512`, and
-   `PROBE_KEYS_FROM_PHASE=1`; capture to a non-dot final path and SIGKILL the
-   process group at the bounded timeout.
-4. Summarize the whole-RDRAM positive control, route phases, and complete B74
-   join table.
+1. Run `grep -n '^## Session ' PORTING-STATE.md | tail -15`; if all 15 titles
+   are sweep-scoped, perform the mandated external retail-entry or M4
+   accumulator-boundary revisit instead of another sweep step.
+2. Census the next unresolved generated placeholder and its companion-map
+   entry; make any rename through the existing regeneration-safe scripts.
+3. Build the affected generated target and verify the exact changed symbol(s).
+4. Write a source table under `scratch/agent/s2970_generated_symbol_rename/`.
 
-Expected outcomes: a producer-slot/B74/consumer join selects H-M4-B74-Producer;
-a different named writer selects H-M4-B74-OtherWriter; positive-control-only
-or pre-title rows select H-M4-StaleOrUnreached and require a new route angle.
+Expected outcomes: one defensible semantic rename or data-gap reconciliation
+advances the sweep; otherwise an evidence-backed ambiguous classification parks
+the address without inventing a name.
