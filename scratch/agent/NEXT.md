@@ -1,34 +1,38 @@
-# NEXT work unit (s2874) — generated-symbol-renaming-sweep
+# NEXT work unit (s2875) — m5-state-arbiter-ground-truth
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-state-arbiter-ground-truth
 
 ## Work unit
 
-Inspect and, only if source-backed, rename the next two short main-overlay
-placeholder records at `0x8007A86C` and `0x8007C298` to explicit `data_gap_*`
-names. Propagate through the companion map, project TOML map, generated C
-snapshot, declarations, and overlay registry. Leave any callable or ambiguous
-record unchanged.
+Ask the retail oracle for ground truth on the distinct `gGameSettings` /
+`mainGameLoop` state-arbiter class before adding any port instrumentation.
+Use one whole-RDRAM positive-control watch plus phase-qualified watches for
+the known state object `0x80130B40` and `mainGameLoop=0x8003DFA0`; drive the
+validated title/hangar route and capture writer PCs, values, and phase rows.
+Do not modify runtime behavior or interpret downstream audio nulls unless the
+positive control and both target phases are reached.
 
 ## Competing hypotheses and discriminator
 
-- H-callable: a placeholder body is a real callable function and must remain
-  unresolved rather than receive a data-gap name.
-- H-data-gap: the body is an isolated short instruction fragment between named
-  functions and can be renamed mechanically.
-- H-mapping-drift: companion and generated addresses or sizes disagree; stop
-  without editing that entry.
+- H-arbiter-writes: retail writes the state object or enters `mainGameLoop` at
+  a phase-qualified edge absent from the port, selecting a route-state lead.
+- H-arbiter-equivalent: retail and port show the same writer/entry sequence,
+  ruling out this state-arbiter class at the measured scope.
+- H-route-invalid: the positive control fails or the port does not reach title
+  and hangar, making the target rows unevaluable and requiring route repair.
 
-The discriminator is one bounded source table containing each body's exact
-byte size/instructions, neighboring named boundaries, and companion
-classification. A short fragment with no return/prologue selects H-data-gap;
-callable structure selects H-callable; any address/size mismatch selects
-H-mapping-drift.
+The discriminator is the single retail-vs-port phase table: positive-control
+count, title/hangar phase reachability, writer-PC/value histogram for
+`0x80130B40`, and `mainGameLoop` entry rows. Each possible outcome selects one
+hypothesis above; no downstream audio counter is interpreted on H-route-invalid.
 
 ## Exact command
 
-    python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x8007A86C --end-address 0x8007C2A0 --limit 2 --require-rename
+    grep -n "gGameSettings\|mainGameLoop\|8003DFA0\|80130B40" tools/oracle docs PORTING-STATE.md | tail -80
+    sed -n '1,220p' tools/oracle/README.md
+    # Then use one new oracle recipe with the validated whole-RDRAM control,
+    # title/hangar phase gates, and both state-arbiter watches.
 
-Verify with `python3 -m py_compile tools/rename_generated_symbols.py`, exact
-reference counts, and `git diff --check`. Record the source table under
-`scratch/agent/s2874_generated_symbol_rename/`.
+Record the complete phase table under
+`scratch/agent/s2875_m5_state_arbiter/`; use SIGKILL, run from `build/`, and
+run `git diff --check` before committing.

@@ -106,6 +106,12 @@ instruction fragments immediately before named routines. They are now named
 `data_gap_*` in the companion map, project symbol map, and generated snapshot;
 the rename is recorded in `tools/rename_generated_symbols.py` for regeneration.
 
+The s2874 bounded sweep inspected `0x8007A86C` and `0x8007C298`. Their generated
+sizes and isolated instruction fragments are consistent with gaps, but the
+companion map supplies only `fake_func_*` plus `defined:true`, with no
+source-backed classification. Both remain ambiguous-or-fake and unchanged;
+the source table is `scratch/agent/s2874_generated_symbol_rename/source-table.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated

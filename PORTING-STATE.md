@@ -120719,3 +120719,18 @@ changed across 3 generated files; there was no build or runtime experiment
 because this was a bounded naming change, not an audio behavior test.
 
 Artifact: `scratch/agent/s2873_generated_symbol_rename/`.
+
+## Session 2874 (2026-08-27) — classified two ambiguous main-overlay placeholders
+
+The bounded generated-symbol sweep inspected `0x8007A86C` and `0x8007C298`.
+The generated snapshot and overlay registry agree with the companion map on
+the addresses and sizes: the first is a four-byte `lw a2, 0x2B94(a2)` fragment,
+and the second is an eight-byte `sll`/`addu` fragment. Neither has a return or
+callable prologue, but the companion entries remain only `fake_func_*` with
+`defined:true`; no source-backed data-gap or semantic classification exists.
+The required `--require-rename` run and the fixed non-required run both changed
+zero references and classified both as `ambiguous-or-fake`. This rules out a
+defensible rename at this scope, not the possibility that future source work
+will resolve them. Checks passed: `py_compile` and `git diff --check`.
+
+Artifact: `scratch/agent/s2874_generated_symbol_rename/`.
