@@ -120947,3 +120947,25 @@ surface, not a hidden implementation. No build or soak was run: the same-build
 s2881–s2884 port pair remains pre-title VI 640, so downstream audio nulls are
 unevaluable. This rules out adding an unowned de-stub or gate bypass as the
 next step; a route-qualified writer/contract discriminator is still required.
+## Session 2886 (2026-08-27) — M5 route/contract pair remained pre-title-invalid
+
+Ran the required retail-first route/contract discriminator. The oracle
+whole-RDRAM positive control reached 10,000 callbacks and the driven retail
+run reached title `VI 1024 @ 0x00790400` and hangar `VI 512` in the
+`0x006AB400` family. The state-span watch recorded 105 writes. The direct
+`0x8006E4B4` execution watch recorded six boot-time hits and no phase-gated
+field rows, so it did not identify a callable target-phase contract edge.
+
+One Debug build then ran image and silent arms concurrently with the same
+phase-gated contract instrumentation and autopilot. Both stopped at pre-title
+`VI 640 @ 0x0066A500`; image had 66 audio dispatches, 6,869 rejected route
+preparations, and 68 pre-title stage calls, while silent had 66 dispatches and
+6,886 rejected preparations. Neither arm produced target-phase task, DMA,
+service, slot, MORT, or PCM rows; neither crashed or aborted.
+
+This selects H-RouteInvalid for the recipe and leaves downstream audio
+unevaluable. It rules out neither the Factor 5 image nor a specific M5 contract
+edge, and no behavior change or mitigation was landed. After three stalled
+iterations on this route hypothesis, the next unit pivots to the bounded
+generated-symbol sweep above `0x800C0000`. Evidence:
+`scratch/agent/s2886_m5_route_contract/RESULTS.md`.

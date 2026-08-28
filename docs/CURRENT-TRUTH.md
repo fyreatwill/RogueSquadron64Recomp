@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2885 (2026-08-27).
+Current maintenance marker: Session 2886 (2026-08-27).
 
 ## Live result
 
@@ -149,6 +149,19 @@ references across `funcs_32.c`, `funcs_33.c`, `funcs.h`, and
 `0x800C0000`. Source table:
 `scratch/agent/s2884_generated_symbol_rename/source-table.md`.
 
+The s2886 M5 route/contract discriminator rebuilt the Debug target and ran the
+image and silent arms concurrently. The retail oracle positive control reached
+10,000 callbacks and independently reached title and hangar; its
+`0x8006E4B4` execution watch had six boot-time hits and no phase-gated field
+rows, while the state-span watch had 105 writes. Both port arms stopped at
+pre-title `VI 640 @ 0x0066A500`: image had 66 dispatches, 6,869 rejected route
+preparations, and 68 pre-title stage calls; silent had 66 dispatches and 6,886
+rejected preparations. Neither produced target-phase task, DMA, service, slot,
+MORT, or PCM rows, and neither crashed or aborted. This selects H-RouteInvalid
+again, leaves downstream audio unevaluable, and authorizes no behavior change.
+After three stalled route iterations, the next unit pivots to the bounded
+generated-symbol sweep.
+
 The s2875 retail-first state-arbiter probe was instrument-valid: the
 whole-RDRAM control reached 10,000 callbacks, and the driven retail run reached
 title (`634 VI` in `0x00790400:1024`) and hangar (`217 VI` in
@@ -206,7 +219,10 @@ Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. The sweep remains eligible while M5 is open and M3 is parked;
 apply only source-backed renames and preserve callable-ambiguous records.
 
-1. **M5 audio de-stubbing — plan complete, execution gated by route.**
+1. **M5 audio de-stubbing — plan complete, execution gated by route.** The
+   s2886 route/contract pair again selected H-RouteInvalid; pause this exact
+   discriminator after three stalled iterations and require a genuinely new
+   route repair before another M5 run.
    `docs/M5-AUDIO-PLAN.md` now contains the current inventory of every active
    audio stub, trap, gate, and safety hatch plus the incremental validation
    sequence. The s2885 survey found no additional production audio path. The
@@ -235,7 +251,7 @@ apply only source-backed renames and preserve callable-ambiguous records.
    still requires a named legitimate contract edge.
 2. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
-3. **Generated-symbol renaming sweep — interval complete through `0x800C0000`.** The s2873 batch completed
+3. **Generated-symbol renaming sweep — next bounded interval after `0x800C0000`.** The s2873 batch completed
    `0x80079278..0x8007A0F0`. The s2880 sweep covered `0x8007C300..0x800AF700`:
    three `__builtin_trap()` gap-fillers (`0x80099C4C`, `0x800AEC54`, `0x800AF6A8`)
    were renamed to `data_gap_*`; five ambiguous executable fragments were left
