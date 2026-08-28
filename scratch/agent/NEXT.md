@@ -1,4 +1,4 @@
-# NEXT work unit — classify `0x8002221C`
+# NEXT work unit — classify `0x800233B0`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -22,9 +22,9 @@ fragment or collision selects a documented non-rename/manual review.
 ## Exact commands
 
 ```sh
-rg -n '8002221C|func_8002221C' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
-rg -n -C 20 '8002221C|func_8002221C' ../N64Recomp/RecompiledFuncs/funcs_*.c
-python3 tools/sweep_scan_candidates.py func_8002221C
+rg -n '800233B0|func_800233B0' ../rogue_squadron64 ../N64Recomp/RecompiledFuncs syms tools/rename
+rg -n -C 20 '800233B0|func_800233B0' ../N64Recomp/RecompiledFuncs/funcs_*.c
+python3 tools/sweep_scan_candidates.py func_800233B0
 ```
 
 If the sources agree on an exact identity, synchronize the project symbol

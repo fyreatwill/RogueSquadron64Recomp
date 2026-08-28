@@ -123181,3 +123181,18 @@ This rules out an unnamed data gap and a local duplicate callable for this
 address. No runtime, audio, or route behavior changed. The next sweep
 candidate is `0x8002221C`. Evidence:
 `scratch/agent/s3019_generated_symbol_rename/source-table.md`.
+
+## Session 3020 (2026-08-28) — synchronized findAndUnlinkSmallestEntry
+
+Completed the bounded generated-symbol audit at `0x8002221C`. The companion
+map, generated definition, caller set, header, and overlay registration
+identify the unique callable entry as `findAndUnlinkSmallestEntry`; its
+0xF0-byte body performs the material free-list best-fit search and unlink.
+Synchronized the stale project symbol TOML and built
+`cmake --build build --config Debug --target RecompiledFuncs -j 2`
+successfully. The scanner reported overlay-reuse matches, but the bounded
+definition and registration checks found no second callable or conflict. This
+rules out an unnamed data gap and a local duplicate callable for this address.
+No runtime, audio, or route behavior changed. The next sweep candidate is
+`0x800233B0`. Evidence:
+`scratch/agent/s3020_generated_symbol_rename/source-table.md`.

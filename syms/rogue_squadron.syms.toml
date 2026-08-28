@@ -338,7 +338,7 @@ functions = [
     { name = "unlinkTextureMaterialList", vram = 0x80021F78, size = 0xD0 },
     { name = "tickTextureMaterialExpiry", vram = 0x80022048, size = 0x11C },
     { name = "resetMaterialExpiryById", vram = 0x80022164, size = 0xB8 },
-    { name = "func_8002221C", vram = 0x8002221C, size = 0xF0 },
+    { name = "findAndUnlinkSmallestEntry", vram = 0x8002221C, size = 0xF0 },
     { name = "popMaterialNodeIntoBucket", vram = 0x8002230C, size = 0x60 },
     { name = "allocOrEvictMaterialNode", vram = 0x8002236C, size = 0x28C },
     { name = "findOrCreateMaterial", vram = 0x800225F8, size = 0x148 },
