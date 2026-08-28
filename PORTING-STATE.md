@@ -121912,3 +121912,21 @@ were already synchronized. Complete table:
 
 This rules out a source-backed callable rename for this record and does not
 change runtime behavior. The next sweep candidate is `0x80097D58`.
+## Session 2941 (2026-08-27) — renamed non-callable fragment at 0x80097D58
+
+Ran the bounded generated-symbol census for `0x80097D58`: searched the
+project map, generated C/header/overlay metadata, companion symbol map, and
+rename helper, then read the surrounding `funcs_26.c` bodies. The eight-byte
+record contains only `lw $fp,0x88($sp)` and `addiu $sp,$sp,0x90`, with no
+callable prologue or return. It follows the complete `playSongById` body,
+which already returns, and precedes `clearStreamedVoiceFlags`, which starts
+with a fresh stack decrement. There is no generated caller, independent
+lookup, or companion semantic name.
+
+Selected H-DataGap and synchronized the project TOML and companion map to
+`data_gap_80097D58`; the generated C/header/overlay metadata was updated by
+the bounded rename helper, as was its regeneration-safe rename table. The
+Debug `RecompiledFuncs` target passed with existing warnings. This rules out
+an independent semantic callable rename and does not change runtime behavior.
+Complete evidence table:
+`scratch/agent/s2941_generated_symbol_rename/source-table.md`.

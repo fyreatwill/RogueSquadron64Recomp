@@ -1477,7 +1477,7 @@ functions = [
     { name = "returnZeroAudioStub", vram = 0x80097AC8, size = 0x8 },
     { name = "playSongByIdLockCtl", vram = 0x80097AD0, size = 0x15C },
     { name = "playSongById", vram = 0x80097C2C, size = 0x12C },
-    { name = "fake_func_80097D58", vram = 0x80097D58, size = 0x8 },
+    { name = "data_gap_80097D58", vram = 0x80097D58, size = 0x8 },
     { name = "clearStreamedVoiceFlags", vram = 0x80097D60, size = 0x48 },
     { name = "serviceStreamedVoices", vram = 0x80097DA8, size = 0x1AC },
     { name = "flushStreamedVoiceBuffers", vram = 0x80097F54, size = 0x94 },

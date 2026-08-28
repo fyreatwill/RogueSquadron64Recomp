@@ -129,6 +129,7 @@ RENAMES = {
     "fake_func_80093E74": "data_gap_80093E74",
     "fake_func_80094348": "data_gap_80094348",
     "fake_func_8009711C": "data_gap_8009711C",
+    "fake_func_80097D58": "data_gap_80097D58",
     "fake_func_800EC6EC": "data_gap_800EC6EC",
     "fake_func_800ECE04": "data_gap_800ECE04",
     # These short main-overlay records precede named routines in the
