@@ -524,6 +524,64 @@ extern "C" void rs64_m5_route_prepare_handoff(uint32_t prepare_seq,
     std::fflush(stderr);
 }
 
+static thread_local uint32_t g_m5_host_current_seq = 0xFFFFFFFFu;
+
+extern "C" uint32_t rs64_m5_host_send_begin(uint32_t data_ptr) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_ORDER");
+        return (all && *all && *all != '0') || (own && *own && *own != '0');
+    }();
+    static std::atomic<uint32_t> next_seq{0};
+    g_m5_host_current_seq = next_seq.fetch_add(1, std::memory_order_relaxed);
+    if (enabled) {
+        std::fprintf(stderr, "[m5-route-order] edge=send-enter seq=%u data=0x%08X "
+                             "phase=%u width=%u origin=0x%06X\n",
+                     g_m5_host_current_seq, data_ptr, rs64_phase_ord(),
+                     rs64_vi_committed_width(), rs64_vi_committed_origin() & 0x00FFFFFFu);
+        std::fflush(stderr);
+    }
+    return g_m5_host_current_seq;
+}
+
+extern "C" uint32_t rs64_m5_host_current_seq(void) {
+    return g_m5_host_current_seq;
+}
+
+extern "C" void rs64_m5_host_edge(const char* edge, uint32_t task_seq,
+                                    uint32_t data_ptr, uint32_t mq,
+                                    uint32_t source, uint32_t sent,
+                                    int32_t valid_count, int32_t msg_count) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_ORDER");
+        return (all && *all && *all != '0') || (own && *own && *own != '0');
+    }();
+    if (!enabled) return;
+    static std::mutex mutex;
+    static uint32_t phase = 0xFFFFFFFFu;
+    static uint32_t edge_rows[5] = {};
+    const uint32_t now_phase = rs64_phase_ord();
+    std::lock_guard<std::mutex> lock(mutex);
+    if (phase != now_phase) {
+        phase = now_phase;
+        for (uint32_t& count : edge_rows) count = 0;
+    }
+    uint32_t edge_index = 4;
+    if (edge && std::strcmp(edge, "send-enter") == 0) edge_index = 0;
+    else if (edge && std::strcmp(edge, "send-return") == 0) edge_index = 1;
+    else if (edge && std::strcmp(edge, "dp-complete") == 0) edge_index = 2;
+    else if (edge && std::strcmp(edge, "external-enqueue") == 0) edge_index = 3;
+    if (edge_rows[edge_index]++ >= (edge_index == 0 ? 2048u : 512u)) return;
+    std::fprintf(stderr,
+        "[m5-route-order] edge=%s seq=%u data=0x%08X mq=0x%08X source=%u "
+        "sent=%u valid=%d capacity=%d phase=%u width=%u origin=0x%06X\n",
+        edge ? edge : "?", task_seq, data_ptr, mq, source, sent,
+        valid_count, msg_count, now_phase, rs64_vi_committed_width(),
+        rs64_vi_committed_origin() & 0x00FFFFFFu);
+    std::fflush(stderr);
+}
+
 namespace {
 
 static bool rs64_m5_route_fingerprint_enabled() {

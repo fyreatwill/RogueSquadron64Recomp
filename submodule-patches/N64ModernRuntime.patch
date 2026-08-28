@@ -2199,7 +2199,7 @@ index 3198be0..e35819c 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..1b075a5 100644
+index 149e770..5845f56 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,11 +8,18 @@
@@ -2221,7 +2221,7 @@ index 149e770..1b075a5 100644
  #include "ultramodern/extensions.h"
  
  #include "ultramodern/rsp.hpp"
-@@ -20,6 +27,336 @@
+@@ -20,6 +27,340 @@
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
@@ -2235,6 +2235,10 @@ index 149e770..1b075a5 100644
 +                                                             uint32_t committed_origin,
 +                                                             uint32_t width);
 +extern "C" __attribute__((weak)) void rs64_vi_boundary_set_screen_request(uint32_t framebuffer);
++extern "C" __attribute__((weak)) void rs64_m5_host_edge(const char* edge,
++    uint32_t task_seq, uint32_t data_ptr, uint32_t mq, uint32_t source,
++    uint32_t sent, int32_t valid_count, int32_t msg_count);
++extern "C" __attribute__((weak)) uint32_t rs64_m5_host_current_seq(void);
 +
 +namespace {
 +
@@ -2558,7 +2562,7 @@ index 149e770..1b075a5 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -30,6 +367,7 @@ struct SpTaskAction {
+@@ -30,6 +371,7 @@ struct SpTaskAction {
  
  struct ScreenUpdateAction {
      ultramodern::renderer::ViRegs regs;
@@ -2566,7 +2570,7 @@ index 149e770..1b075a5 100644
  };
  
  struct UpdateConfigAction {
-@@ -39,6 +377,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
+@@ -39,6 +381,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
  
  struct ViState {
      const OSViMode* mode;
@@ -2574,7 +2578,7 @@ index 149e770..1b075a5 100644
      PTR(void) framebuffer;
      PTR(OSMesg) mq;
      OSMesg msg;
-@@ -65,11 +404,15 @@ static struct {
+@@ -65,11 +408,15 @@ static struct {
          ViState* get_cur_state() {
              return &states[cur_state];
          }
@@ -2592,7 +2596,7 @@ index 149e770..1b075a5 100644
              PTR(void) framebuffer = osVirtualToPhysical(next_state->framebuffer);
              PTR(void) origin = framebuffer + field_regs->origin;
  
-@@ -85,6 +428,17 @@ static struct {
+@@ -85,6 +432,17 @@ static struct {
                  origin = framebuffer;
              }
  
@@ -2610,7 +2614,7 @@ index 149e770..1b075a5 100644
              // TODO implement osViFade
  
              // Update VI registers.
-@@ -101,7 +455,21 @@ static struct {
+@@ -101,7 +459,21 @@ static struct {
              regs.VI_X_SCALE_REG = common_regs->xScale; // TODO implement osViSetXScale
              regs.VI_Y_SCALE_REG = yScale; // TODO implement osViSetYScale
              regs.VI_STATUS_REG = next_state->control;
@@ -2633,7 +2637,7 @@ index 149e770..1b075a5 100644
              // Swap VI states.
              cur_state ^= 1;
              *get_next_state() = *get_cur_state();
-@@ -140,6 +508,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +512,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -2642,7 +2646,7 @@ index 149e770..1b075a5 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -165,9 +535,18 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
+@@ -165,9 +539,18 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
      next_state->mq = mq_;
      next_state->msg = msg;
      next_state->retrace_count = retrace_count;
@@ -2661,7 +2665,7 @@ index 149e770..1b075a5 100644
  
  
  extern std::atomic_bool exited;
-@@ -209,19 +588,41 @@ void vi_thread_func() {
+@@ -209,19 +592,41 @@ void vi_thread_func() {
          }
          total_vis = new_total_vis;
  
@@ -2706,7 +2710,7 @@ index 149e770..1b075a5 100644
  
          // If the game has started, handle sending VI and AI events.
          if (ultramodern::is_game_started()) {
-@@ -231,6 +632,17 @@ void vi_thread_func() {
+@@ -231,6 +636,17 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -2724,7 +2728,7 @@ index 149e770..1b075a5 100644
                      // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
                      // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
                      ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
-@@ -252,12 +664,14 @@ void vi_thread_func() {
+@@ -252,12 +668,19 @@ void vi_thread_func() {
  void sp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
@@ -2736,10 +2740,15 @@ index 149e770..1b075a5 100644
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
 +    log_event_wiring_completion("DP", event_wiring_dp_rows, events_context.dp.mq, events_context.dp.msg);
++    if (rs64_m5_host_edge != nullptr) {
++        rs64_m5_host_edge("dp-complete", rs64_m5_host_current_seq != nullptr ? rs64_m5_host_current_seq() : 0xFFFFFFFFu, 0,
++                          static_cast<uint32_t>(events_context.dp.mq),
++                          static_cast<uint32_t>(ultramodern::EventMessageSource::Dp), 1, -1, -1);
++    }
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -277,17 +691,47 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -277,17 +700,47 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
              return;
          }
  
@@ -2788,7 +2797,7 @@ index 149e770..1b075a5 100644
  
          (void)task_type;
      }
-@@ -394,6 +838,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -394,6 +847,10 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
              }
              else if (const auto* screen_update_action = std::get_if<ScreenUpdateAction>(&action)) {
                  events_context.vi.update_screen_regs = screen_update_action->regs;
@@ -2799,7 +2808,7 @@ index 149e770..1b075a5 100644
                  renderer_context->update_screen();
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
-@@ -456,6 +904,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +913,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -2807,7 +2816,7 @@ index 149e770..1b075a5 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -473,6 +922,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +931,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -2815,7 +2824,7 @@ index 149e770..1b075a5 100644
      next_state->control = next_state->mode->comRegs.ctrl;
  }
  
-@@ -577,6 +1027,7 @@ void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
+@@ -577,6 +1036,7 @@ void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
          events_context.action_queue.enqueue(SpTaskAction{ *task });
      }
      else {
@@ -2824,10 +2833,10 @@ index 149e770..1b075a5 100644
      }
  }
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..7715582 100644
+index 9944a02..67f63cd 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
-@@ -1,18 +1,209 @@
+@@ -1,18 +1,214 @@
  #include <bitset>
  #include <thread>
 +#include <cstdio>
@@ -2844,6 +2853,10 @@ index 9944a02..7715582 100644
 +    uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
 +    uint32_t* row, int* exit_reason, const char** arm);
 +extern "C" uint32_t rs64_phase_ord();
++extern "C" __attribute__((weak)) void rs64_m5_host_edge(const char* edge,
++    uint32_t task_seq, uint32_t data_ptr, uint32_t mq, uint32_t source,
++    uint32_t sent, int32_t valid_count, int32_t msg_count);
++extern "C" __attribute__((weak)) uint32_t rs64_m5_host_current_seq(void);
 +
 +// s215: do_send/do_recv dereference their PTR(OSMesgQueue) argument via
 +// TO_PTR's unchecked `&rdram[(uint64_t)var - 0xFFFFFFFF80000000]` arithmetic
@@ -2952,14 +2965,15 @@ index 9944a02..7715582 100644
      bool requeue_if_blocked;
 +    int source = -1;
 +    AudioRouteMessage audio;
-+};
-+
++    uint32_t host_task_seq = 0xFFFFFFFFu;
+ };
+ 
 +struct AudioSpDelivery {
 +    PTR(OSMesgQueue) mq;
 +    OSMesg msg;
 +    AudioRouteMessage audio;
- };
- 
++};
++
 +static std::deque<AudioSpDelivery> g_audio_sp_deliveries;
 +static thread_local OSMesg g_last_received_message = NULLPTR;
 +static AudioRouteMessage g_current_audio_route;
@@ -3037,7 +3051,7 @@ index 9944a02..7715582 100644
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -28,7 +219,19 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -28,7 +224,24 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
  }
  
  void ultramodern::enqueue_external_message_src(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, EventMessageSource src) {
@@ -3054,11 +3068,16 @@ index 9944a02..7715582 100644
 +                               queued.requeue_if_blocked ? 1 : 0, -1, -1, -1);
 +        }
 +    }
++    if (src == EventMessageSource::Dp && rs64_m5_host_edge != nullptr) {
++        queued.host_task_seq = rs64_m5_host_current_seq != nullptr ? rs64_m5_host_current_seq() : 0xFFFFFFFFu;
++        rs64_m5_host_edge("external-enqueue", queued.host_task_seq, 0, static_cast<uint32_t>(mq),
++                          static_cast<uint32_t>(src), 1, -1, -1);
++    }
 +    external_messages.enqueue(queued);
  }
  
  void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, bool requeue_if_blocked) {
-@@ -37,33 +240,64 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
+@@ -37,33 +250,71 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block);
  
@@ -3086,6 +3105,13 @@ index 9944a02..7715582 100644
 +            msgCount = mq->msgCount;
 +        }
 +        const bool sent = do_send(PASS_RDRAM to_send.mq, to_send.mesg, to_send.jam, false);
++        if (to_send.source == static_cast<int>(ultramodern::EventMessageSource::Dp) &&
++            rs64_m5_host_edge != nullptr) {
++            rs64_m5_host_edge("external-delivery", to_send.host_task_seq, 0,
++                              static_cast<uint32_t>(to_send.mq),
++                              static_cast<uint32_t>(to_send.source), sent ? 1u : 0u,
++                              validCount, msgCount);
++        }
 +        log_audio_sp_delivery(to_send, sent, validCount, msgCount);
 +        log_vi_deq(sent ? "ok" : "full", to_send.mq, validCount, msgCount);
 +        if (!sent && to_send.requeue_if_blocked) {
@@ -3127,7 +3153,7 @@ index 9944a02..7715582 100644
      }
  }
  
-@@ -90,6 +324,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +341,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -3137,7 +3163,7 @@ index 9944a02..7715582 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +343,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +360,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -3152,7 +3178,7 @@ index 9944a02..7715582 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +374,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +391,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -3163,7 +3189,7 @@ index 9944a02..7715582 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +394,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +411,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -3178,7 +3204,7 @@ index 9944a02..7715582 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -161,6 +416,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -161,6 +433,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
  }
  
  extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -3186,7 +3212,7 @@ index 9944a02..7715582 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      bool jam = false;
      
-@@ -183,6 +439,7 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,6 +456,7 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -3194,7 +3220,7 @@ index 9944a02..7715582 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      bool jam = true;
      
-@@ -205,18 +462,54 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +479,54 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {

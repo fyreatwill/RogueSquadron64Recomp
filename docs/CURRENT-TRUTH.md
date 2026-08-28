@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3051 (2026-08-28).
+Current maintenance marker: Session 3052 (2026-08-28).
 
 ## Current state
 
@@ -180,21 +180,34 @@ so its downstream audio nulls were unevaluable. Its corrected driver still
 requires a fresh target-phase run; do not infer audio equivalence or a
 contract gap from that result.
 
+Session 3052 added a host-side sequence table joining `send_dl` entry/return,
+`dp_complete`, DP external enqueue, and DP external delivery. The build
+succeeded and the fixed port capture produced 726 sends, 553 returns, 553 DP
+completions/enqueues, and 99 deliveries. Same-sequence ordering was
+`send-return` → `dp-complete` → `external-enqueue`, with delivery later on the
+consumer thread. The phase control fired, but the run again stopped at VI 640
+origin `0x0066A500`; title/hangar route preparation never accepted. The first
+instrument cap was corrected in-iteration to independent per-edge budgets.
+This selects `H-MeasurementInsufficient` for the target-phase discriminator;
+no route behavior change was justified. Evidence:
+`scratch/agent/s3052_m5_route_order/AUDIT.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
 symbol sweep. Maintenance is complete. M5 design is complete, but Step 1 is
 route-blocked at pre-title VI 640; event registration/completion is live in the
-port and the next unit must use a genuinely new external-delivery angle. M3 is
+port and the next unit must audit gfx action ordering around that handoff. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — correlate host DP completion with route preparation.**
-   Session 3051 positively established the retail guest receive/forward pair,
-   but the port remains at VI 640 before the comparison phase. Use one new
-   port-side table joining `send_dl` return, `dp_complete`, external-message
-   delivery, and the next live-VI route-preparation attempt; retain route and
-   phase positive controls. Do not repeat direct `osSendMesg`, event
-   registration, or consumer-only watches.
+1. **M5 route repair/handoff — audit gfx action ordering around DP completion.**
+   Session 3052 established the port host order through external delivery but
+   still never reached title/hangar. Audit the single gfx-thread action path
+   that calls `sp_complete`, `send_dl`, `dp_complete`, and display-list
+   callbacks. Use one phase-keyed table covering action dequeue, pre-send
+   `sp_complete`, `send_dl` return, `dp_complete`, DP delivery, and the next
+   route prepare; retain positive controls. Do not repeat direct producers,
+   event registration, or consumer-only watches.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017AD0` is complete. Preserve

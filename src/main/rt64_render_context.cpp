@@ -30,6 +30,11 @@ extern "C" void rs64_m5_route_fingerprint_snapshot(uint32_t width,
 extern "C" void rs64_vi_boundary_log(const char* edge, uint32_t requested_fb,
                                       uint32_t committed_origin, uint32_t width);
 extern "C" uint32_t rs64_vi_boundary_screen_request(void);
+extern "C" uint32_t rs64_m5_host_send_begin(uint32_t data_ptr);
+extern "C" void rs64_m5_host_edge(const char* edge, uint32_t task_seq,
+                                    uint32_t data_ptr, uint32_t mq,
+                                    uint32_t source, uint32_t sent,
+                                    int32_t valid_count, int32_t msg_count);
 
 // Interval-scoped diagnostics (session 25).
 //
@@ -290,6 +295,8 @@ public:
     }
 
     void send_dl(const OSTask* task) override {
+        const uint32_t m5_task_seq = rs64_m5_host_send_begin(
+            static_cast<uint32_t>(task->t.data_ptr));
         // ROGUESQ_LLE_FORCE=1: route this GFX task through the LLE RSP
         // recompile path INSTEAD of HLE. factor5_gfx_runner reproduces what
         // real-hardware RSP would do — runs boot+main ucode against DMEM,
@@ -368,6 +375,9 @@ public:
                     s_lle_solo = (v && *v && v[0] != '0') ? 1 : 0;
                 }
                 if (s_lle_solo || in_hangar) {
+                    rs64_m5_host_edge("send-return", m5_task_seq,
+                                      static_cast<uint32_t>(task->t.data_ptr),
+                                      0, 0, 1, -1, -1);
                     return;
                 }
                 // Fall through to HLE below.
@@ -629,6 +639,9 @@ public:
             s_last_ucode = task->t.ucode;
             s_last_data = task->t.ucode_data;
             if (s_hle_disabled.load(std::memory_order_relaxed)) {
+                rs64_m5_host_edge("send-return", m5_task_seq,
+                                  static_cast<uint32_t>(task->t.data_ptr),
+                                  0, 0, 1, -1, -1);
                 return;
             }
             app->state->rsp->reset();
@@ -720,6 +733,9 @@ public:
                                      0,
                                      /*isHLE*/ true);
 #endif
+            rs64_m5_host_edge("send-return", m5_task_seq,
+                              static_cast<uint32_t>(task->t.data_ptr),
+                              0, 0, 1, -1, -1);
         }
     }
 

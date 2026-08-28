@@ -123661,3 +123661,24 @@ AUTOPILOT. The probe was live and recorded phase-4 receives from
 guest receive/forward pair, but the port does not enter the comparison phase.
 It rules out neither missing port delivery nor ordering. No behavior changed.
 Evidence: `scratch/agent/s3051_m5_external_dp_delivery/AUDIT.md`.
+## Session 3052 (2026-08-28) — audited host DP completion order
+
+Ran the bounded M5 host-completion/route-order unit. The independent retail
+oracle was unavailable in this checkout because its required ROM and
+debugger-enabled core paths were absent; no retail null was used as evidence.
+
+Added one host-side, phase-keyed sequence table joining `send_dl`
+entry/return, `dp_complete`, DP external enqueue, and DP external delivery.
+The Debug build succeeded after two namespace fixes. The fixed 30-second
+LLE-only AUTOPILOT capture from `build/` positively fired the phase controls
+and recorded 726 sends, 553 returns, 553 DP completions, 553 DP enqueues, and
+99 DP deliveries. Same-sequence rows show `send-return` → `dp-complete` →
+`external-enqueue`; delivery occurs later on the consumer thread.
+
+The run nevertheless stopped at VI 640 origin `0x0066A500`; route preparation
+remained `accepted=0` and title/hangar phases did not arm. The initial shared
+512-row cap hid later edges, so it was corrected in-iteration to independent
+per-edge budgets and the fixed run was completed. This selects
+`H-MeasurementInsufficient` for the target-phase discriminator and rules out
+no target-phase completion or ordering hypothesis. No behavior change was
+justified. Evidence: `scratch/agent/s3052_m5_route_order/AUDIT.md`.
