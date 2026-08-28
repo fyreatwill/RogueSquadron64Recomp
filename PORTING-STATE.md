@@ -122246,3 +122246,21 @@ actionable executable fragment, and renames the entry to
 `data_gap_800AEC54` in the project map, companion map, generated header,
 overlay table, and C definition. `RecompiledFuncs` built successfully with
 the repository's existing warnings. Next candidate: `0x800B2628`.
+
+## Session 2959 (2026-08-28) — preserved ambiguous menu-overlay fragment
+
+Ran the bounded generated-symbol census for the next placeholder after
+`0x800AEC54`, `fake_func_800B2628` (`0x8` bytes). The complete body is only
+`lwc1 $f0, -0x5D04($at)` at `0x800B2628` and `swc1 $f0, 0x168($v0)` at
+`0x800B262C`, followed by the complete `buildFormatMessageGlyphBuffer`
+entry at `0x800B2630`. The predecessor `playExitSoundAndToggleScreenMeshes`
+already returns at `0x800B2620`/`0x800B2624`. Exact searches found no caller,
+independent lookup, companion semantic name, or alternate source/m2c entry.
+
+Selected H-Fragment: preserve `fake_func_800B2628`. The instructions are
+valid executable code, so this is not a mechanically proven data gap, and no
+semantic rename is justified. This rules out H-Callable and H-DataGap for
+this address, and advances the sweep to the next census candidate after
+`0x800B2628`.
+
+Artifact: `scratch/agent/s2959_generated_symbol_rename/source-table.md`.
