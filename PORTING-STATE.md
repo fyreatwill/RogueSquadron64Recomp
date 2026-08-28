@@ -122805,3 +122805,20 @@ title-phase wait. It produced zero alloc target rows and zero crash/abort
 markers. This is unevaluable because the target phase never fired, not
 evidence for a missing alloc edge; no behavior repair was attempted. Artifact:
 `scratch/agent/s2991_m5_alloc_signal/RESULTS.md`.
+
+## Session 2992 (2026-08-28) — audited actual ProducerMark caller
+
+Audited the queued M5 premise against generated code before adding the probe.
+The retail table's `0x8000C0C4` predecessor is the READY call
+`bufferArbiterMarkSlotReady` (`0x8001BEC8`), while generated
+`bufferArbiterProducerMark` (`0x8001BCE4`) callers are `0x8000BFE8`,
+`0x8000C440`, `0x8000C628`, and `0x8000C64C`. Added a regeneration-safe
+phase-gated probe at the dominant actual caller `0x8000BFE8` and built Debug
+successfully. The qualified port run passed 80 LLE/audio-task positive-control
+rows but remained at VI 640 origin `0x0066A500`, with no title/hangar phase,
+zero ProducerMark target rows, and no crash/abort markers. The target null is
+unevaluable, not evidence of a missing producer edge. This rules out treating
+`0x8000C0C4` as ProducerMark and selects the generated-call audit's mislabeled-
+edge outcome; it does not select `H-producer-missing` or identify the route
+repair. No guest behavior or mitigation was changed. Artifact:
+`scratch/agent/s2992_m5_producer_signal/RESULTS.md`.
