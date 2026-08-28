@@ -121327,3 +121327,20 @@ old-name searches returned zero results, and the Debug target rebuilt
 successfully. It rules out a source-backed semantic rename for this record but
 cannot prove that an undocumented indirect entry does not exist; no runtime
 behavior or mitigation was changed.
+## Session 2908 (2026-08-27) — reconciled main-text stack-adjust data gap at 0x8004661C
+
+Inspected the complete generated-symbol interval `0x8004661C..0x80046620`.
+The sole placeholder, `0x8004661C`, is a four-byte generated record containing
+only `addiu $sp,$sp,0x30`; it has no return, independent body, companion
+semantic name, generated caller, or address lookup. It immediately precedes
+the complete named `parseDatItemCommon` body at `0x80046620`. The complete
+source table is `scratch/agent/s2908_generated_symbol_rename/source-table.md`.
+
+This selects H-DataGap and renames `fake_func_8004661C` to
+`data_gap_8004661C` in the companion map, project symbol map, generated C,
+generated header, overlay metadata, and regeneration-safe rename table. Exact
+old-name searches in the active maps and generated snapshot returned zero
+results, and the Debug target rebuilt successfully. It rules out a
+source-backed semantic rename for this record but cannot prove that an
+undocumented indirect entry does not exist; no runtime behavior or mitigation
+was changed.

@@ -142,6 +142,9 @@ RENAMES = {
     # This twelve-byte generated record is a fixup trap for a missing label
     # between established NPC routines; it has no callable body or references.
     "fake_func_80040304": "data_gap_80040304",
+    # This four-byte stack-adjust fragment has no return or callable body and
+    # precedes the complete parseDatItemCommon entry.
+    "fake_func_8004661C": "data_gap_8004661C",
     # These four-byte records contain only non-returning instruction
     # fragments immediately before named routines; they are not callable
     # function bodies.

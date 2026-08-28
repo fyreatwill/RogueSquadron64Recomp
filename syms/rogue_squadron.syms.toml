@@ -679,7 +679,7 @@ functions = [
     { name = "buildGridCellLabel", vram = 0x80046214, size = 0xFC },
     { name = "populateCraftSelectGrid", vram = 0x80046310, size = 0x174 },
     { name = "loadGridCellTilesByDistance", vram = 0x80046484, size = 0x198 },
-    { name = "fake_func_8004661C", vram = 0x8004661C, size = 0x4 },
+    { name = "data_gap_8004661C", vram = 0x8004661C, size = 0x4 },
     { name = "parseDatItemCommon", vram = 0x80046620, size = 0x164 },
     { name = "loadDatFile", vram = 0x80046784, size = 0xBE4 },
     { name = "updateActiveGridCellState", vram = 0x80047368, size = 0x438 },
