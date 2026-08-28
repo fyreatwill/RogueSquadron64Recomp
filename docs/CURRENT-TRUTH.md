@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3021 (2026-08-28).
+Current maintenance marker: Session 3022 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,15 @@ not PCM correctness. The M5 route dependency remains open, but it no longer
 blocks all progress: static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3022 classified `0x80024878` as the mechanically supported short
+record `data_gap_80024878` immediately before `swizzleTextureRowsToTmem`.
+The companion map, generated body/header, and overlay registration agree;
+the generated body is only an `addu $sp,$fp,$zero` plus `lw $ra,0x1C($sp)`
+fragment, with no duplicate callable definition. Synchronized the stale
+project symbol TOML and built `RecompiledFuncs` successfully. This closes the
+exact-name and overlay-collision hypotheses without inventing a callable
+rename. Evidence: `scratch/agent/s3022_generated_symbol_rename/source-table.md`.
 
 Session 3020 completed the bounded generated-symbol audit at `0x8002221C`.
 The companion map, generated body, caller, header, and overlay registration
@@ -684,9 +693,9 @@ blocker-free workstream until a new M5 route edge is available.
    `texPackTlutAtAllocSlot` in the project map. The generated body for
    `0x800233B0` is currently an inline fragment with no callable token, so do
    not force a generated rename. Audit the next placeholder candidate
-   `0x80024878` for a defensible companion identity. Do not invent names for
-   ambiguous fragments. Keep the M5 route dependency open below and return to
-   it only with a new grounded edge.
+   `0x80024878` was classified as `data_gap_80024878`; do not invent a
+   callable name for it. Continue at the next unresolved placeholder after
+   the scanner stop, `0x8002BB34`, and keep the M5 route dependency open below.
 
 2. **M5 route repair/handoff — identify a different producer/signal edge.** The
    s2988 forced 4→5→0 host transition driver is rejected: it regressed the

@@ -123212,3 +123212,17 @@ an unnamed companion identity and a local duplicate callable while leaving a
 generator function-boundary defect open. No runtime, audio, or route behavior
 changed. The next sweep candidate is `0x80024878`. Evidence:
 `scratch/agent/s3021_generated_symbol_rename/source-table.md`.
+
+## Session 3022 (2026-08-28) — classified data gap at 0x80024878
+
+Completed the bounded generated-symbol audit at `0x80024878`. The companion
+map names the short record `data_gap_80024878`; the generated body is the
+two-instruction stack/return fragment before `swizzleTextureRowsToTmem`, and
+the generated header and overlay registration already use that name. The
+tree-wide scan found one match and no duplicate callable definition. The
+stale project symbol TOML was synchronized and
+`cmake --build build --config Debug --target RecompiledFuncs` succeeded.
+This closes the exact-name and overlay-collision hypotheses for this address,
+while ruling out an invented standalone callable rename. No runtime, audio,
+or route behavior changed. The next sweep candidate is `0x8002BB34`.
+Evidence: `scratch/agent/s3022_generated_symbol_rename/source-table.md`.

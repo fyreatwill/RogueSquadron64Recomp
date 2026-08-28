@@ -380,7 +380,7 @@ functions = [
     { name = "setDebugTextCursor", vram = 0x80024578, size = 0x30 },
     { name = "drawDebugTextString", vram = 0x800245A8, size = 0x140 },
     { name = "loadDebugAssets", vram = 0x800246E8, size = 0x190 },
-    { name = "fake_func_80024878", vram = 0x80024878, size = 0x8 },
+    { name = "data_gap_80024878", vram = 0x80024878, size = 0x8 },
     { name = "swizzleTextureRowsToTmem", vram = 0x80024880, size = 0x18C },
     { name = "data_gap_80024A0C", vram = 0x80024A0C, size = 0x4 },
     { name = "adler32", vram = 0x800269B0, size = 0x1E8 },
