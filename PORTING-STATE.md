@@ -121996,3 +121996,20 @@ changed. The next unit is a batched port-side probe of this candidate using
 the existing phase and positive-control gates. Complete artifacts:
 `scratch/agent/s2945_m5_route_state/RESULTS.md` and
 `RESULTS-phase-gated.md`.
+## Session 2946 (2026-08-28) — port-side route-state candidate probe
+
+The planned port-side match of the oracle-qualified `0x80019C00..0x8001A000`
+range was instrumented in one batch. `fixup_game_funcs.py` now owns a probe at
+the post-load `0x80019CD8` scheduler handoff, and the generated output was
+materialized for the Debug build. The target built successfully.
+
+The first legacy window-driver run was invalid because it did not reach the
+target phase and lacked the fetch control. The fixed run used the documented
+LLE settings, in-process autopilot, spin-yield diagnostic, and
+`ROGUESQ_LOG_F5_STATE=1`: VI 640 reached at 4.4 seconds, the positive
+`[f5-fetch-control]` fired 8 times, and no crash/abort occurred, but title 1024
+and hangar 512 were not reached. The candidate hook consequently fired zero
+times. This rules out neither H-RouteState nor H-RouteInput; it establishes
+that this candidate cannot yet be compared on the port because route
+qualification still fails. No behavior or audio policy change was made.
+Artifact: `scratch/agent/s2946_m5_route_state_final_20260828/RESULTS.md`.

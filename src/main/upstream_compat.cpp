@@ -35,6 +35,10 @@
 #include "librecomp/helpers.hpp"
 #include "ultramodern/ultramodern.hpp"
 
+extern "C" bool rs64_audio_current_route_snapshot(
+    uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
+    uint32_t* row, int* exit_reason, const char** arm);
+
 extern "C" uint32_t rs64_phase_ord(void);
 extern "C" volatile uint32_t g_rs64_last_guest_pc;
 extern "C" void rs64_m5_vi_commit_handoff(uint32_t caller, uint32_t requested_width,
@@ -788,6 +792,55 @@ extern "C" void rs64_m5_route_state_event(uint8_t* rdram, const char* edge,
                             a0, a1, a2, a3,
                             g_rs64_m5_route_state_entry_a1,
                             audio_nonzero, function_nonzero);
+}
+
+extern "C" void rs64_m5_route_candidate(uint8_t* rdram, uint32_t pc,
+                                           uint32_t caller, uint32_t s0,
+                                           uint32_t s1, uint32_t a0,
+                                           uint32_t a1, uint32_t a2,
+                                           uint32_t v0) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_CANDIDATE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || rdram == nullptr) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != bucket) { bucket = key; rows = 0; }
+    if (rows >= 512u) return;
+    const auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
+        const uint8_t* p = rdram + (guest - 0x80000000u);
+        return (static_cast<uint32_t>(p[0]) << 24) |
+               (static_cast<uint32_t>(p[1]) << 16) |
+               (static_cast<uint32_t>(p[2]) << 8) | p[3];
+    };
+    uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &ordinal, &route_row, &exit_reason, &arm);
+    std::fprintf(stderr,
+        "[m5-route-candidate] n=%u phase=%u width=%u origin=0x%06X "
+        "arm=%s active=%u ordinal=%u row=%u pc=0x%08X caller=0x%08X "
+        "s0=0x%08X s1=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X v0=0x%08X "
+        "m0=0x%08X m4=0x%08X m8=0x%08X mc=0x%08X st1ad0=0x%02X "
+        "st3b038=0x%02X st1ad1=0x%02X exit=%d\n",
+        rows, rs64_phase_ord(), width, origin, arm ? arm : "n/a",
+        active ? 1u : 0u, ordinal, route_row, pc, caller, s0, s1, a0,
+        a1, a2, v0, word(a0), word(a0 + 4u), word(a0 + 8u), word(a0 + 12u),
+        rs64_m5_route_state_guest_byte(rdram, 0x80141AD0u),
+        rs64_m5_route_state_guest_byte(rdram, 0x8013B038u),
+        rs64_m5_route_state_guest_byte(rdram, 0x80141AD1u), exit_reason);
+    std::fflush(stderr);
+    ++rows;
 }
 
 extern "C" void rs64_m5_b40_read(uint8_t* /*rdram*/, uint32_t read_pc,

@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2943 (2026-08-28).
+Current maintenance marker: Session 2946 (2026-08-28).
+
+Session 2946 added a regeneration-owned port probe at the oracle-qualified
+`0x80019CD8` scheduler handoff and rebuilt the Debug target successfully. The
+first legacy-driver run and the corrected in-process-autopilot run both stalled
+at pre-title VI 640; the final run added the documented spin-yield diagnostic
+and the correct `[f5-fetch-control]` positive control, which fired 8 times.
+The candidate hook fired 0 times because the route never reached title or
+hangar, so H-RouteState/H-RouteInput remain unevaluable and no port/retail
+match was established. This is a route qualification failure, not evidence of
+candidate absence. Artifact: `scratch/agent/s2946_m5_route_state_final_20260828/RESULTS.md`.
 
 Session 2945's corrected retail-oracle route-state census phase-gated the
 candidate range `0x80019C00..0x8001A000` in the verified Start schedule. The
