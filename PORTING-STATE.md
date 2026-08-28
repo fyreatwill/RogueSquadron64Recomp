@@ -121383,3 +121383,21 @@ symbol map; the rename-table entry is intentionally retained for future
 regeneration. The Debug `RogueSquadron64Recomp` target rebuilt successfully;
 only pre-existing format/sign warnings were emitted. This closes the interval
 and leaves the next sweep after `0x8004CD00`.
+
+## Session 2911 (2026-08-27) — renamed main-text data gap at 0x800538AC
+
+The planned bounded sweep examined `0x800538AC..0x800538B0`. The sole
+placeholder was a 4-byte generated body containing only `lw $v0, 0x10($fp)`;
+it has no prologue or return and sits immediately before the complete
+`trackResourceListWithMappingTables` body at `0x800538B0`. Generated caller and
+address-lookup searches found no independent references beyond the definition,
+header, and overlay metadata. The companion map supplied no semantic callable
+name, so this is a mechanically proven non-callable record and was reconciled
+as `data_gap_800538AC` in the companion map, project symbol map,
+regeneration-safe rename table, and generated C/header/overlay metadata.
+
+The generated snapshot contains no stale `fake_func_800538AC` or
+`func_800538AC` references. The full Debug `RogueSquadron64Recomp` target
+rebuilt and linked successfully, with only existing format/sign and related
+warnings. This closes the interval and rules out a source-backed semantic
+rename there; the next bounded sweep is `0x80054648..0x80054650`.

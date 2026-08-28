@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2910 (2026-08-27).
+Current maintenance marker: Session 2911 (2026-08-27).
+
+The s2911 generated-symbol sweep classified `0x800538AC..0x800538B0`.
+`0x800538AC` is a 4-byte non-callable record containing one isolated
+`lw $v0,0x10($fp)` immediately before the complete
+`trackResourceListWithMappingTables` body, with no generated callers or
+address lookup. It was renamed to `data_gap_800538AC` in the companion source
+map, project symbol map, generated C/header, overlay metadata, and
+regeneration-safe rename table; the Debug target rebuilt successfully. The
+complete table is `scratch/agent/s2911_generated_symbol_rename/source-table.md`.
 
 The s2910 generated-symbol sweep classified `0x8004CCF8..0x8004CD00`.
 `0x8004CCF8` is an 8-byte non-callable record containing two isolated `daddi`

@@ -151,6 +151,9 @@ RENAMES = {
     # This eight-byte record contains two isolated daddi instructions immediately
     # before applyPlayerVehicleStateUpdate; it has no callable body or independent name.
     "fake_func_8004CCF8": "data_gap_8004CCF8",
+    # This four-byte record is an isolated load fragment immediately before
+    # trackResourceListWithMappingTables; it is not a callable function body.
+    "fake_func_800538AC": "data_gap_800538AC",
     # These four-byte records contain only non-returning instruction
     # fragments immediately before named routines; they are not callable
     # function bodies.

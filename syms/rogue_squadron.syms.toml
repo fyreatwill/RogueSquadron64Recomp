@@ -750,7 +750,7 @@ functions = [
     { name = "clearSceneNodeMotionFields", vram = 0x8005368C, size = 0x74 },
     { name = "refreshAllSceneNodeInverseTransforms", vram = 0x80053700, size = 0xC4 },
     { name = "computeAimAnglesFromPoints", vram = 0x800537C4, size = 0xE8 },
-    { name = "fake_func_800538AC", vram = 0x800538AC, size = 0x4 },
+    { name = "data_gap_800538AC", vram = 0x800538AC, size = 0x4 },
     { name = "trackResourceListWithMappingTables", vram = 0x800538B0, size = 0x354 },
     { name = "dispatchOverlaySetupByParentAssetName", vram = 0x80053C04, size = 0x378 },
     { name = "func_80053F7C", vram = 0x80053F7C, size = 0x300 },
