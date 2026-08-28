@@ -1433,7 +1433,7 @@ functions = [
     { name = "computeNoteRatePairFromTableA", vram = 0x80093FE4, size = 0x78 },
     { name = "computeNoteRatePairFromTableB", vram = 0x8009405C, size = 0x78 },
     { name = "computeVoiceVolumePanCoefficients", vram = 0x800940D4, size = 0x274 },
-    { name = "fake_func_80094348", vram = 0x80094348, size = 0x8 },
+    { name = "data_gap_80094348", vram = 0x80094348, size = 0x8 },
     { name = "startSongSequence", vram = 0x80094350, size = 0x608 },
     { name = "stepActiveSongTracks", vram = 0x80094958, size = 0x45C },
     { name = "tickScheduledSongEvents", vram = 0x80094DB4, size = 0x130 },

@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2937 (2026-08-27).
+Current maintenance marker: Session 2939 (2026-08-27).
+
+The s2939 generated-symbol sweep classified `0x80094348` as a proven
+non-callable eight-byte jump fragment immediately before `startSongSequence`.
+Its `j 0x80094370` target lands inside that successor's body; it has no
+prologue, return, companion semantic name, generated caller, or independent
+lookup. The generated C/header/overlay metadata and rename helper already
+used `data_gap_80094348`; the project TOML and companion map are now
+synchronized. Complete table:
+`scratch/agent/s2939_generated_symbol_rename/source-table.md`.
 
 The s2938 generated-symbol sweep classified `0x80093E74` as a proven
 non-callable 12-byte epilogue fragment between complete `sqrtf_recomp` and
@@ -710,8 +719,10 @@ apply only source-backed renames and preserve callable-ambiguous records.
    `compareHalfwordAtOffset4`; s2933 reconciled `0x8008ED6C` to
    `serviceAudioOutputBuffers` and corrected its stale `0x154` project-map
    extent to `0x4`. s2936 reconciled `0x80092CF0` to
-   `interpolateConstantSamplesToPackedWord`; continue with the next remaining
-   placeholder after `0x80092CF0`.
+   `interpolateConstantSamplesToPackedWord`; s2939 classified
+   `0x80094348` as `data_gap_80094348`, synchronizing the project and
+   companion maps; continue with the next remaining placeholder after
+   `0x80094348`.
 4. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 5. **M5 CPU-side MORT publication — unresolved, callback edge closed.** Do not

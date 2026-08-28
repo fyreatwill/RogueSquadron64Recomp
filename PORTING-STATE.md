@@ -121864,6 +121864,24 @@ rename or runtime change. This rules out both an independent semantic rename
 and a `data_gap_80092F10` relabel. Complete evidence table:
 `scratch/agent/s2937_generated_symbol_rename/source-table.md`.
 
+## Session 2939 (2026-08-27) — renamed non-callable fragment at 0x80094348
+
+Ran the bounded generated-symbol census for `0x80094348`: searched the
+project map, generated C/header/overlay metadata, companion symbol map, and
+rename helper, then read the surrounding `funcs_25.c` bodies. The eight-byte
+record contains only `j 0x80094370` and `nop`, with no callable prologue or
+return. It follows complete `computeVoiceVolumePanCoefficients` code and
+jumps into the body of `startSongSequence`, which begins at `0x80094350`.
+There is no generated caller, independent lookup, or companion semantic name.
+The generated surfaces and rename helper already used `data_gap_80094348`; the
+project TOML and companion map were stale.
+
+Selected H-DataGap and synchronized both stale maps. The targeted
+`RecompiledFuncs` Debug build passed. This rules out an independent semantic
+callable rename and preserves the bounded non-callable classification; no
+runtime experiment or behavior change was needed. Complete evidence table:
+`scratch/agent/s2939_generated_symbol_rename/source-table.md`.
+
 ## Session 2938 (2026-08-27) — renamed non-callable fragment at 0x80093E74
 
 Ran the bounded generated-symbol census for `0x80093E74`: searched the
