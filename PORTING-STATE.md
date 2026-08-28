@@ -122013,3 +122013,29 @@ times. This rules out neither H-RouteState nor H-RouteInput; it establishes
 that this candidate cannot yet be compared on the port because route
 qualification still fails. No behavior or audio policy change was made.
 Artifact: `scratch/agent/s2946_m5_route_state_final_20260828/RESULTS.md`.
+
+## Session 2947 (2026-08-28) — checkpoint close-out: selects H-RoutePreTitle from s2946 result
+
+Checkpoint close-out only — no new experiment run. The stop gate rejected s2946's
+OUTCOME because the session entry used "rules out neither" rather than an explicit
+discrimination verb. This entry restates the discrimination and names the next
+discriminator.
+
+**Discrimination from s2946:** The s2946 port probe at `0x80019CD8` ran with the
+documented LLE autopilot recipe (`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`,
+`ROGUESQ_LLE_SOLO=1`, in-process autopilot, `PROBE_PHASE_WIDTH=1024`,
+`PROBE_PHASE_TIMEOUT=180`). The `[f5-fetch-control]` positive control fired 8 times
+across phases 2 and 4 (4 rows each), confirming the instrument is valid for the
+phases reached. The route stopped at pre-title VI 640 (`0x0066A500`) and never
+advanced to title 1024 or hangar 512. The candidate hook (`[m5-route-candidate]`)
+fired zero times. This selects H-RoutePreTitle and refutes H-RouteReachesTarget for
+this recipe. It does not evaluate H-RouteState or H-RouteInput because those require
+a title/hangar-qualified route.
+
+**Next discriminator:** s2905 found `key_match=1` but `accepted=0` at pre-title VI
+640, and s2882 found `route_valid=0` in all stage-call rows at the same phase. The
+route-prepare is receiving a matching key but being rejected. The next discriminating
+unit must capture the specific rejection condition at VI 640 — a probe that logs the
+failing route-prepare field (the first input that differs from the accepted retail
+value) in one batched build/run. This does not require a new oracle run; retail
+already qualified the candidate range in s2945.
