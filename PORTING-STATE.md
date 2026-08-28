@@ -121464,3 +121464,20 @@ lookup. Because the instruction is valid and a callable veneer cannot be
 excluded, the candidate was classified `ambiguous-or-fake` and left unchanged.
 No Debug build was needed because generated files did not change. Complete
 table: `scratch/agent/s2915_generated_symbol_rename/source-table.md`.
+
+## Session 2916 (2026-08-27) — preserved callable-ambiguous record at 0x80056344
+
+The bounded generated-symbol sweep inspected `0x80056344..0x80056350`.
+The sole placeholder, `fake_func_80056344`, is a 12-byte
+`lwc1 $f2,0($a0)` / `add.s $f0,$f0,$f2` / `swc1 $f0,0x12C($v0)` fragment
+between the complete `clearActiveVoiceLine` and `initNpcBookkeepingTables`
+bodies. It has no prologue or return, and exact generated searches found only
+its definition, declaration, and overlay registration; there were no callers
+or independent address lookups. The companion map retains the fake name and
+provides no semantic symbol. Since a split callable fragment cannot be
+excluded from this evidence, the selector classified it `ambiguous-or-fake`
+and preserved it. The normal reconciliation renamed zero references, while
+the `--require-rename` control failed closed with
+`bounded sweep selected no generated references`. No build was needed because
+generated files did not change. Complete table:
+`scratch/agent/s2916_generated_symbol_rename/source-table.md`.

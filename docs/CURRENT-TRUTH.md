@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history
 is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact counts and recipes
 remain in the ledger and scratch artifacts.
 
-Current maintenance marker: Session 2914 (2026-08-27).
+Current maintenance marker: Session 2916 (2026-08-27).
+
+The s2916 generated-symbol sweep inspected `0x80056344..0x80056350`. The
+sole placeholder is a 12-byte `lwc1`/`add.s`/`swc1` fragment between complete
+`clearActiveVoiceLine` and `initNpcBookkeepingTables` bodies. It has no
+prologue, return, generated caller, or independent address lookup, but those
+facts do not prove that a split fragment is non-callable; the companion map
+retains `fake_func_80056344` without a semantic name. It remains
+ambiguous-or-fake and all maps, generated files, and the regeneration-safe
+rename table are unchanged. Complete table:
+`scratch/agent/s2916_generated_symbol_rename/source-table.md`.
 
 The s2915 generated-symbol sweep inspected `0x80055A2C..0x80055A30`. The
 4-byte record contains only `subu $a0,$a0,$v0` between the complete
