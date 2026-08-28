@@ -230,7 +230,7 @@ functions = [
     { name = "setupCameraMatrices", vram = 0x80016C44, size = 0xE4C },
     { name = "setFrameLevelStateBytes", vram = 0x80017A90, size = 0x20 },
     { name = "setRenderStateFlagByteOne", vram = 0x80017AB0, size = 0x10 },
-    { name = "func_80017AC0", vram = 0x80017AC0, size = 0x10 },
+    { name = "setRenderStateFlagByteTwo", vram = 0x80017AC0, size = 0x10 },
     { name = "func_80017AD0", vram = 0x80017AD0, size = 0x10 },
     { name = "func_80017AE0", vram = 0x80017AE0, size = 0x48 },
     { name = "func_80017B28", vram = 0x80017B28, size = 0x20 },

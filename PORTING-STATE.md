@@ -122990,3 +122990,14 @@ This rules out the ambiguous-placeholder and duplicate-definition hypotheses
 for this address. No runtime, audio, or route behavior changed. The next
 candidate is `0x80017AC0`. Evidence:
 `scratch/agent/s3004_generated_symbol_rename/source-table.md`.
+## Session 3005 (2026-08-28) — synchronized setRenderStateFlagByteTwo
+
+Audited the prescribed generated-symbol candidate `0x80017AC0`. The companion
+map names it `setRenderStateFlagByteTwo`; the generated tree has one callable
+definition, five direct callers, and matching header/overlay registration. The
+scanner's overlay-reuse warning reflected registration/reference reuse, not a
+duplicate callable definition. Synchronized the stale project TOML entry and
+built `RecompiledFuncs` successfully. This rules out identity ambiguity for
+this candidate, but changes no runtime behavior. The next sweep candidate is
+`0x80017AE0`. Evidence:
+`scratch/agent/s3005_generated_symbol_rename/source-table.md`.
