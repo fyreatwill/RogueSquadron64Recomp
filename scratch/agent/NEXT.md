@@ -1,14 +1,17 @@
-# NEXT work unit — M5 target-phase qualification after route selection
+# NEXT work unit — obtain a new M5 target-phase route boundary
 
 HYPOTHESIS-ID: m5-target-phase-route-boundary
 
 ## Single work unit
 
 M5 target-phase qualification remains blocked: do not repeat the `s2618` or
-eleven-Start routes. A12 is closed (s3221/s3222: the only guest stores of
+eleven-Start routes. Session 3223 confirmed that no new route or equivalent
+retail-grounded boundary is available in this iteration. A12 is closed
+(s3221/s3222: the only guest stores of
 `0x8014974C` are named binary-gate publications, selects H-NamedFlagWriter).
 The next unit can run only after a human-selected route change or an equivalent
-retail-grounded boundary is available.
+retail-grounded boundary is available. Human input required: select the route
+or supply the boundary and its launch recipe.
 
 The recv-trace instrumentation (`ROGUESQ_RECV_TRACE`) in upstream_compat.cpp
 is passive and env-gated; it is available but was not run in s3221.

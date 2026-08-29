@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3222 (2026-08-29).
+Current maintenance marker: Session 3223 (2026-08-29).
 
 ## Current state
 
@@ -28,7 +28,8 @@ the status-03 wait hatch.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
-1. M5 target-phase qualification remains an open dependency: the current build
+1. M5 target-phase qualification remains an open dependency, reaffirmed in
+   Session 3223: the current build
    was rechecked with the retained `s2618` route and the eleven-Start route;
    both image arms passed dispatch/host controls but stopped at VI 640
    (`0x0066A500`) with no title or hangar transition. A human-selected route or

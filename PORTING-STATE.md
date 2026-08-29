@@ -126566,3 +126566,23 @@ closed; next dependency is the M5 target-phase route selection (human
 input required).
 
 ORIGIN: static census; no mitigation landed.
+
+## Session 3223 (2026-08-29) — blocked pending new M5 route boundary
+
+Performed the required maintenance check: `docs/CURRENT-TRUTH.md` is 7,278
+bytes, so this was not a maintenance iteration. Read the current truth, the
+next-work-unit file, and the soak-results tail. The prescribed M5 unit remains
+blocked because both disqualified routes (`s2618` and eleven-Start) must not be
+repeated, and no new human-selected route or equivalent retail-grounded
+target-phase boundary was supplied in this iteration. No build, instrument,
+run, mitigation, or submodule edit was performed; the existing dirty
+submodules were preserved.
+
+This blocks the target-phase discriminator, not because its hypotheses were
+resolved: the next run still needs to distinguish target-phase reachability,
+continued pre-target stop, and an early crash, using the same-build
+`ROGUESQ_AUDIO_UCODE=0/1` phase-gated pair and image-arm audio joins.
+
+ORIGIN: no runtime value was changed; blocker is the absent route/boundary
+selection. Human action needed: select a route or provide a retail-grounded
+boundary plus launch recipe.
