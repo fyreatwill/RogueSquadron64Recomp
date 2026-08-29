@@ -6,7 +6,16 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3185 (2026-08-29).
+Current maintenance marker: Session 3186 (2026-08-29).
+
+Session 3186 completed the bounded generated-symbol sweep for
+`0x801B0000..0x801C0000`. The required-rename helper selected zero generated
+references and returned its expected no-rename error; independent searches
+found no placeholder occurrence or definition in the interval, and the
+companion symbol files had no record there. The only textual generated-tree
+hit was an unrelated jump comment outside the function-address interval. The
+band is closed without a semantic rename. Evidence:
+`scratch/agent/s3186_generated_symbol_sweep.md`.
 
 Session 3185 revisited the external retail-entry boundary with a new
 independent oracle census of `bufferArbiterProducerScanWait` (`0x8000BF60`)
@@ -800,7 +809,10 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    stale placeholder definition. Session 3184 closed
    `0x801A0000..0x801B0000` with zero generated references, no placeholder
    occurrence or definition, and no companion symbol record. Continue at
-   `0x801B0000..0x801C0000` and preserve ambiguous fragments.
+   `0x801B0000..0x801C0000`, closed by Session 3186: the helper selected zero
+   generated references, the independent definition search found no stale
+   placeholder, and the companion symbol files had no record in the band.
+   Continue at `0x801C0000..0x801D0000` and preserve ambiguous fragments.
 
 5. **External retail-entry boundary — compare the new wait predecessors after
    a route change.** Session 3185's independent retail oracle found

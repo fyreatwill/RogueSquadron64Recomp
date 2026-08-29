@@ -126004,3 +126004,17 @@ evidence: it identifies a live producer-wait route and new phase-dependent
 predecessors, but does not prove a port mismatch because no port arm ran.
 The result does not authorize a mitigation or runtime behavior change. Full
 evidence: `scratch/agent/s3185_retail_producer_wait/RESULTS.md`.
+## Session 3186 (2026-08-29) — bounded generated-symbol sweep closed empty band
+
+Ran the required-rename helper for `0x801B0000..0x801C0000` with the
+companion symbol directory and `--limit 16`. It selected zero generated
+references and returned its expected no-rename error. An independent search
+found no `func_*`, `fake_func_*`, or `static_*` placeholder definition or
+occurrence in the interval, and the companion symbol files had no record
+there. The only generated-tree textual hit was an unrelated jump comment at
+`0x8009F844` targeting `0x801C1C1C`, outside the selected function-address
+interval. This closes the band and rules out both an exact semantic rename and
+a data-gap rename there; continue at `0x801C0000..0x801D0000`.
+The queued M5 validation tail also reported `s2680` launch failure `rc=127`
+at zero seconds; it supplies no runtime evidence and does not change the M5
+route blocker.
