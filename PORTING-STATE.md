@@ -127131,3 +127131,15 @@ missing status-03 publisher/terminal transition in this audited snapshot and
 rules out treating the shutdown wait as an unexplained value. It does not
 provide runtime causation and authorizes no guard, force-clear, wait, or audio
 behavior change. Evidence: `scratch/agent/s3249_m3_status03_audit.md`.
+
+## Session 3250 (2026-08-29) — reran unavailable M5 guard build
+
+Ran the exact configured command `cmake --build build --config Debug --target
+PatchesLib`. It exited 2 immediately: `No rule to make target PatchesLib`.
+Inspection showed the cache still points to `E:/mips-toolchain`, this Unix
+checkout has no `mips64-elf-gcc` or `mips64-elf-ld`, and there is no generated
+`RecompiledPatches/patches.c`. `CMakeLists.txt` only defines `PatchesLib` when
+those prerequisites are available. The M5 Step 3 run was therefore not
+possible. This selects `H-GuardHostMissing` for the local environment and
+rules out neither the guard nor any audio behavior; validation still requires
+the configured Windows/MIPS host.

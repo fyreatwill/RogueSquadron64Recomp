@@ -1,12 +1,15 @@
-# NEXT work unit — validate the M5 guard on a configured MIPS host
+# NEXT work unit — obtain the configured M5 guard validation host
 
 HYPOTHESIS-ID: m5-step3-guard-validation
 
-Run the exact configured `PatchesLib` build on a Windows/MIPS host (or with
-equivalent Rogue Squadron generated patch artifacts), then run the existing
-bounded M5 Step 3 validation. Do not substitute the sibling Starfox artifact,
-Clang, or the host-only N64Recomp binary. Do not change audio behavior unless
-the Step 3 target-phase row identifies one writer/consumer relation.
+The local attempt in Session 3250 selected `H-GuardHostMissing`: the exact
+`PatchesLib` target is absent because the configured MIPS/generated patch
+prerequisites are unavailable. The next single work unit is to run that exact
+build on the configured Windows/MIPS host (or obtain equivalent Rogue
+Squadron generated patch artifacts), then run the existing bounded M5 Step 3
+validation. Do not substitute the sibling Starfox artifact, Clang, or the
+host-only N64Recomp binary. Do not change audio behavior unless Step 3
+identifies one legitimate writer/consumer relation.
 
 ## Competing hypotheses
 
