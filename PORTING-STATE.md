@@ -125210,3 +125210,15 @@ no new transition-capable retail PC outside the closed sets. This selects
 is single-source static evidence and does not authorize a port probe or
 behavior change. Evidence:
 `scratch/agent/s3134_m5_upstream_source_census.md`.
+## Session 3135 (2026-08-28) — found no independent M5 upstream source
+
+Ran the exact bounded source census from `scratch/agent/NEXT.md` across the
+companion decomp tree and project tree, excluding the append-only ledger and
+soak logs. Matches were limited to existing declarations, symbol entries,
+and already-present probes/references. No restored generated body,
+disassembly, new transition-capable retail PC, or new pending-to-descriptor
+writer/reader edge was found. This selects `H-StaticInsufficient` again and
+leaves the M5 route blocker unresolved. It rules out choosing another static
+candidate from the searched material; no build, run, port probe, or behavior
+change was performed. Evidence:
+`scratch/agent/s3135_m5_upstream_source_census.md`.

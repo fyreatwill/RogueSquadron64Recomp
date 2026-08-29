@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3134 (2026-08-28).
+Current maintenance marker: Session 3135 (2026-08-28).
 
 ## Current state
 
@@ -236,6 +236,15 @@ transition-capable retail PC outside the closed candidate sets. This selects
 This is single-source static evidence; it authorizes no port probe or
 behavior change. Evidence:
 `scratch/agent/s3134_m5_upstream_source_census.md`.
+
+Session 3135 reran the exact bounded census across the companion and project
+trees. Matches remained limited to existing declarations, symbol entries,
+and existing probes/references; no restored generated body, disassembly, new
+transition-capable retail PC, or new pending-to-descriptor edge appeared.
+This selects `H-StaticInsufficient` again and leaves the M5 route blocker
+unresolved. Static, single-source evidence; no build, run, port probe, or
+behavior change. Evidence:
+`scratch/agent/s3135_m5_upstream_source_census.md`.
 
 ## Next steps
 
