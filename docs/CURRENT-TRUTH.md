@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3095 (2026-08-28).
+Current maintenance marker: Session 3096 (2026-08-28).
+
+Session 3096 completed the bounded six-surface audit at `0x800457CC`. The
+companion map, generated body, callers, header, overlay registration, and
+rename tooling agree that this is a 4-byte non-callable fragment before
+`initGridLayerFromLevelData`; the project TOML was the only stale surface and
+now uses `data_gap_800457CC`. The next unresolved project placeholder is
+`fake_func_80055A2C`. Evidence:
+`scratch/agent/s3096_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
+runtime, route, audio, mitigation, or generated instruction behavior changed.
 
 Session 3095 completed the bounded six-surface audit at `0x80041EEC`. The
 companion map, generated body, callers, header, overlay registration, rename
@@ -716,7 +727,7 @@ parked pending a new discriminator.
    M5 route probes in Sessions 3091–3094 have not reached a target-phase
    discriminator; park the route thread rather than adding another field.
    Resume at the next unresolved project placeholder, currently
-   `fake_func_800457CC`.
+   `fake_func_80055A2C`.
    Audit companion map, generated body, callers, header, overlay registration,
    project TOML, and local duplicates; preserve fragments/data gaps and do not
    invent semantic names. Keep `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.

@@ -672,7 +672,7 @@ functions = [
     { name = "teardownAnimatedMapGridLayer", vram = 0x80045708, size = 0xA4 },
     { name = "setGridLayerScrollX", vram = 0x800457AC, size = 0xC },
     { name = "setGridLayerScrollBounds", vram = 0x800457B8, size = 0x14 },
-    { name = "fake_func_800457CC", vram = 0x800457CC, size = 0x4 },
+    { name = "data_gap_800457CC", vram = 0x800457CC, size = 0x4 },
     { name = "initGridLayerFromLevelData", vram = 0x800457D0, size = 0x390 },
     { name = "updateGridLayerScroll", vram = 0x80045B60, size = 0x4D0 },
     { name = "selectGridCellTileVariant", vram = 0x80046030, size = 0x1E4 },

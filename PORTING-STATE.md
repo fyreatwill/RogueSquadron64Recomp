@@ -124503,3 +124503,20 @@ Evidence: `scratch/agent/s3095_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
 runtime, route, audio, mitigation, or generated instruction behavior changed.
+
+## Session 3096 (2026-08-28) — synchronized 0x800457CC data-gap symbol
+
+The bounded six-surface generated-symbol audit examined `0x800457CC`. The
+companion map documents a defined 4-byte record before
+`initGridLayerFromLevelData`, not a callable function. The generated body
+contains only `addiu $a2, $a2, -3`, with no prologue or return sequence; no
+independent caller exists. The generated header, overlay registration, and
+rename mapping already use `data_gap_800457CC`; the project TOML was the only
+stale surface and is now synchronized. The next unresolved project placeholder
+is `fake_func_80055A2C`. This selects H-Fragment and rules out an exact
+callable identity and an ambiguous record. No build or game run was needed.
+
+Evidence: `scratch/agent/s3096_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
+runtime, route, audio, mitigation, or generated instruction behavior changed.
