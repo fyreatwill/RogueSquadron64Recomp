@@ -125653,3 +125653,22 @@ No guard, audio behavior, generated source, build, or run changed. The prior
 included in this audit; it was believable when only the local caller check had
 been considered. Evidence:
 `scratch/agent/s3162_m3_stop_voice_by_key_producer_audit.md`.
+
+## Session 3163 (2026-08-29) — audited musyxTriggerVoiceAttack index producers
+
+Completed the bounded static M3 audit of the complete voice-indexed access set
+in `musyxTriggerVoiceAttack` (`0x8009231C`). The generated tree has exactly
+two direct callers: `tickAudioChannel` at `0x8008CE7C`, where `$s6` is bounded
+by the 32-entry local loop, and `startStreamedSampleVoice` at `0x80098194`,
+where `$s0` is the result of `stopVoiceByKey` and is locally rejected only
+when it equals `-1`. The callee masks the argument to 16 bits, computes the
+`0x88` stride, and checks only the base pointer loaded from `0x801496F8`; it
+has no `<64` index check. Session 3162 independently proves the streamed
+producer returns `0..31` or `-1`, but the exact 64-entry callee contract is not
+locally established. Companion symbol metadata and the companion ELF confirm
+the named bodies and addresses. Both calls are real reachable guest sites, so
+`H-M3-Dead` is rejected and the class selects `H-M3-Unclassified`.
+
+No guard, audio behavior, generated source, build, or run changed. This is a
+static contract classification, not proof of a retail-invalid index. Evidence:
+`scratch/agent/s3163_m3_musyx_trigger_voice_attack_audit.md`.

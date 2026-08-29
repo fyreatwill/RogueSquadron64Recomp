@@ -6,7 +6,18 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3162 (2026-08-29).
+Current maintenance marker: Session 3163 (2026-08-29).
+
+Session 3163 completed the bounded static M3 audit of
+`musyxTriggerVoiceAttack`'s complete voice-indexed `0x88`-stride access set.
+Both reachable callers were enumerated: the tick caller's 32-entry loop proves
+`0..31`, while the streamed caller passes `stopVoiceByKey`'s result with only a
+local `!= -1` check. Session 3162 independently proves that producer returns
+`0..31` or `-1`, but the callee itself masks to 16 bits and checks only the
+`0x801496F8` base pointer. The class selects `H-M3-Unclassified` from
+generated control flow plus companion symbol/ELF metadata. No guard, audio
+behavior, generated source, build, or run changed. Evidence:
+`scratch/agent/s3163_m3_musyx_trigger_voice_attack_audit.md`.
 
 Session 3162 completed the bounded static M3 producer audit for
 `stopVoiceByKey`'s result. Its sole generated caller is
@@ -545,9 +556,11 @@ the status-03 wait hatch.
    writer set. Select the next complete NULL-plus-offset class from the
    existing M3 inventory and enumerate all sites in one audit. The next
    selected class is `musyxTriggerVoiceAttack`'s voice-indexed record access.
-   The generated-symbol sweep lead for `0x800A0000..0x800B0000` is closed by
-   Session 3160; resume it only in a different address band after M3 is no
-   longer actionable.
+   Session 3163 completed the selected `musyxTriggerVoiceAttack` class and
+   confirmed `H-M3-Unclassified`; select the next unresolved producer edge
+   from the existing M3 inventory. The generated-symbol sweep lead for
+   `0x800A0000..0x800B0000` is closed by Session 3160; resume it only in a
+   different address band after M3 is no longer actionable.
 
 2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI

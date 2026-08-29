@@ -1,11 +1,11 @@
-# NEXT work unit — bounded M3 audit of the next unresolved voice-index producer
+# NEXT work unit — bounded M3 audit of the unresolved handle producer edge
 
 HYPOTHESIS-ID: m3-idiom-audit
 
-Session 3162 proved the `stopVoiceByKey` producer edge: its only caller is
-`startStreamedSampleVoice`, and `allocateSynthVoice` returns `0..31` or `-1`
-because the complete `D_80141AD0` writer set clamps the scan count to `0x20`.
-Evidence: `scratch/agent/s3162_m3_stop_voice_by_key_producer_audit.md`.
+Session 3163 completed the `musyxTriggerVoiceAttack` site/producer table.
+The tick producer is bounded to `0..31`; the streamed producer is the proven
+`stopVoiceByKey` `0..31`/`-1` edge, but the local callee has no `<64` check.
+Evidence: `scratch/agent/s3163_m3_musyx_trigger_voice_attack_audit.md`.
 
 Session 3161 classified `musyxTriggerVoiceAttack` as
 `H-M3-Unclassified`: the tick caller is proven within the 0x20 channel range,
@@ -14,29 +14,30 @@ without a dominating `<64` proof. Do not add a guard from this classification.
 
 ## Single work unit
 
-Audit the next complete NULL-plus-offset idiom class from the existing M3
-inventory. Enumerate every site, its pointer/index producer, and independent
-companion symbol/ELF evidence in one static table. Do not add a guard or audio
-change from an unclassified result.
+Audit the unresolved `stopVoicesByHandle` handle producer edge. Enumerate every
+reachable caller, every writer/allocator of the node `+0x8` handle field, and
+the direct/indirect dispatch evidence in one static table. Do not add a guard
+or audio change from an unclassified result.
 
 Competing hypotheses and discriminator:
 
-- `H-M3-Proven`: every reachable producer proves `0..63`.
-- `H-M3-Unclassified`: at least one reachable producer lacks that proof; this
+- `H-HandleProven`: every reachable producer proves a valid handle contract.
+- `H-HandleUnclassified`: at least one reachable producer lacks that proof; this
   is a contract classification, not proof of a retail-invalid value.
-- `H-M3-Dead`: apparent producer edges are unreachable lowering artifacts.
+- `H-HandleDead`: apparent producer edges are unreachable lowering artifacts.
 
 The discriminating measurement is one complete site/producer table containing
-guest PC, caller, source, rejection/range checks, and independent metadata.
-Every outcome selects one of the three hypotheses.
+guest PC, caller, field writer, handle construction/range checks, dispatch
+edges, and independent companion symbol/ELF metadata. Every outcome selects
+one of the three hypotheses.
 
 Exact starting commands:
 
 ```sh
-rg -n 'stopVoiceByKey|allocateSynthVoice' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h
-rg -n 'stopVoiceByKey|allocateSynthVoice|801496F8|count:0x40' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+rg -n 'stopVoicesByHandle|allocVoiceHandleNode|resolveVoiceSlotByHandle|0x8\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h
+rg -n 'stopVoicesByHandle|allocVoiceHandleNode|resolveVoiceSlotByHandle|handle list' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 ```
 
-Expected outcome: a complete table selects `H-M3-Proven`,
-`H-M3-Unclassified`, or `H-M3-Dead`. No runtime probe or build is authorized
+Expected outcome: a complete table selects `H-HandleProven`,
+`H-HandleUnclassified`, or `H-HandleDead`. No runtime probe or build is authorized
 for this static audit.
