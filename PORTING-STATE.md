@@ -125222,3 +125222,22 @@ leaves the M5 route blocker unresolved. It rules out choosing another static
 candidate from the searched material; no build, run, port probe, or behavior
 change was performed. Evidence:
 `scratch/agent/s3135_m5_upstream_source_census.md`.
+
+## Session 3136 (2026-08-28) — synchronized mission-overlay generated symbol
+
+Pivoted to the mandated generated-symbol-renaming sweep because the M5 route
+remains blocked on an external retail handoff source. The bounded selection
+used `tools/rename_generated_symbols.py` over `0x800E9AE0`–`0x800E9BF4` with
+the companion decomp tree and required a rename. It synchronized three
+generated references: the declaration, overlay-table entry, and body name
+`func_800E9AE0` → `func_mission_overlay_800E9AE0`. The companion map and prior
+overlay audit support the overlay-qualified identity; the two ambiguous
+`fake_func_800AE3E4`/`fake_func_800B75C4` fragments were left unchanged. The
+post-change search found only the new name in all three generated sites.
+This is a source-only symbol change, so no build or game run was needed and
+no runtime behavior changed.
+
+ORIGIN: companion symbol map and generated overlay record at `0x800E9AE0`;
+the renamed value is a legitimate function identity, not a mitigation.
+Evidence: `tools/rename_generated_symbols.py`; external
+`N64Recomp/RecompiledFuncs/{funcs_39.c,funcs.h,recomp_overlays.inl}`.

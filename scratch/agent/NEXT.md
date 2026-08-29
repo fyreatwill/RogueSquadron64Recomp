@@ -1,37 +1,45 @@
-# NEXT work unit — obtain an independent M5 upstream handoff source
+# NEXT work unit — rename a defensible generated-symbol batch
 
-HYPOTHESIS-ID: m5-audio-route-upstream-retail-boundary
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Human-provide or restore one actionable independent source for the missing
-640-to-1024 handoff: an equivalent generated body/disassembly, or a newly
-static-selected retail PC outside the closed wrapper/callsite set. Do not
-build, add a port probe, or change audio/route behavior before that source
-exists.
+Select one bounded batch of placeholder `func_0x...` symbols from the
+external generated snapshot and rename only entries with a human mapping
+supported by the companion decomp symbols/m2c output or an unambiguous
+call/data-flow match. Do not rename the two deliberately preserved
+`fake_func_*` fragments or invent semantic names. This is a source-only
+cleanup; no build or game run is required.
 
 ## Competing hypotheses
 
-- H-RetailNewEdge: independent static evidence identifies one new
-  transition-capable retail instruction outside the rejected set.
-- H-SnapshotRestored: a complete equivalent generated/disassembly source
-  makes the pending-to-descriptor edge mechanically enumerable.
-- H-StaticInsufficient: no independent source or new edge is available; the
-  route remains blocked pending a supplied artifact.
+- H-DefensibleBatch: at least one placeholder has an independently supported
+  human name and can be renamed consistently across generated C/header/symbol
+  references.
+- H-AmbiguousBatch: the candidate batch has no support beyond address-shaped
+  evidence, so it must remain unchanged and the next batch must be selected.
+- H-ExternalSnapshotUnavailable: the generated snapshot or companion mapping
+  is unavailable in this checkout, so this unit must be substituted only with
+  a documented, falsifiable blocker.
 
 ## Discriminating measurement
 
-Run the bounded census below after the source is supplied. A new exact PC
-selects H-RetailNewEdge; a complete body/data flow selects H-SnapshotRestored;
-continued absence selects H-StaticInsufficient. The falsifier for the current
-blocking explanation is the same census rerun with the supplied artifact in
-the searched trees.
+The discriminating measurement is a mapping table for every selected symbol:
+generated address, proposed human name, companion/decomp evidence, and all
+reference sites. One supported mapping selects H-DefensibleBatch; a complete
+batch with no supported mapping selects H-AmbiguousBatch; absent input files
+selects H-ExternalSnapshotUnavailable. The falsifier for the unavailable
+snapshot explanation is a readable generated file plus a matching companion
+symbol/m2c record.
 
 ## Exact command
 
 ```sh
-rg -n '80128E90|8012A86[245]|8013.*73(70|40)|requestViFeatureChange|applyPendingViChanges|selectAndApplyViMode|800356AC|80035788' /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp --glob '!PORTING-STATE.md' --glob '!scratch/agent/soak_results/**'
+find /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs -maxdepth 1 -type f -name 'funcs_*.c' -print
+rg -n '\bfunc_[0-9A-Fa-f]{8}\b' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+find /Users/williambuckley/Documents/Tools -maxdepth 3 -type d -name 'rogue_squadron64' -print
 ```
 
-If H-RetailNewEdge is selected, the following iteration must run one oracle
-watch for that exact PC with whole-RDRAM and title/hangar controls.
+If H-DefensibleBatch is selected, the next iteration should apply the next
+bounded rename batch and verify generated references/build inputs. If the
+snapshot is unavailable, restore/provide it before continuing the sweep.

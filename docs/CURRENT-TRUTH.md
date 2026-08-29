@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3135 (2026-08-28).
+Current maintenance marker: Session 3136 (2026-08-28).
 
 ## Current state
 
@@ -28,6 +28,14 @@ The regeneration-safe generated-symbol sweep is closed: the only remaining
 project placeholders are the deliberately preserved ambiguous fragments
 `fake_func_800AE3E4` and `fake_func_800B75C4`, both already audited. The next
 active engineering prerequisite is a new retail-grounded M5 boundary.
+
+Session 3136 completed a bounded generated-symbol synchronization for the
+mission-overlay body at `0x800E9AE0`: the external generated declaration and
+overlay table now use the companion-qualified name
+`func_mission_overlay_800E9AE0`, matching the already-renamed body and the
+companion's exact address/overlay record. The two deliberately preserved
+ambiguous `fake_func_*` fragments were not changed. This is source-only and
+does not alter runtime behavior.
 
 ## Latest evidence
 
