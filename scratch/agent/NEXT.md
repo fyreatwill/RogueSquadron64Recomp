@@ -26,7 +26,7 @@ execution from another pre-title route stop.
 Exact commands after the human selects the route/configuration:
 
 ```sh
-zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s3214_m5_route_requal
+zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s3215_m5_route_requal
 ```
 
 Until that human input exists, do not build or launch a substitute route. The
