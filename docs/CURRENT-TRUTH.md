@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3099 (2026-08-28).
+Current maintenance marker: Session 3100 (2026-08-28).
+
+Session 3100 completed the bounded six-surface audit at `0x800AE3E4`. The
+12-byte mission record is an instruction-only fragment with no callable
+prologue, return, generated caller, or exact companion identity. Its final
+word overlaps the independently named menu-overlay entry
+`tickEasedCameraKeyframeBlend` at `0x800AE3EC`, so neither a semantic rename
+nor a `data_gap_*` classification is safe. The placeholder is preserved and
+the sweep advances to the next unresolved project placeholder. Evidence:
+`scratch/agent/s3100_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only boundary classification and regeneration-safe metadata.
+No runtime, route, audio, mitigation, or generated instruction behavior
+changed.
 
 Session 3099 completed the bounded six-surface audit at `0x80072CE8`. The
 companion map explicitly names the two-instruction entry fragment
@@ -761,7 +774,8 @@ parked pending a new discriminator.
    M5 route probes in Sessions 3091–3094 have not reached a target-phase
    discriminator; park the route thread rather than adding another field.
    Resume at the next unresolved project placeholder, currently
-   `fake_func_800AE3E4`.
+   `fake_func_800AE3E4`, now audited and preserved; continue at the next
+   unresolved project placeholder reported by the sweep scanner.
    Audit companion map, generated body, callers, header, overlay registration,
    project TOML, and local duplicates; preserve fragments/data gaps and do not
    invent semantic names. Keep `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.

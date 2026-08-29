@@ -124399,6 +124399,27 @@ fake_func_800AE3E4`.
 ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
 runtime, route, audio, mitigation, or generated instruction behavior changed.
 
+## Session 3100 (2026-08-28) — preserved overlapping 0x800AE3E4 fragment
+
+Ran the bounded six-surface generated-symbol audit at `0x800AE3E4`. The
+mission project record is 12 bytes and the generated body contains only three
+floating-point instructions (`lwc1`, `lwc1`, `mul.s`), with no callable
+prologue, return, generated caller, or exact companion identity. The mission
+map retains `fake_func_800AE3E4`; the next mission routine begins at
+`0x800AE3F0`. The final candidate word overlaps the independently registered
+menu-overlay entry `tickEasedCameraKeyframeBlend` at `0x800AE3EC`.
+
+This supports H-Fragment but leaves the name H-Ambiguous: the instructions
+are executable bytes, not a proven data gap, and overlay overlap makes both a
+semantic rename and `data_gap_*` unsafe. The placeholder was preserved. The
+scanner stops at the next unresolved project placeholder.
+
+Evidence: `scratch/agent/s3100_generated_symbol_rename/AUDIT.md` and the
+six-surface checks recorded there. This is a naming-only result; no runtime,
+route, audio, mitigation, or generated instruction behavior changed.
+
+ORIGIN: boundary classification, not a mitigation.
+
 ## Session 3091 (2026-08-28) — attributed M5 VI selector route boundary
 
 The M5 VI selector-writer attribution ran the independent retail oracle and a
