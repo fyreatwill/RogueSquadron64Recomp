@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3239 (2026-08-29).
+Current maintenance marker: Session 3240 (2026-08-29).
 
 ## Current state
 
@@ -37,9 +37,12 @@ The true MusyX chain has allocator writer `0x8008F228`, derived-head writer
 `0x80091E28`/`0x80091F78`. `rs_malloc` returns zero on its no-fit path and
 the allocation publication has no success check, selecting a possible null
 consumer. Teardown's missing visible clear and any post-free/concurrent
-consumer remain unresolved; no patch is authorized until a safe consumer
-recovery contract is defined. Evidence:
-`scratch/agent/s3239_m3_musyx_pointer_order.md`.
+consumer remain unresolved. Session 3240 audited the complete
+`musyxBuildVoiceCommandList` loop and caller: the selected pointer is
+dereferenced at `0x80091078` before the voice loop, and the caller has no
+error/reinitialization contract. `H-NotPatchable` is selected for this class;
+no patch or allocator mitigation is authorized. Evidence:
+`scratch/agent/s3240_m3_musyx_null_contract.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection,
    but Step 3 edge selection is currently unevaluable.
@@ -50,8 +53,8 @@ recovery contract is defined. Evidence:
    hangar. This closes the current selection attempt without authorizing a
    contract, gate, wait, route, or output change. Do not repeat the parked
    qualification; a new M5 change requires a newly proven target-phase edge.
-   The next active priority is the bounded `-0x68A8`/`-0x68B0` MusyX pointer
-   audit described in `scratch/agent/NEXT.md`.
+   The `-0x68A8`/`-0x68B0` null-consumer class is now closed as a static,
+   non-patchable risk; the next active work must supply a new discriminator.
    Earlier same-build qualification evidence remains below for provenance.
    Session 3235 ran the same-build silent/image pair after adding the
    phase-scoped `[m5-port-retail-target]` commit field. Retail passed the
@@ -221,6 +224,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3240_m3_musyx_null_contract.md`,
 `scratch/agent/s3226_m5_route_writer_oracle/RESULTS.md`,
 `scratch/agent/s3220_m3_keyon_divisor_descriptor.md`,
 `scratch/agent/s3225_m5_route_boundary.md`,

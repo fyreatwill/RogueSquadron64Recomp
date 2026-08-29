@@ -126967,3 +126967,23 @@ ORIGIN: `rs_malloc` at `0x80001C74` writes the null result; zero is not a
 legitimate MusyX channel pointer. A future consumer guard must define the
 legitimate skip/recovery behavior; stale-after-free legitimacy remains
 unproven.
+
+## Session 3240 (2026-08-29) — closed MusyX null-consumer patch contract
+
+Ran the bounded recovery-contract audit requested by Session 3239. The
+complete `musyxBuildVoiceCommandList` body shows that the selected pointer is
+loaded at `0x80091060`, published at `0x80091074`, and dereferenced at
+`0x80091078` before the per-voice loop. The loop has no failure return, and
+the `musyxSynthFrame` caller at `0x80091330` does not inspect one or provide an
+array reinitialization path. This rejects a local `H-SkipVoice` recovery and
+does not establish `H-ReinitArray`; `H-NotPatchable` is selected. No build or
+runtime run was needed, and no patch or allocator mitigation was made. This
+rules out treating the defect as a loop-local bad voice node, but does not
+prove that allocation failure occurs on the validated route. Teardown's
+post-free/concurrent consumer risk remains unresolved.
+
+Evidence: `scratch/agent/s3240_m3_musyx_null_contract.md`.
+
+ORIGIN: `rs_malloc` at `0x80001C74` returns the illegitimate null value on
+no-fit; `allocateSongChannelArray` publishes it at `0x8008F228`. No
+semantics-preserving recovery writer was found.

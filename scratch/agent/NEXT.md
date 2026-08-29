@@ -1,37 +1,37 @@
-# NEXT work unit — define a patches-only null-consumer recovery contract
+# NEXT work unit — obtain a new M5 target-phase discriminator
 
-HYPOTHESIS-ID: m3-musyx-pointer-class-audit
+HYPOTHESIS-ID: m5-target-phase-edge
 
-Session 3239 selected `H-NullConsumer`: `rs_malloc` can return zero and
-`allocateSongChannelArray` publishes it without checking. The next unit is a
-bounded contract audit for a patches-only consumer guard. Do not change
-`rs_malloc` globally and do not add a runtime instrument.
+Session 3240 closed the MusyX null-consumer class as static and non-patchable.
+The next unit returns to M5 only with a genuinely new independent retail
+target-phase discriminator; do not repeat the parked port pair or add a port
+counter before ground truth.
 
 ## Competing hypotheses
 
-- `H-SkipVoice`: a null channel pointer can be detected at the command-list
-  consumer and safely skip only that voice, preserving list state.
-- `H-ReinitArray`: the correct recovery is to rerun or reinitialize the whole
-  channel array, so a local consumer skip would leave inconsistent state.
-- `H-NotPatchable`: no semantics-preserving recovery can be established from
-  the available generated code; leave the class as a documented static risk.
+- `H-PortBoundary`: a new target-phase retail writer/ordering row identifies
+  the missing port boundary.
+- `H-RetailRouteMismatch`: the observed retail target transition is not
+  comparable to the port's pre-title VI and must be rejoined at a different
+  execution edge.
+- `H-NoDiscriminator`: the available oracle route still cannot reach or join
+  the target phase, so no port behavior change is authorized.
 
 ## Discriminator
 
-Recover the complete `musyxBuildVoiceCommandList` loop and its caller contract,
-including list-head/count updates and the voice-index progression. If the
-null path has a local skip that preserves all list invariants, implement one
-override under `patches/` with an `ORIGIN:` naming `0x8008F228` as the writer.
-If recovery requires array-wide state, document the required reinitialization
-edge and do not patch this iteration. If neither can be proven, select
-`H-NotPatchable` and close the class as a static unresolved risk.
+Ask the independent retail oracle for one new target-phase execution watch or
+join around the known `0x00790A00` transition, with the whole-RDRAM positive
+control armed in the same run. The result must expose writer PC, destination
+span, payload polarity, and completion ordering. A complete row selects
+`H-PortBoundary`; a valid alternate join selects `H-RetailRouteMismatch`; a
+missing positive-controlled target transition selects `H-NoDiscriminator` and
+parks M5 without changing port behavior.
 
 ## Exact commands
 
-1. `sed -n '5140,5485p' ../N64Recomp/RecompiledFuncs/funcs_24.c` and map every
-   list-head/count write and loop exit in `musyxBuildVoiceCommandList`.
-2. `rg -n -B20 -A30 'musyxBuildVoiceCommandList\\(rdram|0x80091034|0x80091060|0x80091074|0x8009123C' ../N64Recomp/RecompiledFuncs/funcs_24.c` and identify
-   caller arguments and post-call assumptions.
-3. If a local recovery is proven, add only the corresponding `patches/`
-   override, build `PatchesLib`, then full-link and validate. Otherwise write
-   `scratch/agent/s3240_m3_musyx_null_contract.md` with the selected outcome.
+1. Read `tools/oracle/README.md` and the existing target-phase oracle recipe;
+   identify the exact watch/join site before instrumenting.
+2. Build every oracle arm in one change, retaining the whole-RDRAM positive
+   control and phase gate; run the retail recipe once and capture the bounded
+   result under `scratch/agent/soak_results/`.
+3. Record the selected hypothesis and its two evidence lines in the ledger.
