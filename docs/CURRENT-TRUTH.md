@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3219 (2026-08-29).
+Current maintenance marker: Session 3220 (2026-08-29).
 
 ## Current state
 
@@ -34,17 +34,21 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    (`0x0066A500`) with no title or hangar transition. A human-selected route or
    equivalent new retail-grounded boundary is still required. Do not repeat
    either route unchanged.
-2. Next eligible M3 class is A8 (`musyxKeyOnVoice` divide/overflow): census
-   every divisor/descriptor writer for the eight trap sites at `0x80090CEC`,
-   `0x80090D04`, `0x80090D30`, `0x80090D48`, `0x80090D74`, `0x80090D8C`,
-   `0x80090DB8`, and `0x80090DD0`. Do not remove or replace a trap without a
-   named legitimate descriptor writer. No port run until that census exists.
+2. Next eligible M3 class is A12's unresolved `0x8014974C` spin-flag
+   publication: census every generated store of that word, name the writer,
+   and say whether a zero is legitimate. Do not add a timeout or force-clear
+   without that writer. No port run until the census exists.
 3. After a route change, rerun the existing same-build phase-gated pair with
    `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-arm DMEM,
    DMA, `Broke`/SP completion, service, slot, and PCM joins; retain the silent
    arm as the no-write control.
-4. Closed static M3 publication classes, retain existing guards as safety
-   only: A9 voice-array base (`D_801496F8`) has one store at `0x8008F0EC` in
+4. Closed static M3 publication classes, retain existing traps/guards as
+   safety only: A8 `musyxKeyOnVoice` divide/overflow has one live cmd-list
+   divisor store (`musyxRenderVoiceSamples` at `0x80090768`, constant
+   `0xC0`); the four `break 6` sites are unreachable after `lhu +0x60`; the
+   four `break 7` sites are the game's own divide-by-zero handler
+   (evidence: `scratch/agent/s3220_m3_keyon_divisor_descriptor.md`). A9
+   voice-array base (`D_801496F8`) has one store at `0x8008F0EC` in
    `allocateSongChannelArray` (evidence:
    `scratch/agent/s3219_m3_voice_array_base_publication.md`); A10 3D
    voice-list head (`0x80153414`) has only the named insertion/removal/reset
@@ -100,6 +104,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3220_m3_keyon_divisor_descriptor.md`,
 `scratch/agent/s3219_m3_voice_array_base_publication.md`,
 `scratch/agent/s3218_m4_retail_dest/RESULTS.md`,
 `scratch/agent/s3217_generated_symbol_rename.md`,

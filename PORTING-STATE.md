@@ -126495,3 +126495,29 @@ added or relaxed. No build or runtime run was performed. Evidence:
 
 ORIGIN: generated guest-PC store/load census plus independent companion
 symbol metadata; no mitigation landed.
+
+## Session 3220 (2026-08-29) — completed M3 musyxKeyOnVoice divisor census
+
+The eight A8 trap sites are four `div` pairs inside `musyxKeyOnVoice`
+(`0x80090A3C`), reached only when cmd-list record `+0x21 == 3`. Every
+pair loads the same unsigned halfword at `+0x60($s0)` as the divisor.
+`$s0` is a `0x88`-stride record in the ping-pong cmd-list pair
+`D_80149708` / `D_8014970C`, passed from the sole caller
+`musyxBuildVoiceCommandList` at `0x800910A8`. The sole generated store
+of that cmd-list field is `musyxRenderVoiceSamples` at `0x80090768`
+(`sh $s5, 0x60($s0)`); `$s5` is mix `$a2`, and all three
+`musyxSynthFrame` mix sites pass constant `0xC0`. Mixer-voice ADSR
+`sw $zero, +0x60` sites (`musyxTriggerVoiceAttack`,
+`musyxStartVoiceRelease`, `beginVoiceFadeRelease`,
+`advanceVolumeFadeEnvelope`) write `D_801496F8`, a different malloc.
+`lhu +0x60` makes `$a0` never `-1`, and `(s16-s16)<<16` never
+`0x80000000`, so all four `break 6` traps are unreachable. The four
+`break 7` traps are the game's own divide-by-zero handler (uninit
+first-frame ping-pong heap, which hardware also has).
+`H-NamedDescriptor` is selected; `H-InvalidDivisorProducer` and
+`H-NoLiveDivisorWriter` are not. No trap was added or removed. No
+build or runtime run was performed. Evidence:
+`scratch/agent/s3220_m3_keyon_divisor_descriptor.md`.
+
+ORIGIN: generated guest-PC store/load census plus independent companion
+symbol metadata; no mitigation landed.

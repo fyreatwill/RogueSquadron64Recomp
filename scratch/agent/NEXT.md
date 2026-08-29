@@ -1,33 +1,32 @@
-# NEXT work unit — M3 musyxKeyOnVoice divisor/descriptor census
+# NEXT work unit — M3 A12 0x8014974C spin-flag publication census
 
-HYPOTHESIS-ID: m3-keyon-divisor-descriptor
+HYPOTHESIS-ID: m3-a12-8014974c-publication
 
 ## Single work unit
 
 M5 target-phase qualification remains blocked: do not repeat the `s2618`
-or eleven-Start routes. A9 voice-array base publication is closed (s3219:
-sole store `0x8008F0EC` in `allocateSongChannelArray`). Next eligible unit
-is the A8 idiom-class audit of every divisor/descriptor writer for the
-eight `musyxKeyOnVoice` trap sites.
+or eleven-Start routes. A8 key-on divisor/descriptor is closed (s3220:
+sole cmd-list divisor store `0x80090768` in `musyxRenderVoiceSamples`,
+value `0xC0`; four `break 6` sites unreachable). Next eligible unit is
+the A12 idiom-class audit of every generated store of the unbounded
+spin flag at `0x8014974C`.
 
 Competing hypotheses:
 
-- `H-NamedDescriptor`: every divisor loaded at the eight trap PCs is
-  written by a named voice/channel descriptor path with a finite range.
-- `H-InvalidDivisorProducer`: at least one generated store writes a zero,
-  overflow, or non-voice value into a divisor field the traps are papering
-  over.
-- `H-NoLiveDivisorWriter`: the generated tree has no remaining store into
-  those fields beyond already-named sites; the traps stay safety-only.
+- `H-NamedFlagWriter`: every store of `0x8014974C` is in a named
+  MusyX/synth path with a finite range (including a legitimate zero).
+- `H-InvalidFlagProducer`: at least one generated store writes a
+  non-terminal or overlapping value the unbounded spin is papering over.
+- `H-NoLiveFlagWriter`: the generated tree has no remaining store into
+  that word beyond already-named sites; the spin stays safety-only.
 
-Discriminator: a complete grep census of the eight trap sites' divisor
-loads, the backing record fields, every generated store into those
-fields, companion names, and caller fan-in. Classify each writer as
-in-range, out-of-range at source scope, or unresolved. No port run. No
-trap removal without a named legitimate writer.
+Discriminator: a complete grep census of every `lui 0x8015` / `-0x68B4`
+(and `0x974C` / literal `0x8014974C`) store and load, companion names,
+and caller fan-in. Classify each writer as in-range, out-of-range at
+source scope, or unresolved. No port run. No timeout or force-clear
+without a named legitimate writer.
 
-Exact start: grep `funcs_24.c` `musyxKeyOnVoice` at `0x80090A3C` for the
-eight PCs `0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`,
-`0x80090D74`, `0x80090D8C`, `0x80090DB8`, `0x80090DD0`; recover the
-loaded field offsets; census every store of those offsets in the
-generated snapshot.
+Exact start: grep `RecompiledFuncs/funcs_*.c` for `MEM_W(-0X68B4`,
+`sw …, -0x68B4`, `0x974C`, and `0x8014974C`; recover the storing
+functions; census every store and the `waitForMusyXAudioTaskDone` /
+`shutdownAudioEngine` loads.
