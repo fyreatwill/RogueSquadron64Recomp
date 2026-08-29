@@ -41,7 +41,7 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    `musyxStoreVoiceAdsrParams`; do not add a guard without a legitimate writer
    and bound proof.
 4. Continue the regeneration-safe generated-symbol sweep at the next
-   unresolved companion placeholder, `0x800B47C4`. Recent synchronized data
+   unresolved companion placeholder, `0x800B58B4`. Recent synchronized data
    gaps are recorded in the overview and append-only ledger; preserve
    ambiguous/fake fragments.
 5. Keep the external retail-entry boundary, M4 accumulator origin, and M5
@@ -85,7 +85,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Evidence index
 
-Recent evidence includes `scratch/agent/s3206_generated_symbol_rename.md`,
+Recent evidence includes `scratch/agent/s3207_generated_symbol_rename.md`,
 `scratch/agent/s3205_generated_symbol_rename.md`,
 `scratch/agent/s3204_generated_symbol_rename.md`,
 `scratch/agent/s3203_generated_symbol_rename.md`,

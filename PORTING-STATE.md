@@ -126273,3 +126273,16 @@ table independently uses the same name. This selects `H-DataGap`, rules out a
 new semantic rename, and confirms the prior mechanical classification. No
 build or runtime run was performed because this was a source-only sweep.
 Evidence: `scratch/agent/s3206_generated_symbol_rename.md`.
+
+## Session 3207 (2026-08-29) — confirmed synchronized menu preamble at 0x800B47C4
+
+The bounded companion census found `fake_func_800B47C4` only as the 12-byte
+fragment immediately before the named `menuControllerInput` body at
+`0x800B47D0`; the companion comment explicitly describes it as a fake splat
+trampoline. The generated body and header already use
+`menuControllerInputPreamble`, and the required rename helper selected zero
+stale references. This selects the existing `H-SemanticMatch` mapping over
+`H-DataGap` and `H-Ambiguous`, with two independent lines of evidence for
+already-synchronized state. No build or runtime run was performed because
+this was a source-only sweep. The next lead is `0x800B58B4`.
+Evidence: `scratch/agent/s3207_generated_symbol_rename.md`.
