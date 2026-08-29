@@ -38,7 +38,7 @@ rg -n '80128E90|8012A86[245]|8013.*73(70|40)|requestViFeatureChange|applyPending
 rg -n '80128E90|8012A86[245]|8013.*73(70|40)|requestViFeatureChange|applyPendingViChanges|selectAndApplyViMode|800356AC|80035788' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s390_verify --glob '*.c' --glob '*.h' --glob '*.toml' --glob '*.txt'
 ```
 
-Record the complete caller list and the selected classification in a new
-`scratch/agent/s3132_m5_vi_caller_audit.md`. If H-NewStaticCaller is selected,
-the following iteration must run one oracle watch for that exact PC with the
-same whole-RDRAM, title, and hangar controls.
+Record the complete writer/reader list and selected classification in a new
+audit file. If H-NewStaticEdge is selected, the following iteration must run
+one oracle watch for that exact PC with the same whole-RDRAM, title, and
+hangar controls.
