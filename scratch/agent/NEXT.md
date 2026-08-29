@@ -1,35 +1,31 @@
-# NEXT work unit — recover the missing `allocVoiceHandleNode` producer edge
+# NEXT work unit — select and audit the next M3 NULL-plus-offset idiom
 
-HYPOTHESIS-ID: m3-stop-voices-by-handle-audit
+HYPOTHESIS-ID: m3-next-idiom-class-audit
 
 ## Single work unit
 
-Complete the open edge from Session 3150: recover all references to guest
-`0x80086450`/`allocVoiceHandleNode` (including tables, indirect dispatch, and
-unresolved `jal` targets), then trace each `$a3` setup to the node `+0x8`
-write. Do not add a guard, change audio behavior, or run the blocked M5 route.
+Select the highest-information-value still-open NULL-plus-offset idiom from
+the existing M3 audit inventory, enumerate every guest site and caller, and
+classify each base pointer as locally proven, guarded, or unclassified. Do not
+add a guard, change audio behavior, or run the blocked M5 route.
 
 ## Competing hypotheses
 
-- `H-HandleBound`: every recovered producer path establishes `$a3 < 0x20`.
-- `H-HandleUnbounded`: a recovered producer path reaches `$a3` without a
-  `<0x20` proof.
-- `H-HandleIndirectOnly`: the allocator is only reachable through an
-  indirect/table edge not represented by direct generated calls.
+- `H-M3-Proven`: every site has a local nonzero/data-flow proof.
+- `H-M3-Guarded`: every site is protected by an explicit control-flow guard.
+- `H-M3-Unclassified`: at least one reachable site lacks either proof.
 
 ## Discriminating measurement
 
-Build one complete reference/producer table: reference PC or table entry,
-dispatch mechanism, `$a3` setup, range operation, and path to node `+0x8`.
-`H-HandleBound` requires every recovered path to establish `< 0x20`; an
-unbounded recovered path selects `H-HandleUnbounded`; only indirect/table
-reachability with no recoverable input selects `H-HandleIndirectOnly`.
+Build one complete site table: guest PC, base register, offset, defining load
+or allocation, null/range test, and all reachable callers. `H-M3-Proven`
+requires a proof at every site; `H-M3-Guarded` requires an explicit guard at
+every site; one unclassified reachable site selects `H-M3-Unclassified`.
 
 ## Exact commands
 
 ```sh
-rg -n 'stopVoicesByHandle|0x8013D880|0x80141AD0|0x17C|0x17c|0x64\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n 'startNoteOnVoice|allocateSynthVoice|freeSynthVoiceFromActiveList' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n '80086450|0x80086450|allocVoiceHandleNode|0x86518' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/N64Recomp/*.toml
+rg -n -i 'm3.*(inventory|audit)|null.plus.offset|unclassified.*deref' docs scratch/agent --glob '*.md'
+rg -n 'MEM_[BHW]|0x[0-9A-Fa-f]+\(\$[a-z0-9]+\)' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
 git diff --check
 ```

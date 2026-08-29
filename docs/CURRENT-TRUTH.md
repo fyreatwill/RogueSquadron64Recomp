@@ -6,7 +6,18 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3150 (2026-08-29).
+Current maintenance marker: Session 3151 (2026-08-29).
+
+Session 3151 completed the bounded producer-edge census for
+`allocVoiceHandleNode`. The generated call graph and project dispatch metadata
+contain no direct call, `jal`, function-pointer table entry, or `get_function`
+lookup for `0x80086450`; only the declaration, body, overlay registration, and
+symbol record remain. The companion symbol file and ELF symbol table confirm
+the body independently, but the available host disassembler cannot decode the
+MIPS ELF. This selects `H-HandleIndirectOnly` as a single-source static
+classification of an unrecovered producer edge, not proof of a retail invalid
+handle. No guard or runtime behavior changed. Evidence:
+`scratch/agent/s3151_m3_alloc_voice_producer_edge.md`.
 
 Session 3150 completed the bounded M3 handle-writer audit for
 `stopVoicesByHandle`. All four callers load the same linked-list node `+0x8`
@@ -411,10 +422,11 @@ audit; M5 remains an open dependency, not a reason to stop the loop.
 1. **M3 crash work — bounded idiom-class audit.** The
    `slotDispatcherIter` and the two `slotDispatcherInner` pointer classes
    are closed by Sessions 3146–3148. Select the next bounded NULL-plus-offset
-   idiom from the existing M3 audit inventory; `stopVoicesByHandle` is now
-   selected as an open class because its 8-bit handle-to-32-record bound is
-   unproven. Trace every handle writer/allocator and its low-byte range before
-   considering any guard.
+   idiom from the existing M3 audit inventory. The
+   `stopVoicesByHandle` producer edge is unresolved: no direct or recoverable
+   indirect call to `allocVoiceHandleNode` was found, and no guard is
+   authorized. Select a different complete idiom class unless a new
+   instruction-level dispatch source becomes available.
 
 2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI

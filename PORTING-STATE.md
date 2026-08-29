@@ -125463,3 +125463,20 @@ rules out the caller-mismatch hypothesis but does not authorize a guard or
 mitigation. No build, run, code, or runtime behavior changed.
 
 Evidence: `scratch/agent/s3150_m3_stop_voices_handle_writers.md`.
+
+## Session 3151 (2026-08-29) — censused `allocVoiceHandleNode` producer edge
+
+The selected M3 work unit searched the generated call graph, overlay table,
+project dispatch code, and companion symbol metadata for all references to
+`allocVoiceHandleNode` at `0x80086450`. Only its declaration, body, overlay
+registration, and symbol record were found: no direct generated call, `jal`,
+function-pointer table entry, or `get_function` lookup is recoverable. The
+companion symbol file and ELF symbol table independently confirm the body, but
+the available host disassembler cannot decode the MIPS ELF. A raw ELF scan
+also found no direct `jal` encoding for the target. This selects
+`H-HandleIndirectOnly` as a single-source static classification of an
+unrecovered producer edge. It does not prove a retail invalid handle and does
+not authorize a guard or mitigation. No build, run, code, or runtime behavior
+changed.
+
+Evidence: `scratch/agent/s3151_m3_alloc_voice_producer_edge.md`.
