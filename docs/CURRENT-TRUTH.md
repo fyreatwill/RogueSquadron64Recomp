@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3149 (2026-08-29).
+Current maintenance marker: Session 3150 (2026-08-29).
 
 Session 3150 completed the bounded M3 handle-writer audit for
 `stopVoicesByHandle`. All four callers load the same linked-list node `+0x8`
