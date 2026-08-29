@@ -6,6 +6,20 @@ recipes and historical evidence remain in the append-only ledger.
 
 Current maintenance marker: Session 3092 (2026-08-28).
 
+Session 3093 ran the M5 Step 1 image-vs-silent qualification after rebuilding
+the Debug target. The independent retail oracle passed the whole-RDRAM
+positive control (`10000` callbacks), reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`. The same-build port arms both positively
+dispatched 78 audio tasks (silent `real_ucode=0`, image `real_ucode=1`) but
+both stopped at VI-640 `0x0066A500`; neither produced target-phase task,
+DMA, service, slot, voice, or PCM rows. This rejects an audio-arm-specific
+route difference but leaves the Step 1 audio contract unevaluable. The next
+M5 discriminator moves upstream to VI-mode publication/consumer handoff.
+Evidence: `scratch/agent/s3093_m5_step1_qualification/AUDIT.md`.
+
+ORIGIN: qualification-only A/B. No audio behavior, gate, wait, voice guard,
+or output destination changed.
+
 Session 3092 ran the M5 ProducerMark handoff discriminator after an
 independent retail preflight. Retail passed the whole-RDRAM control, reached
 title/hangar, and executed `0x8001BCE4` with dominant predecessor

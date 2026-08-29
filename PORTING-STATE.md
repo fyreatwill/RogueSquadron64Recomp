@@ -124447,3 +124447,22 @@ capture, `run.log`, and `run.log` from the fixed port capture.
 
 ORIGIN: diagnostic-only generated callsite and entry/exit witnesses; no game
 state, route, audio, or mitigation behavior changed.
+## Session 3093 (2026-08-28) — qualified M5 image against silent audio arm
+
+The Debug target rebuilt successfully. The independent retail oracle passed
+the whole-RDRAM positive control (`10000` callbacks), reached title
+`1024 @ 0x00790400`, and reached hangar `512 @ 0x006AB400`. The same-build
+port pair launched concurrently: the silent arm dispatched 78 tasks with
+`real_ucode=0`, and the Factor 5 image arm dispatched 78 with `real_ucode=1`.
+Both stopped at VI 640 origin `0x0066A500`; neither reached title or hangar,
+and both had zero target-phase task-ABI, DMA, image-stage, service, slot,
+voice, PCM, crash, or abort rows. The positive dispatch controls fired, so
+the downstream nulls are not absent-instrument evidence.
+
+This rejects an audio-arm-specific route difference. H-AudioDegeneracy and
+H-ContractGap remain unevaluable because the target phase was not reached;
+the next discriminator moves upstream to the VI-mode publication/consumer
+handoff. No audio behavior, gate, wait, voice guard, or output destination
+changed. Evidence: `scratch/agent/s3093_m5_step1_qualification/AUDIT.md`.
+
+ORIGIN: qualification-only A/B; no mitigation or runtime behavior change.
