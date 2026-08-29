@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3201 (2026-08-29).
+Current maintenance marker: Session 3202 (2026-08-29).
 
 ## Current state
 
@@ -84,10 +84,11 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Evidence index
 
-Recent evidence includes `scratch/agent/s3192_m5_step1_contract_pair.md`,
+Recent evidence includes `scratch/agent/s3202_generated_symbol_rename.md`,
+`scratch/agent/s3192_m5_step1_contract_pair.md`,
 `scratch/agent/s3185_retail_producer_wait/RESULTS.md`, and generated-symbol
 reports `scratch/agent/s3197_generated_symbol_rename.md` through
-`scratch/agent/s3200_generated_symbol_rename.md`. Use `grep -n` plus a bounded
+`scratch/agent/s3202_generated_symbol_rename.md`. Use `grep -n` plus a bounded
 `sed` window for `PORTING-STATE.md`; never read that multi-megabyte ledger
 wholesale. The soak queue is consumed by automation; fold only new tail lines
 into the next audit.

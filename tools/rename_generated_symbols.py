@@ -128,6 +128,9 @@ RENAMES = {
     # This generated record starts with invalid/data-decoded words and has no
     # companion symbol or standalone callable prologue.
     "static_3_800A2790": "data_gap_800A2790",
+    # This generated record starts with invalid/data-decoded words and its
+    # only generated callsite is itself inside an invalid instruction fragment.
+    "static_3_800A2E98": "data_gap_800A2E98",
     # This generated record starts with an isolated store fragment and has no
     # companion symbol or standalone callable prologue.
     "static_3_800A29BC": "data_gap_800A29BC",

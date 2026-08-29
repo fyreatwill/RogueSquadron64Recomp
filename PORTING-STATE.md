@@ -126209,3 +126209,16 @@ not alter the M5 conclusion.
 This maintenance result advances the documentation state and rules out no new
 runtime hypothesis. Prior durable conclusions and exact evidence remain in the
 overview, ledger, and referenced scratch reports.
+
+## Session 3202 (2026-08-29) — classified generated data-gap split at 0x800A2E98
+
+The bounded generated-symbol census found no companion symbol for
+`0x800A2E98`. Its generated body begins with invalid/data-decoded `mtlo`
+words rather than a callable prologue. The only generated reference is inside
+an invalid instruction fragment, so it is not independent callable evidence.
+This selects `H-DataGap` and rules out a defensible semantic companion rename.
+Added the regeneration-safe mapping `static_3_800A2E98` →
+`data_gap_800A2E98`; the required helper synchronized exactly three references
+in `funcs_49.c`, `funcs.h`, and `funcs_27.c`, with no stale placeholder left.
+No build or runtime run was needed; this was a source-only change.
+Evidence: `scratch/agent/s3202_generated_symbol_rename.md`.
