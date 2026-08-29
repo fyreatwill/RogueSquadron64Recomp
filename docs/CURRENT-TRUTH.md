@@ -6,7 +6,13 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3190 (2026-08-29).
+Current maintenance marker: Session 3191 (2026-08-29).
+
+Session 3191 advanced the generated-symbol sweep by classifying the invalid
+data-decoded split at `0x800A2114` as `data_gap_800A2114`. The regeneration-
+safe helper synchronized the generated body, header, and overlay registration;
+no runtime behavior changed. Evidence:
+`scratch/agent/s3191_generated_symbol_rename.md`.
 
 Session 3190 advanced the generated-symbol sweep by classifying the split
 record at `0x80045024` as `data_gap_80045024`: its body starts at an internal
@@ -839,8 +845,9 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    Session 3187 synchronized the stale declaration and overlay-table
    references for `0x800027B8` to the established `data_gap_800027B8` name.
    Session 3189 classified and synchronized `0x80029270` as
-   `data_gap_80029270`; resume at the next unclassified generated record and
-   preserve ambiguous fragments.
+   `data_gap_80029270`; Session 3191 classified and synchronized
+   `0x800A2114` as `data_gap_800A2114`. Resume at the next unclassified
+   generated record and preserve ambiguous fragments.
 
 5. **External retail-entry boundary — compare the new wait predecessors after
    a route change.** Session 3185's independent retail oracle found

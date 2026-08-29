@@ -116,6 +116,9 @@ RENAMES = {
     # This generated split starts at an internal label below the record
     # address, with no standalone callable prologue or companion symbol.
     "static_3_80045024": "data_gap_80045024",
+    # This generated record starts with an invalid/data-decoded instruction
+    # stream and has no companion symbol or standalone callable prologue.
+    "static_3_800A2114": "data_gap_800A2114",
     # The companion map places these short records immediately before named
     # functions; they are data gaps, not callable game routines.
     "fake_func_80064294": "data_gap_80064294",
