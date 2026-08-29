@@ -126612,3 +126612,33 @@ changed. Evidence: `scratch/agent/unblock-retail-route-20260829-1.log` and
 
 ORIGIN: no guest value was changed; the route is a documented retail input/video
 boundary, and the pair's pre-title stop is an observed route result.
+
+## Session 3225 (2026-08-29) — selected pre-title route-state boundary
+
+Performed the required maintenance check: `docs/CURRENT-TRUTH.md` is 7,495
+bytes, so this was not a maintenance iteration. Before port instrumentation,
+the independent retail oracle was run with Rice, the qualified route prefix,
+and a whole-RDRAM watch. The watch reached its 10,000-callback positive-control
+threshold; retail reached title VI 1024 at 16.2 seconds and held it through
+the 45-second run.
+
+Built the current Debug target once and ran the same-build silent/image pair
+concurrently with the qualified LLE-only route, spin-yield, `ROGUESQ_LOG_ALL`,
+and route/input/VI/recv controls. Both arms reached the same four phase
+markers, including the 640 stop at origin `0x0066A500`; neither reached title
+1024. Each emitted the same six host input edges and continued SDL polling.
+Each emitted the same route-state sequence, ending at the 640 stop with
+`target=0` and no later route transition. Recv tracing continued in both arms
+with the same `queues=30 blocked=10` summary.
+
+This selects `H-PortStateBoundary` among the planned hypotheses and refutes a
+missing input delivery or scheduler/queue stall as the first divergence. The
+selection does not identify the legitimate writer or ordering edge; that is
+the next bounded audit. No guest value, guard, or mitigation changed.
+
+Evidence: `scratch/agent/s3225_m5_route_boundary.md`,
+`scratch/agent/oracle_route_boundary_3225.log`, and
+`scratch/agent/route_boundary_3225/{silent,image}.log`.
+
+ORIGIN: no guest value was changed; this is a route-state classification from
+two same-build arms plus the independent retail phase control.

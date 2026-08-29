@@ -1,13 +1,11 @@
-# NEXT work unit — audit the pre-title route boundary
+# NEXT work unit — audit the pre-title route-state publication edge
 
 HYPOTHESIS-ID: m5-port-route-boundary
 
-Session 3224 resolved the route-selection dependency with a local, retail-
-qualified route: `3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a`.
-Retail passed the whole-RDRAM positive control and reached title 1024 and
-hangar 512. A same-build port silent/image pair using the same route passed
-audio-dispatch controls (69 rows per arm) but both stopped at VI 640 origin
-`0x0066A500`; neither reached title or hangar. A12 remains closed.
+Session 3225 selected `H-PortStateBoundary`: the independent retail oracle
+reached title 1024, but both same-build port arms stopped at 640 origin
+`0x0066A500` despite matching six input edges, continued recv progress, and
+identical route-state output ending with `target=0`.
 
 ## Competing hypotheses
 
@@ -18,21 +16,36 @@ audio-dispatch controls (69 rows per arm) but both stopped at VI 640 origin
 - `H-PortSchedulerBoundary`: host scheduling or queue progress prevents the
   same route transition despite valid input/state evidence.
 
+## Competing hypotheses
+
+- `H-StateWriterAbsent`: the expected pre-title state publication has no live
+  writer in the port's executed path.
+- `H-StateWriterWrongValue`: a live writer runs but publishes a value that
+  legitimately differs from the retail state transition.
+- `H-StateOrdering`: the right publication exists, but the route consumer
+  observes it before/after the required ordering edge.
+
 ## Discriminator
 
-Run one same-build capture of both arms with route, pad-host/pad-SDL, VI-caller,
-queue/recv, and route-state controls. Positive control: both arms' dispatch
-rows and initial VI transition. Independent boundary: retail oracle's
-whole-RDRAM control plus title/hangar phases. The first post-640 divergence
-among input delivery, state publication, or scheduler/queue progress selects
-the hypothesis. Do not infer target-phase audio nulls while 1024 is absent.
+Perform one bounded static writer/consumer audit around the existing
+`m5-route-state` callsites and the route-state guest fields they report. First
+ask the retail oracle for a positive control plus PC-attributed writes to the
+candidate physical fields; only then grep the port's guest stores and consumer
+ordering. A unique executed writer with a retail-matching value and an explicit
+consumer edge selects `H-StateOrdering`; a writer with a differing value
+selects `H-StateWriterWrongValue`; no corresponding writer selects
+`H-StateWriterAbsent`. If the oracle watch cannot be armed and positively
+validated, stop before adding port instrumentation.
+
+No build is authorized until the oracle field watch has a positive control.
+Do not infer target-phase audio nulls while 1024 is absent.
 
 ## Exact start
 
-Build `cmake --build build --config Debug --target RogueSquadron64Recomp`, then
-run both arms concurrently from `build/` with `ROGUESQ_LLE_FORCE=1`,
-`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_SPIN_YIELD=1`,
-`ROGUESQ_LOG_ALL=1`, and the route above via `ROGUESQ_AUTOPILOT`; add
-`ROGUESQ_LOG_VI_CALLERS=1`, `ROGUESQ_RECV_TRACE=1`, and
-`ROGUESQ_LOG_M5_ROUTE_STATE=1`. Capture non-dot final paths and SIGKILL at the
-watchdog boundary.
+Use `tools/oracle/build/rs64_oracle` with the same core/ROM/Rice paths as
+Session 3225, `--watch-write 0x0:0x800000 --hit-cap 3 --vi-trace`, and a
+candidate route-state field watch once its physical address is identified.
+Require the whole-RDRAM positive-control threshold and retail title 1024.
+Then run one grep/static audit of the matching guest stores and consumer
+callers. If a runtime capture is needed, build once and use both audio arms
+concurrently with the Session 3225 environment and SIGKILL watchdog.

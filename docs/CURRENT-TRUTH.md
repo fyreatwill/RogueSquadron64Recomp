@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3224 (2026-08-29).
+Current maintenance marker: Session 3225 (2026-08-29).
 
 ## Current state
 
@@ -29,13 +29,15 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection.
-   Session 3224 used the locally available, retail-qualified phase-relative
-   route `3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a`
-   (distinct from `s2618` and eleven-Start). Retail passed the whole-RDRAM
-   positive control and reached title 1024 and hangar 512. The same-build port
-   silent/image pair passed both dispatch controls but both stopped at VI 640
-   (`0x0066A500`), selecting `H-TargetRouteStillStops`. The next work unit is a
-   route-boundary audit, not another audio or target-phase null measurement.
+   Session 3225 independently revalidated the locally available,
+   retail-qualified phase-relative route
+   `3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a`:
+   retail passed the whole-RDRAM positive control and reached title 1024,
+   while the same-build port silent/image pair stopped at VI 640 origin
+   `0x0066A500`. Matching input edges and continued recv progress, alongside
+   identical route-state output with `target=0`, select `H-PortStateBoundary`
+   over input or scheduler stall. The next work unit is a bounded audit of the
+   pre-title route-state writer/publication edge, not another audio null.
 2. A12's `0x8014974C` publication class is closed by Session 3221: the only
    guest stores are `setupSongRenderBuffers` zero-init, `musyxSynthFrame`
    terminal clear, and its fixed-one pre-callback publication. The waiters
@@ -109,6 +111,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 Recent evidence includes
 `scratch/agent/s3220_m3_keyon_divisor_descriptor.md`,
+`scratch/agent/s3225_m5_route_boundary.md`,
 `scratch/agent/s3219_m3_voice_array_base_publication.md`,
 `scratch/agent/s3218_m4_retail_dest/RESULTS.md`,
 `scratch/agent/s3217_generated_symbol_rename.md`,
