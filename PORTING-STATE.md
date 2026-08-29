@@ -124504,6 +124504,20 @@ Evidence: `scratch/agent/s3095_generated_symbol_rename/AUDIT.md`.
 ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
 runtime, route, audio, mitigation, or generated instruction behavior changed.
 
+## Session 3099 (2026-08-28) — synchronized 0x80072CE8 preamble identity
+
+Ran the bounded generated-symbol six-surface audit for `0x80072CE8`. The
+companion map explicitly names the two-instruction entry fragment
+`initWaterSprayParticlesPreamble` for `initWaterSprayParticles`; the active
+generated body, header, and overlay registration independently already use
+that name, with no standalone caller. The project TOML was the only stale
+surface and is now synchronized. H-ExactIdentity was selected. No build or
+game run was needed because this was regeneration-safe symbol metadata only.
+Evidence: `scratch/agent/s3099_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
+runtime, route, audio, mitigation, or generated instruction behavior changed.
+
 ## Session 3097 (2026-08-28) — synchronized 0x80055A2C preamble identity
 
 The bounded six-surface generated-symbol audit examined `0x80055A2C`. The

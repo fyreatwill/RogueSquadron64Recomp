@@ -4,8 +4,8 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit `fake_func_80072CE8`, the next unresolved project placeholder after
-`0x8006B704`, using the
+Audit `fake_func_800AE3E4`, the next unresolved project placeholder after
+`0x80072CE8`, using the
 six-surface sweep: companion map, generated body, callers, header, overlay
 registration, project TOML, and local duplicate references. Rename only if an
 exact companion identity is supported; otherwise synchronize a mechanical

@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3098 (2026-08-28).
+Current maintenance marker: Session 3099 (2026-08-28).
+
+Session 3099 completed the bounded six-surface audit at `0x80072CE8`. The
+companion map explicitly names the two-instruction entry fragment
+`initWaterSprayParticlesPreamble`; the active generated body, header, and
+overlay registration already agree, with the project TOML as the only stale
+surface. It is now synchronized under that exact name. The next unresolved
+project placeholder is `fake_func_800AE3E4`. Evidence:
+`scratch/agent/s3099_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
+runtime, route, audio, mitigation, or generated instruction behavior changed.
 
 Session 3098 completed the bounded six-surface audit at `0x8006B704`. The
 companion map, generated body, callers, header, overlay registration, project
@@ -750,7 +761,7 @@ parked pending a new discriminator.
    M5 route probes in Sessions 3091–3094 have not reached a target-phase
    discriminator; park the route thread rather than adding another field.
    Resume at the next unresolved project placeholder, currently
-   `fake_func_8006B704`.
+   `fake_func_800AE3E4`.
    Audit companion map, generated body, callers, header, overlay registration,
    project TOML, and local duplicates; preserve fragments/data gaps and do not
    invent semantic names. Keep `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
