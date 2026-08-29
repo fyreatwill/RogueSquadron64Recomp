@@ -125530,3 +125530,21 @@ behavior. No build, run, oracle watch, generated-source edit, or mitigation
 was made.
 
 Evidence: `scratch/agent/s3154_m3_musyx_stop_voice_offset_audit.md`.
+
+## Session 3155 (2026-08-29) — proved `musyxStopVoice` index producer range
+
+Performed the planned complete static M3 audit of the sole
+`musyxStopVoice` call at `tickAllAudioChannels:0x8008CED0`. `s6` is initialized
+to zero, the call occurs before the first-loop increment, and the loop tests
+against the byte at `0x80141AD0`. The generated tree contains exactly four
+stores to that byte: the valid and fallback paths in each of
+`setDisplayMode` and `reapplyDisplayMode`. Both setters validate the input as
+`< 0x21` and store `0x20` otherwise. The companion symbol metadata
+independently identifies the same setters, validation, and active-channel
+count. Therefore the call argument is proven `0..31`, selecting
+`H-M3-ValidProducer` and closing this computed-record producer question at
+static scope. This rules out the unclassified-producer and dead-site
+hypotheses. No guard, build, run, oracle watch, generated-source edit, or
+audio behavior changed.
+
+Evidence: `scratch/agent/s3155_m3_musyx_stop_voice_index_producer.md`.

@@ -6,7 +6,16 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3154 (2026-08-29).
+Current maintenance marker: Session 3155 (2026-08-29).
+
+Session 3155 completed the bounded static M3 audit of the complete
+`musyxStopVoice` computed-record `+0x1` producer edge. `s6` starts at zero,
+the call precedes its increment, and the only four stores to the loop-count
+byte are the two display-mode setters. Each validates `< 0x21` and otherwise
+stores `0x20`, proving the call argument is `0..31`. This selects
+`H-M3-ValidProducer` from generated control flow plus independent companion
+metadata; no guard or audio change is authorized. Evidence:
+`scratch/agent/s3155_m3_musyx_stop_voice_index_producer.md`.
 
 Session 3154 completed a bounded static M3 audit of the complete
 `musyxStopVoice` computed-record `+0x1` store. The sole generated call passes
@@ -442,19 +451,17 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 6's default-off policy is now regeneration-safe. M5 target-phase
 qualification is still blocked until a route change produces title or hangar
-controls. The next work unit is to qualify this policy with the existing
-a same-build control was attempted but did not reach the drain gate. The next
-work unit is a bounded M3 idiom-class audit; do not remove the status-03 wait
-hatch.
+controls. A same-build policy control was attempted but did not reach the
+drain gate. The next work unit is a bounded M3 idiom-class audit; do not remove
+the status-03 wait hatch.
 
-1. **M3 crash work — trace the `musyxStopVoice` index producer edge.** The
-   `slotDispatcherIter` and the two `slotDispatcherInner` pointer classes
-   are closed by Sessions 3146–3148. Select the next bounded NULL-plus-offset
-   idiom from the existing M3 audit inventory. The
-   `stopVoicesByHandle` producer edge is unresolved: no direct or recoverable
-   indirect call to `allocVoiceHandleNode` was found, and no guard is
-   authorized. The next unit must enumerate every predecessor/writer reaching
-   the sole `musyxStopVoice` call; no guard is authorized.
+1. **M3 crash work — audit the next bounded idiom-class inventory entry.**
+   The `slotDispatcherIter`, `slotDispatcherInner`, and
+   `musyxStopVoice` computed-record classes are closed by Sessions 3146–3155.
+   The `stopVoicesByHandle` producer edge remains unresolved: no direct or
+   recoverable indirect call to `allocVoiceHandleNode` was found, and no guard
+   is authorized. Select the next complete NULL-plus-offset class from the
+   existing M3 inventory and enumerate all sites in one audit.
 
 2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI
