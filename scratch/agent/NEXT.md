@@ -26,13 +26,18 @@ interval is classified against companion symbols and generated definitions,
 then the helper must report at least one changed reference. An exact match
 selects SemanticMatch or DataGap; ambiguous entries remain untouched.
 
-Exact starting commands:
+Selected batch: `static_3_8009D8BC` is an invalid two-instruction generated
+split (`lwc1` plus invalid `scd`) with no callable prologue or companion
+semantic symbol. It is a mechanical data-gap rename, not a runtime change.
+
+Exact commands:
 
 ```sh
-python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --start-address 0x800027B8 --end-address 0x800027C0 --limit 16 --require-rename
-rg -ni '^RECOMP_FUNC .*\b(func|fake_func|static)_[0-9a-f]+\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | rg -i '801c[0-9a-f]{4}|801d[0-9a-f]{4}' || true
+python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --start-address 0x8009D8BC --end-address 0x8009D8C0 --limit 16 --require-rename
+rg -n 'static_3_8009D8BC|data_gap_8009D8BC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_49.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h
 ```
 
-Expected outcome: the next batch renames a selected exact stale reference, or
-the bounded sweep reports no stale generated references and selects the next
-unclassified record.
+Expected outcome: the helper changes the generated body and declaration, with
+zero stale `static_3_8009D8BC` references remaining. If it reports no rename,
+the selected record is not present in the generated snapshot and the next
+unclassified static record must be selected.

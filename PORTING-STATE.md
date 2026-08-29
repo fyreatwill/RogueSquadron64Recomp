@@ -126027,3 +126027,13 @@ Ran the regeneration-safe symbol helper on the selected exact batch at
 `fake_func_800027B8`; the helper renamed exactly 2 references in 2 files.
 The focused diff has no runtime logic change. This selects `H-DataGap` for
 this record and rules out a remaining stale placeholder at the address.
+## Session 3188 (2026-08-29) — renamed invalid generated data-gap split
+
+Ran the bounded regeneration-safe rename helper for `0x8009D8BC..0x8009D8C0`.
+The generated snapshot contained `static_3_8009D8BC` in the body, header, and
+overlay table; inspection showed only an isolated `lwc1` followed by an invalid
+`scd`, with no callable prologue or companion semantic symbol. The helper
+renamed all three generated references to `data_gap_8009D8BC`. This is a
+source-only generated-symbol change with no runtime behavior change. It rules
+out a semantic function rename for this record and closes it as `H-DataGap`.
+Evidence: `scratch/agent/s3188_generated_symbol_rename.md`.

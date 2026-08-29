@@ -8,6 +8,12 @@ read.
 
 Current maintenance marker: Session 3187 (2026-08-29).
 
+Session 3188 advanced the generated-symbol sweep by mapping the invalid
+two-instruction split at `0x8009D8BC` from `static_3_8009D8BC` to
+`data_gap_8009D8BC`. The generated body and header now agree; the record has
+no callable prologue or companion semantic symbol, so this is a mechanical
+data-gap name only. Evidence: `scratch/agent/s3188_generated_symbol_rename.md`.
+
 Session 3187 synchronized the remaining stale generated reference for
 `0x800027B8`: the generated body is `data_gap_800027B8`, and the helper
 renamed its `funcs.h` declaration and overlay-table entry from
