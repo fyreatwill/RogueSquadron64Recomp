@@ -126393,3 +126393,25 @@ route/configuration, after which `run_s2285_m5_step1_contract_pair.sh` can run.
 
 ORIGIN: iteration input/state inspection; absence of an authorized route change
 was measured from the prescribed NEXT work unit and current worktree state.
+
+## Session 3215 (2026-08-29) — re-scoped blocked M5 route qualification
+
+The unblock audit followed the required routes in order. The oracle help and
+README confirmed that the installed Rice plugin is an independent retail
+control, not a route selector for the port. A current-build run of the
+retained `s2618` route launched image and silent arms concurrently; both passed
+`audtask-dispatch` and `m5-host-boundary-control`, reached only VI 640 at
+`0x0066A500`, and had zero title/hangar and zero crash/abort markers. A second
+current-build image run using the retained eleven-Start spin-yield recipe
+reached the same VI-640 stop, with 1,280 sampled image dispatch rows and no
+title/hangar transition.
+
+These observations make the M5 target-phase route dependency real at the
+current measured scope; neither route can be repeated unchanged, and no audio
+or route behavior change is authorized. Route 3 applies: the next unit is a
+bounded static M3 audit of every `0x80153414` 3D voice-list publication,
+next/prev dereference, and traversal exit/bound. `scratch/agent/UNBLOCK.md`
+records the route evidence and the re-scoped unit.
+
+ORIGIN: current-build route validation and source/help audit; no mitigation or
+runtime behavior change was made.

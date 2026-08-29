@@ -1,20 +1,23 @@
-# Unblock result — 2026-08-28
+# Unblock result — Session 3215
 
-Route taken: 3, re-scope.
+Route 3 — re-scoped the work unit.
 
-Route 1 did not refute the dependency. The current Debug binary was run with
-the documented LLE-only, spin-yield, autopilot, and phase-gated probe settings.
-The same run observed eight host input controls and VI 640 at
-`0x0066A500`, then timed out waiting for VI 1024 after 60 seconds.
+Route 1 was checked against the oracle help, oracle README, route-related
+source, and all locally documented M5 route knobs. The oracle's Rice video
+plugin is present, but it only proves the independent retail route; it does
+not make the current port arm reach target phase.
 
-Route 2 did not satisfy it locally. Source inspection shows
-`ROGUESQ_M4_Y8000_WIDTH` only selects an M4 probe width; it is not a route
-control. Existing dirty submodule patches contain no selected upstream route
-change, and no behavior-changing route modification was inferred.
+Route 2 was tested locally on the current build:
 
-The M5 route dependency is therefore open, but the project is not stopped.
-`scratch/agent/NEXT.md` now selects a bounded M3 NULL-plus-offset idiom-class
-audit that does not require target-phase audio controls. No runtime behavior
-was changed.
+- `run_s2618_hangar_pcm_boundary.sh`: image and silent arms both passed the
+  dispatch and host-boundary controls, then stopped at VI 640,
+  `0x0066A500`; title/hangar counts were zero and crash/abort counts were zero.
+- the retained eleven-Start image recipe: dispatch reached 1,280 sampled rows
+  and the image arm passed the host control, but it also stopped at VI 640,
+  `0x0066A500`, with no title/hangar transition.
 
-Evidence: `scratch/agent/unblock_route_probe_20260828/`.
+The M5 dependency is therefore real for the target-phase measurement: a
+human-selected route or new retail-grounded boundary is still needed. Route 3
+keeps the loop moving with a bounded static M3 audit of the 3D voice-list
+writer/publication and traversal invariant, which does not require title or
+hangar reachability.

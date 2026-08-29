@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3214 (2026-08-29).
+Current maintenance marker: Session 3215 (2026-08-29).
 
 ## Current state
 
@@ -28,27 +28,34 @@ the status-03 wait hatch.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
-1. Obtain a human-selected route change or equivalent retail-grounded boundary
-   so the M5 Step 1 pair can reach title or hangar. Session 3214 is blocked on
-   this input; do not repeat the Session 3192 pair while both arms stop at VI
-   640.
-2. After a route change, rerun the existing same-build phase-gated pair with
+1. M5 target-phase qualification remains an open dependency: the current build
+   was rechecked with the retained `s2618` route and the eleven-Start route;
+   both image arms passed dispatch/host controls but stopped at VI 640
+   (`0x0066A500`) with no title or hangar transition. A human-selected route or
+   equivalent new retail-grounded boundary is still required. Do not repeat
+   either route unchanged.
+2. While M5 is blocked, perform the bounded M3 audit of
+   `tickAndReap3DAudioVoices`: enumerate every writer/publication of list head
+   `0x80153414`, every next/prev dereference, and the traversal exit/bound from
+   the companion source and generated body. Do not add a guard without a
+   legitimate writer and ordering/bound proof.
+3. After a route change, rerun the existing same-build phase-gated pair with
    `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-arm DMEM,
    DMA, `Broke`/SP completion, service, slot, and PCM joins; retain the silent
    arm as the no-write control.
-3. M3 voice/list/table audit result: the 43-site `SONGTEMPO_TABLE_GUARD`
+4. M3 voice/list/table audit result: the 43-site `SONGTEMPO_TABLE_GUARD`
    class has a concrete `startSongSequence` writer at `0x80096D88` and is
    already fully covered; no new guard work is authorized. The one
    `tickAndReap3DAudioVoices` list-head guard has a named list-head/removal
    family but its node publication and traversal bound remain unclassified.
    Do not add or relax a guard without a legitimate writer and bound proof.
-4. Session 3212 renamed the sole remaining callable generated placeholder
+5. Session 3212 renamed the sole remaining callable generated placeholder
    `static_4_80106C50` to `lvc_registerObjectiveBooleanCounts` in the
    generated declaration/body using a bounded, regeneration-safe tool. The
    body registers objective boolean-count handles and is called from
    `lvc_initializeObjectTracking`; the data-gap/live-tail fragments remain
    unchanged. Resume M3/M5 work after this mandatory sweep pivot.
-5. Keep the external retail-entry boundary, M4 accumulator origin, and M5
+6. Keep the external retail-entry boundary, M4 accumulator origin, and M5
    SP-yield/MORT publication threads parked pending a new target-phase
    discriminator. The corrected MORT descriptor edge is `+0x190` to
    `dmaVoiceSampleAndSignal`; `+0x194` is the speech source.
