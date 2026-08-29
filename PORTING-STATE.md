@@ -125349,3 +125349,16 @@ does not change port, audio, or route behavior.
 
 Evidence: `scratch/agent/s3142_m5_retail_elf_boundary.md`,
 `scratch/agent/s3142_m5_retail_elf_oracle_fixed.log`.
+
+## Session 3143 (2026-08-28) — qualified M5 port VI edge at route boundary
+
+Added a phase-scoped host witness immediately after the `VI_WIDTH_REG` write,
+corresponding to retail ELF edge `0x800357A8`, and exported the required
+submodule patch. The Debug capture used the validated LLE-only/autopilot route
+and same-run controls: 8 all-width edge controls, 8 VI-context controls, and
+1 host voice-audit control. It reached only pre-title `640 @ 0x0066A500`, with
+zero title `1024`, hangar `512`, or target-edge rows and no crash/abort. This
+selects `H-AudioRouteStillBlocked`; target parity and downstream audio nulls
+remain unevaluable. It rules out neither a target edge mismatch nor an audio
+contract gap and authorizes no audio, route, or VI behavior change.
+Evidence: `scratch/agent/s3143_m5_port_vi_edge.md`.

@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3142 (2026-08-28).
+Current maintenance marker: Session 3143 (2026-08-28).
 
 ## Current state
 
@@ -43,6 +43,16 @@ whole-RDRAM positive control (10,000 writes), reached title 1024 and hangar
 `H-ELFExposesNewEdge` from two sources (ELF decode and retail attribution); no
 port, audio, or route behavior changed. Evidence:
 `scratch/agent/s3142_m5_retail_elf_boundary.md`.
+
+Session 3143 added the phase-scoped host witness immediately after the
+`VI_WIDTH_REG` write, corresponding to retail ELF edge `0x800357A8`. In one
+controls-positive port capture it emitted 8 all-width edge controls, while
+the existing VI-context and host voice-audit controls emitted 8 and 1 rows.
+The port reached only pre-title `640 @ 0x0066A500`, with zero title `1024`,
+hangar `512`, or target-edge rows and no crash/abort. This selects
+`H-AudioRouteStillBlocked`; target parity and downstream audio nulls remain
+unevaluable, and no audio, route, or VI behavior changed. Evidence:
+`scratch/agent/s3143_m5_port_vi_edge.md`.
 
 The regeneration-safe generated-symbol sweep is closed: the only remaining
 project placeholders are the deliberately preserved ambiguous fragments
@@ -319,37 +329,33 @@ evidence: `scratch/agent/s3140_m5_retail_source_census.md`.
 
 Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
-the port-side VI publication parity probe is now exhausted for this route.
-M3 is parked pending a new discriminator.
+the port-side VI publication parity probe is exhausted for this route. M5
+target-phase qualification is blocked until a route change produces title or
+hangar controls. M3 remains parked pending a new discriminator.
 
-1. **M5 port parity at the newly qualified VI edge.** Add one phase-scoped
-   host-side probe for the port equivalent of retail `0x800357A8`, retaining
-   the existing VI-context and host voice-audit positive controls in the same
-   build/run. Compare pre-title 640, title 1024, and hangar 512 buckets. Do
-   not change audio or route behavior based on a missing port row alone.
-
-2. **M5 route reachability — requalify target-phase audio/task rows after a
+1. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the
-   upstream boundary produces a new route arm or target-phase control.
+   upstream boundary produces a new route arm or target-phase control. The
+   current edge capture is the required baseline; do not repeat it unchanged.
 
-3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed
    task/DMA/return/service/slot/voice/MORT/PCM table with image and silent
    arms in one build/run. A qualification result alone does not authorize a
    gate, wait, voice, destination, or output change.
 
-4. **M3 crash work — systematic idiom-class audits only.** A new unit must
+3. **M3 crash work — systematic idiom-class audits only.** A new unit must
    enumerate the entire idiom class, name its discriminator, and guard or
    prove every site. Passive crash recurrence belongs in the soak queue.
 
-6. **External retail-entry boundary.** Parked after the candidate set was
+4. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC
    attribution.
 
-7. **M4 accumulator origin.** Parked because the latest route qualification
+5. **M4 accumulator origin.** Parked because the latest route qualification
    had no target-phase positive-control rows. Do not interpret its nulls.
 
-8. **M5 SP-yield lifecycle and CPU-side MORT publication.** Parked pending a
+6. **M5 SP-yield lifecycle and CPU-side MORT publication.** Parked pending a
    route angle that reaches target phases. The corrected MORT descriptor edge
    is `+0x190` to `dmaVoiceSampleAndSignal`; `+0x194` is the speech source.
 
