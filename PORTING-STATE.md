@@ -126888,3 +126888,15 @@ Evidence: `scratch/agent/s3235_m5_port_retail_framebuffer_parity/RESULTS.md`.
 
 ORIGIN: diagnostic VI-commit logging only; no guest value, port behavior,
 guard, ordering change, or mitigation was made.
+## Session 3236 (2026-08-29) — completed M5 Step 3 contract-edge selection
+
+Reviewed the M5 inventory, the Step 1/2 contract evidence, and Session 3235's
+same-build qualification. The valid retail whole-RDRAM, title, and hangar
+controls passed, and both port dispatch controls passed, but both port arms
+stopped at VI 640 before the target phase. No candidate image task/output edge
+therefore had independent writer PC, destination span, payload polarity, and
+completion-order evidence at the target phase; task/output, service, slot,
+voice, MORT, and PCM nulls remained unevaluable. No Step 3 behavior change was
+made. This rules out repeating the parked qualification as an information-
+bearing M5 unit and does not select audio degeneracy, route causation, or any
+writer/ordering change. Evidence: `scratch/agent/s3236_m5_step3_selection.md`.

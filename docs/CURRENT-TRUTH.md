@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3235 (2026-08-29).
+Current maintenance marker: Session 3236 (2026-08-29).
 
 ## Current state
 
@@ -26,9 +26,23 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3236
+completed the Step 3 edge-selection gate without selecting an edge: the
+required target-phase port row is still absent, so no audio behavior change
+is authorized. The next unit is a fresh bounded M3 idiom-class census.
 
-1. M5 target-phase qualification is no longer blocked on route selection.
+1. M5 target-phase qualification is no longer blocked on route selection,
+   but Step 3 edge selection is currently unevaluable.
+   Session 3236 compared the M5 inventory and Step 1/2 evidence with the
+   valid controls from Session 3235. No candidate has independent writer PC,
+   destination span, payload polarity, and completion-order evidence at the
+   target phase: both port arms stop at VI 640 while retail reaches title and
+   hangar. This closes the current selection attempt without authorizing a
+   contract, gate, wait, route, or output change. Do not repeat the parked
+   qualification; a new M5 change requires a newly proven target-phase edge.
+   The next active priority is the fresh systematic M3 census described in
+   `scratch/agent/NEXT.md`.
+   Earlier same-build qualification evidence remains below for provenance.
    Session 3235 ran the same-build silent/image pair after adding the
    phase-scoped `[m5-port-retail-target]` commit field. Retail passed the
    whole-RDRAM positive control and reached target `0x00790400` plus hangar

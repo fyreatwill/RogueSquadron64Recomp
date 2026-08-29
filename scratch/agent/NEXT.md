@@ -1,37 +1,36 @@
-# NEXT work unit — M5 Step 3 contract-edge selection
+# NEXT work unit — fresh M3 idiom-class census
 
-HYPOTHESIS-ID: m5-audio-contract-edge
+HYPOTHESIS-ID: m3-fresh-idiom-census
 
-Session 3235 completed the target-phase qualification attempt with valid
-retail and dispatch controls, but both port arms stopped at VI 640, so the
-target row is unevaluable. Repeating the same qualification is parked.
+Session 3236 completed M5 Step 3 selection without finding an independently
+proven contract edge. The target-phase port row is still unevaluable, so no
+M5 behavior change is authorized and the same qualification is parked.
 
 ## Competing hypotheses
 
-- `H-AudioDegeneracy`: the silent `musyx_stub` path and related degenerate
-  gates are responsible for the downstream failure.
-- `H-ImageContract`: one specific image task/output contract edge is missing
-  and is the next authorized behavior change.
-- `H-PortRoute`: the pre-title route divergence is upstream of audio output;
-  Step 3 must not be used to mask it without a named writer and ordering edge.
+- `H-NewClass`: a complete, currently unclassified repeated unsafe-access
+  idiom exists in the active generated/fixup audio paths.
+- `H-ClosedClasses`: every repeated idiom above the audit threshold is already
+  covered by the closed M3 publication/guard censuses.
+- `H-GuardOnly`: remaining matches are one-off guards or readers whose writer
+  and validity are already proven, not a coherent class.
 
 ## Discriminator
 
-Read the existing Step 1/2 evidence and select exactly one already-proven
-image task/output contract edge (writer PC, destination span, payload polarity,
-and completion ordering). If no edge is independently proven, do not guess or
-patch; record the missing evidence and remain unevaluable. A selected edge
-must produce a same-build old/new arm with task/SP completion and a downstream
-DMEM/DMA or PCM join; a route-only change or a `Broke` return without such a
-join rejects the edge.
+Perform one from-scratch, grep-enumerated census of the active generated and
+fixup-controlled audio paths. Group every match by base pointer, offset,
+operation, and caller; for each repeated group identify all writers and
+classify each site as guarded, proven-in-range, or unresolved. A result with
+one unresolved repeated class selects `H-NewClass` and names the complete
+site list for the next guard audit; zero unresolved repeated classes selects
+`H-ClosedClasses`; only isolated/proven reader matches selects `H-GuardOnly`.
+The census must not add a guard or change runtime behavior.
 
-## Exact preparation and validation
+## Exact commands
 
-1. Inspect `docs/M5-AUDIO-PLAN.md` Step 1/2 and the Session 3235 results.
-2. Use the existing fixup/build path; do not hand-edit generated functions.
-3. Build both contract arms together with:
-   `cmake --build build --config Debug --target RogueSquadron64Recomp`
-4. Run the phase-gated pair only after the edge and rollback are named. The
-   required validation row is dispatch → task fields/source → DMEM/DMA → image
-   exit → SP completion → service → status/slot → voice/reap → MORT → PCM
-   source/consumer → route phase, with the whole-RDRAM control.
+1. `rg -n "(D_8014|D_8015|voice|slot|musyx|break [67]|KSEG0|guard)" src patches tools`
+2. Enumerate each repeated unsafe-access shape and inspect bounded source
+   windows; do not read generated or ledger files wholesale.
+3. Record the complete classification and selected class in a new
+   `scratch/agent/s3237_m3_*` report. No build or soak is authorized unless a
+   concrete behavior change is selected by the census.
