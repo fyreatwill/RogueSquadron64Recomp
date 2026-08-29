@@ -4679,3 +4679,32 @@ because its target phase and positive control are not live. The external
 retail-entry boundary is also parked until a genuinely new handoff can be
 attributed. These parked lines must not be revived by repeating null
 measurements.
+
+## 53. Late checkpoint s3113–s3200
+
+This checkpoint was migrated from `CURRENT-TRUTH.md` during the s3201
+maintenance pass. Exact commands, measurements, and per-session reports remain
+in `PORTING-STATE.md` and `scratch/agent/`.
+
+The M5 route boundary remains unchanged: independent retail controls reach title
+VI 1024 and hangar VI 512, while the latest same-build image/silent pair reaches
+only pre-title VI 640. Dispatch controls are positive, but target-phase audio,
+DMA, service, slot, voice, MORT, and PCM nulls are unevaluable. The next M5
+step requires a human-selected route change or equivalent retail-grounded
+boundary; repeating the pair is not informative.
+
+M3 continues to allow only complete idiom-class audits. Recent audits prove the
+slot-dispatch and active-voice classes, while `stopVoicesByHandle`,
+`musyxInitVoiceFromSample`, and `musyxStoreVoiceAdsrParams` retain
+unclassified producer bounds; no guards were added. The external retail-entry
+and M4 accumulator threads remain parked.
+
+The regeneration-safe generated-symbol sweep is active. Exact companion names
+and mechanically proven invalid/data fragments are synchronized across body,
+header, overlay registration, project symbols, and fixup mappings; ambiguous,
+fake, and address-only fragments remain unchanged. Recent data-gap mappings
+include `0x800027B8`, `0x80029270`, `0x80045024`, `0x8009D8BC`,
+`0x800A2114`, `0x800A2218`, `0x800A23BC`, `0x800A2558`, `0x800A2790`,
+`0x800A2924`, `0x800A29BC`, `0x800A2B50`, and `0x800A2BE4`, plus
+`0x80007064`, `0x800AE3E4`, and `0x801096D8`. The next unclassified record
+is selected in `scratch/agent/NEXT.md`.

@@ -126194,3 +126194,18 @@ renamed three references across the generated body, header, and callsite to
 references. This was a source-only naming change; no build or runtime behavior
 was tested or changed. It rules out a defensible semantic companion rename at
 this split.
+## Session 3201 (2026-08-29) — compacted current-truth maintenance state
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 60,338
+bytes, above the 60,000-byte threshold. No experiment or build was run. The
+file was compacted from 981 lines to 93 lines, with the late s3113–s3200
+checkpoint and durable sweep/M5/M3 status migrated to `docs/PROJECT-OVERVIEW.md`.
+The next-step order was rewritten to keep M5 route reachability first, followed
+by M5 de-stubbing, systematic M3, and the generated-symbol sweep. The queued
+soak tail also contains `s2680_m5_step1_validation` with `rc=127` and `0s`;
+because it did not launch a run, it supplies no target-phase evidence and does
+not alter the M5 conclusion.
+
+This maintenance result advances the documentation state and rules out no new
+runtime hypothesis. Prior durable conclusions and exact evidence remain in the
+overview, ledger, and referenced scratch reports.

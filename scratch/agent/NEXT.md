@@ -43,4 +43,5 @@ rg -n 'static_3_800A2E98|data_gap_800A2E98' \
 
 Expected outcome: add the regeneration-safe mapping only if the census proves
 the data-gap classification, then synchronize the generated body and header
-with zero stale `static_3_800A2E98` references.
+with zero stale `static_3_800A2E98` references. If the record is ambiguous,
+leave it unchanged and document the conflict; do not build or run the game.
