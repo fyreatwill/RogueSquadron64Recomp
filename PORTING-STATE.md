@@ -125373,3 +125373,21 @@ rows, so no build or run was performed. This rules out treating the existing
 edge witness as target-phase audio evidence; it does not distinguish the
 upstream route cause. Human direction is required on the specific route change
 to implement or test.
+## Session 3145 (2026-08-28) — re-scoped M5 route block to M3 audit
+
+The block claim was tested instead of accepted from the previous iteration.
+The current Debug binary ran with the documented LLE-only, spin-yield,
+autopilot, and phase-gated settings. Same-run host input controls fired eight
+times, and the port reached only VI 640 at `0x0066A500`; the 1024 phase gate
+timed out after 60 seconds. Source inspection shows that
+`ROGUESQ_M4_Y8000_WIDTH=512` changes only the M4 probe's logging width, so it
+cannot be the missing route arm. Existing dirty submodules expose no selected
+route change to apply. This confirms the M5 target-phase dependency for the
+current recipe, without identifying its upstream cause; target-phase audio
+nulls remain unevaluable and no audio, VI, gate, wait, voice, or output
+behavior changed.
+
+Route 3 was taken: M5 remains recorded as an open dependency, while the next
+work unit is a bounded M3 NULL-plus-offset guest-pointer idiom-class audit.
+Evidence: `scratch/agent/unblock_route_probe_20260828/` and
+`scratch/agent/UNBLOCK.md`.

@@ -1,24 +1,20 @@
-# Unblock result — M5 retail-grounded boundary
+# Unblock result — 2026-08-28
 
-Route taken: 2, satisfy locally.
+Route taken: 3, re-scope.
 
-The claimed missing source was already available as the companion project's
-generated ELF:
+Route 1 did not refute the dependency. The current Debug binary was run with
+the documented LLE-only, spin-yield, autopilot, and phase-gated probe settings.
+The same run observed eight host input controls and VI 640 at
+`0x0066A500`, then timed out waiting for VI 1024 after 60 seconds.
 
-`/Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf`
+Route 2 did not satisfy it locally. Source inspection shows
+`ROGUESQ_M4_Y8000_WIDTH` only selects an M4 probe width; it is not a route
+control. Existing dirty submodule patches contain no selected upstream route
+change, and no behavior-changing route modification was inferred.
 
-Evidence from this iteration:
+The M5 route dependency is therefore open, but the project is not stopped.
+`scratch/agent/NEXT.md` now selects a bounded M3 NULL-plus-offset idiom-class
+audit that does not require target-phase audio controls. No runtime behavior
+was changed.
 
-- `file` identifies it as a non-stripped, statically linked, 32-bit big-endian
-  MIPS-I ELF.
-- `nm -S -n` identifies `osViSetMode` at `0x800352D0` with size `0x70` and
-  `__osViSwapContext` at `0x80035550` with size `0x360`.
-- The companion `tools/make_elf.py` documents that this ELF is generated from
-  the retail ROM and symbol files and is consumable by N64Recomp.
-- The companion C files are still `INCLUDE_ASM` stubs and no standalone
-  matching `.s` files are present, so the ELF is the local equivalent body
-  missed by the prior census.
-
-This proves the dependency was locally obtainable and makes the block false.
-The next unit will decode those exact ELF ranges and use the recovered edge
-to select a single phase-gated retail oracle watch.
+Evidence: `scratch/agent/unblock_route_probe_20260828/`.

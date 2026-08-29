@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3144 (2026-08-28).
+Current maintenance marker: Session 3145 (2026-08-28).
 
 ## Current state
 
@@ -61,6 +61,19 @@ project placeholders are the deliberately preserved ambiguous fragments
 generated snapshot by naming the entry-local 16-byte clearing loop
 `clearMemory16ByteBlocks`. The next active engineering prerequisite is a new
 retail-grounded M5 boundary.
+
+Session 3145 tested the block's claimed dependency instead of accepting it on
+precedent. The documented LLE-only/spin-yield/autopilot route was run directly
+from the current Debug binary with the existing phase control. Host input
+controls fired eight times, and the port reached only VI 640 at
+`0x0066A500`; the 1024 phase gate timed out after 60 seconds. The suspected
+`ROGUESQ_M4_Y8000_WIDTH=512` setting is probe-only: source inspection shows it
+changes the M4 logging width and cannot change route control flow. The dirty
+submodules contain existing broad patches but no selected route arm. This
+provides a same-run port line of evidence that the M5 target-phase dependency
+is real for the current recipe, while not identifying its upstream cause.
+The work was re-scoped to a bounded M3 idiom-class audit; no runtime behavior
+was changed. Evidence: `scratch/agent/unblock_route_probe_20260828/`.
 
 Session 3144 could not run the queued M5 paired qualification. The required
 route change is not present: the current state still records the port stopping
@@ -340,14 +353,22 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 the port-side VI publication parity probe is exhausted for this route. M5
 target-phase qualification is blocked until a route change produces title or
-hangar controls. M3 remains parked pending a new discriminator.
+hangar controls. The next independent work unit is a bounded M3 idiom-class
+audit; M5 remains an open dependency, not a reason to stop the loop.
 
-1. **M5 route reachability — obtain a route-change direction.** The paired
+1. **M3 crash work — bounded idiom-class audit.** Enumerate every generated
+   site in one selected NULL-plus-offset guest-pointer dereference class,
+   classify each writer and pointer provenance, and guard or prove every site.
+   The discriminator is whether the complete site table contains an
+   unclassified dereference reachable on the validated route; do not build or
+   add a mitigation until every site is classified.
+
+2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI
-   640 and no new route arm is present. Ask for the specific upstream route
-   change to implement or test; do not repeat the current edge capture.
+   640. A human-selected upstream route change or equivalent local
+   retail-grounded source is required; do not repeat the current edge capture.
 
-2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed
    task/DMA/return/service/slot/voice/MORT/PCM table with image and silent
    arms in one build/run. A qualification result alone does not authorize a

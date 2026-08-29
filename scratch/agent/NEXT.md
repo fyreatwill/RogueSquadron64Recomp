@@ -1,13 +1,16 @@
-# NEXT work unit — obtain an M5 route-change direction
+# NEXT work unit — audit one M3 NULL-plus-offset idiom class
 
-HYPOTHESIS-ID: m5-route-after-vi-edge
+HYPOTHESIS-ID: m3-null-offset-idiom-audit
 
 ## Single work unit
 
-The current M5 paired qualification cannot run until an upstream route change
-produces a target-phase control. Ask the human for the specific route change
-to implement or test. Do not infer target-phase audio behavior from pre-title
-rows and do not repeat the VI-edge probe unchanged.
+The M5 paired qualification remains blocked by a real route dependency: the
+current Debug binary's documented LLE-only/spin-yield/autopilot route reaches
+VI 640 but not title 1024. Continue useful work without changing that route.
+Select one concrete generated NULL-plus-offset guest-pointer dereference
+idiom class, enumerate every site with `rg`, and classify pointer provenance,
+writer, and reachability. Guard or prove every site only after the table is
+complete; do not use a mitigation to make a run pass.
 
 ## Competing hypotheses
 
@@ -15,25 +18,25 @@ rows and do not repeat the VI-edge probe unchanged.
   voice/PCM progress once target phases are reachable.
 - `H-ContractGap`: the image arm completes DMEM/DMA but fails a named guest or
   output contract edge, while the silent control does not.
-- `H-RouteOnly`: image and silent arms have the same complete downstream row;
-  the prior failure was solely route reachability.
+- `H-M3-Unclassified`: at least one site in the complete class table remains
+  an unclassified reachable dereference.
+- `H-M3-Proven`: every site is classified as guarded, unreachable, or
+  legitimate, so this idiom class is closed without a behavior change.
 
 ## Discriminating measurement
 
-One build must run both arms concurrently with whole-RDRAM/port phase controls.
-The decisive row is dispatch → task fields → DMEM/DMA → image exit → SP
-completion → service → slot/status → voice/reap → MORT → PCM source/consumer
-→ title `1024` / hangar `512`. A same-phase image-only downstream edge selects
-`H-AudioDegeneracy` or `H-ContractGap` by the first missing contract join; an
-identical complete row selects `H-RouteOnly`. Any row before target phase is
-unevaluable.
+The decisive measurement is a complete static site table for the selected
+idiom: each site must have a source location, guest address, dereference
+offset, writer/provenance classification, and reachability disposition. A
+remaining unclassified reachable site selects `H-M3-Unclassified`; a complete
+classification selects `H-M3-Proven`. A runtime run is not needed unless the
+static table identifies a specific reachable site whose behavior must be
+checked.
 
-## Exact commands after the route change
+## Exact commands
 
 ```sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 zsh scratch/agent/run_s3028_m5_step1_contract_pair.sh
+rg -n -C 3 'KSEG0|0x[0-9A-Fa-f]+|\+[0-9A-Fa-fx]+|\[[^]]+\]' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -C 5 'get_function\(0\)|NULL.*offset|offset.*NULL|guest.*pointer' src /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+git diff --check
 ```
-
-Retain the same-run positive controls and SIGKILL cleanup. No gate, wait,
-voice, destination, or output change is authorized by a missing row alone.
