@@ -611,7 +611,10 @@ else:
   # across 60 sessions, stuck 40+ sessions. This counter fires on the one thing
   # churn cannot fake: consecutive ADVANCED iterations that landed NO
   # engineering change (git fact -- no changed code/tool/patch, no NEW
-  # non-scratch file, and not a >=200-line CURRENT-TRUTH compaction). Any real
+  # non-scratch file, and not a >=200-line CURRENT-TRUTH compaction). A mapping
+  # edit under tools/rename* does NOT count: it commits only a rename dict entry
+  # whose regen output is gitignored, so it moves no build/runtime artifact
+  # (2026-08-29: the churn evasion -- 61/865 commits were exactly this). Any real
   # work resets it. State lives outside the repo so the metered agent cannot
   # reset its own meter. Tunable via NOENG_PIVOT / NOENG_BLOCK.
   NOENGSTATE="${TMPDIR:-/tmp}/.rs64-noeng-state"
@@ -620,8 +623,8 @@ else:
   case "${noeng:-0}" in ''|*[!0-9]*) noeng=0 ;; esac
   eng_change=0
   if [ -n "$iter_start_head" ] && git diff --name-status "${iter_start_head}..HEAD" 2>/dev/null | awk '
-        $1 ~ /^A/ && $2 !~ /^scratch\// { f=1 }
-        $2 !~ /^scratch\// && $2 != "PORTING-STATE.md" && $2 !~ /^docs\// && $2 != "CLAUDE.md" { f=1 }
+        $1 ~ /^A/ && $2 !~ /^scratch\// && $2 !~ /^tools\/rename/ { f=1 }
+        $2 !~ /^scratch\// && $2 != "PORTING-STATE.md" && $2 !~ /^docs\// && $2 != "CLAUDE.md" && $2 !~ /^tools\/rename/ { f=1 }
         END { exit(f?0:1) }'; then
     eng_change=1
   fi
@@ -642,8 +645,9 @@ else:
       echo "Every one scored ADVANCED but changed no code, tool, patch, or new doc --"
       echo "only re-ran existing instruments and recorded observations. The forced"
       echo "bounded-work pivot did not take. Redirect the loop: choose a work unit that"
-      echo "lands code (an M5 de-stub per docs/M5-AUDIO-PLAN.md, or the"
-      echo "generated-symbol-renaming sweep), or re-scope scratch/agent/NEXT.md."
+      echo "moves a build/runtime artifact (an M5 de-stub per docs/M5-AUDIO-PLAN.md, an"
+      echo "M3 guard-class audit, or a route-wall change) -- NOT a tools/rename* mapping"
+      echo "edit, which no longer counts -- or re-scope scratch/agent/NEXT.md."
       echo "Reset the counter: rm ${NOENGSTATE}. Then delete this file and rerun."; } > "$AG/BLOCKED.md"
     notify_blocked
     exit 2
@@ -656,15 +660,18 @@ else:
       echo "renaming the HYPOTHESIS-ID each session hid this from rule 8. Iron rule 14:"
       echo "an instrument re-run that selects nothing is churn, not progress."
       echo
-      echo "THIS iteration you MUST land a committed CODE change, one of:"
+      echo "THIS iteration you MUST land a committed change that moves a BUILD or"
+      echo "RUNTIME artifact, one of:"
       echo "  (a) De-stub the next concrete step in docs/M5-AUDIO-PLAN.md and commit the"
       echo "      generated/runtime change -- a real edit, not another log probe; or"
-      echo "  (b) Switch to the generated-symbol-renaming sweep: set"
-      echo "      HYPOTHESIS-ID: generated-symbol-renaming-sweep and rename a batch of"
-      echo "      func_0x... symbols (ITERATION.md strategic priority 4). It lands code"
-      echo "      every session and is always actionable."
-      echo "Another observation-only audit under scratch/ does NOT satisfy this and"
-      echo "extends the streak toward a loop block at $NOENG_BLOCK."
+      echo "  (b) Land an M3 guard-class audit that commits a guard/code change (next"
+      echo "      steps #2), or attack the VI-640 route wall (next steps #1) with a"
+      echo "      change that alters the boot/route path -- not another observation."
+      echo "The generated-symbol-renaming sweep does NOT satisfy this: a tools/rename*"
+      echo "mapping edit commits no build/runtime artifact and no longer resets this"
+      echo "meter. If neither (a) nor (b) is possible, go BLOCKED with a specific"
+      echo "question rather than another observation-only audit, which does NOT satisfy"
+      echo "this and extends the streak toward a loop block at $NOENG_BLOCK."
       echo; } >> "$AG/PIVOT.md"
   fi
 

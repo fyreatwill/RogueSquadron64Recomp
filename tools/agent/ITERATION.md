@@ -118,15 +118,18 @@ CURRENT-TRUTH "Next steps" (or NEXT.md if present). Before building anything:
    diagnostic-only iteration that selects nothing is not ADVANCED-worthy; the
    Stop gate flags it. If the measurement cannot discriminate, stop adding
    fields and re-read docs/F5-UCODE-REFERENCE.md or the oracle.
-   ENFORCED BEYOND ONE SLUG (2026-08-26): the loop now counts consecutive
-   ADVANCED iterations that land NO engineering change -- no changed
+   ENFORCED BEYOND ONE SLUG (2026-08-26, tightened 2026-08-29): the loop counts
+   consecutive ADVANCED iterations that land NO engineering change -- no changed
    code/tool/patch, no NEW non-scratch file, and not a >=200-line CURRENT-TRUTH
    compaction. At 6 it forces a bounded-work pivot; at 12 it blocks the loop.
    This is slug-INDEPENDENT: renaming the HYPOTHESIS-ID does not reset it, only
-   real work does. If you are re-running an instrument that keeps returning
-   "absent / unresolved / unevaluable", stop -- either land an M5 de-stub
-   (docs/M5-AUDIO-PLAN.md) or switch to the generated-symbol-renaming sweep,
-   which lands code every session.
+   real work does. A generated-symbol-renaming sweep NO LONGER resets it: a
+   tools/rename* mapping edit commits no build/runtime artifact (its regen output
+   is gitignored), so it reads as churn, not engineering. If you are re-running
+   an instrument that keeps returning "absent / unresolved / unevaluable", stop
+   -- land an M5 de-stub (docs/M5-AUDIO-PLAN.md) or an M3 guard-class audit that
+   commits a guard, or go BLOCKED with a specific question. Do not fall back on
+   the rename sweep to stay fed; it will trip the pivot at 6 and block at 12.
 
 ## Ground truth that is not our runtime
 - `tools/oracle/README.md` - runs the RETAIL ROM under mupen64plus with memory
