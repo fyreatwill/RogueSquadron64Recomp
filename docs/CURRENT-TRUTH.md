@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3220 (2026-08-29).
+Current maintenance marker: Session 3221 (2026-08-29).
 
 ## Current state
 
@@ -34,10 +34,10 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    (`0x0066A500`) with no title or hangar transition. A human-selected route or
    equivalent new retail-grounded boundary is still required. Do not repeat
    either route unchanged.
-2. Next eligible M3 class is A12's unresolved `0x8014974C` spin-flag
-   publication: census every generated store of that word, name the writer,
-   and say whether a zero is legitimate. Do not add a timeout or force-clear
-   without that writer. No port run until the census exists.
+2. A12's `0x8014974C` publication class is closed by Session 3221: the only
+   guest stores are `setupSongRenderBuffers` zero-init, `musyxSynthFrame`
+   terminal clear, and its fixed-one pre-callback publication. The waiters
+   remain safety-only; no timeout, force-clear, or new guard is authorized.
 3. After a route change, rerun the existing same-build phase-gated pair with
    `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-arm DMEM,
    DMA, `Broke`/SP completion, service, slot, and PCM joins; retain the silent
@@ -47,7 +47,9 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    divisor store (`musyxRenderVoiceSamples` at `0x80090768`, constant
    `0xC0`); the four `break 6` sites are unreachable after `lhu +0x60`; the
    four `break 7` sites are the game's own divide-by-zero handler
-   (evidence: `scratch/agent/s3220_m3_keyon_divisor_descriptor.md`). A9
+   (evidence: `scratch/agent/s3220_m3_keyon_divisor_descriptor.md`). A12's
+   flag census is recorded in
+   `scratch/agent/s3221_m3_a12_flag_publication_census.md`. A9
    voice-array base (`D_801496F8`) has one store at `0x8008F0EC` in
    `allocateSongChannelArray` (evidence:
    `scratch/agent/s3219_m3_voice_array_base_publication.md`); A10 3D

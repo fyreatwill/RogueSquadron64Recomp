@@ -1,32 +1,30 @@
-# NEXT work unit — M3 A12 0x8014974C spin-flag publication census
+# NEXT work unit — M5 target-phase qualification after route selection
 
-HYPOTHESIS-ID: m3-a12-8014974c-publication
+HYPOTHESIS-ID: m5-target-phase-route-boundary
 
 ## Single work unit
 
-M5 target-phase qualification remains blocked: do not repeat the `s2618`
-or eleven-Start routes. A8 key-on divisor/descriptor is closed (s3220:
-sole cmd-list divisor store `0x80090768` in `musyxRenderVoiceSamples`,
-value `0xC0`; four `break 6` sites unreachable). Next eligible unit is
-the A12 idiom-class audit of every generated store of the unbounded
-spin flag at `0x8014974C`.
+M5 target-phase qualification remains blocked: do not repeat the `s2618` or
+eleven-Start routes. A12 is now closed (s3221: the only guest stores of
+`0x8014974C` are named binary-gate publications). The next unit can run only
+after a human-selected route change or an equivalent retail-grounded boundary
+is available.
 
-Competing hypotheses:
+Competing hypotheses for the next qualification run:
 
-- `H-NamedFlagWriter`: every store of `0x8014974C` is in a named
-  MusyX/synth path with a finite range (including a legitimate zero).
-- `H-InvalidFlagProducer`: at least one generated store writes a
-  non-terminal or overlapping value the unbounded spin is papering over.
-- `H-NoLiveFlagWriter`: the generated tree has no remaining store into
-  that word beyond already-named sites; the spin stays safety-only.
+- `H-TargetRouteUnblocks`: the selected route reaches title 1024 and hangar
+  512, making target-phase audio joins evaluable.
+- `H-TargetRouteStillStops`: the selected route still stops before title,
+  keeping audio/task/DMA/service/slot/voice/PCM rows unevaluable.
+- `H-TargetRouteCrashes`: the route reaches a crash/abort before the target
+  phase and supplies a new discriminating failure boundary.
 
-Discriminator: a complete grep census of every `lui 0x8015` / `-0x68B4`
-(and `0x974C` / literal `0x8014974C`) store and load, companion names,
-and caller fan-in. Classify each writer as in-range, out-of-range at
-source scope, or unresolved. No port run. No timeout or force-clear
-without a named legitimate writer.
+Discriminator: phase-gated same-build `ROGUESQ_AUDIO_UCODE=0/1` arms after
+the route change. Require the image arm's DMEM, DMA, SP completion/Broke,
+service, slot, and PCM joins, with the silent arm as the no-write control.
+Record VI 640/1024/512 transitions; do not use elapsed time.
 
-Exact start: grep `RecompiledFuncs/funcs_*.c` for `MEM_W(-0X68B4`,
-`sw …, -0x68B4`, `0x974C`, and `0x8014974C`; recover the storing
-functions; census every store and the `waitForMusyXAudioTaskDone` /
-`shutdownAudioEngine` loads.
+Exact start after route selection: build the existing Debug target, then run
+the documented phase-gated pair concurrently from `build/` with
+`ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`; capture each arm to a
+non-dot final path and SIGKILL both processes at the watchdog boundary.

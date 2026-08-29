@@ -126496,6 +126496,28 @@ added or relaxed. No build or runtime run was performed. Evidence:
 ORIGIN: generated guest-PC store/load census plus independent companion
 symbol metadata; no mitigation landed.
 
+## Session 3221 (2026-08-29) — completed M3 A12 flag publication census
+
+Performed the complete static census for `0x8014974C` (`0x80150000 -
+0x68B4`). The target is a byte: the only guest stores are
+`setupSongRenderBuffers` at `0x8008F490` clearing zero,
+`musyxSynthFrame` at `0x800912F8` clearing zero after `osRecvMesg`, and
+`musyxSynthFrame` at `0x80091680` storing a fixed one immediately before its
+indirect callback. The only guest loads are the named `musyxSynthFrame`
+consumer and the `shutdownAudioEngine` / `waitForMusyXAudioTaskDone` waiters.
+No word/halfword store, unresolved writer, or alternate generated target was
+found; `funcs_49.c`'s textual `-0x68B4` match has a different base address.
+Caller fan-in is also bounded: `musyxSynthFrame` calls the initializer,
+`shutdownMusyXEngine` calls the shutdown waiter, and `musyxNoopStub` calls the
+task-done waiter. Generated function boundaries, the project symbol table,
+and the companion `D_8014974C` entry provide independent metadata checks.
+`H-NamedFlagWriter` is selected; `H-InvalidFlagProducer` and
+`H-NoLiveFlagWriter` are ruled out at source scope. No build, run, guard,
+timeout, force-clear, or other mitigation was performed.
+
+ORIGIN: generated guest-PC store/load census plus independent symbol metadata;
+all stores are legitimate binary-gate publications, so no mitigation landed.
+
 ## Session 3220 (2026-08-29) — completed M3 musyxKeyOnVoice divisor census
 
 The eight A8 trap sites are four `div` pairs inside `musyxKeyOnVoice`

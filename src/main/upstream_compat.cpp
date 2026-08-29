@@ -11,6 +11,7 @@
 #include <cstring>
 #include <thread>
 #include <mutex>
+#include <chrono>
 #if !defined(_WIN32)
 #include <dlfcn.h>
 #endif
@@ -1686,47 +1687,199 @@ static void log_m5_dp_event_boundary(const char* edge, uint32_t mq_addr,
     }
 }
 
-extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
-    static int s_log_stk = -1;
-    if (s_log_stk < 0) {
+// VI-640 blocked-thread graph (temp, env-gated). Stable host tid, not guest pc.
+static bool recv_trace_enabled() {
+    static const bool enabled = [] {
+        const char* e = std::getenv("ROGUESQ_RECV_TRACE");
+        return e && *e && *e != '0';
+    }();
+    return enabled;
+}
+
+static bool sendmesg_stack_enabled() {
+    static const bool enabled = [] {
         const char* e = std::getenv("ROGUESQ_LOG_SENDMESG_STACK");
-        s_log_stk = (e && *e && *e != '0') ? 1 : 0;
+        return e && *e && *e != '0';
+    }();
+    return enabled;
+}
+
+struct RecvMqStat {
+    uint32_t mq = 0;
+    uint64_t last_tid = 0;
+    uint32_t guest_tid = 0;
+    uint32_t rplus = 0;
+    uint32_t rminus = 0;
+    uint32_t sends = 0;
+    uint32_t logged_rplus = 0;
+    uint32_t logged_rminus = 0;
+    uint32_t stack_logged = 0;
+    uint32_t send_stack_logged = 0;
+};
+
+static constexpr uint32_t kRecvMqCap = 384;
+static RecvMqStat g_recv_stats[kRecvMqCap];
+static std::atomic<uint32_t> g_recv_n{0};
+static std::recursive_mutex g_recv_mu;
+
+static uint32_t rs64_guest_tid(uint8_t* rdram) {
+    PTR(OSThread) t = ultramodern::this_thread();
+    if (!t) return 0;
+    return (uint32_t)TO_PTR(OSThread, t)->id;
+}
+
+static RecvMqStat* recv_stat_for(uint32_t mq) {
+    std::lock_guard<std::recursive_mutex> lock(g_recv_mu);
+    const uint32_t n = g_recv_n.load(std::memory_order_relaxed);
+    for (uint32_t i = 0; i < n && i < kRecvMqCap; i++) {
+        if (g_recv_stats[i].mq == mq) return &g_recv_stats[i];
     }
-    if (s_log_stk) {
-        // Only trace sends to the graph thread's queue at 0x8011A420 — the
-        // queue func_80019BF4 receives on. Other queues are noise for this
-        // investigation. Easy to extend later by editing this list.
-        const uint32_t target_mq = 0x8011A420u;
-        const uint32_t mq_addr = (uint32_t)ctx->r4;
-        if (mq_addr == target_mq) {
-            static int s_count = 0;
-            ++s_count;
-            if (s_count <= 3) {
-                fprintf(stderr,
-                    "[sendmesg #%d] tid=%lu mq=0x%08X mesg_ptr=0x%08X flag=%d\n",
-                    s_count,
-                    GetCurrentThreadId(),
-                    mq_addr,
-                    (unsigned)ctx->r5,
-                    (int)ctx->r6);
-                void* frames[24];
-                USHORT count = RtlCaptureStackBackTrace(0, 24, frames, nullptr);
-                print_stack_with_symbols(frames, count);
-                // Dump the message bytes (first 0x10) so we can see the tag/payload.
-                uint32_t mesg_ptr = (uint32_t)ctx->r5;
-                if (mesg_ptr >= 0x80000000u && mesg_ptr < 0x80800000u) {
-                    uint32_t off = mesg_ptr - 0x80000000u;
-                    fprintf(stderr, "  mesg[0..16]:");
-                    for (int i = 0; i < 16; ++i) {
-                        fprintf(stderr, " %02X", (unsigned)rdram[(off + i) ^ 3]);
-                    }
-                    fprintf(stderr, "\n");
-                }
-                fflush(stderr);
+    if (n >= kRecvMqCap) return nullptr;
+    g_recv_stats[n].mq = mq;
+    g_recv_n.store(n + 1, std::memory_order_relaxed);
+    return &g_recv_stats[n];
+}
+
+static void recv_trace_dump() {
+    RecvMqStat copy[kRecvMqCap];
+    uint32_t n = 0;
+    {
+        std::lock_guard<std::recursive_mutex> lock(g_recv_mu);
+        n = g_recv_n.load(std::memory_order_relaxed);
+        if (n > kRecvMqCap) n = kRecvMqCap;
+        for (uint32_t i = 0; i < n; i++) copy[i] = g_recv_stats[i];
+    }
+    const uint64_t ms = GetTickCount64();
+    uint32_t blocked = 0;
+    for (uint32_t i = 0; i < n; i++) {
+        const RecvMqStat& s = copy[i];
+        const int32_t net = (int32_t)s.rplus - (int32_t)s.rminus;
+        if (net > 0) blocked++;
+        std::fprintf(stderr,
+            "[recvsum] t_ms=%llu mq=0x%08X tid=%lu gid=%u R+=%u R-=%u net=%d S+=%u\n",
+            (unsigned long long)ms, s.mq, (unsigned long)s.last_tid, s.guest_tid,
+            s.rplus, s.rminus, (int)net, s.sends);
+    }
+    std::fprintf(stderr, "[recvsum] t_ms=%llu queues=%u blocked=%u\n",
+        (unsigned long long)ms, n, blocked);
+    std::fflush(stderr);
+}
+
+static void recv_trace_start_dumper() {
+    static std::once_flag once;
+    std::call_once(once, [] {
+        std::fprintf(stderr, "[recvtrace] enabled=1 dumper=10s\n");
+        std::fflush(stderr);
+        std::thread([] {
+            for (;;) {
+                std::this_thread::sleep_for(std::chrono::seconds(10));
+                recv_trace_dump();
             }
+        }).detach();
+    });
+}
+
+static void recv_trace_enter(uint8_t* rdram, uint32_t mq, int32_t flag, uint64_t tid) {
+    if (!recv_trace_enabled() || flag != OS_MESG_BLOCK) return;
+    recv_trace_start_dumper();
+    RecvMqStat* s = recv_stat_for(mq);
+    if (!s) return;
+    const uint32_t gid = rs64_guest_tid(rdram);
+    bool want_line = false;
+    bool want_stack = false;
+    {
+        std::lock_guard<std::recursive_mutex> lock(g_recv_mu);
+        s->last_tid = tid;
+        s->guest_tid = gid;
+        s->rplus++;
+        if (s->logged_rplus < 8) {
+            s->logged_rplus++;
+            want_line = true;
+        }
+        if (s->stack_logged == 0) {
+            s->stack_logged = 1;
+            want_stack = true;
         }
     }
+    if (want_line) {
+        std::fprintf(stderr, "[recvtrace] R+ mq=0x%08X flag=%d tid=%lu gid=%u\n",
+            mq, (int)flag, (unsigned long)tid, gid);
+        std::fflush(stderr);
+    }
+    if (mq == 0x8011A818u) {
+        auto be_u8 = [&](uint32_t kseg) -> unsigned {
+            const uint32_t phys = kseg - 0x80000000u;
+            return (unsigned)rdram[phys ^ 3u];
+        };
+        std::fprintf(stderr,
+            "[framesync-gate] mq=0x8011A818 89C=%u 89D=%u 89E=%u 89F=%u 8A0=%u 28D44=%u\n",
+            be_u8(0x8011A89Cu), be_u8(0x8011A89Du), be_u8(0x8011A89Eu),
+            be_u8(0x8011A89Fu), be_u8(0x8011A8A0u), be_u8(0x80128D44u));
+        std::fflush(stderr);
+    }
+    if (want_stack) {
+        std::fprintf(stderr, "[recvbt] mq=0x%08X tid=%lu gid=%u\n",
+            mq, (unsigned long)tid, gid);
+        void* frames[24];
+        USHORT count = RtlCaptureStackBackTrace(0, 24, frames, nullptr);
+        print_stack_with_symbols(frames, count);
+        std::fflush(stderr);
+    }
+}
+
+static void recv_trace_exit(uint32_t mq, int32_t flag, uint64_t tid, int32_t result) {
+    if (!recv_trace_enabled() || flag != OS_MESG_BLOCK) return;
+    RecvMqStat* s = recv_stat_for(mq);
+    if (!s) return;
+    bool want_line = false;
+    {
+        std::lock_guard<std::recursive_mutex> lock(g_recv_mu);
+        s->rminus++;
+        if (s->logged_rminus < 8) {
+            s->logged_rminus++;
+            want_line = true;
+        }
+    }
+    if (want_line) {
+        std::fprintf(stderr, "[recvtrace] R- mq=0x%08X tid=%lu r=%d\n",
+            mq, (unsigned long)tid, (int)result);
+        std::fflush(stderr);
+    }
+}
+
+static void sendtgt_note(uint32_t mq, uint64_t tid, bool want_stack) {
+    if (!recv_trace_enabled() && !want_stack) return;
+    if (recv_trace_enabled()) recv_trace_start_dumper();
+    RecvMqStat* s = recv_stat_for(mq);
+    if (!s) return;
+    bool first = false;
+    bool do_stack = false;
+    {
+        std::lock_guard<std::recursive_mutex> lock(g_recv_mu);
+        s->sends++;
+        if (s->sends == 1) first = true;
+        if (want_stack && s->send_stack_logged == 0) {
+            s->send_stack_logged = 1;
+            do_stack = true;
+        }
+    }
+    if (first && recv_trace_enabled()) {
+        std::fprintf(stderr, "[sendtgt] mq=0x%08X tid=%lu\n", mq, (unsigned long)tid);
+        std::fflush(stderr);
+    }
+    if (do_stack) {
+        std::fprintf(stderr, "[sendmesg] tid=%lu mq=0x%08X\n", (unsigned long)tid, mq);
+        void* frames[24];
+        USHORT count = RtlCaptureStackBackTrace(0, 24, frames, nullptr);
+        print_stack_with_symbols(frames, count);
+        std::fflush(stderr);
+    }
+}
+
+extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     const uint32_t mq_addr = (uint32_t)ctx->r4;
+    sendtgt_note(mq_addr, GetCurrentThreadId(),
+                 recv_trace_enabled() || sendmesg_stack_enabled());
     log_m5_frame_sync_edge(rdram, "send", mq_addr, (uint32_t)ctx->r5,
                            (s32)ctx->r6);
     if (mq_addr == 0x8011A818u || mq_addr == 0x8011A7E8u || mq_addr == 0x8011A408u) {
@@ -1747,30 +1900,33 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
 
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     const uint32_t mq_addr = (uint32_t)ctx->r4;
-    log_m5_frame_sync_edge(rdram, "recv", mq_addr, (uint32_t)ctx->r5,
-                           (s32)ctx->r6);
+    const int32_t flag = (s32)ctx->r6;
+    const uint64_t tid = GetCurrentThreadId();
+    recv_trace_enter(rdram, mq_addr, flag, tid);
+    log_m5_frame_sync_edge(rdram, "recv", mq_addr, (uint32_t)ctx->r5, flag);
     if (mq_addr == 0x8011A818u || mq_addr == 0x8011A7E8u || mq_addr == 0x8011A408u) {
-        log_submit_boundary(rdram, "recv", mq_addr, (uint32_t)ctx->r6);
+        log_submit_boundary(rdram, "recv", mq_addr, (uint32_t)flag);
     }
     if (mq_addr == 0x8011A408u) {
         const OSMesgQueue before = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
         const int32_t result = osRecvMesg(rdram, (int32_t)ctx->r4,
-                                          (PTR(OSMesg))ctx->r5, (s32)ctx->r6);
+                                          (PTR(OSMesg))ctx->r5, flag);
         const OSMesgQueue after = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
         ctx->r2 = result;
         log_m5_dp_event_boundary("recv", mq_addr, (uint32_t)ctx->r5,
-                                 (s32)ctx->r6, result, before, after);
+                                 flag, result, before, after);
     } else if (mq_addr == 0x8010FEE0u) {
         const OSMesgQueue before = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
         const int32_t result = osRecvMesg(rdram, (int32_t)ctx->r4,
-                                          (PTR(OSMesg))ctx->r5, (s32)ctx->r6);
+                                          (PTR(OSMesg))ctx->r5, flag);
         const OSMesgQueue after = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
         ctx->r2 = result;
-        log_a1_queue_boundary(mq_addr, (PTR(OSMesg))ctx->r5, (s32)ctx->r6,
+        log_a1_queue_boundary(mq_addr, (PTR(OSMesg))ctx->r5, flag,
                               result, before, after);
     } else {
-        ctx->r2 = osRecvMesg(rdram, (int32_t)ctx->r4, (PTR(OSMesg))ctx->r5, (s32)ctx->r6);
+        ctx->r2 = osRecvMesg(rdram, (int32_t)ctx->r4, (PTR(OSMesg))ctx->r5, flag);
     }
+    recv_trace_exit(mq_addr, flag, tid, (int32_t)ctx->r2);
 }
 
 // Override upstream's osStopThread_recomp because upstream's osStopThread
