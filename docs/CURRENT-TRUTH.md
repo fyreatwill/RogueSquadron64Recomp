@@ -6,7 +6,16 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3159 (2026-08-29).
+Current maintenance marker: Session 3160 (2026-08-29).
+
+Session 3160 closed the bounded generated-symbol sweep lead for
+`0x800A0000..0x800B0000`. Fourteen placeholders remain: thirteen
+`static_3_*` records have generated bodies and one generated caller each but
+no companion semantic name, and `0x800AE3E4` is explicitly a companion
+`fake_func_*` record. The bounded rename helper selected zero new mappings.
+This selects `H-AmbiguousFragments` from the generated snapshot plus the
+independent companion symbol files; no placeholder or runtime behavior was
+changed. Evidence: `scratch/agent/s3160_generated_symbol_census.md`.
 
 Session 3159 reopened the regeneration-safe generated-symbol sweep for a
 bounded callable batch. The external generated snapshot had two exact
@@ -158,9 +167,10 @@ unevaluable, and no audio, route, or VI behavior changed. Evidence:
 The earlier callable-placeholder sweep was believed closed after the known
 `func_0x...` and ambiguous-fragment review, but Session 3159 found two
 `static_*` callable records outside that inventory. The active sweep now
-continues only for exact companion-qualified callable matches; ambiguous
-fragments remain preserved. The next active engineering prerequisite is a
-new retail-grounded M5 boundary once this bounded rename lead is exhausted.
+continues only for exact companion-qualified callable matches; the
+`0x800A0000..0x800B0000` lead is exhausted and ambiguous fragments remain
+preserved. The next active engineering prerequisite is a new retail-grounded
+M5 boundary once the current M3 idiom audit queue is exhausted.
 
 Session 3145 tested the block's claimed dependency instead of accepting it on
 precedent. The documented LLE-only/spin-yield/autopilot route was run directly
@@ -514,6 +524,9 @@ the status-03 wait hatch.
    is authorized. Select the next complete NULL-plus-offset class from the
    existing M3 inventory and enumerate all sites in one audit. The next
    selected class is `musyxTriggerVoiceAttack`'s voice-indexed record access.
+   The generated-symbol sweep lead for `0x800A0000..0x800B0000` is closed by
+   Session 3160; resume it only in a different address band after M3 is no
+   longer actionable.
 
 2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI

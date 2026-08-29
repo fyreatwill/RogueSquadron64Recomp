@@ -125606,3 +125606,16 @@ Evidence: `scratch/agent/s3158_m3_musyx_store_voice_adsr_audit.md`.
 ## Session 3159 (2026-08-29) — reopened callable generated-symbol sweep with exact companion batch
 
 The mandated no-churn pivot selected the generated-symbol-renaming sweep because M5 Step 1 remains a qualification checkpoint and the current route lacks its target-phase positive control. A bounded census of the external generated snapshot found two callable placeholders with exact companion matches: `static_5_800AF6AC` is `handleCraftSelectInput` and `static_4_800E9B10` is `initObjectAnimAndDetail`. Both have generated bodies and direct callers; companion `main_overlay.txt` independently supplies the names and addresses. The rename synchronized six references across the generated header, bodies, and callers, and added both mappings to `tools/rename_generated_symbols.py` for regeneration safety. No build or runtime behavior changed. This selects the semantic-rename branch and rules out data-gap/ambiguous treatment for these two rows; it does not classify the remaining placeholders. Evidence: `scratch/agent/s3159_generated_symbol_rename.md`.
+## Session 3160 (2026-08-29) — closed bounded callable-placeholder band
+
+The generated snapshot was enumerated for all placeholders in
+`0x800A0000..0x800B0000` and joined against the companion symbol files. The
+14-row table found 13 `static_3_*` generated bodies with one generated caller
+each but no exact companion semantic name, plus `0x800AE3E4`, which the
+companion independently labels `fake_func_800AE3E4` and registers only as a
+12-byte overlay record. The regeneration-safe rename helper, run with the
+same address bounds, selected zero mappings and changed zero files. This
+selects `H-AmbiguousFragments`; `H-SemanticMatches` and
+`H-NoReachablePlaceholder` are ruled out for this band. No generated symbol
+or runtime behavior changed. Evidence:
+`scratch/agent/s3160_generated_symbol_census.md`.
