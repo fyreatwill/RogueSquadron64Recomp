@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3083 (2026-08-28).
+Current maintenance marker: Session 3084 (2026-08-28).
 
 ## Current state
 
@@ -48,6 +48,18 @@ only `addu $sp,$fp,$zero` and `lw $ra,0x1C($sp)` before
 regeneration-safe `data_gap_80024878` mapping. The next sweep candidate is
 `fake_func_800555E8`. Evidence:
 `scratch/agent/s3083_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
+
+Session 3084 completed the bounded six-surface audit at `0x800555E8`. The
+companion map, generated body, callers, header, overlay registration, project
+TOML, and rename tooling agree on the 8-byte `initPlayerStructsPreamble`
+tail-call entry to `initPlayerStructs`; the active generated tree has no stale
+placeholder reference. This selects H-ExactIdentity and confirms the existing
+regeneration-safe mapping. The next sweep candidate is
+`fake_func_8006ACA4`. Evidence:
+`scratch/agent/s3084_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
@@ -579,7 +591,8 @@ parked pending a new discriminator.
    `initDemoPlayStatePreamble`; `0x800BF498` was audited and preserved as a
    data gap; `0x800BF784` was also audited and preserved as a data gap;
    resume at `data_gap_800C7DB4`; `0x800C64A4` and `0x80024878` were audited
-   and preserved as data gaps. Resume at `fake_func_800555E8`.
+   and preserved as data gaps. `fake_func_800555E8` was synchronized as
+   `initPlayerStructsPreamble`; resume at `fake_func_8006ACA4`.
    If the sweep becomes a
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.

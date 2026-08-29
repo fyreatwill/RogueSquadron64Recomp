@@ -124240,6 +124240,24 @@ confirms the existing regeneration-safe mapping. The next candidate is
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
 
+## Session 3084 (2026-08-28) — synchronized 0x800555E8 preamble
+
+Ran the bounded six-surface generated-symbol audit for
+`fake_func_800555E8`. The companion map, generated body, callers, header,
+overlay registration, project TOML, and rename tooling agree on the 8-byte
+`initPlayerStructsPreamble` entry, whose two instructions tail-call
+`initPlayerStructs` at `0x800555F0`. The active generated tree contains no
+stale placeholder reference; the regeneration-safe mapping was already
+synchronized. This selects H-ExactIdentity. The next sweep candidate is
+`fake_func_8006ACA4`. Evidence:
+`scratch/agent/s3084_generated_symbol_rename/AUDIT.md`.
+
+This rules out a data-gap, fragment, address-conflict, or unresolved identity
+at this boundary and makes no runtime or audio claim.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
+
 ## Session 3083 (2026-08-28) — classified 0x80024878 generated gap
 
 Ran the bounded six-surface generated-symbol audit for `fake_func_80024878`.
