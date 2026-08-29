@@ -126659,3 +126659,30 @@ pre-title stop. It does not select the actual writer-absent, wrong-value, or
 ordering hypothesis. No build, guest value, guard, or mitigation changed.
 
 Evidence: `scratch/agent/s3226_m5_route_writer_oracle/RESULTS.md`.
+
+## Session 3227 (2026-08-29) — corrected retail route-edge phase boundary
+
+Before any port build or new instrumentation, ran the retail oracle with Rice,
+the validated route, a whole-RDRAM positive-control watch, and execution
+watches on `reapplyDisplayMode` entry `0x8008EB5C` and its
+`reapplyAudioConfig` call `0x8008EBC0`. The positive control reached 10,000
+callbacks, and retail reached title VI 1024 at `0x00790400`.
+
+Both execution watches fired twice, at 640 origins `0x00696100` and
+`0x00790500`; no hit occurred in the requested `0x0066A500:640` bucket. The
+entry rows had `$a0=0x5622`, `$a1/$a2=0x10/0x0E` then `0x0F/0x0F`, with `$v0`
+`0x40000` then `0`; the call rows had the corresponding `0x80165E00` and
+`0x80165ED0` pointers and `$v0=0x20`. The valid control, VI trace, and four
+hits prove this is a corrected phase boundary rather than an absent watch.
+
+This work unit does not select writer-absent, wrong-value, or ordering: the
+retail edge is earlier/different-origin than the port's phase-4
+`audio-return` row at `0x0066A500`. It rules out treating the requested
+`0x0066A500` bucket as the retail route-edge phase. No build, guest value,
+guard, ordering change, or mitigation was made.
+
+Evidence: `scratch/agent/s3227_m5_route_oracle.md` and
+`scratch/agent/s3227_m5_route_oracle.log`.
+
+ORIGIN: no guest value was changed; this is a phase-boundary correction from
+an independent retail execution watch with a same-run positive control.

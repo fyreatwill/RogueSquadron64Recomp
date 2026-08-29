@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3226 (2026-08-29).
+Current maintenance marker: Session 3227 (2026-08-29).
 
 ## Current state
 
@@ -29,6 +29,16 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection.
+   Session 3227 proved the retail `reapplyDisplayMode` entry/call edge is
+   live, with two calls at 640 origins `0x00696100` and `0x00790500` before
+   title 1024; no call occurred at the port's `0x0066A500` stop. The
+   whole-RDRAM positive control and title gate passed, so this is a valid
+   phase-boundary correction, not a null instrument. It does not yet select
+   writer-absent, wrong-value, or ordering. The next discriminator is the
+   return branch at `0x8008EBC8`, watched with the two corrected 640 origins,
+   then aligned to the port's phase-3 route and phase-4 audio-return rows.
+   If alignment remains impossible, redesign the boundary before adding
+   instrumentation.
    Session 3226 closed the first concrete field candidate: retail writes to
    `0x80141AD0/1` and `0x8013B038` are early `setDisplayMode`/
    `reapplyDisplayMode` configuration stores, not the missing pre-title route
