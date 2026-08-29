@@ -6,7 +6,15 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3152 (2026-08-29).
+Current maintenance marker: Session 3153 (2026-08-29).
+
+Session 3153 ran the prescribed same-build Step 6 policy pair for 30 seconds.
+The default and explicit `ROGUESQ_DRAIN_INLOOP_TICK=1` arms both reached the
+pre-title VI 640 phase and each emitted eight shade-DMA control rows, but
+neither emitted the `[drain-inloop-gate]` positive-control line. Therefore the
+policy values are unevaluable: this run does not select default-off versus
+policy-bypassed, and it does not authorize any audio, wait, slot, voice, or
+PCM conclusion. Evidence: `scratch/agent/s3153_m5_step6_policy_qualification.md`.
 
 Session 3152 completed the Step 6 M5 de-stub policy change. Runtime startup
 now centralizes the default for `ROGUESQ_DRAIN_INLOOP_TICK` as unset → `0`,
@@ -427,15 +435,11 @@ generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 6's default-off policy is now regeneration-safe. M5 target-phase
 qualification is still blocked until a route change produces title or hangar
 controls. The next work unit is to qualify this policy with the existing
-same-build control, not to remove the status-03 wait hatch.
+a same-build control was attempted but did not reach the drain gate. The next
+work unit is a bounded M3 idiom-class audit; do not remove the status-03 wait
+hatch.
 
-1. **M5 audio de-stubbing — qualify Step 6 policy.** Run the default-off
-   drain policy and explicit `ROGUESQ_DRAIN_INLOOP_TICK=1` control from one
-   build, phase-gated on target VI transitions. Require the gate rows plus
-   task/SP, slot/status, voice/reap, and PCM controls; pre-title nulls remain
-   unevaluable. Do not infer a writer or remove a wait hatch.
-
-2. **M3 crash work — bounded idiom-class audit.** The
+1. **M3 crash work — bounded idiom-class audit.** The
    `slotDispatcherIter` and the two `slotDispatcherInner` pointer classes
    are closed by Sessions 3146–3148. Select the next bounded NULL-plus-offset
    idiom from the existing M3 audit inventory. The
@@ -444,25 +448,25 @@ same-build control, not to remove the status-03 wait hatch.
    authorized. Select a different complete idiom class unless a new
    instruction-level dispatch source becomes available.
 
-3. **M5 route reachability — obtain a route-change direction.** The paired
+2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI
    640. A human-selected upstream route change or equivalent local
    retail-grounded source is required; do not repeat the current edge capture.
 
-4. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed
    task/DMA/return/service/slot/voice/MORT/PCM table with image and silent
    arms in one build/run. A qualification result alone does not authorize a
    gate, wait, voice, destination, or output change.
 
-5. **External retail-entry boundary.** Parked after the candidate set was
+4. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC
    attribution.
 
-6. **M4 accumulator origin.** Parked because the latest route qualification
+5. **M4 accumulator origin.** Parked because the latest route qualification
    had no target-phase positive-control rows. Do not interpret its nulls.
 
-7. **M5 SP-yield lifecycle and CPU-side MORT publication.** Parked pending a
+6. **M5 SP-yield lifecycle and CPU-side MORT publication.** Parked pending a
    route angle that reaches target phases. The corrected MORT descriptor edge
    is `+0x190` to `dmaVoiceSampleAndSignal`; `+0x194` is the speech source.
 

@@ -125502,3 +125502,15 @@ guest-owned value.
 Evidence: `cmake --build build --config Debug --target RogueSquadron64Recomp`
 succeeded; `python3 -m py_compile
 /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` passed.
+
+## Session 3153 (2026-08-29) — qualified Step 6 policy reachability
+
+Ran the existing Debug binary concurrently from `build/` for 30 seconds with
+the default environment and with `ROGUESQ_DRAIN_INLOOP_TICK=1`. Both arms
+reached pre-title VI 640 (`0x0066A500`) and emitted eight shade-DMA control
+rows, but neither emitted the `[drain-inloop-gate]` positive-control line.
+Neither reached title 1024 or hangar 512; neither produced a crash or abort.
+The gate policy values and all task, slot, voice, and PCM target-phase nulls are
+therefore unevaluable. This rules out neither `H-Step6-PolicyApplied` nor
+`H-Step6-PolicyBypassed`, and confirms the route block remains upstream of the
+drain call. Evidence: `scratch/agent/s3153_m5_step6_policy_qualification.md`.
