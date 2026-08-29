@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3106 (2026-08-28).
+Current maintenance marker: Session 3107 (2026-08-28).
+
+Session 3107 ran the independent retail oracle with direct execution watches
+on the three known `osViSetMode` callsites. The whole-RDRAM positive control
+fired 10,000 writes; retail reached title 1024 at `0x00790400` and hangar 512
+at `0x006AB400`. `0x8001BB54` fired only at 38.3s in the 1024 title,
+`0x8001B720` at 38.4s during the 1024→512 transition, and `0x8001B8DC` at
+41.6s in the 512 hangar; none fired at the 17.2s 640→1024 transition. This
+selects H-Unenumerated for the exact writer boundary and rejects
+H-Unevaluable, H-ApplyPending, and H-OtherKnown for this run. It is
+single-source oracle evidence. Evidence:
+`scratch/agent/s3107_m5_retail_mode_callsites/AUDIT.md`.
+
+ORIGIN: qualification-only retail callsite attribution. No port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
 
 Session 3106 ran a new independent retail mode-entry capture. The whole-RDRAM
 positive control fired 10,000 writes, retail reached title 1024 at
@@ -847,12 +861,12 @@ route-blocked at pre-title VI 640 despite a valid retail control and positive
 port dispatch controls; target-phase audio rows remain unevaluable. M3 is
 parked pending a new discriminator.
 
-1. **M5 VI-mode publication edge — direct callsite boundary required.** Session
-   3106 proved the retail mode-entry watch live but did not capture the
-   640→1024 transition. Watch `0x8001B8DC`, `0x8001BB54`, and `0x8001B720`
-   directly in one oracle run, retaining the whole-RDRAM control and target
-   phase trace. A callsite hit at the transition identifies the writer; a
-   live target phase with none identifies an unenumerated caller boundary.
+1. **M5 VI-mode publication edge — enumerate the unenumerated writer.** Session
+   3107 showed the whole-RDRAM control and title/hangar phases live, while the
+   three known callsite watches fired only after the 640→1024 transition. Use
+   a genuinely new retail boundary around the mode-publication wrapper or its
+   descriptor source to identify the missing caller. Do not repeat the three
+   direct callsite watches.
 
 2. **M5 VI-mode publication edge — new boundary required.** Session 3105
    selected H-SharedSwapPath: both surviving predecessors are framebuffer
@@ -868,7 +882,7 @@ parked pending a new discriminator.
    discriminate the absent 1024 writer; do not repeat the selector-byte,
    ProducerMark, or current consumer probes.
 
-4. **Generated-symbol sweep — now eligible if no new M5 discriminator is
+4. **Generated-symbol sweep — eligible only if no new M5 discriminator is
    available.** The bounded six-surface audit rule remains in force; resume at
    the next unresolved placeholder rather than repeating closed audits.
 

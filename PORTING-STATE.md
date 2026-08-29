@@ -124710,3 +124710,22 @@ run, retaining both controls. Evidence:
 
 ORIGIN: qualification-only retail callsite attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
+
+## Session 3107 (2026-08-28) — identified unenumerated retail mode writer
+
+Ran one independent retail-oracle capture watching the three known
+`osViSetMode` callsite PCs directly, retaining the whole-RDRAM positive
+control, validated Start schedule, and VI phase trace. The control fired
+10,000 writes; retail reached title `1024 @ 0x00790400` at 17.2s and hangar
+`512 @ 0x006AB400` at 38.4s. The three watches were live but fired only later:
+`0x8001BB54` at 38.3s in the 1024 title, `0x8001B720` at 38.4s at the
+1024-to-512 transition, and `0x8001B8DC` at 41.6s in the 512 hangar. None
+fired at the 640-to-1024 transition. This selects H-Unenumerated and rules
+out H-Unevaluable, H-ApplyPending, and H-OtherKnown for this run. It rules
+out the three named callers as the target writer but does not identify the
+missing caller or descriptor source. This is single-source oracle evidence.
+
+Evidence: `scratch/agent/s3107_m5_retail_mode_callsites/AUDIT.md`.
+
+ORIGIN: qualification-only retail callsite attribution; no port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
