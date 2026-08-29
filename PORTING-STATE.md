@@ -126379,3 +126379,17 @@ VI 640. Evidence: `scratch/agent/s3213_m3_voice_list_table_audit.md`.
 
 ORIGIN: guest-PC reload/store census plus independent companion symbol metadata;
 no mitigation landed.
+
+## Session 3214 (2026-08-29) — blocked M5 route requalification pending selection
+
+The prescribed M5 work unit was the same-build image-versus-silent qualification
+after a human-selected route change. No route, configuration, or equivalent
+retail-grounded boundary was supplied in this iteration; `scratch/agent/NEXT.md`
+still explicitly prohibits repeating the prior VI-640 pair without one. No build,
+instrument, or game run was performed. Therefore the target-phase audio/task/DMA/
+service/slot/voice/MORT/PCM questions remain unevaluable, and no route or audio
+hypothesis is promoted or ruled out. The single required unblock is a selected
+route/configuration, after which `run_s2285_m5_step1_contract_pair.sh` can run.
+
+ORIGIN: iteration input/state inspection; absence of an authorized route change
+was measured from the prescribed NEXT work unit and current worktree state.

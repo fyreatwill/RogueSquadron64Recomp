@@ -29,7 +29,8 @@ Exact commands after the human selects the route/configuration:
 zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s3214_m5_route_requal
 ```
 
-Until that human input exists, do not build or launch a substitute route.
+Until that human input exists, do not build or launch a substitute route. The
+current iteration is blocked pending that input.
 
 Expected outcome: target phase reached with the required positive controls,
 or the route remains pre-title and M5 stays blocked. If blocked, ask the human

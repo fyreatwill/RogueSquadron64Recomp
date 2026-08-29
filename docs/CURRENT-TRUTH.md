@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3213 (2026-08-29).
+Current maintenance marker: Session 3214 (2026-08-29).
 
 ## Current state
 
@@ -29,8 +29,9 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. Obtain a human-selected route change or equivalent retail-grounded boundary
-   so the M5 Step 1 pair can reach title or hangar. Do not repeat the Session
-   3192 pair while both arms stop at VI 640.
+   so the M5 Step 1 pair can reach title or hangar. Session 3214 is blocked on
+   this input; do not repeat the Session 3192 pair while both arms stop at VI
+   640.
 2. After a route change, rerun the existing same-build phase-gated pair with
    `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-arm DMEM,
    DMA, `Broke`/SP completion, service, slot, and PCM joins; retain the silent
