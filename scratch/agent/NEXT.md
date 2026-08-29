@@ -23,16 +23,13 @@ change: title/hangar VI transition, image-arm DMEM/DMA/SP/service joins, and
 silent-arm no-write control. The result must distinguish target-phase audio
 execution from another pre-title route stop.
 
-Exact commands:
+Exact commands after the human selects the route/configuration:
 
 ```sh
-rg -n 'voice|song|table|list|guard|KSEG0|0x8014' \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_25.c \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_26.c
-rg -n 'voice|song|table|list|0x8014' \
-  /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files \
-  /Users/williambuckley/Documents/Tools/rogue_squadron64/src 2>/dev/null
+zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s3214_m5_route_requal
 ```
+
+Until that human input exists, do not build or launch a substitute route.
 
 Expected outcome: target phase reached with the required positive controls,
 or the route remains pre-title and M5 stays blocked. If blocked, ask the human
