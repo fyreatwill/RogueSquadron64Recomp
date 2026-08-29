@@ -5,7 +5,7 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 ## Single work unit
 
 Audit the next unresolved project placeholder, currently
-`fake_func_80055A2C`, using the six-surface sweep: companion map, generated
+`fake_func_8006B704`, using the six-surface sweep: companion map, generated
 body, callers, header, overlay registration, project TOML, and local duplicate
 references. Rename only if an exact companion identity is supported;
 otherwise synchronize a mechanical `data_gap_*` name or preserve the

@@ -784,7 +784,7 @@ functions = [
     { name = "loadVoiceTxtFile", vram = 0x8005595C, size = 0x1C },
     { name = "getVoiceText", vram = 0x80055978, size = 0xA8 },
     { name = "getVoiceTxtStringPtr", vram = 0x80055A20, size = 0xC },
-    { name = "fake_func_80055A2C", vram = 0x80055A2C, size = 0x4 },
+    { name = "initVoiceSubtitleSystemPreamble", vram = 0x80055A2C, size = 0x4 },
     { name = "initVoiceSubtitleSystem", vram = 0x80055A30, size = 0x15C },
     { name = "linkHudNodeAndComputeScreenPos", vram = 0x80055B8C, size = 0x124 },
     { name = "tickVoiceSubtitleDisplay", vram = 0x80055CB0, size = 0x4FC },

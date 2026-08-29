@@ -124504,6 +124504,23 @@ Evidence: `scratch/agent/s3095_generated_symbol_rename/AUDIT.md`.
 ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
 runtime, route, audio, mitigation, or generated instruction behavior changed.
 
+## Session 3097 (2026-08-28) — synchronized 0x80055A2C preamble identity
+
+The bounded six-surface generated-symbol audit examined `0x80055A2C`. The
+companion map explicitly names the 4-byte one-instruction entry fragment
+`initVoiceSubtitleSystemPreamble` for `initVoiceSubtitleSystem`. The active
+generated body contains only `subu $a0,$a0,$v0`, and the generated header and
+overlay registration already use that preamble name; exact searches found no
+generated caller or independent lookup. The project TOML was the only stale
+surface and is now synchronized. This supersedes the older callable-ambiguous
+classification because the companion identity and all active generated
+surfaces agree. No build or game run was needed.
+
+Evidence: `scratch/agent/s3097_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
+runtime, route, audio, mitigation, or generated instruction behavior changed.
+
 ## Session 3096 (2026-08-28) — synchronized 0x800457CC data-gap symbol
 
 The bounded six-surface generated-symbol audit examined `0x800457CC`. The
