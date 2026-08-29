@@ -1,42 +1,43 @@
-# NEXT work unit — redesign the M5 route phase join
+# NEXT work unit — attribute the retail M5 VI origin writer
 
-HYPOTHESIS-ID: m5-port-route-boundary
+HYPOTHESIS-ID: m5-retail-vi-origin-attribution
 
-Session 3229 watched retail caller, reapply entry, reapply call, and return in
-one run. The whole-RDRAM control passed; all four fired once in order at 640
-origin `0x00790A00`, and the return row matched the port's `audio-return` row
-at `0x0066A500`. The exact `0x00790500` bucket is not a sufficient join key.
-See `scratch/agent/s3229_m5_route_return_oracle.md` and `.log`.
+Session 3230 selected distinct edges: both port arms stopped at
+640/`0x0066A500`, while retail's ordered route PCs fired at 640/`0x00790A00`.
+Do not add more port route fields until the retail buffer writer/commit is
+attributed.
 
 ## Competing hypotheses
 
-- `H-PhaseAlias`: `0x00790500` and `0x00790A00` are the same transition under
-  VI/display-mode rotation, so retail and port can join by a normalized
-  transition key.
-- `H-PhaseDifferentEdge`: the origins are distinct display-mode edges and the
-  port row is not the retail caller transition.
-- `H-PortSequenceMissing`: after a normalized join, the port has no matching
-  caller-to-return sequence even though retail does.
+- `H-RetailRouteWriter`: the retail `0x00790A00` origin is legitimately
+  published by the watched reapply/VI-commit path and its physical buffer can
+  be identified at the VI-swap edge.
+- `H-RetailOtherWriter`: another display-buffer writer produces
+  `0x00790A00`; the watched route PCs are consumers or adjacent bookkeeping.
+- `H-PortOriginSelection`: the port's `0x0066A500` commit is the same logical
+  route but selects a different legitimate buffer because its commit/VI-swap
+  ordering differs.
 
 ## Discriminator
 
-Use the already-grounded retail sequence, then make one phase-gated port
-capture keyed by the same VI transition rather than an exact origin suffix.
-Record the first transition containing the four route PCs/rows and its
-immediately preceding/following VI origin, with a whole-RDRAM positive control
-in the same run. `H-PhaseAlias` is selected if normalized retail and port
-transitions have the same caller/entry/call/return order and values;
-`H-PhaseDifferentEdge` if the surrounding VI edge or sequence differs;
-`H-PortSequenceMissing` only if the normalized port window has no matching
-sequence. Do not add audio/task counters until one outcome selects the phase
-relationship.
+Run the independent retail oracle first with a whole-RDRAM write positive
+control, the existing route and title gate, and a phase-gated execution watch
+on the VI-swap/commit routine already reported by the oracle (`0x80035500`).
+Record each `0x00790A00` transition's VI-swap physical argument, previous PC,
+and immediately preceding/following VI origin. `H-RetailRouteWriter` is
+selected if the watched route sequence and VI-swap writer/argument form one
+ordered publication of `0x00790A00`; `H-RetailOtherWriter` if another PC writes
+or commits it; `H-PortOriginSelection` if retail and port show the same writer
+and ordering but different legitimate buffer selection. A whole-RDRAM control
+must reach its callback threshold in the same run.
 
-## Exact start
+## Exact commands
 
-Before building port instrumentation, inspect the existing phase transition and
-route rows with `rg -n '\\[(phase|m5-route|audio-return)'` in the two validated
-port logs and use `scratch/agent/s3229_m5_route_return_oracle.log` as ground
-truth. Then define one bounded, transition-keyed port capture and run both
-audio arms together; the discriminator is the normalized sequence, not a
-stopwatch or exact origin. Keep the same route, `ROGUESQ_LOG_ALL=1`, and phase
-width 640.
+Use the oracle command documented in `tools/oracle/README.md`, preserving the
+validated Rice/input route and title gate. Add the `0x80035500` VI-swap watch
+and the existing four route-PC watches, plus the whole-RDRAM watch. Capture to
+`scratch/agent/s3231_m5_retail_vi_origin/` and do not build port
+instrumentation until the oracle result is positive-controlled.
+
+Do not add audio/task counters until this writer/commit discriminator selects
+one outcome.

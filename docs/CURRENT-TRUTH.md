@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3229 (2026-08-29).
+Current maintenance marker: Session 3230 (2026-08-29).
 
 ## Current state
 
@@ -29,6 +29,15 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection.
+   Session 3230's same-build silent/image capture selected
+   `H-PhaseDifferentEdge`: both port arms reached 640/origin `0x0066A500`
+   and emitted the same live VI-commit and audio-return rows, while retail's
+   four watched route PCs occur at 640/origin `0x00790A00` before title. This
+   closes the exact-origin alias join and does not establish a missing port
+   sequence. The next work unit is a ground-truth retail VI-swap/commit
+   attribution at the `0x00790A00` transition, with a whole-RDRAM control, to
+   identify the legitimate origin writer and compare its physical buffer to
+   the port's `0x0066A500` commit before adding more port counters.
    Session 3229 watched retail caller, reapply entry, reapply call, and return
    branch in one run. The whole-RDRAM control reached 10,000 callbacks; all
    four watches fired once in order at 640 origin `0x00790A00`, then retail

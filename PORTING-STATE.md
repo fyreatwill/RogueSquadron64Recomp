@@ -126736,3 +126736,28 @@ Evidence: `scratch/agent/s3229_m5_route_return_oracle.md` and
 
 ORIGIN: no mitigation or guest value was changed; this is an independent
 retail execution result with a same-run positive control.
+## Session 3230 (2026-08-29) — selected distinct M5 route phase edge
+
+Built the Debug target once and ran concurrent silent/image port arms with
+LLE-only, spin-yield, the validated autopilot route, `ROGUESQ_LOG_ALL`, VI
+caller tracing, receive tracing, and M5 route tracing. Both arms reached the
+same four phase markers and stopped at 640/origin `0x0066A500`; neither reached
+title 1024, and neither crashed or aborted. Both emitted the same live
+`vi-commit` (`caller=0x80007904`, requested width 640, origin `0x66A500`) and
+phase-4 `audio-return` route row with `target=0`; route-order traffic continued
+after the boundary.
+
+Together with the Session 3229 retail oracle result—caller, reapply entry,
+reapply call, and return branch ordered at 640/origin `0x00790A00`, followed by
+title—this selects `H-PhaseDifferentEdge` over `H-PhaseAlias`. It does not
+select a missing port sequence: the port sequence is live locally but belongs
+to a different display-mode edge. The whole-run phase/route controls and the
+independent retail positive-control/title gate validate the nulls. No guest
+value, guard, ordering change, or mitigation was made.
+
+Evidence: `scratch/agent/s3230_m5_route_phase_join.md` and
+`scratch/agent/route_boundary_3225/{silent,image}.log`.
+
+ORIGIN: no mitigation or guest value was changed; the finding is a phase-edge
+correction based on independent retail attribution and two identical port
+arms.
