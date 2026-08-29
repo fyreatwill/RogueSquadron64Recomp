@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3107 (2026-08-28).
+Current maintenance marker: Session 3111 (2026-08-28).
+
+Session 3111 ran a new independent retail boundary watch over
+`selectAndApplyViMode` and its mode-descriptor helpers
+(`0x8001BB6C:0x8001BC48`). Rice loaded, the whole-RDRAM positive control fired
+10,000 writes, and retail reached title `1024 @ 0x00790400` at 17.2s and
+hangar `512 @ 0x006AB400` at 38.4s, but the new range recorded zero
+executions. This closes that mode-selection/helper range as the 640→1024
+writer boundary; the missing writer remains outside it. It is single-source
+oracle evidence. Evidence:
+`scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
+
+ORIGIN: qualification-only retail boundary attribution. No port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
 
 Session 3107 ran the independent retail oracle with direct execution watches
 on the three known `osViSetMode` callsites. The whole-RDRAM positive control
@@ -862,11 +875,12 @@ port dispatch controls; target-phase audio rows remain unevaluable. M3 is
 parked pending a new discriminator.
 
 1. **M5 VI-mode publication edge — enumerate the unenumerated writer.** Session
-   3107 showed the whole-RDRAM control and title/hangar phases live, while the
-   three known callsite watches fired only after the 640→1024 transition. Use
-   a genuinely new retail boundary around the mode-publication wrapper or its
-   descriptor source to identify the missing caller. Do not repeat the three
-   direct callsite watches.
+   3111 showed the whole-RDRAM control and title/hangar phases live, while the
+   `selectAndApplyViMode`/descriptor-helper range was never executed. Watch a
+   genuinely new earlier `initVideoSubsystem` boundary
+   (`0x8001A098:0x8001B7B8`) to identify the missing caller or descriptor
+   source. Do not repeat the three direct callsite watches or the closed
+   selector-helper range.
 
 2. **M5 VI-mode publication edge — new boundary required.** Session 3105
    selected H-SharedSwapPath: both surviving predecessors are framebuffer

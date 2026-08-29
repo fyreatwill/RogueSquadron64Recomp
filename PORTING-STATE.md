@@ -124711,6 +124711,27 @@ run, retaining both controls. Evidence:
 ORIGIN: qualification-only retail callsite attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3108 (2026-08-28) — closed retail mode-selector boundary
+
+Ran one independent retail-oracle capture with a new execution watch over
+`selectAndApplyViMode` and its mode-descriptor helper range
+`0x8001BB6C:0x8001BC48`. The fixed Rice-backed run passed the whole-RDRAM
+positive control with exactly 10,000 writes and reached title
+`1024 @ 0x00790400` at 17.2s and hangar `512 @ 0x006AB400` at 38.4s. The
+new range was armed but recorded zero executions. The initial no-video attempt
+stopped at 320 and was discarded; the Rice rerun supplied the valid control
+and target phases.
+
+This closes the narrow hypothesis that the 640-to-1024 writer executes through
+the selected mode/helper range. It does not identify the missing writer or
+make a range-null an explanation. The next probe moves earlier to the
+`initVideoSubsystem` range. This is single-source oracle evidence.
+
+Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
+
+ORIGIN: qualification-only retail boundary attribution; no port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
+
 ## Session 3107 (2026-08-28) — identified unenumerated retail mode writer
 
 Ran one independent retail-oracle capture watching the three known
