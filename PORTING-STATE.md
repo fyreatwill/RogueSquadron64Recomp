@@ -124772,6 +124772,29 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3123 (2026-08-28) — qualified port VI consumer reachability
+
+Built the existing port-side VI consumer probe and ran one 120-second
+spin-yield/F5-LLE image-arm capture with `ROGUESQ_LOG_VI_CONTEXT_PORT=1`.
+The probe's all-width positive control fired 8 control rows, and the port
+consumer committed width 640 with 512 phase rows. The run reached only widths
+0, 320, 2, and 640; it produced no target 1024 or 512 hangar phase and was
+SIGKILLed by its watchdog. The result selects `H-PortConsumerAbsent` only for
+the observed target phase because the route stopped before that phase; it does
+not distinguish an absent consumer from an upstream route stop.
+
+This rules out interpreting a target-phase consumer null as evidence of stale
+VI context in this capture. It does not rule out the port consumer itself,
+does not identify the route blocker, and authorizes no behavior change. The
+next work unit is a paired image/silent audio-task route qualification with
+phase-keyed positive controls.
+
+Evidence: `scratch/agent/s3123_vi_consumer_capture/run.log` and
+`scratch/agent/s3123_run.sh`.
+
+ORIGIN: qualification-only port consumer instrumentation; no VI, audio,
+route, wait, voice, destination, or mitigation behavior changed.
+
 ## Session 3122 (2026-08-28) — selected retail VI consumer handoff
 
 Ran one independent retail-oracle capture with the whole-RDRAM positive

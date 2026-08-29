@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3122 (2026-08-28).
+Current maintenance marker: Session 3123 (2026-08-28).
 
 ## Current state
 
@@ -105,6 +105,16 @@ This selects `H-ConsumerHandoff` and rejects the candidate-set form of
 unevaluable. The result is single-source retail evidence: it authorizes a
 port-side parity probe but no behavior change.
 
+Session 3123 built the existing port-side VI consumer probe and ran the
+validated spin-yield/F5-LLE image arm for 120 seconds. Its all-width positive
+control fired 8 rows, and the consumer committed width 640 continuously, but
+the port never reached target width 1024 or hangar width 512. The capture
+therefore selects `H-PortConsumerAbsent` only at the route's observed target
+phase: no target-phase consumer row exists because the port stopped at 640.
+It does not distinguish a missing consumer from an upstream route stop. This
+is single-source port evidence; no behavior change is authorized.
+Evidence: `scratch/agent/s3123_vi_consumer_capture/run.log`.
+
 The strongest route boundary remains the independent comparison: retail
 reaches title at 1024 and hangar at 512, while the recent same-build port
 capture issues only widths 320, 2, 640, and 640 and remains at VI 640. The
@@ -117,12 +127,12 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **M5 VI publication — port-side consumer parity probe.** Compare the
-   port's target-phase VI manager/context handoff against the retail result
-   from Session 3122. Build one phase-scoped probe covering the port's
-   `update_vi`/`update_screen` consumer edge, with the existing VI phase and
-   whole-RDRAM controls. Do not change behavior until the port shows whether
-   its consumer sees the same queued framebuffer/mode context.
+1. **M5 route reachability — qualify the audio/task image arm at target phase.**
+   The port-side consumer parity probe is route-blocked at VI 640. Use one
+   phase-keyed image-versus-silent qualification run with task/DMA/return and
+   VI controls to determine whether the corrected real-image arm reaches the
+   retail-grounded 1024/512 consumer boundary. Do not change a gate, wait,
+   voice, destination, or output path from a pre-target null.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed
