@@ -124189,6 +124189,26 @@ preambles`).
 ORIGIN: naming-only classification. No mitigation, runtime, generated
 instruction, route, or audio behavior changed.
 
+## Session 3081 (2026-08-28) — classified 0x800186D8 generated gap
+
+The mandated generated-symbol-renaming sweep audited `fake_func_800186D8`
+against the available companion map, redefs, neighboring symbol boundaries,
+and project TOML. The companion project independently identifies an 8-byte
+defined record between `freeRenderSubsystemResources` and
+`fetchVertexPositionPrimary`; no callable semantic identity or caller is
+present. The generated RecompiledFuncs/header/registration tree is external
+to this checkout, so those surfaces were not available for inspection, but
+the independent map and exact extent select H-Fragment. The project TOML was
+synchronized to `data_gap_800186D8`, already present in the regeneration-safe
+rename map. The next sweep candidate is `fake_func_80019808`.
+
+This rules out a defensible callable or preamble rename at this boundary and
+does not make a runtime or audio claim. Evidence:
+`scratch/agent/s3081_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No mitigation, runtime, generated
+instruction, route, or audio behavior changed.
+
 ## Session 3079 (2026-08-28) — classified 0x80059B4C generated fragment
 
 The mandated generated-symbol-renaming sweep audited `fake_func_80059B4C`

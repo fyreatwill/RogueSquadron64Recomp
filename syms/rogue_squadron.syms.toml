@@ -241,7 +241,7 @@ functions = [
     { name = "advanceVideoFrame", vram = 0x8001818C, size = 0x2DC },
     { name = "initVideoBootWrapper", vram = 0x80018468, size = 0x1E8 },
     { name = "freeRenderSubsystemResources", vram = 0x80018650, size = 0x88 },
-    { name = "fake_func_800186D8", vram = 0x800186D8, size = 0x8 },
+    { name = "data_gap_800186D8", vram = 0x800186D8, size = 0x8 },
     { name = "fetchVertexPositionPrimary", vram = 0x80018714, size = 0x64 },
     { name = "fetchIndexedVertexPosition", vram = 0x80018778, size = 0x70 },
     { name = "normalizeVec3InPlace", vram = 0x800187E8, size = 0x30 },

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3080 (2026-08-28).
+Current maintenance marker: Session 3081 (2026-08-28).
 
 ## Current state
 
@@ -30,6 +30,17 @@ static generated-symbol work can proceed independently.
 
 ## Latest results
 
+Session 3081 completed the bounded six-surface audit at `0x800186D8`. The
+companion map and independent redefs classify this as an 8-byte defined gap
+between `freeRenderSubsystemResources` and `fetchVertexPositionPrimary`; no
+caller, prologue, return sequence, or semantic identity supports a callable
+name. This selects H-Fragment, so the project TOML was synchronized to the
+existing regeneration-safe `data_gap_800186D8` mapping. Evidence:
+`scratch/agent/s3081_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
+
 Session 3080 completed the bounded six-surface audit at `0x8005C61C`. The
 companion map, generated body, header, overlay registration, and project TOML
 agree on a 4-byte isolated `addu $v1, $v1, $a0` fragment immediately before
@@ -37,7 +48,7 @@ agree on a 4-byte isolated `addu $v1, $v1, $a0` fragment immediately before
 identity. This selects H-Fragment, so the placeholder was renamed mechanically
 to `data_gap_8005C61C` across the regeneration-safe mapping and generated tree.
 The former preamble convenience rule was removed. The next sweep candidate is
-`fake_func_800186D8`. Evidence: `scratch/agent/s3080_generated_symbol_rename/AUDIT.md`.
+`fake_func_80019808`. Evidence: `scratch/agent/s3080_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
