@@ -6,7 +6,15 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3176 (2026-08-29).
+Current maintenance marker: Session 3178 (2026-08-29).
+
+Session 3178 completed the bounded generated-symbol sweep for
+`0x80150000..0x80160000`. The companion census selected two ambiguous/fake
+records and three already-synchronized symbols; the required-rename helper
+changed zero references and returned its expected no-rename error, while an
+independent generated-definition search found no placeholder body in the
+interval. The band is closed without a semantic rename. Evidence:
+`scratch/agent/s3178_generated_symbol_sweep.md`.
 
 Session 3177 completed the bounded generated-symbol sweep for
 `0x80140000..0x80150000`. The companion census visibly selected
@@ -721,8 +729,10 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    ambiguous/fake, with zero stale placeholder definitions. Continue at
    Session 3177 closed `0x80140000..0x80150000`: the only selected record was
    already synchronized, with zero changed references and no stale generated
-   placeholder definition. Continue at `0x80150000..0x80160000` and preserve
-   ambiguous fragments.
+   placeholder definition. Session 3178 closed `0x80150000..0x80160000`: two
+   records were ambiguous/fake, three were already synchronized, and no stale
+   generated placeholder definition remained. Continue at
+   `0x80160000..0x80170000` and preserve ambiguous fragments.
 
 5. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC

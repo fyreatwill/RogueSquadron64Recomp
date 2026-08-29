@@ -125883,3 +125883,20 @@ This closes the band for semantic renaming and rules out an exact companion
 rename there; ambiguous records remain untouched. No build, game run, or
 runtime behavior changed. Evidence:
 `scratch/agent/s3177_generated_symbol_sweep.md`.
+
+## Session 3178 (2026-08-29) — bounded generated-symbol sweep closed synchronized band
+
+Ran the bounded regeneration-safe generated-symbol sweep for
+`0x80150000..0x80160000`. The companion census selected
+`0x801529C0 D_801529C0` and `0x80153420 D_80153420` as ambiguous/fake, and
+`0x80154670 numSpeechSamples`, `0x8015467C speechSampleOffsets`, and
+`0x80154684 speechFile` as already synchronized. The required-rename helper
+changed zero references in zero files and returned its expected no-rename
+error under `--require-rename`. An independent search of generated
+`RECOMP_FUNC` definitions found no `func_`, `fake_func_`, or `static_`
+placeholder body in the interval.
+
+This closes the band for semantic renaming and rules out an exact companion
+rename there; ambiguous records remain untouched. No build, game run, or
+runtime behavior changed. Evidence:
+`scratch/agent/s3178_generated_symbol_sweep.md`.
