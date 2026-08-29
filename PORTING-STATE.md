@@ -124421,3 +124421,28 @@ and the rebuilt capture under `scratch/agent/s3091_m5_vi_selector_writer_rebuilt
 
 ORIGIN: qualification-only route attribution. No selector writer, audio
 route, generated behavior, or mitigation changed.
+
+## Session 3092 (2026-08-28) — attributed M5 ProducerMark route handoff
+
+The M5 ProducerMark handoff discriminator ran after an independent retail
+oracle preflight. Retail passed the whole-RDRAM positive control with 10,000
+writes, reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and
+executed `0x8001BCE4` 1,288 times. Its dominant predecessor was
+`0x8000C628` (1,277), with `0x8000C440` (3), `0x8000BFE8` (4),
+`0x80018258` (2), and `0x8001A300` (2).
+
+The rebuilt port fired the VI-selector positive control and four VI-commit
+rows. The first handoff build observed 45 ProducerMark entry/exit pairs but
+could not attribute the wrapper's entry predecessor. The fixed build added
+all five generated callsite witnesses and observed 40 explicit calls from the
+dominant `0x8000C628` site (43 callsite rows total); the port still stopped at
+VI-640 `0x0066A500`, so the 1024 gate never armed. This rejects a missing
+dominant ProducerMark call. Target-predicate and ordering hypotheses remain
+unevaluable without a target phase, so the route investigation moves upstream
+to VI-mode publication. No audio behavior or mitigation changed.
+
+Evidence: `scratch/agent/s3092_m5_route_handoff/AUDIT.md`, the retail oracle
+capture, `run.log`, and `run.log` from the fixed port capture.
+
+ORIGIN: diagnostic-only generated callsite and entry/exit witnesses; no game
+state, route, audio, or mitigation behavior changed.

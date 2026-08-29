@@ -964,6 +964,53 @@ extern "C" void rs64_m5_route_prepare_inputs(
     ++rows;
 }
 
+extern "C" void rs64_m5_producer_mark_handoff(uint8_t* rdram, uint32_t edge,
+                                                 uint32_t caller, uint32_t s0,
+                                                 uint32_t s1, uint32_t a0,
+                                                 uint32_t a1, uint32_t a2,
+                                                 uint32_t v0) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_ROUTE_HANDOFF");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || !rdram) return;
+    static std::mutex mutex;
+    static uint32_t key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t next_key = (width << 24) ^ origin;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (key != next_key) { key = next_key; rows = 0; }
+    if (rows++ >= 512u) return;
+    const auto byte = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFu;
+        return rdram[(guest - 0x80000000u) ^ 3u];
+    };
+    const auto word = [&byte](uint32_t guest) -> uint32_t {
+        return (byte(guest) << 24) | (byte(guest + 1u) << 16) |
+               (byte(guest + 2u) << 8) | byte(guest + 3u);
+    };
+    const uint32_t target = ((width == 1024u && origin == 0x00790400u) ||
+                             (width == 512u && origin == 0x006AB400u)) ? 1u : 0u;
+    std::fprintf(stderr,
+        "[m5-route-handoff] edge=%s n=%u phase=%u width=%u origin=0x%06X "
+        "target=%u caller=0x%08X s0=0x%08X s1=0x%08X a0=0x%08X a1=0x%08X "
+        "a2=0x%08X v0=0x%08X count=%u states=%u,%u,%u,%u,%u,%u "
+        "pending=0x%08X/0x%08X sel=%02X/%02X/%02X\n",
+        edge == 0u ? "entry" : (edge == 1u ? "exit" : "call"), rows - 1u,
+        phase, width, origin, target,
+        caller, s0, s1, a0, a1, a2, v0, byte(0x80128EADu),
+        byte(0x80128EAAu), byte(0x80128EABu), byte(0x80128EACu),
+        byte(0x80128EADu), byte(0x80128EAEu), byte(0x80128EAFu),
+        word(0x80128E94u), word(0x80128E90u), byte(0x8012A865u),
+        byte(0x8012A864u), byte(0x8012A862u));
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_b40_read(uint8_t* /*rdram*/, uint32_t read_pc,
                                   uint32_t value, uint32_t branch_pc,
                                   uint32_t branch_taken) {

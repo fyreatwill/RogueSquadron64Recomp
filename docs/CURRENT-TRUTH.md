@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3091 (2026-08-28).
+Current maintenance marker: Session 3092 (2026-08-28).
+
+Session 3092 ran the M5 ProducerMark handoff discriminator after an
+independent retail preflight. Retail passed the whole-RDRAM control, reached
+title/hangar, and executed `0x8001BCE4` with dominant predecessor
+`0x8000C628`. The port positive controls fired and the new regeneration-safe
+handoff table observed 45 entry/exit pairs plus 40 explicit dominant
+`0x8000C628` callsite rows, but the port still stopped at VI-640
+`0x0066A500`. This rejects a missing dominant ProducerMark call, while target
+predicate and ordering remain unevaluable because the port never reached the
+target phase. The route investigation moves upstream to VI-mode publication.
+Evidence: `scratch/agent/s3092_m5_route_handoff/AUDIT.md`.
+
+ORIGIN: diagnostic-only handoff attribution. No game state, audio route, or
+mitigation behavior changed.
 
 Session 3091 ran the M5 VI selector-writer attribution after first restoring
 the independent oracle core. Retail passed its whole-RDRAM positive control
@@ -656,13 +670,12 @@ route-blocked at pre-title VI 640 despite a valid retail control and positive
 port dispatch controls; target-phase audio rows remain unevaluable. M3 is
 parked pending a new discriminator.
 
-1. **M5 route repair/handoff — use a new producer/signal edge.** Session 3091
-   found that the watched retail selector bytes are not written in title or
-   hangar, and the rebuilt AUTOPILOT port capture still stops at VI-640 before
-   target-phase selector rows. Retain the whole-RDRAM, title, hangar, and port
-   selector positive controls; use a genuinely different route-handoff edge.
-   Do not repeat the selector-byte watch or change audio behavior from this
-   result.
+1. **M5 VI-mode publication edge — move upstream of ProducerMark.** Session
+   3092 observed the dominant port ProducerMark caller (`0x8000C628`) before
+   the repeatable VI-640 stop, rejecting a missing ProducerMark publication.
+   Attribute the next VI-mode writer/consumer handoff with independent retail
+   whole-RDRAM/title/hangar controls and one phase-keyed port build. Do not
+   repeat the selector-byte watch or change audio behavior from this result.
 
 2. **M5 VI-mode stall — attribute selector-writer inputs.** Session 3076
    ruled out table aliasing, record-copy reorder, selected-pointer mutation,
