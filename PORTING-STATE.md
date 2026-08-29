@@ -124226,3 +124226,16 @@ does not make a runtime or audio claim. Evidence:
 
 ORIGIN: naming-only classification. No mitigation, runtime, generated
 instruction, route, or audio behavior changed.
+## Session 3082 (2026-08-28) — classified 0x80019808 generated gap
+
+Ran the bounded six-surface generated-symbol audit for `fake_func_80019808`.
+The companion map and redefs identify an 8-byte defined gap between
+`projectPointToScreen` and `awaitFrameSyncMesgBlock`. The generated body has
+only `lwc1`/`mul.s`, with no callable prologue, return sequence, or callers;
+header, overlay registration, project TOML, and rename tooling all agree on
+the mechanical `data_gap_80019808` identity. This selects H-Fragment and
+confirms the existing regeneration-safe mapping. The next candidate is
+`fake_func_80024878`. Evidence: `scratch/agent/s3082_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.

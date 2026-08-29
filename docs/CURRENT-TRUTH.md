@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3081 (2026-08-28).
+Current maintenance marker: Session 3082 (2026-08-28).
 
 ## Current state
 
@@ -27,6 +27,18 @@ qualified runs reach title and hangar boundaries. Factor 5 image tasks and
 CPU MORT speech are separate contracts. A `Broke` return proves task
 completion, not PCM correctness. The M5 route dependency remains open, but
 static generated-symbol work can proceed independently.
+
+Session 3082 completed the bounded six-surface audit at `0x80019808`. The
+companion map, generated body, callers, header, overlay registration, and
+project TOML agree on an 8-byte defined gap between `projectPointToScreen` and
+`awaitFrameSyncMesgBlock`; the generated body is only `lwc1`/`mul.s`, with no
+callable prologue, return sequence, or callers. This selects H-Fragment and
+confirms the existing regeneration-safe `data_gap_80019808` mapping. The next
+sweep candidate is `fake_func_80024878`. Evidence:
+`scratch/agent/s3082_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
 
 ## Latest results
 
