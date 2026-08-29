@@ -124114,3 +124114,19 @@ boundary, not runtime behavior.
 
 ORIGIN: naming-only classification. No runtime, generated instruction, route,
 audio, or submodule behavior changed.
+## Session 3076 (2026-08-28) — audited VI selector-state divergence
+
+Completed the bounded VI selector-state audit. The four records at
+`0x80128D50 + {0,0x50,0xA0,0xF0}` are populated by `initVideoSubsystem` with
+matching source/destination strides and `+8` width fields. `applyPendingViChanges`
+uses the selector bytes to choose a record and passes that pointer unchanged to
+`osViSetMode`; the runtime VI consumer does not rewrite it. Retail’s
+`0x80128DA0` requires selector state `[A,B,C]=[1,1,0]`, while port’s
+`0x80128DF0` requires `C=1` and not `(A&&B)`. This selects H-SelectorWriter
+and rejects H-SelectorAlias and H-ModeConsumer at this boundary. The actual
+producer-input difference remains unresolved and is the next measurement;
+no behavior or audio route changed. Evidence:
+`scratch/agent/s3076_m5_vi_selector_state/AUDIT.md`.
+
+ORIGIN: qualification-only static audit. No runtime, generated instruction,
+route, audio, or mitigation behavior changed.

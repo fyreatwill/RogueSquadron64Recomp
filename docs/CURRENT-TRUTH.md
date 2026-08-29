@@ -30,6 +30,19 @@ static generated-symbol work can proceed independently.
 
 ## Latest results
 
+Session 3076 completed the bounded VI selector-state audit. The four records
+at `0x80128D50 + {0,0x50,0xA0,0xF0}` and their `+8` width fields are copied by
+`initVideoSubsystem` without aliasing; `applyPendingViChanges` selects and
+passes the pointer unchanged. Retail `0x80128DA0` requires selector
+`[A,B,C]=[1,1,0]`, while port `0x80128DF0` requires `C=1` and not `(A&&B)`.
+The remaining divergence is upstream selector/pending-mask input from the
+game writers, selecting H-SelectorWriter and rejecting alias/consumer causes
+at this boundary. Evidence: `scratch/agent/s3076_m5_vi_selector_state/AUDIT.md`.
+
+No behavior, audio route, or mitigation changed. The causal producer-value
+difference is still single-source/static pending retail attribution of those
+inputs.
+
 Session 3075 ran the M5 Step-1 image/silent qualification with one rebuilt
 Debug binary, concurrent arms, and the independent retail oracle. The oracle
 passed the whole-RDRAM positive control and reached title `1024 @
@@ -460,12 +473,11 @@ route-blocked at pre-title VI 640 despite a valid retail control and positive
 port dispatch controls; target-phase audio rows remain unevaluable. M3 is
 parked pending a new discriminator.
 
-1. **M5 VI-mode stall — identify the selector-state divergence.** Session
-   3075 requalified both audio arms and confirmed the same VI-640 boundary;
-   the oracle independently reached title/hangar. Continue with a bounded
-   selector audit at `0x80128D50`/`applyPendingViChanges`, naming the state
-   writer or alias that explains retail `0x80128DA0` versus port
-   `0x80128DF0`. Do not change audio behavior from this null.
+1. **M5 VI-mode stall — attribute selector-writer inputs.** Session 3076
+   ruled out table aliasing, record-copy reorder, selected-pointer mutation,
+   and host VI alteration. Attribute the producer inputs for retail
+   `[A,B,C]=[1,1,0]` versus port `0x80128DF0`, using the independent oracle and
+   one phase-keyed port build. Do not change audio behavior from this result.
 
 2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017B28` is complete; the preamble at
@@ -494,7 +506,7 @@ parked pending a new discriminator.
 
 4. **M5 route repair/handoff — identify a different producer/signal edge.**
    Retain task and phase positive controls and use a genuinely new handoff
-   angle only after the selector-state audit.
+   angle only after selector-writer attribution.
 
 5. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
