@@ -4,11 +4,11 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next unresolved generated placeholder `fake_func_8007C298` against
-the companion map, generated body, callers, header, overlay registration, and
-project TOML. Rename it only if all surfaces establish a semantic identity;
-otherwise preserve the placeholder or use a mechanical gap name, then advance
-the ranked sweep.
+Audit the next unresolved generated placeholder after `fake_func_8007C298`
+against the companion map, generated body, callers, header, overlay
+registration, and project TOML. Rename it only if all surfaces establish a
+semantic identity; otherwise preserve the placeholder or use a mechanical gap
+name, then advance the ranked sweep.
 
 ## Competing hypotheses
 
@@ -26,7 +26,7 @@ H-Unresolved. No runtime build is required for this static unit.
 
 ## Exact commands
 
-1. Inspect the six surfaces with bounded `rg`/`sed` windows.
+1. Identify the next ranked placeholder with bounded `rg`/`sed` windows and inspect its six surfaces.
 2. If H-ExactIdentity is selected, update the regeneration-safe rename map,
    companion symbol/TOML entry, and generated references as one batch.
 3. Verify no stale placeholder references remain and record the audit in

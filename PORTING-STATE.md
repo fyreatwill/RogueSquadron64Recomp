@@ -124314,3 +124314,21 @@ but does not prove the valid instruction fragment is uncallable.
 
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
+## Session 3087 (2026-08-28) — classified 0x8007C298 generated gap
+
+Ran the bounded six-surface generated-symbol audit for `fake_func_8007C298`.
+The companion map supplies no semantic identity. The generated body is an
+8-byte record containing only `sll a1,a2,1` and `addu a1,a1,a0`, with no
+callable prologue, return sequence, or generated caller, between complete
+`loadShieldPalette` and `initNpcTexturedEffectFromTemplate` bodies. Header,
+overlay registration, and project TOML agree on the exact address and extent.
+This selects H-Fragment and renames the record mechanically to
+`data_gap_8007C298` in the companion map, project TOML, rename tooling, and
+active generated tree. No build or game run was needed.
+
+This rules out an exact callable identity and surface disagreement, but does
+not make a runtime reachability claim. Evidence:
+`scratch/agent/s3087_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.

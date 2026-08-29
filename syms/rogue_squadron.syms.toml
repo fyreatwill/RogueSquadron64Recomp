@@ -1151,7 +1151,7 @@ functions = [
     { name = "npcShieldUpdate", vram = 0x8007AEF8, size = 0xD20 },
     { name = "heavyAttachedAudioEmitterNpcHandler", vram = 0x8007BC18, size = 0x650 },
     { name = "loadShieldPalette", vram = 0x8007C268, size = 0x30 },
-    { name = "fake_func_8007C298", vram = 0x8007C298, size = 0x8 },
+    { name = "data_gap_8007C298", vram = 0x8007C298, size = 0x8 },
     { name = "initNpcTexturedEffectFromTemplate", vram = 0x8007C2A0, size = 0x250 },
     { name = "npcTexturedEffectUpdate", vram = 0x8007C4F0, size = 0x1C4 },
     { name = "npcTexturedEffectUpdateVariant", vram = 0x8007C6B4, size = 0x1C4 },
