@@ -126415,3 +126415,20 @@ records the route evidence and the re-scoped unit.
 
 ORIGIN: current-build route validation and source/help audit; no mitigation or
 runtime behavior change was made.
+## Session 3216 (2026-08-29) — completed M3 voice-list publication and traversal audit
+
+The complete literal census for `0x80153414` found six writes: two 3D-node
+insertion publications in `play3DSoundEventVariant`, removal updates in
+`factor5RemoveListNode`, `tickAndReap3DAudioVoices`, and `update3DAudioFrame`,
+and the zeroing reset in `reset3DAudioLists`. The reaper loads `node->next`,
+repairs predecessor/successor links, copies that successor to the cursor, and
+loops only while the cursor is nonzero. This proves a finite null-terminated
+traversal at generated-source scope and refutes the unbounded-walk hypothesis.
+Companion metadata independently matches the named insertion/removal/reset
+family. No invalid producer or ordering edge was identified, so no guard was
+added or relaxed; the existing range guard remains safety machinery, not an
+explanation. No build or runtime run was performed. Evidence:
+`scratch/agent/s3216_m3_voice_list_publication_bound.md`.
+
+ORIGIN: generated guest-PC store census plus independent companion symbol
+metadata; no mitigation landed.
