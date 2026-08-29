@@ -127008,3 +127008,15 @@ and VI relation. No mitigation or guest value was changed.
 
 Evidence: `scratch/agent/s3241_m5_vi_swap_target.md` and
 `scratch/agent/soak_results/s3241_m5_vi_swap_target/oracle.log`.
+## Session 3242 (2026-08-29) — moved free-list guard before queue publication
+
+Audited the patch-owned `func_80007D74` free-list pointer-validation class.
+The existing code checked the free-list head before dereference but validated
+the popped pointer only after publishing it into the active queue. Moved that
+guard before publication and tightened the shared KSEG0 predicate to the
+8 MiB RDRAM window. ORIGIN: the guest allocator/free-list head is the writer;
+an out-of-window pointer is not legitimate. `git diff --check` passed. The
+configured checkout lacks the MIPS cross-compiler, so `PatchesLib` was not
+available and the MIPS/generated-host build remains pending; host Clang cannot
+parse the MIPS-only section attribute. This rules out only a local build
+verification, not the source change; it does not select an audio or VI cause.

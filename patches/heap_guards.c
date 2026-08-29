@@ -1,5 +1,5 @@
 // Override of func_80007D74 (heap free-list dequeue + queue insertion) with
-// two KSEG0 pointer-validation guards added. The originals were inline edits
+// KSEG0 pointer-validation guards added. The originals were inline edits
 // in funcs_3.c at L_80007DE0 and L_80007E30; moving them here so the
 // auto-generated funcs_*.c can be regenerated cleanly.
 //
@@ -33,7 +33,8 @@ extern Block** heap_tail_loc;        // 0x8011A7DC — pointer to current tail n
 extern void*   heap_bump;            // 0x801163D4 — bump pointer (block + 0x100)
 
 static int kseg0_ok(const void* p) {
-    return ((uintptr_t)p & 0xE0000000U) == 0x80000000U;
+    uintptr_t addr = (uintptr_t)p;
+    return addr >= 0x80000000U && addr < 0x80800000U;
 }
 
 RECOMP_PATCH Block* func_80007D74(void) {
@@ -67,10 +68,8 @@ RECOMP_PATCH Block* func_80007D74(void) {
     // Re-read head (may have just been replaced by `fresh` above)
     head = heap_free_head;
 
-    // === KSEG0 GUARD 1 (was at funcs_3.c L_80007DE0) ===
     // If head isn't a valid KSEG0 pointer, treat the list as empty rather
-    // than dereferencing into garbage. Empirically caught race-torn /
-    // corrupt heads during cinematic.
+    // than dereferencing into garbage.
     Block* new_head;
     if (!kseg0_ok(head)) {
         new_head = NULL;
@@ -88,7 +87,12 @@ RECOMP_PATCH Block* func_80007D74(void) {
     // before we advanced the list above.
     Block* popped = head;
 
-    // Insert popped into the active queue.
+    if (!kseg0_ok(popped)) {
+        return NULL;
+    }
+
+    // Insert popped into the active queue only after validating the value
+    // published by the free-list head.
     if (*heap_other_listhead != NULL) {
         // Queue non-empty — append after current node.
         Block* p = *heap_tail_loc;       // tail-pointer slot
@@ -99,14 +103,6 @@ RECOMP_PATCH Block* func_80007D74(void) {
                                           // address). Equals q.
     } else {
         *heap_other_listhead = popped;
-    }
-
-    // === KSEG0 GUARD 2 (was at funcs_3.c L_80007E30) ===
-    // Without this, a stale/race-torn popped pointer caused AVs in the
-    // writes below (crash at iter ~929 inside func_800A71B8 → ... here).
-    // Bail out with NULL (alloc-failure sentinel) and let the caller cope.
-    if (!kseg0_ok(popped)) {
-        return NULL;
     }
 
     Block* p2 = *heap_tail_loc;

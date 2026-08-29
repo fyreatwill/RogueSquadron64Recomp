@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3241 (2026-08-29).
+Current maintenance marker: Session 3242 (2026-08-29).
 
 ## Current state
 
@@ -54,13 +54,17 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Compare the Session 3241 retail target output relation against the port's
-   corresponding `osViSwapBuffer`/VI commit row in one same-build phase-gated
-   capture. Require the existing dispatch controls plus the target framebuffer
-   physical address, VI origin, caller/order, and image-versus-silent arm
-   distinction. Only a like-for-like mismatch authorizes M5 Step 3; if the
-   port reaches neither row, classify the boundary as unevaluable rather than
-   adding a guard or route change.
+1. Validate the Session 3242 free-list guard ordering patch through the MIPS
+   toolchain and generated host library. The patch now rejects an invalid
+   `popped` pointer before active-queue publication and limits accepted
+   pointers to `[0x80000000,0x80800000)`. `scratch/agent/s3242_m3_freelist_guard_order.md`
+   records the source audit and local toolchain limitation.
+2. Compare the Session 3241 retail target output relation against the port's
+   corresponding `osViSwapBuffer`/VI commit row only after the guard patch is
+   built and validated. Require the existing dispatch controls plus the target
+   framebuffer physical address, VI origin, caller/order, and image-versus-
+   silent arm distinction. Only a like-for-like mismatch authorizes M5 Step 3;
+   if the port reaches neither row, classify the boundary as unevaluable.
    Session 3241's retail row is caller `0x8001BE24`, `$a0=0x80790000`
    (physical `0x00790000`), target origins `0x00790400/0x00790800`, with the
    whole-RDRAM positive control and title/hangar gates valid. This is
