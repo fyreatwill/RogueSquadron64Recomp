@@ -6,7 +6,18 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3155 (2026-08-29).
+Current maintenance marker: Session 3156 (2026-08-29).
+
+Session 3156 completed the bounded static M3 audit of the final 12
+`stepActiveSongTracks` readers of `D_801529C0` (`0x801529C0`). All 12 guest
+PCs are distinct reachable sites in one function with one epilogue; none is
+lowering-only. The sole writer is `tickAllActiveSongs:0x80096D88`, which
+publishes `0x8014AA00+s2` before the caller's `stepActiveSongTracks` call, and
+the producer's bounded eight-slot loop keeps the value in KSEG0 RDRAM. This
+selects `H-M3-Proven` from generated control flow plus independent companion
+symbol/ELF metadata and closes item -292's 43/43 reader inventory. No guard,
+audio, or runtime behavior changed. Evidence:
+`scratch/agent/s3156_m3_step_active_song_tracks_audit.md`.
 
 Session 3155 completed the bounded static M3 audit of the complete
 `musyxStopVoice` computed-record `+0x1` producer edge. `s6` starts at zero,
@@ -457,7 +468,8 @@ the status-03 wait hatch.
 
 1. **M3 crash work — audit the next bounded idiom-class inventory entry.**
    The `slotDispatcherIter`, `slotDispatcherInner`, and
-   `musyxStopVoice` computed-record classes are closed by Sessions 3146–3155.
+   `musyxStopVoice` computed-record classes and item -292's 43-site
+   `SONGTEMPO_TABLE_GUARD` reader inventory are closed by Sessions 3146–3156.
    The `stopVoicesByHandle` producer edge remains unresolved: no direct or
    recoverable indirect call to `allocVoiceHandleNode` was found, and no guard
    is authorized. Select the next complete NULL-plus-offset class from the

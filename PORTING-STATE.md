@@ -125548,3 +125548,23 @@ hypotheses. No guard, build, run, oracle watch, generated-source edit, or
 audio behavior changed.
 
 Evidence: `scratch/agent/s3155_m3_musyx_stop_voice_index_producer.md`.
+
+## Session 3156 (2026-08-29) — closed `stepActiveSongTracks` song-tempo reader class
+
+Performed the planned complete static M3 audit of the final 12
+`D_801529C0` reader sites in `stepActiveSongTracks`. The rows at guest PCs
+`0x8009498C`, `0x800949C8`, `0x80094B20`, `0x80094B48`, `0x80094BC0`,
+`0x80094C18`, `0x80094C38`, `0x80094C58`, `0x80094CB4`, `0x80094D1C`,
+`0x80094D4C`, and `0x80094D64` are all distinct reachable sites in one
+function with one epilogue; no shared-tail or delay-slot-only duplicate was
+found. The sole generated-tree writer is `tickAllActiveSongs:0x80096D88`,
+which stores `0x8014AA00+s2`; its bounded eight-slot loop initializes and
+advances `s2` by `0xEF8` before the caller invokes `stepActiveSongTracks` at
+`0x80096EF4`. Companion symbol metadata identifies the same global as a
+`0x900`-byte object and the local ELF exports both function addresses.
+This selects `H-M3-Proven` and closes item -292's 43/43 reader inventory.
+It rules out lowering-only and unclassified-reader explanations at static
+scope. No guard, generated-source edit, build, run, oracle watch, or audio
+behavior changed.
+
+Evidence: `scratch/agent/s3156_m3_step_active_song_tracks_audit.md`.
