@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3137 (2026-08-28).
+Current maintenance marker: Session 3138 (2026-08-28).
 
 ## Current state
 
@@ -47,6 +47,16 @@ steps, and stores two zero doublewords per step; the companion tree's libc
 `func_8000040C` → `clearMemory16ByteBlocks` was propagated by the regeneration
 helper, generated header/body/overlay table, and project TOML. This is
 source-only and does not alter runtime behavior.
+
+Session 3138 ran the first M5 Step 1 paired qualification after the prescribed
+retail-boundary census again found no defensible new handoff PC. One build
+carried image and silent arms concurrently for 90 seconds. Both passed the
+dispatch and host-boundary controls and reached pre-title VI 640
+(`0x0066A500`), but neither reached title 1024 or hangar 512. The requested
+downstream task/service/slot/voice/PCM tags had no usable positive rows, so
+their nulls are unevaluable and no audio contract edge is selected. This
+selects `H-RouteBlocked` for this route; audio behavior remains unchanged.
+Evidence: `scratch/agent/s3138_m5_step1_qualification.md`.
 
 ## Latest evidence
 

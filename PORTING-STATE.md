@@ -125261,3 +125261,23 @@ ORIGIN: entry body semantics plus companion libc bzero placement; the renamed
 value is a legitimate function identity, not a mitigation.
 Evidence: `tools/rename_generated_symbols.py`; `syms/rogue_squadron.syms.toml`;
 external `N64Recomp/RecompiledFuncs/{funcs_0.c,funcs.h,recomp_overlays.inl}`.
+
+## Session 3138 (2026-08-28) — qualified M5 image and silent arms at route boundary
+
+The prescribed retail-boundary census again found no defensible new
+transition-capable handoff PC, so this iteration pivoted to the M5 Step 1
+qualification checkpoint. A single Debug build was followed by concurrent
+Factor 5 image and explicit silent `M_AUDTASK` arms using the phase-gated
+AUTOPILOT harness for 90 seconds. Both arms passed same-run dispatch and host
+boundary controls: image dispatch reached at least `n=2048` with
+`real_ucode=1`, silent dispatch reached at least `n=2048` with `real_ucode=0`,
+and both reached pre-title VI 640 at `0x0066A500`. Neither reached title VI
+1024 or hangar VI 512, and neither log contained crash or abort markers. The
+requested downstream task-contract, service, slot/voice, and PCM tags had no
+usable positive rows, so those nulls are unevaluable. This selects
+`H-RouteBlocked` for this route, does not select a de-stubbing edge, and leaves
+audio behavior unchanged. The next unit returns to a genuinely new
+retail-grounded boundary; repeating the exhausted candidate set is forbidden.
+
+Evidence: `scratch/agent/s3138_m5_step1_qualification.md` and
+`scratch/agent/s2618_m5_hangar_pcm_boundary_rerun/{image.log,silent.log}`.
