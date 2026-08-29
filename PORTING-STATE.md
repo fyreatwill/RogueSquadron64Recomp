@@ -125199,3 +125199,14 @@ equivalent generated body/disassembly and repeat the census.
 Evidence: `scratch/agent/s3133_m5_pending_descriptor_audit.md`.
 
 ORIGIN: static census only; no runtime value was changed.
+## Session 3134 (2026-08-28) — found no independent M5 upstream handoff source
+
+Ran the prescribed bounded `rg` census across the companion decomp tree and
+the recomp tree for the pending VI word, selector/descriptor candidates,
+named VI helpers, and known consumer/publication PCs. It found only existing
+symbol declarations and probes; no restored generated body/disassembly and
+no new transition-capable retail PC outside the closed sets. This selects
+`H-StaticInsufficient` and leaves the M5 route blocker unresolved. The result
+is single-source static evidence and does not authorize a port probe or
+behavior change. Evidence:
+`scratch/agent/s3134_m5_upstream_source_census.md`.

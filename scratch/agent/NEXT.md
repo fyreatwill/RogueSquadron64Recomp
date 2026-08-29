@@ -1,15 +1,16 @@
-# NEXT work unit — obtain a new retail-grounded upstream handoff
+# NEXT work unit — obtain the missing independent M5 handoff source
 
 HYPOTHESIS-ID: m5-audio-route-upstream-retail-boundary
 
 ## Single work unit
 
-The previous static census was insufficient: the matching generated snapshot
-is absent and the companion bodies are `INCLUDE_ASM` stubs. Obtain an
-independent actionable handoff source (a restored equivalent generated
+The static census remains insufficient: the matching generated snapshot is
+absent and the companion bodies are `INCLUDE_ASM` stubs. Obtain one
+independent actionable source (a restored equivalent generated
 body/disassembly or a newly static-selected retail PC outside the closed
 wrapper/callsite set), then document exactly one candidate edge and its oracle
-watch recipe. Do not add a port probe or change behavior in this unit.
+watch recipe. Do not add a port probe or change behavior before that source
+exists.
 
 ## Competing hypotheses
 
@@ -17,14 +18,17 @@ watch recipe. Do not add a port probe or change behavior in this unit.
   transition-capable retail instruction outside the rejected set.
 - H-SnapshotRestored: a complete equivalent generated/disassembly source makes
   the pending-to-descriptor edge mechanically enumerable.
-- H-StaticInsufficient: no independent source or new edge is available.
+- H-StaticInsufficient: no independent source or new edge is available; this
+  remains selected until a human supplies an artifact or source.
 
 ## Discriminating measurement
 
 The next source must identify either one exact new PC or a complete body/data
 flow. A new edge selects H-RetailNewEdge; a complete source selects
-H-SnapshotRestored; continued absence selects H-StaticInsufficient and
-requires a human-provided artifact or a pivot to the generated-symbol sweep.
+H-SnapshotRestored; continued absence remains H-StaticInsufficient and
+requires a human-provided artifact. The single experiment that refutes that
+blocking explanation is to rerun the same bounded census after placing the
+artifact in the searched trees.
 
 ## Exact commands
 

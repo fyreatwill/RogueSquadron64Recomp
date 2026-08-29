@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3133 (2026-08-28).
+Current maintenance marker: Session 3134 (2026-08-28).
 
 ## Current state
 
@@ -226,6 +226,16 @@ selects `H-StaticInsufficient`, rules out a static PC selection for this unit,
 and leaves the M5 route blocker unresolved. Single-source static evidence; no
 runtime behavior changed. Evidence:
 `scratch/agent/s3133_m5_pending_descriptor_audit.md`.
+
+Session 3134 repeated the prescribed companion-tree and project-tree census
+for the pending VI word, selector/descriptor candidates, named VI helpers,
+and the known consumer/publication PCs. It found only existing declarations
+and probes: no restored generated body or disassembly, and no new
+transition-capable retail PC outside the closed candidate sets. This selects
+`H-StaticInsufficient` again and leaves the M5 route blocker unresolved.
+This is single-source static evidence; it authorizes no port probe or
+behavior change. Evidence:
+`scratch/agent/s3134_m5_upstream_source_census.md`.
 
 ## Next steps
 
