@@ -126181,3 +126181,16 @@ synchronized exactly three external generated references in `funcs_27.c`,
 `funcs_49.c`, and `funcs.h`. A final search found no stale old-name
 reference. No build or runtime run was needed; the change is source-only.
 Evidence: `scratch/agent/s3199_generated_symbol_rename.md`.
+
+## Session 3200 (2026-08-29) — classified generated data-gap split at 0x800A2BE4
+
+Ran the bounded generated-symbol census for `0x800A2BE4`. The companion symbol
+files had no record, and the generated body begins with `break` followed by
+invalid/data-decoded instructions rather than a callable prologue. The
+required-rename helper initially selected no references, so the regeneration-
+safe mapping was added to `tools/rename_generated_symbols.py`; rerunning it
+renamed three references across the generated body, header, and callsite to
+`data_gap_800A2BE4`. The final search found no stale `static_3_800A2BE4`
+references. This was a source-only naming change; no build or runtime behavior
+was tested or changed. It rules out a defensible semantic companion rename at
+this split.
