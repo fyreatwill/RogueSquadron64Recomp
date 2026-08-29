@@ -7,7 +7,7 @@ size = 0x40
 
 functions = [
     { name = "recomp_entrypoint", vram = 0x80000400, size = 0xC },
-    { name = "func_8000040C", vram = 0x8000040C, size = 0x34 },
+    { name = "clearMemory16ByteBlocks", vram = 0x8000040C, size = 0x34 },
 ]
 
 [[section]]

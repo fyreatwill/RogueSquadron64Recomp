@@ -125241,3 +125241,23 @@ ORIGIN: companion symbol map and generated overlay record at `0x800E9AE0`;
 the renamed value is a legitimate function identity, not a mitigation.
 Evidence: `tools/rename_generated_symbols.py`; external
 `N64Recomp/RecompiledFuncs/{funcs_39.c,funcs.h,recomp_overlays.inl}`.
+
+## Session 3137 (2026-08-28) — named entry-local clearing loop
+
+Pivoted to the mandated generated-symbol-renaming sweep. The bounded
+selection found the last callable placeholder in the external generated
+snapshot, `func_8000040C`. Its body takes address/length inputs, rounds the
+length into 16-byte iterations, performs the entry cache operation, and stores
+two zero doublewords per iteration. The companion tree's libc `bzero` object
+provides independent semantic support for a memory-clearing name. Renamed it
+to `clearMemory16ByteBlocks` in the regeneration helper and propagated the
+name through generated `funcs_0.c`, `funcs.h`, `recomp_overlays.inl`, and the
+project TOML. The post-change search found no remaining `func_8000040C`
+reference. This is source-only; no build or game run was needed and runtime
+behavior is unchanged. The two ambiguous `fake_func_*` fragments remain
+untouched.
+
+ORIGIN: entry body semantics plus companion libc bzero placement; the renamed
+value is a legitimate function identity, not a mitigation.
+Evidence: `tools/rename_generated_symbols.py`; `syms/rogue_squadron.syms.toml`;
+external `N64Recomp/RecompiledFuncs/{funcs_0.c,funcs.h,recomp_overlays.inl}`.

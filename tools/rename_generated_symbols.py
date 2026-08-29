@@ -8,6 +8,9 @@ import sys
 
 
 RENAMES = {
+    # Entry-local zeroing loop: address/length inputs, 16-byte stride, and
+    # paired zero stores match the companion libc bzero implementation.
+    "func_8000040C": "clearMemory16ByteBlocks",
     "func_800824F8": "rs_crc32",
     "func_800BFDC4": "setHudSecondaryWeaponInfo",
     "func_800C63C0": "getAvailableShipsForLevel",
