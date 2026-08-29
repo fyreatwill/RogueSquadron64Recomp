@@ -30,6 +30,22 @@ static generated-symbol work can proceed independently.
 
 ## Latest results
 
+Session 3073 completed the bounded six-surface audit at `0x800C41AC`. The
+companion mission map and primary `redefs.txt` retain the 4-byte
+`data_gap_800C41AC` immediately before `plotRadarBlipColumn`; generated code
+contains only `add.s`, with no return sequence or caller. Header, overlay
+registration, project symbol TOML, and the main rename tool agree on address,
+extent, and mechanical name. This selects H-DataGap and preserves the
+placeholder. The next sweep candidate is `data_gap_800C64A4`. Evidence:
+`scratch/agent/s3073_generated_symbol_rename/AUDIT.md`.
+
+No build or runtime run was needed for this static unit. This rules out an
+independently named callable/preamble identity and mapping drift at this
+boundary; it does not make a claim about runtime behavior.
+
+ORIGIN: naming-only classification. No runtime, generated instruction, route,
+audio, or submodule behavior changed.
+
 Session 3072 completed the bounded six-surface audit at `0x800BF784`. The
 companion mission map and primary `redefs.txt` classify the 12-byte entry as
 `data_gap_800BF784` immediately before `updateHudHealthIndicator`; generated
@@ -425,7 +441,8 @@ parked pending a new discriminator.
    registration, project TOML, and local duplicates. The `0x800BCC38` record
    was audited and preserved as a data gap; `0x800BEBFC` was synchronized as
    `initDemoPlayStatePreamble`; `0x800BF498` was audited and preserved as a
-   data gap; resume at `data_gap_800C41AC`.
+   data gap; `0x800BF784` was also audited and preserved as a data gap;
+   resume at `data_gap_800C64A4`.
    If the sweep becomes a
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.

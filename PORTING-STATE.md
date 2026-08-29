@@ -123961,6 +123961,8 @@ unit. Evidence: `scratch/agent/s3067_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, generated instruction, route,
 audio, or submodule behavior changed.
+
+
 ## Session 3071 (2026-08-28) — audited 0x800BF498 generated symbol
 
 The bounded six-surface generated-symbol audit selected `H-DataGap` for
@@ -124055,6 +124057,24 @@ is `data_gap_800C41AC`. Evidence: `scratch/agent/s3072_generated_symbol_rename/A
 No build or runtime run was needed; this static result rules out an
 independently named callable/preamble identity and mapping drift at this
 boundary, but makes no runtime claim.
+
+ORIGIN: naming-only classification. No runtime, generated instruction, route,
+audio, or submodule behavior changed.
+
+## Session 3073 (2026-08-28) — audited 0x800C41AC generated symbol
+
+Completed the bounded six-surface generated-symbol audit at `0x800C41AC`.
+The companion mission map and primary `build/redefs.txt` retain the 4-byte
+`data_gap_800C41AC` immediately before `plotRadarBlipColumn`; generated code
+contains only `add.s $f22,$f0,$f2`, with no return sequence or generated caller.
+Header, overlay registration, project symbol TOML, and the main rename tool
+agree on address, extent, and mechanical name. This selects H-DataGap and
+preserves the placeholder; the next sweep candidate is
+`data_gap_800C64A4`. No build or runtime run was needed. This rules out an
+independently named callable/preamble identity and mapping drift at this
+boundary, but makes no runtime claim.
+
+Evidence: `scratch/agent/s3073_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, generated instruction, route,
 audio, or submodule behavior changed.
