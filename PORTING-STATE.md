@@ -125821,3 +125821,18 @@ This closes the interval's remaining mechanical data-tail lead while
 preserving its callable records and rules out a runtime-behavior change. No
 build or game run was needed for this source-only rename. Evidence:
 `scratch/agent/s3173_generated_symbol_sweep.md`.
+
+## Session 3174 (2026-08-29) — bounded generated-symbol sweep closed synchronized band
+
+Ran the bounded regeneration-safe generated-symbol sweep for
+`0x80110000..0x80120000`. The companion census selected only already-
+synchronized or ambiguous/fake records. The required-rename helper changed
+zero references in zero files and returned its expected no-rename error under
+`--require-rename`. An independent search of generated `RECOMP_FUNC`
+definitions found no `func_`, `fake_func_`, or `static_` placeholder body in
+the interval.
+
+This closes the band for semantic renaming and rules out an exact companion
+rename there; ambiguous records remain untouched. No build, game run, or
+runtime behavior changed. Evidence:
+`scratch/agent/s3174_generated_symbol_sweep.md`.

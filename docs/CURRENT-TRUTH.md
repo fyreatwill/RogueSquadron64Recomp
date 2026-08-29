@@ -6,7 +6,14 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3173 (2026-08-29).
+Current maintenance marker: Session 3174 (2026-08-29).
+
+Session 3174 completed the bounded generated-symbol sweep for
+`0x80110000..0x80120000`. The companion census selected only synchronized or
+ambiguous/fake records; the required-rename helper changed zero references,
+and an independent generated-definition search found no placeholder body in
+the interval. The band is closed without a semantic rename. Evidence:
+`scratch/agent/s3174_generated_symbol_sweep.md`.
 
 Session 3173 completed the bounded generated-symbol sweep for
 `0x80100000..0x80110000`. The companion census found no stale semantic
@@ -682,8 +689,10 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    Session 3173 closed `0x80100000..0x80110000`: the only remaining
    placeholder in the generated snapshot was the independently classified
    invalid-data tail `static_4_801096D8`, now mechanically named
-   `data_gap_801096D8`. Continue at `0x80110000..0x80120000` and preserve
-   ambiguous fragments.
+   `data_gap_801096D8`. Session 3174 closed
+   `0x80110000..0x80120000` as synchronized or ambiguous/fake, with no
+   placeholder definitions in the interval. Continue at
+   `0x80120000..0x80130000` and preserve ambiguous fragments.
 
 5. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC
