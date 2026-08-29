@@ -212,6 +212,9 @@ RENAMES = {
     # This generated split starts with an isolated store fragment and has no
     # callable prologue, companion symbol, or generated callsite.
     "static_3_800A23BC": "data_gap_800A23BC",
+    # This generated split starts with an isolated multiply fragment and has
+    # no callable prologue or companion symbol.
+    "static_3_800A2F28": "data_gap_800A2F28",
     # This four-byte branch enters the epilogue of the following initializer;
     # it has no standalone prologue, return, caller, or semantic companion.
     "fake_func_8003E55C": "data_gap_8003E55C",

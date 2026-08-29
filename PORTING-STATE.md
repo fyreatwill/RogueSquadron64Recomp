@@ -126222,3 +126222,15 @@ Added the regeneration-safe mapping `static_3_800A2E98` →
 in `funcs_49.c`, `funcs.h`, and `funcs_27.c`, with no stale placeholder left.
 No build or runtime run was needed; this was a source-only change.
 Evidence: `scratch/agent/s3202_generated_symbol_rename.md`.
+
+## Session 3203 (2026-08-29) — classified generated data-gap split at 0x800A2F28
+
+The bounded generated-symbol census found no companion symbol for
+`0x800A2F28`. Its generated body begins with an isolated `mult` instruction
+fragment rather than a callable prologue, with no independent entry evidence.
+The required-rename helper initially selected no references and failed closed;
+after adding the mechanical mapping it synchronized exactly three references
+to `data_gap_800A2F28`, with no stale `static_3_800A2F28` references remaining.
+This selects `H-DataGap` and rules out a defensible semantic companion rename.
+No build or runtime run was performed; this was a source-only change.
+Evidence: `scratch/agent/s3203_generated_symbol_rename.md`.
