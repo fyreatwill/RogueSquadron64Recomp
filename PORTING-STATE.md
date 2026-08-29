@@ -124332,3 +124332,23 @@ not make a runtime reachability claim. Evidence:
 
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
+
+## Session 3088 (2026-08-28) — classified 0x80099FDC generated gap
+
+Ran the bounded six-surface generated-symbol audit for `fake_func_80099FDC`.
+The companion map supplies no semantic identity and the independent redefs
+surface supplies no callable mapping. The project symbol extent is exactly
+four bytes. The generated body starts with a branch whose delay slot at
+`0x80099FE0` is the first word of the `aspMain` RSP text payload, then
+continues by decoding RSP text as CPU instructions through the next named
+routine. There is no direct generated caller. This selects H-Fragment and
+renames the record mechanically to `data_gap_80099FDC` in the companion map,
+project TOML, rename tooling, and active generated tree. No build or game run
+was needed.
+
+This rules out an exact callable identity and surface disagreement, but does
+not make a runtime reachability claim. Evidence:
+`scratch/agent/s3088_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.

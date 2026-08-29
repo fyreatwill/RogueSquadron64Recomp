@@ -10,6 +10,8 @@ registration, and project TOML. Rename it only if all surfaces establish a
 semantic identity; otherwise preserve the placeholder or use a mechanical gap
 name, then advance the ranked sweep.
 
+Current candidate: `fake_func_8009C2C8`.
+
 ## Competing hypotheses
 
 - H-ExactIdentity: all independent surfaces agree on one callable semantic name and exact extent.

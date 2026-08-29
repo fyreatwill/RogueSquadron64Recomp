@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3087 (2026-08-28).
+Current maintenance marker: Session 3088 (2026-08-28).
+
+Session 3088 audited `fake_func_80099FDC` across the companion map, redefs,
+generated body, callers, header, overlay registration, and project TOML. The
+project record is four bytes, and the generated branch's delay slot is the
+first word of the `aspMain` RSP text payload; the remaining generated body is
+an invalid CPU decode of RSP text through the next named CPU routine. No
+caller or semantic companion identity exists. This selects H-Fragment and
+synchronizes the regeneration-safe mechanical name `data_gap_80099FDC`.
+Evidence: `scratch/agent/s3088_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
 
 Session 3087 audited `fake_func_8007C298` across the companion map, generated
 body, callers, header, overlay registration, and project TOML. The 8-byte

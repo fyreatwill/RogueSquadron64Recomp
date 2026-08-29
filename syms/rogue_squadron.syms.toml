@@ -1508,7 +1508,7 @@ functions = [
     { name = "normalizeVec3", vram = 0x80099CFC, size = 0x6C },
     { name = "crossProductVec3", vram = 0x80099D68, size = 0x64 },
     { name = "invertOrientationMatrix", vram = 0x80099DCC, size = 0x210 },
-    { name = "fake_func_80099FDC", vram = 0x80099FDC, size = 0x4 },
+    { name = "data_gap_80099FDC", vram = 0x80099FDC, size = 0x4 },
     { name = "findVoiceSlotByAge", vram = 0x8009AF60, size = 0xE8 },
     { name = "allocAndConfigureNewVoice", vram = 0x8009B048, size = 0x220 },
     { name = "stopVoiceSlotSynced", vram = 0x8009B268, size = 0xD4 },
