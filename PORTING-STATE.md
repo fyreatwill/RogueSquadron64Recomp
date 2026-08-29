@@ -124711,6 +124711,7 @@ run, retaining both controls. Evidence:
 ORIGIN: qualification-only retail callsite attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+
 ## Session 3113 (2026-08-28) — compacted current truth and unified backlog
 
 The maintenance check measured `docs/CURRENT-TRUTH.md` at 61,186 bytes and
@@ -125018,6 +125019,28 @@ later handoff. It rules out H-RangeDead, but does not identify the writer.
 This is single-source oracle evidence.
 
 Evidence: `scratch/agent/s3115_m5_retail_init_video_range/oracle.log`.
+
+ORIGIN: qualification-only retail boundary attribution; no port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
+## Session 3125 (2026-08-28) — qualified retail post-consumer continuation
+
+Ran one independent retail-oracle capture with Rice video, the verified Start
+schedule, VI tracing, and two watches: a whole-RDRAM positive control and the
+new execution range `0x800356AC:0x80035B00`, immediately after the previously
+qualified `__osViSwapContext` consumer range. The positive control reached its
+10,000-callback threshold and continued counting. Retail reached title
+`1024 @ 0x00790400` at 17.3s and hangar `512 @ 0x006AB400` at 38.4s. The new
+range reported 5,631,581 executions overall and remained live through the
+target phases.
+
+This rejects a retail-side stop immediately after `0x800356AC` and establishes
+the next port parity boundary. It does not distinguish the port's upstream
+route stop from a missing phase marker, and it provides no authorization to
+change audio, waits, slots, voices, destinations, or route behavior. This is
+single-source retail evidence; the next work unit is a phase-gated port probe
+for the same range with the existing VI-context and host-voice controls.
+
+Evidence: `scratch/agent/s3125_m5_retail_post_consumer/oracle.log`.
 
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.

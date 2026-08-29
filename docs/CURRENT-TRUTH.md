@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3124 (2026-08-28).
+Current maintenance marker: Session 3125 (2026-08-28).
 
 ## Current state
 
@@ -126,6 +126,16 @@ nulls remain unevaluable and no audio behavior change is authorized. This is
 single-source port evidence; it does not identify the upstream route blocker.
 Evidence: `scratch/agent/s3124_m5_route_qualification/summary.txt`.
 
+Session 3125's independent retail oracle passed the whole-RDRAM positive
+control (10,000 callbacks), reached title `1024 @ 0x00790400` at 17.3s and
+hangar `512 @ 0x006AB400` at 38.4s, and executed the newly watched
+post-consumer range `0x800356AC:0x80035B00` 5,631,581 times. The range was
+live through both target phases; this rejects a retail-side stop immediately
+after `__osViSwapContext` but does not identify the port's pre-target
+divergence. This is single-source retail evidence and authorizes an exact
+phase-gated port parity probe, not a behavior change.
+Evidence: `scratch/agent/s3125_m5_retail_post_consumer/oracle.log`.
+
 The strongest route boundary remains the independent comparison: retail
 reaches title at 1024 and hangar at 512, while the recent same-build port
 capture issues only widths 320, 2, 640, and 640 and remains at VI 640. The
@@ -138,12 +148,13 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **M5 route blocker — find the next upstream handoff boundary.** The paired
-   image/silent qualification passed its controls but both arms stopped at VI
-   640, selecting `H-BothPreTarget`. Use independent retail attribution and a
-   static handoff audit to identify the first divergence before target phase;
-   do not change a gate, wait, voice, destination, or output path from a
-   pre-target null.
+1. **M5 route blocker — compare the post-consumer handoff on the port.** Retail
+   executes `0x800356AC:0x80035B00` through title and hangar, while the port
+   stops at VI 640. Add a phase-gated port watch for the exact range in one
+   build/run, retaining the VI-context and host voice positive controls. A
+   target-phase range row selects an instrumentation/phase-marker issue; no
+   target-phase row with valid controls selects a port divergence at or before
+   this consumer continuation. Do not change audio or route behavior.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the
