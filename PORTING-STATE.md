@@ -125722,3 +125722,18 @@ explicitly preserved and were not changed. This rules out treating this
 record as a callable game routine; it does not change runtime behavior.
 
 No build or game run was needed for this source-only synchronization.
+## Session 3167 (2026-08-29) — proved `musyxMixActiveVoices` voice index class
+
+Completed the bounded static M3 audit of `musyxMixActiveVoices` at
+`0x80090E04`. The six indexed voice-record accesses all use the same loop
+index, and the loop condition proves `s0` is below the published voice count.
+The producer edge is `initN64RspMixer` at `0x8009189C`, which clamps the count
+to at most `0x20` before `allocateSongChannelArray` stores it at `0x80149700`
+(`0x8008F0CC`). The three reachable callers are the `musyxSynthFrame` sites at
+`0x800914C8`, `0x80091588`, and `0x8009163C`. Companion symbol metadata and
+the companion ELF independently confirm the named bodies and addresses.
+
+This selects `H-M3-Proven` for the complete class and rejects both
+`H-M3-Unclassified` and `H-M3-Dead` at static scope. No guard, mitigation,
+audio behavior, generated source, build, or runtime run changed. Evidence:
+`scratch/agent/s3167_m3_musyx_mix_active_voices_audit.md`.

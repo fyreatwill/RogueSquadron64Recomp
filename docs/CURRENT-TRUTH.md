@@ -6,7 +6,16 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3166 (2026-08-29).
+Current maintenance marker: Session 3167 (2026-08-29).
+
+Session 3167 completed a bounded M3 audit of `musyxMixActiveVoices`'s complete
+`0x88`-stride voice-record access class. All six indexed accesses share the
+same loop index; `initN64RspMixer` clamps the published voice count to `0x20`,
+and the mixer loop proves indices `0..31`. Three reachable callers were
+enumerated. Companion symbol metadata and the companion ELF independently
+confirm the named bodies and addresses. This selects `H-M3-Proven`; no guard,
+audio behavior, or generated source changed. Evidence:
+`scratch/agent/s3167_m3_musyx_mix_active_voices_audit.md`.
 
 Session 3166 completed a bounded generated-symbol sweep pivot. The external
 generated snapshot had one remaining callable-shaped placeholder at
@@ -598,7 +607,9 @@ the status-03 wait hatch.
    from the existing M3 inventory. Session 3165 audited the
    `musyxStoreVoiceAdsrParams` `+0x67` index producer: no connected writer or
    recovered indirect/data producer was found, so it selects
-   `H-M3-Unclassified`; do not add a guard. The generated-symbol sweep lead for
+   `H-M3-Unclassified`; do not add a guard. Session 3167 proved the complete
+   `musyxMixActiveVoices` class (`0..31` over the 32-entry array), closing that
+   selected lead. The generated-symbol sweep lead for
    `0x800A0000..0x800B0000` is closed by Session 3160; resume it only in a
    different address band after M3 is no longer actionable.
 
@@ -607,10 +618,11 @@ the status-03 wait hatch.
    640. A human-selected upstream route change or equivalent local
    retail-grounded source is required; do not repeat the current edge capture.
 
-4. **Generated-symbol renaming sweep.** The mandatory pivot resumed this
-   regeneration-safe campaign. Session 3166 synchronized the explicit data
-   gap at `0x800B75C4`; continue with the next bounded address interval only
-   when the helper can land a real rename. Preserve ambiguous fragments.
+4. **Generated-symbol renaming sweep.** M5 remains blocked pending a route
+   change, and Session 3167 closed the selected M3 voice-record class. Resume
+   this regeneration-safe campaign. Session 3166 synchronized the explicit
+   data gap at `0x800B75C4`; continue with the next bounded address interval
+   only when the helper can land a real rename. Preserve ambiguous fragments.
 
 5. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC

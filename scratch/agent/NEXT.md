@@ -4,14 +4,12 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Continue the regeneration-safe sweep from the next unresolved generated
-placeholder. Require an exact companion address, an existing generated
-definition, and either a non-callable/data-gap classification or a defensible
-semantic name. Preserve ambiguous fragments and overlay collisions. Session
-3166 renamed `fake_func_800B75C4` to `data_gap_800B75C4` in the project symbol
-table, rename helper, and external generated snapshot.
+M5 remains blocked pending a route change. The selected M3 class
+`musyxMixActiveVoices` was proven range-safe in Session 3167, and no specific
+unresolved M3 producer edge is currently named in the compact inventory.
+Resume the regeneration-safe sweep from the next unresolved placeholder.
 
-Competing hypotheses and discriminating measurement:
+Competing hypotheses and the discriminating measurement:
 
 - `H-SemanticMatch`: a placeholder has an exact companion-qualified semantic
   function name and can be propagated without ambiguity.
@@ -34,5 +32,4 @@ rg -n '^RECOMP_FUNC void (func|fake_func)_' /Users/williambuckley/Documents/Tool
 
 Expected outcome: the next batch either renames at least one exact candidate,
 or proves the bounded interval contains only synchronized/ambiguous entries;
-if the latter occurs, select the next address band in the same sweep rather
-than running another observation-only M3 audit.
+if the latter occurs, select the next address band in the same sweep.
