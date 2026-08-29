@@ -6,7 +6,13 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3188 (2026-08-29).
+Current maintenance marker: Session 3189 (2026-08-29).
+
+Session 3189 advanced the generated-symbol sweep by mapping the invalid
+unconditional-jump split at `0x80029270` from `static_3_80029270` to
+`data_gap_80029270`. The generated body, declaration, and overlay registration
+were synchronized; no companion semantic symbol or generated callsite exists.
+Evidence: `scratch/agent/s3189_generated_symbol_rename.md`.
 
 Session 3188 advanced the generated-symbol sweep by mapping the invalid
 two-instruction split at `0x8009D8BC` from `static_3_8009D8BC` to
@@ -825,8 +831,9 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    placeholder, and the companion symbol files had no record in the band.
    Session 3187 synchronized the stale declaration and overlay-table
    references for `0x800027B8` to the established `data_gap_800027B8` name.
-   Resume at the next unclassified generated record and preserve ambiguous
-   fragments.
+   Session 3189 classified and synchronized `0x80029270` as
+   `data_gap_80029270`; resume at the next unclassified generated record and
+   preserve ambiguous fragments.
 
 5. **External retail-entry boundary — compare the new wait predecessors after
    a route change.** Session 3185's independent retail oracle found

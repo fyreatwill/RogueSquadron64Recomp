@@ -110,6 +110,9 @@ RENAMES = {
     "static_3_8009D8BC": "data_gap_8009D8BC",
     "fake_func_8009D7CC": "filterVoiceSampleBlockPreamble",
     "static_3_80085CD8": "compareHalfwordAtOffset4",
+    # This generated record starts with an unconditional jump into a later
+    # body and has no companion symbol or generated callsite.
+    "static_3_80029270": "data_gap_80029270",
     # The companion map places these short records immediately before named
     # functions; they are data gaps, not callable game routines.
     "fake_func_80064294": "data_gap_80064294",

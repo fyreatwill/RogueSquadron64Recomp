@@ -126037,3 +126037,16 @@ renamed all three generated references to `data_gap_8009D8BC`. This is a
 source-only generated-symbol change with no runtime behavior change. It rules
 out a semantic function rename for this record and closes it as `H-DataGap`.
 Evidence: `scratch/agent/s3188_generated_symbol_rename.md`.
+## Session 3189 (2026-08-29) — renamed generated data-gap split
+
+Ran the bounded regeneration-safe rename helper for `0x80029270..0x80029274`.
+The generated snapshot contained exactly three references to
+`static_3_80029270` (body, header, and overlay registration). The body starts
+with an unconditional jump into a later label and has no callable prologue;
+the companion symbol files contain no record at this address, and no generated
+callsite exists. The helper initially selected no rename because the mapping
+was absent; after adding the regeneration-safe `data_gap_80029270` mapping, it
+renamed all three references. A final search found zero stale references. This
+selects `H-DataGap` from the generated census plus companion absence and is a
+source-only change with no runtime behavior change.
+Evidence: `scratch/agent/s3189_generated_symbol_rename.md`.
