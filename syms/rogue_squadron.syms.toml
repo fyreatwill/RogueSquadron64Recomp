@@ -1616,7 +1616,7 @@ functions = [
     { name = "decayWeaponCooldownTimer", vram = 0x800B41BC, size = 0x30 },
     { name = "getWeaponChargeLevel", vram = 0x800B41EC, size = 0x10 },
     { name = "advancePitchTowardTarget", vram = 0x800B41FC, size = 0xC0 },
-    { name = "fake_func_800B42BC", vram = 0x800B42BC, size = 0x4 },
+    { name = "data_gap_800B42BC", vram = 0x800B42BC, size = 0x4 },
     { name = "playerXwingInit", vram = 0x800B42C0, size = 0x2C8 },
     { name = "playWeaponFireSound", vram = 0x800B4588, size = 0x738 },
     { name = "playerXwingFireBlaster", vram = 0x800B4CC0, size = 0x294 },

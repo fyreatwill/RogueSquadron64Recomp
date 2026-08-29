@@ -65,6 +65,7 @@ EXTRA_RENAMES = {
     "fake_func_800613B8": "loadCharTextureSetPreamble",
     "fake_func_80069AEC": "collideSegmentAgainstObjectNodesPreamble",
     "fake_func_8006ACA4": "data_gap_8006ACA4",
+    "fake_func_800B42BC": "data_gap_800B42BC",
     "fake_func_8006B704": "data_gap_8006B704",
     "fake_func_800AAADC": "playerSnowSpeederInitPreamble",
     "fake_func_800B58B4": "playerAwingInitPreamble",

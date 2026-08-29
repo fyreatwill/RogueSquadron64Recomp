@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3101 (2026-08-28).
+Current maintenance marker: Session 3102 (2026-08-28).
+
+Session 3102 completed the bounded six-surface audit at `0x800B42BC`. The
+companion map, generated body, callers, header/registration, project TOML,
+and rename tooling show a 4-byte orphan load between the complete
+`advancePitchTowardTarget` epilogue and `playerXwingInit` prologue. It has no
+callers or return sequence, so H-Fragment selected and the entry is now
+synchronized as `data_gap_800B42BC`. Evidence:
+`scratch/agent/s3102_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
+runtime, route, audio, mitigation, or generated instruction behavior changed.
 
 Session 3101 completed the bounded six-surface audit at `0x800AF6A8`. The
 companion map retains only the fake marker, while the active generated body

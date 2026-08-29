@@ -124525,6 +124525,24 @@ Evidence: `scratch/agent/s3095_generated_symbol_rename/AUDIT.md`.
 ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
 runtime, route, audio, mitigation, or generated instruction behavior changed.
 
+## Session 3102 (2026-08-28) — classified 0x800B42BC generated gap
+
+Ran the bounded generated-symbol six-surface audit for `0x800B42BC`. The
+companion map, generated body, callers, header, overlay registration, project
+TOML, and rename tooling identify a 4-byte orphan `lw $v0, 0x2C($fp)` between
+the complete `advancePitchTowardTarget` epilogue and `playerXwingInit`
+prologue. It has no callable prologue, return sequence, caller, or semantic
+identity. H-Fragment selected; the project map and both regeneration-safe
+rename paths now use `data_gap_800B42BC`. The adjacent named
+`playerXwingInit` positive control remains intact. Syntax and uniqueness
+checks passed; no build or game run was needed. This rules out an exact
+callable identity and ambiguous extent for this entry.
+
+Evidence: `scratch/agent/s3102_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
+runtime, route, audio, mitigation, or generated instruction behavior changed.
+
 ## Session 3101 (2026-08-28) — classified 0x800AF6A8 generated gap
 
 Ran the bounded generated-symbol six-surface audit for `0x800AF6A8`. The
