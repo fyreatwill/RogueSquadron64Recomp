@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3233 (2026-08-29).
+Current maintenance marker: Session 3234 (2026-08-29).
 
 ## Current state
 
@@ -29,6 +29,15 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection.
+   Session 3234 repaired the context join's deferred-watch/latch gates and
+   passed the whole-RDRAM positive control (10,000 writes) while capturing the
+   target route at `0x00790A00`. Retail `__osViNext` context was valid with
+   `framep_phys=0x00790000` and candidates `0x00790400/0x00790800`; route
+   `$a0=0x8014090E` is not a framebuffer. The same run captured the known
+   attract and hangar candidate pairs, independently validating the field
+   readout across phases. This closes the oracle join/filter and supplies the
+   concrete target candidate for the next same-build port parity measurement;
+   it does not yet identify the writer or authorize a port-origin change.
    Session 3233 repaired the retail oracle join: the prior implementation
    silently discarded the target route's following 640-to-1024 transition
    because it accepted only the attract origins `0x00696100/0x00696600`.
@@ -102,15 +111,21 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    `reapplyDisplayMode` entry/call (`0x8008EB5C`, `0x8008EBC0`) with the same
    whole-RDRAM positive control, then a bounded comparison of its live
    arguments and return branch against the port.
-2. A12's `0x8014974C` publication class is closed by Session 3221: the only
+2. Next, compare retail candidate `0x00790400` against the port's selected
+   framebuffer at the same phase boundary using the existing same-build
+   phase-gated silent/image pair. Require image-arm DMEM, DMA, `Broke`/SP
+   completion, service, slot, and PCM joins plus the port VI commit row; keep
+   silent as the no-write control. Do not infer a writer or apply a mitigation
+   from the retail route `$a0`.
+3. A12's `0x8014974C` publication class is closed by Session 3221: the only
    guest stores are `setupSongRenderBuffers` zero-init, `musyxSynthFrame`
    terminal clear, and its fixed-one pre-callback publication. The waiters
    remain safety-only; no timeout, force-clear, or new guard is authorized.
-3. After a route-boundary change, rerun the existing same-build phase-gated
+4. After a route-boundary change, rerun the existing same-build phase-gated
    pair with `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-
    arm DMEM, DMA, `Broke`/SP completion, service, slot, and PCM joins; retain
    the silent arm as the no-write control.
-4. Closed static M3 publication classes, retain existing traps/guards as
+5. Closed static M3 publication classes, retain existing traps/guards as
    safety only: A8 `musyxKeyOnVoice` divide/overflow has one live cmd-list
    divisor store (`musyxRenderVoiceSamples` at `0x80090768`, constant
    `0xC0`); the four `break 6` sites are unreachable after `lhu +0x60`; the
@@ -125,11 +140,11 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    family (evidence: `scratch/agent/s3216_m3_voice_list_publication_bound.md`);
    the 43-site `SONGTEMPO_TABLE_GUARD` class has writer `startSongSequence` at
    `0x80096D88`. No new guard work is authorized on these classes.
-5. Generated-symbol sweep remains closed at the evidence boundary (Sessions
+6. Generated-symbol sweep remains closed at the evidence boundary (Sessions
    3210/3212/3217). `static_4_80106C50` was renamed to
    `lvc_registerObjectiveBooleanCounts`; `func_80092F10` is a data-gap
    exclusion overlapping `packFourLutResampledSamples` at `0x80092F94`.
-6. M4 restage destination identity is now known: hangar gfx tasks use
+7. M4 restage destination identity is now known: hangar gfx tasks use
    `gspTask` (`0x800377C8`) with physical `output_buff` `0x0075C000` /
    `0x00781800`, not the port runtime dest `0x4B7800` and not DMEM `0x670`.
    Keep the external retail-entry boundary, hangar `0x8000` Y / accumulator

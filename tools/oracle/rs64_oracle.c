@@ -267,6 +267,7 @@ static long g_post_swap_dropped;
 static long g_post_swap_overflow;
 static uint32_t g_vi_context_table_pc;
 static int g_vi_context_table_enabled;
+static int g_vi_context_any_vi;
 struct vi_context_snapshot {
     int context_valid;
     int mode_valid;
@@ -891,7 +892,7 @@ static struct vi_context_snapshot read_vi_context_snapshot(void)
 static void latch_vi_context_table(uint32_t pc)
 {
     if (!g_vi_context_table_enabled || pc != g_vi_context_table_pc ||
-        pDebugMemRead32(VI_WIDTH_ADDR) != 640)
+        (!g_vi_context_any_vi && pDebugMemRead32(VI_WIDTH_ADDR) != 640))
         return;
     if (g_vi_context_pending.valid)
         g_vi_context_dropped++;
@@ -908,7 +909,8 @@ static void join_vi_context_table(uint32_t width, uint32_t origin)
         return;
     snapshot = g_vi_context_pending.snapshot;
     g_vi_context_pending.valid = 0;
-    if (width != 640 || !is_vi_context_target_origin(origin)) {
+    if ((!g_vi_context_any_vi && width != 640) ||
+        (!g_vi_context_any_vi && !is_vi_context_target_origin(origin))) {
         g_vi_context_dropped++;
         return;
     }
@@ -1970,6 +1972,7 @@ static void usage(void)
         "  --post-swap-table-pc A join a 640-wide swap at A to the following VI callback\n"
         "  --post-swap-any-vi      allow the post-swap join to accept any next VI width/origin\n"
         "  --vi-context-table-pc A join __osViNext at 640-wide execution A to the following VI callback\n"
+        "  --vi-context-any-vi     allow the VI context join to accept any next VI width/origin\n"
         "  --first-watch N       log the first hit for watch index N\n"
         "  --pc-hist-watch N     summarize writer PCs for watch index N (repeatable)\n"
         "  --pc-hist-phase ORIGIN[:WIDTH]  add a writer histogram bucket (default WIDTH=640)\n"
@@ -2082,6 +2085,8 @@ int main(int argc, char **argv)
             g_vi_context_table_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_vi_context_table_enabled = 1;
         }
+        else if (!strcmp(argv[i], "--vi-context-any-vi"))
+            g_vi_context_any_vi = 1;
         else if (!strcmp(argv[i], "--first-watch") && i + 1 < argc)
             g_first_watch = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--pc-hist-watch") && i + 1 < argc) {

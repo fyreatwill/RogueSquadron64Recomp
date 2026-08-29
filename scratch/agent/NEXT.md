@@ -1,39 +1,38 @@
-# NEXT work unit — capture retail VI context at the route boundary
+# NEXT work unit — port/retail target framebuffer parity
 
-HYPOTHESIS-ID: m5-retail-vi-origin-attribution
+HYPOTHESIS-ID: m5-port-retail-framebuffer-parity
 
-Session 3233 showed that the repaired route join is live: it produced a
-target row at `0x00790A00`, but route `$a0` is `0x8014090E`, not a framebuffer.
-The existing VI-context join also filters out the target origin and cannot yet
-provide the framep/mode candidates needed for writer attribution.
+Session 3234 established the retail target context at route origin
+`0x00790A00`: valid frame base `0x00790000`, candidates
+`0x00790400/0x00790800`. The route `$a0=0x8014090E` is not a framebuffer.
 
 ## Competing hypotheses
 
-- `H-RetailRouteWriter`: the target route's VI context contains the
-  framebuffer selected by the route publication.
-- `H-RetailOtherWriter`: the target VI context points to a different writer or
-  commit path than the watched route.
-- `H-PortOriginSelection`: retail exposes a legitimate target framebuffer that
-  differs from the port's selected buffer.
+- `H-PortMatchesRetail`: the port selects the retail target candidate
+  `0x00790400`; the remaining defect is downstream of origin selection.
+- `H-PortOriginSelection`: the port selects a different target framebuffer.
+- `H-PortAudioBoundary`: the port reaches a different target boundary because
+  audio/task progress diverges before the VI commit.
 
 ## Discriminator
 
-Add an any-next-VI arm to the context join, then run the independent retail
-oracle with the whole-RDRAM control and validated full Start schedule,
-watching `0x80091D38` and using `--vi-context-table-pc 0x80091D38`.
-Require the positive control, the target `0x00790A00` route hit, and a
-`vi-context-row` containing context/framep/mode candidates. A candidate equal
-to the route's legitimate framebuffer selects `H-RetailRouteWriter`; a valid
-different candidate or no matching route context selects `H-RetailOtherWriter`;
-the same valid retail candidate compared with the port's selected buffer
-selects `H-PortOriginSelection`. A zero context join after the controls means
-the context filter/join remains unevaluable; do not add port counters.
+Run the existing same-build silent/image phase-gated pair in one iteration,
+with the image and silent arms built together. Require both arms' dispatch,
+DMEM, DMA, `Broke`/SP completion, service, slot, PCM, and VI-commit rows.
+An image-arm port commit of `0x00790400` at the matching target phase selects
+`H-PortMatchesRetail`; a valid different commit selects
+`H-PortOriginSelection`; missing target progress or missing audio joins with
+the established dispatch control selects `H-PortAudioBoundary` only if its
+phase gate and controls pass. A failed phase join is unevaluable, not a null.
 
 ## Exact command
 
-First add `--vi-context-any-vi` to the oracle's context join and rebuild with
-`bash tools/oracle/build.sh`. Then use the Session 3233 fixed oracle command,
-replacing the post-swap options with
-`--vi-context-table-pc 0x80091D38 --vi-context-any-vi`, and capture to a new
-`scratch/agent/s3234_m5_retail_context_join/` directory. Do not build port
-instrumentation until the oracle result is positive-controlled.
+Use the existing qualified pair driver:
+
+`bash scratch/agent/s2972_m5_step1_qualified_route/run_pair.sh`
+
+Before running, add one phase-gated port VI-commit field for target candidate
+`0x00790400` to that driver's existing batch instrumentation; do not add a
+route-`$a0` framebuffer interpretation. Capture results under a new
+`scratch/agent/s3235_m5_port_retail_framebuffer_parity/` directory and retain
+the silent arm as the no-write control.

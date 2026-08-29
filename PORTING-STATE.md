@@ -126835,3 +126835,30 @@ mitigation was made.
 
 ORIGIN: the diagnostic filter change only; the observed route `$a0` is not
 being treated as a legitimate framebuffer.
+
+## Session 3234 (2026-08-29) — captured retail VI context at target route
+
+Ran the independent retail oracle with Rice, the validated ten-Start
+schedule, and a whole-RDRAM write positive control. The initial any-VI run
+passed the control with 10,000 writes but its deferred execution watch skipped
+the pre-title target; the context latch was also still 640-gated. After
+repairing both diagnostic gates, the rerun passed the same control and
+captured five executions and five context joins at `0x80091D38`.
+
+At the target boundary (`next_origin=0x00790A00`), retail reported valid
+context `0x800391e0`, `framep_phys=0x00790000`, and candidates
+`0x00790400`/`0x00790800`. The route `$a0=0x8014090E` (physical
+`0x0014090E`) is not a framebuffer. The same run captured the known attract
+and hangar candidate pairs, validating the readout across phase controls.
+
+This closes the oracle join/filter and supplies a target value for the next
+port parity measurement. It does not identify the writer or authorize a port
+origin change. The deferred-watch miss was an instrument/configuration
+failure, not evidence about retail execution.
+
+Evidence: `scratch/agent/s3234_m5_retail_context_join/RESULTS.md` and its
+three oracle logs. Diagnostic-only changes were made in
+`tools/oracle/rs64_oracle.c`.
+
+ORIGIN: diagnostic-only latch/filter changes; no guest value, port behavior,
+guard, ordering change, or mitigation was made.
