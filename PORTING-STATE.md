@@ -126344,3 +126344,20 @@ legitimate bad producer.
 
 ORIGIN: generated call/access census plus independent companion symbol
 metadata; unresolved writer evidence is not a mitigation target.
+
+## Session 3212 (2026-08-29) — landed bounded callable-symbol rename
+
+The mandated pivot moved from the blocked M5 route and observation-only M3
+audit to the generated-symbol sweep. A bounded source/map/registration check
+selected the objective-registration interpretation for `0x80106C50`: its
+callable body repeatedly invokes `addBooleanCountHandleWrapper`, and the
+generated caller at `0x8010A948` is inside `lvc_initializeObjectTracking`.
+
+Added `tools/rename/generated_symbol_batch.py`, which refuses a silent no-op,
+and applied it to the external generated snapshot. It renamed
+`static_4_80106C50` to `lvc_registerObjectiveBooleanCounts` in `funcs.h` and
+`funcs_49.c`; the syntax check passed. The project TOML keeps the enclosing
+initializer's range because an overlapping symbol record would corrupt its
+boundaries. The unresolved live-tail `func_80092F10` and fake data fragment
+`fake_func_800AE3E4` remain unchanged. No runtime build/run was needed for
+this source-only generated rename. Evidence: `scratch/agent/s3212_generated_symbol_rename.md`.

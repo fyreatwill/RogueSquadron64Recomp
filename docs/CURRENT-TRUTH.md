@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3211 (2026-08-29).
+Current maintenance marker: Session 3212 (2026-08-29).
 
 ## Current state
 
@@ -42,10 +42,12 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    streamed-index bound remain unresolved. Next audit the voice/list/table
    pointer guard class; do not add a guard without a legitimate writer and
    bound proof.
-4. The regeneration-safe generated-symbol sweep is closed at its evidence
-   boundary. `static_4_80106C50` is the sole remaining placeholder: it is a
-   callable body with a real caller but no defensible semantic match, so it
-   remains unchanged. Preserve ambiguous/fake fragments.
+4. Session 3212 renamed the sole remaining callable generated placeholder
+   `static_4_80106C50` to `lvc_registerObjectiveBooleanCounts` in the
+   generated declaration/body using a bounded, regeneration-safe tool. The
+   body registers objective boolean-count handles and is called from
+   `lvc_initializeObjectTracking`; the data-gap/live-tail fragments remain
+   unchanged. Resume M3/M5 work after this mandatory sweep pivot.
 5. Keep the external retail-entry boundary, M4 accumulator origin, and M5
    SP-yield/MORT publication threads parked pending a new target-phase
    discriminator. The corrected MORT descriptor edge is `+0x190` to
