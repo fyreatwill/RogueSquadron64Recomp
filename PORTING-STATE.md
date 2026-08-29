@@ -124294,3 +124294,23 @@ regeneration-safe `data_gap_80024878` mapping. The next candidate is
 
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
+
+## Session 3086 (2026-08-28) — preserved callable-ambiguous fragment at 0x8006B704
+
+Ran the bounded six-surface generated-symbol audit for `fake_func_8006B704`.
+The companion map retains the placeholder and supplies no semantic identity.
+The generated body is a 12-byte `sw a1,0(a0)` plus argument-setup fragment
+between the complete `getLevelTimeLimit` return and the
+`loadCraftShadowTextures` prologue; it has no callable prologue or return
+sequence. The active generated tree has no direct caller or duplicate
+definition. Header, overlay registration, and project TOML agree on the
+placeholder and exact extent. This selects H-Fragment with unresolved
+callability: preserved the placeholder rather than inventing a semantic name
+or a data-gap classification. The next candidate is `fake_func_8007C298`.
+Evidence: `scratch/agent/s3086_generated_symbol_rename/AUDIT.md`.
+
+This rules out an exact companion rename and a mechanically proven data gap,
+but does not prove the valid instruction fragment is uncallable.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.

@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3085 (2026-08-28).
+Current maintenance marker: Session 3086 (2026-08-28).
+
+Session 3086 audited `fake_func_8006B704` across the companion map, generated
+body, callers, header, overlay registration, and project TOML. The 12-byte
+record contains a valid store plus argument setup between
+`getLevelTimeLimit` and `loadCraftShadowTextures`, but has no callable
+prologue/return, direct caller, or independent semantic name. This selects
+H-Fragment with unresolved callability: preserve the placeholder rather than
+inventing a name or data-gap classification. Evidence:
+`scratch/agent/s3086_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
 
 ## Current state
 
@@ -605,8 +617,8 @@ parked pending a new discriminator.
    resume at `data_gap_800C7DB4`; `0x800C64A4` and `0x80024878` were audited
    and preserved as data gaps. `fake_func_800555E8` was synchronized as
    `initPlayerStructsPreamble`; `0x8006ACA4` was classified and synchronized
-   as `data_gap_8006ACA4`; resume at the next unresolved candidate
-   `fake_func_8006B704`.
+   as `data_gap_8006ACA4`; `fake_func_8006B704` was audited and preserved as
+   a callable-ambiguous fragment; resume at `fake_func_8007C298`.
    If the sweep becomes a
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.
