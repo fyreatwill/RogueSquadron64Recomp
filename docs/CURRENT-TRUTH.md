@@ -6,7 +6,14 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3189 (2026-08-29).
+Current maintenance marker: Session 3190 (2026-08-29).
+
+Session 3190 advanced the generated-symbol sweep by classifying the split
+record at `0x80045024` as `data_gap_80045024`: its body starts at an internal
+label below the record address, has no callable prologue, and has no companion
+symbol. The regeneration-safe helper mapping synchronized the body, header,
+and overlay registration; no runtime behavior changed. Evidence:
+`scratch/agent/s3190_generated_symbol_rename.md`.
 
 Session 3189 advanced the generated-symbol sweep by mapping the invalid
 unconditional-jump split at `0x80029270` from `static_3_80029270` to

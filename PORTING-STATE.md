@@ -126050,3 +126050,17 @@ renamed all three references. A final search found zero stale references. This
 selects `H-DataGap` from the generated census plus companion absence and is a
 source-only change with no runtime behavior change.
 Evidence: `scratch/agent/s3189_generated_symbol_rename.md`.
+## Session 3190 (2026-08-29) — classified generated data-gap split at 0x80045024
+
+Ran the bounded generated-symbol census for `0x80045024..0x80045028`.
+The generated snapshot contained exactly three `static_3_80045024`
+references: body, header, and overlay registration. The body starts at an
+internal label `L_80044DF8` below the record address and has no standalone
+callable prologue; the companion symbol files contain no record at this
+address. The required-rename helper initially selected no references because
+the mapping was absent. After adding the regeneration-safe
+`static_3_80045024` → `data_gap_80045024` mapping, it renamed all three
+references, and a final search found zero stale names. This selects
+`H-DataGap` and rules out a semantic callable rename for this record. It is a
+source-only change with no runtime behavior change.
+Evidence: `scratch/agent/s3190_generated_symbol_rename.md`.
