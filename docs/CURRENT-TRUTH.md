@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3225 (2026-08-29).
+Current maintenance marker: Session 3226 (2026-08-29).
 
 ## Current state
 
@@ -29,7 +29,13 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection.
-   Session 3225 independently revalidated the locally available,
+   Session 3226 closed the first concrete field candidate: retail writes to
+   `0x80141AD0/1` and `0x8013B038` are early `setDisplayMode`/
+   `reapplyDisplayMode` configuration stores, not the missing pre-title route
+   publication. The positive-control oracle reached title 1024, and the
+   static port audit matched the writer PCs, so no value or ordering change is
+   authorized from this field class. The actual route consumer boundary
+   remains open. Session 3225 independently revalidated the locally available,
    retail-qualified phase-relative route
    `3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a`:
    retail passed the whole-RDRAM positive control and reached title 1024,
@@ -38,6 +44,10 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    identical route-state output with `target=0`, select `H-PortStateBoundary`
    over input or scheduler stall. The next work unit is a bounded audit of the
    pre-title route-state writer/publication edge, not another audio null.
+   The next discriminator is an oracle execution watch on
+   `reapplyDisplayMode` entry/call (`0x8008EB5C`, `0x8008EBC0`) with the same
+   whole-RDRAM positive control, then a bounded comparison of its live
+   arguments and return branch against the port.
 2. A12's `0x8014974C` publication class is closed by Session 3221: the only
    guest stores are `setupSongRenderBuffers` zero-init, `musyxSynthFrame`
    terminal clear, and its fixed-one pre-callback publication. The waiters
@@ -110,6 +120,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3226_m5_route_writer_oracle/RESULTS.md`,
 `scratch/agent/s3220_m3_keyon_divisor_descriptor.md`,
 `scratch/agent/s3225_m5_route_boundary.md`,
 `scratch/agent/s3219_m3_voice_array_base_publication.md`,

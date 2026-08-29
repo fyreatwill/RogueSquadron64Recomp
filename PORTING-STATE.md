@@ -126642,3 +126642,20 @@ Evidence: `scratch/agent/s3225_m5_route_boundary.md`,
 
 ORIGIN: no guest value was changed; this is a route-state classification from
 two same-build arms plus the independent retail phase control.
+## Session 3226 (2026-08-29) — closed first pre-title route field candidate
+
+Ran the retail oracle before any build with the validated Rice route and a
+whole-RDRAM positive control. The control reached 10,000 callbacks; retail
+reached and held title VI 1024 at `0x00790400`. Watches on candidate fields
+`0x80141AD0/1` and `0x8013B038` fired, but only during early setup. Retail
+writer PCs were `0x8008EA44`, `0x8008EA74`, `0x8008EB8C`, `0x8008EBBC`,
+`0x8008EA64`, and `0x8008EBAC`.
+
+The bounded static audit matched those PCs to the existing
+`setDisplayMode`/`reapplyDisplayMode` display/audio configuration chain;
+`0x80141AD0` is the display-mode byte, not the missing route publication.
+This closes that field candidate and rules out using it to explain the port's
+pre-title stop. It does not select the actual writer-absent, wrong-value, or
+ordering hypothesis. No build, guest value, guard, or mitigation changed.
+
+Evidence: `scratch/agent/s3226_m5_route_writer_oracle/RESULTS.md`.

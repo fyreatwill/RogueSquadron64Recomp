@@ -1,51 +1,38 @@
-# NEXT work unit — audit the pre-title route-state publication edge
+# NEXT work unit — ground-truth the reapplyDisplayMode route edge
 
 HYPOTHESIS-ID: m5-port-route-boundary
 
-Session 3225 selected `H-PortStateBoundary`: the independent retail oracle
-reached title 1024, but both same-build port arms stopped at 640 origin
-`0x0066A500` despite matching six input edges, continued recv progress, and
-identical route-state output ending with `target=0`.
+Session 3226 rejected the first watched fields: retail writes to
+`0x80141AD0/1` and `0x8013B038` are early display/audio configuration stores
+owned by `setDisplayMode`/`reapplyDisplayMode`, not the missing route
+publication. See `scratch/agent/s3226_m5_route_writer_oracle/RESULTS.md`.
 
 ## Competing hypotheses
 
-- `H-PortInputBoundary`: the port's internal autopilot schedule or phase-
-  relative input handling diverges from the retail route before title.
-- `H-PortStateBoundary`: a non-input title/state publication differs before
-  the first 1024 VI transition.
-- `H-PortSchedulerBoundary`: host scheduling or queue progress prevents the
-  same route transition despite valid input/state evidence.
-
-## Competing hypotheses
-
-- `H-StateWriterAbsent`: the expected pre-title state publication has no live
-  writer in the port's executed path.
-- `H-StateWriterWrongValue`: a live writer runs but publishes a value that
-  legitimately differs from the retail state transition.
-- `H-StateOrdering`: the right publication exists, but the route consumer
-  observes it before/after the required ordering edge.
+- `H-StateWriterAbsent`: retail's route transition has no corresponding live
+  writer/call edge in the port.
+- `H-StateWriterWrongValue`: the port reaches the route edge but supplies a
+  different legitimate argument/state value.
+- `H-StateOrdering`: the values match, but the port's consumer observes the
+  publication on the wrong side of the `reapplyAudioConfig` return branch.
 
 ## Discriminator
 
-Perform one bounded static writer/consumer audit around the existing
-`m5-route-state` callsites and the route-state guest fields they report. First
-ask the retail oracle for a positive control plus PC-attributed writes to the
-candidate physical fields; only then grep the port's guest stores and consumer
-ordering. A unique executed writer with a retail-matching value and an explicit
-consumer edge selects `H-StateOrdering`; a writer with a differing value
-selects `H-StateWriterWrongValue`; no corresponding writer selects
-`H-StateWriterAbsent`. If the oracle watch cannot be armed and positively
-validated, stop before adding port instrumentation.
+Run the retail oracle first with `--watch-write 0x0:0x800000` as the positive
+control and `--watch-pc 0x8008EB5C --watch-pc 0x8008EBC0`, plus
+`--pc-phase-log-width 0x0066A500:640` and the validated route. Require the
+whole-RDRAM threshold and retail title 1024. Compare the bounded execution
+rows (`$a0..$a2`, `$v0`, VI phase) with the existing port route-state entry,
+route, and audio-return rows. A retail edge absent in the port selects
+`H-StateWriterAbsent`; matching edge with different args selects
+`H-StateWriterWrongValue`; matching args with a differing return/branch edge
+selects `H-StateOrdering`.
 
-No build is authorized until the oracle field watch has a positive control.
-Do not infer target-phase audio nulls while 1024 is absent.
+No build or new port instrumentation is authorized until the oracle positive
+control and title gate pass.
 
 ## Exact start
 
-Use `tools/oracle/build/rs64_oracle` with the same core/ROM/Rice paths as
-Session 3225, `--watch-write 0x0:0x800000 --hit-cap 3 --vi-trace`, and a
-candidate route-state field watch once its physical address is identified.
-Require the whole-RDRAM positive-control threshold and retail title 1024.
-Then run one grep/static audit of the matching guest stores and consumer
-callers. If a runtime capture is needed, build once and use both audio arms
-concurrently with the Session 3225 environment and SIGKILL watchdog.
+Use the same core/ROM/Rice paths as Session 3226, `--secs 45`,
+`--watch-write 0x0:0x800000 --hit-cap 10000`, the two `--watch-pc` options,
+`--vi-trace`, and `--press 3:start,7:start,11:start,15:a,30:start,45:start`.
