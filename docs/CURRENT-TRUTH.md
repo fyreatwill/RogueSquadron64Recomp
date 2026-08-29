@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3205 (2026-08-29).
+Current maintenance marker: Session 3206 (2026-08-29).
 
 ## Current state
 
@@ -41,9 +41,9 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    `musyxStoreVoiceAdsrParams`; do not add a guard without a legitimate writer
    and bound proof.
 4. Continue the regeneration-safe generated-symbol sweep at the next
-   unresolved companion placeholder, `0x800B75C4`. Recent synchronized data gaps are
-   recorded in the overview and append-only ledger; preserve ambiguous/fake
-   fragments.
+   unresolved companion placeholder, `0x800B47C4`. Recent synchronized data
+   gaps are recorded in the overview and append-only ledger; preserve
+   ambiguous/fake fragments.
 5. Keep the external retail-entry boundary, M4 accumulator origin, and M5
    SP-yield/MORT publication threads parked pending a new target-phase
    discriminator. The corrected MORT descriptor edge is `+0x190` to
@@ -85,7 +85,8 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Evidence index
 
-Recent evidence includes `scratch/agent/s3205_generated_symbol_rename.md`,
+Recent evidence includes `scratch/agent/s3206_generated_symbol_rename.md`,
+`scratch/agent/s3205_generated_symbol_rename.md`,
 `scratch/agent/s3204_generated_symbol_rename.md`,
 `scratch/agent/s3203_generated_symbol_rename.md`,
 `scratch/agent/s3202_generated_symbol_rename.md`,

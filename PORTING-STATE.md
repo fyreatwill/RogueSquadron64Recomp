@@ -126263,3 +126263,13 @@ Added the regeneration-safe mapping `static_3_800A50AC` →
 in the generated body, header, and fragment callsite; the final bounded search
 found no stale placeholder. No build or runtime run was performed; this was a
 source-only change. Evidence: `scratch/agent/s3205_generated_symbol_rename.md`.
+## Session 3206 (2026-08-29) — classified already-synchronized data gap at 0x800B75C4
+
+The bounded companion census found only `fake_func_800B75C4` in the
+mission-overlay symbol file, with no semantic callable name. The required
+rename helper selected zero generated placeholder references and reported the
+header already synchronized as `data_gap_800B75C4`; the generated overlay
+table independently uses the same name. This selects `H-DataGap`, rules out a
+new semantic rename, and confirms the prior mechanical classification. No
+build or runtime run was performed because this was a source-only sweep.
+Evidence: `scratch/agent/s3206_generated_symbol_rename.md`.
