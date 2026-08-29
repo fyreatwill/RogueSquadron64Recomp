@@ -125912,3 +125912,19 @@ body in the interval. This closes the band for semantic renaming and rules
 out an exact companion rename there; ambiguous records remain untouched.
 No build, game run, or runtime behavior changed. Evidence:
 `scratch/agent/s3179_generated_symbol_sweep.md`.
+
+## Session 3180 (2026-08-29) — synchronized generated data-gap batch
+
+The prescribed `0x80170000..0x80180000` band selected no generated
+references, so it could not produce a rename. The bounded regeneration-safe
+helper then synchronized two concrete data-gap records: `static_3_80007064`
+became `data_gap_80007064`, and the 8-byte `fake_func_800AE3E4` fragment
+became `data_gap_800AE3E4`. The latter is immediately followed by the
+companion-qualified `tickEasedCameraKeyframeBlend` body at `0x800AE3EC`.
+The helper changed three references in three generated files, and Python
+syntax validation passed. The tracked rename map was updated so regeneration
+preserves the names; no runtime behavior changed.
+
+This closes the concrete data-gap batch and preserves the high-address band
+for the next sweep. It rules out treating these two records as callable game
+functions, but does not classify the remaining `static_*` records.

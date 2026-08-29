@@ -6,10 +6,10 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 M5 remains blocked pending a route change. The selected M3 class
 `musyxMixActiveVoices` was proven range-safe in Session 3167. Sessions 3168
-through 3177 closed the latest bands without a stale semantic placeholder.
-Session 3179 closed `0x80160000..0x80170000` with zero selected generated
-references and no placeholder definitions. Resume the regeneration-safe sweep
-at `0x80170000..0x80180000`.
+through 3179 closed the latest bands without a stale semantic placeholder.
+Session 3180 synchronized two concrete data-gap records outside the latest
+high-address bands. Resume the regeneration-safe sweep at
+`0x80170000..0x80180000`.
 
 Competing hypotheses and the discriminating measurement:
 

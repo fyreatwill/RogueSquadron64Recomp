@@ -6,7 +6,15 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3179 (2026-08-29).
+Current maintenance marker: Session 3180 (2026-08-29).
+
+Session 3180 completed a bounded generated-symbol sweep across two concrete
+data-gap records. The regeneration helper renamed `static_3_80007064` to
+`data_gap_80007064` and `fake_func_800AE3E4` to `data_gap_800AE3E4`; the latter
+is the first two COP1 instructions before the named body at `0x800AE3EC`.
+Generated header/body/overlay references were synchronized. This is a
+source-only naming change with no runtime behavior change. Evidence:
+`scratch/agent/s3180_generated_symbol_rename.md`.
 
 Session 3179 completed the bounded generated-symbol sweep for
 `0x80160000..0x80170000`. The required-rename helper selected zero generated
@@ -741,8 +749,9 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    generated placeholder definition remained. Continue at
    `0x80160000..0x80170000`, closed by Session 3179: the helper selected zero
    generated references and the independent definition search found no stale
-   placeholder body. Continue at `0x80170000..0x80180000` and preserve
-   ambiguous fragments.
+   placeholder body. Session 3180 synchronized the concrete data gaps at
+   `0x80007064` and `0x800AE3E4`; continue the bounded sweep at
+   `0x80170000..0x80180000` and preserve ambiguous fragments.
 
 5. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC

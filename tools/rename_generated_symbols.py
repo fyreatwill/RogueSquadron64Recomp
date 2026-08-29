@@ -164,6 +164,10 @@ RENAMES = {
     # non-callable fragment between named bodies.
     "fake_func_800B75C4": "data_gap_800B75C4",
     "fake_func_800B89F4": "data_gap_800B89F4",
+    # This eight-byte cinematic-overlay fragment is the first two COP1
+    # instructions of tickEasedCameraKeyframeBlend; the callable body starts
+    # at 0x800AE3EC, so the generated split is a data gap.
+    "fake_func_800AE3E4": "data_gap_800AE3E4",
     # The companion map marks this defined 8-byte record as having no
     # accompanying real function; the generated body is invalid data.
     "fake_func_8003DF98": "data_gap_8003DF98",
