@@ -125328,3 +125328,24 @@ ranges and qualify a new phase-gated retail edge.
 
 Evidence: `scratch/agent/UNBLOCK.md`; companion
 `build/roguesquadron.elf`, `tools/make_elf.py`, and `symbol_files/libultra.txt`.
+
+## Session 3142 (2026-08-28) — decoded retail ELF and qualified post-width VI edge
+
+Decoded the locally available companion ELF. The exact ranges matched
+`osViSetMode` at `0x800352D0` size `0x70` and `__osViSwapContext` at
+`0x80035550` size `0x360`. The body confirmed the known origin and width
+stores at `0x80035788` and `0x80035798`, then exposed the distinct post-width
+VI-register publication at `0x800357A8`.
+
+The first 60-second oracle run passed its whole-RDRAM positive control and
+reached title/hangar, but omitted execution phase gating; its target-phase
+rows were not used. The fixed 45-second run used explicit VI width/origin
+buckets, passed the same positive control with 10,000 writes, reached title
+VI 1024 and hangar VI 512, and observed `0x800357A8` in both target-phase
+streams alongside the known stores. This selects `H-ELFExposesNewEdge` from
+two independent lines of evidence (local ELF decode and retail execution
+attribution), rules out ELF artifact mismatch and “known edges only,” and
+does not change port, audio, or route behavior.
+
+Evidence: `scratch/agent/s3142_m5_retail_elf_boundary.md`,
+`scratch/agent/s3142_m5_retail_elf_oracle_fixed.log`.

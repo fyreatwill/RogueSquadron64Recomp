@@ -1,39 +1,41 @@
-# NEXT work unit — decode the local retail VI consumer body
+# NEXT work unit — qualify port parity at the retail VI edge
 
-HYPOTHESIS-ID: m5-retail-elf-boundary
+HYPOTHESIS-ID: m5-port-vi-edge-parity
 
 ## Single work unit
 
-Use the locally available non-stripped companion ELF to recover the
-instruction-level body of `osViSetMode` and `__osViSwapContext`, then identify
-the pending-to-descriptor or descriptor-to-origin store edge not already
-watched.
+Add a phase-scoped probe at the host equivalent of retail instruction
+`0x800357A8`, the first post-width VI-register publication identified in the
+local ELF, then run one validated port capture. Keep the existing VI-context
+and host voice-audit controls in the same run. No audio, route, or VI behavior
+change is authorized by this unit.
 
 ## Competing hypotheses
 
-- `H-ELFExposesNewEdge`: the ELF body contains a not-yet-watched transition
-  edge, which can be phase-keyed in the retail oracle.
-- `H-ELFOnlyConfirmsKnownEdge`: the body contains only already-watched
-  publication instructions, so the missing writer lies elsewhere.
-- `H-ELFArtifactMismatch`: the ELF does not match the USA v1.0 retail image or
-  lacks usable code bytes, so it cannot ground a new watch.
+- `H-PortEdgePresent`: the port reaches the new edge in the same target phase
+  buckets as its VI controls, selecting a downstream parity investigation.
+- `H-PortRouteStopsBeforeEdge`: controls pass but the port stops at pre-title
+  640, so the edge row is unevaluable and the route boundary remains upstream.
+- `H-PortProbeAbsent`: the port reaches a target phase but the new edge row is
+  absent while the independent controls fire, selecting a host parity defect.
 
 ## Discriminating measurement
 
-The decoded function ranges must match the symbol addresses/sizes and expose
-at least one instruction that writes or transfers the active VI descriptor or
-origin. One oracle run must arm a whole-RDRAM write positive control plus the
-new edge and title `1024`/hangar `512` phase controls. A target-phase hit on a
-new edge selects `H-ELFExposesNewEdge`; only known-edge hits select
-`H-ELFOnlyConfirmsKnownEdge`; an address/byte mismatch selects
-`H-ELFArtifactMismatch`.
+One Debug build must carry the new phase-scoped probe and both existing
+positive controls. A run that reaches title `1024` and hangar `512` with the
+new edge row selects `H-PortEdgePresent`; a controls-positive run that stops
+at pre-title `640` selects `H-PortRouteStopsBeforeEdge`; target-phase controls
+with no new edge row selects `H-PortProbeAbsent`. A null without target-phase
+reach is unevaluable.
 
-## Exact local inputs
+## Exact commands
 
 ```sh
-file /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf
-nm -S -n /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf
+rg -n "update_vi|VI_ORIGIN_REG|vi-context|voice-audit" src lib tools scratch/agent | head -120
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env ROGUESQ_LOG_M5_VI_EDGE=1 zsh scratch/agent/run_s3143_m5_port_vi_edge.sh
 ```
 
-Do not change audio or port behavior until the oracle measurement selects an
-edge.
+The script must capture to a non-dot final path, watchdog itself, and SIGKILL
+the game. Do not change audio or route behavior until the phase-keyed controls
+select one of the three outcomes.

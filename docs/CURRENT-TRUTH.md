@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3141 (2026-08-28).
+Current maintenance marker: Session 3142 (2026-08-28).
 
 ## Current state
 
@@ -33,6 +33,16 @@ companion C files remain `INCLUDE_ASM` stubs, but this ELF is generated from
 the retail ROM/symbol inputs and is explicitly consumable by N64Recomp. The
 prior source block was therefore a missed local artifact, not a human-only
 dependency. No runtime behavior changed.
+
+Session 3142 decoded both local ELF bodies and selected a new publication
+edge. `__osViSwapContext` contains the known origin store at `0x80035788` and
+width store at `0x80035798`, then the distinct post-width VI-register store at
+`0x800357A8`. A corrected independent retail oracle run passed the
+whole-RDRAM positive control (10,000 writes), reached title 1024 and hangar
+512, and executed all three PCs in the target-phase streams. This selects
+`H-ELFExposesNewEdge` from two sources (ELF decode and retail attribution); no
+port, audio, or route behavior changed. Evidence:
+`scratch/agent/s3142_m5_retail_elf_boundary.md`.
 
 The regeneration-safe generated-symbol sweep is closed: the only remaining
 project placeholders are the deliberately preserved ambiguous fragments
@@ -312,12 +322,11 @@ generated-symbol sweep. Maintenance is complete and M5 design is complete;
 the port-side VI publication parity probe is now exhausted for this route.
 M3 is parked pending a new discriminator.
 
-1. **M5 retail ELF boundary — decode the local VI bodies and qualify one new edge.** The
-   companion ELF supplies the previously missed equivalent bodies even though
-   the C wrappers are `INCLUDE_ASM` stubs. Decode the exact symbol ranges,
-   identify a new pending/descriptor/origin edge, and then require one
-   whole-RDRAM-positive, title/hangar-controlled oracle run. Do not change
-   audio or route behavior until that edge is independently attributed.
+1. **M5 port parity at the newly qualified VI edge.** Add one phase-scoped
+   host-side probe for the port equivalent of retail `0x800357A8`, retaining
+   the existing VI-context and host voice-audit positive controls in the same
+   build/run. Compare pre-title 640, title 1024, and hangar 512 buckets. Do
+   not change audio or route behavior based on a missing port row alone.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the
