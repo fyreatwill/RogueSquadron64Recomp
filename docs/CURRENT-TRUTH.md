@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3227 (2026-08-29).
+Current maintenance marker: Session 3228 (2026-08-29).
 
 ## Current state
 
@@ -29,6 +29,14 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection.
+   Session 3228 watched retail entry, call, and return branch in one run. The
+   whole-RDRAM control reached 10,000 callbacks; all three watches fired at
+   corrected 640 origin `0x00790500`, then retail reached title 1024. The
+   return row had `a0=0x8014090E`, `a1=0x8003DE1C`, `a2=0`, `$v0=0`, matching
+   the port's `audio-return` row at `0x0066A500` and `target=0`. This closes
+   the return branch as a discriminator: it is live and locally matching,
+   while the phase remains misaligned. The next work unit is a new
+   ground-truth watch at return caller `0x80091D38`, not another branch field.
    Session 3227 proved the retail `reapplyDisplayMode` entry/call edge is
    live, with two calls at 640 origins `0x00696100` and `0x00790500` before
    title 1024; no call occurred at the port's `0x0066A500` stop. The

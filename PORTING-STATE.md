@@ -126686,3 +126686,26 @@ Evidence: `scratch/agent/s3227_m5_route_oracle.md` and
 
 ORIGIN: no guest value was changed; this is a phase-boundary correction from
 an independent retail execution watch with a same-run positive control.
+## Session 3228 (2026-08-29) — retail route return branch audit
+
+Before any port build or new instrumentation, ran the retail oracle with
+Rice, the validated route, a whole-RDRAM positive-control watch, and execution
+watches on `reapplyDisplayMode` entry `0x8008EB5C`, call `0x8008EBC0`, and
+return branch `0x8008EBC8`. The control reached 10,000 callbacks, retail
+reached the corrected pre-title 640 origin `0x00790500`, then title VI 1024,
+and the run completed 45 seconds cleanly with 2,649 VI callbacks.
+
+All three watches fired once at `0x00790500`. The return row had
+`$a0=0x8014090E`, `$a1=0x8003DE1C`, `$a2=0`, `$v0=0`, with previous PC
+`0x80091D38`. The port's independent `audio-return` row at `0x0066A500`
+has the same arguments and `target=0`. Thus the return branch is live and
+locally matching; this work unit does not select writer-absent, wrong-value,
+or ordering. It rules out treating the branch itself as absent or as a
+different-value edge and leaves the caller/phase boundary open. No guest
+value, guard, ordering change, or mitigation was made.
+
+Evidence: `scratch/agent/s3228_m5_route_return_oracle.md` and
+`scratch/agent/s3228_m5_route_return_oracle.log`.
+
+ORIGIN: no guest value was changed; the result is a phase-boundary correction
+from an independent retail execution watch with a same-run positive control.
