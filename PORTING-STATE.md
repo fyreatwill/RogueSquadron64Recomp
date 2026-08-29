@@ -126249,3 +126249,17 @@ Added the regeneration-safe mapping `static_3_800A2FE4` →
 in `funcs_49.c`, `funcs.h`, and `funcs_27.c`; the final bounded search found no
 stale placeholder. No build or runtime run was performed; this was a
 source-only change. Evidence: `scratch/agent/s3204_generated_symbol_rename.md`.
+
+## Session 3205 (2026-08-29) — classified generated data-gap split at 0x800A50AC
+
+The bounded companion census found no symbol for `0x800A50AC`. Its generated
+record is a short non-callable instruction fragment immediately before known
+speech-state data at `0x800A5120`; the apparent `jal` caller is inside the same
+invalid generated fragment, not independent entry evidence. This selects
+`H-DataGap` and rules out a defensible semantic rename.
+
+Added the regeneration-safe mapping `static_3_800A50AC` →
+`data_gap_800A50AC`. The required helper synchronized exactly three references
+in the generated body, header, and fragment callsite; the final bounded search
+found no stale placeholder. No build or runtime run was performed; this was a
+source-only change. Evidence: `scratch/agent/s3205_generated_symbol_rename.md`.

@@ -148,6 +148,9 @@ RENAMES = {
     # This generated split starts with an invalid/data-decoded instruction
     # stream and has no companion symbol or standalone callable prologue.
     "static_3_800A2FE4": "data_gap_800A2FE4",
+    # This short record lies immediately before known speech-state data and
+    # its apparent caller is inside the same invalid generated fragment.
+    "static_3_800A50AC": "data_gap_800A50AC",
     # The companion map places these short records immediately before named
     # functions; they are data gaps, not callable game routines.
     "fake_func_80064294": "data_gap_80064294",
