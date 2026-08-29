@@ -63,6 +63,9 @@ RENAMES = {
     "fake_func_80108B8C": "data_gap_80108B8C",
     "fake_func_80109428": "data_gap_80109428",
     "fake_func_80109618": "data_gap_80109618",
+    # This generated mission-overlay tail is an invalid-data decode with no
+    # callable prologue or independent companion symbol.
+    "static_4_801096D8": "data_gap_801096D8",
     # The companion map marks these defined fake entries immediately before
     # named functions; their short overlay records are data gaps, not callable
     # game routines.

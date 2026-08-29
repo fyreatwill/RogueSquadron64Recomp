@@ -125806,3 +125806,18 @@ This closes the band for semantic renaming and rules out an exact companion
 rename there; ambiguous records remain untouched. No build, game run, or
 runtime behavior changed. Evidence:
 `scratch/agent/s3172_generated_symbol_sweep.md`.
+
+## Session 3173 (2026-08-29) — renamed invalid generated data tail
+
+Ran the bounded regeneration-safe generated-symbol sweep for
+`0x80100000..0x80110000`. The companion census had no stale semantic
+function names, but the generated snapshot contained `static_4_801096D8`,
+an invalid-data tail with discarded shift/divide instructions and no callable
+prologue. Added the permanent helper mapping to `data_gap_801096D8` and
+applied it to the external generated header, body, and overlay table; direct
+verification found two new-name references and no old-name references.
+
+This closes the interval's remaining mechanical data-tail lead while
+preserving its callable records and rules out a runtime-behavior change. No
+build or game run was needed for this source-only rename. Evidence:
+`scratch/agent/s3173_generated_symbol_sweep.md`.
