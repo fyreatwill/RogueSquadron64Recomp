@@ -125483,18 +125483,22 @@ Evidence: `scratch/agent/s3151_m3_alloc_voice_producer_edge.md`.
 
 ## Session 3152 (2026-08-29) — made M5 Step 6 drain policy regeneration-safe
 
-The mandated M5 pivot landed a real runtime/fixup change. `main.cpp` now
-centralizes the Step 6 startup policy: an unset `ROGUESQ_DRAIN_INLOOP_TICK`
-becomes `0`, while an explicit value remains untouched for the control arm.
-`fixup_game_funcs.py` now interprets only explicit `=1` as enabling the
-generated in-loop `tickMusyXIfActive` injection; unset and `=0` are disabled.
-The target build completed successfully and the fixup passed Python
-compilation. This rules out a source/build-policy mismatch as the next Step 6
-blocker, but does not establish audio task, status, voice, or PCM correctness;
-no guest wait, gate, writer, or output behavior changed. ORIGIN: the policy
-controls the port-only s1976 host injection; it does not alter a guest-owned
-value.
+The mandated M5 pivot landed a real runtime change. `main.cpp` now centralizes
+the Step 6 startup policy via `rs64_m5_apply_drain_tick_policy()`: an unset
+`ROGUESQ_DRAIN_INLOOP_TICK` becomes `"0"` at startup, while an explicit env
+value (e.g. `=1`) is left untouched for the control arm. The fixup's existing
+`apply_s1993_drain_inloop_gate()` already interpreted only `*e == '1'` as
+enabled, so no fixup edit was required — it was verified correct in situ.
 
-Evidence: `cmake --build build --config Debug --target
-RogueSquadron64Recomp` and `python3 -m py_compile
-/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.
+`H-Step6-BuildRegression` REFUTED: target build completed successfully and
+`python3 -m py_compile fixup_game_funcs.py` passed. `H-Step6-PolicyApplied`
+vs `H-Step6-PolicyBypassed` remain open — they require a game run to observe
+`[drain-inloop-gate] en=0` on the default path and `en=1` on the explicit
+path. That is the next discriminating measurement; no audio behavior,
+guest wait, gate, writer, or output was changed this session. ORIGIN: the
+policy controls the port-only s1976 host injection; it does not alter a
+guest-owned value.
+
+Evidence: `cmake --build build --config Debug --target RogueSquadron64Recomp`
+succeeded; `python3 -m py_compile
+/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` passed.
