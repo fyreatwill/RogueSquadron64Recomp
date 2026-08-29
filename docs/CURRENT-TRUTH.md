@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3216 (2026-08-29).
+Current maintenance marker: Session 3217 (2026-08-29).
 
 ## Current state
 
@@ -40,10 +40,11 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    The reaper's `next` walk is null-terminated and finite. No invalid producer
    or ordering edge was identified; retain the existing guard as safety only.
    Evidence: `scratch/agent/s3216_m3_voice_list_publication_bound.md`.
-3. While M5 is blocked, resume the bounded generated-symbol sweep at the
-   unresolved live-tail candidate `func_80092F10`, using companion callers,
-   source/m2c fragments, and registration boundaries before renaming. Do not
-   rename if semantics remain unproven.
+3. The bounded `func_80092F10` live-tail audit is closed as a data-gap
+   exclusion: it overlaps the real `packFourLutResampledSamples` entry at
+   `0x80092F94`, has no callable body or fan-in, and has no companion semantic
+   symbol. No rename was made. Evidence:
+   `scratch/agent/s3217_generated_symbol_rename.md`.
 4. After a route change, rerun the existing same-build phase-gated pair with
    `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-arm DMEM,
    DMA, `Broke`/SP completion, service, slot, and PCM joins; retain the silent
@@ -56,7 +57,9 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    generated declaration/body using a bounded, regeneration-safe tool. The
    body registers objective boolean-count handles and is called from
    `lvc_initializeObjectTracking`; the data-gap/live-tail fragments remain
-   unchanged. Resume M3/M5 work after this mandatory sweep pivot.
+   unchanged. The follow-up live-tail audit in Session 3217 found no
+   additional callable placeholder; resume M3/M5 work after this sweep
+   closure.
 7. Keep the external retail-entry boundary, M4 accumulator origin, and M5
    SP-yield/MORT publication threads parked pending a new target-phase
    discriminator. The corrected MORT descriptor edge is `+0x190` to
@@ -98,7 +101,8 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Evidence index
 
-Recent evidence includes `scratch/agent/s3213_m3_voice_list_table_audit.md`,
+Recent evidence includes `scratch/agent/s3217_generated_symbol_rename.md`,
+`scratch/agent/s3213_m3_voice_list_table_audit.md`,
 `scratch/agent/s3209_generated_symbol_rename.md`,
 `scratch/agent/s3208_generated_symbol_rename.md`,
 `scratch/agent/s3207_generated_symbol_rename.md`,

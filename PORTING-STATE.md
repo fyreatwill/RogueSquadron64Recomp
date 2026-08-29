@@ -126432,3 +126432,16 @@ explanation. No build or runtime run was performed. Evidence:
 
 ORIGIN: generated guest-PC store census plus independent companion symbol
 metadata; no mitigation landed.
+
+## Session 3217 (2026-08-29) — excluded overlapping live-tail symbol
+
+The bounded audit of `func_80092F10` selected the data-gap hypothesis. The
+TOML entry at `0x80092F10` ends exactly where the generated callable
+`packFourLutResampledSamples` begins at `0x80092F94`; the generated source has
+no function declaration/body or call target at `0x80092F10`. Companion
+`main_overlay.txt` independently names `0x80092F94` and provides no semantic
+symbol for `0x80092F10`, while `funcs.h` declares only the `0x80092F94`
+function. This rules out a defensible rename and distinguishes the overlap
+from an unresolved callable function. No generated file was edited and no
+runtime run was performed. Evidence:
+`scratch/agent/s3217_generated_symbol_rename.md`.
