@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3126 (2026-08-28).
+Current maintenance marker: Session 3127 (2026-08-28).
 
 ## Current state
 
@@ -154,6 +154,16 @@ so it is not evidence that the full range was executed when the breadcrumb
 was stale. This is single-source port evidence; no behavior change is
 authorized. Evidence: `scratch/agent/s3126_m5_post_consumer_port/run.log`.
 
+Session 3127's independent retail oracle passed the whole-RDRAM positive
+control (10,000 writes), reached title `1024 @ 0x00790400` and hangar `512 @
+0x006AB400`, and watched exact guest PC `0x800356A8`, the final instruction
+before the previously qualified `0x800356AC:0x80035B00` continuation. The
+candidate executed zero times overall, including both target phases. This
+rejects it as the immediate pre-consumer handoff and selects
+`H-RetailBoundaryAbsent`; the port divergence remains unexplained. This is
+single-source retail evidence and does not authorize a port change.
+Evidence: `scratch/agent/s3127_m5_retail_preconsumer/oracle.log`.
+
 ## Next steps
 
 Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
@@ -162,11 +172,12 @@ Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
 1. **M5 route blocker — ground the upstream divergence.** The port-side
    post-consumer watch had valid controls but no target phase, selecting a
-   divergence at or before the `0x800356AC:0x80035B00` continuation. Before
-   adding another port instrument, use the retail oracle to enumerate one
-   new, phase-gated handoff immediately before this range and identify its
-   writer/consumer PC; then add the matching port watch only if that retail
-   boundary is named. Do not change audio or route behavior.
+   divergence at or before the `0x800356AC:0x80035B00` continuation. The
+   exact immediately preceding PC `0x800356A8` is not executed by retail,
+   so it is rejected. Before adding another port instrument, use the retail
+   oracle to enumerate one genuinely different, statically named handoff
+   immediately before or at this continuation and identify its writer/consumer
+   PC. Do not change audio or route behavior.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the

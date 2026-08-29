@@ -124773,6 +124773,29 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3127 (2026-08-28) — rejected exact pre-consumer handoff
+
+Ran one independent retail-oracle capture with Rice video, the verified Start
+schedule, a whole-RDRAM write positive control, VI tracing, and an exact
+execution watch at `0x800356A8`, the final instruction before the previously
+qualified `0x800356AC:0x80035B00` continuation. The positive control reached
+10,000 writes and retail reached title `1024 @ 0x00790400` at 17.2s and
+hangar `512 @ 0x006AB400` at 38.4s. The exact PC recorded zero executions
+overall, including both target phases.
+
+This rejects `0x800356A8` as a live immediate pre-consumer handoff and selects
+`H-RetailBoundaryAbsent`. It rules out neither the already-live continuation
+nor the port's upstream divergence; the next candidate must be a genuinely
+different statically identified edge. The failed initial launch was only an
+ unavailable `timeout` command and produced no measurement. No port, audio,
+route, selector, wait, voice, or mitigation behavior changed. This is
+single-source retail evidence.
+
+Evidence: `scratch/agent/s3127_m5_retail_preconsumer/oracle.log` and
+`scratch/agent/s3127_m5_retail_preconsumer/RESULT.md`.
+
+ORIGIN: qualification-only retail boundary attribution; no behavior change.
+
 ## Session 3126 (2026-08-28) — rejected port post-consumer reachability
 
 Ran the phase-gated port parity probe for the retail-live guest-PC range

@@ -4,35 +4,41 @@ HYPOTHESIS-ID: m5-audio-route-upstream-boundary
 
 ## Single work unit
 
-Use one independent retail-oracle run to enumerate a new phase-gated
-writer/consumer handoff immediately before `0x800356AC:0x80035B00`.
+Use one static audit of the MIPS `__osViSwapContext` boundary to identify a
+genuinely different named handoff for the next retail oracle run. The exact
+`0x800356A8` candidate was absent in retail even though title/hangar controls
+were valid, so do not repeat it or the closed `0x80034F38:0x800356AC` range.
 Session 3126's port probe had valid controls (VI-context 8 rows and host
 voice-audit 1 row), but the port reached only VI 640 and had zero rows from
 the retail-live continuation. Audio and route behavior remain out of scope.
 
 ## Competing hypotheses
 
-- H-RetailPreConsumerBoundary: a newly watched retail PC immediately before
-  the continuation is live in title/hangar and names the next port boundary.
-- H-RetailBoundaryAbsent: the proposed pre-consumer handoff is not
-  target-phase live; choose a different statically identified handoff.
+- H-NewStaticHandoff: the audit identifies a distinct branch/call/return PC at
+  the VI consumer boundary that can be phase-gated in the retail oracle.
+- H-NoDistinctHandoff: the audited instructions are already covered or have
+  no independent execution edge; choose the highest-information non-consumer
+  boundary instead.
 - H-RetailControlInvalid: the whole-RDRAM positive control or title/hangar
   phase markers fail, so the oracle result is unevaluable.
 
 ## Discriminating measurement
 
-In one bounded retail-oracle run, the whole-RDRAM control must fire and retail
-must reach title 1024 and hangar 512. A target-phase row from a newly named
-pre-consumer PC selects H-RetailPreConsumerBoundary; no row with valid
-controls rejects that candidate; a missing control or phase marker selects
+The audit must produce one exact guest PC not already covered by the closed
+consumer watches and explain why it is an independent handoff. The following
+oracle run must pass the whole-RDRAM control and reach title/hangar; a
+target-phase row selects H-NewStaticHandoff, no row with valid controls
+selects H-NoDistinctHandoff, and missing controls select
 H-RetailControlInvalid.
 
 ## Exact commands
 
-1. Use the retail oracle's whole-RDRAM positive control and one newly selected
-   pre-consumer execution watch, phase-gated to title/hangar VI transitions.
-2. Run once with the fixed oracle recipe, capture the full log, and kill with
-   SIGKILL if the watchdog expires.
+1. Audit the linked retail ELF/disassembly for `__osViSwapContext`
+   `0x80035550:0x800358AC`; record one distinct branch/call/return PC and its
+   relation to `0x800356AC`.
+2. Rewrite this file with that candidate and the same competing outcomes,
+   then run one oracle capture with all-RDRAM control and explicit title/
+   hangar phase buckets.
 3. Record the control, title/hangar phases, watched PC rows, and selected
    hypothesis; do not add a port instrument until the writer/consumer PC is
    named.
