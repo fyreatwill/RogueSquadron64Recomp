@@ -126809,3 +126809,29 @@ oracle logs.
 
 ORIGIN: no mitigation or guest value was changed; this is a positive-controlled
 independent retail observation with an explicitly unevaluable join.
+
+## Session 3233 (2026-08-29) — repaired retail route-to-VI join
+
+Ran the independent retail oracle with the validated Rice/full-Start route,
+whole-RDRAM write positive control, route execution watch
+`0x80091D38`, and the post-swap join latched at that route PC. The first
+capture demonstrated an oracle filter artifact: the join accepted only the
+attract origins `0x00696100/0x00696600`, so it discarded the target route's
+following 640-to-1024 transition.
+
+Added the diagnostic `--post-swap-any-vi` arm and rebuilt the oracle. The fixed
+capture passed the 10,000-write positive control, reached title and hangar,
+and produced two joins. The target row had pre/next origin `0x00790A00`,
+swap predecessor `0x80091D34`, and route `$a0=0x8014090E` (physical
+`0x0014090E`), which is not a framebuffer. This validates route execution and
+join ordering and refutes the prior zero-join interpretation as a filter
+artifact, but selects none of the writer/origin hypotheses. Next, capture the
+VI context/framebuffer fields at this target boundary before adding port
+counters.
+
+Evidence: `scratch/agent/s3233_m5_retail_route_join/RESULTS.md` and its two
+oracle logs. No guest value, port behavior, guard, ordering change, or
+mitigation was made.
+
+ORIGIN: the diagnostic filter change only; the observed route `$a0` is not
+being treated as a legitimate framebuffer.

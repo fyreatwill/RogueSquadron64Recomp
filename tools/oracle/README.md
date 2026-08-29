@@ -74,6 +74,11 @@ caller, physical `$a0`, and the most recently dumped mode descriptor. Rows are
 bounded at 256; the shutdown summary reports latched, joined, pending, dropped,
 and overflow counts.
 
+`--post-swap-any-vi` changes that join's filter to accept the next VI callback
+at any width or origin. Use it only when the watched execution itself is the
+phase boundary; it is a diagnostic escape hatch for transitions such as the
+retail 640-to-1024 title switch.
+
 `--vi-context-table-pc A` performs the same bounded join for the retail
 `__osViNext` context at a watched 640-wide execution PC. It records the
 context state, frame pointer, mode pointer, current field, both mode field

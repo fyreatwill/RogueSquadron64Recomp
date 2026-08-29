@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3232 (2026-08-29).
+Current maintenance marker: Session 3233 (2026-08-29).
 
 ## Current state
 
@@ -29,6 +29,15 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection.
+   Session 3233 repaired the retail oracle join: the prior implementation
+   silently discarded the target route's following 640-to-1024 transition
+   because it accepted only the attract origins `0x00696100/0x00696600`.
+   With an any-next-VI diagnostic arm, the positive-controlled run produced
+   two joins, including pre/next origin `0x00790A00`; the route `$a0` was
+   `0x8014090E` (physical `0x0014090E`), not a framebuffer. This validates
+   route execution and join ordering but does not select a legitimate writer
+   or port origin-selection hypothesis. Next, use a target-phase join that
+   captures the actual VI context/framebuffer fields, not route `$a0`.
    Session 3232's independent retail runs passed the whole-RDRAM control,
    reached title and hangar, and fired all four established route PCs at the
    `0x00790A00` transition. The `osViSwapBuffer` phase join returned

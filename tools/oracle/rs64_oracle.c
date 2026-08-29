@@ -252,6 +252,7 @@ struct mode_descriptor_snapshot {
 static struct mode_descriptor_snapshot g_last_mode_descriptor;
 static uint32_t g_post_swap_table_pc;
 static int g_post_swap_table_enabled;
+static int g_post_swap_any_vi;
 struct post_swap_pending {
     int valid;
     uint32_t pre_origin;
@@ -939,7 +940,8 @@ static void join_post_swap_table(uint32_t width, uint32_t origin)
         return;
     pending = g_post_swap_pending;
     g_post_swap_pending.valid = 0;
-    if (width != 640 || !is_post_swap_target_origin(origin)) {
+    if ((!g_post_swap_any_vi && width != 640) ||
+        (!g_post_swap_any_vi && !is_post_swap_target_origin(origin))) {
         g_post_swap_dropped++;
         return;
     }
@@ -1966,6 +1968,7 @@ static void usage(void)
         "  --pc-task-type N   OSTask type to dump (default 2=audio; 1=gfx; 0=any)\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
         "  --post-swap-table-pc A join a 640-wide swap at A to the following VI callback\n"
+        "  --post-swap-any-vi      allow the post-swap join to accept any next VI width/origin\n"
         "  --vi-context-table-pc A join __osViNext at 640-wide execution A to the following VI callback\n"
         "  --first-watch N       log the first hit for watch index N\n"
         "  --pc-hist-watch N     summarize writer PCs for watch index N (repeatable)\n"
@@ -2073,6 +2076,8 @@ int main(int argc, char **argv)
             g_post_swap_table_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_post_swap_table_enabled = 1;
         }
+        else if (!strcmp(argv[i], "--post-swap-any-vi"))
+            g_post_swap_any_vi = 1;
         else if (!strcmp(argv[i], "--vi-context-table-pc") && i + 1 < argc) {
             g_vi_context_table_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_vi_context_table_enabled = 1;
