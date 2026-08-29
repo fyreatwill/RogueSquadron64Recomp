@@ -125900,3 +125900,15 @@ This closes the band for semantic renaming and rules out an exact companion
 rename there; ambiguous records remain untouched. No build, game run, or
 runtime behavior changed. Evidence:
 `scratch/agent/s3178_generated_symbol_sweep.md`.
+
+## Session 3179 (2026-08-29) — bounded generated-symbol sweep closed synchronized band
+
+Ran the required regeneration-safe generated-symbol helper for
+`0x80160000..0x80170000` with `--require-rename`, followed by an independent
+search of generated `RECOMP_FUNC` definitions. The helper selected zero
+generated references, returned its expected no-rename exit code 2, and the
+definition search found no `func_*`, `fake_func_*`, or `static_*` placeholder
+body in the interval. This closes the band for semantic renaming and rules
+out an exact companion rename there; ambiguous records remain untouched.
+No build, game run, or runtime behavior changed. Evidence:
+`scratch/agent/s3179_generated_symbol_sweep.md`.
