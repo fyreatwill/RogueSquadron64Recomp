@@ -1,8 +1,11 @@
-# NEXT work unit — audit `musyxStoreVoiceAdsrParams` voice-index class
+# NEXT work unit — audit `musyxTriggerVoiceAttack` voice-index class
 
 HYPOTHESIS-ID: m3-idiom-class-audit
 
-Session 3156 closed item -292's 43/43 `0x801529C0` reader inventory.
+Session 3158 selected `H-M3-Unclassified` for `musyxStoreVoiceAdsrParams`:
+one reachable SoundMacro caller passes `lbu s5+0x67` without a local `<64`
+proof, and the callee has four independent `0x88`-stride stores. The existing
+base-pointer guard is not an index proof.
 
 Session 3155 selected `H-M3-ValidProducer` for the complete `musyxStopVoice`
 `+0x1` computed-record store: `s6` starts at zero, the call precedes its
@@ -11,7 +14,7 @@ increment, and both sole writers of the loop-count byte clamp it to at most
 
 ## Single work unit
 
-Audit the complete `musyxStoreVoiceAdsrParams` voice-indexed record/table class
+Audit the complete `musyxTriggerVoiceAttack` voice-indexed record/table class
 in one static pass. Enumerate every generated caller, every indexed load/store
 and its base/count producer, then reconcile with companion symbols/ELF when
 available. Do not edit generated functions or add guards. No build or runtime
@@ -40,8 +43,8 @@ voice behavior changes.
 Exact starting commands:
 
 ```sh
-rg -n 'musyxStoreVoiceAdsrParams|voice index|voice-index|0x88 voice' docs /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs | head -240
-rg -n 'musyxStoreVoiceAdsrParams' /Users/williambuckley/Documents/Tools/rogue_squadron64 | head -120
+rg -n 'musyxTriggerVoiceAttack|voice index|voice-index|0x88 voice' docs /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs | head -240
+rg -n 'musyxTriggerVoiceAttack' /Users/williambuckley/Documents/Tools/rogue_squadron64 | head -120
 
 Expected discriminator outcomes: a complete site table with all reachable
 rows locally proven selects `H-M3-Proven`; any reachable row lacking a

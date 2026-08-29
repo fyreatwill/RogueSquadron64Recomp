@@ -6,7 +6,18 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3157 (2026-08-29).
+Current maintenance marker: Session 3158 (2026-08-29).
+
+Session 3158 completed the bounded static M3 audit of
+`musyxStoreVoiceAdsrParams`'s voice-indexed `0x88`-stride record accesses.
+The current generated tree has one reachable caller, which passes a byte
+loaded from `s5+0x67` without a local `<64` proof, and the callee has four
+independent stores with no index check. `allocateSongChannelArray` supports
+the `0x801496F8` base/stride interpretation but does not establish the
+caller-byte bound. This selects `H-M3-Unclassified` from generated control
+flow plus companion symbol metadata; the existing base-pointer guard remains
+unchanged and no audio or runtime behavior changed. Evidence:
+`scratch/agent/s3158_m3_musyx_store_voice_adsr_audit.md`.
 
 Session 3157 completed the bounded static M3 audit of
 `musyxInitVoiceFromSample`'s voice-indexed `0x88`-stride record accesses.
@@ -478,7 +489,10 @@ drain gate. The next work unit is a bounded M3 idiom-class audit; do not remove
 the status-03 wait hatch.
 
 1. **M3 crash work — audit the next bounded idiom-class inventory entry.**
-   Session 3157 audited `musyxInitVoiceFromSample`: its two reachable callers
+   Session 3158 audited `musyxStoreVoiceAdsrParams`: its one reachable caller
+   passes a byte-loaded index without a local `<64` proof, and all four
+   indexed stores remain unclassified. Session 3157 audited
+   `musyxInitVoiceFromSample`: its two reachable callers
    and two independently formed voice-slot pointers remain unclassified
    because the sound-macro index has no local `<64` proof and the streamed
    allocator/lifecycle edge does not establish the callee's exact bound. The
@@ -488,7 +502,8 @@ the status-03 wait hatch.
    The `stopVoicesByHandle` producer edge remains unresolved: no direct or
    recoverable indirect call to `allocVoiceHandleNode` was found, and no guard
    is authorized. Select the next complete NULL-plus-offset class from the
-   existing M3 inventory and enumerate all sites in one audit.
+   existing M3 inventory and enumerate all sites in one audit. The next
+   selected class is `musyxTriggerVoiceAttack`'s voice-indexed record access.
 
 2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI

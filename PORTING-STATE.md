@@ -125586,3 +125586,20 @@ static scope. No guard, generated-source edit, build, run, oracle watch, or
 audio behavior changed.
 
 Evidence: `scratch/agent/s3157_m3_musyx_init_voice_index_audit.md`.
+
+## Session 3158 (2026-08-29) — audited `musyxStoreVoiceAdsrParams` index contract
+
+Performed the planned complete static M3 audit of
+`musyxStoreVoiceAdsrParams`. The current generated tree has exactly one
+reachable direct caller, `musyxSetVoiceAdsrFromTable` at `0x8008A9DC`; it
+passes `lbu 0x67(s5)` as the voice index with no local `<64` proof. The callee
+forms `0x801496F8 + a0*0x88` and has four independent stores at guest PCs
+`0x800922E0`, `0x800922E8`, `0x8009230C`, and `0x80092318`. Its existing base
+guard proves only a KSEG0 base, not the index. `allocateSongChannelArray`
+writes the base and allocates using the same stride, but does not establish
+the caller-byte bound. Companion symbol metadata independently identifies the
+caller, callee, base, and record layout. This selects `H-M3-Unclassified`
+and rules out lowering-only/dead-site explanations at static scope. No guard,
+generated-source edit, build, run, oracle watch, or audio behavior changed.
+
+Evidence: `scratch/agent/s3158_m3_musyx_store_voice_adsr_audit.md`.
