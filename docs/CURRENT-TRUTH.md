@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3221 (2026-08-29).
+Current maintenance marker: Session 3222 (2026-08-29).
 
 ## Current state
 

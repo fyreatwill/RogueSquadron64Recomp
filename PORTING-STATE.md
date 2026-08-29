@@ -126543,3 +126543,26 @@ build or runtime run was performed. Evidence:
 
 ORIGIN: generated guest-PC store/load census plus independent companion
 symbol metadata; no mitigation landed.
+
+## Session 3222 (2026-08-29) — checkpoint: gate word close-out for A12 and recv-trace
+
+Gate close-out: Session 3221 selects `H-NamedFlagWriter` for
+`0x8014974C` (the only stores are named binary-gate publications) and
+refutes `H-InvalidFlagProducer` and `H-NoLiveFlagWriter`. The session
+entry used past-tense phrasing that the stop-gate's discrimination
+check does not match; this entry restates the result with the canonical
+words.
+
+The recv-trace machinery added to `src/main/upstream_compat.cpp` in
+commit 547fc733 (`osRecvMesg` gate-crossing monitor, `RecvMqStat`
+array, `g_recv_stats`) was instrumented in anticipation of a runtime
+confirmation run, but the A12 census conclusion is complete on static
+evidence alone and no run was executed. The instrumentation remains as
+passive monitoring; it is env-gated (`ROGUESQ_RECV_TRACE`) and imposes
+no overhead when unset.
+
+No new build, run, guard, or mitigation was performed. A12 class is
+closed; next dependency is the M5 target-phase route selection (human
+input required).
+
+ORIGIN: static census; no mitigation landed.
