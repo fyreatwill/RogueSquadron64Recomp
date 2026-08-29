@@ -7,7 +7,8 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 M5 remains blocked pending a route change. The selected M3 class
 `musyxMixActiveVoices` was proven range-safe in Session 3167. Sessions 3168
 through 3171 closed the latest bands without a stale semantic placeholder.
-Resume the regeneration-safe sweep at the next address band.
+Resume the regeneration-safe sweep at the next address band,
+`0x80100000..0x80110000`.
 
 Competing hypotheses and the discriminating measurement:
 
@@ -26,8 +27,8 @@ selects SemanticMatch or DataGap; ambiguous entries remain untouched.
 Exact starting commands:
 
 ```sh
-python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800F0000 --end-address 0x80100000 --limit 16 --require-rename
-rg -n '^RECOMP_FUNC void (func|fake_func)_' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | awk '$0 ~ /0x800F/ || $0 ~ /0x8010/ {print}' | head -80
+python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x80100000 --end-address 0x80110000 --limit 16 --require-rename
+rg -n '^RECOMP_FUNC void (func|fake_func)_' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | awk '$0 ~ /0x8010/ || $0 ~ /0x8011/ {print}' | head -80
 ```
 
 Expected outcome: the next batch either renames at least one exact candidate,
