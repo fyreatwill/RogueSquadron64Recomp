@@ -126361,3 +126361,21 @@ initializer's range because an overlapping symbol record would corrupt its
 boundaries. The unresolved live-tail `func_80092F10` and fake data fragment
 `fake_func_800AE3E4` remain unchanged. No runtime build/run was needed for
 this source-only generated rename. Evidence: `scratch/agent/s3212_generated_symbol_rename.md`.
+## Session 3213 (2026-08-29) — completed M3 voice/list/table pointer census
+
+Performed the complete source census requested for the existing voice/list/table
+guard inventory. `funcs_25.c` contains 43 `SONGTEMPO_TABLE_GUARD` reloads across
+six reachable song-sequencer readers; the generated `startSongSequence` body
+writes `0x801529C0` at `0x80096D88`, and the companion metadata independently
+identifies the table and reader roles. This supports the legitimate-writer
+branch and does not identify a bad producer. `funcs_26.c` contains one
+`tickAndReap3DAudioVoices` guard at `0x80098F14` for the `0x80153414` 3D voice
+list. The companion identifies its remove/reset family, but the node
+publication ordering and finite traversal bound remain unclassified. Both
+consumers are reachable, so an unreachable-only explanation is ruled out; no
+guard was added or relaxed. No build or runtime run was performed because the
+static census selected no safe engineering change and M5 remains blocked at
+VI 640. Evidence: `scratch/agent/s3213_m3_voice_list_table_audit.md`.
+
+ORIGIN: guest-PC reload/store census plus independent companion symbol metadata;
+no mitigation landed.

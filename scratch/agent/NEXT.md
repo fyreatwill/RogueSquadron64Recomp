@@ -1,26 +1,27 @@
-# NEXT work unit — M3 voice/list/table-pointer idiom audit
+# NEXT work unit — obtain a target-phase route change for M5
 
-HYPOTHESIS-ID: m3-musyx-voice-list-table-pointer-contract
+HYPOTHESIS-ID: m5-target-phase-route-boundary
 
 ## Single work unit
 
-Audit every producer and consumer edge in the existing voice/list/table
-pointer guard inventory in `funcs_25.c` and `funcs_26.c`. This is a complete
-source audit, not a single-site guard change. M5 remains blocked at VI 640.
+M5 is blocked at VI 640 in the Session 3192 same-build image-versus-silent
+pair. The next unit requires a human-selected route change, or an equivalent
+retail-grounded boundary, that makes the image arm reach title or hangar.
+Do not repeat the same pair before that change.
 
 Competing hypotheses and the discriminating measurement:
 
-- `H-LegitimateWriter`: every guarded pointer has a reachable initialized
-  writer and a valid traversal bound.
-- `H-BadProducer`: a reachable writer can publish an invalid pointer before a
-  guarded consumer; identify the ordering edge.
-- `H-UnreachableGuard`: no guarded consumer has a callable producer/consumer
-  edge in the current image.
+- `H-RouteOnly`: the VI-640 stop is route-specific and a selected route change
+  reaches the target phase.
+- `H-AudioPath`: the image/silent arm difference changes target-phase reachability
+  only after a valid audio task/service boundary is selected.
+- `H-Blocked`: no authorized route change is available; the target-phase nulls
+  remain unevaluable.
 
-The discriminator is one whole-class census of all guarded pointer loads,
-their writers, traversal bounds, and callable edges, joined by guest PC and
-field offset. A null is invalid unless every known guard and writer is marked
-by the census positive control.
+The discriminator is the first phase-gated same-build pair after the route
+change: title/hangar VI transition, image-arm DMEM/DMA/SP/service joins, and
+silent-arm no-write control. The result must distinguish target-phase audio
+execution from another pre-title route stop.
 
 Exact commands:
 
@@ -33,7 +34,6 @@ rg -n 'voice|song|table|list|0x8014' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64/src 2>/dev/null
 ```
 
-Expected outcome: one complete writer/consumer table that proves the
-contract, names a legitimate bad producer and ordering edge, or proves the
-path unreachable. Do not add a guard or build/run until the table selects one
-outcome.
+Expected outcome: target phase reached with the required positive controls,
+or the route remains pre-title and M5 stays blocked. If blocked, ask the human
+to select the route/configuration before any build or run.

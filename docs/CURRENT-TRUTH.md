@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3212 (2026-08-29).
+Current maintenance marker: Session 3213 (2026-08-29).
 
 ## Current state
 
@@ -35,13 +35,12 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-arm DMEM,
    DMA, `Broke`/SP completion, service, slot, and PCM joins; retain the silent
    arm as the no-write control.
-3. When M5 is still blocked, perform only a complete M3 idiom-class audit from
-   the existing inventory. Session 3211 classified the complete
-   `musyxInitVoiceFromSample` voice-slot producer contract as unclassified:
-   both callers are reachable, but the `+0x67` writer and a complete
-   streamed-index bound remain unresolved. Next audit the voice/list/table
-   pointer guard class; do not add a guard without a legitimate writer and
-   bound proof.
+3. M3 voice/list/table audit result: the 43-site `SONGTEMPO_TABLE_GUARD`
+   class has a concrete `startSongSequence` writer at `0x80096D88` and is
+   already fully covered; no new guard work is authorized. The one
+   `tickAndReap3DAudioVoices` list-head guard has a named list-head/removal
+   family but its node publication and traversal bound remain unclassified.
+   Do not add or relax a guard without a legitimate writer and bound proof.
 4. Session 3212 renamed the sole remaining callable generated placeholder
    `static_4_80106C50` to `lvc_registerObjectiveBooleanCounts` in the
    generated declaration/body using a bounded, regeneration-safe tool. The
@@ -89,7 +88,8 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Evidence index
 
-Recent evidence includes `scratch/agent/s3209_generated_symbol_rename.md`,
+Recent evidence includes `scratch/agent/s3213_m3_voice_list_table_audit.md`,
+`scratch/agent/s3209_generated_symbol_rename.md`,
 `scratch/agent/s3208_generated_symbol_rename.md`,
 `scratch/agent/s3207_generated_symbol_rename.md`,
 `scratch/agent/s3205_generated_symbol_rename.md`,
