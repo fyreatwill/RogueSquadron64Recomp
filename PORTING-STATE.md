@@ -124466,3 +124466,23 @@ handoff. No audio behavior, gate, wait, voice guard, or output destination
 changed. Evidence: `scratch/agent/s3093_m5_step1_qualification/AUDIT.md`.
 
 ORIGIN: qualification-only A/B; no mitigation or runtime behavior change.
+
+## Session 3094 (2026-08-28) — attributed M5 VI-mode publication boundary
+
+The Debug target rebuilt successfully. The independent retail oracle passed
+the whole-RDRAM positive control with 18,896 callbacks, reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and its watched retail
+`osViSetMode`, selected-mode caller, and ProducerMark PCs fired. The port
+selector control fired, recorded four `osViSetMode` calls and 512 bounded
+VI-context rows, but remained at VI 640: it published `0x80128E40` followed by
+`0x80128DF0`, both width 640, with zero title/hangar rows.
+
+This rejects a missing publication wrapper and the observed 640 consumer as
+the cause, but leaves the absent 1024 writer and ordering unevaluable. After
+three upstream route probes without a target-phase discriminator, this route
+thread is parked and the next unit pivots to the bounded generated-symbol
+sweep. No audio, route, selector, wait, voice, or mitigation behavior
+changed. Evidence: `scratch/agent/s3094_m5_vi_mode_publication/AUDIT.md`.
+
+ORIGIN: qualification-only publication/consumer attribution; no mitigation
+or runtime behavior change.
