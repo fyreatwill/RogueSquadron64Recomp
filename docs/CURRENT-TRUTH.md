@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3115 (2026-08-28).
+Current maintenance marker: Session 3116 (2026-08-28).
 
 ## Current state
 
@@ -31,15 +31,15 @@ active engineering prerequisite is a new retail-grounded M5 boundary.
 
 ## Latest evidence
 
-Session 3115's independent retail-oracle boundary capture passed the
+Session 3116's independent retail-oracle boundary capture passed the
 whole-RDRAM positive control and reached title `1024 @ 0x00790400` and hangar
-`512 @ 0x006AB400`. The new `initVideoSubsystem` execution range
-`0x8001A098:0x8001B7B8` fired 1,141 times, but its observed execution was
-late at about 52.8s in hangar 512; it did not execute at the 640-to-1024
-transition at about 18.3s. This refutes the range as the transition writer
-for this run, while proving the range is live later. It leaves the writer
-outside this range or in a later handoff. This is single-source oracle
-evidence; it does not authorize a port change.
+`512 @ 0x006AB400`. The post-init execution range
+`0x8001B7B8:0x8001BB6C` fired throughout the run, including target phases,
+but did not provide direct VI-mode-write attribution. This refutes the range
+as the missing 640-to-1024 writer while proving it is live. Combined with
+Session 3115, the writer remains outside both watched ranges or in a later
+handoff. This is single-source oracle evidence; it does not authorize a port
+change.
 
 Session 3112 synchronized the mechanically classifiable generated records
 `0x800B2628`, `0x800B42BC`, and `0x800B89F4` as `data_gap_*` where appropriate,
@@ -63,12 +63,12 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **M5 VI publication — enumerate the missing writer.** Watch the new gap
-   immediately after the late `initVideoSubsystem` range,
-   `0x8001B7B8:0x8001BB6C`, retaining a whole-RDRAM positive control and
-   title/hangar phase controls. Do not repeat the three direct callsite
-   watches, the closed selector-helper range, or the now-qualified
-   `initVideoSubsystem` range.
+1. **M5 VI publication — enumerate the missing writer.** The two contiguous
+   ranges through `0x8001BB6C` are now live but not selected as the transition
+   writer. Use a genuinely different static handoff or retail-grounded PC
+   boundary; do not repeat either range, the three direct callsite watches,
+   or the closed selector-helper range. Retain a whole-RDRAM positive control
+   and title/hangar phase controls.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed

@@ -124772,6 +124772,24 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3116 (2026-08-28) — rejected post-init retail boundary as VI writer
+
+Ran one independent retail-oracle capture with the whole-RDRAM positive
+control, Rice video, verified Start schedule, and VI trace. The control fired
+128 visible writes and continued counting; retail reached title
+`1024 @ 0x00790400` at 17.3s and hangar `512 @ 0x006AB400` at 38.4s. The
+execution watch over `0x8001B7B8:0x8001BB6C` fired throughout the run, including
+at the target phases, but the range execution summary contains no direct VI
+mode-write attribution. This selects H-OtherWriter: the range is live but is
+not the missing 640-to-1024 writer boundary. It rules out H-GapDead and
+H-GapWriter for this capture, but does not identify the writer. This is
+single-source oracle evidence.
+
+Evidence: `scratch/agent/s3116_m5_retail_post_init_range/oracle.log`.
+
+ORIGIN: qualification-only retail boundary attribution; no port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
+
 ## Session 3107 (2026-08-28) — identified unenumerated retail mode writer
 
 Ran one independent retail-oracle capture watching the three known
