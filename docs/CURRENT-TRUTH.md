@@ -6,6 +6,15 @@ recipes and evidence remain in the ledger and `scratch/agent/`.
 
 Current maintenance marker: Session 3247 (2026-08-29).
 
+Session 3248 proved the guard-build block is an external dependency and
+re-scoped the loop. The exact `PatchesLib` build still exits 2 because this
+Unix checkout has no target, MIPS GCC/LD, or generated Rogue Squadron patch
+output; the CMake source confirms those prerequisites are required. The
+sibling Starfox generated patch artifact is not a valid substitute. This is
+not guard evidence and does not authorize M5 Step 3, but it no longer stops
+the loop. The next unit is a build-independent complete static audit of the
+MusyX status-03 publication/consumer idiom class.
+
 ## Current state
 
 The native port builds and boots through attribution, the N64 logo, intro
@@ -86,7 +95,8 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Validate the existing free-list guard patch on a host with the configured
+1. The existing free-list guard validation remains an external dependency:
+   validate it on a host with the configured
    MIPS GCC/LD and Debug N64Recomp, then run the bounded M5 Step 3 gate. The
    port target-row comparison is currently `H-PortRowMissing`: the existing
    image/silent pair has a valid VI control but no target row. Require the
@@ -101,6 +111,12 @@ no patch or allocator mitigation is authorized. Evidence:
    The guard build is currently an external dependency; the port-side audit
    may proceed independently, but no M5 behavior change is authorized until
    the guard validation is obtained.
+   Session 3248 proved the local dependency is real and re-scoped active work
+   to the status-03 idiom audit in `scratch/agent/NEXT.md`. Do not substitute
+   the sibling Starfox generated patch artifact, Clang, or the host-only
+   `build/N64Recomp` binary for this validation.
+   The one satisfying experiment remains the exact `PatchesLib` build plus
+   the existing Step 3 recipe on a configured Windows/MIPS host.
    Session 3236 compared the M5 inventory and Step 1/2 evidence with the
    valid controls from Session 3235. No candidate has independent writer PC,
    destination span, payload polarity, and completion-order evidence at the

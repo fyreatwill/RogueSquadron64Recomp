@@ -1,22 +1,26 @@
-# Unblock result — Session 3245
+# Unblock result — Session 3248
 
-Route 3 (re-scope) resolved the loop stop without pretending the guard was
-validated.
+Route taken: 3, re-scope after proving the stated build dependency is real.
 
-Evidence:
+Evidence this iteration:
 
-- Route 1: `build/N64Recomp --help` is parsed as a TOML filename, so it does
-  not provide an alternate patch-validation path. `patches/README.md` and
-  `CMakeLists.txt` show that the normal pipeline requires MIPS cross-tools,
-  N64Recomp, and make.
-- Route 2: `cmake --build build --config Debug --target PatchesLib` returned
-  exit code 2 with `No rule to make target PatchesLib`. The cache points to
-  `E:/mips-toolchain`; no local `mips64-elf-*` binaries or generated
-  `RecompiledPatches/patches.c` are present.
-- Route 3: `scratch/agent/NEXT.md` now selects a build-independent audit of
-  the existing port VI/output boundary. The guard validation is recorded as
-  an open dependency, and M5 behavior remains gated.
+- The exact command `cmake --build build --config Debug --target PatchesLib`
+  exited 2 with `No rule to make target \`PatchesLib\'`.
+- `cmake --build build --target help` lists the host targets but no
+  `PatchesLib` target. The CMake source creates that target only when the
+  configured MIPS GCC, configured N64Recomp executable, and `make` are all
+  present.
+- This checkout has `/usr/bin/make`, but no local `mips64-elf-gcc` or
+  `mips64-elf-ld`, no `RecompiledPatches/patches.c`, and no `patches.elf`.
+  The cache points to `E:/mips-toolchain`; the available host binary is
+  `build/N64Recomp`, not the configured `build/Debug/N64Recomp.exe`.
+- A generated `patches.c` in the sibling Starfox project was inspected and
+  rejected as a substitute: it is for a different ROM, symbols, and patch
+  ELF, so it cannot validate this project's guard override.
 
-The specific observation that makes the block false for loop progress is that
-the next discriminator can be run from existing source and captures without
-the unavailable cross-toolchain; it does not prove the free-list guard itself.
+The guard validation remains an external Windows/MIPS-host dependency. It no
+longer blocks the project loop: `NEXT.md` now selects a build-independent,
+systematic M3 status-03 publication/consumer audit. The one experiment that
+would satisfy the parked dependency is still the exact `PatchesLib` build on a
+host with the configured MIPS toolchain and generated Rogue Squadron patch
+artifacts, followed by the existing Step 3 validation recipe.

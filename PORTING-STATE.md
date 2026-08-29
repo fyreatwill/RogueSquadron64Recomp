@@ -127092,3 +127092,22 @@ failed. The next attempt requires the configured Windows/MIPS host or generated
 patch artifacts; Clang and the stale map remain invalid substitutions.
 
 Evidence: `scratch/agent/s3247_guard_validation.md`.
+## Session 3248 (2026-08-29) — proved guard build dependency and re-scoped
+
+The unblock iteration tested the stated dependency in order. The exact
+`cmake --build build --config Debug --target PatchesLib` command exited 2 with
+`No rule to make target PatchesLib`; the target list independently contains no
+`PatchesLib`. The CMake source makes the target conditional on MIPS GCC, the
+configured N64Recomp executable, and make. This checkout has only host
+`/usr/bin/make`, no `mips64-elf-gcc`/`mips64-elf-ld`, no
+`RecompiledPatches/patches.c`, and no `patches.elf`. The available
+`build/N64Recomp` and a sibling Starfox `patches.c` are not valid substitutes
+for this project's configured/generated patch pipeline.
+
+This proves the guard validation dependency is real but external, not guard
+evidence. Route 3 re-scoped the next unit to a complete static M3 audit of the
+MusyX status-03 publication/consumer idiom class, which needs no MIPS host or
+runtime change. Evidence: `scratch/agent/UNBLOCK.md`. The parked dependency
+can be satisfied only by running the exact build and Step 3 recipe on a
+configured Windows/MIPS host or with equivalent Rogue Squadron generated
+artifacts.

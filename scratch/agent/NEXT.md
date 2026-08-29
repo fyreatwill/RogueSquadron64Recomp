@@ -1,40 +1,43 @@
-# NEXT work unit — validate guard patch and unlock M5 Step 3
+# NEXT work unit — audit the status-03 audio idiom class
 
-HYPOTHESIS-ID: m5-step3-guard-validation
+HYPOTHESIS-ID: m3-status03-publication-consumer-audit
 
-Session 3246 selected `H-PortRowMissing`: the port-side target logger is
-present, but the validated image/silent pair stops at VI 640/origin
-`0x0066A500`, while retail reaches the target relation. The next unit is the
-already-planned guard validation on a host with the configured MIPS toolchain;
-it is the prerequisite for M5 Step 3 and must not be substituted by Clang.
+The M5 guard-build dependency is external and does not block a static M3
+audit. Audit every generated-source status-03 read, writer, and terminal
+transition in the MusyX service/slot family as one complete idiom class. Do
+not change guards, waits, audio routing, or output behavior in this unit.
 
 ## Competing hypotheses
 
-- `H-GuardBuildable`: MIPS/generated-host validation runs and supplies the
-  required Step 3 gate.
-- `H-GuardHostMissing`: the exact target remains unavailable, leaving Step 3
-  blocked without evidence about guard correctness.
+- `H-Status03NamedContract`: every status-03 read has a named legitimate
+  publisher and a bounded consumer/reaping transition in the guest code.
+- `H-Status03MissingPublisher`: at least one live status-03 read has no
+  publisher or terminal transition in the reachable generated call graph.
+- `H-Status03SafetyOnly`: the reads are only defensive/safety paths and do not
+  authorize changing the existing wait hatch.
 
 ## Discriminator
 
-Run `cmake --build build --config Debug --target PatchesLib`, then the existing
-M5 Step 3 validation recipe from `docs/M5-AUDIO-PLAN.md`. A successful
-MIPS/generated-host build selects `H-GuardBuildable`; `No rule to make target
-PatchesLib`, missing `E:/mips-toolchain`, or missing generated patches selects
-`H-GuardHostMissing`. The latter is an environment result, not guard evidence.
+Build one complete table from static sources: for each status-03 read, record
+the function/address, field offset, all stores to that field, caller/callee
+edge, and terminal `02/00` or reap transition. A class-wide named writer and
+consumer for every live read selects `H-Status03NamedContract`; a live read
+without one selects `H-Status03MissingPublisher`; unreachable or defensive
+reads with no live transition select `H-Status03SafetyOnly`. Do not infer
+runtime causation from a guard hit.
 
 ## Exact commands
 
-1. On the configured host, run `cmake --build build --config Debug --target PatchesLib`.
-2. If it builds, run the bounded guard validation with its existing image and
-   silent controls; capture build, dispatch, target VI, and downstream joins.
-3. Do not modify audio/output behavior unless the complete Step 3 validation
-   row proves one named legitimate writer/consumer contract.
+1. `rg -n "status|STATUS|03|0x03|+0x|lbu|lb|sb|sh|sw" RecompiledFuncs/funcs_*.c`
+   and enumerate only the MusyX service/slot status-03 idiom.
+2. Trace each enumerated address through the companion named symbols and
+   callers in `syms/` and `docs/game-architecture.md`; inspect bounded source
+   windows, never the full generated files.
+3. Write one evidence table under `scratch/agent/` with the selected
+   hypothesis and any unresolved address. No build or runtime instrument is
+   authorized unless the table proves a specific missing contract.
 
-## Open dependency
-
-The current checkout has no MIPS GCC/LD, no generated
-`RecompiledPatches/patches.c`, and no `PatchesLib` target. Session 3247
-confirmed the exact build failure again. This work unit is blocked until a
-configured Windows/MIPS host or equivalent generated patch artifacts are made
-available; do not substitute Clang or the stale `patches.map`.
+The parked M5 Step 3 validation remains: a configured Windows/MIPS host (or
+   equivalent Rogue Squadron generated patch artifacts) must eventually run
+   `cmake --build build --config Debug --target PatchesLib` and the existing
+   Step 3 recipe.
