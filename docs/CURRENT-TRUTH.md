@@ -128,13 +128,14 @@ Evidence: `scratch/agent/s3124_m5_route_qualification/summary.txt`.
 
 Session 3125's independent retail oracle passed the whole-RDRAM positive
 control (10,000 callbacks), reached title `1024 @ 0x00790400` at 17.3s and
-hangar `512 @ 0x006AB400` at 38.4s, and executed the newly watched
-post-consumer range `0x800356AC:0x80035B00` 5,631,581 times. The range was
-live through both target phases; this rejects a retail-side stop immediately
-after `__osViSwapContext` but does not identify the port's pre-target
-divergence. This is single-source retail evidence and authorizes an exact
-phase-gated port parity probe, not a behavior change.
-Evidence: `scratch/agent/s3125_m5_retail_post_consumer/oracle.log`.
+hangar `512 @ 0x006AB400` at 38.4s, and the fixed phase-gated run recorded
+post-consumer execution rows in both target buckets (including
+`0x800356F4` at title and `0x800358E8` at hangar). The range also reported
+3,724,111 hits overall. This rejects a retail-side stop immediately after
+`__osViSwapContext` but does not identify the port's pre-target divergence.
+This is single-source retail evidence and authorizes an exact phase-gated port
+parity probe, not a behavior change.
+Evidence: `scratch/agent/s3125_m5_retail_post_consumer/oracle_phase.log`.
 
 The strongest route boundary remains the independent comparison: retail
 reaches title at 1024 and hangar at 512, while the recent same-build port
@@ -149,7 +150,7 @@ generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
 1. **M5 route blocker — compare the post-consumer handoff on the port.** Retail
-   executes `0x800356AC:0x80035B00` through title and hangar, while the port
+   executes `0x800356AC:0x80035B00` in title and hangar, while the port
    stops at VI 640. Add a phase-gated port watch for the exact range in one
    build/run, retaining the VI-context and host voice positive controls. A
    target-phase range row selects an instrumentation/phase-marker issue; no
