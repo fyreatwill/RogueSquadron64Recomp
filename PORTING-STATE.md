@@ -125672,3 +125672,21 @@ the named bodies and addresses. Both calls are real reachable guest sites, so
 No guard, audio behavior, generated source, build, or run changed. This is a
 static contract classification, not proof of a retail-invalid index. Evidence:
 `scratch/agent/s3163_m3_musyx_trigger_voice_attack_audit.md`.
+
+## Session 3164 (2026-08-29) — audited `stopVoicesByHandle` handle producer edge
+
+Completed the bounded static M3 producer audit for the node handle consumed by
+`stopVoicesByHandle` at `0x8008DA98`. The generated tree has exactly four real
+direct callers: two sites in `stopSongByHandle` and two in
+`tickSongSequence`; all load the same linked-list node `+0x8` field. The sole
+identified writer is `allocVoiceHandleNode:0x80086518`, which copies
+unconstrained `$a3` after a counter increment that skips `-1`; no upper-bound
+proof is present. No direct `jal`, function-pointer entry, or `get_function`
+edge to the allocator was recovered, so the edge is unresolved rather than
+proven dead. Companion symbol metadata and the companion ELF independently
+confirm `allocVoiceHandleNode`, `resolveVoiceSlotByHandle`, and
+`stopVoicesByHandle` at their exact addresses. This selects
+`H-HandleUnclassified`, not proof of a retail-invalid handle, and authorizes no
+guard or audio behavior change. No build or run was performed.
+
+Evidence: `scratch/agent/s3164_m3_stop_voices_handle_producer_audit.md`.

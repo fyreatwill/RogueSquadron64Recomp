@@ -6,7 +6,17 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3163 (2026-08-29).
+Current maintenance marker: Session 3164 (2026-08-29).
+
+Session 3164 completed the bounded static M3 audit of the unresolved
+`stopVoicesByHandle` handle producer edge. All four direct callers load the
+same linked-list node `+0x8` field; the sole identified writer is
+`allocVoiceHandleNode:0x80086518`, which copies unconstrained `$a3`. No direct
+or recoverable indirect dispatch edge to the allocator was found. Companion
+symbol metadata and the companion ELF independently confirm the named bodies
+and addresses. This selects `H-HandleUnclassified`: not proof of a retail
+invalid handle, and no guard or audio behavior change is authorized. Evidence:
+`scratch/agent/s3164_m3_stop_voices_handle_producer_audit.md`.
 
 Session 3163 completed the bounded static M3 audit of
 `musyxTriggerVoiceAttack`'s complete voice-indexed `0x88`-stride access set.
@@ -549,10 +559,12 @@ the status-03 wait hatch.
    `slotDispatcherIter`, `slotDispatcherInner`, and
    `musyxStopVoice` computed-record classes and item -292's 43-site
    `SONGTEMPO_TABLE_GUARD` reader inventory are closed by Sessions 3146–3156.
-   The `stopVoicesByHandle` producer edge remains unresolved: no direct or
-   recoverable indirect call to `allocVoiceHandleNode` was found, and no guard
-   is authorized. Session 3162 closes the `stopVoiceByKey` producer edge as
-   `H-M3-Proven` (`0..31` or `-1`) after auditing its complete count-byte
+   Session 3164 audited the `stopVoicesByHandle` producer edge: all four
+   callers use the same node `+0x8`, while the sole identified writer copies
+   unconstrained `$a3` and no direct or recoverable indirect allocator edge
+   was found. This selects `H-HandleUnclassified`, not a retail-invalid-value
+   finding; no guard is authorized. Session 3162 closes the `stopVoiceByKey`
+   producer edge as `H-M3-Proven` (`0..31` or `-1`) after auditing its complete count-byte
    writer set. Select the next complete NULL-plus-offset class from the
    existing M3 inventory and enumerate all sites in one audit. The next
    selected class is `musyxTriggerVoiceAttack`'s voice-indexed record access.
