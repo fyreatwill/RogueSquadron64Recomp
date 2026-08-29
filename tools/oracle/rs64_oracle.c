@@ -343,6 +343,7 @@ static long g_store_field_dump_overflow;
 static long g_store_field_dump_candidate_callbacks;
 static uint32_t g_pc_task_dump_pc;
 static int g_pc_task_dump_enabled;
+static uint32_t g_pc_task_dump_type = 2; /* 0 = any type */
 struct pc_task_dump_row {
     long task_n;
     uint32_t task_ptr;
@@ -660,20 +661,23 @@ static void dump_pc_task(uint32_t pc)
         g_pc_task_dump_invalid++;
         return;
     }
-    if (pDebugMemRead32(debug_rdram_addr(task_phys)) != 2u) {
-        g_pc_task_dump_non_type2++;
-        return;
+    {
+        uint32_t type = pDebugMemRead32(debug_rdram_addr(task_phys));
+        if (g_pc_task_dump_type != 0 && type != g_pc_task_dump_type) {
+            g_pc_task_dump_non_type2++;
+            return;
+        }
+        g_pc_task_dump_type2_rows++;
+        if (g_n_pc_task_dump_rows >= MAX_PC_TASK_DUMP_ROWS) {
+            g_pc_task_dump_overflow++;
+            return;
+        }
+        row = &g_pc_task_dump_rows[g_n_pc_task_dump_rows++];
+        row->task_n = g_pc_task_dump_type2_rows;
+        row->task_ptr = task_ptr;
+        row->task_phys = task_phys;
+        row->type = type;
     }
-    g_pc_task_dump_type2_rows++;
-    if (g_n_pc_task_dump_rows >= MAX_PC_TASK_DUMP_ROWS) {
-        g_pc_task_dump_overflow++;
-        return;
-    }
-    row = &g_pc_task_dump_rows[g_n_pc_task_dump_rows++];
-    row->task_n = g_pc_task_dump_type2_rows;
-    row->task_ptr = task_ptr;
-    row->task_phys = task_phys;
-    row->type = 2;
     row->output_buff = pDebugMemRead32(debug_rdram_addr(task_phys + 0x28u));
     row->output_buff_size = pDebugMemRead32(debug_rdram_addr(task_phys + 0x2Cu));
     row->data_ptr = pDebugMemRead32(debug_rdram_addr(task_phys + 0x30u));
@@ -1958,7 +1962,8 @@ static void usage(void)
         "  --pc-phase-log-width ORIGIN:WIDTH log watched execs at an explicit VI bucket\n"
         "  --pc-field-dump A[,B...] dump phase-gated $s0/$s1 and pointed fields\n"
         "  --store-field-dump W:A[,B...] dump phase-gated fields at exact writes on watch W\n"
-        "  --pc-task-dump A   dump phase-gated type-2 OSTask fields at PC A\n"
+        "  --pc-task-dump A   dump phase-gated OSTask fields at PC A\n"
+        "  --pc-task-type N   OSTask type to dump (default 2=audio; 1=gfx; 0=any)\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
         "  --post-swap-table-pc A join a 640-wide swap at A to the following VI callback\n"
         "  --vi-context-table-pc A join __osViNext at 640-wide execution A to the following VI callback\n"
@@ -2058,6 +2063,8 @@ int main(int argc, char **argv)
             g_pc_task_dump_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_pc_task_dump_enabled = 1;
         }
+        else if (!strcmp(argv[i], "--pc-task-type") && i + 1 < argc)
+            g_pc_task_dump_type = (uint32_t)strtoul(argv[++i], NULL, 0);
         else if (!strcmp(argv[i], "--mode-dump-pc") && i + 1 < argc) {
             g_mode_dump_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_mode_dump_enabled = 1;
@@ -2412,13 +2419,56 @@ int main(int argc, char **argv)
                    row->branch_selector, row->branch_state, row->n);
         }
     }
-    if (g_pc_task_dump_enabled)
-        printf("[oracle] pc-task-summary pc=0x%08x rows=%d/%d "
-               "phase_hits=%ld type2=%ld non_type2=%ld invalid=%ld overflow=%ld\n",
-               g_pc_task_dump_pc, g_n_pc_task_dump_rows,
+    if (g_pc_task_dump_enabled) {
+        printf("[oracle] pc-task-summary pc=0x%08x want=%u rows=%d/%d "
+               "phase_hits=%ld matched=%ld mismatch=%ld type2=%ld non_type2=%ld "
+               "invalid=%ld overflow=%ld\n",
+               g_pc_task_dump_pc, g_pc_task_dump_type, g_n_pc_task_dump_rows,
                MAX_PC_TASK_DUMP_ROWS, g_pc_task_dump_phase_hits,
                g_pc_task_dump_type2_rows, g_pc_task_dump_non_type2,
+               g_pc_task_dump_type == 2 ? g_pc_task_dump_type2_rows : 0L,
+               g_pc_task_dump_type == 2 ? g_pc_task_dump_non_type2 : 0L,
                g_pc_task_dump_invalid, g_pc_task_dump_overflow);
+        {
+            struct {
+                uint32_t type;
+                uint32_t task_ptr;
+                uint32_t output_buff;
+                uint32_t output_buff_size;
+                long n;
+            } uniq[64];
+            int nuniq = 0;
+            int ui, ri;
+            for (ri = 0; ri < g_n_pc_task_dump_rows; ri++) {
+                struct pc_task_dump_row *row = &g_pc_task_dump_rows[ri];
+                for (ui = 0; ui < nuniq; ui++) {
+                    if (uniq[ui].type == row->type &&
+                        uniq[ui].task_ptr == row->task_ptr &&
+                        uniq[ui].output_buff == row->output_buff &&
+                        uniq[ui].output_buff_size == row->output_buff_size) {
+                        uniq[ui].n++;
+                        break;
+                    }
+                }
+                if (ui == nuniq) {
+                    if (nuniq < 64) {
+                        uniq[nuniq].type = row->type;
+                        uniq[nuniq].task_ptr = row->task_ptr;
+                        uniq[nuniq].output_buff = row->output_buff;
+                        uniq[nuniq].output_buff_size = row->output_buff_size;
+                        uniq[nuniq].n = 1;
+                        nuniq++;
+                    }
+                }
+            }
+            printf("[oracle] pc-task-unique n=%d cap=64\n", nuniq);
+            for (ui = 0; ui < nuniq; ui++)
+                printf("[oracle] pc-task-unique type=0x%x task_ptr=0x%08x "
+                       "output_buff=0x%08x output_buff_size=0x%08x n=%ld\n",
+                       uniq[ui].type, uniq[ui].task_ptr, uniq[ui].output_buff,
+                       uniq[ui].output_buff_size, uniq[ui].n);
+        }
+    }
     printf("[oracle] execution watch hits: %ld\n", g_pc_hits);
     for (int i = 0; i < g_n_exec_prev; i++)
         printf("[oracle] exec-prev pc=0x%08x prev=0x%08x n=%ld\n",

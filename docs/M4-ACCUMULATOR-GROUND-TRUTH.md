@@ -260,3 +260,17 @@ Zero hangar-origin marks, zero `gate=hangar`, zero attract 512.
 This selects UNEVALUABLE and does not select any H-*. Re-open
 only after a port `[phase] vi_width=512 origin=0x006AB400`.
 Do not treat 640 gated zeros as hangar.
+
+## s3218 hangar `gspTask` output_buff identity
+
+The restaged `L_17F0` bytes leave DMEM `0xD60` through `L_112C` `SP_WR_LEN`
+to `MEM_W(0x108)` / `OSTask.output_buff`. A type-any hangar dump at
+`osSpTaskStartGo` (`0x80033FCC`) with a whole-RDRAM positive control
+attributes gfx tasks to `gspTask` (`0x800377C8`) and two hangar dests,
+physical `0x0075C000` and `0x00781800` (KSEG0 `0x8075C000` /
+`0x80781800`). Title uses `0x005F6800`. None is the port runtime dest
+`0x4B7800`. A second watch on those ranges recorded millions of CPU
+writes in the hangar phase. Do not re-watch `0x4B7800` or DMEM `0x670`.
+The remaining parked M4 question is still hangar `0x8000` Y / accumulator
+arithmetic, which needs a port hangar LLE route, not another dest search.
+Evidence: `scratch/agent/s3218_m4_retail_dest/RESULTS.md`.

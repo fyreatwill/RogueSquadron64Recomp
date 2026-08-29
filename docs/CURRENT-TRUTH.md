@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3217 (2026-08-29).
+Current maintenance marker: Session 3218 (2026-08-29).
 
 ## Current state
 
@@ -60,10 +60,13 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    unchanged. The follow-up live-tail audit in Session 3217 found no
    additional callable placeholder; resume M3/M5 work after this sweep
    closure.
-7. Keep the external retail-entry boundary, M4 accumulator origin, and M5
-   SP-yield/MORT publication threads parked pending a new target-phase
-   discriminator. The corrected MORT descriptor edge is `+0x190` to
-   `dmaVoiceSampleAndSignal`; `+0x194` is the speech source.
+7. M4 restage destination identity is now known: hangar gfx tasks use
+   `gspTask` (`0x800377C8`) with physical `output_buff` `0x0075C000` /
+   `0x00781800`, not the port runtime dest `0x4B7800` and not DMEM `0x670`.
+   Keep the external retail-entry boundary, hangar `0x8000` Y / accumulator
+   arithmetic, and M5 SP-yield/MORT publication threads parked pending a
+   new target-phase discriminator. The corrected MORT descriptor edge is
+   `+0x190` to `dmaVoiceSampleAndSignal`; `+0x194` is the speech source.
 
 ## Durable boundaries and operating rules
 
@@ -101,7 +104,8 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Evidence index
 
-Recent evidence includes `scratch/agent/s3217_generated_symbol_rename.md`,
+Recent evidence includes `scratch/agent/s3218_m4_retail_dest/RESULTS.md`,
+`scratch/agent/s3217_generated_symbol_rename.md`,
 `scratch/agent/s3213_m3_voice_list_table_audit.md`,
 `scratch/agent/s3209_generated_symbol_rename.md`,
 `scratch/agent/s3208_generated_symbol_rename.md`,

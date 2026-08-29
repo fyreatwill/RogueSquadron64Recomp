@@ -126445,3 +126445,30 @@ function. This rules out a defensible rename and distinguishes the overlap
 from an unresolved callable function. No generated file was edited and no
 runtime run was performed. Evidence:
 `scratch/agent/s3217_generated_symbol_rename.md`.
+
+## Session 3218 (2026-08-29) — derived hangar gspTask output_buff identity
+
+The last-15-title mix was not sweep-only, CURRENT-TRUTH was under the
+maintenance cap, and M5 remains route-blocked, so this iteration ran the
+parked M4 destination-identity unit. Generated ovl20 `L_112C`/`L_1DB0`
+show the `L_17F0` restage DMA destination is `OSTask.output_buff`, not
+DMEM `0x670`. The oracle `--pc-task-dump` was extended with
+`--pc-task-type` (0=any, 1=gfx, default 2) and a unique dest summary.
+
+The type-any Rice hangar dump passed the whole-RDRAM 10,000-write control,
+reached title 1024 and hangar 512 `0x006AB400/800`, and recorded 4,449
+phase-gated tasks at `osSpTaskStartGo` (`0x80033FCC`). Gfx tasks are the
+independently named `gspTask` object at `0x800377C8`. Hangar
+`output_buff` is a stable pair `0x8075C000`/`0x80781800` (physical
+`0x0075C000`/`0x00781800`); title uses `0x805F6800`. None is the port
+runtime dest `0x4B7800`. Audio type-2 rows kept `output_buff=0`.
+
+A second same-recipe watch on those physical ranges stayed at hangar,
+reproduced the three type-1 dests, and counted 3,855,019 CPU writes into
+the hangar union and 236,624 into the title range. This selects
+`H-RetailDifferentWriter` for destination identity and refutes
+`H-DestinationNotStable` and `H-RetailSameWriter` versus `0x4B7800`.
+RSP `SP_WR_LEN` remains the restage writer; sampled CPU post-values
+showed other GBI/RDP ops, not `0xC8`. No mitigation. Do not re-watch
+`0x4B7800` or DMEM `0x670`. Evidence:
+`scratch/agent/s3218_m4_retail_dest/RESULTS.md`.
