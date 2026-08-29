@@ -1,46 +1,40 @@
-# NEXT work unit — bounded generated-symbol rename audit
+# NEXT work unit — external retail-entry boundary oracle handoff
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: external-retail-entry-boundary-revisit
 
 ## Single work unit
 
-Audit the next unresolved project placeholder after `0x800B42BC`, currently
-`fake_func_800B75C4`, using the
-six-surface sweep: companion map, generated body, callers, header, overlay
-registration, project TOML, and local duplicate references. Rename only if an
-exact companion identity is supported; otherwise synchronize a mechanical
-`data_gap_*` name or preserve the placeholder for callable-ambiguous
-fragments. This is one bounded rename/classification change. The candidate
-has an existing historical audit, so do not repeat it without a new
-discriminator; use that evidence to decide whether a regeneration-safe
-classification can now be landed.
+Run one independent retail-oracle experiment to identify a new post-boot
+handoff predecessor for the title/hangar transition. The generated-symbol
+sweep is parked: all four remaining project `fake_func_*` entries have
+bounded audits, and `0x800B75C4` was revalidated this iteration.
 
 ## Competing hypotheses
 
-- H-ExactIdentity: companion/source/callers support one semantic name.
-- H-Fragment: the record is non-callable or a data gap; only a mechanical name
-  is safe.
-- H-Ambiguous: evidence is insufficient; preserve the placeholder.
-
-For `0x800B75C4`, a named companion plus callable body/callers selects
-H-ExactIdentity; an isolated fragment between named bodies with no callers
-selects H-Fragment and `data_gap_800B75C4`; conflicting extent or callable
-evidence selects H-Ambiguous and keeps `fake_func_800B75C4`.
+- H-ExternalCallsite: a retail CPU callsite outside the previously rejected
+  four candidate PCs transfers into the VI/title route.
+- H-WrapperChain: the transition is mediated by a stable internal wrapper;
+  the useful discriminator is its predecessor histogram at the target phase.
+- H-NoTarget: the watched execution boundary is not reached under the
+  validated input schedule, so this oracle recipe cannot select a handoff.
 
 ## Discriminating measurement
 
-The six-surface evidence table must show whether the record has a callable
-identity, exact companion name, or only fragment/gap evidence. The positive
-control is the adjacent named callable body after the candidate; it must
-remain present in the generated body/header/registration after any rename.
-Exact identity selects H-ExactIdentity; no prologue/return/caller selects
-H-Fragment; mixed or conflicting evidence selects H-Ambiguous and leaves the
-placeholder.
+The oracle run must pass a whole-RDRAM positive-control write watch, reach
+retail title `0x00790400` and hangar `0x006AB400`, and collect a bounded
+`osViSwapBuffer` predecessor histogram plus phase-gated execution rows. A
+new post-boot predecessor selects H-ExternalCallsite or H-WrapperChain;
+missing title/hangar phases selects H-NoTarget and makes the handoff null
+unevaluable. Do not add port instrumentation until the oracle supplies a
+ground-truth PC.
 
 ## Exact commands
 
-1. Confirm the candidate with `rg -n 'fake_func_800B75C4' syms/rogue_squadron.syms.toml`.
-2. Inspect the six surfaces and existing rename tooling; do not regenerate the
-   full tree.
-3. Apply one regeneration-safe mapping/generated-tree rename or mechanical gap
-   classification, then run relevant syntax/uniqueness checks.
+1. Confirm the oracle binary and ROM paths, then run one 180-second retail
+   capture from the repository root with `--watch-write 0x0:0x800000` as the
+   positive control, `--watch-pc 0x80035500`, `--pc-hist-phase 0x00790400:1024`,
+   `--pc-hist-phase 0x006AB400:512`, `--press` using the validated named
+   button schedule from `tools/oracle/README.md`, and a Rice video plugin.
+2. Save the output under `scratch/agent/` with a non-dot final path
+   component; report the positive-control count, VI phases, and predecessor
+   table before deciding whether a port-side instrument is justified.

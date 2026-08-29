@@ -6,6 +6,19 @@ recipes and historical evidence remain in the append-only ledger.
 
 Current maintenance marker: Session 3102 (2026-08-28).
 
+Session 3103 revalidated the bounded six-surface candidate at `0x800B75C4`
+with a new control-flow discriminator. The live generated tree has a real
+`beq` from `findLockOnTarget` to `L_800B75C4`, whose three instructions are
+executed before the separate `playerYwingInit` prologue. The record therefore
+cannot be renamed as `data_gap_*`; the companion map and redefs still supply
+no independent semantic preamble identity, so `fake_func_800B75C4` remains.
+All four remaining project `fake_func_*` entries now have bounded audits, so
+the current sweep has no unaudited candidate. Evidence:
+`scratch/agent/s3103_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only control-flow classification. No runtime, route, audio,
+mitigation, or generated instruction behavior changed.
+
 Session 3102 completed the bounded six-surface audit at `0x800B42BC`. The
 companion map, generated body, callers, header/registration, project TOML,
 and rename tooling show a 4-byte orphan load between the complete

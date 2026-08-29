@@ -124525,6 +124525,26 @@ Evidence: `scratch/agent/s3095_generated_symbol_rename/AUDIT.md`.
 ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
 runtime, route, audio, mitigation, or generated instruction behavior changed.
 
+## Session 3103 (2026-08-28) — revalidated 0x800B75C4 control-flow fragment
+
+Revalidated the bounded six-surface generated-symbol candidate
+`fake_func_800B75C4` using a new discriminator against the stale NEXT entry.
+The live generated tree contains `beq $v1,$zero,L_800B75C4` at `0x800B759C`
+inside `findLockOnTarget`, followed by three executable instructions at
+`0x800B75C4..0x800B75CC`; the separate placeholder body has no prologue or
+return. The companion map/redefs still provide no independent
+`playerYwingInitPreamble` identity, and the named `playerYwingInit` positive
+control begins separately at `0x800B75D0`. This selects H-Fragment and rules
+out both `data_gap_800B75C4` and an exact semantic rename. The placeholder was
+preserved. The other three project `fake_func_*` entries all have existing
+bounded audits, so the live sweep has no unaudited candidate.
+
+Evidence: `scratch/agent/s3103_generated_symbol_rename/AUDIT.md` and the live
+generated body/header/registration plus companion map/redefs.
+
+ORIGIN: naming-only control-flow classification. No runtime, route, audio,
+mitigation, or generated instruction behavior changed.
+
 ## Session 3102 (2026-08-28) — classified 0x800B42BC generated gap
 
 Ran the bounded generated-symbol six-surface audit for `0x800B42BC`. The
