@@ -126987,3 +126987,24 @@ Evidence: `scratch/agent/s3240_m3_musyx_null_contract.md`.
 ORIGIN: `rs_malloc` at `0x80001C74` returns the illegitimate null value on
 no-fit; `allocateSongChannelArray` publishes it at `0x8008F228`. No
 semantics-preserving recovery writer was found.
+## Session 3241 (2026-08-29) — captured retail target-phase VI-swap output relation
+
+The first oracle invocation used the pre-transition `0x00790A00:640` phase
+bucket for `osViSwapBuffer` and therefore logged zero execution hits. This was
+a gate error, not a null result: the same run passed the whole-RDRAM positive
+control at 10,000 callbacks and reached title 1024 plus hangar 512. The fixed
+invocation phase-gated the watched `osViSwapBuffer` execution at
+`0x00790400:1024` and produced 1,130 hits, all with predecessor
+`0x8001BE24`. The target rows carried `$a0=0x80790000` (physical
+`0x00790000`) and alternated VI origins `0x00790400`/`0x00790800`; the VI
+trace also showed the later hangar `0x006AB400` phase.
+
+This selects `H-PortBoundary` for the next port-side comparison: a valid
+target-phase retail output relation now exists. It is single-source oracle
+evidence (execution-watch and VI-trace signals from one independent retail
+run), so it does not yet authorize a port behavior change or M5 Step 3. The
+next discriminator is a same-build port capture aligned to this framebuffer
+and VI relation. No mitigation or guest value was changed.
+
+Evidence: `scratch/agent/s3241_m5_vi_swap_target.md` and
+`scratch/agent/soak_results/s3241_m5_vi_swap_target/oracle.log`.

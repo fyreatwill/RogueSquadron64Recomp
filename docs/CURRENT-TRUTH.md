@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3240 (2026-08-29).
+Current maintenance marker: Session 3241 (2026-08-29).
 
 ## Current state
 
@@ -14,6 +14,16 @@ VI 512 (`0x006AB400`) on the validated spin-yield/F5-LLE route. Hangar visuals
 still have geometry/color artifacts. Audio is not production-complete: the
 Factor 5 image task is the qualified real-audio arm and `musyx_stub`/Broke is
 the silent control.
+
+Session 3241 supplied a new target-phase retail output relation: the
+independent oracle's `osViSwapBuffer` edge (`0x80035500`) runs from caller
+`0x8001BE24` with framebuffer `$a0=0x80790000` (physical `0x00790000`) while
+the target VI alternates `0x00790400/0x00790800`. The whole-RDRAM positive
+control, title, and hangar gates all passed. This selects a target-phase
+`H-PortBoundary` comparison, but is single-source oracle evidence and does
+not yet authorize a port behavior change. The next unit must compare this
+relation with the port's corresponding swap/output row before any M5 Step 3
+change.
 
 The latest same-build M5 image-versus-silent qualification (Session 3235)
 passed dispatch controls in both arms but reached only pre-title VI 640
@@ -44,8 +54,24 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. M5 target-phase qualification is no longer blocked on route selection,
-   but Step 3 edge selection is currently unevaluable.
+1. Compare the Session 3241 retail target output relation against the port's
+   corresponding `osViSwapBuffer`/VI commit row in one same-build phase-gated
+   capture. Require the existing dispatch controls plus the target framebuffer
+   physical address, VI origin, caller/order, and image-versus-silent arm
+   distinction. Only a like-for-like mismatch authorizes M5 Step 3; if the
+   port reaches neither row, classify the boundary as unevaluable rather than
+   adding a guard or route change.
+   Session 3241's retail row is caller `0x8001BE24`, `$a0=0x80790000`
+   (physical `0x00790000`), target origins `0x00790400/0x00790800`, with the
+   whole-RDRAM positive control and title/hangar gates valid. This is
+   single-source oracle evidence pending the port-side line.
+   Session 3236 compared the M5 inventory and Step 1/2 evidence with the
+   valid controls from Session 3235. No candidate has independent writer PC,
+   destination span, payload polarity, and completion-order evidence at the
+   target phase: both port arms stop at VI 640 while retail reaches title and
+   hangar. This closes the current selection attempt without authorizing a
+   contract, gate, wait, route, or output change. Do not repeat the parked
+   qualification; a new M5 change requires a newly proven target-phase edge.
    Session 3236 compared the M5 inventory and Step 1/2 evidence with the
    valid controls from Session 3235. No candidate has independent writer PC,
    destination span, payload polarity, and completion-order evidence at the

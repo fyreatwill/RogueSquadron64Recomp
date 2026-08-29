@@ -1,37 +1,37 @@
-# NEXT work unit — obtain a new M5 target-phase discriminator
+# NEXT work unit — compare port output relation with retail target swap
 
 HYPOTHESIS-ID: m5-target-phase-edge
 
-Session 3240 closed the MusyX null-consumer class as static and non-patchable.
-The next unit returns to M5 only with a genuinely new independent retail
-target-phase discriminator; do not repeat the parked port pair or add a port
-counter before ground truth.
+Session 3241 produced a valid, target-phase retail relation. The next unit is
+the first like-for-like port comparison; do not apply M5 Step 3 until this
+comparison identifies a missing legitimate edge.
 
 ## Competing hypotheses
 
-- `H-PortBoundary`: a new target-phase retail writer/ordering row identifies
-  the missing port boundary.
-- `H-RetailRouteMismatch`: the observed retail target transition is not
-  comparable to the port's pre-title VI and must be rejoined at a different
-  execution edge.
-- `H-NoDiscriminator`: the available oracle route still cannot reach or join
-  the target phase, so no port behavior change is authorized.
+- `H-PortOutputMismatch`: the port's target-phase VI/framebuffer publication
+  differs from retail's caller `0x8001BE24`, physical framebuffer
+  `0x00790000`, or target origins `0x00790400/0x00790800`.
+- `H-PortTargetUnevaluable`: the port still cannot reach the corresponding
+  target phase, so no output or audio change is authorized.
+- `H-PortOutputMatches`: the port reaches the same relation; the current M5
+  target-edge theory is not selected and must be parked.
 
 ## Discriminator
 
-Ask the independent retail oracle for one new target-phase execution watch or
-join around the known `0x00790A00` transition, with the whole-RDRAM positive
-control armed in the same run. The result must expose writer PC, destination
-span, payload polarity, and completion ordering. A complete row selects
-`H-PortBoundary`; a valid alternate join selects `H-RetailRouteMismatch`; a
-missing positive-controlled target transition selects `H-NoDiscriminator` and
-parks M5 without changing port behavior.
+Build one same-build pair with `ROGUESQ_AUDIO_UCODE=0/1`, retaining all
+existing passive M5/phase/dispatch controls. Capture the port's swap caller,
+physical framebuffer, VI origin, image-task/output rows, and ordering in the
+same phase-gated run. A like-for-like mismatch selects `H-PortOutputMismatch`;
+absence of the target row selects `H-PortTargetUnevaluable`; matching caller,
+destination, origins, and order selects `H-PortOutputMatches`.
 
 ## Exact commands
 
-1. Read `tools/oracle/README.md` and the existing target-phase oracle recipe;
-   identify the exact watch/join site before instrumenting.
-2. Build every oracle arm in one change, retaining the whole-RDRAM positive
-   control and phase gate; run the retail recipe once and capture the bounded
-   result under `scratch/agent/soak_results/`.
-3. Record the selected hypothesis and its two evidence lines in the ledger.
+1. Build: `cmake --build build --config Debug --target
+   RogueSquadron64Recomp`.
+2. Run the existing bounded recipe, which includes the retail controls and
+   both port arms in one invocation:
+   `zsh scratch/agent/s3235_m5_port_retail_framebuffer_parity/run_pair.sh`.
+3. Require whole-RDRAM positive control, title 1024, and hangar 512 before
+   interpreting port zeros. Compare the resulting rows with
+   `scratch/agent/soak_results/s3241_m5_vi_swap_target/oracle.log`.
