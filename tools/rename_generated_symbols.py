@@ -94,6 +94,9 @@ RENAMES = {
     # N64Recomp incorrectly folds the following RSP bytes into its generated
     # record, so it is not a callable CPU function.
     "fake_func_80099FDC": "data_gap_80099FDC",
+    # This eight-byte audio record contains only two COP1 instructions
+    # between complete voice routines; it has no callable body.
+    "fake_func_8009C2C8": "data_gap_8009C2C8",
     "fake_func_8009D7CC": "filterVoiceSampleBlockPreamble",
     "static_3_80085CD8": "compareHalfwordAtOffset4",
     # The companion map places these short records immediately before named

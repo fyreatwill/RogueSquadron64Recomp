@@ -124240,6 +124240,25 @@ confirms the existing regeneration-safe mapping. The next candidate is
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
 
+## Session 3089 (2026-08-28) — classified 0x8009C2C8 generated gap
+
+Ran the bounded six-surface generated-symbol audit for `fake_func_8009C2C8`.
+The companion map had no semantic identity, and the project symbol extent is
+exactly eight bytes. The generated body contains only `mul.s $f2,$f2,$f4` and
+`add.s $f0,$f0,$f2`, with no callable prologue, return sequence, or generated
+caller, between complete `stopVoice` and `computeVoicePanCoefficients` bodies.
+Header, overlay registration, project TOML, and redefs agree on the address
+and extent. This selects H-Fragment and renames the record mechanically to
+`data_gap_8009C2C8` in the companion map, project TOML, rename tooling, and
+active generated tree. No build or game run was needed.
+
+This rules out an exact callable identity and surface disagreement, but does
+not make a runtime reachability claim. Evidence:
+`scratch/agent/s3089_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
+
 ## Session 3085 (2026-08-28) — classified 0x8006ACA4 generated gap
 
 The bounded six-surface generated-symbol audit examined `fake_func_8006ACA4`.

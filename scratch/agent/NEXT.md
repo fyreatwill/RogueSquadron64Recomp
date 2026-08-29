@@ -4,13 +4,13 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next unresolved generated placeholder after `fake_func_8007C298`
+Audit the next unresolved generated placeholder after `fake_func_8009C2C8`
 against the companion map, generated body, callers, header, overlay
 registration, and project TOML. Rename it only if all surfaces establish a
 semantic identity; otherwise preserve the placeholder or use a mechanical gap
 name, then advance the ranked sweep.
 
-Current candidate: `fake_func_8009C2C8`.
+Current candidate: `fake_func_8009D7CC`.
 
 ## Competing hypotheses
 

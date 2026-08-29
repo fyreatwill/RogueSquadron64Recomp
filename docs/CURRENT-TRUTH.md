@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3088 (2026-08-28).
+Current maintenance marker: Session 3089 (2026-08-28).
+
+Session 3089 audited `fake_func_8009C2C8` across the companion map, generated
+body, callers, header, overlay registration, and project TOML. The 8-byte
+record contains only two COP1 instructions between complete `stopVoice` and
+`computeVoicePanCoefficients` bodies, with no callable prologue, return
+sequence, caller, or independent semantic identity. This selects H-Fragment
+and synchronizes the regeneration-safe mechanical name `data_gap_8009C2C8`.
+Evidence: `scratch/agent/s3089_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
 
 Session 3088 audited `fake_func_80099FDC` across the companion map, redefs,
 generated body, callers, header, overlay registration, and project TOML. The
@@ -642,8 +653,8 @@ parked pending a new discriminator.
    `initPlayerStructsPreamble`; `0x8006ACA4` was classified and synchronized
    as `data_gap_8006ACA4`; `fake_func_8006B704` was audited and preserved as
    a callable-ambiguous fragment; `fake_func_8007C298` was then classified and
-   synchronized as `data_gap_8007C298`. Resume at the next unresolved
-   candidate.
+   synchronized as `data_gap_8007C298`; `fake_func_8009C2C8` was classified
+   and synchronized as `data_gap_8009C2C8`. Resume at `fake_func_8009D7CC`.
    If the sweep becomes a
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.
