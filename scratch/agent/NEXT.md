@@ -1,38 +1,39 @@
-# NEXT work unit — audit `data_gap_800C7DB4`
+# NEXT work unit — audit the VI selector-state divergence
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-vi-selector-state-divergence
 
 ## Single work unit
 
-Audit the next unresolved project-symbol placeholder, `data_gap_800C7DB4`, in
-the mission overlay. Compare its companion symbol entry, generated body,
-callers, header, overlay registration, project symbol TOML, and local
-duplicates. Rename only if an exact semantic identity is independently
-supported; otherwise preserve the mechanical data-gap placeholder. This is
-one bounded static audit and requires no build or runtime run.
+Perform a bounded static audit of the four-record VI mode table at
+`0x80128D50` and the selector state consumed by `applyPendingViChanges` at
+`0x8001B8DC`. Explain retail selection `0x80128DA0` (width 1024) versus port
+selection `0x80128DF0` (width 640). Do not change behavior or add a probe
+unless the source audit identifies a specific writer/state mismatch.
 
 ## Competing hypotheses
 
-- H-ExactIdentity: an independent source identifies a named function or
-  preamble, permitting a regeneration-safe TOML sync.
-- H-DataGap: no independent second source names this record; preserve the
-  mechanical data-gap name.
-- H-MappingDrift: companion and generated/project metadata disagree on
-  address or extent.
+- H-SelectorWriter: a game-side writer or initialization path populates or
+  selects a different table record in the port.
+- H-SelectorAlias: the table is correct but pointer arithmetic, base address,
+  or field offset differs between generated/runtime surfaces.
+- H-ModeConsumer: selection matches, but a consumer or host VI publication
+  changes the descriptor before commit.
+- H-Unresolved: static surfaces agree and no mismatch explains the divergence.
 
 ## Discriminating measurement
 
-Check companion `build/redefs.txt` and source/m2c material for an independent
-semantic name, then compare all six generated surfaces. A semantic name
-supported independently selects H-ExactIdentity; its absence with a coherent
-fragment/data boundary selects H-DataGap; any address or extent mismatch
-selects H-MappingDrift.
+Table every writer/initializer of `0x80128D50..0x80128E10`, every selector
+read at `applyPendingViChanges`, the selected pointer and `+8` width field,
+and the handoff into `osViSetMode`/`update_vi`. A named state writer with a
+port/retail value difference selects H-SelectorWriter; an address/offset
+mismatch selects H-SelectorAlias; a post-selection mutation selects
+H-ModeConsumer; complete agreement selects H-Unresolved. Source-only results
+are labeled single-source and do not authorize mitigation.
 
 ## Exact commands
 
 1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
-2. `grep -n '800C7DB4\\|data_gap_800C7DB4' /Users/williambuckley/Documents/Tools/rogue_squadron64/build/redefs.txt | head -10`
-3. `grep -n '800C7DB4' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt`
-4. `grep -n '800C7DB4\\|data_gap_800C7DB4' tools/rename_generated_symbols.py`
-5. `rg -n '800C7DB4|data_gap_800C7DB4' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs syms tools/rename_generated_symbols.py`
-6. Record the six-surface comparison in `scratch/agent/s<next>_generated_symbol_rename/AUDIT.md`.
+2. `rg -n '80128D50|80128DA0|80128DF0|applyPendingViChanges|osViSetMode|initVideoSubsystem' docs src syms tools scratch/agent --glob '!soak_results/**'`
+3. Inspect bounded generated/companion windows only at identified hits.
+4. Record the writer/selector/consumer table in
+   `scratch/agent/s<next>_m5_vi_selector_state/AUDIT.md`.

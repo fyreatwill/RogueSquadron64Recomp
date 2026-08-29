@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3074 (2026-08-28).
+Current maintenance marker: Session 3075 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,20 @@ completion, not PCM correctness. The M5 route dependency remains open, but
 static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3075 ran the M5 Step-1 image/silent qualification with one rebuilt
+Debug binary, concurrent arms, and the independent retail oracle. The oracle
+passed the whole-RDRAM positive control and reached title `1024 @
+0x00790400` plus hangar `512 @ 0x006AB400`. Both port arms positively
+dispatched audio tasks (`78` rows each; `real_ucode=1/0`) but stopped at VI
+640 (`0x0066A500`) after width 2 (`0x006DD000`); neither reached a target
+phase. Both had zero target-phase task/DMA/image-return/SP/service/slot/voice/
+PCM rows and zero crash/abort rows. This selects H-RouteInvalid; downstream
+audio nulls are unevaluable, and no audio behavior or mitigation is
+authorized. Evidence: `scratch/agent/s3075_m5_step1_qualification/AUDIT.md`.
+
+ORIGIN: qualification-only. No runtime, generated instruction, route, audio,
+or submodule behavior changed.
 
 Session 3074 completed the bounded six-surface audit at `0x800C64A4`. The
 companion mission map and `redefs.txt` retain the 12-byte `data_gap_800C64A4`
@@ -441,12 +455,19 @@ this capture. Evidence: `scratch/agent/s3056_m5_vi_mode_oracle_setup/AUDIT.md`.
 ## Next steps
 
 Priority is maintenance, then M5, then systematic M3, then the generated
-symbol sweep. Maintenance is complete. M5 design is complete, but Step 1 is
-route-blocked at pre-title VI 640; event registration/completion is live in the
-port and the next unit must use a different handoff edge. M3 is
+symbol sweep. Maintenance is complete. M5 design is complete. Step 1 remains
+route-blocked at pre-title VI 640 despite a valid retail control and positive
+port dispatch controls; target-phase audio rows remain unevaluable. M3 is
 parked pending a new discriminator.
 
-1. **Generated-symbol sweep — continue only with exact companion identities.**
+1. **M5 VI-mode stall — identify the selector-state divergence.** Session
+   3075 requalified both audio arms and confirmed the same VI-640 boundary;
+   the oracle independently reached title/hangar. Continue with a bounded
+   selector audit at `0x80128D50`/`applyPendingViChanges`, naming the state
+   writer or alias that explains retail `0x80128DA0` versus port
+   `0x80128DF0`. Do not change audio behavior from this null.
+
+2. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017B28` is complete; the preamble at
    `0x800B47C4` is synchronized as `menuControllerInputPreamble` and the
    preamble at `0x800B58B4` is synchronized as `playerAwingInitPreamble`.
@@ -465,27 +486,15 @@ parked pending a new discriminator.
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.
 
-2. **M5 VI-mode stall — identify the selector-state divergence.** Session
-   3059 found retail selecting `0x80128DA0` while the port selected
-   `0x80128DF0`; both are populated by `initVideoSubsystem` and the pointer
-   is passed unchanged. Continue only with a bounded static audit or
-   retail-grounded selector-state attribution that can name the divergent
-   producer/state.
-
 3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
-   Resume only after the route boundary is repaired or a target-phase route
-   is independently reached. Use the phase-keyed table covering route,
-   M_AUDTASK fields, DMEM/DMA, image break/`Broke`, SP completion, guest
-   service, slot/voice transitions, MORT class, and PCM joins. Do not change
-   a gate, wait, voice guard, or output destination from qualification alone.
+   Resume after the route boundary is repaired or a target-phase route is
+   independently reached. Use the phase-keyed task/DMA/return/service/
+   slot/voice/MORT/PCM table; do not change a gate, wait, voice guard, or
+   output destination from qualification alone.
 
 4. **M5 route repair/handoff — identify a different producer/signal edge.**
-   The s2988 forced 4→5→0 host transition regressed to VI 320. The s2989–s2991
-   READY, wait-on-video, and allocation probes were unevaluable at VI 640.
-   The `0x8000C0C4` example is the READY caller, not ProducerMark; the actual
-   ProducerMark caller probe at `0x8000BFE8` was also unevaluable. Resume only
-   with a genuinely new handoff angle and retain task and phase positive
-   controls.
+   Retain task and phase positive controls and use a genuinely new handoff
+   angle only after the selector-state audit.
 
 5. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.

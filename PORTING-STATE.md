@@ -123962,6 +123962,26 @@ unit. Evidence: `scratch/agent/s3067_generated_symbol_rename/AUDIT.md`.
 ORIGIN: naming-only classification. No runtime, generated instruction, route,
 audio, or submodule behavior changed.
 
+## Session 3075 (2026-08-28) — qualified M5 image versus silent audio arms
+
+The Debug target rebuilt successfully. The concurrent Step-1 recipe launched
+the independent retail oracle, then image and silent `M_AUDTASK` arms from the
+same build with phase-gated AUTOPILOT input. The oracle passed the whole-RDRAM
+positive control at 10,000 callbacks and reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`. Both port arms positively dispatched audio tasks
+(`78` rows each, `real_ucode=1/0`) but stopped at VI 640 `0x0066A500` after
+width 2 `0x006DD000`; neither reached title or hangar. Both had zero
+target-phase task/DMA/image-return/SP/service/slot/voice/PCM rows and zero
+crash/abort markers. This selects H-RouteInvalid; downstream audio nulls are
+unevaluable, so no audio behavior or mitigation was changed. The next unit is
+the bounded VI selector-state audit at `0x80128D50` /
+`applyPendingViChanges`.
+
+Evidence: `scratch/agent/s3075_m5_step1_qualification/AUDIT.md`.
+
+ORIGIN: qualification-only. No runtime, generated instruction, route, audio,
+or submodule behavior changed.
+
 
 ## Session 3071 (2026-08-28) — audited 0x800BF498 generated symbol
 
