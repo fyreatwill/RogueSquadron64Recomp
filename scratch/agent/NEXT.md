@@ -1,36 +1,35 @@
-# NEXT work unit — fresh M3 idiom-class census
+# NEXT work unit — bounded MusyX pointer-class guard audit
 
-HYPOTHESIS-ID: m3-fresh-idiom-census
+HYPOTHESIS-ID: m3-musyx-pointer-class-audit
 
-Session 3236 completed M5 Step 3 selection without finding an independently
-proven contract edge. The target-phase port row is still unevaluable, so no
-M5 behavior change is authorized and the same qualification is parked.
+Session 3237 selected a new repeated M3 class: unguarded MusyX pointer globals
+`0x80149758` (`-0x68A8`) and `0x80149750` (`-0x68B0`). The census did not
+authorize a guard; exact site recovery and writer/free ordering are next.
 
 ## Competing hypotheses
 
-- `H-NewClass`: a complete, currently unclassified repeated unsafe-access
-  idiom exists in the active generated/fixup audio paths.
-- `H-ClosedClasses`: every repeated idiom above the audit threshold is already
-  covered by the closed M3 publication/guard censuses.
-- `H-GuardOnly`: remaining matches are one-off guards or readers whose writer
-  and validity are already proven, not a coherent class.
+- `H-LegitimatePublished`: allocator/build writers publish valid KSEG0 pointers
+  before every consumer and no guard is needed.
+- `H-UnresolvedConsumer`: at least one reader can consume an invalid or stale
+  pointer and needs a patch-based guard audit.
+- `H-NonAudioAlias`: out-of-region callers are unrelated aliases and must be
+  split from the MusyX class.
 
 ## Discriminator
 
-Perform one from-scratch, grep-enumerated census of the active generated and
-fixup-controlled audio paths. Group every match by base pointer, offset,
-operation, and caller; for each repeated group identify all writers and
-classify each site as guarded, proven-in-range, or unresolved. A result with
-one unresolved repeated class selects `H-NewClass` and names the complete
-site list for the next guard audit; zero unresolved repeated classes selects
-`H-ClosedClasses`; only isolated/proven reader matches selects `H-GuardOnly`.
-The census must not add a guard or change runtime behavior.
+Recover the exact function/address for every `-0x68A8` and `-0x68B0` site in
+the generated tree, then grep all fixup rules for those sites. Enumerate
+writers, frees, aliases, and consumer dereferences; classify every site as
+guarded, proven in-range, or unresolved. Complete writer/free/order proof
+selects `H-LegitimatePublished`; one unresolved consumer selects
+`H-UnresolvedConsumer`; unrelated non-MusyX callers select `H-NonAudioAlias`.
+If a guard is selected, land it through `patches/` with an `ORIGIN:` line.
 
 ## Exact commands
 
-1. `rg -n "(D_8014|D_8015|voice|slot|musyx|break [67]|KSEG0|guard)" src patches tools`
-2. Enumerate each repeated unsafe-access shape and inspect bounded source
-   windows; do not read generated or ledger files wholesale.
-3. Record the complete classification and selected class in a new
-   `scratch/agent/s3237_m3_*` report. No build or soak is authorized unless a
-   concrete behavior change is selected by the census.
+1. `rg -n -- "-0X68A8|-0X68B0" ../N64Recomp/RecompiledFuncs/funcs_*.c`
+2. Recover exact function headers and bounded windows for every site; inspect
+   `tools/fixup*` for matching transformations.
+3. Enumerate writers/free edges and classify every site in a new
+   `scratch/agent/s3238_m3_*` report. Build only if the audit selects a
+   concrete patch-based guard; otherwise do not run the game.

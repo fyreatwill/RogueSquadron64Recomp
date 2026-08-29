@@ -126900,3 +126900,23 @@ voice, MORT, and PCM nulls remained unevaluable. No Step 3 behavior change was
 made. This rules out repeating the parked qualification as an information-
 bearing M5 unit and does not select audio degeneracy, route causation, or any
 writer/ordering change. Evidence: `scratch/agent/s3236_m5_step3_selection.md`.
+
+## Session 3237 (2026-08-29) — censused MusyX pointer idiom class
+
+Ran the mandated fresh M3 census with `rg` across active source,
+patch-controlled paths, fixup rules, and generated audio functions. No build
+or runtime run was needed for this static work unit. The census selected a
+new repeated class: unguarded MusyX pointer globals `0x80149758`
+(`-0x68A8`) and `0x80149750` (`-0x68B0`). Writers are
+`allocateSongChannelArray` at `0x8008F228` and
+`musyxBuildVoiceCommandList` at `0x80091074`; readers include key-on,
+command-list build, synth, shutdown, and wait paths, with additional
+out-of-region aliases requiring classification. Existing voice-array guards
+cover only `-0x6908`, not this class. Scalar `-0x6900`/`-0x68FE`/`-0x68F0`
+matches and the active `break 6/7` search did not produce a new pointer or
+handler class. No guard, guest value, or behavior change was made. Next is a
+bounded writer/free/order audit of the complete `-0x68A8`/`-0x68B0` site list.
+
+Evidence: `scratch/agent/s3237_m3_pointer_class_census.md`.
+
+ORIGIN: diagnostic-only static census; no mitigation or guest value was changed.

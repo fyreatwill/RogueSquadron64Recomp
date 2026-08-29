@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3236 (2026-08-29).
+Current maintenance marker: Session 3237 (2026-08-29).
 
 ## Current state
 
@@ -29,7 +29,8 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3236
 completed the Step 3 edge-selection gate without selecting an edge: the
 required target-phase port row is still absent, so no audio behavior change
-is authorized. The next unit is a fresh bounded M3 idiom-class census.
+is authorized. Session 3237's fresh census selected a new unresolved repeated
+MusyX pointer class; the next unit is the bounded guard audit in `NEXT.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection,
    but Step 3 edge selection is currently unevaluable.
@@ -40,8 +41,8 @@ is authorized. The next unit is a fresh bounded M3 idiom-class census.
    hangar. This closes the current selection attempt without authorizing a
    contract, gate, wait, route, or output change. Do not repeat the parked
    qualification; a new M5 change requires a newly proven target-phase edge.
-   The next active priority is the fresh systematic M3 census described in
-   `scratch/agent/NEXT.md`.
+   The next active priority is the bounded `-0x68A8`/`-0x68B0` MusyX pointer
+   audit described in `scratch/agent/NEXT.md`.
    Earlier same-build qualification evidence remains below for provenance.
    Session 3235 ran the same-build silent/image pair after adding the
    phase-scoped `[m5-port-retail-target]` commit field. Retail passed the
