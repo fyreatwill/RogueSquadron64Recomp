@@ -61,7 +61,6 @@ EXTRA_REVERTS = {
 EXTRA_RENAMES = {
     "fake_func_800AD378": "storeTrackedObjectAuxiliaryFields",
     "fake_func_800B47C4": "menuControllerInputPreamble",
-    "fake_func_8005C61C": "checkTrackedNpcProximityForCuePreamble",
     "fake_func_8005EE64": "steerOrientationTowardTargetPreamble",
     "fake_func_800613B8": "loadCharTextureSetPreamble",
     "fake_func_80069AEC": "collideSegmentAgainstObjectNodesPreamble",

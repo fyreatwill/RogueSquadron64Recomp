@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3079 (2026-08-28).
+Current maintenance marker: Session 3080 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,18 @@ completion, not PCM correctness. The M5 route dependency remains open, but
 static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3080 completed the bounded six-surface audit at `0x8005C61C`. The
+companion map, generated body, header, overlay registration, and project TOML
+agree on a 4-byte isolated `addu $v1, $v1, $a0` fragment immediately before
+`checkTrackedNpcProximityForCue`; there is no independent caller or semantic
+identity. This selects H-Fragment, so the placeholder was renamed mechanically
+to `data_gap_8005C61C` across the regeneration-safe mapping and generated tree.
+The former preamble convenience rule was removed. The next sweep candidate is
+`fake_func_800186D8`. Evidence: `scratch/agent/s3080_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
 
 Session 3079 completed the bounded six-surface audit at `0x80059B4C`. The
 companion map, generated body, header, overlay registration, and project TOML

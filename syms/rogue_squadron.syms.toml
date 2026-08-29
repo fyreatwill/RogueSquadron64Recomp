@@ -846,7 +846,7 @@ functions = [
     { name = "setupWalkerSpriteTileQuad", vram = 0x8005B51C, size = 0x7A8 },
     { name = "cinematicSplineWalkerNpcHandler", vram = 0x8005BCC4, size = 0x90C },
     { name = "allocAllInitialNpcSlots", vram = 0x8005C5D0, size = 0x4C },
-    { name = "fake_func_8005C61C", vram = 0x8005C61C, size = 0x4 },
+    { name = "data_gap_8005C61C", vram = 0x8005C61C, size = 0x4 },
     { name = "checkTrackedNpcProximityForCue", vram = 0x8005C620, size = 0x254 },
     { name = "audioCueDispatcherNpcHandler", vram = 0x8005C874, size = 0x10D8 },
     { name = "collectNearbyNpcsForEffect", vram = 0x8005D94C, size = 0x18C },
