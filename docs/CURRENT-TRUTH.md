@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3129 (2026-08-28).
+Current maintenance marker: Session 3130 (2026-08-28).
 
 ## Current state
 
@@ -188,6 +188,15 @@ not identify the upstream writer, and no audio or route behavior changed.
 This is single-source port evidence. Evidence:
 `scratch/agent/s3129_m5_origin_publish/run.log`.
 
+Session 3130's independent retail oracle passed the whole-RDRAM positive
+control (10,000 writes), reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, and watched the newly audited direct `osViSetMode`
+callsite `0x8001BC28` in `selectAndApplyViMode`. The candidate executed zero
+times overall, including both target phases. This rejects that selected-mode
+callsite as the retail target-phase handoff and leaves the upstream boundary
+unidentified. This is single-source oracle evidence; no port behavior changed.
+Evidence: `scratch/agent/s3130_m5_retail_bc28/AUDIT.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
@@ -195,11 +204,12 @@ generated-symbol sweep. Maintenance is complete and M5 design is complete;
 the port-side VI publication parity probe is now exhausted for this route.
 M3 is parked pending a new discriminator.
 
-1. **M5 route blocker — retail-grounded upstream handoff.** Use the oracle to
-   identify one new static handoff upstream of `__osViSwapContext` and the
-   already rejected consumer/pre-consumer candidates, with whole-RDRAM and
-   title/hangar controls in the same run. Do not add another port probe until
-   retail attributes a distinct edge; do not change audio or route behavior.
+1. **M5 route blocker — retail-grounded upstream handoff.** Audit the call
+   chain and data handoff feeding the retail VI consumer, excluding the closed
+   direct callsites `0x8001B720`, `0x8001B8DC`, `0x8001BB54`, and `0x8001BC28`,
+   then use one new statically selected PC in an oracle run with whole-RDRAM
+   and title/hangar controls. Do not add another port probe until retail
+   attributes a distinct edge; do not change audio or route behavior.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the
@@ -215,14 +225,14 @@ M3 is parked pending a new discriminator.
    enumerate the entire idiom class, name its discriminator, and guard or
    prove every site. Passive crash recurrence belongs in the soak queue.
 
-5. **External retail-entry boundary.** Parked after the candidate set was
+6. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC
    attribution.
 
-5. **M4 accumulator origin.** Parked because the latest route qualification
+7. **M4 accumulator origin.** Parked because the latest route qualification
    had no target-phase positive-control rows. Do not interpret its nulls.
 
-6. **M5 SP-yield lifecycle and CPU-side MORT publication.** Parked pending a
+8. **M5 SP-yield lifecycle and CPU-side MORT publication.** Parked pending a
    route angle that reaches target phases. The corrected MORT descriptor edge
    is `+0x190` to `dmaVoiceSampleAndSignal`; `+0x194` is the speech source.
 

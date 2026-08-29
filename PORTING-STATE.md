@@ -125128,5 +125128,24 @@ for the same range with the existing VI-context and host-voice controls.
 Evidence: `scratch/agent/s3125_m5_retail_post_consumer/oracle.log` and
 `scratch/agent/s3125_m5_retail_post_consumer/oracle_phase.log`.
 
-ORIGIN: qualification-only retail boundary attribution; no port, audio,
-route, selector, wait, voice, or mitigation behavior changed.
+## Session 3130 (2026-08-28) — rejected selected-mode retail handoff
+
+Audited the generated VI manager code and selected the previously unenumerated
+direct callsite `0x8001BC28`, the `osViSetMode` instruction at the end of
+`selectAndApplyViMode` after the selected descriptor fields are copied. Ran
+one independent retail-oracle capture with Rice video, the verified Start
+schedule, VI tracing, explicit title/hangar phase buckets, and a whole-RDRAM
+positive-control watch. The control reached 10,000 writes; retail reached
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; the candidate had zero
+execution hits overall and zero rows in both target phases.
+
+This selects `H-RetailBoundaryAbsent` and rules out `0x8001BC28` as the
+target-phase retail handoff. It leaves the upstream boundary unidentified and
+does not distinguish the next static candidate. No port, audio, route, wait,
+slot, voice, or mitigation behavior changed. This is single-source oracle
+evidence.
+
+Evidence: `scratch/agent/s3130_m5_retail_bc28/AUDIT.md` and
+`scratch/agent/s3130_m5_retail_bc28/oracle.log`.
+
+ORIGIN: qualification-only retail boundary attribution; no behavior change.
