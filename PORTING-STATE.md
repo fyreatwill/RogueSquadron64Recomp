@@ -125722,6 +125722,21 @@ explicitly preserved and were not changed. This rules out treating this
 record as a callable game routine; it does not change runtime behavior.
 
 No build or game run was needed for this source-only synchronization.
+
+## Session 3168 (2026-08-29) — bounded generated-symbol sweep found synchronized band
+
+Ran the regeneration-safe companion-symbol sweep over
+`0x800B75D0..0x800C0000` with the required rename control. The helper found
+only already-synchronized companion names and reported zero changed
+references/files. The remaining placeholder `fake_func_800B89F4` is marked
+fake/data by companion metadata and was preserved. The post-run generated
+placeholder check still showed only the known unresolved records and the
+already-synchronized mission-overlay entry.
+
+This selects `H-Ambiguous` for the remaining record in the band, closes the
+band for semantic renaming, and rules out an exact companion rename there. No
+build, game run, or runtime behavior changed. Evidence:
+`scratch/agent/s3168_generated_symbol_sweep.md`.
 ## Session 3167 (2026-08-29) — proved `musyxMixActiveVoices` voice index class
 
 Completed the bounded static M3 audit of `musyxMixActiveVoices` at

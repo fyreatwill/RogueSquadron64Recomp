@@ -6,7 +6,14 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3167 (2026-08-29).
+Current maintenance marker: Session 3168 (2026-08-29).
+
+Session 3168 completed the bounded generated-symbol sweep for
+`0x800B75D0..0x800C0000`. Every companion-qualified candidate was already
+synchronized; the only remaining placeholder in the band,
+`fake_func_800B89F4`, is explicitly fake/data and remains unchanged. The
+helper changed zero references, closing this band without a new semantic
+rename. Evidence: `scratch/agent/s3168_generated_symbol_sweep.md`.
 
 Session 3167 completed a bounded M3 audit of `musyxMixActiveVoices`'s complete
 `0x88`-stride voice-record access class. All six indexed accesses share the
@@ -621,8 +628,10 @@ the status-03 wait hatch.
 4. **Generated-symbol renaming sweep.** M5 remains blocked pending a route
    change, and Session 3167 closed the selected M3 voice-record class. Resume
    this regeneration-safe campaign. Session 3166 synchronized the explicit
-   data gap at `0x800B75C4`; continue with the next bounded address interval
-   only when the helper can land a real rename. Preserve ambiguous fragments.
+   data gap at `0x800B75C4`; Session 3168 found the next band
+   `0x800B75D0..0x800C0000` already synchronized except for the explicitly
+   fake `0x800B89F4`, which remains unchanged. Continue at the next bounded
+   interval and preserve ambiguous fragments.
 
 5. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC
