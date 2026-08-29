@@ -124772,6 +124772,31 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3117 (2026-08-28) — audited new retail VI handoff candidate
+
+Performed the bounded static audit requested by the previous work unit. The
+generated function `runMenuModelViewerScreen` begins at `0x800C28F0`; at
+`0x800C2984` it calls `requestViFeatureChange` with immediate argument `0x11`.
+That callee stores the request at `0x80128E90`. This is a new producer-side
+request boundary outside the closed direct `osViSetMode` callsites and
+`0x8001B7B8:0x8001BC48` selector/helper range. The generated tree also has
+five other callers, but this is the only newly selected menu-model edge with
+an identifiable constant and caller context.
+
+The audit rules out treating `0x800C2984` as the final VI-register writer: its
+static edge ends at a pending-word store. It does not rule out that this
+request triggers the later missing handoff. The discriminating next
+measurement is a retail physical-PC watch at `0x800C2984`, with the
+whole-RDRAM positive control and title/hangar phase controls: transition-time
+execution supports H-NewHandoff; target-only execution supports
+H-ExistingConsumer; no execution with valid controls supports H-DeadOrAliased.
+No runtime behavior changed.
+
+Evidence: `scratch/agent/s3117_m5_retail_handoff_static/AUDIT.md`.
+
+ORIGIN: static candidate audit; no port, audio, route, selector, wait, voice,
+or mitigation behavior changed.
+
 ## Session 3116 (2026-08-28) — rejected post-init retail boundary as VI writer
 
 Ran one independent retail-oracle capture with the whole-RDRAM positive

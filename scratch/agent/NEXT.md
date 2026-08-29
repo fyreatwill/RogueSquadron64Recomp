@@ -1,38 +1,33 @@
-# NEXT work unit — statically identify a new retail VI handoff boundary
+# NEXT work unit — oracle-test the newly identified menu VI handoff
 
 HYPOTHESIS-ID: m5-retail-video-publication-boundary
 
 ## Single work unit
 
-Perform a bounded static audit of the code immediately following the closed
-retail execution ranges through `0x8001BB6C`, using the generated function
-body, its call targets, and the companion symbol/decomp names. Identify one
-previously unwatched caller or handoff that can be tested independently by
-the retail oracle. Do not modify runtime behavior or repeat any already
-closed range/callsite.
+Run the independent retail oracle with a physical execution watch for guest
+PC `0x800C2984` (`runMenuModelViewerScreen`), retaining the whole-RDRAM
+positive control and title/hangar VI phase controls. This is the next test of
+the static candidate documented in
+`scratch/agent/s3117_m5_retail_handoff_static/AUDIT.md`.
 
 ## Competing hypotheses
 
-- H-NewHandoff: a newly identified caller/handoff contains the 640-to-1024
-  publication path.
-- H-ExistingConsumer: the candidate only consumes an already-published mode;
-  the writer is elsewhere.
-- H-DeadOrAliased: the candidate is unreachable in the retail route or is an
-  overlay-aliased duplicate and cannot be used as a new boundary.
+- H-NewHandoff: `0x800C2984` is on the 640-to-1024 publication path.
+- H-ExistingConsumer: it only requests/consumes state after publication; the
+  writer is elsewhere.
+- H-DeadOrAliased: it is unreachable in the retail route or overlay-aliased.
 
 ## Discriminating measurement
 
-The audit must produce a concrete PC/range candidate and an instruction-level
-reason it can distinguish those hypotheses. The next oracle run must watch
-that candidate with the whole-RDRAM positive control and VI phase controls:
-transition-time execution selects H-NewHandoff; target-phase execution only
-without a transition handoff selects H-ExistingConsumer; no execution with
-valid controls selects H-DeadOrAliased.
+The watch must fire with a transition-time timestamp/phase attribution. A hit
+at the 640-to-1024 transition, with the pending-word write and later title
+phase, selects H-NewHandoff. Hits only after title/hangar publication select
+H-ExistingConsumer. No candidate hit while the positive control and phase
+controls pass selects H-DeadOrAliased.
 
-## Exact commands
+## Exact run requirements
 
-`rg -n "8001B7B8|8001BB6C|8001BC48|800182D8|800C2984" RecompiledFuncs src syms docs`
-
-Then read only the bounded generated-function window and companion symbol
-records around the selected target, and write the candidate plus its call
-edge to `scratch/agent/s3117_m5_retail_handoff_static/AUDIT.md`.
+Use the oracle recipe under `tools/oracle/README.md`; arm the whole-RDRAM
+positive control first, add the `0x800C2984` physical-PC watch, and keep the
+title/hangar VI phase watches. Do not modify the port or repeat the closed
+`0x8001A098:0x8001BB6C` ranges.

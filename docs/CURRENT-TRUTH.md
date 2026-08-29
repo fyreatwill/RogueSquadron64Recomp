@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3116 (2026-08-28).
+Current maintenance marker: Session 3117 (2026-08-28).
 
 ## Current state
 
@@ -51,6 +51,13 @@ outside the already watched direct `osViSetMode` callsites and helper range.
 These are single-source oracle qualifications; they select an unenumerated
 writer but do not identify it.
 
+Session 3117's static audit identified guest PC `0x800C2984` in
+`runMenuModelViewerScreen` as a new request-stage handoff: it calls
+`requestViFeatureChange(0x11)`, whose first store is the pending word at
+`0x80128E90`. This is outside the closed direct `osViSetMode` callsites and
+selector range. It is a candidate boundary only; no runtime behavior changed
+and retail attribution is still required.
+
 The strongest route boundary remains the independent comparison: retail
 reaches title at 1024 and hangar at 512, while the recent same-build port
 capture issues only widths 320, 2, 640, and 640 and remains at VI 640. The
@@ -63,12 +70,11 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **M5 VI publication — enumerate the missing writer.** The two contiguous
-   ranges through `0x8001BB6C` are now live but not selected as the transition
-   writer. Use a genuinely different static handoff or retail-grounded PC
-   boundary; do not repeat either range, the three direct callsite watches,
-   or the closed selector-helper range. Retain a whole-RDRAM positive control
-   and title/hangar phase controls.
+1. **M5 VI publication — test the new handoff.** Use the retail oracle to
+   watch guest PC `0x800C2984` with a whole-RDRAM positive control and
+   title/hangar phase controls. Transition-time execution selects the new
+   handoff; target-only execution makes it a consumer; no execution with
+   valid controls makes it dead or aliased. Do not repeat closed ranges.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed
