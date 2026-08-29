@@ -6,7 +6,16 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3160 (2026-08-29).
+Current maintenance marker: Session 3161 (2026-08-29).
+
+Session 3161 completed the bounded static M3 audit of
+`musyxTriggerVoiceAttack`'s voice-indexed `0x88`-stride record accesses. The
+tick caller is range-proven through the companion's 0x20-channel array, but
+the streamed caller passes `stopVoiceByKey`'s result with only a `!= -1`
+check; the available producer flow does not prove `0..63`. This selects
+`H-M3-Unclassified` from generated control flow plus independent companion
+symbol metadata. No guard, audio behavior, generated source, build, or run
+changed. Evidence: `scratch/agent/s3161_m3_musyx_trigger_voice_attack_audit.md`.
 
 Session 3160 closed the bounded generated-symbol sweep lead for
 `0x800A0000..0x800B0000`. Fourteen placeholders remain: thirteen

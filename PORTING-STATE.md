@@ -125619,3 +125619,18 @@ selects `H-AmbiguousFragments`; `H-SemanticMatches` and
 `H-NoReachablePlaceholder` are ruled out for this band. No generated symbol
 or runtime behavior changed. Evidence:
 `scratch/agent/s3160_generated_symbol_census.md`.
+## Session 3161 (2026-08-29) — audited musyxTriggerVoiceAttack index producers
+
+The complete generated call/access table for `musyxTriggerVoiceAttack` at
+`0x8009231C` found two reachable calls. The `tickAllAudioChannels` edge at
+`0x8008CE7C` uses a zero-based channel counter bounded by the companion's
+0x20-entry channel array, proving that edge's index is within the mixer voice
+bound. The `startStreamedSampleVoice` edge at `0x80098194` uses the return of
+`stopVoiceByKey`; its only local rejection is `-1`, and the available
+`allocateSynthVoice` producer flow does not prove a nonnegative result is
+below 64. Companion symbol metadata independently confirms the mixer base
+and `0x88` stride and the channel-array count. This selects
+`H-M3-Unclassified`, rules out `H-M3-Proven` and `H-M3-Dead` at static scope,
+and does not prove a retail-invalid value. No guard, generated source, audio
+behavior, build, or run changed. Evidence:
+`scratch/agent/s3161_m3_musyx_trigger_voice_attack_audit.md`.
