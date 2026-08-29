@@ -123961,3 +123961,21 @@ unit. Evidence: `scratch/agent/s3067_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, generated instruction, route,
 audio, or submodule behavior changed.
+
+## Session 3068 (2026-08-28) — audited 0x800B89F4 generated symbol
+
+Completed the bounded six-surface generated-symbol audit for mission-overlay
+`fake_func_800B89F4`. The companion mission map retains the fake entry and
+comments that the real function is `playerVwingInit` at `0x800B8A00`, but
+companion `build/redefs.txt` has no `800B89F4`, fake-symbol, or V-wing preamble
+identity. The external generated snapshot registers a 0xC-byte placeholder
+immediately before `playerVwingInit`; its surrounding disassembly shows the
+address inside the preceding control-flow sequence, and no generated caller
+targets it. Header, overlay registration, project TOML, and rename tooling
+agree on the placeholder, `0x800B89F4`, and size `0xC`. This selects H-Fragment,
+rejects H-ExactIdentity and H-MappingDrift, and preserves the placeholder. The
+next sweep candidate is `data_gap_800BCC38`. No build or runtime run was needed
+for this static unit. Evidence: `scratch/agent/s3068_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, generated instruction, route,
+audio, or submodule behavior changed.
