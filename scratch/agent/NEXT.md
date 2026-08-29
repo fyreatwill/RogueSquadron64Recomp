@@ -1,41 +1,38 @@
-# NEXT work unit — enumerate the missing retail mode writer through initVideoSubsystem
+# NEXT work unit — audit the remaining unresolved generated fragment
 
-HYPOTHESIS-ID: m5-retail-mode-writer-boundary
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Use one genuinely new independent-retail boundary: watch the earlier
-`initVideoSubsystem` range `0x8001A098:0x8001B7B8`, phase-gated to the live 640
-origin, with exact-PC and previous-PC reporting. Attribute the caller or
-descriptor source responsible for the 640→1024 publication. The direct
-watches from Session 3107 and the `selectAndApplyViMode` range from Session
-3111 are closed and must not be repeated. Retain the whole-RDRAM positive
-control, validated Start schedule, VI trace, and title/hangar phase coverage.
-Do not modify the port until retail identifies a specific boundary.
+Audit `fake_func_800AE3E4` across the companion map, generated body, callers,
+header/registration, project TOML, and local duplicates. If it is a callable
+fragment with an exact companion identity, synchronize that name through the
+rename fixups and generated snapshot; if it is an ambiguous instruction
+fragment, classify it as `data_gap_800AE3E4` only when its boundaries prove
+non-callability; otherwise preserve the placeholder. Do not revisit the
+completed `0x800B2628`, `0x800B42BC`, or `0x800B89F4` records.
 
 ## Competing hypotheses
 
-- H-InitWrapper: the range executes at the first transition; its exact PC and
-  previous PC identify the earlier mode wrapper/caller.
-- H-DescriptorProducer: the range executes at the transition with GPR or
-  pointed-field values that identify the descriptor/table source.
-- H-OtherCallsite: the transition occurs while this range is absent, but the
-  range exposes a caller path that can be correlated to another publication
-  site.
-- H-Unevaluable: the control or target phase is absent, or the new boundary
-  watch is not live.
+- H-Callable: a complete prologue/return and exact companion identity support
+  a semantic rename.
+- H-DataGap: the bytes are an isolated fragment or invalid-data trap between
+  complete routines, supporting a mechanical `data_gap_*` rename.
+- H-Ambiguous: overlap, callers, or duplicate overlay matches prevent a safe
+  rename, so the placeholder must remain.
+- H-StaleSurface: the generated snapshot is already renamed but one checked-in
+  symbol/fixup surface is stale and needs synchronization only.
 
 ## Discriminating measurement
 
-The same run must show 10,000 whole-RDRAM callbacks, the 17.2s title
-`1024 @ 0x00790400` transition, the 38.4s hangar `512 @ 0x006AB400`
-transition, and a new-range execution/data row at the first transition. An
-exact range PC plus `prev_pc` at that transition selects H-InitWrapper; a
-descriptor/GPR row tied to the transition selects H-DescriptorProducer; a
-range absence with an independently correlated publication path selects
-H-OtherCallsite; missing controls or target phases selects H-Unevaluable.
+The six-surface audit must show whether `0x800AE3E4` has a callable boundary,
+an exact companion identity, and a unique generated definition. A complete
+callable body plus exact companion name selects H-Callable; an isolated or
+trap-filled record with no callers selects H-DataGap; overlap or duplicate
+identity selects H-Ambiguous; a mismatch limited to project surfaces selects
+H-StaleSurface. The required code result is a synchronized rename only for
+the selected callable/data-gap case.
 
 ## Constraint
 
-Before building any port instrument, obtain this retail boundary attribution;
-it is currently single-source oracle evidence.
+No runtime instrument or build is required for this naming-only unit.

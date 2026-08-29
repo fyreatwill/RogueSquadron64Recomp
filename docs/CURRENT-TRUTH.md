@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3111 (2026-08-28).
+Current maintenance marker: Session 3112 (2026-08-28).
+
+Session 3112 completed a bounded generated-symbol sweep. The generated
+snapshot classified `0x800B2628` as an 8-byte isolated fragment before
+`buildFormatMessageGlyphBuffer` and `0x800B89F4` as a trap-filled invalid-data
+record between complete V-wing routines; both are now synchronized as
+`data_gap_*` in the project symbols, regeneration fixups, and generated
+snapshot. The stale generated `0x800B42BC` name was synchronized at the same
+time. No runtime behavior changed. The remaining unresolved project
+placeholders are `fake_func_800AE3E4` and `fake_func_800B75C4`.
+Evidence: the bounded rename command and generated snapshot diff in the
+Session 3112 commit.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
+runtime, route, audio, mitigation, or generated instruction behavior changed.
 
 Session 3111 ran a new independent retail boundary watch over
 `selectAndApplyViMode` and its mode-descriptor helpers
@@ -874,7 +888,14 @@ route-blocked at pre-title VI 640 despite a valid retail control and positive
 port dispatch controls; target-phase audio rows remain unevaluable. M3 is
 parked pending a new discriminator.
 
-1. **M5 VI-mode publication edge — enumerate the unenumerated writer.** Session
+1. **Generated-symbol sweep — audit the remaining unresolved fragments.**
+   Session 3112 synchronized the mechanically classifiable `0x800B2628`,
+   `0x800B89F4`, and stale `0x800B42BC` records. Audit `fake_func_800AE3E4`
+   next across the companion map, generated body, callers, header, overlay
+   registration, project TOML, and local duplicates; preserve the placeholder
+   if the boundary remains ambiguous. Do not repeat the completed records.
+
+2. **M5 VI-mode publication edge — enumerate the unenumerated writer.** Session
    3111 showed the whole-RDRAM control and title/hangar phases live, while the
    `selectAndApplyViMode`/descriptor-helper range was never executed. Watch a
    genuinely new earlier `initVideoSubsystem` boundary
@@ -882,23 +903,23 @@ parked pending a new discriminator.
    source. Do not repeat the three direct callsite watches or the closed
    selector-helper range.
 
-2. **M5 VI-mode publication edge — new boundary required.** Session 3105
+3. **M5 VI-mode publication edge — new boundary required.** Session 3105
    selected H-SharedSwapPath: both surviving predecessors are framebuffer
    swaps, not mode writers, and their generated/companion identities agree.
    Do not repeat this caller audit. Revisit the absent retail 1024 writer only
    with a genuinely new external boundary that can attribute its caller or
    descriptor source.
 
-3. **M5 VI-mode publication edge — parked after Session 3094.** The port
+4. **M5 VI-mode publication edge — parked after Session 3094.** The port
    publishes and consumes a live 640 descriptor (`0x80128DF0`) but never
    reaches the retail 1024 transition. The independent retail mode/caller
    watches are live. Revisit only with a genuinely new boundary that can
    discriminate the absent 1024 writer; do not repeat the selector-byte,
    ProducerMark, or current consumer probes.
 
-4. **Generated-symbol sweep — eligible only if no new M5 discriminator is
-   available.** The bounded six-surface audit rule remains in force; resume at
-   the next unresolved placeholder rather than repeating closed audits.
+5. **Generated-symbol sweep — continue after the remaining fragment audit.**
+   The bounded six-surface audit rule remains in force; preserve unresolved
+   boundaries rather than inventing semantic names.
 
 4. **M5 VI-mode stall — attribute selector-writer inputs.** Session 3076
    ruled out table aliasing, record-copy reorder, selected-pointer mutation,

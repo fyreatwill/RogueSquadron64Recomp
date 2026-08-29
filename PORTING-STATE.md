@@ -124711,6 +124711,26 @@ run, retaining both controls. Evidence:
 ORIGIN: qualification-only retail callsite attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3112 (2026-08-28) — synchronized two generated data-gap symbols
+
+The mandated no-churn pivot selected the generated-symbol-renaming sweep
+because the M5 plan still has no qualified contract edge to de-stub. A
+bounded generated snapshot audit found that `0x800B2628` is an 8-byte
+isolated scalar-store fragment immediately before `buildFormatMessageGlyphBuffer`,
+and `0x800B89F4` is a 12-byte trap-filled invalid-data record between the
+complete `emitTexturedEffectCue` and `playerVwingInit` bodies. The generated
+snapshot also still carried stale `fake_func_800B42BC`, which was synchronized
+to its existing `data_gap_800B42BC` classification in the same bounded run.
+The rename tool changed 9 references in 4 generated files; project symbols and
+both regeneration rename surfaces now use `data_gap_800B2628`,
+`data_gap_800B89F4`, and `data_gap_800B42BC`.
+
+This rules out treating these three records as callable game functions, but
+does not resolve the remaining ambiguous `fake_func_800AE3E4` and
+`fake_func_800B75C4` boundaries. No runtime behavior, audio route, mitigation,
+or port instrument changed. ORIGIN: naming-only classification and
+regeneration-safe symbol metadata.
+
 ## Session 3108 (2026-08-28) — closed retail mode-selector boundary
 
 Ran one independent retail-oracle capture with a new execution watch over

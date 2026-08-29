@@ -149,6 +149,10 @@ RENAMES = {
     "fake_func_80041EEC": "data_gap_80041EEC",
     "fake_func_800457CC": "data_gap_800457CC",
     "fake_func_800B42BC": "data_gap_800B42BC",
+    # These short menu-overlay records are isolated fragments between complete
+    # callable bodies; the generated B89F4 body is an invalid-data trap.
+    "fake_func_800B2628": "data_gap_800B2628",
+    "fake_func_800B89F4": "data_gap_800B89F4",
     # The companion map marks this defined 8-byte record as having no
     # accompanying real function; the generated body is invalid data.
     "fake_func_8003DF98": "data_gap_8003DF98",
