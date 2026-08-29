@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3068 (2026-08-28).
+Current maintenance marker: Session 3069 (2026-08-28).
 
 ## Current state
 
@@ -127,6 +127,16 @@ targets it. Header, registration, TOML, and rename tooling agree on the
 placeholder and boundary. This selects H-Fragment and preserves the
 placeholder. The next sweep candidate is `data_gap_800BCC38`. Evidence:
 `scratch/agent/s3068_generated_symbol_rename/AUDIT.md`.
+
+Session 3069 completed the bounded six-surface audit at `0x800BCC38`. The
+companion mission map and redefs identify it as an explicit data gap before
+`playerT16Init` at `0x800BCC40`; the generated body is an 8-byte conditional
+branch into that initializer with an unresolved cross-function label, and no
+caller targets the gap. Header, overlay registration, project TOML, and rename
+tooling agree on the 8-byte boundary and mechanical name. This selects
+H-DataGap and preserves the placeholder. The next sweep candidate is
+`data_gap_800BEBFC`. Evidence:
+`scratch/agent/s3069_generated_symbol_rename/AUDIT.md`.
 
 Session 3065 completed the bounded six-surface audit at `0x800B47C4`. The
 companion comments, generated extent, callers, header/registration, project
@@ -367,7 +377,9 @@ parked pending a new discriminator.
    audited and preserved as a fragment; resume at the next candidate
    (`data_gap_800BCC38`)
    only after auditing companion map, generated body, callers, header, overlay
-   registration, project TOML, and local duplicates. If the sweep becomes a
+   registration, project TOML, and local duplicates. The `0x800BCC38` record
+   was audited and preserved as a data gap; resume at `data_gap_800BEBFC`.
+   If the sweep becomes a
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.
 
