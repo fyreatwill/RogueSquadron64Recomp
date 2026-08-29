@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3210 (2026-08-29).
+Current maintenance marker: Session 3211 (2026-08-29).
 
 ## Current state
 
@@ -36,9 +36,12 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    DMA, `Broke`/SP completion, service, slot, and PCM joins; retain the silent
    arm as the no-write control.
 3. When M5 is still blocked, perform only a complete M3 idiom-class audit from
-   the existing inventory. The next bounded audit is the voice-slot producer
-   contract around `musyxInitVoiceFromSample`; do not add a guard without a
-   legitimate writer and bound proof.
+   the existing inventory. Session 3211 classified the complete
+   `musyxInitVoiceFromSample` voice-slot producer contract as unclassified:
+   both callers are reachable, but the `+0x67` writer and a complete
+   streamed-index bound remain unresolved. Next audit the voice/list/table
+   pointer guard class; do not add a guard without a legitimate writer and
+   bound proof.
 4. The regeneration-safe generated-symbol sweep is closed at its evidence
    boundary. `static_4_80106C50` is the sole remaining placeholder: it is a
    callable body with a real caller but no defensible semantic match, so it

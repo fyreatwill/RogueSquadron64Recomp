@@ -126322,3 +126322,25 @@ data-gap rename and an evidence-backed semantic rename. No build or runtime
 run was performed because this was a source-only sweep. The next unit is a
 complete M3 voice-slot producer audit centered on `musyxInitVoiceFromSample`.
 Evidence: `scratch/agent/s3210_generated_symbol_rename.md`.
+## Session 3211 (2026-08-29) — audited M3 voice-slot producer idiom
+
+Performed the complete static producer/consumer census for
+`musyxInitVoiceFromSample` and its voice-slot initialization idiom. The
+generated tree contains two real direct callers: `soundMacroOpPlaySampleKeymap`
+at `0x8008A564`, passing the owning record's `+0x67` byte, and
+`startStreamedSampleVoice` at `0x800980EC`, passing `stopVoiceByKey`'s result
+after only rejecting `-1`. The callee computes both records from
+`0x801496F8 + (index & 0xffff) * 0x88` and writes `record+0x34` at
+`0x800921E8`; `allocateSongChannelArray` is the base/count allocator writer.
+
+The companion `main_overlay.txt` independently corroborates the function
+addresses, base, stride, and caller roles. The generated whole-class `+0x67`
+store search recovered no connected live writer, and the available streamed
+caller path does not prove the callee's exact `<64` bound. Both callers are
+reachable, so this selects static `H-Unclassified`; it does not prove a bad
+retail value. No build, run, guard, audio behavior, or generated-source edit
+was made. This rules out an unreachable-only explanation, but does not name a
+legitimate bad producer.
+
+ORIGIN: generated call/access census plus independent companion symbol
+metadata; unresolved writer evidence is not a mitigation target.
