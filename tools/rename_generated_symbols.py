@@ -14,6 +14,8 @@ RENAMES = {
     "func_800824F8": "rs_crc32",
     "func_800BFDC4": "setHudSecondaryWeaponInfo",
     "func_800C63C0": "getAvailableShipsForLevel",
+    "static_5_800AF6AC": "handleCraftSelectInput",
+    "static_4_800E9B10": "initObjectAnimAndDetail",
     "fake_func_800AA6CC": "npcPredictedRangeCheckPreamble",
     "fake_func_800AAADC": "playerSnowSpeederInitPreamble",
     "fake_func_8005C61C": "data_gap_8005C61C",

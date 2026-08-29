@@ -1,54 +1,52 @@
-# NEXT work unit — audit `musyxTriggerVoiceAttack` voice-index class
+# NEXT work unit — bounded callable-placeholder census in `0x800A0000..0x800B0000`
 
-HYPOTHESIS-ID: m3-idiom-class-audit
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Session 3158 selected `H-M3-Unclassified` for `musyxStoreVoiceAdsrParams`:
-one reachable SoundMacro caller passes `lbu s5+0x67` without a local `<64`
-proof, and the callee has four independent `0x88`-stride stores. The existing
-base-pointer guard is not an index proof.
-
-Session 3155 selected `H-M3-ValidProducer` for the complete `musyxStopVoice`
-`+0x1` computed-record store: `s6` starts at zero, the call precedes its
-increment, and both sole writers of the loop-count byte clamp it to at most
-`0x20`, so the call argument is `0..31`.
+Session 3159 renamed the exact companion-qualified callable records
+`static_5_800AF6AC` → `handleCraftSelectInput` and
+`static_4_800E9B10` → `initObjectAnimAndDetail`. Continue the sweep under one
+stable slug; do not rename ambiguous fragments or data-gap records.
 
 ## Single work unit
 
-Audit the complete `musyxTriggerVoiceAttack` voice-indexed record/table class
-in one static pass. Enumerate every generated caller, every indexed load/store
-and its base/count producer, then reconcile with companion symbols/ELF when
-available. Do not edit generated functions or add guards. No build or runtime
-probe is authorized for this source-only discriminator.
+Enumerate every remaining generated placeholder in the address band
+`0x800A0000..0x800B0000`, join each address against the companion symbol
+files, and select at most one bounded batch of exact semantic callable names.
+If the band has no such match, close this sweep lead and return to the
+retail-grounded M5 boundary rather than inventing names.
 
 Competing hypotheses and discriminator:
 
-- `H-M3-Proven`: every reachable indexed access has a dominating producer and
-  range proof for the 64-entry `0x88` voice array; this closes the class
-  without a guard.
-- `H-M3-Unclassified`: at least one reachable caller or indexed access lacks a
-  complete base/index/count proof; this keeps the class open and authorizes no
-  mitigation.
-- `H-M3-LoweringOnly`: all apparent multiple sites collapse to duplicate
-  delay-slot/shared-tail lowering, with no independent unsafe access.
-- `H-M3-Dead`: all candidate callers/sites are unreachable or unreferenced in
-  the generated dispatch graph.
+- `H-SemanticMatches`: at least one remaining placeholder has one exact,
+  non-fake companion callable name and a generated body/caller. Rename only
+  those rows through the helper.
+- `H-AmbiguousFragments`: candidates are companion fake/data-gap records or
+  split fragments. Preserve their placeholders and record the classification.
+- `H-NoReachablePlaceholder`: remaining candidates have no generated body or
+  caller and are not actionable callable symbols.
 
-The discriminating measurement is a complete site/caller/producer table. A
-real reachable row with an unproved index or base selects
-`H-M3-Unclassified`; all rows locally proven selects `H-M3-Proven`; only
-duplicate/lowering rows selects `H-M3-LoweringOnly`; no reachable rows selects
-`H-M3-Dead`. This is static evidence only and does not authorize audio or
-voice behavior changes.
+The discriminating measurement is one address table containing placeholder,
+companion name/type, generated body span, and caller/reference count. A
+unique semantic callable row selects `H-SemanticMatches`; only fake/data-gap
+or split rows selects `H-AmbiguousFragments`; no body/caller rows selects
+`H-NoReachablePlaceholder`.
 
 Exact starting commands:
 
 ```sh
-rg -n 'musyxTriggerVoiceAttack|voice index|voice-index|0x88 voice' docs /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs | head -240
-rg -n 'musyxTriggerVoiceAttack' /Users/williambuckley/Documents/Tools/rogue_squadron64 | head -120
-
-Expected discriminator outcomes: a complete site table with all reachable
-rows locally proven selects `H-M3-Proven`; any reachable row lacking a
-producer/range proof selects `H-M3-Unclassified`; only duplicate/lowering
-rows select `H-M3-LoweringOnly`. No runtime probe is valid unless a positive
-control and a phase-scoped discriminator are first designed.
+python3 - <<'PY'
+from pathlib import Path
+import re
+root = Path('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs')
+text = '\n'.join(p.read_text() for p in sorted(root.glob('funcs_*.c')) + [root/'funcs.h', root/'recomp_overlays.inl'] if p.exists())
+for addr in sorted(set(re.findall(r'\b(?:func|fake_func|static_[0-9]+)_([0-9A-Fa-f]{8})\b', text))):
+    n = int(addr, 16)
+    if 0x800A0000 <= n < 0x800B0000:
+        print(addr)
+PY
+rg -n '^(?!D_|fake_func_|func_)[A-Za-z_][A-Za-z0-9_]*\s*=\s*0x800A' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 ```
+
+Expected outcomes: exact callable matches are renamed in one bounded batch;
+ambiguous/data-gap rows remain untouched; an empty callable set closes this
+lead. No runtime probe or build is authorized for this naming discriminator.

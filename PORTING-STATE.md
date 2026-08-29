@@ -125603,3 +125603,6 @@ and rules out lowering-only/dead-site explanations at static scope. No guard,
 generated-source edit, build, run, oracle watch, or audio behavior changed.
 
 Evidence: `scratch/agent/s3158_m3_musyx_store_voice_adsr_audit.md`.
+## Session 3159 (2026-08-29) — reopened callable generated-symbol sweep with exact companion batch
+
+The mandated no-churn pivot selected the generated-symbol-renaming sweep because M5 Step 1 remains a qualification checkpoint and the current route lacks its target-phase positive control. A bounded census of the external generated snapshot found two callable placeholders with exact companion matches: `static_5_800AF6AC` is `handleCraftSelectInput` and `static_4_800E9B10` is `initObjectAnimAndDetail`. Both have generated bodies and direct callers; companion `main_overlay.txt` independently supplies the names and addresses. The rename synchronized six references across the generated header, bodies, and callers, and added both mappings to `tools/rename_generated_symbols.py` for regeneration safety. No build or runtime behavior changed. This selects the semantic-rename branch and rules out data-gap/ambiguous treatment for these two rows; it does not classify the remaining placeholders. Evidence: `scratch/agent/s3159_generated_symbol_rename.md`.

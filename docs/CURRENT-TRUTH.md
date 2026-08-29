@@ -6,7 +6,18 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3158 (2026-08-29).
+Current maintenance marker: Session 3159 (2026-08-29).
+
+Session 3159 reopened the regeneration-safe generated-symbol sweep for a
+bounded callable batch. The external generated snapshot had two exact
+companion matches that were not in the rename table: `static_5_800AF6AC` is
+`handleCraftSelectInput`, and `static_4_800E9B10` is
+`initObjectAnimAndDetail`. Each has a generated body and direct caller, and
+the companion symbol files independently provide the names and addresses.
+The rename helper now carries both mappings, while the external snapshot's
+header, bodies, and callsites were synchronized. This is source-only and
+does not change runtime behavior. Evidence:
+`scratch/agent/s3159_generated_symbol_rename.md`.
 
 Session 3158 completed the bounded static M3 audit of
 `musyxStoreVoiceAdsrParams`'s voice-indexed `0x88`-stride record accesses.
@@ -144,13 +155,12 @@ hangar `512`, or target-edge rows and no crash/abort. This selects
 unevaluable, and no audio, route, or VI behavior changed. Evidence:
 `scratch/agent/s3143_m5_port_vi_edge.md`.
 
-The regeneration-safe generated-symbol sweep is closed: the only remaining
-project placeholders are the deliberately preserved ambiguous fragments
-`fake_func_800AE3E4` and `fake_func_800B75C4`, both already audited. Session
-3137 also removed the last callable `func_0x...` placeholder from the external
-generated snapshot by naming the entry-local 16-byte clearing loop
-`clearMemory16ByteBlocks`. The next active engineering prerequisite is a new
-retail-grounded M5 boundary.
+The earlier callable-placeholder sweep was believed closed after the known
+`func_0x...` and ambiguous-fragment review, but Session 3159 found two
+`static_*` callable records outside that inventory. The active sweep now
+continues only for exact companion-qualified callable matches; ambiguous
+fragments remain preserved. The next active engineering prerequisite is a
+new retail-grounded M5 boundary once this bounded rename lead is exhausted.
 
 Session 3145 tested the block's claimed dependency instead of accepting it on
 precedent. The documented LLE-only/spin-yield/autopilot route was run directly
