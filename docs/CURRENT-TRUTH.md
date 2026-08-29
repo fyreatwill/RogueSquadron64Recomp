@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3237 (2026-08-29).
+Current maintenance marker: Session 3238 (2026-08-29).
 
 ## Current state
 
@@ -30,7 +30,14 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3236
 completed the Step 3 edge-selection gate without selecting an edge: the
 required target-phase port row is still absent, so no audio behavior change
 is authorized. Session 3237's fresh census selected a new unresolved repeated
-MusyX pointer class; the next unit is the bounded guard audit in `NEXT.md`.
+MusyX pointer class; Session 3238 split it by effective address. Four NPC-list
+uses are `0x80139750` and one objective float is `0x800A9750`, both aliases.
+The true MusyX chain has allocator writer `0x8008F228`, derived-head writer
+`0x80091074`, indexed command-list/synth consumers, and teardown frees at
+`0x80091E28`/`0x80091F78`. Allocation failure and stale-after-free ordering
+remain unchecked, so the true consumer class is unresolved and no guard or
+behavior change is authorized. Evidence:
+`scratch/agent/s3238_m3_musyx_pointer_audit.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection,
    but Step 3 edge selection is currently unevaluable.

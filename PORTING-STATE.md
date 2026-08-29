@@ -126920,3 +126920,26 @@ bounded writer/free/order audit of the complete `-0x68A8`/`-0x68B0` site list.
 Evidence: `scratch/agent/s3237_m3_pointer_class_census.md`.
 
 ORIGIN: diagnostic-only static census; no mitigation or guest value was changed.
+
+## Session 3238 (2026-08-29) — split MusyX pointer aliases and audited lifecycle
+
+Ran the bounded `-0x68A8`/`-0x68B0` static audit over the active generated
+tree, fixup-controlled paths, and companion symbol files. Effective-address
+recovery split four `guidedEffectNpcHandler` sites to `0x80139750` and the
+objective voice load to `0x800A9750`; these are non-audio aliases, not the
+MusyX globals at `0x80149758`/`0x80149750`. The true chain has allocator
+writer `allocateSongChannelArray:0x8008F228`, derived-head writer
+`musyxBuildVoiceCommandList:0x80091074`, indexed command-list/synth readers,
+and teardown frees at `0x80091E28`/`0x80091F78`. The allocator result is
+published without a success check and teardown does not visibly clear the
+published array in the recovered windows, so the true consumer class remains
+unresolved rather than proven safe. No build or runtime run was needed and no
+guard or behavior change was made. This rules out treating the split-address
+sites as one shared pointer class, but does not yet select allocation failure
+versus teardown ordering as the origin of a bad value.
+
+Evidence: `scratch/agent/s3238_m3_musyx_pointer_audit.md`.
+
+ORIGIN: the only true pointer writer is `allocateSongChannelArray` at
+`0x8008F228`; its value is legitimate on successful allocation, while null
+on failure and stale-after-free legitimacy remain unresolved.

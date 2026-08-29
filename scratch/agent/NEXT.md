@@ -1,35 +1,42 @@
-# NEXT work unit — bounded MusyX pointer-class guard audit
+# NEXT work unit — verify MusyX command-list allocation failure and teardown semantics
 
 HYPOTHESIS-ID: m3-musyx-pointer-class-audit
 
-Session 3237 selected a new repeated M3 class: unguarded MusyX pointer globals
-`0x80149758` (`-0x68A8`) and `0x80149750` (`-0x68B0`). The census did not
-authorize a guard; exact site recovery and writer/free ordering are next.
+Session 3238 split the repeated immediate class by effective address and
+found the true MusyX chain unresolved because `rs_malloc` publication has no
+success check and teardown does not visibly clear the published array. The
+next unit is one bounded static failure/order audit; do not add a runtime
+counter or build unless this audit identifies a concrete patch contract.
 
 ## Competing hypotheses
 
-- `H-LegitimatePublished`: allocator/build writers publish valid KSEG0 pointers
-  before every consumer and no guard is needed.
-- `H-UnresolvedConsumer`: at least one reader can consume an invalid or stale
-  pointer and needs a patch-based guard audit.
-- `H-NonAudioAlias`: out-of-region callers are unrelated aliases and must be
-  split from the MusyX class.
+- `H-AllocatorNeverNull`: the heap allocator is fatal or otherwise guarantees
+  a non-null result for these fixed-size audio allocations; the true consumers
+  are legitimately published and no guard is needed.
+- `H-NullConsumer`: `rs_malloc` can return zero and the indexed load/write
+  sequence at `0x80091060` can dereference it; a patch guard has a concrete
+  writer and failure contract.
+- `H-TeardownStale`: either teardown free can race or be followed by a synth
+  consumer because `0x80149758`/`0x80149750` are not cleared; the needed
+  contract is ordering/clear publication, not an allocation guard.
 
 ## Discriminator
 
-Recover the exact function/address for every `-0x68A8` and `-0x68B0` site in
-the generated tree, then grep all fixup rules for those sites. Enumerate
-writers, frees, aliases, and consumer dereferences; classify every site as
-guarded, proven in-range, or unresolved. Complete writer/free/order proof
-selects `H-LegitimatePublished`; one unresolved consumer selects
-`H-UnresolvedConsumer`; unrelated non-MusyX callers select `H-NonAudioAlias`.
-If a guard is selected, land it through `patches/` with an `ORIGIN:` line.
+Recover the `rs_malloc` failure return path and all callers/order edges around
+`allocateSongChannelArray`, `musyxSynthFrame`, `shutdownAudioEngine`, and
+`waitForMusyXAudioTaskDone`. A fatal/non-returning failure path plus teardown
+call exclusion selects `H-AllocatorNeverNull`; a returning zero reaching the
+published array selects `H-NullConsumer`; a post-free or concurrent consumer
+edge selects `H-TeardownStale`. If an actual guard or clear is selected, land
+only through `patches/`, with an `ORIGIN:` naming the writer and whether the
+value is legitimate.
 
 ## Exact commands
 
-1. `rg -n -- "-0X68A8|-0X68B0" ../N64Recomp/RecompiledFuncs/funcs_*.c`
-2. Recover exact function headers and bounded windows for every site; inspect
-   `tools/fixup*` for matching transformations.
-3. Enumerate writers/free edges and classify every site in a new
-   `scratch/agent/s3238_m3_*` report. Build only if the audit selects a
-   concrete patch-based guard; otherwise do not run the game.
+1. `rg -n -B8 -A35 "L_80001C74|jr.*ra|rs_malloc" ../N64Recomp/RecompiledFuncs/funcs_0.c`
+   and identify the return value on every allocator failure branch.
+2. `rg -n -B8 -A12 "allocateSongChannelArray|musyxSynthFrame|shutdownAudioEngine|waitForMusyXAudioTaskDone|8008F228|80091060|80091074|80091E28|80091F78" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/*.txt`
+   and recover callers plus teardown ordering.
+3. Write `scratch/agent/s3239_m3_musyx_pointer_order.md` with the selected
+   hypothesis and the full writer/consumer/free table. Build only if a
+   patch-based guard or ordering change is justified by the discriminator.
