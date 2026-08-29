@@ -1,9 +1,9 @@
-# NEXT work unit — validate the free-list guard ordering patch
+# NEXT work unit — validate the free-list guard ordering patch on a toolchain host
 
 HYPOTHESIS-ID: m3-freelist-guard-order
 
-Session 3242 landed a guard-class change in `patches/heap_guards.c`. Session
-3243 confirmed that this checkout cannot run the validation: the configured
+Session 3242 landed a guard-class change in `patches/heap_guards.c`. Sessions
+3243–3244 confirmed that this checkout cannot run the validation: the configured
 build has no `PatchesLib` target and the MIPS/N64Recomp prerequisites are
 absent. The next unit remains a bounded build/validation on a toolchain-capable
 host; do not infer runtime behavior from the source-only check.
@@ -38,4 +38,6 @@ valid-path build/link/route failure selects `H-GuardRegression`.
 
 The local `build/CMakeCache.txt` expects `E:/mips-toolchain` and a Debug
 `N64Recomp.exe`; `RecompiledPatches/patches.c` is not present. Do not substitute
-host Clang or the stale July `patches.map` for this validation.
+host Clang or the stale July `patches.map` for this validation. Human action
+required: provide or mount the Windows/toolchain-capable checkout, then rerun
+this exact work unit; no port-side M5 change is authorized before it.

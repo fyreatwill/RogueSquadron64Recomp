@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3243 (2026-08-29).
+Current maintenance marker: Session 3244 (2026-08-29).
 
 ## Current state
 
@@ -14,6 +14,12 @@ VI 512 (`0x006AB400`) on the validated spin-yield/F5-LLE route. Hangar visuals
 still have geometry/color artifacts. Audio is not production-complete: the
 Factor 5 image task is the qualified real-audio arm and `musyx_stub`/Broke is
 the silent control.
+
+Session 3244 re-attempted the prescribed guard validation. The configured
+Unix build has no `PatchesLib` target, its cache points at the unavailable
+`E:/mips-toolchain`, and `RecompiledPatches/patches.c` is absent. This is an
+environment block, not evidence for or against the guard. M5 Step 3 remains
+gated behind a successful MIPS/generated-host validation.
 
 Session 3241 supplied a new target-phase retail output relation: the
 independent oracle's `osViSwapBuffer` edge (`0x80035500`) runs from caller
@@ -54,16 +60,17 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Validate the Session 3242 free-list guard ordering patch through the MIPS
+1. On a host with the configured MIPS GCC and Debug `N64Recomp`, validate the
+   Session 3242 free-list guard ordering patch through the MIPS
    toolchain and generated host library. The patch now rejects an invalid
    `popped` pointer before active-queue publication and limits accepted
    pointers to `[0x80000000,0x80800000)`. `scratch/agent/s3242_m3_freelist_guard_order.md`
    records the source audit and local toolchain limitation.
-   Session 3243 could not execute this validation: the local CMake build has
+   Sessions 3243 and 3244 could not execute this validation: the local CMake build has
    no `PatchesLib` target because its configured `E:/mips-toolchain` and
    `N64Recomp` prerequisites are absent; generated host source is also absent.
-   This is an environment substitution, not evidence for or against the
-   guard. See `scratch/agent/SUBSTITUTION.md`.
+   This is an environment block, not evidence for or against the guard. See
+   `scratch/agent/BLOCKED.md`.
 2. Compare the Session 3241 retail target output relation against the port's
    corresponding `osViSwapBuffer`/VI commit row only after the guard patch is
    built and validated. Require the existing dispatch controls plus the target

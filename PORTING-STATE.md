@@ -127032,3 +127032,16 @@ configured checkout lacks the MIPS cross-compiler, so `PatchesLib` was not
 available and the MIPS/generated-host build remains pending; host Clang cannot
 parse the MIPS-only section attribute. This rules out only a local build
 verification, not the source change; it does not select an audio or VI cause.
+
+## Session 3244 (2026-08-29) — blocked on free-list guard validation host
+
+Re-attempted the single planned work unit with
+`cmake --build build --config Debug --target PatchesLib`. The configured Unix
+Makefiles build returned `No rule to make target PatchesLib` (exit code 2).
+The cache still requires `E:/mips-toolchain`, and `RecompiledPatches/patches.c`
+is absent, so the MIPS compile, N64Recomp generation, host-library link, and
+bounded runtime route could not run. This confirms the environment block in
+this iteration; it is not a source or runtime result. The guard hypotheses
+remain unresolved, and M5 Step 3 remains gated. No code behavior was changed.
+
+Evidence: `scratch/agent/BLOCKED.md`.
