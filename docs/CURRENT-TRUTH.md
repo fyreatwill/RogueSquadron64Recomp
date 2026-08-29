@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3118 (2026-08-28).
+Current maintenance marker: Session 3119 (2026-08-28).
 
 ## Current state
 
@@ -67,6 +67,16 @@ or hangar. This rejects the candidate as the target-phase publication
 boundary; it is a pre-title request-stage event whose relationship to the
 missing writer remains unresolved. This is single-source oracle evidence.
 
+Session 3119's complete static audit of the five remaining
+`requestViFeatureChange` callers classified them as mission/cutscene or menu
+maintenance, cinematic/player-record teardown, and post-transition hangar
+work. None is a target-phase 640-to-1024 publication handoff; the hangar call
+is explicitly after `beginSceneRenderFrame`. This selects
+`H-AlreadyEnumerated` for this caller family and moves the next retail probe to
+the unenumerated handoff between the pending request-mask store and VI
+descriptor publication. This is static evidence only and does not identify
+the writer. Evidence: `scratch/agent/s3119_m5_vi_request_callers.md`.
+
 The strongest route boundary remains the independent comparison: retail
 reaches title at 1024 and hangar at 512, while the recent same-build port
 capture issues only widths 320, 2, 640, and 640 and remains at VI 640. The
@@ -79,12 +89,12 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **M5 VI publication — enumerate the remaining request callers.** Perform
-   one bounded static audit of every remaining `requestViFeatureChange` caller,
-   classify each by caller phase and argument provenance, and select one
-   retail-testable handoff outside the closed ranges. The `0x800C2984` hit is
-   pre-title only and is closed as the target-phase boundary; do not repeat
-   its oracle watch or the closed direct-callsite/helper ranges.
+1. **M5 VI publication — retail-test the next handoff family.** Attribute the
+   first store/call after the pending request-mask write and before the VI
+   descriptor changes from 640 to 1024, with whole-RDRAM, title, and hangar
+   controls in the same run. The five remaining request callers are now
+   classified and closed as the missing transition boundary; do not repeat
+   those watches, `0x800C2984`, or the closed direct-callsite/helper ranges.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed

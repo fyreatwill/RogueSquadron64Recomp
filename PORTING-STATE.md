@@ -124772,6 +124772,31 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3119 (2026-08-28) — classified remaining VI request callers
+
+Performed the single bounded static audit requested by the prior iteration.
+Read the current generated definitions and classified every remaining
+`requestViFeatureChange` caller: `0x80044BAC` in `cutsceneActorNpcHandler` is
+mission/cutscene actor maintenance with a dynamic global argument;
+`0x800AFA70` in `tickCraftSelectScreen` is a menu request with immediate
+argument 1; `0x800AF644` in `cinematicDeactivator` and `0x800B42BC` in
+`destroyPlayerShipRecord` are conditional teardown requests with immediate
+argument 8; and `0x800ADB34` in `updateHangarBayScene` forwards its input after
+`beginSceneRenderFrame` and is therefore post-transition hangar work. Every
+edge reaches the pending request-mask store at `0x80128E90`, but none is a
+640-to-1024 title publication handoff. The complete table is recorded in
+`scratch/agent/s3119_m5_vi_request_callers.md`.
+
+This selects `H-AlreadyEnumerated` for the caller family and rules out using
+these five PCs as the missing transition writer. It does not identify the
+writer and provides no retail attribution; the next unit moves the independent
+oracle to the unenumerated handoff between the pending-mask write and VI
+descriptor publication. No build, runtime instrumentation, or port behavior
+changed.
+
+ORIGIN: static classification only; no mitigation, guard, audio, route, or
+generated instruction behavior changed.
+
 ## Session 3118 (2026-08-28) — rejected pre-title menu VI handoff
 
 Ran the independent retail oracle with Rice video, the validated Start

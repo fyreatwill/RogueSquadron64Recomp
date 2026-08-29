@@ -1,31 +1,35 @@
-# NEXT work unit — audit remaining VI request handoffs
+# NEXT work unit — retail boundary for the next VI publication handoff family
 
 HYPOTHESIS-ID: m5-retail-video-publication-boundary
 
 ## Single work unit
 
-Audit all remaining callers of `requestViFeatureChange` in the generated tree
-(`0x80044BAC`, `0x800AFA70`, `0x800AF644`, `0x800B42BC`, and `0x800ADB34`),
-using bounded source windows and caller/argument provenance. Produce one
-short audit artifact that chooses the highest-information-value retail PC for
-the next oracle run. Do not instrument or build the port in this unit.
+Use `scratch/agent/s3119_m5_vi_request_callers.md` to move the independent
+retail oracle to the next unenumerated handoff family: attribute the first
+write/call after the pending request-mask store and before the VI descriptor
+changes from 640 to 1024. Build one watch set containing the whole-RDRAM
+positive control, title/hangar phase controls, and the complete candidate PC
+range; do not repeat `0x800C2984`, `0x8001A098:0x8001BB6C`, or the closed
+selector/helper range. Do not instrument or build the port in this unit.
 
 ## Competing hypotheses
 
-- H-RemainingCaller: one of the five callers is executed at the 640-to-1024
-  transition and hands off the missing publication state.
-- H-AlreadyEnumerated: all five are pre-title or post-publication requests;
-  the writer is outside `requestViFeatureChange` callers.
-- H-Ambiguous: static provenance cannot distinguish a target-phase caller;
-  the next useful probe must move to a different handoff family.
+- H-NextHandoff: a retail-attributed store/call between the request-mask write
+  and descriptor publication identifies the missing writer boundary.
+- H-OutsideInterval: the descriptor changes through a writer outside the
+  watched interval, so the next probe must widen to the descriptor consumer or
+  VI register handoff.
+- H-NoTransition: the retail run reaches title without a directly attributable
+  descriptor write in either family, indicating a deferred/frame-boundary
+  publication path.
 
 ## Discriminating measurement
 
-The discriminating measurement is the complete caller classification table:
-an identified target-phase caller with a concrete argument and path to the
-pending word selects H-RemainingCaller; only pre-title/post-publication
-callers selects H-AlreadyEnumerated; unresolved phase/provenance selects
-H-Ambiguous. The prior oracle run is the independent negative control for
+The discriminating measurement is the PC-attributed write/call sequence across
+the 640→1024 transition. A candidate in the interval with a matching
+descriptor write selects H-NextHandoff; no candidate but a descriptor write in
+the widened consumer handoff selects H-OutsideInterval; no descriptor write
+with passed phase controls selects H-NoTransition. The prior oracle run is the independent negative control for
 `0x800C2984`: it fired once at 640 pre-title, while the whole-RDRAM control
 and title/hangar phase controls passed.
 
