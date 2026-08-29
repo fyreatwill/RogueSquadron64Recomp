@@ -125514,3 +125514,19 @@ The gate policy values and all task, slot, voice, and PCM target-phase nulls are
 therefore unevaluable. This rules out neither `H-Step6-PolicyApplied` nor
 `H-Step6-PolicyBypassed`, and confirms the route block remains upstream of the
 drain call. Evidence: `scratch/agent/s3153_m5_step6_policy_qualification.md`.
+## Session 3154 (2026-08-29) — audited `musyxStopVoice` computed-record offset
+
+Performed the planned complete static M3 audit of `musyxStopVoice`'s only
+nonzero-offset computed-record access, the byte store at guest PC
+`0x80092384`. The base loaded from `0x801496F8` is checked for the KSEG0
+range before the store. The generated tree has one call, from
+`tickAllAudioChannels` at `0x8008CED0`, passing `s6`; no second call, function
+pointer entry, or `get_function` lookup is recoverable. The callsite's local
+flow does not provide a dominating `<0x20` test for `s6`, so the
+handle/index-to-voice-record contract remains `H-M3-UnclassifiedProducer` on
+single-source static evidence. This rules out treating the base check as a
+complete record-range proof and rules out adding a guard or changing audio
+behavior. No build, run, oracle watch, generated-source edit, or mitigation
+was made.
+
+Evidence: `scratch/agent/s3154_m3_musyx_stop_voice_offset_audit.md`.
