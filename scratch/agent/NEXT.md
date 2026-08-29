@@ -1,33 +1,37 @@
-# NEXT work unit — oracle-test the newly identified menu VI handoff
+# NEXT work unit — audit remaining VI request handoffs
 
 HYPOTHESIS-ID: m5-retail-video-publication-boundary
 
 ## Single work unit
 
-Run the independent retail oracle with a physical execution watch for guest
-PC `0x800C2984` (`runMenuModelViewerScreen`), retaining the whole-RDRAM
-positive control and title/hangar VI phase controls. This is the next test of
-the static candidate documented in
-`scratch/agent/s3117_m5_retail_handoff_static/AUDIT.md`.
+Audit all remaining callers of `requestViFeatureChange` in the generated tree
+(`0x80044BAC`, `0x800AFA70`, `0x800AF644`, `0x800B42BC`, and `0x800ADB34`),
+using bounded source windows and caller/argument provenance. Produce one
+short audit artifact that chooses the highest-information-value retail PC for
+the next oracle run. Do not instrument or build the port in this unit.
 
 ## Competing hypotheses
 
-- H-NewHandoff: `0x800C2984` is on the 640-to-1024 publication path.
-- H-ExistingConsumer: it only requests/consumes state after publication; the
-  writer is elsewhere.
-- H-DeadOrAliased: it is unreachable in the retail route or overlay-aliased.
+- H-RemainingCaller: one of the five callers is executed at the 640-to-1024
+  transition and hands off the missing publication state.
+- H-AlreadyEnumerated: all five are pre-title or post-publication requests;
+  the writer is outside `requestViFeatureChange` callers.
+- H-Ambiguous: static provenance cannot distinguish a target-phase caller;
+  the next useful probe must move to a different handoff family.
 
 ## Discriminating measurement
 
-The watch must fire with a transition-time timestamp/phase attribution. A hit
-at the 640-to-1024 transition, with the pending-word write and later title
-phase, selects H-NewHandoff. Hits only after title/hangar publication select
-H-ExistingConsumer. No candidate hit while the positive control and phase
-controls pass selects H-DeadOrAliased.
+The discriminating measurement is the complete caller classification table:
+an identified target-phase caller with a concrete argument and path to the
+pending word selects H-RemainingCaller; only pre-title/post-publication
+callers selects H-AlreadyEnumerated; unresolved phase/provenance selects
+H-Ambiguous. The prior oracle run is the independent negative control for
+`0x800C2984`: it fired once at 640 pre-title, while the whole-RDRAM control
+and title/hangar phase controls passed.
 
 ## Exact run requirements
 
-Use the oracle recipe under `tools/oracle/README.md`; arm the whole-RDRAM
-positive control first, add the `0x800C2984` physical-PC watch, and keep the
-title/hangar VI phase watches. Do not modify the port or repeat the closed
-`0x8001A098:0x8001BB6C` ranges.
+Read the generated callers and the relevant `requestViFeatureChange` body in
+bounded windows; record caller phase, argument source, and whether the edge
+can reach the pending-word store. Do not modify the port or repeat the closed
+`0x800C2984`, `0x8001A098:0x8001BB6C`, or selector/helper watches.

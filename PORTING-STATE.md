@@ -124772,6 +124772,25 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3118 (2026-08-28) — rejected pre-title menu VI handoff
+
+Ran the independent retail oracle with Rice video, the validated Start
+schedule, VI tracing, and the whole-RDRAM positive-control watch armed first.
+The control reached its 10,000 visible-hit threshold and continued counting;
+retail reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`.
+
+The execution watch for `0x800C2984` fired exactly once at 3.3s, while VI was
+already 640-wide at origin `0x0066A500`. It did not fire during the
+640-to-1024 transition or in title/hangar. This rejects the candidate as the
+target-phase VI publication boundary. It remains a pre-title request-stage
+event; the missing writer is still unlocated. This is single-source oracle
+evidence, with the positive control and target-phase controls valid.
+
+Evidence: `scratch/agent/s3118_m5_retail_handoff_oracle/run.log`.
+
+ORIGIN: qualification-only retail boundary attribution; no port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
+
 ## Session 3117 (2026-08-28) — audited new retail VI handoff candidate
 
 Performed the bounded static audit requested by the previous work unit. The

@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3117 (2026-08-28).
+Current maintenance marker: Session 3118 (2026-08-28).
 
 ## Current state
 
@@ -58,6 +58,15 @@ Session 3117's static audit identified guest PC `0x800C2984` in
 selector range. It is a candidate boundary only; no runtime behavior changed
 and retail attribution is still required.
 
+Session 3118's independent retail-oracle capture passed the whole-RDRAM
+positive control (10,000 visible writes and 10,000 additional counted writes),
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, and executed
+`0x800C2984` exactly once at 3.3s during the already-live 640 phase
+(`0x0066A500`). It did not execute at the 640-to-1024 transition or in title
+or hangar. This rejects the candidate as the target-phase publication
+boundary; it is a pre-title request-stage event whose relationship to the
+missing writer remains unresolved. This is single-source oracle evidence.
+
 The strongest route boundary remains the independent comparison: retail
 reaches title at 1024 and hangar at 512, while the recent same-build port
 capture issues only widths 320, 2, 640, and 640 and remains at VI 640. The
@@ -70,11 +79,12 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **M5 VI publication — test the new handoff.** Use the retail oracle to
-   watch guest PC `0x800C2984` with a whole-RDRAM positive control and
-   title/hangar phase controls. Transition-time execution selects the new
-   handoff; target-only execution makes it a consumer; no execution with
-   valid controls makes it dead or aliased. Do not repeat closed ranges.
+1. **M5 VI publication — enumerate the remaining request callers.** Perform
+   one bounded static audit of every remaining `requestViFeatureChange` caller,
+   classify each by caller phase and argument provenance, and select one
+   retail-testable handoff outside the closed ranges. The `0x800C2984` hit is
+   pre-title only and is closed as the target-phase boundary; do not repeat
+   its oracle watch or the closed direct-callsite/helper ranges.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed
