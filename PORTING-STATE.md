@@ -126018,3 +126018,12 @@ a data-gap rename there; continue at `0x801C0000..0x801D0000`.
 The queued M5 validation tail also reported `s2680` launch failure `rc=127`
 at zero seconds; it supplies no runtime evidence and does not change the M5
 route blocker.
+
+## Session 3187 (2026-08-29) — synchronized generated data-gap reference
+
+Ran the regeneration-safe symbol helper on the selected exact batch at
+`0x800027B8`. The generated body was already named `data_gap_800027B8`, but
+`funcs.h` and `recomp_overlays.inl` still referenced
+`fake_func_800027B8`; the helper renamed exactly 2 references in 2 files.
+The focused diff has no runtime logic change. This selects `H-DataGap` for
+this record and rules out a remaining stale placeholder at the address.

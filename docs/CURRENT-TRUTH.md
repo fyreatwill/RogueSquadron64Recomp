@@ -6,7 +6,12 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3186 (2026-08-29).
+Current maintenance marker: Session 3187 (2026-08-29).
+
+Session 3187 synchronized the remaining stale generated reference for
+`0x800027B8`: the generated body is `data_gap_800027B8`, and the helper
+renamed its `funcs.h` declaration and overlay-table entry from
+`fake_func_800027B8`. No runtime behavior changed.
 
 Session 3186 completed the bounded generated-symbol sweep for
 `0x801B0000..0x801C0000`. The required-rename helper selected zero generated
@@ -812,7 +817,10 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    `0x801B0000..0x801C0000`, closed by Session 3186: the helper selected zero
    generated references, the independent definition search found no stale
    placeholder, and the companion symbol files had no record in the band.
-   Continue at `0x801C0000..0x801D0000` and preserve ambiguous fragments.
+   Session 3187 synchronized the stale declaration and overlay-table
+   references for `0x800027B8` to the established `data_gap_800027B8` name.
+   Resume at the next unclassified generated record and preserve ambiguous
+   fragments.
 
 5. **External retail-entry boundary — compare the new wait predecessors after
    a route change.** Session 3185's independent retail oracle found
