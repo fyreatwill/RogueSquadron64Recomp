@@ -157,6 +157,9 @@ RENAMES = {
     # These short menu-overlay records are isolated fragments between complete
     # callable bodies; the generated B89F4 body is an invalid-data trap.
     "fake_func_800B2628": "data_gap_800B2628",
+    # The companion map marks this short mission-overlay record as a defined
+    # non-callable fragment between named bodies.
+    "fake_func_800B75C4": "data_gap_800B75C4",
     "fake_func_800B89F4": "data_gap_800B89F4",
     # The companion map marks this defined 8-byte record as having no
     # accompanying real function; the generated body is invalid data.

@@ -125707,3 +125707,18 @@ of a retail-invalid index. No guard, audio behavior, generated source, build,
 or runtime run changed.
 
 Evidence: `scratch/agent/s3165_m3_musyx_store_voice_index_producer_audit.md`.
+
+## Session 3166 (2026-08-29) — synchronized generated data-gap placeholder
+
+The mandatory no-churn pivot selected the generated-symbol renaming sweep.
+The external generated snapshot had one remaining placeholder function body
+at `0x800B75C4`. Companion mission-overlay metadata identifies its 12-byte
+record as a non-callable fragment between `findLockOnTarget` and
+`playerYwingInit`, so it was renamed mechanically to `data_gap_800B75C4`.
+The regeneration helper mapping, project symbol table, generated header,
+generated body, and overlay registration now agree. The helper reported three
+changed references. The other placeholder records remain ambiguous or
+explicitly preserved and were not changed. This rules out treating this
+record as a callable game routine; it does not change runtime behavior.
+
+No build or game run was needed for this source-only synchronization.

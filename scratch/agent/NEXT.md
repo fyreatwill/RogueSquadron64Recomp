@@ -1,37 +1,38 @@
-# NEXT work unit — bounded M3 audit of `musyxInitVoiceFromSample` descriptor producers
+# NEXT work unit — generated-symbol renaming sweep, next bounded placeholder batch
 
-HYPOTHESIS-ID: m3-idiom-audit
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the unresolved descriptor-pointer edge at `musyxInitVoiceFromSample`
-(`0x80092128`). Enumerate both generated callers, the complete construction
-and writer inventory for their `$a1` sample descriptor, all pointer/range
-checks and dispatch edges, and companion symbol/ELF metadata. Static audit
-only: no build, run, guard, or audio change.
+Continue the regeneration-safe sweep from the next unresolved generated
+placeholder. Require an exact companion address, an existing generated
+definition, and either a non-callable/data-gap classification or a defensible
+semantic name. Preserve ambiguous fragments and overlay collisions. Session
+3166 renamed `fake_func_800B75C4` to `data_gap_800B75C4` in the project symbol
+table, rename helper, and external generated snapshot.
 
 Competing hypotheses and discriminating measurement:
 
-- `H-M3-Proven`: both reachable callers pass a live, bounded descriptor
-  pointer whose fields are valid for the callee's reads.
-- `H-M3-Unclassified`: a reachable caller lacks that proof, or descriptor
-  population is through an unrecovered data/DMA/indirect producer; this is not
-  proof of a retail-invalid pointer.
-- `H-M3-Dead`: the apparent call/access is unreachable or lowering-only.
+- `H-SemanticMatch`: a placeholder has an exact companion-qualified semantic
+  function name and can be propagated without ambiguity.
+- `H-DataGap`: a placeholder is independently classified as a non-callable
+  fragment and can be renamed mechanically to `data_gap_<address>`.
+- `H-Ambiguous`: the companion record is fake/duplicate/overlay-colliding or
+  lacks enough evidence; it must remain unchanged.
 
-The discriminator is one complete caller/producer table with guest PCs,
-argument construction, descriptor writers, range checks, dispatch edges, and
-independent companion symbol/ELF confirmation. A fully bounded table selects
-Proven; an unbounded or unrecovered reachable producer selects Unclassified;
-no reachable call selects Dead.
+The discriminator is one bounded sweep table: every candidate in the selected
+interval is classified against companion symbols and generated definitions,
+then the helper must report at least one changed reference. An exact match
+selects SemanticMatch or DataGap; ambiguous entries remain untouched.
 
 Exact starting commands:
 
 ```sh
-rg -n 'musyxInitVoiceFromSample|0x80092128|0x8009212C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n 'musyxInitVoiceFromSample|0x80092128|sampleDesc|sample' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files /Users/williambuckley/Documents/Tools/rogue_squadron64/build
+python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x800B75D0 --end-address 0x800C0000 --limit 16 --require-rename
+rg -n '^RECOMP_FUNC void (func|fake_func)_' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
 ```
 
-Expected outcome: a complete static table selects exactly one of
-`H-M3-Proven`, `H-M3-Unclassified`, or `H-M3-Dead`; no runtime probe or build
-is authorized.
+Expected outcome: the next batch either renames at least one exact candidate,
+or proves the bounded interval contains only synchronized/ambiguous entries;
+if the latter occurs, select the next address band in the same sweep rather
+than running another observation-only M3 audit.

@@ -6,7 +6,17 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3165 (2026-08-29).
+Current maintenance marker: Session 3166 (2026-08-29).
+
+Session 3166 completed a bounded generated-symbol sweep pivot. The external
+generated snapshot had one remaining callable-shaped placeholder at
+`0x800B75C4`; companion metadata classifies its 12-byte record as a
+non-callable mission-overlay fragment between named bodies. The regeneration
+helper now maps `fake_func_800B75C4` to `data_gap_800B75C4`, and the project
+symbol table plus generated header/body/overlay table were synchronized. The
+three-reference helper run changed exactly those generated records; ambiguous
+placeholder records were not touched. This is source-only and does not alter
+runtime behavior.
 
 Session 3165 completed the bounded static M3 audit of the
 `musyxStoreVoiceAdsrParams` voice-index producer edge. The sole callsite loads
@@ -558,7 +568,12 @@ controls. A same-build policy control was attempted but did not reach the
 drain gate. The next work unit is a bounded M3 idiom-class audit; do not remove
 the status-03 wait hatch.
 
-1. **M3 crash work — audit the next bounded idiom-class inventory entry.**
+1. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+   The current route remains blocked before target phases, so do not repeat the
+   same qualification. Resume after a human-selected route change or an
+   equivalent new retail-grounded boundary.
+
+2. **M3 crash work — audit the next bounded idiom-class inventory entry.**
    Session 3158 audited `musyxStoreVoiceAdsrParams`: its one reachable caller
    passes a byte-loaded index without a local `<64` proof, and all four
    indexed stores remain unclassified. Session 3157 audited
@@ -587,25 +602,24 @@ the status-03 wait hatch.
    `0x800A0000..0x800B0000` is closed by Session 3160; resume it only in a
    different address band after M3 is no longer actionable.
 
-2. **M5 route reachability — obtain a route-change direction.** The paired
+3. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI
    640. A human-selected upstream route change or equivalent local
    retail-grounded source is required; do not repeat the current edge capture.
 
-3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
-   Resume only when a port run reaches target phases. Use the phase-keyed
-   task/DMA/return/service/slot/voice/MORT/PCM table with image and silent
-   arms in one build/run. A qualification result alone does not authorize a
-   gate, wait, voice, destination, or output change.
+4. **Generated-symbol renaming sweep.** The mandatory pivot resumed this
+   regeneration-safe campaign. Session 3166 synchronized the explicit data
+   gap at `0x800B75C4`; continue with the next bounded address interval only
+   when the helper can land a real rename. Preserve ambiguous fragments.
 
-4. **External retail-entry boundary.** Parked after the candidate set was
+5. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC
    attribution.
 
-5. **M4 accumulator origin.** Parked because the latest route qualification
+6. **M4 accumulator origin.** Parked because the latest route qualification
    had no target-phase positive-control rows. Do not interpret its nulls.
 
-6. **M5 SP-yield lifecycle and CPU-side MORT publication.** Parked pending a
+7. **M5 SP-yield lifecycle and CPU-side MORT publication.** Parked pending a
    route angle that reaches target phases. The corrected MORT descriptor edge
    is `+0x190` to `dmaVoiceSampleAndSignal`; `+0x194` is the speech source.
 
