@@ -6,7 +6,14 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3181 (2026-08-29).
+Current maintenance marker: Session 3182 (2026-08-29).
+
+Session 3182 completed the bounded generated-symbol sweep for
+`0x80180000..0x80190000`. The required-rename helper selected zero generated
+references and returned its expected no-rename error; an independent
+generated-definition search found no placeholder body in the interval. The
+band is closed without a semantic rename. Evidence:
+`scratch/agent/s3182_generated_symbol_sweep.md`.
 
 Session 3181 completed the bounded generated-symbol sweep for
 `0x80170000..0x80180000`. The required-rename helper selected zero generated
@@ -760,7 +767,9 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    `0x80007064` and `0x800AE3E4`. Session 3181 closed
    `0x80170000..0x80180000`: the helper selected zero generated references
    and the independent definition search found no stale placeholder body.
-   Continue at `0x80180000..0x80190000` and preserve ambiguous fragments.
+   Session 3182 closed `0x80180000..0x80190000` the same way: zero generated
+   references and no stale placeholder definition. Continue at the next
+   unexamined address band and preserve ambiguous fragments.
 
 5. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC
