@@ -8,6 +8,14 @@ read.
 
 Current maintenance marker: Session 3176 (2026-08-29).
 
+Session 3177 completed the bounded generated-symbol sweep for
+`0x80140000..0x80150000`. The companion census visibly selected
+`0x80149470 aspTask` as already synchronized; the required-rename helper
+changed zero references and returned its expected no-rename error, while an
+independent generated-definition search found no placeholder body in the
+interval. The band is closed without a semantic rename. Evidence:
+`scratch/agent/s3177_generated_symbol_sweep.md`.
+
 Session 3176 completed the bounded generated-symbol sweep for
 `0x80130000..0x80140000`. The companion census visibly classified the
 selected records as already synchronized or ambiguous/fake; the required-
@@ -711,7 +719,10 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    ambiguous/fake, with zero stale placeholder definitions. Continue at
    Session 3176 closed `0x80130000..0x80140000` as already synchronized or
    ambiguous/fake, with zero stale placeholder definitions. Continue at
-   `0x80140000..0x80150000` and preserve ambiguous fragments.
+   Session 3177 closed `0x80140000..0x80150000`: the only selected record was
+   already synchronized, with zero changed references and no stale generated
+   placeholder definition. Continue at `0x80150000..0x80160000` and preserve
+   ambiguous fragments.
 
 5. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC
