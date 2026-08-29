@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3077 (2026-08-28).
+Current maintenance marker: Session 3078 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,18 @@ completion, not PCM correctness. The M5 route dependency remains open, but
 static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3078 completed the bounded six-surface audit at `0x80056344`. The
+companion map, generated body, header, overlay registration, and project TOML
+agree on a 12-byte three-instruction fragment between `clearActiveVoiceLine`
+and `initNpcBookkeepingTables`; there is no prologue, return sequence, caller,
+or independent semantic identity. This selects H-Fragment, so the placeholder
+was renamed mechanically to `data_gap_80056344` across the regeneration-safe
+mapping and generated tree. The next sweep candidate is `fake_func_80059B4C`.
+Evidence: `scratch/agent/s3078_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
 
 Session 3077 landed a bounded generated-symbol rename batch in the sibling
 recompiled tree. `fake_func_800B47C4` and `fake_func_800B58B4` were renamed to

@@ -792,7 +792,7 @@ functions = [
     { name = "freeSubtitleOverlay", vram = 0x800562AC, size = 0x34 },
     { name = "setActiveVoiceLine", vram = 0x800562E0, size = 0x50 },
     { name = "clearActiveVoiceLine", vram = 0x80056330, size = 0x14 },
-    { name = "fake_func_80056344", vram = 0x80056344, size = 0xC },
+    { name = "data_gap_80056344", vram = 0x80056344, size = 0xC },
     { name = "initNpcBookkeepingTables", vram = 0x80056350, size = 0x10C },
     { name = "load_hmt_and_hob", vram = 0x8005645C, size = 0x948 },
     { name = "isHobObjectLoaded", vram = 0x80056DA4, size = 0x10C },

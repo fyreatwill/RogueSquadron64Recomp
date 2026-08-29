@@ -124130,6 +124130,24 @@ no behavior or audio route changed. Evidence:
 
 ORIGIN: qualification-only static audit. No runtime, generated instruction,
 route, audio, or mitigation behavior changed.
+## Session 3078 (2026-08-28) — classified 0x80056344 generated fragment
+
+The mandated generated-symbol-renaming sweep audited `fake_func_80056344`
+against the companion map, generated body, callers, header, overlay
+registration, and project TOML. The entry is a 12-byte, three-instruction
+fragment between `clearActiveVoiceLine` and `initNpcBookkeepingTables`, with
+no prologue, return sequence, caller, or independent semantic identity. This
+selects H-Fragment rather than a human callable name. It was renamed
+mechanically to `data_gap_80056344` across the companion map, project TOML,
+generated definition/declaration/registration, and regenerated `redefs.txt`.
+
+This rules out a defensible semantic rename at this boundary while removing
+the placeholder from the generated tree; it makes no runtime or audio claim.
+Evidence: `scratch/agent/s3078_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No mitigation, runtime, generated
+instruction, route, audio, or behavior changed.
+
 ## Session 3077 (2026-08-28) — renamed menu and A-wing preambles
 
 The mandated no-churn pivot selected the generated-symbol-renaming sweep.
