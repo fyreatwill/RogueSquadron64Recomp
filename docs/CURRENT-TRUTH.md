@@ -8,6 +8,12 @@ read.
 
 Current maintenance marker: Session 3196 (2026-08-29).
 
+Session 3197 advanced the generated-symbol sweep by classifying the invalid
+data-decoded split at `0x800A2924` as `data_gap_800A2924`. The regeneration-
+safe helper synchronized the generated body, header, and overlay registration;
+no runtime behavior changed. Evidence:
+`scratch/agent/s3197_generated_symbol_rename.md`.
+
 Session 3196 advanced the generated-symbol sweep by classifying the invalid
 data-decoded split at `0x800A2790` as `data_gap_800A2790`. The regeneration-
 safe helper synchronized the generated body and header; no runtime behavior
@@ -885,7 +891,7 @@ Do not remove the status-03 wait hatch.
    synchronized `0x800A2218` as `data_gap_800A2218`; Session 3194 classified
    and synchronized `0x800A23BC` as `data_gap_800A23BC`; Session 3195
    classified and synchronized `0x800A2558` as `data_gap_800A2558`. Resume at
-   `0x800A2924`, the next unclassified generated record, and preserve
+   `0x800A29BC`, the next unclassified generated record, and preserve
    ambiguous fragments.
 
 5. **External retail-entry boundary — compare the new wait predecessors after
