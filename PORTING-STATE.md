@@ -124486,3 +124486,20 @@ changed. Evidence: `scratch/agent/s3094_m5_vi_mode_publication/AUDIT.md`.
 
 ORIGIN: qualification-only publication/consumer attribution; no mitigation
 or runtime behavior change.
+## Session 3095 (2026-08-28) — synchronized 0x80041EEC data-gap symbol
+
+The bounded six-surface generated-symbol audit examined `0x80041EEC`. The
+companion map documents a defined 4-byte record before
+`allocAndInitDoublyLinkedNodePool12`, not a callable function. The generated
+body contains only `lw $t2, 0x12C($sp)`, with no prologue or return sequence;
+no independent caller exists. The generated header, overlay registration,
+rename mapping, and companion source already use `data_gap_80041EEC`; the
+project TOML was the only stale surface and is now synchronized. An
+independent uniqueness check found no stale project-TOML placeholder or
+duplicate destination. This selects H-Fragment and rules out an exact
+callable identity and an ambiguous record. No build or game run was needed.
+
+Evidence: `scratch/agent/s3095_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
+runtime, route, audio, mitigation, or generated instruction behavior changed.

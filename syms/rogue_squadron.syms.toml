@@ -653,7 +653,7 @@ functions = [
     { name = "assignNpcTargetAndPosition", vram = 0x80041D8C, size = 0xC0 },
     { name = "setNpcForwardVectorByIndex", vram = 0x80041E4C, size = 0x60 },
     { name = "resolveNpcContextByIndex", vram = 0x80041EAC, size = 0x40 },
-    { name = "fake_func_80041EEC", vram = 0x80041EEC, size = 0x4 },
+    { name = "data_gap_80041EEC", vram = 0x80041EEC, size = 0x4 },
     { name = "allocAndInitDoublyLinkedNodePool12", vram = 0x80041EF0, size = 0xB4 },
     { name = "rasterizeEdgeXSpansAscending", vram = 0x80041FA4, size = 0x174 },
     { name = "rasterizeEdgeXSpansDescending", vram = 0x80042118, size = 0x180 },

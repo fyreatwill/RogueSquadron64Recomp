@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3094 (2026-08-28).
+Current maintenance marker: Session 3095 (2026-08-28).
+
+Session 3095 completed the bounded six-surface audit at `0x80041EEC`. The
+companion map, generated body, callers, header, overlay registration, rename
+mapping, and project TOML agree that this is a 4-byte non-callable record
+before `allocAndInitDoublyLinkedNodePool12`; the project TOML was the only
+stale surface and now uses `data_gap_80041EEC`. The next unresolved project
+placeholder is `fake_func_800457CC`. Evidence:
+`scratch/agent/s3095_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
+runtime, route, audio, mitigation, or generated instruction behavior changed.
 
 Session 3094 ran the independent M5 VI-mode publication/consumer handoff
 capture after rebuilding Debug. Retail passed the whole-RDRAM positive control
@@ -704,7 +715,8 @@ parked pending a new discriminator.
 1. **Generated-symbol sweep — continue with exact companion identities.** The
    M5 route probes in Sessions 3091–3094 have not reached a target-phase
    discriminator; park the route thread rather than adding another field.
-   Resume at the next unresolved placeholder after `filterVoiceSampleBlockPreamble`.
+   Resume at the next unresolved project placeholder, currently
+   `fake_func_800457CC`.
    Audit companion map, generated body, callers, header, overlay registration,
    project TOML, and local duplicates; preserve fragments/data gaps and do not
    invent semantic names. Keep `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
