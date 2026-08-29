@@ -2,9 +2,11 @@
 
 HYPOTHESIS-ID: m3-freelist-guard-order
 
-Session 3242 landed a guard-class change in `patches/heap_guards.c`. The next
-unit is a bounded build/validation of that patch once the MIPS toolchain is
-available; do not infer runtime behavior from the source-only check here.
+Session 3242 landed a guard-class change in `patches/heap_guards.c`. Session
+3243 confirmed that this checkout cannot run the validation: the configured
+build has no `PatchesLib` target and the MIPS/N64Recomp prerequisites are
+absent. The next unit remains a bounded build/validation on a toolchain-capable
+host; do not infer runtime behavior from the source-only check.
 
 ## Competing hypotheses
 
@@ -31,3 +33,9 @@ valid-path build/link/route failure selects `H-GuardRegression`.
    `RecompiledPatches/patches.c` contains the override.
 3. Run the existing bounded route with the normal positive controls and
    inspect for valid allocator progress and absence of a pre-publication AV.
+
+## Environment prerequisite
+
+The local `build/CMakeCache.txt` expects `E:/mips-toolchain` and a Debug
+`N64Recomp.exe`; `RecompiledPatches/patches.c` is not present. Do not substitute
+host Clang or the stale July `patches.map` for this validation.

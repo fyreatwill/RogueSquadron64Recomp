@@ -127008,6 +127008,18 @@ and VI relation. No mitigation or guest value was changed.
 
 Evidence: `scratch/agent/s3241_m5_vi_swap_target.md` and
 `scratch/agent/soak_results/s3241_m5_vi_swap_target/oracle.log`.
+## Session 3243 (2026-08-29) — checked free-list guard build prerequisites
+
+Attempted the single planned work unit: validating Session 3242's
+free-list-guard ordering patch through `cmake --build build --config Debug
+--target PatchesLib`. The configured Unix Makefiles build returned `No rule to
+make target PatchesLib`; its CMake condition is disabled because the cache
+expects `E:/mips-toolchain` and a Debug `N64Recomp.exe`, neither available in
+this checkout/host. The MIPS compiler and `N64Recomp` were also absent from
+PATH, `RecompiledPatches/patches.c` was absent, and the checked-in map predates
+the edit. This is a toolchain availability result, not a guard correctness
+result. The planned compile/link/runtime discriminator remains unevaluable.
+No code behavior was changed. See `scratch/agent/SUBSTITUTION.md`.
 ## Session 3242 (2026-08-29) — moved free-list guard before queue publication
 
 Audited the patch-owned `func_80007D74` free-list pointer-validation class.
