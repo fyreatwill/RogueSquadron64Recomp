@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3100 (2026-08-28).
+Current maintenance marker: Session 3101 (2026-08-28).
+
+Session 3101 completed the bounded six-surface audit at `0x800AF6A8`. The
+companion map retains only the fake marker, while the active generated body
+is an explicit trap-filled invalid-data record with no callable prologue,
+return, caller, or semantic identity. The adjacent positive-control entry
+`handleCraftSelectInput` at `0x800AF6AC` remains intact. The record is now
+synchronized as `data_gap_800AF6A8` across the generated body, header, overlay
+registration, project TOML, and rename tooling. Evidence:
+`scratch/agent/s3101_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
+runtime, route, audio, mitigation, or generated instruction behavior changed.
 
 Session 3100 completed the bounded six-surface audit at `0x800AE3E4`. The
 12-byte mission record is an instruction-only fragment with no callable
@@ -774,8 +786,9 @@ parked pending a new discriminator.
    M5 route probes in Sessions 3091–3094 have not reached a target-phase
    discriminator; park the route thread rather than adding another field.
    Resume at the next unresolved project placeholder, currently
-   `fake_func_800AE3E4`, now audited and preserved; continue at the next
-   unresolved project placeholder reported by the sweep scanner.
+   `fake_func_800AE3E4`, now audited and preserved; `fake_func_800AF6A8` is
+   now classified as `data_gap_800AF6A8`; continue at the next unresolved
+   project placeholder reported by the sweep scanner.
    Audit companion map, generated body, callers, header, overlay registration,
    project TOML, and local duplicates; preserve fragments/data gaps and do not
    invent semantic names. Keep `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.

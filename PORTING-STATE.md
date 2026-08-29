@@ -124525,6 +124525,25 @@ Evidence: `scratch/agent/s3095_generated_symbol_rename/AUDIT.md`.
 ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
 runtime, route, audio, mitigation, or generated instruction behavior changed.
 
+## Session 3101 (2026-08-28) — classified 0x800AF6A8 generated gap
+
+Ran the bounded generated-symbol six-surface audit for `0x800AF6A8`. The
+companion cinematic map retains `fake_func_800AF6A8` and supplies no semantic
+identity. The active generated definition is an 8-byte `__builtin_trap()` gap
+filler, with no callable prologue, return sequence, generated caller, or
+independent lookup. The adjacent positive-control entry
+`handleCraftSelectInput` at `0x800AF6AC` remains present. Header, overlay
+registration, project TOML, and rename tooling now agree on
+`data_gap_800AF6A8`; TOML parsing and stale-reference checks passed. This
+selects H-Fragment and rules out an exact callable identity and an ambiguous
+record. No build or game run was needed for this naming-only change.
+
+Evidence: `scratch/agent/s3101_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: the generated trap/fake record is a static decode artifact between
+named overlay entries. Only symbol metadata changed; no runtime, route, audio,
+mitigation, or generated instruction behavior changed.
+
 ## Session 3099 (2026-08-28) — synchronized 0x80072CE8 preamble identity
 
 Ran the bounded generated-symbol six-surface audit for `0x80072CE8`. The
