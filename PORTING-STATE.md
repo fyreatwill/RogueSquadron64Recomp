@@ -126077,3 +126077,16 @@ search found no stale old-name reference. No build or runtime run was needed;
 the change is source-only and rules out a semantic companion rename for this
 record.
 Evidence: `scratch/agent/s3191_generated_symbol_rename.md`.
+## Session 3192 (2026-08-29) — qualified M5 audio arms before target phase
+
+The rebuilt target ran `run_s2285_m5_step1_contract_pair.sh` with the retail
+oracle gated first. The oracle whole-RDRAM positive control reached 10,000
+callbacks, title `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400`. The
+silent and image port arms both visibly selected their intended dispatch
+(`real_ucode=0` and `1`, 80 sampled dispatch rows each), but both stopped at
+pre-title VI 640 `0x0066A500` and neither reached title or hangar before the
+harness SIGKILL deadline. No target-phase task/DMA/service/slot/voice/PCM
+rows were therefore interpretable. This selects `H-BothPreTarget`, confirms
+the arm selector controls, and rules out neither audio degeneracy nor a
+downstream audio contract; it authorizes no audio gate, wait, voice, PCM, or
+task-output change. Evidence: `scratch/agent/s3192_m5_step1_contract_pair.md`.

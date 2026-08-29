@@ -6,7 +6,17 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3191 (2026-08-29).
+Current maintenance marker: Session 3192 (2026-08-29).
+
+Session 3192 ran the M5 Step 1 same-build image-versus-silent qualification.
+The independent retail oracle passed its whole-RDRAM positive control and
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` before the
+port arms launched. Both port arms then passed the dispatch selector control
+(`real_ucode=0` versus `1`) and reached only pre-title VI 640
+(`0x0066A500`); neither reached title or hangar before the harness killed the
+pair. Consequently target-phase task/DMA/service/slot/voice/PCM nulls are
+unevaluable, selecting `H-BothPreTarget`; no audio behavior or mitigation is
+authorized. Evidence: `scratch/agent/s3192_m5_step1_contract_pair.md`.
 
 Session 3191 advanced the generated-symbol sweep by classifying the invalid
 data-decoded split at `0x800A2114` as `data_gap_800A2114`. The regeneration-
@@ -749,19 +759,27 @@ evidence: `scratch/agent/s3140_m5_retail_source_census.md`.
 ## Next steps
 
 Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
-generated-symbol sweep. Maintenance is complete and M5 design is complete;
-Step 6's default-off policy is now regeneration-safe. M5 target-phase
-qualification is still blocked until a route change produces title or hangar
-controls. A same-build policy control was attempted but did not reach the
-drain gate. The selected M3 class is now closed; the next work unit is the
-bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
+generated-symbol sweep. Maintenance and M5 design are complete. Session 3192
+qualified the dispatch arms but again found both port arms stopped at VI 640,
+so M5 target-phase qualification is blocked until a route change produces
+title or hangar controls. The selected M3 class is closed; with the M5 route
+boundary blocked, the next work unit is the bounded generated-symbol sweep.
+Do not remove the status-03 wait hatch.
 
-1. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
-   The current route remains blocked before target phases, so do not repeat the
-   same qualification. Resume after a human-selected route change or an
-   equivalent new retail-grounded boundary.
+1. **M5 route reachability — obtain a route-change direction.** Session 3192
+   ran the prescribed Step 1 pair: both image and silent arms reached only VI
+   640 despite a retail oracle control reaching title and hangar. Do not repeat
+   this pair. A human-selected upstream route change or equivalent new
+   retail-grounded source is required before Step 1 can produce target-phase
+   audio evidence.
 
-2. **M3 crash work — audit the next bounded idiom-class inventory entry.**
+2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+   After item 1 changes the route, rerun the existing same-build pair with
+   `ROGUESQ_AUDIO_UCODE=0/1`, `ROGUESQ_LOG_ALL=1`, and phase gating. The image
+   arm must show nonzero DMEM/DMA, `Broke`, SP completion, and downstream
+   service/slot/PCM joins; the silent arm remains the no-write control.
+
+3. **M3 crash work — audit the next bounded idiom-class inventory entry.**
    Session 3158 audited `musyxStoreVoiceAdsrParams`: its one reachable caller
    passes a byte-loaded index without a local `<64` proof, and all four
    indexed stores remain unclassified. Session 3157 audited
@@ -791,11 +809,6 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    selected lead. The generated-symbol sweep lead for
    `0x800A0000..0x800B0000` is closed by Session 3160; resume it only in a
    different address band after M3 is no longer actionable.
-
-3. **M5 route reachability — obtain a route-change direction.** The paired
-   phase-keyed qualification is blocked because the port still stops at VI
-   640. A human-selected upstream route change or equivalent local
-   retail-grounded source is required; do not repeat the current edge capture.
 
 4. **Generated-symbol renaming sweep.** M5 remains blocked pending a route
    change, and Session 3167 closed the selected M3 voice-record class. Resume

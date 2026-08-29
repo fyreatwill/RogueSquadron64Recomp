@@ -6,7 +6,8 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Classify and synchronize the next unclassified generated placeholder,
 `static_3_800A2218`, using the companion symbol files and its generated body.
-This is a source-only sweep; no build or runtime run is needed.
+This is a source-only sweep; no build or runtime run is needed. M5 Step 1 is
+blocked at VI 640 until a route change supplies title/hangar controls.
 
 Competing hypotheses and the discriminating measurement:
 
@@ -18,12 +19,11 @@ Competing hypotheses and the discriminating measurement:
 - `H-Ambiguous`: the record has unresolved callable/data or duplicate-symbol
   status; leave it unchanged.
 
-The discriminator is one bounded census plus the required-rename helper. An
-exact companion result selects `H-SemanticMatch`; a body beginning with
-invalid/data-decoded instructions and lacking a callable prologue or
-companion symbol selects `H-DataGap`, after adding the regeneration-safe
-mapping if needed. Any conflict selects `H-Ambiguous` and authorizes no
-rename.
+The discriminator is one bounded companion census plus the required-rename
+helper. An exact companion result selects `H-SemanticMatch`; a body beginning
+with invalid/data-decoded instructions and lacking a callable prologue or
+companion symbol selects `H-DataGap`; any conflict selects `H-Ambiguous` and
+authorizes no rename.
 
 Exact commands:
 
