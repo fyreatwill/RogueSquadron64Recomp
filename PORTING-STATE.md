@@ -124772,6 +124772,24 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3120 (2026-08-28) — aligned M5 audio arm identity
+
+Corrected `lib/N64ModernRuntime/librecomp/src/rsp.cpp` so the M5 task-contract
+path labels an unset `ROGUESQ_AUDIO_UCODE` as the default Factor 5 image,
+matching `src/main/main.cpp` dispatch. An explicit `ROGUESQ_AUDIO_UCODE=0`
+still selects `musyx_stub`, preserving the silent control. Exported the
+submodule patch and built `RogueSquadron64Recomp` successfully. Existing
+generated-code and macOS deployment-target warnings remained non-fatal.
+
+This removes an arm-identity mismatch that could corrupt Step 1's image-versus-
+stub qualification table. It does not establish audio output, route progress,
+or a missing task/output contract edge; no runtime soak was run here, so those
+downstream hypotheses remain open and target-phase nulls remain unevaluable.
+
+Evidence: successful `cmake --build build --config Debug --target
+RogueSquadron64Recomp`; source comparison of `get_rsp_microcode` and
+`run_task` predicates. No mitigation-shaped change was made.
+
 ## Session 3119 (2026-08-28) — classified remaining VI request callers
 
 Performed the single bounded static audit requested by the prior iteration.

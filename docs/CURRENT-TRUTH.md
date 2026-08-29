@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3119 (2026-08-28).
+Current maintenance marker: Session 3120 (2026-08-28).
 
 ## Current state
 
@@ -76,6 +76,12 @@ is explicitly after `beginSceneRenderFrame`. This selects
 the unenumerated handoff between the pending request-mask store and VI
 descriptor publication. This is static evidence only and does not identify
 the writer. Evidence: `scratch/agent/s3119_m5_vi_request_callers.md`.
+
+Session 3120 corrected the M5 task-contract arm identity in the runtime:
+`run_task` now treats an unset `ROGUESQ_AUDIO_UCODE` as the default real
+`factor5_ucode_b` image, matching `get_rsp_microcode`; only an explicit `0`
+selects `musyx_stub`. The target builds successfully. No game soak was run in
+this environment, so downstream phase rows remain unevaluable.
 
 The strongest route boundary remains the independent comparison: retail
 reaches title at 1024 and hangar at 512, while the recent same-build port
