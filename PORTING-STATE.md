@@ -123906,3 +123906,15 @@ caller; the exact-address searches found no duplicate entry. Selected the
 fragment/data-boundary hypothesis and preserved the placeholder. This rules
 out an independently supported semantic rename and mapping drift at this
 address. Next candidate: `fake_func_800B47C4`.
+## Session 3065 (2026-08-28) — synchronized 0x800B47C4 preamble symbol
+
+Completed the bounded six-surface generated-symbol audit for menu-overlay
+`fake_func_800B47C4`. Companion comments identify the adjacent real
+`menuControllerInput` body at `0x800B47D0`; the generated target is only a
+12-byte `lui`/`lwc1`/`swc1` record, has no generated caller or return sequence,
+and is registered separately from the `0x38E4`-byte body. Both rename maps
+already classified this exact boundary as `menuControllerInputPreamble`, so
+the project TOML was synchronized to that regeneration-safe name. This
+selects the bounded preamble identity, rules out a second callable function
+or metadata drift, and preserves `menuControllerInput` as the body entry.
+Evidence: `scratch/agent/s3065_generated_symbol_rename/AUDIT.md`.

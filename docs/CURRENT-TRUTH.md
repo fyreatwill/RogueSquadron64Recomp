@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3064 (2026-08-28).
+Current maintenance marker: Session 3065 (2026-08-28).
 
 ## Current state
 
@@ -95,6 +95,15 @@ registration remain address-named, while the project TOML and rename tool
 already agree on `func_mission_overlay_800E9AE0`. No generated caller or
 mapping drift was found, so no human rename was justified. Evidence:
 `scratch/agent/s3063_generated_symbol_rename/AUDIT.md`.
+
+Session 3065 completed the bounded six-surface audit at `0x800B47C4`. The
+companion comments, generated extent, callers, header/registration, project
+TOML, and rename tooling identify the 12-byte record as
+`menuControllerInputPreamble`, immediately before the real
+`menuControllerInput` body at `0x800B47D0`. The generated record is only a
+float load/store with no return sequence or caller; the project TOML was
+synchronized from its stale placeholder name. Evidence:
+`scratch/agent/s3065_generated_symbol_rename/AUDIT.md`.
 
 Session 3064 completed the bounded six-surface audit at `0x800B2628`. The
 companion map, generated body/header/registration, and project TOML all agree
@@ -318,7 +327,9 @@ port and the next unit must use a different handoff edge. M3 is
 parked pending a new discriminator.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   The synchronized region through `0x80017B28` is complete. Preserve
+   The synchronized region through `0x80017B28` is complete; the bounded
+   preamble at `0x800B47C4` is now synchronized as
+   `menuControllerInputPreamble`. Preserve
    placeholders for fragments, data gaps, and unresolved boundaries; do not
    invent semantic names. Resume at the next candidate only after auditing
    companion map, generated body, callers, header, overlay registration,

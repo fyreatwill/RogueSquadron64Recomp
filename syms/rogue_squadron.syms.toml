@@ -2462,7 +2462,7 @@ functions = [
     { name = "positionHudSpriteOffset", vram = 0x800B44D0, size = 0x1C },
     { name = "createHudSpritePair", vram = 0x800B44EC, size = 0x12C },
     { name = "layoutHudSpriteScreenRect", vram = 0x800B4618, size = 0x1AC },
-    { name = "fake_func_800B47C4", vram = 0x800B47C4, size = 0xC },
+    { name = "menuControllerInputPreamble", vram = 0x800B47C4, size = 0xC },
     { name = "menuControllerInput", vram = 0x800B47D0, size = 0x38E4 },
     { name = "updateShipPartAnimation", vram = 0x800B80B4, size = 0x224 },
     { name = "buildHudAmmoReadout", vram = 0x800B82D8, size = 0x2DC },
