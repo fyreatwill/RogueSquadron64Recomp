@@ -124711,6 +124711,27 @@ run, retaining both controls. Evidence:
 ORIGIN: qualification-only retail callsite attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3114 (2026-08-28) — closed generated-symbol sweep inventory
+
+The prescribed `fake_func_800AE3E4` audit was already complete in Session
+3100, and the only other remaining project placeholder,
+`fake_func_800B75C4`, was already revalidated in Session 3103. A fresh static
+inventory of `syms/rogue_squadron.syms.toml` found exactly those two
+placeholders, and `tools/sweep_scan_candidates.py fake_func_800AE3E4` reported
+zero auto-resolvable entries before stopping on the already-audited
+placeholder. Their six-surface dispositions remain deliberate preservation:
+the first overlaps the independently named menu entry at `0x800AE3EC`, while
+the second is a live branch-target fragment without a standalone callable
+identity. No generated code or symbol name changed.
+
+This closes the current generated-symbol sweep inventory and rules out an
+unaudited rename candidate in the project map. It does not prove either
+preserved fragment is unreachable at runtime. Evidence:
+`scratch/agent/s3114_generated_symbol_sweep_closure/AUDIT.md`.
+
+ORIGIN: naming-only inventory closure; no runtime, route, audio, mitigation,
+or generated instruction behavior changed.
+
 ## Session 3113 (2026-08-28) — compacted current truth and unified backlog
 
 The maintenance check measured `docs/CURRENT-TRUTH.md` at 61,186 bytes and

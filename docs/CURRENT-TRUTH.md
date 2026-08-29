@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3113 (2026-08-28).
+Current maintenance marker: Session 3114 (2026-08-28).
 
 ## Current state
 
@@ -24,9 +24,10 @@ nulls from those port captures are unevaluable. No audio gate, wait, voice
 guard, output destination, or VI behavior may be changed without a named
 legitimate writer and an ordering edge.
 
-The active engineering campaign is the regeneration-safe generated-symbol
-sweep. The next unresolved project placeholder is `fake_func_800AE3E4`.
-`fake_func_800B75C4` remains unresolved after a fresh control-flow audit.
+The regeneration-safe generated-symbol sweep is closed: the only remaining
+project placeholders are the deliberately preserved ambiguous fragments
+`fake_func_800AE3E4` and `fake_func_800B75C4`, both already audited. The next
+active engineering prerequisite is a new retail-grounded M5 boundary.
 
 ## Latest evidence
 
@@ -52,38 +53,30 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **Generated-symbol sweep — audit `fake_func_800AE3E4`.** Perform the
-   six-surface audit: companion map, generated body, callers,
-   header/registration, project TOML, and local duplicates. Synchronize an
-   exact companion name only with callable boundaries and independent
-   identity. Use `data_gap_800AE3E4` only if the boundaries prove
-   non-callability; otherwise preserve the placeholder. No runtime build is
-   needed.
-
-2. **M5 VI publication — enumerate the missing writer.** Only after a new
+1. **M5 VI publication — enumerate the missing writer.** Only after a new
    retail-grounded boundary, watch the earlier `initVideoSubsystem` range
    (`0x8001A098:0x8001B7B8`) or an equivalently new handoff. Retain a whole-
    RDRAM positive control and title/hangar phase controls. Do not repeat the
    three direct callsite watches or the closed selector-helper range.
 
-3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed
    task/DMA/return/service/slot/voice/MORT/PCM table with image and silent
    arms in one build/run. A qualification result alone does not authorize a
    gate, wait, voice, destination, or output change.
 
-4. **M3 crash work — systematic idiom-class audits only.** A new unit must
+3. **M3 crash work — systematic idiom-class audits only.** A new unit must
    enumerate the entire idiom class, name its discriminator, and guard or
    prove every site. Passive crash recurrence belongs in the soak queue.
 
-5. **External retail-entry boundary.** Parked after the candidate set was
+4. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC
    attribution.
 
-6. **M4 accumulator origin.** Parked because the latest route qualification
+5. **M4 accumulator origin.** Parked because the latest route qualification
    had no target-phase positive-control rows. Do not interpret its nulls.
 
-7. **M5 SP-yield lifecycle and CPU-side MORT publication.** Parked pending a
+6. **M5 SP-yield lifecycle and CPU-side MORT publication.** Parked pending a
    route angle that reaches target phases. The corrected MORT descriptor edge
    is `+0x190` to `dmaVoiceSampleAndSignal`; `+0x194` is the speech source.
 

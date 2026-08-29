@@ -1,36 +1,34 @@
-# NEXT work unit — audit the remaining unresolved generated fragment
+# NEXT work unit — enumerate a new retail-grounded M5 boundary
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-retail-video-publication-boundary
 
 ## Single work unit
 
-Audit `fake_func_800AE3E4` across the companion map, generated body, callers,
-header/registration, project TOML, and local duplicates. Synchronize a name
-only if the evidence proves a callable fragment with an exact companion
-identity; use `data_gap_800AE3E4` only if the boundaries prove
-non-callability; otherwise preserve the placeholder. Do not repeat the
-completed `0x800B2628`, `0x800B42BC`, or `0x800B89F4` records.
+Use the independent retail oracle to watch the earlier `initVideoSubsystem`
+handoff range `0x8001A098:0x8001B7B8` while retaining the whole-RDRAM positive
+control and title/hangar VI phase controls. This is a new boundary; do not
+repeat the three direct `osViSetMode` callsite watches or the closed selector
+helper range.
 
 ## Competing hypotheses
 
-- H-Callable: complete prologue/return plus exact companion identity support a
-  semantic rename.
-- H-DataGap: isolated fragment or trap-filled invalid-data record between
-  complete routines supports a mechanical `data_gap_*` name.
-- H-Ambiguous: overlap, callers, or duplicate overlay identity prevents a
-  safe rename, so the placeholder remains.
-- H-StaleSurface: generated code is already correct and only a project
-  symbol/fixup surface is stale.
+- H-EarlyWriter: the range executes at the 640→1024 transition and supplies
+  the missing writer boundary.
+- H-OtherWriter: the range is live but does not write the transition mode;
+  the writer is later or in a different handoff.
+- H-RangeDead: the range does not execute despite positive control and title/
+  hangar phases; this boundary is closed.
 
 ## Discriminating measurement
 
-The six-surface audit must report callable boundaries, exact companion
-identity, callers, and uniqueness. A complete callable body plus exact name
-selects H-Callable; an isolated/trap-filled record with no callers selects
-H-DataGap; overlap or duplicate identity selects H-Ambiguous; a project-only
-mismatch selects H-StaleSurface. The selected outcome determines whether a
-regeneration-safe rename is made.
+The measurement is the oracle's PC-attributed write/watch rows in the handoff
+range at the 640→1024 transition, with the positive control and phase rows
+visible in the same capture. A transition write in the range selects
+H-EarlyWriter; execution without the mode write selects H-OtherWriter; zero
+range rows with valid controls selects H-RangeDead.
 
-## Constraint
+## Exact command shape
 
-Naming-only. No runtime instrument or build is required.
+Run the existing retail-oracle recipe from `tools/oracle/README.md`, adding
+the range watch and retaining the whole-RDRAM control. Capture the result in
+`scratch/agent/s3115_m5_retail_init_video_range/` and do not build the port.
