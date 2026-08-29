@@ -124689,3 +124689,24 @@ Evidence: `scratch/agent/s3105_external_retail_wrapper_chain/AUDIT.md`.
 
 ORIGIN: static qualification of existing retail handoff callers; no runtime,
 audio, route, selector, wait, voice, or mitigation behavior changed.
+
+## Session 3106 (2026-08-28) — qualified retail mode-entry boundary
+
+Ran one independent retail-oracle capture watching `osViSetMode` at
+`0x800352D0`, with a whole-RDRAM positive control, Rice video, and the
+validated Start schedule. The positive control fired 10,000 writes and was
+removed; the mode watch remained live with 17 execution hits. Retail reached
+title `1024 @ 0x00790400` at 17.2s and hangar `512 @ 0x006AB400` at 38.4s.
+The mode-entry predecessor histogram was `0x8001B8DC:13`, `0x8001BB54:2`, and
+`0x8001B720:2`, but no mode-entry row was captured at the 640-to-1024
+transition. The mode dump produced zero rows because it only reports the
+640-width descriptor path. The controls prove the instrument and target phase
+live, but the transition attribution is unevaluable; this does not select
+`applyPendingViChanges` or another callsite.
+
+The next discriminator watches the three known callsite PCs directly in one
+run, retaining both controls. Evidence:
+`scratch/agent/s3106_m5_retail_mode_writer/AUDIT.md`.
+
+ORIGIN: qualification-only retail callsite attribution; no port, audio,
+route, selector, wait, voice, or mitigation behavior changed.

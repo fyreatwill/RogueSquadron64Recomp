@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3105 (2026-08-28).
+Current maintenance marker: Session 3106 (2026-08-28).
+
+Session 3106 ran a new independent retail mode-entry capture. The whole-RDRAM
+positive control fired 10,000 writes, retail reached title 1024 at
+`0x00790400` and hangar 512 at `0x006AB400`, and the `osViSetMode` watch at
+`0x800352D0` fired 17 times. Its predecessor histogram was only
+`0x8001B8DC` (13), `0x8001BB54` (2), and `0x8001B720` (2), but no watched row
+was captured at the 17.2s 640→1024 transition; the mode dump also produced no
+rows because it is limited to the 640-width path. This selects H-Unevaluable
+for the exact transition writer, not H-ApplyPending or H-OtherCallsite.
+Evidence: `scratch/agent/s3106_m5_retail_mode_writer/AUDIT.md`.
+
+ORIGIN: qualification-only retail callsite attribution. No port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
 
 Session 3105 statically audited both surviving retail `osViSwapBuffer`
 predecessors. `0x8001BE24` is in `bufferArbiterProducerMark` and `0x80019B14`
@@ -834,21 +847,28 @@ route-blocked at pre-title VI 640 despite a valid retail control and positive
 port dispatch controls; target-phase audio rows remain unevaluable. M3 is
 parked pending a new discriminator.
 
-1. **M5 VI-mode publication edge — new boundary required.** Session 3105
+1. **M5 VI-mode publication edge — direct callsite boundary required.** Session
+   3106 proved the retail mode-entry watch live but did not capture the
+   640→1024 transition. Watch `0x8001B8DC`, `0x8001BB54`, and `0x8001B720`
+   directly in one oracle run, retaining the whole-RDRAM control and target
+   phase trace. A callsite hit at the transition identifies the writer; a
+   live target phase with none identifies an unenumerated caller boundary.
+
+2. **M5 VI-mode publication edge — new boundary required.** Session 3105
    selected H-SharedSwapPath: both surviving predecessors are framebuffer
    swaps, not mode writers, and their generated/companion identities agree.
    Do not repeat this caller audit. Revisit the absent retail 1024 writer only
    with a genuinely new external boundary that can attribute its caller or
    descriptor source.
 
-2. **M5 VI-mode publication edge — parked after Session 3094.** The port
+3. **M5 VI-mode publication edge — parked after Session 3094.** The port
    publishes and consumes a live 640 descriptor (`0x80128DF0`) but never
    reaches the retail 1024 transition. The independent retail mode/caller
    watches are live. Revisit only with a genuinely new boundary that can
    discriminate the absent 1024 writer; do not repeat the selector-byte,
    ProducerMark, or current consumer probes.
 
-3. **Generated-symbol sweep — now eligible if no new M5 discriminator is
+4. **Generated-symbol sweep — now eligible if no new M5 discriminator is
    available.** The bounded six-surface audit rule remains in force; resume at
    the next unresolved placeholder rather than repeating closed audits.
 

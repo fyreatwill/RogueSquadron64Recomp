@@ -1,37 +1,33 @@
-# NEXT work unit — resume the generated-symbol sweep
+# NEXT work unit — direct retail mode-writer callsites
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-retail-mode-writer-boundary
 
 ## Single work unit
 
-Perform one bounded six-surface audit of the next unresolved project
-`fake_func_*`/placeholder symbol after the last synchronized sweep entry.
-Use the companion map, generated body, callers, generated header and overlay
-registration, project TOML, and rename tooling. Preserve the placeholder when
-the evidence only supports a fragment/data gap or cannot establish semantics.
+Run one independent retail-oracle capture watching the three known
+`osViSetMode` callsite PCs directly. Retain the whole-RDRAM positive control,
+validated Start schedule, VI trace, and title/hangar phase coverage. Do not
+modify the port.
 
 ## Competing hypotheses
 
-- H-SemanticName: all six surfaces and the companion map establish one human
-  function identity.
-- H-Fragment: the record is a non-callable instruction fragment or data gap;
-  only a mechanical `data_gap_*` name is justified.
-- H-Unresolved: the surfaces disagree or do not establish callability or
-  semantics; preserve the placeholder and document the boundary.
+- H-ApplyPending: `0x8001B8DC` executes at the 640→1024 transition.
+- H-OtherKnown: `0x8001BB54` or `0x8001B720` executes at that transition.
+- H-Unenumerated: target phase is live but none of the three callsites fires
+  at the transition.
+- H-Unevaluable: the positive control or target phase is absent.
 
 ## Discriminating measurement
 
-For the selected placeholder, record exact evidence for all six surfaces. A
-stable human identity selects H-SemanticName; a bounded non-callable fragment
-selects H-Fragment; disagreement or insufficient evidence selects
-H-Unresolved. Do not invent a semantic name.
+The same run must show 10,000 whole-RDRAM control callbacks, the title
+`1024 @ 0x00790400` phase, and direct execution rows for the callsite PCs.
+The callsite hit nearest the 640→1024 VI transition selects its hypothesis;
+no hit with both controls live selects H-Unenumerated. Missing controls select
+H-Unevaluable.
 
-## Exact commands
+## Exact command
 
-1. `grep -n '^## Session ' PORTING-STATE.md | tail -15` (REVISIT check).
-2. Locate the next unresolved placeholder with bounded `rg`/`sed` searches in
-   `../N64Recomp/RecompiledFuncs`, `../rogue_squadron64`, `syms`, and rename
-   tooling.
-3. Save the six-surface audit under
-   `scratch/agent/s3106_generated_symbol_rename/` and update synchronized
-   symbol surfaces only if the evidence selects a safe name.
+`env tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 45 --watch-write 0x0:0x800000 --watch-pc 0x8001B8DC,0x8001BB54,0x8001B720 --pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006AB400:512 --hit-cap 12000 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start --hold-ms 150 > scratch/agent/s3107_m5_retail_mode_callsites/oracle.log 2>&1`
+
+Save the bounded result and classification in
+`scratch/agent/s3107_m5_retail_mode_callsites/AUDIT.md`.
