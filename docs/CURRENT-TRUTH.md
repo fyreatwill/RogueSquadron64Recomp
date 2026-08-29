@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3218 (2026-08-29).
+Current maintenance marker: Session 3219 (2026-08-29).
 
 ## Current state
 
@@ -34,33 +34,28 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    (`0x0066A500`) with no title or hangar transition. A human-selected route or
    equivalent new retail-grounded boundary is still required. Do not repeat
    either route unchanged.
-2. M3 voice-list publication audit is complete: the literal head census found
-   only the named insertion/removal/reset family at `0x80098B84`,
-   `0x80098D88`, `0x80098E38`, `0x80098F60`, `0x800999B8`, and `0x80099C30`.
-   The reaper's `next` walk is null-terminated and finite. No invalid producer
-   or ordering edge was identified; retain the existing guard as safety only.
-   Evidence: `scratch/agent/s3216_m3_voice_list_publication_bound.md`.
-3. The bounded `func_80092F10` live-tail audit is closed as a data-gap
-   exclusion: it overlaps the real `packFourLutResampledSamples` entry at
-   `0x80092F94`, has no callable body or fan-in, and has no companion semantic
-   symbol. No rename was made. Evidence:
-   `scratch/agent/s3217_generated_symbol_rename.md`.
-4. After a route change, rerun the existing same-build phase-gated pair with
+2. Next eligible M3 class is A8 (`musyxKeyOnVoice` divide/overflow): census
+   every divisor/descriptor writer for the eight trap sites at `0x80090CEC`,
+   `0x80090D04`, `0x80090D30`, `0x80090D48`, `0x80090D74`, `0x80090D8C`,
+   `0x80090DB8`, and `0x80090DD0`. Do not remove or replace a trap without a
+   named legitimate descriptor writer. No port run until that census exists.
+3. After a route change, rerun the existing same-build phase-gated pair with
    `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-arm DMEM,
    DMA, `Broke`/SP completion, service, slot, and PCM joins; retain the silent
    arm as the no-write control.
-5. The 43-site `SONGTEMPO_TABLE_GUARD` class has a concrete
-   `startSongSequence` writer at `0x80096D88` and is already fully covered; no
-   new guard work is authorized.
-6. Session 3212 renamed the sole remaining callable generated placeholder
-   `static_4_80106C50` to `lvc_registerObjectiveBooleanCounts` in the
-   generated declaration/body using a bounded, regeneration-safe tool. The
-   body registers objective boolean-count handles and is called from
-   `lvc_initializeObjectTracking`; the data-gap/live-tail fragments remain
-   unchanged. The follow-up live-tail audit in Session 3217 found no
-   additional callable placeholder; resume M3/M5 work after this sweep
-   closure.
-7. M4 restage destination identity is now known: hangar gfx tasks use
+4. Closed static M3 publication classes, retain existing guards as safety
+   only: A9 voice-array base (`D_801496F8`) has one store at `0x8008F0EC` in
+   `allocateSongChannelArray` (evidence:
+   `scratch/agent/s3219_m3_voice_array_base_publication.md`); A10 3D
+   voice-list head (`0x80153414`) has only the named insertion/removal/reset
+   family (evidence: `scratch/agent/s3216_m3_voice_list_publication_bound.md`);
+   the 43-site `SONGTEMPO_TABLE_GUARD` class has writer `startSongSequence` at
+   `0x80096D88`. No new guard work is authorized on these classes.
+5. Generated-symbol sweep remains closed at the evidence boundary (Sessions
+   3210/3212/3217). `static_4_80106C50` was renamed to
+   `lvc_registerObjectiveBooleanCounts`; `func_80092F10` is a data-gap
+   exclusion overlapping `packFourLutResampledSamples` at `0x80092F94`.
+6. M4 restage destination identity is now known: hangar gfx tasks use
    `gspTask` (`0x800377C8`) with physical `output_buff` `0x0075C000` /
    `0x00781800`, not the port runtime dest `0x4B7800` and not DMEM `0x670`.
    Keep the external retail-entry boundary, hangar `0x8000` Y / accumulator
@@ -104,8 +99,11 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 
 ## Evidence index
 
-Recent evidence includes `scratch/agent/s3218_m4_retail_dest/RESULTS.md`,
+Recent evidence includes
+`scratch/agent/s3219_m3_voice_array_base_publication.md`,
+`scratch/agent/s3218_m4_retail_dest/RESULTS.md`,
 `scratch/agent/s3217_generated_symbol_rename.md`,
+`scratch/agent/s3216_m3_voice_list_publication_bound.md`,
 `scratch/agent/s3213_m3_voice_list_table_audit.md`,
 `scratch/agent/s3209_generated_symbol_rename.md`,
 `scratch/agent/s3208_generated_symbol_rename.md`,

@@ -126472,3 +126472,26 @@ RSP `SP_WR_LEN` remains the restage writer; sampled CPU post-values
 showed other GBI/RDP ops, not `0xC8`. No mitigation. Do not re-watch
 `0x4B7800` or DMEM `0x670`. Evidence:
 `scratch/agent/s3218_m4_retail_dest/RESULTS.md`.
+
+## Session 3219 (2026-08-29) — completed M3 voice-array base publication census
+
+The complete generated census for `D_801496F8` (`lui 0x8015` / `-0x6908`)
+found one store: `allocateSongChannelArray` at `0x8008F0EC` writes the
+first `rs_malloc` of `count * 0x88` bytes. The adjacent `D_801496FC`
+store at `0x8008F0E4` is the same malloc result, used by the init-zero
+loop and by `shutdownAudioEngine`'s free; later mallocs in the allocator
+target other globals. No `0x96F8` encoding, no literal `0x801496F8`
+store, and no reset/zero publisher exist. Fan-in is solely
+`initN64RspMixer` (`0x80091934`), itself reached from
+`initAudioSubsystem` / `setDisplayMode` and `reapplyAudioConfig` /
+`reapplyDisplayMode`. Companion `main_overlay.txt` independently names
+the same install path, base, and `0x88` stride. Twenty-one game loads
+are in the named MusyX voice family; two (`musyxStartVoiceRelease` at
+`0x80092278`, `setVoiceModulationParams` at `0x800923FC`) lack the A9
+KSEG0 skip and are readers, not publishers. `H-NamedProducersOnly` is
+selected; `H-InvalidPublisher` and `H-NoLiveBase` are not. No guard was
+added or relaxed. No build or runtime run was performed. Evidence:
+`scratch/agent/s3219_m3_voice_array_base_publication.md`.
+
+ORIGIN: generated guest-PC store/load census plus independent companion
+symbol metadata; no mitigation landed.
