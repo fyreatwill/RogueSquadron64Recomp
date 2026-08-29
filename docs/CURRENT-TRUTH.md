@@ -8,6 +8,17 @@ read.
 
 Current maintenance marker: Session 3149 (2026-08-29).
 
+Session 3150 completed the bounded M3 handle-writer audit for
+`stopVoicesByHandle`. All four callers load the same linked-list node `+0x8`
+field, ruling out a caller/field mismatch. The sole identified voice-node
+`+0x8` writer is `allocVoiceHandleNode` at `0x80086518`, which copies
+unconstrained `$a3`; its node-allocation counter is separate from the stored
+handle. No direct generated callsite to this allocator is present, so the
+producer edge cannot establish `0..0x1F`. This selects
+`H-HandleUnbounded` as a single-source static contract classification, not
+proof of a retail invalid value. No guard or runtime behavior changed.
+Evidence: `scratch/agent/s3150_m3_stop_voices_handle_writers.md`.
+
 ## Current state
 
 The native port builds and boots. With the validated spin-yield route and

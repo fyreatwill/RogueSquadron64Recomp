@@ -125447,3 +125447,19 @@ single-source static evidence. This rules out treating the linked-list null
 checks as the unresolved defect and rules out adding a guard based only on the
 callee's local record accesses. No code, guard, runtime behavior, or build was
 changed. Evidence: `scratch/agent/s3149_m3_stop_voices_by_handle_audit.md`.
+
+## Session 3150 (2026-08-29) — traced `stopVoicesByHandle` handle writers
+
+The selected M3 work unit enumerated the four direct callers and the voice
+node allocation path. All four callers load the same node `+0x8` field, so
+there is no caller/field mismatch. The sole identified voice-node `+0x8`
+writer is `allocVoiceHandleNode` at `0x80086518`; it copies `$a3` without a
+clamp or `<0x20` proof. Its monotonic node-allocation counter is a separate
+value and cannot bound the stored handle. No direct generated callsite to
+`allocVoiceHandleNode` or `jal 0x80086450` exists, leaving the producer edge
+unresolved. This selects `H-HandleUnbounded` as a single-source static
+contract classification, not proof that retail emits an invalid handle. It
+rules out the caller-mismatch hypothesis but does not authorize a guard or
+mitigation. No build, run, code, or runtime behavior changed.
+
+Evidence: `scratch/agent/s3150_m3_stop_voices_handle_writers.md`.
