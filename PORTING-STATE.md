@@ -125391,3 +125391,16 @@ Route 3 was taken: M5 remains recorded as an open dependency, while the next
 work unit is a bounded M3 NULL-plus-offset guest-pointer idiom-class audit.
 Evidence: `scratch/agent/unblock_route_probe_20260828/` and
 `scratch/agent/UNBLOCK.md`.
+
+## Session 3146 (2026-08-28) — closed slotDispatcherIter slot-pointer idiom class
+
+The selected M3 class was every original nonzero-offset `MEM_*` access through
+`slotDispatcherIter`'s slot pointer (`$s1`, `ctx->r17`), guest PCs
+`0x8003E944` through `0x8003E9D8`. The complete six-row table shows that the
+pointer is loaded from the global slot table at `0x8003E938`, tested nonzero at
+`0x8003E93C`, and not reassigned before any listed access. The two `+0x1A`
+stores are legitimate age-field writers in the function itself. This selects
+`H-M3-Proven` for the class and rules out an unclassified reachable null-plus-
+offset dereference there. Probe-control reads were excluded from the generated
+site count. No build, run, guard, or runtime behavior change was needed.
+Evidence: `scratch/agent/s3146_m3_slot_pointer_audit.md`.

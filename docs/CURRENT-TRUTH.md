@@ -75,6 +75,15 @@ is real for the current recipe, while not identifying its upstream cause.
 The work was re-scoped to a bounded M3 idiom-class audit; no runtime behavior
 was changed. Evidence: `scratch/agent/unblock_route_probe_20260828/`.
 
+Session 3146 completed a bounded M3 NULL-plus-offset audit for the six original
+nonzero-offset dereferences through `slotDispatcherIter`'s slot pointer
+(`0x8003E944`–`0x8003E9D8`). The pointer is loaded from the global slot table,
+tested nonzero at `0x8003E93C`, and remains unchanged through each listed
+access; the `+0x1A` stores are legitimate age-field writers in the same
+function. The complete static table selects `H-M3-Proven` for this class and
+adds no guard or runtime behavior. Evidence:
+`scratch/agent/s3146_m3_slot_pointer_audit.md`.
+
 Session 3144 could not run the queued M5 paired qualification. The required
 route change is not present: the current state still records the port stopping
 at pre-title VI 640, and the working tree exposes no selected upstream route
@@ -356,12 +365,11 @@ target-phase qualification is blocked until a route change produces title or
 hangar controls. The next independent work unit is a bounded M3 idiom-class
 audit; M5 remains an open dependency, not a reason to stop the loop.
 
-1. **M3 crash work — bounded idiom-class audit.** Enumerate every generated
-   site in one selected NULL-plus-offset guest-pointer dereference class,
-   classify each writer and pointer provenance, and guard or prove every site.
-   The discriminator is whether the complete site table contains an
-   unclassified dereference reachable on the validated route; do not build or
-   add a mitigation until every site is classified.
+1. **M3 crash work — bounded idiom-class audit.** The
+   `slotDispatcherIter` slot-pointer class is closed by Session 3146. The next
+   class is `slotDispatcherInner`'s slot-pointer dereferences; enumerate every
+   site, classify its caller contract/provenance, and guard or prove every
+   site before any build or mitigation.
 
 2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI
@@ -373,10 +381,6 @@ audit; M5 remains an open dependency, not a reason to stop the loop.
    task/DMA/return/service/slot/voice/MORT/PCM table with image and silent
    arms in one build/run. A qualification result alone does not authorize a
    gate, wait, voice, destination, or output change.
-
-3. **M3 crash work — systematic idiom-class audits only.** A new unit must
-   enumerate the entire idiom class, name its discriminator, and guard or
-   prove every site. Passive crash recurrence belongs in the soak queue.
 
 4. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC

@@ -1,4 +1,4 @@
-# NEXT work unit — audit one M3 NULL-plus-offset idiom class
+# NEXT work unit — audit slotDispatcherInner slot-pointer dereferences
 
 HYPOTHESIS-ID: m3-null-offset-idiom-audit
 
@@ -7,10 +7,11 @@ HYPOTHESIS-ID: m3-null-offset-idiom-audit
 The M5 paired qualification remains blocked by a real route dependency: the
 current Debug binary's documented LLE-only/spin-yield/autopilot route reaches
 VI 640 but not title 1024. Continue useful work without changing that route.
-Select one concrete generated NULL-plus-offset guest-pointer dereference
-idiom class, enumerate every site with `rg`, and classify pointer provenance,
-writer, and reachability. Guard or prove every site only after the table is
-complete; do not use a mitigation to make a run pass.
+The next class is every original nonzero-offset dereference through
+`slotDispatcherInner`'s slot pointer (`$s1`, represented as `ctx->r17`), from
+guest PC `0x8003EA60` to that function's return. Enumerate the complete class
+with `rg`, then classify pointer provenance, writer, and reachability before
+adding any guard.
 
 ## Competing hypotheses
 
@@ -18,10 +19,11 @@ complete; do not use a mitigation to make a run pass.
   voice/PCM progress once target phases are reachable.
 - `H-ContractGap`: the image arm completes DMEM/DMA but fails a named guest or
   output contract edge, while the silent control does not.
-- `H-M3-Unclassified`: at least one site in the complete class table remains
-  an unclassified reachable dereference.
+- `H-M3-Unclassified`: at least one slot-pointer site remains an unclassified
+  reachable dereference or lacks a defensible caller contract.
 - `H-M3-Proven`: every site is classified as guarded, unreachable, or
-  legitimate, so this idiom class is closed without a behavior change.
+  legitimate under a named caller contract, so the class closes without a
+  behavior change.
 
 ## Discriminating measurement
 
@@ -36,7 +38,7 @@ checked.
 ## Exact commands
 
 ```sh
-rg -n -C 3 'KSEG0|0x[0-9A-Fa-f]+|\+[0-9A-Fa-fx]+|\[[^]]+\]' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n -C 5 'get_function\(0\)|NULL.*offset|offset.*NULL|guest.*pointer' src /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+rg -n -C 3 'ctx->r17, 0X' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c
+sed -n '24690,25020p' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c
 git diff --check
 ```
