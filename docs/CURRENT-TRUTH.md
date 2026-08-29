@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3102 (2026-08-28).
+Current maintenance marker: Session 3104 (2026-08-28).
+
+Session 3104 ran the independent retail oracle with a whole-RDRAM positive
+control and the validated Start schedule. The control fired 10,000 writes;
+retail reached title origin `0x00790400` (634 VI rows) and hangar origin
+`0x006AB400` (2,447 VI rows). `osViSwapBuffer` execution had only the two
+known predecessors, `0x8001BE24` (4,098) and `0x80019B14` (155), with no new
+post-boot predecessor. This rejects H-NoTarget for the recipe but does not
+distinguish the external-callsite and wrapper-chain hypotheses. It is
+single-source oracle evidence; no port instrumentation was justified.
+Evidence: `scratch/agent/s3104_external_retail_entry_boundary/AUDIT.md`.
+
+ORIGIN: qualification-only retail handoff attribution. No audio, route,
+selector, wait, voice, or mitigation behavior changed.
 
 Session 3103 revalidated the bounded six-surface candidate at `0x800B75C4`
 with a new control-flow discriminator. The live generated tree has a real
@@ -806,16 +819,12 @@ route-blocked at pre-title VI 640 despite a valid retail control and positive
 port dispatch controls; target-phase audio rows remain unevaluable. M3 is
 parked pending a new discriminator.
 
-1. **Generated-symbol sweep — continue with exact companion identities.** The
-   M5 route probes in Sessions 3091–3094 have not reached a target-phase
-   discriminator; park the route thread rather than adding another field.
-   Resume at the next unresolved project placeholder, currently
-   `fake_func_800AE3E4`, now audited and preserved; `fake_func_800AF6A8` is
-   now classified as `data_gap_800AF6A8`; continue at the next unresolved
-   project placeholder reported by the sweep scanner.
-   Audit companion map, generated body, callers, header, overlay registration,
-   project TOML, and local duplicates; preserve fragments/data gaps and do not
-   invent semantic names. Keep `HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
+1. **M5 route handoff — statically audit the two surviving retail callers.**
+   Session 3104 reached both target phases but found only the known
+   `osViSwapBuffer` predecessors `0x8001BE24` and `0x80019B14`. Trace both
+   caller bodies and their callees to the VI-mode writer/descriptor decision,
+   using companion symbols and generated callsites; do not add port probes
+   until this identifies a new boundary.
 
 2. **M5 VI-mode publication edge — parked after Session 3094.** The port
    publishes and consumes a live 640 descriptor (`0x80128DF0`) but never
@@ -824,13 +833,17 @@ parked pending a new discriminator.
    discriminate the absent 1024 writer; do not repeat the selector-byte,
    ProducerMark, or current consumer probes.
 
-3. **M5 VI-mode stall — attribute selector-writer inputs.** Session 3076
+3. **Generated-symbol sweep — parked while M5 remains open.** Resume only
+   after the M5 route/audio blocker is closed or a new discriminator is
+   unavailable, following the bounded six-surface audit rule.
+
+4. **M5 VI-mode stall — attribute selector-writer inputs.** Session 3076
    ruled out table aliasing, record-copy reorder, selected-pointer mutation,
    and host VI alteration. Attribute the producer inputs for retail
    `[A,B,C]=[1,1,0]` versus port `0x80128DF0`, using the independent oracle and
    one phase-keyed port build. Do not change audio behavior from this result.
 
-4. **Generated-symbol sweep — historical continuation notes.**
+5. **Generated-symbol sweep — historical continuation notes.**
    The synchronized region through `0x80017B28` is complete; the preamble at
    `0x800B47C4` is synchronized as `menuControllerInputPreamble` and the
    preamble at `0x800B58B4` is synchronized as `playerAwingInitPreamble`.

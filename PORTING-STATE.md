@@ -124644,3 +124644,21 @@ passed; no runtime behavior changed. Evidence:
 
 ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
 runtime, route, audio, mitigation, or generated instruction behavior changed.
+## Session 3104 (2026-08-28) — qualified surviving retail handoff callers
+
+Ran the independent retail oracle with Rice video, the validated Start
+schedule, `--watch-pc 0x80035500`, both target phase buckets, and a whole-RDRAM
+positive-control watch. The control fired 10,000 writes; the run reached title
+origin `0x00790400` for 634 VI rows and hangar origin `0x006AB400` for 2,447
+VI rows. The watched `osViSwapBuffer` entry fired 4,253 times and its only
+predecessors were `0x8001BE24` (4,098) and `0x80019B14` (155). No new
+post-boot predecessor appeared. This rejects H-NoTarget for the recipe but
+does not distinguish H-ExternalCallsite from H-WrapperChain; it is
+single-source oracle evidence and leaves the handoff unresolved. No build,
+port instrumentation, or runtime behavior changed.
+
+Evidence: `scratch/agent/s3104_external_retail_entry_boundary/AUDIT.md` and
+`scratch/agent/s3104_external_retail_entry_boundary/oracle.log`.
+
+ORIGIN: qualification-only retail handoff attribution; no audio, route,
+selector, wait, voice, or mitigation behavior changed.
