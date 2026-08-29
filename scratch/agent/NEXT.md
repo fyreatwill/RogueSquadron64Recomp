@@ -1,10 +1,10 @@
-# NEXT work unit — audit `fake_func_800B2628`
+# NEXT work unit — audit `fake_func_800B47C4`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next unresolved project-TOML placeholder, `fake_func_800B2628`,
+Audit the next unresolved project-TOML placeholder, `fake_func_800B47C4`,
 which is in the menu overlay. Compare its companion symbol entry, generated
 body, callers, header, overlay registration, project TOML, and local
 duplicates. Rename only if an exact semantic identity is independently
@@ -33,7 +33,7 @@ justified.
 ## Exact commands
 
 1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
-2. Inspect `fake_func_800B2628` in the companion menu symbol file, generated
+2. Inspect `fake_func_800B47C4` in the companion menu symbol file, generated
    `RecompiledFuncs/funcs_*.c`, `funcs.h`, `recomp_overlays.inl`, and
    `syms/rogue_squadron.syms.toml`.
 3. Record the six-surface comparison in

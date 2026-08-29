@@ -123896,3 +123896,13 @@ address-qualified name `func_mission_overlay_800E9AE0`; all six surfaces agree.
 This rejects mapping drift and a data-fragment interpretation, but does not
 support a human rename. No behavior or generated source was changed. The next
 sweep candidate is the next remaining placeholder after `0x800E9AE0`.
+## Session 3064 (2026-08-28) — audited 0x800B2628 generated symbol
+
+Completed the bounded six-surface generated-symbol audit for menu-overlay
+`fake_func_800B2628`. The companion map, generated body/header/registration,
+and project TOML agree on an 8-byte placeholder at `0x800B2628`. The body is
+only `lwc1` followed by `swc1`, with no return sequence and no generated
+caller; the exact-address searches found no duplicate entry. Selected the
+fragment/data-boundary hypothesis and preserved the placeholder. This rules
+out an independently supported semantic rename and mapping drift at this
+address. Next candidate: `fake_func_800B47C4`.

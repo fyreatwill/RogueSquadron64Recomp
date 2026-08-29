@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3063 (2026-08-28).
+Current maintenance marker: Session 3064 (2026-08-28).
 
 ## Current state
 
@@ -95,6 +95,14 @@ registration remain address-named, while the project TOML and rename tool
 already agree on `func_mission_overlay_800E9AE0`. No generated caller or
 mapping drift was found, so no human rename was justified. Evidence:
 `scratch/agent/s3063_generated_symbol_rename/AUDIT.md`.
+
+Session 3064 completed the bounded six-surface audit at `0x800B2628`. The
+companion map, generated body/header/registration, and project TOML all agree
+on an 8-byte menu-overlay placeholder, but the body is only a float load/store
+with no return sequence and no generated caller. This selects the fragment or
+data-boundary hypothesis; no semantic rename is justified. The next sweep
+candidate is `0x800B47C4`. Evidence:
+`scratch/agent/s3064_generated_symbol_rename/AUDIT.md`.
 
 Session 3040 ran the M5 Step-1 image/silent qualification after an independent
 retail ground-truth preflight. Retail passed the whole-RDRAM positive control
