@@ -125956,6 +125956,20 @@ rename there; ambiguous records remain untouched. No build, game run, or
 runtime behavior changed. Evidence:
 `scratch/agent/s3182_generated_symbol_sweep.md`.
 
+## Session 3184 (2026-08-29) — bounded generated-symbol sweep closed synchronized band
+
+Ran the required regeneration-safe generated-symbol helper for
+`0x801A0000..0x801B0000` with `--require-rename`. The helper selected zero
+generated references, changed zero references in zero files, and returned its
+expected bounded no-rename error. Independent case-insensitive searches found
+no placeholder occurrence or `RECOMP_FUNC` placeholder definition in the
+interval, and the companion symbol files contained no record there.
+
+This closes the band for semantic renaming and rules out an exact companion
+rename there; ambiguous fragments remain untouched. No build, game run, or
+runtime behavior changed. Evidence:
+`scratch/agent/s3184_generated_symbol_sweep.md`.
+
 ## Session 3183 (2026-08-29) — bounded generated-symbol sweep closed synchronized band
 
 Ran the required regeneration-safe generated-symbol helper for

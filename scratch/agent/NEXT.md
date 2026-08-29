@@ -6,9 +6,9 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 M5 remains blocked pending a route change. The selected M3 class
 `musyxMixActiveVoices` was proven range-safe in Session 3167. Sessions 3168
-through 3182 closed the latest bands without a stale semantic placeholder,
+through 3183 closed the latest bands without a stale semantic placeholder,
 apart from the separately synchronized data-gap records in Session 3180.
-Resume the regeneration-safe sweep at `0x801A0000..0x801B0000`.
+Resume the regeneration-safe sweep at `0x801B0000..0x801C0000`.
 
 Competing hypotheses and the discriminating measurement:
 
@@ -27,8 +27,8 @@ selects SemanticMatch or DataGap; ambiguous entries remain untouched.
 Exact starting commands:
 
 ```sh
-python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x801A0000 --end-address 0x801B0000 --limit 16 --require-rename
-rg -n '^RECOMP_FUNC void (func|fake_func|static)_[^(]+\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | rg '801A[0-9A-Fa-f]{4}|801B[0-9A-Fa-f]{4}' || true
+python3 tools/rename_generated_symbols.py /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --companion-dir /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files --start-address 0x801B0000 --end-address 0x801C0000 --limit 16 --require-rename
+rg -ni '^RECOMP_FUNC .*\b(func|fake_func|static)_[0-9a-f]+\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | rg -i '801b[0-9a-f]{4}|801c[0-9a-f]{4}' || true
 ```
 
 Expected outcome: the next batch either renames at least one exact candidate,
