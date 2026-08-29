@@ -6,7 +6,15 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3168 (2026-08-29).
+Current maintenance marker: Session 3169 (2026-08-29).
+
+Session 3169 completed the bounded generated-symbol sweep for
+`0x800C0000..0x800D0000`. The companion census found no stale generated
+placeholder with a semantic rename: all callable-shaped candidates were
+already synchronized, while fake/data records were ambiguous or already
+mechanically named. The required-rename control reported zero changed
+references and the band is closed without a new rename. Evidence:
+`scratch/agent/s3169_generated_symbol_sweep.md`.
 
 Session 3168 completed the bounded generated-symbol sweep for
 `0x800B75D0..0x800C0000`. Every companion-qualified candidate was already
@@ -581,8 +589,8 @@ generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 6's default-off policy is now regeneration-safe. M5 target-phase
 qualification is still blocked until a route change produces title or hangar
 controls. A same-build policy control was attempted but did not reach the
-drain gate. The next work unit is a bounded M3 idiom-class audit; do not remove
-the status-03 wait hatch.
+drain gate. The selected M3 class is now closed; the next work unit is the
+bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
 
 1. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    The current route remains blocked before target phases, so do not repeat the
@@ -630,8 +638,9 @@ the status-03 wait hatch.
    this regeneration-safe campaign. Session 3166 synchronized the explicit
    data gap at `0x800B75C4`; Session 3168 found the next band
    `0x800B75D0..0x800C0000` already synchronized except for the explicitly
-   fake `0x800B89F4`, which remains unchanged. Continue at the next bounded
-   interval and preserve ambiguous fragments.
+   fake `0x800B89F4`, which remains unchanged. Session 3169 closed
+   `0x800C0000..0x800D0000` as already synchronized or ambiguous. Continue at
+   the following bounded interval and preserve ambiguous fragments.
 
 5. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC

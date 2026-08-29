@@ -125752,3 +125752,15 @@ This selects `H-M3-Proven` for the complete class and rejects both
 `H-M3-Unclassified` and `H-M3-Dead` at static scope. No guard, mitigation,
 audio behavior, generated source, build, or runtime run changed. Evidence:
 `scratch/agent/s3167_m3_musyx_mix_active_voices_audit.md`.
+## Session 3169 (2026-08-29) — bounded generated-symbol sweep closed synchronized band
+
+Ran the regeneration-safe companion-symbol sweep over
+`0x800C0000..0x800D0000` with the required changed-reference control. The
+companion census found only already-synchronized semantic names and
+ambiguous/fake data records. The helper changed zero references and zero
+files, and returned its expected no-rename failure under `--require-rename`.
+The generated placeholder check found no callable placeholder definition in
+the interval. This closes the band for semantic renaming and rules out an
+exact companion rename there; ambiguous records remain untouched. No build,
+game run, or runtime behavior changed. Evidence:
+`scratch/agent/s3169_generated_symbol_sweep.md`.
