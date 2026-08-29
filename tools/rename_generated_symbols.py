@@ -125,6 +125,9 @@ RENAMES = {
     # This generated record starts with data-decoded words and trap/invalid
     # instructions, with no companion symbol or standalone callable prologue.
     "static_3_800A2558": "data_gap_800A2558",
+    # This generated record starts with invalid/data-decoded words and has no
+    # companion symbol or standalone callable prologue.
+    "static_3_800A2790": "data_gap_800A2790",
     # The companion map places these short records immediately before named
     # functions; they are data gaps, not callable game routines.
     "fake_func_80064294": "data_gap_80064294",
