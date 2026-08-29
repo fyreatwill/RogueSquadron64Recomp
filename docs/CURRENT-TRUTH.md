@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3230 (2026-08-29).
+Current maintenance marker: Session 3231 (2026-08-29).
 
 ## Current state
 
@@ -29,6 +29,14 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection.
+   Session 3231 changed `get_rsp_microcode` to read `ROGUESQ_AUDIO_UCODE`
+   per `M_AUDTASK` instead of caching the first task's arm. Same-build image
+   and silent smoke controls produced 46/45 dispatch rows and 552 SP-return
+   rows respectively, with every row on its requested arm and no crash or
+   abort. This closes the stale-selector hypothesis at the dispatch boundary
+   only; both runs stopped before title, so downstream audio/task/DMA/service/
+   slot/voice/MORT/PCM conclusions remain unevaluable. The next work unit
+   returns to the independent retail VI-swap/origin attribution below.
    Session 3230's same-build silent/image capture selected
    `H-PhaseDifferentEdge`: both port arms reached 640/origin `0x0066A500`
    and emitted the same live VI-commit and audio-return rows, while retail's

@@ -1,6 +1,6 @@
 # M5 — audio de-stubbing plan
 
-Refreshed in session 3038 (2026-08-28). This is the design gate for M5.
+Refreshed in session 3231 (2026-08-29). This is the design gate for M5.
 Session 2791 completed the SP-yield request lifecycle by clearing stale request
 state when a new task starts; task interruption and resumption remain out of
 scope.
@@ -29,6 +29,13 @@ pair's downstream nulls remain unevaluable. The first behavior change is
 therefore still not authorized by this survey: Step 1 must run with the
 validated AUTOPILOT/phase-gated route, then Step 3 may implement one named
 missing contract edge.
+
+Session 3231 made the dispatch boundary task-local: `get_rsp_microcode` reads
+`ROGUESQ_AUDIO_UCODE` for each `M_AUDTASK`, preserving the explicit silent arm
+without allowing the first dispatched task to pin later tasks to that arm.
+The image and silent smoke controls retained their expected dispatch and
+SP-completion rows, but stopped before the target title phase; this is a
+runtime qualification fix, not evidence of downstream audio output.
 
 The source-level inventory was checked directly in `main.cpp`,
 `librecomp/rsp.cpp`, `librecomp/ai.cpp`, `ultramodern/audio.cpp`,

@@ -2,10 +2,8 @@
 
 HYPOTHESIS-ID: m5-retail-vi-origin-attribution
 
-Session 3230 selected distinct edges: both port arms stopped at
-640/`0x0066A500`, while retail's ordered route PCs fired at 640/`0x00790A00`.
-Do not add more port route fields until the retail buffer writer/commit is
-attributed.
+Session 3231 fixed the per-task audio-arm selector and validated both fresh
+image/silent controls. Downstream target-phase qualification remains open.
 
 ## Competing hypotheses
 
@@ -36,7 +34,7 @@ must reach its callback threshold in the same run.
 Use the oracle command documented in `tools/oracle/README.md`, preserving the
 validated Rice/input route and title gate. Add the `0x80035500` VI-swap watch
 and the existing four route-PC watches, plus the whole-RDRAM watch. Capture to
-`scratch/agent/s3231_m5_retail_vi_origin/` and do not build port
+`scratch/agent/s3232_m5_retail_vi_origin/` and do not build port
 instrumentation until the oracle result is positive-controlled.
 
 Do not add audio/task counters until this writer/commit discriminator selects

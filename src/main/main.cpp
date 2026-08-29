@@ -3121,11 +3121,12 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
         // The image arm is default; set ROGUESQ_AUDIO_UCODE=0 for the stub
         // control used by the incremental audio qualification steps.
         {
-            static int s_use_real_audio_ucode = -1;
-            if (s_use_real_audio_ucode < 0) {
-                const char* e = getenv("ROGUESQ_AUDIO_UCODE");
-                s_use_real_audio_ucode = !(e && e[0] == '0');
-            }
+            // Read the arm for each task. Audio task submission can outlive
+            // the probe that selected the previous task, so caching this
+            // process-wide would make the explicit silent control stale.
+            const char* audio_ucode = getenv("ROGUESQ_AUDIO_UCODE");
+            const int use_real_audio_ucode =
+                !(audio_ucode && audio_ucode[0] == '0');
             // s300: ground-truth counter for whether M_AUDTASK is ever
             // dispatched at all (step 1's source trace found the gate byte
             // doesn't directly block it, but the first soak logged 0
@@ -3147,10 +3148,10 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
             rs64_m5_init_voice_probe_control();
             if (s_audtask_n < 40 || (s_audtask_n % 128) == 0) {
                 fprintf(stderr, "[audtask-dispatch] n=%u real_ucode=%d\n",
-                        s_audtask_n, s_use_real_audio_ucode);
+                        s_audtask_n, use_real_audio_ucode);
             }
             s_audtask_n++;
-            if (s_use_real_audio_ucode) return &factor5_ucode_b_probe;
+            if (use_real_audio_ucode) return &factor5_ucode_b_probe;
         }
         return &musyx_stub_probe;
     default:

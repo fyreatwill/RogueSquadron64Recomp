@@ -126761,3 +126761,28 @@ Evidence: `scratch/agent/s3230_m5_route_phase_join.md` and
 ORIGIN: no mitigation or guest value was changed; the finding is a phase-edge
 correction based on independent retail attribution and two identical port
 arms.
+## Session 3231 (2026-08-29) — made M5 audio arm selection task-local
+
+Changed `src/main/main.cpp:get_rsp_microcode` to read
+`ROGUESQ_AUDIO_UCODE` for each `M_AUDTASK` instead of caching the first task's
+selection. This preserves the Factor 5 image default and the explicit zero
+silent control while preventing a prior task from pinning later dispatches to
+the wrong arm.
+
+Built `RogueSquadron64Recomp` successfully. Fresh image and silent smoke arms
+from that build produced, respectively, 46 and 45 `[audtask-dispatch]` rows;
+all rows selected the requested arm. Both arms produced 552
+`sp-complete-return` rows and neither emitted a crash or abort marker. The
+smoke route stopped before the target title phase, so this validates only the
+dispatch/completion boundary and does not qualify downstream DMA, service,
+slot, voice, MORT, or PCM behavior. The initial smoke attempt used an invalid
+capture path and was rerun with the corrected path; it produced no game run.
+
+This selects `H-PerTaskSelection` at the runtime dispatch boundary and rules
+out stale process-wide arm caching. It does not explain the VI-640 route stop
+or authorize a guest gate/output change.
+
+Evidence: `scratch/agent/s3231_m5_per_task_dispatch/{image,silent}.log`.
+
+ORIGIN: no guest value, guard, or mitigation was changed; this is a runtime
+dispatch-contract correction, with the task environment as the arm selector.
