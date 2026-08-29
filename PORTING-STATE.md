@@ -125432,3 +125432,18 @@ an unclassified reachable null-plus-offset dereference in this class, and
 provides no basis for a guard or mitigation. No build, run, or runtime
 behavior change was needed. Evidence:
 `scratch/agent/s3148_m3_slot_inner_derived_audit.md`.
+## Session 3149 (2026-08-29) — selected unbounded `stopVoicesByHandle` index contract
+
+The planned work unit was a complete static M3 idiom audit of
+`stopVoicesByHandle` at `0x8008DA98`, including all four direct generated
+callsites. The body has valid local null/data-flow edges for the global linked
+list head, its next links, and the matched node's `+0xC` field. The handle is
+masked with `andi 0xff`, then used in a `0x17C`-stride calculation against
+the active voice-record table. The current generated body provides no proof
+that the resulting 0..255 index is restricted to the 32-record active table.
+
+`H-M3-Unclassified` is selected for the handle-to-record-index contract on
+single-source static evidence. This rules out treating the linked-list null
+checks as the unresolved defect and rules out adding a guard based only on the
+callee's local record accesses. No code, guard, runtime behavior, or build was
+changed. Evidence: `scratch/agent/s3149_m3_stop_voices_by_handle_audit.md`.

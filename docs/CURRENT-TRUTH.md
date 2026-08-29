@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3148 (2026-08-28).
+Current maintenance marker: Session 3149 (2026-08-29).
 
 ## Current state
 
@@ -106,6 +106,15 @@ invariant. This selects `H-M3-Proven` for the complete class and provides no
 basis for a guard or mitigation. Static evidence only; no build or runtime
 behavior changed. Evidence:
 `scratch/agent/s3148_m3_slot_inner_derived_audit.md`.
+
+Session 3149 audited the complete `stopVoicesByHandle` body and all four direct
+callsites. The linked-list head, node links, and matched-node `+0xC` access
+have local null/data-flow edges. The handle is only masked to 8 bits before a
+`0x17C`-stride access into the 32-record active voice table; no local or
+caller-side proof bounds it to `0..0x1F`. This selects `H-M3-Unclassified` for
+the handle-to-record-index contract. It is single-source static evidence: no
+runtime run or guard was added. Evidence:
+`scratch/agent/s3149_m3_stop_voices_by_handle_audit.md`.
 
 Session 3144 could not run the queued M5 paired qualification. The required
 route change is not present: the current state still records the port stopping
@@ -391,8 +400,10 @@ audit; M5 remains an open dependency, not a reason to stop the loop.
 1. **M3 crash work — bounded idiom-class audit.** The
    `slotDispatcherIter` and the two `slotDispatcherInner` pointer classes
    are closed by Sessions 3146–3148. Select the next bounded NULL-plus-offset
-   idiom from the existing M3 audit inventory; enumerate every site and
-   classify its null-check/provenance edge before any build or mitigation.
+   idiom from the existing M3 audit inventory; `stopVoicesByHandle` is now
+   selected as an open class because its 8-bit handle-to-32-record bound is
+   unproven. Trace every handle writer/allocator and its low-byte range before
+   considering any guard.
 
 2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI

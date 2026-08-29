@@ -1,40 +1,35 @@
-# NEXT work unit — audit the next unclassified M3 pointer idiom class
+# NEXT work unit — trace the `stopVoicesByHandle` handle bound
 
-HYPOTHESIS-ID: m3-null-offset-idiom-audit
+HYPOTHESIS-ID: m3-stop-voices-by-handle-audit
 
 ## Single work unit
 
-The M5 paired qualification remains blocked by the current route stopping at
-VI 640. The `slotDispatcherInner` derived heap/list-pointer class closed in
-Session 3148. Continue useful work without changing that route: select the
-next bounded M3 NULL-plus-offset idiom from the existing audit inventory,
-then enumerate its complete site table before adding any guard.
+Complete the open edge from Session 3149: enumerate every writer and allocator
+that can produce the handle passed to `stopVoicesByHandle`, and prove or fail
+to prove that its low byte is in `0..0x1F` before the 0x17c-stride table access.
+Do not add a guard, change audio behavior, or run the blocked M5 route.
 
 ## Competing hypotheses
 
-- `H-AudioDegeneracy`: the silent arm suppresses downstream task/service/slot/
-  voice/PCM progress once target phases are reachable.
-- `H-ContractGap`: the image arm completes DMEM/DMA but fails a named guest or
-  output contract edge, while the silent control does not.
-- `H-M3-Unclassified`: at least one site in the next selected idiom remains
-  an unclassified reachable dereference or lacks a defensible contract.
-- `H-M3-Proven`: every site in the next selected idiom is classified as
-  guarded, unreachable, or legitimate under a named caller contract, so the
-  class closes without a behavior change.
+- `H-HandleBound`: all reachable handle writers/allocators clamp or construct
+  an index below 32 before the four callers pass node `+0x8`.
+- `H-HandleUnbounded`: at least one reachable writer can publish a low byte
+  from 0x20..0xFF, leaving the callee's table access unclassified.
+- `H-HandleCallerMismatch`: the four callers do not all pass the same handle
+  field or one caller bypasses the documented active-list contract.
 
 ## Discriminating measurement
 
-The decisive measurement is a complete static site table for every `MEM_*`
-access in the newly selected idiom. Each site must have a guest address,
-offset, null-check/data-flow edge, writer or allocator provenance, and
-reachability disposition. Any unclassified reachable site selects
-`H-M3-Unclassified`; a complete classification selects `H-M3-Proven`. A
-runtime run is not needed unless the table identifies a specific reachable
-site whose behavior must be checked.
+Build one complete writer/caller table: guest PC, destination address/field,
+writer function, input provenance, range operation, and each path to node
+`+0x8`. `H-HandleBound` requires every reachable path to establish `< 0x20`;
+one reachable path without that proof selects `H-HandleUnbounded`, and a
+field/caller mismatch selects `H-HandleCallerMismatch`.
 
 ## Exact commands
 
 ```sh
-rg -n 'MEM_[A-Z]+\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | rg '<next-selected-range>'
+rg -n 'stopVoicesByHandle|0x8013D880|0x80141AD0|0x17C|0x17c|0x64\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n 'startNoteOnVoice|allocateSynthVoice|freeSynthVoiceFromActiveList' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
 git diff --check
 ```
