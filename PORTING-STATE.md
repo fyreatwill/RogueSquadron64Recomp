@@ -126072,7 +126072,7 @@ zero-register arithmetic and data-like stores, has no callable prologue, and
 ends at the next split `0x800A2218`; this selects `H-DataGap`. Added the
 regeneration-safe mapping `static_3_800A2114` → `data_gap_800A2114` and ran
 the bounded helper, which synchronized exactly three external generated
-references in `funcs_49.c`, `funcs.h`, and `recomp_overlays.inl`. A final
+references in `funcs_49.c`, `funcs_27.c`, and `funcs.h`. A final
 search found no stale old-name reference. No build or runtime run was needed;
 the change is source-only and rules out a semantic companion rename for this
 record.
@@ -126090,3 +126090,17 @@ rows were therefore interpretable. This selects `H-BothPreTarget`, confirms
 the arm selector controls, and rules out neither audio degeneracy nor a
 downstream audio contract; it authorizes no audio gate, wait, voice, PCM, or
 task-output change. Evidence: `scratch/agent/s3192_m5_step1_contract_pair.md`.
+
+## Session 3193 (2026-08-29) — classified generated data-gap split at 0x800A2218
+
+The bounded generated-symbol census found no companion symbol for
+`0x800A2218`. Its generated body begins with data-decoded zero-register
+arithmetic and contains an invalid instruction at `0x800A2228` that lowers to
+`do_break`; it has no standalone callable prologue. This selects `H-DataGap`
+and rules out a semantic callable rename for this record. Added the
+regeneration-safe mapping `static_3_800A2218` → `data_gap_800A2218` and ran
+the bounded helper, which synchronized exactly three external generated
+references in `funcs_49.c`, `funcs.h`, and `recomp_overlays.inl`. A final
+search found no stale old-name reference. No build or runtime run was needed;
+the change is source-only.
+Evidence: `scratch/agent/s3193_generated_symbol_rename.md`.

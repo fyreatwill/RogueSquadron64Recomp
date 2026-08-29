@@ -6,7 +6,13 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3192 (2026-08-29).
+Current maintenance marker: Session 3193 (2026-08-29).
+
+Session 3193 advanced the generated-symbol sweep by classifying the invalid
+data-decoded split at `0x800A2218` as `data_gap_800A2218`. The regeneration-
+safe helper synchronized the generated body, header, and callsite;
+no runtime behavior changed. Evidence:
+`scratch/agent/s3193_generated_symbol_rename.md`.
 
 Session 3192 ran the M5 Step 1 same-build image-versus-silent qualification.
 The independent retail oracle passed its whole-RDRAM positive control and
@@ -859,8 +865,9 @@ Do not remove the status-03 wait hatch.
    references for `0x800027B8` to the established `data_gap_800027B8` name.
    Session 3189 classified and synchronized `0x80029270` as
    `data_gap_80029270`; Session 3191 classified and synchronized
-   `0x800A2114` as `data_gap_800A2114`. Resume at the next unclassified
-   generated record and preserve ambiguous fragments.
+   `0x800A2114` as `data_gap_800A2114`; Session 3193 classified and
+   synchronized `0x800A2218` as `data_gap_800A2218`. Resume at the next
+   unclassified generated record and preserve ambiguous fragments.
 
 5. **External retail-entry boundary — compare the new wait predecessors after
    a route change.** Session 3185's independent retail oracle found
