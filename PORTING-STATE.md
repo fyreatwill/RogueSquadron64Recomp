@@ -125490,11 +125490,11 @@ value (e.g. `=1`) is left untouched for the control arm. The fixup's existing
 `apply_s1993_drain_inloop_gate()` already interpreted only `*e == '1'` as
 enabled, so no fixup edit was required — it was verified correct in situ.
 
-`H-Step6-BuildRegression` REFUTED: target build completed successfully and
-`python3 -m py_compile fixup_game_funcs.py` passed. `H-Step6-PolicyApplied`
-vs `H-Step6-PolicyBypassed` remain open — they require a game run to observe
+A successful build refutes H-Step6-BuildRegression; `python3 -m py_compile
+fixup_game_funcs.py` also passed. H-Step6-PolicyApplied vs
+H-Step6-PolicyBypassed remain open: they require a game run to observe
 `[drain-inloop-gate] en=0` on the default path and `en=1` on the explicit
-path. That is the next discriminating measurement; no audio behavior,
+path. That run is the next discriminating measurement. No audio behavior,
 guest wait, gate, writer, or output was changed this session. ORIGIN: the
 policy controls the port-only s1976 host injection; it does not alter a
 guest-owned value.
