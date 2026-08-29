@@ -124240,6 +124240,28 @@ confirms the existing regeneration-safe mapping. The next candidate is
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
 
+## Session 3085 (2026-08-28) — classified 0x8006ACA4 generated gap
+
+The bounded six-surface generated-symbol audit examined `fake_func_8006ACA4`.
+The companion `main_overlay.txt` retains the placeholder and provides no
+semantic identity. The active generated body contains only `lwc1`, `lwc1`, and
+`add.s` over the 12-byte extent, with no callable prologue, return sequence,
+or generated caller. Header and overlay registration agree on the 12-byte
+record between `transformMeshPartIntoWorld` and
+`transformObjectColliderCenter`; project TOML agrees on the address and size.
+This selects H-Fragment and renames the record mechanically to
+`data_gap_8006ACA4` in the regeneration-safe rename maps, project TOML, and
+active generated tree. No build or game run was needed.
+
+This rules out a defensible semantic rename and confirms the record is a
+non-callable boundary fragment. It does not claim anything about runtime
+reachability or audio behavior.
+
+Evidence: `scratch/agent/s3085_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
+
 ## Session 3084 (2026-08-28) — synchronized 0x800555E8 preamble
 
 Ran the bounded six-surface generated-symbol audit for

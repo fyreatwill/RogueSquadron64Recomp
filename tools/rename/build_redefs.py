@@ -64,7 +64,7 @@ EXTRA_RENAMES = {
     "fake_func_8005EE64": "steerOrientationTowardTargetPreamble",
     "fake_func_800613B8": "loadCharTextureSetPreamble",
     "fake_func_80069AEC": "collideSegmentAgainstObjectNodesPreamble",
-    "fake_func_8006ACA4": "transformObjectColliderCenterPreamble",
+    "fake_func_8006ACA4": "data_gap_8006ACA4",
     "fake_func_800AAADC": "playerSnowSpeederInitPreamble",
     "fake_func_800B58B4": "playerAwingInitPreamble",
     "fake_func_800AA6CC": "npcPredictedRangeCheckPreamble",

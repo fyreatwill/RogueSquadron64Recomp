@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3084 (2026-08-28).
+Current maintenance marker: Session 3085 (2026-08-28).
 
 ## Current state
 
@@ -60,6 +60,18 @@ placeholder reference. This selects H-ExactIdentity and confirms the existing
 regeneration-safe mapping. The next sweep candidate is
 `fake_func_8006ACA4`. Evidence:
 `scratch/agent/s3084_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
+
+Session 3085 completed the bounded six-surface audit at `0x8006ACA4`. The
+companion map retains the placeholder, the generated body is only three
+instructions with no callable prologue or return, and no generated caller
+exists. Overlay extent and project TOML place it as a 12-byte record between
+`transformMeshPartIntoWorld` and `transformObjectColliderCenter`. This selects
+H-Fragment, so the record is now named mechanically as `data_gap_8006ACA4` in
+the project TOML, rename tooling, and active generated tree. Evidence:
+`scratch/agent/s3085_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
@@ -592,7 +604,9 @@ parked pending a new discriminator.
    data gap; `0x800BF784` was also audited and preserved as a data gap;
    resume at `data_gap_800C7DB4`; `0x800C64A4` and `0x80024878` were audited
    and preserved as data gaps. `fake_func_800555E8` was synchronized as
-   `initPlayerStructsPreamble`; resume at `fake_func_8006ACA4`.
+   `initPlayerStructsPreamble`; `0x8006ACA4` was classified and synchronized
+   as `data_gap_8006ACA4`; resume at the next unresolved candidate
+   `fake_func_8006B704`.
    If the sweep becomes a
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.

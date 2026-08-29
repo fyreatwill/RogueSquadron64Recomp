@@ -983,7 +983,7 @@ functions = [
     { name = "findSegmentObjectSphereHit", vram = 0x8006A944, size = 0x234 },
     { name = "projectPointOntoObjectSphereHit", vram = 0x8006AB78, size = 0x104 },
     { name = "transformMeshPartIntoWorld", vram = 0x8006AC7C, size = 0x28 },
-    { name = "fake_func_8006ACA4", vram = 0x8006ACA4, size = 0xC },
+    { name = "data_gap_8006ACA4", vram = 0x8006ACA4, size = 0xC },
     { name = "transformObjectColliderCenter", vram = 0x8006ACB0, size = 0x198 },
     { name = "intersectSegmentWithObjectSphere", vram = 0x8006AE58, size = 0x168 },
     { name = "decrypt_ns_hmt", vram = 0x8006AFC0, size = 0x40 },
