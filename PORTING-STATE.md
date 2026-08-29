@@ -125281,3 +125281,18 @@ retail-grounded boundary; repeating the exhausted candidate set is forbidden.
 
 Evidence: `scratch/agent/s3138_m5_step1_qualification.md` and
 `scratch/agent/s2618_m5_hangar_pcm_boundary_rerun/{image.log,silent.log}`.
+## Session 3139 (2026-08-28) — censused retail M5 boundary source
+
+Ran the prescribed static census for `pending`, VI descriptors,
+`osViSetMode`, `__osViSwapContext`, and `VI_ORIGIN_REG` across the companion
+tree, project symbols, and docs. Before any build, recorded the candidate
+table and the required whole-RDRAM/title/hangar positive controls in
+`scratch/agent/s3139_m5_retail_static_census.md`. The relevant companion
+libultra bodies remain `INCLUDE_ASM` stubs; project matches are existing
+declarations, comments, symbol records, and already-closed probes. No new
+transition-capable retail instruction or generated body was available, so
+the work unit selected `H-SourceInsufficient` and performed no build, oracle
+watch, port instrumentation, or audio change. This rules out a repeated
+candidate-based retail capture for the current source set, not the retail
+handoff itself. Evidence is single-source static census; a restored
+instruction-level body/disassembly is required to falsify the result.

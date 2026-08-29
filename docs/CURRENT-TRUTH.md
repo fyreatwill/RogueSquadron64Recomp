@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3138 (2026-08-28).
+Current maintenance marker: Session 3139 (2026-08-28).
 
 ## Current state
 
@@ -57,6 +57,16 @@ downstream task/service/slot/voice/PCM tags had no usable positive rows, so
 their nulls are unevaluable and no audio contract edge is selected. This
 selects `H-RouteBlocked` for this route; audio behavior remains unchanged.
 Evidence: `scratch/agent/s3138_m5_step1_qualification.md`.
+
+Session 3139 reran the prescribed independent static census for pending VI
+state, descriptors, VI setters, swap context, and origin publication. The
+available companion executable bodies remain `INCLUDE_ASM` stubs, while the
+project tree contains only existing declarations, symbol records, comments,
+and already-closed probes. No new transition-capable retail instruction or
+restored generated body was found. This selects `H-SourceInsufficient` and
+rules out another oracle or port-instrument build for this unit. Single-source
+static evidence; no runtime behavior changed. Evidence:
+`scratch/agent/s3139_m5_retail_static_census.md`.
 
 ## Latest evidence
 
@@ -282,13 +292,12 @@ generated-symbol sweep. Maintenance is complete and M5 design is complete;
 the port-side VI publication parity probe is now exhausted for this route.
 M3 is parked pending a new discriminator.
 
-1. **M5 route blocker — obtain a retail-grounded upstream handoff.** The
+1. **M5 route blocker — restore source for a retail-grounded upstream handoff.** The
    pending-request/descriptor static audit is insufficient because the
    generated snapshot is absent and the companion bodies are `INCLUDE_ASM`
    stubs. Do not invent a PC or add a port probe. Restore/provide an equivalent
-   generated body/disassembly, or choose a genuinely new retail watch based on
-   independent static evidence, then require whole-RDRAM and title/hangar
-   controls. Do not change audio or route behavior.
+   generated body/disassembly that exposes a new edge; then require whole-RDRAM
+   and title/hangar controls. Do not change audio or route behavior.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the
