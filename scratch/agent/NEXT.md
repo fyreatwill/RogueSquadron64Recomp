@@ -1,40 +1,38 @@
-# NEXT work unit — obtain a new M5 target-phase route boundary
+# NEXT work unit — audit the pre-title route boundary
 
-HYPOTHESIS-ID: m5-target-phase-route-boundary
+HYPOTHESIS-ID: m5-port-route-boundary
 
-## Single work unit
+Session 3224 resolved the route-selection dependency with a local, retail-
+qualified route: `3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a`.
+Retail passed the whole-RDRAM positive control and reached title 1024 and
+hangar 512. A same-build port silent/image pair using the same route passed
+audio-dispatch controls (69 rows per arm) but both stopped at VI 640 origin
+`0x0066A500`; neither reached title or hangar. A12 remains closed.
 
-M5 target-phase qualification remains blocked: do not repeat the `s2618` or
-eleven-Start routes. Session 3223 confirmed that no new route or equivalent
-retail-grounded boundary is available in this iteration. A12 is closed
-(s3221/s3222: the only guest stores of
-`0x8014974C` are named binary-gate publications, selects H-NamedFlagWriter).
-The next unit can run only after a human-selected route change or an equivalent
-retail-grounded boundary is available. Human input required: select the route
-or supply the boundary and its launch recipe.
+## Competing hypotheses
 
-The recv-trace instrumentation (`ROGUESQ_RECV_TRACE`) in upstream_compat.cpp
-is passive and env-gated; it is available but was not run in s3221.
-
-## Competing hypotheses for the next qualification run
-
-- `H-TargetRouteUnblocks`: the selected route reaches title 1024 and hangar
-  512, making target-phase audio joins evaluable.
-- `H-TargetRouteStillStops`: the selected route still stops before title,
-  keeping audio/task/DMA/service/slot/voice/PCM rows unevaluable.
-- `H-TargetRouteCrashes`: the route reaches a crash/abort before the target
-  phase and supplies a new discriminating failure boundary.
+- `H-PortInputBoundary`: the port's internal autopilot schedule or phase-
+  relative input handling diverges from the retail route before title.
+- `H-PortStateBoundary`: a non-input title/state publication differs before
+  the first 1024 VI transition.
+- `H-PortSchedulerBoundary`: host scheduling or queue progress prevents the
+  same route transition despite valid input/state evidence.
 
 ## Discriminator
 
-Phase-gated same-build `ROGUESQ_AUDIO_UCODE=0/1` arms after the route change.
-Require the image arm's DMEM, DMA, SP completion/Broke, service, slot, and PCM
-joins, with the silent arm as the no-write control. Record VI 640/1024/512
-transitions; do not use elapsed time.
+Run one same-build capture of both arms with route, pad-host/pad-SDL, VI-caller,
+queue/recv, and route-state controls. Positive control: both arms' dispatch
+rows and initial VI transition. Independent boundary: retail oracle's
+whole-RDRAM control plus title/hangar phases. The first post-640 divergence
+among input delivery, state publication, or scheduler/queue progress selects
+the hypothesis. Do not infer target-phase audio nulls while 1024 is absent.
 
-## Exact start after route selection
+## Exact start
 
-Build the existing Debug target, then run the documented phase-gated pair
-concurrently from `build/` with `ROGUESQ_AUDIO_UCODE=0/1` and
-`ROGUESQ_LOG_ALL=1`; capture each arm to a non-dot final path and SIGKILL both
-processes at the watchdog boundary.
+Build `cmake --build build --config Debug --target RogueSquadron64Recomp`, then
+run both arms concurrently from `build/` with `ROGUESQ_LLE_FORCE=1`,
+`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`, `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_LOG_ALL=1`, and the route above via `ROGUESQ_AUTOPILOT`; add
+`ROGUESQ_LOG_VI_CALLERS=1`, `ROGUESQ_RECV_TRACE=1`, and
+`ROGUESQ_LOG_M5_ROUTE_STATE=1`. Capture non-dot final paths and SIGKILL at the
+watchdog boundary.

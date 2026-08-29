@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3223 (2026-08-29).
+Current maintenance marker: Session 3224 (2026-08-29).
 
 ## Current state
 
@@ -28,21 +28,22 @@ the status-03 wait hatch.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
-1. M5 target-phase qualification remains an open dependency, reaffirmed in
-   Session 3223: the current build
-   was rechecked with the retained `s2618` route and the eleven-Start route;
-   both image arms passed dispatch/host controls but stopped at VI 640
-   (`0x0066A500`) with no title or hangar transition. A human-selected route or
-   equivalent new retail-grounded boundary is still required. Do not repeat
-   either route unchanged.
+1. M5 target-phase qualification is no longer blocked on route selection.
+   Session 3224 used the locally available, retail-qualified phase-relative
+   route `3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a`
+   (distinct from `s2618` and eleven-Start). Retail passed the whole-RDRAM
+   positive control and reached title 1024 and hangar 512. The same-build port
+   silent/image pair passed both dispatch controls but both stopped at VI 640
+   (`0x0066A500`), selecting `H-TargetRouteStillStops`. The next work unit is a
+   route-boundary audit, not another audio or target-phase null measurement.
 2. A12's `0x8014974C` publication class is closed by Session 3221: the only
    guest stores are `setupSongRenderBuffers` zero-init, `musyxSynthFrame`
    terminal clear, and its fixed-one pre-callback publication. The waiters
    remain safety-only; no timeout, force-clear, or new guard is authorized.
-3. After a route change, rerun the existing same-build phase-gated pair with
-   `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-arm DMEM,
-   DMA, `Broke`/SP completion, service, slot, and PCM joins; retain the silent
-   arm as the no-write control.
+3. After a route-boundary change, rerun the existing same-build phase-gated
+   pair with `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-
+   arm DMEM, DMA, `Broke`/SP completion, service, slot, and PCM joins; retain
+   the silent arm as the no-write control.
 4. Closed static M3 publication classes, retain existing traps/guards as
    safety only: A8 `musyxKeyOnVoice` divide/overflow has one live cmd-list
    divisor store (`musyxRenderVoiceSamples` at `0x80090768`, constant

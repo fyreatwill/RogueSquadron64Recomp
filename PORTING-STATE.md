@@ -126586,3 +126586,29 @@ continued pre-target stop, and an early crash, using the same-build
 ORIGIN: no runtime value was changed; blocker is the absent route/boundary
 selection. Human action needed: select a route or provide a retail-grounded
 boundary plus launch recipe.
+
+## Session 3224 (2026-08-29) — unblocked M5 route selection; port still stops pre-title
+
+The claimed absence of a usable M5 route boundary was refuted locally. The
+oracle documentation/source and `--help` confirmed that an explicit video
+plugin supplies the post-boot path, and the installed Rice plugin plus the
+debugger-enabled oracle core were available. A distinct phase-relative route
+(`3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a`) was
+run without downloading or installing anything. Its whole-RDRAM positive
+control reached 10,000 callbacks; independent VI trace reached title 1024 and
+hangar 512.
+
+Built the current Debug target and ran the same-build port silent/image pair
+concurrently with `ROGUESQ_AUDIO_UCODE=0/1`, `ROGUESQ_LOG_ALL=1`, LLE-solo,
+spin-yield, and the same route through the in-process autopilot. Both arms
+passed the audio-dispatch control (69 rows each), then both stopped at VI 640
+origin `0x0066A500`; neither reached title or hangar and neither emitted
+target-phase task/DMA/service/slot/PCM joins. This selects `H-TargetRouteStillStops`
+for the port route and makes the result valid rather than unevaluable: the
+human route-selection dependency is satisfied, while the remaining defect is
+the port's pre-title route boundary. No audio behavior, guard, or mitigation
+changed. Evidence: `scratch/agent/unblock-retail-route-20260829-1.log` and
+`scratch/agent/unblock-m5-route-20260829/{silent,image}.log`.
+
+ORIGIN: no guest value was changed; the route is a documented retail input/video
+boundary, and the pair's pre-title stop is an observed route result.

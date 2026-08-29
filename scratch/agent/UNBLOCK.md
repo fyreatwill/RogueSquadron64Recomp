@@ -1,23 +1,19 @@
-# Unblock result — Session 3215
+# Unblock result — Session 3224
 
-Route 3 — re-scoped the work unit.
+Route taken: 1 (refute the claim), followed by local satisfaction of the route
+dependency.
 
-Route 1 was checked against the oracle help, oracle README, route-related
-source, and all locally documented M5 route knobs. The oracle's Rice video
-plugin is present, but it only proves the independent retail route; it does
-not make the current port arm reach target phase.
+The claimed absence of a usable route was false. The oracle's documented
+`--video` route and installed Rice plugin were available locally. The distinct
+phase-relative route
+`3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a`
+was tested without downloading or installing anything. Retail passed the
+whole-RDRAM positive-control threshold (10,000 callbacks) and reached title
+VI 1024 and hangar VI 512.
 
-Route 2 was tested locally on the current build:
-
-- `run_s2618_hangar_pcm_boundary.sh`: image and silent arms both passed the
-  dispatch and host-boundary controls, then stopped at VI 640,
-  `0x0066A500`; title/hangar counts were zero and crash/abort counts were zero.
-- the retained eleven-Start image recipe: dispatch reached 1,280 sampled rows
-  and the image arm passed the host control, but it also stopped at VI 640,
-  `0x0066A500`, with no title/hangar transition.
-
-The M5 dependency is therefore real for the target-phase measurement: a
-human-selected route or new retail-grounded boundary is still needed. Route 3
-keeps the loop moving with a bounded static M3 audit of the 3D voice-list
-writer/publication and traversal invariant, which does not require title or
-hangar reachability.
+The same-build port pair then ran both `ROGUESQ_AUDIO_UCODE=0` and `1` with
+`ROGUESQ_LOG_ALL=1`. Each arm passed the dispatch control (69 rows), but both
+stopped at VI 640 origin `0x0066A500`, with no title/hangar transition or
+target-phase joins. This is a valid `H-TargetRouteStillStops` result, not an
+unevaluable human-selection block. The next unit audits the port route
+boundary.
