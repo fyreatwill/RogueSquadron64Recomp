@@ -124039,3 +124039,22 @@ Evidence: `scratch/agent/s3070_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, generated instruction, route,
 audio, or submodule behavior changed.
+## Session 3072 (2026-08-28) — audited 0x800BF784 generated symbol
+
+Completed the bounded six-surface audit at `0x800BF784`. The companion
+mission map and primary `build/redefs.txt` classify the 12-byte entry as
+`data_gap_800BF784` immediately before `updateHudHealthIndicator`; generated
+code contains only `lui`, `lwc1`, and `sub.s`, with no return sequence or
+caller. Header, overlay registration, project TOML, and the main rename tool
+agree on the address and extent. A local `tools/rename/build_redefs.py`
+extra-rename rule calls the fake symbol `updateHudHealthIndicatorPreamble`,
+but no independent companion surface supports that semantic identity. H-
+DataGap selected and the placeholder was preserved. The next sweep candidate
+is `data_gap_800C41AC`. Evidence: `scratch/agent/s3072_generated_symbol_rename/AUDIT.md`.
+
+No build or runtime run was needed; this static result rules out an
+independently named callable/preamble identity and mapping drift at this
+boundary, but makes no runtime claim.
+
+ORIGIN: naming-only classification. No runtime, generated instruction, route,
+audio, or submodule behavior changed.

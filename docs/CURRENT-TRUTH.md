@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3071 (2026-08-28).
+Current maintenance marker: Session 3072 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,24 @@ completion, not PCM correctness. The M5 route dependency remains open, but
 static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3072 completed the bounded six-surface audit at `0x800BF784`. The
+companion mission map and primary `redefs.txt` classify the 12-byte entry as
+`data_gap_800BF784` immediately before `updateHudHealthIndicator`; generated
+code contains only `lui`/`lwc1`/`sub.s`, with no return sequence or caller.
+Header, overlay registration, project TOML, and the main rename tool agree on
+the address and extent. A local `EXTRA_RENAMES` convenience rule calls the
+fake symbol `updateHudHealthIndicatorPreamble`, but no independent companion
+surface supports that semantic identity. This selects H-DataGap and preserves
+the placeholder. The next sweep candidate is `data_gap_800C41AC`. Evidence:
+`scratch/agent/s3072_generated_symbol_rename/AUDIT.md`.
+
+No build or runtime run was needed for this static unit. This rules out an
+independently named callable/preamble identity and mapping drift at this
+boundary; it does not make a claim about runtime behavior.
+
+ORIGIN: naming-only classification. No runtime, generated instruction, route,
+audio, or submodule behavior changed.
 
 Session 3071 completed the bounded six-surface audit at `0x800BF498`. The
 companion mission map and `build/redefs.txt` preserve the mechanical
@@ -407,7 +425,7 @@ parked pending a new discriminator.
    registration, project TOML, and local duplicates. The `0x800BCC38` record
    was audited and preserved as a data gap; `0x800BEBFC` was synchronized as
    `initDemoPlayStatePreamble`; `0x800BF498` was audited and preserved as a
-   data gap; resume at `data_gap_800BF784`.
+   data gap; resume at `data_gap_800C41AC`.
    If the sweep becomes a
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.

@@ -1,10 +1,10 @@
-# NEXT work unit — audit `data_gap_800BF784`
+# NEXT work unit — audit `data_gap_800C41AC`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Audit the next unresolved project-TOML placeholder, `data_gap_800BF784`, in
+Audit the next unresolved project-TOML placeholder, `data_gap_800C41AC`, in
 the mission overlay. Compare its companion symbol entry, generated body,
 callers, header, overlay registration, project TOML, and local duplicates.
 Rename only if an exact semantic identity is independently supported;
@@ -31,8 +31,8 @@ selects H-MappingDrift.
 ## Exact commands
 
 1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
-2. `grep -n '800BF784\|data_gap_800BF784' /Users/williambuckley/Documents/Tools/rogue_squadron64/build/redefs.txt | head -10`
-3. `grep -n '800BF784' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt`
-4. `grep -n '800BF784\|data_gap_800BF784' tools/rename_generated_symbols.py`
-5. `rg -n '800BF784|data_gap_800BF784' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs syms tools/rename_generated_symbols.py`
+2. `grep -n '800C41AC\|data_gap_800C41AC' /Users/williambuckley/Documents/Tools/rogue_squadron64/build/redefs.txt | head -10`
+3. `grep -n '800C41AC' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt`
+4. `grep -n '800C41AC\|data_gap_800C41AC' tools/rename_generated_symbols.py`
+5. `rg -n '800C41AC|data_gap_800C41AC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs syms tools/rename_generated_symbols.py`
 6. Record the six-surface comparison in `scratch/agent/s<next>_generated_symbol_rename/AUDIT.md`.
