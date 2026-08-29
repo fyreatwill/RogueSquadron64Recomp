@@ -126298,3 +126298,14 @@ synchronized. This selects the existing `H-SemanticMatch` mapping over
 `H-DataGap` and `H-Ambiguous`; no new rename, build, or runtime run was
 performed. The next unresolved generated placeholder is `static_4_80106C50`.
 Evidence: `scratch/agent/s3208_generated_symbol_rename.md`.
+
+## Session 3209 (2026-08-29) — classified unresolved callable placeholder at 0x80106C50
+
+The bounded source census found no companion-tree symbol, source/m2c match, or
+independent mapping for `0x80106C50`. Unlike a data-gap split, the generated
+snapshot has a real caller (`jal` at `0x8010A948`) and a normal callable body
+ending at `0x80106D38`. The required-rename helper selected zero references,
+so the placeholder remains unchanged under `H-UnresolvedStatic`; no build or
+runtime run was performed. This rules out `H-DataGap` and an evidence-backed
+semantic rename for this address. Evidence:
+`scratch/agent/s3209_generated_symbol_rename.md`.
