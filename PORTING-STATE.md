@@ -127111,3 +127111,23 @@ runtime change. Evidence: `scratch/agent/UNBLOCK.md`. The parked dependency
 can be satisfied only by running the exact build and Step 3 recipe on a
 configured Windows/MIPS host or with equivalent Rogue Squadron generated
 artifacts.
+
+## Session 3249 (2026-08-29) — audited MusyX status-03 publication and reaping
+
+Ran the complete static status-byte census against the available generated
+snapshot `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs.s2471-gate3-before`.
+It found 11 reads across the voice-slot query, stop, service, progress, free,
+and shutdown functions, and seven direct stores. The legitimate status-03
+publishers are `stopVoiceSlotSynced` at `0x8009B30C` after the status-02 stop
+path and `serviceVoicePoolFrame` at `0x8009B7CC` for the streaming branch.
+`serviceVoicePoolFrame` consumes status 03 at `0x8009B680`, calls the streaming
+reap path when required, and clears the status at `0x8009B7EC` after the stream
+field reaches zero. `shutdownMusyXVoices` is a waiter over this contract.
+
+This selects `H-Status03NamedContract` on two-source static evidence: generated
+instruction sites provide the transitions, while the companion named-symbol
+and caller references identify the functions and edges. It rules out a
+missing status-03 publisher/terminal transition in this audited snapshot and
+rules out treating the shutdown wait as an unexplained value. It does not
+provide runtime causation and authorizes no guard, force-clear, wait, or audio
+behavior change. Evidence: `scratch/agent/s3249_m3_status03_audit.md`.

@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3247 (2026-08-29).
+Current maintenance marker: Session 3249 (2026-08-29).
+
+Session 3249 completed the build-independent MusyX status-03 idiom audit.
+The generated snapshot has a legitimate status-03 publisher in
+`stopVoiceSlotSynced` (`0x8009B30C`) and a named service consumer/reaper in
+`serviceVoicePoolFrame` (`0x8009B680` → `0x8009B7EC`), with a second legitimate
+streaming publication at `0x8009B7CC`. `shutdownMusyXVoices` is a waiter over
+that contract, not an unexplained publisher. This selects
+`H-Status03NamedContract`; the status-03 wait hatch remains authorized and no
+guard, force-clear, or audio behavior change is justified. Evidence:
+`scratch/agent/s3249_m3_status03_audit.md`.
 
 Session 3248 proved the guard-build block is an external dependency and
 re-scoped the loop. The exact `PatchesLib` build still exits 2 because this
@@ -117,6 +127,9 @@ no patch or allocator mitigation is authorized. Evidence:
    `build/N64Recomp` binary for this validation.
    The one satisfying experiment remains the exact `PatchesLib` build plus
    the existing Step 3 recipe on a configured Windows/MIPS host.
+   Session 3249 completed the status-03 static audit and found named,
+   legitimate publication and service-reaping edges. This closes the current
+   status-03 idiom selection without authorizing a wait or status change.
    Session 3236 compared the M5 inventory and Step 1/2 evidence with the
    valid controls from Session 3235. No candidate has independent writer PC,
    destination span, payload polarity, and completion-order evidence at the
