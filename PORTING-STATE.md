@@ -126943,3 +126943,27 @@ Evidence: `scratch/agent/s3238_m3_musyx_pointer_audit.md`.
 ORIGIN: the only true pointer writer is `allocateSongChannelArray` at
 `0x8008F228`; its value is legitimate on successful allocation, while null
 on failure and stale-after-free legitimacy remain unresolved.
+
+## Session 3239 (2026-08-29) — proved MusyX allocator null return path
+
+Ran the bounded MusyX `-0x68A8`/`-0x68B0` allocation and teardown audit. The
+`rs_malloc` no-fit path initializes its return accumulator to zero and reaches
+`0x80001C74`, where zero is returned; it does not fail fatally. The writer at
+`0x8008F228` publishes that result without a success check, and
+`musyxBuildVoiceCommandList` dereferences the indexed pointer at
+`0x80091078` after loading it at `0x80091060`. This selects `H-NullConsumer`
+as a possible origin over `H-AllocatorNeverNull`. Shutdown and wait still
+free the published array at `0x80091E28`/`0x80091F78` without visible clears,
+but no post-free or concurrent consumer edge was proven, so
+`H-TeardownStale` remains unresolved. No build or runtime run was needed and
+no patch was made: the static result identifies the writer and invalid value,
+but not a validated-route occurrence or a semantics-preserving consumer
+recovery contract. This rules out the claim that the allocator necessarily
+returns non-null, but does not authorize a global allocator mitigation.
+
+Evidence: `scratch/agent/s3239_m3_musyx_pointer_order.md`.
+
+ORIGIN: `rs_malloc` at `0x80001C74` writes the null result; zero is not a
+legitimate MusyX channel pointer. A future consumer guard must define the
+legitimate skip/recovery behavior; stale-after-free legitimacy remains
+unproven.

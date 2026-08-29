@@ -1,42 +1,37 @@
-# NEXT work unit — verify MusyX command-list allocation failure and teardown semantics
+# NEXT work unit — define a patches-only null-consumer recovery contract
 
 HYPOTHESIS-ID: m3-musyx-pointer-class-audit
 
-Session 3238 split the repeated immediate class by effective address and
-found the true MusyX chain unresolved because `rs_malloc` publication has no
-success check and teardown does not visibly clear the published array. The
-next unit is one bounded static failure/order audit; do not add a runtime
-counter or build unless this audit identifies a concrete patch contract.
+Session 3239 selected `H-NullConsumer`: `rs_malloc` can return zero and
+`allocateSongChannelArray` publishes it without checking. The next unit is a
+bounded contract audit for a patches-only consumer guard. Do not change
+`rs_malloc` globally and do not add a runtime instrument.
 
 ## Competing hypotheses
 
-- `H-AllocatorNeverNull`: the heap allocator is fatal or otherwise guarantees
-  a non-null result for these fixed-size audio allocations; the true consumers
-  are legitimately published and no guard is needed.
-- `H-NullConsumer`: `rs_malloc` can return zero and the indexed load/write
-  sequence at `0x80091060` can dereference it; a patch guard has a concrete
-  writer and failure contract.
-- `H-TeardownStale`: either teardown free can race or be followed by a synth
-  consumer because `0x80149758`/`0x80149750` are not cleared; the needed
-  contract is ordering/clear publication, not an allocation guard.
+- `H-SkipVoice`: a null channel pointer can be detected at the command-list
+  consumer and safely skip only that voice, preserving list state.
+- `H-ReinitArray`: the correct recovery is to rerun or reinitialize the whole
+  channel array, so a local consumer skip would leave inconsistent state.
+- `H-NotPatchable`: no semantics-preserving recovery can be established from
+  the available generated code; leave the class as a documented static risk.
 
 ## Discriminator
 
-Recover the `rs_malloc` failure return path and all callers/order edges around
-`allocateSongChannelArray`, `musyxSynthFrame`, `shutdownAudioEngine`, and
-`waitForMusyXAudioTaskDone`. A fatal/non-returning failure path plus teardown
-call exclusion selects `H-AllocatorNeverNull`; a returning zero reaching the
-published array selects `H-NullConsumer`; a post-free or concurrent consumer
-edge selects `H-TeardownStale`. If an actual guard or clear is selected, land
-only through `patches/`, with an `ORIGIN:` naming the writer and whether the
-value is legitimate.
+Recover the complete `musyxBuildVoiceCommandList` loop and its caller contract,
+including list-head/count updates and the voice-index progression. If the
+null path has a local skip that preserves all list invariants, implement one
+override under `patches/` with an `ORIGIN:` naming `0x8008F228` as the writer.
+If recovery requires array-wide state, document the required reinitialization
+edge and do not patch this iteration. If neither can be proven, select
+`H-NotPatchable` and close the class as a static unresolved risk.
 
 ## Exact commands
 
-1. `rg -n -B8 -A35 "L_80001C74|jr.*ra|rs_malloc" ../N64Recomp/RecompiledFuncs/funcs_0.c`
-   and identify the return value on every allocator failure branch.
-2. `rg -n -B8 -A12 "allocateSongChannelArray|musyxSynthFrame|shutdownAudioEngine|waitForMusyXAudioTaskDone|8008F228|80091060|80091074|80091E28|80091F78" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/*.txt`
-   and recover callers plus teardown ordering.
-3. Write `scratch/agent/s3239_m3_musyx_pointer_order.md` with the selected
-   hypothesis and the full writer/consumer/free table. Build only if a
-   patch-based guard or ordering change is justified by the discriminator.
+1. `sed -n '5140,5485p' ../N64Recomp/RecompiledFuncs/funcs_24.c` and map every
+   list-head/count write and loop exit in `musyxBuildVoiceCommandList`.
+2. `rg -n -B20 -A30 'musyxBuildVoiceCommandList\\(rdram|0x80091034|0x80091060|0x80091074|0x8009123C' ../N64Recomp/RecompiledFuncs/funcs_24.c` and identify
+   caller arguments and post-call assumptions.
+3. If a local recovery is proven, add only the corresponding `patches/`
+   override, build `PatchesLib`, then full-link and validate. Otherwise write
+   `scratch/agent/s3240_m3_musyx_null_contract.md` with the selected outcome.
