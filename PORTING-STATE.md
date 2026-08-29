@@ -124398,3 +124398,26 @@ fake_func_800AE3E4`.
 
 ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
 runtime, route, audio, mitigation, or generated instruction behavior changed.
+
+## Session 3091 (2026-08-28) — attributed M5 VI selector route boundary
+
+The M5 VI selector-writer attribution ran the independent retail oracle and a
+rebuilt AUTOPILOT port capture. Retail passed the whole-RDRAM positive control
+with 10,029 writes and reached title 1024 at `0x00790400` plus hangar 512 at
+`0x006AB400`; the physical watch on `0x0011A865..67` recorded zero writes in
+those phases. The port selector positive control fired and the port produced
+512 bounded VI-context rows, but it remained at VI-640 until the 180-second
+phase timeout. The initial capture omitted AUTOPILOT; the corrected capture
+armed AUTOPILOT and reproduced the same boundary after a full rebuild.
+
+The selector-control, selector-writer, and selector-selected markers were
+absent in both port captures, so those nulls are not evidence about selector
+values. This rules out the watched retail byte range as the producer boundary
+and rejects stale-binary/missing-driver explanations, but selects no selector
+hypothesis. It leaves the pre-title route handoff as the next new angle.
+
+Evidence: `scratch/agent/s3091_m5_vi_selector_writer/AUDIT.md`, oracle output,
+and the rebuilt capture under `scratch/agent/s3091_m5_vi_selector_writer_rebuilt/`.
+
+ORIGIN: qualification-only route attribution. No selector writer, audio
+route, generated behavior, or mitigation changed.

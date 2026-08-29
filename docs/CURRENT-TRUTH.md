@@ -4,7 +4,23 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3090 (2026-08-28).
+Current maintenance marker: Session 3091 (2026-08-28).
+
+Session 3091 ran the M5 VI selector-writer attribution after first restoring
+the independent oracle core. Retail passed its whole-RDRAM positive control
+(10,029 writes) and reached title 1024 at `0x00790400` and hangar 512 at
+`0x006AB400`, but a physical watch on `0x0011A865..67` had zero writes in
+those phases. The port selector positive control fired and produced 512
+bounded VI-context rows, but both the pre-rebuild and rebuilt AUTOPILOT
+captures stopped at VI-640; the title/hangar gate never armed. Specific
+generated selector/writer markers were absent in both captures, so their
+nulls are unevaluable. This rejects the watched byte range as the retail
+producer boundary and rejects stale binary/missing AUTOPILOT as explanations,
+but selects no selector hypothesis. Evidence:
+`scratch/agent/s3091_m5_vi_selector_writer/AUDIT.md`.
+
+ORIGIN: qualification-only route attribution. No selector writer, audio
+route, generated behavior, or mitigation changed.
 
 Session 3090 audited `fake_func_8009D7CC` across the companion map, redefs,
 generated body, callers, header, overlay registration, and project TOML. The
@@ -640,13 +656,21 @@ route-blocked at pre-title VI 640 despite a valid retail control and positive
 port dispatch controls; target-phase audio rows remain unevaluable. M3 is
 parked pending a new discriminator.
 
-1. **M5 VI-mode stall — attribute selector-writer inputs.** Session 3076
+1. **M5 route repair/handoff — use a new producer/signal edge.** Session 3091
+   found that the watched retail selector bytes are not written in title or
+   hangar, and the rebuilt AUTOPILOT port capture still stops at VI-640 before
+   target-phase selector rows. Retain the whole-RDRAM, title, hangar, and port
+   selector positive controls; use a genuinely different route-handoff edge.
+   Do not repeat the selector-byte watch or change audio behavior from this
+   result.
+
+2. **M5 VI-mode stall — attribute selector-writer inputs.** Session 3076
    ruled out table aliasing, record-copy reorder, selected-pointer mutation,
    and host VI alteration. Attribute the producer inputs for retail
    `[A,B,C]=[1,1,0]` versus port `0x80128DF0`, using the independent oracle and
    one phase-keyed port build. Do not change audio behavior from this result.
 
-2. **Generated-symbol sweep — continue only with exact companion identities.**
+3. **Generated-symbol sweep — continue only with exact companion identities.**
    The synchronized region through `0x80017B28` is complete; the preamble at
    `0x800B47C4` is synchronized as `menuControllerInputPreamble` and the
    preamble at `0x800B58B4` is synchronized as `playerAwingInitPreamble`.
@@ -672,41 +696,41 @@ parked pending a new discriminator.
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.
 
-3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+4. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume after the route boundary is repaired or a target-phase route is
    independently reached. Use the phase-keyed task/DMA/return/service/
    slot/voice/MORT/PCM table; do not change a gate, wait, voice guard, or
    output destination from qualification alone.
 
-4. **M5 route repair/handoff — identify a different producer/signal edge.**
+5. **M5 route repair/handoff — identify a different producer/signal edge.**
    Retain task and phase positive controls and use a genuinely new handoff
    angle only after selector-writer attribution.
 
-5. **M3 crash work — parked.** Resume only as a complete idiom-class audit
+6. **M3 crash work — parked.** Resume only as a complete idiom-class audit
    with a named discriminator; passive recurrence belongs in the soak queue.
 
-6. **M4 accumulator origin — blocked at route qualification.** The latest
+7. **M4 accumulator origin — blocked at route qualification.** The latest
    revisit had generic controls but zero M4 stage-1 positive-control rows and
    no 512 hangar phase. Do not interpret those nulls.
 
-7. **M5 SP-yield lifecycle validation — parked** pending a route angle that
+8. **M5 SP-yield lifecycle validation — parked** pending a route angle that
    reaches target phases.
 
-8. **M5 CPU-side MORT publication — unresolved; callback edge closed.** The
+9. **M5 CPU-side MORT publication — unresolved; callback edge closed.** The
    corrected edge is `serviceStreamingVoice` descriptor `+0x190` to
    `dmaVoiceSampleAndSignal`; `+0x194` is the legitimate speech source. Do
    not repeat this callback audit without a new destination/order edge.
 
-9. **External retail-entry boundary — candidate set rejected (s2903).** The
+10. **External retail-entry boundary — candidate set rejected (s2903).** The
    oracle reached title/hangar, but the four watched candidate PCs were
    boot/pre-title only. Any revisit needs a different static handoff and
    ground-truth PC attribution.
 
-10. **M5 image task contract / hangar artifact — parked.** No writeback, remap,
+11. **M5 image task contract / hangar artifact — parked.** No writeback, remap,
    forced state, or mitigation without an `ORIGIN:` naming the writer and
    stating whether its value is legitimate.
 
-11. **M5 route handoff — retail grounded, port route still missing.** Retail
+12. **M5 route handoff — retail grounded, port route still missing.** Retail
     positively executes `bufferArbiterProducerMark` at `0x8001BCE4` in title
     and hangar. The next route unit must use a new port-side repair/probe
     angle tied to this handoff and retain the positive control.

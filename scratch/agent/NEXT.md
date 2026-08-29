@@ -1,36 +1,50 @@
-# NEXT work unit — generated-symbol-renaming sweep
+# NEXT work unit — M5 route repair/handoff
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m5-route-repair-handoff
 
 ## Single work unit
 
-Audit the next unresolved generated placeholder after `fake_func_8009C2C8`
-against the companion map, generated body, callers, header, overlay
-registration, and project TOML. Rename it only if all surfaces establish a
-semantic identity; otherwise preserve the placeholder or use a mechanical gap
-name, then advance the ranked sweep.
-
-Current candidate: `fake_func_800AE3E4` (the scanner stops here because its
-generated definition is still a placeholder; perform the six-surface audit).
+Use a genuinely new port-side handoff edge to explain the reproducible
+pre-title VI-640 stop. Retain the retail and port positive controls. The
+candidate should be tied to the already-grounded retail
+`bufferArbiterProducerMark` handoff at `0x8001BCE4`, but must not repeat the
+selector-byte watch or modify audio behavior.
 
 ## Competing hypotheses
 
-- H-ExactIdentity: all independent surfaces agree on one callable semantic name and exact extent.
-- H-Fragment: the record is an inline fragment or preamble without a distinct callable identity; preserve the placeholder or use a mechanical gap name.
-- H-Conflict: overlay/address or companion surfaces disagree; do not rename.
-- H-Unresolved: the available surfaces cannot establish a defensible name.
+- H-ProducerHandoff: the port fails to publish or consume the producer mark
+  that precedes target VI routing; retail executes the mark in title/hangar,
+  while port does not or sees a different state.
+- H-RoutePredicate: the producer mark is present and consumed, but the port’s
+  target predicate rejects the resulting state before VI-1024/512.
+- H-Ordering: both values exist, but publication/consumer ordering differs
+  across the retrace or message boundary.
+- H-NotHandoff: the handoff matches; the first divergence is another upstream
+  state machine edge, so stop expanding this candidate without a new trace.
 
 ## Discriminating measurement
 
-The six-surface table selects H-ExactIdentity only when body boundaries,
-callers, and independent mappings agree; an inline-only body selects
-H-Fragment; disagreement selects H-Conflict; insufficient evidence selects
-H-Unresolved. No runtime build is required for this static unit.
+One phase-keyed table must join, for retail and port, producer-mark entry and
+value, consumer entry and value, live VI width/origin, pending mode/selector
+state, and the first target-route predicate result. The whole-RDRAM oracle
+watch and its title/hangar phases are required positive controls; the port
+AUTOPILOT arm and selector-positive marker are required port controls. The
+first divergent row selects the hypothesis: missing/different producer
+(H-ProducerHandoff), equal handoff but rejected predicate (H-RoutePredicate),
+equal values with reordered publication (H-Ordering), or equal complete
+table (H-NotHandoff). Missing target phase makes downstream rows unevaluable.
 
 ## Exact commands
 
-1. Identify the next ranked placeholder with bounded `rg`/`sed` windows and inspect its six surfaces.
-2. If H-ExactIdentity is selected, update the regeneration-safe rename map,
-   companion symbol/TOML entry, and generated references as one batch.
-3. Verify no stale placeholder references remain and record the audit in
-   `scratch/agent/s<session>_generated_symbol_rename/AUDIT.md`.
+1. Inspect the existing retail `bufferArbiterProducerMark` oracle recipe and
+   port route diagnostics; do not add a field without a corresponding retail
+   or port join key.
+2. Build one Debug `RogueSquadron64Recomp` target carrying the complete
+   handoff table.
+3. Run the retail oracle and port AUTOPILOT capture with
+   `PROBE_PHASE_WIDTH=1024`, `PROBE_KEYS_FROM_PHASE=1`, and the whole-RDRAM
+   positive control; include the existing title/hangar route schedule.
+4. Write `scratch/agent/s<session>_m5_route_handoff/AUDIT.md` with all rows,
+   controls, selected/refuted hypotheses, and unevaluable phases. Any route
+   change requires an `ORIGIN:` naming its writer and legitimacy; otherwise
+   make no behavior change.
