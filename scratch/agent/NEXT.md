@@ -1,38 +1,37 @@
-# NEXT work unit — port/retail target framebuffer parity
+# NEXT work unit — M5 Step 3 contract-edge selection
 
-HYPOTHESIS-ID: m5-port-retail-framebuffer-parity
+HYPOTHESIS-ID: m5-audio-contract-edge
 
-Session 3234 established the retail target context at route origin
-`0x00790A00`: valid frame base `0x00790000`, candidates
-`0x00790400/0x00790800`. The route `$a0=0x8014090E` is not a framebuffer.
+Session 3235 completed the target-phase qualification attempt with valid
+retail and dispatch controls, but both port arms stopped at VI 640, so the
+target row is unevaluable. Repeating the same qualification is parked.
 
 ## Competing hypotheses
 
-- `H-PortMatchesRetail`: the port selects the retail target candidate
-  `0x00790400`; the remaining defect is downstream of origin selection.
-- `H-PortOriginSelection`: the port selects a different target framebuffer.
-- `H-PortAudioBoundary`: the port reaches a different target boundary because
-  audio/task progress diverges before the VI commit.
+- `H-AudioDegeneracy`: the silent `musyx_stub` path and related degenerate
+  gates are responsible for the downstream failure.
+- `H-ImageContract`: one specific image task/output contract edge is missing
+  and is the next authorized behavior change.
+- `H-PortRoute`: the pre-title route divergence is upstream of audio output;
+  Step 3 must not be used to mask it without a named writer and ordering edge.
 
 ## Discriminator
 
-Run the existing same-build silent/image phase-gated pair in one iteration,
-with the image and silent arms built together. Require both arms' dispatch,
-DMEM, DMA, `Broke`/SP completion, service, slot, PCM, and VI-commit rows.
-An image-arm port commit of `0x00790400` at the matching target phase selects
-`H-PortMatchesRetail`; a valid different commit selects
-`H-PortOriginSelection`; missing target progress or missing audio joins with
-the established dispatch control selects `H-PortAudioBoundary` only if its
-phase gate and controls pass. A failed phase join is unevaluable, not a null.
+Read the existing Step 1/2 evidence and select exactly one already-proven
+image task/output contract edge (writer PC, destination span, payload polarity,
+and completion ordering). If no edge is independently proven, do not guess or
+patch; record the missing evidence and remain unevaluable. A selected edge
+must produce a same-build old/new arm with task/SP completion and a downstream
+DMEM/DMA or PCM join; a route-only change or a `Broke` return without such a
+join rejects the edge.
 
-## Exact command
+## Exact preparation and validation
 
-Use the existing qualified pair driver:
-
-`bash scratch/agent/s2972_m5_step1_qualified_route/run_pair.sh`
-
-Before running, add one phase-gated port VI-commit field for target candidate
-`0x00790400` to that driver's existing batch instrumentation; do not add a
-route-`$a0` framebuffer interpretation. Capture results under a new
-`scratch/agent/s3235_m5_port_retail_framebuffer_parity/` directory and retain
-the silent arm as the no-write control.
+1. Inspect `docs/M5-AUDIO-PLAN.md` Step 1/2 and the Session 3235 results.
+2. Use the existing fixup/build path; do not hand-edit generated functions.
+3. Build both contract arms together with:
+   `cmake --build build --config Debug --target RogueSquadron64Recomp`
+4. Run the phase-gated pair only after the edge and rollback are named. The
+   required validation row is dispatch → task fields/source → DMEM/DMA → image
+   exit → SP completion → service → status/slot → voice/reap → MORT → PCM
+   source/consumer → route phase, with the whole-RDRAM control.

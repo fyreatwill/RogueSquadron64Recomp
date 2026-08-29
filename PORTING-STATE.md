@@ -126862,3 +126862,29 @@ three oracle logs. Diagnostic-only changes were made in
 
 ORIGIN: diagnostic-only latch/filter changes; no guest value, port behavior,
 guard, ordering change, or mitigation was made.
+
+## Session 3235 (2026-08-29) — qualified port framebuffer parity at retail target
+
+Added the phase-scoped `[m5-port-retail-target]` field to the existing VI
+commit handoff and built the Debug target successfully. The corrected zsh
+driver launched the retail oracle and silent/image port arms concurrently.
+
+The retail oracle passed the whole-RDRAM positive control at 10,000 writes and
+reached target `0x00790400` width 1024 and hangar `0x006AB400` width 512. Both
+port arms passed their dispatch controls (61 silent, 63 image in the driver
+summary), emitted one VI-640 control at origin `0x0066A500`, and emitted no
+`[m5-port-retail-target]` row. DMEM/DMA, task/SP, service, slot, PCM, and
+audio-return joins were zero in both arms; no crash or abort marker occurred.
+
+This run is unevaluable for framebuffer parity, port-origin selection, and
+audio-boundary causation because neither port arm reached the requested 1024
+phase. It rules out an oracle positive-control failure and stale arm selection
+for this run, but does not authorize a port-origin or audio change. The
+repeated qualification is parked; the next work unit is the first M5 plan
+Step 3 contract-edge selection, only if a named writer and ordering edge is
+already proven.
+
+Evidence: `scratch/agent/s3235_m5_port_retail_framebuffer_parity/RESULTS.md`.
+
+ORIGIN: diagnostic VI-commit logging only; no guest value, port behavior,
+guard, ordering change, or mitigation was made.

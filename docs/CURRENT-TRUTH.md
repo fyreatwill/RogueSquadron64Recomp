@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3234 (2026-08-29).
+Current maintenance marker: Session 3235 (2026-08-29).
 
 ## Current state
 
@@ -15,7 +15,7 @@ still have geometry/color artifacts. Audio is not production-complete: the
 Factor 5 image task is the qualified real-audio arm and `musyx_stub`/Broke is
 the silent control.
 
-The latest same-build M5 image-versus-silent qualification (Session 3192)
+The latest same-build M5 image-versus-silent qualification (Session 3235)
 passed dispatch controls in both arms but reached only pre-title VI 640
 (`0x0066A500`). Independent retail controls reached title and hangar. Thus all
 target-phase audio/task/DMA/service/slot/voice/MORT/PCM nulls are unevaluable;
@@ -29,6 +29,15 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection.
+   Session 3235 ran the same-build silent/image pair after adding the
+   phase-scoped `[m5-port-retail-target]` commit field. Retail passed the
+   whole-RDRAM positive control and reached target `0x00790400` plus hangar
+   `0x006AB400`; both port arms passed dispatch controls but stopped at
+   `0x0066A500`/640 and emitted no target commit or downstream audio joins.
+   Because the requested 1024 phase was not reached, the parity result is
+   unevaluable and does not select framebuffer mismatch, origin selection, or
+   audio-boundary causation. Repeating this qualification is parked; proceed
+   to the first authorized M5 behavior change in `M5-AUDIO-PLAN.md`.
    Session 3234 repaired the context join's deferred-watch/latch gates and
    passed the whole-RDRAM positive control (10,000 writes) while capturing the
    target route at `0x00790A00`. Retail `__osViNext` context was valid with
@@ -111,12 +120,11 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    `reapplyDisplayMode` entry/call (`0x8008EB5C`, `0x8008EBC0`) with the same
    whole-RDRAM positive control, then a bounded comparison of its live
    arguments and return branch against the port.
-2. Next, compare retail candidate `0x00790400` against the port's selected
-   framebuffer at the same phase boundary using the existing same-build
-   phase-gated silent/image pair. Require image-arm DMEM, DMA, `Broke`/SP
-   completion, service, slot, and PCM joins plus the port VI commit row; keep
-   silent as the no-write control. Do not infer a writer or apply a mitigation
-   from the retail route `$a0`.
+2. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row
+   identifies one missing image task/output contract edge. Keep the change to
+   exactly one proven writer/consumer relation, with retail writer PC,
+   destination span, payload polarity, and completion ordering as controls.
+   Do not infer a writer or apply a mitigation from the retail route `$a0`.
 3. A12's `0x8014974C` publication class is closed by Session 3221: the only
    guest stores are `setupSongRenderBuffers` zero-init, `musyxSynthFrame`
    terminal clear, and its fixed-one pre-callback publication. The waiters

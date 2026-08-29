@@ -508,6 +508,25 @@ extern "C" void rs64_m5_vi_commit_handoff(uint32_t caller,
     g_m5_vi_commit.width.store(vi->VI_WIDTH_REG, std::memory_order_relaxed);
     g_m5_vi_commit.origin.store(vi->VI_ORIGIN_REG & 0x00FFFFFFu, std::memory_order_relaxed);
     g_m5_vi_commit.phase.store(rs64_phase_ord(), std::memory_order_relaxed);
+    static bool target_control = false;
+    if (!target_control && vi->VI_WIDTH_REG >= 640u) {
+        std::fprintf(stderr,
+            "[m5-port-vi-control] seq=%u caller=0x%08X requested_width=%u "
+            "committed_width=%u committed_origin=0x%06X phase=%u\n",
+            seq, caller, requested_width, vi->VI_WIDTH_REG,
+            vi->VI_ORIGIN_REG & 0x00FFFFFFu, rs64_phase_ord());
+        std::fflush(stderr);
+        target_control = true;
+    }
+    if (vi->VI_WIDTH_REG == 1024u &&
+        (vi->VI_ORIGIN_REG & 0x00FFFFFFu) == 0x00790400u) {
+        std::fprintf(stderr,
+            "[m5-port-retail-target] seq=%u caller=0x%08X requested_width=%u "
+            "committed_width=%u committed_origin=0x%06X phase=%u\n",
+            seq, caller, requested_width, vi->VI_WIDTH_REG,
+            vi->VI_ORIGIN_REG & 0x00FFFFFFu, rs64_phase_ord());
+        std::fflush(stderr);
+    }
     std::fprintf(stderr,
         "[m5-route-transition] edge=vi-commit seq=%u caller=0x%08X "
         "mode_ptr=0x%08X requested_width=%u committed_width=%u "
