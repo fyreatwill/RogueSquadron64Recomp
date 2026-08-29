@@ -125568,3 +125568,21 @@ scope. No guard, generated-source edit, build, run, oracle watch, or audio
 behavior changed.
 
 Evidence: `scratch/agent/s3156_m3_step_active_song_tracks_audit.md`.
+
+## Session 3157 (2026-08-29) — audited `musyxInitVoiceFromSample` index contract
+
+Performed the planned complete static M3 audit of
+`musyxInitVoiceFromSample`. The generated tree has exactly two distinct direct
+callers: `soundMacroOpPlaySampleKeymap` at `0x8008C454` and
+`startStreamedSampleVoice` at `0x800980EC`. The callee forms the voice record
+twice from `0x801496F8 + ((a0 & 0xffff) * 0x88)`; its existing base check proves
+only a KSEG0/RDRAM base, not the index bound. The sound-macro path passes its
+incoming `$a0` without a local `<64` proof. The streamed path rejects only
+`-1` after `stopVoiceByKey`, and the available source does not establish the
+callee array's exact 64-slot lifecycle bound. Companion symbol metadata
+independently names the function, base, stride, and caller roles. This selects
+`H-M3-Unclassified` and rules out lowering-only/dead-site explanations at
+static scope. No guard, generated-source edit, build, run, oracle watch, or
+audio behavior changed.
+
+Evidence: `scratch/agent/s3157_m3_musyx_init_voice_index_audit.md`.

@@ -6,7 +6,18 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3156 (2026-08-29).
+Current maintenance marker: Session 3157 (2026-08-29).
+
+Session 3157 completed the bounded static M3 audit of
+`musyxInitVoiceFromSample`'s voice-indexed `0x88`-stride record accesses.
+There are two distinct reachable callers: the sound-macro path passes an
+incoming `$a0` with no local `<64` proof, while the streamed path passes a
+`stopVoiceByKey` result whose available source does not establish the callee's
+exact 64-slot bound/lifecycle. The callee's KSEG0 base guard proves only the
+`0x801496F8` voice-array base, not the masked 16-bit index. This selects
+`H-M3-Unclassified` from generated control flow plus independent companion
+symbol metadata; no guard, audio, or runtime behavior changed. Evidence:
+`scratch/agent/s3157_m3_musyx_init_voice_index_audit.md`.
 
 Session 3156 completed the bounded static M3 audit of the final 12
 `stepActiveSongTracks` readers of `D_801529C0` (`0x801529C0`). All 12 guest
@@ -467,7 +478,11 @@ drain gate. The next work unit is a bounded M3 idiom-class audit; do not remove
 the status-03 wait hatch.
 
 1. **M3 crash work — audit the next bounded idiom-class inventory entry.**
-   The `slotDispatcherIter`, `slotDispatcherInner`, and
+   Session 3157 audited `musyxInitVoiceFromSample`: its two reachable callers
+   and two independently formed voice-slot pointers remain unclassified
+   because the sound-macro index has no local `<64` proof and the streamed
+   allocator/lifecycle edge does not establish the callee's exact bound. The
+   `slotDispatcherIter`, `slotDispatcherInner`, and
    `musyxStopVoice` computed-record classes and item -292's 43-site
    `SONGTEMPO_TABLE_GUARD` reader inventory are closed by Sessions 3146–3156.
    The `stopVoicesByHandle` producer edge remains unresolved: no direct or
