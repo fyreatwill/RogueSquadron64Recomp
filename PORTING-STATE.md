@@ -124078,3 +124078,19 @@ Evidence: `scratch/agent/s3073_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, generated instruction, route,
 audio, or submodule behavior changed.
+## Session 3074 (2026-08-28) — audited 0x800C64A4 generated symbol
+
+Completed the bounded six-surface generated-symbol audit at `0x800C64A4`.
+The companion mission map and `build/redefs.txt` retain the 12-byte
+`data_gap_800C64A4` record immediately before `initHangarDisplayItemTimers`.
+The generated body is only `lw ra`, `lw fp`, and `addiu sp` with no return
+sequence or caller; the preceding function consumes the address as an inline
+branch target. Header, overlay registration, project TOML, rename tooling,
+and historical local snapshots agree on address, size, and mechanical name.
+This selected H-DataGap, so the placeholder was preserved. The next candidate
+is `data_gap_800C7DB4`. No build or runtime run was needed; this rules out an
+independently named callable/preamble identity and mapping drift at this
+boundary, not runtime behavior.
+
+ORIGIN: naming-only classification. No runtime, generated instruction, route,
+audio, or submodule behavior changed.
