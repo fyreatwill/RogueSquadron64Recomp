@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3143 (2026-08-28).
+Current maintenance marker: Session 3144 (2026-08-28).
 
 ## Current state
 
@@ -61,6 +61,15 @@ project placeholders are the deliberately preserved ambiguous fragments
 generated snapshot by naming the entry-local 16-byte clearing loop
 `clearMemory16ByteBlocks`. The next active engineering prerequisite is a new
 retail-grounded M5 boundary.
+
+Session 3144 could not run the queued M5 paired qualification. The required
+route change is not present: the current state still records the port stopping
+at pre-title VI 640, and the working tree exposes no selected upstream route
+change to apply. Repeating the qualification would produce only the already
+unevaluable pre-title rows. This blocks the iteration pending a human-selected
+route change or an equivalent new retail-grounded boundary; it does not
+authorize audio, route, VI, gate, wait, voice, destination, or output changes.
+The read-only repository-state check is this iteration's evidence.
 
 Session 3136 completed a bounded generated-symbol synchronization for the
 mission-overlay body at `0x800E9AE0`: the external generated declaration and
@@ -333,10 +342,10 @@ the port-side VI publication parity probe is exhausted for this route. M5
 target-phase qualification is blocked until a route change produces title or
 hangar controls. M3 remains parked pending a new discriminator.
 
-1. **M5 route reachability — requalify target-phase audio/task rows after a
-   route change.** Repeat the paired phase-keyed qualification only after the
-   upstream boundary produces a new route arm or target-phase control. The
-   current edge capture is the required baseline; do not repeat it unchanged.
+1. **M5 route reachability — obtain a route-change direction.** The paired
+   phase-keyed qualification is blocked because the port still stops at VI
+   640 and no new route arm is present. Ask for the specific upstream route
+   change to implement or test; do not repeat the current edge capture.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed

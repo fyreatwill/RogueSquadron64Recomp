@@ -1,14 +1,13 @@
-# NEXT work unit — requalify M5 audio after a route change
+# NEXT work unit — obtain an M5 route-change direction
 
 HYPOTHESIS-ID: m5-route-after-vi-edge
 
 ## Single work unit
 
-Do not repeat the exhausted VI-edge probe unchanged. After an upstream route
-change produces a new target-phase control, run the paired phase-keyed M5
-Step 1 qualification with image and silent arms in one build/run. If no route
-change is available, stop and ask for the specific route-change direction;
-do not infer target-phase audio behavior from pre-title rows.
+The current M5 paired qualification cannot run until an upstream route change
+produces a target-phase control. Ask the human for the specific route change
+to implement or test. Do not infer target-phase audio behavior from pre-title
+rows and do not repeat the VI-edge probe unchanged.
 
 ## Competing hypotheses
 

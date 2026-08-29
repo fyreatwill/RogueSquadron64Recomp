@@ -125362,3 +125362,14 @@ selects `H-AudioRouteStillBlocked`; target parity and downstream audio nulls
 remain unevaluable. It rules out neither a target edge mismatch nor an audio
 contract gap and authorizes no audio, route, or VI behavior change.
 Evidence: `scratch/agent/s3143_m5_port_vi_edge.md`.
+## Session 3144 (2026-08-28) — blocked pending an M5 route change
+
+The queued M5 work unit was the paired image/silent target-phase qualification,
+but it requires a route change first. A read-only state check this iteration
+confirmed the current route remains the pre-title VI-640 path and the working
+tree contains no selected upstream route change to apply. Running the paired
+qualification unchanged would yield only the already unevaluable pre-title
+rows, so no build or run was performed. This rules out treating the existing
+edge witness as target-phase audio evidence; it does not distinguish the
+upstream route cause. Human direction is required on the specific route change
+to implement or test.
