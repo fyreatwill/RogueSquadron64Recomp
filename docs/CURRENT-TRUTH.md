@@ -6,7 +6,18 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3184 (2026-08-29).
+Current maintenance marker: Session 3185 (2026-08-29).
+
+Session 3185 revisited the external retail-entry boundary with a new
+independent oracle census of `bufferArbiterProducerScanWait` (`0x8000BF60`)
+alongside `bufferArbiterProducerMark` (`0x8001BCE4`). The whole-RDRAM control
+fired 10,000 times and the retail route reached title `1024 @ 0x00790400`
+and hangar `512 @ 0x006AB400`. The wait routine executed in both target
+phases, with predecessors `0x800C5CEC` (title) and `0x800B24E8` (hangar);
+ProducerMark remained dominated by `0x8000C628`. This selects
+`H-wait-route` and refutes `H-mark-only` for the tested retail route. It is
+single-source oracle evidence only: no port arm ran and no port mismatch is
+proved. Evidence: `scratch/agent/s3185_retail_producer_wait/RESULTS.md`.
 
 Session 3184 completed the bounded generated-symbol sweep for
 `0x801A0000..0x801B0000`. The required-rename helper selected zero generated
@@ -791,9 +802,13 @@ bounded generated-symbol sweep. Do not remove the status-03 wait hatch.
    occurrence or definition, and no companion symbol record. Continue at
    `0x801B0000..0x801C0000` and preserve ambiguous fragments.
 
-5. **External retail-entry boundary.** Parked after the candidate set was
-   rejected; revisit only with a different static handoff and independent PC
-   attribution.
+5. **External retail-entry boundary — compare the new wait predecessors after
+   a route change.** Session 3185's independent retail oracle found
+   `bufferArbiterProducerScanWait` live in both target phases, with title
+   predecessor `0x800C5CEC` and hangar predecessor `0x800B24E8`, while
+   ProducerMark remained dominated by `0x8000C628`. This is single-source
+   ground truth, not a port mismatch; do not add another port counter until a
+   route change reaches title or hangar.
 
 6. **M4 accumulator origin.** Parked because the latest route qualification
    had no target-phase positive-control rows. Do not interpret its nulls.

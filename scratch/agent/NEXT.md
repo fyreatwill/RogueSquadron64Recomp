@@ -5,9 +5,9 @@ HYPOTHESIS-ID: generated-symbol-renaming-sweep
 ## Single work unit
 
 M5 remains blocked pending a route change. The selected M3 class
-`musyxMixActiveVoices` was proven range-safe in Session 3167. Sessions 3168
-through 3183 closed the latest bands without a stale semantic placeholder,
-apart from the separately synchronized data-gap records in Session 3180.
+`musyxMixActiveVoices` was proven range-safe in Session 3167. Session 3185's
+mandatory external-boundary revisit found a retail producer-wait route but no
+port target phase; do not repeat that oracle recipe until a route change.
 Resume the regeneration-safe sweep at `0x801B0000..0x801C0000`.
 
 Competing hypotheses and the discriminating measurement:

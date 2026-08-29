@@ -125983,3 +125983,24 @@ This closes the band for semantic renaming and rules out an exact companion
 rename there; ambiguous records remain untouched. No build, game run, or
 runtime behavior changed. Evidence:
 `scratch/agent/s3183_generated_symbol_sweep.md`.
+## Session 3185 (2026-08-29) — ground-truthed retail producer-wait handoff
+
+The mandatory all-sweep-title REVISIT rule applied, so this iteration used a
+new external retail-entry angle rather than another generated-symbol band.
+The competing hypotheses and phase-gated discriminator were recorded in
+`scratch/agent/NEXT.md` before the run. The independent retail oracle ran the
+known Rice/Start recipe with a whole-RDRAM positive control and watched both
+`bufferArbiterProducerScanWait` (`0x8000BF60`) and
+`bufferArbiterProducerMark` (`0x8001BCE4`). The control reached 10,000
+writes; the VI trace reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`; the run exited `rc=0` after 5,324 VI callbacks.
+
+The wait routine executed 5 times lifetime, including printed target-phase
+rows in title and hangar. Their predecessors were `0x800C5CEC` in title and
+`0x800B24E8` in hangar. ProducerMark executed 2,023 times in the final
+histogram, dominated by `0x8000C628` (2,012). This selects `H-wait-route` and
+refutes `H-mark-only` for this retail capture. It is single-source oracle
+evidence: it identifies a live producer-wait route and new phase-dependent
+predecessors, but does not prove a port mismatch because no port arm ran.
+The result does not authorize a mitigation or runtime behavior change. Full
+evidence: `scratch/agent/s3185_retail_producer_wait/RESULTS.md`.
