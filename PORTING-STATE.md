@@ -124811,3 +124811,21 @@ preserved fragment is unreachable at runtime. Evidence:
 
 ORIGIN: naming-only inventory closure; no runtime, route, audio, mitigation,
 or generated instruction behavior changed.
+
+## Session 3115 (2026-08-28) — qualified late init-video retail range
+
+Ran one independent retail-oracle capture with the whole-RDRAM positive
+control, Rice video, verified Start schedule, and VI trace. The control fired
+10,000 writes; retail reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. The new execution watch over
+`0x8001A098:0x8001B7B8` recorded 1,141 executions, but the observed rows were
+late at about 52.8s in hangar 512 rather than at the 640-to-1024 transition at
+about 18.3s. This refutes H-EarlyWriter for this range and selects the live-
+but-late interpretation: the transition writer is outside this range or in a
+later handoff. It rules out H-RangeDead, but does not identify the writer.
+This is single-source oracle evidence.
+
+Evidence: `scratch/agent/s3115_m5_retail_init_video_range/oracle.log`.
+
+ORIGIN: qualification-only retail boundary attribution; no port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
