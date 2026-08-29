@@ -124537,3 +124537,18 @@ Evidence: `scratch/agent/s3096_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification and regeneration-safe symbol metadata; no
 runtime, route, audio, mitigation, or generated instruction behavior changed.
+## Session 3098 (2026-08-28) — classified 0x8006B704 generated fragment
+
+Ran the bounded generated-symbol six-surface audit for `0x8006B704`. The
+companion map, generated body, callers, header, overlay registration, project
+TOML, and rename tooling show a 12-byte isolated store/argument-setup/load
+fragment between complete `getLevelTimeLimit` and `loadCraftShadowTextures`
+bodies. It has no callable prologue, return sequence, caller, or independent
+semantic identity. H-Fragment was selected and the name was synchronized as
+`data_gap_8006B704` across the companion map, active generated tree, project
+TOML, and regeneration-safe rename tooling. Syntax and uniqueness checks
+passed; no runtime behavior changed. Evidence:
+`scratch/agent/s3098_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
+runtime, route, audio, mitigation, or generated instruction behavior changed.

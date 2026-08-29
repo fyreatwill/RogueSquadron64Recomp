@@ -183,6 +183,10 @@ RENAMES = {
     # function bodies.
     "fake_func_8006D8FC": "data_gap_8006D8FC",
     "fake_func_8006F4AC": "data_gap_8006F4AC",
+    # This twelve-byte main-overlay record is an isolated store/argument setup
+    # fragment between complete level-time and craft-shadow routines; it has no
+    # standalone callable body or independent semantic identity.
+    "fake_func_8006B704": "data_gap_8006B704",
     # These records have __builtin_trap() bodies from the fixup pass, confirming
     # the bytes decoded as invalid MIPS; they are not callable game routines.
     "fake_func_80099C4C": "data_gap_80099C4C",

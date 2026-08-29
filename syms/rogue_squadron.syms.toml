@@ -1002,7 +1002,7 @@ functions = [
     { name = "getLevelConfigHalfword", vram = 0x8006B604, size = 0x2C },
     { name = "getLevelExpansionMemoryBudget", vram = 0x8006B630, size = 0x64 },
     { name = "getLevelTimeLimit", vram = 0x8006B694, size = 0x70 },
-    { name = "fake_func_8006B704", vram = 0x8006B704, size = 0xC },
+    { name = "data_gap_8006B704", vram = 0x8006B704, size = 0xC },
     { name = "loadCraftShadowTextures", vram = 0x8006B710, size = 0x134 },
     { name = "applyCentripetalBankingToNpcCorners", vram = 0x8006B844, size = 0x4D4 },
     { name = "allocateAndInitCraftNpcContext", vram = 0x8006BD18, size = 0x1B0 },

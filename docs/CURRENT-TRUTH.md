@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3097 (2026-08-28).
+Current maintenance marker: Session 3098 (2026-08-28).
+
+Session 3098 completed the bounded six-surface audit at `0x8006B704`. The
+companion map, generated body, callers, header, overlay registration, project
+TOML, and rename tooling agree that this is a 12-byte non-callable instruction
+fragment between `getLevelTimeLimit` and `loadCraftShadowTextures`; it is now
+synchronized as `data_gap_8006B704`. The next unresolved project placeholder
+is the first remaining `fake_func_*` entry after this address. Evidence:
+`scratch/agent/s3098_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
+runtime, route, audio, mitigation, or generated instruction behavior changed.
 
 Session 3097 completed the bounded six-surface audit at `0x80055A2C`. The
 companion map explicitly names the one-instruction entry fragment
