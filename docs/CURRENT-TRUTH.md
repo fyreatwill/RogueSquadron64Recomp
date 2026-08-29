@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3123 (2026-08-28).
+Current maintenance marker: Session 3124 (2026-08-28).
 
 ## Current state
 
@@ -115,6 +115,17 @@ It does not distinguish a missing consumer from an upstream route stop. This
 is single-source port evidence; no behavior change is authorized.
 Evidence: `scratch/agent/s3123_vi_consumer_capture/run.log`.
 
+Session 3124 ran the paired, phase-keyed M5 route qualification with the
+corrected image arm and silent control in one build/window. Both arms passed
+the same-run positive controls (nine VI-context control rows and the host
+voice-audit control), each dispatched 2,944 audio tasks, and each reached VI
+640 but neither reached title 1024 or hangar 512. Image rows identified
+`factor5_ucode_b`; silent rows identified `musyx_stub`. This selects
+`H-BothPreTarget`: target-phase audio/task/DMA/service/slot/voice/MORT/PCM
+nulls remain unevaluable and no audio behavior change is authorized. This is
+single-source port evidence; it does not identify the upstream route blocker.
+Evidence: `scratch/agent/s3124_m5_route_qualification/summary.txt`.
+
 The strongest route boundary remains the independent comparison: retail
 reaches title at 1024 and hangar at 512, while the recent same-build port
 capture issues only widths 320, 2, 640, and 640 and remains at VI 640. The
@@ -127,24 +138,28 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **M5 route reachability — qualify the audio/task image arm at target phase.**
-   The port-side consumer parity probe is route-blocked at VI 640. Use one
-   phase-keyed image-versus-silent qualification run with task/DMA/return and
-   VI controls to determine whether the corrected real-image arm reaches the
-   retail-grounded 1024/512 consumer boundary. Do not change a gate, wait,
-   voice, destination, or output path from a pre-target null.
+1. **M5 route blocker — find the next upstream handoff boundary.** The paired
+   image/silent qualification passed its controls but both arms stopped at VI
+   640, selecting `H-BothPreTarget`. Use independent retail attribution and a
+   static handoff audit to identify the first divergence before target phase;
+   do not change a gate, wait, voice, destination, or output path from a
+   pre-target null.
 
-2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
+2. **M5 route reachability — requalify target-phase audio/task rows after a
+   route change.** Repeat the paired phase-keyed qualification only after the
+   upstream boundary produces a new route arm or target-phase control.
+
+3. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed
    task/DMA/return/service/slot/voice/MORT/PCM table with image and silent
    arms in one build/run. A qualification result alone does not authorize a
    gate, wait, voice, destination, or output change.
 
-3. **M3 crash work — systematic idiom-class audits only.** A new unit must
+4. **M3 crash work — systematic idiom-class audits only.** A new unit must
    enumerate the entire idiom class, name its discriminator, and guard or
    prove every site. Passive crash recurrence belongs in the soak queue.
 
-4. **External retail-entry boundary.** Parked after the candidate set was
+5. **External retail-entry boundary.** Parked after the candidate set was
    rejected; revisit only with a different static handoff and independent PC
    attribution.
 

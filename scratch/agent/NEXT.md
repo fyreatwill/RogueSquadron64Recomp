@@ -1,37 +1,34 @@
-# NEXT work unit — qualify target-phase audio/task route reachability
+# NEXT work unit — identify the upstream route blocker before target phase
 
-HYPOTHESIS-ID: m5-audio-route-target-reachability
+HYPOTHESIS-ID: m5-audio-route-upstream-boundary
 
 ## Single work unit
 
-Run one paired image-arm/silent-arm qualification using the existing
-phase-keyed audio/task/DMA/return/service/slot/voice/MORT/PCM table and the
-VI consumer controls. The completed consumer probe stopped at VI 640, so
-target-phase parity cannot be assessed until route reachability is established.
-Do not change behavior.
+Use one new independent retail-grounded/static handoff audit to find the first
+divergence before VI 1024. The paired qualification in Session 3124 passed
+same-run controls and showed both image and silent arms stopping at VI 640, so
+the audio/task table is still unevaluable. Do not change behavior.
 
 ## Competing hypotheses
 
-- H-ImageReachesTarget: the corrected real Factor 5 image arm reaches 1024 or
-  512 and supplies target-phase positive-control rows.
-- H-SilentReachesTarget: only the silent arm reaches target phase, implicating
-  image-task handling without authorizing a change.
-- H-BothPreTarget: both arms stop before target phase, so audio/task rows are
-  unevaluable and the route blocker is upstream of this table.
+- H-UpstreamPortStop: both arms stop at the same pre-target boundary, so the
+  blocker precedes the audio/task table.
+- H-ImageSpecificStop: image dispatch changes the boundary or terminal state,
+  implicating image-task handling.
+- H-RouteInstrumentationGap: controls show target progress while the current
+  phase marker misses it, requiring a marker/consumer correction.
 
 ## Discriminating measurement
 
-In one run, the positive-control prefix plus paired image/silent phase rows
-split the hypotheses. Target-phase rows in the image arm select
-H-ImageReachesTarget; target rows only in silent select
-H-SilentReachesTarget; no target rows in either arm with live controls select
-H-BothPreTarget.
+In one bounded audit/run, independently attributed guest PCs or a newly watched
+handoff must split the hypotheses: identical image/silent stop boundary selects
+H-UpstreamPortStop; an arm-specific boundary selects H-ImageSpecificStop; a
+live target-phase control without a phase marker selects H-RouteInstrumentationGap.
 
 ## Exact commands
 
-1. Use the existing phase-keyed audio/task/DMA/return/service/slot/voice/MORT/PCM
-   diagnostic and build both image and silent arms in one build.
-2. Run both arms from `build/` with the corrected image default and existing
-   spin-yield/F5-LLE controls, capturing a whole-run positive control and VI
-   phase lines to a new `scratch/agent/s3124_*` directory; kill with SIGKILL.
-3. Record target-phase reachability and select exactly one hypothesis.
+1. Ask/inspect the independent retail handoff boundary before adding port
+   instrumentation; choose one unenumerated pre-640-to-1024 handoff.
+2. Build all arms and controls together, run from `build/`, and kill with
+   SIGKILL. Require the same-run positive control to fire.
+3. Record the first divergent guest PC/phase and select exactly one hypothesis.

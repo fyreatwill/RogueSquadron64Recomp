@@ -124772,6 +124772,24 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3124 (2026-08-28) — qualified paired M5 route reachability
+
+Built the Debug target and ran image and silent arms concurrently for the
+bounded 120-second qualification using the phase-keyed task/DMA/return and VI
+controls. Both arms fired the same-run positive controls: nine VI-context
+control rows and the host voice-audit control. Each dispatched 2,944 audio
+tasks and reached VI 640, but neither reached title 1024 or hangar 512. The
+image arm identified `factor5_ucode_b`; the silent arm identified
+`musyx_stub`. This selects `H-BothPreTarget` and rules out an image-versus-
+silent target-phase split for this route. It leaves target-phase audio,
+service, slot, voice, MORT, and PCM rows unevaluable and does not identify the
+upstream route blocker. No behavior change was made.
+
+Evidence: `scratch/agent/s3124_m5_route_qualification/summary.txt`.
+
+ORIGIN: qualification-only port route attribution; no audio, route, wait,
+voice, destination, output, or mitigation behavior changed.
+
 ## Session 3123 (2026-08-28) — qualified port VI consumer reachability
 
 Built the existing port-side VI consumer probe and ran one 120-second
