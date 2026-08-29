@@ -125417,3 +125417,18 @@ host blocks are delay-slot lowering of one guest store. This selects
 `H-M3-Proven`, rules out an unclassified reachable dereference in this class,
 and provides no basis for a guard. No build, run, or runtime behavior change
 was needed. Evidence: `scratch/agent/s3147_m3_slot_inner_audit.md`.
+## Session 3148 (2026-08-28) — closed slotDispatcherInner derived-pointer idiom class
+
+The selected M3 class was every generated `MEM_*` site through the heap
+record and derived/list pointers (`$a0`, `$v1`, and `$v0`) in
+`slotDispatcherInner`, guest PCs `0x8003EAE0`–`0x8003EBF8`. The complete table
+has 30 guest sites. `$a0` is either the nonzero selected global head or the
+result of the `0x204C` allocation path; the byte-table `$v0`/`$v1` values are
+interior addresses derived from the record's initialized index. The list
+links at `0x44` and `0x48` are nullable, but each store/load through a link is
+preceded by the relevant nonzero branch, including the branch-likely
+predecessor case and final unlink path. This selects `H-M3-Proven`, rules out
+an unclassified reachable null-plus-offset dereference in this class, and
+provides no basis for a guard or mitigation. No build, run, or runtime
+behavior change was needed. Evidence:
+`scratch/agent/s3148_m3_slot_inner_derived_audit.md`.

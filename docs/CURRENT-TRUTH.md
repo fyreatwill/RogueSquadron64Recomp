@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3147 (2026-08-28).
+Current maintenance marker: Session 3148 (2026-08-28).
 
 ## Current state
 
@@ -94,6 +94,18 @@ host blocks are delay-slot lowering of one guest store. This selects
 `H-M3-Proven` for the class: no unclassified reachable dereference or guard
 site was found, and no runtime behavior changed. Evidence:
 `scratch/agent/s3147_m3_slot_inner_audit.md`.
+
+Session 3148 completed the bounded derived heap/list-pointer audit for the
+same function, covering all 30 guest `MEM_*` sites through the record and its
+`0x44`/`0x48` links between `0x8003EAE0` and `0x8003EBF8`. The record pointer
+is either a nonzero selected global head or the result of the `0x204C`
+allocation path. Every nullable list link is tested before use, including
+the branch-likely predecessor store and the final unlink loads; the byte
+table addresses are interior offsets under the record's initialized index
+invariant. This selects `H-M3-Proven` for the complete class and provides no
+basis for a guard or mitigation. Static evidence only; no build or runtime
+behavior changed. Evidence:
+`scratch/agent/s3148_m3_slot_inner_derived_audit.md`.
 
 Session 3144 could not run the queued M5 paired qualification. The required
 route change is not present: the current state still records the port stopping
@@ -377,12 +389,10 @@ hangar controls. The next independent work unit is a bounded M3 idiom-class
 audit; M5 remains an open dependency, not a reason to stop the loop.
 
 1. **M3 crash work — bounded idiom-class audit.** The
-   `slotDispatcherIter` and `slotDispatcherInner` slot-pointer classes are
-   closed by Sessions 3146 and 3147. The next class is the derived heap/list
-   pointers in `slotDispatcherInner` (`$a0`, `$v1`, and `$v0`) at guest PCs
-   `0x8003EAE0`–`0x8003EBF8`; enumerate every dereference, classify each
-   null-check/provenance edge, and guard or prove every site before any build
-   or mitigation.
+   `slotDispatcherIter` and the two `slotDispatcherInner` pointer classes
+   are closed by Sessions 3146–3148. Select the next bounded NULL-plus-offset
+   idiom from the existing M3 audit inventory; enumerate every site and
+   classify its null-check/provenance edge before any build or mitigation.
 
 2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI
