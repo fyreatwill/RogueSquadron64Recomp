@@ -34,5 +34,7 @@ PatchesLib`, missing `E:/mips-toolchain`, or missing generated patches selects
 ## Open dependency
 
 The current checkout has no MIPS GCC/LD, no generated
-`RecompiledPatches/patches.c`, and no `PatchesLib` target. Do not substitute
-Clang or the stale `patches.map`.
+`RecompiledPatches/patches.c`, and no `PatchesLib` target. Session 3247
+confirmed the exact build failure again. This work unit is blocked until a
+configured Windows/MIPS host or equivalent generated patch artifacts are made
+available; do not substitute Clang or the stale `patches.map`.

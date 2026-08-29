@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3246 (2026-08-29).
+Current maintenance marker: Session 3247 (2026-08-29).
 
 ## Current state
 
@@ -39,6 +39,13 @@ independent target relation is caller `0x8001BE24`, `$a0=0x80790000` (physical
 unevaluable until it reaches the target phase. No M5 output/audio behavior
 change is authorized. Evidence:
 `scratch/agent/s3246_m5_port_vi_boundary_audit.md`.
+
+Session 3247 retried the configured `PatchesLib` build. It returned `No rule to
+make target PatchesLib` (exit 2); the cache still points to `E:/mips-toolchain`,
+and this checkout has neither a `PatchesLib` target nor generated
+`RecompiledPatches/patches.c`. This selects `H-GuardHostMissing`, is not guard
+evidence, and blocks M5 Step 3 pending the configured Windows/MIPS host.
+Evidence: `scratch/agent/s3247_guard_validation.md`.
 
 Session 3241 supplied a new target-phase retail output relation: the
 independent oracle's `osViSwapBuffer` edge (`0x80035500`) runs from caller

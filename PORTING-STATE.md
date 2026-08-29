@@ -127079,3 +127079,16 @@ or stale port control; it does not authorize an output/audio change. The MIPS
 generated-host guard validation remains the M5 Step 3 prerequisite.
 
 Evidence: `scratch/agent/s3246_m5_port_vi_boundary_audit.md`.
+
+## Session 3247 (2026-08-29) — revalidated unavailable guard build
+
+Ran the exact prerequisite `cmake --build build --config Debug --target
+PatchesLib`. It returned `No rule to make target PatchesLib` with exit code 2.
+The cache points to `E:/mips-toolchain`; this checkout has no `PatchesLib`
+target and no generated `RecompiledPatches/patches.c`. This selects
+`H-GuardHostMissing` and provides no evidence about the free-list guard or any
+M5 behavior. The M5 Step 3 recipe was not run because its build prerequisite
+failed. The next attempt requires the configured Windows/MIPS host or generated
+patch artifacts; Clang and the stale map remain invalid substitutions.
+
+Evidence: `scratch/agent/s3247_guard_validation.md`.
