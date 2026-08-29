@@ -30,6 +30,20 @@ static generated-symbol work can proceed independently.
 
 ## Latest results
 
+Session 3077 landed a bounded generated-symbol rename batch in the sibling
+recompiled tree. `fake_func_800B47C4` and `fake_func_800B58B4` were renamed to
+`menuControllerInputPreamble` and `playerAwingInitPreamble`; their generated
+definitions, declarations, and overlay registrations now agree, with six
+placeholder references removed. The companion mappings, generated bodies,
+callers, and exact short extents support both preamble identities. The M5
+VI-selector observation unit was not rerun; the mandated engineering pivot
+selected the rename sweep because no M5 contract edge was proven for a safe
+de-stub.
+
+Evidence: sibling commit `f9d0ab0`, generated-tree verification, and the
+existing companion symbol files. ORIGIN: naming-only code change; no runtime,
+audio route, or mitigation behavior changed.
+
 Session 3076 completed the bounded VI selector-state audit. The four records
 at `0x80128D50 + {0,0x50,0xA0,0xF0}` and their `+8` width fields are copied by
 `initVideoSubsystem` without aliasing; `applyPendingViChanges` selects and

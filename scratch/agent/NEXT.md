@@ -1,37 +1,34 @@
-# NEXT work unit — retail-grounded VI selector-writer inputs
+# NEXT work unit — generated-symbol-renaming sweep
 
-HYPOTHESIS-ID: m5-vi-selector-writer-inputs
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Use the independent retail oracle to attribute producer inputs leading to
-selector state `[A,B,C]=[1,1,0]` for title `0x80128DA0`, then compare the same
-producer callsites in the port. Instrument only the identified writers
-(`setRenderViewScaleFloat`, `beginSceneRenderFrame`, and
-`requestViFeatureChange`) plus `applyPendingViChanges` entry, with a
-phase-keyed positive control. Do not change behavior or audio routing.
+Audit the next unresolved generated placeholder `fake_func_80056344` against
+the companion map, generated body, callers, header, overlay registration, and
+project TOML. Rename it only if all surfaces establish a semantic identity;
+otherwise preserve the placeholder and advance the ranked sweep.
 
 ## Competing hypotheses
 
-- H-ProducerValue: retail and port receive different flag or mask inputs.
-- H-ProducerReachability: one producer callsite/path is absent in the port.
-- H-OracleBoundary: producer inputs match but retail attribution is from a
-  later or different state transition.
-- H-Unresolved: all producer inputs and paths match.
+- H-ExactIdentity: all independent surfaces agree on one callable semantic
+  name and exact extent.
+- H-Fragment: the record is an inline fragment or preamble without a distinct
+  callable identity; preserve the placeholder or use a mechanical gap name.
+- H-Conflict: overlay/address or companion surfaces disagree; do not rename.
+- H-Unresolved: the available surfaces cannot establish a defensible name.
 
 ## Discriminating measurement
 
-The first producer-side difference, keyed to the oracle's retail title phase,
-selects H-ProducerValue; a missing call/path selects H-ProducerReachability;
-equal inputs with a later oracle transition selects H-OracleBoundary; complete
-equality selects H-Unresolved. The positive control must visibly fire in the
-same run.
+The six-surface table selects H-ExactIdentity only when body boundaries,
+callers, and independent mappings agree; an inline-only body selects
+H-Fragment; disagreement selects H-Conflict; insufficient evidence selects
+H-Unresolved. No runtime build is required for this static unit.
 
 ## Exact commands
 
-1. Prepare the oracle watch/attribution recipe from `tools/oracle/README.md`
-   and arm its whole-RDRAM positive control.
-2. Add all producer and consumer counters in one build; phase-gate at VI
-   transitions and run oracle and port arms concurrently.
-3. Capture to `scratch/agent/s<next>_m5_vi_selector_writer_inputs/` and record
-   the complete producer-input table before selecting a hypothesis.
+1. Inspect the six surfaces with bounded `rg`/`sed` windows.
+2. If H-ExactIdentity is selected, update the regeneration-safe rename map,
+   companion symbol/TOML entry, and generated references as one batch.
+3. Verify no stale placeholder references remain and record the audit in
+   `scratch/agent/s<next>_generated_symbol_rename/AUDIT.md`.

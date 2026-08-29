@@ -124130,3 +124130,23 @@ no behavior or audio route changed. Evidence:
 
 ORIGIN: qualification-only static audit. No runtime, generated instruction,
 route, audio, or mitigation behavior changed.
+## Session 3077 (2026-08-28) — renamed menu and A-wing preambles
+
+The mandated no-churn pivot selected the generated-symbol-renaming sweep.
+Using the existing regeneration-safe rename tool, the bounded batch renamed
+`fake_func_800B47C4` to `menuControllerInputPreamble` and
+`fake_func_800B58B4` to `playerAwingInitPreamble` in the sibling generated
+tree. The generated definitions, `funcs.h` declarations, and
+`recomp_overlays.inl` registrations now agree; six placeholder references
+were changed and no stale references remain in those three files. The
+companion mappings, generated bodies, callers, and exact short extents support
+both names. This is a naming-only change and makes no runtime or audio claim.
+
+The M5 VI-selector observation unit was not run: the required pivot selected
+the actionable rename sweep because the current M5 plan has no proven output
+contract edge authorizing a de-stub. The generated change is committed in the
+sibling N64Recomp repository as `f9d0ab0` (`iter: rename menu and A-wing
+preambles`).
+
+ORIGIN: naming-only classification. No mitigation, runtime, generated
+instruction, route, or audio behavior changed.
