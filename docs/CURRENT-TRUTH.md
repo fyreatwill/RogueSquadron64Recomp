@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3139 (2026-08-28).
+Current maintenance marker: Session 3140 (2026-08-28).
 
 ## Current state
 
@@ -285,6 +285,16 @@ unresolved. Static, single-source evidence; no build, run, port probe, or
 behavior change. Evidence:
 `scratch/agent/s3135_m5_upstream_source_census.md`.
 
+Session 3140 reran the exact source-restoration census before any build. The
+companion `osViSetMode` and `__osViSwapContext` bodies remain `INCLUDE_ASM`
+stubs; project matches remain existing declarations, symbol records, comments,
+and closed probes. No new transition-capable retail instruction or generated
+body was found, so this selects `H-SourceInsufficient` and does not authorize
+another oracle watch, port instrument, or audio change. This repeats the
+source limitation after the candidate set was exhausted; the M5 boundary is
+blocked pending equivalent instruction-level source. Single-source static
+evidence: `scratch/agent/s3140_m5_retail_source_census.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
@@ -292,12 +302,14 @@ generated-symbol sweep. Maintenance is complete and M5 design is complete;
 the port-side VI publication parity probe is now exhausted for this route.
 M3 is parked pending a new discriminator.
 
-1. **M5 route blocker — restore source for a retail-grounded upstream handoff.** The
+1. **M5 route blocker — obtain source for a retail-grounded upstream handoff (BLOCKED).** The
    pending-request/descriptor static audit is insufficient because the
    generated snapshot is absent and the companion bodies are `INCLUDE_ASM`
-   stubs. Do not invent a PC or add a port probe. Restore/provide an equivalent
-   generated body/disassembly that exposes a new edge; then require whole-RDRAM
-   and title/hangar controls. Do not change audio or route behavior.
+   stubs. Sessions 3133–3135, 3139, and 3140 found no new source. Do not
+   invent a PC or add a port probe. Restore/provide an equivalent generated
+   body/disassembly that exposes a new edge; then require whole-RDRAM and
+   title/hangar controls. Do not change audio or route behavior. Human input
+   is required to supply that source or explicitly select a different thread.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the

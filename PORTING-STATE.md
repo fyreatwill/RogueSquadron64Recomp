@@ -125296,3 +125296,17 @@ watch, port instrumentation, or audio change. This rules out a repeated
 candidate-based retail capture for the current source set, not the retail
 handoff itself. Evidence is single-source static census; a restored
 instruction-level body/disassembly is required to falsify the result.
+
+## Session 3140 (2026-08-28) — blocked on retail M5 source restoration
+
+Ran the prescribed source-restoration census before any build using the exact
+pending/descriptor/VI-setter/swap-context/origin-publication search across the
+companion tree, project symbols, and docs. The companion
+`osViSetMode`/`__osViSwapContext` bodies remain `INCLUDE_ASM` stubs; the
+remaining matches are existing declarations, symbol records, comments, and
+closed probes. No new transition-capable retail PC or generated body appeared.
+This selects `H-SourceInsufficient` and rules out another candidate-based
+oracle watch for the current source set. No runtime behavior changed. The M5
+boundary is now blocked pending equivalent instruction-level source or an
+explicit human choice to change engineering threads. Evidence:
+`scratch/agent/s3140_m5_retail_source_census.md`.
