@@ -123961,6 +123961,25 @@ unit. Evidence: `scratch/agent/s3067_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, generated instruction, route,
 audio, or submodule behavior changed.
+## Session 3071 (2026-08-28) — audited 0x800BF498 generated symbol
+
+The bounded six-surface generated-symbol audit selected `H-DataGap` for
+`0x800BF498`. The companion mission map and `build/redefs.txt` preserve the
+mechanical `data_gap_800BF498` identity. Generated output contains exactly an
+8-byte `lw`/`sw` fragment with no return sequence or generated caller,
+immediately before `attached3DSoundEmitterNpcHandler`. Header, overlay
+registration, project TOML, and rename tooling agree on the address and
+extent. The placeholder was preserved; the next sweep candidate is
+`data_gap_800BF784`.
+
+No build or runtime run was needed for this static unit. This rules out an
+independently named callable/preamble identity and mapping drift at this
+boundary; it does not make a claim about runtime behavior.
+
+Evidence: `scratch/agent/s3071_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, generated instruction, route,
+audio, or submodule behavior changed.
 
 ## Session 3068 (2026-08-28) — audited 0x800B89F4 generated symbol
 
