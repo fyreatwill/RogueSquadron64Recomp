@@ -125928,3 +125928,16 @@ preserves the names; no runtime behavior changed.
 This closes the concrete data-gap batch and preserves the high-address band
 for the next sweep. It rules out treating these two records as callable game
 functions, but does not classify the remaining `static_*` records.
+## Session 3181 (2026-08-29) — bounded generated-symbol sweep closed synchronized band
+
+Ran the required regeneration-safe generated-symbol helper for
+`0x80170000..0x80180000` with `--require-rename`. The helper selected zero
+generated references, changed zero references in zero files, and returned its
+expected bounded no-rename error. An independent search of generated
+`RECOMP_FUNC` definitions found no `func_`, `fake_func_`, or `static_`
+placeholder body in the interval.
+
+This closes the band for semantic renaming and rules out an exact companion
+rename there; ambiguous records remain untouched. No build, game run, or
+runtime behavior changed. Evidence:
+`scratch/agent/s3181_generated_symbol_sweep.md`.
