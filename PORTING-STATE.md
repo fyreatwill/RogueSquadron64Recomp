@@ -124711,6 +124711,26 @@ run, retaining both controls. Evidence:
 ORIGIN: qualification-only retail callsite attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3113 (2026-08-28) — compacted current truth and unified backlog
+
+The maintenance check measured `docs/CURRENT-TRUTH.md` at 61,186 bytes and
+1,030 lines, exceeding the 60,000-byte threshold. No experiment or build ran.
+The file was compacted to 7,297 bytes and 139 lines: repeated historical
+session material was removed from the operational file, while the durable
+late-session M5 and generated-symbol checkpoint was migrated to
+`docs/PROJECT-OVERVIEW.md` section 52. The active route boundary, qualified
+controls, superseded conclusions, and evidence index were retained. The
+backlog was rewritten as one monotonic sequence (1–7), with duplicate and
+closed entries removed.
+
+This rules out only documentation drift as the source of the oversized truth
+file; it does not change any runtime or investigation conclusion. The next
+work unit remains the bounded six-surface audit of `fake_func_800AE3E4` under
+the generated-symbol-renaming-sweep hypothesis. ORIGIN: maintenance-only
+documentation compaction and durable-history migration; no runtime,
+instrument, audio, route, selector, wait, voice, or mitigation behavior
+changed.
+
 ## Session 3112 (2026-08-28) — synchronized two generated data-gap symbols
 
 The mandated no-churn pivot selected the generated-symbol-renaming sweep

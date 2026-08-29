@@ -4637,3 +4637,45 @@ around the level-handler batch, then closed many intervals through
 mechanically proven short data gaps, while preserving callable-ambiguous and
 fake/address-only placeholders. The next bounded interval is
 `0x80074500..0x80075500`.
+
+## 52. Operational checkpoint s2866–s3112
+
+This checkpoint was migrated from `CURRENT-TRUTH.md` during the s3113
+maintenance pass. The append-only ledger and `scratch/agent/` artifacts retain
+the exact commands, measurements, and per-session audit reports.
+
+The validated route still reaches title VI 1024 (`0x00790400`) and hangar VI
+512 (`0x006AB400`) when the spin-yield controls are enabled. Recent M5 route
+captures, however, stop at pre-title VI 640 (`0x0066A500`), making all
+target-phase audio rows unevaluable. Independent retail runs pass a
+whole-RDRAM positive control, reach title and hangar, and show the expected
+phase-specific mode transitions. Retail execution watches identified the
+known `osViSetMode` callers and `selectAndApplyViMode` helper range, but none
+attributed the 640→1024 transition. The active route hypothesis is therefore
+an unenumerated writer outside the closed ranges; do not change audio or VI
+behavior without a new boundary that identifies its writer and legitimacy.
+
+The M5 design inventory is complete in `docs/M5-AUDIO-PLAN.md`. The Factor 5
+image task is the real audio arm; the `musyx_stub`/Broke path is the silent
+control. The image-vs-silent dispatch controls are positive, but target-phase
+task, DMA, service, slot, voice, MORT, and PCM measurements remain blocked by
+the route boundary. This is qualification evidence, not permission to
+de-stub a gate or remap an output.
+
+The generated-symbol sweep is regeneration-safe and bounded by a six-surface
+audit: companion map, generated body, callers, header/registration, project
+TOML, and local duplicates. Exact companion identities are synchronized;
+isolated fragments and trap-filled records may receive mechanical
+`data_gap_*` names; callable-ambiguous or overlay-overlapping entries retain
+placeholders. Sessions 3094–3112 audited the late candidates and synchronized
+`0x800B2628`, `0x800B42BC`, and `0x800B89F4` where the evidence justified it.
+The remaining unresolved project placeholders are `fake_func_800AE3E4` and
+`fake_func_800B75C4`; the former is the next audit target and the latter has
+already been revalidated as an ambiguous callable fragment.
+
+M3 remains restricted to complete idiom-class audits; passive crash
+recurrence belongs in the soak queue. M4 accumulator-origin work is parked
+because its target phase and positive control are not live. The external
+retail-entry boundary is also parked until a genuinely new handoff can be
+attributed. These parked lines must not be revived by repeating null
+measurements.
