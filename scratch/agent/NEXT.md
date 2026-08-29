@@ -10,7 +10,8 @@ registration, and project TOML. Rename it only if all surfaces establish a
 semantic identity; otherwise preserve the placeholder or use a mechanical gap
 name, then advance the ranked sweep.
 
-Current candidate: `fake_func_8009D7CC`.
+Current candidate: `fake_func_800AE3E4` (the scanner stops here because its
+generated definition is still a placeholder; perform the six-surface audit).
 
 ## Competing hypotheses
 

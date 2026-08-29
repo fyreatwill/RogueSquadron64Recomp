@@ -124371,3 +124371,30 @@ not make a runtime reachability claim. Evidence:
 
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
+## Session 3090 (2026-08-28) — synchronized 0x8009D7CC preamble identity
+
+The generated-symbol sweep audited `fake_func_8009D7CC` across the six
+independent surfaces required by the work unit. The companion
+`rogue_squadron64/symbol_files/main_overlay.txt` identifies the address as
+`filterVoiceSampleBlockPreamble`, explicitly describing it as a one-instruction
+entry fragment immediately before `filterVoiceSampleBlock` at `0x8009D7D0`.
+The companion `build/redefs.txt` maps the function, data, and fake aliases at
+the address to the same name. The active generated `funcs_27.c` body contains
+only `mtc1 $zero,$f4` and no prologue or return; its header and overlay table
+already use the preamble name, with an exact four-byte extent. No generated
+caller targets the fragment. The project TOML was the remaining stale surface
+and is now synchronized to `filterVoiceSampleBlockPreamble`.
+
+The discriminating table selected H-ExactIdentity for the mechanical preamble
+identity (not a standalone callable body); H-Fragment was rejected because the
+independent companion explicitly supplies the entry-fragment name, while
+H-Conflict and H-Unresolved were rejected by agreement across the surfaces.
+The bounded verification scanner then stopped at the next candidate,
+`fake_func_800AE3E4`, whose generated definition remains a placeholder.
+
+Evidence: `scratch/agent/s3090_generated_symbol_rename/AUDIT.md`, the six
+surface files above, and `python3 tools/sweep_scan_candidates.py
+fake_func_800AE3E4`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata. No
+runtime, route, audio, mitigation, or generated instruction behavior changed.

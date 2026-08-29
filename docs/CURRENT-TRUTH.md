@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3089 (2026-08-28).
+Current maintenance marker: Session 3090 (2026-08-28).
+
+Session 3090 audited `fake_func_8009D7CC` across the companion map, redefs,
+generated body, callers, header, overlay registration, and project TOML. The
+four-byte record is the one-instruction `mtc1 $zero,$f4` entry fragment for
+`filterVoiceSampleBlock`; the following function has its own complete body and
+the project TOML is now synchronized as `filterVoiceSampleBlockPreamble`.
+Evidence: `scratch/agent/s3090_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification and regeneration-safe symbol metadata.
+No runtime, route, audio, mitigation, or generated instruction behavior
+changed.
 
 Session 3089 audited `fake_func_8009C2C8` across the companion map, generated
 body, callers, header, overlay registration, and project TOML. The 8-byte
@@ -654,7 +665,9 @@ parked pending a new discriminator.
    as `data_gap_8006ACA4`; `fake_func_8006B704` was audited and preserved as
    a callable-ambiguous fragment; `fake_func_8007C298` was then classified and
    synchronized as `data_gap_8007C298`; `fake_func_8009C2C8` was classified
-   and synchronized as `data_gap_8009C2C8`. Resume at `fake_func_8009D7CC`.
+   and synchronized as `data_gap_8009C2C8`. Session 3090 synchronized
+   `filterVoiceSampleBlockPreamble`; continue the sweep at the next unresolved
+   placeholder.
    If the sweep becomes a
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.
