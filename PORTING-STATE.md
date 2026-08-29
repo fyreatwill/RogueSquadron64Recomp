@@ -126786,3 +126786,26 @@ Evidence: `scratch/agent/s3231_m5_per_task_dispatch/{image,silent}.log`.
 
 ORIGIN: no guest value, guard, or mitigation was changed; this is a runtime
 dispatch-contract correction, with the task environment as the arm selector.
+## Session 3232 (2026-08-29) — attempted retail VI-origin attribution
+
+Ran the independent retail oracle with Rice, the validated full Start
+schedule, a whole-RDRAM write positive control, the four established route-PC
+watches, and `osViSwapBuffer` (`0x80035500`) in one batch. The positive control
+reached 10,000 callbacks and was removed; two full-schedule captures reached
+title and hangar, both included the retail `0x00790A00` transition, and all
+four route PCs fired once. The swap phase join returned `latched=0,
+joined=0` in both captures. A shorter retry took a different direct route and
+its zero route counts were treated as unevaluable.
+
+This validates that the retail route is live but does not select
+writer-absent, other-writer, or port-origin-selection: the route-to-swap join
+did not yield the requested physical argument and adjacent VI origins. No
+port instrumentation, guest value, guard, ordering change, or mitigation was
+made. Next, repair the bounded oracle join at route execution PC
+`0x80091D38` before adding port counters.
+
+Evidence: `scratch/agent/s3232_m5_retail_vi_origin/RESULTS.md` and its three
+oracle logs.
+
+ORIGIN: no mitigation or guest value was changed; this is a positive-controlled
+independent retail observation with an explicitly unevaluable join.

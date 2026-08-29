@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3231 (2026-08-29).
+Current maintenance marker: Session 3232 (2026-08-29).
 
 ## Current state
 
@@ -29,6 +29,15 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
 
 1. M5 target-phase qualification is no longer blocked on route selection.
+   Session 3232's independent retail runs passed the whole-RDRAM control,
+   reached title and hangar, and fired all four established route PCs at the
+   `0x00790A00` transition. The `osViSwapBuffer` phase join returned
+   `latched=0, joined=0` in both full-schedule captures, so the
+   writer-to-swap discriminator is unevaluable. A shorter retry took a direct
+   `0x0066A500 -> 0x00790400` route and its zero route counts are unevaluable.
+   Do not infer a legitimate writer or port origin-selection defect from
+   these runs; repair the oracle join around a route execution PC before
+   adding port counters.
    Session 3231 changed `get_rsp_microcode` to read `ROGUESQ_AUDIO_UCODE`
    per `M_AUDTASK` instead of caching the first task's arm. Same-build image
    and silent smoke controls produced 46/45 dispatch rows and 552 SP-return

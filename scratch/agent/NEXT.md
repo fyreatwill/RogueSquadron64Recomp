@@ -1,41 +1,35 @@
-# NEXT work unit — attribute the retail M5 VI origin writer
+# NEXT work unit — repair the retail route-to-VI join
 
 HYPOTHESIS-ID: m5-retail-vi-origin-attribution
 
-Session 3231 fixed the per-task audio-arm selector and validated both fresh
-image/silent controls. Downstream target-phase qualification remains open.
+Session 3232 showed that the four retail route PCs and `0x00790A00` VI
+transition are live, but `--post-swap-table-pc 0x80035500` produced no
+joined rows. Downstream target-phase qualification remains open.
 
 ## Competing hypotheses
 
-- `H-RetailRouteWriter`: the retail `0x00790A00` origin is legitimately
-  published by the watched reapply/VI-commit path and its physical buffer can
-  be identified at the VI-swap edge.
-- `H-RetailOtherWriter`: another display-buffer writer produces
-  `0x00790A00`; the watched route PCs are consumers or adjacent bookkeeping.
-- `H-PortOriginSelection`: the port's `0x0066A500` commit is the same logical
-  route but selects a different legitimate buffer because its commit/VI-swap
-  ordering differs.
+- `H-RetailRouteWriter`: the `0x00790A00` transition is the watched route's
+  legitimate publication.
+- `H-RetailOtherWriter`: another writer or commit path owns that origin.
+- `H-PortOriginSelection`: retail and port share writer/order but select
+  different legitimate buffers.
 
 ## Discriminator
 
-Run the independent retail oracle first with a whole-RDRAM write positive
-control, the existing route and title gate, and a phase-gated execution watch
-on the VI-swap/commit routine already reported by the oracle (`0x80035500`).
-Record each `0x00790A00` transition's VI-swap physical argument, previous PC,
-and immediately preceding/following VI origin. `H-RetailRouteWriter` is
-selected if the watched route sequence and VI-swap writer/argument form one
-ordered publication of `0x00790A00`; `H-RetailOtherWriter` if another PC writes
-or commits it; `H-PortOriginSelection` if retail and port show the same writer
-and ordering but different legitimate buffer selection. A whole-RDRAM control
-must reach its callback threshold in the same run.
+Run the independent retail oracle with the whole-RDRAM control and validated
+full Start schedule, watching the four route PCs and using
+`--post-swap-table-pc 0x80091D38` (the route execution, not the high-frequency
+swap routine). Keep phase buckets for `0x00790A00`, `0x00790400`, and
+`0x006AB400/800`, plus `--vi-trace`. A joined row with the route's physical
+framebuffer and following VI origin selects `H-RetailRouteWriter`; another
+writer or unmatched route selects `H-RetailOtherWriter`; matching writer/order
+with a different legitimate port buffer selects `H-PortOriginSelection`.
+Zero joined rows after a positive control means the join remains unevaluable
+and requires no port instrumentation.
 
-## Exact commands
+## Exact command
 
-Use the oracle command documented in `tools/oracle/README.md`, preserving the
-validated Rice/input route and title gate. Add the `0x80035500` VI-swap watch
-and the existing four route-PC watches, plus the whole-RDRAM watch. Capture to
-`scratch/agent/s3232_m5_retail_vi_origin/` and do not build port
-instrumentation until the oracle result is positive-controlled.
-
-Do not add audio/task counters until this writer/commit discriminator selects
-one outcome.
+Use the Session 3232 oracle command, replacing only
+`--post-swap-table-pc 0x80035500` with `--post-swap-table-pc 0x80091D38`, and
+capture to a new `scratch/agent/s3233_m5_retail_route_join/` directory. Do not
+build port instrumentation until the oracle result is positive-controlled.
