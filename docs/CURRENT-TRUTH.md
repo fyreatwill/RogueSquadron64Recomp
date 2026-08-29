@@ -12,9 +12,11 @@ title/hangar, and executed `0x8001BCE4` with dominant predecessor
 `0x8000C628`. The port positive controls fired and the new regeneration-safe
 handoff table observed 45 entry/exit pairs plus 40 explicit dominant
 `0x8000C628` callsite rows, but the port still stopped at VI-640
-`0x0066A500`. This rejects a missing dominant ProducerMark call, while target
-predicate and ordering remain unevaluable because the port never reached the
-target phase. The route investigation moves upstream to VI-mode publication.
+`0x0066A500`. This refutes H-MissingCaller (a missing dominant ProducerMark
+call); target predicate and ordering remain unevaluable because the port never
+reached the target phase. The route investigation moves upstream to VI-mode
+publication, with the discriminating next angle being the writer/consumer
+handoff upstream of ProducerMark.
 Evidence: `scratch/agent/s3092_m5_route_handoff/AUDIT.md`.
 
 ORIGIN: diagnostic-only handoff attribution. No game state, audio route, or

@@ -124436,10 +124436,11 @@ rows. The first handoff build observed 45 ProducerMark entry/exit pairs but
 could not attribute the wrapper's entry predecessor. The fixed build added
 all five generated callsite witnesses and observed 40 explicit calls from the
 dominant `0x8000C628` site (43 callsite rows total); the port still stopped at
-VI-640 `0x0066A500`, so the 1024 gate never armed. This rejects a missing
-dominant ProducerMark call. Target-predicate and ordering hypotheses remain
-unevaluable without a target phase, so the route investigation moves upstream
-to VI-mode publication. No audio behavior or mitigation changed.
+VI-640 `0x0066A500`, so the 1024 gate never armed. This refutes H-MissingCaller
+(a missing dominant ProducerMark call). Target-predicate and ordering hypotheses
+remain unevaluable without a target phase; the discriminating next angle is the
+VI-mode writer/consumer handoff upstream of ProducerMark. No audio behavior or
+mitigation changed.
 
 Evidence: `scratch/agent/s3092_m5_route_handoff/AUDIT.md`, the retail oracle
 capture, `run.log`, and `run.log` from the fixed port capture.
