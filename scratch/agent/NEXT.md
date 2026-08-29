@@ -12,10 +12,15 @@ Session 3126's port probe had valid controls (VI-context 8 rows and host
 voice-audit 1 row), but the port reached only VI 640 and had zero rows from
 the retail-live continuation. Audio and route behavior remain out of scope.
 
+Static audit candidate: `0x80035788` is the `sw` that publishes the selected
+origin to `VI_ORIGIN_REG` (`0xA4400004`); `0x80035798` is the subsequent width
+store. This is a distinct origin-publication PC, not the rejected `0x800356A8`
+or the closed pre-consumer range.
+
 ## Competing hypotheses
 
-- H-NewStaticHandoff: the audit identifies a distinct branch/call/return PC at
-  the VI consumer boundary that can be phase-gated in the retail oracle.
+- H-NewStaticHandoff: `0x80035788` executes in retail during target phases,
+  giving direct attribution for origin publication at the VI consumer edge.
 - H-NoDistinctHandoff: the audited instructions are already covered or have
   no independent execution edge; choose the highest-information non-consumer
   boundary instead.
@@ -24,21 +29,14 @@ the retail-live continuation. Audio and route behavior remain out of scope.
 
 ## Discriminating measurement
 
-The audit must produce one exact guest PC not already covered by the closed
-consumer watches and explain why it is an independent handoff. The following
-oracle run must pass the whole-RDRAM control and reach title/hangar; a
-target-phase row selects H-NewStaticHandoff, no row with valid controls
-selects H-NoDistinctHandoff, and missing controls select
+The oracle run must pass the whole-RDRAM control and reach title/hangar; a
+target-phase row for `0x80035788` selects H-NewStaticHandoff, no row with
+valid controls selects H-NoDistinctHandoff, and missing controls select
 H-RetailControlInvalid.
 
 ## Exact commands
 
-1. Audit the linked retail ELF/disassembly for `__osViSwapContext`
-   `0x80035550:0x800358AC`; record one distinct branch/call/return PC and its
-   relation to `0x800356AC`.
-2. Rewrite this file with that candidate and the same competing outcomes,
-   then run one oracle capture with all-RDRAM control and explicit title/
-   hangar phase buckets.
-3. Record the control, title/hangar phases, watched PC rows, and selected
-   hypothesis; do not add a port instrument until the writer/consumer PC is
-   named.
+1. Run one oracle capture with `--watch-write 0x0:0x800000`,
+   `--watch-pc 0x80035788`, Rice, VI tracing, and the verified Start schedule.
+2. Record the positive-control count, title/hangar phases, and candidate-PC
+   rows; do not add a port instrument until the writer/consumer PC is named.

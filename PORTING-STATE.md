@@ -124773,6 +124773,27 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3128 (2026-08-28) — qualified retail VI origin publication
+
+Audited the linked retail ELF's `__osViSwapContext` and selected the distinct
+instruction `0x80035788`, which stores the selected origin to `VI_ORIGIN_REG`
+(`0xA4400004`); the previously watched `0x80035798` is the subsequent width
+store. Ran one independent retail-oracle capture with Rice video, the verified
+Start schedule, VI trace, whole-RDRAM positive control, and the new execution
+watch. The control fired 10,000 visible writes; retail reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; the candidate fired 2,569
+times overall and had target-phase rows for both title and hangar. This
+selects `H-NewStaticHandoff` and authorizes a port-side parity probe at the
+origin-publication edge. It rules out `H-NoDistinctHandoff` and
+`H-RetailControlInvalid` for this run, but remains single-source retail
+evidence and does not authorize audio or route behavior changes.
+
+Evidence: `scratch/agent/s3128_m5_retail_origin_publish/AUDIT.md` and
+`scratch/agent/s3128_m5_retail_origin_publish/oracle.log`.
+
+ORIGIN: qualification-only retail boundary attribution; no port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
+
 ## Session 3127 (2026-08-28) — rejected exact pre-consumer handoff
 
 Ran one independent retail-oracle capture with Rice video, the verified Start
