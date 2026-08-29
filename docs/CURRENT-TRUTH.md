@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3062 (2026-08-28).
+Current maintenance marker: Session 3063 (2026-08-28).
 
 ## Current state
 
@@ -86,6 +86,15 @@ the confirmed `rs_crc32` and `setHudSecondaryWeaponInfo` identities when a
 regeneration emits their address placeholders. The duplicate menu-overlay
 entry at the same address remains distinct. Evidence:
 `scratch/agent/s3062_generated_symbol_rename/AUDIT.md`.
+
+Session 3063 completed the bounded six-surface audit at `0x800E9AE0`. The
+companion mission-overlay map says this is a real `0x114`-byte function split
+by a false `0x800E9B10` target, but supplies no semantic name. The generated
+body is coherent NPC/object initialization code; its header and overlay
+registration remain address-named, while the project TOML and rename tool
+already agree on `func_mission_overlay_800E9AE0`. No generated caller or
+mapping drift was found, so no human rename was justified. Evidence:
+`scratch/agent/s3063_generated_symbol_rename/AUDIT.md`.
 
 Session 3040 ran the M5 Step-1 image/silent qualification after an independent
 retail ground-truth preflight. Retail passed the whole-RDRAM positive control

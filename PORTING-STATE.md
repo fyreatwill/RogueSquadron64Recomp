@@ -123883,3 +123883,16 @@ The duplicate menu-overlay symbol at the same address remains distinct, so
 this does not merge overlay-specific routines. No runtime experiment was
 needed for this static rename work. Evidence:
 `scratch/agent/s3062_generated_symbol_rename/AUDIT.md`.
+## Session 3063 (2026-08-28) — audited 0x800E9AE0 generated symbol
+
+The bounded generated-symbol sweep audited the first remaining project-TOML
+address-derived entry after `0x800C63C0`, `0x800E9AE0`. The companion
+mission-overlay map explicitly explains that this is a real `0x114`-byte
+function split by a false `0x800E9B10` target, but provides no semantic name.
+The generated body is coherent NPC/object initialization code, while its
+header and overlay registration remain address-named and no generated caller
+was found. The project TOML and rename tool already use the synchronized
+address-qualified name `func_mission_overlay_800E9AE0`; all six surfaces agree.
+This rejects mapping drift and a data-fragment interpretation, but does not
+support a human rename. No behavior or generated source was changed. The next
+sweep candidate is the next remaining placeholder after `0x800E9AE0`.

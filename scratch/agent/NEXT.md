@@ -1,43 +1,40 @@
-# NEXT work unit — exact companion identity after `0x800C63C0`
+# NEXT work unit — audit `fake_func_800B2628`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Resume the generated-symbol sweep at the next unresolved project-TOML
-placeholder after the renamed `0x800C63C0` entry. Select one candidate with an exact companion identity,
-then audit its companion symbol entry, generated body, callers, header,
-overlay registration, project TOML, and local duplicates. Rename only if the
-identity and semantics agree; otherwise record why the placeholder remains.
-This is a bounded static change and requires no build or runtime run.
+Audit the next unresolved project-TOML placeholder, `fake_func_800B2628`,
+which is in the menu overlay. Compare its companion symbol entry, generated
+body, callers, header, overlay registration, project TOML, and local
+duplicates. Rename only if an exact semantic identity is independently
+supported; otherwise record why it remains a placeholder/data-gap name.
+This is one bounded static audit and requires no build or runtime run.
 
 ## Competing hypotheses
 
-- H-ExactIdentity: the next candidate has a defensible human name in the companion project and can be renamed safely.
-- H-BoundaryOnly: the candidate is a fragment, data gap, or boundary without enough semantic evidence and must remain `func_*`.
-- H-MappingDrift: companion and generated metadata disagree, so synchronization is needed before any rename.
+- H-ExactIdentity: companion evidence names a real callable routine and all
+  six surfaces agree, permitting a regeneration-safe rename.
+- H-BoundaryOnly: the address is a fragment, invalid decode, or data gap and
+  must remain address-derived.
+- H-MappingDrift: companion and generated/project metadata disagree, so the
+  entry needs synchronization or must remain unresolved.
 
 ## Discriminating measurement
 
-The candidate audit must compare all six surfaces: companion identity, body,
-callers, header, overlay registration, and project TOML. Agreement across all
-six with coherent local semantics selects H-ExactIdentity; an unresolved
-fragment/data boundary selects H-BoundaryOnly; any address/name mismatch
-selects H-MappingDrift. Land one regeneration-safe rename or a new bounded
-audit documenting why no rename is justified.
+Compare all six surfaces: companion identity, generated body, callers, header,
+overlay registration, and project TOML, including duplicate-address entries.
+Coherent callable semantics plus exact agreement selects H-ExactIdentity;
+invalid/data-boundary evidence selects H-BoundaryOnly; any address, extent,
+overlay, or name disagreement selects H-MappingDrift. Land one
+regeneration-safe rename or a new bounded audit explaining why no rename is
+justified.
 
 ## Exact commands
 
 1. `grep -n '^## Session ' PORTING-STATE.md | tail -15`
-2. Inspect the next candidate after `0x800C63C0` in the companion symbol file,
-   generated `RecompiledFuncs/funcs_*.c`, `funcs.h`, `recomp_overlays.inl`,
-   and `syms/rogue_squadron.syms.toml`.
-3. Record the six-surface comparison in a new
+2. Inspect `fake_func_800B2628` in the companion menu symbol file, generated
+   `RecompiledFuncs/funcs_*.c`, `funcs.h`, `recomp_overlays.inl`, and
+   `syms/rogue_squadron.syms.toml`.
+3. Record the six-surface comparison in
    `scratch/agent/s<next>_generated_symbol_rename/AUDIT.md`.
-
-The next candidate is the first remaining `name = "func_..."` entry in
-`syms/rogue_squadron.syms.toml` after `0x800C63C0`; inspect it before selecting
-the address. Exact agreement selects `H-ExactIdentity` and permits a
-regeneration-safe rename; a fragment/data gap selects `H-BoundaryOnly`; any
-disagreement selects `H-MappingDrift` and requires synchronization before
-renaming.
