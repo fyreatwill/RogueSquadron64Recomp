@@ -1,39 +1,41 @@
-# NEXT work unit — audit the retail VI handoff callers
+# NEXT work unit — audit the pending-request-to-descriptor handoff
 
 HYPOTHESIS-ID: m5-audio-route-upstream-retail-boundary
 
 ## Single work unit
 
-Perform a bounded static caller/data-flow audit around
-`freeRenderSubsystemResources` (`0x80018650`) and its call into
-`selectAndApplyViMode`. Enumerate every caller and classify whether it can
-run during the retail 640-to-1024 transition. Select exactly one new
-transition-capable instruction for a later oracle capture; do not add a port
-probe or change behavior in this unit.
+Perform a bounded static audit of the handoff between the pending feature word
+at `0x80128E90`, the mode-selection bytes/descriptor records used by
+`selectAndApplyViMode`, and the VI consumer. Enumerate every generated/decomp
+writer and reader in that data path, excluding the already exhausted wrapper
+chain and closed direct callsites. Select exactly one new transition-capable
+instruction for a later oracle capture; do not add a port probe or change
+behavior in this unit.
 
 ## Competing hypotheses
 
-- H-AlreadyEnumerated: all callers of the cleanup/wrapper chain are known
-  boot-only or pre-title; the missing handoff is outside this chain.
-- H-NewStaticCaller: a caller in the chain is transition-capable and supplies
-  one new PC for the next retail oracle boundary capture.
-- H-StaticInsufficient: the available generated/decomp caller evidence cannot
-  distinguish lifecycle or callsite identity; no oracle candidate is selected.
+- H-AlreadyEnumerated: all pending-word/descriptor writers and readers are
+  already known and none is a transition-capable untested edge.
+- H-NewStaticEdge: one untested instruction transfers the pending request into
+  the descriptor/consumer path and supplies the next oracle PC.
+- H-StaticInsufficient: the available generated/decomp evidence cannot
+  distinguish the handoff or its instruction identity.
 
 ## Discriminating measurement
 
-The complete caller census must include every generated/decomp reference to
-`freeRenderSubsystemResources`, `selectAndApplyViMode`, and the containing
-functions, with each caller classified from its surrounding control flow and
-known phase markers. A transition-capable caller yields H-NewStaticCaller and
-one exact PC; all callers proven pre-title yields H-AlreadyEnumerated; missing
-or contradictory caller identity yields H-StaticInsufficient.
+The complete census must include every generated/decomp reference to
+`0x80128E90`, the selector bytes/descriptor bases in `selectAndApplyViMode`,
+and the VI consumer handoff, with each writer/reader classified from its
+surrounding control flow and known phase markers. One transition-capable edge
+yields H-NewStaticEdge and one exact PC; all edges already classified yields
+H-AlreadyEnumerated; missing or contradictory identity yields
+H-StaticInsufficient.
 
 ## Exact commands
 
 ```
-rg -n 'freeRenderSubsystemResources|selectAndApplyViMode|80018650|8001BB6C' /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp --glob '!PORTING-STATE.md' --glob '!scratch/agent/soak_results/**'
-rg -n 'freeRenderSubsystemResources|selectAndApplyViMode|80018650|8001BB6C' /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/syms --glob '*.c' --glob '*.h' --glob '*.toml'
+rg -n '80128E90|8012A86[245]|8013.*73(70|40)|requestViFeatureChange|applyPendingViChanges|selectAndApplyViMode|800356AC|80035788' /Users/williambuckley/Documents/Tools/rogue_squadron64 /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp --glob '!PORTING-STATE.md' --glob '!scratch/agent/soak_results/**'
+rg -n '80128E90|8012A86[245]|8013.*73(70|40)|requestViFeatureChange|applyPendingViChanges|selectAndApplyViMode|800356AC|80035788' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/s390_verify --glob '*.c' --glob '*.h' --glob '*.toml' --glob '*.txt'
 ```
 
 Record the complete caller list and the selected classification in a new

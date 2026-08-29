@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3131 (2026-08-28).
+Current maintenance marker: Session 3132 (2026-08-28).
 
 ## Current state
 
@@ -206,6 +206,17 @@ This is single-source oracle evidence; no port behavior changed. Evidence:
 `scratch/agent/s3131_m5_retail_186c0/oracle.log`.
 Evidence: `scratch/agent/s3130_m5_retail_bc28/AUDIT.md`.
 
+Session 3132's bounded caller/data-flow census found no hidden caller of
+`freeRenderSubsystemResources` in the available generated snapshot, companion
+tree, project symbols, or registration artifacts. The wrapper's only
+represented call edge is `0x800186C0 → selectAndApplyViMode`; its complete body
+only frees five resources, selects/copies a mode descriptor, calls
+`osViSetMode`, and waits on the video queue. This selects H-AlreadyEnumerated
+and supplies no new retail PC. It rules out another caller in this wrapper
+chain but does not identify the upstream 640-to-1024 handoff. Static,
+single-source evidence; no build, run, or behavior change.
+Evidence: `scratch/agent/s3132_m5_vi_caller_audit.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
@@ -213,13 +224,14 @@ generated-symbol sweep. Maintenance is complete and M5 design is complete;
 the port-side VI publication parity probe is now exhausted for this route.
 M3 is parked pending a new discriminator.
 
-1. **M5 route blocker — retail-grounded upstream handoff.** Audit the call
-   chain and data handoff feeding the retail VI consumer, excluding the closed
+1. **M5 route blocker — retail-grounded upstream handoff.** The
+   `freeRenderSubsystemResources` wrapper chain is exhausted: its only
+   represented selector edge is `0x800186C0`, rejected by Session 3131. Audit
+   the distinct pending-request-to-descriptor handoff outside the closed
    direct callsites `0x8001B720`, `0x8001B8DC`, `0x8001BB54`, `0x8001BC28`, and
-   the rejected `0x800186C0`, then use one new statically selected PC in an
-   oracle run with whole-RDRAM and title/hangar controls. Do not add another
-   port probe until retail attributes a distinct edge; do not change audio or
-   route behavior.
+   `0x800186C0`, then use one new statically selected PC in an oracle run with
+   whole-RDRAM and title/hangar controls. Do not add another port probe until
+   retail attributes a distinct edge; do not change audio or route behavior.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the

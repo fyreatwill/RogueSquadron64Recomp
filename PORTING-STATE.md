@@ -125160,3 +125160,23 @@ zero times overall, including both target phases. This rejects the candidate
 as the target-phase handoff and leaves the upstream boundary unidentified.
 No port instrumentation or behavior changed. Evidence:
 `scratch/agent/s3131_m5_retail_186c0/oracle.log`.
+
+## Session 3132 (2026-08-28) — exhausted VI wrapper caller chain
+
+Ran the prescribed bounded static caller/data-flow census across the
+companion repository, project symbols, generated-function snapshot, and
+registration artifacts. `freeRenderSubsystemResources` is defined once and
+the only represented relevant edge is its internal `0x800186C0` call to
+`selectAndApplyViMode`; the selector then copies a mode descriptor, calls
+`osViSetMode` at `0x8001BC28`, and waits on the video queue. No hidden caller,
+alternate overlay alias, pending-word writer, or target-phase marker was
+found in this chain.
+
+H-AlreadyEnumerated selected. This rules out another caller in the wrapper
+chain and supplies no new retail PC. The previously selected `0x800186C0`
+edge remains rejected by Session 3131's independent retail oracle. No build,
+oracle run, port probe, audio change, or mitigation was performed.
+
+Evidence: `scratch/agent/s3132_m5_vi_caller_audit.md`.
+
+ORIGIN: static caller census only; no runtime or behavior change.
