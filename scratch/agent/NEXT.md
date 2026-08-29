@@ -1,40 +1,37 @@
-# NEXT work unit — audit the two surviving retail handoff callers
+# NEXT work unit — resume the generated-symbol sweep
 
-HYPOTHESIS-ID: external-retail-wrapper-chain-static-audit
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 ## Single work unit
 
-Perform one bounded static call-chain audit of retail `osViSwapBuffer`
-predecessors `0x8001BE24` and `0x80019B14`, tracing each body and its direct
-callees toward the title/hangar VI-mode writer. The oracle reached both target
-phases but found no new predecessor, so do not build or add port
-instrumentation unless this audit identifies a new boundary.
+Perform one bounded six-surface audit of the next unresolved project
+`fake_func_*`/placeholder symbol after the last synchronized sweep entry.
+Use the companion map, generated body, callers, generated header and overlay
+registration, project TOML, and rename tooling. Preserve the placeholder when
+the evidence only supports a fragment/data gap or cannot establish semantics.
 
 ## Competing hypotheses
 
-- H-DirectModeWrapper: one surviving predecessor or its direct callee owns the
-  mode/descriptor decision used by title and hangar.
-- H-SharedSwapPath: both predecessors are generic buffer-swap wrappers and the
-  mode writer is an upstream shared caller, outside these bodies.
-- H-OverlayAlias: the address is reached through an overlay-aliased generated
-  entry, so companion identity and overlay registration disagree with the
-  static call chain.
+- H-SemanticName: all six surfaces and the companion map establish one human
+  function identity.
+- H-Fragment: the record is a non-callable instruction fragment or data gap;
+  only a mechanical `data_gap_*` name is justified.
+- H-Unresolved: the surfaces disagree or do not establish callability or
+  semantics; preserve the placeholder and document the boundary.
 
 ## Discriminating measurement
 
-For each predecessor, record the exact generated body, direct callsites,
-callee identities, companion-map identity, and any static path to
-`osViSetMode` or the mode descriptor fields. A unique mode-writer path selects
-H-DirectModeWrapper; only generic swap operations plus an upstream writer
-selects H-SharedSwapPath; disagreement between generated registration and the
-companion identity selects H-OverlayAlias. If neither body/callee chain can
-reach the decision, leave the route unresolved and document the boundary.
+For the selected placeholder, record exact evidence for all six surfaces. A
+stable human identity selects H-SemanticName; a bounded non-callable fragment
+selects H-Fragment; disagreement or insufficient evidence selects
+H-Unresolved. Do not invent a semantic name.
 
 ## Exact commands
 
-1. `rg -n "8001BE24|80019B14|80035500|osViSetMode|80128E" RecompiledFuncs src lib`
-2. Use bounded `sed` windows around every hit, then inspect the companion map,
-   generated header/registration, and project TOML for both predecessor
-   addresses.
-3. Save the call-chain table and selected hypothesis under
-   `scratch/agent/s3105_external_retail_wrapper_chain/`.
+1. `grep -n '^## Session ' PORTING-STATE.md | tail -15` (REVISIT check).
+2. Locate the next unresolved placeholder with bounded `rg`/`sed` searches in
+   `../N64Recomp/RecompiledFuncs`, `../rogue_squadron64`, `syms`, and rename
+   tooling.
+3. Save the six-surface audit under
+   `scratch/agent/s3106_generated_symbol_rename/` and update synchronized
+   symbol surfaces only if the evidence selects a safe name.

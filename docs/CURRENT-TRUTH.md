@@ -4,7 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3104 (2026-08-28).
+Current maintenance marker: Session 3105 (2026-08-28).
+
+Session 3105 statically audited both surviving retail `osViSwapBuffer`
+predecessors. `0x8001BE24` is in `bufferArbiterProducerMark` and `0x80019B14`
+is in `viRetraceHandlerThread`; each selects/loads a framebuffer pointer and
+calls `osViSwapBuffer`, with no `osViSetMode` or VI-descriptor decision in its
+body. Generated names, registrations, project symbols, and the companion map
+agree, so no overlay alias was found. The mode writer is upstream in
+`advanceVideoFrame → swapBufferWithViMode → osViSetMode`, with additional
+direct callers in the video update/init paths. This selects
+H-SharedSwapPath and closes the two-caller static boundary without identifying
+the absent retail 1024 writer. Evidence:
+`scratch/agent/s3105_external_retail_wrapper_chain/AUDIT.md`.
+
+ORIGIN: static qualification of existing retail handoff callers. No runtime,
+audio, route, selector, wait, voice, or mitigation behavior changed.
 
 Session 3104 ran the independent retail oracle with a whole-RDRAM positive
 control and the validated Start schedule. The control fired 10,000 writes;
@@ -819,12 +834,12 @@ route-blocked at pre-title VI 640 despite a valid retail control and positive
 port dispatch controls; target-phase audio rows remain unevaluable. M3 is
 parked pending a new discriminator.
 
-1. **M5 route handoff — statically audit the two surviving retail callers.**
-   Session 3104 reached both target phases but found only the known
-   `osViSwapBuffer` predecessors `0x8001BE24` and `0x80019B14`. Trace both
-   caller bodies and their callees to the VI-mode writer/descriptor decision,
-   using companion symbols and generated callsites; do not add port probes
-   until this identifies a new boundary.
+1. **M5 VI-mode publication edge — new boundary required.** Session 3105
+   selected H-SharedSwapPath: both surviving predecessors are framebuffer
+   swaps, not mode writers, and their generated/companion identities agree.
+   Do not repeat this caller audit. Revisit the absent retail 1024 writer only
+   with a genuinely new external boundary that can attribute its caller or
+   descriptor source.
 
 2. **M5 VI-mode publication edge — parked after Session 3094.** The port
    publishes and consumes a live 640 descriptor (`0x80128DF0`) but never
@@ -833,9 +848,9 @@ parked pending a new discriminator.
    discriminate the absent 1024 writer; do not repeat the selector-byte,
    ProducerMark, or current consumer probes.
 
-3. **Generated-symbol sweep — parked while M5 remains open.** Resume only
-   after the M5 route/audio blocker is closed or a new discriminator is
-   unavailable, following the bounded six-surface audit rule.
+3. **Generated-symbol sweep — now eligible if no new M5 discriminator is
+   available.** The bounded six-surface audit rule remains in force; resume at
+   the next unresolved placeholder rather than repeating closed audits.
 
 4. **M5 VI-mode stall — attribute selector-writer inputs.** Session 3076
    ruled out table aliasing, record-copy reorder, selected-pointer mutation,

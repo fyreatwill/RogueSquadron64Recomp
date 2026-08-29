@@ -124662,3 +124662,30 @@ Evidence: `scratch/agent/s3104_external_retail_entry_boundary/AUDIT.md` and
 
 ORIGIN: qualification-only retail handoff attribution; no audio, route,
 selector, wait, voice, or mitigation behavior changed.
+
+## Session 3105 (2026-08-28) — audited the two surviving retail swap callers
+
+Ran the bounded static call-chain audit specified by the prior NEXT file.
+`0x8001BE24` is the `osViSwapBuffer` call inside
+`bufferArbiterProducerMark`; its body receives the queue message, scans the
+slot-state bytes, loads a selected framebuffer pointer, swaps it, updates
+slot state, and returns. `0x80019B14` is the corresponding call inside
+`viRetraceHandlerThread`; it scans the same slot table, swaps the selected
+framebuffer, calls `postSwapRdpReset`, sends the completion message, and
+yields. Neither body contains `osViSetMode`, a VI descriptor load, or a
+mode-field store.
+
+The generated bodies, header/registration, project TOML, and companion symbol
+files agree on both identities, so the overlay-alias hypothesis is refuted.
+The mode-setting path is upstream: `advanceVideoFrame` calls
+`swapBufferWithViMode`, which calls `osViSetMode`; the video update/init paths
+also contain direct mode-setting calls. This selects H-SharedSwapPath and
+rules out H-DirectModeWrapper for both surviving predecessors. It does not
+identify the absent retail 1024 writer, so the next work unit pivots to the
+eligible generated-symbol sweep unless a genuinely new external mode-writer
+boundary appears.
+
+Evidence: `scratch/agent/s3105_external_retail_wrapper_chain/AUDIT.md`.
+
+ORIGIN: static qualification of existing retail handoff callers; no runtime,
+audio, route, selector, wait, voice, or mitigation behavior changed.
