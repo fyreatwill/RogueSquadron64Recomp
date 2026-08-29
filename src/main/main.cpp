@@ -5416,18 +5416,23 @@ static LONG WINAPI crash_handler(EXCEPTION_POINTERS* ep) {
 }
 #endif // _WIN32
 
+static void rs64_m5_apply_drain_tick_policy() {
+    if (std::getenv("ROGUESQ_DRAIN_INLOOP_TICK") != nullptr) {
+        return;
+    }
+#ifdef _WIN32
+    _putenv_s("ROGUESQ_DRAIN_INLOOP_TICK", "0");
+#else
+    setenv("ROGUESQ_DRAIN_INLOOP_TICK", "0", 0);
+#endif
+}
+
 int main(int argc, char* argv[]) {
     (void)argc; (void)argv;
 
     // The drain-loop tick is a port-only injection; keep the retail-shaped
     // path as the default while retaining an explicit rollback arm.
-    if (std::getenv("ROGUESQ_DRAIN_INLOOP_TICK") == nullptr) {
-#ifdef _WIN32
-        _putenv_s("ROGUESQ_DRAIN_INLOOP_TICK", "0");
-#else
-        setenv("ROGUESQ_DRAIN_INLOOP_TICK", "0", 0);
-#endif
-    }
+    rs64_m5_apply_drain_tick_policy();
 
 #ifdef _WIN32
     // Log PE base so we can resolve absolute addresses from SEH logs to RVAs

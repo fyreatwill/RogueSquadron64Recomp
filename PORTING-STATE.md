@@ -125480,3 +125480,21 @@ not authorize a guard or mitigation. No build, run, code, or runtime behavior
 changed.
 
 Evidence: `scratch/agent/s3151_m3_alloc_voice_producer_edge.md`.
+
+## Session 3152 (2026-08-29) — made M5 Step 6 drain policy regeneration-safe
+
+The mandated M5 pivot landed a real runtime/fixup change. `main.cpp` now
+centralizes the Step 6 startup policy: an unset `ROGUESQ_DRAIN_INLOOP_TICK`
+becomes `0`, while an explicit value remains untouched for the control arm.
+`fixup_game_funcs.py` now interprets only explicit `=1` as enabling the
+generated in-loop `tickMusyXIfActive` injection; unset and `=0` are disabled.
+The target build completed successfully and the fixup passed Python
+compilation. This rules out a source/build-policy mismatch as the next Step 6
+blocker, but does not establish audio task, status, voice, or PCM correctness;
+no guest wait, gate, writer, or output behavior changed. ORIGIN: the policy
+controls the port-only s1976 host injection; it does not alter a guest-owned
+value.
+
+Evidence: `cmake --build build --config Debug --target
+RogueSquadron64Recomp` and `python3 -m py_compile
+/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.

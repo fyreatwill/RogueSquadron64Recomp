@@ -1,31 +1,33 @@
-# NEXT work unit — select and audit the next M3 NULL-plus-offset idiom
+# NEXT work unit — qualify the Step 6 drain-tick policy
 
-HYPOTHESIS-ID: m3-next-idiom-class-audit
+HYPOTHESIS-ID: m5-audio-destub-step6-policy
 
 ## Single work unit
 
-Select the highest-information-value still-open NULL-plus-offset idiom from
-the existing M3 audit inventory, enumerate every guest site and caller, and
-classify each base pointer as locally proven, guarded, or unclassified. Do not
-add a guard, change audio behavior, or run the blocked M5 route.
+Build the centralized default-off drain-tick policy and the regeneration-safe
+fixup together. Do not remove the status-03 wait hatch or alter a guest gate.
 
 ## Competing hypotheses
 
-- `H-M3-Proven`: every site has a local nonzero/data-flow proof.
-- `H-M3-Guarded`: every site is protected by an explicit control-flow guard.
-- `H-M3-Unclassified`: at least one reachable site lacks either proof.
+- `H-Step6-PolicyApplied`: an unset `ROGUESQ_DRAIN_INLOOP_TICK` reaches the
+  generated drain loop as `0`, while explicit `=1` remains the control arm.
+- `H-Step6-PolicyBypassed`: generated code still treats unset as enabled or
+  the startup policy is not applied before the first drain call.
+- `H-Step6-BuildRegression`: the policy source/fixup change does not compile
+  or changes unrelated startup behavior.
 
 ## Discriminating measurement
 
-Build one complete site table: guest PC, base register, offset, defining load
-or allocation, null/range test, and all reachable callers. `H-M3-Proven`
-requires a proof at every site; `H-M3-Guarded` requires an explicit guard at
-every site; one unclassified reachable site selects `H-M3-Unclassified`.
+One source/build check must show the helper call, the fixup's `=1` predicate,
+and a successful target build. If a run is available, one same-build pair
+must show `[drain-inloop-gate] en=0` with the default and `en=1` with the
+explicit control. The result selects policy-applied, policy-bypassed, or
+build-regression; no route-null is interpreted as audio evidence.
 
 ## Exact commands
 
 ```sh
-rg -n -i 'm3.*(inventory|audit)|null.plus.offset|unclassified.*deref' docs scratch/agent --glob '*.md'
-rg -n 'MEM_[BHW]|0x[0-9A-Fa-f]+\(\$[a-z0-9]+\)' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n 'rs64_m5_apply_drain_tick_policy|ROGUESQ_DRAIN_INLOOP_TICK|s1993_inloop_tick_en' src/main/main.cpp /Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py
+cmake --build build --config Debug --target RogueSquadron64Recomp
 git diff --check
 ```
