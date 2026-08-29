@@ -114,7 +114,7 @@ RENAMES = {
     # These short mission-overlay records are non-callable fragments between
     # established function boundaries.
     "fake_func_800BCC38": "data_gap_800BCC38",
-    "fake_func_800BEBFC": "data_gap_800BEBFC",
+    "fake_func_800BEBFC": "initDemoPlayStatePreamble",
     "fake_func_800BF498": "data_gap_800BF498",
     "fake_func_800BF784": "data_gap_800BF784",
     # These short main-overlay records precede named routines in the

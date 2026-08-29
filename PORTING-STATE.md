@@ -123999,3 +123999,24 @@ Evidence: `scratch/agent/s3069_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, generated instruction,
 route, audio, or submodule behavior changed.
+## Session 3070 (2026-08-28) — synchronized 0x800BEBFC preamble symbol
+
+The bounded six-surface generated-symbol audit selected `H-ExactIdentity` for
+`0x800BEBFC`. The companion mission map and generated output place a 4-byte
+fragment immediately before `initDemoPlayState` at `0x800BEC00`; the generated
+body is only `addu $fp,$sp,$zero`, with no return sequence or generated caller.
+Companion `build/redefs.txt` independently maps the fake symbol to
+`initDemoPlayStatePreamble`, and `tools/rename/build_redefs.py` already carries
+the same identity. Header, overlay registration, and extent all agree. The
+project TOML and `tools/rename_generated_symbols.py` were synchronized from
+`data_gap_800BEBFC` to `initDemoPlayStatePreamble`; the next sweep candidate is
+`data_gap_800BF498`.
+
+No build or runtime run was needed for this static unit. This rules out a
+boundary-only data-gap classification and mapping drift at this address; it
+does not make a claim about runtime behavior.
+
+Evidence: `scratch/agent/s3070_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, generated instruction, route,
+audio, or submodule behavior changed.

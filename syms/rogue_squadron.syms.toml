@@ -1668,7 +1668,7 @@ functions = [
     { name = "triggerNabooEngineEffect", vram = 0x800BE228, size = 0x280 },
     { name = "tickPlayerCraftBlinkIndicator", vram = 0x800BE4A8, size = 0x328 },
     { name = "playerNabooStarfighterUpdate", vram = 0x800BE7D0, size = 0x42C },
-    { name = "data_gap_800BEBFC", vram = 0x800BEBFC, size = 0x4 },
+    { name = "initDemoPlayStatePreamble", vram = 0x800BEBFC, size = 0x4 },
     { name = "initDemoPlayState", vram = 0x800BEC00, size = 0xDC },
     { name = "applyDemoRecordedHudEvents", vram = 0x800BECDC, size = 0x13C },
     { name = "clearPlayerSlotHudTracking", vram = 0x800BEE18, size = 0x94 },

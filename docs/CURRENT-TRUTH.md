@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3069 (2026-08-28).
+Current maintenance marker: Session 3070 (2026-08-28).
 
 ## Current state
 
@@ -29,6 +29,17 @@ completion, not PCM correctness. The M5 route dependency remains open, but
 static generated-symbol work can proceed independently.
 
 ## Latest results
+
+Session 3070 completed the bounded six-surface audit at `0x800BEBFC`. The
+companion mission map and generated registration/TOML showed a 4-byte record
+immediately before `initDemoPlayState` at `0x800BEC00`; generated code is the
+single `addu $fp,$sp,$zero` fragment with no return sequence or caller. The
+independent companion `redefs.txt` maps the corresponding fake symbol to
+`initDemoPlayStatePreamble`, and the local `build_redefs.py` already carries
+that identity. This selects H-ExactIdentity: the project TOML and
+`rename_generated_symbols.py` were synchronized. The next sweep candidate is
+`data_gap_800BF498`. Evidence:
+`scratch/agent/s3070_generated_symbol_rename/AUDIT.md`.
 
 Session 3057 mapped retail PC `0x80035798` to libultra
 `__osViSwapContext` (`0x80035550–0x800358AC`), the VI-register commit
@@ -378,7 +389,8 @@ parked pending a new discriminator.
    (`data_gap_800BCC38`)
    only after auditing companion map, generated body, callers, header, overlay
    registration, project TOML, and local duplicates. The `0x800BCC38` record
-   was audited and preserved as a data gap; resume at `data_gap_800BEBFC`.
+   was audited and preserved as a data gap; `0x800BEBFC` was synchronized as
+   `initDemoPlayStatePreamble`; resume at `data_gap_800BF498`.
    If the sweep becomes a
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.
