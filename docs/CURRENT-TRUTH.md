@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3128 (2026-08-28).
+Current maintenance marker: Session 3129 (2026-08-28).
 
 ## Current state
 
@@ -176,19 +176,30 @@ publication edge. It is single-source retail evidence and does not authorize
 an audio or route behavior change. Evidence:
 `scratch/agent/s3128_m5_retail_origin_publish/AUDIT.md`.
 
+Session 3129's port-side parity probe instrumented the host equivalent of the
+retail `0x80035788` origin publication: `update_vi` immediately before its
+`VI_ORIGIN_REG` store. The same run emitted eight bounded origin-publication
+control rows, eight VI-context control rows, and one host voice-audit control.
+It reached only pre-title VI 640 (`0x0066A500`), emitted zero target
+publication rows, and reached neither title nor hangar; no crash or abort was
+observed. This selects `H-PortPublicationAbsent` for the observed route and
+places the divergence upstream of the VI consumer/publication edge. It does
+not identify the upstream writer, and no audio or route behavior changed.
+This is single-source port evidence. Evidence:
+`scratch/agent/s3129_m5_origin_publish/run.log`.
+
 ## Next steps
 
 Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
-Step 1 is route-blocked. M3 is parked pending a new discriminator.
+the port-side VI publication parity probe is now exhausted for this route.
+M3 is parked pending a new discriminator.
 
-1. **M5 route blocker — port parity at origin publication.** Add one
-   phase-gated port probe for the now-retail-qualified `0x80035788` boundary,
-   retaining the existing VI-context and host-voice positive controls. The
-   target discriminator is a port row at the origin-publication edge before
-   the route stops at VI 640; no row with valid controls means the divergence
-   remains upstream of this consumer edge. Do not change audio or route
-   behavior.
+1. **M5 route blocker — retail-grounded upstream handoff.** Use the oracle to
+   identify one new static handoff upstream of `__osViSwapContext` and the
+   already rejected consumer/pre-consumer candidates, with whole-RDRAM and
+   title/hangar controls in the same run. Do not add another port probe until
+   retail attributes a distinct edge; do not change audio or route behavior.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the

@@ -1,42 +1,36 @@
-# NEXT work unit — ground the upstream route divergence in retail
+# NEXT work unit — identify a new retail-grounded upstream handoff
 
-HYPOTHESIS-ID: m5-audio-route-upstream-boundary
+HYPOTHESIS-ID: m5-audio-route-upstream-retail-boundary
 
 ## Single work unit
 
-Use one static audit of the MIPS `__osViSwapContext` boundary to identify a
-genuinely different named handoff for the next retail oracle run. The exact
-`0x800356A8` candidate was absent in retail even though title/hangar controls
-were valid, so do not repeat it or the closed `0x80034F38:0x800356AC` range.
-Session 3126's port probe had valid controls (VI-context 8 rows and host
-voice-audit 1 row), but the port reached only VI 640 and had zero rows from
-the retail-live continuation. Audio and route behavior remain out of scope.
-
-Static audit candidate: `0x80035788` is the `sw` that publishes the selected
-origin to `VI_ORIGIN_REG` (`0xA4400004`); `0x80035798` is the subsequent width
-store. This is a distinct origin-publication PC, not the rejected `0x800356A8`
-or the closed pre-consumer range.
+Use one static audit to choose a genuinely new instruction or handoff upstream
+of the retail `__osViSwapContext` origin publication, then run one oracle
+capture for that exact edge. Do not repeat `0x800356A8`, the closed
+`0x80034F38:0x80035B00` consumer range, or `0x80035788`; the port publication
+probe had positive controls but stopped at VI 640.
 
 ## Competing hypotheses
 
-- H-NewStaticHandoff: `0x80035788` executes in retail during target phases,
-  giving direct attribution for origin publication at the VI consumer edge.
-- H-NoDistinctHandoff: the audited instructions are already covered or have
-  no independent execution edge; choose the highest-information non-consumer
-  boundary instead.
-- H-RetailControlInvalid: the whole-RDRAM positive control or title/hangar
-  phase markers fail, so the oracle result is unevaluable.
+- H-NewRetailBoundary: the new watched PC executes in retail during title or
+  hangar, giving direct attribution for an upstream handoff.
+- H-RetailBoundaryAbsent: whole-RDRAM and title/hangar controls pass but the
+  new candidate has zero target-phase executions; select another static edge.
+- H-RetailControlInvalid: the positive control or title/hangar phase markers
+  fail, so the candidate result is unevaluable.
 
 ## Discriminating measurement
 
-The oracle run must pass the whole-RDRAM control and reach title/hangar; a
-target-phase row for `0x80035788` selects H-NewStaticHandoff, no row with
-valid controls selects H-NoDistinctHandoff, and missing controls select
-H-RetailControlInvalid.
+The oracle run must pass the whole-RDRAM positive control and reach title
+`1024 @ 0x00790400` plus hangar `512 @ 0x006AB400`. A target-phase execution
+row for the new PC selects H-NewRetailBoundary; valid controls plus no such
+row selects H-RetailBoundaryAbsent; missing controls or either target phase
+selects H-RetailControlInvalid.
 
 ## Exact commands
 
-1. Run one oracle capture with `--watch-write 0x0:0x800000`,
-   `--watch-pc 0x80035788`, Rice, VI tracing, and the verified Start schedule.
-2. Record the positive-control count, title/hangar phases, and candidate-PC
-   rows; do not add a port instrument until the writer/consumer PC is named.
+1. Read the relevant static VI-manager code and select one new upstream PC.
+2. Run `tools/oracle/build/rs64_oracle` with `--watch-write 0x0:0x800000`,
+   `--watch-pc <new-pc>`, `--vi-trace`, Rice, and the verified Start schedule.
+3. Record the control count, title/hangar phase rows, and candidate-PC rows;
+   do not add a port instrument unless the oracle selects H-NewRetailBoundary.

@@ -124773,6 +124773,27 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3129 (2026-08-28) — rejected port origin-publication reachability
+
+Built the Debug target after adding a bounded probe at the host equivalent of
+retail `0x80035788`: `update_vi` immediately before the
+`VI_ORIGIN_REG` publication. Ran one phase-gated capture in the validated
+spin-yield/F5-LLE arm with the publication probe, VI-context probe, and host
+voice-audit control enabled. The same run emitted eight origin-publication
+control rows, eight VI-context control rows, and one host voice-audit control.
+It reached only pre-title VI 640 (`0x0066A500`), emitted zero target
+publication rows, and reached neither title nor hangar. No crash or abort
+marker occurred. This selects H-PortPublicationAbsent for the observed route
+and rules out an invalid instrument; it places the route divergence upstream
+of the VI consumer/publication edge but does not identify the writer. No
+audio, route, wait, slot, voice, destination, or mitigation behavior changed.
+This is single-source port evidence.
+
+Evidence: `scratch/agent/s3129_m5_origin_publish/run.log`.
+
+ORIGIN: qualification-only host publication instrumentation; the writer is
+`events.cpp::update_vi` and the published origin is legitimate VI state.
+
 ## Session 3128 (2026-08-28) — qualified retail VI origin publication
 
 Audited the linked retail ELF's `__osViSwapContext` and selected the distinct
