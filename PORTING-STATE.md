@@ -126157,3 +126157,15 @@ references in `funcs_49.c`, `funcs.h`, and `recomp_overlays.inl`. A final
 search found no stale old-name reference. No build or runtime run was needed;
 the change is source-only. Evidence:
 `scratch/agent/s3197_generated_symbol_rename.md`.
+## Session 3198 (2026-08-29) — classified generated data-gap split at 0x800A29BC
+
+The bounded generated-symbol census found no companion symbol for
+`0x800A29BC`. Its generated body begins with an isolated store fragment and
+has no standalone callable prologue; the generated tree contains only the
+body, declaration, and one callsite. This selects `H-DataGap` and rules out a
+semantic callable rename for this record. Added the regeneration-safe mapping
+`static_3_800A29BC` → `data_gap_800A29BC` and ran the bounded helper, which
+synchronized exactly three external generated references in `funcs_49.c`,
+`funcs.h`, and `funcs_27.c`. A final search found no stale old-name reference
+and no overlay-table entry. No build or runtime run was needed; the change is
+source-only. Evidence: `scratch/agent/s3198_generated_symbol_rename.md`.
