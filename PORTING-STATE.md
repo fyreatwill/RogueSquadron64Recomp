@@ -125634,3 +125634,22 @@ and `0x88` stride and the channel-array count. This selects
 and does not prove a retail-invalid value. No guard, generated source, audio
 behavior, build, or run changed. Evidence:
 `scratch/agent/s3161_m3_musyx_trigger_voice_attack_audit.md`.
+## Session 3162 (2026-08-29) — audited stopVoiceByKey producer contract
+
+Completed the bounded static M3 producer audit for `stopVoiceByKey`'s result.
+The generated tree contains one direct caller, `startStreamedSampleVoice` at
+`0x80098054`; `stopVoiceByKey` obtains its result from `allocateSynthVoice`,
+then returns that index or `-1`. `allocateSynthVoice` scans from zero while
+the index is below `D_80141AD0`. The complete generated writer inventory for
+that byte is the two stores in each of `setDisplayMode` and
+`reapplyDisplayMode`; both validate the input below `0x21` and otherwise store
+`0x20`. The successful producer result is therefore `0..31`, and the caller's
+`!= -1` check is sufficient for the 64-entry voice-record bound. Companion
+symbol metadata and the companion ELF independently confirm the named bodies
+and addresses. This selects `H-M3-Proven` and closes this producer edge.
+
+No guard, audio behavior, generated source, build, or run changed. The prior
+`H-M3-Unclassified` label is superseded because the count-byte writer set was
+included in this audit; it was believable when only the local caller check had
+been considered. Evidence:
+`scratch/agent/s3162_m3_stop_voice_by_key_producer_audit.md`.

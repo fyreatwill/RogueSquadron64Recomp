@@ -6,7 +6,17 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3161 (2026-08-29).
+Current maintenance marker: Session 3162 (2026-08-29).
+
+Session 3162 completed the bounded static M3 producer audit for
+`stopVoiceByKey`'s result. Its sole generated caller is
+`startStreamedSampleVoice`; the result comes from `allocateSynthVoice`, which
+scans `D_80141AD0`. The complete generated writer inventory shows both writers
+validate `<0x21` and otherwise store `0x20`, proving successful results are
+`0..31` and failure is `-1`. This selects `H-M3-Proven` from generated control
+flow plus companion symbol/ELF metadata and closes that producer edge. No
+guard, audio behavior, generated source, build, or run changed. Evidence:
+`scratch/agent/s3162_m3_stop_voice_by_key_producer_audit.md`.
 
 Session 3161 completed the bounded static M3 audit of
 `musyxTriggerVoiceAttack`'s voice-indexed `0x88`-stride record accesses. The
@@ -530,7 +540,9 @@ the status-03 wait hatch.
    `SONGTEMPO_TABLE_GUARD` reader inventory are closed by Sessions 3146–3156.
    The `stopVoicesByHandle` producer edge remains unresolved: no direct or
    recoverable indirect call to `allocVoiceHandleNode` was found, and no guard
-   is authorized. Select the next complete NULL-plus-offset class from the
+   is authorized. Session 3162 closes the `stopVoiceByKey` producer edge as
+   `H-M3-Proven` (`0..31` or `-1`) after auditing its complete count-byte
+   writer set. Select the next complete NULL-plus-offset class from the
    existing M3 inventory and enumerate all sites in one audit. The next
    selected class is `musyxTriggerVoiceAttack`'s voice-indexed record access.
    The generated-symbol sweep lead for `0x800A0000..0x800B0000` is closed by
