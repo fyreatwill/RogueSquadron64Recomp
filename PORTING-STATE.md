@@ -124772,6 +124772,30 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3122 (2026-08-28) — selected retail VI consumer handoff
+
+Ran one independent retail-oracle capture with the whole-RDRAM positive
+control, Rice video, the verified Start schedule, VI tracing, and an execution
+watch over `0x80034F38:0x800356AC`, covering `viMgrMain` and
+`__osViSwapContext`; `__osViNext` (`0x80039214`) was also watched as a queued
+context control. The positive control reached 10,000 callbacks. Retail
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`.
+
+At the 640-to-1024 transition at 17.2s, the range executed with
+`v0=0x00790000`, then entered `__osViSwapContext` at `0x80035550`; the VI
+trace reported the new 1024 context. The range recorded 1,675,531 executions
+and the context-swap routine 4,604 executions. The optional `__osViNext` join
+had zero rows and is unevaluable. This selects H-ConsumerHandoff and rejects
+the candidate-set form of H-OutsideConsumer; H-DeferredVI is less likely.
+The result is single-source oracle evidence and authorizes a port-side parity
+probe, not a behavior change.
+
+Evidence: `scratch/agent/s3122_m5_retail_consumer_handoff/oracle.log` and
+`scratch/agent/s3122_m5_retail_consumer_handoff/AUDIT.md`.
+
+ORIGIN: independent retail boundary attribution; no port, audio, route,
+selector, wait, voice, or mitigation behavior changed.
+
 ## Session 3121 (2026-08-28) — rejected retail VI record boundary
 
 The independent retail oracle watched a whole-RDRAM write positive control,

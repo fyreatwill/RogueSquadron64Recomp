@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3121 (2026-08-28).
+Current maintenance marker: Session 3122 (2026-08-28).
 
 ## Current state
 
@@ -93,6 +93,18 @@ in the 640 and hangar controls. This selects a deferred/outside-consumer
 publication boundary for the next retail probe. It is single-source oracle
 evidence and does not identify the writer or authorize a port change.
 
+Session 3122's independent retail oracle passed the whole-RDRAM positive
+control (10,000 callbacks), reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, and watched the untested libultra consumer range
+`0x80034F38:0x800356AC`. At the 640-to-1024 transition it executed
+`viMgrMain` and entered `__osViSwapContext` (`0x80035550`) with the new
+`0x00790000` context immediately before the VI trace reported `0x00790400`.
+The consumer range was live (1,675,531 executions; 4,604 context swaps).
+This selects `H-ConsumerHandoff` and rejects the candidate-set form of
+`H-OutsideConsumer`; `__osViNext`'s optional join was empty and is
+unevaluable. The result is single-source retail evidence: it authorizes a
+port-side parity probe but no behavior change.
+
 The strongest route boundary remains the independent comparison: retail
 reaches title at 1024 and hangar at 512, while the recent same-build port
 capture issues only widths 320, 2, 640, and 640 and remains at VI 640. The
@@ -105,12 +117,12 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **M5 VI publication — retail-test the consumer-side handoff.** Attribute
-   the first store/call after the queued mode reaches the VI manager/context
-   publication path, with whole-RDRAM, title, and hangar controls in the same
-   run. The request/selector/record family is now negative at the title
-   transition; do not repeat those watches, `0x800C2984`, or the closed direct
-   callsite/helper ranges.
+1. **M5 VI publication — port-side consumer parity probe.** Compare the
+   port's target-phase VI manager/context handoff against the retail result
+   from Session 3122. Build one phase-scoped probe covering the port's
+   `update_vi`/`update_screen` consumer edge, with the existing VI phase and
+   whole-RDRAM controls. Do not change behavior until the port shows whether
+   its consumer sees the same queued framebuffer/mode context.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed

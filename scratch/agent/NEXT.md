@@ -1,36 +1,40 @@
-# NEXT work unit — widen retail VI publication boundary to the consumer handoff
+# NEXT work unit — port-side VI consumer parity
 
-HYPOTHESIS-ID: m5-retail-video-publication-boundary
+HYPOTHESIS-ID: m5-port-vi-consumer-handoff-parity
 
 ## Single work unit
 
-Use the retail oracle to watch the next consumer-side handoff outside the
-closed selector/record family. Start from the VI manager/context publication
-path after the queued mode is consumed; include a whole-RDRAM positive
-control, title/hangar phase controls, and one complete candidate PC/address
-set in the same run. Do not repeat `0x800C2984`, `0x8001A098:0x8001BB6C`, or
-the selector/record watches from s3121. Do not modify the port.
+Instrument one build of the port's consumer-side VI handoff around
+`ultramodern::ViManager::update_vi` and the following `update_screen` action.
+Phase-gate all rows on VI transitions and retain the existing whole-RDRAM
+positive control. Compare whether the port consumes the same framebuffer and
+mode context that retail publishes at the 640-to-1024 transition. Do not
+change behavior.
 
 ## Competing hypotheses
 
-- H-ConsumerHandoff: the missing publication is attributed to a consumer-side
-  call/store after the queued mode reaches the VI manager.
-- H-OutsideConsumer: the descriptor/register writer is outside the next
-  consumer candidate set, so the probe must widen again.
-- H-DeferredVI: title is reached without a directly attributable write in the
-  producer or consumer candidate sets, indicating deferred/frame-boundary
-  publication.
+- H-PortConsumerParity: the port consumes the queued context and publishes
+  the same framebuffer/mode transition; the missing behavior is downstream.
+- H-PortConsumerStale: the port consumer runs but sees a stale or mismatched
+  framebuffer/mode context at the target transition.
+- H-PortConsumerAbsent: the port never reaches the consumer handoff in the
+  target phase, so the route stop is upstream.
 
 ## Discriminating measurement
 
-The PC-attributed write/call sequence across the 640-to-1024 transition splits
-the hypotheses. A matching consumer write/call selects H-ConsumerHandoff; a
-live consumer candidate with no matching publication selects H-OutsideConsumer;
-no publication with passed controls selects H-DeferredVI.
+In one run, a positive-control row plus target-phase paired snapshots of
+`next_state` before `update_vi`, `update_screen_regs` after the screen action,
+and VI width/origin split the hypotheses. Matching retail-equivalent context
+selects H-PortConsumerParity; a live consumer with stale/mismatched fields
+selects H-PortConsumerStale; no target-phase consumer row with passed controls
+selects H-PortConsumerAbsent.
 
 ## Exact commands
 
-Run the existing retail-oracle recipe from `tools/oracle/README.md`, retaining
-the whole-RDRAM positive control and title/hangar phase controls. Use a new
-consumer-side candidate set derived from the VI manager/context path and
-record the result in `scratch/agent/s3122_*`.
+1. Add the phase-scoped diagnostic to the existing VI event consumer path,
+   using the canonical env-var catalog and no behavior change.
+2. Build with `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+3. Run from `build/` with the existing validated spin-yield/F5-LLE route,
+   capturing the whole-RDRAM positive control and VI phase lines to a new
+   `scratch/agent/s3123_*` directory; kill with SIGKILL if the watchdog fires.
+4. Record the paired consumer snapshots and select exactly one hypothesis.
