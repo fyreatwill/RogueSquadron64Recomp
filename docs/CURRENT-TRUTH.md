@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3187 (2026-08-29).
+Current maintenance marker: Session 3188 (2026-08-29).
 
 Session 3188 advanced the generated-symbol sweep by mapping the invalid
 two-instruction split at `0x8009D8BC` from `static_3_8009D8BC` to
