@@ -125404,3 +125404,16 @@ stores are legitimate age-field writers in the function itself. This selects
 offset dereference there. Probe-control reads were excluded from the generated
 site count. No build, run, guard, or runtime behavior change was needed.
 Evidence: `scratch/agent/s3146_m3_slot_pointer_audit.md`.
+
+## Session 3147 (2026-08-28) — closed slotDispatcherInner slot-pointer idiom class
+
+The selected M3 class was every `MEM_*` access through `slotDispatcherInner`'s
+slot pointer (`$s1`, `ctx->r17`). The complete function-body enumeration found
+five guest sites: `+0x14` at `0x8003EA60`, `0x8003EAC4`, and `0x8003EAEC`,
+`+0x18` at `0x8003EAF8`, and `+0x04` at `0x8003EB48`. All five use the stable
+`$a0` record. The five generated callers pass their initialized `$s0` record
+after linking it into the global slot table via `popNpcSlotFromTail`; repeated
+host blocks are delay-slot lowering of one guest store. This selects
+`H-M3-Proven`, rules out an unclassified reachable dereference in this class,
+and provides no basis for a guard. No build, run, or runtime behavior change
+was needed. Evidence: `scratch/agent/s3147_m3_slot_inner_audit.md`.

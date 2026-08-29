@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3145 (2026-08-28).
+Current maintenance marker: Session 3147 (2026-08-28).
 
 ## Current state
 
@@ -83,6 +83,17 @@ access; the `+0x1A` stores are legitimate age-field writers in the same
 function. The complete static table selects `H-M3-Proven` for this class and
 adds no guard or runtime behavior. Evidence:
 `scratch/agent/s3146_m3_slot_pointer_audit.md`.
+
+Session 3147 completed the bounded `slotDispatcherInner` slot-pointer audit.
+The complete function-body enumeration found five guest sites (`+0x14` at
+`0x8003EA60`, `0x8003EAC4`, and `0x8003EAEC`; `+0x18` at `0x8003EAF8`; and
+`+0x04` at `0x8003EB48`). All five use the stable `$a0`/`$s1` slot record.
+The five generated callers pass their freshly initialized `$s0` record after
+inserting it into the global slot table via `popNpcSlotFromTail`; the repeated
+host blocks are delay-slot lowering of one guest store. This selects
+`H-M3-Proven` for the class: no unclassified reachable dereference or guard
+site was found, and no runtime behavior changed. Evidence:
+`scratch/agent/s3147_m3_slot_inner_audit.md`.
 
 Session 3144 could not run the queued M5 paired qualification. The required
 route change is not present: the current state still records the port stopping
@@ -366,10 +377,12 @@ hangar controls. The next independent work unit is a bounded M3 idiom-class
 audit; M5 remains an open dependency, not a reason to stop the loop.
 
 1. **M3 crash work — bounded idiom-class audit.** The
-   `slotDispatcherIter` slot-pointer class is closed by Session 3146. The next
-   class is `slotDispatcherInner`'s slot-pointer dereferences; enumerate every
-   site, classify its caller contract/provenance, and guard or prove every
-   site before any build or mitigation.
+   `slotDispatcherIter` and `slotDispatcherInner` slot-pointer classes are
+   closed by Sessions 3146 and 3147. The next class is the derived heap/list
+   pointers in `slotDispatcherInner` (`$a0`, `$v1`, and `$v0`) at guest PCs
+   `0x8003EAE0`–`0x8003EBF8`; enumerate every dereference, classify each
+   null-check/provenance edge, and guard or prove every site before any build
+   or mitigation.
 
 2. **M5 route reachability — obtain a route-change direction.** The paired
    phase-keyed qualification is blocked because the port still stops at VI
