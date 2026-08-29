@@ -126286,3 +126286,15 @@ stale references. This selects the existing `H-SemanticMatch` mapping over
 already-synchronized state. No build or runtime run was performed because
 this was a source-only sweep. The next lead is `0x800B58B4`.
 Evidence: `scratch/agent/s3207_generated_symbol_rename.md`.
+
+## Session 3208 (2026-08-29) — confirmed synchronized player A-wing preamble at 0x800B58B4
+
+The bounded companion census found `fake_func_800B58B4` in the mission
+overlay symbol file. The generated snapshot independently contains the
+12-byte callable preamble already named `playerAwingInitPreamble`, and the
+header plus overlay table use the same name. The required rename helper
+selected zero stale references and reported the mapping as already
+synchronized. This selects the existing `H-SemanticMatch` mapping over
+`H-DataGap` and `H-Ambiguous`; no new rename, build, or runtime run was
+performed. The next unresolved generated placeholder is `static_4_80106C50`.
+Evidence: `scratch/agent/s3208_generated_symbol_rename.md`.
