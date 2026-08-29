@@ -125149,3 +125149,14 @@ Evidence: `scratch/agent/s3130_m5_retail_bc28/AUDIT.md` and
 `scratch/agent/s3130_m5_retail_bc28/oracle.log`.
 
 ORIGIN: qualification-only retail boundary attribution; no behavior change.
+## Session 3131 (2026-08-28) — rejected upstream retail VI caller
+
+Ran the planned independent retail-oracle capture watching PC `0x800186C0`,
+the `jal 0x8001BB6C` that was selected as an upstream caller into
+`selectAndApplyViMode`. The whole-RDRAM positive control reached 10,000
+callbacks and was removed successfully. Retail reached title VI 1024 at
+`0x00790400` and hangar VI 512 at `0x006AB400`; the candidate PC executed
+zero times overall, including both target phases. This rejects the candidate
+as the target-phase handoff and leaves the upstream boundary unidentified.
+No port instrumentation or behavior changed. Evidence:
+`scratch/agent/s3131_m5_retail_186c0/oracle.log`.

@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3130 (2026-08-28).
+Current maintenance marker: Session 3131 (2026-08-28).
 
 ## Current state
 
@@ -195,6 +195,15 @@ callsite `0x8001BC28` in `selectAndApplyViMode`. The candidate executed zero
 times overall, including both target phases. This rejects that selected-mode
 callsite as the retail target-phase handoff and leaves the upstream boundary
 unidentified. This is single-source oracle evidence; no port behavior changed.
+
+Session 3131's independent retail oracle passed the whole-RDRAM positive
+control (10,000 callbacks), reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, and watched the upstream callsite `0x800186C0` (the
+`jal 0x8001BB6C` into `selectAndApplyViMode`). The candidate executed zero
+times overall, including both target phases. This rejects that caller as the
+retail target-phase handoff and leaves the upstream boundary unidentified.
+This is single-source oracle evidence; no port behavior changed. Evidence:
+`scratch/agent/s3131_m5_retail_186c0/oracle.log`.
 Evidence: `scratch/agent/s3130_m5_retail_bc28/AUDIT.md`.
 
 ## Next steps
@@ -206,10 +215,11 @@ M3 is parked pending a new discriminator.
 
 1. **M5 route blocker — retail-grounded upstream handoff.** Audit the call
    chain and data handoff feeding the retail VI consumer, excluding the closed
-   direct callsites `0x8001B720`, `0x8001B8DC`, `0x8001BB54`, and `0x8001BC28`,
-   then use one new statically selected PC in an oracle run with whole-RDRAM
-   and title/hangar controls. Do not add another port probe until retail
-   attributes a distinct edge; do not change audio or route behavior.
+   direct callsites `0x8001B720`, `0x8001B8DC`, `0x8001BB54`, `0x8001BC28`, and
+   the rejected `0x800186C0`, then use one new statically selected PC in an
+   oracle run with whole-RDRAM and title/hangar controls. Do not add another
+   port probe until retail attributes a distinct edge; do not change audio or
+   route behavior.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the
