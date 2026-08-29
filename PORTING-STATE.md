@@ -124772,6 +124772,28 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3121 (2026-08-28) — rejected retail VI record boundary
+
+The independent retail oracle watched a whole-RDRAM write positive control,
+the pending VI range `0x128E90:0x128E9C`, the four game VI records
+`0x128D50:0x128E40`, the final record `0x128E40:0x128E50`, and selector bytes
+`0x11A865:0x11A869` in one Rice run with the validated Start schedule. The
+positive control produced 18,055 writes and the run reached title `1024 @
+0x00790400` and hangar `512 @ 0x006AB400`.
+
+No title-phase write hit the selector or VI-record ranges. The pending range
+had only the known per-frame writers `0x8001BA80` and `0x8001BA88` in the title
+bucket; request/clear edges were observed in the 640 and hangar controls. This
+selects H-NoTransition for the watched descriptor/state family: publication is
+deferred or outside these addresses. It does not identify the outside writer,
+and no port behavior changed.
+
+Evidence: `scratch/agent/s3121_m5_retail_vi_publication_boundary.md` and
+`scratch/agent/s3121_m5_retail_vi_publication_boundary.log`.
+
+ORIGIN: qualification-only retail boundary attribution; no port, audio,
+route, selector, wait, voice, or mitigation behavior changed.
+
 ## Session 3120 (2026-08-28) — aligned M5 audio arm identity
 
 Corrected `lib/N64ModernRuntime/librecomp/src/rsp.cpp` so the M5 task-contract

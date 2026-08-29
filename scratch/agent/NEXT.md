@@ -1,36 +1,36 @@
-# NEXT work unit — retail boundary for the next VI publication handoff family
+# NEXT work unit — widen retail VI publication boundary to the consumer handoff
 
 HYPOTHESIS-ID: m5-retail-video-publication-boundary
 
 ## Single work unit
 
-Use `scratch/agent/s3119_m5_vi_request_callers.md` to move the independent
-retail oracle to the next unenumerated handoff family: attribute the first
-write/call after the pending request-mask store and before the VI descriptor
-changes from 640 to 1024. Build one watch set containing the whole-RDRAM
-positive control, title/hangar phase controls, and the complete candidate PC
-range. Do not repeat `0x800C2984`, `0x8001A098:0x8001BB6C`, or the closed
-selector/helper range. Do not modify the port in this unit.
+Use the retail oracle to watch the next consumer-side handoff outside the
+closed selector/record family. Start from the VI manager/context publication
+path after the queued mode is consumed; include a whole-RDRAM positive
+control, title/hangar phase controls, and one complete candidate PC/address
+set in the same run. Do not repeat `0x800C2984`, `0x8001A098:0x8001BB6C`, or
+the selector/record watches from s3121. Do not modify the port.
 
 ## Competing hypotheses
 
-- H-NextHandoff: a retail-attributed store/call in the interval identifies the
-  missing VI publication boundary.
-- H-OutsideInterval: the descriptor changes through a writer outside the
-  interval, so the next probe must widen to the descriptor consumer or VI
-  register handoff.
-- H-NoTransition: title is reached without a directly attributable descriptor
-  write in either family, indicating deferred/frame-boundary publication.
+- H-ConsumerHandoff: the missing publication is attributed to a consumer-side
+  call/store after the queued mode reaches the VI manager.
+- H-OutsideConsumer: the descriptor/register writer is outside the next
+  consumer candidate set, so the probe must widen again.
+- H-DeferredVI: title is reached without a directly attributable write in the
+  producer or consumer candidate sets, indicating deferred/frame-boundary
+  publication.
 
 ## Discriminating measurement
 
 The PC-attributed write/call sequence across the 640-to-1024 transition splits
-the hypotheses. A candidate in the interval with a matching descriptor write
-selects H-NextHandoff; a widened-handoff write selects H-OutsideInterval; no
-descriptor write with passed phase controls selects H-NoTransition.
+the hypotheses. A matching consumer write/call selects H-ConsumerHandoff; a
+live consumer candidate with no matching publication selects H-OutsideConsumer;
+no publication with passed controls selects H-DeferredVI.
 
 ## Exact commands
 
 Run the existing retail-oracle recipe from `tools/oracle/README.md`, retaining
-the whole-RDRAM positive control and title/hangar phase controls. Record the
-watch configuration and result in a new `scratch/agent/s3121_*` artifact.
+the whole-RDRAM positive control and title/hangar phase controls. Use a new
+consumer-side candidate set derived from the VI manager/context path and
+record the result in `scratch/agent/s3122_*`.

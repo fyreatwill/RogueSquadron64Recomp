@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3120 (2026-08-28).
+Current maintenance marker: Session 3121 (2026-08-28).
 
 ## Current state
 
@@ -83,6 +83,16 @@ Session 3120 corrected the M5 task-contract arm identity in the runtime:
 selects `musyx_stub`. The target builds successfully. No game soak was run in
 this environment, so downstream phase rows remain unevaluable.
 
+Session 3121's independent retail oracle passed the whole-RDRAM positive
+control (18,055 writes), reached title `1024 @ 0x00790400` and hangar `512 @
+0x006AB400`, and watched the pending VI range, all four game VI records, the
+final record, and selector bytes in one run. No title-phase write occurred to
+the selector or record ranges. The pending range's title rows were only the
+known per-frame `0x8001BA80/0x8001BA88` writers; request/clear edges were live
+in the 640 and hangar controls. This selects a deferred/outside-consumer
+publication boundary for the next retail probe. It is single-source oracle
+evidence and does not identify the writer or authorize a port change.
+
 The strongest route boundary remains the independent comparison: retail
 reaches title at 1024 and hangar at 512, while the recent same-build port
 capture issues only widths 320, 2, 640, and 640 and remains at VI 640. The
@@ -95,12 +105,12 @@ Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **M5 VI publication — retail-test the next handoff family.** Attribute the
-   first store/call after the pending request-mask write and before the VI
-   descriptor changes from 640 to 1024, with whole-RDRAM, title, and hangar
-   controls in the same run. The five remaining request callers are now
-   classified and closed as the missing transition boundary; do not repeat
-   those watches, `0x800C2984`, or the closed direct-callsite/helper ranges.
+1. **M5 VI publication — retail-test the consumer-side handoff.** Attribute
+   the first store/call after the queued mode reaches the VI manager/context
+   publication path, with whole-RDRAM, title, and hangar controls in the same
+   run. The request/selector/record family is now negative at the title
+   transition; do not repeat those watches, `0x800C2984`, or the closed direct
+   callsite/helper ranges.
 
 2. **M5 audio de-stubbing — qualify Step 1, then implement one named edge.**
    Resume only when a port run reaches target phases. Use the phase-keyed
