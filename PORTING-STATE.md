@@ -125180,3 +125180,22 @@ oracle run, port probe, audio change, or mitigation was performed.
 Evidence: `scratch/agent/s3132_m5_vi_caller_audit.md`.
 
 ORIGIN: static caller census only; no runtime or behavior change.
+
+## Session 3133 (2026-08-28) — found pending VI handoff statically insufficient
+
+Ran the prescribed bounded census for `0x80128E90`, selector/descriptor
+candidate addresses, the named VI helper chain, and the VI consumer/publication
+symbols. The available companion bodies are `INCLUDE_ASM` stubs, and the
+matching generated-function snapshot is absent from the workspace. Existing
+project references to the pending/selector bytes are diagnostic reads only;
+no game-side writer/reader body or new transition-capable instruction could be
+identified. `H-StaticInsufficient` selected, so no oracle PC, build, run,
+instrumentation, or behavior change was authorized.
+
+This rules out selecting a new oracle edge from the available text, not the
+existence of the retail handoff. The falsifying experiment is to restore an
+equivalent generated body/disassembly and repeat the census.
+
+Evidence: `scratch/agent/s3133_m5_pending_descriptor_audit.md`.
+
+ORIGIN: static census only; no runtime value was changed.

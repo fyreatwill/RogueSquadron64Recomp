@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3132 (2026-08-28).
+Current maintenance marker: Session 3133 (2026-08-28).
 
 ## Current state
 
@@ -217,6 +217,16 @@ chain but does not identify the upstream 640-to-1024 handoff. Static,
 single-source evidence; no build, run, or behavior change.
 Evidence: `scratch/agent/s3132_m5_vi_caller_audit.md`.
 
+Session 3133's available-text census of the pending word,
+selector/descriptor candidates, named VI helpers, and consumer/publication
+symbols found no game-side writer/reader body or new transition-capable
+instruction. The companion libultra bodies are `INCLUDE_ASM` stubs and the
+matching generated-function snapshot is absent from the workspace. This
+selects `H-StaticInsufficient`, rules out a static PC selection for this unit,
+and leaves the M5 route blocker unresolved. Single-source static evidence; no
+runtime behavior changed. Evidence:
+`scratch/agent/s3133_m5_pending_descriptor_audit.md`.
+
 ## Next steps
 
 Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
@@ -224,14 +234,13 @@ generated-symbol sweep. Maintenance is complete and M5 design is complete;
 the port-side VI publication parity probe is now exhausted for this route.
 M3 is parked pending a new discriminator.
 
-1. **M5 route blocker — retail-grounded upstream handoff.** The
-   `freeRenderSubsystemResources` wrapper chain is exhausted: its only
-   represented selector edge is `0x800186C0`, rejected by Session 3131. Audit
-   the distinct pending-request-to-descriptor handoff outside the closed
-   direct callsites `0x8001B720`, `0x8001B8DC`, `0x8001BB54`, `0x8001BC28`, and
-   `0x800186C0`, then use one new statically selected PC in an oracle run with
-   whole-RDRAM and title/hangar controls. Do not add another port probe until
-   retail attributes a distinct edge; do not change audio or route behavior.
+1. **M5 route blocker — obtain a retail-grounded upstream handoff.** The
+   pending-request/descriptor static audit is insufficient because the
+   generated snapshot is absent and the companion bodies are `INCLUDE_ASM`
+   stubs. Do not invent a PC or add a port probe. Restore/provide an equivalent
+   generated body/disassembly, or choose a genuinely new retail watch based on
+   independent static evidence, then require whole-RDRAM and title/hangar
+   controls. Do not change audio or route behavior.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the
