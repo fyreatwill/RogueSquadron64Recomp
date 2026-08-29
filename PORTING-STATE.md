@@ -127045,3 +127045,21 @@ this iteration; it is not a source or runtime result. The guard hypotheses
 remain unresolved, and M5 Step 3 remains gated. No code behavior was changed.
 
 Evidence: `scratch/agent/BLOCKED.md`.
+
+## Session 3245 (2026-08-29) — re-scoped the unavailable guard validation
+
+Worked the four unblock routes in order. The checked-in `build/N64Recomp`
+does not expose a separate patch-validation mode: `--help` is treated as a
+TOML path. `patches/README.md` and `CMakeLists.txt` confirm that `PatchesLib`
+is conditional on MIPS GCC/LD, N64Recomp, and make. The exact build command
+returned `No rule to make target PatchesLib` (exit code 2); the cache points to
+`E:/mips-toolchain`, no local `mips64-elf-*` compiler/linker was found, and
+`RecompiledPatches/patches.c` is absent. Route 1 did not refute the dependency
+and route 2 could not satisfy it locally. Route 3 re-scoped the next unit to a
+build-independent audit of the port-side target VI/output boundary, recorded
+the toolchain validation as an open dependency, and kept M5 Step 3 gated.
+
+This makes the loop block false without claiming guard correctness. The next
+unit must compare the existing port `[m5-port-retail-target]` /
+`[m5-route-transition]` row with Session 3241's retail relation and label any
+source-only result single-source. Evidence: `scratch/agent/UNBLOCK.md`.

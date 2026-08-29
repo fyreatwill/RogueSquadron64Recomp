@@ -21,6 +21,15 @@ Unix build has no `PatchesLib` target, its cache points at the unavailable
 environment block, not evidence for or against the guard. M5 Step 3 remains
 gated behind a successful MIPS/generated-host validation.
 
+Session 3245 tested the block's alternatives. The checked-in N64Recomp binary
+accepts a TOML config path, not a help-mode substitute for the patch pipeline;
+the CMake source creates `PatchesLib` only when MIPS GCC, the configured
+N64Recomp executable, and make all exist. The exact target build still returns
+`No rule to make target PatchesLib`; no local `mips64-elf-*` toolchain or
+generated `RecompiledPatches/patches.c` exists. Route 3 therefore re-scopes the
+next unit to a build-independent port-side VI/output-boundary audit. The guard
+validation remains an open external dependency and M5 Step 3 remains gated.
+
 Session 3241 supplied a new target-phase retail output relation: the
 independent oracle's `osViSwapBuffer` edge (`0x80035500`) runs from caller
 `0x8001BE24` with framebuffer `$a0=0x80790000` (physical `0x00790000`) while
@@ -60,18 +69,7 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. On a host with the configured MIPS GCC and Debug `N64Recomp`, validate the
-   Session 3242 free-list guard ordering patch through the MIPS
-   toolchain and generated host library. The patch now rejects an invalid
-   `popped` pointer before active-queue publication and limits accepted
-   pointers to `[0x80000000,0x80800000)`. `scratch/agent/s3242_m3_freelist_guard_order.md`
-   records the source audit and local toolchain limitation.
-   Sessions 3243 and 3244 could not execute this validation: the local CMake build has
-   no `PatchesLib` target because its configured `E:/mips-toolchain` and
-   `N64Recomp` prerequisites are absent; generated host source is also absent.
-   This is an environment block, not evidence for or against the guard. See
-   `scratch/agent/BLOCKED.md`.
-2. Compare the Session 3241 retail target output relation against the port's
+1. Compare the Session 3241 retail target output relation against the port's
    corresponding `osViSwapBuffer`/VI commit row only after the guard patch is
    built and validated. Require the existing dispatch controls plus the target
    framebuffer physical address, VI origin, caller/order, and image-versus-
@@ -81,6 +79,9 @@ no patch or allocator mitigation is authorized. Evidence:
    (physical `0x00790000`), target origins `0x00790400/0x00790800`, with the
    whole-RDRAM positive control and title/hangar gates valid. This is
    single-source oracle evidence pending the port-side line.
+   The guard build is currently an external dependency; the port-side audit
+   may proceed independently, but no M5 behavior change is authorized until
+   the guard validation is obtained.
    Session 3236 compared the M5 inventory and Step 1/2 evidence with the
    valid controls from Session 3235. No candidate has independent writer PC,
    destination span, payload polarity, and completion-order evidence at the

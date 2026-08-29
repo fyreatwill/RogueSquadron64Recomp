@@ -1,19 +1,22 @@
-# Unblock result — Session 3224
+# Unblock result — Session 3245
 
-Route taken: 1 (refute the claim), followed by local satisfaction of the route
-dependency.
+Route 3 (re-scope) resolved the loop stop without pretending the guard was
+validated.
 
-The claimed absence of a usable route was false. The oracle's documented
-`--video` route and installed Rice plugin were available locally. The distinct
-phase-relative route
-`3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a`
-was tested without downloading or installing anything. Retail passed the
-whole-RDRAM positive-control threshold (10,000 callbacks) and reached title
-VI 1024 and hangar VI 512.
+Evidence:
 
-The same-build port pair then ran both `ROGUESQ_AUDIO_UCODE=0` and `1` with
-`ROGUESQ_LOG_ALL=1`. Each arm passed the dispatch control (69 rows), but both
-stopped at VI 640 origin `0x0066A500`, with no title/hangar transition or
-target-phase joins. This is a valid `H-TargetRouteStillStops` result, not an
-unevaluable human-selection block. The next unit audits the port route
-boundary.
+- Route 1: `build/N64Recomp --help` is parsed as a TOML filename, so it does
+  not provide an alternate patch-validation path. `patches/README.md` and
+  `CMakeLists.txt` show that the normal pipeline requires MIPS cross-tools,
+  N64Recomp, and make.
+- Route 2: `cmake --build build --config Debug --target PatchesLib` returned
+  exit code 2 with `No rule to make target PatchesLib`. The cache points to
+  `E:/mips-toolchain`; no local `mips64-elf-*` binaries or generated
+  `RecompiledPatches/patches.c` are present.
+- Route 3: `scratch/agent/NEXT.md` now selects a build-independent audit of
+  the existing port VI/output boundary. The guard validation is recorded as
+  an open dependency, and M5 behavior remains gated.
+
+The specific observation that makes the block false for loop progress is that
+the next discriminator can be run from existing source and captures without
+the unavailable cross-toolchain; it does not prove the free-list guard itself.
