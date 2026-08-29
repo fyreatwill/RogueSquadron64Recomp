@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3196 (2026-08-29).
+Current maintenance marker: Session 3197 (2026-08-29).
 
 Session 3197 advanced the generated-symbol sweep by classifying the invalid
 data-decoded split at `0x800A2924` as `data_gap_800A2924`. The regeneration-
