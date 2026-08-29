@@ -126234,3 +126234,18 @@ to `data_gap_800A2F28`, with no stale `static_3_800A2F28` references remaining.
 This selects `H-DataGap` and rules out a defensible semantic companion rename.
 No build or runtime run was performed; this was a source-only change.
 Evidence: `scratch/agent/s3203_generated_symbol_rename.md`.
+
+## Session 3204 (2026-08-29) — classified generated data-gap split at 0x800A2FE4
+
+The bounded companion census found no symbol for `0x800A2FE4`. Its generated
+record begins with invalid/data-decoded word `0x00155B81`, and the generated
+cross-function-goto report shows a false split rather than a standalone
+callable body. The only generated caller is inside the corresponding invalid
+fragment, so it is not independent semantic evidence. This selects
+`H-DataGap` and rules out a defensible companion rename.
+
+Added the regeneration-safe mapping `static_3_800A2FE4` →
+`data_gap_800A2FE4`. The required helper synchronized exactly three references
+in `funcs_49.c`, `funcs.h`, and `funcs_27.c`; the final bounded search found no
+stale placeholder. No build or runtime run was performed; this was a
+source-only change. Evidence: `scratch/agent/s3204_generated_symbol_rename.md`.
