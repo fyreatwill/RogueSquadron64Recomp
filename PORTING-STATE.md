@@ -126309,3 +126309,16 @@ so the placeholder remains unchanged under `H-UnresolvedStatic`; no build or
 runtime run was performed. This rules out `H-DataGap` and an evidence-backed
 semantic rename for this address. Evidence:
 `scratch/agent/s3209_generated_symbol_rename.md`.
+
+## Session 3210 (2026-08-29) — closed generated-symbol sweep at evidence boundary
+
+The bounded inventory after `static_4_80106C50` contained no unresolved
+generated placeholder; that symbol is the sole remaining placeholder in the
+generated tree. The source census independently found a real caller at
+`0x8010A948` and a normal callable body ending at `0x80106D38`, while the
+companion tree has no semantic symbol for `0x80106C50` and names only the
+adjacent `lvc_checkComplexObjectives` at `0x80106D3C`. This rules out a
+data-gap rename and an evidence-backed semantic rename. No build or runtime
+run was performed because this was a source-only sweep. The next unit is a
+complete M3 voice-slot producer audit centered on `musyxInitVoiceFromSample`.
+Evidence: `scratch/agent/s3210_generated_symbol_rename.md`.

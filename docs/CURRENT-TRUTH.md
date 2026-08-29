@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3209 (2026-08-29).
+Current maintenance marker: Session 3210 (2026-08-29).
 
 ## Current state
 
@@ -36,15 +36,13 @@ renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`.
    DMA, `Broke`/SP completion, service, slot, and PCM joins; retain the silent
    arm as the no-write control.
 3. When M5 is still blocked, perform only a complete M3 idiom-class audit from
-   the existing inventory. Current unresolved producer contracts include
-   `stopVoicesByHandle`, `musyxInitVoiceFromSample`, and
-   `musyxStoreVoiceAdsrParams`; do not add a guard without a legitimate writer
-   and bound proof.
-4. Continue the regeneration-safe generated-symbol sweep by inventory-selecting
-   the next unresolved placeholder after `static_4_80106C50`. That symbol is a
-   callable body but has no defensible semantic match; preserve it unchanged.
-   Recent synchronized data gaps are recorded in the overview and append-only
-   ledger; preserve ambiguous/fake fragments.
+   the existing inventory. The next bounded audit is the voice-slot producer
+   contract around `musyxInitVoiceFromSample`; do not add a guard without a
+   legitimate writer and bound proof.
+4. The regeneration-safe generated-symbol sweep is closed at its evidence
+   boundary. `static_4_80106C50` is the sole remaining placeholder: it is a
+   callable body with a real caller but no defensible semantic match, so it
+   remains unchanged. Preserve ambiguous/fake fragments.
 5. Keep the external retail-entry boundary, M4 accumulator origin, and M5
    SP-yield/MORT publication threads parked pending a new target-phase
    discriminator. The corrected MORT descriptor edge is `+0x190` to
@@ -99,4 +97,5 @@ reports `scratch/agent/s3197_generated_symbol_rename.md` through
 `scratch/agent/s3203_generated_symbol_rename.md`. Use `grep -n` plus a bounded
 `sed` window for `PORTING-STATE.md`; never read that multi-megabyte ledger
 wholesale. The soak queue is consumed by automation; fold only new tail lines
-into the next audit.
+into the next audit. Session 3210 closes the generated-symbol sweep; see
+`scratch/agent/s3210_generated_symbol_rename.md`.
