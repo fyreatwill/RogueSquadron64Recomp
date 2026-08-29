@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3125 (2026-08-28).
+Current maintenance marker: Session 3126 (2026-08-28).
 
 ## Current state
 
@@ -143,19 +143,30 @@ capture issues only widths 320, 2, 640, and 640 and remains at VI 640. The
 port's audio-arm dispatch controls are positive in earlier qualified runs,
 so a zero target-phase audio row is not evidence of absent dispatch.
 
+Session 3126's phase-gated port parity probe passed both same-run controls:
+the VI-context control fired 8 rows and the host voice-audit control fired
+once. The port still issued only the pre-title 640 origin and produced zero
+rows from the retail-live `0x800356AC:0x80035B00` range; it reached neither
+title nor hangar, with no crash or abort. This selects `H-PortConsumerAbsent`
+at the observed route, while leaving the upstream pre-640 divergence
+unidentified. The range watch is sampled at the existing VI-commit accessor,
+so it is not evidence that the full range was executed when the breadcrumb
+was stale. This is single-source port evidence; no behavior change is
+authorized. Evidence: `scratch/agent/s3126_m5_post_consumer_port/run.log`.
+
 ## Next steps
 
 Priority is maintenance, then M5 de-stubbing, then systematic M3, then the
 generated-symbol sweep. Maintenance is complete and M5 design is complete;
 Step 1 is route-blocked. M3 is parked pending a new discriminator.
 
-1. **M5 route blocker — compare the post-consumer handoff on the port.** Retail
-   executes `0x800356AC:0x80035B00` in title and hangar, while the port
-   stops at VI 640. Add a phase-gated port watch for the exact range in one
-   build/run, retaining the VI-context and host voice positive controls. A
-   target-phase range row selects an instrumentation/phase-marker issue; no
-   target-phase row with valid controls selects a port divergence at or before
-   this consumer continuation. Do not change audio or route behavior.
+1. **M5 route blocker — ground the upstream divergence.** The port-side
+   post-consumer watch had valid controls but no target phase, selecting a
+   divergence at or before the `0x800356AC:0x80035B00` continuation. Before
+   adding another port instrument, use the retail oracle to enumerate one
+   new, phase-gated handoff immediately before this range and identify its
+   writer/consumer PC; then add the matching port watch only if that retail
+   boundary is named. Do not change audio or route behavior.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the

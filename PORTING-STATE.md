@@ -124773,6 +124773,24 @@ Evidence: `scratch/agent/s3111_m5_retail_mode_selector_range/AUDIT.md`.
 ORIGIN: qualification-only retail boundary attribution; no port, audio,
 route, selector, wait, voice, or mitigation behavior changed.
 
+## Session 3126 (2026-08-28) — rejected port post-consumer reachability
+
+Ran the phase-gated port parity probe for the retail-live guest-PC range
+`0x800356AC:0x80035B00` in the validated spin-yield/F5-LLE image arm. The
+same-run VI-context positive control fired 8 rows and the host voice-audit
+positive control fired once. The port reached only pre-title VI 640
+(`0x0066A500`), produced zero target-phase post-consumer rows, and reached
+neither title nor hangar; there were no crash or abort markers. This selects
+`H-PortConsumerAbsent` at the observed route and rules out an invalid control
+for this capture, but it does not identify the upstream divergence or prove
+the full range absent because the watch samples the live guest-PC breadcrumb
+at the VI accessor. No audio, route, wait, slot, voice, or mitigation
+behavior changed.
+
+Evidence: `scratch/agent/s3126_m5_post_consumer_port/run.log`.
+
+ORIGIN: qualification-only port parity instrumentation; no behavior change.
+
 ## Session 3124 (2026-08-28) — qualified paired M5 route reachability
 
 Built the Debug target and ran image and silent arms concurrently for the

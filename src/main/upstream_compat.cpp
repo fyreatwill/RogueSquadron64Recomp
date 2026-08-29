@@ -449,6 +449,35 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
 }
 
 extern "C" uint32_t rs64_vi_committed_width() {
+    static const bool log_post_consumer = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_M5_POST_CONSUMER");
+        const char* own = std::getenv("ROGUESQ_LOG_ALL");
+        return (all && *all && *all != '0') ||
+               (own && *own && *own != '0');
+    }();
+    if (log_post_consumer) {
+        const uint32_t pc = static_cast<uint32_t>(g_rs64_last_guest_pc);
+        if (pc >= 0x800356ACu && pc < 0x80035B00u) {
+            const auto* vi = ultramodern::renderer::get_vi_regs();
+            const uint32_t width = vi->VI_WIDTH_REG;
+            const uint32_t origin = vi->VI_ORIGIN_REG & 0x00FFFFFFu;
+            const bool target = (width == 1024u && origin == 0x00790400u) ||
+                                (width == 512u && origin == 0x006AB400u);
+            static uint32_t last_phase = 0xFFFFFFFFu;
+            static uint32_t rows = 0;
+            const uint32_t phase = rs64_phase_ord();
+            if (phase != last_phase) {
+                last_phase = phase;
+                rows = 0;
+            }
+            if (target && rows++ < 32u) {
+                std::fprintf(stderr,
+                    "[m5-post-consumer] pc=0x%08X width=%u origin=0x%06X phase=%u row=%u\n",
+                    pc, width, origin, phase, rows - 1u);
+                std::fflush(stderr);
+            }
+        }
+    }
     return ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
 }
 
