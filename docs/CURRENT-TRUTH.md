@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3078 (2026-08-28).
+Current maintenance marker: Session 3079 (2026-08-28).
 
 ## Current state
 
@@ -30,13 +30,26 @@ static generated-symbol work can proceed independently.
 
 ## Latest results
 
+Session 3079 completed the bounded six-surface audit at `0x80059B4C`. The
+companion map, generated body, header, overlay registration, and project TOML
+agree on a 4-byte isolated `sw $fp, 0x48($sp)` fragment immediately before
+`mat34CrossRowsAndCopyPos`; there is no independent caller or semantic
+identity. This selects H-Fragment, so the placeholder was renamed mechanically
+to `data_gap_80059B4C` across the regeneration-safe mapping and generated tree.
+The next sweep candidate is `fake_func_8005C61C`. Evidence:
+`scratch/agent/s3079_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
+
 Session 3078 completed the bounded six-surface audit at `0x80056344`. The
 companion map, generated body, header, overlay registration, and project TOML
 agree on a 12-byte three-instruction fragment between `clearActiveVoiceLine`
 and `initNpcBookkeepingTables`; there is no prologue, return sequence, caller,
 or independent semantic identity. This selects H-Fragment, so the placeholder
 was renamed mechanically to `data_gap_80056344` across the regeneration-safe
-mapping and generated tree. The next sweep candidate is `fake_func_80059B4C`.
+mapping and generated tree. The next sweep candidate was `fake_func_80059B4C`,
+now resolved as a mechanical gap; the next candidate is `fake_func_8005C61C`.
 Evidence: `scratch/agent/s3078_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or

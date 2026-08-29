@@ -124168,3 +124168,21 @@ preambles`).
 
 ORIGIN: naming-only classification. No mitigation, runtime, generated
 instruction, route, or audio behavior changed.
+
+## Session 3079 (2026-08-28) — classified 0x80059B4C generated fragment
+
+The mandated generated-symbol-renaming sweep audited `fake_func_80059B4C`
+against the companion map, generated body, callers, header, overlay
+registration, and project TOML. The entry is a four-byte isolated
+`sw $fp, 0x48($sp)` immediately before `mat34CrossRowsAndCopyPos`, with no
+independent caller, prologue, return sequence, or semantic identity. This
+selects H-Fragment. It was renamed mechanically to `data_gap_80059B4C` across
+the companion map, project TOML, generated definition/declaration, and overlay
+registration. The next sweep candidate is `fake_func_8005C61C`.
+
+This rules out a defensible callable or preamble rename at this boundary and
+does not make a runtime or audio claim. Evidence:
+`scratch/agent/s3079_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No mitigation, runtime, generated
+instruction, route, or audio behavior changed.
