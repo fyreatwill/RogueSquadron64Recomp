@@ -123941,3 +123941,23 @@ repeats for every shiptype-Init preamble in this overlay region. Evidence:
 
 ORIGIN: naming-only synchronization. No runtime, generated instruction, route,
 audio, or submodule behavior changed.
+
+## Session 3067 (2026-08-28) — audited 0x800B75C4 generated symbol
+
+Completed the bounded six-surface generated-symbol audit for mission-overlay
+`fake_func_800B75C4`. The companion mission map retains the fake entry and
+comments that the real function is `playerYwingInit` at `0x800B75D0`; companion
+`build/redefs.txt` has no `800B75C4` or `playerYwingInitPreamble` entry. The
+live generated body is exactly three instructions (`lui`, `lwc1`, `mul.s`) over
+`0x800B75C4..0x800B75CC`, with no prologue, return sequence, or generated
+caller. Current callers target `playerYwingInit`. Header, overlay registration,
+and project TOML agree on the placeholder, `0xC` size, and boundary. Current
+rename tooling has no semantic mapping; historical backup files with a
+temporary name are not live independent evidence.
+
+This selects H-Fragment, rejects H-ExactIdentity and H-MappingDrift, and
+preserves the placeholder. No build or runtime run was needed for this static
+unit. Evidence: `scratch/agent/s3067_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, generated instruction, route,
+audio, or submodule behavior changed.

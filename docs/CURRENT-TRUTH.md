@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3066 (2026-08-28).
+Current maintenance marker: Session 3067 (2026-08-28).
 
 ## Current state
 
@@ -105,6 +105,17 @@ because no independent preamble name existed at that time; the oracle
 redefs.txt now closes that gap. The project TOML was synchronized from
 `fake_func_800B58B4` to `playerAwingInitPreamble`. Evidence:
 `scratch/agent/s3066_generated_symbol_rename/AUDIT.md`.
+
+Session 3067 completed the bounded six-surface audit at `0x800B75C4`. The
+companion map explicitly retains `fake_func_800B75C4` and says the real
+function is `playerYwingInit`; `redefs.txt` has no independent
+`playerYwingInitPreamble` identity. The generated body is only three
+instructions (`lui`, `lwc1`, `mul.s`) over `0xC` bytes, with no return sequence
+or caller; callers target `playerYwingInit` at `0x800B75D0`. Header,
+registration, and project TOML agree on the `0xC`-byte boundary. This selects
+H-Fragment and preserves the placeholder. The next sweep candidate is
+`fake_func_800B89F4`. Evidence:
+`scratch/agent/s3067_generated_symbol_rename/AUDIT.md`.
 
 Session 3065 completed the bounded six-surface audit at `0x800B47C4`. The
 companion comments, generated extent, callers, header/registration, project
@@ -341,7 +352,7 @@ parked pending a new discriminator.
    `0x800B47C4` is synchronized as `menuControllerInputPreamble` and the
    preamble at `0x800B58B4` is synchronized as `playerAwingInitPreamble`.
    Preserve placeholders for fragments, data gaps, and unresolved boundaries;
-   do not invent semantic names. Resume at the next candidate (`fake_func_800B75C4`)
+   do not invent semantic names. Resume at the next candidate (`fake_func_800B89F4`)
    only after auditing companion map, generated body, callers, header, overlay
    registration, project TOML, and local duplicates. If the sweep becomes a
    revisit under the rule in the user instructions, use the external
