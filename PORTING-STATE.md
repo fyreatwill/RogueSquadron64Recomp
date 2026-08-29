@@ -126709,3 +126709,30 @@ Evidence: `scratch/agent/s3228_m5_route_return_oracle.md` and
 
 ORIGIN: no guest value was changed; the result is a phase-boundary correction
 from an independent retail execution watch with a same-run positive control.
+## Session 3229 (2026-08-29) — retail route caller boundary audit
+
+Before adding port instrumentation, ran the retail oracle with Rice, the
+validated route, a whole-RDRAM positive-control watch, and execution watches
+on caller `0x80091D38`, reapply entry `0x8008EB5C`, reapply call `0x8008EBC0`,
+and return branch `0x8008EBC8`. The control reached 10,000 callbacks, retail
+reached title VI 1024, and the run completed 45 seconds cleanly with 2,668 VI
+callbacks.
+
+All four watches fired once in order at 640 origin `0x00790A00`, rather than
+the previously assumed exact `0x00790500` origin. The caller/return values
+were `a0=0x8014090E`, `a1=0x8003DE1C`, `a2=0`, `v0=0`; the reapply entry had
+`a0=0x5622`, `a1/a2=0x0F`, and the call had `a0=0x80165ED0`, `a1/a2=0x0F`,
+`v0=0x20`. The port's `audio-return` row has the same return arguments and
+`target=0`, but at origin `0x0066A500`.
+
+This refutes an absent retail caller and provides no evidence of a wrong value
+or local ordering defect. It does not establish a like-for-like port match:
+the phase origins differ, so the exact phase join must be redesigned before
+adding more port counters. No build, guest value, guard, ordering change, or
+mitigation was made.
+
+Evidence: `scratch/agent/s3229_m5_route_return_oracle.md` and
+`scratch/agent/s3229_m5_route_return_oracle.log`.
+
+ORIGIN: no mitigation or guest value was changed; this is an independent
+retail execution result with a same-run positive control.
