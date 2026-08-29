@@ -123918,3 +123918,26 @@ the project TOML was synchronized to that regeneration-safe name. This
 selects the bounded preamble identity, rules out a second callable function
 or metadata drift, and preserves `menuControllerInput` as the body entry.
 Evidence: `scratch/agent/s3065_generated_symbol_rename/AUDIT.md`.
+
+## Session 3066 (2026-08-28) — synchronized 0x800B58B4 preamble symbol
+
+Completed the bounded six-surface generated-symbol audit for mission-overlay
+`fake_func_800B58B4`. The companion mission_overlay.txt retains the fake entry
+and its adjacent comment explicitly states "real function is playerAwingInit";
+`playerAwingInit` is at `0x800B58C0`. The companion oracle redefs.txt
+independently maps `fake_func_800B58B4` → `playerAwingInitPreamble` (line
+10116), providing a second independent naming source. The generated body
+(documented in s2962) is 3 instructions: `addiu $a3, $zero, 0x7F`,
+`jal 0x800E9B10`, and `nop` delay slot — 0xC bytes, no standalone prologue or
+return, and no generated caller. The rename tools (`rename_generated_symbols.py`
+line 113 and `build_redefs.py` line 70) both register `playerAwingInitPreamble`.
+The TOML was the only stale surface: synchronized from `fake_func_800B58B4` to
+`playerAwingInitPreamble`. Session 2962 had preserved the placeholder because the
+rename maps had not yet supplied an independent preamble name; that evidence gap
+is now closed by the oracle redefs.txt entry. This selects H-ExactIdentity and
+rules out a standalone callable function and a data-only fragment. The pattern
+repeats for every shiptype-Init preamble in this overlay region. Evidence:
+`scratch/agent/s3066_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only synchronization. No runtime, generated instruction, route,
+audio, or submodule behavior changed.

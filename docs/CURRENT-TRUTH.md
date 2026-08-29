@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3065 (2026-08-28).
+Current maintenance marker: Session 3066 (2026-08-28).
 
 ## Current state
 
@@ -95,6 +95,16 @@ registration remain address-named, while the project TOML and rename tool
 already agree on `func_mission_overlay_800E9AE0`. No generated caller or
 mapping drift was found, so no human rename was justified. Evidence:
 `scratch/agent/s3063_generated_symbol_rename/AUDIT.md`.
+
+Session 3066 completed the bounded six-surface audit at `0x800B58B4`. The
+companion mission_overlay.txt comment ("real function is playerAwingInit"),
+the oracle redefs.txt independent naming (`playerAwingInitPreamble`), the
+generated body (3-instruction, 0xC bytes, no prologue or return, no caller),
+and both rename tools all agree. Session 2962 had preserved the placeholder
+because no independent preamble name existed at that time; the oracle
+redefs.txt now closes that gap. The project TOML was synchronized from
+`fake_func_800B58B4` to `playerAwingInitPreamble`. Evidence:
+`scratch/agent/s3066_generated_symbol_rename/AUDIT.md`.
 
 Session 3065 completed the bounded six-surface audit at `0x800B47C4`. The
 companion comments, generated extent, callers, header/registration, project
@@ -327,15 +337,15 @@ port and the next unit must use a different handoff edge. M3 is
 parked pending a new discriminator.
 
 1. **Generated-symbol sweep — continue only with exact companion identities.**
-   The synchronized region through `0x80017B28` is complete; the bounded
-   preamble at `0x800B47C4` is now synchronized as
-   `menuControllerInputPreamble`. Preserve
-   placeholders for fragments, data gaps, and unresolved boundaries; do not
-   invent semantic names. Resume at the next candidate only after auditing
-   companion map, generated body, callers, header, overlay registration,
-   project TOML, and local duplicates. If the sweep becomes a revisit under
-   the rule in the user instructions, use the external retail-entry or M4
-   boundary instead.
+   The synchronized region through `0x80017B28` is complete; the preamble at
+   `0x800B47C4` is synchronized as `menuControllerInputPreamble` and the
+   preamble at `0x800B58B4` is synchronized as `playerAwingInitPreamble`.
+   Preserve placeholders for fragments, data gaps, and unresolved boundaries;
+   do not invent semantic names. Resume at the next candidate (`fake_func_800B75C4`)
+   only after auditing companion map, generated body, callers, header, overlay
+   registration, project TOML, and local duplicates. If the sweep becomes a
+   revisit under the rule in the user instructions, use the external
+   retail-entry or M4 boundary instead.
 
 2. **M5 VI-mode stall — identify the selector-state divergence.** Session
    3059 found retail selecting `0x80128DA0` while the port selected
