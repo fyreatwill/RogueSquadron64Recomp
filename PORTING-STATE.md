@@ -124239,3 +124239,18 @@ confirms the existing regeneration-safe mapping. The next candidate is
 
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
+
+## Session 3083 (2026-08-28) — classified 0x80024878 generated gap
+
+Ran the bounded six-surface generated-symbol audit for `fake_func_80024878`.
+The companion map, generated body, callers, header, overlay registration,
+project TOML, and rename tooling agree on an 8-byte non-callable record
+immediately before `swizzleTextureRowsToTmem`. Its body contains only
+`addu $sp,$fp,$zero` and `lw $ra,0x1C($sp)`, with no independent prologue,
+callable semantics, or caller. This selects H-Fragment and preserves the
+regeneration-safe `data_gap_80024878` mapping. The next candidate is
+`fake_func_800555E8`. Evidence:
+`scratch/agent/s3083_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.

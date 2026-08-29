@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and historical evidence remain in the append-only ledger.
 
-Current maintenance marker: Session 3082 (2026-08-28).
+Current maintenance marker: Session 3083 (2026-08-28).
 
 ## Current state
 
@@ -36,6 +36,18 @@ callable prologue, return sequence, or callers. This selects H-Fragment and
 confirms the existing regeneration-safe `data_gap_80019808` mapping. The next
 sweep candidate is `fake_func_80024878`. Evidence:
 `scratch/agent/s3082_generated_symbol_rename/AUDIT.md`.
+
+ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
+generated instruction behavior changed.
+
+Session 3083 completed the bounded six-surface audit at `0x80024878`. The
+companion map, generated body, callers, header, overlay registration, project
+TOML, and rename tooling agree on an 8-byte non-callable record containing
+only `addu $sp,$fp,$zero` and `lw $ra,0x1C($sp)` before
+`swizzleTextureRowsToTmem`. This selects H-Fragment and preserves the
+regeneration-safe `data_gap_80024878` mapping. The next sweep candidate is
+`fake_func_800555E8`. Evidence:
+`scratch/agent/s3083_generated_symbol_rename/AUDIT.md`.
 
 ORIGIN: naming-only classification. No runtime, route, audio, mitigation, or
 generated instruction behavior changed.
@@ -566,8 +578,8 @@ parked pending a new discriminator.
    was audited and preserved as a data gap; `0x800BEBFC` was synchronized as
    `initDemoPlayStatePreamble`; `0x800BF498` was audited and preserved as a
    data gap; `0x800BF784` was also audited and preserved as a data gap;
-   resume at `data_gap_800C7DB4`; `0x800C64A4` was audited and preserved as a
-   data gap.
+   resume at `data_gap_800C7DB4`; `0x800C64A4` and `0x80024878` were audited
+   and preserved as data gaps. Resume at `fake_func_800555E8`.
    If the sweep becomes a
    revisit under the rule in the user instructions, use the external
    retail-entry or M4 boundary instead.
