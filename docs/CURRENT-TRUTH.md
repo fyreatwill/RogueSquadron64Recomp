@@ -6,7 +6,17 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3164 (2026-08-29).
+Current maintenance marker: Session 3165 (2026-08-29).
+
+Session 3165 completed the bounded static M3 audit of the
+`musyxStoreVoiceAdsrParams` voice-index producer edge. The sole callsite loads
+the owning record's `+0x67` byte without a local range check; the complete
+generated writer inventory found no connected record-relative `+0x67` writer or
+recovered indirect/data producer. Companion metadata independently confirms
+the named caller/callee and `0x88` voice-slot layout. This selects
+`H-M3-Unclassified`, not proof of a retail-invalid index; no guard or audio
+behavior change is authorized. Evidence:
+`scratch/agent/s3165_m3_musyx_store_voice_index_producer_audit.md`.
 
 Session 3164 completed the bounded static M3 audit of the unresolved
 `stopVoicesByHandle` handle producer edge. All four direct callers load the
@@ -570,7 +580,10 @@ the status-03 wait hatch.
    selected class is `musyxTriggerVoiceAttack`'s voice-indexed record access.
    Session 3163 completed the selected `musyxTriggerVoiceAttack` class and
    confirmed `H-M3-Unclassified`; select the next unresolved producer edge
-   from the existing M3 inventory. The generated-symbol sweep lead for
+   from the existing M3 inventory. Session 3165 audited the
+   `musyxStoreVoiceAdsrParams` `+0x67` index producer: no connected writer or
+   recovered indirect/data producer was found, so it selects
+   `H-M3-Unclassified`; do not add a guard. The generated-symbol sweep lead for
    `0x800A0000..0x800B0000` is closed by Session 3160; resume it only in a
    different address band after M3 is no longer actionable.
 

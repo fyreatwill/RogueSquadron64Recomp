@@ -125690,3 +125690,20 @@ confirm `allocVoiceHandleNode`, `resolveVoiceSlotByHandle`, and
 guard or audio behavior change. No build or run was performed.
 
 Evidence: `scratch/agent/s3164_m3_stop_voices_handle_producer_audit.md`.
+
+## Session 3165 (2026-08-29) — audited `musyxStoreVoiceAdsrParams` index producer
+
+Completed the bounded static M3 producer audit for the byte-loaded voice index
+passed from `musyxSetVoiceAdsrFromTable` at `0x8008A9D8` to
+`musyxStoreVoiceAdsrParams` at `0x800922C4`. The callee computes a `0x88`
+stride from the byte and checks only the voice-array base. The complete
+generated-source writer inventory found no connected record-relative `+0x67`
+writer and no recovered indirect or data-driven producer; other literal
+`+0x67` stores are stack temporaries or unrelated records. Companion symbol
+metadata independently confirms both named functions and the voice-slot
+layout. The call is a real reachable site, so `H-M3-Dead` is rejected, while
+the missing/unbounded producer evidence selects `H-M3-Unclassified`, not proof
+of a retail-invalid index. No guard, audio behavior, generated source, build,
+or runtime run changed.
+
+Evidence: `scratch/agent/s3165_m3_musyx_store_voice_index_producer_audit.md`.
