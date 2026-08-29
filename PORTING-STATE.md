@@ -126117,3 +126117,16 @@ three external generated references in `funcs_27.c`, `funcs_49.c`, and
 `funcs.h`. A final search found no stale old-name reference. No build or
 runtime run was needed; the change is source-only.
 Evidence: `scratch/agent/s3194_generated_symbol_rename.md`.
+
+## Session 3195 (2026-08-29) — classified generated data-gap split at 0x800A2558
+
+The bounded generated-symbol census found no companion symbol for
+`0x800A2558`. Its generated body begins with data-decoded `dsub` words,
+then `tgeu`/`tltu` traps and invalid words; it has no standalone callable
+prologue or generated callsite. This selects `H-DataGap` and rules out a
+semantic callable rename for this record. Added the regeneration-safe mapping
+`static_3_800A2558` → `data_gap_800A2558` and ran the bounded helper, which
+synchronized exactly three external generated references in `funcs_49.c`,
+`funcs.h`, and the generated record. A final search found no stale old-name
+reference. No build or runtime run was needed; the change is source-only.
+Evidence: `scratch/agent/s3195_generated_symbol_rename.md`.
