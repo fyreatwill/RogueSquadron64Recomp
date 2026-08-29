@@ -127063,3 +127063,19 @@ This makes the loop block false without claiming guard correctness. The next
 unit must compare the existing port `[m5-port-retail-target]` /
 `[m5-route-transition]` row with Session 3241's retail relation and label any
 source-only result single-source. Evidence: `scratch/agent/UNBLOCK.md`.
+
+## Session 3246 (2026-08-29) — audited port target VI/output boundary
+
+Audited the port source and the existing same-build image/silent capture
+against the independent retail target relation. The port's target logger is
+present, and both arms fired the VI positive-control logger, but both stopped
+at width 640/origin `0x0066A500`; neither emitted the target row or reached
+target-phase downstream joins. Retail independently passed its whole-RDRAM
+control, reached title/hangar, and recorded `osViSwapBuffer` predecessor
+`0x8001BE24`, `$a0=0x80790000` (physical `0x00790000`), with origins
+`0x00790400/0x00790800`. This selects `H-PortRowMissing`: the relation is
+unevaluable, not a like-for-like mismatch. It rules out only a missing logger
+or stale port control; it does not authorize an output/audio change. The MIPS
+generated-host guard validation remains the M5 Step 3 prerequisite.
+
+Evidence: `scratch/agent/s3246_m5_port_vi_boundary_audit.md`.
