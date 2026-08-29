@@ -1,19 +1,24 @@
-# Unblock result — Session 2993
+# Unblock result — M5 retail-grounded boundary
 
-Route taken: 2, then 3.
+Route taken: 2, satisfy locally.
 
-The oracle README/help and source showed that the required video/RSP plugins,
-phase gates, execution watches, and whole-RDRAM positive control are already
-available locally. A new locally grounded edge was then added at the retail-
-dominant `0x8000C628 -> bufferArbiterProducerMark` callsite through the
-regeneration fixup. The Debug build succeeded. In one same-build concurrent
-capture, both silent and image arms produced 45 audio-task positive-control
-rows and no crash/abort markers, but neither reached title/hangar and both
-produced zero target rows. That result is unevaluable, so route qualification
-remains an open dependency.
+The claimed missing source was already available as the companion project's
+generated ELF:
 
-Route 3 is resolved by re-scoping the next unit to static symbol work. The
-companion map, generated definition, and four generated callers independently
-identify `0x80001354` as `runVideoFrameTick`; that semantic name was
-synchronized into `syms/rogue_squadron.syms.toml`. The next work unit does not
-require target-phase execution or human-supplied route repair.
+`/Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf`
+
+Evidence from this iteration:
+
+- `file` identifies it as a non-stripped, statically linked, 32-bit big-endian
+  MIPS-I ELF.
+- `nm -S -n` identifies `osViSetMode` at `0x800352D0` with size `0x70` and
+  `__osViSwapContext` at `0x80035550` with size `0x360`.
+- The companion `tools/make_elf.py` documents that this ELF is generated from
+  the retail ROM and symbol files and is consumable by N64Recomp.
+- The companion C files are still `INCLUDE_ASM` stubs and no standalone
+  matching `.s` files are present, so the ELF is the local equivalent body
+  missed by the prior census.
+
+This proves the dependency was locally obtainable and makes the block false.
+The next unit will decode those exact ELF ranges and use the recovered edge
+to select a single phase-gated retail oracle watch.

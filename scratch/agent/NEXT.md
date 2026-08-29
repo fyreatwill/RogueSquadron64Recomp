@@ -1,43 +1,39 @@
-# NEXT work unit — human source decision for blocked M5 boundary
+# NEXT work unit — decode the local retail VI consumer body
 
-HYPOTHESIS-ID: m5-retail-source-restoration
+HYPOTHESIS-ID: m5-retail-elf-boundary
 
 ## Single work unit
 
-Obtain an equivalent generated body or instruction-level disassembly for the
-libultra/video handoff, or explicitly choose a different engineering thread.
-The prior candidate set and pending/descriptor census are exhausted; a
-repeated candidate is invalid. Until source exists, do not build an oracle
-watch, add a port instrument, or change audio behavior.
+Use the locally available non-stripped companion ELF to recover the
+instruction-level body of `osViSetMode` and `__osViSwapContext`, then identify
+the pending-to-descriptor or descriptor-to-origin store edge not already
+watched.
 
 ## Competing hypotheses
 
-- H-RetailBoundaryFound: the new candidate executes in title or hangar and
-  identifies the missing 640-to-1024 publication edge.
-- H-RetailBoundaryAbsent: the candidate is live only in the 640 control or
-  never executes, so it is not the target handoff.
-- H-SourceInsufficient: the available static sources cannot justify a new
-  candidate; no instrument should be built.
+- `H-ELFExposesNewEdge`: the ELF body contains a not-yet-watched transition
+  edge, which can be phase-keyed in the retail oracle.
+- `H-ELFOnlyConfirmsKnownEdge`: the body contains only already-watched
+  publication instructions, so the missing writer lies elsewhere.
+- `H-ELFArtifactMismatch`: the ELF does not match the USA v1.0 retail image or
+  lacks usable code bytes, so it cannot ground a new watch.
 
 ## Discriminating measurement
 
-The same oracle run, once the missing source is supplied, must show the
-whole-RDRAM control, title `1024`, hangar `512`, and candidate-PC hits
-phase-keyed by VI origin. Target-phase candidate hits select
-H-RetailBoundaryFound; control-only or zero hits select H-RetailBoundaryAbsent;
-the present census selected H-SourceInsufficient because no new candidate is
-defensible. The work is blocked pending human source or thread selection.
+The decoded function ranges must match the symbol addresses/sizes and expose
+at least one instruction that writes or transfers the active VI descriptor or
+origin. One oracle run must arm a whole-RDRAM write positive control plus the
+new edge and title `1024`/hangar `512` phase controls. A target-phase hit on a
+new edge selects `H-ELFExposesNewEdge`; only known-edge hits select
+`H-ELFOnlyConfirmsKnownEdge`; an address/byte mismatch selects
+`H-ELFArtifactMismatch`.
 
-## Exact command
+## Exact local inputs
 
 ```sh
-rg -n 'pending|descriptor|osViSetMode|__osViSwapContext|VI_ORIGIN_REG' \
-  /Users/williambuckley/Documents/Tools/rogue_squadron64 \
-  syms docs --glob '!PORTING-STATE.md'
+file /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf
+nm -S -n /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf
 ```
 
-Before any build, record a new candidate table and positive-control watch in
-this file. The 2026-08-28 census found no candidate; evidence is in
-`scratch/agent/s3140_m5_retail_source_census.md`. The next falsifier is a
-restored libultra/video generated body or equivalent instruction-level
-disassembly that exposes a not-yet-watched pending-to-descriptor edge.
+Do not change audio or port behavior until the oracle measurement selects an
+edge.

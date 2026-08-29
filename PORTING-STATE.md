@@ -125310,3 +125310,21 @@ oracle watch for the current source set. No runtime behavior changed. The M5
 boundary is now blocked pending equivalent instruction-level source or an
 explicit human choice to change engineering threads. Evidence:
 `scratch/agent/s3140_m5_retail_source_census.md`.
+
+## Session 3141 (2026-08-28) — resolved M5 source block from local ELF
+
+Worked the four unblock routes in order. The companion C files remain literal
+`INCLUDE_ASM` stubs and no matching standalone `.s` files are present, so the
+source census alone still cannot provide the bodies. Route 2 then succeeded:
+the already-built companion artifact
+`/Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf`
+is a non-stripped big-endian MIPS-I ELF generated from the retail ROM and
+symbol files by `tools/make_elf.py`. Its symbol table contains
+`osViSetMode` at `0x800352D0` size `0x70` and `__osViSwapContext` at
+`0x80035550` size `0x360`. This is an equivalent local generated body, so the
+human source dependency and the block are false. No build, oracle run, audio
+change, or port behavior change was made. The next unit will decode these
+ranges and qualify a new phase-gated retail edge.
+
+Evidence: `scratch/agent/UNBLOCK.md`; companion
+`build/roguesquadron.elf`, `tools/make_elf.py`, and `symbol_files/libultra.txt`.

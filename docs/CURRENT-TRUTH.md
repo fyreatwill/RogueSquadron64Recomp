@@ -6,7 +6,7 @@ exact run recipes and evidence remain in the append-only ledger and scratch
 artifacts. This file is intentionally compact and is the required pre-work
 read.
 
-Current maintenance marker: Session 3140 (2026-08-28).
+Current maintenance marker: Session 3141 (2026-08-28).
 
 ## Current state
 
@@ -23,6 +23,16 @@ hangar. Therefore target-phase audio/task/DMA/service/slot/voice/MORT/PCM
 nulls from those port captures are unevaluable. No audio gate, wait, voice
 guard, output destination, or VI behavior may be changed without a named
 legitimate writer and an ordering edge.
+
+Session 3141 resolved the source block locally: the companion project already
+has a non-stripped generated ELF at
+`/Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf`.
+Its symbol table contains the exact retail bodies for `osViSetMode`
+(`0x800352D0`, `0x70`) and `__osViSwapContext` (`0x80035550`, `0x360`). The
+companion C files remain `INCLUDE_ASM` stubs, but this ELF is generated from
+the retail ROM/symbol inputs and is explicitly consumable by N64Recomp. The
+prior source block was therefore a missed local artifact, not a human-only
+dependency. No runtime behavior changed.
 
 The regeneration-safe generated-symbol sweep is closed: the only remaining
 project placeholders are the deliberately preserved ambiguous fragments
@@ -302,14 +312,12 @@ generated-symbol sweep. Maintenance is complete and M5 design is complete;
 the port-side VI publication parity probe is now exhausted for this route.
 M3 is parked pending a new discriminator.
 
-1. **M5 route blocker — obtain source for a retail-grounded upstream handoff (BLOCKED).** The
-   pending-request/descriptor static audit is insufficient because the
-   generated snapshot is absent and the companion bodies are `INCLUDE_ASM`
-   stubs. Sessions 3133–3135, 3139, and 3140 found no new source. Do not
-   invent a PC or add a port probe. Restore/provide an equivalent generated
-   body/disassembly that exposes a new edge; then require whole-RDRAM and
-   title/hangar controls. Do not change audio or route behavior. Human input
-   is required to supply that source or explicitly select a different thread.
+1. **M5 retail ELF boundary — decode the local VI bodies and qualify one new edge.** The
+   companion ELF supplies the previously missed equivalent bodies even though
+   the C wrappers are `INCLUDE_ASM` stubs. Decode the exact symbol ranges,
+   identify a new pending/descriptor/origin edge, and then require one
+   whole-RDRAM-positive, title/hangar-controlled oracle run. Do not change
+   audio or route behavior until that edge is independently attributed.
 
 2. **M5 route reachability — requalify target-phase audio/task rows after a
    route change.** Repeat the paired phase-keyed qualification only after the
