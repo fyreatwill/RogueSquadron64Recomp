@@ -4,22 +4,38 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3305 (2026-08-30).
+Current maintenance marker: Session 3306 (2026-08-30).
+
+Session 3306 asked the independent retail oracle for
+`cinematicLoopBody`'s loop/exit path. The prescribed 30 s recipe
+passed whole-RDRAM, `[gpr-ctl]`, VI 640, and entry `0x800A5D80` at
+6.5 s (`prev_pc=0x8003E10C`, `$a0=0x13`), but `0x8003E114` was
+silent: 472 loop-head / 471 backedge rows with exit-gate `$v0=0`.
+The same-iteration 90 s Rice retry is the live scope. Controls:
+10000-write, `[gpr-ctl]`, VI `640 @ 0x0066A500` at 2.1 s, entry at
+6.5 s, and `0x8003E114` at 48.9 s. Early-exit `0x800A5DD8` ran with
+`$v0=1` (not taken). Loop-head `0x800A6024` began at 10.4 s
+(`prev=0x800A6020` then 1002× `0x800A64B4`). Exit-gate
+`0x800A6074` was `$v0=0` for 1002 first-cinematic iters, then
+`$v0=1` at 48.8 s (`prev=0x800A6070`) into `0x800A64BC`,
+epilogue `0x800A65E4` (`prev=0x8003DF90`), return `0x800A6618`,
+caller `0x8003E114`, and second menu `0x8003E13C`
+(`$a0=0x80130B40` `$a1=2`). Title `1024 @ 0x00790400` at 49.2 s.
+This selects `H-RetailFiniteLoop` and refutes `H-RetailEarlyExit`,
+`H-RetailAlternateExit`, and 90 s `H-CoverageInvalid`. Combined
+with port Session 3305, the port-only stop is inside this finite
+loop or its 6.5–10.4 s prologue. No M5 Step 3. Evidence:
+`scratch/agent/s3306_retail_cinematic_exit.md`.
 
 Session 3305 censused the entire default post-viewer continuation in one
 phase-scoped table. All 24 synthetic mark IDs and the arm/reset/SP/VI/viewer
 controls passed. The live path reached every edge from `0x800C5D30` through
-both final menu callees, `menuOverlayInit` return, every main-loop gate,
-`0x8003E10C`, and `cinematicLoopBody` entry `0x800A5D80`. It never reached
-the cinematic return at `0x800A6618`, caller continuation, second menu entry,
-or title 1024, while `update_screen` and SP completions continued without a
-crash. This selects `H-CinematicEntryStalls` and refutes the menu-fallthrough,
-main-loop-stall, and invalid-coverage alternatives. The stall location is
-single-source port evidence; retail Session 3283 independently establishes
-that the same call returns and reaches the second menu activation. Fresh
-regeneration also exposed the known s2948 diagnostic raw-read crash; its four
-diagnostic-only source reads are now regeneration-safely KSEG-checked.
-Evidence: `scratch/agent/s3305_postviewer_continuation.md`.
+`0x8003E10C` and `cinematicLoopBody` entry `0x800A5D80`, and never reached
+`0x800A6618`, caller continuation, second menu, or title 1024. This selects
+`H-CinematicEntryStalls`. Fresh regeneration also exposed the known s2948
+diagnostic raw-read crash; its four diagnostic-only source reads are now
+regeneration-safely KSEG-checked. Evidence:
+`scratch/agent/s3305_postviewer_continuation.md`.
 
 Session 3304 promoted completion-wins/not-yielded status to the default and
 added one request-reset helper to both weak and linked strong task-start
@@ -715,21 +731,23 @@ the status-03 wait hatch.
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3304's
-completion-aware SP-yield lifecycle returns the viewer; Session 3305 now
-locates the next port-only stop inside `cinematicLoopBody`, after its
-`0x800A5D80` entry and before `0x800A6618` return. Retail Session 3283 proves
-that call returns. Session 3276's `H-PortTargetPublicationAbsent` still holds.
-No M5 Step 3 audio change is authorized until a like-for-like target row
-exists.
+completion-aware SP-yield lifecycle returns the viewer; Session 3305 locates
+the next port-only stop inside `cinematicLoopBody`; Session 3306 shows
+retail's first attract call is a finite loop that returns at 48.9 s via
+`0x800A6074` `$v0=1` → `0x800A64BC`. Session 3276's
+`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio change is
+authorized until a like-for-like target row exists.
 
-1. Ask the independent retail oracle for `cinematicLoopBody`'s complete
-   loop/exit path before adding another port instrument: entry `0x800A5D80`,
-   early exit `0x800A5DD8→0x800A65E4`, loop head `0x800A6024`, exit gate
-   `0x800A6074→0x800A64BC`, backedge `0x800A64B4→0x800A6024`, epilogue
-   `0x800A65E4`, and return `0x800A6618`. Use whole-RDRAM and VI controls and
-   capture counts/order/register values in one oracle run. The result must
-   distinguish a normal finite loop, early exit, and a path that never uses
-   the presumed loop edges.
+1. Port-side table of the Session 3306 retail cinematic edges in one
+   build and one ≥120 s run: `0x800A5DD8` (`$v0`), loop head
+   `0x800A6024`, exit gate `0x800A6074` (`$v0`), backedge
+   `0x800A64B4`, exit target `0x800A64BC`, epilogue `0x800A65E4`,
+   plus the existing entry `0x800A5D80` / return `0x800A6618`.
+   Regeneration-safe via `fixup_game_funcs.py` (and a live
+   `tools/apply_s3306_*.py`). Arm mark-all, viewer-return, VI-640,
+   and SP-completion controls. Distinguish prologue stall, looping
+   with `$v0=0` at the gate, exit-without-return, and invalid
+   coverage. Do not add audio/output changes.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -782,6 +800,12 @@ route-wide PCM-gap theory, and force-zero default policy are superseded at
 their measured scopes. They were believable before qualified routes,
 same-build controls, or independent retail attribution existed. Full failed
 experiments remain in the ledger and archived overview.
+
+The prescribed Session 3306 30 s undriven Rice recipe does not
+reach the cinematic return: first attract still has exit-gate
+`$v0=0` at 30 s. Believable because Session 3283 with Start
+returned at 17.0 s. Without Start the finite loop runs ~1003
+iterations and returns at 48.9 s.
 
 Sessions 3288-3302 described the port's viewer stall through
 `H-PortFadeOutNeverEntered`, `H-SubmitRecvBlocked`,
@@ -983,6 +1007,8 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3306_retail_cinematic_exit.md`,
+`scratch/agent/s3305_postviewer_continuation.md`,
 `scratch/agent/s3304_yield_lifecycle_default.md`,
 `scratch/agent/s3303_yield_status_ab.md`,
 `scratch/agent/s3302_port_89f_clear.md`,
@@ -998,14 +1024,9 @@ Recent evidence includes
 `scratch/agent/s3292_retail_submit_send.md`,
 `scratch/agent/s3291_retail_submit_recv.md`,
 `scratch/agent/s3290_submit_gfx_stall.md`,
-`scratch/agent/s3289_port_viewer_stall.md`,
-`scratch/agent/s3288_port_viewer_fade.md`,
 `scratch/agent/s3287_viewer_s5_exit.md`,
 `scratch/agent/s3285_freelist_live_guard.md`,
-`scratch/agent/s3285_viewer_frame_exit.md`,
-`scratch/agent/s3284_first_menu_model_viewer.md`,
 `scratch/agent/s3283_menu_return_vs_cinematic.md`,
-`scratch/agent/s3282_menu_entry_vs_jal.md`,
 `scratch/agent/s3281_tick_parent.md`,
 `scratch/agent/s3280_initvideo_caller.md`,
 `scratch/agent/s3279_retail_osvimode_slots.md`,

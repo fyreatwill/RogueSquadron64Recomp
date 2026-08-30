@@ -128551,3 +128551,37 @@ retail Session 3283 independently establishes that the same cinematic returns
 and reaches the second menu activation. The next unit asks the retail oracle
 which cinematic loop/exit edges are live before adding any port-side internal
 table. No M5 Step 3 audio/output behavior changed. No new soak verdicts.
+
+## Session 3306 (2026-08-30) — retail cinematicLoopBody is a finite attract loop
+
+HYPOTHESIS-ID `m5-osvimode-postviewer-continuation`. One independent
+retail Rice oracle asked which `cinematicLoopBody` loop/exit edges are
+live on the first attract call. The prescribed 30 s / `--hit-cap 10000`
+recipe (`scratch/agent/s3306_retail_cinematic_exit/run.log`) passed
+whole-RDRAM 10000, `[gpr-ctl]`, VI 640, and entry `0x800A5D80` at 6.5 s
+(`prev_pc=0x8003E10C`, `$a0=0x13`), but `0x8003E114` was silent: 472
+loop-head / 471 backedge visits with exit-gate `$v0=0`. That run is
+coverage-invalid for the exit and is the positive control that the loop
+body is live. The same-iteration 90 s / `--hit-cap 20000` retry
+(`scratch/agent/s3306_retail_cinematic_exit/run90.log`) is the live
+scope. Evidence: `scratch/agent/s3306_retail_cinematic_exit.md`.
+
+90 s controls: 10000-write, `[gpr-ctl]`, VI `640 @ 0x0066A500` at 2.1 s,
+entry at 6.5 s, caller `0x8003E114` at 48.9 s, title `1024 @ 0x00790400`
+at 49.2 s, 5367 VI, `rc=0`. Early-exit `0x800A5DD8` ran with `$v0=1`
+(not taken). Loop-head `0x800A6024` began at 10.4 s (`prev=0x800A6020`,
+then 1002× `0x800A64B4`). Exit-gate `0x800A6074` was `$v0=0` for 1002
+first-cinematic iterations, then `$v0=1` at 48.8 s into `0x800A64BC`
+(`prev_pc=0x800A6074`), epilogue `0x800A65E4` (`prev=0x8003DF90`),
+return `0x800A6618`, caller `0x8003E114` (`prev=0x800A6618`), and
+second menu `0x8003E13C` (`$a0=0x80130B40` `$a1=2` `$a2=0x2EC0`).
+Lifetime: `5D80=2`, `5DD8=2`, `6024=1196`, `6074=1196`, `64B4=1194`,
+`64BC=1`, `65E4=1`, `6618=1`, `E114=1`, `E13C=1`. A second cinematic
+entered at 80.1 s (`prev_pc=0x8003E324`) and was still looping at 90 s;
+it is not required for this discriminator.
+
+This selects `H-RetailFiniteLoop` and refutes `H-RetailEarlyExit`,
+`H-RetailAlternateExit`, and 90 s `H-CoverageInvalid`. Combined with
+port Session 3305, the port-only stop is inside this finite loop or its
+6.5–10.4 s prologue, not a missing early-exit. No M5 Step 3
+audio/output behavior changed. No new soak verdicts.
