@@ -4,7 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3291 (2026-08-29).
+Current maintenance marker: Session 3292 (2026-08-29).
+
+Session 3292 asked who sends to queue `0x8011A818` during the
+retail attract viewer. Whole-RDRAM 10000-write control, title
+`1024 @ 0x00790400`, viewer entry `0x800C28F0` at 2.5 s, and
+`0x800C2E00` at 6.7 s all passed. `--hit-cap 20000` printed
+through 7.9 s, covering the viewer return. Viewer-window
+`$a0=0x8011A818` sends are 242/242 `osSendMesg` with
+`prev_pc=0x80019F1C` (`$a1=0` `$a2=0`). That PC is
+`spTaskSchedulerThread`'s `jal osSendMesg` loading
+`$a0=0x8011A818`, gated on `lbu 0x80128D44`. Zero jam rows on
+this queue. This selects `H-RetailSpSchedulerProducer` and
+refutes `H-RetailEventMesgProducer`, `H-RetailSubmitSelfProducer`,
+`H-RetailViRetraceProducer`, and `H-SendCoverageInvalid`. No M5
+Step 3. Evidence:
+`scratch/agent/s3292_retail_submit_send.md`.
 
 Session 3291 asked whether retail's `submitGfxFrame` first
 `osRecvMesg` at `0x8000C0B4` returns during the attract viewer.
@@ -486,22 +501,23 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3291
-selects `H-RetailRecvReturns`: retail's first `submitGfxFrame`
-recv at `0x8000C0B4` of queue `0x8011A818` returns throughout the
-viewer. Session 3290's `H-SubmitRecvBlocked` still holds for the
-port's SENT n=3. Session 3288's `H-PortFadeOutNeverEntered` still
-holds as the reason fade-out never runs. Session 3276's
-`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio
-change is authorized until a like-for-like target row exists.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3292
+selects `H-RetailSpSchedulerProducer`: retail's viewer producer
+on `0x8011A818` is `spTaskSchedulerThread` jal `0x80019F1C`,
+gated on `0x80128D44`. Session 3291's `H-RetailRecvReturns` and
+Session 3290's `H-SubmitRecvBlocked` still hold. Session 3288's
+`H-PortFadeOutNeverEntered` still holds as the reason fade-out
+never runs. Session 3276's `H-PortTargetPublicationAbsent` still
+holds. No M5 Step 3 audio change is authorized until a
+like-for-like target row exists.
 
-1. Retail: who sends to queue `0x8011A818` during the attract
-   viewer. Watch `osSendMesg` (`0x80033410`) and `osJamMesg`
-   (`0x8002C3B0`); split `prev_pc` on `$a0=0x8011A818` rows in
-   2.5–6.7 s. Whole-RDRAM 10000-write control, viewer entry
-   `0x800C28F0`, and `0x800C2E00` as gates. Use `--hit-cap 20000`.
-   Do not add a skip, allow, restore, or wait bypass. No M5
-   Step 3.
+1. Port: does `spTaskSchedulerThread` jal `0x80019F1C` send to
+   `0x8011A818` after SENT n=3? Retail producer is that jal,
+   gated on `lbu 0x80128D44 != 0`, NOBLOCK, mesg 0. Join existing
+   `[s3290-stall]` SENT n=3 / E0B4 with a width≥640 probe at
+   `0x80019F1C` (send) and `L_80019F24` (flag-zero skip), using
+   SENT n=2 as the same-run positive control. Do not add a skip,
+   allow, restore, or wait bypass. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -642,6 +658,13 @@ did not, so a long wait could have been hardware-normal.
 Session 3291 measured 241 matched `C0B4`/`C0BC` pairs in the
 viewer window and a 0.1 s max gap, so retail returns every time.
 
+Session 3291 left the producer of `0x8011A818` open. The
+architecture sketch puts `osSendMesg(swapDoneQ)` in
+`viRetraceHandlerThread`, which made `H-RetailViRetraceProducer`
+the default. Session 3292 measured every viewer-window send as
+`prev_pc=0x80019F1C` inside `spTaskSchedulerThread`; the retrace
+handler ends at `0x80019BC4`.
+
 The recomp direct C call to `submitGfxFrame` does not write guest
 `$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
 that word is dead.
@@ -654,6 +677,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3292_retail_submit_send.md`,
 `scratch/agent/s3291_retail_submit_recv.md`,
 `scratch/agent/s3290_submit_gfx_stall.md`,
 `scratch/agent/s3289_port_viewer_stall.md`,

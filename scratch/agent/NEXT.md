@@ -1,67 +1,64 @@
-# NEXT work unit — who sends to 0x8011A818 during the retail viewer
+# NEXT work unit — port: does 0x80019F1C send after SENT n=3?
 
 HYPOTHESIS-ID: m5-osvimode-viewer-frame-exit
 
 ## Resume context
 
-Session 3291 selected `H-RetailRecvReturns`: retail's
-`submitGfxFrame` first `osRecvMesg` at `0x8000C0B4`
-(`mq=0x8011A818`, blocking) returns every time during the attract
-viewer (241/241 in 2.5–6.7 s, max gap 0.1 s). Session 3290: the
-port's third viewer invocation enters that recv and does not
-return. Iron rule 12: ask retail who produces on that queue
-before another port instrument. Keep s3288 fade / s3289 SENT /
-s3290 inner probes in the port tree; this unit is oracle-only.
+Session 3292 selected `H-RetailSpSchedulerProducer`: every
+retail viewer-window send to `0x8011A818` has
+`prev_pc=0x80019F1C` inside `spTaskSchedulerThread`
+(`0x80019BF4`..`0x8001A018`). The jal loads `$a0=0x8011A818`,
+`$a1=0`, `$a2=0` (NOBLOCK) and is skipped when
+`lbu 0x80128D44 == 0` (`L_80019F24`). Session 3291: retail's
+matching recv at `0x8000C0B4` returns every time. Session 3290:
+the port's SENT n=3 enters that recv and does not return.
+Keep s3288 fade / s3289 SENT / s3290 inner probes; this unit
+is a port instrument of the now-named retail producer.
 
 ## Competing hypotheses
 
-- `H-RetailEventMesgProducer`: during 2.5–6.7 s, `osSendMesg`
-  (`0x80033410`) or `osJamMesg` (`0x8002C3B0`) with
-  `$a0=0x8011A818` has `prev_pc` in the libultra event/interrupt
-  path (SP/DP complete, `__osEventState`, around
-  `0x8002xxxx`/`0x80033xxx` other than the send/jam bodies).
-- `H-RetailSubmitSelfProducer`: those sends have `prev_pc` inside
-  `submitGfxFrame` (`0x8000C07C`..`0x8000C6CC`).
-- `H-RetailViRetraceProducer`: those sends have `prev_pc` inside
-  `viRetraceHandlerThread` (`0x80019868`..`0x80019C00`) or
-  `postSwapRdpReset` (`0x8001C12C`).
-- `H-SendCoverageInvalid`: whole-RDRAM 10000-write control, title
-  `1024 @ 0x00790400`, viewer `0x800C28F0`, or `0x800C2E00` miss,
-  or no `$a0=0x8011A818` send/jam row in 2.5–6.7 s.
+- `H-PortSchedSendMissing`: after `[s3290-stall] SENT n=3` /
+  `E0B4` n=41, `0x80019F1C` never fires (flag `0x80128D44`
+  stays 0, or the scheduler never reaches the jal). SENT n=2
+  still shows the send (positive control).
+- `H-PortSchedSendLost`: `0x80019F1C` fires with
+  `$a0=0x8011A818` after SENT n=3 `E0B4`, but `R0B4` still
+  missing (send happens, blocking recv does not take it).
+- `H-PortSchedSendBeforeRecv`: `0x80019F1C` fires after SENT
+  n=3 starts and before `E0B4` (or only before SENT n=3), so
+  the NOBLOCK send is a lost wakeup against an empty queue.
+- `H-PortSchedCoverageInvalid`: SENT n=3 / viewer / 640 /
+  `2D50` n=3 miss, or the new 19F1C/19F24 probe is silent
+  while SENT n=2 still returns.
 
 ## Discriminator
 
-One independent retail Rice oracle, 25 s, eleven-Start. Watches
-are physical. Exec watches armed at first VI (no
-`--pc-phase-log-width` on the first run). Histogram plus printed
-exec-prev rows: `osSendMesg` / `osJamMesg` with `$a0=0x8011A818`
-during 2.5–6.7 s, with viewer entry/return as gates.
+One Debug port run, 30 s from `build/`, SIGKILL.
+`ROGUESQ_LOG_M5_POSTWAIT=1`. Keep s3288/s3289/s3290 probes.
+Add a width≥640 always-print at `0x80019F1C` (jal taken) and
+`L_80019F24` (flag-zero skip), logging `$a0` and
+`MEM_BU(0x80128D44)`. SENT n=2 must show a 19F1C send
+(same-run positive control). Join to SENT n=3 `E0B4`.
 
-`prev_pc` in the event/interrupt range selects
-`H-RetailEventMesgProducer`. `prev_pc` in `submitGfxFrame`
-selects `H-RetailSubmitSelfProducer`. `prev_pc` in the VI
-retrace / post-swap range selects `H-RetailViRetraceProducer`.
-Missed controls or no matching `$a0` row is a failed instrument.
+A 19F1C send after `E0B4` n=41 with no `R0B4` selects
+`H-PortSchedSendLost`. Silence at 19F1C after SENT n=3, with
+n=2 still sending, selects `H-PortSchedSendMissing`. A 19F1C
+send between SENT n=3 and `E0B4` selects
+`H-PortSchedSendBeforeRecv`. Missed controls or a silent
+probe on n=2 is a failed instrument.
 
-Use `--hit-cap 20000` so the send/jam flood still prints through
-the viewer after the 10000-write control is removed. If printed
-`$a0=0x8011A818` rows still miss 2.5–6.7 s, same-iteration rerun
-with `--pc-phase-log-width 0x0066A500:640` plus
-`0x0066AA00:640` and `0x005D4500:640`.
-
-Do not add a skip, allow, restore, or wait bypass. No M5 Step 3.
+Do not add a skip, allow, restore, or wait bypass. No M5
+Step 3.
 
 ## Exact commands
 
+Fixup: `tools/apply_s3293_scheduler_send.py` (also hook from
+`fixup_game_funcs.py`) at `0x80019F1C` and `L_80019F24`.
+Rebuild Debug. Then from `build/` with the ROM present:
+
 ```
-tools/oracle/build/rs64_oracle \
-  --watch-write 0x0:0x800000 \
-  --watch-pc 0x80033410,0x8002C3B0,0x800C28F0,0x800C2E00 \
-  --secs 25 --hit-cap 20000 --vi-trace --vi-poll \
-  --video rice
+env ROGUESQ_LOG_M5_POSTWAIT=1 ./RogueSquadron64Recomp
 ```
 
-Log: `scratch/agent/s3292_retail_submit_send.md` plus the oracle
-capture. Filter printed execs to `$a0=0x8011A818` (and jam
-equivalent) in the viewer window; keep the lifetime exec-prev
-histogram.
+30 s, SIGKILL. Log: `scratch/agent/s3293_port_scheduler_send.md`
+plus the captured run log.

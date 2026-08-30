@@ -128055,3 +128055,35 @@ change. No new soak-queue verdicts. Evidence:
 `scratch/agent/s3291_retail_submit_recv.log`,
 `scratch/agent/s3291_retail_submit_recv_cap20000.log`.
 
+## Session 3292 (2026-08-29) — retail 0x8011A818 producer is spTaskSchedulerThread
+
+Retail Rice oracle, HYPOTHESIS-ID `m5-osvimode-viewer-frame-exit`.
+Watches `osSendMesg` (`0x80033410`), `osJamMesg` (`0x8002C3B0`),
+viewer entry `0x800C28F0`, and return `0x800C2E00`. Whole-RDRAM
+write control, 25 s, eleven-Start, first-VI arming,
+`--hit-cap 20000`. Log: `scratch/agent/s3292_retail_submit_send.log`.
+Printed execs ran through t=7.9 s (n=20000), after the 6.7 s
+viewer return, so the `--pc-phase-log-width` fallback was not
+needed.
+
+Same-run positive controls: whole-RDRAM 10000 hits and
+`[gpr-ctl]`; title `1024 @ 0x00790400` at 17.3 s; viewer entry
+at 2.5 s (`prev_pc=0x800C5C98`, 640 @ `0x0066aa00`); viewer
+return at 6.7 s (`prev_pc=0x800C2DFC`). 1462 VI, 25.1 s wall /
+24.4 s emulated.
+
+Lifetime `osSendMesg=40980` / `osJamMesg=2327`. Viewer window
+2.5–6.7 s: 242 `$a0=0x8011A818` sends, all
+`prev_pc=0x80019F1C`, `$a1=0` `$a2=0`. Zero jam rows on that
+queue. `0x80019F1C` is `spTaskSchedulerThread`'s
+`jal osSendMesg` (`$a0=0x80120000-0x57E8`), gated on
+`lbu 0x80128D44`. Lifetime send-prev n=723 vs s3291 recv 719.
+
+This selects `H-RetailSpSchedulerProducer` and refutes
+`H-RetailEventMesgProducer`, `H-RetailSubmitSelfProducer`,
+`H-RetailViRetraceProducer`, and `H-SendCoverageInvalid`. Next
+discriminator is whether the port executes that jal after SENT
+n=3. No audio or M5 Step 3 change. No new soak-queue verdicts.
+Evidence: `scratch/agent/s3292_retail_submit_send.md`,
+`scratch/agent/s3292_retail_submit_send.log`.
+
