@@ -127661,3 +127661,32 @@ No new soak-queue verdicts. Evidence:
 `scratch/agent/s3279_retail_osvimode_slots.log`,
 `scratch/agent/s3279_retail_osvimode_slots_title.log`,
 `scratch/agent/s3279_retail_osvimode_slots_dummy.log`.
+
+## Session 3280 (2026-08-29) — 1024 rewrite caller is advanceVideoFrame
+
+Independent retail Rice oracle, HYPOTHESIS-ID `m5-osvimode-1024-rewrite-caller`.
+25 s, eleven-Start, `--watch-write 0x0:0x800000` (cap 10000), `--watch-pc
+0x8001A098`, slot watch `0x128D58:0x128D5C`, `--vi-trace --vi-poll`.
+
+Positive controls: 10000-write watch removed; `[gpr-ctl]` fired; exec watch
+lifetime 3; title `1024 @ 0x00790800` at 17.3 s then `0x00790400` (233 VI
+in that bucket); 1463 VI; 25.1 s wall / 24.4 s emulated.
+
+All three `initVideoSubsystem` entries have `prev_pc=0x80018378`
+(`advanceVideoFrame` jal): 2.2 s (320, `$a0=0x280`) then 640 VI; 6.8 s
+(640 @ `0x0066A500`, `$a0=0x280`); 17.2 s (640 @ `0x0062bd00`, `$a0=0x200`)
+then 1024 VI at 17.3 s. Boot-wrapper jal `0x80018564` never appeared.
+`H-CallerCoverageInvalid` and `H-RewriteNotANewEntry` refuted.
+`H-RewriteCallerTitleEntry` refuted (`advanceVideoFrame` is the port's
+already-reached 640 publisher, s3278 call 3). `H-RewriteCallerPreTitle`
+selected: the port is missing later invocations of that jal (s3278
+`tick-jal` n=1, no third `initVideoSubsystem` `osViSetMode`).
+
+The 17.2 s row is at origin `0x0062bd00`, not the port's stop origin; the
+6.8 s same-caller row at `0x0066A500` still publishes 640. Sole parent of
+`advanceVideoFrame` is `runVideoFrameTick` jal `0x800014F0`. No audio or
+M5 Step 3 change.
+
+No new soak-queue verdicts. Evidence:
+`scratch/agent/s3280_initvideo_caller.md`,
+`scratch/agent/s3280_initvideo_caller.log`.

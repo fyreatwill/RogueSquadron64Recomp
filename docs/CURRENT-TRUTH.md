@@ -4,23 +4,31 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3279 (2026-08-29).
+Current maintenance marker: Session 3280 (2026-08-29).
+
+Session 3280 asked retail who calls `initVideoSubsystem` (`0x8001A098`)
+at the 640→1024 rewrite. Rice, 25 s, whole-RDRAM 10000-write control,
+title `1024 @ 0x00790400` (233 VI), exec watch fired three times. All
+three `prev_pc=0x80018378` (`advanceVideoFrame` jal). The 17.2 s
+1024-edge entry is 0.1 s before 1024 VI, live width still 640 at
+`0x0062bd00`, `$a0=0x200`. A 6.8 s same-caller entry is at the port's
+stop origin `640 @ 0x0066A500` with `$a0=0x280`. This selects
+`H-RewriteCallerPreTitle` and refutes `H-RewriteCallerTitleEntry`,
+`H-RewriteNotANewEntry`, and `H-CallerCoverageInvalid`. Combined with
+Session 3278 (port `advanceVideoFrame` ran once, 640 only), the missing
+1024 copy is a later invocation of a caller the port already reaches,
+not a title-only function. Evidence:
+`scratch/agent/s3280_initvideo_caller.md`.
 
 Session 3279 asked retail whether the four OSViMode slot +8 words ever
 hold 1024. Dummy video stayed at `320 @ 0x006dd280` (documented RDP
 stall). Rice arms passed the whole-RDRAM 10000-write control, title
 `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400`. While title 1024 was
 live, every slot snapshot was word `0x00000400` (FNV `0x4795eec9`). The
-only writer is `0x8001B6B0` (`initVideoSubsystem` 4×0x50 copy), including
-the store at the 640→1024 edge. Hangar then rewrites the same words to
-512. This selects `H-RetailTableHas1024` and refutes
-`H-RetailTableNever1024`. Combined with Session 3278's port census
-(slots 320 then 640, never 1024), `H-MissingTableRewrite` is two-source
-for the table-contents difference. It does not yet say the missing copy
-is why the port stays at VI 640: retail's 1024 copy sits on the title
-edge, so it may be title-entry (symptom) rather than a pre-title
-publisher the port should already have run. Evidence:
-`scratch/agent/s3279_retail_osvimode_slots.md`.
+only writer is `0x8001B6B0` (`initVideoSubsystem` 4×0x50 copy). This
+selects `H-RetailTableHas1024`. Combined with Session 3278's port
+census, `H-MissingTableRewrite` is two-source for table contents.
+Evidence: `scratch/agent/s3279_retail_osvimode_slots.md`.
 
 Session 3278 censused the four OSViMode slots from `osViSetMode_recomp`.
 Same-run controls: four `[osViSetMode]` rows (including swapBuffer
@@ -404,20 +412,23 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3279
-selected `H-RetailTableHas1024`; with Session 3278 this is two-source
-`H-MissingTableRewrite` for table contents. Session 3276's
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3280
+selected `H-RewriteCallerPreTitle`: the 1024-edge jal is
+`advanceVideoFrame` `0x80018378`. Session 3276's
 `H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio change is
 authorized until a like-for-like target row exists.
 
-1. Independent retail oracle: who calls `initVideoSubsystem` (`0x8001A098`)
-   at the title-1024 rewrite (`0x8001B6B0` at the 640→1024 edge)? Exec watch
-   at function entry with `prev_pc` / `$ra`, Rice video, whole-RDRAM write
-   control, title `1024 @ 0x00790400` gate. A caller the port should already
-   have reached during VI 640 selects a missing port call (cause). A caller
-   that only runs as title entry selects a symptom of never leaving 640.
-   Do not change audio behavior. Require Rice (`mupen64plus-video-rice`);
-   dummy video stays at 320.
+1. Independent retail oracle: who calls `runVideoFrameTick` (`0x80001354`)
+   at the 17.2 s 1024-edge (the sole parent of `advanceVideoFrame`)? Four
+   jal sites: `menuOverlayInit` `0x800C5A18` (port already reached; s3278
+   `site=menu-jal`), `mainGameLoop` `0x8003E29C`/`0x8003E360`,
+   `initSceneForMission` `0x800A9C70`. Exec-watch entry with `prev_pc`,
+   Rice, whole-RDRAM 10000-write control, title `1024 @ 0x00790400` gate,
+   and `--pc-phase-log-width` for `0x0062BD00:640` plus the two 1024
+   origins so the edge print survives EXEC_LOG_CAP. Menu parent selects
+   missing later menu ticks (cause). `mainGameLoop` parent selects
+   title-entry of the same rewrite chain. Do not change audio behavior.
+   Require Rice; dummy video stays at 320.
 2. Validate Session 3270's expanded free-list guard class on the configured
    Windows/MIPS host (`PatchesLib`). Do not repeat the local missing-target
    build. The guard is not evidence that the VI-640 route or audio is corrupt.
@@ -488,6 +499,12 @@ generated-code defect on the only swap-time `osViSetMode` path.
 Session 3278 left retail's four-slot table unevaluated at title. Session 3279
 measured every slot +8 word as 1024 while title `1024 @ 0x00790400` was live.
 
+Session 3279 left open that the 1024 copy might be a title-only publisher.
+Session 3280 named the 1024-edge jal as `advanceVideoFrame` `0x80018378`,
+already the port's 640 publisher, so a title-only overlay caller is
+refuted. The invocation still sits 0.1 s before 1024 VI at origin
+`0x0062bd00`.
+
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
 name. Stable companion duplicate-prefix and preamble mappings belong in
@@ -496,6 +513,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3280_initvideo_caller.md`,
 `scratch/agent/s3279_retail_osvimode_slots.md`,
 `scratch/agent/s3278_osvimode_table_census.md`,
 `scratch/agent/s3277_swapbuffer_delay_slot.md`,
