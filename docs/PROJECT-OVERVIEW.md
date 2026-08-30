@@ -35,16 +35,15 @@ boundary; the image arm is qualified but not fully de-stubbed. M3 is limited
 to idiom-class audits. M4 hangar/512 Y=0x8000 is not live on the first
 hangar capture. See `CURRENT-TRUTH.md`.
 
-**Current handoff (s3039):** the validated route can reach title VI 1024
-(`0x00790400`) and hangar VI 512 (`0x006AB400`), but recent M5 route probes
-stop at pre-title VI 640 (`0x0066A500`). The retail oracle independently
-reaches title/hangar and shows phase-specific route-message fields; the
-matching port fields are invalid or never reach those phases, so downstream
-audio nulls are unevaluable. M5 behavior changes remain gated on a named
-legitimate writer and ordering edge. The active bounded engineering campaign
-is the regeneration-safe generated-symbol sweep, currently continuing after
-`0x800AAADC`; exact classifications and artifacts are in the ledger and
-`scratch/agent/s2955_generated_symbol_rename/`.
+**Current handoff (s3309):** Session 3304's completion-aware SP-yield
+default returns from the attract viewer. The port then enters
+`cinematicLoopBody` and stays at VI `640 @ 0x0066A500` because
+`cinematicStageAdvancer` skips on a null `0x800B0934` (s3308). Retail
+exits that loop at 48.8 s and reaches title `1024 @ 0x00790400` at
+49.2 s (s3306). The next unit is an independent retail write-watch of
+physical `0x000B0934`. The generated-symbol sweep is closed
+(s3210/s3212/s3217). M5 Step 3 remains gated until a like-for-like
+target row exists. Exact live state is in `CURRENT-TRUTH.md`.
 
 ## 2. How the pipeline fits together
 
@@ -4708,3 +4707,120 @@ include `0x800027B8`, `0x80029270`, `0x80045024`, `0x8009D8BC`,
 `0x800A2924`, `0x800A29BC`, `0x800A2B50`, and `0x800A2BE4`, plus
 `0x80007064`, `0x800AE3E4`, and `0x801096D8`. The next unclassified record
 is selected in `scratch/agent/NEXT.md`.
+
+## 54. Route, PatchesLib, VI publication, and viewer-stall archive (s3201–s3302)
+
+Migrated from `CURRENT-TRUTH.md` during the s3309 maintenance pass. Exact
+commands, counts, and per-session reports remain in `PORTING-STATE.md` and
+`scratch/agent/`. The live cinematic-exit thread (s3303–s3308) stays in
+CURRENT-TRUTH.
+
+### Generated-symbol close and M5 route (s3201–s3253)
+
+Sessions 3210/3212/3217 closed the generated-symbol sweep. M5 design is
+complete in `docs/M5-AUDIO-PLAN.md`. Same-build image-versus-silent pairs
+(s3235, s3272, s3275) pass dispatch controls but stop at pre-title VI
+`640 @ 0x0066A500`; independent retail reaches title 1024 and hangar 512.
+Target-phase audio/task/DMA/service/slot/voice/MORT/PCM nulls are therefore
+unevaluable. Retail target-phase `osViSwapBuffer` is caller `0x8001BE24`,
+`$a0=0x80790000` (s3241). Session 3274's target-span writer `0x800078EC` is
+`rs_memset`, not a VI publisher. Session 3273 watched a metadata field of
+sentinels, not the framebuffer (`H-TargetRowsInsufficient`).
+
+`PatchesLib` cannot be built on this Unix checkout (`H-GuardHostMissing` /
+`H-GuardBuildUnavailable`): no target, cache at `E:/mips-toolchain`, no
+local `mips64-elf-*`, no `RecompiledPatches/patches.c`. Sessions 3244,
+3245, 3247, 3250, 3251, and 3271 reconfirmed that; do not retry the local
+missing-target build. Session 3249's MusyX status-03 audit named
+`stopVoiceSlotSynced` / `serviceVoicePoolFrame` as the legitimate
+publisher/reaper contract; the status-03 wait hatch remains authorized.
+
+### Scheduler identity, selectors, and VI publication (s3254–s3276)
+
+Sessions 3254 and 3270 landed KSEG0 / alignment / cycle-cap guards in
+`patches/heap_guards.c`; Session 3285 moved the 3270 class onto the
+generated host walks that actually link
+(`allocateDisplayListBuffer` / `allocDLBlockToFillRectList`). ORIGIN:
+safety guards over guest allocator pointers whose legitimacy was not
+independently proven. Runtime validation remains pending on the
+Windows/MIPS host.
+
+Scheduler identity at `0x80019CD0` is blocked as a live port capture:
+s3256/s3257 crashed at `spTaskSchedulerThread+2864` (Bus error,
+`last-guest-pc=0x8000834C`); s3259 showed the s2948 diagnostic itself
+evaluated `MEM_HU(ctx->r17, 0x22)` after `r17` was legitimately 1, and a
+KSEG0 guard on that diagnostic rebuilt with no crash in 30 s. Retail
+s3269 executed `0x80019CD0` 7,900 times but the watch interface exposed
+only stable queue/context registers (`H-RecvWatchUnavailable`). Selector
+byte watches at `0x8011A865` (s3266–s3268) recorded zero reads against
+live pending-state reads; aligned-word loads remain unevaluable, not
+absent.
+
+Session 3261: phase 4 stays at width 640 / origin `0x0066A500` with one
+further `osViSetMode` from `applyPendingViChanges`, again width 640
+(`H-BoundaryProducer`). Session 3276 completed the caller table from
+`RECOMP_FUNCS_DIR=../N64Recomp/RecompiledFuncs` and selected
+`H-PortTargetPublicationAbsent`: live post-640 publisher is
+`applyPendingViChanges` (`viRetraceHandlerThread` `0x80019914`), slot
+`0x80128DF0` width 640, no 1024 request. `selectAndApplyViMode` is
+teardown-only.
+
+### Attract path, OSViMode, and the request-only viewer stall (s3277–s3302)
+
+Session 3277 restored the `swapBufferWithViMode` jal delay-slot `$a0`
+(`H-DelaySlotNotCausal`): hardware dest is copied-mode `0x80128C90`
+width 320, not the skip-goto leftover `0x80128CD4` width 2. Session 3278
+censused the four OSViMode slots from `osViSetMode_recomp`: 320 then 640,
+never 1024 (`H-MissingTableRewrite`). Session 3279: retail title 1024
+holds every slot +8 word as `0x00000400`; only writer is `0x8001B6B0`
+(`initVideoSubsystem` 4×0x50 copy, `H-RetailTableHas1024`). Session 3280
+named the 1024-edge jal as `advanceVideoFrame` `0x80018378`. Session 3281
+named the 17.0 s `runVideoFrameTick` parent as `menuOverlayInit`
+`0x800C5A18`.
+
+Boot attract is two `menuOverlayInit` activations, not one long wait
+(s3282): 2.0 s `$a1=9` during VI 320 (`prev_pc=0x8003E08C`), then 17.0 s
+`$a1=2` during VI 640 (`prev_pc=0x8003E13C`). The unused `(s3, 2, 0xB)`
+site at `0x8003E0CC` is dead. Session 3283 filled the gap: first return
+at 6.9 s, cinematic jal `0x8003E10C` / entry `0x800A5D80`, then the 17 s
+jal. Session 3284: first `$a1=9` does enter `runMenuModelViewerScreen`
+(`0x800C28F0`) at 2.5 s and returns at 6.7 s (`H-RetailViewerThenReturn`).
+`--pc-phase-log-width` defers `--watch-pc` until the first listed VI
+bucket; arm at first VI when a 320-phase event matters. Mupen can omit a
+nullifiable delay-slot PC (s3285 vs s3287 at `0x800C2B88` /
+`0x800C2B84`).
+
+Sessions 3288–3302 described the port's *then-default* viewer stall,
+accurate under request-only `osSpTaskYielded` and still reproducible
+with `ROGUESQ_SP_YIELDED_REQUEST_ONLY=1`, superseded as the default by
+Session 3304:
+
+- s3288: `2D50` ran three times all fallthrough (`H-PortFadeOutNeverEntered`);
+  retail s3287 ran it 243 times then took.
+- s3289: `submitGfxFrame` entered n=3 and never returned (`SENT` n=3,
+  `SRET` max n=2).
+- s3290: first `osRecvMesg` at `0x8000C0B4` (`a0=0x8011A818` `a2=1`)
+  entered without return (`H-SubmitRecvBlocked`).
+- s3291: retail 241/241 matched `C0B4`/`C0BC` pairs in the viewer
+  window, max gap 0.1 s (`H-RetailRecvReturns`). `--hit-cap 10000`
+  truncated at 1.9 s; 20000 covered the return.
+- s3292: every viewer-window send to `0x8011A818` is
+  `prev_pc=0x80019F1C` inside `spTaskSchedulerThread`
+  (`H-RetailSpSchedulerProducer`).
+- s3293–s3295: port last 19ED0 then abandoned that gate; loop head
+  `19CC4` kept matching recvs; type-`0x81` 19E80 fallthroughs because
+  `$s2[0]==1` (`0x8011A89F`).
+- s3296–s3298: retail 19E80 never sees `$v0=1`, 19E70 exec=0, yield
+  pointer at `0x80128D40` stays 0, type-2 always idle-starts 19DCC
+  (`H-RetailType2Idle`). The port's `yieldw=0x80149470` is extra.
+- s3299–s3302: port type-2 yields after last 19ED0 (`19DC0` stores
+  `0x80149470` while `sp89c=1`); type-1 `0x80019D34` is the 89C=1
+  store; retail type-1 also starts `gspTask` `0x800377C8` but 19FE4
+  clears 89C before type-2. Port `19F6C` does clear 89F; yield-complete
+  `19E70` restores one. The strong `osSpTaskStartGo_recomp` override
+  omits the weak request clear.
+
+Session 3303 selected `H-FalseYieldStatus` (completion-wins vs
+request-only A/B); Session 3304 promoted completion-wins to the
+default. Those two sessions, and the cinematic-exit thread they
+unblocked, remain in CURRENT-TRUTH.

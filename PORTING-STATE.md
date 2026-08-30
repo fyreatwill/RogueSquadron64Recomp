@@ -128659,3 +128659,24 @@ Named writer `cinematicInitializer` `0x800AF4B8`; named clearer
 `cinematicDeactivator` `0x800AF640`. Next is independent retail
 on physical `0x000B0934`. Evidence:
 `scratch/agent/s3308_stage_advancer.md`.
+
+## Session 3309 (2026-08-30) — compacted CURRENT-TRUTH past 60 KB cap
+
+Triggered maintenance: `wc -c < docs/CURRENT-TRUTH.md` printed 61,424
+(1,094 lines), above the 60,000-byte gate. No experiment, build, or
+audio/output change. Soak tail `s3307_cine_loop_600s` (rc=137, 600 s)
+was already folded in Session 3308; no newer soak line.
+
+Compacted `docs/CURRENT-TRUTH.md` to 17,842 bytes / 333 lines (net
+-761 lines, under the ~35 KB cap). Durable s3201–s3302 material
+(PatchesLib host-missing, scheduler identity, VI publication,
+OSViMode, boot-attract path, and the request-only viewer-stall chain)
+moved to `docs/PROJECT-OVERVIEW.md` section 54. Next-steps stayed one
+monotonic 1–7 sequence. Headline marker is Session 3309. Section 1
+handoff in the overview was refreshed from the stale s3039
+generated-symbol campaign to the live cinematic-exit thread.
+
+Live operational truth is unchanged: Session 3304's completion-aware
+SP-yield default returns the viewer; Session 3308's `H-PtrZeroSkip`
+still names the cinematic stop (`0x800B0934` null). Next unit remains
+the independent retail write-watch of physical `0x000B0934`.
