@@ -127949,3 +127949,34 @@ soak-queue verdicts. Evidence:
 `scratch/agent/s3288_port_viewer_fade.md`,
 `scratch/agent/s3288_port_viewer_fade.log`.
 
+
+## Session 3289 (2026-08-29) — submitGfxFrame never returns after 2D50 n=3
+
+Port viewer-loop stall census, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. Fixup probe at `L_800C29E0`,
+`L_800C2A40`, and entry+return of the six 2D50-fallthrough callees
+(`tools/apply_s3289_viewer_loop_stall.py`, also hooked from
+`fixup_game_funcs.py`). Kept s3288 `[s3288-fade]`. Debug rebuild.
+One 30 s run from `build/` with `ROGUESQ_LOG_M5_POSTWAIT=1`,
+SIGKILL. Log: `scratch/agent/s3289_port_viewer_stall.log`.
+
+Same-run positive controls: `[phase] 640 @ 0x0066A500` at 3.1 s;
+`[m5-postwait]` viewer `entry` `pc=0x800C28F0`; `[s3288-fade]
+2D50 n=3 taken=0`. Failed instrument would have been a silent
+entry, no 640 phase, or missing `2D50` n=3. Zero
+crash/abort/Bus-error/last-guest-pc. `SRET` n=1 and n=2 printed.
+
+`29E0` and `2A40` each n=1..3 `$s2=0`. Five callees before
+`submitGfxFrame` returned n=3. `SENT` n=3 with `SRET` max n=2.
+`29E0` n=4 silent. `2DA0` / return silent.
+
+This selects `H-StuckAfterFallthrough` (`submitGfxFrame`
+`0x8000C07C`) and refutes `H-StuckOnFourthLoopHead`,
+`H-ViewerReturnedUnlogged`, and `H-StallCoverageInvalid`. This is
+the third viewer-loop invocation of that jal, not the disproven
+internal "iter 3 hangs" reading of `func_8000C07C`. Next
+discriminator is which jal inside `submitGfxFrame` does not return
+on that third invocation. No audio or M5 Step 3 change. No new
+soak-queue verdicts. Evidence:
+`scratch/agent/s3289_port_viewer_stall.md`,
+`scratch/agent/s3289_port_viewer_stall.log`.

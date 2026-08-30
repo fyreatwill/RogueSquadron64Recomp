@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3288 (2026-08-29).
+Current maintenance marker: Session 3289 (2026-08-29).
+
+Session 3289 asked which site after the third `2D50` fallthrough
+stalls. Same-run controls: viewer `[m5-postwait]` entry, `[phase]`
+`640 @ 0x0066A500`, and `[s3288-fade] 2D50 n=3 taken=0` all fired.
+`L_800C29E0` and `L_800C2A40` each ran n=1..3 with `$s2=0`. The
+five callees before `submitGfxFrame` returned n=3.
+`submitGfxFrame` (`0x8000C07C`) entered n=3 and never returned
+(`SENT` n=3, `SRET` max n=2). `29E0` n=4 silent. This selects
+`H-StuckAfterFallthrough` (`submitGfxFrame`) and refutes
+`H-StuckOnFourthLoopHead`, `H-ViewerReturnedUnlogged`, and
+`H-StallCoverageInvalid`. This is the third viewer-loop invocation
+of that jal, not the disproven internal "iter 3 hangs" reading of
+`func_8000C07C`. No M5 Step 3. Evidence:
+`scratch/agent/s3289_port_viewer_stall.md`.
 
 Session 3288 asked the port whether the 640 viewer hold enters
 `L_800C2B00` / `0x800C2B84` and whether `0x800C2D50` ever takes.
@@ -450,23 +464,24 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3288
-selects `H-PortFadeOutNeverEntered`: the 640 viewer hold never
-enters `$s2==2` fade-out, and `2D50` stops after three
-fallthroughs. Session 3287 selected `H-DelaySlotWatchMiss` on
-retail. Session 3276's `H-PortTargetPublicationAbsent` still holds.
-No M5 Step 3 audio change is authorized until a like-for-like
-target row exists.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3289
+selects `H-StuckAfterFallthrough`: the 640 viewer hold's third
+`2D50` fallthrough enters `submitGfxFrame` (`0x8000C07C`) and
+does not return. Session 3288's `H-PortFadeOutNeverEntered` still
+holds as the reason fade-out never runs. Session 3276's
+`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio
+change is authorized until a like-for-like target row exists.
 
-1. Port viewer-loop stall after the third `2D50` fallthrough: last
-   site is `L_800C29E0`, one of the six fallthrough callees
-   (`waitForPrevFrameDone` … `submitGfxFrame`), or `$s2==0`
-   `L_800C2A40`. One fixup probe at those sites plus keep the
-   s3288 fade census. One Debug rebuild, one 30 s run with
-   `ROGUESQ_LOG_M5_POSTWAIT=1`. Viewer `[m5-postwait]` entry plus
-   `[phase]` 640 / `0x0066A500` plus `2D50` n=3 fallthrough are
-   the controls. Do not add a skip, allow, restore, or wait
-   bypass. No M5 Step 3.
+1. Inside `submitGfxFrame` on the third viewer-loop invocation:
+   which of its 23 jals does not return. One fixup probe at every
+   jal entry (and return of the recv/yield/send sites) plus keep
+   s3288 fade and s3289 `SENT`/`SRET`. One Debug rebuild, one 30 s
+   run with `ROGUESQ_LOG_M5_POSTWAIT=1`. Controls: viewer
+   `[m5-postwait]` entry, `[phase]` 640 / `0x0066A500`, `2D50` n=3
+   fallthrough, and `SENT` n=3 without `SRET` n=3. Do not add a
+   skip, allow, restore, or wait bypass. No M5 Step 3. This is
+   not the disproven internal "iter 3 hangs" reading of
+   `func_8000C07C`.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -589,6 +604,11 @@ the way retail does until fade-out" is too coarse. Session 3288
 measured three `2D50` fallthroughs (`$s2=0`) then silence, so the
 port is not looping that join while waiting for `$s2==2`.
 
+Session 3288 left the stall as `L_800C29E0`, one of six
+fallthrough callees, or `L_800C2A40`. Session 3289 measured
+`submitGfxFrame` entered n=3 without return; the other five
+callees returned and `29E0` n=4 never ran.
+
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
 name. Stable companion duplicate-prefix and preamble mappings belong in
@@ -597,6 +617,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3289_port_viewer_stall.md`,
 `scratch/agent/s3288_port_viewer_fade.md`,
 `scratch/agent/s3287_viewer_s5_exit.md`,
 `scratch/agent/s3285_freelist_live_guard.md`,
