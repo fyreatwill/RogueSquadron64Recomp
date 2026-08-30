@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3270 (2026-08-29).
+Current maintenance marker: Session 3271 (2026-08-29).
+
+Session 3271 re-attempted the prescribed validation of the Session 3270
+free-list guard class. `cmake --build build --config Debug --target
+PatchesLib` still exits immediately with `No rule to make target PatchesLib`;
+the cache points at `E:/mips-toolchain`, no local MIPS compiler/linker is
+installed, and `RecompiledPatches/` is absent. This selects
+`H-GuardBuildUnavailable` for this checkout only. No guard compilation,
+valid-path execution, or cyclic-chain fixture ran, so no guard behavior or
+VI/audio conclusion follows. Evidence:
+`scratch/agent/s3271_guard_validation.md`.
 
 Session 3270 completed the next M3 free-list/active-queue guard-class change
 in `patches/heap_guards.c`. The existing KSEG0 predicate now also rejects
@@ -320,12 +330,11 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Validate Session 3270's expanded free-list guard class on the configured
-   Windows/MIPS host. Do not repeat the local target build until that host or
-   generated patch artifacts are available. Require successful patch
-   compilation, unchanged valid-path behavior, and a controlled cyclic-chain
-   fixture that returns before queue writes. This guard is not evidence that
-   the VI-640 route or audio is corrupt.
+1. Obtain the configured Windows/MIPS build artifact or generated patch
+   outputs, then validate Session 3270's expanded free-list guard class.
+   Require successful patch compilation, unchanged valid-path behavior, and a
+   controlled cyclic-chain fixture that returns before queue writes. This
+   guard is not evidence that the VI-640 route or audio is corrupt.
 2. Capture the consumed-message handoff around generated `0x80019CCC` and
    `0x80019CD0` with positive controls. Session 3269 reached both target
    origins and proved the receive watch live, but its interface exposed no
