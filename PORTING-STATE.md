@@ -127304,3 +127304,26 @@ changed. This rules out a dead identity instrument, but selects neither
 `H-SpMsgMutated` nor `H-Type2AbsentAtRecv`; the missing target boundary remains
 open. Evidence: `scratch/agent/s3260_scheduler_identity.md` and
 `scratch/agent/s3260_scheduler_identity.log`.
+## Session 3261 (2026-08-29) — selected VI-mode publication boundary
+
+The required maintenance check measured `docs/CURRENT-TRUTH.md` at 33,884
+bytes, so this was not a maintenance iteration. The work unit audited the
+pre-target VI-640 producer/consumer boundary, after recording competing
+hypotheses and the discriminator in `scratch/agent/NEXT.md`. The Debug target
+built successfully from the actual Unix `build/` directory and a 60-second
+`ROGUESQ_RECV_TRACE=1 ROGUESQ_LOG_ALL=1` run was SIGKILLed after capture.
+
+Positive controls fired, including frame-sync, DP, submit, VI-recv, and
+scheduler identity controls. The port entered phase 4 at width 640/origin
+`0x0066A500`. It made four total `osViSetMode` calls; call 4, from
+`applyPendingViChanges`, requested width 640 while width 640 was already
+committed. No width-1024 request or target origin appeared. Receive progress
+continued through 2,309 phase-4 rows and route preparation continued through
+sequence 5,649, with no crash or abort marker.
+
+This selects `H-BoundaryProducer` at the VI-mode publication edge: scheduler
+and route activity are live, but the target-mode request is never published.
+It rules out a producer-wide stop and an explicit phase-4 terminal contract,
+but does not identify the upstream state/writer that should request the target
+mode. No scheduler, audio, or mitigation behavior changed. Full evidence is
+in `scratch/agent/s3261_vi640_boundary.md` and the captured log.

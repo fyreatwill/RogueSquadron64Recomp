@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3260 (2026-08-29).
+Current maintenance marker: Session 3261 (2026-08-29).
+
+Session 3261 audited and captured the pre-target VI publication boundary. The
+positive-controlled run entered phase 4 at width 640/origin `0x0066A500`, then
+made exactly one further `osViSetMode` call from `applyPendingViChanges`, again
+requesting width 640. Scheduler receive progress and route preparation
+continued, but no target-mode request or target origin appeared during 60 s.
+This selects `H-BoundaryProducer` at the VI-mode publication edge, rules out a
+producer-wide stop and an explicit phase-4 terminal contract, and leaves the
+upstream state/writer that should request the target mode unresolved. Evidence:
+`scratch/agent/s3261_vi640_boundary.md` and
+`scratch/agent/s3261_vi640_boundary.log`.
 
 Session 3260 ran the repaired scheduler identity capture from the actual Unix
 `build/` output (the documented `build/Debug` directory is absent). Positive
