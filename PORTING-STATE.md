@@ -128680,3 +128680,35 @@ Live operational truth is unchanged: Session 3304's completion-aware
 SP-yield default returns the viewer; Session 3308's `H-PtrZeroSkip`
 still names the cinematic stop (`0x800B0934` null). Next unit remains
 the independent retail write-watch of physical `0x000B0934`.
+
+## Session 3310 (2026-08-30) — retail 0x000B0934 late-init from jal 0x800A62B4
+
+HYPOTHESIS-ID: m5-osvimode-postviewer-continuation
+
+One independent retail Rice oracle (90 s, `--hit-cap 20000`, no
+`--press`). Whole-RDRAM write control, `[gpr-ctl]`, VI
+`640 @ 0x0066A500` at 2.3 s, cinematic entry at 6.6 s, and title
+`1024 @ 0x00790800` at 49.3 s all passed. Pointer watch
+`0x000B0934:0x000B0938` printed both of its 2 hits after the
+control was removed at 10000 writes.
+
+Exactly two writers: `cinematicInitializer` `sw $v0, 0x934($s2)`
+at `0x800AF4B8` (`$v0=0x800D9780`) at 48.1 s, `prev=0x800A62B4`;
+then `cinematicDeactivator` `sw $zero` at `0x800AF640` at 49.0 s
+on the 64BC exit jal. AF430 `$v0=0` immediately before the store.
+Advancer n=1186 lifetime; 972 calls on a null word (10.5–48.0 s),
+then 26 with the pointer live (48.1–49.0 s). Initializer n=1.
+
+This selects `H-RetailLateInit`. `H-RetailPtrLive` (write before
+the first advancer) is refuted. `H-RetailPtrAlsoZero` is refuted
+by the KSEG0 store. `H-RetailInitThenClear` as a mid-loop clearer
+is refuted: the AF640 zero is the exit-path deactivator. Combined
+with port s3308 `H-PtrZeroSkip`, the null word during the loop is
+hardware-like until 48.1 s; the port-only stop is that
+`cinematicLoopBody` never takes `jal cinematicInitializer` at
+`0x800A62B4`.
+
+No M5 Step 3. No audio/output change. Soak tail `s3307_cine_loop_600s`
+was already folded in Session 3308; no newer soak line.
+
+Evidence: `scratch/agent/s3310_retail_b0934_writer.md`.

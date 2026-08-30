@@ -8,7 +8,24 @@ Current maintenance marker: Session 3309 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
-## Live investigation (s3303–s3308)
+## Live investigation (s3303–s3310)
+
+Session 3310 asked the independent retail oracle who writes physical
+`0x000B0934`. The 90 s Rice run is the live scope. Controls:
+10002-write, `[gpr-ctl]`, VI `640 @ 0x0066A500` at 2.3 s, cinematic
+entry at 6.6 s, title `1024 @ 0x00790800` at 49.3 s. Exactly two
+pointer writes: `cinematicInitializer` `sw $v0` at `0x800AF4B8`
+(`$v0=0x800D9780`) at 48.1 s from `jal 0x800A62B4`, then
+`cinematicDeactivator` `sw $zero` at `0x800AF640` at 49.0 s on the
+64BC exit path. Advancer ran 972 times on a null word (10.5–48.0 s)
+before that store, then 26 times with the pointer live. This selects
+`H-RetailLateInit` and refutes `H-RetailPtrLive` (write-before-first-
+advancer), `H-RetailPtrAlsoZero`, `H-RetailInitThenClear` as a
+mid-loop clearer, and `H-CoverageInvalid`. Combined with port
+Session 3308, the null word during the loop is hardware-like until
+48.1 s; the port-only stop is that `cinematicLoopBody` never takes
+`jal cinematicInitializer` at `0x800A62B4`. No M5 Step 3. Evidence:
+`scratch/agent/s3310_retail_b0934_writer.md`.
 
 Session 3308 port-censused `cinematicStageAdvancer` (`0x800AF550`)
 in one build and one 120 s retry. The first launch crashed at VI
@@ -24,9 +41,7 @@ then 1/30. Same-run `[phase] cineState` is 0 after boot (83 rows)
 via `rdram_be32_at(0xB0934)`. This selects `H-PtrZeroSkip` and
 refutes `H-DtBelowThreshold`, `H-StageNeverHits7`, and retry
 `H-CoverageInvalid`. The 6074 gate stays 0 because the skip
-returns 0. Named guest writer is `cinematicInitializer` `sw` at
-`0x800AF4B8`; named clearer is `cinematicDeactivator` `sw $zero`
-at `0x800AF640`. No M5 Step 3. Evidence:
+returns 0. No M5 Step 3. Evidence:
 `scratch/agent/s3308_stage_advancer.md`.
 
 The queued 600 s soak (`s3307_cine_loop_600s`) was SIGKILL at
@@ -107,11 +122,15 @@ the silent control.
 The current default after Session 3304 returns from the attract viewer
 and enters `cinematicLoopBody` (`0x800A5D80`), then stays at VI
 `640 @ 0x0066A500` because `cinematicStageAdvancer` always skips on a
-null `0x800B0934`. Retail Session 3306 exits that loop at 48.8 s and
-reaches title `1024 @ 0x00790400` at 49.2 s. Boot attract on both
-sides is menu `$a1=9` → `runMenuModelViewerScreen` → cinematic →
-second menu `$a1=2` (`0x8003E13C`), not the architecture sketch of
-menu `$a1=9`, menu `(s3, 2, 0xB)`, then cinematic.
+null `0x800B0934`. Retail Session 3310 shows that word is also null
+for 972 advancer calls; the named store is a late in-loop
+`jal cinematicInitializer` at `0x800A62B4` (48.1 s, KSEG0
+`0x800D9780`), then 26 live-pointer advancer frames, then the 64BC
+deactivator zeros it at 49.0 s. Retail Session 3306 exits that loop
+at 48.8 s and reaches title `1024 @ 0x00790400` at 49.2 s. Boot
+attract on both sides is menu `$a1=9` → `runMenuModelViewerScreen` →
+cinematic → second menu `$a1=2` (`0x8003E13C`), not the architecture
+sketch of menu `$a1=9`, menu `(s3, 2, 0xB)`, then cinematic.
 
 `H-PortTargetPublicationAbsent` still holds: the live post-640
 publisher is `applyPendingViChanges` (`viRetraceHandlerThread` at
@@ -146,19 +165,19 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3304's
 completion-aware SP-yield lifecycle returns the viewer; Session 3308 shows
 the cinematic exit-gate stays `$v0=0` because `cinematicStageAdvancer`
-skips on `$v1==0` at `0x800AF55C` (`0x800B0934` null) while retail
-Session 3306 returns at 48.9 s via `0x800A6074` `$v0=1` → `0x800A64BC`.
-Session 3276's `H-PortTargetPublicationAbsent` still holds. No M5 Step 3
+skips on `$v1==0` at `0x800AF55C` (`0x800B0934` null). Retail Session
+3310 writes that word only at 48.1 s from in-loop `jal 0x800A62B4`,
+then Session 3306's 6074 `$v0=1` → `0x800A64BC` at 48.8 s. Session
+3276's `H-PortTargetPublicationAbsent` still holds. No M5 Step 3
 audio change is authorized until a like-for-like target row exists.
 
-1. Independent retail write-watch of physical `0x000B0934` (guest
-   `0x800B0934`) during first attract, plus exec of
-   `cinematicInitializer` store `0x800AF4B8` and
-   `cinematicDeactivator` clear `0x800AF640`. Whole-RDRAM 10000-write
-   control, VI `640 @ 0x0066A500`, cinematic entry. Distinguish
-   retail-live KSEG0 pointer, retail-also-zero, named-PC writer, and
-   invalid coverage. Do not add audio/output changes. Keep the s3308
-   table.
+1. Port census of `cinematicLoopBody` `jal cinematicInitializer` at
+   `0x800A62B4` and its skip predicates (`sltu`/`beq` `0x800A626C`,
+   `$a0`-byte `beq` `0x800A6274`, `isCinematicActive` `bne`
+   `0x800A6288`). Same-run mark-all, viewer-return, VI-640, cinematic
+   entry, loop-head, and 6074 controls. Distinguish jal-unreached,
+   time-pred skip, flag-byte skip, already-active skip, and jal-fires.
+   Do not add audio/output changes. Keep the s3306/s3308 tables.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -269,6 +288,14 @@ predicate or a too-slow loop. Believable because retail needed
 ~1003 iters / 48.8 s. Session 3308 measured `$v1=0` at
 `0x800AF55C` on every call, so the stage/dt path never runs.
 
+Session 3308 treated `cinematicInitializer` `sw` at `0x800AF4B8`
+as a setup writer that should have run before the first
+advancer. Believable from the architecture table ("sets state
+ptr at 0x800B0934"). Session 3310 measured that store at 48.1 s
+from in-loop `jal 0x800A62B4`, after 972 null-ptr advancer
+calls. `H-PtrZeroSkip` still describes the port; it is not by
+itself the port-vs-retail mismatch.
+
 The prescribed Session 3306 30 s undriven Rice recipe does not
 reach the cinematic return: first attract still has exit-gate
 `$v0=0` at 30 s. Believable because Session 3283 with Start
@@ -314,6 +341,7 @@ scheduler and submit loop.
 ## Evidence index
 
 Live-thread evidence:
+`scratch/agent/s3310_retail_b0934_writer.md`,
 `scratch/agent/s3308_stage_advancer.md`,
 `scratch/agent/s3307_cinematic_loop.md`,
 `scratch/agent/s3306_retail_cinematic_exit.md`,
