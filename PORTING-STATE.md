@@ -127427,3 +127427,19 @@ single-source instrument result only; it rules out an observed load in that
 range during this capture, not selector liveness or a runtime explanation.
 No port or audio behavior changed. Evidence:
 `scratch/agent/s3268_selector_region.md` and its capture log.
+
+## Session 3269 (2026-08-29) — captured retail scheduler identity boundary
+
+The prescribed independent retail-oracle capture used the whole-RDRAM write
+positive control, the Rice video plugin, and the full start schedule. The
+control reached 10,000 writes; the run reached title origins `0x00790400` and
+`0x00790800`, hangar origin `0x006AB400`, and 3,565 VI frames. The generated
+scheduler receive PC `0x80019CD0` executed 7,900 times from `0x80019CCC`,
+including target-origin rows. Its detail registers were stable (`a0=
+0x8011A420`, `a1=0x8011D460`, `s1=1`, `s0=0x80128C70`), but the oracle
+interface exposed no accepted-message pointer, type byte, or `89F/28D44`
+identity. This valid single-source result selects `H-RecvWatchUnavailable`;
+message mutation, another task type, and type-2 absence remain unresolved.
+The next work unit watches both adjacent PCs with the supported field dump.
+Evidence: `scratch/agent/s3269_scheduler_identity.md` and
+`scratch/agent/s3269_scheduler_identity.log`.

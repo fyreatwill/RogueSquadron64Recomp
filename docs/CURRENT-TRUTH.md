@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3268 (2026-08-29).
+Current maintenance marker: Session 3269 (2026-08-29).
+
+Session 3269 ran the prescribed independent retail scheduler identity
+capture. The whole-RDRAM write control reached 10,000 hits; the run reached
+title origins `0x00790400/0x00790800`, hangar origin `0x006AB400`, and 3,565
+VI frames. `0x80019CD0` executed 7,900 times from `0x80019CCC`, including
+target-origin rows, but this watch interface exposed only stable queue/context
+registers (`a0=0x8011A420`, `a1=0x8011D460`, `s1=1`) and no accepted-message
+pointer, type, or `89F/28D44` identity. This selects
+`H-RecvWatchUnavailable` as a valid single-source instrument result; message
+mutation, another task type, and type-2 absence remain unresolved. Evidence:
+[`s3269_scheduler_identity.md`](../scratch/agent/s3269_scheduler_identity.md)
+and `scratch/agent/s3269_scheduler_identity.log`.
 
 Session 3268 ran the prescribed independent retail aligned selector-region
 capture. The whole-RDRAM write control reached 10,000 hits; the run reached
@@ -296,7 +308,14 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Capture retail scheduler message identity at generated `0x80019CD0` with
+1. Capture the consumed-message handoff around generated `0x80019CCC` and
+   `0x80019CD0` with positive controls. Session 3269 reached both target
+   origins and proved the receive watch live, but its interface exposed no
+   message pointer/type/`89F`/`28D44` fields, selecting
+   `H-RecvWatchUnavailable`. Use adjacent-PC detail plus a phase-gated field
+   dump in one run; do not infer message mutation, another task type, or
+   type-2 absence from the missing fields.
+2. Capture retail scheduler message identity at generated `0x80019CD0` with
    positive controls. Session 3268 widened the selector watch to
    `0x00114A800..0x00114A900` and still saw zero reads, while pending state and
    boundary PCs were live; this selects `H-SelectorNotReadInObservedPhases`
