@@ -6,6 +6,15 @@ recipes and evidence remain in the ledger and `scratch/agent/`.
 
 Current maintenance marker: Session 3271 (2026-08-29).
 
+Session 3272 ran the required M5 Step 1 same-build image-versus-silent pair.
+The independent retail oracle passed the whole-RDRAM 10,000-write control and
+reached title `1024 @ 0x00790400` plus hangar `512 @ 0x006AB400`. Both port
+arms visibly dispatched their selected audio arm, but neither reached title
+or hangar; both stopped at pre-title `640 @ 0x0066A500` and later emitted
+off-target `640 @ 0x00696100`. No downstream audio rows are interpretable.
+This selects `H-RouteInvalid` for Step 1, not an audio-contract gap. Evidence:
+`scratch/agent/s3272_m5_step1_pair.md` and the captured pair directory.
+
 Session 3271 re-attempted the prescribed validation of the Session 3270
 free-list guard class. `cmake --build build --config Debug --target
 PatchesLib` still exits immediately with `No rule to make target PatchesLib`;
@@ -312,7 +321,12 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3236
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3272
+made the Step 1 pair route-invalid again: retail reached title/hangar, while
+both port arms stopped before title at `640 @ 0x0066A500`; downstream audio
+nulls remain unevaluable. The next M5 unit is a route-boundary audit or
+ground-truth capture that can make the port reach a like-for-like target row;
+do not change audio behavior or interpret the missing joins. Session 3236
 completed the Step 3 edge-selection gate without selecting an edge: the
 required target-phase port row is still absent, so no audio behavior change
 is authorized. Session 3237's fresh census selected a new unresolved repeated
@@ -624,6 +638,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3272_m5_step1_pair.md`,
 `scratch/agent/s3240_m3_musyx_null_contract.md`,
 `scratch/agent/s3226_m5_route_writer_oracle/RESULTS.md`,
 `scratch/agent/s3220_m3_keyon_divisor_descriptor.md`,

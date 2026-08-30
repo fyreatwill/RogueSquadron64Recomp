@@ -1,47 +1,52 @@
-# NEXT work unit — capture the scheduler message handoff with positive controls
+# NEXT work unit — identify the target VI route writer independently
 
-HYPOTHESIS-ID: retail-scheduler-message-handoff
+HYPOTHESIS-ID: m5-route-boundary-target-writer
 
-Run one independent retail-oracle capture, phase-gated through title and
-hangar, watching both `0x80019CCC` and `0x80019CD0` with the supported field
-dump. Do not repeat the unavailable local `PatchesLib` target; guard
-validation is parked until the configured Windows/MIPS host or generated
-patch artifacts are available.
+M5 Step 1 is currently route-invalid: retail reaches title/hangar, while the
+port image and silent arms stop at pre-title VI 640. Run one independent retail
+oracle capture that compares the target framebuffer writer with the port's
+observed pre-title route. This is a ground-truth boundary unit; do not change
+audio behavior or add another port counter.
 
 ## Competing hypotheses
 
-- `H-MessageFieldsExposed`: the handoff exposes an accepted message pointer,
-  type, and `89F/28D44` fields at target-origin rows.
-- `H-MessageFieldsUnavailable`: adjacent-PC detail still exposes only stable
-  queue/context registers, leaving mutation, task type, and identity
-  unresolved.
-- `H-NoTargetCorrelation`: positive controls or target origins fail, making
-  the field result unevaluable rather than absent.
+- `H-RetailTargetWriter`: a legitimate retail writer/caller publishes the
+  target framebuffer address during title or hangar, with an attributable PC
+  and ordered VI transition.
+- `H-RetailPreTargetOnly`: the watched writer is live only before the target
+  transition, so the missing port target row is upstream of that writer.
+- `H-RetailTargetWriteUnavailable`: whole-RDRAM/title/hangar controls pass but
+  the selected aligned watch cannot expose the target writer, leaving the
+  boundary unresolved rather than absent.
 
 ## Discriminator
 
-A whole-RDRAM positive-control hit plus target-origin rows in the same run is
-required. Exposed accepted-message identity selects `H-MessageFieldsExposed`;
-target rows with only the stable register set select
-`H-MessageFieldsUnavailable`; failure to correlate target origins selects
-`H-NoTargetCorrelation` and leaves the handoff unresolved.
+The same oracle run must pass the whole-RDRAM positive control and reach title
+`1024 @ 0x00790400` plus hangar `512 @ 0x006AB400`. Watch the target physical
+framebuffer span `0x00790000..0x00790C00`, the pre-title span
+`0x00696000..0x00697000`, and the known route callsites
+`0x8001BE24,0x8008EB7C,0x8008EC88,0x8008EBC8`. A target-phase write with a
+writer PC selects `H-RetailTargetWriter`; valid phases with only pre-target
+writes select `H-RetailPreTargetOnly`; missing aligned target rows despite all
+controls select `H-RetailTargetWriteUnavailable`.
 
 ## Exact command
 
-From the repository root, with the configured debugger-enabled Mupen core
-available at the documented path:
+From the repository root, use the existing bounded target-writer driver:
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 180 --watch-write 0x0:0x800000 --hit-cap 10000 \
-  --watch-pc 0x80019CCC,0x80019CD0 \
-  --pc-phase-log 0x00790400,0x00790800,0x006AB400 \
-  --pc-field-dump 0x80019CCC,0x80019CD0 \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+zsh scratch/agent/run_s2297_m5_target_only_writer_sequence.sh s3273_m5_route_boundary
 ```
 
-Record positive-control count, VI origins, both PC counts, and the bounded
-field rows. Do not add a port field or change audio behavior.
+It arms the whole-RDRAM control, target/pre-target physical spans, phase-gated
+PC histograms, and post-value rows in one retail run, then SIGKILLs the oracle
+watchdog. Record the positive controls and target-only writer table. Do not
+interpret a missing target row unless the controls are present.
+
+## Follow-up selection
+
+If `H-RetailTargetWriter` is selected, compare that writer/order against the
+port's `640 @ 0x0066A500` route before authorizing any M5 Step 3 edge. If
+`H-RetailPreTargetOnly` or `H-RetailTargetWriteUnavailable` is selected, keep
+Step 1 unevaluable and choose the next route-boundary discriminator; do not
+infer an audio, gate, slot, or PCM cause.

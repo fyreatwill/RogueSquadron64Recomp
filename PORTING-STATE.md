@@ -127474,3 +127474,20 @@ pending on the configured Windows/MIPS host or a supplied generated artifact.
 The next work unit is the prescribed retail-oracle scheduler message handoff
 capture at `0x80019CCC`/`0x80019CD0`. Evidence:
 `scratch/agent/s3271_guard_validation.md`.
+## Session 3272 (2026-08-29) — M5 Step 1 pair was route-invalid
+
+The single build `cmake --build build --target RogueSquadron64Recomp` passed.
+The same-build silent/image qualification then ran with the independent retail
+oracle. The oracle passed the whole-RDRAM positive control at 10,000 writes and
+reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. The port's
+silent arm visibly dispatched `real_ucode=0` (96 sampled rows) and the image
+arm dispatched `real_ucode=1` (94 sampled rows), but neither arm reached title
+or hangar. Both stopped at pre-title `640 @ 0x0066A500` and later emitted
+off-target `640 @ 0x00696100`; the driver SIGKILLed both at the pair deadline.
+
+Because the port target phase was absent, both arms had zero interpretable
+ABI/DMA/image-stage/return/service/slot/PCM rows. This selects
+`H-RouteInvalid`, not `H-ImageContractGap` or an audio explanation, and rules
+out using this run to authorize an M5 Step 3 edge. Evidence:
+`scratch/agent/s3272_m5_step1_pair.md` and
+`scratch/agent/s3272_m5_step1_pair/driver.log`.
