@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3265 (2026-08-29).
+Current maintenance marker: Session 3266 (2026-08-29).
+
+Session 3266 ran a new independent retail read-watch capture for the VI-640
+request-state edge. Both the generic 180-second and fixed 60-second runs
+passed the whole-RDRAM positive control and reached title 1024 plus hangar
+512. The fixed run observed 23,594 reads of pending state
+`0x80128E94/98`, with detailed PCs inside `applyPendingViChanges` and its mode
+helpers, but zero reads of selector bytes `0x8011A865..67`; those reads may be
+aligned word loads and are therefore unevaluable, not absent. The oracle still
+does not print read values or phase labels, so `H-RequestState`,
+`H-BoundaryConsumer`, and `H-Phase4SteadyState` remain unresolved. No port or
+audio behavior changed. Evidence: [`s3266_vi_request_state_reads.md`](../scratch/agent/s3266_vi_request_state_reads.md)
+and its two captured logs.
 
 Session 3265 ran the required independent retail VI request-state capture.
 Both runs passed the whole-RDRAM positive control. The fixed phase-gated run

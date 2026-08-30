@@ -1,50 +1,50 @@
-# NEXT work unit — expose VI request-state loads or provenance
+# NEXT work unit — align the retail VI selector read watch
 
-HYPOTHESIS-ID: vi640-maudtask-type2-writer
+HYPOTHESIS-ID: vi640-request-state-read-edge
 
-The local source-availability arm is closed as `H-SourceUnavailable`:
-`RecompiledFuncs/` is absent, and `applyPendingViChanges` is available only as
-symbol metadata plus the probe-template caller. Session 3265's positive-
-controlled retail capture proved the producer is live at VI 640 origin
-`0x0066A500` and reaches title/hangar, but entry GPRs did not expose the
-function's internal state loads or successor branch. Do not repeat that entry
-capture, repeat the local inventory, or add a port-side field. The next unit
-must obtain the generated body/provenance or a new independent ground-truth
-trace that exposes the state inputs and request/commit ordering.
+Run one independent retail-oracle capture using an aligned selector-word
+watch. Session 3266 proved the pending-state read surface is live, but the
+byte watch at `0x8011A865..67` missed likely aligned word loads. Do not repeat
+the entry-only capture, local inventory, or add a port-side field.
 
 ## Competing hypotheses
 
-- `H-RequestState`: an upstream state/branch prevents the target VI-mode
-  request from being issued.
-- `H-BoundaryConsumer`: a target request is issued but the VI consumer fails
-  to commit it.
-- `H-Phase4SteadyState`: width 640 is an intentional terminal route.
-- `H-SourceUnavailable`: the generated body/state inputs are unavailable in
-  this checkout. Selected for the local arm only.
+- `H-RequestState`: pending/selector state is live but never selects the
+  title-width descriptor, suppressing the request.
+- `H-BoundaryConsumer`: the target-width request is selected and issued, but
+  the VI consumer fails to commit it.
+- `H-Phase4SteadyState`: retail's state contract remains explicitly on the
+  640 route and makes no target request.
+- `H-SelectorWatchUnavailable`: aligned selector reads still cannot be
+  attributed; this is an instrument result, not a runtime conclusion.
 
 ## Discriminator
 
-Obtain the generated body or an independent ground-truth trace of the state
-inputs. A live state input with no target request selects `H-RequestState`; a
-target request followed by no commit selects `H-BoundaryConsumer`; an explicit
-terminal-route contract selects `H-Phase4SteadyState`. Continued absence is an
-external dependency, not a runtime conclusion.
+The run must pass the whole-RDRAM write control and reach title 1024 plus
+hangar 512. Detail aligned reads covering selector A/B/C at physical
+`0x00114A864..0x00114A86C`, alongside pending A/B reads at
+`0x00128E94..0x00128E9C`, and correlate their PCs with
+`applyPendingViChanges`/`0x8001B8DC` and VI transitions. A selector state that
+stays in the 640 record with no target request selects `H-RequestState`; a
+target request with no target commit selects `H-BoundaryConsumer`; an explicit
+stable terminal contract selects `H-Phase4SteadyState`; absent aligned rows
+selects `H-SelectorWatchUnavailable`.
 
-## Exact commands
+## Exact command
 
 ```sh
-test -x tools/oracle/build/rs64_oracle
-tools/oracle/build/rs64_oracle --core "$ORACLE_CORE" --rom "$RETAIL_ROM" \
-  --secs 180 --watch-write 0x0:0x800000 \
-  --watch-pc 0x8001B7F0 --pc-phase-log-width 0x0066A500:640 \
-  --vi-trace --hit-cap 64
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  --secs 60 --watch-write 0x0:0x800000 \
+  --watch-read 0x114A864:0x114A86C --watch-read 0x128E94:0x128E9C \
+  --detail-watch 1 --detail-watch 2 \
+  --watch-pc 0x8001B7F0,0x8001B8DC,0x800352D0 \
+  --pc-phase-log-width 0x0066A500:640 --vi-trace --hit-cap 64
 ```
 
-Do not run this entry-only command again. The next satisfying input is the
-generated body/provenance or an independent trace exposing state inputs and
-request/commit ordering. A live state input with no target request selects
-`H-RequestState`; a target request with no commit selects
-`H-BoundaryConsumer`; an explicit terminal-route contract selects
-`H-Phase4SteadyState`. If either oracle dependency is absent, record that
-setup fact and do not claim a runtime hypothesis. No scheduler/audio behavior
-change is authorized.
+Capture output under `scratch/agent/` with a non-dot final path. No build or
+port/audio behavior change is authorized until this aligned state edge is
+classified.

@@ -127385,3 +127385,16 @@ boundary-consumer, or terminal-route hypothesis is selected. This rules out a
 producer-wide absence at the VI-640 boundary, not the unresolved state edge.
 No port or audio behavior changed. Evidence:
 `scratch/agent/s3265_vi_request_state.md` and its captured oracle logs.
+## Session 3266 (2026-08-29) — captured retail VI request-state reads
+
+Ran the retail oracle twice as one bounded read-watch unit. Both runs passed
+the whole-RDRAM positive control and reached title 1024 and hangar 512. The
+fixed detailed run observed 23,594 reads in pending state
+`0x80128E94..0x80128E9C`, including PCs inside `applyPendingViChanges` and its
+mode helpers, plus 3,452 apply executions from caller `0x80019914`. The
+selector-byte watch `0x8011A865..67` produced zero reads; because aligned word
+loads can cover those bytes without touching the byte addresses, that null is
+unevaluable. The oracle does not expose read values or phase labels, so
+`H-RequestState`, `H-BoundaryConsumer`, and `H-Phase4SteadyState` remain
+unresolved. No port or audio behavior changed. Evidence:
+`scratch/agent/s3266_vi_request_state_reads.md` and its captured logs.
