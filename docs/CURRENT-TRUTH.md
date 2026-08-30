@@ -4,22 +4,35 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3296 (2026-08-29).
+Current maintenance marker: Session 3297 (2026-08-29).
+
+Session 3297 asked retail whether `0x80019E04`
+(`beq $v0, $zero, L_80019E7C` after `lw` of `0x80128D40`)
+ever sees `$v0 != 0`. Same-run controls: whole-RDRAM
+10000-write, `[gpr-ctl]` at 0.5 s, viewer `0x800C28F0` at
+2.3 s, `0x800C2E00` at 6.5 s, and 19E04 live in that
+window. Title 1024 did not fire (cinematic 640 continued).
+Lifetime 19E04 n=2075 is `$v0=0` n=2075; viewer-window
+n=500 all `$v0=0`. `0x80019E70` exec=0 and `0x80019E0C`
+exec=0. Physical `0x00128D40:0x00128D44` write hits=0,
+post-value samples=0, shutdown snapshot 4 zero bytes
+(FNV `0x4b95f515`). This selects `H-RetailYieldPtrZero`
+and `H-RetailYieldPtrUnpublished` and refutes
+`H-RetailYieldPtrLive`. Combined with s3295/s3296, the
+port's `yieldw=0x80149470` publisher is extra. No M5
+Step 3. Evidence:
+`scratch/agent/s3297_retail_yield_ptr.md`.
 
 Session 3296 asked retail whether `0x80019E80` keeps taking
 and who writes physical `0x0011A89F` after `0x80019E70`
 stores 1. Same-run controls: whole-RDRAM 10000-write,
 viewer `0x800C28F0` at 2.2 s, `0x800C2E00` at 6.4 s, and
-19E80 live in that window. Title 1024 did not fire (cinematic
-640 continued). Viewer 19E80 n=500 is `$v0=2` n=258 /
-`$v0=0` n=242 / `$v0=1` n=0 (`$s1=1`); every 19ED0 has
-`prev_pc=0x80019E80` (lifetime 2079=2079). `0x80019E70`
-exec=0 and the 89F byte watch is 0 for the whole 25 s.
-This selects `H-RetailNoYieldStore` and refutes
-`H-RetailS2Cleared` and `H-RetailS2Stays1`. Combined with
-s3295, the port's yield-complete `sb` of 1 is extra.
-No M5 Step 3. Evidence:
-`scratch/agent/s3296_retail_s2_gate.md`.
+19E80 live in that window. Title 1024 did not fire. Viewer
+19E80 n=500 is `$v0=2` n=258 / `$v0=0` n=242 / `$v0=1`
+n=0 (`$s1=1`); every 19ED0 has `prev_pc=0x80019E80`.
+`0x80019E70` exec=0 and the 89F byte watch is 0.
+This selects `H-RetailNoYieldStore`. No M5 Step 3.
+Evidence: `scratch/agent/s3296_retail_s2_gate.md`.
 
 Session 3295 asked which recv-dispatch after last 19ED0 skips
 the 19ED0 gate. Same-run controls: viewer `[m5-postwait]`
@@ -559,11 +572,12 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3296
-selects `H-RetailNoYieldStore`: retail 19E80 keeps taking
-(`$v0` is 0 or 2) because `0x80019E70` never stores 1.
-Session 3295's `H-Ed0CompareSkip`, Session 3294's
-`H-SchedLoopAliveNoEd0`, Session 3293's
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3297
+selects `H-RetailYieldPtrZero` and
+`H-RetailYieldPtrUnpublished`: 19E04 `$v0` is always 0
+and `0x80128D40` is never written. Session 3296's
+`H-RetailNoYieldStore`, Session 3295's `H-Ed0CompareSkip`,
+Session 3294's `H-SchedLoopAliveNoEd0`, Session 3293's
 `H-PortSchedSendMissing`, Session 3292's
 `H-RetailSpSchedulerProducer`, Session 3291's
 `H-RetailRecvReturns`, Session 3290's `H-SubmitRecvBlocked`,
@@ -572,17 +586,16 @@ Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Retail: during the attract viewer, does `0x80019E04`
-   (`beq $v0, $zero, L_80019E7C` after `lw` of `0x80128D40`)
-   ever see `$v0 != 0`? s3296 showed `0x80019E70` (the
-   yield-complete `sb` of 1 onto `0x8011A89F`) never
-   executes, so either the yield pointer stays 0 (beq to
-   19E7C always) or a different successor is taken.
-   Join whole-RDRAM 10000-write control, title
-   `1024 @ 0x00790400`, viewer `0x800C28F0` / `0x800C2E00`,
-   exec at `0x80019E04` / `0x80019E70`, and writes to
-   `0x00128D40:0x00128D44`. `--hit-cap 20000`. Do not add a
-   skip, allow, restore, or wait bypass. No M5 Step 3.
+1. Retail: during the attract viewer, does type-2 dispatch
+   `L_80019D90` run, and does it take idle `L_80019DCC` or
+   the yield-publish `0x80019DC0` (`sw` of msg+4 into
+   `0x80128D40` after `osSpTaskYield`)? s3297 showed that
+   word stays 0, so 19DC0 should be silent; 19D90 vs 19DCC
+   splits "no type-2" from "type-2 while SP idle". Join
+   whole-RDRAM 10000-write control, viewer `0x800C28F0` /
+   `0x800C2E00`, exec at `0x80019D90` / `0x80019DAC` /
+   `0x80019DC0` / `0x80019DCC`. `--hit-cap 20000`. Do not
+   add a skip, allow, restore, or wait bypass. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -759,6 +772,13 @@ compare skip. Session 3296 measured 500 viewer 19E80 with
 `$v0 != 1`, lifetime 19ED0=19E80 all taken from 19E80, and
 zero `0x80019E70` execs.
 
+Session 3296 left open whether 19E04 sees a live yield
+pointer and takes a successor other than 19E70, or the
+pointer stays 0. Believable because the port's 19DFC
+`yieldw=0x80149470` is a real loaded word. Session 3297
+measured 500 viewer 19E04 with `$v0=0`, 19E0C exec=0, and
+zero writes to aligned `0x00128D40`.
+
 The recomp direct C call to `submitGfxFrame` does not write guest
 `$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
 that word is dead.
@@ -771,6 +791,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3297_retail_yield_ptr.md`,
 `scratch/agent/s3296_retail_s2_gate.md`,
 `scratch/agent/s3295_port_scheduler_dispatch.md`,
 `scratch/agent/s3294_port_scheduler_stall.md`,

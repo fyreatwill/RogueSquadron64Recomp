@@ -128244,3 +128244,37 @@ after 19DFC `yieldw=0x80149470` is extra on this attract
 viewer. `H-RetailCoverageInvalid` is not selected for the
 viewer window. No audio or M5 Step 3 change. No new
 soak-queue verdicts.
+
+
+## Session 3297 (2026-08-29) — retail 19E04 yield pointer stays 0; no 0x80128D40 writer
+
+Retail 19E04 `$v0` / `0x80128D40`-writer capture, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. One independent Rice
+oracle, 25 s, first-VI arming, `--hit-cap 20000`. Watches:
+whole-RDRAM, physical `0x00128D40:0x00128D44`, exec
+`0x80019E04` / `0x80019E70` / `0x800C28F0` /
+`0x800C2E00` / `0x80019E0C`. Log:
+`scratch/agent/s3297_retail_yield_ptr.log`. Evidence:
+`scratch/agent/s3297_retail_yield_ptr.md`.
+
+Same-run positive controls: whole-RDRAM 10000-write and
+`[gpr-ctl]` at 0.5 s; viewer entry `0x800C28F0` at 2.3 s
+(`prev_pc=0x800C5C98`, 640 @ `0x0066aa00`); viewer return
+`0x800C2E00` at 6.5 s; 19E04 live in-window n=500. 1470 VI,
+25.0 s wall / 24.5 s emulated, `rc=0`. Title
+`1024 @ 0x00790400` did not fire (cinematic 640 continued
+through 24.4 s). Hit-cap not truncated (12077 total hits).
+
+Viewer 19E04: `$v0=0` n=500 / `$v0!=0` n=0. Lifetime
+19E04=2075 all `$v0=0`, all `prev_pc=0x80019E00`.
+`0x80019E70` exec=0. `0x80019E0C` exec=0. Yield-pointer
+word watch hits=0; post-value samples=0; shutdown snapshot
+4 zero bytes (FNV `0x4b95f515`).
+
+This selects `H-RetailYieldPtrZero` and
+`H-RetailYieldPtrUnpublished` and refutes
+`H-RetailYieldPtrLive`. Combined with s3295/s3296, the
+port's `19DFC yieldw=0x80149470` publisher is extra on this
+attract viewer. `H-RetailCoverageInvalid` is not selected
+for the viewer window. No audio or M5 Step 3 change. No new
+soak-queue verdicts.
