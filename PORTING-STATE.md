@@ -128166,3 +128166,47 @@ fails to enter 19E7C/19ED0. No audio or M5 Step 3 change.
 No new soak-queue verdicts. Evidence:
 `scratch/agent/s3294_port_scheduler_stall.md`,
 `scratch/agent/s3294_port_scheduler_stall.log`.
+
+## Session 3295 (2026-08-29) — 19E80 fallthrough after last 19ED0; $s2[0]==1 skips the gate
+
+Port scheduler-dispatch census, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. Fixup probe at
+`0x80019CDC` (type-byte load), `L_80019DFC`, `L_80019E7C`,
+and `0x80019E80` taken vs fallthrough
+(`tools/apply_s3295_scheduler_dispatch.py`, also hooked from
+`fixup_game_funcs.py`). Kept s3288 fade, s3289 SENT/SRET,
+s3290 inner, s3293 gate, s3294 loop. Debug rebuild. One 30 s
+run from `build/` with `ROGUESQ_LOG_M5_POSTWAIT=1`, SIGKILL.
+Log: `scratch/agent/s3295_port_scheduler_dispatch.log`.
+
+Same-run positive controls: `[phase] 640 @ 0x0066A500` at
+3.6 s; `[m5-postwait]` viewer `entry` `pc=0x800C28F0`;
+`[s3288-fade] 2D50 n=3 taken=0`; SENT n=3 without SRET n=3;
+E0B4 n=41 without R0B4 n=41; `[s3293-sched] 19F1C n=41` at
+width 640 `a0=0x8011A818`; `[s3294-stall]` 19CC4 live at
+width 640 from n=242 through n=3936; `[s3295-disp]` 19E80T
+n=123 at width 640 (taken arm prints). Last 19ED0 is n=123
+(`s2b0=0x02`). Zero crash/abort/Bus-error/last-guest-pc.
+
+Last 19ED0 n=123: 19DFC/19E7C/19E80T with `s2b0=0x02`
+`yieldw=0`, then F50 send E0F64/R0F64 n=82 returned, then
+19CC4 n=247 `s2b0=0x00`. SENT n=3 then blocked in E0B4 n=41.
+First 19DFC after that is n=124 `type=0x81`
+`yieldw=0x80149470` `s2b0=0x00` (no 19E7C); 19CC4 n=250
+`s2b0=0x01`. Next idle 0x81 (19DFC n=125) reaches 19E7C
+n=124 and 19E80F n=1 with `$s2[0]==$s1==1`. After last
+19ED0: 2458 type-`0x81` 19CDC rows, 19DFC 2458 (yieldw
+1229/1229), 19E7C 1229, 19E80F 1229, 19E80T 0.
+
+This selects `H-Ed0CompareSkip` and refutes `H-NoType81`,
+`H-Type81YieldBusy` as the sole skip (19E7C still runs), and
+`H-DispatchCoverageInvalid`. Combined with s3293/s3294:
+`H-PortSchedSendMissing` still holds because 19E80
+fallthroughs, not because type 0x81 is absent and not
+because the scheduler is stalled. `$s2` is `0x8011A89F`
+(yield-complete store `0x80019E70`). Single-source port
+census. Next discriminator is retail 19E80 `$v0` and writes
+to physical `0x0011A89F` during the attract viewer. No audio
+or M5 Step 3 change. No new soak-queue verdicts. Evidence:
+`scratch/agent/s3295_port_scheduler_dispatch.md`,
+`scratch/agent/s3295_port_scheduler_dispatch.log`.

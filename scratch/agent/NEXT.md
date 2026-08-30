@@ -1,63 +1,60 @@
-# NEXT work unit — port: which recv-dispatch skips the 19ED0 gate?
+# NEXT work unit — retail: 19E80 take vs sticky 0x8011A89F=1
 
 HYPOTHESIS-ID: m5-osvimode-viewer-frame-exit
 
 ## Resume context
 
-Session 3294 selected `H-SchedLoopAliveNoEd0`: after last
-19ED0 n=122 the F50 send returned and loop head `19CC4`
-continued through n=4045 while SENT n=3 blocked in E0B4.
-Zero further 19ED0/19F1C. `L_80019ED0` is reached from
-`L_80019E7C` (type `0x81` path `L_80019DFC` when yielded-task
-word `0x80128D40` is zero) only if `$s2[0] != 1`. At SENT n=3
-the live loop already shows `19CC4` n=248 `s2b0=0x01`. Keep
-s3288 fade / s3289 SENT / s3290 inner / s3293 gate / s3294
-loop probes; this unit is the dispatch after recv return.
+Session 3295 selected `H-Ed0CompareSkip`: after last 19ED0
+n=123, type `0x81` and `L_80019E7C` stay live (1229 each)
+but `0x80019E80` always fallthroughs because `$s2[0]==1`.
+`$s2` is `0x8011A89F`. The first sticky 1 appears on 19CC4
+n=250 immediately after 19DFC n=124 (`yieldw=0x80149470`),
+which is the yield-complete store at `0x80019E70`
+(`sb $s1, -0x5761($at)`). Session 3292 already showed retail
+viewer-window `0x8011A818` sends are 242/242 from
+`0x80019F1C` (inside 19ED0), so retail must take 19E80.
 
 ## Competing hypotheses
 
-- `H-NoType81`: after last 19ED0, recv returns but the type
-  byte at `0x80019CDC` is never `0x81` (loop eats 0/1/2 and
-  jumps to `19CC4`).
-- `H-Type81YieldBusy`: type `0x81` arrives, `L_80019DFC`
-  runs, but `0x80128D40` is nonzero so the yield-restart path
-  is taken instead of `L_80019E7C`.
-- `H-Ed0CompareSkip`: `L_80019E7C` runs, but `$s2[0]==1` so
-  `0x80019E80` does not take `L_80019ED0`.
-- `H-DispatchCoverageInvalid`: SENT n=3 / 19F1C n=41 /
-  19CC4 after last 19ED0 miss, or the new
-  type/19DFC/19E7C/19E80 probes are silent at width 640.
+- `H-RetailS2Cleared`: during 2.5–6.7 s, `0x80019E80` `$v0`
+  is 0 or 2 (takes 19ED0). Physical `0x0011A89F` is written
+  to 1 at `0x80019E70` and later cleared (expected clearer
+  `0x80019F6C`) before the next 19E80.
+- `H-RetailNoYieldStore`: viewer-window `0x80019E70` never
+  stores; `0x0011A89F` stays 0/2 so 19E80 keeps taking. The
+  port's yieldw=`0x80149470` path is extra.
+- `H-RetailS2Stays1`: retail 19E80 `$v0` is also 1 during
+  the viewer (fallthrough), so a different site must produce
+  the 242 `0x8011A818` sends (would reopen s3292).
+- `H-RetailCoverageInvalid`: whole-RDRAM 10000-write
+  control, title `1024 @ 0x00790400`, viewer `0x800C28F0`,
+  or `0x800C2E00` miss, or no 19E80 exec in 2.5–6.7 s.
 
 ## Discriminator
 
-One Debug port run, 30 s from `build/`, SIGKILL.
-`ROGUESQ_LOG_M5_POSTWAIT=1`. Keep s3288/s3289/s3290/s3293/s3294
-probes. Add a width≥640 always-print at the type-byte load
-(`0x80019CDC`), `L_80019DFC`, `L_80019E7C`, and the
-`0x80019E80` taken vs fallthrough. 19F1C n=41 and 19CC4 n=248+
-must still print (same-run positive controls). Join to SENT
-n=3 `E0B4` and last 19ED0.
+One independent retail Rice oracle, 25 s, eleven-Start.
+Watches are physical. Exec watches armed at first VI (no
+`--pc-phase-log-width`). `--hit-cap 20000`.
 
-A live type census with zero `0x81` after last 19ED0 selects
-`H-NoType81`. Type `0x81` plus `19DFC` without `19E7C`
-selects `H-Type81YieldBusy`. `19E7C` plus fallthrough at
-`19E80` (`$s2[0]==1`) selects `H-Ed0CompareSkip`. Missed
-controls or a silent new probe on 19CC4 n=248+ is a failed
-instrument.
+A viewer-window 19E80 census with `$v0 != 1` plus a later
+clear of `0x0011A89F` selects `H-RetailS2Cleared`. Zero
+19E70 stores and `$v0 != 1` selects `H-RetailNoYieldStore`.
+19E80 `$v0==1` throughout 2.5–6.7 s selects
+`H-RetailS2Stays1`. Missed controls is a failed instrument.
 
 Do not add a skip, allow, restore, or wait bypass. No M5
 Step 3.
 
 ## Exact commands
 
-Fixup: `tools/apply_s3295_scheduler_dispatch.py` (also hook
-from `fixup_game_funcs.py`) at `0x80019CDC`, `L_80019DFC`,
-`L_80019E7C`, and `0x80019E80` taken vs fallthrough.
-Rebuild Debug. Then from `build/` with the ROM present:
-
 ```
-env ROGUESQ_LOG_M5_POSTWAIT=1 ./RogueSquadron64Recomp
+tools/oracle/build/rs64_oracle \
+  --watch-write 0x0:0x800000 \
+  --watch-write 0x0011A89F:0x0011A8A0 \
+  --watch-pc 0x80019E80,0x80019E70,0x80019ED0,0x800C28F0,0x800C2E00 \
+  --secs 25 --hit-cap 20000 --vi-trace --vi-poll \
+  --video rice
 ```
 
-30 s, SIGKILL. Log: `scratch/agent/s3295_port_scheduler_dispatch.md`
-plus the captured run log.
+Log: `scratch/agent/s3296_retail_s2_gate.md` plus the
+captured run log.

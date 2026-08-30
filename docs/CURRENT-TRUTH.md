@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3294 (2026-08-29).
+Current maintenance marker: Session 3295 (2026-08-29).
+
+Session 3295 asked which recv-dispatch after last 19ED0 skips
+the 19ED0 gate. Same-run controls: viewer `[m5-postwait]`
+entry, `[phase]` `640 @ 0x0066A500`, `[s3288-fade] 2D50 n=3
+taken=0`, SENT n=3 without SRET n=3, E0B4 n=41 without R0B4,
+19F1C n=41, 19CC4 through n=3936, and 19E80T n=123 (taken arm
+prints). After last 19ED0 n=123: 2458 type-`0x81` 19CDC rows,
+19DFC 2458 (yieldw split 1229 `0x80149470` / 1229 zero),
+19E7C 1229, 19E80F 1229 (`$s2[0]==$s1==1`), 19E80T 0. This
+selects `H-Ed0CompareSkip` and refutes `H-NoType81`,
+`H-Type81YieldBusy` as the sole skip, and
+`H-DispatchCoverageInvalid`. `$s2` is `0x8011A89F`. No M5
+Step 3. Evidence:
+`scratch/agent/s3295_port_scheduler_dispatch.md`.
 
 Session 3294 asked where `spTaskSchedulerThread` stalls after
 the last `L_80019ED0`. Same-run controls: viewer
@@ -530,24 +544,28 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3294
-selects `H-SchedLoopAliveNoEd0`: after last 19ED0 the scheduler
-keeps looping recv on `0x8011A420` and never re-enters
-`L_80019ED0`. Session 3293's `H-PortSchedSendMissing`,
-Session 3292's `H-RetailSpSchedulerProducer`, Session 3291's
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3295
+selects `H-Ed0CompareSkip`: after last 19ED0, type `0x81` and
+`L_80019E7C` stay live but `0x80019E80` always fallthroughs
+because `$s2[0]==1` at `0x8011A89F`. Session 3294's
+`H-SchedLoopAliveNoEd0`, Session 3293's
+`H-PortSchedSendMissing`, Session 3292's
+`H-RetailSpSchedulerProducer`, Session 3291's
 `H-RetailRecvReturns`, Session 3290's `H-SubmitRecvBlocked`,
 and Session 3288's `H-PortFadeOutNeverEntered` still hold.
 Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Port: after last 19ED0, which recv-dispatch skips the
-   19ED0 gate? `L_80019ED0` is reached from `L_80019E7C`
-   (type `0x81` path `L_80019DFC` when yielded-task word
-   `0x80128D40` is zero) only if `$s2[0] != 1`. Join existing
-   SENT n=3 / 19F1C n=41 / 19CC4 n=248+ with width≥640 probes
-   at the type-byte load (`0x80019CDC`), `L_80019DFC`,
-   `L_80019E7C`, and the `0x80019E80` compare. Do not add a
+1. Retail: during the attract viewer, does `0x80019E80` keep
+   taking (`$v0 != 1`) and who writes physical `0x0011A89F`
+   after `0x80019E70` stores 1? s3292 already showed 242/242
+   viewer `0x8011A818` sends from `0x80019F1C` (inside
+   19ED0), so retail must enter 19ED0. Join whole-RDRAM
+   10000-write control, title `1024 @ 0x00790400`, viewer
+   `0x800C28F0` / `0x800C2E00`, exec at `0x80019E80` /
+   `0x80019E70` / `0x80019ED0`, and writes to
+   `0x0011A89F:0x0011A8A0`. `--hit-cap 20000`. Do not add a
    skip, allow, restore, or wait bypass. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
@@ -711,6 +729,13 @@ F50 send returned, then ~3800 matched recvs during SENT n=3.
 The scheduler is not stalled; the 19ED0 gate is not
 re-entered.
 
+Session 3294 left the skip as type / 19DFC / 19E7C / 19E80.
+Believable because 19ED0 went silent while recv kept matching.
+Session 3295 measured 2458 type-`0x81` rows and 1229 `19E7C`
+visits after last 19ED0, all with `$s2[0]==1` so 19E80
+fallthroughs. `H-NoType81` and "19DFC without 19E7C" are
+refuted.
+
 The recomp direct C call to `submitGfxFrame` does not write guest
 `$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
 that word is dead.
@@ -723,6 +748,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3295_port_scheduler_dispatch.md`,
 `scratch/agent/s3294_port_scheduler_stall.md`,
 `scratch/agent/s3293_port_scheduler_send.md`,
 `scratch/agent/s3292_retail_submit_send.md`,
