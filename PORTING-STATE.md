@@ -127602,3 +127602,31 @@ holds. No audio or M5 Step 3 change.
 No new soak-queue verdicts. Evidence:
 `scratch/agent/s3277_swapbuffer_delay_slot.md` and
 `scratch/agent/s3277_swapbuffer_delay_slot.log`.
+
+## Session 3278 (2026-08-29) — censused OSViMode table; selected missing 1024 rewrite
+
+Host `[vi-mode-table]` dump in `osViSetMode_recomp` after each existing
+`[osViSetMode]` row: four slot widths at `0x80128D50+{0,0x50,0xA0,0xF0}+8`,
+pendingA/B, mask9, selector bytes. Debug rebuild. One 60s
+`ROGUESQ_LOG_ALL=1` run from `build/`, killed with SIGKILL.
+
+Same-run controls: four `[osViSetMode]` rows including swapBuffer
+`0x80128C90` width 320, each immediately followed by `[vi-mode-table]`;
+`[m5-port-vi-control]` at width 640 origin `0x66A500`.
+
+Calls 1–2: all four slots 320, pending 0. Calls 3–4: all four slots 640.
+Call 4 (`applyPendingViChanges`) had `pendingB=0x11` / `pending_mask9=0x1`
+and published `0x80128DF0` width 640. Zero 1024 slot or publisher rows.
+`[phase]` `0 → 320 → 640/0x0066A500`. No crash.
+
+`H-PendingBitGap` is refuted. `H-MissingTableRewrite` is selected
+(single-source port census). `H-RequestMaskNever1024` is not selected: no
+1024 template exists, and the pending path is live. The 320→640 rewrite is
+`initVideoSubsystem`'s 4×0x50 copy at `0x8001B6A8`.
+`H-PortTargetPublicationAbsent` still holds. No audio or M5 Step 3 change.
+Next discriminator: independent retail post-value of the four slot +8 words
+at title 1024.
+
+No new soak-queue verdicts. Evidence:
+`scratch/agent/s3278_osvimode_table_census.md` and
+`scratch/agent/s3278_osvimode_table_census.log`.

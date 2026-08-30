@@ -426,6 +426,32 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
         "width=%u xScale=0x%08X yScale=0x%08X ra=0x%08X site=%s\n",
         n, mode_ptr, type, ctrl, width, xScale, yScale, ra, site);
     fflush(stderr);
+    {
+        auto guest_u8 = [rdram](uint32_t guest) -> uint32_t {
+            if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFu;
+            return rdram[(guest - 0x80000000u) ^ 3u];
+        };
+        auto guest_u32 = [&guest_u8](uint32_t guest) -> uint32_t {
+            return (guest_u8(guest) << 24) | (guest_u8(guest + 1u) << 16) |
+                   (guest_u8(guest + 2u) << 8) | guest_u8(guest + 3u);
+        };
+        const uint32_t slot0 = guest_u32(0x80128D50u + 8u);
+        const uint32_t slot1 = guest_u32(0x80128DA0u + 8u);
+        const uint32_t slot2 = guest_u32(0x80128DF0u + 8u);
+        const uint32_t slot3 = guest_u32(0x80128E40u + 8u);
+        const uint32_t pendingA = guest_u32(0x80128E94u);
+        const uint32_t pendingB = guest_u32(0x80128E90u);
+        fprintf(stderr,
+            "[vi-mode-table] call=%d mode_ptr=0x%08X requested_width=%u "
+            "slot0=%u slot1=%u slot2=%u slot3=%u "
+            "pendingA=0x%08X pendingB=0x%08X pending_mask9=0x%X "
+            "sel=%02X/%02X/%02X\n",
+            n, mode_ptr, width, slot0, slot1, slot2, slot3,
+            pendingA, pendingB, (pendingA | pendingB) & 0x9u,
+            guest_u8(0x8011A865u), guest_u8(0x8011A864u),
+            guest_u8(0x8011A862u));
+        fflush(stderr);
+    }
     static const bool log_transition = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_VI_TRANSITION");

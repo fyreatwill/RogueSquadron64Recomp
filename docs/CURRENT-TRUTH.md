@@ -4,19 +4,29 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3277 (2026-08-29).
+Current maintenance marker: Session 3278 (2026-08-29).
+
+Session 3278 censused the four OSViMode slots from `osViSetMode_recomp`.
+Same-run controls: four `[osViSetMode]` rows (including swapBuffer
+`0x80128C90` width 320) each paired with a `[vi-mode-table]` dump, plus
+`[m5-port-vi-control]` at width 640 origin `0x66A500`. Every slot was 320
+on calls 1–2 and 640 on calls 3–4; none was 1024. Call 4
+(`applyPendingViChanges`) had `pendingB=0x11` / `pending_mask9=0x1` and
+published slot `0x80128DF0` width 640. This selects `H-MissingTableRewrite`
+and refutes `H-PendingBitGap`. `H-RequestMaskNever1024` is not selected
+(no 1024 template; the pending path is live). Single-source port census;
+does not yet say whether retail's table contains 1024 at title.
+`H-PortTargetPublicationAbsent` still holds. Evidence:
+`scratch/agent/s3278_osvimode_table_census.md`.
 
 Session 3277 landed the `swapBufferWithViMode` jal delay-slot `$a0`
-correction. One 60s `ROGUESQ_LOG_ALL=1` run passed the same-run controls
-(`[osViSetMode]` four rows; `[m5-port-vi-control]` at width 640). Call 2 now
-requests copied-mode dest `0x80128C90` width 320; the width-2 `[osViSetMode]`
-and `[phase]` rows are gone. Phase still stops at `640 @ 0x0066A500` with no
-1024 request. This selects `H-DelaySlotNotCausal` and refutes `H-FixupMissed`.
-ORIGIN: jal `0x8001BB54`; hardware passes `0x80128C90` (legitimate copied
-OSViMode), the skip-goto left `0x80128CD4` (width 2, not legitimate).
-`H-PortTargetPublicationAbsent` still holds. Evidence:
-`scratch/agent/s3277_swapbuffer_delay_slot.md` and
-`scratch/agent/s3277_swapbuffer_delay_slot.log`.
+correction. Call 2 now requests copied-mode dest `0x80128C90` width 320; the
+width-2 `[osViSetMode]` and `[phase]` rows are gone. Phase still stops at
+`640 @ 0x0066A500` with no 1024 request. This selects `H-DelaySlotNotCausal`
+and refutes `H-FixupMissed`. ORIGIN: jal `0x8001BB54`; hardware passes
+`0x80128C90` (legitimate copied OSViMode), the skip-goto left `0x80128CD4`
+(width 2, not legitimate). Evidence:
+`scratch/agent/s3277_swapbuffer_delay_slot.md`.
 
 Session 3276 completed the port target-VI publication/commit audit. CMake's
 `RECOMP_FUNCS_DIR` (`../N64Recomp/RecompiledFuncs`) plus the host VI wrappers
@@ -379,16 +389,17 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3277
-selected `H-DelaySlotNotCausal`; Session 3276's `H-PortTargetPublicationAbsent`
-still holds after the width-2 correction. No M5 Step 3 audio change is
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3278
+selected `H-MissingTableRewrite`; Session 3276's
+`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio change is
 authorized until a like-for-like target row exists.
 
-1. Census the four OSViMode slots at `0x80128D50+{0,0x50,0xA0,0xF0}` and the
-   post-640 `$a0` of `requestViFeatureChange` / `beginSceneRenderFrame`. Dump
-   all four slot widths from `osViSetMode_recomp` on the existing four-call
-   run. A 1024-width template with no applyPending call selects a pending-bit
-   gap; no 1024 template selects a missing table rewrite. Do not change audio
+1. Independent retail oracle: do the four OSViMode slot +8 words
+   (`0x00128D58/DA8/DF8/E48`) ever become 1024 while title `1024 @
+   0x00790400` is live? Whole-RDRAM write control plus `--post-value-watch`
+   on those words, phase-gated to title 1024 and pre-title 640. A 1024 store
+   at title selects a port-missing rewrite; title 1024 with no 1024 slot
+   store selects a different publisher than this table. Do not change audio
    behavior.
 2. Validate Session 3270's expanded free-list guard class on the configured
    Windows/MIPS host (`PatchesLib`). Do not repeat the local missing-target
@@ -465,6 +476,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3278_osvimode_table_census.md`,
 `scratch/agent/s3277_swapbuffer_delay_slot.md`,
 `scratch/agent/s3276_m5_target_vi_publication_audit.md`,
 `scratch/agent/s3275_m5_route_writer_parity.md`,
