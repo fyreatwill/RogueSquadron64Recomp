@@ -127186,3 +127186,22 @@ store is already the nonzero C88 default, so no port, audio, or mitigation
 change was made. The exact target writer remains unresolved. Evidence:
 `scratch/agent/s3253_retail_target_store.md` and
 `scratch/agent/s3253_retail_target_store/oracle.log`.
+
+## Session 3254 (2026-08-29) — completed the heap dequeue/link guard class
+
+Performed the planned M3 static audit of `func_80007D74` and found unchecked
+dereferences in the allocator-returned fresh chain, its splice predecessor,
+the published free-list successor, and the active-queue metadata/tail path.
+`patches/heap_guards.c` now validates every pointer in that idiom before
+dereference, clears an invalid successor, and returns before queue writes when
+queue metadata is invalid. The valid-link path remains equivalent in intent.
+ORIGIN: `func_80007D74` reads guest-owned allocator and active-queue pointers;
+their values are not independently proven legitimate, so this is a guard and
+not an explanation of the underlying defect.
+
+The exact verification command `cmake --build build --config Debug --target
+PatchesLib` exited 2 immediately with `No rule to make target PatchesLib`.
+This checkout has no configured PatchesLib target, MIPS GCC/LD, or generated
+`RecompiledPatches/patches.c`, so runtime validation did not run. The change
+advances the build artifact while leaving guard causation unresolved; host
+validation remains required.

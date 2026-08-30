@@ -45,18 +45,25 @@ RECOMP_PATCH Block* func_80007D74(void) {
     if (head == NULL) {
         Block* fresh = func_8002221C();
         if (fresh != NULL) {
+            if (!kseg0_ok(fresh)) {
+                return NULL;
+            }
             // Walk fresh's chain to find its tail
             Block* tail = fresh;
-            if (tail->next != NULL) {
-                while (tail->next != NULL) {
-                    tail = tail->next;
+            while (tail->next != NULL) {
+                if (!kseg0_ok(tail->next)) {
+                    return NULL;
                 }
+                tail = tail->next;
             }
             // Splice old head onto the end of fresh's chain
             Block* old_head = heap_free_head;
             if (old_head == NULL) {
                 tail->next = NULL;
             } else {
+                if (!kseg0_ok(old_head)) {
+                    return NULL;
+                }
                 tail->next = old_head;
                 old_head->prev = tail;
             }
@@ -77,8 +84,12 @@ RECOMP_PATCH Block* func_80007D74(void) {
         new_head = head->next;
     }
     heap_free_head = new_head;
-    if (new_head != NULL) {
+    if (kseg0_ok(new_head)) {
         new_head->prev = NULL;
+    } else {
+        // Keep an invalid published successor from surviving into the next
+        // allocation attempt.
+        heap_free_head = NULL;
     }
 
     // The block we'll return is the one we just popped. In the original
@@ -93,21 +104,30 @@ RECOMP_PATCH Block* func_80007D74(void) {
 
     // Insert popped into the active queue only after validating the value
     // published by the free-list head.
+    if (!kseg0_ok(heap_other_listhead) || !kseg0_ok(heap_tail_loc)) {
+        return NULL;
+    }
+    Block* tail = *heap_tail_loc;
+    if (!kseg0_ok(tail)) {
+        return NULL;
+    }
+
     if (*heap_other_listhead != NULL) {
         // Queue non-empty — append after current node.
-        Block* p = *heap_tail_loc;       // tail-pointer slot
-        Block* q = p->next;               // current node at tail
+        if (!kseg0_ok(tail->next)) {
+            return NULL;
+        }
+        Block* q = tail->next;            // current node at tail
         q->next = popped;                 // q now points to popped
-        popped->prev = p->next;           // re-read of p->next; unchanged by
+        popped->prev = tail->next;        // re-read of p->next; unchanged by
                                           // the q->next write above (different
                                           // address). Equals q.
     } else {
         *heap_other_listhead = popped;
     }
 
-    Block* p2 = *heap_tail_loc;
     popped->next = NULL;
-    p2->next = popped;
+    tail->next = popped;
     heap_bump = (uint8_t*)popped + 0x100;
 
     return (Block*)((uint8_t*)popped + 8);

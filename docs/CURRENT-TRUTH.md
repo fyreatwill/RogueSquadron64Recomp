@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3253 (2026-08-29).
+Current maintenance marker: Session 3254 (2026-08-29).
+
+Session 3254 completed the M3 `func_80007D74` free-list dequeue/active-queue
+pointer audit and landed a guard-class change in `patches/heap_guards.c`.
+Every dereference of the allocator-returned chain, published successor, queue
+metadata slot, tail node, and tail successor now has a KSEG0 check; invalid
+metadata returns before queue writes, and an invalid successor is cleared from
+the free-list head. The valid path remains equivalent in intent. ORIGIN:
+`func_80007D74` consumes guest-owned allocator and queue pointers; their
+legitimacy was not independently proven, so this is a safety guard rather than
+an explanation of the hangar defect. The configured `PatchesLib` build still
+fails before compilation with `No rule to make target PatchesLib` because this
+checkout lacks the configured MIPS/generated-patch prerequisites. Evidence is
+single-source static audit plus the exact build failure; runtime guard
+validation remains pending on the configured Windows/MIPS host.
 
 Session 3253 ran the independent retail oracle with a whole-RDRAM positive
 control and target 1024 gates. `0x8008EC88` executed once only at the
@@ -137,12 +151,21 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. The existing free-list guard validation remains an external dependency:
-   validate it on a host with the configured
-   MIPS GCC/LD and Debug N64Recomp, then run the bounded M5 Step 3 gate. The
-   port target-row comparison is currently `H-PortRowMissing`: the existing
+1. Validate Session 3254's complete free-list guard class on the configured
+   Windows/MIPS host, then run the bounded M5 Step 3 gate only if the build
+   produces `RecompiledPatches/patches.c`. The exact local build remains
+   unavailable and must not be repeated until that host or generated artifact
+   is supplied. The guard change is not evidence that the free-list values are
+   corrupt; its ORIGIN is the guest allocator/queue publication contract.
+   The existing M5 target-row comparison remains `H-PortRowMissing`: the
    image/silent pair has a valid VI control but no target row. Require the
    target framebuffer physical address, VI origin, caller/order, and
+   image-versus-silent distinction before any M5 behavior change.
+2. Once the external guard validation is available, resume the target-phase
+   port/retail boundary work with a like-for-like target framebuffer row.
+   The current comparison is `H-PortRowMissing`: the existing image/silent
+   pair has a valid VI control but no target row. Require the target
+   framebuffer physical address, VI origin, caller/order, and
    image-versus-silent distinction before any M5 behavior change. Only a
    like-for-like mismatch or a newly proven legitimate writer/consumer edge
    can authorize Step 3.
