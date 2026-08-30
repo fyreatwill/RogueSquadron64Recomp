@@ -128712,3 +128712,43 @@ No M5 Step 3. No audio/output change. Soak tail `s3307_cine_loop_600s`
 was already folded in Session 3308; no newer soak line.
 
 Evidence: `scratch/agent/s3310_retail_b0934_writer.md`.
+
+## Session 3311 (2026-08-30) — port jal cinematicInitializer skipped by 0x800A6274 flag-byte
+
+HYPOTHESIS-ID: m5-osvimode-postviewer-continuation
+
+Port census of `cinematicLoopBody` `jal cinematicInitializer` at
+`0x800A62B4` and skip predicates `0x800A626C` / `0x800A6274` /
+`0x800A6288`. Live apply `tools/apply_s3311_cine_init_jal.py` into
+`funcs_27.c`; same transform imported by `N64Recomp/fixup_game_funcs.py`.
+Diagnostic only: no guest store/branch change, no M5 Step 3. s3306
+and s3308 tables kept.
+
+One 122 s watchdog launch from `build/` (no VI-320 crash, no retry).
+Driver: `scratch/agent/s3311_cine_init_jal/run.sh`. No `--press`.
+
+Same-run controls: 4/4 `[s3311-cine-init-jal-control] mark`, 6/6
+stage-adv, 7/7 cine-loop, 24/24 s3305, completion-wins 87,
+request-reset 87, SP-complete 64, VI `640 @ 0x0066A500` at 4.8 s
+`#209`, viewer return, cinematic entry `$a0=0x13`, loop-head,
+exit-gate. Zero `[CRASH]` / `[ABORT]`. No title 1024.
+
+Table: time-pred `0x800A626C` n=100 printed all `$v1=1` `taken=0`
+(count 0→`0x69`, limit=`0x4A6`=1190). Flag-byte `0x800A6274` n=139
+all `$v0=0` `$a0=0` `taken=1`. Silent: already-active `0x800A6288`,
+init-jal `0x800A62B4`. Same-run `[phase] cuts44=1200` is limit+10.
+s3308 ptr-check still `$v1=0` taken=1 n=139. s3306 exit-gate
+`v0_nz=0` n=100. Last VI `#768` `640 @ 0x00696100`. Count at
+`0xB28($s3)` ended `0x94` (148).
+
+This selects `H-FlagByteSkip` and refutes `H-JalUnreached`,
+`H-TimePredSkip` (626C `taken=1` with 6274/62B4 silent),
+`H-JalFires`, and `H-CoverageInvalid`. Combined with retail
+Session 3310, the port-only stop of that jal is 6274 taking on
+`$a0=0` while count 148 < 1190. On MIPS, 626C taken (count >=
+1190) bypasses the flag check into 627C/62B4; that path did not
+run. Next discriminator: independent retail 626C/6274/6288/62B4
+with `$v0`/`$v1`/`$a0` to split time-pred bypass vs flag-byte
+set as the hardware path into the jal.
+
+Evidence: `scratch/agent/s3311_cine_init_jal.md`.

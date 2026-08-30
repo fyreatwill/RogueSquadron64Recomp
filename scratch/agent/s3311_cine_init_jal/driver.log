@@ -1,0 +1,32 @@
+started=2026-08-30T16:03:24Z
+pid=93587 attempt=1
+terminal=watchdog elapsed=122s ended=2026-08-30T16:05:27Z
+mark_ids=4
+s3308_mark_ids=6
+s3306_mark_ids=7
+s3305_mark_ids=24
+arm_rows=87
+reset_rows=87
+sp_complete=64
+phase_640=1
+viewer_entry=2
+viewer_return=2
+cine_entry=1
+loop_head=10
+title_1024=0
+crash=0 abort=0
+edge_0=10
+edge_0_first=[s3311-cine-init-jal] phase=3 width=640 origin=0x696100 edge_id=0 site=time-pred pc=0x800A626C v0=0x000004A6 v1=0x00000001 a0=0x00000000 taken=0 n=1 count=0x00000000 limit=0x000004A6 ra=0x00000000
+edge_0_last=[s3311-cine-init-jal] phase=3 width=640 origin=0x696100 edge_id=0 site=time-pred pc=0x800A626C v0=0x000004A6 v1=0x00000001 a0=0x00000000 taken=0 n=100 count=0x00000069 limit=0x000004A6 ra=0x00000000
+edge_1=139
+edge_1_first=[s3311-cine-init-jal] phase=3 width=640 origin=0x696100 edge_id=1 site=flag-byte pc=0x800A6274 v0=0x00000000 v1=0x00000001 a0=0x00000000 taken=1 n=1 count=0x00000000 limit=0x00000000 ra=0x00000000
+edge_1_last=[s3311-cine-init-jal] phase=3 width=640 origin=0x62BD00 edge_id=1 site=flag-byte pc=0x800A6274 v0=0x00000000 v1=0x00000001 a0=0x00000000 taken=1 n=139 count=0x00000094 limit=0x00000000 ra=0x00000000
+edge_2=0
+edge_2_first=
+edge_2_last=
+edge_3=0
+edge_3_first=
+edge_3_last=
+time_taken=0 time_not=10 flag_taken=139 flag_not=0 active_taken=0 active_not=0 jal_n=0
+verdict=H-FlagByteSkip
+analyze_rc=3
