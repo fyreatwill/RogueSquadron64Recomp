@@ -127751,3 +127751,34 @@ first 320-phase activation and never reaches `0x8003E13C`.
 No audio or M5 Step 3 change. No new soak-queue verdicts. Evidence:
 `scratch/agent/s3282_menu_entry_vs_jal.md`,
 `scratch/agent/s3282_menu_entry_vs_jal.log`.
+
+## Session 3283 (2026-08-29) — first menuOverlayInit returns; cinematic occupies 6.9–17 s
+
+Independent retail Rice oracle, HYPOTHESIS-ID
+`m5-osvimode-menu-return-vs-cinematic`. 25 s, eleven-Start,
+`--watch-write 0x0:0x800000` (cap 10000), `--watch-pc
+0x8003E094,0x8003E10C,0x800A5D80,0x8003E13C`, `--vi-trace --vi-poll`.
+No `--pc-phase-log-width`.
+
+Positive controls: 10000-write watch; `[gpr-ctl]` fired; `0x8003E13C`
+executed once at 17.0 s (lifetime execution watch hits 4, one per
+PC); title `1024 @ 0x00790400` at 17.3 s then `0x00790800`; 1448 VI;
+25.1 s wall / 24.1 s emulated; `rc=0`.
+
+First `menuOverlayInit` returns at 6.9 s: continuation `0x8003E094`
+`prev_pc=0x800C5D94` (`jr ra` of size-`0x4FC` `menuOverlayInit`)
+during VI 640 @ `0x0066a500`. The cinematic jal `0x8003E10C` and
+entry `0x800A5D80` (`prev_pc=0x8003E10C`, `$a0=0x13` `$a1=2`) fire
+in the same 0.1 s bucket. `0x8003E13C` at 17.0 s during
+`640 @ 0x0062c200`, `$a1=2`. Combined with s3282's 2.0 s
+`0x8003E08C` entry (`$a1=9`, VI 320): first activation is resident
+2.0–6.9 s and spans 320→640; cinematic is one blocking call until
+17 s. `H-ReturnCoverageInvalid`, `H-FirstStaysResident`, and
+`H-GapIsOtherMainWork` refuted. `H-FirstReturnsThenCinematic`
+selected (return is 6.9 s, not the ~2 s entry time). Combined with
+s3278: the port ran the first 320-phase activation and never
+reaches `0x8003E13C`.
+
+No audio or M5 Step 3 change. No new soak-queue verdicts. Evidence:
+`scratch/agent/s3283_menu_return_vs_cinematic.md`,
+`scratch/agent/s3283_menu_return_vs_cinematic.log`.

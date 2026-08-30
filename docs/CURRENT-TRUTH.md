@@ -4,22 +4,33 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3282 (2026-08-29).
+Current maintenance marker: Session 3283 (2026-08-29).
+
+Session 3283 asked retail what occupies the gap between the 2.0 s
+first `menuOverlayInit` entry and the 17 s `0x8003E13C` jal. Rice,
+25 s, whole-RDRAM 10000-write control, title `1024 @ 0x00790400`,
+exec watches armed at first VI. Continuation `0x8003E094` at 6.9 s
+(`prev_pc=0x800C5D94`, `menuOverlayInit` `jr ra`); cinematic jal
+`0x8003E10C` and entry `0x800A5D80` (`prev_pc=0x8003E10C`) in the
+same 0.1 s bucket at `640 @ 0x0066a500`; `0x8003E13C` at 17.0 s
+during `640 @ 0x0062c200`, 0.3 s before 1024 VI. This selects
+`H-FirstReturnsThenCinematic` (return is 6.9 s, not ~2 s) and
+refutes `H-FirstStaysResident`, `H-GapIsOtherMainWork`, and
+`H-ReturnCoverageInvalid`. Combined with Session 3282: first
+`$a1=9` activation is resident 2.0–6.9 s and spans 320→640; cinematic
+is one blocking call until 17 s. Combined with Session 3278: the
+port's 320-phase `menu-jal` is that first activation and never
+reaches `0x8003E13C`. Evidence:
+`scratch/agent/s3283_menu_return_vs_cinematic.md`.
 
 Session 3282 asked retail whether `menuOverlayInit` (`0x800C58A0`)
 enters early and waits until 17 s before its `runVideoFrameTick` jal
-(`0x800C5A18`), or first enters at 17 s. Rice, 25 s, whole-RDRAM
-10000-write control, title `1024 @ 0x00790400`, exec watches armed at
-first VI. Two entries, each with an immediate jal: 2.0 s
-`prev_pc=0x8003E08C` (`mainGameLoop`, `$a1=9`) during VI 320, then
-17.0 s `prev_pc=0x8003E13C` (`mainGameLoop`, `$a1=2`) during VI 640,
-0.3 s before 1024 VI. This selects `H-MenuReentry` and refutes
-`H-MenuWaitBeforeTick`, `H-LateMenuEntry`, and
-`H-EntryCoverageInvalid`. The 17 s jal is the post-cinematic
+(`0x800C5A18`), or first enters at 17 s. Two entries, each with an
+immediate jal: 2.0 s `prev_pc=0x8003E08C` (`$a1=9`) during VI 320,
+then 17.0 s `prev_pc=0x8003E13C` (`$a1=2`) during VI 640. This
+selects `H-MenuReentry`. The 17 s jal is the post-cinematic
 `mainGameLoop` site, not a wait inside the first activation, and not
-the unused `(s3, 2, 0xB)` site at `0x8003E0CC`. Combined with
-Session 3278: the port's 320-phase `menu-jal` is the first retail
-activation; it never reaches `0x8003E13C`. Evidence:
+the unused `(s3, 2, 0xB)` site at `0x8003E0CC`. Evidence:
 `scratch/agent/s3282_menu_entry_vs_jal.md`.
 
 Session 3281 asked retail who calls `runVideoFrameTick` (`0x80001354`)
@@ -406,24 +417,23 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3282
-selected `H-MenuReentry`: the 1024-edge tick is a second
-`mainGameLoop`→`menuOverlayInit` (`0x8003E13C`, `$a1=2`) after a 2.0 s
-first activation (`0x8003E08C`, `$a1=9`). Session 3276's
-`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio change is
-authorized until a like-for-like target row exists.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3283
+selected `H-FirstReturnsThenCinematic`: first `$a1=9` returns at 6.9 s,
+`cinematicLoopBody` occupies 6.9–17.0 s, then `0x8003E13C` (`$a1=2`).
+Session 3276's `H-PortTargetPublicationAbsent` still holds. No M5 Step 3
+audio change is authorized until a like-for-like target row exists.
 
-1. Independent retail oracle: first `menuOverlayInit` return
-   (`mainGameLoop` `0x8003E094`) vs `cinematicLoopBody` jal
-   (`0x8003E10C` / entry `0x800A5D80`) vs second menu jal
-   `0x8003E13C` in one Rice run. Arm exec watches at first VI (no
-   `--pc-phase-log-width`). Whole-RDRAM 10000-write control, title
-   `1024 @ 0x00790400`, and the 17 s `0x8003E13C` exec as the watch
-   control. Return at ~2 s then cinematic then 17 s jal selects a
-   short first activation with cinematic occupying the gap. Return at
-   ~17 s selects a long first inner loop. Early return and no
-   cinematic selects other `mainGameLoop` work. Do not change audio
-   behavior. Require Rice; dummy video stays at 320.
+1. Independent retail oracle: does first `menuOverlayInit` (`$a1=9`,
+   2.0–6.9 s) enter `runMenuModelViewerScreen` (`0x800C28F0`)? Exec-watch
+   `0x800C28F0`, `0x8003E094`, `0x800A5D80`, `0x8003E13C` in one Rice
+   run, armed at first VI (no `--pc-phase-log-width`). Whole-RDRAM
+   10000-write control, title `1024 @ 0x00790400`, and the 6.9 s
+   `0x8003E094` exec as the watch control. Viewer during 2.0–6.9 s then
+   return selects a screen retail also uses (port stuck inside it).
+   Silent viewer before return selects a port mis-dispatch. Viewer only
+   after 17 s `0x8003E13C` selects too-early port entry. Classify
+   `0x800C28F0` by `prev_pc` inside `menuOverlayInit`. Do not change
+   audio behavior. Require Rice; dummy video stays at 320.
 2. Validate Session 3270's expanded free-list guard class on the configured
    Windows/MIPS host (`PatchesLib`). Do not repeat the local missing-target
    build. The guard is not evidence that the VI-640 route or audio is corrupt.
@@ -515,6 +525,13 @@ before its jal. Session 3282 measured two immediate entry→jal pairs
 at 2.0 s and 17.0 s; the wait-inside-one-call reading is refuted.
 The 17 s site is `mainGameLoop` `0x8003E13C`, not `0x8003E0CC`.
 
+Session 3282 left the 15 s gap occupant open. Session 3283 measured
+return at 6.9 s then `cinematicLoopBody` (`prev_pc=0x8003E10C`) until
+the 17 s jal. A long first inner loop, and a gap of other
+`mainGameLoop` work without cinematic, are refuted. Boot attract is
+menu `$a1=9`, cinematic, then menu `$a1=2` — not the architecture
+sketch of menu `$a1=9`, menu `(s3, 2, 0xB)`, then cinematic.
+
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
 name. Stable companion duplicate-prefix and preamble mappings belong in
@@ -523,6 +540,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3283_menu_return_vs_cinematic.md`,
 `scratch/agent/s3282_menu_entry_vs_jal.md`,
 `scratch/agent/s3281_tick_parent.md`,
 `scratch/agent/s3280_initvideo_caller.md`,
