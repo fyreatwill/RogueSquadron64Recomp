@@ -4,21 +4,29 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3276 (2026-08-29).
+Current maintenance marker: Session 3277 (2026-08-29).
+
+Session 3277 landed the `swapBufferWithViMode` jal delay-slot `$a0`
+correction. One 60s `ROGUESQ_LOG_ALL=1` run passed the same-run controls
+(`[osViSetMode]` four rows; `[m5-port-vi-control]` at width 640). Call 2 now
+requests copied-mode dest `0x80128C90` width 320; the width-2 `[osViSetMode]`
+and `[phase]` rows are gone. Phase still stops at `640 @ 0x0066A500` with no
+1024 request. This selects `H-DelaySlotNotCausal` and refutes `H-FixupMissed`.
+ORIGIN: jal `0x8001BB54`; hardware passes `0x80128C90` (legitimate copied
+OSViMode), the skip-goto left `0x80128CD4` (width 2, not legitimate).
+`H-PortTargetPublicationAbsent` still holds. Evidence:
+`scratch/agent/s3277_swapbuffer_delay_slot.md` and
+`scratch/agent/s3277_swapbuffer_delay_slot.log`.
 
 Session 3276 completed the port target-VI publication/commit audit. CMake's
 `RECOMP_FUNCS_DIR` (`../N64Recomp/RecompiledFuncs`) plus the host VI wrappers
 enumerate every `osViSetMode` caller, so `H-PortPublicationSourceUnavailable`
-is refuted. The live post-phase-4 publisher is `applyPendingViChanges`
-(`viRetraceHandlerThread` at `0x80019914`); in the s3261 capture it requested
-width 640 at slot `0x80128DF0`. No 1024 request was published.
-`H-PortTargetPublicationAbsent` is selected. `selectAndApplyViMode` is
-teardown-only. Session 3274's target-span PC `0x800078EC` is `rs_memset`, not
-a VI publisher. A generated delay-slot orders `swapBufferWithViMode`'s
-`addiu $a0, $a0, -0x44` after `osViSetMode_recomp`, producing the transient
-width-2 phase; ORIGIN is that jal at `0x8001BB54`, and the `$a0` is not a
-legitimate OSViMode pointer. That defect is not claimed as the 1024-gap
-cause. Evidence: `scratch/agent/s3276_m5_target_vi_publication_audit.md`.
+is refuted. The live post-640 publisher is `applyPendingViChanges`
+(`viRetraceHandlerThread` at `0x80019914`); it requested width 640 at slot
+`0x80128DF0`. No 1024 request was published. `H-PortTargetPublicationAbsent`
+is selected. `selectAndApplyViMode` is teardown-only. Session 3274's
+target-span PC `0x800078EC` is `rs_memset`, not a VI publisher. Evidence:
+`scratch/agent/s3276_m5_target_vi_publication_audit.md`.
 
 Session 3275 completed the M5 port route-writer parity capture. The first
 recipe run was invalid because its parser counted downstream controls only
@@ -371,42 +379,34 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3276
-selected `H-PortTargetPublicationAbsent`: after phase 4 the only live
-publisher is `applyPendingViChanges` requesting 640 at `0x80128DF0`. Session
-3274's retail target-span PC `0x800078EC` is `rs_memset`, not a VI publisher.
-No M5 Step 3 audio change is authorized until a like-for-like target row
-exists.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3277
+selected `H-DelaySlotNotCausal`; Session 3276's `H-PortTargetPublicationAbsent`
+still holds after the width-2 correction. No M5 Step 3 audio change is
+authorized until a like-for-like target row exists.
 
-1. Land the `swapBufferWithViMode` jal delay-slot `$a0` correction in
-   `../N64Recomp/fixup_game_funcs.py` (sibling of this repo,
-   regeneration-preserved). ORIGIN: jal at `0x8001BB54`; hardware would
-   pass `0x80128C90`, the recompiled order passes `0x80128CD4` (width 2).
-   Same-run control: the width-2 `[osViSetMode]` / `[phase]` rows disappear
-   and the copied mode width is requested. Do not treat a 1024 appearance as
-   the predicted outcome; this is not claimed as the title-mode writer.
-2. After that control, census the four OSViMode slots at
-   `0x80128D50+{0,0x50,0xA0,0xF0}` and the phase-4 `$a0` of
-   `requestViFeatureChange` / `beginSceneRenderFrame`. A 1024-width template
-   with no applyPending call selects a pending-bit gap; no 1024 template
-   selects a missing table rewrite. Do not change audio behavior.
-3. Validate Session 3270's expanded free-list guard class on the configured
+1. Census the four OSViMode slots at `0x80128D50+{0,0x50,0xA0,0xF0}` and the
+   post-640 `$a0` of `requestViFeatureChange` / `beginSceneRenderFrame`. Dump
+   all four slot widths from `osViSetMode_recomp` on the existing four-call
+   run. A 1024-width template with no applyPending call selects a pending-bit
+   gap; no 1024 template selects a missing table rewrite. Do not change audio
+   behavior.
+2. Validate Session 3270's expanded free-list guard class on the configured
    Windows/MIPS host (`PatchesLib`). Do not repeat the local missing-target
    build. The guard is not evidence that the VI-640 route or audio is corrupt.
-4. After the pre-VI-640 scheduler crash is repaired or explained, capture
+3. After the pre-VI-640 scheduler crash is repaired or explained, capture
    consumed-message identity at `0x80019CD0` with `ROGUESQ_RECV_TRACE`
    positive controls. Session 3269 selected `H-RecvWatchUnavailable`. Require
    caller, message pointer, type byte, and `89F/28D44` in the same phase.
-5. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row names
+4. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row names
    one missing image task/output contract edge. Keep the change to exactly one
    proven writer/consumer relation.
-6. Closed static M3 classes, retain existing traps/guards as safety only:
+5. Closed static M3 classes, retain existing traps/guards as safety only:
    A8 key-on divisor, A12 `0x8014974C`, A9 voice-array base, A10 3D voice-list
    head, 43-site `SONGTEMPO_TABLE_GUARD`. `-0x68A8`/`-0x68B0` is
    `H-NotPatchable`. Status-03 is a named `stopVoiceSlotSynced` /
    `serviceVoicePoolFrame` contract.
-7. Generated-symbol sweep remains closed (Sessions 3210/3212/3217).
-8. M4 restage destination is hangar `gspTask` (`0x800377C8`) with physical
+6. Generated-symbol sweep remains closed (Sessions 3210/3212/3217).
+7. M4 restage destination is hangar `gspTask` (`0x800377C8`) with physical
    `output_buff` `0x0075C000` / `0x00781800`. Keep the external retail-entry
    boundary, hangar `0x8000` Y / accumulator arithmetic, and M5 SP-yield/MORT
    publication threads parked pending a new target-phase discriminator. The
@@ -451,6 +451,12 @@ Session 3274's target-span writer `0x800078EC` was treated as a candidate
 VI/output publisher. It is `rs_memset` (`0x800078E0`). The span is being
 filled; that PC does not publish a VI mode.
 
+The `swapBufferWithViMode` delay-slot width-2 request looked like a VI-mode
+publisher bug that might block title 1024. Session 3277 restored hardware
+`$a0` order; the copied mode is width 320 and the 1024 request is still
+absent. Believable because the illegitimate width-2 pointer was a real
+generated-code defect on the only swap-time `osViSetMode` path.
+
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
 name. Stable companion duplicate-prefix and preamble mappings belong in
@@ -459,6 +465,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3277_swapbuffer_delay_slot.md`,
 `scratch/agent/s3276_m5_target_vi_publication_audit.md`,
 `scratch/agent/s3275_m5_route_writer_parity.md`,
 `scratch/agent/s3272_m5_step1_pair.md`,

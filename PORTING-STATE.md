@@ -127573,3 +127573,32 @@ audio/output behavior changed.
 
 No new soak-queue verdicts since 2026-08-27. Evidence:
 `scratch/agent/s3276_m5_target_vi_publication_audit.md`.
+
+## Session 3277 (2026-08-29) — corrected swapBufferWithViMode jal delay-slot $a0
+
+Landed the regeneration-preserved delay-slot `$a0` correction for
+`swapBufferWithViMode` jal `0x8001BB54`. Unique PATCH in
+`../N64Recomp/fixup_game_funcs.py`; applied to the already-sentinel'd
+`funcs_5.c` via `tools/apply_s3277_swapbuffer_delay_slot.py`. One Debug
+rebuild and one 60s `ROGUESQ_LOG_ALL=1` run from `build/`, killed with
+SIGKILL.
+
+ORIGIN: jal at `0x8001BB54`. Hardware executes `addiu $a0, $a0, -0x44` in
+the delay slot and passes copied-mode dest `0x80128C90`. N64Recomp called
+`osViSetMode_recomp` first and skipped the slot via goto-after, leaving
+`$a0=0x80128CD4`. That pointer is not a legitimate OSViMode (width 2).
+The restored `$a0` is the legitimate copied mode.
+
+Same-run controls: `[osViSetMode]` four rows; `[m5-port-vi-control]` at
+width 640 origin `0x66A500`; `[vi-gate] site=0x8001BB54` still sampled
+pre-slot `0x80128CD4` width 2 while `[osViSetMode #2]` sampled
+`0x80128C90` width 320.
+
+Call 2 width-2 is gone. `[phase]` is now `0 → 320 → 640/0x0066A500` (s3261
+had a width-2 step). No 1024 request. `H-FixupMissed` is refuted.
+`H-DelaySlotNotCausal` is selected. `H-PortTargetPublicationAbsent` still
+holds. No audio or M5 Step 3 change.
+
+No new soak-queue verdicts. Evidence:
+`scratch/agent/s3277_swapbuffer_delay_slot.md` and
+`scratch/agent/s3277_swapbuffer_delay_slot.log`.
