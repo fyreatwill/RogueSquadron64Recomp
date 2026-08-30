@@ -1,43 +1,39 @@
-# NEXT work unit — obtain the configured M5 guard validation host
+# NEXT work unit — attribute the retail pre-title route-state writer
 
-HYPOTHESIS-ID: m5-step3-guard-validation
+HYPOTHESIS-ID: retail-pretitle-route-state-writer
 
-The local attempt in Session 3250 selected `H-GuardHostMissing`: the exact
-`PatchesLib` target is absent because the configured MIPS/generated patch
-prerequisites are unavailable. The next single work unit is to run that exact
-build on the configured Windows/MIPS host (or obtain equivalent Rogue
-Squadron generated patch artifacts), then run the existing bounded M5 Step 3
-validation. Do not substitute the sibling Starfox artifact, Clang, or the
-host-only N64Recomp binary. Do not change audio behavior unless Step 3
-identifies one legitimate writer/consumer relation.
+The local guard-build attempt in Session 3251 was the third stalled attempt on
+the same unavailable-host hypothesis. Do not repeat it locally. The next
+single work unit is the independent-retail route-state attribution at the
+pre-title 640-to-1024 boundary, centered on `reapplyDisplayMode` entry and
+call (`0x8008EB5C`, `0x8008EBC0`) and its return branch (`0x8008EBC8`). This is
+ground truth first; do not add port instrumentation or change audio behavior.
 
 ## Competing hypotheses
 
-- `H-GuardValidated`: the configured patch build succeeds and the guard can be
-  validated in the existing Step 3 recipe.
-- `H-GuardHostMissing`: the configured/generated prerequisite is unavailable,
-  so no guard or M5 behavior conclusion is possible.
-- `H-Step3EdgeSelected`: the build succeeds and target-phase controls identify
-  one legitimate missing edge for a later bounded behavior change.
+- `H-RetailWriterLiveAndAligned`: the watched retail writer/call/return edge
+  fires at the target transition with ordered values comparable to the port's
+  existing route/audio-return row.
+- `H-RetailWriterAbsent`: the whole-RDRAM positive control and title gate pass,
+  but this candidate edge does not execute; the candidate is ruled out.
+- `H-RetailWriterMisaligned`: the edge fires, but its phase, arguments, or
+  return value cannot explain the port boundary; redesign the join rather than
+  adding a port counter.
 
 ## Discriminator
 
-The build result is the first discriminator: success permits the existing
-Step 3 recipe; missing target/toolchain/generated output selects
-`H-GuardHostMissing`. If Step 3 runs, require whole-RDRAM/VI controls plus the
-target framebuffer physical address, VI origin, caller/order, image-vs-silent
-distinction, task/DMA/SP completion, service, slot, and PCM joins. Only a
-like-for-like mismatch or a newly proven legitimate writer/consumer edge
-selects `H-Step3EdgeSelected`; otherwise leave behavior unchanged.
+One oracle run with a whole-RDRAM positive control and title 1024 gate must
+capture the writer/call/return PCs, live arguments, return branch, VI origin,
+framebuffer context, and ordering at the 640-to-1024 transition.
+`H-RetailWriterLiveAndAligned` requires the oracle watch sequence and a
+comparison with the existing port row. A missing or misaligned candidate does
+not authorize port instrumentation or an audio change.
 
 ## Exact commands
 
-1. On the configured host: `cmake --build build --config Debug --target PatchesLib`.
-2. If it succeeds, run the existing bounded Step 3 recipe with both
-   `ROGUESQ_AUDIO_UCODE=0` and `ROGUESQ_AUDIO_UCODE=1` in one build/run plan,
-   phase-gated by `PROBE_PHASE_WIDTH` and `PROBE_KEYS_FROM_PHASE=1`.
-3. Record the build and validation result in `scratch/agent/`, then update the
-   ledger. No mitigation is authorized from a failed prerequisite.
-
-The completed status-03 audit is evidence only; it does not waive this M5
-prerequisite.
+1. Read `tools/oracle/README.md` and use its existing route-watch recipe; do
+   not build a new instrument before the oracle control is armed.
+2. Run one retail capture with whole-RDRAM control, the three candidate PCs,
+   and the title 1024 gate. Capture bounded output and classify the hypotheses.
+3. Compare only against the existing port row; if no like-for-like relation
+   exists, record the boundary as unevaluable and leave source unchanged.

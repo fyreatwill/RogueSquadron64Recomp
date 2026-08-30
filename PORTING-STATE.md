@@ -127143,3 +127143,14 @@ those prerequisites are available. The M5 Step 3 run was therefore not
 possible. This selects `H-GuardHostMissing` for the local environment and
 rules out neither the guard nor any audio behavior; validation still requires
 the configured Windows/MIPS host.
+## Session 3251 (2026-08-29) — confirmed third unavailable guard-build attempt
+
+Ran the exact configured command `cmake --build build --config Debug --target
+PatchesLib`. It exited 2 immediately with `No rule to make target PatchesLib`.
+The target inventory contains only the main executable; `mips64-elf-gcc` and
+`mips64-elf-ld` are absent, and `RecompiledPatches/patches.c` is absent. The
+M5 Step 3 validation did not run. This selects `H-GuardHostMissing` for the
+local environment and rules out neither the guard nor audio behavior. It is
+the third stalled attempt on this hypothesis, so the next unit pivots to the
+independent retail pre-title route-state writer boundary; no source behavior
+was changed.

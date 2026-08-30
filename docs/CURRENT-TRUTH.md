@@ -4,7 +4,14 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3250 (2026-08-29).
+Current maintenance marker: Session 3251 (2026-08-29).
+
+Session 3251 reran the exact configured `PatchesLib` build and confirmed the
+same external block: the target inventory has no `PatchesLib`, neither MIPS
+tool is installed, and `RecompiledPatches/patches.c` is absent. This is the
+third stalled guard-host attempt in the current thread, so the next unit
+pivots to the existing retail pre-title route-state writer boundary. No M5
+Step 3 validation or audio/guard behavior change was performed.
 
 Session 3250 reran the exact configured `PatchesLib` build. It exited 2
 immediately with `No rule to make target PatchesLib`; the cache still points at
@@ -134,11 +141,13 @@ no patch or allocator mitigation is authorized. Evidence:
    `build/N64Recomp` binary for this validation.
    The one satisfying experiment remains the exact `PatchesLib` build plus
    the existing Step 3 recipe on a configured Windows/MIPS host.
-   Session 3250 reran the exact `PatchesLib` target and again found no target
-   in the configured Unix build, with no local MIPS/generated patch
+   Session 3250 and Session 3251 reran the exact `PatchesLib` target and found
+   no target in the configured Unix build, with no local MIPS/generated patch
    prerequisites. This is external-host evidence only; do not treat it as
    guard validation. The satisfying experiment remains the exact build plus
-   Step 3 recipe on a configured Windows/MIPS host.
+   Step 3 recipe on a configured Windows/MIPS host. Per the three-attempt
+   stall rule, do not repeat this local command until that host or its
+   generated artifacts are supplied.
    Session 3249 completed the status-03 static audit and found named,
    legitimate publication and service-reaping edges. This closes the current
    status-03 idiom selection without authorizing a wait or status change.
