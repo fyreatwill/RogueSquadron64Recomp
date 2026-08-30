@@ -128585,3 +128585,36 @@ This selects `H-RetailFiniteLoop` and refutes `H-RetailEarlyExit`,
 port Session 3305, the port-only stop is inside this finite loop or its
 6.5–10.4 s prologue, not a missing early-exit. No M5 Step 3
 audio/output behavior changed. No new soak verdicts.
+
+## Session 3307 (2026-08-30) — port cinematicLoopBody loops with exit-gate $v0=0
+
+HYPOTHESIS-ID `m5-osvimode-postviewer-continuation`. One regeneration-safe
+port table of the Session 3306 cinematic loop/exit edges
+(`tools/apply_s3306_cinematic_loop.py`, mirrored in
+`N64Recomp/fixup_game_funcs.py`). Diagnostic only; no guest
+store/branch change and no M5 Step 3.
+
+The first launch (`run1_crash.log`) died at 6 s with
+`spTaskSchedulerThread` SIGSEGV at VI 320 (`last-guest-pc=0x8000834c`,
+`si_addr=0x400128d47`) before any mark-all or cinematic row. That run
+is coverage-invalid. The same-binary 121 s retry (`run.log`) is the
+live scope. Driver: `scratch/agent/s3307_cinematic_loop/run.sh`.
+
+Retry controls: cine-loop marks 0–6, s3305 marks 0–23, completion-wins
+69, request-reset 69, SP-complete 64, VI `640 @ 0x0066A500` at 3.1 s
+`#104`, viewer entry/return, cinematic-call/entry `$a0=0x13`. Zero
+crash/abort.
+
+Early-exit `0x800A5DD8` `$v0=1` not taken (matches retail). Loop-head
+`0x800A6024` began at VI `#384` origin `0x696100` (`$v0=0x80140000`
+then 1). Exit-gate `0x800A6074` printed n=1,8,50,100,150 all `$v0=0`
+`taken=0` `v0_nz=0`. Backedge `0x800A64B4` matched through n=150 at
+VI `#640`. Silent: `0x800A64BC`, `0x800A65E4`, `0x800A6618`, s3305
+edges 20–22, title 1024. Last VI `#704` still `640 @ 0x0062BD00`.
+
+This selects `H-PortLoopNoExit` and refutes `H-PortPrologueStall`,
+`H-PortExitNoReturn`, and retry `H-CoverageInvalid`. Combined with
+retail Session 3306 (1002 gate `$v0=0` then `$v0=1` at 48.8 s), the
+port-only stop is `cinematicStageAdvancer` never returning 1 in this
+120 s window. A 600 s soak is queued to test a later gate take.
+Evidence: `scratch/agent/s3307_cinematic_loop.md`.
