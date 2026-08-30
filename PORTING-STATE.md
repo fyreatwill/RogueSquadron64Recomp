@@ -128515,3 +128515,39 @@ ORIGIN: `osSpTaskYield_recomp` legitimately writes a request, but it is not a
 legitimate yielded-task result because the host has no task interrupt/resume
 path. Resetting it at task start is lifecycle cleanup, not a corruption guard.
 No M5 Step 3 audio/output behavior changed. No new soak verdicts.
+
+## Session 3305 (2026-08-30) — post-viewer path enters cinematic but never returns
+
+HYPOTHESIS-ID `m5-osvimode-postviewer-continuation`. Added one
+regeneration-safe, phase-scoped 24-ID edge table spanning
+`menuOverlayInit`'s post-wait branch, both final callees, the function return,
+every `mainGameLoop` branch through `0x8003E10C`, cinematic entry/return, and
+the second menu call. The same run armed a synthetic mark for every table ID
+and the existing completion-wins, request-reset, SP-completion, VI-640,
+viewer-entry/return, and post-wait controls. Evidence:
+`scratch/agent/s3305_postviewer_continuation.md`; raw capture and parsed table
+are under `scratch/agent/s3305_postviewer_continuation/`.
+
+The first run was invalid before controls because fresh regeneration restored
+the s2948 diagnostic's raw `MEM_HU(ctx->r17, 0x22)` read. It reproduced the
+known `0x80019CD8` Bus error with `ctx->r17=2`. The fixup now KSEG-checks all
+four diagnostic-only reads; the rebuild and corrected run had no crash or
+abort. This changes no guest branch, store, or task behavior.
+
+The corrected run passed 24/24 mark IDs, 67 completion-wins rows, 67
+pre=1/post=0 resets, 64 SP completions, VI `640 @ 0x0066A500`, viewer return,
+and the post-wait branch. Actual edges were
+`1→2→3→4→5→6→7→8→9→10→13→14→15→16→17→18→19`: menu fell through, both
+callees and the menu returned, PAL returned zero, all three cinematic gates
+fell through with zero, overlay load returned, and `0x8003E10C` entered
+`cinematicLoopBody(0x13, ...)`. Edge 20 (`0x800A6618` return), caller return,
+second menu entry, and title 1024 remained absent while the live process
+continued through `update_screen #640` and later SP completions.
+
+This selects `H-CinematicEntryStalls` and refutes
+`H-MenuFallthroughStalls`, `H-MenuReturnsMainStalls`, and
+`H-CoverageInvalid`. The stall location is single-source port evidence;
+retail Session 3283 independently establishes that the same cinematic returns
+and reaches the second menu activation. The next unit asks the retail oracle
+which cinematic loop/exit edges are live before adding any port-side internal
+table. No M5 Step 3 audio/output behavior changed. No new soak verdicts.

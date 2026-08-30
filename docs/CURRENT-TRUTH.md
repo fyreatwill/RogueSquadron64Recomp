@@ -4,7 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3304 (2026-08-30).
+Current maintenance marker: Session 3305 (2026-08-30).
+
+Session 3305 censused the entire default post-viewer continuation in one
+phase-scoped table. All 24 synthetic mark IDs and the arm/reset/SP/VI/viewer
+controls passed. The live path reached every edge from `0x800C5D30` through
+both final menu callees, `menuOverlayInit` return, every main-loop gate,
+`0x8003E10C`, and `cinematicLoopBody` entry `0x800A5D80`. It never reached
+the cinematic return at `0x800A6618`, caller continuation, second menu entry,
+or title 1024, while `update_screen` and SP completions continued without a
+crash. This selects `H-CinematicEntryStalls` and refutes the menu-fallthrough,
+main-loop-stall, and invalid-coverage alternatives. The stall location is
+single-source port evidence; retail Session 3283 independently establishes
+that the same call returns and reaches the second menu activation. Fresh
+regeneration also exposed the known s2948 diagnostic raw-read crash; its four
+diagnostic-only source reads are now regeneration-safely KSEG-checked.
+Evidence: `scratch/agent/s3305_postviewer_continuation.md`.
 
 Session 3304 promoted completion-wins/not-yielded status to the default and
 added one request-reset helper to both weak and linked strong task-start
@@ -699,21 +714,22 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3304 lands
-the completion-aware SP-yield lifecycle: the viewer now returns and scheduling
-continues, but title width 1024 is still absent. The old port E70/E80F and
-third-submit path is retained only as rollback evidence. Retail Sessions
-3296/3298/3301 remain the independent lifecycle ground truth. Session 3276's
-`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio change is
-authorized until a like-for-like target row exists.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3304's
+completion-aware SP-yield lifecycle returns the viewer; Session 3305 now
+locates the next port-only stop inside `cinematicLoopBody`, after its
+`0x800A5D80` entry and before `0x800A6618` return. Retail Session 3283 proves
+that call returns. Session 3276's `H-PortTargetPublicationAbsent` still holds.
+No M5 Step 3 audio change is authorized until a like-for-like target row
+exists.
 
-1. Census the default port's complete post-viewer `menuOverlayInit`
-   continuation in one run: branch at `0x800C5D30`, fallthrough/loop target,
-   function return `0x800C5D94`, caller continuation `0x8003E094`, cinematic
-   jal `0x8003E10C`, and cinematic entry `0x800A5D80`. Require the existing
-   640/viewer-return/reset/SP controls. Retail Session 3283 independently
-   establishes `C5D94` return then cinematic entry; select the first missing
-   port edge rather than adding another join field.
+1. Ask the independent retail oracle for `cinematicLoopBody`'s complete
+   loop/exit path before adding another port instrument: entry `0x800A5D80`,
+   early exit `0x800A5DD8→0x800A65E4`, loop head `0x800A6024`, exit gate
+   `0x800A6074→0x800A64BC`, backedge `0x800A64B4→0x800A6024`, epilogue
+   `0x800A65E4`, and return `0x800A6618`. Use whole-RDRAM and VI controls and
+   capture counts/order/register values in one oracle run. The result must
+   distinguish a normal finite loop, early exit, and a path that never uses
+   the presumed loop edges.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
