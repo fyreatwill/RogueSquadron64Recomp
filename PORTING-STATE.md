@@ -127205,3 +127205,18 @@ This checkout has no configured PatchesLib target, MIPS GCC/LD, or generated
 `RecompiledPatches/patches.c`, so runtime validation did not run. The change
 advances the build artifact while leaving guard causation unresolved; host
 validation remains required.
+
+## Session 3255 (2026-08-29) — tested scheduler receive-type discriminator
+
+Added a bounded `ROGUESQ_RECV_TRACE` scheduler-message probe and built the
+Debug executable successfully. Existing receive controls were positive:
+`[recvtrace] enabled=1`, successful receives on `0x8011A420`, and repeated
+`[recvsum]` rows. The port reached VI 640 `0x0066A500`, but not title 1024.
+
+The new type rows remained absent. The wrapper-level `$a1` was zero, and the
+queue snapshot showed `msgbuf=0x8011A830`, `first=0`, and a zero entry; this is
+consistent with external SP delivery happening inside `osRecvMesg` after the
+pre-call snapshot, but it does not identify the consumed message. The
+measurement is unevaluable and selects none of `H-SpMsgMutated`,
+`H-OtherOsTask`, or `H-Type2AbsentAtRecv`. No scheduler/audio/guard behavior
+changed. Evidence: `scratch/agent/s3255_vi640_recv_type.md`.

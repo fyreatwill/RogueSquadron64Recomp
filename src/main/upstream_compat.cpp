@@ -1866,6 +1866,27 @@ static void recv_trace_exit(uint32_t mq, int32_t flag, uint64_t tid, int32_t res
     }
 }
 
+static void recv_trace_scheduler_type(uint8_t* rdram, uint32_t msg_addr,
+                                      int32_t result) {
+    if (!recv_trace_enabled() || result != 0 || msg_addr < 0x80000000u ||
+        msg_addr >= 0x80800000u) return;
+    static std::atomic<uint32_t> rows{0};
+    const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
+    if (row >= 256u) return;
+    const uint32_t msg_phys = msg_addr - 0x80000000u;
+    const unsigned type = (unsigned)rdram[msg_phys ^ 3u];
+    auto be_u8 = [&](uint32_t kseg) -> unsigned {
+        const uint32_t p = kseg - 0x80000000u;
+        return (unsigned)rdram[p ^ 3u];
+    };
+    std::fprintf(stderr,
+        "[recv-scheduler-type] phase=%u row=%u msg=0x%08X type=0x%02X "
+        "89F=%u 28D44=%u\n",
+        rs64_phase_ord(), row, msg_addr, type, be_u8(0x8011A89Fu),
+        be_u8(0x80128D44u));
+    std::fflush(stderr);
+}
+
 static void sendtgt_note(uint32_t mq, uint64_t tid, bool want_stack) {
     if (!recv_trace_enabled() && !want_stack) return;
     if (recv_trace_enabled()) recv_trace_start_dumper();
@@ -1932,6 +1953,12 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
                                           (PTR(OSMesg))ctx->r5, flag);
         const OSMesgQueue after = *TO_PTR(OSMesgQueue, (PTR(OSMesgQueue))ctx->r4);
         ctx->r2 = result;
+        const int32_t consumed = after.msgCount > 0
+            ? (after.first + after.msgCount - 1) % after.msgCount : 0;
+        const uint32_t scheduler_msg =
+            (result == 0 && after.msgCount > 0)
+                ? (uint32_t)(uintptr_t)TO_PTR(OSMesg, after.msg)[consumed] : 0u;
+        recv_trace_scheduler_type(rdram, scheduler_msg, result);
         log_m5_dp_event_boundary("recv", mq_addr, (uint32_t)ctx->r5,
                                  flag, result, before, after);
     } else if (mq_addr == 0x8010FEE0u) {

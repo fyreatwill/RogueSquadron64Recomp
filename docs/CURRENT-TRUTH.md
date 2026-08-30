@@ -4,7 +4,15 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3254 (2026-08-29).
+Current maintenance marker: Session 3255 (2026-08-29).
+
+Session 3255 ran the scheduler receive-type discriminator. The existing
+`ROGUESQ_RECV_TRACE` controls fired, but the new type field was unevaluable:
+the wrapper saw `$a1=0`, and the queue snapshot was empty because external
+messages are delivered inside `osRecvMesg` after the pre-call copy. The port
+reached VI 640 `0x0066A500`, not title 1024. No type-2 hypothesis is selected
+and no scheduler/audio behavior changed. Evidence:
+`scratch/agent/s3255_vi640_recv_type.md`.
 
 Session 3254 completed the M3 `func_80007D74` free-list dequeue/active-queue
 pointer audit and landed a guard-class change in `patches/heap_guards.c`.
@@ -151,7 +159,15 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Validate Session 3254's complete free-list guard class on the configured
+1. Capture the scheduler message identity at the generated `0x80019CD0`
+   receive call site (or expose the runtime's consumed-message value), with
+   `ROGUESQ_RECV_TRACE` positive controls. The wrapper-level `$a1`/queue
+   snapshot probe from Session 3255 is unevaluable because external delivery
+   occurs inside `osRecvMesg`; do not interpret its zero type rows. Require a
+   caller identity, message pointer, type byte, and `89F/28D44` in the same
+   phase before selecting `H-SpMsgMutated`, `H-OtherOsTask`, or
+   `H-Type2AbsentAtRecv`.
+2. Validate Session 3254's complete free-list guard class on the configured
    Windows/MIPS host, then run the bounded M5 Step 3 gate only if the build
    produces `RecompiledPatches/patches.c`. The exact local build remains
    unavailable and must not be repeated until that host or generated artifact
