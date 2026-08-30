@@ -4,20 +4,34 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3284 (2026-08-29).
+Current maintenance marker: Session 3285 (2026-08-29).
+
+Session 3285 landed Session 3270's free-list alignment + cyclic-walk
+cap on the generated host functions that actually link
+(`allocateDisplayListBuffer` / `allocDLBlockToFillRectList`).
+ORIGIN: those functions consume guest allocator pointers; legitimacy
+was not independently proven. Safety guard, not a VI-640 or audio
+explanation. Debug rebuild compiled `funcs_3.c` and relinked
+`build/RogueSquadron64Recomp`. Evidence:
+`scratch/agent/s3285_freelist_live_guard.md`.
+
+The same session's independent Rice run asked whether
+`runMenuModelViewerScreen` leaves via the `$s5=1` fade store at
+`0x800C2B88` before a brief `anyAudioSlotActive` tail. Whole-RDRAM
+10000-write control, title `1024 @ 0x00790400`, and the 6.8 s
+`0x8003E094` exec (`prev_pc=0x800C5D94`) all passed. `0x800C2B88`
+had zero hits; `0x800C2DB0` then `0x800C2E00` then `0x8003E094`
+clustered at 6.8 s (one slot jal, `v0=1` at `jr ra`). This selects
+`H-RetailNoFadeStore` and refutes `H-RetailFrameTimerThenBriefSlot`,
+`H-RetailLongSlotWait`, and `H-ExitCoverageInvalid`. Combined with
+s3278: the port entered that screen and never reached the slot tail.
+Evidence: `scratch/agent/s3285_viewer_frame_exit.md`.
 
 Session 3284 asked retail whether first `menuOverlayInit` (`$a1=9`,
-2.0–6.9 s) enters `runMenuModelViewerScreen` (`0x800C28F0`). Rice,
-25 s, whole-RDRAM 10000-write control, title `1024 @ 0x00790400`,
-and the 6.7 s `0x8003E094` exec as the watch control. Viewer entry
-at 2.5 s (`prev_pc=0x800C5C98`, inside `menuOverlayInit`, same jal
-as the port's s3278 caller) during `640 @ 0x0066aa00`; first return
-at 6.7 s; cinematic `0x800A5D80` in the same bucket; `0x8003E13C`
-at 17.0 s; title at 17.3 s. This selects `H-RetailViewerThenReturn`
-and refutes `H-RetailNoViewer`, `H-RetailViewerAfterCine`, and
-`H-ViewerCoverageInvalid`. Combined with s3278: the port entered
-that same screen and never returned. Evidence:
-`scratch/agent/s3284_first_menu_model_viewer.md`.
+2.0–6.9 s) enters `runMenuModelViewerScreen` (`0x800C28F0`). Viewer
+entry at 2.5 s (`prev_pc=0x800C5C98`) during `640 @ 0x0066aa00`;
+first return at 6.7 s. This selected `H-RetailViewerThenReturn`.
+Evidence: `scratch/agent/s3284_first_menu_model_viewer.md`.
 
 Session 3283 asked retail what occupies the gap between the 2.0 s
 first `menuOverlayInit` entry and the 17 s `0x8003E13C` jal.
@@ -420,31 +434,29 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3284
-selected `H-RetailViewerThenReturn`: first `$a1=9` enters
-`runMenuModelViewerScreen` at 2.5 s (`prev_pc=0x800C5C98`) and returns
-at 6.7 s. Session 3276's `H-PortTargetPublicationAbsent` still holds.
-No M5 Step 3 audio change is authorized until a like-for-like target
-row exists.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3285
+selected `H-RetailNoFadeStore`: first `$a1=9` returns from
+`runMenuModelViewerScreen` at 6.8 s through the slot tail without
+executing `0x800C2B88`. Session 3276's `H-PortTargetPublicationAbsent`
+still holds. No M5 Step 3 audio change is authorized until a
+like-for-like target row exists.
 
-1. Independent retail oracle: does `runMenuModelViewerScreen` leave its
-   frame loop (`$s5=1` at `0x800C2B88`, `$f24` fade to 0) before the
-   `anyAudioSlotActive` tail (`0x800C2DB0`), and is that tail brief?
-   Exec-watch `0x800C2B88`, `0x800C2DB0`, `0x800C2E00` (`jr ra`), and
-   `0x8003E094` in one Rice run, armed at first VI. Whole-RDRAM
-   10000-write control, title `1024 @ 0x00790400`, and the 6.7 s
-   `0x8003E094` exec as the watch control. Clustered `0x800C2B88` then
-   `0x800C2DB0` then `jr ra` near 6.7 s selects a frame-timer exit with
-   a brief slot wait. `0x800C2DB0` near 2.5 s and `jr ra` at 6.7 s
-   selects a long slot wait. Do not change audio behavior. Require Rice.
-   The s3278 port log had zero `[slot-ret-caller]
-   site=runMenuModelViewerScreen`, so the port is still in the frame
-   loop, not the A11 wait. If the no-engineering pivot is active, land
-   the matching port counters in `tools/fixup_*.py` in the same
-   iteration (do not add a skip/guard).
-2. Validate Session 3270's expanded free-list guard class on the configured
-   Windows/MIPS host (`PatchesLib`). Do not repeat the local missing-target
-   build. The guard is not evidence that the VI-640 route or audio is corrupt.
+1. Independent retail oracle: does `0x800C2B84` (`bc1tl`) fire near
+   the 6.8 s return while `0x800C2B88` stays silent, or does
+   `0x800C2D50` (`beq $s5,$v0`) reach `L_800C2DA0` without that
+   branch? Exec-watch `0x800C2B84`, `0x800C2D50`, `0x800C2DA0`, and
+   `0x800C2E00` in one Rice run, armed at first VI. Whole-RDRAM
+   10000-write control, title `1024 @ 0x00790400`, and the 6.8 s
+   `0x800C2E00` exec as the watch control. `0x800C2B84` then
+   `0x800C2D50` then `0x800C2DA0` selects a delay-slot watch miss.
+   `0x800C2D50`/`0x800C2DA0` without `0x800C2B84` selects another
+   `$s5==$v0` path. Do not add a skip, allow, restore, or wait
+   bypass. No M5 Step 3. Require Rice.
+2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
+   generated host walks that link here. Remaining: validate
+   `patches/heap_guards.c` on the configured Windows/MIPS host
+   (`PatchesLib`). Do not repeat the local missing-target build. The
+   guard is not evidence that the VI-640 route or audio is corrupt.
 3. After the pre-VI-640 scheduler crash is repaired or explained, capture
    consumed-message identity at `0x80019CD0` with `ROGUESQ_RECV_TRACE`
    positive controls. Session 3269 selected `H-RecvWatchUnavailable`. Require
@@ -547,6 +559,12 @@ Session 3284 measured the same `0x800C5C98` jal at 2.5 s on retail,
 then a 6.7 s return, so the port is stuck inside a screen retail
 also uses.
 
+Session 3284 left the 2.5–6.7 s occupant as the `$f24==0` `$s5=1`
+store at `0x800C2B88` then a possible slot wait. That was believable
+because the generated fade-out path is the only `$s5=1` addiu in the
+function. Session 3285 measured zero `0x800C2B88` hits and a single
+6.8 s slot jal then `jr ra`, so retail leaves without that store.
+
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
 name. Stable companion duplicate-prefix and preamble mappings belong in
@@ -555,6 +573,8 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3285_freelist_live_guard.md`,
+`scratch/agent/s3285_viewer_frame_exit.md`,
 `scratch/agent/s3284_first_menu_model_viewer.md`,
 `scratch/agent/s3283_menu_return_vs_cinematic.md`,
 `scratch/agent/s3282_menu_entry_vs_jal.md`,

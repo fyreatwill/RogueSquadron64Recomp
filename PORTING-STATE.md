@@ -127814,3 +127814,44 @@ than the post-loop `anyAudioSlotActive` tail.
 No audio or M5 Step 3 change. No new soak-queue verdicts. Evidence:
 `scratch/agent/s3284_first_menu_model_viewer.md`,
 `scratch/agent/s3284_first_menu_model_viewer.log`.
+
+## Session 3285 (2026-08-29) — live free-list align+cycle guards; retail leaves viewer without 0x800C2B88
+
+Mandatory no-engineering pivot: landed Session 3270's alignment +
+cyclic-walk cap on the generated host walks that actually link.
+`tools/apply_s3285_freelist_align_cycle.py` plus the matching PATCH in
+`../N64Recomp/fixup_game_funcs.py` expand `allocateDisplayListBuffer`
+(`func_80007D74`) and `allocDLBlockToFillRectList` GUARD2/3/4 with
+`(addr & 3)` and a `0x8000`-step cycle abort, and reject an invalid
+tail node at `0x80007E20` before queue mutation. Debug rebuild compiled
+`funcs_3.c` and relinked `build/RogueSquadron64Recomp`. ORIGIN: those
+functions consume guest allocator pointers published by the allocator /
+`findAndUnlinkSmallestEntry`; legitimacy was not independently proven.
+Safety guard, not a VI-640 or audio explanation. No `PatchesLib` build.
+No skip/wait/audio change.
+
+Same iteration, independent retail Rice oracle, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. 25 s, eleven-Start,
+`--watch-write 0x0:0x800000` (cap 10000), `--watch-pc
+0x800C2B88,0x800C2DB0,0x800C2E00,0x8003E094`, `--vi-trace --vi-poll`.
+No `--pc-phase-log-width`.
+
+Positive controls: 10000-write watch; `[gpr-ctl]` fired; `0x8003E094`
+executed once at 6.8 s (`prev_pc=0x800C5D94`); title
+`1024 @ 0x00790400` at 17.3 s after `640 -> 1024` origin `0x00790800`;
+1456 VI; 25.1 s wall / 24.3 s emulated; `rc=0`.
+
+`0x800C2B88` had 0 hits. `0x800C2DB0` once at 6.8 s
+(`prev_pc=0x8008DA44`, `tickMusyXIfActive` return into the slot jal)
+during `640 @ 0x0066aa00`; `0x800C2E00` once at 6.8 s (`prev_pc=0x800C2DFC`,
+`v0=1`); `0x8003E094` in the same 0.1 s bucket. `H-ExitCoverageInvalid`,
+`H-RetailFrameTimerThenBriefSlot`, and `H-RetailLongSlotWait` refuted.
+`H-RetailNoFadeStore` selected: retail returns through the slot tail
+without executing the `$f24==0` `$s5=1` store. Combined with s3278:
+the port entered that screen and never reached
+`[slot-ret-caller] site=runMenuModelViewerScreen`.
+
+No new soak-queue verdicts. Evidence:
+`scratch/agent/s3285_freelist_live_guard.md`,
+`scratch/agent/s3285_viewer_frame_exit.md`,
+`scratch/agent/s3285_viewer_frame_exit.log`.
