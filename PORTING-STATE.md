@@ -127398,3 +127398,18 @@ unevaluable. The oracle does not expose read values or phase labels, so
 `H-RequestState`, `H-BoundaryConsumer`, and `H-Phase4SteadyState` remain
 unresolved. No port or audio behavior changed. Evidence:
 `scratch/agent/s3266_vi_request_state_reads.md` and its captured logs.
+## Session 3267 (2026-08-29) — mapped aligned VI selector watch
+
+Ran the prescribed independent retail oracle capture with the aligned
+selector-word watch. The whole-RDRAM write watch reached its 10,000-hit
+positive-control cap; the run reached title VI 1024 and hangar VI 512. The
+selector range at physical `0x00114A864..0x00114A86C` produced zero reads,
+while pending state `0x00128E94..0x00128E9C` produced 23,720 reads. The
+watched boundary PCs executed 3,766 times (`0x8001B7F0` 3,472,
+`0x8001B8DC` 141, `0x800352D0` 151). This selects
+`H-SelectorWatchUnavailable` as an instrument result only; it does not select
+`H-RequestState`, `H-BoundaryConsumer`, or `H-Phase4SteadyState`. It rules out
+only an observed aligned load in that exact selector range, not selector
+state activity elsewhere. No port or audio behavior changed. Evidence:
+`scratch/agent/s3267_vi_selector_aligned.md` and
+`scratch/agent/s3267_vi_selector_aligned.log`.
