@@ -128455,3 +128455,33 @@ status is treated as a completed yield on a runtime that does not interrupt
 tasks. Static follow-up is single-source: the strong StartGo override also
 omits the weak implementation's request clear. No skip, force-clear, wait
 bypass, audio output change, or M5 Step 3 change. No new soak verdicts.
+
+## Session 3303 (2026-08-30) — completion-wins SP status restores viewer scheduling
+
+Same-build port A/B, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. Added an env-gated
+`osSpTaskYielded_recomp` completion-wins arm and bounded request/result rows,
+exported the N64ModernRuntime patch, built once, and launched both arms from
+that binary. The first driver attempt failed in summary formatting; after the
+harness fix, one corrected pair had an early candidate scheduler crash before
+the arm hook fired and was invalid. The unchanged rerun passed all controls
+and is the only pair used. Evidence:
+`scratch/agent/s3303_yield_status_ab.md`; captures and joined verdict are under
+`scratch/agent/s3303_yield_status_ab/`.
+
+Both valid arms reached `640 @ 0x0066A500`, viewer entry, their explicit arm
+row, and at least 64 bounded host SP-completion controls, with no crash or
+abort. Baseline emitted 12 `requested=1 returned=1` rows, 12 E70 stores, and
+12 E80F fallthroughs; it stopped at SENT n=3 / SRET n=2 / 2D50 n=3.
+Completion-wins emitted `requested=1 returned=0`, then E60, 19ED0, 19F1C, and
+19FE4 before SRET n=3 and 2D50 n=4. It continued through matched SENT/SRET and
+2D50 n=10 before SIGKILL; no E70/E80F row occurred.
+
+This selects `H-FalseYieldStatus` and refutes `H-StatusOnly`,
+`H-YieldStatusNotCausal`, and `H-CoverageInvalid`. Retail
+s3296/s3298/s3301 is the independent second line: no viewer E70/yield
+publication and type-1 completes before type-2. ORIGIN: `osSpTaskYield`
+legitimately writes a request, but the bit is not a legitimate yielded-task
+result because this host never interrupts or resumes a task. The candidate
+remains env-gated; no M5 Step 3 audio/output behavior changed. No new soak
+verdicts.

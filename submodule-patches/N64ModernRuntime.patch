@@ -1975,11 +1975,12 @@ index 1cb3f6a..35b7009 100644
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
-index ae0f44f..85f1da7 100644
+index ae0f44f..65a890d 100644
 --- a/librecomp/src/sp.cpp
 +++ b/librecomp/src/sp.cpp
-@@ -1,15 +1,21 @@
+@@ -1,15 +1,22 @@
  #include <cstdio>
++#include <cstdlib>
  #include <fstream>
 +#include <atomic>
  #include <ultramodern/ultramodern.hpp>
@@ -2002,7 +2003,7 @@ index ae0f44f..85f1da7 100644
      //printf("[sp] osSpTaskStartGo(0x%08X)\n", (uint32_t)ctx->r4);
      OSTask* task = TO_PTR(OSTask, ctx->r4);
      if (task->t.type == M_GFXTASK) {
-@@ -37,12 +43,14 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -37,12 +44,35 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
  }
  
  extern "C" void osSpTaskYield_recomp(uint8_t* rdram, recomp_context* ctx) {
@@ -2016,7 +2017,28 @@ index ae0f44f..85f1da7 100644
 -    // Task yield requests are ignored, so always return 0 as tasks will never be yielded
 -    ctx->r2 = 0;
 +    (void)rdram;
-+    ctx->r2 = g_sp_yield_requested.load(std::memory_order_acquire) ? 1 : 0;
++    static const bool completion_wins = [] {
++        const char* e = std::getenv("ROGUESQ_SP_YIELDED_COMPLETION_WINS");
++        return e && *e && *e != '0';
++    }();
++    static const bool log_ab = [] {
++        const char* e = std::getenv("ROGUESQ_LOG_SP_YIELDED_AB");
++        return e && *e && *e != '0';
++    }();
++    const bool requested = g_sp_yield_requested.load(std::memory_order_acquire);
++    const uint32_t returned = completion_wins ? 0u : (requested ? 1u : 0u);
++    ctx->r2 = returned;
++    if (log_ab) {
++        static std::atomic<uint32_t> rows{0};
++        const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
++        if (row < 2048u) {
++            std::fprintf(stderr,
++                "[sp-yielded-ab] row=%u arm=%s requested=%u returned=%u\n",
++                row, completion_wins ? "completion-wins" : "request-only",
++                requested ? 1u : 0u, returned);
++            std::fflush(stderr);
++        }
++    }
  }
  
  extern "C" void __osSpSetPc_recomp(uint8_t* rdram, recomp_context* ctx) {
@@ -2202,7 +2224,7 @@ index 3198be0..e35819c 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..8cb888a 100644
+index 149e770..1a769bf 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,11 +8,18 @@
@@ -2224,7 +2246,7 @@ index 149e770..8cb888a 100644
  #include "ultramodern/extensions.h"
  
  #include "ultramodern/rsp.hpp"
-@@ -20,6 +27,406 @@
+@@ -20,6 +27,430 @@
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
@@ -2606,13 +2628,37 @@ index 149e770..8cb888a 100644
 +std::atomic<uint32_t> event_wiring_sp_rows{0};
 +std::atomic<uint32_t> event_wiring_dp_rows{0};
 +
++const char* os_event_kind(OSEvent event_id) {
++    switch (event_id) {
++        case OS_EVENT_SW1: return "SW1";
++        case OS_EVENT_SW2: return "SW2";
++        case OS_EVENT_CART: return "CART";
++        case OS_EVENT_COUNTER: return "COUNTER";
++        case OS_EVENT_SP: return "SP";
++        case OS_EVENT_SI: return "SI";
++        case OS_EVENT_AI: return "AI";
++        case OS_EVENT_VI: return "VI";
++        case OS_EVENT_PI: return "PI";
++        case OS_EVENT_DP: return "DP";
++        case OS_EVENT_CPU_BREAK: return "CPU_BREAK";
++        case OS_EVENT_SP_BREAK: return "SP_BREAK";
++        case OS_EVENT_FAULT: return "FAULT";
++        case OS_EVENT_THREADSTATUS: return "THREADSTATUS";
++        case OS_EVENT_PRENMI: return "PRENMI";
++        default: return "?";
++    }
++}
++
 +void log_event_wiring_registration(OSEvent event_id, PTR(OSMesgQueue) mq, OSMesg msg) {
-+    if (!event_wiring_log_enabled() || (event_id != OS_EVENT_SP && event_id != OS_EVENT_DP)) return;
++    if (!event_wiring_log_enabled()) return;
 +    const uint32_t row = event_wiring_reg_rows.fetch_add(1, std::memory_order_relaxed);
 +    if (row >= 64) return;
-+    std::fprintf(stderr, "[event-wiring] register kind=%s event=%u mq=0x%08X msg=0x%08X row=%u\n",
-+        event_id == OS_EVENT_SP ? "SP" : "DP", event_id,
-+        static_cast<uint32_t>(mq), static_cast<uint32_t>(msg), row);
++    const int stored = (event_id == OS_EVENT_SP || event_id == OS_EVENT_DP ||
++                        event_id == OS_EVENT_AI || event_id == OS_EVENT_SI) ? 1 : 0;
++    std::fprintf(stderr,
++        "[event-wiring] register kind=%s event=%u mq=0x%08X msg=0x%08X stored=%d row=%u\n",
++        os_event_kind(event_id), event_id,
++        static_cast<uint32_t>(mq), static_cast<uint32_t>(msg), stored, row);
 +    std::fflush(stderr);
 +}
 +
@@ -2631,7 +2677,7 @@ index 149e770..8cb888a 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -30,6 +437,7 @@ struct SpTaskAction {
+@@ -30,6 +461,7 @@ struct SpTaskAction {
  
  struct ScreenUpdateAction {
      ultramodern::renderer::ViRegs regs;
@@ -2639,7 +2685,7 @@ index 149e770..8cb888a 100644
  };
  
  struct UpdateConfigAction {
-@@ -39,6 +447,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
+@@ -39,6 +471,7 @@ using Action = std::variant<SpTaskAction, ScreenUpdateAction, UpdateConfigAction
  
  struct ViState {
      const OSViMode* mode;
@@ -2647,7 +2693,7 @@ index 149e770..8cb888a 100644
      PTR(void) framebuffer;
      PTR(OSMesg) mq;
      OSMesg msg;
-@@ -65,11 +474,15 @@ static struct {
+@@ -65,11 +498,15 @@ static struct {
          ViState* get_cur_state() {
              return &states[cur_state];
          }
@@ -2665,7 +2711,7 @@ index 149e770..8cb888a 100644
              PTR(void) framebuffer = osVirtualToPhysical(next_state->framebuffer);
              PTR(void) origin = framebuffer + field_regs->origin;
  
-@@ -85,11 +498,27 @@ static struct {
+@@ -85,11 +522,27 @@ static struct {
                  origin = framebuffer;
              }
  
@@ -2693,7 +2739,7 @@ index 149e770..8cb888a 100644
              regs.VI_TIMING_REG = common_regs->burst;
              regs.VI_V_SYNC_REG = common_regs->vSync;
              regs.VI_H_SYNC_REG = common_regs->hSync;
-@@ -101,7 +530,21 @@ static struct {
+@@ -101,7 +554,21 @@ static struct {
              regs.VI_X_SCALE_REG = common_regs->xScale; // TODO implement osViSetXScale
              regs.VI_Y_SCALE_REG = yScale; // TODO implement osViSetYScale
              regs.VI_STATUS_REG = next_state->control;
@@ -2716,7 +2762,7 @@ index 149e770..8cb888a 100644
              // Swap VI states.
              cur_state ^= 1;
              *get_next_state() = *get_cur_state();
-@@ -140,6 +583,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +607,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -2725,7 +2771,22 @@ index 149e770..8cb888a 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -165,9 +610,18 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
+@@ -161,13 +630,33 @@ extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_,
+ 
+ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 retrace_count) {
+     std::lock_guard lock{ events_context.message_mutex };
++    if (event_wiring_log_enabled()) {
++        static std::atomic<uint32_t> vi_set_rows{0};
++        const uint32_t row = vi_set_rows.fetch_add(1, std::memory_order_relaxed);
++        if (row < 16) {
++            std::fprintf(stderr,
++                "[event-wiring] register kind=VI-SET event=%u mq=0x%08X msg=0x%08X retrace=%u stored=1 row=%u\n",
++                (unsigned)OS_EVENT_VI, static_cast<uint32_t>(mq_),
++                static_cast<uint32_t>(msg), retrace_count, row);
++            std::fflush(stderr);
++        }
++    }
+     ViState* next_state = events_context.vi.get_next_state();
      next_state->mq = mq_;
      next_state->msg = msg;
      next_state->retrace_count = retrace_count;
@@ -2744,7 +2805,7 @@ index 149e770..8cb888a 100644
  
  
  extern std::atomic_bool exited;
-@@ -209,19 +663,41 @@ void vi_thread_func() {
+@@ -209,19 +698,41 @@ void vi_thread_func() {
          }
          total_vis = new_total_vis;
  
@@ -2789,7 +2850,7 @@ index 149e770..8cb888a 100644
  
          // If the game has started, handle sending VI and AI events.
          if (ultramodern::is_game_started()) {
-@@ -231,6 +707,17 @@ void vi_thread_func() {
+@@ -231,6 +742,17 @@ void vi_thread_func() {
              ViState* cur_state = events_context.vi.get_cur_state();
              if (remaining_retraces == 0) {
                  if (cur_state->mq != NULLPTR) {
@@ -2807,7 +2868,7 @@ index 149e770..8cb888a 100644
                      // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
                      // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
                      ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
-@@ -252,12 +739,19 @@ void vi_thread_func() {
+@@ -252,12 +774,19 @@ void vi_thread_func() {
  void sp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
@@ -2827,7 +2888,7 @@ index 149e770..8cb888a 100644
      ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
  }
  
-@@ -277,17 +771,47 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
+@@ -277,17 +806,47 @@ void task_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_r
              return;
          }
  
@@ -2876,7 +2937,7 @@ index 149e770..8cb888a 100644
  
          (void)task_type;
      }
-@@ -359,6 +883,9 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -359,6 +918,9 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
          if (events_context.action_queue.wait_dequeue_timed(action, 1ms)) {
              // Determine the action type and act on it
              if (const auto* task_action = std::get_if<SpTaskAction>(&action)) {
@@ -2886,7 +2947,7 @@ index 149e770..8cb888a 100644
                  // Turn on instant present if the game has been started and it hasn't been turned on yet.
                  if (ultramodern::is_game_started() && !enabled_instant_present) {
                      renderer_context->enable_instant_present();
-@@ -368,11 +895,19 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -368,11 +930,19 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  // start another graphics task until the RDP is also complete. Games usually preserve the RSP inputs until the RDP
                  // is finished as well, so sending this early shouldn't be an issue in most cases.
                  // If this causes issues then the logic can be replaced with responding to yield requests.
@@ -2907,7 +2968,7 @@ index 149e770..8cb888a 100644
  
                  [[maybe_unused]] auto renderer_start = std::chrono::high_resolution_clock::now();
                  // RogueSquadron64Recomp: send_dl RE-ENABLED. RT64 has a
-@@ -387,13 +922,26 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
+@@ -387,13 +957,26 @@ void gfx_thread_func(uint8_t* rdram, moodycamel::LightweightSemaphore* thread_re
                  [[maybe_unused]] auto renderer_end = std::chrono::high_resolution_clock::now();
  
                  dp_complete();
@@ -2934,7 +2995,7 @@ index 149e770..8cb888a 100644
                  renderer_context->update_screen();
                  display_refresh_rate = renderer_context->get_display_framerate();
                  resolution_scale = renderer_context->get_resolution_scale();
-@@ -456,6 +1004,7 @@ static const OSViMode dummy_mode = []() {
+@@ -456,6 +1039,7 @@ static const OSViMode dummy_mode = []() {
  void set_dummy_vi(bool odd) {
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = &dummy_mode;
@@ -2942,7 +3003,7 @@ index 149e770..8cb888a 100644
      // Set up a dummy framebuffer.
      next_state->framebuffer = 0x80700000;
      if (odd) {
-@@ -473,6 +1022,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
+@@ -473,6 +1057,7 @@ extern "C" void osViSetMode(RDRAM_ARG PTR(OSViMode) mode_) {
      OSViMode* mode = TO_PTR(OSViMode, mode_);
      ViState* next_state = events_context.vi.get_next_state();
      next_state->mode = mode;
@@ -2950,7 +3011,7 @@ index 149e770..8cb888a 100644
      next_state->control = next_state->mode->comRegs.ctrl;
  }
  
-@@ -577,6 +1127,7 @@ void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
+@@ -577,6 +1162,7 @@ void ultramodern::submit_rsp_task(RDRAM_ARG PTR(OSTask) task_) {
          events_context.action_queue.enqueue(SpTaskAction{ *task });
      }
      else {
@@ -2959,16 +3020,21 @@ index 149e770..8cb888a 100644
      }
  }
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..67f63cd 100644
+index 9944a02..263f191 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
-@@ -1,18 +1,214 @@
+@@ -1,18 +1,258 @@
  #include <bitset>
  #include <thread>
 +#include <cstdio>
 +#include <cstdlib>
 +#include <atomic>
 +#include <deque>
++#include <mutex>
++#if !defined(_WIN32)
++#include <execinfo.h>
++#include <pthread.h>
++#endif
  
  #include "blockingconcurrentqueue.h"
  
@@ -3031,6 +3097,45 @@ index 9944a02..67f63cd 100644
 +    const uint32_t row = n.fetch_add(1, std::memory_order_relaxed);
 +    std::fprintf(stderr, "[vi-deq] n=%u site=%s mq=0x%08X validCount=%d msgCount=%d\n",
 +        row, site, static_cast<uint32_t>(mq_), static_cast<int>(validCount), static_cast<int>(msgCount));
++    std::fflush(stderr);
++}
++
++static bool recv_trace_env() {
++    static const bool enabled = [] {
++        const char* e = std::getenv("ROGUESQ_RECV_TRACE");
++        return e && e[0] && e[0] != '0';
++    }();
++    return enabled;
++}
++
++static uint64_t rs64_host_tid() {
++#if defined(__APPLE__)
++    uint64_t tid = 0;
++    pthread_threadid_np(nullptr, &tid);
++    return tid;
++#elif defined(_WIN32)
++    return 0;
++#else
++    return (uint64_t)pthread_self();
++#endif
++}
++
++static void log_unique_mq_tag(const char* tag, uint32_t mq, int extra) {
++    if (!recv_trace_env()) return;
++    static std::mutex mu;
++    static uint32_t seen_mq[512];
++    static int seen_extra[512];
++    static uint32_t n = 0;
++    std::lock_guard<std::mutex> lock(mu);
++    for (uint32_t i = 0; i < n; i++) {
++        if (seen_mq[i] == mq && seen_extra[i] == extra) return;
++    }
++    if (n >= 512) return;
++    seen_mq[n] = mq;
++    seen_extra[n] = extra;
++    n++;
++    std::fprintf(stderr, "[%s] mq=0x%08X extra=%d n=%u tid=%llu\n",
++        tag, mq, extra, n, (unsigned long long)rs64_host_tid());
 +    std::fflush(stderr);
 +}
 +
@@ -3177,7 +3282,7 @@ index 9944a02..67f63cd 100644
  static moodycamel::BlockingConcurrentQueue<QueuedMessage> external_messages {};
  std::bitset<32> requeue_enabled;
  
-@@ -28,7 +224,24 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
+@@ -28,7 +268,25 @@ void ultramodern::set_message_queue_control(const ultramodern::MessageQueueContr
  }
  
  void ultramodern::enqueue_external_message_src(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, EventMessageSource src) {
@@ -3199,11 +3304,12 @@ index 9944a02..67f63cd 100644
 +        rs64_m5_host_edge("external-enqueue", queued.host_task_seq, 0, static_cast<uint32_t>(mq),
 +                          static_cast<uint32_t>(src), 1, -1, -1);
 +    }
++    log_unique_mq_tag("hostpost", static_cast<uint32_t>(mq), static_cast<int>(src));
 +    external_messages.enqueue(queued);
  }
  
  void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool jam, bool requeue_if_blocked) {
-@@ -37,33 +250,71 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
+@@ -37,33 +295,71 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block);
  
@@ -3279,7 +3385,34 @@ index 9944a02..67f63cd 100644
      }
  }
  
-@@ -90,6 +341,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -75,6 +371,26 @@ extern "C" void osCreateMesgQueue(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) ms
+     mq->msg = msg;
+     mq->validCount = 0;
+     mq->first = 0;
++    if (recv_trace_env()) {
++        static std::atomic<uint32_t> rows{0};
++        const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
++        if (row < 80) {
++            std::fprintf(stderr,
++                "[createmq] row=%u mq=0x%08X msg=0x%08X count=%d tid=%llu\n",
++                row, static_cast<uint32_t>(mq_), static_cast<uint32_t>(msg),
++                static_cast<int>(count), (unsigned long long)rs64_host_tid());
++#if !defined(_WIN32)
++            void* frames[16];
++            int nframes = backtrace(frames, 16);
++            char** syms = backtrace_symbols(frames, nframes);
++            for (int i = 0; i < nframes; i++) {
++                std::fprintf(stderr, "  [%2d] %s\n", i, syms ? syms[i] : "?");
++            }
++            free(syms);
++#endif
++            std::fflush(stderr);
++        }
++    }
+ }
+ 
+ s32 MQ_GET_COUNT(OSMesgQueue *mq) {
+@@ -90,6 +406,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -3289,7 +3422,7 @@ index 9944a02..67f63cd 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +360,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +425,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -3304,7 +3437,7 @@ index 9944a02..67f63cd 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +391,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +456,10 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -3315,7 +3448,7 @@ index 9944a02..67f63cd 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,7 +411,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,7 +476,13 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -3330,7 +3463,7 @@ index 9944a02..67f63cd 100644
      }
      
      mq->first = (mq->first + 1) % mq->msgCount;
-@@ -161,6 +433,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -161,6 +498,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
  }
  
  extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -3338,15 +3471,16 @@ index 9944a02..67f63cd 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      bool jam = false;
      
-@@ -183,6 +456,7 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,6 +521,8 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
++    log_unique_mq_tag("sendtgt-jam", static_cast<uint32_t>(mq_), static_cast<int>(flags));
 +    log_vi_mq("jam", mq_, flags);
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      bool jam = true;
      
-@@ -205,18 +479,54 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,18 +545,54 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
