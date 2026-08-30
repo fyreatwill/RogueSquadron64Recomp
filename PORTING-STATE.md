@@ -128087,3 +128087,39 @@ n=3. No audio or M5 Step 3 change. No new soak-queue verdicts.
 Evidence: `scratch/agent/s3292_retail_submit_send.md`,
 `scratch/agent/s3292_retail_submit_send.log`.
 
+## Session 3293 (2026-08-29) — port 0x80019F1C silent after SENT n=3; scheduler leaves the gate
+
+Port scheduler-send census, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. Fixup probe at `L_80019ED0`,
+`0x80019EE0`, jal `0x80019F1C`, and the flag-zero skip to
+`L_80019F24` (`tools/apply_s3293_scheduler_send.py`, also
+hooked from `fixup_game_funcs.py`). Kept s3288 fade, s3289
+SENT/SRET, s3290 inner stalls. Debug rebuild. One 30 s run
+from `build/` with `ROGUESQ_LOG_M5_POSTWAIT=1`, SIGKILL.
+Log: `scratch/agent/s3293_port_scheduler_send.log`.
+
+Same-run positive controls: `[phase] 640 @ 0x0066A500` at 4.6 s;
+`[m5-postwait]` viewer `entry` `pc=0x800C28F0`; `[s3288-fade]
+2D50 n=3 taken=0`; SENT n=3 without SRET n=3; E0B4 n=41
+without R0B4; `[s3293-sched] 19F1C n=41` at width 640
+`a0=0x8011A818` `a1=0` `a2=0` during SENT n=1, then SENT n=2
+`R0B4` n=40. Cinematic 19F1C n=1..10 also printed. Zero
+crash/abort/Bus-error/last-guest-pc.
+
+After 19F1C n=41, two `19ED0` visits (`n=122/123`, `$s2[0]=2`)
+skipped the jal during the SENT n=2 body. Zero `[s3293-sched]`
+rows after that: no 19F1C, no 19EE0, no 19F24, no 19ED0 n=124+
+(width ≥ 640 always-prints). SENT n=3 then blocked in E0B4.
+The `0x80128D44==0` skip never fired; every printed 19EE0 had
+`flag=0x01`.
+
+This selects `H-PortSchedSendMissing` and refutes
+`H-PortSchedSendLost`, `H-PortSchedSendBeforeRecv`, and
+`H-PortSchedCoverageInvalid`. Combined with s3292: retail's
+viewer producer is this jal; the port executes it once at 640
+and then leaves `L_80019ED0`. Next discriminator is the stall
+site inside `spTaskSchedulerThread` after 19ED0 n=123. No audio
+or M5 Step 3 change. No new soak-queue verdicts. Evidence:
+`scratch/agent/s3293_port_scheduler_send.md`,
+`scratch/agent/s3293_port_scheduler_send.log`.
+
