@@ -127154,3 +127154,18 @@ local environment and rules out neither the guard nor audio behavior. It is
 the third stalled attempt on this hypothesis, so the next unit pivots to the
 independent retail pre-title route-state writer boundary; no source behavior
 was changed.
+
+## Session 3252 (2026-08-29) — attributed retail route writer phase
+
+Ran one debugger-enabled retail-oracle capture with Rice video, RSP-HLE, the
+documented Start schedule, a whole-RDRAM positive-control write watch, and
+execution watches at `0x8008EB5C`, `0x8008EBC0`, and `0x8008EBC8`. The positive
+control produced 10,000 writes and the VI trace reached title width 1024 at
+origins `0x00790400/0x00790800`. All three candidate PCs executed twice, but
+only at 1024/origin `0x006AB800` and 512/origin `0x006AB400`, after the target
+transition. The target-phase join produced zero rows. This selects
+`H-RetailWriterMisaligned`, rules out candidate absence, and rules out using
+this candidate as the target writer. It does not identify the legitimate
+writer and authorizes no port, audio, or mitigation change. Evidence:
+`scratch/agent/s3252_retail_route_writer.md` and
+`scratch/agent/retail_route_writer_3252.log`.

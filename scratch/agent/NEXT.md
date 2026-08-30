@@ -1,39 +1,38 @@
-# NEXT work unit — attribute the retail pre-title route-state writer
+# NEXT work unit — watch the target-phase display-mode store
 
 HYPOTHESIS-ID: retail-pretitle-route-state-writer
 
-The local guard-build attempt in Session 3251 was the third stalled attempt on
-the same unavailable-host hypothesis. Do not repeat it locally. The next
-single work unit is the independent-retail route-state attribution at the
-pre-title 640-to-1024 boundary, centered on `reapplyDisplayMode` entry and
-call (`0x8008EB5C`, `0x8008EBC0`) and its return branch (`0x8008EBC8`). This is
-ground truth first; do not add port instrumentation or change audio behavior.
+Session 3252 established that the watched `reapplyDisplayMode` triplet is live
+but executes only after the target boundary. Do not repeat that watch or add
+port instrumentation. The next single work unit is an independent retail
+oracle watch of the target-phase display-mode store at `0x8008EC88`, gated to
+1024 origins `0x00790400` and `0x00790800`, with the whole-RDRAM positive
+control and title gate retained.
 
 ## Competing hypotheses
 
-- `H-RetailWriterLiveAndAligned`: the watched retail writer/call/return edge
-  fires at the target transition with ordered values comparable to the port's
-  existing route/audio-return row.
-- `H-RetailWriterAbsent`: the whole-RDRAM positive control and title gate pass,
-  but this candidate edge does not execute; the candidate is ruled out.
-- `H-RetailWriterMisaligned`: the edge fires, but its phase, arguments, or
-  return value cannot explain the port boundary; redesign the join rather than
-  adding a port counter.
+- `H-TargetStoreLive`: `0x8008EC88` writes at target width/origin with a
+  value/order relation that can be compared to the port boundary.
+- `H-TargetStoreAbsent`: controls pass but no target-phase store occurs;
+  this candidate is ruled out.
+- `H-TargetStoreMisaligned`: the store fires, but its value or ordering is not
+  the target route relation; keep the port unchanged and redesign the watch.
 
 ## Discriminator
 
 One oracle run with a whole-RDRAM positive control and title 1024 gate must
-capture the writer/call/return PCs, live arguments, return branch, VI origin,
-framebuffer context, and ordering at the 640-to-1024 transition.
-`H-RetailWriterLiveAndAligned` requires the oracle watch sequence and a
-comparison with the existing port row. A missing or misaligned candidate does
-not authorize port instrumentation or an audio change.
+capture the `0x8008EC88` store, its value and PC, live 1024 VI origin, and
+ordering relative to the transition. A target-phase hit with a comparable
+value selects `H-TargetStoreLive`; zero hits with valid controls selects
+`H-TargetStoreAbsent`; otherwise select `H-TargetStoreMisaligned`. No result
+authorizes a port or audio change by itself.
 
 ## Exact commands
 
 1. Read `tools/oracle/README.md` and use its existing route-watch recipe; do
    not build a new instrument before the oracle control is armed.
-2. Run one retail capture with whole-RDRAM control, the three candidate PCs,
-   and the title 1024 gate. Capture bounded output and classify the hypotheses.
+2. Run one retail capture with `--watch-write 0x0:0x800000`,
+   `--watch-pc 0x8008EC88`, `--pc-phase-log-width 0x00790400:1024`, and
+   `--pc-phase-log-width 0x00790800:1024`, plus the documented Start schedule.
 3. Compare only against the existing port row; if no like-for-like relation
    exists, record the boundary as unevaluable and leave source unchanged.

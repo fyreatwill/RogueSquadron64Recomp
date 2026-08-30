@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3251 (2026-08-29).
+Current maintenance marker: Session 3252 (2026-08-29).
+
+Session 3252 ran the independent retail oracle with a whole-RDRAM positive
+control and watched `reapplyDisplayMode` entry/call/return. All three PCs
+executed twice, but only at 1024/origin `0x006AB800` and 512/origin
+`0x006AB400`, after the target title transition at `0x00790400/0x00790800`.
+The explicit target-phase join produced zero rows. This selects
+`H-RetailWriterMisaligned`, rules out candidate absence, and requires a new
+target-boundary writer angle; no port or audio behavior changed. Evidence:
+`scratch/agent/s3252_retail_route_writer.md`.
 
 Session 3251 reran the exact configured `PatchesLib` build and confirmed the
 same external block: the target inventory has no `PatchesLib`, neither MIPS
@@ -148,6 +157,12 @@ no patch or allocator mitigation is authorized. Evidence:
    Step 3 recipe on a configured Windows/MIPS host. Per the three-attempt
    stall rule, do not repeat this local command until that host or its
    generated artifacts are supplied.
+   Session 3252 found the watched `reapplyDisplayMode` triplet live but
+   misaligned: it ran at `0x006AB800`/`0x006AB400`, not at the target
+   `0x00790400`/`0x00790800` transition. The target-phase join was empty
+   despite the whole-RDRAM and title controls. Do not add port counters or
+   infer a target writer from this candidate; the next oracle angle should
+   watch the target-phase store/writer boundary directly.
    Session 3249 completed the status-03 static audit and found named,
    legitimate publication and service-reaping edges. This closes the current
    status-03 idiom selection without authorizing a wait or status change.
