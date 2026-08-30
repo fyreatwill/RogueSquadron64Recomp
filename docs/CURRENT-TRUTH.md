@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3262 (2026-08-29).
+Current maintenance marker: Session 3263 (2026-08-29).
+
+Session 3263 repeated the bounded availability audit for the VI request-state
+body. `RecompiledFuncs/` is absent; `applyPendingViChanges` exists locally
+only as symbol metadata (`0x8001B7F0`, size `0x2AC`) and the probe template's
+expected caller (`0x80019914`). The host VI wrappers cannot expose the
+function's state loads or branch successors, so `H-RequestState`,
+`H-BoundaryConsumer`, and `H-Phase4SteadyState` remain unresolved. No build or
+runtime instrumentation was run. The next satisfying input is the generated
+body/provenance or an independent retail trace of its state inputs. Evidence:
+[`VI640-REQUEST-STATE-BLOCK.md`](VI640-REQUEST-STATE-BLOCK.md).
 
 Session 3262 audited the local VI-640 publication boundary. The host wrappers
 only forward/observe `osViSetMode` and consume committed VI registers; the

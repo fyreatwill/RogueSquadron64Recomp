@@ -127344,3 +127344,16 @@ rules out the host wrappers as the mode-choice producer, but does not rule out
 any guest-side state hypothesis. No build or instrumentation was run because
 the source audit supplied no complete discriminator or positive-control plan.
 Evidence: `docs/VI640-BOUNDARY-AUDIT.md`.
+
+## Session 3263 (2026-08-29) — bounded VI request-state source audit
+
+Ran the prescribed bounded source-availability checks for the VI-mode request
+state at `applyPendingViChanges`. `RecompiledFuncs/` is absent from this
+checkout; the function appears only in `syms/rogue_squadron.syms.toml` as
+`0x8001B7F0`/`0x2AC` and in `tools/apply_s802_vi_selector_probe.py` as the
+expected caller at `0x80019914`. The host VI wrappers only observe/forward
+requests and consume committed registers, so they cannot enumerate the
+function's state loads or branch successors. No build or runtime run was
+justified. This leaves `H-RequestState`, `H-BoundaryConsumer`, and
+`H-Phase4SteadyState` unresolved and rules out only the local-body-available
+hypothesis. Evidence: `docs/VI640-REQUEST-STATE-BLOCK.md`.

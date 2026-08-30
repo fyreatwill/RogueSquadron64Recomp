@@ -2,10 +2,11 @@
 
 HYPOTHESIS-ID: vi640-maudtask-type2-writer
 
-Session 3262 found that the local checkout cannot perform the requested state
-audit: the generated `RecompiledFuncs/` tree is absent. The only local
-reference is the probe template's expected caller at `0x80019914`; host VI
-wrappers observe requests but do not choose them.
+Session 3263 completed the local availability audit. The generated
+`RecompiledFuncs/` tree is absent; `applyPendingViChanges` is available only
+as symbol metadata and a probe-template call site. The next unit requires an
+external generated body/provenance or an independent retail trace of its
+state inputs.
 
 ## Competing hypotheses
 
@@ -15,7 +16,7 @@ wrappers observe requests but do not choose them.
   to commit it.
 - `H-Phase4SteadyState`: width 640 is an intentional terminal route.
 - `H-SourceUnavailable`: the generated body/state inputs are unavailable in
-  this checkout, so the three runtime hypotheses cannot yet be split.
+  this checkout, so the runtime hypotheses cannot yet be split.
 
 ## Discriminator
 
@@ -23,8 +24,8 @@ Obtain the generated body or an independent ground-truth trace of its state
 inputs. A suppressed target request with a live state input selects
 `H-RequestState`; a target request followed by no commit selects
 `H-BoundaryConsumer`; an explicit terminal-route contract selects
-`H-Phase4SteadyState`. If the body cannot be supplied, record the external
-dependency rather than adding another host-side field.
+`H-Phase4SteadyState`; continued source absence selects
+`H-SourceUnavailable`.
 
 ## Exact commands
 
@@ -35,8 +36,6 @@ git diff -- src lib patches tools
 ```
 
 Read only bounded windows around `applyPendingViChanges` and its state inputs
-once the generated body is available. No scheduler/audio behavior change is
-authorized. Build/run only if the body identifies a complete existing positive
-control and a discriminating capture.
-
-Do not repeat the completed boundary capture or add another source field.
+once the generated body is available. If it remains unavailable, obtain the
+independent oracle trace instead; do not add another host-side field. No
+scheduler/audio behavior change is authorized.
