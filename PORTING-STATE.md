@@ -127511,3 +127511,19 @@ ABI/DMA/image-stage/return/service/slot/PCM rows. This selects
 out using this run to authorize an M5 Step 3 edge. Evidence:
 `scratch/agent/s3272_m5_step1_pair.md` and
 `scratch/agent/s3272_m5_step1_pair/driver.log`.
+## Session 3274 (2026-08-29) — captured retail target framebuffer-span writer
+
+Ran the prescribed independent retail oracle capture with whole-RDRAM,
+target-span, metadata-span, adjacent-PC, and phase writer watches in one run.
+The whole-RDRAM control recorded 13,204 writes; VI tracing reached title
+1024/origin `0x00790400` and hangar 512/origin `0x006AB400`. The target span
+`0x00790000..0x00790C00` recorded 3,096 writes. In the selected hangar phase,
+`0x800078EC` wrote 3,072 times and `0x8001804C`/`0x8001805C` wrote 12 times
+each. The adjacent execution watch `0x8008EB00..0x8008ED00` was live with
+24,098 executions but had zero target-span writes. This selects
+`H-TargetSpanWriter` as valid single-source oracle evidence and rules out the
+adjacent candidate range as the target-span writer for this capture; it does
+not yet explain the port's pre-title VI-640 stop or authorize an audio/output
+change. Next: compare the port's phase-640 route/order and writeback against
+the retail relation in both same-build audio arms. Evidence:
+`scratch/agent/s3274_m5_target_span_writer.md`.
