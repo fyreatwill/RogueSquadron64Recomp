@@ -127474,6 +127474,26 @@ pending on the configured Windows/MIPS host or a supplied generated artifact.
 The next work unit is the prescribed retail-oracle scheduler message handoff
 capture at `0x80019CCC`/`0x80019CD0`. Evidence:
 `scratch/agent/s3271_guard_validation.md`.
+## Session 3273 (2026-08-29) — retail target-writer watch was insufficient
+
+The planned work unit was one independent retail target-writer capture using
+the whole-RDRAM, title, hangar, target-phase, metadata-span, and named-PC
+controls. The oracle completed with `oracle_rc=0`; the whole-RDRAM positive
+control passed, title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` were
+reached, and one target-phase bucket row was present.
+
+The phase writer histogram for metadata span `0x00141AD0..0x00141AF0`
+contained only `0x80094648` (`n=24`). Its 24 ordered rows all wrote sentinel
+`0x7F7F7F7F` to `0x00141AD8..0x00141AEC` at VI 2272. The requested
+`0x8008EB8C` and `0x8008EBBC` PCs had no target rows, and the non-sentinel
+table was `0/16` for all three PCs. This selects `H-TargetRowsInsufficient`
+as a valid single-source instrument result. It does not prove that the retail
+target writer is absent because the watch covered a metadata field rather than
+the target framebuffer. No port, audio, route, VI, or output behavior changed.
+The next unit watches the actual target framebuffer span and an adjacent PC
+range. Evidence: `scratch/agent/s3273_m5_route_boundary.md` and
+`scratch/agent/s2297_m5_target_only_writer_sequence/driver.log`.
+
 ## Session 3272 (2026-08-29) — M5 Step 1 pair was route-invalid
 
 The single build `cmake --build build --target RogueSquadron64Recomp` passed.

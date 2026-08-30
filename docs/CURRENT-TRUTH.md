@@ -4,7 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3271 (2026-08-29).
+Current maintenance marker: Session 3273 (2026-08-29).
+
+Session 3273 ran the prescribed independent retail target-writer capture.
+The whole-RDRAM positive control, title `1024 @ 0x00790400`, hangar
+`512 @ 0x006AB400`, and one target-phase row all passed. The selected
+metadata-span watch had 24 target-phase writes from `0x80094648`, but every
+row was the sentinel `0x7F7F7F7F` at `0x00141AD8..0x00141AEC`; the requested
+`0x8008EB8C` and `0x8008EBBC` PCs had no target rows. The non-sentinel table
+was `0/16` for all three PCs, so the driver selected
+`H-TargetRowsInsufficient`. This is a valid single-source instrument result,
+not evidence that the retail target writer is absent: the watch covered a
+metadata field rather than the target framebuffer. No port or audio behavior
+changed. Evidence: `scratch/agent/s3273_m5_route_boundary.md` and the
+`s2297_m5_target_only_writer_sequence` capture.
 
 Session 3272 ran the required M5 Step 1 same-build image-versus-silent pair.
 The independent retail oracle passed the whole-RDRAM 10,000-write control and
@@ -321,7 +334,12 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3272
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3273
+reached the retail target phase but its metadata-span/candidate-PC table was
+insufficient: only sentinel housekeeping from `0x80094648` was observed.
+The next M5 unit must watch the actual target framebuffer span and adjacent
+generated-PC range in one independent retail run; do not infer writer absence
+or change audio behavior. Session 3272
 made the Step 1 pair route-invalid again: retail reached title/hangar, while
 both port arms stopped before title at `640 @ 0x0066A500`; downstream audio
 nulls remain unevaluable. The next M5 unit is a route-boundary audit or
@@ -344,19 +362,28 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Obtain the configured Windows/MIPS build artifact or generated patch
+1. Watch the actual target framebuffer span `0x00790000..0x00790C00` and the
+   adjacent generated-PC range `0x8008EB00..0x8008ED00` in one independent
+   retail run. Include the whole-RDRAM positive control, title/hangar gates,
+   and a phase writer histogram for the target span. A target-phase write with
+   an attributable PC selects a legitimate writer candidate; a live target
+   phase with no target-span writes selects an unresolved upstream/output
+   boundary; missing controls invalidate the run. This replaces the
+   metadata-only `H-TargetRowsInsufficient` capture and authorizes no M5
+   behavior change by itself.
+2. Obtain the configured Windows/MIPS build artifact or generated patch
    outputs, then validate Session 3270's expanded free-list guard class.
    Require successful patch compilation, unchanged valid-path behavior, and a
    controlled cyclic-chain fixture that returns before queue writes. This
    guard is not evidence that the VI-640 route or audio is corrupt.
-2. Capture the consumed-message handoff around generated `0x80019CCC` and
+3. Capture the consumed-message handoff around generated `0x80019CCC` and
    `0x80019CD0` with positive controls. Session 3269 reached both target
    origins and proved the receive watch live, but its interface exposed no
    message pointer/type/`89F`/`28D44` fields, selecting
    `H-RecvWatchUnavailable`. Use adjacent-PC detail plus a phase-gated field
    dump in one run; do not infer message mutation, another task type, or
    type-2 absence from the missing fields.
-3. Capture retail scheduler message identity at generated `0x80019CD0` with
+4. Capture retail scheduler message identity at generated `0x80019CD0` with
    positive controls. Session 3268 widened the selector watch to
    `0x00114A800..0x00114A900` and still saw zero reads, while pending state and
    boundary PCs were live; this selects `H-SelectorNotReadInObservedPhases`
