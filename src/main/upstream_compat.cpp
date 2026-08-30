@@ -1887,6 +1887,43 @@ static void recv_trace_scheduler_type(uint8_t* rdram, uint32_t msg_addr,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_scheduler_recv_identity(uint8_t* rdram, uint32_t pc,
+                                                   uint32_t caller,
+                                                   uint32_t output_slot,
+                                                   uint32_t result) {
+    if (!recv_trace_enabled() || result != 0 || rdram == nullptr) return;
+    if (output_slot < 0x80000000u || output_slot >= 0x80800000u) return;
+    const uint32_t slot_phys = output_slot - 0x80000000u;
+    const uint32_t msg_addr =
+        (static_cast<uint32_t>(rdram[slot_phys ^ 3u]) << 24) |
+        (static_cast<uint32_t>(rdram[(slot_phys + 1u) ^ 3u]) << 16) |
+        (static_cast<uint32_t>(rdram[(slot_phys + 2u) ^ 3u]) << 8) |
+        static_cast<uint32_t>(rdram[(slot_phys + 3u) ^ 3u]);
+    unsigned type = 0xFFu;
+    if (msg_addr >= 0x80000000u && msg_addr < 0x80800000u) {
+        type = rdram[(msg_addr - 0x80000000u) ^ 3u];
+    }
+    static std::atomic<uint32_t> bucket{0xFFFFFFFFu};
+    static std::atomic<uint32_t> rows{0};
+    const uint32_t phase = rs64_phase_ord();
+    if (bucket.load(std::memory_order_relaxed) != phase &&
+        bucket.exchange(phase, std::memory_order_relaxed) != phase) {
+        rows.store(0, std::memory_order_relaxed);
+    }
+    const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
+    if (row >= 256u) return;
+    auto be_u8 = [rdram](uint32_t guest) -> unsigned {
+        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFu;
+        return rdram[(guest - 0x80000000u) ^ 3u];
+    };
+    std::fprintf(stderr,
+        "[recv-scheduler-identity] phase=%u row=%u pc=0x%08X caller=0x%08X "
+        "slot=0x%08X msg=0x%08X type=0x%02X 89F=%u 28D44=%u\n",
+        phase, row, pc, caller, output_slot, msg_addr, type,
+        be_u8(0x8011A89Fu), be_u8(0x80128D44u));
+    std::fflush(stderr);
+}
+
 static void sendtgt_note(uint32_t mq, uint64_t tid, bool want_stack) {
     if (!recv_trace_enabled() && !want_stack) return;
     if (recv_trace_enabled()) recv_trace_start_dumper();

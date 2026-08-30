@@ -1,42 +1,45 @@
-# NEXT work unit — capture scheduler message identity at the call site
+# NEXT work unit — repair regenerated-tree scheduler crash
 
 HYPOTHESIS-ID: vi640-maudtask-type2-writer
 
-Session 3255's wrapper-level receive-type probe was unevaluable: `$a1` was
-zero at the wrapper and the queue snapshot preceded external-message
-delivery. Do not repeat that probe or infer a message type from its zero rows.
+Session 3256 established that the retail call site is live, but the freshly
+regenerated port crashes in `spTaskSchedulerThread+2864` during VI 320. The
+new identity hook is not the cause: the disabled-hook control crashed at the
+same location with the same register pattern. Do not repeat the scheduler
+identity capture until the port reaches the VI-640 wall.
 
 ## Competing hypotheses
 
-- `H-SpMsgMutated`: the scheduler receives the host SP-complete object
-  `0x80128C70`, whose byte 0 is unexpectedly 2 at the VI-640 wall.
-- `H-OtherOsTask`: a different live producer supplies a type-2 message to
-  `0x8011A420`; the call-site capture names its pointer and type.
-- `H-Type2AbsentAtRecv`: the scheduler receives only type 1/0x81 or another
-  non-2 value; the 89F=2 stall needs a different explanation.
+- `H-Regeneration-Missing-Patch`: the fresh N64Recomp/fixup output omitted a
+  previously required generated-tree patch, causing the early scheduler crash.
+- `H-Regeneration-Compiler-Drift`: the current N64Recomp output differs in
+  control-flow or register handling independently of the missing fixup sites.
+- `H-Port-Baseline-Crash`: the crash is already present in the checked-in
+  baseline and is unrelated to regeneration.
 
 ## Discriminator
 
-Instrument the generated scheduler call at `0x80019CCC..0x80019CD0` (through
-the regeneration/fixup path, or an equivalent host hook that records the
-generated caller) so the capture records the caller, output-slot address,
-message pointer after return, type byte, and `89F/28D44`. The same run must
-show the existing `[recvtrace]` positive control and reach the VI-640 phase.
-Type 2 with `0x80128C70` selects `H-SpMsgMutated`; type 2 with another pointer
-selects `H-OtherOsTask`; no type 2 after the controls select
-`H-Type2AbsentAtRecv`. If the port never reaches the required call-site phase,
-report coverage invalid rather than interpreting a null.
+Inventory the pre-regeneration generated-tree patch markers and compare them
+with the current fixup report and the last known-good build artifacts. Restore
+only the missing regeneration-preserved diagnostics/behavior through
+`fixup_game_funcs.py` or its dedicated apply script, then build once. Run the
+same prescribed port recipe with `ROGUESQ_RECV_TRACE=0` as a control. Reaching
+VI 640 (without the identity hook enabled) selects a missing-patch/drift
+explanation and authorizes the identity capture as the following unit; an
+identical 320 crash after marker parity selects baseline/other runtime crash
+and requires a new code-level discriminator. Do not treat a build-only success
+or a 320-phase row as target coverage.
 
 ## Exact start
 
-First inspect the fixup/regeneration path for the existing `funcs_4.c`
-diagnostic hooks, then make one bounded instrument/build. Run from `build/`:
+First use bounded `git diff`/marker checks in the external N64Recomp tree; do
+not clear or regenerate again until the missing marker set is identified.
+Then build from this repository's `build/` directory:
 
 ```
 env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
     ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
-    ROGUESQ_RECV_TRACE=1 ./RogueSquadron64Recomp
+    ROGUESQ_RECV_TRACE=0 ./RogueSquadron64Recomp
 ```
 
-SIGKILL at approximately 40 seconds. Preserve the full log under a path whose
-final component does not begin with `.`.
+SIGKILL at 40 seconds and preserve the log under `scratch/agent/`.

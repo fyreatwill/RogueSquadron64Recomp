@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3255 (2026-08-29).
+Current maintenance marker: Session 3256 (2026-08-29).
+
+Session 3256 added a regeneration-preserved post-return scheduler identity
+capture at `0x80019CD0`. The independent retail oracle passed its whole-RDRAM
+positive control and executed that call site 7,620 times through title and
+hangar. The port emitted one valid pre-target row (`msg=0x80112AE0`, type 1),
+but both instrument and disabled-hook control runs crashed in the regenerated
+tree at the same 320-phase scheduler location. Required VI-640 coverage is
+therefore invalid; no scheduler hypothesis is selected and the row must not be
+used to claim target-phase type-2 absence. Evidence:
+`scratch/agent/s3256_scheduler_identity.md`.
 
 Session 3255 ran the scheduler receive-type discriminator. The existing
 `ROGUESQ_RECV_TRACE` controls fired, but the new type field was unevaluable:
@@ -167,6 +177,10 @@ no patch or allocator mitigation is authorized. Evidence:
    caller identity, message pointer, type byte, and `89F/28D44` in the same
    phase before selecting `H-SpMsgMutated`, `H-OtherOsTask`, or
    `H-Type2AbsentAtRecv`.
+   Session 3256's hook is present in the fixup path, but the regenerated tree
+   crashes in the 320 phase even with the hook disabled. First repair or
+   account for that regenerated-tree regression; do not repeat the capture
+   until the port reaches the VI-640 wall.
 2. Validate Session 3254's complete free-list guard class on the configured
    Windows/MIPS host, then run the bounded M5 Step 3 gate only if the build
    produces `RecompiledPatches/patches.c`. The exact local build remains

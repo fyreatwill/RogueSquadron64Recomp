@@ -127220,3 +127220,19 @@ pre-call snapshot, but it does not identify the consumed message. The
 measurement is unevaluable and selects none of `H-SpMsgMutated`,
 `H-OtherOsTask`, or `H-Type2AbsentAtRecv`. No scheduler/audio/guard behavior
 changed. Evidence: `scratch/agent/s3255_vi640_recv_type.md`.
+
+## Session 3256 (2026-08-29) — captured post-return scheduler identity
+
+The independent retail oracle ran with a whole-RDRAM positive-control watch and
+executed `0x80019CD0` 7,620 times while reaching title and hangar. A new
+post-return, regeneration-preserved port hook captured the output slot,
+message pointer, type byte, caller, and `89F/28D44`. It produced one valid
+pre-target row: slot `0x8011D460`, message `0x80112AE0`, type `1`. The port
+also passed its receive-trace controls, but crashed in the regenerated tree
+during VI 320 before the required VI-640 wall. A disabled-hook control crashed
+at the identical scheduler location with the same register pattern. This
+attributes the early failure to the regenerated-tree/control issue rather than
+the new hook, but leaves the target-phase message identity unevaluable. It
+selects no scheduler hypothesis and rules out neither target-phase type-2
+presence nor absence. Evidence:
+`scratch/agent/s3256_scheduler_identity.md`.
