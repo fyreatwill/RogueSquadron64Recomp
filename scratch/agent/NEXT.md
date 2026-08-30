@@ -1,49 +1,48 @@
-# NEXT work unit — port: where does the scheduler stall after 19ED0 n=123?
+# NEXT work unit — port: which recv-dispatch skips the 19ED0 gate?
 
 HYPOTHESIS-ID: m5-osvimode-viewer-frame-exit
 
 ## Resume context
 
-Session 3293 selected `H-PortSchedSendMissing`: after SENT n=3 /
-E0B4 n=41, jal `0x80019F1C` never fires. Same-run 19F1C n=41 at
-width 640 (`a0=0x8011A818`) unblocked SENT n=2. The
-`0x80128D44==0` skip (`19F24`) was silent. Last scheduler-gate
-visits were `19ED0` n=122/123 with `$s2[0]=2` during SENT n=2
-(path to `L_80019F50` / send `0x8011A800`), then no further
-`L_80019ED0`. Keep s3288 fade / s3289 SENT / s3290 inner /
-s3293 gate probes; this unit is the stall site inside
-`spTaskSchedulerThread` after that last 19ED0.
+Session 3294 selected `H-SchedLoopAliveNoEd0`: after last
+19ED0 n=122 the F50 send returned and loop head `19CC4`
+continued through n=4045 while SENT n=3 blocked in E0B4.
+Zero further 19ED0/19F1C. `L_80019ED0` is reached from
+`L_80019E7C` (type `0x81` path `L_80019DFC` when yielded-task
+word `0x80128D40` is zero) only if `$s2[0] != 1`. At SENT n=3
+the live loop already shows `19CC4` n=248 `s2b0=0x01`. Keep
+s3288 fade / s3289 SENT / s3290 inner / s3293 gate / s3294
+loop probes; this unit is the dispatch after recv return.
 
 ## Competing hypotheses
 
-- `H-SchedRecvBlocked`: after `19ED0` n=123, `osRecvMesg` at
-  `0x80019CD0` is entered and does not return (loop waiting
-  on a message that never arrives).
-- `H-SchedF50SendBlocked`: the `$s2[0]!=0` path's `osSendMesg`
-  at `0x80019F64` (`$a0=0x8011A800`) is entered on n=122 or
-  n=123 and does not return.
-- `H-SchedOtherJal`: after `19ED0` n=123 a different jal
-  (`osSpTaskLoad`/`osSpTaskStartGo`/`getTimeLow32`/other send)
-  is the last site and does not return; loop head
-  `L_80019CC4` is not reached again.
-- `H-SchedCoverageInvalid`: SENT n=3 / viewer / 640 / 19ED0
-  n=123 miss, or the new loop/recv/F50 probes are silent
-  while 19F1C n=41 still prints.
+- `H-NoType81`: after last 19ED0, recv returns but the type
+  byte at `0x80019CDC` is never `0x81` (loop eats 0/1/2 and
+  jumps to `19CC4`).
+- `H-Type81YieldBusy`: type `0x81` arrives, `L_80019DFC`
+  runs, but `0x80128D40` is nonzero so the yield-restart path
+  is taken instead of `L_80019E7C`.
+- `H-Ed0CompareSkip`: `L_80019E7C` runs, but `$s2[0]==1` so
+  `0x80019E80` does not take `L_80019ED0`.
+- `H-DispatchCoverageInvalid`: SENT n=3 / 19F1C n=41 /
+  19CC4 after last 19ED0 miss, or the new
+  type/19DFC/19E7C/19E80 probes are silent at width 640.
 
 ## Discriminator
 
 One Debug port run, 30 s from `build/`, SIGKILL.
-`ROGUESQ_LOG_M5_POSTWAIT=1`. Keep s3288/s3289/s3290/s3293
-probes. Add a width≥640 always-print at `L_80019CC4` (loop
-head), `0x80019CD0` recv entry+return, and `0x80019F64` send
-entry+return. 19ED0 n=123 and 19F1C n=41 must still print
-(same-run positive controls). Join to SENT n=3 `E0B4`.
+`ROGUESQ_LOG_M5_POSTWAIT=1`. Keep s3288/s3289/s3290/s3293/s3294
+probes. Add a width≥640 always-print at the type-byte load
+(`0x80019CDC`), `L_80019DFC`, `L_80019E7C`, and the
+`0x80019E80` taken vs fallthrough. 19F1C n=41 and 19CC4 n=248+
+must still print (same-run positive controls). Join to SENT
+n=3 `E0B4` and last 19ED0.
 
-A 19CD0 enter without return after 19ED0 n=123 selects
-`H-SchedRecvBlocked`. A 19F64 enter without return on n=122
-or n=123 selects `H-SchedF50SendBlocked`. Loop head silence
-with some other last jal selects `H-SchedOtherJal`. Missed
-controls or a silent new probe on 19F1C n=41 is a failed
+A live type census with zero `0x81` after last 19ED0 selects
+`H-NoType81`. Type `0x81` plus `19DFC` without `19E7C`
+selects `H-Type81YieldBusy`. `19E7C` plus fallthrough at
+`19E80` (`$s2[0]==1`) selects `H-Ed0CompareSkip`. Missed
+controls or a silent new probe on 19CC4 n=248+ is a failed
 instrument.
 
 Do not add a skip, allow, restore, or wait bypass. No M5
@@ -51,14 +50,14 @@ Step 3.
 
 ## Exact commands
 
-Fixup: `tools/apply_s3294_scheduler_stall.py` (also hook from
-`fixup_game_funcs.py`) at `L_80019CC4`, `0x80019CD0`
-entry+return, and `0x80019F64` entry+return.
+Fixup: `tools/apply_s3295_scheduler_dispatch.py` (also hook
+from `fixup_game_funcs.py`) at `0x80019CDC`, `L_80019DFC`,
+`L_80019E7C`, and `0x80019E80` taken vs fallthrough.
 Rebuild Debug. Then from `build/` with the ROM present:
 
 ```
 env ROGUESQ_LOG_M5_POSTWAIT=1 ./RogueSquadron64Recomp
 ```
 
-30 s, SIGKILL. Log: `scratch/agent/s3294_port_scheduler_stall.md`
+30 s, SIGKILL. Log: `scratch/agent/s3295_port_scheduler_dispatch.md`
 plus the captured run log.

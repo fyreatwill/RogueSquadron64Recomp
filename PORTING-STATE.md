@@ -128123,3 +128123,46 @@ or M5 Step 3 change. No new soak-queue verdicts. Evidence:
 `scratch/agent/s3293_port_scheduler_send.md`,
 `scratch/agent/s3293_port_scheduler_send.log`.
 
+
+## Session 3294 (2026-08-29) — scheduler loop alive after last 19ED0; 19ED0 path abandoned
+
+Port scheduler-stall census, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. Fixup probe at `L_80019CC4`
+(loop head), `0x80019CD0` recv entry+return, and `0x80019F64`
+F50-send entry+return (`tools/apply_s3294_scheduler_stall.py`,
+also hooked from `fixup_game_funcs.py`). Kept s3288 fade,
+s3289 SENT/SRET, s3290 inner, s3293 gate. Debug rebuild. One
+30 s run from `build/` with `ROGUESQ_LOG_M5_POSTWAIT=1`,
+SIGKILL. Log: `scratch/agent/s3294_port_scheduler_stall.log`.
+
+Same-run positive controls: `[phase] 640 @ 0x0066A500` at 3.0 s;
+`[m5-postwait]` viewer `entry` `pc=0x800C28F0`; `[s3288-fade]
+2D50 n=3 taken=0`; SENT n=3 without SRET n=3; E0B4 n=41
+without R0B4; `[s3293-sched] 19F1C n=41` at width 640
+`a0=0x8011A818`; `[s3294-stall]` 19CC4/E0CD0/R0CD0 live at
+width 640 from n=240 and E0F64/R0F64 n=80/81 returned at
+width 640. Prescribed 19ED0 n=123 did not fire; last 19ED0 is
+n=122 (`s2b0=0x02`) and width ≥ 640 always-prints, so n=123
+would have shown. Zero crash/abort/Bus-error/last-guest-pc.
+`miss=1` count is 0.
+
+Last 19ED0 n=122 took the F50 send (`E0F64`/`R0F64` n=81,
+`a0=0x8011A800`) and that send returned; loop head `19CC4`
+n=245 ran immediately. SENT n=3 then blocked in E0B4 n=41.
+During that block the scheduler kept matching recv on
+`0x8011A420` (`19CC4` n=248 `s2b0=0x01` through n=4045 at
+SIGKILL; last `R0CD0` n=4044). Zero further 19ED0, 19F1C, or
+E0F64. VI/SI kept pumping (`update_screen` #1600, origin
+later `0x005D4500`).
+
+This selects `H-SchedLoopAliveNoEd0` and refutes
+`H-SchedRecvBlocked`, `H-SchedF50SendBlocked`,
+`H-SchedOtherJal`, and `H-SchedCoverageInvalid`. Combined
+with s3293: `H-PortSchedSendMissing` still holds because the
+19ED0 gate is not re-entered, not because a jal inside
+`spTaskSchedulerThread` blocks. Single-source port census.
+Next discriminator is which recv-dispatch after last 19ED0
+fails to enter 19E7C/19ED0. No audio or M5 Step 3 change.
+No new soak-queue verdicts. Evidence:
+`scratch/agent/s3294_port_scheduler_stall.md`,
+`scratch/agent/s3294_port_scheduler_stall.log`.

@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3293 (2026-08-29).
+Current maintenance marker: Session 3294 (2026-08-29).
+
+Session 3294 asked where `spTaskSchedulerThread` stalls after
+the last `L_80019ED0`. Same-run controls: viewer
+`[m5-postwait]` entry, `[phase]` `640 @ 0x0066A500`,
+`[s3288-fade] 2D50 n=3 taken=0`, SENT n=3 without SRET n=3,
+E0B4 n=41 without R0B4, and `19F1C` n=41 at width 640. Last
+19ED0 was n=122 (`s2b0=0x02`); the F50 send at `0x80019F64`
+n=81 returned, then loop head `19CC4` n=245 ran immediately.
+During SENT n=3 the scheduler kept matching recv on
+`0x8011A420` (`19CC4` n=248 through n=4045). Zero further
+19ED0/19F1C. This selects `H-SchedLoopAliveNoEd0` and refutes
+`H-SchedRecvBlocked`, `H-SchedF50SendBlocked`,
+`H-SchedOtherJal`, and `H-SchedCoverageInvalid`. No M5 Step 3.
+Evidence: `scratch/agent/s3294_port_scheduler_stall.md`.
 
 Session 3293 asked whether the port's `spTaskSchedulerThread`
 jal `0x80019F1C` still sends to `0x8011A818` after SENT n=3.
@@ -516,24 +530,25 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3293
-selects `H-PortSchedSendMissing`: the port's `0x80019F1C` jal
-sends once at 640 (unblocking SENT n=2) then the scheduler
-leaves `L_80019ED0`. Session 3292's `H-RetailSpSchedulerProducer`,
-Session 3291's `H-RetailRecvReturns`, Session 3290's
-`H-SubmitRecvBlocked`, and Session 3288's
-`H-PortFadeOutNeverEntered` still hold. Session 3276's
-`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio
-change is authorized until a like-for-like target row exists.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3294
+selects `H-SchedLoopAliveNoEd0`: after last 19ED0 the scheduler
+keeps looping recv on `0x8011A420` and never re-enters
+`L_80019ED0`. Session 3293's `H-PortSchedSendMissing`,
+Session 3292's `H-RetailSpSchedulerProducer`, Session 3291's
+`H-RetailRecvReturns`, Session 3290's `H-SubmitRecvBlocked`,
+and Session 3288's `H-PortFadeOutNeverEntered` still hold.
+Session 3276's `H-PortTargetPublicationAbsent` still holds.
+No M5 Step 3 audio change is authorized until a like-for-like
+target row exists.
 
-1. Port: where does `spTaskSchedulerThread` stall after
-   `L_80019ED0` n=123 (before SENT n=3)? The `0x80128D44==0`
-   skip is refuted. Join existing SENT n=3 / E0B4 with
-   width≥640 probes at loop head `L_80019CC4`, recv
-   `0x80019CD0` entry+return, and the `$s2[0]!=0` send
-   `0x80019F64` (queue `0x8011A800`). 19ED0 n=123 and 19F1C
-   n=41 are the same-run positive controls. Do not add a skip,
-   allow, restore, or wait bypass. No M5 Step 3.
+1. Port: after last 19ED0, which recv-dispatch skips the
+   19ED0 gate? `L_80019ED0` is reached from `L_80019E7C`
+   (type `0x81` path `L_80019DFC` when yielded-task word
+   `0x80128D40` is zero) only if `$s2[0] != 1`. Join existing
+   SENT n=3 / 19F1C n=41 / 19CC4 n=248+ with width≥640 probes
+   at the type-byte load (`0x80019CDC`), `L_80019DFC`,
+   `L_80019E7C`, and the `0x80019E80` compare. Do not add a
+   skip, allow, restore, or wait bypass. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -688,6 +703,14 @@ width-640 send during SENT n=1, then two `$s2[0]=2` gate
 visits that skip the jal, then silence at `L_80019ED0` before
 SENT n=3. The flag-zero skip never fired.
 
+Session 3293 left the stall as some jal after last 19ED0
+(recv, F50 send, or SpTaskLoad/StartGo). Believable because
+19ED0 went silent and SENT n=3 blocked. Session 3294 measured
+loop head `19CC4` n=245 immediately after the last 19ED0's
+F50 send returned, then ~3800 matched recvs during SENT n=3.
+The scheduler is not stalled; the 19ED0 gate is not
+re-entered.
+
 The recomp direct C call to `submitGfxFrame` does not write guest
 `$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
 that word is dead.
@@ -700,6 +723,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3294_port_scheduler_stall.md`,
 `scratch/agent/s3293_port_scheduler_send.md`,
 `scratch/agent/s3292_retail_submit_send.md`,
 `scratch/agent/s3291_retail_submit_recv.md`,
