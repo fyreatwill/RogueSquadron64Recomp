@@ -4,7 +4,26 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3301 (2026-08-29).
+Current maintenance marker: Session 3302 (2026-08-29).
+
+Session 3302 asked whether the port's last `19ED0` path
+actually clears `0x8011A89F`, and who restores one before
+the first `19E80F`. Controls reached viewer `640 @
+0x0066A500`, SENT n=3, blocking E0B4 n=41, last 19ED0
+n=124, and matched F64 entry/return. `19F50 n=83 seq=165`
+saw 89F=2; `19F6C-post n=83 seq=166` saw 89F=0. After
+type-1 started `gspTask`, type-2 published the yield word,
+and the next type-81 took `19E70-post n=1 seq=167`
+(`s0=s1=1`, 89F=1); the following type-81 reached the first
+19E80F. This selects `H-Ed0ClearsThenE70` and refutes
+`H-Ed0NonzeroNoClear`, `H-Ed0ClearsThenOther`, and invalid
+coverage. The named legitimate writer is the scheduler's
+yield-complete store. Static follow-up is single-source:
+the strong `osSpTaskStartGo_recomp` override omits the weak
+implementation's request clear, while `osSpTaskYielded`
+reports request state even though the runtime never
+interrupts a task. No M5 Step 3. Evidence:
+`scratch/agent/s3302_port_89f_clear.md`.
 
 Session 3301 asked retail whether attract-viewer type-1
 (`0x80019D10` / `0x80019D58`) starts `gspTask` and writes
@@ -667,13 +686,16 @@ Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Port: after last 19ED0 (`s2b0=2` takes `L_80019F50`),
-   does `0x80019F6C` (`sb $zero, 0($s2)`) clear
-   `0x8011A89F`, and who writes 89F=1 before the first
-   19E80 fallthrough? Probe `0x80019F50`, `0x80019F6C`,
-   `0x80019E70` (`sb $s1, 0x8011A89F`), keep last 19ED0 /
-   19F64 / 19E80F / SENT n=3. Do not add a skip, allow,
-   restore, or wait bypass. No M5 Step 3.
+1. Same-build port A/B: baseline request-only
+   `osSpTaskYielded` versus a diagnostic completion-wins
+   arm that returns not-yielded after the host has completed
+   the GFX task. Require the baseline E70 loop and, in the
+   candidate arm, E60 followed by restored 19ED0/19F1C/
+   19FE4, submit-recv return, and viewer progress. Retail
+   ground truth is s3296/s3298/s3301. ORIGIN: the request is
+   legitimately written by `osSpTaskYield`; it is not an
+   actual yielded-task result because this runtime never
+   interrupts a task. Experimental arm only; no M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -889,6 +911,13 @@ always idle. Session 3301 measured 242 viewer 19D10=19D34
 =19D58 (`gspTask` `0x800377C8`, `$s1=1`), 19D78=0, and
 19FE4 1:1 with 19D10+19DCC so 19DCC always loads 0.
 
+Session 3301 left open whether the port's last 19F50 path
+misses its `19F6C` clear or whether another writer restores
+89F. Session 3302 measured `19F50` 89F=2 → returned F64 →
+`19F6C-post` 89F=0, then named `19E70-post` restoring one
+immediately after the first extra type-2 yield. The
+missed-clear and unknown-writer readings are refuted.
+
 The recomp direct C call to `submitGfxFrame` does not write guest
 `$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
 that word is dead.
@@ -901,6 +930,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3302_port_89f_clear.md`,
 `scratch/agent/s3301_retail_type1_sp.md`,
 `scratch/agent/s3300_port_sp_busy_writer.md`,
 `scratch/agent/s3299_port_type2_successor.md`,

@@ -128422,3 +128422,36 @@ This selects `H-RetailType1StartsSp` and refutes
 sides type-1-start `gspTask` / write 89C; only retail
 keeps 19FE4 running so type-2 idle-starts. No audio or
 M5 Step 3 change. No new soak-queue verdicts.
+
+## Session 3302 (2026-08-29) — 19F6C clears 89F; yield-complete 19E70 restores one
+
+Port scheduler clear/restore capture, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. Added the regeneration-preserved
+`tools/apply_s3302_89f_clear.py` four-site ordering probe. The first build
+failed because its helper lacked an `rdram` parameter; the helper contract
+and calls were fixed in both the live generated file and sibling fixup, and
+the second build completed. One 30 s run from `build/`, SIGKILL. Evidence:
+`scratch/agent/s3302_port_89f_clear.md`; capture:
+`scratch/agent/s3302_port_89f_clear/run.log`.
+
+Same-run controls reached `[phase] 640 @ 0x0066A500`, viewer
+`[m5-postwait]` entry, `[s3288-fade] 2D50 n=3 taken=0`, SENT n=3,
+blocking E0B4 n=41, last 19ED0 n=124, and matched F64 entry/return.
+No crash/abort marker appeared. The new helper was live at the three
+decisive sites; its E60 null is not used as evidence.
+
+Last relevant order: `19F50 n=83 seq=165` saw 89F=2; F64 returned;
+`19F6C-post n=83 seq=166` saw 89F=0. Type-1 then started
+`gspTask 0x800377C8`, type-2 published `yieldw=0x80149470`, and the
+next type-81 took `19E70-post n=1 seq=167` with `s0=s1=1` and
+89F=1. The following type-81 reached the first 19E80F. E70 continued
+to n=1192 while F50/F6C stopped at n=83.
+
+This selects `H-Ed0ClearsThenE70` and refutes
+`H-Ed0NonzeroNoClear`, `H-Ed0ClearsThenOther`, and
+`H-CoverageInvalid`. The writer is the scheduler's legitimate
+yield-complete store; the port reaches it because request-only yield
+status is treated as a completed yield on a runtime that does not interrupt
+tasks. Static follow-up is single-source: the strong StartGo override also
+omits the weak implementation's request clear. No skip, force-clear, wait
+bypass, audio output change, or M5 Step 3 change. No new soak verdicts.
