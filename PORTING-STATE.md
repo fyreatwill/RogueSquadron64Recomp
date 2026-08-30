@@ -127327,3 +127327,20 @@ It rules out a producer-wide stop and an explicit phase-4 terminal contract,
 but does not identify the upstream state/writer that should request the target
 mode. No scheduler, audio, or mitigation behavior changed. Full evidence is
 in `scratch/agent/s3261_vi640_boundary.md` and the captured log.
+## Session 3262 (2026-08-29) — audited the VI-640 request-state boundary
+
+The prescribed source audit checked the host-side VI wrappers, the existing
+`applyPendingViChanges` regeneration probe template, and the local generated
+source inventory. `upstream_compat.cpp` only forwards and observes
+`osViSetMode`; `rt64_render_context.cpp` only consumes committed VI registers.
+The generated `RecompiledFuncs/` tree is absent, and the only local reference
+to `applyPendingViChanges` is the expected caller at `0x80019914` in
+`tools/apply_s802_vi_selector_probe.py`. Its state loads and branch successors
+cannot therefore be enumerated from this checkout.
+
+This leaves `H-RequestState`, `H-BoundaryConsumer`, and
+`H-Phase4SteadyState` unresolved and selects no runtime behavior change. It
+rules out the host wrappers as the mode-choice producer, but does not rule out
+any guest-side state hypothesis. No build or instrumentation was run because
+the source audit supplied no complete discriminator or positive-control plan.
+Evidence: `docs/VI640-BOUNDARY-AUDIT.md`.

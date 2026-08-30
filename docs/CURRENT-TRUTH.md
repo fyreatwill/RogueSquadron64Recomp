@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3261 (2026-08-29).
+Current maintenance marker: Session 3262 (2026-08-29).
+
+Session 3262 audited the local VI-640 publication boundary. The host wrappers
+only forward/observe `osViSetMode` and consume committed VI registers; the
+generated `RecompiledFuncs/` tree containing `applyPendingViChanges` is absent,
+and the only local reference is the regeneration probe's expected call site at
+`0x80019914`. The function's state loads and branch successors are therefore
+not locally enumerable, so `H-RequestState`, `H-BoundaryConsumer`, and
+`H-Phase4SteadyState` remain unresolved. No build or instrumentation was run;
+the next satisfying input is the generated body or an independent ground-
+truth trace of its state inputs. Evidence: [`VI640-BOUNDARY-AUDIT.md`](VI640-BOUNDARY-AUDIT.md).
 
 Session 3261 audited and captured the pre-target VI publication boundary. The
 positive-controlled run entered phase 4 at width 640/origin `0x0066A500`, then
@@ -224,14 +234,14 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Audit the pre-target scheduler/VI-640 boundary and explain why the repaired
-   port remains at width 640/origin `0x0066A500`. Session 3260 proves the
-   scheduler identity instrument works in phase 2 and sees legitimate type-2
-   messages, but target-phase rows remain absent without a crash. The next
-   discriminator must identify one concrete producer/consumer or state edge
-   separating the phase-2 accepted message stream from the missing target
-   transition; do not repeat the capture or change scheduler/audio behavior
-   until that edge is named.
+1. Obtain the generated body/provenance for `applyPendingViChanges` at the
+   expected caller `0x80019914`, or an independent ground-truth trace of its
+   state inputs. The local host wrappers cannot enumerate that state edge
+   because `RecompiledFuncs/` is absent. A live state input with a suppressed
+   target request selects `H-RequestState`; a target request with no commit
+   selects `H-BoundaryConsumer`; an explicit terminal-route contract selects
+   `H-Phase4SteadyState`. Do not repeat the scheduler identity capture or add
+   another port field until one of those edges is available.
 2. After the boundary audit, capture the scheduler message identity at the
    generated `0x80019CD0` receive call site with positive controls. A type-2
    target row selects `H-SpMsgMutated`; a valid non-type-2 target row selects
