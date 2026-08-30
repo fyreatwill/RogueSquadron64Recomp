@@ -127722,3 +127722,32 @@ change.
 No new soak-queue verdicts. Evidence:
 `scratch/agent/s3281_tick_parent.md`,
 `scratch/agent/s3281_tick_parent.log`.
+
+## Session 3282 (2026-08-29) — menuOverlayInit re-enters at 17 s
+
+Independent retail Rice oracle, HYPOTHESIS-ID
+`m5-osvimode-menu-entry-vs-jal`. 25 s, eleven-Start,
+`--watch-write 0x0:0x800000` (cap 10000), `--watch-pc
+0x800C58A0,0x800C5A18`, `--vi-trace --vi-poll`. No
+`--pc-phase-log-width`.
+
+Positive controls: 10000-write watch removed; `[gpr-ctl]` fired;
+jal `0x800C5A18` executed twice (lifetime execution watch hits 4
+across both PCs); title `1024 @ 0x00790800` at 17.3 s then
+`0x00790400`; 1462 VI; 25.1 s wall / 24.4 s emulated; `rc=0`.
+
+Two `menuOverlayInit` entries, each with an immediate jal:
+2.0 s `prev_pc=0x8003E08C` (`mainGameLoop`, `$a1=9`) during VI 320
+@ `0x006dd280`; 17.0 s `prev_pc=0x8003E13C` (`mainGameLoop`,
+`$a1=2`) during VI 640 @ `0x0062c200`, 0.3 s before 1024 VI.
+`exec-prev` n=1 each for those callers; jal fall-through
+`prev=0x800c5a14 n=2`. The `(s3, 2, 0xB)` site `0x8003E0CC`
+produced zero entries. `H-EntryCoverageInvalid`,
+`H-MenuWaitBeforeTick`, and `H-LateMenuEntry` refuted.
+`H-MenuReentry` selected: the 1024-edge tick is a second
+`mainGameLoop` activation. Combined with s3278: the port ran the
+first 320-phase activation and never reaches `0x8003E13C`.
+
+No audio or M5 Step 3 change. No new soak-queue verdicts. Evidence:
+`scratch/agent/s3282_menu_entry_vs_jal.md`,
+`scratch/agent/s3282_menu_entry_vs_jal.log`.

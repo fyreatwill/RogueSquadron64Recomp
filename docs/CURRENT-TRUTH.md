@@ -4,21 +4,30 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3281 (2026-08-29).
+Current maintenance marker: Session 3282 (2026-08-29).
+
+Session 3282 asked retail whether `menuOverlayInit` (`0x800C58A0`)
+enters early and waits until 17 s before its `runVideoFrameTick` jal
+(`0x800C5A18`), or first enters at 17 s. Rice, 25 s, whole-RDRAM
+10000-write control, title `1024 @ 0x00790400`, exec watches armed at
+first VI. Two entries, each with an immediate jal: 2.0 s
+`prev_pc=0x8003E08C` (`mainGameLoop`, `$a1=9`) during VI 320, then
+17.0 s `prev_pc=0x8003E13C` (`mainGameLoop`, `$a1=2`) during VI 640,
+0.3 s before 1024 VI. This selects `H-MenuReentry` and refutes
+`H-MenuWaitBeforeTick`, `H-LateMenuEntry`, and
+`H-EntryCoverageInvalid`. The 17 s jal is the post-cinematic
+`mainGameLoop` site, not a wait inside the first activation, and not
+the unused `(s3, 2, 0xB)` site at `0x8003E0CC`. Combined with
+Session 3278: the port's 320-phase `menu-jal` is the first retail
+activation; it never reaches `0x8003E13C`. Evidence:
+`scratch/agent/s3282_menu_entry_vs_jal.md`.
 
 Session 3281 asked retail who calls `runVideoFrameTick` (`0x80001354`)
-at the 17.2 s 1024-edge. Rice, 25 s, whole-RDRAM 10000-write control,
-title `1024 @ 0x00790400` (233 VI), exec watch fired twice after
-`--pc-phase-log-width` armed it at `640 @ 0x0066A500` (2.3 s). The
-17.0 s tick (0.3 s before 1024 VI) has `prev_pc=0x800C5A18`
-(`menuOverlayInit` jal). The only other tick is 6.7 s
-`prev_pc=0x800A9C70` (`initSceneForMission`) at the port's stop origin.
-Zero `mainGameLoop` jals. Lifetime `exec-prev` n=1 each; the tick is
-not per-frame. This selects `H-TickParentMenu` and refutes
-`H-TickParentMainGameLoop`, `H-TickParentMission` (for the 1024-edge),
-and `H-TickCoverageInvalid`. Combined with Session 3278 (port
-`menu-jal` n=1 during VI 320, then 640 only), the missing 1024 copy is
-a later `menuOverlayInit`→tick the port never runs. Evidence:
+at the 17.2 s 1024-edge. The 17.0 s tick has `prev_pc=0x800C5A18`
+(`menuOverlayInit` jal); the only other post-arm tick is 6.7 s
+`initSceneForMission`. This selected `H-TickParentMenu`. Session 3282
+shows that 17 s jal is the second of two `menuOverlayInit` activations.
+`--pc-phase-log-width` had deferred the 320-phase first tick. Evidence:
 `scratch/agent/s3281_tick_parent.md`.
 
 Session 3280 asked retail who calls `initVideoSubsystem` (`0x8001A098`)
@@ -397,22 +406,24 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3281
-selected `H-TickParentMenu`: the 1024-edge `runVideoFrameTick` jal is
-`menuOverlayInit` `0x800C5A18`. Session 3276's
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3282
+selected `H-MenuReentry`: the 1024-edge tick is a second
+`mainGameLoop`→`menuOverlayInit` (`0x8003E13C`, `$a1=2`) after a 2.0 s
+first activation (`0x8003E08C`, `$a1=9`). Session 3276's
 `H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio change is
 authorized until a like-for-like target row exists.
 
-1. Independent retail oracle: `menuOverlayInit` entry `0x800C58A0` vs
-   jal `0x800C5A18` timing in one Rice run. Arm the exec watch at first
-   VI (no `--pc-phase-log-width`, or include 320 origins so defer does
-   not skip the port's 320-phase window). Whole-RDRAM 10000-write
-   control, title `1024 @ 0x00790400`, and a jal exec at ~17 s as the
-   watch control. Early entry + 17 s jal selects a wait-before-tick
-   inside `menuOverlayInit` (s3278 port `slot-ret path=gate0 v0=1`
-   skipped that wait). First entry at ~17 s selects late overlay
-   entry. Two entries select re-entry. Do not change audio behavior.
-   Require Rice; dummy video stays at 320.
+1. Independent retail oracle: first `menuOverlayInit` return
+   (`mainGameLoop` `0x8003E094`) vs `cinematicLoopBody` jal
+   (`0x8003E10C` / entry `0x800A5D80`) vs second menu jal
+   `0x8003E13C` in one Rice run. Arm exec watches at first VI (no
+   `--pc-phase-log-width`). Whole-RDRAM 10000-write control, title
+   `1024 @ 0x00790400`, and the 17 s `0x8003E13C` exec as the watch
+   control. Return at ~2 s then cinematic then 17 s jal selects a
+   short first activation with cinematic occupying the gap. Return at
+   ~17 s selects a long first inner loop. Early return and no
+   cinematic selects other `mainGameLoop` work. Do not change audio
+   behavior. Require Rice; dummy video stays at 320.
 2. Validate Session 3270's expanded free-list guard class on the configured
    Windows/MIPS host (`PatchesLib`). Do not repeat the local missing-target
    build. The guard is not evidence that the VI-640 route or audio is corrupt.
@@ -496,8 +507,13 @@ measured two ticks only: `initSceneForMission` at 6.7 s, then
 
 `--pc-phase-log-width` defers `--watch-pc` until the first listed VI
 bucket (`g_defer_exec_watches`). Session 3281 armed at 2.3 s
-`640 @ 0x0066A500`; 320-phase ticks were unevaluable. Next unit must
-arm during 320 if that is the port window.
+`640 @ 0x0066A500`; 320-phase ticks were unevaluable. Session 3282
+armed at first VI and recovered the missing 2.0 s first activation.
+
+Session 3281 left open whether `menuOverlayInit` waits until 17 s
+before its jal. Session 3282 measured two immediate entry→jal pairs
+at 2.0 s and 17.0 s; the wait-inside-one-call reading is refuted.
+The 17 s site is `mainGameLoop` `0x8003E13C`, not `0x8003E0CC`.
 
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
@@ -507,6 +523,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3282_menu_entry_vs_jal.md`,
 `scratch/agent/s3281_tick_parent.md`,
 `scratch/agent/s3280_initvideo_caller.md`,
 `scratch/agent/s3279_retail_osvimode_slots.md`,
