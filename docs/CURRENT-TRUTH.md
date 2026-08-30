@@ -4,28 +4,32 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3285 (2026-08-29).
+Current maintenance marker: Session 3287 (2026-08-29).
+
+Session 3287 asked retail whether `0x800C2B84` (`bc1tl $f24==0`)
+fires near the 6.8 s `runMenuModelViewerScreen` return, or
+`0x800C2D50` reaches `L_800C2DA0` without it. Whole-RDRAM 10000-write
+control, title `1024 @ 0x00790400`, and `0x800C2E00` at 6.7 s all
+passed. `0x800C2B84` ran 31 times at 6.1–6.6 s (`prev_pc=0x800C2B80`);
+`0x800C2D50` ran 243 times from 2.6 s with `$v0=1`; last 2B84 then
+taken beq (`prev_pc=0x800C2D50`) then `0x800C2DA0` at 6.6 s then
+`0x800C2E00`. In-function `$s5=1` writer is only the `0x800C2B88`
+delay slot. Combined with s3285's zero `0x800C2B88` hits, this
+selects `H-DelaySlotWatchMiss` and refutes
+`H-BeqTakenWithoutFadeStore`, `H-Da0WithoutBeq`, and
+`H-ExitCoverageInvalid`. Evidence:
+`scratch/agent/s3287_viewer_s5_exit.md`.
 
 Session 3285 landed Session 3270's free-list alignment + cyclic-walk
 cap on the generated host functions that actually link
 (`allocateDisplayListBuffer` / `allocDLBlockToFillRectList`).
 ORIGIN: those functions consume guest allocator pointers; legitimacy
 was not independently proven. Safety guard, not a VI-640 or audio
-explanation. Debug rebuild compiled `funcs_3.c` and relinked
-`build/RogueSquadron64Recomp`. Evidence:
-`scratch/agent/s3285_freelist_live_guard.md`.
-
-The same session's independent Rice run asked whether
-`runMenuModelViewerScreen` leaves via the `$s5=1` fade store at
-`0x800C2B88` before a brief `anyAudioSlotActive` tail. Whole-RDRAM
-10000-write control, title `1024 @ 0x00790400`, and the 6.8 s
-`0x8003E094` exec (`prev_pc=0x800C5D94`) all passed. `0x800C2B88`
-had zero hits; `0x800C2DB0` then `0x800C2E00` then `0x8003E094`
-clustered at 6.8 s (one slot jal, `v0=1` at `jr ra`). This selects
-`H-RetailNoFadeStore` and refutes `H-RetailFrameTimerThenBriefSlot`,
-`H-RetailLongSlotWait`, and `H-ExitCoverageInvalid`. Combined with
-s3278: the port entered that screen and never reached the slot tail.
-Evidence: `scratch/agent/s3285_viewer_frame_exit.md`.
+explanation. The same session's Rice run had zero `0x800C2B88` hits
+and a 6.8 s slot jal; that `H-RetailNoFadeStore` reading is
+superseded by Session 3287. Evidence:
+`scratch/agent/s3285_freelist_live_guard.md`,
+`scratch/agent/s3285_viewer_frame_exit.md`.
 
 Session 3284 asked retail whether first `menuOverlayInit` (`$a1=9`,
 2.0–6.9 s) enters `runMenuModelViewerScreen` (`0x800C28F0`). Viewer
@@ -434,24 +438,24 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3285
-selected `H-RetailNoFadeStore`: first `$a1=9` returns from
-`runMenuModelViewerScreen` at 6.8 s through the slot tail without
-executing `0x800C2B88`. Session 3276's `H-PortTargetPublicationAbsent`
-still holds. No M5 Step 3 audio change is authorized until a
-like-for-like target row exists.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3287
+selects `H-DelaySlotWatchMiss`: first `$a1=9` returns from
+`runMenuModelViewerScreen` at 6.7 s because `$s2==2` fade-out
+(`0x800C2B84` at 6.1–6.6 s) sets `$s5=1` and `0x800C2D50` takes to
+the slot tail. Mupen does not report `0x800C2B88`. Session 3276's
+`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio
+change is authorized until a like-for-like target row exists.
 
-1. Independent retail oracle: does `0x800C2B84` (`bc1tl`) fire near
-   the 6.8 s return while `0x800C2B88` stays silent, or does
-   `0x800C2D50` (`beq $s5,$v0`) reach `L_800C2DA0` without that
-   branch? Exec-watch `0x800C2B84`, `0x800C2D50`, `0x800C2DA0`, and
-   `0x800C2E00` in one Rice run, armed at first VI. Whole-RDRAM
-   10000-write control, title `1024 @ 0x00790400`, and the 6.8 s
-   `0x800C2E00` exec as the watch control. `0x800C2B84` then
-   `0x800C2D50` then `0x800C2DA0` selects a delay-slot watch miss.
-   `0x800C2D50`/`0x800C2DA0` without `0x800C2B84` selects another
-   `$s5==$v0` path. Do not add a skip, allow, restore, or wait
-   bypass. No M5 Step 3. Require Rice.
+1. Port fade-out census: during the 640 viewer hold, does
+   `L_800C2B00` / `0x800C2B84` run, and does `0x800C2D50` ever take?
+   One fixup probe at those three sites, one Debug rebuild, one 30 s
+   run with `ROGUESQ_LOG_M5_POSTWAIT=1`. Existing viewer `[m5-postwait]`
+   entry plus `[phase]` 640 / `0x0066A500` are the controls. Silent
+   2B00+2B84 with live 2D50 fallthrough selects
+   `H-PortFadeOutNeverEntered`. 2B84 with `c1cs=0` throughout selects
+   `H-PortF24NeverZero`. Taken 2B84 then still-falling 2D50 selects
+   `H-PortS5Lost`. Do not add a skip, allow, restore, or wait
+   bypass. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -563,7 +567,11 @@ Session 3284 left the 2.5–6.7 s occupant as the `$f24==0` `$s5=1`
 store at `0x800C2B88` then a possible slot wait. That was believable
 because the generated fade-out path is the only `$s5=1` addiu in the
 function. Session 3285 measured zero `0x800C2B88` hits and a single
-6.8 s slot jal then `jr ra`, so retail leaves without that store.
+6.8 s slot jal then `jr ra`, and selected `H-RetailNoFadeStore`.
+Believable as a delay-slot PC the oracle can name: Session 3287
+measured `0x800C2B84` live at 6.1–6.6 s and the taken beq immediately
+after the last 2B84, so the store ran and Mupen omitted the
+nullifiable delay-slot PC.
 
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
@@ -573,6 +581,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3287_viewer_s5_exit.md`,
 `scratch/agent/s3285_freelist_live_guard.md`,
 `scratch/agent/s3285_viewer_frame_exit.md`,
 `scratch/agent/s3284_first_menu_model_viewer.md`,

@@ -127875,3 +127875,46 @@ vs `H-Da0WithoutBeq`) remains open: `0x800C2B84`, `0x800C2D50`, and
 No oracle data was collected this session. No code, instrument, or audio
 change was made. NEXT.md is updated as a RESUME instruction: the exact
 oracle command from NEXT.md is the immediate next step. Evidence: none new.
+
+## Session 3287 (2026-08-29) — retail bc1tl then beq to slot tail; delay-slot watch miss
+
+Independent retail Rice oracle, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. 25 s, eleven-Start,
+`--watch-write 0x0:0x800000`, `--watch-pc
+0x800C2B84,0x800C2D50,0x800C2DA0,0x800C2E00`, `--vi-trace --vi-poll`.
+No `--pc-phase-log-width`. Prescribed `--hit-cap 10000` log
+`s3287_viewer_s5_exit.log` hit `EXEC_LOG_CAP=64` after the write
+control, so only the first 64 exec hits printed (all `0x800C2D50` at
+2.7–3.7 s). Same watches rerun with `--hit-cap 20000`
+(`s3287_viewer_s5_exit_cap20000.log`) printed all 276 exec hits.
+Summary counts matched both runs.
+
+Positive controls: 10000-write watch; `[gpr-ctl]` fired; title
+`1024 @ 0x00790400` at 17.3 s after `640 -> 1024` origin
+`0x00790800`; `0x800C2E00` executed once at 6.7 s
+(`prev_pc=0x800C2DFC`, `v0=1`); 1461 VI; 25.1 s wall / 24.4 s
+emulated; `rc=0`. Failed instrument would have been a silent
+`0x800C2E00`. Overlay-alias check: every exec-prev sits inside
+`0x800C28F0..0x800C2E08`.
+
+`0x800C2B84` (`bc1tl`) executed 31 times at 6.1–6.6 s
+(`prev_pc=0x800C2B80`). `0x800C2D50` (`beq $s5,$v0`) executed 243
+times from 2.6–6.6 s (`prev_pc=0x800C2D4C`, `$v0=1` at every printed
+hit; `0x800C2D4C` is `addiu $v0,$zero,1`). `0x800C2DA0` executed once
+at 6.6 s (`prev_pc=0x800C2D50`). Exit interleave: `2D50` n=10272
+not-taken; `2B84` n=10273; `2D50` n=10274 taken; `2DA0` n=10275;
+`2E00` n=10276 at 6.7 s. In `runMenuModelViewerScreen` the only
+`$s5=1` writer is the `0x800C2B88` delay slot; `$s5` is zeroed at
+`0x800C2934`. So the last `2B84` was taken. Combined with s3285's
+zero `0x800C2B88` hits, Mupen does not report that delay-slot PC.
+
+This selects `H-DelaySlotWatchMiss` and refutes
+`H-BeqTakenWithoutFadeStore`, `H-Da0WithoutBeq`, and
+`H-ExitCoverageInvalid`. s3285's `H-RetailNoFadeStore` is superseded:
+the fade store ran. Next discriminator is whether the port ever
+enters `L_800C2B00` / `0x800C2B84` during the 640 viewer hold.
+
+No audio or M5 Step 3 change. No new soak-queue verdicts. Evidence:
+`scratch/agent/s3287_viewer_s5_exit.md`,
+`scratch/agent/s3287_viewer_s5_exit.log`,
+`scratch/agent/s3287_viewer_s5_exit_cap20000.log`.

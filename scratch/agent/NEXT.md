@@ -1,61 +1,59 @@
-# NEXT work unit — RESUME: retail delay-slot vs beq-path discriminator
+# NEXT work unit — port fade-out path vs retail 6.1–6.6 s 2B84 window
 
 HYPOTHESIS-ID: m5-osvimode-viewer-frame-exit
 
 ## Resume context
 
-Session 3285 selects `H-RetailNoFadeStore`: retail first `menuOverlayInit`
-returns from `runMenuModelViewerScreen` at 6.8 s through the slot jal
-(`0x800C2DB0` → `0x800C2E00`) without executing `0x800C2B88` (`$s5=1` delay
-slot). Session 3286 was a checkpoint close-out; the oracle below did NOT run.
+Session 3287 selects `H-DelaySlotWatchMiss`: retail's first
+`menuOverlayInit` leaves `runMenuModelViewerScreen` because the
+`$s2==2` fade-out path (`L_800C2B00`) runs at 6.1–6.6 s, the last
+`0x800C2B84` (`bc1tl $f24==0`) is taken (delay slot sets `$s5=1`),
+and `0x800C2D50` (`beq $s5,$v0` with `$v0=1`) jumps to `L_800C2DA0`.
+Mupen does not report `0x800C2B88`. The port (s3278) entered this
+screen at `640 @ 0x66A500` and never reached the slot tail.
 
-Run the oracle now exactly as written — do not modify it.
+Host recomp executes the delay slot in the `if (c1cs)` body, so a
+taken `0x800C2B84` on the port WOULD set `$s5=1` and the next `2D50`
+would exit. The stuck port is therefore a fade-out / `$f24` problem,
+not an oracle delay-slot artifact.
 
 ## Competing hypotheses
 
-- `H-DelaySlotWatchMiss`: `0x800C2B84` (`bc1tl`) fires near 6.8 s and
-  `0x800C2D50` then `0x800C2DA0` follow. Mupen does not report the
-  nullifiable delay-slot PC `0x800C2B88` even when the branch is taken.
-  The fade store ran.
-- `H-BeqTakenWithoutFadeStore`: `0x800C2D50` fires and `0x800C2DA0`
-  follows, but `0x800C2B84` is silent. `$s5` matches `$v0` without the
-  fade store (another writer, or `$v0` is 0).
-- `H-Da0WithoutBeq`: `0x800C2DA0` / `0x800C2DB0` fire without
-  `0x800C2D50`. Another path into the slot tail.
-- `H-ExitCoverageInvalid`: whole-RDRAM control or title 1024 missing,
-  or the 6.8 s `0x800C2E00` watch silent (failed instrument).
+- `H-PortFadeOutNeverEntered`: during the 640 viewer hold, `L_800C2B00`
+  and `0x800C2B84` stay silent while `0x800C2D50` keeps falling through
+  (`$s5!=1`). `$s2` never becomes 2.
+- `H-PortF24NeverZero`: `0x800C2B00` / `0x800C2B84` fire, but `c1cs`
+  stays false (`$f24!=0`) and `0x800C2D50` never takes.
+- `H-PortS5Lost`: `0x800C2B84` is taken (`$s5=1`) and `0x800C2D50`
+  still falls through.
+- `H-PortTailReached`: `0x800C2DA0` / return fire (s3278 stale).
+- `H-PortCoverageInvalid`: existing `[m5-postwait]` viewer entry silent,
+  or `[phase]` never reaches 640.
 
 ## Discriminator
 
-One retail Rice run. Exec-watch `0x800C2B84`, `0x800C2D50`,
-`0x800C2DA0`, `0x800C2E00` in the same run, armed at first VI.
-Printed times vs the known 6.8 s return. Overlay-alias hits need
-`prev_pc` inside `0x800C28F0..0x800C2E08`.
+One Debug rebuild with a fixup probe at `L_800C2B00`, `0x800C2B84`
+(log `c1cs`, `$s5`/`r21`, `$s2`/`r18`, `$f24` bits), and the taken
+arm of `0x800C2D50`. One 30 s port run from `build/` with the ROM
+present. Positive control: s2045 `[m5-postwait]` viewer `entry` must
+fire (enable `ROGUESQ_LOG_M5_POSTWAIT=1`) AND `[phase]` 640 at
+`0x0066A500`. Rate-limit 2B00/2B84 to first 10 + every 50.
 
-Positive control: `--watch-write 0x0:0x800000` must hit (cap 10000)
-AND `--vi-trace` must show title `1024 @ 0x00790400` AND an exec hit
-at `0x800C2E00` must fire at ~6.8 s. A silent `0x800C2E00` watch is a
-failed instrument.
+Silent 2B00+2B84 with live 2D50 fallthrough selects
+`H-PortFadeOutNeverEntered`. 2B84 with `c1cs=0` throughout selects
+`H-PortF24NeverZero`. Taken 2B84 then still-falling 2D50 selects
+`H-PortS5Lost`. 2DA0/return selects `H-PortTailReached`. Silent
+entry or no 640 phase is a failed instrument.
 
-Require Rice. Dummy video stays at 320 / `0x006dd280` forever.
+Do not add a skip, allow, restore, or wait bypass. No M5 Step 3.
 
-## Exact command
-
-From the repository root:
+## Exact commands
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core ~/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom  ~/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 25 --hit-cap 10000 \
-  --watch-write 0x0:0x800000 \
-  --watch-pc 0x800C2B84,0x800C2D50,0x800C2DA0,0x800C2E00 \
-  --vi-trace --vi-poll \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s3287_viewer_s5_exit.log 2>&1
+python3 tools/apply_s3288_viewer_fade_probe.py
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-No `--pc-phase-log-width`. Join printed `0x800C2B84` / `0x800C2D50`
-times to `0x800C2DA0` and the 6.8 s `0x800C2E00`. Do not change audio
-behavior. Log file is `s3287_viewer_s5_exit.log` (next session number).
+Then from `build/`, 30 s, SIGKILL, `ROGUESQ_LOG_M5_POSTWAIT=1` plus
+existing `[phase]` / `[slot-ret-caller]` (unconditional). Log:
+`scratch/agent/s3288_port_viewer_fade.log`.
