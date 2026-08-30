@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3258 (2026-08-29).
+Current maintenance marker: Session 3259 (2026-08-29).
+
+Session 3259 compared the available external regenerated scheduler body with
+the Debug binary and found a fourth case outside the prior scheduler
+hypotheses: the `s2948` diagnostic itself evaluated `MEM_HU(ctx->r17, 0x22)`
+after `r17` had legitimately been set to state value `1` at `0x80019C84`.
+The original `0x80019CD8` instruction only loads the received message pointer;
+the extra halfword read generated the reported Bus error at
+`spTaskSchedulerThread+2864`. Applying the existing regeneration-preserved
+KSEG0 guard for the diagnostic source reads rebuilt successfully, and a
+30-second `ROGUESQ_LOG_ALL=1` run emitted no crash, abort, Bus-error,
+access-violation, or `last-guest-pc` marker. This rules out the current
+missing-marker, compiler-drift, and baseline-crash interpretations at this
+fault site, but does not identify the target-phase message. Evidence:
+`scratch/agent/s3259_scheduler_probe_origin.md`.
 
 Session 3258 audited the checked-in host scheduler path and Debug binary. The
 faulting generated instruction is an ordinary guest-RDRAM `MEM_HU(0x22, r17)`
@@ -190,14 +204,16 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Compare the pre-VI-640 scheduler crash against the external regenerated
-   function tree when that artifact is available. The local audit maps the
-   fault to generated `MEM_HU(0x22, r17)` at host `0x100AD3930`; inspect the
-   producer of `r17`, fixup markers, and compiler output before any guard or
-   repeat run. A missing marker authorizes restoring that exact marker; a
-   proven host contract defect authorizes one narrow fix; otherwise keep the
-   issue blocked on the external tree. Preserve the receive-identity
-   discriminator below and do not claim target-phase type-2 absence.
+1. Run the repaired scheduler diagnostic long enough to reach the VI-640 wall,
+   then capture the post-return receive identity at `0x80019CD0`. The prior
+   crash was caused by the diagnostic's invalid `r17+0x22` read and is fixed by
+   the regeneration-preserved KSEG0 guard. Require positive `ROGUESQ_RECV_TRACE`
+   controls plus caller identity, message pointer, type byte, and `89F/28D44`
+   in the same phase. A type-2 row selects `H-SpMsgMutated`; a non-type-2
+   accepted row selects `H-OtherOsTask`; a valid VI-640 wall with no accepted
+   type-2 row selects `H-Type2AbsentAtRecv`. If the repaired run still fails
+   before VI 640, inspect only the new fault site and do not infer target-phase
+   absence.
 2. Repair or explain the pre-VI-640 scheduler crash before capturing message
    identity. Session 3257's checked-in control build reproduced a Bus error
    at `spTaskSchedulerThread+2864` after width 320, with

@@ -127273,3 +127273,18 @@ producer and legitimacy of `r17` unevaluable. No guard, value substitution,
 audio, scheduler, or mitigation change was made. Evidence is single-source
 binary mapping plus checked-in runtime source:
 `scratch/agent/s3258_scheduler_contract_audit.md`.
+## Session 3259 (2026-08-29) — identified diagnostic-induced scheduler fault
+
+The external regenerated tree was available for the planned comparison. Its
+scheduler body sets `r17` to the legitimate state value `1` at `0x80019C84`,
+and the original instruction at `0x80019CD8` only loads the received message
+pointer. The `s2948` diagnostic had added `MEM_HU(ctx->r17, 0x22)` immediately
+after the receive, and host disassembly independently maps the reported
+`spTaskSchedulerThread+2864` fault to that extra halfword load. The fault was
+therefore diagnostic-induced, not a missing fixup marker, compiler drift, or
+malformed game message. Applying the existing regeneration-preserved `s2950`
+KSEG0 checks rebuilt the Debug target successfully. A 30-second
+`ROGUESQ_LOG_ALL=1` run emitted no crash, abort, Bus-error, access-violation,
+or `last-guest-pc` marker and continued producing route-probe rows. This
+validates the diagnosis but does not yet establish target-phase scheduler
+message identity. Evidence: `scratch/agent/s3259_scheduler_probe_origin.md`.

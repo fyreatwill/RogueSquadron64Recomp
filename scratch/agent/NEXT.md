@@ -1,42 +1,38 @@
-# NEXT work unit — compare the external regenerated scheduler body
+# NEXT work unit — capture repaired scheduler receive identity
 
 HYPOTHESIS-ID: vi640-maudtask-type2-writer
 
-Session 3258 audited the checked-in binary and host runtime. The crash site is
-generated guest code performing `MEM_HU(0x22, r17)` at host `0x100AD3930`.
-The local runtime queue handoff is not the identified host-pointer fault, but
-the producer and legitimacy of `r17` remain unevaluable because the external
-regenerated tree is unavailable.
+Session 3259 established that the former crash was the `s2948` probe reading
+`MEM_HU(ctx->r17, 0x22)` after the generated scheduler had set `r17=1` as a
+state value. The external `s2950` KSEG0 guard is now applied and the rebuilt
+30-second run has no crash markers.
 
 ## Competing hypotheses
 
-- `H-Regeneration-Missing-Patch`: the external N64Recomp/fixup output omitted a
-  required marker or wrapper.
-- `H-Regeneration-Compiler-Drift`: the external generated body differs in
-  control-flow or register handling without a missing marker.
-- `H-Port-Baseline-Crash`: the checked-in baseline has the same malformed
-  `r17` producer and the crash is independent of regeneration.
+- `H-SpMsgMutated`: the accepted target-phase scheduler message has type 2 or
+  otherwise carries a mutated message descriptor.
+- `H-OtherOsTask`: a non-target task/message is accepted at the scheduler
+  receive boundary.
+- `H-Type2AbsentAtRecv`: the repaired port reaches the target wall but no
+  accepted type-2 message is present at `0x80019CD0`.
 
 ## Discriminator
 
-When the external artifact is available, compare the generated body around
-guest `0x80019CD0` and the faulting scheduler continuation with the checked-in
-binary. Identify the exact producer of `r17`, its value at the `+0x22` load,
-and any fixup marker covering that boundary. A missing marker selects the
-first hypothesis; a body/register difference with all markers present selects
-compiler drift; matching body and malformed `r17` selects baseline crash. A
-missing artifact is not a result and authorizes no guard or repeat run.
+Run the repaired Debug binary from `build/` with `ROGUESQ_RECV_TRACE=1` and
+the existing phase controls. The discriminating row must include caller,
+message pointer, type byte, output slot, and `89F/28D44`, and must occur after
+the VI-640 wall. Type 2 selects `H-SpMsgMutated`; a valid non-type-2 accepted
+message selects `H-OtherOsTask`; a valid VI-640 wall with no type-2 row selects
+`H-Type2AbsentAtRecv`. A pre-wall crash is unevaluable and requires a new
+fault-site audit.
 
 ## Exact start
 
 ```sh
-test -d /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs && \
-  rg -n "80019CD0|spTaskSchedulerThread|8000834C|RECV|fixup" \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
-  /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools
-nm -an build/RogueSquadron64Recomp | rg "spTaskSchedulerThread|80019cd0"
+cmake --build build --config Debug --target RogueSquadron64Recomp
+sh -c 'env ROGUESQ_RECV_TRACE=1 ROGUESQ_LOG_ALL=1 ./RogueSquadron64Recomp > ../scratch/agent/s3260_scheduler_identity.log 2>&1 & p=$!; sleep 60; kill -9 "$p" 2>/dev/null || true; wait "$p" 2>/dev/null || true'
 ```
 
-Only after one of the three outcomes is identified may the matching exact
-marker/contract change be built and run. If the external tree is absent, stop
-and leave the issue blocked on that artifact; do not repeat the local control.
+Do not add another source field or repeat the old unguarded probe. If the
+repaired run does not reach VI 640, classify it as unevaluable and audit only
+the new fault site.
