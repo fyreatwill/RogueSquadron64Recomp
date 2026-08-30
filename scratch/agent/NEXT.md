@@ -1,56 +1,42 @@
-# NEXT work unit — identify the pre-VI-640 scheduler fault contract
+# NEXT work unit — compare the external regenerated scheduler body
 
 HYPOTHESIS-ID: vi640-maudtask-type2-writer
 
-Session 3256 established that the retail call site is live, but the freshly
-regenerated port crashes in `spTaskSchedulerThread+2864` during VI 320. Session
-3257 reproduced the same local control crash with the hook disabled: Bus error
-at `0x103ACF930`, fault `0x380000021`, last guest PC `0x8000834C`, after width
-320. The external regenerated tree is unavailable, so the next unit must use
-the checked-in scheduler source and symbols to identify the invalid-value
-contract before another run.
+Session 3258 audited the checked-in binary and host runtime. The crash site is
+generated guest code performing `MEM_HU(0x22, r17)` at host `0x100AD3930`.
+The local runtime queue handoff is not the identified host-pointer fault, but
+the producer and legitimacy of `r17` remain unevaluable because the external
+regenerated tree is unavailable.
 
 ## Competing hypotheses
 
-- `H-Regeneration-Missing-Patch`: the fresh N64Recomp/fixup output omitted a
-  previously required generated-tree patch, causing the early scheduler crash.
-- `H-Regeneration-Compiler-Drift`: the current N64Recomp output differs in
-  control-flow or register handling independently of the missing fixup sites.
-- `H-Port-Baseline-Crash`: the crash is already present in the checked-in
-  baseline and is unrelated to regeneration.
+- `H-Regeneration-Missing-Patch`: the external N64Recomp/fixup output omitted a
+  required marker or wrapper.
+- `H-Regeneration-Compiler-Drift`: the external generated body differs in
+  control-flow or register handling without a missing marker.
+- `H-Port-Baseline-Crash`: the checked-in baseline has the same malformed
+  `r17` producer and the crash is independent of regeneration.
 
 ## Discriminator
 
-Audit the host implementation and generated call boundary for
-`spTaskSchedulerThread+2864`, including the register/value that becomes the
-fault address `0x380000021`. Produce a bounded source-level table naming the
-consumer, its producer, and whether the value is a valid guest pointer or an
-invalid scheduler contract. The discriminating outcome is: (a) a missing
-regeneration-preserved wrapper/fixup is identified, which authorizes restoring
-that exact marker and one build/run; (b) the checked-in host contract itself
-accepts a malformed value, which authorizes one narrowly scoped contract fix;
-or (c) no local source boundary can explain it, which leaves the issue
-blocked on the external regenerated tree. Do not add a guard or repeat the
-baseline run without one of these outcomes.
+When the external artifact is available, compare the generated body around
+guest `0x80019CD0` and the faulting scheduler continuation with the checked-in
+binary. Identify the exact producer of `r17`, its value at the `+0x22` load,
+and any fixup marker covering that boundary. A missing marker selects the
+first hypothesis; a body/register difference with all markers present selects
+compiler drift; matching body and malformed `r17` selects baseline crash. A
+missing artifact is not a result and authorizes no guard or repeat run.
 
 ## Exact start
 
-First use bounded `rg`/`nm`/`git log -S` checks in the checked-in source and
-generated-library symbols; do not clear or regenerate. Candidate commands:
-
-```
-rg -n "spTaskSchedulerThread|0x80019CD0|8011D460|8000834C|0x380000021" src lib tools
+```sh
+test -d /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs && \
+  rg -n "80019CD0|spTaskSchedulerThread|8000834C|RECV|fixup" \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+  /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools
 nm -an build/RogueSquadron64Recomp | rg "spTaskSchedulerThread|80019cd0"
-git log --all -S"spTaskSchedulerThread" --oneline -- src lib tools
 ```
 
-Only if the audit identifies an exact missing marker or contract boundary,
-build from this repository's `build/` directory:
-
-```
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \
-    ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
-    ROGUESQ_RECV_TRACE=0 ./RogueSquadron64Recomp
-```
-
-SIGKILL at 40 seconds and preserve the log under `scratch/agent/`.
+Only after one of the three outcomes is identified may the matching exact
+marker/contract change be built and run. If the external tree is absent, stop
+and leave the issue blocked on that artifact; do not repeat the local control.

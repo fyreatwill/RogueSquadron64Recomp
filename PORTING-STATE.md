@@ -127255,3 +127255,21 @@ missing fixup markers, compiler drift, and an inherent baseline crash. No
 scheduler, audio, guard, or mitigation behavior changed. Evidence:
 `scratch/agent/s3257_baseline_scheduler.md` and
 `scratch/agent/s3257_baseline_scheduler.log`.
+## Session 3258 (2026-08-29) — audited pre-VI-640 scheduler fault contract
+
+Performed the planned bounded host-source and binary audit without another
+build or run. `nm` locates `spTaskSchedulerThread` at `0x100AD2E00`; `otool`
+maps the reported scheduler fault site to generated code that performs an
+ordinary guest-RDRAM `MEM_HU(0x22, r17)` load. The `recomp_context` layout and
+`MEM_HU` macro confirm `r17` is the register at context offset `0x88`; the
+checked-in host SP path instead uses the explicit `osRecvMesg`/task-queue
+handoff and contains no corresponding host-pointer dereference.
+
+No local source identifies a missing regeneration marker, compiler drift, or
+an inherent baseline defect because the external regenerated
+`RecompiledFuncs/` tree and fixup markers are absent. This result rules out
+the checked-in host queue contract as the identified fault, but leaves the
+producer and legitimacy of `r17` unevaluable. No guard, value substitution,
+audio, scheduler, or mitigation change was made. Evidence is single-source
+binary mapping plus checked-in runtime source:
+`scratch/agent/s3258_scheduler_contract_audit.md`.
