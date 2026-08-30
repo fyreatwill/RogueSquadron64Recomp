@@ -4,7 +4,30 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3307 (2026-08-30).
+Current maintenance marker: Session 3308 (2026-08-30).
+
+Session 3308 port-censused `cinematicStageAdvancer` (`0x800AF550`)
+in one build and one 120 s retry. The first launch crashed at VI
+320 in `spTaskSchedulerThread` (`last-guest-pc=0x8000834c`) before
+marks; the same-binary retry is the live scope. Controls: 6/6
+stage-adv marks, 7/7 cine-loop marks, 24/24 s3305 marks,
+completion-wins 61, request-reset 61, SP-complete 64, VI
+`640 @ 0x0066A500`, viewer return, cinematic entry, loop-head, and
+exit-gate. Ptr-check `0x800AF55C` ran n=138 all `$v1=0` `taken=1`.
+Silent: fp-compare `0x800AF590`, stage-lt7 `0x800AF5B4`, ret-one
+`0x800AF5BC`. ret-zero `0x800AF604` `$v0=0`. Entry `$a2` is 1/60
+then 1/30. Same-run `[phase] cineState` is 0 after boot (83 rows)
+via `rdram_be32_at(0xB0934)`. This selects `H-PtrZeroSkip` and
+refutes `H-DtBelowThreshold`, `H-StageNeverHits7`, and retry
+`H-CoverageInvalid`. The 6074 gate stays 0 because the skip
+returns 0. No M5 Step 3. Evidence:
+`scratch/agent/s3308_stage_advancer.md`.
+
+The queued 600 s soak (`s3307_cine_loop_600s`) was SIGKILL at
+600 s with no crash, no title 1024, and exit-gate `v0_nz=0`
+(printed n=100). The scheduler was still matching recv at width
+640 origin `0x696100`. That extends `H-PortLoopNoExit` and is
+consistent with `H-PtrZeroSkip`.
 
 Session 3307 port-censused the Session 3306 cinematic loop/exit
 edges in one build and one 121 s run. The first launch crashed at
@@ -18,8 +41,9 @@ printed n=150 (VI `#640`) with gate `$v0=0` (`v0_nz=0`). Silent:
 `0x800A64BC`, `0x800A65E4`, `0x800A6618`, second menu, title 1024.
 This selects `H-PortLoopNoExit` and refutes `H-PortPrologueStall`,
 `H-PortExitNoReturn`, and retry `H-CoverageInvalid`. Combined with
-retail Session 3306, the port-only stop is `cinematicStageAdvancer`
-never returning 1 in this window. No M5 Step 3. Evidence:
+retail Session 3306, the port-only stop was
+`cinematicStageAdvancer` never returning 1; Session 3308 named
+that as the null `0x800B0934` skip. No M5 Step 3. Evidence:
 `scratch/agent/s3307_cinematic_loop.md`.
 
 Session 3306 asked the independent retail oracle for
@@ -731,21 +755,21 @@ the status-03 wait hatch.
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3304's
-completion-aware SP-yield lifecycle returns the viewer; Session 3307 shows
-the port loops inside `cinematicLoopBody` with exit-gate `$v0=0` while
-retail Session 3306 returns at 48.9 s via `0x800A6074` `$v0=1` →
-`0x800A64BC`. Session 3276's `H-PortTargetPublicationAbsent` still
-holds. No M5 Step 3 audio change is authorized until a like-for-like
-target row exists.
+completion-aware SP-yield lifecycle returns the viewer; Session 3308 shows
+the cinematic exit-gate stays `$v0=0` because `cinematicStageAdvancer`
+skips on `$v1==0` at `0x800AF55C` (`0x800B0934` null) while retail
+Session 3306 returns at 48.9 s via `0x800A6074` `$v0=1` → `0x800A64BC`.
+Session 3276's `H-PortTargetPublicationAbsent` still holds. No M5 Step 3
+audio change is authorized until a like-for-like target row exists.
 
-1. Port-side table of `cinematicStageAdvancer` (`0x800AF550`) — the
-   6074 `$v0` producer — in one build and one ≥120 s run: pointer
-   `0x800B0934` / `0x800AF55C`, fp compare `0x800AF590`, stage byte
-   `0x800B0938` / `0x800AF5B4` (`sltiu 7`), plus the returned `$v0`.
-   Keep the s3306 loop table. Distinguish ptr-zero skip, dt below
-   threshold, stage never reaching 7, and invalid coverage. Fold the
-   queued 600 s soak (`s3307_cine_loop_600s.sh`) if it lands. Do not
-   add audio/output changes.
+1. Independent retail write-watch of physical `0x000B0934` (guest
+   `0x800B0934`) during first attract, plus exec of
+   `cinematicInitializer` store `0x800AF4B8` and
+   `cinematicDeactivator` clear `0x800AF640`. Whole-RDRAM 10000-write
+   control, VI `640 @ 0x0066A500`, cinematic entry. Distinguish
+   retail-live KSEG0 pointer, retail-also-zero, named-PC writer, and
+   invalid coverage. Do not add audio/output changes. Keep the s3308
+   table.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -804,6 +828,11 @@ was silent after entry. Believable as a hang at the first
 instruction; Session 3307 measured a live loop with a stuck
 exit-gate, so the missing return is `H-PortLoopNoExit` not an
 entry stall.
+
+Session 3307 left the stuck 6074 `$v0` as a skip/stage/dt
+predicate or a too-slow loop. Believable because retail needed
+~1003 iters / 48.8 s. Session 3308 measured `$v1=0` at
+`0x800AF55C` on every call, so the stage/dt path never runs.
 
 The prescribed Session 3306 30 s undriven Rice recipe does not
 reach the cinematic return: first attract still has exit-gate

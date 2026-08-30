@@ -128618,3 +128618,44 @@ retail Session 3306 (1002 gate `$v0=0` then `$v0=1` at 48.8 s), the
 port-only stop is `cinematicStageAdvancer` never returning 1 in this
 120 s window. A 600 s soak is queued to test a later gate take.
 Evidence: `scratch/agent/s3307_cinematic_loop.md`.
+
+## Session 3308 (2026-08-30) — cinematicStageAdvancer skips on null 0x800B0934
+
+HYPOTHESIS-ID `m5-osvimode-postviewer-continuation`. One
+regeneration-safe port table of `cinematicStageAdvancer`
+(`tools/apply_s3308_stage_advancer.py`, mirrored in
+`N64Recomp/fixup_game_funcs.py`). Diagnostic only; no guest
+store/branch change and no M5 Step 3. s3306 loop table kept.
+
+The first launch (`run1_crash.log`) died at 4 s with
+`spTaskSchedulerThread` SIGSEGV at VI 320 (`last-guest-pc=0x8000834c`,
+`si_addr=0x400128d47`) before marks. Coverage-invalid. The
+same-binary 120 s retry (`run.log`) is the live scope. Driver:
+`scratch/agent/s3308_stage_advancer/run.sh`.
+
+Queued soak `s3307_cine_loop_600s` (rc=137, 600 s): no crash, no
+title 1024, exit-gate `v0_nz=0`, last printed cine-loop n=100,
+scheduler still matching recv at width 640 origin `0x696100`.
+Extends `H-PortLoopNoExit`.
+
+Retry controls: stage-adv marks 0–5, cine-loop marks 0–6, s3305
+marks 0–23, completion-wins 61, request-reset 61, SP-complete 64,
+VI `640 @ 0x0066A500` at 2.6 s `#102`, viewer entry/return,
+cinematic-entry, loop-head, exit-gate. Zero crash/abort.
+
+Ptr-check `0x800AF55C` n=138 all `$v1=0` `taken=1` after
+`lw $v1, 0x934($v0)` with `$v0=0x800B0000`. Silent: fp-compare
+`0x800AF590`, stage-lt7 `0x800AF5B4`, ret-one `0x800AF5BC`.
+ret-zero `0x800AF604` `$v0=0`. Entry `$a2` is `0x3C888889` (1/60)
+then `0x3D088888` (1/30). s3306 exit-gate printed n=100 all
+`$v0=0`. Helper `MEM_W` `ptr=0x6E6F6974` disagrees with guest
+`$v1` and is discarded. Same-run `[phase] cineState` via
+`rdram_be32_at(0xB0934)` is 0 after boot (83 rows).
+
+This selects `H-PtrZeroSkip` and refutes `H-DtBelowThreshold`,
+`H-StageNeverHits7`, and retry `H-CoverageInvalid`. Combined with
+s3306/s3307, the 6074 gate stays 0 because the skip returns 0.
+Named writer `cinematicInitializer` `0x800AF4B8`; named clearer
+`cinematicDeactivator` `0x800AF640`. Next is independent retail
+on physical `0x000B0934`. Evidence:
+`scratch/agent/s3308_stage_advancer.md`.

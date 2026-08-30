@@ -1,64 +1,64 @@
-# NEXT work unit — cinematicStageAdvancer $v0 producer table
+# NEXT work unit — retail 0x000B0934 writer during first attract
 
 HYPOTHESIS-ID: m5-osvimode-postviewer-continuation
 
 ## Resume context
 
-Port Session 3307 selected `H-PortLoopNoExit`: first attract
-`cinematicLoopBody` skips early-exit (`0x800A5DD8` `$v0=1`), reaches
-loop-head `0x800A6024` and backedge `0x800A64B4` (printed n=150 at
-VI `#640`), and keeps exit-gate `0x800A6074` at `$v0=0` (`v0_nz=0`)
-through a 121 s run. Silent: `0x800A64BC`, `0x800A65E4`,
-`0x800A6618`, title 1024. Retail Session 3306 took `$v0=1` at 48.8 s
-after 1002 gate visits. Architecture: the gate `$v0` is
-`cinematicStageAdvancer` (`0x800AF550`) after `andi 0xFF`.
-
-A 600 s soak is queued (`scratch/agent/soak_queue/s3307_cine_loop_600s.sh`)
-to test whether a longer wall clock ever sets the gate. Do not babysit
-it; fold the verdict if present.
+Port Session 3308 selected `H-PtrZeroSkip`: every
+`cinematicStageAdvancer` ptr-check at `0x800AF55C` sees `$v1=0`
+after `lw` of `0x800B0934` (n=138/138), takes `L_800AF604`, and
+returns `$v0=0`. Silent: fp-compare, stage-lt7, ret-one. dt `$a2`
+is live (1/60 then 1/30). Same-run `[phase] cineState` is 0 after
+boot. Named guest writer is `cinematicInitializer` `sw` at
+`0x800AF4B8`; named clearer is `cinematicDeactivator` `sw $zero`
+at `0x800AF640`. Ask retail before another port instrument.
 
 ## Competing hypotheses
 
-- `H-PtrZeroSkip`: `0x800AF55C` sees `$v1==0` (word at `0x800B0934`)
-  and takes `L_800AF604`; the stage/dt path never runs.
-- `H-DtBelowThreshold`: the `c.lt.s` at `0x800AF588` (`0x800A5D70`
-  vs dt-scaled accumulator) stays false; stage byte `0x800B0938`
-  never increments.
-- `H-StageNeverHits7`: stage byte increments but `sltiu 0x7` at
-  `0x800AF5B0` stays true (`$v0=1` continue); exit `$v0` never
-  published.
-- `H-CoverageInvalid`: missing mark-all, viewer-return, VI-640,
-  cinematic-entry, loop-head, or gate row.
+- `H-RetailPtrLive`: physical `0x000B0934` is a KSEG0 pointer
+  during first-attract cinematic, written from `0x800AF4B8`
+  (or another named PC) before the first advancer call.
+- `H-RetailPtrAlsoZero`: retail also holds 0 through the first
+  cinematic; the port skip is hardware-like and the 6074 `$v0=1`
+  has a different producer.
+- `H-RetailInitThenClear`: retail writes a live pointer then
+  `0x800AF640` (or another store) zeros it before/during the
+  loop — so a port clearer would be the mismatch.
+- `H-CoverageInvalid`: missing whole-RDRAM 10000-write, `[gpr-ctl]`,
+  VI `640 @ 0x0066A500`, or cinematic entry `0x800A5D80`.
 
 ## Discriminator
 
-One regeneration-safe table of `cinematicStageAdvancer` entry,
-`0x800AF55C` (`$v1`), `0x800AF590` (fp compare taken),
-`0x800AF5B4` (stage<7), and the `$v0` stored into the 6074 gate,
-in one build and one ≥120 s run. Log the `0x800B0934` pointer,
-`0x800B0938` stage byte, and IEEE bits of `$f0`/`$f2`. Phase-reset
-the print budget on VI width changes. Arm a synthetic mark for
-every new edge ID. Keep the s3306 loop table.
+One Rice oracle: whole-RDRAM write control plus write-watch
+`0x000B0934:0x000B0938` and exec-watch of `0x800AF408`,
+`0x800AF4B8`, `0x800AF640`, `0x800AF550`, `0x800AF55C`,
+`0x800A5D80`. 90 s, `--hit-cap 20000`, `--vi-trace --vi-poll`.
+No `--press`.
 
-Ptr-zero rows with silent compare/stage select `H-PtrZeroSkip`.
-Compare never-taken with frozen stage byte selects
-`H-DtBelowThreshold`. Stage increments and stays `<7` selects
-`H-StageNeverHits7`. Missing controls select `H-CoverageInvalid`.
+KSEG0 write from `0x800AF4B8` (or another PC) before cinematic
+entry selects `H-RetailPtrLive`. Zero write hits and `$v0`/`exec`
+of initializer still live with a 0 snapshot selects
+`H-RetailPtrAlsoZero`. Nonzero write then a later zero store
+before/during the loop selects `H-RetailInitThenClear`. Missing
+controls select `H-CoverageInvalid`.
 
 ## Exact commands
 
-1. Add `tools/apply_s3307_stage_advancer.py` injecting probes at
-   those PCs in `funcs_29.c`. Mirror the transform into
-   `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.
-   Reuse `ROGUESQ_LOG_M5_CINE_LOOP` or sibling
-   `ROGUESQ_LOG_M5_STAGE_ADV=1`. Do not change guest stores/branches.
-2. Build:
-   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp`
-3. Run from `build/` with the ROM present, SIGKILL at 120 s, env:
-   `ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_M5_POSTWAIT=1 ROGUESQ_LOG_M5_POSTVIEWER_EDGE=1 ROGUESQ_M5_POSTVIEWER_MARK_ALL=1 ROGUESQ_LOG_M5_CINE_LOOP=1 ROGUESQ_M5_CINE_LOOP_MARK_ALL=1`
-   plus the new mark-all. Require viewer return, VI 640 at
-   `0x0066A500`, cinematic entry, loop-head, exit-gate, and every
-   new mark ID. If the first launch crashes at VI 320 in
-   `spTaskSchedulerThread`, retry the same binary once (s3307).
+```
+tools/oracle/build/rs64_oracle \
+  --core .../libmupen64plus.dylib \
+  --rom  .../rogue_squadron.z64 \
+  --video .../mupen64plus-video-rice.dylib \
+  --watch-write 0x0:0x800000 \
+  --watch-write 0x000B0934:0x000B0938 \
+  --watch-pc 0x800AF408,0x800AF4B8,0x800AF640,0x800AF550,0x800AF55C,0x800A5D80 \
+  --secs 90 --hit-cap 20000 --vi-trace --vi-poll
+```
 
-No M5 Step 3. No audio/output change.
+Use the same CORE/ROM/VIDEO paths as
+`scratch/agent/s3306_retail_cinematic_exit/run.sh`. Require
+10000-write, `[gpr-ctl]`, VI `640 @ 0x0066A500`, and cinematic
+entry. If `--hit-cap` truncates before entry, raise it in the
+same iteration.
+
+No M5 Step 3. No audio/output change. No port build.
