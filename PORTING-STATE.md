@@ -127443,3 +127443,19 @@ message mutation, another task type, and type-2 absence remain unresolved.
 The next work unit watches both adjacent PCs with the supported field dump.
 Evidence: `scratch/agent/s3269_scheduler_identity.md` and
 `scratch/agent/s3269_scheduler_identity.log`.
+
+## Session 3270 (2026-08-29) — expanded free-list queue guard class
+
+Completed the next M3 guard-class change in `patches/heap_guards.c`. The
+existing KSEG0 pointer predicate now also rejects misaligned guest pointers,
+and the fresh free-chain walk aborts after the maximum possible number of
+0x100-byte blocks in RDRAM. This closes the cyclic-list spin path before
+active-queue mutation. ORIGIN: `func_80007D74` consumes pointers published by
+the guest allocator and active-queue metadata; legitimacy was not independently
+proven, so this is a safety guard rather than an explanation of the VI-640 or
+audio route. The configured local build was attempted with
+`cmake --build build --config Debug --target PatchesLib` and failed immediately
+with `make: No rule to make target PatchesLib. Stop.` The local checkout lacks
+the configured MIPS/generated-patch prerequisites, so compile/runtime
+validation remains pending on the Windows/MIPS host. Evidence:
+`scratch/agent/s3270_m3_free_list_guard.md`.

@@ -34,8 +34,10 @@ extern void*   heap_bump;            // 0x801163D4 — bump pointer (block + 0x1
 
 static int kseg0_ok(const void* p) {
     uintptr_t addr = (uintptr_t)p;
-    return addr >= 0x80000000U && addr < 0x80800000U;
+    return addr >= 0x80000000U && addr < 0x80800000U && (addr & 3U) == 0;
 }
+
+#define MAX_FREE_BLOCKS (0x800000 / 0x100)
 
 RECOMP_PATCH Block* func_80007D74(void) {
     Block* head = heap_free_head;
@@ -50,7 +52,11 @@ RECOMP_PATCH Block* func_80007D74(void) {
             }
             // Walk fresh's chain to find its tail
             Block* tail = fresh;
+            uint32_t chain_len = 0;
             while (tail->next != NULL) {
+                if (++chain_len >= MAX_FREE_BLOCKS) {
+                    return NULL;
+                }
                 if (!kseg0_ok(tail->next)) {
                     return NULL;
                 }

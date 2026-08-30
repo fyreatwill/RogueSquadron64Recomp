@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3269 (2026-08-29).
+Current maintenance marker: Session 3270 (2026-08-29).
+
+Session 3270 completed the next M3 free-list/active-queue guard-class change
+in `patches/heap_guards.c`. The existing KSEG0 predicate now also rejects
+misaligned guest pointers, and the fresh free-chain walk aborts after the
+maximum possible number of 0x100-byte blocks in RDRAM, closing the cyclic-list
+spin path before queue mutation. ORIGIN: `func_80007D74` consumes pointers
+published by the guest allocator and active-queue metadata; their legitimacy
+was not independently proven, so this is a safety guard, not an explanation
+of the VI-640 or audio route. The configured local `PatchesLib` target still
+does not exist (`make: No rule to make target PatchesLib`), so compile/runtime
+validation remains pending on the Windows/MIPS host. Evidence:
+`scratch/agent/s3270_m3_free_list_guard.md`.
 
 Session 3269 ran the prescribed independent retail scheduler identity
 capture. The whole-RDRAM write control reached 10,000 hits; the run reached
@@ -308,14 +320,20 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Capture the consumed-message handoff around generated `0x80019CCC` and
+1. Validate Session 3270's expanded free-list guard class on the configured
+   Windows/MIPS host. Do not repeat the local target build until that host or
+   generated patch artifacts are available. Require successful patch
+   compilation, unchanged valid-path behavior, and a controlled cyclic-chain
+   fixture that returns before queue writes. This guard is not evidence that
+   the VI-640 route or audio is corrupt.
+2. Capture the consumed-message handoff around generated `0x80019CCC` and
    `0x80019CD0` with positive controls. Session 3269 reached both target
    origins and proved the receive watch live, but its interface exposed no
    message pointer/type/`89F`/`28D44` fields, selecting
    `H-RecvWatchUnavailable`. Use adjacent-PC detail plus a phase-gated field
    dump in one run; do not infer message mutation, another task type, or
    type-2 absence from the missing fields.
-2. Capture retail scheduler message identity at generated `0x80019CD0` with
+3. Capture retail scheduler message identity at generated `0x80019CD0` with
    positive controls. Session 3268 widened the selector watch to
    `0x00114A800..0x00114A900` and still saw zero reads, while pending state and
    boundary PCs were live; this selects `H-SelectorNotReadInObservedPhases`
@@ -324,12 +342,12 @@ no patch or allocator mitigation is authorized. Evidence:
    selects `H-OtherOsTask`; a valid target wall with no type-2 row selects
    `H-Type2AbsentAtRecv`. Missing target correlation remains unresolved.
    Do not add a port field or change audio behavior.
-2. After the boundary audit, capture the scheduler message identity at the
+4. After the boundary audit, capture the scheduler message identity at the
    generated `0x80019CD0` receive call site with positive controls. A type-2
    target row selects `H-SpMsgMutated`; a valid non-type-2 target row selects
    `H-OtherOsTask`; a valid target wall with no accepted type-2 row selects
    `H-Type2AbsentAtRecv`.
-3. Repair or explain the pre-VI-640 scheduler crash before capturing message
+5. Repair or explain the pre-VI-640 scheduler crash before capturing message
    identity. Session 3257's checked-in control build reproduced a Bus error
    at `spTaskSchedulerThread+2864` after width 320, with
    `last-guest-pc=0x8000834C`; it reached no VI-640 wall. The external
