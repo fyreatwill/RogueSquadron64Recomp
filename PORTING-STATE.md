@@ -127459,3 +127459,18 @@ with `make: No rule to make target PatchesLib. Stop.` The local checkout lacks
 the configured MIPS/generated-patch prerequisites, so compile/runtime
 validation remains pending on the Windows/MIPS host. Evidence:
 `scratch/agent/s3270_m3_free_list_guard.md`.
+
+## Session 3271 (2026-08-29) — guard validation remains blocked by missing host target
+
+Attempted validation of Session 3270's expanded free-list guard class.
+`cmake --build build --config Debug --target PatchesLib` exited immediately with
+`make: No rule to make target PatchesLib. Stop.` The CMakeCache still points to
+`MIPS_TOOLCHAIN_DIR:PATH=E:/mips-toolchain`; no `mips64-elf-gcc` or
+`mips64-elf-ld` is installed; `RecompiledPatches/` is absent. No guard
+compilation, valid-path execution, or controlled cyclic-chain fixture ran.
+This selects `H-GuardBuildUnavailable` for this checkout only and provides no
+evidence about guard behavior or the VI-640/audio route. Guard validation remains
+pending on the configured Windows/MIPS host or a supplied generated artifact.
+The next work unit is the prescribed retail-oracle scheduler message handoff
+capture at `0x80019CCC`/`0x80019CD0`. Evidence:
+`scratch/agent/s3271_guard_validation.md`.
