@@ -127918,3 +127918,34 @@ No audio or M5 Step 3 change. No new soak-queue verdicts. Evidence:
 `scratch/agent/s3287_viewer_s5_exit.md`,
 `scratch/agent/s3287_viewer_s5_exit.log`,
 `scratch/agent/s3287_viewer_s5_exit_cap20000.log`.
+
+## Session 3288 (2026-08-29) — port fade-out never entered; 2D50 fallthrough x3 then stall
+
+Port fade-out census, HYPOTHESIS-ID `m5-osvimode-viewer-frame-exit`.
+Fixup probe at `L_800C2B00`, `0x800C2B84`, both arms of
+`0x800C2D50`, `L_800C2DA0`, and the `0x800C2E00` return
+(`tools/apply_s3288_viewer_fade_probe.py`, also hooked from
+`fixup_game_funcs.py`). Debug rebuild. One 30 s run from `build/`
+with `ROGUESQ_LOG_M5_POSTWAIT=1`, SIGKILL. Log:
+`scratch/agent/s3288_port_viewer_fade.log`.
+
+Same-run positive controls: `[phase] 640 @ 0x0066A500` at 4.5 s;
+`[m5-postwait]` viewer `entry` `pc=0x800C28F0` `width=640
+origin=0x66A500`. Failed instrument would have been a silent entry
+or no 640 phase. Zero crash/abort/Bus-error/last-guest-pc.
+
+`2B00` and `2B84` were silent. `2D50` printed n=1,2,3, all
+`taken=0`, `$s2=0`, `$s5=0`, `$f24` = 1/30 then 2/30 then 5/30.
+Rate-limit is first 10 + every 50, so n=3 is visit count. `2DA0`
+and return silent. After n=3 the process kept pumping VI/SI
+(`update_screen` #1600) but never returned to `2D50`. Retail
+(s3287) ran `2D50` 243 times across 2.6–6.6 s then took.
+
+This selects `H-PortFadeOutNeverEntered` and refutes
+`H-PortF24NeverZero`, `H-PortS5Lost`, `H-PortTailReached`, and
+`H-PortCoverageInvalid`. Next discriminator is the stall site after
+the third fallthrough. No audio or M5 Step 3 change. No new
+soak-queue verdicts. Evidence:
+`scratch/agent/s3288_port_viewer_fade.md`,
+`scratch/agent/s3288_port_viewer_fade.log`.
+

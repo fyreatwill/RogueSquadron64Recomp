@@ -4,7 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3287 (2026-08-29).
+Current maintenance marker: Session 3288 (2026-08-29).
+
+Session 3288 asked the port whether the 640 viewer hold enters
+`L_800C2B00` / `0x800C2B84` and whether `0x800C2D50` ever takes.
+Same-run controls: `[m5-postwait]` viewer `entry` and `[phase]`
+`640 @ 0x0066A500` both fired. `2B00` and `2B84` were silent. `2D50`
+ran three times, all fallthrough, `$s2=0` `$s5=0`, `$f24` = 1/30 then
+2/30 then 5/30. No taken `2D50`, no `2DA0`, no return. First-10
+prints would have shown n=4+ if the join kept running. This selects
+`H-PortFadeOutNeverEntered` and refutes `H-PortF24NeverZero`,
+`H-PortS5Lost`, `H-PortTailReached`, and `H-PortCoverageInvalid`.
+Retail (s3287) ran `2D50` 243 times then took. No M5 Step 3.
+Evidence: `scratch/agent/s3288_port_viewer_fade.md`.
 
 Session 3287 asked retail whether `0x800C2B84` (`bc1tl $f24==0`)
 fires near the 6.8 s `runMenuModelViewerScreen` return, or
@@ -438,23 +450,22 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3287
-selects `H-DelaySlotWatchMiss`: first `$a1=9` returns from
-`runMenuModelViewerScreen` at 6.7 s because `$s2==2` fade-out
-(`0x800C2B84` at 6.1–6.6 s) sets `$s5=1` and `0x800C2D50` takes to
-the slot tail. Mupen does not report `0x800C2B88`. Session 3276's
-`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio
-change is authorized until a like-for-like target row exists.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3288
+selects `H-PortFadeOutNeverEntered`: the 640 viewer hold never
+enters `$s2==2` fade-out, and `2D50` stops after three
+fallthroughs. Session 3287 selected `H-DelaySlotWatchMiss` on
+retail. Session 3276's `H-PortTargetPublicationAbsent` still holds.
+No M5 Step 3 audio change is authorized until a like-for-like
+target row exists.
 
-1. Port fade-out census: during the 640 viewer hold, does
-   `L_800C2B00` / `0x800C2B84` run, and does `0x800C2D50` ever take?
-   One fixup probe at those three sites, one Debug rebuild, one 30 s
-   run with `ROGUESQ_LOG_M5_POSTWAIT=1`. Existing viewer `[m5-postwait]`
-   entry plus `[phase]` 640 / `0x0066A500` are the controls. Silent
-   2B00+2B84 with live 2D50 fallthrough selects
-   `H-PortFadeOutNeverEntered`. 2B84 with `c1cs=0` throughout selects
-   `H-PortF24NeverZero`. Taken 2B84 then still-falling 2D50 selects
-   `H-PortS5Lost`. Do not add a skip, allow, restore, or wait
+1. Port viewer-loop stall after the third `2D50` fallthrough: last
+   site is `L_800C29E0`, one of the six fallthrough callees
+   (`waitForPrevFrameDone` … `submitGfxFrame`), or `$s2==0`
+   `L_800C2A40`. One fixup probe at those sites plus keep the
+   s3288 fade census. One Debug rebuild, one 30 s run with
+   `ROGUESQ_LOG_M5_POSTWAIT=1`. Viewer `[m5-postwait]` entry plus
+   `[phase]` 640 / `0x0066A500` plus `2D50` n=3 fallthrough are
+   the controls. Do not add a skip, allow, restore, or wait
    bypass. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
@@ -573,6 +584,11 @@ measured `0x800C2B84` live at 6.1–6.6 s and the taken beq immediately
 after the last 2B84, so the store ran and Mupen omitted the
 nullifiable delay-slot PC.
 
+Session 3278/3284's "port holds inside `runMenuModelViewerScreen`
+the way retail does until fade-out" is too coarse. Session 3288
+measured three `2D50` fallthroughs (`$s2=0`) then silence, so the
+port is not looping that join while waiting for `$s2==2`.
+
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
 name. Stable companion duplicate-prefix and preamble mappings belong in
@@ -581,6 +597,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3288_port_viewer_fade.md`,
 `scratch/agent/s3287_viewer_s5_exit.md`,
 `scratch/agent/s3285_freelist_live_guard.md`,
 `scratch/agent/s3285_viewer_frame_exit.md`,
