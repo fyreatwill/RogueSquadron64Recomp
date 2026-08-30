@@ -127782,3 +127782,35 @@ reaches `0x8003E13C`.
 No audio or M5 Step 3 change. No new soak-queue verdicts. Evidence:
 `scratch/agent/s3283_menu_return_vs_cinematic.md`,
 `scratch/agent/s3283_menu_return_vs_cinematic.log`.
+
+## Session 3284 (2026-08-29) — first menuOverlayInit enters runMenuModelViewerScreen then returns
+
+Independent retail Rice oracle, HYPOTHESIS-ID
+`m5-osvimode-first-menu-model-viewer`. 25 s, eleven-Start,
+`--watch-write 0x0:0x800000` (cap 10000), `--watch-pc
+0x800C28F0,0x8003E094,0x800A5D80,0x8003E13C`, `--vi-trace --vi-poll`.
+No `--pc-phase-log-width`.
+
+Positive controls: 10000-write watch; `[gpr-ctl]` fired; `0x8003E094`
+executed once at 6.7 s (lifetime execution watch hits 4, one per
+PC); title `1024 @ 0x00790400` at 17.3 s after `640 -> 1024` origin
+`0x00790800`; 1463 VI; 25.1 s wall / 24.4 s emulated; `rc=0`.
+
+`runMenuModelViewerScreen` (`0x800C28F0`) executed once at 2.5 s,
+`prev_pc=0x800C5C98` (inside `menuOverlayInit` `0x800C58A0..0x800C5D9C`,
+the same jal s3278 logged on the port), during VI 640 @ `0x0066aa00`.
+First return `0x8003E094` at 6.7 s (`prev_pc=0x800C5D94`); cinematic
+`0x800A5D80` (`prev_pc=0x8003E10C`) in the same 0.1 s bucket;
+`0x8003E13C` at 17.0 s during `640 @ 0x0062c200`. `H-ViewerCoverageInvalid`,
+`H-RetailNoViewer`, and `H-RetailViewerAfterCine` refuted.
+`H-RetailViewerThenReturn` selected: retail enters and leaves the
+model viewer during the first `$a1=9` activation. Combined with s3278:
+the port entered that same screen at `640 @ 0x66A500` and never
+returned (zero `[m5-postwait]` return; zero
+`[slot-ret-caller] site=runMenuModelViewerScreen`), so it is stuck
+inside a screen retail also uses, still in the frame loop rather
+than the post-loop `anyAudioSlotActive` tail.
+
+No audio or M5 Step 3 change. No new soak-queue verdicts. Evidence:
+`scratch/agent/s3284_first_menu_model_viewer.md`,
+`scratch/agent/s3284_first_menu_model_viewer.log`.

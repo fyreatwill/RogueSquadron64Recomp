@@ -1,52 +1,57 @@
-# NEXT work unit — retail: does first menuOverlayInit run runMenuModelViewerScreen?
+# NEXT work unit — retail: viewer frame-loop exit vs anyAudioSlotActive tail
 
-HYPOTHESIS-ID: m5-osvimode-first-menu-model-viewer
+HYPOTHESIS-ID: m5-osvimode-viewer-frame-exit
 
-Session 3283 selected `H-FirstReturnsThenCinematic`: first
-`menuOverlayInit` (`$a1=9` at 2.0 s) returns at 6.9 s
-(`0x8003E094`, `prev_pc=0x800C5D94`); `cinematicLoopBody` jal
-`0x8003E10C` / entry `0x800A5D80` occupies 6.9–17.0 s; second
-menu jal `0x8003E13C` at 17.0 s then title 1024. Iron rule 12:
-the port's s3278 census entered `runMenuModelViewerScreen`
-(`0x800C28F0`) at `640 @ 0x66A500` during that first activation
-and never logged a return. Ask retail whether that screen is on
-the first-menu path.
+Session 3284 selected `H-RetailViewerThenReturn`: first
+`menuOverlayInit` (`$a1=9`) jal's `runMenuModelViewerScreen`
+(`0x800C28F0`) at 2.5 s (`prev_pc=0x800C5C98`) and returns at 6.7 s.
+The generated body has two sequential waits: a frame loop that exits
+when `$s5=1` (`0x800C2B88`, `$f24` fade to 0), then
+`anyAudioSlotActive` until `$v0 != 0` (`L_800C2DB0`). s3278's port
+log entered the screen and never reached
+`[slot-ret-caller] site=runMenuModelViewerScreen`, so the port is
+still in the frame loop. Ask retail which gate actually occupies
+2.5–6.7 s.
 
-Do not use `--pc-phase-log-width` unless 320 origins are listed:
-that flag defers `--watch-pc` until the first matching bucket.
+Do not use `--pc-phase-log-width` unless 320 origins are listed.
+
+If the no-engineering pivot preamble is present (streak hits 6 after
+s3284), also land matching regeneration-preserved port counters at
+`0x800C2B88` / `0x800C2DB0` / `0x800C2E00` in `tools/fixup_*.py` in
+this same iteration. Do not add a skip, allow, restore, or wait
+bypass. No M5 Step 3. No local `PatchesLib` build.
 
 ## Competing hypotheses
 
-- `H-RetailViewerThenReturn`: `0x800C28F0` fires during 2.0–6.9 s
-  (first `$a1=9` activation); `0x8003E094` still at 6.9 s. Retail
-  enters and leaves the model viewer; the port is stuck inside a
-  screen retail also uses.
-- `H-RetailNoViewer`: `0x800C28F0` silent before `0x8003E094`.
-  The port's model-viewer entry is a mis-dispatch, not retail's
-  first-menu path.
-- `H-RetailViewerAfterCine`: `0x800C28F0` fires only after the
-  17 s `0x8003E13C` (second menu). The port entered it too early.
-- `H-ViewerCoverageInvalid`: whole-RDRAM control or title 1024
-  gate missing, or the 6.9 s `0x8003E094` watch silent (failed
+- `H-RetailFrameTimerThenBriefSlot`: `0x800C2B88` then `0x800C2DB0`
+  then `0x800C2E00` clustered near the 6.7 s `0x8003E094`. Retail
+  spends 2.5–6.7 s in the frame loop; the slot wait is one or a few
+  hits. The port is stuck on the fade/timer, not A11.
+- `H-RetailLongSlotWait`: `0x800C2DB0` fires near 2.5 s and
+  `0x800C2E00` at 6.7 s. Retail spends most of the interval on
+  `anyAudioSlotActive`. Does not explain the s3278 port (it never
+  reached that tail) unless the port never leaves the frame loop
+  for a different reason.
+- `H-RetailNoFadeStore`: `0x800C2E00` fires without `0x800C2B88`.
+  Another `$s5=1` path, or `bc1tl` nullified the watched delay slot.
+- `H-ExitCoverageInvalid`: whole-RDRAM control or title 1024 gate
+  missing, or the 6.7 s `0x8003E094` watch silent (failed
   instrument).
 
 ## Discriminator
 
-One retail Rice run. Exec-watch `0x800C28F0`, `0x8003E094`,
-`0x800A5D80`, `0x8003E13C` in the same run, armed at first VI.
-Printed `0x800C28F0` time vs 6.9 s return vs cinematic vs 17 s
-jal selects during-first / never-in-first / only-after-cinematic.
-Classify overlay-alias hits at `0x800C28F0` by `prev_pc` (must be
-inside `menuOverlayInit` `0x800C58A0..0x800C5D9C` to count as
-first-menu). Boot/320 `0x800C28F0` is still a first-activation
-hit.
+One retail Rice run. Exec-watch `0x800C2B88`, `0x800C2DB0`,
+`0x800C2E00`, `0x8003E094` in the same run, armed at first VI.
+Printed times vs 2.5 s viewer entry (s3284) vs 6.7 s return select
+frame-timer / long-slot / no-fade. `0x800C2B88` is the `bc1tl`
+delay slot that stores `$s5=1` only when `$f24==0`; overlay-alias
+hits need `prev_pc` inside `0x800C28F0..0x800C2E08`.
 
 Positive control: `--watch-write 0x0:0x800000` must hit (cap 10000)
 AND `--vi-trace` must show title `1024 @ 0x00790400` AND `[gpr-ctl]`
-/ an exec hit at `0x8003E094` must fire (the 6.9 s first return is
-enough to prove the watch). A silent `0x8003E094` watch is a failed
-instrument. The 17 s `0x8003E13C` hit is a second timeline anchor,
-not required to classify the viewer.
+/ an exec hit at `0x8003E094` must fire. A silent `0x8003E094` watch
+is a failed instrument. Lifetime `exec-prev` still counts past
+EXEC_LOG_CAP 64.
 
 Require Rice. Dummy video stays at 320 / `0x006dd280` forever.
 
@@ -61,14 +66,12 @@ tools/oracle/build/rs64_oracle \
   --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
   --secs 25 --hit-cap 10000 \
   --watch-write 0x0:0x800000 \
-  --watch-pc 0x800C28F0,0x8003E094,0x800A5D80,0x8003E13C \
+  --watch-pc 0x800C2B88,0x800C2DB0,0x800C2E00,0x8003E094 \
   --vi-trace --vi-poll \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s3284_first_menu_model_viewer.log 2>&1
+  > scratch/agent/s3285_viewer_frame_exit.log 2>&1
 ```
 
-No `--pc-phase-log-width`: exec watches arm on first VI (covers 320).
-Join printed `0x800C28F0` times to `0x8003E094` / `0x800A5D80` and
-the 17 s `0x8003E13C`. Lifetime `exec-prev` still counts past
-EXEC_LOG_CAP 64. Do not change audio behavior. Do not run M5 Step 3.
-Do not repeat the local missing-target `PatchesLib` build.
+No `--pc-phase-log-width`. Join printed `0x800C2B88` / `0x800C2DB0`
+times to `0x800C2E00` and the 6.7 s `0x8003E094`. Do not change
+audio behavior.
