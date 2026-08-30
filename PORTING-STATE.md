@@ -128485,3 +128485,33 @@ legitimately writes a request, but the bit is not a legitimate yielded-task
 result because this host never interrupts or resumes a task. The candidate
 remains env-gated; no M5 Step 3 audio/output behavior changed. No new soak
 verdicts.
+
+## Session 3304 (2026-08-30) — default yield lifecycle returns viewer but not title
+
+Same-build port A/B, HYPOTHESIS-ID `m5-osvimode-viewer-frame-exit`. Promoted
+completion-wins/not-yielded status to the default, retained request-only behind
+`ROGUESQ_SP_YIELDED_REQUEST_ONLY=1`, and called one exported request-reset
+helper from both the weak and linked strong task-start implementations. Built
+once, exported `submodule-patches/N64ModernRuntime.patch`, and launched both
+arms concurrently from `build/`. Evidence:
+`scratch/agent/s3304_yield_lifecycle_default.md`; captures and joined verdict
+are under `scratch/agent/s3304_yield_lifecycle_default/`.
+
+Both arms passed explicit arm, `requested_pre=1 requested_post=0` reset,
+SP-completion, `640 @ 0x0066A500`, and viewer-entry controls, with no crash or
+abort. Default emitted 44 `requested=1 returned=0` rows, E60=44, E70=0,
+E80F=0, matched SENT/SRET through n=100, and returned from the viewer. The
+following `waitForAnyAudioSlot` also returned and `menuOverlayInit` reached
+its `0x800C5D30` post-wait branch with slot type 12. It still published no
+title-width 1024 phase during the bounded 120-second run. Rollback emitted
+`requested=1 returned=1`, E70/E80F, and stopped at SENT n=3 / SRET n=2 with
+no viewer return.
+
+This selects `H-ViewerOnly` and refutes `H-LifecycleRepairComplete`,
+`H-LateYieldRecurrence`, and `H-CoverageInvalid`. The lifecycle repair lands;
+Session 3276's downstream `H-PortTargetPublicationAbsent` remains. Retail
+Sessions 3296/3298/3301 are the independent second line for the lifecycle.
+ORIGIN: `osSpTaskYield_recomp` legitimately writes a request, but it is not a
+legitimate yielded-task result because the host has no task interrupt/resume
+path. Resetting it at task start is lifecycle cleanup, not a corruption guard.
+No M5 Step 3 audio/output behavior changed. No new soak verdicts.

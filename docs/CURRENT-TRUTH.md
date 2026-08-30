@@ -4,7 +4,23 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3303 (2026-08-30).
+Current maintenance marker: Session 3304 (2026-08-30).
+
+Session 3304 promoted completion-wins/not-yielded status to the default and
+added one request-reset helper to both weak and linked strong task-start
+paths; request-only remains available as
+`ROGUESQ_SP_YIELDED_REQUEST_ONLY=1`. The same-build pair passed arm,
+pre=1/post=0 reset, SP-completion, viewer-entry, and 640-phase controls.
+Default emitted 44 `requested=1 returned=0` / E60 rows, zero E70/E80F,
+matched SENT/SRET through n=100, and returned from the viewer without a crash.
+Rollback emitted `requested=1 returned=1`, E70/E80F, and stopped at SENT n=3 /
+SRET n=2. Default still never published title width 1024 during the bounded
+120-second run, selecting `H-ViewerOnly` and refuting
+`H-LifecycleRepairComplete`, `H-LateYieldRecurrence`, and invalid coverage.
+The repair lands; Session 3276's downstream `H-PortTargetPublicationAbsent`
+remains. ORIGIN: the request bit is legitimate, but it is not a legitimate
+yielded-task result on a host with no interrupt/resume path. Evidence:
+`scratch/agent/s3304_yield_lifecycle_default.md`.
 
 Session 3303 ran the same-build port A/B for request-only
 `osSpTaskYielded` versus diagnostic completion-wins. Both arms passed
@@ -683,34 +699,21 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3301
-selects `H-RetailType1StartsSp`: viewer type-1 starts
-`gspTask` `0x800377C8` and writes 89C; 19FE4 is 1:1 with
-every type-1 and type-2 start and leaves 89C=0 for 19DCC.
-Session 3300's `H-Type1StartsSp`, Session 3299's
-`H-PortType2Yields`, Session 3298's `H-RetailType2Idle`,
-Session 3297's `H-RetailYieldPtrZero` /
-`H-RetailYieldPtrUnpublished`, Session 3296's
-`H-RetailNoYieldStore`, Session 3295's `H-Ed0CompareSkip`,
-Session 3294's `H-SchedLoopAliveNoEd0`, Session 3293's
-`H-PortSchedSendMissing`, Session 3292's
-`H-RetailSpSchedulerProducer`, Session 3291's
-`H-RetailRecvReturns`, Session 3290's `H-SubmitRecvBlocked`,
-and Session 3288's `H-PortFadeOutNeverEntered` still hold.
-Session 3276's `H-PortTargetPublicationAbsent` still holds.
-No M5 Step 3 audio change is authorized until a like-for-like
-target row exists.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3304 lands
+the completion-aware SP-yield lifecycle: the viewer now returns and scheduling
+continues, but title width 1024 is still absent. The old port E70/E80F and
+third-submit path is retained only as rollback evidence. Retail Sessions
+3296/3298/3301 remain the independent lifecycle ground truth. Session 3276's
+`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio change is
+authorized until a like-for-like target row exists.
 
-1. Promote completion-wins/not-yielded semantics to the default
-   `osSpTaskYielded` path, preserving request-only as an explicit rollback
-   arm. In one build, phase-gate both default and rollback arms at the 640
-   viewer and require default E60 plus sustained matched SENT/SRET/2D50,
-   viewer return, and title 1024; rollback must reproduce E70/19E80F and the
-   third-submit stall. Also reconcile the strong `osSpTaskStartGo_recomp`
-   override with request reset so the process-local bit cannot remain stale.
-   ORIGIN: `osSpTaskYield` writes a legitimate request, but the host never
-   interrupts/resumes a task, so request-only is not a legitimate completion
-   result. This is scheduler lifecycle repair, not M5 Step 3 audio output.
+1. Census the default port's complete post-viewer `menuOverlayInit`
+   continuation in one run: branch at `0x800C5D30`, fallthrough/loop target,
+   function return `0x800C5D94`, caller continuation `0x8003E094`, cinematic
+   jal `0x8003E10C`, and cinematic entry `0x800A5D80`. Require the existing
+   640/viewer-return/reset/SP controls. Retail Session 3283 independently
+   establishes `C5D94` return then cinematic entry; select the first missing
+   port edge rather than adding another join field.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -763,6 +766,17 @@ route-wide PCM-gap theory, and force-zero default policy are superseded at
 their measured scopes. They were believable before qualified routes,
 same-build controls, or independent retail attribution existed. Full failed
 experiments remain in the ledger and archived overview.
+
+Sessions 3288-3302 described the port's viewer stall through
+`H-PortFadeOutNeverEntered`, `H-SubmitRecvBlocked`,
+`H-PortSchedSendMissing`, `H-Ed0CompareSkip`, and the type-2 yield/busy-byte
+chain. Those findings were accurate under the then-default request-only
+`osSpTaskYielded` contract and remain reproducible with the rollback env var,
+but they no longer describe the default runtime after Session 3304. They were
+believable because the runtime itself reported a requested task as yielded;
+Session 3304's completion-aware default reaches E60, keeps SENT/SRET matched,
+and returns from the viewer. The downstream missing title publication is not
+superseded.
 
 Sessions 3262–3264 selected `H-SourceUnavailable` / `H-PortPublicationSourceUnavailable`
 because `RecompiledFuncs/` is absent from this repository root. That was
@@ -953,6 +967,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3304_yield_lifecycle_default.md`,
 `scratch/agent/s3303_yield_status_ab.md`,
 `scratch/agent/s3302_port_89f_clear.md`,
 `scratch/agent/s3301_retail_type1_sp.md`,
