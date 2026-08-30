@@ -128278,3 +128278,37 @@ port's `19DFC yieldw=0x80149470` publisher is extra on this
 attract viewer. `H-RetailCoverageInvalid` is not selected
 for the viewer window. No audio or M5 Step 3 change. No new
 soak-queue verdicts.
+
+## Session 3298 (2026-08-29) — retail type-2 always idle-starts; yield-publish 19DC0 silent
+
+Retail type-2 dispatch vs yield-publish capture, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. One independent Rice
+oracle, 25 s, first-VI arming, `--hit-cap 20000`. Watches:
+whole-RDRAM, physical `0x00128D40:0x00128D44`, exec
+`0x80019D90` / `0x80019DAC` / `0x80019DC0` / `0x80019DCC`
+/ `0x800C28F0` / `0x800C2E00`. Log:
+`scratch/agent/s3298_retail_type2_yield.log`. Evidence:
+`scratch/agent/s3298_retail_type2_yield.md`.
+
+Same-run positive controls: whole-RDRAM 10000-write and
+`[gpr-ctl]` at 0.5 s; viewer entry `0x800C28F0` at 2.2 s
+(`prev_pc=0x800C5C98`, 640 @ `0x0066aa00`); viewer return
+`0x800C2E00` at 6.4 s; 19D90/19DCC live in-window n=259
+each. 1474 VI, 25.0 s wall / 24.6 s emulated, `rc=0`. Title
+`1024 @ 0x00790400` did not fire (cinematic 640 continued
+through 24.4 s). Hit-cap not truncated (12896 total hits).
+
+Viewer 19D90 n=259 all `prev_pc=0x80019CE0` `$a0=0x80128C80`;
+19DCC n=259 all `prev_pc=0x80019DA4` `$v0=0`. Lifetime
+19D90=19DCC=1447 (1:1 from 0.6 s). `0x80019DAC` exec=0.
+`0x80019DC0` exec=0. Yield-pointer word watch hits=0;
+post-value samples=0; shutdown snapshot 4 zero bytes
+(FNV `0x4b95f515`).
+
+This selects `H-RetailType2Idle` and refutes
+`H-RetailNoType2` and `H-RetailType2Yields`. Combined with
+s3295/s3297, retail type-2 arrives but SP is idle so the
+yield publisher never stores; the port's
+`yieldw=0x80149470` is extra. `H-RetailCoverageInvalid` is
+not selected for the viewer window. No audio or M5 Step 3
+change. No new soak-queue verdicts.
