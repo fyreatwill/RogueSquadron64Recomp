@@ -1,66 +1,64 @@
-# NEXT work unit — port: who leaves SP busy at first yielding type-2
+# NEXT work unit — retail: does type-1 start gspTask / write 89C?
 
 HYPOTHESIS-ID: m5-osvimode-viewer-frame-exit
 
 ## Resume context
 
-Session 3299 selected `H-PortType2Yields`: after last 19ED0
-n=123, the first type-2 (`19D90 n=83`, `$a0=0x80128C80`)
-takes `0x80019DAC` / `0x80019DC0` and stores
-`yieldw=0x80149470` because `0x8011A89C==1`. Pre-last-19ED0
-type-2 was idle (`19DCC n=82`, `sp89c=0`). 19D94S=0.
-Retail (s3298) never takes 19DC0.
+Session 3300 selected `H-Type1StartsSp`: after last 19ED0
+n=123, 19FE4 n=123 clears `0x8011A89C`, then type-1
+`19CDC n=247` (`$a0=0x80128CE0`) takes `L_80019D10` with
+`sp89c=0`, starts `gspTask` `0x800377C8` at `0x80019D58`,
+and `0x80019D34` (`sb $s1, 0($s4)`, `$s4=0x8011A89C`)
+leaves `89C==1` for the next type-2. 19D78=0. After first
+19DC0, 19FE4 never reruns (19ED0 abandoned).
 
-In the same join, `19CDC n=247` is type `0x01`
-(`$a0=0x80128CE0`) between last 19ED0 and the first
-19DC0. Scheduler stores to `0x8011A89C` include idle-start
-`0x80019DD4` (`sb $s1, -4($s3)`) and clearer `0x80019FE4`
-(`sb $zero, -0x5764($at)`).
+Retail (s3298) type-2 always idle-starts (`19D90=19DCC`,
+19DC0 exec=0). Unknown: whether retail type-1 at the
+attract viewer starts the same `gspTask` / writes 89C,
+and if so who clears it before type-2.
 
 ## Competing hypotheses
 
-- `H-Type1StartsSp`: the type-1 handler after last 19ED0
-  idle-starts SP (or equivalent) and leaves `89C==1` for
-  the next type-2.
-- `H-IdleStartUncleared`: last 19DCC n=82's `0x80019DD4`
-  store of 1 is still live; `0x80019FE4` does not run in
-  the gap.
-- `H-Other89CWriter`: some other PC writes 1 into
-  `0x8011A89C` in the gap (not 19DD4 / not type-1).
-- `H-BusyCoverageInvalid`: viewer `[m5-postwait]` entry,
-  `[phase]` `640 @ 0x0066A500`, SENT n=3, last 19ED0, first
-  19DC0, or the new 19DD4 / 19FE4 / type-1 probes are
-  silent at width 640.
+- `H-RetailType1StartsSp`: viewer-window `0x80019D10` and
+  `0x80019D58` are live (`$a0=0x800377C8` at 19D58);
+  `0x80019D34` execs; type-2 still idle-starts (19DCC), so
+  a clearer (`0x80019FE4` or equivalent) or ordering keeps
+  89C=0 for type-2.
+- `H-RetailType1Absent`: `0x80019D10` is silent in the
+  viewer window. Type-1 never runs, so 89C stays 0.
+- `H-RetailType1BusySkip`: `0x80019D10` is live but
+  `0x80019D78` is live and `0x80019D58` is 0 (does not
+  start SP / does not write 89C).
+- `H-RetailCoverageInvalid`: whole-RDRAM 10000-write
+  control, viewer `0x800C28F0`, return `0x800C2E00`, or
+  s3298's 19D90/19DCC idle pair miss.
 
 ## Discriminator
 
-One Debug port run, 30 s from `build/`, SIGKILL.
-`ROGUESQ_LOG_M5_POSTWAIT=1`. Keep s3288 fade / s3289 SENT /
-s3290 inner / s3293 gate / s3294 loop / s3295 dispatch /
-s3299 type-2 probes. Add a width≥640 always-print at
-`0x80019DD4`, `0x80019FE4`, and type-1 dispatch
-(`0x80019CF0` / `L_80019D10`).
+One independent retail Rice oracle, 25 s. Watches are
+physical. Exec watches armed at first VI (no
+`--pc-phase-log-width`). `--hit-cap 20000`. No `--press`.
 
-Type-1 live in the gap + 19DD4 after it + 19FE4 silent
-before first 19DC0 selects `H-Type1StartsSp`. 19DD4 only
-on last 19DCC and 19FE4 silent selects
-`H-IdleStartUncleared`. 89C becomes 1 with neither
-selects `H-Other89CWriter`. Missed controls is a failed
-instrument.
+19D10+19D58 live in the viewer window + 19DCC still 1:1
+with 19D90 selects `H-RetailType1StartsSp`. 19D10 silent
+selects `H-RetailType1Absent`. 19D10 live, 19D78 live,
+19D58=0 selects `H-RetailType1BusySkip`. Missed controls
+is a failed instrument.
 
 Do not add a skip, allow, restore, or wait bypass. No M5
 Step 3.
 
 ## Exact commands
 
-Fixup: `tools/apply_s3300_sp_busy_writer.py` (also hook
-from `fixup_game_funcs.py`) at `0x80019DD4`, `0x80019FE4`,
-and type-1 `L_80019D10`. Rebuild Debug. Then from `build/`
-with the ROM present:
-
 ```
-env ROGUESQ_LOG_M5_POSTWAIT=1 ./RogueSquadron64Recomp
+tools/oracle/build/rs64_oracle \
+  --core ~/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom  ~/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --watch-write 0x0:0x800000 \
+  --watch-pc 0x80019D10,0x80019D34,0x80019D58,0x80019D78,0x80019FE4,0x80019DCC,0x800C28F0,0x800C2E00 \
+  --secs 25 --hit-cap 20000 --vi-trace --vi-poll
 ```
 
-30 s, SIGKILL. Log: `scratch/agent/s3300_port_sp_busy_writer.md`
-plus the captured run log.
+Log: `scratch/agent/s3301_retail_type1_sp.md` plus the
+captured run log.

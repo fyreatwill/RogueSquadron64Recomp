@@ -128349,3 +128349,42 @@ type-2 idle-starts because SP is idle; the port's extra
 `yieldw=0x80149470` is this `0x80019DC0` store while
 `0x8011A89C==1`. No audio or M5 Step 3 change. No new
 soak-queue verdicts.
+
+## Session 3300 (2026-08-29) — type-1 19D34 leaves 0x8011A89C==1 for first yield
+
+Port SP-busy-byte writer capture, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. Fixup probe at type-1
+`0x80019CF0` taken / `L_80019D10` / `0x80019D58` /
+`L_80019D78` / idle-start `0x80019DD4` / clearer
+`0x80019FE4` (`tools/apply_s3300_sp_busy_writer.py`,
+hooked from `fixup_game_funcs.py`). Kept s3288–s3299
+probes. Debug rebuild. One 30 s run from `build/` with
+`ROGUESQ_LOG_M5_POSTWAIT=1`, SIGKILL. Log:
+`scratch/agent/s3300_port_sp_busy_writer.log`. Evidence:
+`scratch/agent/s3300_port_sp_busy_writer.md`.
+
+Same-run positive controls: `[phase] 640 @ 0x0066A500` at
+3.0 s; viewer `[m5-postwait]` entry `pc=0x800C28F0`;
+`2D50` n=3 taken=0; SENT n=3 without SRET n=3; E0B4 n=41
+without R0B4 n=41; last 19ED0 n=123 (`s2b0=0x02`); last
+idle 19DCC n=82 (`sp89c=0`); first 19DC0 n=1 (`sp89c=1`);
+new probes live at width 640. Zero
+crash/abort/Bus-error/last-guest-pc.
+
+Lifetime last n: 19CF0T=19D10=19D58=42 (every 19D58
+`$a0=0x800377C8`), 19D78=0, 19DD4=82 (1:1 with 19DCC),
+19FE4=123 (1:1 with 19ED0). Join: last 19DD4 n=82 stores
+1, last 19ED0, then 19FE4 n=123 **clears** 89C, then
+type-1 `19CDC n=247` (`$a0=0x80128CE0`) 19D10 n=42
+`sp89c=0`, 19D58 n=42 `sp89c=1`, then 19D90 n=83 /
+19DC0 n=1. After first 19DC0: 19DD4=0, 19FE4=0, 19D10=0.
+`$s4` init is `0x8011A89C`; type-1 `0x80019D34`
+`sb $s1, 0($s4)` is the 89C=1 store.
+
+This selects `H-Type1StartsSp` and refutes
+`H-IdleStartUncleared`, `H-Other89CWriter`, and
+`H-BusyCoverageInvalid`. Combined with s3298, retail
+type-2 never sees this busy byte. Combined with
+s3293–s3295, 19FE4 never reruns because 19ED0 is
+abandoned. No audio or M5 Step 3 change. No new
+soak-queue verdicts.

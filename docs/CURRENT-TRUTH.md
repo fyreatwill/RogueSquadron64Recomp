@@ -4,7 +4,27 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3299 (2026-08-29).
+Current maintenance marker: Session 3300 (2026-08-29).
+
+Session 3300 asked who leaves `0x8011A89C==1` for the
+first yielding type-2 after last 19ED0. Same-run
+controls: viewer `[m5-postwait]` entry, `[phase]`
+`640 @ 0x0066A500`, `[s3288-fade] 2D50 n=3 taken=0`,
+SENT n=3 without SRET n=3, E0B4 n=41 without R0B4,
+last 19ED0 n=123, last idle 19DCC n=82, and first 19DC0
+n=1. Last 19DD4 n=82 stores 1, then 19FE4 n=123 **clears**
+it (`sp89c=1` before store). Type-1 `19CDC n=247`
+(`$a0=0x80128CE0`) then takes 19D10 n=42 with `sp89c=0`,
+starts `gspTask` `0x800377C8` at 19D58 n=42
+(`s4_0=1` `sp89c=1`), 19D78=0. First 19DC0 follows.
+`$s4` is `0x8011A89C`; type-1 `0x80019D34`
+`sb $s1, 0($s4)` is the 89C=1 store. After first 19DC0:
+19DD4=0, 19FE4=0, 19D10=0 (19ED0 abandoned, so the
+clearer never reruns). This selects `H-Type1StartsSp`
+and refutes `H-IdleStartUncleared`, `H-Other89CWriter`,
+and `H-BusyCoverageInvalid`. Combined with s3298, retail
+type-2 never sees this busy byte. No M5 Step 3. Evidence:
+`scratch/agent/s3300_port_sp_busy_writer.md`.
 
 Session 3299 asked the port whether attract-viewer type-2
 `L_80019D90` takes idle `L_80019DCC` (retail, s3298) or
@@ -608,10 +628,12 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3299
-selects `H-PortType2Yields`: after last 19ED0 the port's
-type-2 takes `0x80019DC0` and stores `0x80149470` because
-`0x8011A89C==1`. Session 3298's `H-RetailType2Idle`,
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3300
+selects `H-Type1StartsSp`: after last 19ED0, type-1
+`19CDC n=247` starts `gspTask` `0x800377C8` and
+`0x80019D34` (`sb $s1, 0($s4)`, `$s4=0x8011A89C`) leaves
+the busy byte set for the next type-2. Session 3299's
+`H-PortType2Yields`, Session 3298's `H-RetailType2Idle`,
 Session 3297's `H-RetailYieldPtrZero` /
 `H-RetailYieldPtrUnpublished`, Session 3296's
 `H-RetailNoYieldStore`, Session 3295's `H-Ed0CompareSkip`,
@@ -624,16 +646,15 @@ Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Port: in the gap after last 19ED0 n=123, who leaves
-   `0x8011A89C==1` for the first yielding type-2
-   (`19D90 n=83` / `19DC0 n=1`)? Same join has type-1
-   `19CDC n=247` (`$a0=0x80128CE0`) before that type-2.
-   Named scheduler stores: idle-start `0x80019DD4` (1) and
-   clearer `0x80019FE4` (0). Join viewer `[m5-postwait]`
-   entry, `[phase]` `640 @ 0x0066A500`, SENT n=3 without
-   SRET n=3, last 19ED0, and first 19DC0. Keep s3288–s3299
-   probes. Do not add a skip, allow, restore, or wait
-   bypass. No M5 Step 3.
+1. Retail: during the attract viewer, does type-1
+   (`0x80019D10` / `0x80019D58`) start `gspTask` and
+   write `0x8011A89C`, and if so who clears it before
+   type-2 idle-starts? Watch `0x80019D10`, `0x80019D34`,
+   `0x80019D58`, `0x80019D78`, `0x80019FE4`, `0x80019DCC`,
+   viewer `0x800C28F0`, return `0x800C2E00`. Whole-RDRAM
+   10000-write control; `--hit-cap 20000`; arm at first
+   VI. Join 19DCC 1:1 with 19D90 from s3298. Do not add a
+   skip, allow, restore, or wait bypass. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -833,6 +854,15 @@ first type-2 after last 19ED0 (`sp89c=1`, store
 `0x80149470`) and 1164/1164 later type-2 visits on the
 same arm, so the extra word is this yield-publish.
 
+Session 3299 left the busy byte as last-19DCC's uncleared
+19DD4, a type-1 idle-start through 19DD4, or some other
+writer. Believable because 19DD4 is the named 89C=1 store
+and 19DCC n=82 is the last idle type-2. Session 3300
+measured 19FE4 n=123 clearing 89C after last 19DD4, then
+type-1 19D10 seeing 0, then 19D58 seeing 1 after
+`0x80019D34` (`$s4=0x8011A89C`). The uncleared-19DD4
+reading is refuted.
+
 The recomp direct C call to `submitGfxFrame` does not write guest
 `$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
 that word is dead.
@@ -845,6 +875,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3300_port_sp_busy_writer.md`,
 `scratch/agent/s3299_port_type2_successor.md`,
 `scratch/agent/s3298_retail_type2_yield.md`,
 `scratch/agent/s3297_retail_yield_ptr.md`,
