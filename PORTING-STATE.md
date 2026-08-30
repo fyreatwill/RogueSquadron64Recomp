@@ -127855,3 +127855,23 @@ No new soak-queue verdicts. Evidence:
 `scratch/agent/s3285_freelist_live_guard.md`,
 `scratch/agent/s3285_viewer_frame_exit.md`,
 `scratch/agent/s3285_viewer_frame_exit.log`.
+
+## Session 3286 (2026-08-29) — checkpoint close-out: oracle not attempted
+
+Checkpoint: primary session died before the planned s3286 oracle command
+ran (stop gate blocked on churn guard — s3285 used past-tense
+"selected/refuted" instead of the expected present-tense forms).
+
+Restating s3285's oracle result in canonical form: the independent retail
+Rice run selects `H-RetailNoFadeStore` and refutes `H-ExitCoverageInvalid`,
+`H-RetailFrameTimerThenBriefSlot`, and `H-RetailLongSlotWait`. Retail's
+first `menuOverlayInit` returns from `runMenuModelViewerScreen` at 6.8 s
+through the slot jal (`0x800C2DB0` → `0x800C2E00` → `0x8003E094`) without
+ever executing `0x800C2B88` (the `$f24==0` `$s5=1` store). The delay-slot
+watch-miss question (`H-DelaySlotWatchMiss` vs `H-BeqTakenWithoutFadeStore`
+vs `H-Da0WithoutBeq`) remains open: `0x800C2B84`, `0x800C2D50`, and
+`0x800C2DA0` were not watched in s3285's run.
+
+No oracle data was collected this session. No code, instrument, or audio
+change was made. NEXT.md is updated as a RESUME instruction: the exact
+oracle command from NEXT.md is the immediate next step. Evidence: none new.
