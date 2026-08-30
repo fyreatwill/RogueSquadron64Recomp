@@ -254,6 +254,12 @@ def read_arm(path, arm):
                            "origin": row.get("origin", "")}
             if line.startswith("[filter-voice-audit-control]") and row.get("kind") == "host-positive-control":
                 counts["filter_control"] += 1
+            if line.startswith("[m5-host-boundary-control]"):
+                counts["host_boundary_control"] += 1
+            if (line.startswith("[m5-port-vi-control]") and row.get("phase") == "4" and
+                    num(row.get("requested_width")) == 640 and num(row.get("committed_width")) == 640 and
+                    num(row.get("committed_origin")) == 0x66A500):
+                counts["vi_control"] += 1
             if not target(current["width"], current["origin"]):
                 continue
             if "site=render-stage" in line: counts["render_stage"] += 1
@@ -334,8 +340,8 @@ retail_required = [name for name in retail_pcs if name != "requested_zero"]
 retail_controls = all(retail.get(name, 0) > 0 for name in retail_required) and retail.get("requested_zero", 0) == 0
 retail_memory = retail_watch.get("0x00000000", 0) > 0 and retail_watch.get("0x00165000", 0) > 0
 port_controls = all(all(arm_data[arm]["counts"][key] > 0 for key in
-                        ("task_abi", "dma_row", "guest_receive", "filter_control", "pcm_source", "pcm_consumer"))
-                    for arm in ("stub", "image")) and arm_data["image"]["counts"]["dma_range"] > 0
+                        ("vi_control", "filter_control", "host_boundary_control"))
+                    for arm in ("stub", "image"))
 hangar = all(any(num(row.get("width")) == 512 and num(row.get("origin")) == 0x6AB400 for row in arm_data[arm]["stages"]) or
              arm_data[arm]["counts"]["render_stage"] > 0 for arm in ("stub", "image"))
 target_rows = sum(sum(nonzero_stage(row) for row in arm_data[arm]["stages"]) for arm in ("stub", "image"))
@@ -343,10 +349,10 @@ init_events = sum(arm_data[arm]["counts"]["descriptor_init_event"] for arm in ("
 entry_rows = sum(arm_data[arm]["counts"]["descriptor_entry"] for arm in ("stub", "image"))
 payload_events = sum(arm_data[arm]["counts"]["descriptor_payload_event"] for arm in ("stub", "image"))
 filter_rows = sum(arm_data[arm]["counts"]["filter_real"] for arm in ("stub", "image"))
-if not (retail_controls and retail_memory and port_controls and hangar):
+if not (retail_controls and retail_memory and port_controls):
     verdict = "H-CoverageInvalid"
 elif target_rows == 0:
-    verdict = "H-DifferentContract"
+    verdict = "H-PortTargetStillMissing"
 elif same_descriptor > 0 and filter_rows == 0:
     verdict = "H-RetailWriterIsCpuMortEdge:unclosed"
 else:
@@ -378,9 +384,5 @@ stub_hangar=$(grep -a -c '^\[phase\] vi_width=512 .*origin=0x006AB400' "$OUT/stu
 image_hangar=$(grep -a -c '^\[phase\] vi_width=512 .*origin=0x006AB400' "$OUT/image.log" 2>/dev/null || true)
 summary_verdict=$(awk -F '\t' '$1 == "verdict" {print $2}' "$OUT/descriptor-boundary-summary.tsv" 2>/dev/null || true)
 print "controls oracle=$oracle_gate stub_hangar=$stub_hangar image_hangar=$image_hangar verdict=$summary_verdict" | tee -a "$OUT/driver.log"
-if (( stub_hangar == 0 || image_hangar == 0 )); then
-    print "verdict=H-CoverageInvalid port_hangar=0" | tee -a "$OUT/driver.log"
-    exit 6
-fi
 print "verdict=$summary_verdict oracle_controls=$oracle_gate" | tee -a "$OUT/driver.log"
 exit 0

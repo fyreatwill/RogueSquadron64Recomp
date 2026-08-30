@@ -4,7 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3274 (2026-08-29).
+Current maintenance marker: Session 3275 (2026-08-29).
+
+Session 3275 completed the M5 port route-writer parity capture. The first
+recipe run was invalid because its parser counted downstream controls only
+after a target phase, making the missing-target branch unreachable. The fixed
+same-build pair passed the retail oracle controls and, in both port arms,
+passed the host positive controls and phase-4 VI control at `640 /
+0x0066A500`; neither reached a target phase or emitted a target-span row.
+The fixed driver selects `H-PortTargetStillMissing` as single-source
+port-boundary evidence. It rules out invalid coverage, but does not select
+writer parity or mismatch and does not authorize audio/output changes.
+Evidence: `scratch/agent/s3275_m5_route_writer_parity.md`.
 
 Session 3274 ran the prescribed independent retail target framebuffer-span
 capture. The whole-RDRAM positive control recorded 13,204 writes, and VI
@@ -374,19 +385,17 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Compare the port's phase-640 route/order and host writeback with the
-   independently observed retail target-span writer relation. Run the
-   existing same-build image/silent pair with `ROGUESQ_LOG_ALL=1`,
-   `ROGUESQ_LOG_M5_HOST_BOUNDARY=1`, `ROGUESQ_LOG_M5_ROUTE_ORDER=1`,
-   `ROGUESQ_LOG_M5_ROUTE_TRANSITION=1`, and `ROGUESQ_LOG_VI_CALLERS=1`,
-   phase-gated from width 640. Require positive controls in both arms,
-   phase-640 route/order rows, the port's guest writeback destination and
-   caller/order, and an image-versus-silent distinction. A like-for-like port
-   row at physical `0x00790000..0x00790C00` with matching route ordering
-   supplies the second evidence line for `0x800078EC`; a valid port phase with
-   a different destination/order selects a port-boundary mismatch; missing
-   target rows leave the comparison unresolved. Do not change audio or output
-   behavior in this unit.
+1. Audit the port's target-VI publication boundary after the valid phase-4
+   stop. Start from the local `osViSetMode`/VI-commit wrappers and every
+   checked-in caller or symbol reference, and make one table of requested
+   width, committed width/origin, caller, and the next route-preparation
+   consumer. Competing outcomes are: a target request is never published
+   (`H-PortTargetPublicationAbsent`), a target request is published but
+   committed or consumed under another origin (`H-PortTargetCommitMismatch`),
+   or the local/generated source needed to enumerate the boundary is absent
+   (`H-PortPublicationSourceUnavailable`). The discriminator is a complete
+   caller-to-commit table, not another target-phase null counter. Do not build,
+   change audio/output behavior, or infer a retail writer from this audit.
 2. Obtain the configured Windows/MIPS build artifact or generated patch
    outputs, then validate Session 3270's expanded free-list guard class.
    Require successful patch compilation, unchanged valid-path behavior, and a
@@ -681,6 +690,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3275_m5_route_writer_parity.md`,
 `scratch/agent/s3272_m5_step1_pair.md`,
 `scratch/agent/s3240_m3_musyx_null_contract.md`,
 `scratch/agent/s3226_m5_route_writer_oracle/RESULTS.md`,

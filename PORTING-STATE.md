@@ -127527,3 +127527,24 @@ not yet explain the port's pre-title VI-640 stop or authorize an audio/output
 change. Next: compare the port's phase-640 route/order and writeback against
 the retail relation in both same-build audio arms. Evidence:
 `scratch/agent/s3274_m5_target_span_writer.md`.
+
+## Session 3275 (2026-08-29) — fixed M5 route-writer parity gate
+
+Ran the prescribed same-build M5 route-writer parity recipe. The first run
+was invalid because the parser counted task/PCM controls only after entering
+a target phase, making its `H-PortTargetStillMissing` branch unreachable.
+Both arms nevertheless reached phase 4 at width 640/origin `0x0066A500`.
+
+Fixed the recipe to count the phase-4 VI control and host positive controls
+before target filtering, then reran both audio arms. The retail oracle passed
+its whole-RDRAM and title/hangar controls. Stub and image each produced one
+host filter positive control, one host writeback positive control, and one
+valid phase-4 VI control. Neither produced a target-phase row, a
+`[m5-port-retail-target]` row, downstream audio/PCM row, or hangar phase. The
+fixed driver selected `H-PortTargetStillMissing` and exited successfully.
+
+This is single-source port-boundary evidence: it rules out invalid coverage,
+but does not select writer parity or mismatch and does not join the port to
+retail target writer PC `0x800078EC`. No audio, output, or runtime behavior
+changed. Evidence: `scratch/agent/s3275_m5_route_writer_parity.md` and
+`scratch/agent/s3275_m5_route_writer_parity_fixed/driver.log`.
