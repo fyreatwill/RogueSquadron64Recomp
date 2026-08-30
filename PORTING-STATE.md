@@ -128752,3 +128752,42 @@ with `$v0`/`$v1`/`$a0` to split time-pred bypass vs flag-byte
 set as the hardware path into the jal.
 
 Evidence: `scratch/agent/s3311_cine_init_jal.md`.
+
+## Session 3312 (2026-08-30) — retail jal 0x800A62B4 takes the flag-byte path
+
+HYPOTHESIS-ID: m5-osvimode-postviewer-continuation
+
+Independent retail Rice census of `cinematicLoopBody` skip
+predicates `0x800A626C` / `0x800A6274` / `0x800A6288` and
+`jal cinematicInitializer` at `0x800A62B4`. Added `$v1` to
+oracle `print_gpr_fields` so 626C taken is direct. No
+`--press`. No port build. No M5 Step 3.
+
+One 90 s run. Driver:
+`scratch/agent/s3312_retail_cine_init_path/run.sh`.
+
+Same-run controls: whole-RDRAM 10000-write, positive-control
+threshold, `[gpr-ctl]`, `$v1` printed 2406, VI
+`640 @ 0x0066A500` at 2.2 s, cinematic entry `0x800A5D80` at
+6.6 s (`$a0=0x13`), 62B4 n=1, title `1024 @ 0x00790400` at
+49.2 s. 5366 VI, 90.0 s wall / 89.4 s emulated, `rc=0`.
+
+Time-pred `0x800A626C` n=1190 printed 1189 all `$v1=1`
+`taken=0` (limit `$v0=0x4A6` first attract). Flag-byte
+`0x800A6274` n=1190: `$a0=0` `taken=1` for 975 first-attract
+visits (10.5–48.1 s), then `$a0=1` `taken=0` at 48.1 s (23
+visits through 48.8 s). First already-active `0x800A6288` at
+48.1 s `$v0=0` `$a0=1` `taken=0`, then 22 `$v0=1`. Jal n=1
+`prev=0x800A62B0` at 48.1 s; AF4B8 stores `$v0=0x800D9780`.
+
+This selects `H-RetailFlagSet` and refutes
+`H-RetailTimeBypass` (626C never takes), `H-RetailJalOther`,
+and `H-CoverageInvalid`. Combined with port Session 3311,
+both sides leave 626C not-taken; the port-only stop is
+skip-allow `$a0` staying 0, not a missed 1190-count bypass.
+Skip-allow is 1 if incoming `$a0` is set
+(`getControllerNewButtonsPressed` `& 0x9000` at
+`0x800A6208`) else `lbu 0x800B0B1C` at `0x800A6244`. Next
+discriminator: which of those two operands flips at 48.1 s.
+
+Evidence: `scratch/agent/s3312_retail_cine_init_path.md`.

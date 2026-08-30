@@ -8,7 +8,25 @@ Current maintenance marker: Session 3309 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
-## Live investigation (s3303–s3311)
+## Live investigation (s3303–s3312)
+
+Session 3312 asked independent retail which skip
+`cinematicLoopBody` takes into `jal cinematicInitializer` at
+`0x800A62B4`. One 90 s Rice run. Controls: 10000-write,
+`[gpr-ctl]`, `$v1` printed 2406, VI `640 @ 0x0066A500` at
+2.2 s, cinematic entry at 6.6 s, 62B4, title
+`1024 @ 0x00790400` at 49.2 s. Time-pred `0x800A626C` n=1190
+printed 1189 all `$v1=1` `taken=0` (limit `$v0=0x4A6`).
+Flag-byte `0x800A6274` n=1190: `$a0=0` `taken=1` for 975
+first-attract visits, then `$a0=1` `taken=0` at 48.1 s (23
+visits). First already-active `0x800A6288` at 48.1 s `$v0=0`
+`taken=0`, then 22 `$v0=1`. Jal n=1 `prev=0x800A62B0`; AF4B8
+stores `0x800D9780`. This selects `H-RetailFlagSet` and
+refutes `H-RetailTimeBypass` (626C never takes),
+`H-RetailJalOther`, and `H-CoverageInvalid`. Combined with
+port Session 3311, both sides skip 626C; the port-only stop is
+skip-allow `$a0` staying 0. No M5 Step 3. Evidence:
+`scratch/agent/s3312_retail_cine_init_path.md`.
 
 Session 3311 port-censused `cinematicLoopBody`'s path into
 `jal cinematicInitializer` at `0x800A62B4`. One 122 s launch
@@ -23,9 +41,9 @@ init-jal `0x800A62B4`, title 1024. Same-run `cuts44=1200` is
 limit+10. This selects `H-FlagByteSkip` and refutes
 `H-JalUnreached`, `H-TimePredSkip` (626C `taken=1`),
 `H-JalFires`, and `H-CoverageInvalid`. Combined with retail
-Session 3310, the port-only stop of that jal is 6274 taking
-while count (148) is still below 1190. No M5 Step 3. Evidence:
-`scratch/agent/s3311_cine_init_jal.md`.
+Session 3312, the port-only stop of that jal is 6274 taking
+on `$a0=0`, not a missed 1190-count bypass. No M5 Step 3.
+Evidence: `scratch/agent/s3311_cine_init_jal.md`.
 
 Session 3310 asked the independent retail oracle who writes physical
 `0x000B0934`. The 90 s Rice run is the live scope. Controls:
@@ -138,17 +156,21 @@ the silent control.
 The current default after Session 3304 returns from the attract viewer
 and enters `cinematicLoopBody` (`0x800A5D80`), then stays at VI
 `640 @ 0x0066A500` because `cinematicStageAdvancer` always skips on a
-null `0x800B0934`. Session 3311 shows that null persists because
-`jal cinematicInitializer` at `0x800A62B4` never fires: `0x800A6274`
-always takes on `$a0=0` while count at `0xB28($s3)` is 0..148 vs
-limit-10=1190 (`cuts44=1200`). Retail Session 3310 writes that word
-only at 48.1 s from that jal (KSEG0 `0x800D9780`), then 26
-live-pointer advancer frames, then the 64BC deactivator zeros it at
-49.0 s. Retail Session 3306 exits that loop at 48.8 s and reaches
-title `1024 @ 0x00790400` at 49.2 s. Boot attract on both sides is
-menu `$a1=9` → `runMenuModelViewerScreen` → cinematic → second menu
-`$a1=2` (`0x8003E13C`), not the architecture sketch of menu `$a1=9`,
-menu `(s3, 2, 0xB)`, then cinematic.
+null `0x800B0934`. That null persists because
+`jal cinematicInitializer` at `0x800A62B4` never fires. Session 3312
+shows retail also leaves time-pred `0x800A626C` not-taken (`$v1=1`
+on all 1189 printed rows); the hardware path is skip-allow `$a0`
+going 0→1 at 48.1 s so `0x800A6274` falls through, first 6288
+`$v0=0`, then the jal, then AF4B8 stores KSEG0 `0x800D9780`. Port
+Session 3311 keeps `$a0=0` so 6274 always takes. Skip-allow is 1 if
+incoming `$a0` is set (`getControllerNewButtonsPressed` `& 0x9000`
+at `0x800A6208`) else `lbu 0x800B0B1C` at `0x800A6244`; prologue
+`0x800A5EE8` zeros that byte. Retail Session 3306 exits that loop
+at 48.8 s and reaches title `1024 @ 0x00790400` at 49.2 s. Boot
+attract on both sides is menu `$a1=9` → `runMenuModelViewerScreen`
+→ cinematic → second menu `$a1=2` (`0x8003E13C`), not the
+architecture sketch of menu `$a1=9`, menu `(s3, 2, 0xB)`, then
+cinematic.
 
 `H-PortTargetPublicationAbsent` still holds: the live post-640
 publisher is `applyPendingViChanges` (`viRetraceHandlerThread` at
@@ -181,23 +203,23 @@ guard evidence. Do not retry the local missing-target build. M5 Step
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3304's
-completion-aware SP-yield lifecycle returns the viewer; Session 3311 shows
-`jal cinematicInitializer` at `0x800A62B4` is skipped by `0x800A6274`
-(`$a0=0`) while count 148 < limit-10 1190, so `0x800B0934` stays null
-and Session 3308's advancer skip remains. Retail Session 3310 writes
-that word only at 48.1 s from that jal, then Session 3306's 6074
-`$v0=1` → `0x800A64BC` at 48.8 s. Session 3276's
-`H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio
-change is authorized until a like-for-like target row exists.
+completion-aware SP-yield lifecycle returns the viewer; Session 3312
+shows retail reaches `jal cinematicInitializer` because skip-allow
+`$a0` goes 1 at 48.1 s, not because count hits 1190. Port Session
+3311 keeps `$a0=0` so 6274 always takes and `0x800B0934` stays
+null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
+No M5 Step 3 audio change is authorized until a like-for-like
+target row exists.
 
-1. Independent retail Rice census of `cinematicLoopBody`
-   `0x800A626C` / `0x800A6274` / `0x800A6288` / `0x800A62B4` with
-   `$v0`/`$v1`/`$a0`. Split time-pred bypass (626C taken at ~48 s,
-   flag stays 0) vs flag-byte set (`$a0!=0` before the threshold)
-   as the hardware path into the jal Session 3310 already named.
-   Require 10000-write, `[gpr-ctl]`, VI `640 @ 0x0066A500`,
-   cinematic entry, and 62B4. No `--press`. No port build. No M5
-   Step 3.
+1. Independent retail Rice census of skip-allow sources into
+   `0x800A6274`: exec `0x800A6238` (incoming `$a0` bne), exec
+   `0x800A6248` (`lbu 0x800B0B1C` beq), write physical
+   `0x000B0B1C`, plus 6274/62B4 as join keys. Split
+   `H-RetailIncomingA0` (6238 taken at 48.1 s, no 0xB1C write)
+   vs `H-RetailB1CWrite` (0xB1C written nonzero, 6248 not-taken)
+   vs `H-RetailBoth` vs `H-CoverageInvalid`. Require 10000-write,
+   `[gpr-ctl]`, VI `640 @ 0x0066A500`, cinematic entry, and 62B4.
+   No `--press`. No port build. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -322,6 +344,12 @@ Session 3311 measured 626C live (`taken=0`, count < 1190) and
 6274 always taken on `$a0=0`, so the jal is reached-and-skipped
 by the flag-byte gate, not unreached.
 
+Session 3311 treated retail 62B4 at 48.1 s as consistent with a
+~30 Hz loop reaching count >= 1190 and bypassing 6274.
+Believable from the MIPS (626C taken skips the flag). Session
+3312 measured 626C `$v1=1` on all 1189 printed rows; hardware
+sets skip-allow `$a0` to 1 at 48.1 s instead.
+
 The prescribed Session 3306 30 s undriven Rice recipe does not
 reach the cinematic return: first attract still has exit-gate
 `$v0=0` at 30 s. Believable because Session 3283 with Start
@@ -367,6 +395,7 @@ scheduler and submit loop.
 ## Evidence index
 
 Live-thread evidence:
+`scratch/agent/s3312_retail_cine_init_path.md`,
 `scratch/agent/s3311_cine_init_jal.md`,
 `scratch/agent/s3310_retail_b0934_writer.md`,
 `scratch/agent/s3308_stage_advancer.md`,
