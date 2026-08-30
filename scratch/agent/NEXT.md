@@ -1,64 +1,67 @@
-# NEXT work unit — retail: does type-1 start gspTask / write 89C?
+# NEXT work unit — port: after last 19ED0, does 19F6C clear 89F?
 
 HYPOTHESIS-ID: m5-osvimode-viewer-frame-exit
 
 ## Resume context
 
-Session 3300 selected `H-Type1StartsSp`: after last 19ED0
-n=123, 19FE4 n=123 clears `0x8011A89C`, then type-1
-`19CDC n=247` (`$a0=0x80128CE0`) takes `L_80019D10` with
-`sp89c=0`, starts `gspTask` `0x800377C8` at `0x80019D58`,
-and `0x80019D34` (`sb $s1, 0($s4)`, `$s4=0x8011A89C`)
-leaves `89C==1` for the next type-2. 19D78=0. After first
-19DC0, 19FE4 never reruns (19ED0 abandoned).
+Session 3301 selected `H-RetailType1StartsSp`: viewer
+type-1 starts `gspTask` `0x800377C8` and writes 89C;
+19FE4 is 1:1 with every type-1 and type-2 start, so
+19DCC always loads `0x8011A89C==0`. Combined with s3300,
+the port's type-1 start is the same; the extra yield is
+19FE4 not rerunning after 19ED0 is abandoned.
 
-Retail (s3298) type-2 always idle-starts (`19D90=19DCC`,
-19DC0 exec=0). Unknown: whether retail type-1 at the
-attract viewer starts the same `gspTask` / writes 89C,
-and if so who clears it before type-2.
+Last 19ED0 on the port has `s2b0=2`, so `bne` at
+`0x80019ED4` takes `L_80019F50` (not 19F1C). That path
+ends at `0x80019F6C` `sb $zero, 0($s2)` which should
+clear `0x8011A89F`. Session 3295 then sees 19E80
+fallthrough (`$s2[0]==1`). Named 1-store is `0x80019E70`
+(`sb $s1, -0x5761($at)` = 89F, `$s1=1`) on the
+yield-complete arm; `0x80019E60` stores 0 when yield
+status is 0.
 
 ## Competing hypotheses
 
-- `H-RetailType1StartsSp`: viewer-window `0x80019D10` and
-  `0x80019D58` are live (`$a0=0x800377C8` at 19D58);
-  `0x80019D34` execs; type-2 still idle-starts (19DCC), so
-  a clearer (`0x80019FE4` or equivalent) or ordering keeps
-  89C=0 for type-2.
-- `H-RetailType1Absent`: `0x80019D10` is silent in the
-  viewer window. Type-1 never runs, so 89C stays 0.
-- `H-RetailType1BusySkip`: `0x80019D10` is live but
-  `0x80019D78` is live and `0x80019D58` is 0 (does not
-  start SP / does not write 89C).
-- `H-RetailCoverageInvalid`: whole-RDRAM 10000-write
-  control, viewer `0x800C28F0`, return `0x800C2E00`, or
-  s3298's 19D90/19DCC idle pair miss.
+- `H-Ed0NonzeroNoClear`: last 19ED0 takes 19F50 / 19F64
+  returns, but 19F6C is silent, so 89F is never cleared
+  on that visit.
+- `H-Ed0ClearsThenE70`: 19F6C runs (89F=0), then 19E70
+  stores 1 before the first 19E80 fallthrough.
+- `H-Ed0ClearsThenOther`: 19F6C runs, 19E70 is silent in
+  that gap, some other PC writes 89F=1.
+- `H-CoverageInvalid`: viewer `[m5-postwait]` entry,
+  `[phase]` `640 @ 0x0066A500`, SENT n=3, last 19ED0,
+  19F64, first 19E80F, or the new probes miss at width
+  640.
 
 ## Discriminator
 
-One independent retail Rice oracle, 25 s. Watches are
-physical. Exec watches armed at first VI (no
-`--pc-phase-log-width`). `--hit-cap 20000`. No `--press`.
-
-19D10+19D58 live in the viewer window + 19DCC still 1:1
-with 19D90 selects `H-RetailType1StartsSp`. 19D10 silent
-selects `H-RetailType1Absent`. 19D10 live, 19D78 live,
-19D58=0 selects `H-RetailType1BusySkip`. Missed controls
-is a failed instrument.
+One 30 s port run. 19F6C silent after last 19ED0 selects
+`H-Ed0NonzeroNoClear`. 19F6C live then 19E70 before first
+19E80F selects `H-Ed0ClearsThenE70`. 19F6C live, 19E70
+silent in the gap, 19E80F still `$s2[0]==1` selects
+`H-Ed0ClearsThenOther`. Missed controls is a failed
+instrument.
 
 Do not add a skip, allow, restore, or wait bypass. No M5
 Step 3.
 
 ## Exact commands
 
+Write `tools/apply_s3302_89f_clear.py` (and hook the same
+transform from `fixup_game_funcs.py`) probing `L_80019F50`,
+`0x80019F6C`, `0x80019E60`, `0x80019E70`. Keep s3288 fade /
+s3289 SENT / s3290 inner / s3293 gate / s3294 loop /
+s3295 dispatch / s3299 type-2 / s3300 89C. Print
+`$s2[0]`, 89C, 89F, yieldw.
+
 ```
-tools/oracle/build/rs64_oracle \
-  --core ~/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom  ~/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --watch-write 0x0:0x800000 \
-  --watch-pc 0x80019D10,0x80019D34,0x80019D58,0x80019D78,0x80019FE4,0x80019DCC,0x800C28F0,0x800C2E00 \
-  --secs 25 --hit-cap 20000 --vi-trace --vi-poll
+python3 tools/apply_s3302_89f_clear.py
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  cmake --build build --config Debug --target RogueSquadron64Recomp
+# from build/, ROM present, 30 s then SIGKILL:
+env ROGUESQ_LOG_M5_POSTWAIT=1 ./RogueSquadron64Recomp
 ```
 
-Log: `scratch/agent/s3301_retail_type1_sp.md` plus the
+Log: `scratch/agent/s3302_port_89f_clear.md` plus the
 captured run log.

@@ -128388,3 +128388,37 @@ type-2 never sees this busy byte. Combined with
 s3293–s3295, 19FE4 never reruns because 19ED0 is
 abandoned. No audio or M5 Step 3 change. No new
 soak-queue verdicts.
+
+## Session 3301 (2026-08-29) — retail type-1 starts gspTask; 19FE4 clears 89C before type-2
+
+Retail type-1 SP-start capture, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. One independent Rice
+oracle, 25 s, watches physical, execs armed at first VI,
+`--hit-cap 20000`, no `--press`. Command in
+`scratch/agent/s3301_retail_type1_sp.md`. Log:
+`scratch/agent/s3301_retail_type1_sp.log`. Evidence:
+`scratch/agent/s3301_retail_type1_sp.md`.
+
+Same-run positive controls: whole-RDRAM 10000-write
+(`[oracle] positive-control threshold reached`);
+`[gpr-ctl]` at 0.5 s; viewer `0x800C28F0` at 2.3 s
+(`prev_pc=0x800C5C98`, 640 @ `0x0066aa00`); return
+`0x800C2E00` at 6.5 s (`prev_pc=0x800C2DFC`, `$v0=1`);
+19D10/19D34/19D58 and 19DCC live in 2.3–6.5 s. 1468 VI,
+25.0 s wall / 24.5 s emulated, 15414 hits (not truncated).
+Title 1024 did not fire (cinematic 640 continued).
+
+Lifetime: 19D10=19D34=19D58=632 (1:1; 19D58 all
+`$a0=0x800377C8`; 19D34 all `$s1=1` `$v0=0x800377C8`);
+19D78=0; 19FE4=2074=19D10+19DCC (632+1442); 19DCC=1442
+all `prev=0x80019DA4` `$v0=0`. Viewer: 19D10/19D34/19D58
+=242 (`$a0=0x80128CE0` n=241), 19DCC=258
+(`$a0=0x80128C80`), 19FE4=500. After every viewer 19D58
+the next of {19FE4,19DCC,19D10} is 19FE4.
+
+This selects `H-RetailType1StartsSp` and refutes
+`H-RetailType1Absent`, `H-RetailType1BusySkip`, and
+`H-RetailCoverageInvalid`. Combined with s3300, both
+sides type-1-start `gspTask` / write 89C; only retail
+keeps 19FE4 running so type-2 idle-starts. No audio or
+M5 Step 3 change. No new soak-queue verdicts.

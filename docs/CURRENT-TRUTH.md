@@ -4,7 +4,28 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3300 (2026-08-29).
+Current maintenance marker: Session 3301 (2026-08-29).
+
+Session 3301 asked retail whether attract-viewer type-1
+(`0x80019D10` / `0x80019D58`) starts `gspTask` and writes
+`0x8011A89C`, and who clears it before type-2 idle-starts.
+Same-run controls: whole-RDRAM 10000-write, `[gpr-ctl]` at
+0.5 s, viewer `0x800C28F0` at 2.3 s, `0x800C2E00` at 6.5 s,
+and 19D10/19D58/19DCC live in that window. Title 1024 did
+not fire (cinematic 640 continued). Lifetime
+19D10=19D34=19D58=632 (1:1, all `prev=0x80019CF0` /
+`0x80019D30` / `0x80019D54`); 19D78 exec=0. Every 19D34
+has `$s1=1` `$v0=0x800377C8`; every 19D58 has
+`$a0=0x800377C8`. 19FE4=2074=19D10+19DCC (632+1442);
+every 19DCC `$v0=0` (`prev=0x80019DA4`). Viewer 2.3–6.5 s:
+19D10/19D34/19D58=242, 19DCC=258, 19FE4=500; after every
+19D58 the next of {19FE4,19DCC,19D10} is 19FE4. This
+selects `H-RetailType1StartsSp` and refutes
+`H-RetailType1Absent`, `H-RetailType1BusySkip`, and
+`H-RetailCoverageInvalid`. Combined with s3300, both
+sides type-1-start `gspTask` / write 89C; only retail
+keeps 19FE4 running. No M5 Step 3. Evidence:
+`scratch/agent/s3301_retail_type1_sp.md`.
 
 Session 3300 asked who leaves `0x8011A89C==1` for the
 first yielding type-2 after last 19ED0. Same-run
@@ -628,11 +649,11 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3300
-selects `H-Type1StartsSp`: after last 19ED0, type-1
-`19CDC n=247` starts `gspTask` `0x800377C8` and
-`0x80019D34` (`sb $s1, 0($s4)`, `$s4=0x8011A89C`) leaves
-the busy byte set for the next type-2. Session 3299's
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3301
+selects `H-RetailType1StartsSp`: viewer type-1 starts
+`gspTask` `0x800377C8` and writes 89C; 19FE4 is 1:1 with
+every type-1 and type-2 start and leaves 89C=0 for 19DCC.
+Session 3300's `H-Type1StartsSp`, Session 3299's
 `H-PortType2Yields`, Session 3298's `H-RetailType2Idle`,
 Session 3297's `H-RetailYieldPtrZero` /
 `H-RetailYieldPtrUnpublished`, Session 3296's
@@ -646,15 +667,13 @@ Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Retail: during the attract viewer, does type-1
-   (`0x80019D10` / `0x80019D58`) start `gspTask` and
-   write `0x8011A89C`, and if so who clears it before
-   type-2 idle-starts? Watch `0x80019D10`, `0x80019D34`,
-   `0x80019D58`, `0x80019D78`, `0x80019FE4`, `0x80019DCC`,
-   viewer `0x800C28F0`, return `0x800C2E00`. Whole-RDRAM
-   10000-write control; `--hit-cap 20000`; arm at first
-   VI. Join 19DCC 1:1 with 19D90 from s3298. Do not add a
-   skip, allow, restore, or wait bypass. No M5 Step 3.
+1. Port: after last 19ED0 (`s2b0=2` takes `L_80019F50`),
+   does `0x80019F6C` (`sb $zero, 0($s2)`) clear
+   `0x8011A89F`, and who writes 89F=1 before the first
+   19E80 fallthrough? Probe `0x80019F50`, `0x80019F6C`,
+   `0x80019E70` (`sb $s1, 0x8011A89F`), keep last 19ED0 /
+   19F64 / 19E80F / SENT n=3. Do not add a skip, allow,
+   restore, or wait bypass. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -863,6 +882,13 @@ type-1 19D10 seeing 0, then 19D58 seeing 1 after
 `0x80019D34` (`$s4=0x8011A89C`). The uncleared-19DD4
 reading is refuted.
 
+Session 3300 left open that retail type-1 might be absent
+or busy-skip, so 89C would stay 0 and type-2 would idle
+without a clearer. Believable because s3298's type-2 is
+always idle. Session 3301 measured 242 viewer 19D10=19D34
+=19D58 (`gspTask` `0x800377C8`, `$s1=1`), 19D78=0, and
+19FE4 1:1 with 19D10+19DCC so 19DCC always loads 0.
+
 The recomp direct C call to `submitGfxFrame` does not write guest
 `$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
 that word is dead.
@@ -875,6 +901,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3301_retail_type1_sp.md`,
 `scratch/agent/s3300_port_sp_busy_writer.md`,
 `scratch/agent/s3299_port_type2_successor.md`,
 `scratch/agent/s3298_retail_type2_yield.md`,
