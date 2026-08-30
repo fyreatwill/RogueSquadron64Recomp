@@ -127980,3 +127980,43 @@ on that third invocation. No audio or M5 Step 3 change. No new
 soak-queue verdicts. Evidence:
 `scratch/agent/s3289_port_viewer_stall.md`,
 `scratch/agent/s3289_port_viewer_stall.log`.
+
+## Session 3290 (2026-08-29) — submitGfxFrame SENT n=3 blocks in first osRecvMesg
+
+Port submitGfxFrame jal-stall census, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. Fixup probe at every jal entry
+inside `submitGfxFrame` (23) plus return of the seven
+recv/yield/send sites (`tools/apply_s3290_submit_gfx_stall.py`,
+also hooked from `fixup_game_funcs.py`). Kept s3288 fade and
+s3289 `SENT`/`SRET`. Debug rebuild. Two 30 s runs from `build/`
+with `ROGUESQ_LOG_M5_POSTWAIT=1`, SIGKILL.
+
+First run's first-10 + every-50 budget hid width-640 inner sites
+after n=10 (`scratch/agent/s3290_submit_gfx_stall.ratelimit.log`).
+Cinematic n=1..10 proved the probe live. Same-iteration fix:
+always print at committed width ≥ 640.
+Log: `scratch/agent/s3290_submit_gfx_stall.log`.
+
+Same-run positive controls: `[phase] 640 @ 0x0066A500` at 3.1 s;
+`[m5-postwait]` viewer `entry` `pc=0x800C28F0`; `[s3288-fade]
+2D50 n=3 taken=0`; `SENT` n=3 without `SRET` n=3; `[s3290-stall]`
+after `SENT` n=3. Zero crash/abort/Bus-error/last-guest-pc.
+
+`SENT` n=1 skipped first recv (`0x8011A89E==0`) and returned.
+`SENT` n=2 recv'd `0x8011A818` at `0x8000C0B4` and returned.
+`SENT` n=3: `E088` n=43 then `E0B4` n=41 (`osRecvMesg`
+`0x8000C0B4`, `a0=0x8011A818` `a2=1`) with no `R0B4`. No yield
+or later jal. VI/SI kept pumping to `update_screen` #1600.
+
+This selects `H-SubmitRecvBlocked` and refutes
+`H-SubmitYieldBlocked`, `H-SubmitOtherCallee`, and
+`H-SubmitCoverageInvalid`. This is the third viewer-loop
+invocation of `submitGfxFrame`, not the disproven internal
+"iter 3 hangs" reading of `func_8000C07C`. Next discriminator
+is whether retail's same recv returns during the viewer, and
+who sends to `0x8011A818`. No audio or M5 Step 3 change. No new
+soak-queue verdicts. Evidence:
+`scratch/agent/s3290_submit_gfx_stall.md`,
+`scratch/agent/s3290_submit_gfx_stall.log`,
+`scratch/agent/s3290_submit_gfx_stall.ratelimit.log`.
+

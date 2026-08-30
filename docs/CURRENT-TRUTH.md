@@ -4,20 +4,28 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3289 (2026-08-29).
+Current maintenance marker: Session 3290 (2026-08-29).
+
+Session 3290 asked which jal inside `submitGfxFrame` does not
+return on the third viewer-loop invocation. Same-run controls:
+viewer `[m5-postwait]` entry, `[phase]` `640 @ 0x0066A500`,
+`[s3288-fade] 2D50 n=3 taken=0`, `SENT` n=3 without `SRET` n=3,
+and `[s3290-stall]` cinematic first-10 plus width-640 inner rows
+for SENT n=1 and n=2. After `SENT` n=3: `E088` n=43 then
+`E0B4` n=41 (`osRecvMesg` `0x8000C0B4`, `a0=0x8011A818` `a2=1`)
+with no `R0B4`. This selects `H-SubmitRecvBlocked` and refutes
+`H-SubmitYieldBlocked`, `H-SubmitOtherCallee`, and
+`H-SubmitCoverageInvalid`. The first-10 rate-limit hid this on
+the first run; width ≥ 640 always-print in the same iteration
+was the live scope. No M5 Step 3. Evidence:
+`scratch/agent/s3290_submit_gfx_stall.md`.
 
 Session 3289 asked which site after the third `2D50` fallthrough
 stalls. Same-run controls: viewer `[m5-postwait]` entry, `[phase]`
 `640 @ 0x0066A500`, and `[s3288-fade] 2D50 n=3 taken=0` all fired.
-`L_800C29E0` and `L_800C2A40` each ran n=1..3 with `$s2=0`. The
-five callees before `submitGfxFrame` returned n=3.
 `submitGfxFrame` (`0x8000C07C`) entered n=3 and never returned
-(`SENT` n=3, `SRET` max n=2). `29E0` n=4 silent. This selects
-`H-StuckAfterFallthrough` (`submitGfxFrame`) and refutes
-`H-StuckOnFourthLoopHead`, `H-ViewerReturnedUnlogged`, and
-`H-StallCoverageInvalid`. This is the third viewer-loop invocation
-of that jal, not the disproven internal "iter 3 hangs" reading of
-`func_8000C07C`. No M5 Step 3. Evidence:
+(`SENT` n=3, `SRET` max n=2). This selected
+`H-StuckAfterFallthrough`. Evidence:
 `scratch/agent/s3289_port_viewer_stall.md`.
 
 Session 3288 asked the port whether the 640 viewer hold enters
@@ -464,24 +472,21 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3289
-selects `H-StuckAfterFallthrough`: the 640 viewer hold's third
-`2D50` fallthrough enters `submitGfxFrame` (`0x8000C07C`) and
-does not return. Session 3288's `H-PortFadeOutNeverEntered` still
-holds as the reason fade-out never runs. Session 3276's
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3290
+selects `H-SubmitRecvBlocked`: the third viewer `submitGfxFrame`
+blocks in `osRecvMesg` at `0x8000C0B4` of queue `0x8011A818`.
+Session 3288's `H-PortFadeOutNeverEntered` still holds as the
+reason fade-out never runs. Session 3276's
 `H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio
 change is authorized until a like-for-like target row exists.
 
-1. Inside `submitGfxFrame` on the third viewer-loop invocation:
-   which of its 23 jals does not return. One fixup probe at every
-   jal entry (and return of the recv/yield/send sites) plus keep
-   s3288 fade and s3289 `SENT`/`SRET`. One Debug rebuild, one 30 s
-   run with `ROGUESQ_LOG_M5_POSTWAIT=1`. Controls: viewer
-   `[m5-postwait]` entry, `[phase]` 640 / `0x0066A500`, `2D50` n=3
-   fallthrough, and `SENT` n=3 without `SRET` n=3. Do not add a
-   skip, allow, restore, or wait bypass. No M5 Step 3. This is
-   not the disproven internal "iter 3 hangs" reading of
-   `func_8000C07C`.
+1. Retail: does `0x8000C0B4` (`submitGfxFrame` first recv) return
+   during the attract viewer (`0x800C0BC` follows), or sit blocked
+   the way the port does on SENT n=3. Whole-RDRAM 10000-write
+   control, viewer entry `0x800C28F0`, and `0x800C2E00` return as
+   gates. Do not add a skip, allow, restore, or wait bypass. No
+   M5 Step 3. This is not the disproven internal "iter 3 hangs"
+   reading of `func_8000C07C`.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -609,6 +614,17 @@ fallthrough callees, or `L_800C2A40`. Session 3289 measured
 `submitGfxFrame` entered n=3 without return; the other five
 callees returned and `29E0` n=4 never ran.
 
+Session 3289 left the stall as some jal inside `submitGfxFrame`.
+A first-10 + every-50 budget hid the stalling invocation (iron
+rule 3). Session 3290 phase-scoped to width ≥ 640 and measured
+the first `osRecvMesg` (`0x8000C0B4`, queue `0x8011A818`) entered
+without return. Yield and send paths were not entered on that
+invocation.
+
+The recomp direct C call to `submitGfxFrame` does not write guest
+`$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
+that word is dead.
+
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
 name. Stable companion duplicate-prefix and preamble mappings belong in
@@ -617,6 +633,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3290_submit_gfx_stall.md`,
 `scratch/agent/s3289_port_viewer_stall.md`,
 `scratch/agent/s3288_port_viewer_fade.md`,
 `scratch/agent/s3287_viewer_s5_exit.md`,
