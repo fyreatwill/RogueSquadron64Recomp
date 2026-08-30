@@ -4,20 +4,28 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3280 (2026-08-29).
+Current maintenance marker: Session 3281 (2026-08-29).
+
+Session 3281 asked retail who calls `runVideoFrameTick` (`0x80001354`)
+at the 17.2 s 1024-edge. Rice, 25 s, whole-RDRAM 10000-write control,
+title `1024 @ 0x00790400` (233 VI), exec watch fired twice after
+`--pc-phase-log-width` armed it at `640 @ 0x0066A500` (2.3 s). The
+17.0 s tick (0.3 s before 1024 VI) has `prev_pc=0x800C5A18`
+(`menuOverlayInit` jal). The only other tick is 6.7 s
+`prev_pc=0x800A9C70` (`initSceneForMission`) at the port's stop origin.
+Zero `mainGameLoop` jals. Lifetime `exec-prev` n=1 each; the tick is
+not per-frame. This selects `H-TickParentMenu` and refutes
+`H-TickParentMainGameLoop`, `H-TickParentMission` (for the 1024-edge),
+and `H-TickCoverageInvalid`. Combined with Session 3278 (port
+`menu-jal` n=1 during VI 320, then 640 only), the missing 1024 copy is
+a later `menuOverlayInit`→tick the port never runs. Evidence:
+`scratch/agent/s3281_tick_parent.md`.
 
 Session 3280 asked retail who calls `initVideoSubsystem` (`0x8001A098`)
-at the 640→1024 rewrite. Rice, 25 s, whole-RDRAM 10000-write control,
-title `1024 @ 0x00790400` (233 VI), exec watch fired three times. All
-three `prev_pc=0x80018378` (`advanceVideoFrame` jal). The 17.2 s
-1024-edge entry is 0.1 s before 1024 VI, live width still 640 at
-`0x0062bd00`, `$a0=0x200`. A 6.8 s same-caller entry is at the port's
-stop origin `640 @ 0x0066A500` with `$a0=0x280`. This selects
-`H-RewriteCallerPreTitle` and refutes `H-RewriteCallerTitleEntry`,
-`H-RewriteNotANewEntry`, and `H-CallerCoverageInvalid`. Combined with
-Session 3278 (port `advanceVideoFrame` ran once, 640 only), the missing
-1024 copy is a later invocation of a caller the port already reaches,
-not a title-only function. Evidence:
+at the 640→1024 rewrite. All three entries have `prev_pc=0x80018378`
+(`advanceVideoFrame` jal). The 17.2 s 1024-edge is 0.1 s before 1024
+VI at origin `0x0062bd00`, `$a0=0x200`. This selected
+`H-RewriteCallerPreTitle`. Evidence:
 `scratch/agent/s3280_initvideo_caller.md`.
 
 Session 3279 asked retail whether the four OSViMode slot +8 words ever
@@ -182,35 +190,12 @@ registers, not the function's internal state loads or successor branch.
 remain unresolved. No port or audio behavior changed. Evidence:
 `scratch/agent/s3265_vi_request_state.md` and its two captured oracle logs.
 
-Session 3264 repeated the bounded availability audit for the VI request-state
-edge. `RecompiledFuncs/` remains absent; `applyPendingViChanges` is still
-available locally only as symbol metadata (`0x8001B7F0`, size `0x2AC`) and the
-probe template's expected caller (`0x80019914`). The host VI wrappers cannot
-expose the function's state loads or branch successors. This selects
-`H-SourceUnavailable` for the local checkout and leaves
-`H-RequestState`, `H-BoundaryConsumer`, and `H-Phase4SteadyState` unresolved;
-no build or runtime instrumentation was run. Evidence:
+Sessions 3262–3264 audited the local VI-640 publication boundary under the
+false premise that `RecompiledFuncs/` was absent from this checkout.
+Session 3276 superseded that: CMake's `RECOMP_FUNCS_DIR` is
+`../N64Recomp/RecompiledFuncs`. Evidence:
+[`VI640-BOUNDARY-AUDIT.md`](VI640-BOUNDARY-AUDIT.md),
 [`VI640-REQUEST-STATE-BLOCK.md`](VI640-REQUEST-STATE-BLOCK.md).
-
-Session 3263 repeated the bounded availability audit for the VI request-state
-body. `RecompiledFuncs/` is absent; `applyPendingViChanges` exists locally
-only as symbol metadata (`0x8001B7F0`, size `0x2AC`) and the probe template's
-expected caller (`0x80019914`). The host VI wrappers cannot expose the
-function's state loads or branch successors, so `H-RequestState`,
-`H-BoundaryConsumer`, and `H-Phase4SteadyState` remain unresolved. No build or
-runtime instrumentation was run. The next satisfying input is the generated
-body/provenance or an independent retail trace of its state inputs. Evidence:
-[`VI640-REQUEST-STATE-BLOCK.md`](VI640-REQUEST-STATE-BLOCK.md).
-
-Session 3262 audited the local VI-640 publication boundary. The host wrappers
-only forward/observe `osViSetMode` and consume committed VI registers; the
-generated `RecompiledFuncs/` tree containing `applyPendingViChanges` is absent,
-and the only local reference is the regeneration probe's expected call site at
-`0x80019914`. The function's state loads and branch successors are therefore
-not locally enumerable, so `H-RequestState`, `H-BoundaryConsumer`, and
-`H-Phase4SteadyState` remain unresolved. No build or instrumentation was run;
-the next satisfying input is the generated body or an independent ground-
-truth trace of its state inputs. Evidence: [`VI640-BOUNDARY-AUDIT.md`](VI640-BOUNDARY-AUDIT.md).
 
 Session 3261 audited and captured the pre-target VI publication boundary. The
 positive-controlled run entered phase 4 at width 640/origin `0x0066A500`, then
@@ -412,22 +397,21 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3280
-selected `H-RewriteCallerPreTitle`: the 1024-edge jal is
-`advanceVideoFrame` `0x80018378`. Session 3276's
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3281
+selected `H-TickParentMenu`: the 1024-edge `runVideoFrameTick` jal is
+`menuOverlayInit` `0x800C5A18`. Session 3276's
 `H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio change is
 authorized until a like-for-like target row exists.
 
-1. Independent retail oracle: who calls `runVideoFrameTick` (`0x80001354`)
-   at the 17.2 s 1024-edge (the sole parent of `advanceVideoFrame`)? Four
-   jal sites: `menuOverlayInit` `0x800C5A18` (port already reached; s3278
-   `site=menu-jal`), `mainGameLoop` `0x8003E29C`/`0x8003E360`,
-   `initSceneForMission` `0x800A9C70`. Exec-watch entry with `prev_pc`,
-   Rice, whole-RDRAM 10000-write control, title `1024 @ 0x00790400` gate,
-   and `--pc-phase-log-width` for `0x0062BD00:640` plus the two 1024
-   origins so the edge print survives EXEC_LOG_CAP. Menu parent selects
-   missing later menu ticks (cause). `mainGameLoop` parent selects
-   title-entry of the same rewrite chain. Do not change audio behavior.
+1. Independent retail oracle: `menuOverlayInit` entry `0x800C58A0` vs
+   jal `0x800C5A18` timing in one Rice run. Arm the exec watch at first
+   VI (no `--pc-phase-log-width`, or include 320 origins so defer does
+   not skip the port's 320-phase window). Whole-RDRAM 10000-write
+   control, title `1024 @ 0x00790400`, and a jal exec at ~17 s as the
+   watch control. Early entry + 17 s jal selects a wait-before-tick
+   inside `menuOverlayInit` (s3278 port `slot-ret path=gate0 v0=1`
+   skipped that wait). First entry at ~17 s selects late overlay
+   entry. Two entries select re-entry. Do not change audio behavior.
    Require Rice; dummy video stays at 320.
 2. Validate Session 3270's expanded free-list guard class on the configured
    Windows/MIPS host (`PatchesLib`). Do not repeat the local missing-target
@@ -505,6 +489,16 @@ already the port's 640 publisher, so a title-only overlay caller is
 refuted. The invocation still sits 0.1 s before 1024 VI at origin
 `0x0062bd00`.
 
+Session 3280 left open which of four `runVideoFrameTick` parents is live
+at 17.2 s, and NEXT.md treated that tick as per-frame. Session 3281
+measured two ticks only: `initSceneForMission` at 6.7 s, then
+`menuOverlayInit` at 17.0 s. The 1024-edge parent is the menu jal.
+
+`--pc-phase-log-width` defers `--watch-pc` until the first listed VI
+bucket (`g_defer_exec_watches`). Session 3281 armed at 2.3 s
+`640 @ 0x0066A500`; 320-phase ticks were unevaluable. Next unit must
+arm during 320 if that is the port window.
+
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
 name. Stable companion duplicate-prefix and preamble mappings belong in
@@ -513,6 +507,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3281_tick_parent.md`,
 `scratch/agent/s3280_initvideo_caller.md`,
 `scratch/agent/s3279_retail_osvimode_slots.md`,
 `scratch/agent/s3278_osvimode_table_census.md`,

@@ -127690,3 +127690,35 @@ M5 Step 3 change.
 No new soak-queue verdicts. Evidence:
 `scratch/agent/s3280_initvideo_caller.md`,
 `scratch/agent/s3280_initvideo_caller.log`.
+
+## Session 3281 (2026-08-29) — 1024-edge tick parent is menuOverlayInit
+
+Independent retail Rice oracle, HYPOTHESIS-ID `m5-osvimode-1024-tick-parent`.
+25 s, eleven-Start, `--watch-write 0x0:0x800000` (cap 10000), `--watch-pc
+0x80001354`, slot watch `0x128D58:0x128D5C`, `--pc-phase-log-width` for
+`0x0066A500:640` / `0x0062BD00:640` / the two 1024 origins, `--vi-trace
+--vi-poll`.
+
+Positive controls: 10000-write watch removed; `[gpr-ctl]` fired; exec
+watch lifetime 2 after `[phase-arm] width=640 origin=0x0066a500` at
+2.3 s; title `1024 @ 0x00790800` at 17.3 s then `0x00790400` (233 VI
+in that bucket); 1460 VI; 25.1 s wall / 24.3 s emulated.
+
+`runVideoFrameTick` executed twice: 6.7 s `prev_pc=0x800A9C70`
+(`initSceneForMission`) at `640 @ 0x0066A500`; 17.0 s
+`prev_pc=0x800C5A18` (`menuOverlayInit`) at `640 @ 0x00696100`, 0.3 s
+before 1024 VI. `exec-prev` n=1 each; zero `mainGameLoop`
+`0x8003E29C`/`0x8003E360`. Slot +8 write at 17.2 s joins the menu
+tick to the 1024 copy. `H-TickCoverageInvalid` and
+`H-TickParentMainGameLoop` refuted. `H-TickParentMission` refuted for
+the 1024-edge. `H-TickParentMenu` selected: the port's s3278
+`menu-jal` n=1 ran during VI 320 and produced 640; retail's 1024-edge
+is a later invocation of that jal. The tick is not per-frame.
+
+`--pc-phase-log-width` deferred the exec watch, so 320-phase ticks are
+unevaluable; that does not split the 17 s parent. No audio or M5 Step 3
+change.
+
+No new soak-queue verdicts. Evidence:
+`scratch/agent/s3281_tick_parent.md`,
+`scratch/agent/s3281_tick_parent.log`.
