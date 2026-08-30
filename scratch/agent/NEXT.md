@@ -1,37 +1,34 @@
-# NEXT work unit — map the retail VI selector region
+# NEXT work unit — capture retail scheduler message identity at the receive boundary
 
-HYPOTHESIS-ID: vi640-request-state-read-edge
+HYPOTHESIS-ID: scheduler-message-identity-target-phase
 
-Run one independent retail-oracle capture with a wider, aligned read watch
-covering the selector's surrounding physical region. Session 3267 passed the
-whole-RDRAM positive control and reached title 1024 plus hangar 512, but the
-candidate selector range `0x00114A864..0x00114A86C` had zero reads. Do not
-repeat the entry-only capture, add a port-side field, or change audio behavior.
+Run one independent retail-oracle capture at the generated scheduler receive
+call site. The selector region was zero-read even when widened, while the
+pending-state and VI-boundary controls were live; move upstream to the
+message that should publish the target-phase transition.
 
 ## Competing hypotheses
 
-- `H-SelectorAtNeighbor`: the selector is read at a nearby aligned address
-  outside the narrow candidate range.
-- `H-SelectorNotRead`: the selector is not read during the observed title and
-  hangar phases; the current state-edge model is aimed at the wrong consumer.
-- `H-SelectorWatchAliasing`: the oracle's physical watch boundary or detail
-  attribution prevents observing the relevant load despite the positive
-  control.
-- `H-RequestState`: the selector is live but suppresses the target request;
-  retain this only if a selector-region hit carries the expected boundary PC
-  and state can be correlated with the VI transition.
+- `H-SpMsgMutated`: the target-phase accepted message is type `0x02` but its
+  `89F/28D44` identity or payload is mutated.
+- `H-OtherOsTask`: the target-phase message is valid but has a non-`0x02`
+  task type, so the expected transition belongs to another task path.
+- `H-Type2AbsentAtRecv`: the scheduler receive boundary has no accepted type-2
+  target row despite valid receive activity.
+- `H-RecvWatchUnavailable`: the receive watch lacks a target-phase row or its
+  detail fields cannot be correlated, leaving all three semantic hypotheses
+  unresolved.
 
 ## Discriminator
 
-The run must pass the whole-RDRAM write control and reach title VI 1024 plus
-hangar VI 512. Watch physical `0x00114A800..0x00114A900` with detail, plus
-pending state `0x00128E94..0x00128E9C`, and correlate rows with
-`0x8001B7F0`, `0x8001B8DC`, `0x800352D0` and VI transitions. A hit in the
-neighbor region tied to the boundary selects `H-SelectorAtNeighbor`; zero
-selector-region reads with positive control selects `H-SelectorNotRead`; a
-watch hit that cannot be attributed or a positive-control boundary anomaly
-selects `H-SelectorWatchAliasing`. A state-correlated selector hit that stays
-on the 640 record selects `H-RequestState`.
+The whole-RDRAM write watch must reach 10,000 hits and the run must reach the
+retail title 1024 and hangar 512 gates. Watch `0x80019CD0` with detail and
+phase-gate the target origins `0x00790400,0x00790800`; retain the scheduler
+identity fields and `89F/28D44` census in the same run. A target row with type
+`0x02` and an anomalous identity selects `H-SpMsgMutated`; a valid target row
+with another type selects `H-OtherOsTask`; a valid target wall with accepted
+receive activity but no type-2 row selects `H-Type2AbsentAtRecv`. Missing or
+uncorrelated target coverage selects `H-RecvWatchUnavailable`.
 
 ## Exact command
 
@@ -42,11 +39,12 @@ tools/oracle/build/rs64_oracle \
   --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
   --secs 60 --watch-write 0x0:0x800000 \
-  --watch-read 0x114A800:0x114A900 --watch-read 0x128E94:0x128E9C \
-  --detail-watch 1 --detail-watch 2 \
-  --watch-pc 0x8001B7F0,0x8001B8DC,0x800352D0 \
-  --pc-phase-log-width 0x0066A500:640 --vi-trace --hit-cap 256
+  --watch-pc 0x80019CD0 --detail-watch 1 \
+  --pc-phase-log-width 0x00790400:1024 \
+  --pc-phase-log-width 0x00790800:1024 \
+  --vi-trace --hit-cap 256
 ```
 
-Capture output under `scratch/agent/` with a non-dot final path. No port or
-audio behavior change is authorized until the selector region is classified.
+Capture output under `scratch/agent/` with a non-dot final path. Do not build
+or change port/audio behavior until the target-phase identity row is
+classified.

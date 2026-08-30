@@ -127413,3 +127413,17 @@ only an observed aligned load in that exact selector range, not selector
 state activity elsewhere. No port or audio behavior changed. Evidence:
 `scratch/agent/s3267_vi_selector_aligned.md` and
 `scratch/agent/s3267_vi_selector_aligned.log`.
+## Session 3268 (2026-08-29) — widened retail VI selector watch
+
+Ran the prescribed independent retail oracle capture with a whole-RDRAM
+positive control, a widened aligned selector-region read watch, pending-state
+read watch, and the three VI request/boundary PCs. The positive control reached
+10,000 writes; the run reached the 640-wide phase and produced 3,569 VI
+frames. Selector region `0x00114A800..0x00114A900` had zero reads. Pending
+state `0x00128E94..0x00128E9C` had 23,704 reads and the watched boundary PCs
+executed 3,764 times (`0x8001B7F0` 3,470, `0x8001B8DC` 143,
+`0x800352D0` 151). This selects `H-SelectorNotReadInObservedPhases` as a
+single-source instrument result only; it rules out an observed load in that
+range during this capture, not selector liveness or a runtime explanation.
+No port or audio behavior changed. Evidence:
+`scratch/agent/s3268_selector_region.md` and its capture log.

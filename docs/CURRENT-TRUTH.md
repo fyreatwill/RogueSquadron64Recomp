@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3267 (2026-08-29).
+Current maintenance marker: Session 3268 (2026-08-29).
+
+Session 3268 ran the prescribed independent retail aligned selector-region
+capture. The whole-RDRAM write control reached 10,000 hits; the run reached
+the 640-wide phase and produced 3,569 VI frames. The widened selector region
+`0x00114A800..0x00114A900` had zero reads, while pending state had 23,704
+reads and the watched boundary PCs executed 3,764 times. This selects
+`H-SelectorNotReadInObservedPhases` as a single-source instrument result
+only; it does not explain the port boundary or prove the selector is dead.
+Evidence: `scratch/agent/s3268_selector_region.md` and its capture log.
 
 Session 3267 ran the prescribed independent retail aligned selector-read
 capture. The whole-RDRAM write control reached its 10,000-hit cap, and the run
@@ -287,14 +296,14 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Map the surrounding retail selector region with one positive-controlled
-   read-watch capture. Session 3267's selector range
-   `0x00114A864..0x00114A86C` had zero reads despite title/hangar coverage,
-   while the pending range and boundary PCs were live. Watch a wider aligned
-   region and retain detail so the actual load address can be identified.
-   A selector-region hit tied to the VI-640 boundary makes the state edge
-   evaluable; another zero with positive control selects
-   `H-SelectorNotReadInObservedPhases` and moves the investigation upstream.
+1. Capture retail scheduler message identity at generated `0x80019CD0` with
+   positive controls. Session 3268 widened the selector watch to
+   `0x00114A800..0x00114A900` and still saw zero reads, while pending state and
+   boundary PCs were live; this selects `H-SelectorNotReadInObservedPhases`
+   only and moves the investigation upstream. A target row with type `0x02`
+   and anomalous `89F/28D44` selects `H-SpMsgMutated`; another valid type
+   selects `H-OtherOsTask`; a valid target wall with no type-2 row selects
+   `H-Type2AbsentAtRecv`. Missing target correlation remains unresolved.
    Do not add a port field or change audio behavior.
 2. After the boundary audit, capture the scheduler message identity at the
    generated `0x80019CD0` receive call site with positive controls. A type-2
