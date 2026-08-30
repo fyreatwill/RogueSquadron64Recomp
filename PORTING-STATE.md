@@ -127548,3 +127548,28 @@ but does not select writer parity or mismatch and does not join the port to
 retail target writer PC `0x800078EC`. No audio, output, or runtime behavior
 changed. Evidence: `scratch/agent/s3275_m5_route_writer_parity.md` and
 `scratch/agent/s3275_m5_route_writer_parity_fixed/driver.log`.
+
+## Session 3276 (2026-08-29) — selected port target-VI publication absent
+
+Audited the port target-VI publication/commit boundary. CMake's
+`RECOMP_FUNCS_DIR` (`../N64Recomp/RecompiledFuncs`) contains the generated
+bodies that Sessions 3262-3264 treated as absent from the repo root. Five
+`osViSetMode` sites exist: `preNmiResetThread`, `initVideoSubsystem`,
+`applyPendingViChanges`, `swapBufferWithViMode`, and `selectAndApplyViMode`
+(teardown-only, caller `freeRenderSubsystemResources`).
+
+The s3261 same-run table is: init 320, swapBuffer width 2, init 640, then
+`applyPendingViChanges` 640 at `0x80128DF0` after phase 4. No 1024 request.
+`H-PortPublicationSourceUnavailable` is refuted. `H-PortTargetCommitMismatch`
+is not selected for the target row. `H-PortTargetPublicationAbsent` is
+selected. Session 3274's `0x800078EC` is `rs_memset`, not a VI publisher.
+`rs64_m5_vi_commit_handoff` caller is `g_rs64_last_guest_pc`, not the jal RA.
+
+ORIGIN: `swapBufferWithViMode` jal at `0x8001BB54` has delay-slot
+`addiu $a0, $a0, -0x44` applied after `osViSetMode_recomp`, so `$a0` is
+`0x80128CD4` (width 2) instead of legitimate `0x80128C90`. The width-2 phase
+is real, then overwritten by 640. Not claimed as the 1024-gap cause. No
+audio/output behavior changed.
+
+No new soak-queue verdicts since 2026-08-27. Evidence:
+`scratch/agent/s3276_m5_target_vi_publication_audit.md`.

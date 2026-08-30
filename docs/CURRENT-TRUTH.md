@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3275 (2026-08-29).
+Current maintenance marker: Session 3276 (2026-08-29).
+
+Session 3276 completed the port target-VI publication/commit audit. CMake's
+`RECOMP_FUNCS_DIR` (`../N64Recomp/RecompiledFuncs`) plus the host VI wrappers
+enumerate every `osViSetMode` caller, so `H-PortPublicationSourceUnavailable`
+is refuted. The live post-phase-4 publisher is `applyPendingViChanges`
+(`viRetraceHandlerThread` at `0x80019914`); in the s3261 capture it requested
+width 640 at slot `0x80128DF0`. No 1024 request was published.
+`H-PortTargetPublicationAbsent` is selected. `selectAndApplyViMode` is
+teardown-only. Session 3274's target-span PC `0x800078EC` is `rs_memset`, not
+a VI publisher. A generated delay-slot orders `swapBufferWithViMode`'s
+`addiu $a0, $a0, -0x44` after `osViSetMode_recomp`, producing the transient
+width-2 phase; ORIGIN is that jal at `0x8001BB54`, and the `$a0` is not a
+legitimate OSViMode pointer. That defect is not claimed as the 1024-gap
+cause. Evidence: `scratch/agent/s3276_m5_target_vi_publication_audit.md`.
 
 Session 3275 completed the M5 port route-writer parity capture. The first
 recipe run was invalid because its parser counted downstream controls only
@@ -357,301 +371,46 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3274
-supplied a valid retail target-span writer, principally `0x800078EC`, but
-this remains single-source until the port reaches a like-for-like target row.
-The next M5 unit must compare the port's phase-640 route/order and host
-writeback with that retail relation in both same-build audio arms; do not
-change audio behavior. Session 3272
-made the Step 1 pair route-invalid again: retail reached title/hangar, while
-both port arms stopped before title at `640 @ 0x0066A500`; downstream audio
-nulls remain unevaluable. The next M5 unit is a route-boundary audit or
-ground-truth capture that can make the port reach a like-for-like target row;
-do not change audio behavior or interpret the missing joins. Session 3236
-completed the Step 3 edge-selection gate without selecting an edge: the
-required target-phase port row is still absent, so no audio behavior change
-is authorized. Session 3237's fresh census selected a new unresolved repeated
-MusyX pointer class; Session 3238 split it by effective address. Four NPC-list
-uses are `0x80139750` and one objective float is `0x800A9750`, both aliases.
-The true MusyX chain has allocator writer `0x8008F228`, derived-head writer
-`0x80091074`, indexed command-list/synth consumers, and teardown frees at
-`0x80091E28`/`0x80091F78`. `rs_malloc` returns zero on its no-fit path and
-the allocation publication has no success check, selecting a possible null
-consumer. Teardown's missing visible clear and any post-free/concurrent
-consumer remain unresolved. Session 3240 audited the complete
-`musyxBuildVoiceCommandList` loop and caller: the selected pointer is
-dereferenced at `0x80091078` before the voice loop, and the caller has no
-error/reinitialization contract. `H-NotPatchable` is selected for this class;
-no patch or allocator mitigation is authorized. Evidence:
-`scratch/agent/s3240_m3_musyx_null_contract.md`.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3276
+selected `H-PortTargetPublicationAbsent`: after phase 4 the only live
+publisher is `applyPendingViChanges` requesting 640 at `0x80128DF0`. Session
+3274's retail target-span PC `0x800078EC` is `rs_memset`, not a VI publisher.
+No M5 Step 3 audio change is authorized until a like-for-like target row
+exists.
 
-1. Audit the port's target-VI publication boundary after the valid phase-4
-   stop. Start from the local `osViSetMode`/VI-commit wrappers and every
-   checked-in caller or symbol reference, and make one table of requested
-   width, committed width/origin, caller, and the next route-preparation
-   consumer. Competing outcomes are: a target request is never published
-   (`H-PortTargetPublicationAbsent`), a target request is published but
-   committed or consumed under another origin (`H-PortTargetCommitMismatch`),
-   or the local/generated source needed to enumerate the boundary is absent
-   (`H-PortPublicationSourceUnavailable`). The discriminator is a complete
-   caller-to-commit table, not another target-phase null counter. Do not build,
-   change audio/output behavior, or infer a retail writer from this audit.
-2. Obtain the configured Windows/MIPS build artifact or generated patch
-   outputs, then validate Session 3270's expanded free-list guard class.
-   Require successful patch compilation, unchanged valid-path behavior, and a
-   controlled cyclic-chain fixture that returns before queue writes. This
-   guard is not evidence that the VI-640 route or audio is corrupt.
-3. Capture the consumed-message handoff around generated `0x80019CCC` and
-   `0x80019CD0` with positive controls. Session 3269 reached both target
-   origins and proved the receive watch live, but its interface exposed no
-   message pointer/type/`89F`/`28D44` fields, selecting
-   `H-RecvWatchUnavailable`. Use adjacent-PC detail plus a phase-gated field
-   dump in one run; do not infer message mutation, another task type, or
-   type-2 absence from the missing fields.
-4. Capture retail scheduler message identity at generated `0x80019CD0` with
-   positive controls. Session 3268 widened the selector watch to
-   `0x00114A800..0x00114A900` and still saw zero reads, while pending state and
-   boundary PCs were live; this selects `H-SelectorNotReadInObservedPhases`
-   only and moves the investigation upstream. A target row with type `0x02`
-   and anomalous `89F/28D44` selects `H-SpMsgMutated`; another valid type
-   selects `H-OtherOsTask`; a valid target wall with no type-2 row selects
-   `H-Type2AbsentAtRecv`. Missing target correlation remains unresolved.
-   Do not add a port field or change audio behavior.
-4. After the boundary audit, capture the scheduler message identity at the
-   generated `0x80019CD0` receive call site with positive controls. A type-2
-   target row selects `H-SpMsgMutated`; a valid non-type-2 target row selects
-   `H-OtherOsTask`; a valid target wall with no accepted type-2 row selects
-   `H-Type2AbsentAtRecv`.
-5. Repair or explain the pre-VI-640 scheduler crash before capturing message
-   identity. Session 3257's checked-in control build reproduced a Bus error
-   at `spTaskSchedulerThread+2864` after width 320, with
-   `last-guest-pc=0x8000834C`; it reached no VI-640 wall. The external
-   regenerated tree and marker set are unavailable in this checkout, so do
-   not claim missing-marker or compiler-drift selection from this run. The
-   next discriminator must inspect the host scheduler source/register
-   contract and identify one safe, testable distinction between the invalid
-   guest-derived value and a legitimate scheduler message/slot before any
-   mitigation is landed. Preserve the existing competing hypotheses in
-   `scratch/agent/NEXT.md` and do not repeat the local baseline until a new
-   code-level discriminator is prepared.
-   After the crash is repaired or explained, capture the scheduler message
-   identity at the generated `0x80019CD0` receive call site (or expose the
-   runtime's consumed-message value), with `ROGUESQ_RECV_TRACE` positive
-   controls. Require a caller identity, message pointer, type byte, and
-   `89F/28D44` in the same phase before selecting `H-SpMsgMutated`,
-   `H-OtherOsTask`, or `H-Type2AbsentAtRecv`.
-3. Validate Session 3254's complete free-list guard class on the configured
-   receive call site (or expose the runtime's consumed-message value), with
-   `ROGUESQ_RECV_TRACE` positive controls. The wrapper-level `$a1`/queue
-   snapshot probe from Session 3255 is unevaluable because external delivery
-   occurs inside `osRecvMesg`; do not interpret its zero type rows. Require a
-   caller identity, message pointer, type byte, and `89F/28D44` in the same
-   phase before selecting `H-SpMsgMutated`, `H-OtherOsTask`, or
-   `H-Type2AbsentAtRecv`.
-   Session 3256's hook is present in the fixup path, but the regenerated tree
-   crashes in the 320 phase even with the hook disabled. First repair or
-   account for that regenerated-tree regression; do not repeat the capture
-   until the port reaches the VI-640 wall.
-2. Validate Session 3254's complete free-list guard class on the configured
-   Windows/MIPS host, then run the bounded M5 Step 3 gate only if the build
-   produces `RecompiledPatches/patches.c`. The exact local build remains
-   unavailable and must not be repeated until that host or generated artifact
-   is supplied. The guard change is not evidence that the free-list values are
-   corrupt; its ORIGIN is the guest allocator/queue publication contract.
-   The existing M5 target-row comparison remains `H-PortRowMissing`: the
-   image/silent pair has a valid VI control but no target row. Require the
-   target framebuffer physical address, VI origin, caller/order, and
-   image-versus-silent distinction before any M5 behavior change.
-2. Once the external guard validation is available, resume the target-phase
-   port/retail boundary work with a like-for-like target framebuffer row.
-   The current comparison is `H-PortRowMissing`: the existing image/silent
-   pair has a valid VI control but no target row. Require the target
-   framebuffer physical address, VI origin, caller/order, and
-   image-versus-silent distinction before any M5 behavior change. Only a
-   like-for-like mismatch or a newly proven legitimate writer/consumer edge
-   can authorize Step 3.
-   Session 3241's retail row is caller `0x8001BE24`, `$a0=0x80790000`
-   (physical `0x00790000`), target origins `0x00790400/0x00790800`, with the
-   whole-RDRAM positive control and title/hangar gates valid. This is
-   single-source oracle evidence pending the port-side line.
-   The guard build is currently an external dependency; the port-side audit
-   may proceed independently, but no M5 behavior change is authorized until
-   the guard validation is obtained.
-   Session 3248 proved the local dependency is real and re-scoped active work
-   to the status-03 idiom audit in `scratch/agent/NEXT.md`. Do not substitute
-   the sibling Starfox generated patch artifact, Clang, or the host-only
-   `build/N64Recomp` binary for this validation.
-   The one satisfying experiment remains the exact `PatchesLib` build plus
-   the existing Step 3 recipe on a configured Windows/MIPS host.
-   Session 3250 and Session 3251 reran the exact `PatchesLib` target and found
-   no target in the configured Unix build, with no local MIPS/generated patch
-   prerequisites. This is external-host evidence only; do not treat it as
-   guard validation. The satisfying experiment remains the exact build plus
-   Step 3 recipe on a configured Windows/MIPS host. Per the three-attempt
-   stall rule, do not repeat this local command until that host or its
-   generated artifacts are supplied.
-   Session 3252 found the watched `reapplyDisplayMode` triplet live but
-   misaligned: it ran at `0x006AB800`/`0x006AB400`, not at the target
-   `0x00790400`/`0x00790800` transition. The target-phase join was empty
-   despite the whole-RDRAM and title controls. Do not add port counters or
-   infer a target writer from this candidate; the next oracle angle should
-   watch the target-phase store/writer boundary directly.
-   Session 3253 watched the direct `0x8008EC88` store with valid whole-RDRAM,
-   title, and target-origin controls. It fired once only at the subsequent
-   1024-to-512 transition (`0x006AB800`/`$a0=0x1B0`), not at either target
-   origin. Do not change the already-nonzero port C88 store or infer target
-   causation from it; the next oracle angle should watch the other named
-   target-boundary writer `0x8008ED48`.
-   Session 3249 completed the status-03 static audit and found named,
-   legitimate publication and service-reaping edges. This closes the current
-   status-03 idiom selection without authorizing a wait or status change.
-   Session 3236 compared the M5 inventory and Step 1/2 evidence with the
-   valid controls from Session 3235. No candidate has independent writer PC,
-   destination span, payload polarity, and completion-order evidence at the
-   target phase: both port arms stop at VI 640 while retail reaches title and
-   hangar. This closes the current selection attempt without authorizing a
-   contract, gate, wait, route, or output change. Do not repeat the parked
-   qualification; a new M5 change requires a newly proven target-phase edge.
-   Session 3236 compared the M5 inventory and Step 1/2 evidence with the
-   valid controls from Session 3235. No candidate has independent writer PC,
-   destination span, payload polarity, and completion-order evidence at the
-   target phase: both port arms stop at VI 640 while retail reaches title and
-   hangar. This closes the current selection attempt without authorizing a
-   contract, gate, wait, route, or output change. Do not repeat the parked
-   qualification; a new M5 change requires a newly proven target-phase edge.
-   The `-0x68A8`/`-0x68B0` null-consumer class is now closed as a static,
-   non-patchable risk; the next active work must supply a new discriminator.
-   Earlier same-build qualification evidence remains below for provenance.
-   Session 3235 ran the same-build silent/image pair after adding the
-   phase-scoped `[m5-port-retail-target]` commit field. Retail passed the
-   whole-RDRAM positive control and reached target `0x00790400` plus hangar
-   `0x006AB400`; both port arms passed dispatch controls but stopped at
-   `0x0066A500`/640 and emitted no target commit or downstream audio joins.
-   Because the requested 1024 phase was not reached, the parity result is
-   unevaluable and does not select framebuffer mismatch, origin selection, or
-   audio-boundary causation. Repeating this qualification is parked; proceed
-   to the first authorized M5 behavior change in `M5-AUDIO-PLAN.md`.
-   Session 3234 repaired the context join's deferred-watch/latch gates and
-   passed the whole-RDRAM positive control (10,000 writes) while capturing the
-   target route at `0x00790A00`. Retail `__osViNext` context was valid with
-   `framep_phys=0x00790000` and candidates `0x00790400/0x00790800`; route
-   `$a0=0x8014090E` is not a framebuffer. The same run captured the known
-   attract and hangar candidate pairs, independently validating the field
-   readout across phases. This closes the oracle join/filter and supplies the
-   concrete target candidate for the next same-build port parity measurement;
-   it does not yet identify the writer or authorize a port-origin change.
-   Session 3233 repaired the retail oracle join: the prior implementation
-   silently discarded the target route's following 640-to-1024 transition
-   because it accepted only the attract origins `0x00696100/0x00696600`.
-   With an any-next-VI diagnostic arm, the positive-controlled run produced
-   two joins, including pre/next origin `0x00790A00`; the route `$a0` was
-   `0x8014090E` (physical `0x0014090E`), not a framebuffer. This validates
-   route execution and join ordering but does not select a legitimate writer
-   or port origin-selection hypothesis. Next, use a target-phase join that
-   captures the actual VI context/framebuffer fields, not route `$a0`.
-   Session 3232's independent retail runs passed the whole-RDRAM control,
-   reached title and hangar, and fired all four established route PCs at the
-   `0x00790A00` transition. The `osViSwapBuffer` phase join returned
-   `latched=0, joined=0` in both full-schedule captures, so the
-   writer-to-swap discriminator is unevaluable. A shorter retry took a direct
-   `0x0066A500 -> 0x00790400` route and its zero route counts are unevaluable.
-   Do not infer a legitimate writer or port origin-selection defect from
-   these runs; repair the oracle join around a route execution PC before
-   adding port counters.
-   Session 3231 changed `get_rsp_microcode` to read `ROGUESQ_AUDIO_UCODE`
-   per `M_AUDTASK` instead of caching the first task's arm. Same-build image
-   and silent smoke controls produced 46/45 dispatch rows and 552 SP-return
-   rows respectively, with every row on its requested arm and no crash or
-   abort. This closes the stale-selector hypothesis at the dispatch boundary
-   only; both runs stopped before title, so downstream audio/task/DMA/service/
-   slot/voice/MORT/PCM conclusions remain unevaluable. The next work unit
-   returns to the independent retail VI-swap/origin attribution below.
-   Session 3230's same-build silent/image capture selected
-   `H-PhaseDifferentEdge`: both port arms reached 640/origin `0x0066A500`
-   and emitted the same live VI-commit and audio-return rows, while retail's
-   four watched route PCs occur at 640/origin `0x00790A00` before title. This
-   closes the exact-origin alias join and does not establish a missing port
-   sequence. The next work unit is a ground-truth retail VI-swap/commit
-   attribution at the `0x00790A00` transition, with a whole-RDRAM control, to
-   identify the legitimate origin writer and compare its physical buffer to
-   the port's `0x0066A500` commit before adding more port counters.
-   Session 3229 watched retail caller, reapply entry, reapply call, and return
-   branch in one run. The whole-RDRAM control reached 10,000 callbacks; all
-   four watches fired once in order at 640 origin `0x00790A00`, then retail
-   reached title 1024. The caller and return values match the port's
-   `audio-return` row at `0x0066A500` with `target=0`. This refutes an absent
-   retail caller and gives no evidence of a wrong value or local ordering
-   defect, but it is not a like-for-like port comparison because the phase
-   origins differ. The next work unit is to redesign the phase join around the
-   observed transition, not add another return-branch field.
-   Session 3227 proved the retail `reapplyDisplayMode` entry/call edge is
-   live, with two calls at 640 origins `0x00696100` and `0x00790500` before
-   title 1024; no call occurred at the port's `0x0066A500` stop. The
-   whole-RDRAM positive control and title gate passed, so this is a valid
-   phase-boundary correction, not a null instrument. It does not yet select
-   writer-absent, wrong-value, or ordering. The next discriminator is the
-   return branch at `0x8008EBC8`, watched with the two corrected 640 origins,
-   then aligned to the port's phase-3 route and phase-4 audio-return rows.
-   If alignment remains impossible, redesign the boundary before adding
-   instrumentation.
-   Session 3226 closed the first concrete field candidate: retail writes to
-   `0x80141AD0/1` and `0x8013B038` are early `setDisplayMode`/
-   `reapplyDisplayMode` configuration stores, not the missing pre-title route
-   publication. The positive-control oracle reached title 1024, and the
-   static port audit matched the writer PCs, so no value or ordering change is
-   authorized from this field class. The actual route consumer boundary
-   remains open. Session 3225 independently revalidated the locally available,
-   retail-qualified phase-relative route
-   `3:start,7:start,11:start,15:a,30:start,45:start,60:a,75:start,90:a`:
-   retail passed the whole-RDRAM positive control and reached title 1024,
-   while the same-build port silent/image pair stopped at VI 640 origin
-   `0x0066A500`. Matching input edges and continued recv progress, alongside
-   identical route-state output with `target=0`, select `H-PortStateBoundary`
-   over input or scheduler stall. The next work unit is a bounded audit of the
-   pre-title route-state writer/publication edge, not another audio null.
-   The next discriminator is an oracle execution watch on
-   `reapplyDisplayMode` entry/call (`0x8008EB5C`, `0x8008EBC0`) with the same
-   whole-RDRAM positive control, then a bounded comparison of its live
-   arguments and return branch against the port.
-2. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row
-   identifies one missing image task/output contract edge. Keep the change to
-   exactly one proven writer/consumer relation, with retail writer PC,
-   destination span, payload polarity, and completion ordering as controls.
-   Do not infer a writer or apply a mitigation from the retail route `$a0`.
-3. A12's `0x8014974C` publication class is closed by Session 3221: the only
-   guest stores are `setupSongRenderBuffers` zero-init, `musyxSynthFrame`
-   terminal clear, and its fixed-one pre-callback publication. The waiters
-   remain safety-only; no timeout, force-clear, or new guard is authorized.
-4. After a route-boundary change, rerun the existing same-build phase-gated
-   pair with `ROGUESQ_AUDIO_UCODE=0/1` and `ROGUESQ_LOG_ALL=1`. Require image-
-   arm DMEM, DMA, `Broke`/SP completion, service, slot, and PCM joins; retain
-   the silent arm as the no-write control.
-5. Closed static M3 publication classes, retain existing traps/guards as
-   safety only: A8 `musyxKeyOnVoice` divide/overflow has one live cmd-list
-   divisor store (`musyxRenderVoiceSamples` at `0x80090768`, constant
-   `0xC0`); the four `break 6` sites are unreachable after `lhu +0x60`; the
-   four `break 7` sites are the game's own divide-by-zero handler
-   (evidence: `scratch/agent/s3220_m3_keyon_divisor_descriptor.md`). A12's
-   flag census is recorded in
-   `scratch/agent/s3221_m3_a12_flag_publication_census.md`. A9
-   voice-array base (`D_801496F8`) has one store at `0x8008F0EC` in
-   `allocateSongChannelArray` (evidence:
-   `scratch/agent/s3219_m3_voice_array_base_publication.md`); A10 3D
-   voice-list head (`0x80153414`) has only the named insertion/removal/reset
-   family (evidence: `scratch/agent/s3216_m3_voice_list_publication_bound.md`);
-   the 43-site `SONGTEMPO_TABLE_GUARD` class has writer `startSongSequence` at
-   `0x80096D88`. No new guard work is authorized on these classes.
-6. Generated-symbol sweep remains closed at the evidence boundary (Sessions
-   3210/3212/3217). `static_4_80106C50` was renamed to
-   `lvc_registerObjectiveBooleanCounts`; `func_80092F10` is a data-gap
-   exclusion overlapping `packFourLutResampledSamples` at `0x80092F94`.
-7. M4 restage destination identity is now known: hangar gfx tasks use
-   `gspTask` (`0x800377C8`) with physical `output_buff` `0x0075C000` /
-   `0x00781800`, not the port runtime dest `0x4B7800` and not DMEM `0x670`.
-   Keep the external retail-entry boundary, hangar `0x8000` Y / accumulator
-   arithmetic, and M5 SP-yield/MORT publication threads parked pending a
-   new target-phase discriminator. The corrected MORT descriptor edge is
-   `+0x190` to `dmaVoiceSampleAndSignal`; `+0x194` is the speech source.
+1. Land the `swapBufferWithViMode` jal delay-slot `$a0` correction in
+   `../N64Recomp/fixup_game_funcs.py` (sibling of this repo,
+   regeneration-preserved). ORIGIN: jal at `0x8001BB54`; hardware would
+   pass `0x80128C90`, the recompiled order passes `0x80128CD4` (width 2).
+   Same-run control: the width-2 `[osViSetMode]` / `[phase]` rows disappear
+   and the copied mode width is requested. Do not treat a 1024 appearance as
+   the predicted outcome; this is not claimed as the title-mode writer.
+2. After that control, census the four OSViMode slots at
+   `0x80128D50+{0,0x50,0xA0,0xF0}` and the phase-4 `$a0` of
+   `requestViFeatureChange` / `beginSceneRenderFrame`. A 1024-width template
+   with no applyPending call selects a pending-bit gap; no 1024 template
+   selects a missing table rewrite. Do not change audio behavior.
+3. Validate Session 3270's expanded free-list guard class on the configured
+   Windows/MIPS host (`PatchesLib`). Do not repeat the local missing-target
+   build. The guard is not evidence that the VI-640 route or audio is corrupt.
+4. After the pre-VI-640 scheduler crash is repaired or explained, capture
+   consumed-message identity at `0x80019CD0` with `ROGUESQ_RECV_TRACE`
+   positive controls. Session 3269 selected `H-RecvWatchUnavailable`. Require
+   caller, message pointer, type byte, and `89F/28D44` in the same phase.
+5. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row names
+   one missing image task/output contract edge. Keep the change to exactly one
+   proven writer/consumer relation.
+6. Closed static M3 classes, retain existing traps/guards as safety only:
+   A8 key-on divisor, A12 `0x8014974C`, A9 voice-array base, A10 3D voice-list
+   head, 43-site `SONGTEMPO_TABLE_GUARD`. `-0x68A8`/`-0x68B0` is
+   `H-NotPatchable`. Status-03 is a named `stopVoiceSlotSynced` /
+   `serviceVoicePoolFrame` contract.
+7. Generated-symbol sweep remains closed (Sessions 3210/3212/3217).
+8. M4 restage destination is hangar `gspTask` (`0x800377C8`) with physical
+   `output_buff` `0x0075C000` / `0x00781800`. Keep the external retail-entry
+   boundary, hangar `0x8000` Y / accumulator arithmetic, and M5 SP-yield/MORT
+   publication threads parked pending a new target-phase discriminator. The
+   corrected MORT descriptor edge is `+0x190` to `dmaVoiceSampleAndSignal`.
 
 ## Durable boundaries and operating rules
 
@@ -682,6 +441,16 @@ their measured scopes. They were believable before qualified routes,
 same-build controls, or independent retail attribution existed. Full failed
 experiments remain in the ledger and archived overview.
 
+Sessions 3262–3264 selected `H-SourceUnavailable` / `H-PortPublicationSourceUnavailable`
+because `RecompiledFuncs/` is absent from this repository root. That was
+believable as a local-tree probe; CMake's `RECOMP_FUNCS_DIR` is
+`../N64Recomp/RecompiledFuncs`, which is present and contains the VI
+publisher bodies. Session 3276 used that tree to complete the caller table.
+
+Session 3274's target-span writer `0x800078EC` was treated as a candidate
+VI/output publisher. It is `rs_memset` (`0x800078E0`). The span is being
+filled; that PC does not publish a VI mode.
+
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
 name. Stable companion duplicate-prefix and preamble mappings belong in
@@ -690,6 +459,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3276_m5_target_vi_publication_audit.md`,
 `scratch/agent/s3275_m5_route_writer_parity.md`,
 `scratch/agent/s3272_m5_step1_pair.md`,
 `scratch/agent/s3240_m3_musyx_null_contract.md`,
