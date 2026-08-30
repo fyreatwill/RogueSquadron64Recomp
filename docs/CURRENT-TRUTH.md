@@ -4,7 +4,25 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3298 (2026-08-29).
+Current maintenance marker: Session 3299 (2026-08-29).
+
+Session 3299 asked the port whether attract-viewer type-2
+`L_80019D90` takes idle `L_80019DCC` (retail, s3298) or
+yield-publish `0x80019DC0`. Same-run controls: viewer
+`[m5-postwait]` entry, `[phase]` `640 @ 0x0066A500`,
+`[s3288-fade] 2D50 n=3 taken=0`, SENT n=3 without SRET n=3,
+E0B4 n=41 without R0B4, last 19ED0 n=123, and 19D90/19DCC
+live at width 640 before that gate. Lifetime 19D90=1246 =
+19DCC 82 + 19DAC/19DC0 1164; 19D94S=0. Last idle 19DCC is
+n=82 (`sp89c=0`) before last 19ED0. First 19DC0 is n=1 on
+the next type-2 (`19D90 n=83`, `sp89c=1`,
+`v0=yieldw=0x80149470`, `$a0=0x80128C80`), still before
+SENT n=3; every later 19DC0 stores the same pointer. This
+selects `H-PortType2Yields` and refutes `H-PortType2Idle`,
+`H-PortType2BusySkip`, and `H-PortCoverageInvalid`. Combined
+with s3298, the extra yield word is this store while SP is
+busy. No M5 Step 3. Evidence:
+`scratch/agent/s3299_port_type2_successor.md`.
 
 Session 3298 asked retail whether attract-viewer type-2
 dispatch `L_80019D90` takes idle `L_80019DCC` or
@@ -590,9 +608,10 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3298
-selects `H-RetailType2Idle`: type-2 `L_80019D90` is live
-and always takes idle `L_80019DCC`; `0x80019DC0` is silent.
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3299
+selects `H-PortType2Yields`: after last 19ED0 the port's
+type-2 takes `0x80019DC0` and stores `0x80149470` because
+`0x8011A89C==1`. Session 3298's `H-RetailType2Idle`,
 Session 3297's `H-RetailYieldPtrZero` /
 `H-RetailYieldPtrUnpublished`, Session 3296's
 `H-RetailNoYieldStore`, Session 3295's `H-Ed0CompareSkip`,
@@ -605,16 +624,16 @@ Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Port: during the attract viewer and around last 19ED0 /
-   SENT n=3, does type-2 `L_80019D90` take idle `L_80019DCC`
-   (retail, s3298) or yield-publish `0x80019DC0` (`sw` of
-   msg+4 into `0x80128D40`)? s3295 first saw
-   `yieldw=0x80149470` on 19DFC n=124, after last 19ED0
-   n=123 still had `yieldw=0`. Join viewer `[m5-postwait]`
+1. Port: in the gap after last 19ED0 n=123, who leaves
+   `0x8011A89C==1` for the first yielding type-2
+   (`19D90 n=83` / `19DC0 n=1`)? Same join has type-1
+   `19CDC n=247` (`$a0=0x80128CE0`) before that type-2.
+   Named scheduler stores: idle-start `0x80019DD4` (1) and
+   clearer `0x80019FE4` (0). Join viewer `[m5-postwait]`
    entry, `[phase]` `640 @ 0x0066A500`, SENT n=3 without
-   SRET n=3, last 19ED0, and 19CDC type-`0x02` rows. Keep
-   s3288–s3295 probes. Do not add a skip, allow, restore,
-   or wait bypass. No M5 Step 3.
+   SRET n=3, last 19ED0, and first 19DC0. Keep s3288–s3299
+   probes. Do not add a skip, allow, restore, or wait
+   bypass. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -806,6 +825,14 @@ followed by 19DCC (`$v0=0` at `0x8011A89C`) and zero
 19DAC/19DC0, so the publisher is silent because SP is idle
 at type-2, not because type-2 is absent.
 
+Session 3298 left open that the port might also idle-start
+type-2, so the extra `yieldw` would have a different
+publisher. Believable because pre-last-19ED0 type-2 is
+idle on both sides. Session 3299 measured 19DC0 n=1 on the
+first type-2 after last 19ED0 (`sp89c=1`, store
+`0x80149470`) and 1164/1164 later type-2 visits on the
+same arm, so the extra word is this yield-publish.
+
 The recomp direct C call to `submitGfxFrame` does not write guest
 `$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
 that word is dead.
@@ -818,6 +845,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3299_port_type2_successor.md`,
 `scratch/agent/s3298_retail_type2_yield.md`,
 `scratch/agent/s3297_retail_yield_ptr.md`,
 `scratch/agent/s3296_retail_s2_gate.md`,

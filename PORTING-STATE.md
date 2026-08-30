@@ -128312,3 +128312,40 @@ yield publisher never stores; the port's
 `yieldw=0x80149470` is extra. `H-RetailCoverageInvalid` is
 not selected for the viewer window. No audio or M5 Step 3
 change. No new soak-queue verdicts.
+
+## Session 3299 (2026-08-29) — port type-2 yields after last 19ED0; 19DC0 stores 0x80149470
+
+Port type-2 idle vs yield-publish capture, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. Fixup probe at
+`L_80019D90` / `0x80019D94` skip / `0x80019DAC` /
+`0x80019DC0` / `L_80019DCC`
+(`tools/apply_s3299_type2_successor.py`, hooked from
+`fixup_game_funcs.py`). Kept s3288–s3295 probes. Debug
+rebuild. One 30 s run from `build/` with
+`ROGUESQ_LOG_M5_POSTWAIT=1`, SIGKILL. Log:
+`scratch/agent/s3299_port_type2_successor.log`. Evidence:
+`scratch/agent/s3299_port_type2_successor.md`.
+
+Same-run positive controls: `[phase] 640 @ 0x0066A500` at
+4.6 s; viewer `[m5-postwait]` entry `pc=0x800C28F0`;
+`2D50` n=3 taken=0; SENT n=3 without SRET n=3; E0B4 n=41
+without R0B4 n=41; last 19ED0 n=123 (`s2b0=0x02`); 19D90
+n=82 / 19DCC n=82 live at width 640 before that gate
+(`sp89c=0`). Zero crash/abort/Bus-error/last-guest-pc.
+
+Lifetime last n: 19D90=1246, 19DCC=82, 19DAC=1164,
+19DC0=1164, 19D94S=0 (1246=82+1164). Every 19D90 has
+`$a0=0x80128C80` and `v0=0`. Every 19DC0 stores
+`0x80149470`. After last 19ED0: 19DCC=0 and 19D90=19DC0
+1:1. First 19DC0 is n=1 on 19D90 n=83 (`sp89c=1`) before
+SENT n=3; 19DFC n=124 then loads that yieldw (matches
+s3295). Same join has type-1 `19CDC n=247`
+(`$a0=0x80128CE0`) between last 19ED0 and first 19DC0.
+
+This selects `H-PortType2Yields` and refutes
+`H-PortType2Idle`, `H-PortType2BusySkip`, and
+`H-PortCoverageInvalid`. Combined with s3298, retail
+type-2 idle-starts because SP is idle; the port's extra
+`yieldw=0x80149470` is this `0x80019DC0` store while
+`0x8011A89C==1`. No audio or M5 Step 3 change. No new
+soak-queue verdicts.
