@@ -128210,3 +128210,37 @@ to physical `0x0011A89F` during the attract viewer. No audio
 or M5 Step 3 change. No new soak-queue verdicts. Evidence:
 `scratch/agent/s3295_port_scheduler_dispatch.md`,
 `scratch/agent/s3295_port_scheduler_dispatch.log`.
+
+## Session 3296 (2026-08-29) — retail 19E80 always takes; 19E70 never stores
+
+Retail 19E80 `$v0` / 89F-writer capture, HYPOTHESIS-ID
+`m5-osvimode-viewer-frame-exit`. One independent Rice
+oracle, 25 s, first-VI arming, `--hit-cap 20000`. Watches:
+whole-RDRAM, physical `0x0011A89F:0x0011A8A0`, exec
+`0x80019E80` / `0x80019E70` / `0x80019ED0` / `0x800C28F0` /
+`0x800C2E00` / `0x80019F6C`. Log:
+`scratch/agent/s3296_retail_s2_gate.log`. Evidence:
+`scratch/agent/s3296_retail_s2_gate.md`.
+
+Same-run positive controls: whole-RDRAM 10000-write and
+`[gpr-ctl]` at 0.4 s; viewer entry `0x800C28F0` at 2.2 s
+(`prev_pc=0x800C5C98`, 640 @ `0x0066aa00`); viewer return
+`0x800C2E00` at 6.4 s; 19E80 live in-window n=500. 1473 VI,
+25.0 s wall / 24.6 s emulated, `rc=0`. Title
+`1024 @ 0x00790400` did not fire (cinematic 640 continued
+through 24.3 s). Hit-cap printed through t=17.8 s.
+
+Viewer 19E80: `$v0=2` n=258, `$v0=0` n=242, `$v0=1` n=0,
+`$s1=1`. Lifetime 19E80=2079 and 19ED0=2079, every 19ED0
+`prev_pc=0x80019E80`. `0x80019E70` exec=0. 89F byte watch
+hits=0. 19F6C exec=2892 (word store at aligned `0x0011A89C`,
+not an sb of 1). The 242 `$v0=0` takes match s3292's 242
+viewer sends from `0x80019F1C`.
+
+This selects `H-RetailNoYieldStore` and refutes
+`H-RetailS2Cleared` and `H-RetailS2Stays1`. Combined with
+s3295, the port's yield-complete `sb` of 1 at `0x80019E70`
+after 19DFC `yieldw=0x80149470` is extra on this attract
+viewer. `H-RetailCoverageInvalid` is not selected for the
+viewer window. No audio or M5 Step 3 change. No new
+soak-queue verdicts.

@@ -1,34 +1,33 @@
-# NEXT work unit — retail: 19E80 take vs sticky 0x8011A89F=1
+# NEXT work unit — retail: 19E04 yield-pointer vs 19E70 path
 
 HYPOTHESIS-ID: m5-osvimode-viewer-frame-exit
 
 ## Resume context
 
-Session 3295 selected `H-Ed0CompareSkip`: after last 19ED0
-n=123, type `0x81` and `L_80019E7C` stay live (1229 each)
-but `0x80019E80` always fallthroughs because `$s2[0]==1`.
-`$s2` is `0x8011A89F`. The first sticky 1 appears on 19CC4
-n=250 immediately after 19DFC n=124 (`yieldw=0x80149470`),
-which is the yield-complete store at `0x80019E70`
-(`sb $s1, -0x5761($at)`). Session 3292 already showed retail
-viewer-window `0x8011A818` sends are 242/242 from
-`0x80019F1C` (inside 19ED0), so retail must take 19E80.
+Session 3296 selected `H-RetailNoYieldStore`: during the
+attract viewer, `0x80019E80` always takes (`$v0` is 0 or 2,
+never 1) and `0x80019E70` never executes. Combined with
+s3295, the port's yield-complete `sb` of 1 at 19E70 (after
+19DFC `yieldw=0x80149470` in `0x80128D40`) is extra.
+`0x80019E04` is `beq $v0, $zero, L_80019E7C` after
+`lw $v0, -0x72C0($v0)` from `0x80128D40`.
 
 ## Competing hypotheses
 
-- `H-RetailS2Cleared`: during 2.5–6.7 s, `0x80019E80` `$v0`
-  is 0 or 2 (takes 19ED0). Physical `0x0011A89F` is written
-  to 1 at `0x80019E70` and later cleared (expected clearer
-  `0x80019F6C`) before the next 19E80.
-- `H-RetailNoYieldStore`: viewer-window `0x80019E70` never
-  stores; `0x0011A89F` stays 0/2 so 19E80 keeps taking. The
-  port's yieldw=`0x80149470` path is extra.
-- `H-RetailS2Stays1`: retail 19E80 `$v0` is also 1 during
-  the viewer (fallthrough), so a different site must produce
-  the 242 `0x8011A818` sends (would reopen s3292).
+- `H-RetailYieldPtrZero`: during 2.5–6.7 s, `0x80019E04`
+  `$v0` is 0 (beq to 19E7C). Physical `0x00128D40` stays 0
+  or is written only as 0. 19E70 remains silent because the
+  nonzero-yield successor is dead.
+- `H-RetailYieldPtrLive`: `0x80019E04` `$v0` is nonzero at
+  least once in the viewer, so retail has a yield pointer
+  but still does not execute 19E70 (different successor
+  than the port).
+- `H-RetailYieldPtrUnpublished`: `0x80019E04` runs with
+  `$v0==0` and no write to `0x00128D40` in the viewer; the
+  port's `0x80149470` publisher is extra.
 - `H-RetailCoverageInvalid`: whole-RDRAM 10000-write
   control, title `1024 @ 0x00790400`, viewer `0x800C28F0`,
-  or `0x800C2E00` miss, or no 19E80 exec in 2.5–6.7 s.
+  or `0x800C2E00` miss, or no 19E04 exec in 2.5–6.7 s.
 
 ## Discriminator
 
@@ -36,11 +35,12 @@ One independent retail Rice oracle, 25 s, eleven-Start.
 Watches are physical. Exec watches armed at first VI (no
 `--pc-phase-log-width`). `--hit-cap 20000`.
 
-A viewer-window 19E80 census with `$v0 != 1` plus a later
-clear of `0x0011A89F` selects `H-RetailS2Cleared`. Zero
-19E70 stores and `$v0 != 1` selects `H-RetailNoYieldStore`.
-19E80 `$v0==1` throughout 2.5–6.7 s selects
-`H-RetailS2Stays1`. Missed controls is a failed instrument.
+Viewer-window 19E04 `$v0==0` on every row plus 19E70 still
+0 selects `H-RetailYieldPtrZero`. Any in-window `$v0 != 0`
+selects `H-RetailYieldPtrLive`. Zero writes to
+`0x00128D40` with `$v0==0` selects
+`H-RetailYieldPtrUnpublished` as well as Zero. Missed
+controls is a failed instrument.
 
 Do not add a skip, allow, restore, or wait bypass. No M5
 Step 3.
@@ -50,11 +50,11 @@ Step 3.
 ```
 tools/oracle/build/rs64_oracle \
   --watch-write 0x0:0x800000 \
-  --watch-write 0x0011A89F:0x0011A8A0 \
-  --watch-pc 0x80019E80,0x80019E70,0x80019ED0,0x800C28F0,0x800C2E00 \
+  --watch-write 0x00128D40:0x00128D44 \
+  --watch-pc 0x80019E04,0x80019E70,0x800C28F0,0x800C2E00 \
   --secs 25 --hit-cap 20000 --vi-trace --vi-poll \
   --video rice
 ```
 
-Log: `scratch/agent/s3296_retail_s2_gate.md` plus the
+Log: `scratch/agent/s3297_retail_yield_ptr.md` plus the
 captured run log.

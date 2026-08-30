@@ -4,7 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3295 (2026-08-29).
+Current maintenance marker: Session 3296 (2026-08-29).
+
+Session 3296 asked retail whether `0x80019E80` keeps taking
+and who writes physical `0x0011A89F` after `0x80019E70`
+stores 1. Same-run controls: whole-RDRAM 10000-write,
+viewer `0x800C28F0` at 2.2 s, `0x800C2E00` at 6.4 s, and
+19E80 live in that window. Title 1024 did not fire (cinematic
+640 continued). Viewer 19E80 n=500 is `$v0=2` n=258 /
+`$v0=0` n=242 / `$v0=1` n=0 (`$s1=1`); every 19ED0 has
+`prev_pc=0x80019E80` (lifetime 2079=2079). `0x80019E70`
+exec=0 and the 89F byte watch is 0 for the whole 25 s.
+This selects `H-RetailNoYieldStore` and refutes
+`H-RetailS2Cleared` and `H-RetailS2Stays1`. Combined with
+s3295, the port's yield-complete `sb` of 1 is extra.
+No M5 Step 3. Evidence:
+`scratch/agent/s3296_retail_s2_gate.md`.
 
 Session 3295 asked which recv-dispatch after last 19ED0 skips
 the 19ED0 gate. Same-run controls: viewer `[m5-postwait]`
@@ -544,10 +559,10 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3295
-selects `H-Ed0CompareSkip`: after last 19ED0, type `0x81` and
-`L_80019E7C` stay live but `0x80019E80` always fallthroughs
-because `$s2[0]==1` at `0x8011A89F`. Session 3294's
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3296
+selects `H-RetailNoYieldStore`: retail 19E80 keeps taking
+(`$v0` is 0 or 2) because `0x80019E70` never stores 1.
+Session 3295's `H-Ed0CompareSkip`, Session 3294's
 `H-SchedLoopAliveNoEd0`, Session 3293's
 `H-PortSchedSendMissing`, Session 3292's
 `H-RetailSpSchedulerProducer`, Session 3291's
@@ -557,15 +572,16 @@ Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Retail: during the attract viewer, does `0x80019E80` keep
-   taking (`$v0 != 1`) and who writes physical `0x0011A89F`
-   after `0x80019E70` stores 1? s3292 already showed 242/242
-   viewer `0x8011A818` sends from `0x80019F1C` (inside
-   19ED0), so retail must enter 19ED0. Join whole-RDRAM
-   10000-write control, title `1024 @ 0x00790400`, viewer
-   `0x800C28F0` / `0x800C2E00`, exec at `0x80019E80` /
-   `0x80019E70` / `0x80019ED0`, and writes to
-   `0x0011A89F:0x0011A8A0`. `--hit-cap 20000`. Do not add a
+1. Retail: during the attract viewer, does `0x80019E04`
+   (`beq $v0, $zero, L_80019E7C` after `lw` of `0x80128D40`)
+   ever see `$v0 != 0`? s3296 showed `0x80019E70` (the
+   yield-complete `sb` of 1 onto `0x8011A89F`) never
+   executes, so either the yield pointer stays 0 (beq to
+   19E7C always) or a different successor is taken.
+   Join whole-RDRAM 10000-write control, title
+   `1024 @ 0x00790400`, viewer `0x800C28F0` / `0x800C2E00`,
+   exec at `0x80019E04` / `0x80019E70`, and writes to
+   `0x00128D40:0x00128D44`. `--hit-cap 20000`. Do not add a
    skip, allow, restore, or wait bypass. No M5 Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
@@ -736,6 +752,13 @@ visits after last 19ED0, all with `$s2[0]==1` so 19E80
 fallthroughs. `H-NoType81` and "19DFC without 19E7C" are
 refuted.
 
+Session 3295 left open that retail 19E80 might also see 1
+and fall through, or that 19E70 stores 1 and a clearer
+resets it. Believable because the port's sticky 1 is the
+compare skip. Session 3296 measured 500 viewer 19E80 with
+`$v0 != 1`, lifetime 19ED0=19E80 all taken from 19E80, and
+zero `0x80019E70` execs.
+
 The recomp direct C call to `submitGfxFrame` does not write guest
 `$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
 that word is dead.
@@ -748,6 +771,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3296_retail_s2_gate.md`,
 `scratch/agent/s3295_port_scheduler_dispatch.md`,
 `scratch/agent/s3294_port_scheduler_stall.md`,
 `scratch/agent/s3293_port_scheduler_send.md`,
