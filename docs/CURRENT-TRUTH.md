@@ -4,7 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3264 (2026-08-29).
+Current maintenance marker: Session 3265 (2026-08-29).
+
+Session 3265 ran the required independent retail VI request-state capture.
+Both runs passed the whole-RDRAM positive control. The fixed phase-gated run
+reached VI 640 origin `0x0066A500`, title 1024, and hangar 512; it observed
+`applyPendingViChanges` 2,266 times, all from caller `0x80019914`. This proves
+the producer is live at the VI-640 boundary, but the oracle exposes only entry
+registers, not the function's internal state loads or successor branch.
+`H-RequestState`, `H-BoundaryConsumer`, and `H-Phase4SteadyState` therefore
+remain unresolved. No port or audio behavior changed. Evidence:
+`scratch/agent/s3265_vi_request_state.md` and its two captured oracle logs.
 
 Session 3264 repeated the bounded availability audit for the VI request-state
 edge. `RecompiledFuncs/` remains absent; `applyPendingViChanges` is still

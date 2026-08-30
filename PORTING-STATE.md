@@ -127370,3 +127370,18 @@ and leaves `H-RequestState`, `H-BoundaryConsumer`, and
 `H-Phase4SteadyState` unresolved. It rules out only local generated-body
 availability; it says nothing about the retail state contract. No build or
 runtime instrumentation was run. Evidence: `docs/VI640-REQUEST-STATE-BLOCK.md`.
+## Session 3265 (2026-08-29) — captured retail VI request-state boundary
+
+Ran the independent retail oracle with a whole-RDRAM positive control and a
+phase-gated watch on `applyPendingViChanges` at `0x8001B7F0`. The initial
+180-second capture reached title 1024 and hangar 512, passed the positive
+control with 10,000 writes, and observed 8,491 executions from caller
+`0x80019914`, but its gate was aimed at the hangar 512 origin. The corrected
+40-second capture gated the pre-title 640 origin `0x0066A500`, passed the same
+10,000-write control, reached title and hangar, and observed 2,266 executions,
+all from `0x80019914`. The oracle exposes entry registers but not this
+function's internal state loads or successor branch, so no request-state,
+boundary-consumer, or terminal-route hypothesis is selected. This rules out a
+producer-wide absence at the VI-640 boundary, not the unresolved state edge.
+No port or audio behavior changed. Evidence:
+`scratch/agent/s3265_vi_request_state.md` and its captured oracle logs.
