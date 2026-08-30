@@ -1,30 +1,42 @@
-# NEXT work unit — capture repaired scheduler receive identity
+# NEXT work unit — audit the missing target-phase boundary
 
 HYPOTHESIS-ID: vi640-maudtask-type2-writer
 
-Session 3259 established that the former crash was the `s2948` probe reading
-`MEM_HU(ctx->r17, 0x22)` after the generated scheduler had set `r17=1` as a
-state value. The external `s2950` KSEG0 guard is now applied and the rebuilt
-30-second run has no crash markers.
+Session 3260 established that the repaired identity probe is live: phase-2
+accepted rows carried valid message pointers and types `0x02/0x01/0x81`, with
+`89F/28D44`; positive controls fired. The run stayed at phase 4 width 640,
+origin `0x0066A500`, and never reached the target VI-640 wall.
 
 ## Competing hypotheses
 
-- `H-SpMsgMutated`: the accepted target-phase scheduler message has type 2 or
-  otherwise carries a mutated message descriptor.
-- `H-OtherOsTask`: a non-target task/message is accepted at the scheduler
-  receive boundary.
-- `H-Type2AbsentAtRecv`: the repaired port reaches the target wall but no
-  accepted type-2 message is present at `0x80019CD0`.
+- `H-BoundaryProducer`: a pre-target producer/state transition fails to publish
+  the message or VI/output state needed to leave width 640.
+- `H-BoundaryConsumer`: the message stream is present, but a scheduler/VI
+  consumer or gate does not accept the transition.
+- `H-Phase4SteadyState`: width 640 is an intentional steady state in this
+  route, so the missing target row is not a scheduler message defect.
 
 ## Discriminator
 
-Run the repaired Debug binary from `build/` with `ROGUESQ_RECV_TRACE=1` and
-the existing phase controls. The discriminating row must include caller,
-message pointer, type byte, output slot, and `89F/28D44`, and must occur after
-the VI-640 wall. Type 2 selects `H-SpMsgMutated`; a valid non-type-2 accepted
-message selects `H-OtherOsTask`; a valid VI-640 wall with no type-2 row selects
-`H-Type2AbsentAtRecv`. A pre-wall crash is unevaluable and requires a new
-fault-site audit.
+Enumerate the phase-4 width-640 producer/consumer/state edges in the checked-in
+port and map each to the existing phase logger. The discriminator is one
+named edge with an observable state change: a missing producer publication
+selects `H-BoundaryProducer`; a present publication with no consumer advance
+selects `H-BoundaryConsumer`; an explicit route contract proving width 640 is
+terminal selects `H-Phase4SteadyState`. Do not add a new runtime field until
+the source audit identifies the edge and its existing positive control.
+
+## Exact commands
+
+```sh
+rg -n "vi_width|0066A500|update_screen|target|80019CD0|spTaskSchedulerThread|recv-scheduler-identity" src lib RecompiledFuncs patches tools
+rg -n "phase=4|width=640|0066A500|VI-640" src docs tools scratch/agent/s3260_scheduler_identity.md
+git diff -- src lib patches tools
+```
+
+Read only bounded windows around the scheduler/VI/output matches. This is a
+static boundary audit; no build or game run is authorized unless it identifies
+a complete existing A/B arm and a discriminating measurement.
 
 ## Exact start
 

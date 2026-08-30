@@ -127288,3 +127288,19 @@ KSEG0 checks rebuilt the Debug target successfully. A 30-second
 or `last-guest-pc` marker and continued producing route-probe rows. This
 validates the diagnosis but does not yet establish target-phase scheduler
 message identity. Evidence: `scratch/agent/s3259_scheduler_probe_origin.md`.
+
+## Session 3260 (2026-08-29) — captured repaired scheduler identity boundary
+
+The Debug target built successfully. The documented `build/Debug` directory is
+absent in this Unix checkout, so the same 60-second watchdog capture ran from
+the actual `build/` output directory. Positive controls fired: accepted
+phase-2 scheduler identity rows carried valid message pointers and type bytes
+`0x02`, `0x01`, and `0x81`, with `89F/28D44` fields present. The run reached
+phase 4 width 640/origin `0x0066A500` and remained there for the full window;
+it emitted no crash, abort, Bus-error, access-violation, or last-guest-PC
+marker and never reached the target VI-640 wall. The target-phase message
+discriminator is therefore unevaluable, and no scheduler or audio behavior
+changed. This rules out a dead identity instrument, but selects neither
+`H-SpMsgMutated` nor `H-Type2AbsentAtRecv`; the missing target boundary remains
+open. Evidence: `scratch/agent/s3260_scheduler_identity.md` and
+`scratch/agent/s3260_scheduler_identity.log`.

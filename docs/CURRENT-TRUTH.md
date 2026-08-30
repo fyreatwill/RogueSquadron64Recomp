@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3259 (2026-08-29).
+Current maintenance marker: Session 3260 (2026-08-29).
+
+Session 3260 ran the repaired scheduler identity capture from the actual Unix
+`build/` output (the documented `build/Debug` directory is absent). Positive
+controls fired, and accepted phase-2 rows contained valid message pointers,
+types `0x02/0x01/0x81`, and `89F/28D44`. The port then remained at phase 4
+width 640/origin `0x0066A500` for the full 60-second run, with no crash
+markers, and never reached the target VI-640 wall. The target-phase type-2
+discriminator is therefore unevaluable; no scheduler or audio behavior
+changed. Evidence: `scratch/agent/s3260_scheduler_identity.md`.
 
 Session 3259 compared the available external regenerated scheduler body with
 the Debug binary and found a fourth case outside the prior scheduler
@@ -204,17 +213,20 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Run the repaired scheduler diagnostic long enough to reach the VI-640 wall,
-   then capture the post-return receive identity at `0x80019CD0`. The prior
-   crash was caused by the diagnostic's invalid `r17+0x22` read and is fixed by
-   the regeneration-preserved KSEG0 guard. Require positive `ROGUESQ_RECV_TRACE`
-   controls plus caller identity, message pointer, type byte, and `89F/28D44`
-   in the same phase. A type-2 row selects `H-SpMsgMutated`; a non-type-2
-   accepted row selects `H-OtherOsTask`; a valid VI-640 wall with no accepted
-   type-2 row selects `H-Type2AbsentAtRecv`. If the repaired run still fails
-   before VI 640, inspect only the new fault site and do not infer target-phase
-   absence.
-2. Repair or explain the pre-VI-640 scheduler crash before capturing message
+1. Audit the pre-target scheduler/VI-640 boundary and explain why the repaired
+   port remains at width 640/origin `0x0066A500`. Session 3260 proves the
+   scheduler identity instrument works in phase 2 and sees legitimate type-2
+   messages, but target-phase rows remain absent without a crash. The next
+   discriminator must identify one concrete producer/consumer or state edge
+   separating the phase-2 accepted message stream from the missing target
+   transition; do not repeat the capture or change scheduler/audio behavior
+   until that edge is named.
+2. After the boundary audit, capture the scheduler message identity at the
+   generated `0x80019CD0` receive call site with positive controls. A type-2
+   target row selects `H-SpMsgMutated`; a valid non-type-2 target row selects
+   `H-OtherOsTask`; a valid target wall with no accepted type-2 row selects
+   `H-Type2AbsentAtRecv`.
+3. Repair or explain the pre-VI-640 scheduler crash before capturing message
    identity. Session 3257's checked-in control build reproduced a Bus error
    at `spTaskSchedulerThread+2864` after width 320, with
    `last-guest-pc=0x8000834C`; it reached no VI-640 wall. The external
