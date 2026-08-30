@@ -4,7 +4,23 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3278 (2026-08-29).
+Current maintenance marker: Session 3279 (2026-08-29).
+
+Session 3279 asked retail whether the four OSViMode slot +8 words ever
+hold 1024. Dummy video stayed at `320 @ 0x006dd280` (documented RDP
+stall). Rice arms passed the whole-RDRAM 10000-write control, title
+`1024 @ 0x00790400`, and hangar `512 @ 0x006AB400`. While title 1024 was
+live, every slot snapshot was word `0x00000400` (FNV `0x4795eec9`). The
+only writer is `0x8001B6B0` (`initVideoSubsystem` 4×0x50 copy), including
+the store at the 640→1024 edge. Hangar then rewrites the same words to
+512. This selects `H-RetailTableHas1024` and refutes
+`H-RetailTableNever1024`. Combined with Session 3278's port census
+(slots 320 then 640, never 1024), `H-MissingTableRewrite` is two-source
+for the table-contents difference. It does not yet say the missing copy
+is why the port stays at VI 640: retail's 1024 copy sits on the title
+edge, so it may be title-entry (symptom) rather than a pre-title
+publisher the port should already have run. Evidence:
+`scratch/agent/s3279_retail_osvimode_slots.md`.
 
 Session 3278 censused the four OSViMode slots from `osViSetMode_recomp`.
 Same-run controls: four `[osViSetMode]` rows (including swapBuffer
@@ -14,9 +30,8 @@ on calls 1–2 and 640 on calls 3–4; none was 1024. Call 4
 (`applyPendingViChanges`) had `pendingB=0x11` / `pending_mask9=0x1` and
 published slot `0x80128DF0` width 640. This selects `H-MissingTableRewrite`
 and refutes `H-PendingBitGap`. `H-RequestMaskNever1024` is not selected
-(no 1024 template; the pending path is live). Single-source port census;
-does not yet say whether retail's table contains 1024 at title.
-`H-PortTargetPublicationAbsent` still holds. Evidence:
+(no 1024 template; the pending path is live). `H-PortTargetPublicationAbsent`
+still holds. Evidence:
 `scratch/agent/s3278_osvimode_table_census.md`.
 
 Session 3277 landed the `swapBufferWithViMode` jal delay-slot `$a0`
@@ -389,18 +404,20 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3278
-selected `H-MissingTableRewrite`; Session 3276's
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3279
+selected `H-RetailTableHas1024`; with Session 3278 this is two-source
+`H-MissingTableRewrite` for table contents. Session 3276's
 `H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio change is
 authorized until a like-for-like target row exists.
 
-1. Independent retail oracle: do the four OSViMode slot +8 words
-   (`0x00128D58/DA8/DF8/E48`) ever become 1024 while title `1024 @
-   0x00790400` is live? Whole-RDRAM write control plus `--post-value-watch`
-   on those words, phase-gated to title 1024 and pre-title 640. A 1024 store
-   at title selects a port-missing rewrite; title 1024 with no 1024 slot
-   store selects a different publisher than this table. Do not change audio
-   behavior.
+1. Independent retail oracle: who calls `initVideoSubsystem` (`0x8001A098`)
+   at the title-1024 rewrite (`0x8001B6B0` at the 640→1024 edge)? Exec watch
+   at function entry with `prev_pc` / `$ra`, Rice video, whole-RDRAM write
+   control, title `1024 @ 0x00790400` gate. A caller the port should already
+   have reached during VI 640 selects a missing port call (cause). A caller
+   that only runs as title entry selects a symptom of never leaving 640.
+   Do not change audio behavior. Require Rice (`mupen64plus-video-rice`);
+   dummy video stays at 320.
 2. Validate Session 3270's expanded free-list guard class on the configured
    Windows/MIPS host (`PatchesLib`). Do not repeat the local missing-target
    build. The guard is not evidence that the VI-640 route or audio is corrupt.
@@ -468,6 +485,9 @@ publisher bug that might block title 1024. Session 3277 restored hardware
 absent. Believable because the illegitimate width-2 pointer was a real
 generated-code defect on the only swap-time `osViSetMode` path.
 
+Session 3278 left retail's four-slot table unevaluated at title. Session 3279
+measured every slot +8 word as 1024 while title `1024 @ 0x00790400` was live.
+
 Static boundary-only symbol classifications remain non-renames when companion
 symbols, source/m2c, callers, and local semantics do not provide a defensible
 name. Stable companion duplicate-prefix and preamble mappings belong in
@@ -476,6 +496,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3279_retail_osvimode_slots.md`,
 `scratch/agent/s3278_osvimode_table_census.md`,
 `scratch/agent/s3277_swapbuffer_delay_slot.md`,
 `scratch/agent/s3276_m5_target_vi_publication_audit.md`,

@@ -127630,3 +127630,34 @@ at title 1024.
 No new soak-queue verdicts. Evidence:
 `scratch/agent/s3278_osvimode_table_census.md` and
 `scratch/agent/s3278_osvimode_table_census.log`.
+
+## Session 3279 (2026-08-29) — retail OSViMode table holds 1024 at title
+
+Independent retail oracle, HYPOTHESIS-ID `m5-osvimode-retail-1024-slot`.
+Dummy-video arm stayed at `320 @ 0x006dd280` for 60 s / 3595 VI (documented
+dummy-RDP stall). Two Rice arms used whole-RDRAM write cap 10000, slot +8
+watches `0x00128D58/DA8/DF8/E48`, `--detail-watch 1..4`, `--post-value-watch
+1..4`, eleven-Start, `--vi-trace`.
+
+60 s Rice: 10000-write control removed, title `1024 @ 0x00790400` at 17.3 s,
+hangar `512 @ 0x006AB400` at 38.4 s, 3563 VI. Every slot store is
+`0x8001B6B0` (`initVideoSubsystem` 4×0x50 copy). Armed post-value samples
+are hangar-only `0x00000200` (512); the 17.3 s title store precedes the
+first 1024 VI callback so it is not sampled.
+
+25 s Rice title window: same 10000-write control, stopped while 1024
+`0x00790400` was live (1461 VI, no hangar). All four slot snapshots were
+`fnv=0x4795eec9` / nonzero=1 = word `0x00000400` (1024). FNV decoder
+matched dummy=320 and hangar-sampled 512 in the same iteration.
+
+`H-RetailTableCoverageInvalid` refuted (Rice). `H-RetailTableNever1024`
+refuted. `H-RetailTableHas1024` selected. With Session 3278's port census,
+`H-MissingTableRewrite` is two-source for table contents, not yet for
+why the port stays at VI 640 (the 1024 copy is on the title edge). No
+audio or M5 Step 3 change.
+
+No new soak-queue verdicts. Evidence:
+`scratch/agent/s3279_retail_osvimode_slots.md`,
+`scratch/agent/s3279_retail_osvimode_slots.log`,
+`scratch/agent/s3279_retail_osvimode_slots_title.log`,
+`scratch/agent/s3279_retail_osvimode_slots_dummy.log`.
