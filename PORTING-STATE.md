@@ -127169,3 +127169,20 @@ this candidate as the target writer. It does not identify the legitimate
 writer and authorizes no port, audio, or mitigation change. Evidence:
 `scratch/agent/s3252_retail_route_writer.md` and
 `scratch/agent/retail_route_writer_3252.log`.
+
+## Session 3253 (2026-08-29) — tested target-phase display-mode store
+
+Ran one debugger-enabled retail-oracle capture with Rice video, the
+documented Start schedule, a whole-RDRAM positive-control write watch, and an
+execution watch at `0x8008EC88`. The positive control produced 10,000 writes;
+the VI trace reached title width 1024 at both `0x00790400` and `0x00790800`,
+and the target phase was therefore valid. The candidate executed once only at
+the 1024-to-512 transition, reporting `$a0=0x000001b0`, `$v0=1`, and live
+origin `0x006ab800`; it did not execute at either target 1024 origin.
+
+This selects `H-TargetStoreMisaligned`, rules out candidate absence, and rules
+out using this store as the target writer. Existing port evidence says the
+store is already the nonzero C88 default, so no port, audio, or mitigation
+change was made. The exact target writer remains unresolved. Evidence:
+`scratch/agent/s3253_retail_target_store.md` and
+`scratch/agent/s3253_retail_target_store/oracle.log`.

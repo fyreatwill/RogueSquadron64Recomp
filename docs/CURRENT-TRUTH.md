@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3252 (2026-08-29).
+Current maintenance marker: Session 3253 (2026-08-29).
+
+Session 3253 ran the independent retail oracle with a whole-RDRAM positive
+control and target 1024 gates. `0x8008EC88` executed once only at the
+1024-to-512 transition, with `$a0=0x1B0` and live origin `0x006AB800`; it did
+not execute at `0x00790400` or `0x00790800`. This selects
+`H-TargetStoreMisaligned`, rules out candidate absence, and leaves the exact
+target writer unresolved. The existing port record shows this store is
+already the nonzero C88 default, so no port or audio behavior changed.
+Evidence: `scratch/agent/s3253_retail_target_store.md`.
 
 Session 3252 ran the independent retail oracle with a whole-RDRAM positive
 control and watched `reapplyDisplayMode` entry/call/return. All three PCs
@@ -163,6 +172,12 @@ no patch or allocator mitigation is authorized. Evidence:
    despite the whole-RDRAM and title controls. Do not add port counters or
    infer a target writer from this candidate; the next oracle angle should
    watch the target-phase store/writer boundary directly.
+   Session 3253 watched the direct `0x8008EC88` store with valid whole-RDRAM,
+   title, and target-origin controls. It fired once only at the subsequent
+   1024-to-512 transition (`0x006AB800`/`$a0=0x1B0`), not at either target
+   origin. Do not change the already-nonzero port C88 store or infer target
+   causation from it; the next oracle angle should watch the other named
+   target-boundary writer `0x8008ED48`.
    Session 3249 completed the status-03 static audit and found named,
    legitimate publication and service-reaping edges. This closes the current
    status-03 idiom selection without authorizing a wait or status change.
