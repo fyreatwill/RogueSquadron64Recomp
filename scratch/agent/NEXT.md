@@ -1,12 +1,12 @@
-# NEXT work unit — obtain the VI-mode request state body
+# NEXT work unit — capture retail VI request-state inputs
 
 HYPOTHESIS-ID: vi640-maudtask-type2-writer
 
-Session 3263 completed the local availability audit. The generated
-`RecompiledFuncs/` tree is absent; `applyPendingViChanges` is available only
-as symbol metadata and a probe-template call site. The next unit requires an
-external generated body/provenance or an independent retail trace of its
-state inputs.
+The local source-availability arm is closed as `H-SourceUnavailable`:
+`RecompiledFuncs/` is absent, and `applyPendingViChanges` is available only as
+symbol metadata plus the probe-template caller. The next unit must use the
+independent retail oracle or supplied regeneration artifact; do not repeat the
+local inventory or add a port-side field.
 
 ## Competing hypotheses
 
@@ -16,26 +16,31 @@ state inputs.
   to commit it.
 - `H-Phase4SteadyState`: width 640 is an intentional terminal route.
 - `H-SourceUnavailable`: the generated body/state inputs are unavailable in
-  this checkout, so the runtime hypotheses cannot yet be split.
+  this checkout. Selected for the local arm only.
 
 ## Discriminator
 
-Obtain the generated body or an independent ground-truth trace of its state
-inputs. A suppressed target request with a live state input selects
-`H-RequestState`; a target request followed by no commit selects
-`H-BoundaryConsumer`; an explicit terminal-route contract selects
-`H-Phase4SteadyState`; continued source absence selects
-`H-SourceUnavailable`.
+Obtain the generated body or an independent ground-truth trace of the state
+inputs. A live state input with no target request selects `H-RequestState`; a
+target request followed by no commit selects `H-BoundaryConsumer`; an explicit
+terminal-route contract selects `H-Phase4SteadyState`. Continued absence is an
+external dependency, not a runtime conclusion.
 
 ## Exact commands
 
 ```sh
-rg -n "vi_width|0066A500|update_screen|target|80019CD0|spTaskSchedulerThread|recv-scheduler-identity" src lib RecompiledFuncs patches tools
-rg -n "phase=4|width=640|0066A500|VI-640" src docs tools scratch/agent/s3260_scheduler_identity.md
-git diff -- src lib patches tools
+test -x tools/oracle/build/rs64_oracle
+tools/oracle/build/rs64_oracle --core "$ORACLE_CORE" --rom "$RETAIL_ROM" \
+  --secs 180 --watch-write 0x0:0x800000 \
+  --watch-pc 0x8001B7F0 --pc-phase-log-width 640 \
+  --vi-trace --hit-cap 64
 ```
 
-Read only bounded windows around `applyPendingViChanges` and its state inputs
-once the generated body is available. If it remains unavailable, obtain the
-independent oracle trace instead; do not add another host-side field. No
-scheduler/audio behavior change is authorized.
+The run is valid only if the whole-RDRAM watch fires and the VI trace reaches
+the target boundary. Add a focused watch for the state addresses once the
+generated body or its provenance identifies them. A live state input with no
+target request selects `H-RequestState`; a target request with no commit
+selects `H-BoundaryConsumer`; an explicit terminal contract selects
+`H-Phase4SteadyState`. If either oracle dependency is absent, record that
+setup fact and do not claim a runtime hypothesis. No scheduler/audio behavior
+change is authorized.

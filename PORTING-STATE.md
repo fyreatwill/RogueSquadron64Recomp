@@ -127357,3 +127357,16 @@ function's state loads or branch successors. No build or runtime run was
 justified. This leaves `H-RequestState`, `H-BoundaryConsumer`, and
 `H-Phase4SteadyState` unresolved and rules out only the local-body-available
 hypothesis. Evidence: `docs/VI640-REQUEST-STATE-BLOCK.md`.
+## Session 3264 (2026-08-29) — closed local VI request-state availability arm
+
+Ran the prescribed bounded inventory for the VI-mode request-state edge.
+`RecompiledFuncs/` is absent from this checkout; `applyPendingViChanges` is
+present only in `syms/rogue_squadron.syms.toml` at `0x8001B7F0` with size
+`0x2AC`, and in `tools/apply_s802_vi_selector_probe.py` as the expected caller
+at `0x80019914`. The host VI wrappers expose only request forwarding and
+committed-register consumption, so no state load or branch successor is
+available to classify. This selects `H-SourceUnavailable` for the local arm
+and leaves `H-RequestState`, `H-BoundaryConsumer`, and
+`H-Phase4SteadyState` unresolved. It rules out only local generated-body
+availability; it says nothing about the retail state contract. No build or
+runtime instrumentation was run. Evidence: `docs/VI640-REQUEST-STATE-BLOCK.md`.
