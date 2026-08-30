@@ -128020,3 +128020,38 @@ soak-queue verdicts. Evidence:
 `scratch/agent/s3290_submit_gfx_stall.log`,
 `scratch/agent/s3290_submit_gfx_stall.ratelimit.log`.
 
+## Session 3291 (2026-08-29) — retail submitGfxFrame recv returns during viewer
+
+Retail Rice oracle, HYPOTHESIS-ID `m5-osvimode-viewer-frame-exit`.
+Watches `0x8000C0B4` (`submitGfxFrame` first `osRecvMesg`),
+`0x8000C0BC` (recv continuation), viewer entry `0x800C28F0`, and
+return `0x800C2E00`. Whole-RDRAM write control, 25 s,
+eleven-Start, first-VI arming. Prescribed `--hit-cap 10000` run
+printed only the first 64 execs (0.9–1.9 s, width 320) because
+`EXEC_LOG_CAP=64`; lifetime histogram already matched 718/718 but
+could not split a viewer-window return from a multi-second block.
+Same-iteration `--hit-cap 20000` printed all 1440 execs.
+Logs: `scratch/agent/s3291_retail_submit_recv.log`,
+`scratch/agent/s3291_retail_submit_recv_cap20000.log`.
+
+Same-run positive controls (cap-20000): whole-RDRAM 10000 hits
+and `[gpr-ctl]`; title `1024 @ 0x00790400` at 17.3 s; viewer
+entry at 2.5 s (`prev_pc=0x800C5C98`, 640 @ `0x0066aa00`);
+viewer return at 6.7 s (`prev_pc=0x800C2DFC`). 1459 VI, 25.1 s
+wall / 24.3 s emulated.
+
+Lifetime `C0B4=719` / `C0BC=719`. Viewer window 2.5–6.7 s:
+241/241 in the same 0.1 s buckets; max `C0B4`→next `C0BC` gap
+0.1 s. `$a0=0x8011A818`; every `C0BC` `prev_pc=0x80033300`
+(`osRecvMesg` `jr ra`); post-return `$a2=1` (blocking).
+
+This selects `H-RetailRecvReturns` and refutes
+`H-RetailRecvBlocks`, `H-RetailRecvSkipped`, and
+`H-ExitCoverageInvalid`. Combined with s3290: the port's SENT n=3
+block is not what retail does on this recv. Next discriminator is
+who sends to `0x8011A818` during the viewer. No audio or M5 Step 3
+change. No new soak-queue verdicts. Evidence:
+`scratch/agent/s3291_retail_submit_recv.md`,
+`scratch/agent/s3291_retail_submit_recv.log`,
+`scratch/agent/s3291_retail_submit_recv_cap20000.log`.
+

@@ -4,7 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3290 (2026-08-29).
+Current maintenance marker: Session 3291 (2026-08-29).
+
+Session 3291 asked whether retail's `submitGfxFrame` first
+`osRecvMesg` at `0x8000C0B4` returns during the attract viewer.
+Whole-RDRAM 10000-write control, title `1024 @ 0x00790400`,
+viewer entry `0x800C28F0` at 2.5 s, and `0x800C2E00` at 6.7 s
+all passed. Lifetime `C0B4=719` / `C0BC=719`. Viewer window:
+241/241 in the same 0.1 s buckets; max gap 0.1 s;
+`$a0=0x8011A818`; every `C0BC` `prev_pc=0x80033300`. This
+selects `H-RetailRecvReturns` and refutes `H-RetailRecvBlocks`,
+`H-RetailRecvSkipped`, and `H-ExitCoverageInvalid`. The
+prescribed `--hit-cap 10000` run truncated printed execs at
+1.9 s; `--hit-cap 20000` in the same iteration was the live
+scope. No M5 Step 3. Evidence:
+`scratch/agent/s3291_retail_submit_recv.md`.
 
 Session 3290 asked which jal inside `submitGfxFrame` does not
 return on the third viewer-loop invocation. Same-run controls:
@@ -472,21 +486,22 @@ the status-03 wait hatch.
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
-renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3290
-selects `H-SubmitRecvBlocked`: the third viewer `submitGfxFrame`
-blocks in `osRecvMesg` at `0x8000C0B4` of queue `0x8011A818`.
-Session 3288's `H-PortFadeOutNeverEntered` still holds as the
-reason fade-out never runs. Session 3276's
+renaming. M5 design is complete in `docs/M5-AUDIO-PLAN.md`. Session 3291
+selects `H-RetailRecvReturns`: retail's first `submitGfxFrame`
+recv at `0x8000C0B4` of queue `0x8011A818` returns throughout the
+viewer. Session 3290's `H-SubmitRecvBlocked` still holds for the
+port's SENT n=3. Session 3288's `H-PortFadeOutNeverEntered` still
+holds as the reason fade-out never runs. Session 3276's
 `H-PortTargetPublicationAbsent` still holds. No M5 Step 3 audio
 change is authorized until a like-for-like target row exists.
 
-1. Retail: does `0x8000C0B4` (`submitGfxFrame` first recv) return
-   during the attract viewer (`0x800C0BC` follows), or sit blocked
-   the way the port does on SENT n=3. Whole-RDRAM 10000-write
-   control, viewer entry `0x800C28F0`, and `0x800C2E00` return as
-   gates. Do not add a skip, allow, restore, or wait bypass. No
-   M5 Step 3. This is not the disproven internal "iter 3 hangs"
-   reading of `func_8000C07C`.
+1. Retail: who sends to queue `0x8011A818` during the attract
+   viewer. Watch `osSendMesg` (`0x80033410`) and `osJamMesg`
+   (`0x8002C3B0`); split `prev_pc` on `$a0=0x8011A818` rows in
+   2.5–6.7 s. Whole-RDRAM 10000-write control, viewer entry
+   `0x800C28F0`, and `0x800C2E00` as gates. Use `--hit-cap 20000`.
+   Do not add a skip, allow, restore, or wait bypass. No M5
+   Step 3.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
@@ -621,6 +636,12 @@ the first `osRecvMesg` (`0x8000C0B4`, queue `0x8011A818`) entered
 without return. Yield and send paths were not entered on that
 invocation.
 
+Session 3290 left open that retail might also block on that
+recv. Believable because the port's SENT n=2 returned and n=3
+did not, so a long wait could have been hardware-normal.
+Session 3291 measured 241 matched `C0B4`/`C0BC` pairs in the
+viewer window and a 0.1 s max gap, so retail returns every time.
+
 The recomp direct C call to `submitGfxFrame` does not write guest
 `$ra` `0x800C2D98` into `0x40($sp)`; a saved-ra viewer gate on
 that word is dead.
@@ -633,6 +654,7 @@ name. Stable companion duplicate-prefix and preamble mappings belong in
 ## Evidence index
 
 Recent evidence includes
+`scratch/agent/s3291_retail_submit_recv.md`,
 `scratch/agent/s3290_submit_gfx_stall.md`,
 `scratch/agent/s3289_port_viewer_stall.md`,
 `scratch/agent/s3288_port_viewer_fade.md`,
