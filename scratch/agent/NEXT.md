@@ -1,12 +1,14 @@
-# NEXT work unit — repair regenerated-tree scheduler crash
+# NEXT work unit — identify the pre-VI-640 scheduler fault contract
 
 HYPOTHESIS-ID: vi640-maudtask-type2-writer
 
 Session 3256 established that the retail call site is live, but the freshly
-regenerated port crashes in `spTaskSchedulerThread+2864` during VI 320. The
-new identity hook is not the cause: the disabled-hook control crashed at the
-same location with the same register pattern. Do not repeat the scheduler
-identity capture until the port reaches the VI-640 wall.
+regenerated port crashes in `spTaskSchedulerThread+2864` during VI 320. Session
+3257 reproduced the same local control crash with the hook disabled: Bus error
+at `0x103ACF930`, fault `0x380000021`, last guest PC `0x8000834C`, after width
+320. The external regenerated tree is unavailable, so the next unit must use
+the checked-in scheduler source and symbols to identify the invalid-value
+contract before another run.
 
 ## Competing hypotheses
 
@@ -19,22 +21,31 @@ identity capture until the port reaches the VI-640 wall.
 
 ## Discriminator
 
-Inventory the pre-regeneration generated-tree patch markers and compare them
-with the current fixup report and the last known-good build artifacts. Restore
-only the missing regeneration-preserved diagnostics/behavior through
-`fixup_game_funcs.py` or its dedicated apply script, then build once. Run the
-same prescribed port recipe with `ROGUESQ_RECV_TRACE=0` as a control. Reaching
-VI 640 (without the identity hook enabled) selects a missing-patch/drift
-explanation and authorizes the identity capture as the following unit; an
-identical 320 crash after marker parity selects baseline/other runtime crash
-and requires a new code-level discriminator. Do not treat a build-only success
-or a 320-phase row as target coverage.
+Audit the host implementation and generated call boundary for
+`spTaskSchedulerThread+2864`, including the register/value that becomes the
+fault address `0x380000021`. Produce a bounded source-level table naming the
+consumer, its producer, and whether the value is a valid guest pointer or an
+invalid scheduler contract. The discriminating outcome is: (a) a missing
+regeneration-preserved wrapper/fixup is identified, which authorizes restoring
+that exact marker and one build/run; (b) the checked-in host contract itself
+accepts a malformed value, which authorizes one narrowly scoped contract fix;
+or (c) no local source boundary can explain it, which leaves the issue
+blocked on the external regenerated tree. Do not add a guard or repeat the
+baseline run without one of these outcomes.
 
 ## Exact start
 
-First use bounded `git diff`/marker checks in the external N64Recomp tree; do
-not clear or regenerate again until the missing marker set is identified.
-Then build from this repository's `build/` directory:
+First use bounded `rg`/`nm`/`git log -S` checks in the checked-in source and
+generated-library symbols; do not clear or regenerate. Candidate commands:
+
+```
+rg -n "spTaskSchedulerThread|0x80019CD0|8011D460|8000834C|0x380000021" src lib tools
+nm -an build/RogueSquadron64Recomp | rg "spTaskSchedulerThread|80019cd0"
+git log --all -S"spTaskSchedulerThread" --oneline -- src lib tools
+```
+
+Only if the audit identifies an exact missing marker or contract boundary,
+build from this repository's `build/` directory:
 
 ```
 env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 \

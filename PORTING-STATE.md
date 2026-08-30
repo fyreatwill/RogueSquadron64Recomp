@@ -127236,3 +127236,22 @@ the new hook, but leaves the target-phase message identity unevaluable. It
 selects no scheduler hypothesis and rules out neither target-phase type-2
 presence nor absence. Evidence:
 `scratch/agent/s3256_scheduler_identity.md`.
+
+## Session 3257 (2026-08-29) — reproduced the scheduler crash in the local control
+
+The required external `E:/Projects/N64Recomp` checkout is not mounted here,
+and this repository has no local generated `N64Recomp/` or `RecompiledFuncs/`
+tree from which to inventory regeneration markers. The checked-in Debug target
+did build successfully with `cmake --build build --config Debug --target
+RogueSquadron64Recomp`.
+
+The prescribed control run used `ROGUESQ_RECV_TRACE=0` from `build/`. It
+returned 138 after about two seconds, with width 0 and width 320 as the only
+phase rows, then a Bus error at `spTaskSchedulerThread+2864` (PC
+`0x103ACF930`), fault address `0x380000021`, and last guest PC
+`0x8000834C`. It did not reach VI 640. This is a valid local baseline/control
+reproduction, but without the external regenerated tree it cannot distinguish
+missing fixup markers, compiler drift, and an inherent baseline crash. No
+scheduler, audio, guard, or mitigation behavior changed. Evidence:
+`scratch/agent/s3257_baseline_scheduler.md` and
+`scratch/agent/s3257_baseline_scheduler.log`.

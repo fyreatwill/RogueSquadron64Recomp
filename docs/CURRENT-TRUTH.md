@@ -4,7 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3256 (2026-08-29).
+Current maintenance marker: Session 3257 (2026-08-29).
+
+Session 3257 ran the checked-in Debug baseline with the scheduler identity
+hook disabled. The build succeeded, but the process reproduced the early Bus
+error at `spTaskSchedulerThread+2864` before VI 640 (width 320 was the last
+phase row; fault address `0x380000021`, last guest PC `0x8000834C`). The
+external regenerated N64Recomp tree and its marker set are not mounted here,
+so this confirms the local control crash but does not distinguish missing
+fixup markers, compiler drift, and an inherent baseline crash. Evidence:
+`scratch/agent/s3257_baseline_scheduler.md`.
 
 Session 3256 added a regeneration-preserved post-return scheduler identity
 capture at `0x80019CD0`. The independent retail oracle passed its whole-RDRAM
@@ -169,7 +178,25 @@ error/reinitialization contract. `H-NotPatchable` is selected for this class;
 no patch or allocator mitigation is authorized. Evidence:
 `scratch/agent/s3240_m3_musyx_null_contract.md`.
 
-1. Capture the scheduler message identity at the generated `0x80019CD0`
+1. Repair or explain the pre-VI-640 scheduler crash before capturing message
+   identity. Session 3257's checked-in control build reproduced a Bus error
+   at `spTaskSchedulerThread+2864` after width 320, with
+   `last-guest-pc=0x8000834C`; it reached no VI-640 wall. The external
+   regenerated tree and marker set are unavailable in this checkout, so do
+   not claim missing-marker or compiler-drift selection from this run. The
+   next discriminator must inspect the host scheduler source/register
+   contract and identify one safe, testable distinction between the invalid
+   guest-derived value and a legitimate scheduler message/slot before any
+   mitigation is landed. Preserve the existing competing hypotheses in
+   `scratch/agent/NEXT.md` and do not repeat the local baseline until a new
+   code-level discriminator is prepared.
+   After the crash is repaired or explained, capture the scheduler message
+   identity at the generated `0x80019CD0` receive call site (or expose the
+   runtime's consumed-message value), with `ROGUESQ_RECV_TRACE` positive
+   controls. Require a caller identity, message pointer, type byte, and
+   `89F/28D44` in the same phase before selecting `H-SpMsgMutated`,
+   `H-OtherOsTask`, or `H-Type2AbsentAtRecv`.
+2. Validate Session 3254's complete free-list guard class on the configured
    receive call site (or expose the runtime's consumed-message value), with
    `ROGUESQ_RECV_TRACE` positive controls. The wrapper-level `$a1`/queue
    snapshot probe from Session 3255 is unevaluable because external delivery
