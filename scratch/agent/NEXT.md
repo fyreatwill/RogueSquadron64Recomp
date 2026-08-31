@@ -1,20 +1,17 @@
-# NEXT work unit — M5 earlier producer/call-contract census
+# NEXT work unit — M5 exact earlier-producer target attribution
 
 HYPOTHESIS-ID: m5-earlier-producer-contract
 
-Before building, enumerate static callers and generated callsites feeding the
-selected `0x8002BEE8`/`0x800078E0` family. Then ask the retail oracle for one
-driven, phase-gated run retaining those caller PCs, arguments, and target-span
-bytes, with whole-RDRAM control. Use Rice and the canonical Start schedule.
-Then build once and run one port census with the existing phase, audio-task,
-callback-writer, PCM, and static-call controls. Do not change output or audio
-behavior.
+The 88 generated `jal 0x800078E0` callsites are now enumerated. Before
+building, run the retail oracle with whole-RDRAM control and only the exact
+predecessor/writer PCs plus target-span watch; then build once and run the
+equivalent port census with the existing phase, audio-task, callback-writer,
+PCM, and static-call controls. Do not change output or audio behavior.
 
 Competing hypotheses:
 
-- `H-EarlierPortContract`: retail caller/input rows are valid and nonzero while
-  the port still has only `0x8008F2CC` zero-fill; the gap is earlier than the
-  observed port writer.
+- `H-EarlierPortContract`: retail has a phase-gated target write preceded by
+  the selected producer while the port still has only `0x8008F2CC` zero-fill.
 - `H-DownstreamPortMismatch`: the port exposes matching caller/input rows with
   nonzero target bytes; the gap is downstream of this boundary.
 - `H-LegitimateEarlierZero`: both routes expose the caller/input edge but write
@@ -25,6 +22,14 @@ Discriminator: a valid retail caller/input row with no port counterpart selects
 `H-DownstreamPortMismatch`; matching zero rows on both routes select
 `H-LegitimateEarlierZero`. If the retail hangar phase bucket is absent, the
 oracle arm is partial and no hangar hypothesis is selected.
+
+Exact oracle route shape:
+
+    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 120 --watch-write 0x0:0x800000 --watch-write 0x1798B0:0x179A48 --watch-pc 0x8002BEE8,0x800078E8,0x800078EC --pc-phase-log-width 0x006AB400:512 --pc-hist-watch 1 --pc-hist-phase 0x006AB400:512 --vi-trace --press '6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start' --hold-ms 150
+
+Expected: whole-RDRAM control and predecessor/writer executions fire. A
+phase-gated target write with those predecessors is the retail positive arm;
+no target rows despite the control means payload attribution is partial.
 
 Exact port route shape:
 

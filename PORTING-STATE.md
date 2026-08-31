@@ -130337,3 +130337,26 @@ output or audio behavior changed. Evidence:
 `docs/M5-S3390-PREDECESSOR-EDGE.md`,
 `scratch/agent/oracle_s3390/predecessor.log`, and
 `scratch/agent/port_s3390/run.log`.
+
+## Session 3391 (2026-08-31) — M5 exact earlier-producer census
+
+The planned work unit enumerated the current generated `jal 0x800078E0`
+callsite set: 88 sites, including the known `0x8008F2CC` target path. The
+independent retail oracle then ran the canonical Rice route for 120 seconds
+with whole-RDRAM and target-span controls plus execution/field watches. The
+whole-RDRAM control fired 223,338 times over 7,169 VI frames; retail reached
+the hangar 512 phase and the `0x8002BEE8`, `0x800078E0`, and `0x800078E8`
+watches were live. The target-span watch produced no visible hit rows, so
+that oracle arm is partial for payload attribution.
+
+The rebuilt port reached title `0x00790400` at 11.8 seconds and hangar
+`0x006AB400` at 19.9 seconds. Phase, static-call, and PCM controls fired;
+there were no crash or abort markers. Its only target-overlap row remained
+the zero-fill `0x8008F2CC -> rs_memset` path (`dst=0x801797B0`, `val=0`,
+`len=0x298`), with no callback-writer or earlier-producer row and zero PCM
+source/consumer summaries. This selects `H-EarlierPortContract` at the
+observed boundary and refutes a matching port predecessor edge. It does not
+establish that the zero fill is illegitimate and does not claim a like-for-like
+retail payload comparison because the retail target watch was partial. No
+output or audio behavior changed. Evidence: `docs/M5-S3391-EARLIER-PRODUCER.md`
+and `scratch/agent/oracle_s3391/predecessor.log`.

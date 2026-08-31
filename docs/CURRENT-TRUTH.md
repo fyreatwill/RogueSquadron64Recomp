@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3390 (2026-08-31). This file was compacted
+through Session 3391 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -117,6 +117,20 @@ source boundary:
   leaving hangar, outside the discriminator. Evidence is in
   [M5-S3390-PREDECESSOR-EDGE.md](M5-S3390-PREDECESSOR-EDGE.md).
 
+- Session 3391 enumerated the current generated `jal 0x800078E0` set (88
+  callsites) and ran the selected earlier-producer census. Retail's
+  whole-RDRAM control fired 223,338 times over 7,169 VI frames; its
+  `0x8002BEE8` predecessor execution watch fired 37,635 times and its
+  `0x800078E0`/`0x800078E8` controls were live. The target-span oracle watch
+  produced no visible hit rows, so payload attribution for this arm is
+  partial. The port reached title and hangar with phase, static-call, and PCM
+  controls live; its only hangar target row remained the zero-fill
+  `0x8008F2CC -> rs_memset` path (`dst=0x801797B0`, `len=0x298`), with no
+  callback or earlier-producer row and zero PCM. This selects
+  `H-EarlierPortContract` at the observed boundary, but does not establish
+  that the zero fill is illegitimate or provide a retail payload comparison.
+  Evidence is in [M5-S3391-EARLIER-PRODUCER.md](M5-S3391-EARLIER-PRODUCER.md).
+
 No output substitution or mitigation is authorized. Do not change waits, slots,
 status handling, consumer dispatch, or PCM writeback while tracing the source.
 
@@ -125,17 +139,18 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the selected earlier producer/call contract. Enumerate static callers
-   and generated callsites feeding the retail `0x8002BEE8`/`0x800078E0` family,
-   then ask the retail oracle for one phase-gated run retaining those caller
-   PCs, arguments, and target-span bytes with whole-RDRAM control. Batch one
-   equivalent port census using the existing controls; do not change output
-   or audio behavior.
-2. Discriminator: a valid retail caller/input row with no port counterpart
-   selects an earlier port producer gap; a matching nonzero port row moves the
-   boundary downstream; matching zero rows on both routes make that boundary
-   legitimate. If the retail hangar bucket is absent, record the arm as
-   partial and do not claim a hangar discriminator.
+1. Refine the selected earlier producer/call contract with a bounded oracle
+   run retaining only `0x8002BEE8`, `0x800078E8`, and `0x800078EC` execution
+   rows plus the exact target-span watch, avoiding the noisy `0x800078E0`
+   field table. Keep whole-RDRAM control and the canonical driven Rice route.
+   Batch one equivalent port census with the existing controls; do not change
+   output or audio behavior.
+2. Discriminator: a phase-gated retail target write with a valid predecessor
+   and no port counterpart keeps `H-EarlierPortContract`; a matching port
+   predecessor and target write moves the boundary downstream; matching zero
+   writes on both routes make the boundary legitimate. If either target watch
+   is absent while its whole-RDRAM control fires, record that arm as partial
+   and do not select a payload hypothesis.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
