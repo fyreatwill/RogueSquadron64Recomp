@@ -1,39 +1,34 @@
-# NEXT work unit — capture the caller supplying the early callback target
+# NEXT work unit — mark callback transfers at generated callers
 
 HYPOTHESIS-ID: m5-callback-occupant-caller
 
-Session 3337 proved that `registerSiCallback` writes `0x8009123C` in phase 2,
-but did not identify the caller supplying that value. Capture the callee-entry
-return address and argument for every registration, with the existing early
-store and census controls.
+Session 3338 proved that `registerSiCallback` receives `0x8009123C` in phase 2,
+but generated `$ra` is zero for every entry. The next build must mark the
+transfer immediately before each generated call to `0x80007910`, independent
+of phase, and join that explicit callsite marker to the entry ordinal.
 
 ## Competing hypotheses
 
-- `H-PortRegisterEntryCaller`: an entry probe at `0x80007910` sees
-  `$a0=0x8009123C` and a distinct `$ra`/caller marker during phase 2.
-- `H-PortKnownCallerAlias`: the entry probe sees `0x8009123C` only from one of
-  the already-known generated callsites, indicating the prior callsite mark
-  was not aligned with the actual transfer.
-- `H-PortStoreEntryMismatch`: the entry probe never sees the argument although
-  the exact store hook does, indicating a recomp dispatch/context mismatch or
-  an indirect value mutation inside the callee.
+- `H-DirectTransfer`: an un-gated transfer marker fires at one of the known
+  direct generated callsites and joins to the `0x8009123C` entry.
+- `H-IndirectTransfer`: no known direct callsite marker fires, so the target
+  arrives through an indirect dispatcher or callback path.
+- `H-ContextMarker`: the transfer marker fires but cannot join by ordinal,
+  showing that generated context/entry accounting is insufficient.
 
 ## Discriminator and exact commands
 
-First retain the prior independent retail callback-table baseline; a fresh
-oracle rerun is unavailable because this checkout lacks its debugger-enabled
-core and Rice plugin. Add one entry probe immediately on entry to generated
-`registerSiCallback` at `0x80007910`, logging `$a0` and `$ra` in bounded phase
-buckets. Keep the early store mark, direct callsite marks, and full census.
-Run:
+Retain the independent retail baseline from Session 3335; a fresh oracle rerun
+is unavailable because this checkout lacks its debugger-enabled core and Rice
+plugin. Add the transfer hook to the regeneration fixup and current generated
+direct-call sites, retain the entry/store/census hooks, then run:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s3334_m5_callback_writer_attribution.sh
+    zsh scratch/agent/run_s3333_m5_callback_reachability.sh
 
-The positive-control rows must include the host boundary/task controls and
-the run must reach title 1024 and hangar 512. An entry row with
-`a0=0x8009123C` and a stable caller marker selects `H-PortRegisterEntryCaller`;
-only a known caller selects `H-PortKnownCallerAlias`; a store row without a
-matching entry row selects `H-PortStoreEntryMismatch`. Missing controls
-invalidate the run and require a fixed rerun. No contract change or mitigation
-is authorized.
+The positive-control rows must include host-boundary and task-handoff controls,
+and the run must reach title 1024 and hangar 512. A joined transfer/entry row
+selects `H-DirectTransfer`; an entry with no direct marker selects
+`H-IndirectTransfer`; an unjoinable marker selects `H-ContextMarker`. Missing
+controls invalidate the run and require a fixed rerun. No contract change or
+mitigation is authorized.

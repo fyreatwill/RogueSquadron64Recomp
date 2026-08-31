@@ -129315,3 +129315,16 @@ mitigation was made.
 
 Evidence: `scratch/agent/s3337_m5_callback_early_store.md` and the port log at
 `scratch/agent/s3334_m5_callback_writer_attribution/port.log`.
+## Session 3338 (2026-08-30) — captured M5 callback entry without caller marker
+
+Built the regeneration-surviving `registerSiCallback` entry probe and ran the
+prescribed recipe. The first run crashed at 169 ms before controls, so it was
+discarded. The fixed reachability run passed host-boundary and task-handoff
+controls, reached title VI 1024 and hangar VI 512, and had no crash or abort.
+The entry probe fired 11 times: `0x80003250` once, `0x8009123C` six times,
+and `0x8009B5A8` four times. Every captured `$ra` was zero, including the
+phase-2 `0x8009123C` entry. This refutes a store-versus-entry mismatch but
+does not identify the caller; `$ra=0` is not evidence of an address-zero
+caller. The next discriminator must mark the transfer at the generated caller
+side. No behavior change or mitigation was made. Evidence:
+`scratch/agent/s3338_m5_callback_entry.md`.

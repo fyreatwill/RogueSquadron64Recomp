@@ -8,6 +8,14 @@ Current maintenance marker: Session 3337 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
+Session 3338 added a regeneration-surviving entry probe at
+`registerSiCallback` (`0x80007910`). The valid fixed recipe passed host/task,
+title-1024, and hangar-512 controls; entry captured `0x8009123C` in phase 2
+and later target phases, but `$ra` was zero on every row. This refutes a
+store-versus-entry mismatch but does not identify the caller; zero is a
+single-source generated-context result, not an address-zero caller finding.
+Evidence: `scratch/agent/s3338_m5_callback_entry.md`.
+
 Session 3337 selected the early callback-table store writer. The port passed
 host/task controls and reached title 1024 and hangar 512. An ungated exact
 store hook observed `0x80007928` writing `0x80003250` and then
@@ -462,7 +470,7 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3330–3334:
+1. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3330–3338:
    the reachable port hangar has valid task/PCM controls but no slot/status
    rows or named retail consumer-PC executions, selecting
    `H-PortSlotStatusMissing` on single-source port evidence. The callback audit
@@ -477,9 +485,12 @@ target row exists.
    whole-RDRAM and port task/host controls. Session 3336 found no direct
    generated callsite registering `0x8009123C`; the table is already
    `[80003250,8009123C,0,0]` before the later `0x8009BC50` call. Next: capture
-   `0x80007928` store events outside target phases to distinguish an early
-   store from a transient census observation. Do not change a contract edge
-   or add a mitigation.
+   Session 3338 proves the `0x8009123C` value is already present at
+   `registerSiCallback` entry, but generated `$ra` is zero for all entries, so
+   the caller remains unresolved. Next: add a caller-side transfer marker that
+   records the actual generated callsite and entry ordinal in the same build;
+   do not infer a caller from `$ra=0`. Do not change a contract edge or add a
+   mitigation.
    Do not add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
