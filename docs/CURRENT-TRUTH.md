@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3365 (2026-08-31). Compacted from
+Current maintenance marker: Session 3366 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -63,6 +63,16 @@ PCM-boundary rows were zero; no run had title/hangar or crash/abort markers.
 These attempts are route-invalid/unevaluable, not evidence for a downstream
 hypothesis. The next attempt must use the known valid 90-second direct recipe
 from s3364. Evidence: `scratch/agent/s3365_m5_downstream_contract.md`.
+
+Session 3366 corrected the route recipe and qualified the downstream contract.
+The valid LLE port run reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, with callback transfer/entry controls live and no crash or
+abort markers. The `0x80019B74` consumer-entry marker remained zero, while PCM
+source and consumer boundaries both fired. Audio task joins used the
+`musyx_stub` arm and reported `dma_count=0`, no source/consumer matches, and
+`complete=0`. This selects `H-PortConsumerIndirectGap` and records the stubbed
+audio divergence; it does not implicate the PCM boundary. Evidence:
+`scratch/agent/s3366_m5_downstream_contract.md`.
 
 Session 3358 validated the session 3357 task-start pointer guard on the live
 route. The Debug binary reached title VI `1024 @ 0x00790400` at 14.6 s and

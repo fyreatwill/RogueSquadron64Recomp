@@ -129826,3 +129826,21 @@ this run, not any downstream hypothesis. The next attempt must use the known
 valid 90-second direct recipe from s3364, which reached title at 13.7 seconds
 and hangar at 25.0 seconds. Evidence:
 `scratch/agent/s3365_m5_downstream_contract.md`.
+
+## Session 3366 (2026-08-31) — qualified M5 downstream contract
+
+The first direct launch omitted the qualified LLE/solo/spin-yield/autopilot
+controls and stayed in 640 attract, so its nulls were discarded. The corrected
+single port arm ran from `build/` with the canonical route and reached title VI
+`1024 @ 0x00790400` at 13.5 seconds and hangar VI `512 @ 0x006AB400` at 24.8
+seconds. Callback transfer/entry controls fired in both target phases, with
+zero crash/abort markers.
+
+The named `0x80019B74` consumer-entry marker stayed at zero, while PCM source
+and consumer boundaries both fired (100 rows each). Audio task ABI and join
+rows fired through `musyx_stub`; joins reported `dma_count=0`, no
+source/consumer matches, and `complete=0`. Voice-slot activity occurred, but
+no active voice contract completed. This selects
+`H-PortConsumerIndirectGap` and records the stubbed audio divergence; it does
+not implicate the PCM boundary. No behavior change was made. Evidence:
+`scratch/agent/s3366_m5_downstream_contract.md`.

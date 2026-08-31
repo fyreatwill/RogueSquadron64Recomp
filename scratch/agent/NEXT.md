@@ -1,42 +1,38 @@
-# NEXT work unit — qualify M5 Step 1 downstream contract
+# NEXT work unit — census M5 consumer indirect dispatch
 
-HYPOTHESIS-ID: m5-downstream-contract
+HYPOTHESIS-ID: m5-consumer-indirect-dispatch
 
-Session 3364 selected `H-PortMatchesRetail`: the qualified port run passed
-host/task/PCM, title, and hangar controls and observed the retail-matching
-`0x800919EC -> 0x80007910` edge with `$a0=0x8009123C`, plus the known
-`0x80007928 -> 0x8009123C` writer. The callback source/target gap is closed;
-the remaining M5 Step 1 question is whether the matching edge closes the
-downstream service/slot/voice/PCM contract.
+Session 3366 selected `H-PortConsumerIndirectGap`: the valid qualified route
+reached title and hangar, the callback edge and PCM source/consumer controls
+fired, but the named `0x80019B74` consumer-entry marker stayed zero. Audio task
+joins used `musyx_stub` and were incomplete by design.
 
 Competing hypotheses for the next unit:
 
-- `H-DownstreamContractComplete`: matching callback edges lead to the retail
-  service, slot/status, voice, and PCM outcomes.
-- `H-PortConsumerIndirectGap`: the matching edge exists, but the port does not
-  dispatch the callback-table consumer path.
-- `H-PortAudioContractGap`: consumer dispatch exists, but task/slot/voice/PCM
-  completion still diverges after the callback edge.
+- `H-GeneratedConsumerEdgePresent`: an existing generated indirect call feeds
+  one or more named consumer PCs, but the current marker misses that edge.
+- `H-GeneratedConsumerEdgeAbsent`: no generated caller reaches the named
+  consumers; the unresolved dispatch is outside the generated static map.
+- `H-ConsumerNameOrPCMismatch`: the runtime marker names or keys the wrong
+  consumer PCs despite the callback edge being valid.
 
-Discriminating measurement: one build/run using the existing phase-gated
-consumer-entry, slot/status, voice, PCM source/consumer, task/SP-completion,
-title, and hangar markers, while retaining the callback edge as a control. A
-complete service-to-PCM row selects `H-DownstreamContractComplete`; matching
-callback rows with zero consumer entries selects `H-PortConsumerIndirectGap`;
-consumer entries with missing slot/voice/PCM joins selects
-`H-PortAudioContractGap`. Any null before title/hangar is unevaluable.
+Discriminating measurement: a bounded static census, not a new runtime field.
+Enumerate every generated `jalr`/`LOOKUP_FUNC` site whose target can reach the
+four named consumer PCs, classify its source register/constant and overlay,
+and compare it with the existing consumer-entry marker definitions. A concrete
+generated edge selects `H-GeneratedConsumerEdgePresent`; no edge after a
+complete census selects `H-GeneratedConsumerEdgeAbsent`; a mismatch between
+the four named PCs and their marker wiring selects `H-ConsumerNameOrPCMismatch`.
+An incomplete symbol/overlay map is unresolved, not a null result.
 
-Exact bounded preparation before any build:
+Exact commands:
 
 ```sh
 rg -n -C 8 'serviceVoicePoolFrame|0x80019B74|consumer_entry|pcm-boundary' src tools ../N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n 'jalr|LOOKUP_FUNC' ../N64Recomp/RecompiledFuncs/funcs_*.c | rg '8009B5A8|8009BD7C|80019B74|consumer|voice|slot'
 ```
 
-Then inspect the existing regeneration-safe consumer markers, add only a
-missing join if the complete table cannot be read, build once, and run the
-qualified port recipe directly from `build/` for 90 seconds with no injected
-input. The prior 45-second attempts stayed in 640 attract; the known valid
-s3364 route reached title at 13.7 seconds and hangar at 25.0 seconds. Require
-title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` before reading
-consumer/PCM nulls. The callback edge and route controls must visibly fire
-before any downstream null is interpreted. No behavior change or mitigation.
+Inspect only the existing regeneration-safe marker definitions and generated
+call sites; no build or runtime experiment is needed unless the census finds
+missing marker wiring that can be corrected without changing behavior. No
+behavior change or mitigation.
