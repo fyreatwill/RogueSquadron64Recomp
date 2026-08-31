@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3380 (2026-08-31). This file was compacted
+through Session 3381 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -82,11 +82,24 @@ renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 3. Discriminator: same-run rows keyed by caller PC, destination, value, len,
    phase, and audio-task ordinal/row. Retail caller activity with no matching
    port row selects `H-PortCaller8002BEECAbsent`; matching activity with a
-   tuple difference selects `H-PortCallerArgumentConstruction`; matching
-   tuple under a distinct dispatch path selects `H-PortCallerDispatchAlias`.
-4. Keep phase, audio-task/ABI, PCM, image-stage/DMA, title, and hangar positive
-   controls. Build all desired arms in one iteration if an A/B is needed. Do
-   not change behavior. Evidence: `scratch/agent/s3380_m5_caller_census.md`.
+  tuple difference selects `H-PortCallerArgumentConstruction`; matching
+  tuple under a distinct dispatch path selects `H-PortCallerDispatchAlias`.
+- Session 3381's oracle-plus-port census passed the whole-RDRAM, title, hangar,
+  audio/image/PCM controls. Retail showed 402 `0x8002BEEC -> 0x800078EC`
+  predecessor executions and two `0x8008F2CC` executions. The port target row
+  matched retail's `dst=0x801797B0`, `val=0`, `len=0x298`, but arrived through
+  `0x8008F2CC -> rs_memset`; no port target row used `0x8002BEEC`. This selects
+  `H-PortCaller8002BEECAbsent` for the direct-writer edge and refutes argument
+  construction mismatch at that tuple. The alias mechanism remains unresolved.
+  Evidence: `scratch/agent/s3381_m5_caller_census.md`.
+4. Trace the selected direct-writer edge. Before building, ask the oracle for
+   phase-gated rows at `0x8002BEEC` and `0x800078EC` including the predecessor
+   and target bytes, then add one port-side census at the equivalent writer
+   entry that records the guest return/caller edge and target bytes. Keep all
+   existing controls; do not change output or audio behavior.
+5. Discriminator: a port writer edge with `caller=0x8002BEEC` and matching
+   target bytes selects dispatch alias/translation; no such edge while the
+   port zero-fill persists selects an earlier missing dispatch/producer edge.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

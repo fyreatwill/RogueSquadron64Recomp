@@ -130130,3 +130130,20 @@ out writer absence as the explanation. It does not prove that the zero fill is
 illegitimate; no behavior changed. The helper budget fix is in
 `tools/apply_s2447_m5_static_calls.py`. Evidence is in
 `scratch/agent/s3380_m5_caller_census.md`.
+## Session 3381 (2026-08-31) — traced M5 direct-writer caller edge
+
+Ran the required retail oracle first with whole-RDRAM, target-span, caller, and
+writer controls. The control fired; retail reached title `1024 @ 0x00790400`
+and hangar `512 @ 0x006AB400`. Retail executed `0x8002BEEC` as predecessor to
+`0x800078EC` 402 times and executed `0x8008F2CC` twice. The target field row
+identified `0x801797B0`.
+
+Built and ran the validated port route with the existing phase, title, hangar,
+audio/image, and PCM controls. The target row matched retail's destination,
+zero value, and `0x298` length, but its caller was `0x8008F2CC` through
+`rs_memset`; no target-phase port row used `0x8002BEEC`. No crash or abort
+occurred. This selects `H-PortCaller8002BEECAbsent` for the direct-writer edge
+and refutes argument construction mismatch at the observed tuple. It leaves
+the alias/translation mechanism unresolved and does not establish that the
+zero fill is illegitimate. No behavior changed. Evidence:
+`scratch/agent/s3381_m5_caller_census.md`.
