@@ -1,12 +1,11 @@
-# NEXT work unit — re-qualify the M5 route before the direct-writer census
+# NEXT work unit — phase-qualified M5 direct-writer edge census
 
-HYPOTHESIS-ID: m5-direct-writer-route-qualification
+HYPOTHESIS-ID: m5-direct-writer-edge
 
-Before building, reproduce the validated LLE-only real-audio route with the
-established phase, callback, PCM, and static-rs_memset controls. The previous
-corrected attempt crashed in `fillSampleStreamRange` before title, so first
-establish that the route reaches VI 1024 and VI 512 without a crash. Do not
-interpret writer absence unless both phase controls fire.
+Before building, ask the retail oracle for writer ground truth, then build one
+port census containing the existing phase, audio-task, callback, PCM, and
+static-rs_memset controls plus direct-writer edge fields. Run from `build/`
+through `tools/probe.sh`; do not change output or audio behavior.
 
 Retail command shape:
 
@@ -14,29 +13,27 @@ Retail command shape:
       --watch-write 0x0:0x800000 --watch-pc 0x8002BEEC --watch-pc 0x800078EC \
       --pc-phase-log-width 0x006AB400:512 --pc-phase-log-width 0x00790400:1024
 
-Port command shape, after the instrument is built, from `build/`:
+Port route shape:
 
     env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_STUB_MISSING_FUNCS=1 \
-      ROGUESQ_LOG_M5_DIRECT_WRITER=1 ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
+      ROGUESQ_LOG_M5_CALLBACK_WRITER=1 ROGUESQ_LOG_PCM_BOUNDARY=1 \
+      ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' \
       ./RogueSquadron64Recomp
 
 Competing hypotheses:
 
-- `H-RouteStable`: the established route reaches title/hangar; the prior crash
-  was transient or recipe-related and the direct-writer census can resume.
-- `H-AudioRouteCrash`: the real-audio route dies in `fillSampleStreamRange`
-  before title, blocking the direct-writer census behind an audio defect.
-- `H-LoggingRouteCrash`: only the combined logging set triggers the early
-  crash; a no-log control in the same iteration reaches title/hangar.
+- `H-DispatchAlias`: port reaches `0x800078EC` with caller edge
+  `0x8002BEEC` and matching target bytes; the gap is dispatch/translation.
+- `H-EarlierProducerGap`: port zero-fill persists with no
+  `caller=0x8002BEEC` writer edge; the missing edge is upstream.
+- `H-LegitimateZeroThenProducer`: port reaches the matching writer edge but
+  stores zero while retail independently stores nonzero bytes; a later producer
+  remains unlocated.
 
-Discriminator: same-iteration no-log and logging arms must both reach title
-1024 and hangar 512 with zero crash/abort markers. Stable arms reopen the
-writer census; logging-only failure selects `H-LoggingRouteCrash`; failure in
-both arms selects `H-AudioRouteCrash`. A missing phase marker makes the arm
-invalid, not a hypothesis result.
-
-Exact constraints: ask the oracle before building; launch the port from
-`build/` through `tools/probe.sh`; use the canonical Start schedule and
-non-dot-prefixed capture paths; terminate with SIGKILL. Batch no-log and
-logging arms in one iteration. Do not hand-edit generated functions.
+Discriminator: compare phase-qualified retail rows at `0x800078EC` and
+`0x8002BEEC` with port writer rows. Matching caller and bytes selects
+`H-DispatchAlias`; persistent port zero-fill without the caller edge selects
+`H-EarlierProducerGap`; matching caller with zero port bytes and nonzero retail
+post-store bytes selects `H-LegitimateZeroThenProducer`. Missing phase markers
+make the port arm invalid. Use one build and one run with all controls.

@@ -50,6 +50,12 @@ source boundary:
   spans. This selects `H-PortSourceWriterZero`, refutes writer absence for the
   observed port span, and moves the gap upstream to the writer's input/caller
   contract. Transform behavior on nonzero input remains unevaluable.
+- Session 3385 rebuilt the stale executable and re-qualified the paired route:
+  no-log and established-logging arms both reached title VI 1024 and hangar
+  VI 512, with zero crash/abort markers. The logging arm's phase and audio/task
+  controls fired. The prior s3384 pre-title crash was not reproduced; no
+  direct-writer row occurred in this qualification window, so writer-edge
+  hypotheses remain open.
 - Session 3380's fixed caller census passed whole-RDRAM, title, hangar,
   audio-ABI, image-join, PCM-join, and PCM-boundary controls. The port target
   span was issued by `rs_memset` callsite `0x8008F2CC` with
@@ -67,22 +73,13 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Re-qualify the M5 route before interpreting the direct-writer edge. Session
-   3384's corrected phase-gated rerun crashed before title in
-   `fillSampleStreamRange` (last guest PC `0x8000B650`), so no target-phase row
-   is valid. Do not treat this as evidence for writer absence.
-2. Trace the selected direct-writer edge. Session 3383 re-qualified the route:
-   the no-log arm reached title/hangar at 14.6s/23.8s, and the established M5
-   logging arm reached them at 11.6s/19.8s; both had zero crash/abort markers.
-   The logging controls positively fired. This refutes the logging-trigger and
-   route-regression explanations for the s3382 early crash and confirms the
-   recipe is reproducible.
-3. Before building, ask the retail oracle for phase-gated rows at
+1. Trace the selected direct-writer edge. Before building, ask the retail
+   oracle for phase-gated rows at
    `0x8002BEEC` and `0x800078EC`, including predecessor and target bytes, then
    batch one port census at the equivalent writer entry recording the guest
    return/caller edge and target bytes. Keep all existing controls; do not
    change output or audio behavior.
-4. Discriminator: a port writer edge with `caller=0x8002BEEC` and matching
+2. Discriminator: a port writer edge with `caller=0x8002BEEC` and matching
    target bytes selects dispatch alias/translation; no such edge while the
    port zero-fill persists selects an earlier missing dispatch/producer edge.
    A matching writer with zero bytes, paired with retail nonzero post-store

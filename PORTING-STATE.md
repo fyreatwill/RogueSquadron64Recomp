@@ -130193,3 +130193,25 @@ because the required phase was not reached. The next unit re-qualifies this
 route before interpreting the edge. Evidence:
 `scratch/agent/s3384_direct_writer_attempt.md` and
 `scratch/agent/oracle_s3384.log`.
+
+## Session 3385 (2026-08-31) — re-qualified M5 route after stale-build correction
+
+The retail oracle ran first. Its whole-RDRAM positive control reached 10,000
+callbacks; retail executed `0x800078EC` 9,667 times and `0x8002BEEC` zero times.
+No retail phase rows were produced, so this was valid writer ground truth but
+not a retail phase comparison.
+
+The first paired port attempt exposed a stale executable: both arms reached the
+target phases, but expected M5 logging markers were absent. After rebuilding
+`RogueSquadron64Recomp`, the fixed paired run used the canonical LLE-only route
+and autopilot through `tools/probe.sh`. Both no-log and logging arms reached VI
+1024 and VI 512, returned 0, and had zero `[CRASH]` and `[ABORT]` markers. The
+logging arm emitted phase and audio-task controls. No direct-writer rows were
+observed in this qualification window.
+
+This selects `H-RouteStable` for route qualification and refutes the
+logging-triggered and reproducible pre-title audio-route-crash explanations at
+this run scope. It does not select a direct-writer hypothesis; that census is
+the next work unit. The stale logging variable `ROGUESQ_LOG_M5_DIRECT_WRITER`
+was not used as evidence; the established callback/PCM controls were used
+after rebuilding.
