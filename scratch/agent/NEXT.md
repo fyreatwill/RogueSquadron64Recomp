@@ -34,5 +34,9 @@ rg -n -C 8 'serviceVoicePoolFrame|0x80019B74|consumer_entry|pcm-boundary' src to
 
 Then inspect the existing regeneration-safe consumer markers, add only a
 missing join if the complete table cannot be read, build once, and run the
-qualified port recipe. The callback edge and route controls must visibly fire
+qualified port recipe directly from `build/` for 90 seconds with no injected
+input. The prior 45-second attempts stayed in 640 attract; the known valid
+s3364 route reached title at 13.7 seconds and hangar at 25.0 seconds. Require
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` before reading
+consumer/PCM nulls. The callback edge and route controls must visibly fire
 before any downstream null is interpreted. No behavior change or mitigation.

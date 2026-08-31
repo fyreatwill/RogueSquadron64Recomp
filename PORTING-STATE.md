@@ -129808,3 +129808,21 @@ This selects `H-PortMatchesRetail` and refutes `H-PortWriterMismatch` and
 `H-PortProbeGap` for the qualified route. The callback source/target question
 is closed, but downstream consumer divergence remains open. No behavior
 change was made. Evidence: `scratch/agent/s3364_m5_port_callback_edge.md`.
+## Session 3365 (2026-08-31) — qualified M5 downstream contract route
+
+The Debug target rebuilt successfully. Three bounded attempts used the
+existing regeneration-surviving downstream markers. The first 1024-gated
+probe and the corrected 640-gated probe remained in non-target 640 attract
+origin `0x62BD00`; the corrected run passed host-boundary and real-audio
+positive controls (host-boundary=1, audio-task=61, PCM-sanity=30), but had no
+title/hangar phase. A final direct no-input run for 45 seconds likewise passed
+host/audio controls, remained at `0x62BD00`, and produced zero target-phase
+consumer-entry or PCM-boundary rows, with no crash/abort markers.
+
+These runs are route-invalid/unevaluable and select none of
+`H-DownstreamContractComplete`, `H-PortConsumerIndirectGap`, or
+`H-PortAudioContractGap`. They rule out interpreting target-phase nulls from
+this run, not any downstream hypothesis. The next attempt must use the known
+valid 90-second direct recipe from s3364, which reached title at 13.7 seconds
+and hangar at 25.0 seconds. Evidence:
+`scratch/agent/s3365_m5_downstream_contract.md`.
