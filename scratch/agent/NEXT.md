@@ -1,43 +1,38 @@
-# NEXT work unit — census the port source/target callback edge
+# NEXT work unit — qualify M5 Step 1 downstream contract
 
-HYPOTHESIS-ID: m5-callback-table-writer
+HYPOTHESIS-ID: m5-downstream-contract
 
-Session 3363 selected `H-RetailLiteralArgument`: the independent retail
-oracle passed all controls and observed `0x800919EC -> 0x80007910` with
-`$a0=0x8009123C` in both target phases. The next unit is one bounded,
-regeneration-surviving port census of the same source/target table; no
-behavior change or mitigation.
+Session 3364 selected `H-PortMatchesRetail`: the qualified port run passed
+host/task/PCM, title, and hangar controls and observed the retail-matching
+`0x800919EC -> 0x80007910` edge with `$a0=0x8009123C`, plus the known
+`0x80007928 -> 0x8009123C` writer. The callback source/target gap is closed;
+the remaining M5 Step 1 question is whether the matching edge closes the
+downstream service/slot/voice/PCM contract.
 
-Session 3362 found the only generated `0x800919D4`/`0x800919EC` site in
-`initN64RspMixer`: `$a0` is set to literal `0x8009123C` immediately before
-the `jalr`, and the target is loaded from the slot initialized at
-`0x80091900`. Session 3361 paired the port callback-table store: `0x80007928`
-wrote `0x8009123C`, `0x80007968` cleared, and `0x80017D08` wrote only
-`0x400/0x800` halfwords.
+Competing hypotheses for the next unit:
 
-Competing hypotheses:
+- `H-DownstreamContractComplete`: matching callback edges lead to the retail
+  service, slot/status, voice, and PCM outcomes.
+- `H-PortConsumerIndirectGap`: the matching edge exists, but the port does not
+  dispatch the callback-table consumer path.
+- `H-PortAudioContractGap`: consumer dispatch exists, but task/slot/voice/PCM
+  completion still diverges after the callback edge.
 
-- `H-PortMatchesRetail`: the port callback-table writer and indirect call
-  produce the retail target/value pair.
-- `H-PortWriterMismatch`: the port writes a different source value, writer,
-  or target than retail.
-- `H-PortProbeGap`: the port chain is present but the census misses its edge.
-
-Discriminating measurement: one build/run with an aggregate, phase-gated
-probe joining every write to `0x8011A8A4:0x8011A8B8` to its guest writer PC and
-the subsequent `0x800919EC`/`0x80007910` target and `$a0`, while retaining
-host/task/PCM, title, and hangar controls. A paired port row matching retail
-(`0x80007928 -> 0x8009123C` and `0x800919EC -> 0x80007910`, `$a0=0x8009123C`)
-selects `H-PortMatchesRetail`; a controlled different writer/value/target
-selects `H-PortWriterMismatch`; table writes plus no chain rows with controls
-selects `H-PortProbeGap`.
+Discriminating measurement: one build/run using the existing phase-gated
+consumer-entry, slot/status, voice, PCM source/consumer, task/SP-completion,
+title, and hangar markers, while retaining the callback edge as a control. A
+complete service-to-PCM row selects `H-DownstreamContractComplete`; matching
+callback rows with zero consumer entries selects `H-PortConsumerIndirectGap`;
+consumer entries with missing slot/voice/PCM joins selects
+`H-PortAudioContractGap`. Any null before title/hangar is unevaluable.
 
 Exact bounded preparation before any build:
 
 ```sh
-rg -n -C 8 '800919D4|800919EC' ../N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -C 8 'serviceVoicePoolFrame|0x80019B74|consumer_entry|pcm-boundary' src tools ../N64Recomp/RecompiledFuncs/funcs_*.c
 ```
 
-Then inspect the existing aggregate probe/fixup path, add only the missing
-joined fields, build once, and run the qualified port recipe. The positive
-controls must visibly fire before any null is interpreted.
+Then inspect the existing regeneration-safe consumer markers, add only a
+missing join if the complete table cannot be read, build once, and run the
+qualified port recipe. The callback edge and route controls must visibly fire
+before any downstream null is interpreted. No behavior change or mitigation.

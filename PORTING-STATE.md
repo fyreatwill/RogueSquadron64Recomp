@@ -129790,3 +129790,21 @@ alternate retail argument or absent retail chain for the qualified route.
 Together with Session 3362's generated static census, this supplies two-line
 evidence. No behavior change was made. Raw capture:
 `scratch/agent/s3363_m5_retail_callback_argument/oracle.log`.
+
+## Session 3364 (2026-08-31) — qualified port callback source/target edge
+
+Rebuilt the Debug target and ran the qualified LLE port route for 90 seconds
+from `build/` with the aggregate callback writer, transfer, and entry probes.
+The positive controls fired: 133 host-boundary rows, 1,346 audio task ABI
+rows, 180 PCM boundary rows, title VI `1024 @ 0x00790400`, and hangar VI
+`512 @ 0x006AB400`. There were zero `[CRASH]` or `[ABORT]` markers; the game
+was terminated with SIGKILL after collection.
+
+The target phases captured the same edge independently observed on retail:
+`0x800919EC -> 0x80007910` with `$a0=0x8009123C`, plus the direct
+`0x8009BC50 -> 0x80007910` path with `$a0=0x8009B5A8`. The writer census also
+captured `0x80007928 -> 0x8009123C` and `0x80091900 -> 0x80007910`.
+This selects `H-PortMatchesRetail` and refutes `H-PortWriterMismatch` and
+`H-PortProbeGap` for the qualified route. The callback source/target question
+is closed, but downstream consumer divergence remains open. No behavior
+change was made. Evidence: `scratch/agent/s3364_m5_port_callback_edge.md`.

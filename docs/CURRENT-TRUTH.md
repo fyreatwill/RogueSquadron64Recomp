@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3363 (2026-08-31). Compacted from
+Current maintenance marker: Session 3364 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -44,6 +44,15 @@ the separate direct `0x8009BC50` path passed `0x8009B5A8`. This selects
 retail chain. Together with Session 3362's static census this is two-line
 evidence; the missing port source/target census remains open. Evidence:
 `scratch/agent/s3363_m5_retail_callback_argument.md`.
+
+Session 3364's rebuilt qualified port run passed host/task/PCM controls, title
+1024, and hangar 512 with zero crash/abort markers. Its aggregate census
+captured the same callback edge as retail, `0x800919EC -> 0x80007910` with
+`$a0=0x8009123C`, plus the known port store `0x80007928 -> 0x8009123C` and
+initializer `0x80091900 -> 0x80007910`. This selects `H-PortMatchesRetail`
+and refutes `H-PortWriterMismatch` and `H-PortProbeGap` for the qualified
+route. The callback source/target qualification is closed; no behavior
+change was made. Evidence: `scratch/agent/s3364_m5_port_callback_edge.md`.
 
 Session 3358 validated the session 3357 task-start pointer guard on the live
 route. The Debug binary reached title VI `1024 @ 0x00790400` at 14.6 s and
@@ -603,6 +612,15 @@ target row exists.
    `H-PortWriterIsThirdGuestSite` and leaves the upstream source/call path
    that supplies `0x8009123C` to `registerSiCallback` as the next boundary.
    Evidence: `scratch/agent/s3361_m5_callback_table_writer_source.md`.
+   Session 3364's rebuilt qualified port run passed host/task/PCM, title, and
+   hangar controls with zero crash/abort markers. It captured the same
+   `0x800919EC -> 0x80007910` transfer and `$a0=0x8009123C` as retail, plus
+   `0x80007928 -> 0x8009123C` and `0x80091900 -> 0x80007910`. This selects
+   `H-PortMatchesRetail` and refutes `H-PortWriterMismatch` and
+   `H-PortProbeGap`; the callback source/target qualification is closed.
+   Next: qualify the downstream service/slot/voice/PCM contract in one
+   phase-gated port run. Evidence:
+   `scratch/agent/s3364_m5_port_callback_edge.md`.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
