@@ -8,7 +8,7 @@ Current maintenance marker: Session 3315 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
-## Live investigation (s3303–s3314)
+## Live investigation (s3303–s3315)
 
 Session 3315 completed the static B1C caller/order audit. The generated tree
 contains exactly three fixed-address accesses: the zero reset at `0x800A5EE8`,
