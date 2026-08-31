@@ -130618,3 +130618,21 @@ shows whether the caller exists in the port or is silenced.
 
 No audio behavior changed. Evidence: `docs/M5-S3402-SLOT-PREPHASE.md` and
 `scratch/agent/s3402_retail_field348_owner/oracle.log`.
+## Session 3403 (2026-08-31) — M5 retail PCM-dispatch watch qualification
+
+Ran the prescribed retail ground-truth caller probe for `0x8002BEEC`, retaining
+the whole-RDRAM positive control, title/hangar phase trace, and the secondary
+`0x1935E0` PCM-write control. The oracle reached both target phases: title
+1024 was present for 632 VI frames and hangar 512 for 397 VI frames. The
+whole-RDRAM control reached 10,000 callbacks and the secondary control fired
+40 times. The caller execution watch itself reported zero hits and therefore
+no `exec-prev` histogram.
+
+This is a valid instrument null, not an absent-run result, but it is not yet a
+dispatch discriminator: the 60-second route ended while the secondary control
+had only 40 writes, whereas earlier longer retail captures observed the target
+PCM path. It does not select `H-Dispatch-DirectCaller`,
+`H-Dispatch-IndirectCaller`, or `H-Dispatch-BootOnly`, and it does not justify
+changing the port. The next probe extends this same phase-qualified route to
+120 seconds without adding runtime instrumentation. Evidence:
+`scratch/agent/s3403_retail_8002beec_caller/oracle.log`.

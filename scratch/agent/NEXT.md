@@ -1,11 +1,13 @@
-# NEXT work unit — retail exec-prev for 0x8002BEEC dispatch caller
+# NEXT work unit — extend retail exec-prev capture for 0x8002BEEC
 
 HYPOTHESIS-ID: m5-image-stage3-destination
 
 The slot-level investigation is closed for hangar-512: both retail and port have
-`field348=0x801797B0` (two independent lines from s3401 + s3402). The gap is in
-what dispatches `0x8002BEEC` — the JAL that calls `0x800078EC` (the PCM writer).
-In retail it fires 37,635 times per 120 s; in the port, zero times.
+`field348=0x801797B0` (two independent lines from s3401 + s3402). The first
+60-second caller-watch attempt passed all controls and reached hangar, but
+`0x8002BEEC` had zero hits and the secondary `0x1935E0` control had only 40
+writes. Extend the same route to 120 seconds so the known later retail PCM
+activity has time to appear.
 
 Use `--watch-pc 0x8002BEEC` to capture the oracle's `exec-prev` histogram for
 that PC. The README states: "exec-prev pc=X prev=Y n=N — for each exec hit,
@@ -34,7 +36,7 @@ Command:
       --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
       --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
       --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-      --secs 60 \
+      --secs 120 \
       --watch-write 0x0:0x800000 \
       --watch-pc 0x8002BEEC \
       --watch-write 0x1935E0:0x1935F0 \
@@ -46,8 +48,9 @@ Command:
       > scratch/agent/s3403_retail_8002beec_caller/oracle.log 2>&1
 
 Notes:
-- 60 seconds is enough to reach hangar-512 (~38s measured); the phase-log
-  restricts logged exec rows to title/hangar to prevent boot noise.
+- 120 seconds is enough to retain the hangar-512 phase after the ~38s
+  transition; the phase-log restricts logged exec rows to title/hangar to
+  prevent boot noise.
 - Retain whole-RDRAM positive control. Retain `0x1935E0` as a secondary control
   (confirming retail PCM production path is live).
 - The `exec-prev` lines in the shutdown summary name the JAL dispatch site.

@@ -386,6 +386,18 @@ Combined with s3401's port witness, this gives two independent lines:
   The slot-level investigation is closed for hangar-512. Evidence is in
   [M5-S3402-SLOT-PREPHASE.md](M5-S3402-SLOT-PREPHASE.md).
 
+Session 3403 ran the prescribed retail `--watch-pc 0x8002BEEC` probe for 60
+seconds with whole-RDRAM, title/hangar, and `0x1935E0` controls. The oracle
+reached title 1024 (632 VI) and hangar 512 (397 VI); the positive control
+reached 10,000 callbacks and the secondary PCM control fired 40 times. The
+caller watch had zero execution hits and no `exec-prev` rows. Because the
+secondary path was only lightly active in this shorter route, this is a valid
+instrument null but not a dispatch discriminator: it selects none of
+`H-Dispatch-DirectCaller`, `H-Dispatch-IndirectCaller`, or
+`H-Dispatch-BootOnly`. A longer same-route capture is required before adding
+port caller instrumentation. Evidence is in
+`scratch/agent/s3403_retail_8002beec_caller/oracle.log`.
+
 Baseline and independent boundary evidence remains indexed in the ledger and
 PROJECT-OVERVIEW section 54. Use bounded `grep`/ `sed` windows for
 PORTING-STATE.md; never read it wholesale. The soak queue is consumed by
