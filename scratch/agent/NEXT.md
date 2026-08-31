@@ -1,45 +1,52 @@
-# NEXT work unit — post-sample retail table-entry writers
+# NEXT work unit — capture port table pointer at the load edge
 
 HYPOTHESIS-ID: m5-output-state-contract-boundary
 
-Session 3467 confirmed the candidate retail table-span writers and their entry
-addresses, but `store-field-dump` exposes only the pre-store word. The shared
-post-value sampler still sees nonzero retail state pointers, while the
-candidate writer/value join remains unevaluable.
+Session 3468 corrected the oracle configuration and measured the retail
+post-store values. The independent controls passed and all candidate writers
+produced ordered values, but the retail-only run cannot distinguish a source
+value divergence from a different port-side table pointer.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-SourceWriterValue`: the same table entry is selected, but its writer
-  stores a different value, selecting the source-table contract edge.
-- `H-TablePointerDivergence`: the table pointer/selection differs before the
-  load, selecting the producer/selection contract edge.
-- `H-ObservationInvalid`: the retail table is invalid; this requires failure
-  of both positive controls in the same run.
+- `H-SourceWriterValue`: port and retail select the same entry, but the stored
+  value differs; the port-side pointer matches the retail `0x801Bxxxx`
+  selection.
+- `H-TablePointerDivergence`: the port load selects a different table entry or
+  pointer before the shared writer boundary.
+- `H-PortObservationInvalid`: the port witness is absent or its positive
+  control fails, leaving the cross-runtime join unevaluable.
 
-Work unit: run one independent retail capture retaining the whole-RDRAM and
-physical source-watch controls, with `--post-value-watch 1` and
-`--post-value-pc 0x80064350,0x80064360,0x80064378,0x800646d8` so the table-span
-watch samples post-store words for each candidate writer. Keep the existing
-candidate execution watches, load/store rows, phase gates, and source-slot
-post-value watch. Join writer address/value to load/store rows by title phase
-and per-PC ordinal.
+Discriminating measurement: in one port run, phase-gated at title origin
+`0x00790400`, record the table pointer/entry selected at the
+`0x800644DC`/`0x80064524` edge, with the existing four-PC schema control and
+the source-writer control. Join by phase and ordinal to the Session 3468
+retail table. A matching entry with a different value selects
+`H-SourceWriterValue`; a different entry selects `H-TablePointerDivergence`;
+missing port rows or failed controls select `H-PortObservationInvalid`.
 
-Exact command: use the Session 3467 command, changing the post-value options
-to `--post-value-watch 1 --post-value-pc
-0x80064350,0x80064360,0x80064378,0x800646d8,0x80064524` and retaining
-`--post-value-watch 2 --post-value-pc 0x80064524 --vi-trace`. The base command
-is the validated Rice/Start command from Session 3467 with
-`--watch-write 0x0:0x800000 --watch-write 0x1b4aa0:0x1b4b24
---watch-write 0x1e8710:0x1e8714 --detail-watch 1`, the four candidate PCs
-plus `0x800644a8,0x800644dc,0x80064524`, both title phase gates, and
-`--post-value-watch 2 --post-value-pc 0x80064524 --vi-trace`. Keep the run
-inside the 35-second title window so the oracle flushes its summaries.
+Work unit: add one regeneration-safe port witness at the table-load edge that
+records the selected table pointer and ordinal, then build once and run the
+validated LLE/spin-yield title route. Keep the four-PC schema control, title
+phase gate, and existing source-writer rows in the same run. Do not alter
+audio waits, slots, status handling, consumer dispatch, clear behavior, or
+PCM writeback.
 
-Expected discriminator: same table pointer with a different stored entry value
-selects `H-SourceWriterValue`; a different table pointer/selection selects
-`H-TablePointerDivergence`; control failure selects `H-ObservationInvalid`.
-Do not add port fields or alter audio waits, slots, status handling, consumer
-dispatch, clear behavior, or PCM writeback.
+Exact preparation/build commands:
 
-Evidence inputs: `scratch/agent/s3464_m5_retail_producer_value/oracle.log` and
-`scratch/agent/s3460_m5_source_value_witness_retry/run.log`.
+1. `rg -n "800644DC|80064524|source-writer|four-PC" src tools RecompiledFuncs`
+2. Add the witness through the applicable fixup/instrumentation path, then
+   `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+3. Launch the existing validated title capture from `build/` with its LLE,
+   spin-yield, `PROBE_PHASE_WIDTH`, and `PROBE_KEYS_FROM_PHASE=1` settings,
+   writing the capture to `scratch/agent/s3469_m5_port_pointer/run.log`.
+4. Parse controls and the ordered join with `rg -n "control|phase|644dc|64524|pointer|source-writer"`.
+
+Expected outcomes: matching pointer plus divergent value selects
+`H-SourceWriterValue`; a different pointer selects
+`H-TablePointerDivergence`; missing rows or failed controls select
+`H-PortObservationInvalid`. No mitigation or runtime behavior change is
+authorized by this unit.
+
+Evidence baseline: `scratch/agent/s3468_m5_retail_post_value/oracle-fixed.log`
+and `docs/M5-S3468-RETAIL-POST-VALUE.md`.

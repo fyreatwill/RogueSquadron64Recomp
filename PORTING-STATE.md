@@ -131945,3 +131945,28 @@ neither `H-SourceWriterValue` nor `H-TablePointerDivergence`. Evidence:
 ORIGIN: no mitigation or runtime behavior change was added; the observed
 retail state-pointer values are legitimate, and candidate post-store values
 remain unmeasured.
+
+## Session 3468 (2026-08-31) — measured retail table-entry post-store values
+
+The first prescribed capture used table addresses instead of writer PCs for
+`--store-field-dump` and omitted `--post-value-pc-detail`; its positive
+controls and execution watches fired, but the post-target table was empty.
+The corrected single-run Rice oracle capture used the four writer PCs and
+detail rows. Whole-RDRAM, table-span, and source-slot controls fired with
+14,935, 3,032, and 1,903 writes; title reached both 1024-wide origins.
+Candidate writers `0x80064350`, `0x80064360`, `0x80064378`, and `0x800646D8`
+all fired, with 1,863 phase-qualified store callbacks and 968 unique rows.
+Post-store values were measured for all four writers. The shared
+`0x80064524` sampler recorded 398 nonzero rows, including 327
+`0x801B4F00` and 71 `0x801B5E70`.
+
+This repairs the instrument failure and establishes legitimate retail
+post-store values, but does not expose the port-side table pointer or
+selection. It therefore selects neither `H-SourceWriterValue` nor
+`H-TablePointerDivergence` across runtimes. The retail baseline now rules out
+missing ordered writer values and failed controls; the next unit must add the
+port pointer witness. Evidence: `docs/M5-S3468-RETAIL-POST-VALUE.md` and
+`scratch/agent/s3468_m5_retail_post_value/oracle-fixed.log`.
+
+ORIGIN: no mitigation or runtime behavior change was added; the observed
+retail post-store pointer values are legitimate.

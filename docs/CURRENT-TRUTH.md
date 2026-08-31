@@ -221,18 +221,28 @@ post-store values, so the exact writer/value join remains unevaluable; this
 confirms active legitimate retail writers but selects neither pointer nor
 value divergence. Evidence: [M5-S3467-RETAIL-WRITER-VALUES.md](M5-S3467-RETAIL-WRITER-VALUES.md).
 
+Session 3468 corrected the post-store instrument configuration and repeated
+the independent Rice capture. Whole-RDRAM, table-span, and source-slot
+controls fired with 14,935, 3,032, and 1,903 writes; title reached both
+1024-wide origins. Candidate writers `0x80064350`, `0x80064360`,
+`0x80064378`, and `0x800646D8` all fired, yielding 1,863 phase-qualified
+store callbacks and 968 unique rows. Post-store values were measured for all
+four writers, and the shared `0x80064524` sampler recorded 398 nonzero rows
+(327 `0x801B4F00`, 71 `0x801B5E70`). This repairs the earlier instrument
+failure and establishes legitimate retail post-store values, but the run did
+not expose the port-side table pointer or selection. Therefore neither
+`H-SourceWriterValue` nor `H-TablePointerDivergence` is selected across
+runtimes. Evidence: [M5-S3468-RETAIL-POST-VALUE.md](M5-S3468-RETAIL-POST-VALUE.md).
+
 ## Next steps
 
-1. Capture the post-store word for the identified title-phase table writers
-   (`0x80064350`, `0x80064360`, `0x80064378`, `0x800646D8`) at entries such as
-   `0x801B4AA0`/`0x801B4AA8`, retaining both positive controls and the existing
-   load/store watches. A matching entry pointer with a divergent stored value
-   selects `H-SourceWriterValue`; a different pointer/selection selects
-   `H-TablePointerDivergence`; missing ordered values remain unevaluable.
-2. Determine whether the next divergence is the table pointer or the table
-   entry's writer/value. A matching pointer with a different entry value names
-   the source-table contract; a different pointer names the producer/selection
-   contract; missing ordered rows remain unevaluable.
+1. Capture the port-side table pointer/selection at the intervening
+   `0x800644DC`/`0x80064524` edge, then join it to the qualified retail
+   post-store values and entry ordinals. Matching pointers with divergent
+   values select `H-SourceWriterValue`; different pointers select
+   `H-TablePointerDivergence`; missing ordered rows remain unevaluable.
+2. Retain the Session 3468 retail post-store table as the independent baseline;
+   do not repeat the retail-only capture unless the port witness changes.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 4. Use the producer join to identify the first output/state contract divergence
