@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3317 (2026-08-30). Compacted from
+Current maintenance marker: Session 3319 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -15,12 +15,14 @@ A1–A20 inventory in `docs/M5-AUDIO-PLAN.md`; this is single-source evidence
 and authorizes no behavior change. Evidence:
 `scratch/agent/s3317_m5_plan_reconciliation.md`.
 
-Session 3318 is blocked on the configured-host discriminator. This
-iteration's environment check reports Darwin 25.4.0 arm64, no local
-`mips64-elf-gcc`, no `RecompiledPatches/patches.c`, and no mounted
-`mips-toolchain`. The required Windows/MIPS build cannot be run here, and the
-local missing-target build is explicitly not to be repeated. Evidence is in
-the session entry and `scratch/agent/BLOCKED.md`.
+Session 3319 established that the configured-host PatchesLib discriminator is
+genuinely unavailable in this checkout, but it is not a project-wide stop.
+The documented pipeline has no host-only alternative; the native arm64
+`build/N64Recomp` artifact cannot produce the missing MIPS ELF. There is no
+local MIPS compiler/linker, `patches/patches.elf`, or generated
+`RecompiledPatches/patches.c`. The host build remains an open dependency,
+while the next unit is rescopeable to an independent retail publication
+capture. Evidence: `scratch/agent/s3319_unblock_routes.md`.
 
 ## Live investigation (s3303–s3317)
 
@@ -262,13 +264,11 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. BLOCKED pending access to the configured Windows/MIPS host. Once available,
-   run
-   `cmake --build build --config Debug --target PatchesLib` to distinguish
-   patch build availability from source/link failures. Do not repeat the local
-   missing-target check; Session 3317 measured this checkout as Darwin with
-   no `E:/mips-toolchain`. The falsifier is a successful configured-host run
-   or a compiler/linker failure after the target exists.
+1. Keep configured-host PatchesLib validation as an open dependency. When
+   that host is available, run `cmake --build build --config Debug --target
+   PatchesLib` to distinguish build availability from source/link failures.
+   Do not repeat the local missing-target check; Session 3319 confirmed the
+   missing MIPS stage and generated input here.
 2. Treat the B1C source investigation as closed at the observed phase: no
    alternate writer or ordering edge exists in the generated tree, and neither
    conditional nonzero path fired in Session 3314. Do not repeat the same
@@ -277,10 +277,14 @@ target row exists.
 3. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. The guard is not evidence that the
    VI-640 route or audio is corrupt.
-4. After the pre-VI-640 scheduler crash is repaired or explained, capture
-   consumed-message identity at `0x80019CD0` with `ROGUESQ_RECV_TRACE`
-   positive controls. Session 3269 selected `H-RecvWatchUnavailable`. Require
-   caller, message pointer, type byte, and `89F/28D44` in the same phase.
+4. Run one independent retail target-phase publication capture with the
+   existing oracle: whole-RDRAM write control, `--pc-phase-log-width`,
+   `--watch-pc 0x80035500`, `--post-swap-any-vi`, and the target transition.
+   Joined target rows select a retail swap publication edge; target mode rows
+   without a swap select a separate publication edge; no target transition
+   with controls passing selects an unreached target phase. Require caller,
+   physical framebuffer, mode origins, and next VI width/origin in the same
+   joined table.
 5. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row names
    one missing image task/output contract edge. Keep the change to exactly one
    proven writer/consumer relation.

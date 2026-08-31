@@ -127046,6 +127046,24 @@ remain unresolved, and M5 Step 3 remains gated. No code behavior was changed.
 
 Evidence: `scratch/agent/BLOCKED.md`.
 
+## Session 3319 (2026-08-30) — audited and rescoped the configured-host block
+
+I worked the unblock routes in order. Route 1 is refuted: `CMakeLists.txt`,
+`patches/README.md`, and `patches/Makefile` all require MIPS ELF generation
+before `RecompiledPatches/patches.c`, so the repository has no host-only
+PatchesLib path. Route 2 is unavailable locally: this is Darwin 25.4.0 arm64;
+the native `build/N64Recomp` exists, but `mips64-elf-gcc`, `mips64-elf-ld`,
+`patches/patches.elf`, and `RecompiledPatches/patches.c` do not. No software
+was installed or downloaded, and I did not repeat the prohibited local
+missing-target build. Evidence: `scratch/agent/s3319_unblock_routes.md`.
+
+Route 3 resolves the project stop: the configured-host build remains an open
+dependency, while `NEXT.md` now selects an independent retail target-phase
+publication capture using the existing oracle's positive control and
+post-swap join. `BLOCKED.md` was removed because the block was rescopeable;
+`UNBLOCK.md` records the evidence and falsifiable next unit. No behavior
+change or M5 Step 3 change was made.
+
 ## Session 3245 (2026-08-29) — re-scoped the unavailable guard validation
 
 Worked the four unblock routes in order. The checked-in `build/N64Recomp`
