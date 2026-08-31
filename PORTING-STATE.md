@@ -130528,3 +130528,26 @@ explanation there. It does not identify the guest producer of `field348` or
 establish zero-output legitimacy. No audio behavior changed. Evidence:
 `scratch/agent/s3399_m5_stage3_destination_contract/driver.log` and paired
 port/oracle logs.
+
+## Session 3400 (2026-08-31) — M5 field348 producer census
+
+The fresh build enabled the existing field348 writer/candidate/memset and
+static `rs_memset` caller probes, then ran the retail checkpoint with
+concurrent silent and image port arms. Retail passed the whole-RDRAM control,
+title/hangar gates, and checkpoint; its `0x1935E0` watch retained 18 post-store
+samples, including 12 nonzero samples from `0x800078EC`. Both port arms reached
+hangar without crash/abort markers.
+
+The image arm consistently reported `field348=0x801797B0`; its field348 span
+was zero-valued (`25E26BC5`, `nz=0`). The span was initialized by the target
+zero-fill at `0x8008F2CC` (`dst=0x801797B0`, `len=0x298`), and the only observed
+span writer was `0x800078EC`, writing zero bytes. Stage 3 copied DMEM
+`0xCB0..0xE48` to `0x1798B0` (`762B22A5`, `nz=0`) while DMA/exit, guest
+service, and PCM controls were live; PCM stayed zero.
+
+This selects `H-PortStage3Field348ProducerGap` at the observed content/
+producer contract and refutes an address alias and legitimate-zero explanation
+against the retail publication. It does not identify the input preceding the
+zero-fill. No audio behavior changed. Evidence:
+`docs/M5-S3400-FIELD348-PRODUCER.md` and
+`scratch/agent/s3400_m5_field348_producer_census/`.

@@ -246,13 +246,12 @@ the paired logs.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Explain the selected `H-PortStage3Missing` destination contract by tracing
-   the guest producer of `field348=0x801797B0` and its caller inputs upstream
-   of the image-stage hook. Phase-qualify one same-build census joining that
-   producer to the `0xCB0` source, DMA completion, guest service, and PCM
-   rows. Retain the retail-backed `0x1935E0` control and both audio arms. Do
-   not change audio behavior or add a destination redirect until the writer
-   and legitimacy of the value are identified.
+1. Explain the selected `H-PortStage3Field348ProducerGap` by tracing the
+   input to the `0x8008F2C8` store immediately before the `0x8008F2CC`
+   zero-fill of `field348=0x801797B0`. Phase-qualify one same-build census
+   joining that caller input to the `0xCB0` source, DMA completion, guest
+   service, and PCM rows. Retain the retail-backed `0x1935E0` control and both
+   audio arms. Do not change audio behavior or add a destination redirect.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
    not repeat the old final-summary-only or dual-origin recipes; use the signal
    checkpoint and retain post-store sampling for all four candidates.
@@ -340,6 +339,22 @@ Latest M5 evidence:
 - `scratch/agent/s3372_m5_status03_port_contract.md`
 - `scratch/agent/s3369_m5_status03_worker_contract.md`
 - `scratch/agent/s3364_m5_port_callback_edge.md`
+
+Session 3400 enabled the existing field348 writer/candidate/memset and static
+`rs_memset` caller probes in the fresh-build contract pair. Retail again passed
+whole-RDRAM, title, hangar, and checkpoint controls; its `0x1935E0` checkpoint
+had 18 retained post-store samples, including 12 nonzero writes from
+`0x800078EC`. Both port arms reached hangar without crash/abort. The image arm
+consistently supplied `field348=0x801797B0`; that span was zero-valued
+(`25E26BC5`, `nz=0`), initialized by the target zero-fill at `0x8008F2CC`
+(`dst=0x801797B0`, `len=0x298`), and written only with zero bytes by
+`0x800078EC`. Stage 3 copied zero DMEM `0xCB0..0xE48` to `0x1798B0`
+(`762B22A5`, `nz=0`) while DMA/exit, guest service, and PCM controls were
+live. This selects `H-PortStage3Field348ProducerGap` for the observed content/
+producer contract and refutes address alias and legitimate-zero explanations
+against the retail publication. The input preceding the zero-fill remains
+unresolved; no audio behavior changed. Evidence is in
+[M5-S3400-FIELD348-PRODUCER.md](M5-S3400-FIELD348-PRODUCER.md).
 
 Baseline and independent boundary evidence remains indexed in the ledger and
 PROJECT-OVERVIEW section 54. Use bounded `grep`/ `sed` windows for
