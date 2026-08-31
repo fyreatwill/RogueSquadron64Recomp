@@ -2319,6 +2319,37 @@ extern "C" void rs64_m5_state_pointer_checkpoint(uint8_t* rdram,
 
 extern "C" void rs64_m5_pointer_span_store(char width, uint32_t pc,
                                              uint32_t addr, uint32_t value) {
+    static const bool task_writer_enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_TASK_WRITER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    const uint32_t store_phys = addr & 0x1FFFFFFFu;
+    const uint32_t store_span = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);
+    const uint32_t title_origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool title_phase = rs64_vi_committed_width() == 1024u &&
+        (title_origin == 0x00790400u || title_origin == 0x00790800u);
+    if (task_writer_enabled && title_phase &&
+        store_phys < 0x001494B0u && store_phys + store_span > 0x00149470u) {
+        static uint32_t rows = 0;
+        static bool control = false;
+        if (!control) {
+            std::fprintf(stderr,
+                "[m5-task-writer-control] phase=%u width=1024 origin=0x%06X span=0x149470:0x1494B0\n",
+                rs64_phase_ord(), title_origin);
+            std::fflush(stderr);
+            control = true;
+        }
+        if (rows < 2048u) {
+            std::fprintf(stderr,
+                "[m5-task-writer] ordinal=%u phase=%u width=1024 origin=0x%06X "
+                "pc=0x%08X width=%c phys=0x%06X field=0x%X value=0x%08X\n",
+                rows++, rs64_phase_ord(), title_origin, pc, width, store_phys,
+                store_phys - 0x00149470u, value);
+            std::fflush(stderr);
+        }
+    }
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_STATE_POINTER");

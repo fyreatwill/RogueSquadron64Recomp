@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3480 (2026-08-31). This record was
+Current active marker: Session 3482 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -389,13 +389,31 @@ payload legitimacy remain unresolved; evidence:
 ORIGIN: this iteration only observes retail and port task fields and queue
 returns; it does not rewrite, skip, or validate the differing payload.
 
+Session 3482 added a regeneration-safe title-scoped witness to the existing
+generated guest-store hook and joined it to a fresh independent retail task
+span watch. Both controls and both title origins were live. Retail's task-span
+writer histogram and the port witness contain the same ten writer PCs
+`0x80091718` through `0x80091784`; the port emitted 204–205 rows per PC. This
+rules out an absent or wholly different writer route at this boundary. The
+resulting payloads still diverge: retail task rows use `0x80171CE0` or
+`0x80173B20` with sizes 1–2, while port enqueue rows also expose
+`0x8018DD30`/size 3 and `0x8018FB70`/size 1. This selects the broad
+payload/operand divergence boundary and rules out invalid observation and a
+writer-route-only explanation, but does not establish whether the differing
+operand is supplied at `0x8009177C/0x80091784` or mutated afterward. Evidence:
+[M5-S3482-TASK-WRITER-JOIN.md](../M5-S3482-TASK-WRITER-JOIN.md).
+
+ORIGIN: the new witness observes generated task-struct stores and values only;
+it does not rewrite, skip, or validate task fields.
+
 ## Next steps
 
-1. Join the qualified port host-task rows to a new independent retail
-   `OSTask` dump at the title task-enqueue execution PC, retaining whole-RDRAM
-   and host-boundary controls. A matching task ABI/output tuple selects a
-   later output/consumer edge; the first task-field divergence selects the
-   host task contract; missing controls make the observation invalid.
+1. Obtain ordered independent-retail post-store values for task fields
+   `0x1494A0` and `0x1494A4` at writer PCs `0x8009177C` and `0x80091784`, then
+   join them to the port task-writer rows and enqueue rows by title origin and
+   per-PC ordinal. Matching post-store values with later enqueue divergence
+   selects an intervening mutation; the first writer-value divergence selects
+   the writer operand; missing controls make the observation invalid.
 2. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare

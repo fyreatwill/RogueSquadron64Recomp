@@ -132247,3 +132247,23 @@ Evidence: `docs/M5-S3481-HOST-TASK-JOIN.md` and
 
 ORIGIN: this iteration only observes retail and port task fields and queue
 returns; it does not rewrite, skip, or validate the differing payload.
+## Session 3482 (2026-08-31) — joined task-struct writer route and payload
+
+The independent Rice oracle and validated port arm were run with whole-RDRAM
+positive controls and title phase gates at `0x00790400` and `0x00790800`. The
+oracle task-PC control fired, captured 1,257 type-2 rows, and its physical task
+span watch recorded 52,980 writes. The port task-handoff and new task-writer
+controls fired; the port witness emitted 2,048 rows and the enqueue witness
+481 rows. The oracle's title writer histogram and the port witness contained
+the same ten writer PCs (`0x80091718` through `0x80091784`), with 204–205 port
+rows per PC. This rules out an absent or wholly different writer route and
+invalid observation.
+
+The task payloads nevertheless diverged. Retail rows used `0x80171CE0` or
+`0x80173B20` with sizes 1–2. Port rows also used those values but exposed
+`0x8018DD30`/size 3 and `0x8018FB70`/size 1. Task type/pointer and output/yield
+fields agreed. This selects the broad payload/operand divergence boundary;
+the exact writer-side value versus intervening mutation remains unresolved
+because the oracle histogram did not include ordered post-store values. The
+new host witness is diagnostic-only and does not alter task fields. Evidence:
+[M5-S3482-TASK-WRITER-JOIN.md](M5-S3482-TASK-WRITER-JOIN.md).
