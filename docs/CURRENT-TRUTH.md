@@ -4,9 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3329 (2026-08-30). Compacted from
+Current maintenance marker: Session 3330 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3330 completed the reachable-hangar M5 slot/status qualification. The
+port image arm passed VI-1024 and VI-512 plus task/PCM controls, but produced
+zero slot/status rows and zero executions of retail's named consumer PCs
+`0x80094648`, `0x8009B600`, `0x8009B85C`, and `0x8009BDE8`. The actual MusyX
+voice table stayed `max=1 active=0 mask=0` in the same target phase. This
+selects `H-PortSlotStatusMissing` for the recipe, with single-source port
+evidence; it names no missing writer and authorizes no behavior change.
+The run later hit the known unaligned PI-DMA abort after the controls fired.
+Evidence: `scratch/agent/s3330_m5_slot_status_qualification.md`.
 
 Session 3329 resolved the apparent title blocker in one phase-gated port run:
 the image arm committed VI-1024 at 50.3 s, reached hangar VI-512 at 94.2 s
@@ -372,7 +382,16 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
+1. M5 Step 1 remains `H-ContractGap`, now narrowed by Session 3330:
+   the reachable port hangar has valid task/PCM controls but no slot/status
+   rows or named retail consumer-PC executions, selecting
+   `H-PortSlotStatusMissing` on single-source port evidence. The voice probe
+   is inactive (`max=1 active=0`) but this is not yet a replacement for the
+   slot/status finding. Next: perform a bounded static callsite/dispatch audit
+   for the four retail consumer PCs and their slot/status ranges, then pair
+   that result with the existing retail capture before any Step 3 change.
+   Do not add a mitigation.
+2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
    (`H-RetailSlotConsumer`). The port image arm now reaches hangar with the
    extended autopilot; the prior title stop was schedule-dependent for this
@@ -380,21 +399,21 @@ target row exists.
    zero/max=1 rather than exhausted. Next: run the slot/status qualification
    in the reachable hangar phase and compare its writer/consumer rows to the
    retail capture. Do not change a contract edge or add a mitigation.
-2. Keep configured-host PatchesLib validation as an open dependency. When
+3. Keep configured-host PatchesLib validation as an open dependency. When
    that host is available, run `cmake --build build --config Debug --target
    PatchesLib` to distinguish build availability from source/link failures.
    Do not repeat the local missing-target check; Session 3319 confirmed the
    missing MIPS stage and generated input here.
-3. Treat the B1C source investigation as closed at the observed phase: no
+4. Treat the B1C source investigation as closed at the observed phase: no
    alternate writer or ordering edge exists in the generated tree, and neither
    conditional nonzero path fired in Session 3314. Do not repeat the same
    6208/6238/6248/6274/62B4 census. Reopen only with a new retail/port
    discriminator for the data-dependent predicates.
-4. Session 3321 completed the generated free-list-walk census: all six
+5. Session 3321 completed the generated free-list-walk census: all six
    traversal dereferences and three cache-head loads are guarded. The guard
    is not evidence that the VI-640 route or audio is corrupt; do not reopen
    this class without a new writer or an unguarded generated site.
-5. Retail target publication remains an `osViSwapBuffer`-related edge
+6. Retail target publication remains an `osViSwapBuffer`-related edge
    (`0x80035500`, usually caller `0x8001BE24`, physical `$a0=0x00790000`),
    but Session 3323's all-width join found no 640→1024 row. Treat the title
    transition as non-immediate relative to that watched edge; identify the

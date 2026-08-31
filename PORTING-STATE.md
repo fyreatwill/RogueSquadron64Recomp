@@ -129141,3 +129141,26 @@ known abort/crash path during continued hangar capture; the earlier phase and
 task/PCM controls remain valid. No behavior change or mitigation was made.
 ORIGIN: diagnostic-only voice-table poll; no gameplay value was changed.
 Evidence: `scratch/agent/s3329_m5_slot_status_discriminator.md`.
+
+## Session 3330 (2026-08-30) — qualified reachable-hangar slot/status consumers
+
+The prescribed port image-arm run used VI-512 phase gating and the existing
+60/90/120-second autopilot. It passed the required controls: VI-1024 and
+VI-512 phase rows, 5,082 target-phase audio-task DMA rows, 13,499 task joins,
+7,148 PCM source rows, 7,130 PCM consumer rows, and the voice probe's initial
+arm row. The run captured 125 frames and then aborted before the first
+phase-relative key at 60 seconds; the abort was the known unaligned PI-DMA
+assertion in `do_rom_read` at `pi.cpp:86`, after the discriminator controls
+had fired.
+
+The port log had zero slot/status rows and zero executions of retail's named
+consumer PCs `0x80094648`, `0x8009B600`, `0x8009B85C`, and `0x8009BDE8`.
+The actual MusyX voice probe stayed `max=1 active=0 mask=0`. This selects
+`H-PortSlotStatusMissing` for the reachable hangar recipe and rules out the
+claim that the port already matches the retail slot/status consumer edge.
+It does not distinguish the missing writer from an upstream dispatch/state
+gate, and it does not authorize a contract change. The result is
+single-source on the port side; the independent retail writer/consumer
+capture remains the comparison line.
+
+Evidence: `scratch/agent/s3330_m5_slot_status_qualification.md`.
