@@ -129912,3 +129912,17 @@ generated-source idiom audit in `scratch/agent/s3249_m3_status03_audit.md`
 independently identifies the same worker and state transitions, providing the
 second line of evidence. Full evidence:
 `scratch/agent/s3369_m5_status03_worker_contract.md`.
+## Session 3370 (2026-08-31) — qualified port status-03 worker contract
+
+The first direct wrapper was route-invalid: it logged only the title phase and
+used stale marker names. The fixed `tools/probe.sh` run used the known s3364
+key schedule and Factor 5 image arm. It passed title `1024 @ 0x00790400`,
+hangar `512 @ 0x006AB400`, audio-task/ABI and PCM controls, and had no crash or
+abort markers. In hangar, the existing service probe recorded five status-03
+worker entries and five exits. No exact `0x8009B7EC` zero-store row was
+available; the live slot-event rows were status-02 events. This selects the
+qualified port no-clear/gate hypothesis only provisionally and rules out route
+invalidity, absent task/PCM activity, and pre-hangar failure. The static s3249
+audit identifies `0x8009B7EC` as the legitimate clear writer, so no wait or slot
+behavior change was made. Next: add the exact regeneration-surviving store
+witness and repeat the same route.

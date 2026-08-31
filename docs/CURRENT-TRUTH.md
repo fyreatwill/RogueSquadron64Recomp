@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3369 (2026-08-31). Compacted from
+Current maintenance marker: Session 3370 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -18,6 +18,16 @@ and refutes a retail status gate or alternate worker for the observed path.
 Together with the independent generated-source audit in `s3249`, this is
 two-line evidence. No wait or slot change is authorized. Evidence:
 `scratch/agent/s3369_m5_status03_worker_contract.md`.
+
+Session 3370's fixed qualified port run reached title `1024 @ 0x00790400`
+and hangar `512 @ 0x006AB400`, with audio-task/ABI and PCM controls live and
+no crash/abort markers. In hangar, the named service worker entered and exited
+with status `03` five times, but the exact `0x8009B7EC` status-zero store was
+not instrumented and no row appeared. The slot-event control was live but
+showed status `02` rows. This selects the qualified port no-clear/gate result,
+not a behavior explanation; the legitimate clear writer remains established
+by the static s3249 audit. No wait or slot change is authorized. Evidence:
+`scratch/agent/s3370_m5_status03_worker_contract.md`.
 
 Session 3368's bounded M3 SP task-pointer audit added the missing full-
 `OSTask` KSEG0 range check to `osSpTaskLoad_recomp`, matching the existing
