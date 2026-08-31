@@ -129505,3 +129505,23 @@ interpretation and does not identify the missing caller or authorize a
 behavior change. The wrapper left the game process alive after capture return;
 the process was SIGKILLed. Evidence:
 `scratch/agent/s3348_m5_slot_status_qualification.md`.
+## Session 3349 (2026-08-30) — audited M5 named consumer reachability
+
+Ran the prescribed bounded static census over `../N64Recomp/RecompiledFuncs`,
+`docs`, and `src`; no build or runtime experiment was run. `0x80094648` is
+inside `startSongSequence`, with direct generated callers at `0x80097B9C`,
+`0x80097BC4`, and `0x80097CF0`. `0x8009B600` and `0x8009B85C` are inside
+`serviceVoicePoolFrame`, and `0x8009BDE8` is inside
+`accumulateVoiceSampleOffset`. Neither latter body has a direct generated
+caller or a statically resolved callback registration. `musyxSynthFrame` has
+unresolved `LOOKUP_FUNC` edges at `0x800919EC` and the wait path, but the
+generated tree does not resolve their loaded targets to the service or
+accumulator bodies. `initMusyXVoiceTable` registers the service entry
+`0x8009B5A8`, not either named store body.
+
+This single-source static result selects none of `H-ConsumerIndirect`,
+`H-ConsumerGate`, or `H-ConsumerWrongNames`; the map is incomplete and no
+behavior change is authorized. The next unit is a retail-oracle capture with
+whole-RDRAM control and phase-gated exact execution watches for the service,
+accumulator, and three named consumer PCs, retaining previous-PC attribution.
+Evidence: `scratch/agent/s3349_m5_consumer_reachability_audit.md`.

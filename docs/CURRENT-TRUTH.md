@@ -8,6 +8,16 @@ Current maintenance marker: Session 3348 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
+Session 3349 statically audited the four M5 named consumer PCs. The
+`0x80094648` store is in `startSongSequence`, which has three direct generated
+callers. `0x8009B600` and `0x8009B85C` are in `serviceVoicePoolFrame`, while
+`0x8009BDE8` is in `accumulateVoiceSampleOffset`; neither latter body has a
+direct generated caller or a statically resolved callback registration. The
+audio parent has unresolved `LOOKUP_FUNC` edges, so the static map is
+incomplete: none of `H-ConsumerIndirect`, `H-ConsumerGate`, or
+`H-ConsumerWrongNames` is selected. No behavior change is authorized.
+Evidence: `scratch/agent/s3349_m5_consumer_reachability_audit.md`.
+
 Session 3348 rebuilt the Debug target and ran the validated extended
 Start/spin-yield M5 slot/status qualification. Host/task/PCM controls and both
 title VI 1024 and hangar VI 512 controls were positive. Target-phase
@@ -615,8 +625,14 @@ target row exists.
    the three hypotheses. Session 3348 used the validated extended route,
    reached VI 512 with positive controls, and found target-phase slot/status
    activity but zero hits for all four named consumer PCs. This selects
-   `H-PortConsumerUnreached`. Next: statically audit those consumer bodies and
-   every indirect caller or callback edge; do not change behavior.
+   `H-PortConsumerUnreached`. Session 3349 found one direct consumer chain for
+   `0x80094648`, but no direct or statically resolved indirect chain to the
+   service/accumulator consumers. The static map is incomplete and selects
+   none of the three reachability hypotheses. Next: use the independent retail
+   oracle with a whole-RDRAM positive control and phase-gated exact execution
+   watches for service entry, accumulator entry, and the three consumer PCs;
+   retain previous-PC attribution. Do not change behavior or add a port probe
+   before that ground-truth capture.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

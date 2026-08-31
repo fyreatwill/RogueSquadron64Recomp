@@ -1,36 +1,36 @@
-# NEXT work unit — audit M5 named consumer reachability
+# NEXT work unit — retail ground truth for M5 consumer reachability
 
 HYPOTHESIS-ID: m5-consumer-reachability-audit
 
-Session 3348 reached the validated hangar phase with positive controls and
-observed port slot/status activity, but none of the four retail-named
-consumer PCs. Do one bounded static audit before adding instrumentation or
-changing behavior.
+Session 3349 completed the bounded static audit. `startSongSequence` directly
+reaches `0x80094648`; `serviceVoicePoolFrame` and
+`accumulateVoiceSampleOffset` have no direct generated callers, and their
+possible callback route is unresolved `LOOKUP_FUNC` state. The audit selected
+none of the hypotheses and authorizes no behavior change.
 
 Competing hypotheses:
 
-- `H-ConsumerIndirect`: each named consumer is reached only through an
-  indirect callback/function-pointer edge absent from the direct caller map.
-- `H-ConsumerGate`: direct or indirect callers exist, but a visible status,
-  slot, or phase predicate prevents the port from entering them.
-- `H-ConsumerWrongNames`: the retail PCs are not the corresponding port
-  consumers for this route, so the existing runtime probe is aimed at the
-  wrong bodies.
+- `H-ConsumerIndirect`: retail executes the service/accumulator bodies through
+  an indirect callback edge, while the port has a reachability gap.
+- `H-ConsumerGate`: retail enters the bodies but a status/slot predicate gates
+  the named stores, and the port differs at that predicate.
+- `H-ConsumerWrongNames`: the retail PCs do not represent the corresponding
+  consumer route despite the generated bodies.
 
-Discriminator: enumerate every generated caller/reference and every callback
-or function-pointer registration edge for `0x80094648`, `0x8009B600`,
-`0x8009B85C`, and `0x8009BDE8`, then reconcile each with the M5 plan's slot,
-status, and voice-table accesses. A complete indirect-only chain selects
-`H-ConsumerIndirect`; an enumerated chain with a reachable predicate selects
-`H-ConsumerGate`; no corresponding port body/edge selects
-`H-ConsumerWrongNames`. An incomplete static map selects none and defines the
-next ground-truth probe.
+Discriminator: run the retail oracle with a whole-RDRAM positive control and
+phase-gated exact execution watches for `0x8009B5A8`, `0x8009BD7C`,
+`0x8009B600`, `0x8009B85C`, and `0x8009BDE8`, retaining each watch's
+`prev_pc` and hangar origin `0x006AB400`. Retail entry plus named stores with
+an indirect previous-PC chain selects `H-ConsumerIndirect`; entry with stores
+absent and a live status/slot predicate selects `H-ConsumerGate`; no
+corresponding retail entry/store activity selects `H-ConsumerWrongNames`. An
+absent hangar phase or absent whole-RDRAM control is invalid, not a null.
 
-Exact commands:
+Exact command shape from the repo root (substitute the documented debug-core,
+retail-ROM, and Rice-plugin paths):
 
-    rg -n -S '80094648|8009B600|8009B85C|8009BDE8' ../N64Recomp/RecompiledFuncs docs src
-    rg -n -S 'registerSiCallback|8011A8A4|80141AD8|80154620|startSongSequence|serviceVoicePoolFrame|accumulateVoiceSampleOffset' ../N64Recomp/RecompiledFuncs docs src
-    sed -n '<bounded caller windows>p' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    tools/oracle/build/rs64_oracle --core <debug-core.dylib> --rom <retail.z64> --secs 180 --video <rice.dylib> --watch-write 0x0:0x800000 --watch-pc 0x8009B5A8 --watch-pc 0x8009BD7C --watch-pc 0x8009B600 --watch-pc 0x8009B85C --watch-pc 0x8009BDE8 --pc-phase-log-width 0x006AB400:512 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
 
-Do not build, add a probe, change behavior, or add a mitigation until the
-static census identifies the discriminating edge.
+Do not build or add a port instrument until the oracle positive control and
+hangar phase both pass. Capture output to a non-dot final path and use SIGKILL
+if the frontend needs stopping.
