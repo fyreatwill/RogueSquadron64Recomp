@@ -1,6 +1,9 @@
-# NEXT work unit — port host-boundary census for callback-table writer
+# NEXT work unit — port host-boundary census for callback-table writer (post-maintenance)
 
 HYPOTHESIS-ID: m5-callback-table-writer
+
+Maintenance session 3359 completed; run this bounded census next. No audio
+behavior change or mitigation is authorized.
 
 Session 3356's independent retail oracle attributed all 19 callback-table
 writes to guest PCs `0x80007928` (11) and `0x80007968` (8), with post-values

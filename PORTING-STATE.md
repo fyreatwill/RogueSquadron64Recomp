@@ -129699,3 +129699,17 @@ pointer; it is legitimate when the full OSTask object lies within KSEG0 RDRAM;
 rejecting out-of-range values before `TO_PTR` is the guard's intended contract.
 
 Evidence: `scratch/agent/s3358_task_ptr_guard_validation.md`.
+
+## Session 3359 (2026-08-31) — compacted current-truth maintenance ledger
+
+Maintenance iteration only; no build, run, soak, or experiment was performed.
+`docs/CURRENT-TRUTH.md` exceeded the 60,000-byte threshold at 60,004 bytes
+and 986 lines. Its duplicated per-session investigation narrative was
+compacted to 47,173 bytes and 786 lines, a reduction of 12,831 bytes and 200
+lines from the measured starting file; durable conclusions remain in Current
+state, Next steps, Superseded conclusions, PROJECT-OVERVIEW, and the ledger.
+
+The required next unit remains the M5 callback-table writer/source census with
+its three competing hypotheses and retail/port positive controls in
+`scratch/agent/NEXT.md`. This maintenance result rules out no runtime
+hypothesis and changes no behavior.

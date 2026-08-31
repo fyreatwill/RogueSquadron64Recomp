@@ -4,8 +4,8 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3358 (2026-08-31). Compacted from
-61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
+Current maintenance marker: Session 3359 (2026-08-31). Compacted from
+60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
 Session 3358 validated the session 3357 task-start pointer guard on the live
@@ -63,109 +63,50 @@ but not its writer. No behavior change was authorized. Evidence:
    regeneration-surviving port host-boundary census for the same table; do not
    change behavior or add a mitigation.
 
-Session 3355 completed the bounded M5 callback-table static audit. The only
-generated table writer is `registerSiCallback` at `0x80007928`, with the
-matching clear helper at `0x80007968`; the only direct registration callers
-provide `0x80003250` and `0x8009B5A8`. The dispatcher reads the same
-`0x8011A8A4` base and indirect-calls the loaded slot at `0x80019B74`. No
-generated writer or alternate alias explains the port's three pre-existing
-`0x8009123C` occupants. This refutes `H-PortTableAlias` and
-`H-PortDispatcher`, and leaves an unresolved runtime/indirect writer class;
-no behavior change is authorized. Evidence:
-`scratch/agent/s3355_m5_callback_table_static_audit.md` (single-source).
+Session 3355's static callback audit found only the known registration/clear
+helpers and no alternate alias or generated writer for the port occupants.
+The unresolved class is runtime/indirect writing. Evidence:
+`scratch/agent/s3355_m5_callback_table_static_audit.md`.
 
-Session 3353 completed the bounded M5 indirect consumer-edge census. The
-generated tree has three direct `startSongSequence` callers, but no direct or
-literal `LOOKUP_FUNC` edge to `serviceVoicePoolFrame` or
-`accumulateVoiceSampleOffset`; the remaining candidates are register-loaded
-`jalr` sites. The companion symbol map independently confirms the target
-addresses and direct song-call topology. This supports
-`H-PortConsumerIndirectGap` and rules out a name/probe mismatch, but does not
-identify the dynamic pointer/table writer. No behavior change is authorized.
-Evidence: `scratch/agent/s3353_m5_consumer_edge_census.md`.
+Session 3353 found no direct or literal generated edge to the service and
+accumulator consumers; only register-loaded `jalr` sites remain. Evidence:
+`scratch/agent/s3353_m5_consumer_edge_census.md`.
 
-Session 3352 completed the port M5 consumer-entry qualification. The fresh
-retail pre-capture again passed the whole-RDRAM control and reached hangar
-`512 @ 0x006AB400` with all five target PCs live. The port run passed title
-`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, host/task/PCM, and gate
-controls, but the regeneration-surviving exact-site markers at
-`0x80094648`, `0x8009B5A8`, `0x8009B600`, `0x8009B85C`, and `0x8009BDE8` all
-remained zero. This selects `H-PortConsumerIndirectGap` for the qualified
-route over a status/slot gate or probe-label mismatch; no behavior change is
-authorized. Evidence: `scratch/agent/s3352_m5_port_consumer_entry.md`.
+Session 3352 qualified the route: retail controls and all five consumer PCs
+were live, while the port controls passed and all five exact-site markers
+were zero. This selects `H-PortConsumerIndirectGap` for the qualified route.
+Evidence: `scratch/agent/s3352_m5_port_consumer_entry.md`.
 
-Session 3351 completed the independent retail M5 consumer-reachability
-capture. The whole-RDRAM positive control fired, the driven run reached hangar
-`512 @ 0x006AB400`, and all five named service/consumer PCs executed with
-stable previous-PC chains. This refutes `H-ConsumerWrongNames` and proves the
-retail route is live; it does not distinguish a port reachability gap from a
-port status/slot gate. Evidence: `scratch/agent/s3351_m5_retail_consumer_oracle.md`.
+Session 3351 independently confirmed retail reaches all five named consumer
+PCs in hangar, refuting `H-ConsumerWrongNames`; it does not split port
+reachability from a port status/slot gate. Evidence:
+`scratch/agent/s3351_m5_retail_consumer_oracle.md`.
 
-Session 3350 completed a bounded M3 message-queue API guard audit. The
-existing internal `do_send`/`do_recv` guard was bypassed by public
-`osSendMesg`, `osJamMesg`, `osRecvMesg`, and `osCreateMesgQueue` entry points
-that called `TO_PTR` first. Those four entry points now reject out-of-KSEG0
-queue pointers before conversion; the valid queue path is unchanged. The
-Debug target rebuilt successfully. ORIGIN: the queue pointer is supplied by
-guest queue setup/callers and is legitimate when it is in KSEG0 RDRAM; an
-out-of-range value is the upstream corrupted-pointer class this guard is
-intended to contain. Evidence: `scratch/agent/s3350_m3_mesgqueue_api_guard.md`.
+Session 3350 guarded four public message-queue entry points before `TO_PTR`;
+the Debug target rebuilt and valid queue behavior was unchanged. ORIGIN: the
+guest supplies queue pointers, which are legitimate only in KSEG0 RDRAM.
+Evidence: `scratch/agent/s3350_m3_mesgqueue_api_guard.md`.
 
-Session 3349 statically audited the four M5 named consumer PCs. The
-`0x80094648` store is in `startSongSequence`, which has three direct generated
-callers. `0x8009B600` and `0x8009B85C` are in `serviceVoicePoolFrame`, while
-`0x8009BDE8` is in `accumulateVoiceSampleOffset`; neither latter body has a
-direct generated caller or a statically resolved callback registration. The
-audio parent has unresolved `LOOKUP_FUNC` edges, so the static map is
-incomplete: none of `H-ConsumerIndirect`, `H-ConsumerGate`, or
-`H-ConsumerWrongNames` is selected. No behavior change is authorized.
+Session 3349 found the service/accumulator consumers lack direct generated
+callers and have unresolved `LOOKUP_FUNC` edges; the static map is incomplete.
 Evidence: `scratch/agent/s3349_m5_consumer_reachability_audit.md`.
 
-Session 3348 rebuilt the Debug target and ran the validated extended
-Start/spin-yield M5 slot/status qualification. Host/task/PCM controls and both
-title VI 1024 and hangar VI 512 controls were positive. Target-phase
-`slot-byte`/`slot-sb`/drain activity was present, but named consumer PCs
-`0x80094648`, `0x8009B600`, `0x8009B85C`, and `0x8009BDE8` had zero hits. This
-selects `H-PortConsumerUnreached`; no behavior change is authorized. The next
-unit is a bounded static audit of those consumer bodies and their indirect
-callers. Evidence: `scratch/agent/s3348_m5_slot_status_qualification.md`.
+Session 3348's qualified route had positive controls and slot/status activity,
+but zero hits for the four named consumers, selecting
+`H-PortConsumerUnreached`. Evidence:
+`scratch/agent/s3348_m5_slot_status_qualification.md`.
 
-Session 3346 completed retail indirect execution attribution for the corrected
-callback pointer. With whole-RDRAM and title-phase controls live, the oracle
-observed `0x800919D4` loading `0x80007910`, `0x800919EC` executing with that
-target, and `0x80007910` entered with `prev_pc=0x800919EC`. A driven retry
-reached title 1024 but stalled before hangar, so no new slot-write count was
-obtained. This selects `H-GuestJalr` and refutes host dispatch as the
-explanation for the observed occupant transfer; no behavior change is
-authorized. Evidence: `scratch/agent/s3346_m5_retail_indirect_exec.md`.
+Session 3346 independently observed the guest chain
+`0x800919D4 -> 0x800919EC -> 0x80007910`, refuting host dispatch for that
+occupant transfer. Evidence: `scratch/agent/s3346_m5_retail_indirect_exec.md`.
 
-Session 3345 completed the static provenance audit for the corrected retail
-pointer slot. `initN64RspMixer` constructs `0x80007910` as an immediate and
-stores it at `0x80091900` / physical `0x001499D4`; there is no guest source
-load to trace. The later `0x800919D4` reload and `0x800919EC` `jalr` are in the
-same generated body. This selects the legitimate immediate-writer branch and
-refutes a missing source-table load, but does not distinguish retail host
-dispatch from an execution-watch attribution gap. No build or behavior change
-was needed. Evidence: `scratch/agent/s3345_m5_pointer_provenance_audit.md`.
+Session 3345 confirmed `0x80007910` is a legitimate immediate initializer
+stored at `0x80091900`; there is no source-table load to trace. Evidence:
+`scratch/agent/s3345_m5_pointer_provenance_audit.md`.
 
-Session 3344 completed the independent retail pointer-source capture. The
-whole-RDRAM positive control reached 10,006 writes, title 1024 and hangar 512
-controls both passed, and the corrected physical slot `0x001499D4` recorded 6
-writes, all from guest PC `0x80091900`. This selects `H-PointerWriter` and
-refutes `H-StalePointer` for the target route. The execution watch had zero
-hits, so host dispatch remains unmeasured as a separate behavior. Evidence:
+Session 3344's retail capture attributed six corrected-slot writes to guest
+PC `0x80091900`, refuting stale-pointer state. Evidence:
 `scratch/agent/s3344_m5_retail_pointer_source.md`.
-
-Session 3343 redesigned callback-writer capture to aggregate rows and drain
-them from the phase poller. In one same-build matrix, both the no-writer and
-aggregate-writer LLE arms passed host/task controls and reached title 1024 and
-hangar 512 without a crash; the aggregate arm retained target-phase rows for
-`0x80091900 -> 0x80007910` and `0x80007928 -> 0x8009123C`. This refutes the
-prior per-event-output scheduler perturbation and makes the port pointer-writer
-discriminator target-valid. A separate audio/image arm crashed before controls
-and is route-invalid. Retail ground truth independently recorded one write at
-the corrected physical `0x001499D4` slot. Evidence:
-`scratch/agent/s3343_m5_callback_writer_aggregate.md`.
 
 Session 3343 redesigned callback-writer capture to aggregate rows and drain
 them from the phase poller. In one same-build matrix, both the no-writer and
@@ -406,207 +347,66 @@ no-following-VI, but does not yet distinguish a non-immediate title swap from
 the join's 640-only latch filter. Evidence:
 `scratch/agent/s3322_retail_post_swap_join.md`.
 
-## Live investigation (s3303–s3324)
+## Recent evidence ledger
 
-Session 3342 closes the current route-validity attempt: retain the no-probe
-validated route and redesign the callback-writer probe so it cannot perturb
-the scheduler before repeating the pointer-source census. Session 3343
-completed that redesign: the aggregate arm reached both target phases and
-retained the pointer/table rows, while the baseline also remained valid. The
-separate audio/image arm crashed before controls and is not a discriminator.
+The detailed per-session narrative is retained in the append-only ledger and
+PROJECT-OVERVIEW. Durable operational conclusions are:
 
-Session 3340 closes the caller attribution discriminator for the observed
-`0x8009123C` registration: the transfer is the indirect call at `0x800919EC`.
-The next boundary is the source/writer of the function pointer loaded before
-that call; retain the retail callback-table baseline and port
-host/task/title/hangar controls. Do not change behavior based on the target
-mismatch alone.
+- s3358 validated the task-start guest-pointer guard; title 1024 and hangar
+  512 passed with 56 audio dispatches and no crash.
+- s3356's independent retail watch attributed all callback-table writes to
+  guest PCs `0x80007928` or `0x80007968`, leaving the port's pre-existing
+  `0x8009123C` occupants unresolved.
+- s3351–s3354 show retail executes all five named M5 consumers, while the
+  qualified port reaches hangar with no named consumer hits; unresolved
+  register-loaded `jalr` edges remain the active boundary.
+- s3344–s3346 establish the legitimate pointer initializer and guest chain
+  `0x800919D4 -> 0x800919EC -> 0x80007910`.
+- s3325–s3329 establish target-route reachability but no named port
+  slot allocation/submission edge.
+Sessions 3313–3320 established the retail/port cinematic and VI baselines:
+retail sets the skip-allow byte late and reaches the initializer/title, while
+the port keeps it zero; retail's swap edge is real but has no immediate
+640→1024 row. The B1C and PatchesLib details are in the ledger and evidence
+index; neither authorizes a behavior change.
 
-Session 3333 closes the first reachability boundary: retail has the expected
-initializer, service callback, and child edge, while the port installs and
-dispatches `0x8009123C` in their place. The next boundary is writer/source
-attribution for the port's callback-table population, retaining the same
-retail whole-RDRAM and target-phase controls. Do not change behavior based on
-the target mismatch alone.
+The s3312 retail/port cinematic discriminator selected `H-RetailFlagSet`:
+retail's skip-allow byte becomes 1 late and reaches the initializer/title,
+while the port keeps it zero. Evidence remains in
+`scratch/agent/s3312_retail_cine_init_path.md` and the ledger.
 
-Session 3320 closed the independent retail target-publication discriminator.
-The no-video setup correction and the join-cap limitation are recorded in the
-evidence file; the final Rice run had 10,000 positive-control writes, 2,854
-watched swap executions, and the target physical framebuffer row. This is
-two-line evidence for the retail swap edge (phase table plus watched caller /
-GPR row), not evidence for a missing M5 consumer. No behavior change is
-authorized.
-
-Session 3316 could not run the configured-host `PatchesLib` discriminator.
-Same-iteration checks found the Unix checkout, cached `E:/mips-toolchain`
-paths with neither MIPS executable present, no generated
-`RecompiledPatches/patches.c`, and no `PatchesLib` target in CMake's target
-list. This selects `H-GuardHostMissing` for this environment only; it is not
-patch-source or linker evidence. Evidence:
-`scratch/agent/s3316_patches_host_validation.md`.
-
-Session 3315 completed the static B1C caller/order audit. The generated tree
-contains exactly three fixed-address accesses: the zero reset at `0x800A5EE8`,
-the conditional nonzero store at `0x800A61D0` inside `cinematicLoopBody`, and
-the conditional nonzero store at `0x800A9360` inside `dispatchCueByCategory`.
-The latter is reached through `spawnCutsceneEffectsAndCues` at `0x800A6304`,
-after the reset. There is no alternate writer and no pre-reset writer order.
-Combined with Session 3314's controlled silence at both conditional stores,
-this selects `H-PortB1CDead` for the observed phase, while leaving both
-conditional paths data-dependent globally. Evidence:
-`scratch/agent/s3315_b1c_static_audit.md`.
-
-Session 3313 asked independent retail which operand sets skip-allow `$a0`
-before `0x800A6274`. Two no-press Rice runs passed whole-RDRAM 10000-write,
-`[gpr-ctl]`, VI 640, cinematic-entry, and title VI-1024 controls. At
-48.1–48.5 s, `0x800A6238` is not taken with `$a0=0`; a late physical
-`0x000B0B1C` write from `0x800A9360` is followed by `0x800A6248` loading
-`$v0=1`, `0x800A6274` falling through with `$a0=1`, and `0x800A62B4`
-executing. This selects `H-RetailB1CWrite` and refutes the incoming-
-controller arm. Evidence: `scratch/agent/s3313_retail_skip_source.md`.
-
-Session 3314 ran the corrected port-side source census. The same build passed
-four mark-all controls, 64 SP completions, 1,395 VI-640 rows, and cinematic
-entry. At the branch sites, `$a0`/`$v0` remained zero; 6274 took 139 times and
-62B4 never ran. The prologue zero writer at `0x800A5EE8` fired once, while
-known writers `0x800A61D0` and `0x800A9360` did not. This rules out incoming
-nonzero input and a firing 9360 writer in the observed phase, but leaves the
-classification as named-writer absence rather than proof of a B1C writer.
-Evidence: `scratch/agent/s3314_port_skip_source.md`.
-
-Session 3312 asked independent retail which skip
-`cinematicLoopBody` takes into `jal cinematicInitializer` at
-`0x800A62B4`. One 90 s Rice run. Controls: 10000-write,
-`[gpr-ctl]`, `$v1` printed 2406, VI `640 @ 0x0066A500` at
-2.2 s, cinematic entry at 6.6 s, 62B4, title
-`1024 @ 0x00790400` at 49.2 s. Time-pred `0x800A626C` n=1190
-printed 1189 all `$v1=1` `taken=0` (limit `$v0=0x4A6`).
-Flag-byte `0x800A6274` n=1190: `$a0=0` `taken=1` for 975
-first-attract visits, then `$a0=1` `taken=0` at 48.1 s (23
-visits). First already-active `0x800A6288` at 48.1 s `$v0=0`
-`taken=0`, then 22 `$v0=1`. Jal n=1 `prev=0x800A62B0`; AF4B8
-stores `0x800D9780`. This selects `H-RetailFlagSet` and
-refutes `H-RetailTimeBypass` (626C never takes),
-`H-RetailJalOther`, and `H-CoverageInvalid`. Combined with
-port Session 3311, both sides skip 626C; the port-only stop is
-skip-allow `$a0` staying 0. No M5 Step 3. Evidence:
-`scratch/agent/s3312_retail_cine_init_path.md`.
-
-Session 3311 port-censused `cinematicLoopBody`'s path into
-`jal cinematicInitializer` at `0x800A62B4`. One 122 s launch
-(no VI-320 crash). Controls: 4/4 init-jal marks, 6/6 stage-adv,
-7/7 cine-loop, 24/24 s3305, completion-wins 87, request-reset 87,
-SP-complete 64, VI `640 @ 0x0066A500` at 4.8 s, viewer return,
-cinematic entry, loop-head, and exit-gate. Time-pred `0x800A626C`
-ran n=100 printed all `$v1=1` `taken=0` (count 0→`0x69`,
-limit=`0x4A6`=1190). Flag-byte `0x800A6274` ran n=139 all
-`$v0=0` `$a0=0` `taken=1`. Silent: already-active `0x800A6288`,
-init-jal `0x800A62B4`, title 1024. Same-run `cuts44=1200` is
-limit+10. This selects `H-FlagByteSkip` and refutes
-`H-JalUnreached`, `H-TimePredSkip` (626C `taken=1`),
-`H-JalFires`, and `H-CoverageInvalid`. Combined with retail
-Session 3312, the port-only stop of that jal is 6274 taking
-on `$a0=0`, not a missed 1190-count bypass. No M5 Step 3.
+The s3311 port capture confirmed `H-FlagByteSkip`: the time predicate ran
+but the flag-byte branch stayed taken on `$a0=0`, so the initializer jal did
+not fire. This is the port-side counterpart to s3312 and is not an M5 change.
 Evidence: `scratch/agent/s3311_cine_init_jal.md`.
 
-Session 3310 asked the independent retail oracle who writes physical
-`0x000B0934`. The 90 s Rice run is the live scope. Controls:
-10002-write, `[gpr-ctl]`, VI `640 @ 0x0066A500` at 2.3 s, cinematic
-entry at 6.6 s, title `1024 @ 0x00790800` at 49.3 s. Exactly two
-pointer writes: `cinematicInitializer` `sw $v0` at `0x800AF4B8`
-(`$v0=0x800D9780`) at 48.1 s from `jal 0x800A62B4`, then
-`cinematicDeactivator` `sw $zero` at `0x800AF640` at 49.0 s on the
-64BC exit path. Advancer ran 972 times on a null word (10.5–48.0 s)
-before that store, then 26 times with the pointer live. This selects
-`H-RetailLateInit` and refutes `H-RetailPtrLive` (write-before-first-
-advancer), `H-RetailPtrAlsoZero`, `H-RetailInitThenClear` as a
-mid-loop clearer, and `H-CoverageInvalid`. Combined with port
-Session 3311, the null word during the loop is hardware-like until
-48.1 s; the port-only stop is `0x800A6274` taking on `$a0=0`. No
-M5 Step 3. Evidence: `scratch/agent/s3310_retail_b0934_writer.md`.
+The s3310 retail capture showed `0x800B0934` is initialized only after the
+finite loop, then cleared on exit; the port's null pointer during the loop is
+therefore hardware-like, while its flag-byte mismatch remains causal.
+Evidence: `scratch/agent/s3310_retail_b0934_writer.md`.
 
-Session 3308 port-censused `cinematicStageAdvancer` (`0x800AF550`)
-in one build and one 120 s retry. The first launch crashed at VI
-320 in `spTaskSchedulerThread` (`last-guest-pc=0x8000834c`) before
-marks; the same-binary retry is the live scope. Controls: 6/6
-stage-adv marks, 7/7 cine-loop marks, 24/24 s3305 marks,
-completion-wins 61, request-reset 61, SP-complete 64, VI
-`640 @ 0x0066A500`, viewer return, cinematic entry, loop-head, and
-exit-gate. Ptr-check `0x800AF55C` ran n=138 all `$v1=0` `taken=1`.
-Silent: fp-compare `0x800AF590`, stage-lt7 `0x800AF5B4`, ret-one
-`0x800AF5BC`. ret-zero `0x800AF604` `$v0=0`. Entry `$a2` is 1/60
-then 1/30. Same-run `[phase] cineState` is 0 after boot (83 rows)
-via `rdram_be32_at(0xB0934)`. This selects `H-PtrZeroSkip` and
-refutes `H-DtBelowThreshold`, `H-StageNeverHits7`, and retry
-`H-CoverageInvalid`. The 6074 gate stays 0 because the skip
-returns 0. No M5 Step 3. Evidence:
-`scratch/agent/s3308_stage_advancer.md`.
+Session 3308 selected `H-PtrZeroSkip`: the stage advancer's pointer check
+was live and always saw zero, so it returned zero. The queued 600 s soak
+had no crash but no title transition. Evidence:
+`scratch/agent/s3308_stage_advancer.md` and the ledger.
 
-The queued 600 s soak (`s3307_cine_loop_600s`) was SIGKILL at
-600 s with no crash, no title 1024, and exit-gate `v0_nz=0`
-(printed n=100). The scheduler was still matching recv at width
-640 origin `0x696100`. That extends `H-PortLoopNoExit` and is
-consistent with `H-PtrZeroSkip`.
-
-Session 3307 port-censused the Session 3306 cinematic loop/exit
-edges. Same first-launch crash at VI 320; the same-binary 121 s
-retry is the live scope. Controls: 7/7 cine-loop marks, 24/24
-s3305 marks, completion-wins 69, request-reset 69, SP-complete
-64, VI `640 @ 0x0066A500`, viewer return, and cinematic entry
-`$a0=0x13`. Early-exit `0x800A5DD8` `$v0=1` not taken. Loop-head /
-exit-gate / backedge ran through printed n=150 (VI `#640`) with
-gate `$v0=0` (`v0_nz=0`). Silent: `0x800A64BC`, `0x800A65E4`,
-`0x800A6618`, second menu, title 1024. This selects
-`H-PortLoopNoExit` and refutes `H-PortPrologueStall`,
-`H-PortExitNoReturn`, and retry `H-CoverageInvalid`. Combined with
-retail Session 3306, the port-only stop was
-`cinematicStageAdvancer` never returning 1. Evidence:
+Session 3307 selected `H-PortLoopNoExit`: the port stayed in the cinematic
+loop with the exit gate at zero, unlike retail's finite-loop return. Evidence:
 `scratch/agent/s3307_cinematic_loop.md`.
 
-Session 3306 asked the independent retail oracle for
-`cinematicLoopBody`'s loop/exit path. The 90 s Rice run is the live
-scope. Controls: 10000-write, `[gpr-ctl]`, VI `640 @ 0x0066A500` at
-2.1 s, entry at 6.5 s, caller `0x8003E114` at 48.9 s. Early-exit
-`0x800A5DD8` `$v0=1` not taken. Loop-head `0x800A6024` began at
-10.4 s then 1002× `0x800A64B4`. Exit-gate `0x800A6074` was `$v0=0`
-for 1002 first-cinematic iters, then `$v0=1` at 48.8 s into
-`0x800A64BC`, epilogue, return `0x800A6618`, caller `0x8003E114`,
-and second menu `0x8003E13C`. Title `1024 @ 0x00790400` at 49.2 s.
-This selects `H-RetailFiniteLoop`. Evidence:
-`scratch/agent/s3306_retail_cinematic_exit.md`.
+Retail s3306 independently reached the cinematic return and title after
+about 1002 loop iterations, confirming the finite-loop reference behavior.
+Evidence: `scratch/agent/s3306_retail_cinematic_exit.md`.
 
-Session 3305 censused the post-viewer continuation. All 24 mark IDs and
-the arm/reset/SP/VI/viewer controls passed. The live path reached
-`cinematicLoopBody` entry `0x800A5D80` and never reached `0x800A6618`
-or title 1024. Session 3307 refined that missing return to
-`H-PortLoopNoExit`. Evidence:
-`scratch/agent/s3305_postviewer_continuation.md`.
+Sessions 3305–3308 establish the cinematic baseline: the viewer returns,
+then the port's stage advancer sees a null pointer and returns zero, so the
+exit gate never opens; retail's finite loop eventually initializes the stage.
+Detailed captures remain in the ledger and evidence index.
 
-Session 3304 promoted completion-wins/not-yielded status to the default and
-added one request-reset helper to both weak and linked strong task-start
-paths; request-only remains available as
-`ROGUESQ_SP_YIELDED_REQUEST_ONLY=1`. The same-build pair passed arm,
-pre=1/post=0 reset, SP-completion, viewer-entry, and 640-phase controls.
-Default emitted 44 `requested=1 returned=0` / E60 rows, matched SENT/SRET
-through n=100, and returned from the viewer. Rollback still died at SENT
-n=3. Default never published title 1024 in 120 s (`H-ViewerOnly`). ORIGIN:
-the request bit is legitimate, but it is not a legitimate yielded-task
-result on a host with no interrupt/resume path. Evidence:
-`scratch/agent/s3304_yield_lifecycle_default.md`.
-
-Session 3303 ran the same-build port A/B for request-only
-`osSpTaskYielded` versus diagnostic completion-wins. Both arms passed
-`640 @ 0x0066A500`, viewer-entry, arm-row, and SP-completion controls.
-Baseline reported `requested=1 returned=1`, took 19E70/19E80F 12 times,
-and stopped at SENT n=3 / SRET n=2 / 2D50 n=3. Completion-wins reported
-`requested=1 returned=0`, took 19E60, restored 19ED0/19F1C/19FE4,
-returned SRET n=3, and advanced through matched SENT/SRET and 2D50 n=10.
-This selects `H-FalseYieldStatus` and refutes `H-StatusOnly`,
-`H-YieldStatusNotCausal`, and valid-pair coverage failure. Combined with
-retail s3296/s3298/s3301, the causal conclusion is two-source. ORIGIN: the
-request bit is legitimately written by `osSpTaskYield`, but is not a
-legitimate yielded-task result because the host never interrupts/resumes a
-task. Evidence: `scratch/agent/s3303_yield_status_ab.md`.
+Sessions 3303–3304 established the completion-aware SP-yield contract as
+the default: the request bit is legitimate, but not a yielded-task result on
+this host because no interrupt/resume path exists. Evidence remains in the
+ledger and `scratch/agent/s3303_yield_status_ab.md`.
 
 ## Current state
 
