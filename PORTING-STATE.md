@@ -130670,3 +130670,24 @@ or adjacent external caller at those addresses in this route. It does not
 reconcile the earlier `0x8002BEEC` attribution or identify the external
 dispatch site. No port instrumentation or audio behavior changed. Evidence:
 `scratch/agent/s3405_retail_pcm_dispatch/oracle.log`.
+
+## Session 3406 (2026-08-31) — M5 retail producer dispatch census
+
+Scanned the retail ELF across main and all overlay sections for direct JAL
+sites targeting `rs_memset` at `0x800078E0`. There were 88 direct sites; the
+body has no outbound call. The disputed `0x8002BEEC` boundary is not a direct
+JAL: its instruction is `0x42000018`, with a JAL to `0x8002B480` immediately
+after it.
+
+The all-88-PC oracle arm exceeded setup capacity and exited 2 before emulation,
+so it is not evidence. The fixed focused arm passed the positive controls:
+10,010 whole-RDRAM writes, 10 writes at `0x1935E0`, and 1,281 hangar VI rows.
+It observed 191,046 executions at `0x8002BEEC` and
+`exec-prev pc=0x800078ec prev=0x8002beec n=177` before `0x800078EC`.
+
+This selects `H-IndirectDispatch` at the measured boundary and refutes
+`H-StaticCallsite` and `H-RouteMismatch`. It does not yet explain why the
+predecessor field names a statically non-JAL instruction, so the next work unit
+qualifies this boundary on the port. No port or audio behavior changed.
+Evidence: `docs/M5-S3406-RETAIL-PRODUCER-DISPATCH.md` and
+`scratch/agent/s3406_retail_producer_dispatch/oracle-focused.log`.

@@ -433,3 +433,14 @@ Baseline and independent boundary evidence remains indexed in the ledger and
 PROJECT-OVERVIEW section 54. Use bounded `grep`/ `sed` windows for
 PORTING-STATE.md; never read it wholesale. The soak queue is consumed by
 automation; fold only new tail lines into the next audit.
+
+Session 3406 scanned the retail ELF across main and all overlay sections and
+found 88 direct JAL sites to `rs_memset`; `0x8002BEEC` is not a direct JAL
+(`0x42000018` there). The focused independent oracle arm passed its controls
+(10,010 whole-RDRAM writes, 10 target writes, 1,281 hangar VI rows), observed
+`0x8002BEEC` 191,046 times, and recorded
+`exec-prev pc=0x800078EC prev=0x8002BEEC n=177`. No direct candidate was an
+observed producer predecessor. This selects `H-IndirectDispatch` at the
+measured boundary and refutes `H-StaticCallsite` and `H-RouteMismatch`; the
+predecessor-field/static-instruction reconciliation remains open. Evidence is
+in [M5-S3406-RETAIL-PRODUCER-DISPATCH.md](M5-S3406-RETAIL-PRODUCER-DISPATCH.md).

@@ -1,39 +1,33 @@
-# NEXT work unit — enumerate the retail PCM producer’s external dispatch sites
+# NEXT work unit — qualify the port at the retail producer boundary
 
-HYPOTHESIS-ID: m5-retail-producer-dispatch
+HYPOTHESIS-ID: m5-port-producer-boundary
 
-Session 3405 passed all controls but found only self-reentry at
-`0x800078EC`: 9,699 hits, all `exec-prev=0x800078EC`; `0x80033300`,
-`0x800078E8`, `0x8002BEE8`, and `0x8002BEEC` were zero. The earlier
-`0x8002BEEC` attribution is stale or route-dependent and must be reconciled
-before port instrumentation.
+Session 3406 scanned main plus all overlay sections and found 88 direct JAL
+sites to `rs_memset`; `0x8002BEEC` is not a direct JAL (`0x42000018`). The
+focused oracle arm passed controls and observed `0x8002BEEC` 191,046 times,
+with `exec-prev pc=0x800078EC prev=0x8002BEEC n=177`.
 
 Competing hypotheses:
 
-- `H-StaticCallsite`: a statically enumerated JAL/callsite in the retail
-  `0x800078EC` body or its immediate caller chain is the external dispatch
-  site and will execute in the completion-safe route.
-- `H-IndirectDispatch`: no direct JAL identifies the edge; a function-pointer
-  or overlay dispatch site must be watched instead.
-- `H-RouteMismatch`: the earlier `0x8002BEEC` edge belongs to a different
-  route, so neither static candidate set executes during this route.
+- `H-PortBoundaryPresent`: the port executes `0x8002BEEC` and exposes the same
+  producer predecessor relation; the gap is downstream.
+- `H-PortBoundaryAbsent`: the port does not execute `0x8002BEEC`; the missing
+  producer dispatch remains upstream.
+- `H-PortBoundaryDifferent`: the port executes it with a different predecessor
+  or route relation, indicating address reuse or overlay divergence.
 
-Discriminator: perform one bounded disassembly/callsite enumeration of the
-retail `0x800078EC` function and its immediate callers, producing one complete
-candidate table. Then run one completion-safe oracle census watching every
-candidate plus `0x800078EC`, with whole-RDRAM, `0x1935E0`, title/hangar, and
-phase-histogram controls. A candidate with nonzero count and an `exec-prev`
-relation to the producer selects the static edge; only indirect candidates
-firing selects indirect dispatch; no external candidate firing with controls
-live selects route mismatch.
+Discriminator: in one fresh build/run, retain the existing port PCM/image
+controls and add phase-qualified execution/predecessor logging at
+`0x8002BEEC` and `0x800078EC`. Controls must include the qualified route,
+title/hangar VI transitions, audio ABI/DMA, image-stage, and nonzero PCM
+boundary controls. Matching execution plus the same predecessor selects
+`H-PortBoundaryPresent`; zero execution with controls live selects
+`H-PortBoundaryAbsent`; a different predecessor selects
+`H-PortBoundaryDifferent`.
 
-Commands:
+Use the existing completion-safe port contract-pair recipe, adding only the
+two boundary PCs in its already-batched configuration. Build once, run silent
+and image arms concurrently, and SIGKILL both after target phases. Do not alter
+waits, slots, dispatch, or PCM writeback.
 
-    rg -n "0x800078EC|800078ec|func_800078EC" /Users/williambuckley/Documents/Tools/rogue_squadron64
-    # Read bounded windows around the identified body/callsites, then substitute
-    # the complete candidate list in the oracle command.
-    env tools/oracle/build/rs64_oracle ...
-
-The oracle run must retain the whole-RDRAM positive control and be SIGKILL-safe.
-Do not add port instrumentation until the retail external dispatch site is
-named.
+Evidence: `docs/M5-S3406-RETAIL-PRODUCER-DISPATCH.md`.
