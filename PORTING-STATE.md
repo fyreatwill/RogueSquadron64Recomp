@@ -128974,3 +128974,17 @@ It does not yet distinguish a non-immediate title swap from the join's
 
 Evidence: `scratch/agent/s3322_retail_post_swap_join.md` and
 `scratch/agent/s3322_retail_post_swap_join.log`.
+## Session 3323 (2026-08-30) — captured retail all-width post-swap ordering
+
+The independent retail oracle was rebuilt after changing the post-swap latch
+to accept every pre-swap VI width and print `pre_width`. One 90 s Rice run
+passed the whole-RDRAM positive control (10,000 writes), watched
+`osViSwapBuffer` 1,849 times, and observed 5,369 VI frames including title
+1024 and the return to 640. The table latched/joined 1,849/1,849 rows with
+zero pending, dropped, or overflow. Every row was 640→640/other 640-origin or
+1024→1024; no 640→1024 title row existed. The watched PC's callers were
+`0x8001BE24` for 1,848 hits and `0x80019B14` for one. This selects
+`H-NonImmediateTitleSwap` for the watched edge and rules out table saturation
+and the old 640-only latch filter, but is single-source evidence: it does not
+identify the actual title-transition publisher and authorizes no port or M5
+behavior change. Full evidence: `scratch/agent/s3323_retail_all_width.md`.

@@ -1,37 +1,38 @@
-# NEXT work unit — capture retail title transition with all-width latches
+# NEXT work unit — attribute retail title mode setup/apply ordering
 
-HYPOTHESIS-ID: retail-title-transition-all-width
+HYPOTHESIS-ID: retail-title-transition-ordering
 
-Session 3322 showed the 4096-row any-VI join is live and not overflowing,
-but its 640-only latch filter retained no 640→1024 row. The configured
-Windows/MIPS PatchesLib host remains an external dependency.
+Session 3323 accepted every pre-swap width and still found no 640→1024 row
+after `osViSwapBuffer` at `0x80035500`. The configured Windows/MIPS
+PatchesLib host remains an external dependency.
 
 ## Competing hypotheses
 
-- `H-ImmediateTitleSwap`: an all-width latch retains a row with pre-width 640
-  and next width 1024, identifying the exact retail publication ordering.
-- `H-NonImmediateTitleSwap`: title 1024 occurs, but no 640-pre-width latch
-  joins to it, so the mode transition is not immediately after that swap edge.
-- `H-OtherCaller`: the target transition follows a swap from a different
-  caller or width, naming a distinct retail publication path.
+- `H-ModeSetupBeforeApply`: a watched retail mode-setup call writes/returns a
+  1024 template before the first title VI, and the apply path consumes it.
+- `H-ApplyWithoutSetup`: the title transition is driven by an already-live
+  1024 template; no mode setup call occurs in the target window.
+- `H-OtherPublisher`: neither watched mode path attributes the transition,
+  so publication is through another caller or an unobserved interrupt path.
 
 ## Discriminator
 
-Change the oracle post-swap latch to accept every watched swap width while
-recording and printing the pre-width. Build once and run the same Rice-backed
-90-second capture. The whole-RDRAM watch and VI trace are positive controls.
-Classify rows where `pre_width=640` and `next_width=1024`, retaining swap
-caller/origin and pending/dropped/overflow counts. A matching row selects
-`H-ImmediateTitleSwap`; no matching row with title 1024 live selects
-`H-NonImmediateTitleSwap`; a matching row with a different caller selects
-`H-OtherCaller`.
+Add all candidate PCs to one oracle execution watch: `0x8001B6B0`
+(`initVideoSubsystem`), `0x80018378` (`advanceVideoFrame`),
+`0x80019914` (`applyPendingViChanges`), and `0x80035500`
+(`osViSwapBuffer`). Phase-gate detailed rows at VI origin `0x00790400`,
+width 1024, and run one Rice-backed 90-second capture with whole-RDRAM and
+VI trace controls. Compare each candidate's execution time/GPR row with the
+first title VI and record whether a 1024 mode template is written before the
+transition. A setup→apply chain selects `H-ModeSetupBeforeApply`; title VI
+with no setup execution selects `H-ApplyWithoutSetup`; neither watched path
+selects `H-OtherPublisher`.
 
 ## Exact command
 
 ```sh
-apply_patch  # latch all swap widths, retain/report pre_width
 tools/oracle/build.sh
-tools/oracle/build/rs64_oracle --core "$PWD/../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" --rom "$PWD/../rogue_squadron64/rogue_squadron.z64" --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 90 --watch-write 0x0:0x800000 --watch-pc 0x80035500 --pc-phase-log-width 0x00790400:1024 --post-swap-table-pc 0x80035500 --post-swap-any-vi --vi-trace
+tools/oracle/build/rs64_oracle --core "$PWD/../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" --rom "$PWD/../rogue_squadron64/rogue_squadron.z64" --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 90 --watch-write 0x0:0x800000 --watch-pc 0x8001B6B0,0x80018378,0x80019914,0x80035500 --pc-phase-log-width 0x00790400:1024 --vi-trace
 ```
 
 No M5 Step 3 or port behavior change is authorized by this capture alone.

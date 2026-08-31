@@ -255,6 +255,7 @@ static int g_post_swap_table_enabled;
 static int g_post_swap_any_vi;
 struct post_swap_pending {
     int valid;
+    uint32_t pre_width;
     uint32_t pre_origin;
     uint32_t prev_pc;
     uint32_t a0_phys;
@@ -820,12 +821,12 @@ static void dump_mode_descriptor(uint32_t pc)
 
 static void latch_post_swap_table(uint32_t pc)
 {
-    if (!g_post_swap_table_enabled || pc != g_post_swap_table_pc ||
-        pDebugMemRead32(VI_WIDTH_ADDR) != 640)
+    if (!g_post_swap_table_enabled || pc != g_post_swap_table_pc)
         return;
     if (g_post_swap_pending.valid)
         g_post_swap_dropped++;
     g_post_swap_pending.valid = 1;
+    g_post_swap_pending.pre_width = pDebugMemRead32(VI_WIDTH_ADDR);
     g_post_swap_pending.pre_origin = pDebugMemRead32(VI_ORIGIN_ADDR);
     g_post_swap_pending.prev_pc =
         (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC);
@@ -951,11 +952,12 @@ static void join_post_swap_table(uint32_t width, uint32_t origin)
         g_post_swap_overflow++;
         return;
     }
-    printf("[post-swap-row] pre_origin=0x%08x swap_prev_pc=0x%08x "
+    printf("[post-swap-row] pre_width=%u pre_origin=0x%08x swap_prev_pc=0x%08x "
            "a0_phys=0x%08x next_origin=0x%08x mode_valid=%d "
            "mode_ptr=0x%08x fld0.origin=0x%08x fld0.yScale=0x%08x "
            "fld1.origin=0x%08x fld1.yScale=0x%08x\n",
-           pending.pre_origin, pending.prev_pc, pending.a0_phys, origin,
+           pending.pre_width, pending.pre_origin, pending.prev_pc,
+           pending.a0_phys, origin,
            pending.mode.valid, pending.mode.mode_ptr,
            pending.mode.fld0_origin, pending.mode.fld0_y_scale,
            pending.mode.fld1_origin, pending.mode.fld1_y_scale);
