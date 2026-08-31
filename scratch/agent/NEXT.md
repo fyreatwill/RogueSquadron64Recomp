@@ -1,31 +1,31 @@
-# NEXT work unit — join task writer values to enqueue payloads
+# NEXT work unit — trace the producer of extra port task operands
 
 HYPOTHESIS-ID: m5-task-field-writer
 
-Session 3482 matched the retail and port task-span writer-PC route at all ten
-title-phase PCs but found differing resulting payloads at enqueue. The exact
-writer operand versus intervening mutation is still open.
+Session 3483 selected the writer-operand hypothesis: retail post-store values
+at `0x8009177C/0x80091784` are restricted to `0x80171CE0`/`0x80173B20` and
+sizes 1/2, while port writer and enqueue rows also carry
+`0x8018FB70`/size 3 and `0x8018DD30`/size 1.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-WriterOperand`: the shared writer PCs store different values in the
-  payload fields; ordered post-store values diverge at the writer.
-- `H-TaskPayloadMutation`: shared writer values match, then a later guest
-  store or host boundary changes the fields before enqueue.
-- `H-TaskObservationInvalid`: the task enqueue PC or phase join is not live;
-  missing whole-RDRAM/phase controls invalidate the comparison.
+- `H-ProducerDivergence`: an upstream port producer stores the extra operands;
+  a source-span writer row with those values selects this.
+- `H-GuestTransform`: producer values match retail, then guest code transforms
+  them before `0x8009177C/0x80091784`; matching producer rows plus differing
+  writer rows selects this.
+- `H-ObservationInvalid`: controls or the title phase fail; no conclusion is
+  valid without both positive controls and title rows.
 
-Discriminating measurement: extend the independent Rice oracle capture to emit
-ordered post-store values for physical fields `0x1494A0` and `0x1494A4` at
-writer PCs `0x8009177C` and `0x80091784`, retaining whole-RDRAM control,
-task-PC control, and phase buckets. Join those rows to the existing port
-`[m5-task-writer]` and `[m5-host-task-boundary]` rows by origin and per-PC
-ordinal. Matching writer values followed by enqueue divergence selects
-`H-TaskPayloadMutation`; first writer-value divergence selects
-`H-WriterOperand`; missing controls select `H-ObservationInvalid`.
+Discriminating measurement: one title-gated capture covering the complete
+candidate source spans feeding the task fields, retaining the whole-RDRAM
+control, task-writer control, and enqueue rows. Join producer rows to writer
+rows by title origin and per-PC ordinal. Build once only if a new hook is
+needed; otherwise run the existing validated route and the independent Rice
+oracle together.
 
-Build once after all hooks are present. Run both arms concurrently from
-`build/` with SIGKILL watchdog cleanup. Use the existing Rice oracle route and
-the validated `s3479_m5_downstream_requal/run_late.sh` route, and keep the
-title phase/ordinal join. Do not infer from sequential task rows without both
-controls.
+Expected commands: first run the Rice oracle with `--watch-write 0x0:0x800000`
+and the selected source-span watches, then run the port from `build/` with
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_SOLO=1`,
+`ROGUESQ_LOG_M5_TASK_WRITER=1`, and the existing title phase controls. Use
+SIGKILL watchdog cleanup and do not compare sequential animation ordinals.

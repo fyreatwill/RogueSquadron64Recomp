@@ -132267,3 +132267,24 @@ the exact writer-side value versus intervening mutation remains unresolved
 because the oracle histogram did not include ordered post-store values. The
 new host witness is diagnostic-only and does not alter task fields. Evidence:
 [M5-S3482-TASK-WRITER-JOIN.md](M5-S3482-TASK-WRITER-JOIN.md).
+
+## Session 3483 (2026-08-31) — joined task-field writer values
+
+The independent Rice oracle ran with a whole-RDRAM positive control and a
+physical watch on task fields `0x1494A0:0x1494A8`. The control fired 15,248
+callbacks, the task-field watch fired 5,248 writes, title reached 633
+width-1024 VIs, and post-store detail captured 629 rows at each target PC.
+Retail stored only `0x80171CE0` or `0x80173B20` at `0x8009177C`, and only
+sizes 1 or 2 at `0x80091784`.
+
+The validated port arm reached title, fired the task-writer and downstream
+positive controls, and emitted 2,048 writer rows plus 480 enqueue rows. Port
+writer values included the retail pair but also `0x8018FB70`/size 3 and
+`0x8018DD30`/size 1; the enqueue rows carried those same extra payloads. This
+selects `H-WriterOperand` and rules out an intervening mutation after the
+writer at this boundary. It does not identify the upstream producer of the
+extra port operands. Evidence:
+`scratch/agent/s3483_m5_task_field_writer/RESULTS.md`.
+
+ORIGIN: this iteration only observes independent retail stores and port writer/
+enqueue fields; it does not rewrite, skip, or validate task payloads.
