@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3420 (2026-08-31). This file was compacted
+through Session 3421 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -354,19 +354,30 @@ is writer-loop internal state or the subsequent publication path; no runtime
 behavior changed. Evidence is in
 [M5-S3420-RETAIL-ENTRY-ARGS.md](M5-S3420-RETAIL-ENTRY-ARGS.md).
 
+Session 3421 added the regeneration-safe writer-loop witness and ran the
+silent/image pair. Both arms reached title 1024 and hangar 512 with all route
+controls live and no crash/abort. The new witness produced 72 rows in each
+arm; the target tuple matched between arms but differed from the retail
+ordinary-loop ground-truth shape: port target `s0=0x12`, `s1=0x5622`, versus
+retail `s0=a0`, `s1=0x18`. Port target `v0`/`v1` advanced normally, and the
+non-target port control showed `s0=a0`, `s1=a2`, validating the witness. This
+selects `H-PortWriterStateDiffers` at the observed boundary, but does not
+establish whether the difference is caller state or host register setup.
+Evidence is in [M5-S3421-WRITER-STATE.md](M5-S3421-WRITER-STATE.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Add one regeneration-safe port writer-loop state witness at `0x800078EC`,
-   collecting the complete internal register/state tuple at the target span,
-   with silent and Factor 5 image arms in one fresh build/run. Compare it to
-   Session 3420's retail tuple and retain phase, whole-route, ABI/DMA,
-   image-stage, and PCM controls.
-2. If the internal tuples match, move the discriminator to the next
-   publication boundary; if they differ, trace the first differing field.
-   Do not change waits, slots, dispatch, clear behavior, or PCM writeback.
+1. Obtain a like-for-like retail target-row state capture for the
+   `0x801797B0..0x80179A48` stores, joining the exact target memory watch to
+   `0x800078EC` execution state. The s3421 port witness found target
+   `s0=0x12`/`s1=0x5622` while its normal-loop control was `s0=a0`/`s1=a2`;
+   do not treat the ordinary retail loop as a target-row substitute.
+2. If retail target state matches the port, inspect the subsequent publication
+   boundary; if it differs, trace the first differing state producer. Do not
+   change waits, slots, dispatch, clear behavior, or PCM writeback.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

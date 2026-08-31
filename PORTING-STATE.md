@@ -130918,3 +130918,33 @@ the entry-argument explanation at this boundary. The next probe is a port
 writer-loop internal-state comparison; no runtime behavior changed.
 Evidence: `docs/M5-S3420-RETAIL-ENTRY-ARGS.md` and
 `scratch/agent/s3422_retail_entry_arguments_capture/oracle.log`.
+
+## Session 3421 (2026-08-31) — M5 writer-loop internal-state witness
+
+Ran the independent retail preflight before instrumenting: whole-RDRAM and
+exact target-span controls fired, with 3,230,451 executions at `0x800078EC`
+and 1,166 target-span writes. The retail field witness showed the ordinary
+512 loop shape `s0=a0`, `s1=0x18`.
+
+Added `tools/apply_s3421_m5_writer_state.py`, which installs a bounded,
+phase-gated writer-loop state witness at the actual `0x800078EC` store site.
+The fresh build passed after fixing one format-argument warning. Silent and
+Factor 5 image arms ran concurrently and both reached title 1024 and hangar
+512 without crash or abort. The new witness fired 72 times in each arm; the
+image arm had 4,942 image-stage rows and silent had zero. Non-target witness
+rows were also live, proving the state instrument had a positive control.
+
+Both port arms had the same first target tuple: `a0=0x801797B0`, `a1=0`,
+`a2=0x298`, `ra=0`, `t0=1`, `t1=0`, `s0=0x12`, `s1=0x5622`,
+`v0=0x801797B0`, `v1=0`, predicate true. Target `v0`/`v1` then advanced
+normally. This selects `H-PortWriterStateDiffers` against the retail
+ordinary-loop control and refutes a port/image-arm difference, but it does
+not yet prove the same `s0/s1` values for retail's target rows: the exact
+retail target capture was not joined to the PC field table. The next unit is
+that like-for-like retail target-state join; no waits, slots, dispatch, or
+PCM writeback changed.
+
+Evidence: `docs/M5-S3421-WRITER-STATE.md`,
+`scratch/agent/s3421_retail_writer_state_groundtruth.log`,
+`scratch/agent/s3421_retail_writer_state_exact.log`, and
+`scratch/agent/s3421_m5_writer_state/driver.log`.
