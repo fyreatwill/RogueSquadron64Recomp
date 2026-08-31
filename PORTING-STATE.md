@@ -129071,3 +129071,48 @@ explicit PID watchdog reruns are the valid captures.
 Evidence: `scratch/agent/s3327_m5_slot_status_consumer.md` and the captures in
 `scratch/agent/s3327_m5_slot_status_oracle/` and
 `scratch/agent/s3327_m5_slot_status_port/`.
+
+## Session 3328 (2026-08-30) — port image arm selects H-PortRouteStillIncomplete at title VI-1024
+
+Work unit: port-side slot/status route qualification. Ran
+`scratch/agent/run_s3327_m5_slot_status_port.sh` (180 s watchdog,
+`ROGUESQ_LOG_PHASE`, `ROGUESQ_LOG_M5_B40_WRITER`, `ROGUESQ_LOG_M5_TASK_CONTRACT`,
+`ROGUESQ_LOG_PCM_BOUNDARY`, `ROGUESQ_LOG_M5_GATE_CONTRACT`,
+`ROGUESQ_LOG_M5_B40_ROUTE`, `ROGUESQ_LOG_M5_ROUTE_TRANSITION`,
+`ROGUESQ_LOG_FILTER_VOICE_AUDIT`, autopilot 3:start/6:start/9:start/12:start/
+16:a/20:a/24:start/28:a, `ROGUESQ_AUTOPILOT_STOP_WIDTH=512`,
+`PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=110 PROBE_KEYS_FROM_PHASE=1`,
+`ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1`).
+
+Phase transitions observed: 320 at 1.4 s, 640 at 3.2 s, 1024 at 14.6 s. Game
+never reached 512 (hangar); SIGKILL at 180 s. Autopilot fired all 8 events
+correctly (events 1–4 at 3/6/9/12 s during VI-640, events 5–8 at 16/20/24/28 s
+during VI-1024). No crash or abort marker in the log.
+
+Controls: the M5 image arm produced 31,512 `audtask-join` rows, 89
+`pcm-boundary-source` rows, 89 `pcm-boundary-consumer` rows, 6,308
+`audtask-dma-row` rows, and 7,796 `m5-route-prepare` rows in phase 4
+(VI-1024). These pass prior session controls: DMA stages and PCM source/consumer
+are live in the image arm.
+
+Key new findings:
+1. No vi-commit for VI-1024 in the M5 route. The last `m5-route-transition`
+   `edge=vi-commit` was seq=9 (`caller=0x80007904 requested_width=1024
+   committed_width=640 commit_origin=0x696100 phase=3`). All 7,796 phase-4
+   route-prepare rows show `commit_seq=9 commit_width=640 commit_phase=3
+   key_match=0`. A vi-commit with `committed_width=1024` never appeared.
+2. Slot-pool count grew monotonically: 4 at t=6.6 s, 473 at t=9.9 s, 668 at
+   t=10.9 s, stable to 671, then rising to 1578 at t=64.5 s (phase 4 relative).
+   No slot freeing was observed. This is a new finding not present in s3325/s3326.
+3. No B40-writer, slot-allocation, or slot-submission rows appeared.
+
+This selects `H-PortRouteStillIncomplete`: the port image arm cannot reach hangar
+512 within the 180 s watchdog. It does not select `H-PortMatchesRetail`.
+The missing edge remains open between the image/PCM path and the slot/status
+relation. Two candidate explanations: (a) the M5 route vi-commit for 1024 is
+absent, so the committed route key is stale; (b) the audio slot pool is leaking
+(growing to 1578 with no freeing), potentially blocking slot-dependent progress.
+No behavior change or mitigation is authorized. Single-source evidence.
+
+Evidence: `scratch/agent/s3327_m5_slot_status_port/image.log` (556,576 lines,
+180 s run, SIGKILL).

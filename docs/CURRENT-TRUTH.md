@@ -8,6 +8,19 @@ Current maintenance marker: Session 3326 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
+Session 3328 ran the port-side slot/status qualification (180 s watchdog,
+bounded logging). The image arm reached VI-1024 at 14.6 s with autopilot and
+ran 31,512 audio task joins, 89 PCM source/consumer pairs, 6,308 DMA rows, and
+7,796 route-prepare rows in phase 4. Two new findings: (1) no vi-commit for
+VI-1024 appeared — the last M5 route vi-commit was seq=9 with
+`requested_width=1024 committed_width=640 commit_phase=3`, so all 7,796
+phase-4 route-prepare rows show `key_match=0`; (2) slot-pool count grew
+monotonically from 4 to 1578 over 64.5 s in the title phase with no slot
+freeing observed. The game never reached VI-512 (hangar) and was SIGKILL at
+180 s. No B40-writer, slot-allocation, or slot-submission rows. This selects
+`H-PortRouteStillIncomplete` and authorizes no behavior change. Single-source
+evidence. Evidence: `scratch/agent/s3327_m5_slot_status_port/image.log`.
+
 Session 3327's retail-first slot/status capture passed the whole-RDRAM control,
 observed 108 target-phase writes in `0x141AD0:0x141AF0` and 48,349 writes in
 `0x154620:0x1546A0`, and saw `0x80094648`, `0x8009B600`, `0x8009B85C`, and
@@ -350,13 +363,17 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3326–3327:
-   retail does not write the candidate PCM/output spans during title or
-   hangar, while it does write slot/status words and executes the named
-   status-consumer PCs. The retail branch selects `H-RetailSlotConsumer`, but
-   the port arm did not reach hangar, so complete the port route qualification
-   with bounded logging before adding a new probe. Do not change a contract
-   edge or add a mitigation.
+1. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3328: retail
+   writes slot/status and executes the named consumer PCs in the hangar phase
+   (`H-RetailSlotConsumer`); the port image arm cannot reach hangar even at
+   180 s. Two new blocking observations: the M5 route vi-commit for VI-1024 is
+   absent (last commit is seq=9 with committed_width=640, key_match=0 on all
+   7,796 phase-4 route-prepare rows), and the audio slot-pool count grows
+   monotonically from 4 to 1578 in the title phase with no slot freeing.
+   Before adding a slot/status probe, identify why the port is stuck at VI-1024:
+   the discriminating question is whether the missing vi-commit for 1024 or the
+   slot-pool exhaustion is the causal blocker. Design the next instrument to
+   cover both in one build. Do not change a contract edge or add a mitigation.
 2. Keep configured-host PatchesLib validation as an open dependency. When
    that host is available, run `cmake --build build --config Debug --target
    PatchesLib` to distinguish build availability from source/link failures.
