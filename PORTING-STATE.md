@@ -129926,3 +129926,9 @@ invalidity, absent task/PCM activity, and pre-hangar failure. The static s3249
 audit identifies `0x8009B7EC` as the legitimate clear writer, so no wait or slot
 behavior change was made. Next: add the exact regeneration-surviving store
 witness and repeat the same route.
+## Session 3371 (2026-08-31) — checkpoint close-out: commit ucode binary from s3370 build
+
+No new experiment was run. Session s3370 rebuilt the Debug target during its
+cmake build, regenerating `ucode_024A10.bin`, but did not stage the binary
+before committing. This iteration commits only that artifact; all conclusions
+and next steps remain those of s3370.
