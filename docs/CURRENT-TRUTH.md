@@ -4,9 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3344 (2026-08-30). Compacted from
+Current maintenance marker: Session 3345 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3345 completed the static provenance audit for the corrected retail
+pointer slot. `initN64RspMixer` constructs `0x80007910` as an immediate and
+stores it at `0x80091900` / physical `0x001499D4`; there is no guest source
+load to trace. The later `0x800919D4` reload and `0x800919EC` `jalr` are in the
+same generated body. This selects the legitimate immediate-writer branch and
+refutes a missing source-table load, but does not distinguish retail host
+dispatch from an execution-watch attribution gap. No build or behavior change
+was needed. Evidence: `scratch/agent/s3345_m5_pointer_provenance_audit.md`.
 
 Session 3344 completed the independent retail pointer-source capture. The
 whole-RDRAM positive control reached 10,006 writes, title 1024 and hangar 512
@@ -572,9 +581,12 @@ target row exists.
    PC `0x80091900`; the execution watch had zero hits. This selects
    `H-PointerWriter` and refutes `H-StalePointer` for the target route. Next:
    trace the source value and separately validate whether the slot is consumed
-   through an uninstrumented indirect edge. Do not change a contract edge or
-   add a mitigation.
-   Do not add a mitigation.
+   through an uninstrumented indirect edge. Session 3345 resolved the source:
+   both retail and port use the legitimate immediate `0x80007910` initializer
+   at `0x80091900`; there is no source memory access to instrument. The
+   remaining discriminator is retail execution attribution versus host
+   dispatch at the later `0x800919D4`/`0x800919EC` edge. Do not change a
+   contract edge or add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
    (`H-RetailSlotConsumer`). The port image arm now reaches hangar with the

@@ -129436,3 +129436,19 @@ This selects `H-PointerWriter` and refutes `H-StalePointer` for the target
 route. It weakens, but does not fully measure, `H-HostDispatch`. No runtime
 behavior or mitigation was changed. Evidence:
 `scratch/agent/s3344_m5_retail_pointer_source.md`.
+
+## Session 3345 (2026-08-30) — audited callback-pointer provenance
+
+The bounded static audit of `initN64RspMixer` found that the callback value
+stored by `0x80091900` is constructed directly as `0x80007910` by
+`lui 0x8000` / `addiu 0x7910`; no guest source load or table lookup feeds the
+store. The later `0x800919D4` load reads the same physical slot
+`0x001499D4`, and `0x800919EC` performs the indirect `jalr`.
+
+This selects the legitimate immediate-writer explanation and refutes a
+missing source-table load. It does not distinguish retail host dispatch from
+an execution-watch attribution gap, so no port build, behavior change, or
+mitigation was made. The next discriminator must cover the retail guest
+`jalr`/target attribution with the existing positive controls and corrected
+slot watch. Evidence:
+`scratch/agent/s3345_m5_pointer_provenance_audit.md`.
