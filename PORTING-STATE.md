@@ -128840,3 +128840,16 @@ The batch source instrumentation is maintained by
 `tools/apply_s3314_skip_source.py`; the run recipe and raw evidence are in
 `scratch/agent/s3314_port_skip_source/`. The next work unit is a bounded
 static caller/order audit, not another identical runtime census.
+## Session 3315 (2026-08-30) — static B1C caller/order audit
+
+Ran the bounded static audit from NEXT.md against the generated functions and
+the checked-in symbol map; no build or runtime experiment. The complete table
+found only the reset store at `0x800A5EE8`, the conditional nonzero store at
+`0x800A61D0` inside `cinematicLoopBody`, and the conditional nonzero store at
+`0x800A9360` inside `dispatchCueByCategory`. The latter is reached through
+`spawnCutsceneEffectsAndCues` at `0x800A6304`, after the reset. The six direct
+cinematic callers were enumerated; no alternate fixed-address B1C writer
+exists. This refutes `H-PortB1CUncalled` and `H-PortB1COrder`. Combined with
+Session 3314's positive-control run, where only the reset fired, it selects
+`H-PortB1CDead` for the observed phase, without proving the conditional paths
+globally unreachable. Evidence: `scratch/agent/s3315_b1c_static_audit.md`.

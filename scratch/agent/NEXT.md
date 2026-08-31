@@ -1,37 +1,35 @@
-# NEXT work unit — static caller/order audit for the remaining B1C source
+# NEXT work unit — validate the patches library on the configured MIPS host
 
-HYPOTHESIS-ID: m5-osvimode-postviewer-continuation
+HYPOTHESIS-ID: m5-patches-host-validation
 
-Session 3314's corrected port run passed positive controls and showed
-`$a0=0` at 6238, `$v0=0` at 6248, 6274 taking, and no 62B4. Known stores at
-5EE8, 61D0, and 9360 were instrumented; only the prologue zero store fired.
-Do not repeat that census.
+Session 3315 found exactly three fixed-address B1C accesses: the reset at
+5EE8 and conditional nonzero stores at 61D0 and 9360. There is no alternate
+writer or pre-reset order; the observed-phase classification is
+H-PortB1CDead. Do not repeat the B1C census.
 
 ## Competing hypotheses
 
-- `H-PortB1CUncalled`: the nonzero writer is in a caller or alternate overlay
-  path, not one of the three funcs_27 stores.
-- `H-PortB1COrder`: a known writer exists but executes before the prologue
-  zero, so the observed phase sees the reset value.
-- `H-PortB1CDead`: all known nonzero writers are unreachable on this route and
-  the port has no legitimate source corresponding to retail's late write.
+- `H-GuardBuildWorks`: the Windows/MIPS toolchain and generated patch inputs
+  are available and `PatchesLib` builds.
+- `H-GuardHostMissing`: the configured target or generated patch inputs remain
+  unavailable, as on this Unix checkout.
+- `H-GuardSourceFails`: the host exists but the patch source/link contract
+  fails.
 
 ## Discriminator
 
-One bounded static audit, no runtime build: enumerate every reference to
-`0x800B0B1C`/offset `0xB1C` in the generated functions and companion symbol
-maps, then trace the callers of `cinematicLoopBody`, the 61D0 block, and the
-9360 block. A complete caller/order table that names an alternate writer,
-proves a pre-reset order, or proves all writers dead selects the matching
-hypothesis. If generated code has no complete caller relation, stop and
-request the Windows/source tree rather than adding another runtime field.
+On the configured Windows/MIPS host, run `cmake --build build --config Debug
+--target PatchesLib`. A successful `PatchesLib.lib` selects
+`H-GuardBuildWorks`; the documented missing-target/generated-input failure
+selects `H-GuardHostMissing`; a compiler/linker diagnostic after the target
+exists selects `H-GuardSourceFails`. Do not repeat the local missing-target
+build.
 
 ## Exact commands
 
 ```
-rg -n '0X[Bb]1[Cc]|0x[Bb]1[Cc]|800B0B1C|800A61D0|800A9360' ../N64Recomp/RecompiledFuncs ../N64Recomp/syms
-rg -n 'cinematicLoopBody|800A5D80|800A61D0|800A9360' ../N64Recomp/RecompiledFuncs/funcs_*.c
+cmake --build build --config Debug --target PatchesLib
 ```
 
-Record the table and selected hypothesis in a new evidence file. No M5 Step
-3 or behavior change is authorized by this audit.
+Record the build result in a new evidence file. No M5 Step 3 or behavior
+change is authorized by this validation.
