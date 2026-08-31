@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3428 (2026-08-31). This file was compacted
+through Session 3430 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -466,19 +466,36 @@ controls live and no crash/abort. Actual generated entry witnesses saw only
 like-for-like count boundary but leaves the producer unevaluable. Evidence is
 in [M5-S3429-SETUP-STATE-ENTRY.md](M5-S3429-SETUP-STATE-ENTRY.md).
 
+Session 3430 qualified the real `setDisplayMode` callsites with ground truth
+first. Retail passed the whole-RDRAM control and title/hangar gates; its
+`0x8008EBC0` watch fired in both target phases with
+`a0=0x80165ED0, a1=0x12, a2=0x0E, a3=0`, while `0x8008EA78` had no hit on the
+driven route. The fresh-build concurrent silent/image pair reached title 1024
+and hangar 512 with all controls live and no crash/abort markers. The caller
+witness fired only for `set-reapply`, once per arm at title, with
+`a0=0x80165ED0, a1=0x12, a2=0, a3=0`; neither arm exposed `set-init`. This
+selects `H-DirectSetupCallerParity` and refutes the proposed `0x5622` count at
+either observed `setDisplayMode` audio callsite. The earlier producer of the
+init-to-allocate `0x5622` value remains unresolved. Evidence is in
+[M5-S3430-SETDISPLAY-CALLERS.md](M5-S3430-SETDISPLAY-CALLERS.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Witness caller arguments immediately before the real `setDisplayMode`
-   callsites `0x8008EA78 -> initAudioSubsystem` and `0x8008EBC0 ->
-   reapplyAudioConfig`, after the independent oracle watches those two PCs.
-   The discriminator is whether either caller carries `a1=0x5622` or another
-   setup-count value before entry; require whole-RDRAM, title/hangar, init,
-   ABI/DMA, and image-stage controls. Do not change waits, slots, dispatch,
-   clear behavior, or PCM writeback.
-2. The direct `initN64RspMixer` callsite boundary is closed: both retail and
+1. Trace the remaining producer of port `a1=0x5622` before the closed
+   `initN64RspMixer -> allocateSongChannelArray` edge. First qualify the
+   corresponding retail producer/caller boundary with whole-RDRAM, title,
+   hangar, and a positive execution control; then batch the complete port
+   caller-state witness in one build and concurrent silent/image run. The
+   discriminator must identify the first port/retail divergence in producer
+   arguments or state, not repeat the closed `setDisplayMode` callsite. Do not
+   change waits, slots, dispatch, clear behavior, or PCM writeback.
+2. The direct `setDisplayMode` audio callsite boundary is closed: retail and
+   port both pass `a1=0x12` at observed `0x8008EBC0`; neither exposes `0x5622`.
+   The `0x8008EA78` route was absent in both qualified target-phase captures.
+3. The direct `initN64RspMixer` callsite boundary is closed: both retail and
    port use `0x80091D14` on the qualified route. The
    `allocateSongChannelArray` entry/first-malloc boundary and the
    init-to-allocate edge are closed at their observed scopes. Port `a1=0x5622`

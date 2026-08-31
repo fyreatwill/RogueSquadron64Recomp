@@ -131140,3 +131140,29 @@ This refutes interpreting the requested labels as the named function entries,
 but does not measure the proposed `0x5622` producer boundary. The next probe
 moves to the real `setDisplayMode` callsites at `0x8008EA78` and `0x8008EBC0`.
 No runtime behavior changed. Evidence: `docs/M5-S3429-SETUP-STATE-ENTRY.md`.
+
+## Session 3430 (2026-08-31) — setDisplayMode caller argument census
+
+Ran the independent retail oracle first with a whole-RDRAM positive control,
+Rice video, the validated Start schedule, and execution watches at the real
+`setDisplayMode` callsites `0x8008EA78` and `0x8008EBC0`. The control reached
+10,000 writes and the route reached title 1024 and hangar 512. Retail exposed
+`0x8008EBC0` in both target phases with `a0=0x80165ED0, a1=0x12, a2=0x0E,
+a3=0`; `0x8008EA78` had no hit on this driven route. The absent init-callsite
+row is not treated as a phase failure.
+
+Added a regeneration-safe witness immediately before both generated calls and
+rebuilt the Debug target successfully. Concurrent silent and Factor 5 image
+arms both reached title 1024 and hangar 512 with the init positive control and
+audio ABI/DMA controls live; image-stage was live only in the image arm, and
+neither emitted crash or abort markers. Each port arm exposed one
+`set-reapply` row at title with `a0=0x80165ED0, a1=0x12, a2=0, a3=0`; neither
+exposed `set-init`.
+
+This selects `H-DirectSetupCallerParity`: the observed port reapply caller
+matches retail, and the divergent `0x5622` value is not an argument to either
+observed audio setup call at this boundary. It refutes
+`H-PortCountAtReapplyCaller` and `H-PortCountAtInitCaller` as explanations for
+the count divergence and closes the direct callsite question at this scope.
+The earlier producer of the init-to-allocate count remains unresolved. No
+runtime behavior changed. Evidence: `docs/M5-S3430-SETDISPLAY-CALLERS.md`.

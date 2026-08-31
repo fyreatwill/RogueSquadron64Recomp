@@ -1,28 +1,29 @@
-# NEXT work unit — witness real setup-state callers
+# NEXT work unit — trace the producer of the divergent init count
 
-HYPOTHESIS-ID: m5-port-setup-state-producer
+HYPOTHESIS-ID: m5-port-init-count-producer
 
-Session 3429 showed that the prior labels are instructions, not the named
-function entries: retail hit `0x80091848` but not `0x80091B84`, while the port
-entry witness saw only `reapplyAudioConfig a1=0x12` and no target-phase init
-entry. The actual `setDisplayMode` callsites are `0x8008EA78` and
-`0x8008EBC0`.
+Session 3430 closed the direct `setDisplayMode` audio-call boundary. Retail
+and port both expose `0x8008EBC0` with `a1=0x12` on the qualified route; the
+port witness saw the same value immediately before `reapplyAudioConfig`.
+Neither qualified target-phase run exposed `0x8008EA78`, so it is not a live
+producer on this route. The divergent port `a1=0x5622` is already present at
+the `initN64RspMixer -> allocateSongChannelArray` edge and remains unexplained.
 
 Competing hypotheses and the single discriminating measurement:
 
-- `H-PortCountAtReapplyCaller`: port `a1=0x5622` is present before
-  `0x8008EBC0`, so `setDisplayMode` supplies it.
-- `H-PortCountAtInitCaller`: port `a1=0x5622` is present before
-  `0x8008EA78`, so the init route supplies it.
-- `H-PortCountUnresolved`: neither real callsite exposes the divergent count,
-  requiring an earlier or indirect producer edge.
+- `H-PortEarlierInitCountCaller`: the next caller before `initN64RspMixer`
+  supplies `a1=0x5622` on port while retail supplies `0x561F`.
+- `H-PortInitCountStateMutation`: both callers supply the same count, but a
+  preceding state write or reload diverges before the init call.
+- `H-PortInitCountIndirectRoute`: the differing value arrives through an
+  indirect dispatch or route not covered by the current direct-call census.
 
-Exact work: ask the retail oracle first to watch `0x8008EA78` and `0x8008EBC0`
-with whole-RDRAM, title, and hangar controls. Then add one regeneration-safe
-phase-gated host witness immediately before each generated call, recording
-`a0..a3`; build once; run the existing silent/image pair concurrently with
-`ROGUESQ_LOG_INIT_VOICE_SAMPLE=1`. A port `a1=0x5622` before `0x8008EBC0`
-selects `H-PortCountAtReapplyCaller`; only before `0x8008EA78` selects
-`H-PortCountAtInitCaller`; neither with live controls selects
-`H-PortCountUnresolved`. Do not change waits, slots, dispatch, clear behavior,
-or PCM writeback.
+Exact work: inspect the generated direct JAL/call chain immediately preceding
+`0x80091D14`, identify the nearest bounded producer edge, then ask the retail
+oracle first for that edge with whole-RDRAM, title, and hangar controls plus a
+positive execution watch. Add one regeneration-safe phase-gated witness table
+covering every candidate predecessor in the same build; run silent and Factor
+5 image arms concurrently with `ROGUESQ_LOG_INIT_VOICE_SAMPLE=1`. A first
+caller/state divergence selects the corresponding hypothesis; matching
+predecessor state with live controls selects the indirect-route hypothesis.
+Do not change waits, slots, dispatch, clear behavior, or PCM writeback.
