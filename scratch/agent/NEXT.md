@@ -1,33 +1,30 @@
-# NEXT work unit — repair title-scoped source-writer witness
+# NEXT work unit — join qualified title source-writer values
 
 HYPOTHESIS-ID: m5-output-state-contract-boundary
 
-Session 3459 reached title with the prescribed LLE/spin-yield route, but the
-existing writer witness emitted zero title rows. Its positive control fired
-only in width-640 phase, so the source-value join remains unevaluable.
+Session 3460 qualified the repaired title witness: the title entry control
+fired and the source-writer table emitted 1,024 rows (768 at `0x800644B0`, 256
+at `0x80064524`), all with zero port values. Retail value evidence exists in
+the s3458 post-store arm, but the source/value join is not yet qualified.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-WitnessGate`: title rows are suppressed by the host phase/origin gate; a
-  title-scoped control plus rows after correcting the gate selects this.
-- `H-GeneratedRoute`: title execution does not reach the generated
-  instrumented stores; a title control elsewhere plus absent store rows
-  selects this.
-- `H-TitleNoStore`: the title path reaches the instrumented functions but does
-  not execute the source-slot stores; function-entry evidence plus absent
-  store rows selects this.
-- `H-ControlFailure`: no title-scoped positive control fires; the result is
-  unevaluable and the witness must not be used for value conclusions.
+- `H-PortRetailParity`: joined writer PCs and values match; the source edge is
+  closed.
+- `H-PortZeroLegitimate`: writer PCs match and retail also stores zero at the
+  joined ordinals; zero is legitimate at this boundary.
+- `H-PortWrongValue`: writer PCs match but retail stores nonzero values; the
+  first value divergence selects the missing producer contract.
+- `H-PortWriterRoute`: ordered writer PCs differ or a side is absent; the
+  route/ordering boundary remains unresolved.
 
-Before building, repair only the witness gate or add a regeneration-safe
-title function-entry control so all four outcomes are distinguishable. Then
-build and run:
+Before building, use the existing qualified retail post-store rows and the
+port retry rows as ground-truth inputs; do not add another field. Build:
 `cmake --build build --config Debug --target RogueSquadron64Recomp`
-followed by
-`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_WRITER_PARITY=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 tools/probe.sh scratch/agent/s3460_m5_source_value_witness 45 0.5`.
-The discriminator is a title-scoped positive control plus the first
-phase/PC/ordinal source-writer value joined to the producer load: corrected
-gate selects `H-WitnessGate`, title entry without stores selects
-`H-GeneratedRoute` or `H-TitleNoStore` using the entry control, and absent
-title control selects `H-ControlFailure`. Do not alter audio waits, slots,
-dispatch, clear behavior, or PCM writeback.
+and run the existing title-writer recipe with a new output directory:
+`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_WRITER_PARITY=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 tools/probe.sh scratch/agent/s3461_m5_source_value_join 45 0.5`.
+The discriminator is the first phase/PC/ordinal writer/value join against the
+retail table: matching PCs and values select `H-PortRetailParity` or
+`H-PortZeroLegitimate`; matching PCs with a first nonzero retail value select
+`H-PortWrongValue`; missing or reordered PCs select `H-PortWriterRoute`.
+Do not alter audio waits, slots, dispatch, clear behavior, or PCM writeback.

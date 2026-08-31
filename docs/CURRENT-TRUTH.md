@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3458 (2026-08-31). This record was
+Current maintenance marker: Session 3460 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -136,14 +136,26 @@ qualified for this arm, but the title writer witness is not; the source-value
 join remains unevaluable and no audio behavior is implicated. Evidence:
 [M5-S3459-SOURCE-VALUE-PORT.md](M5-S3459-SOURCE-VALUE-PORT.md).
 
+Session 3460 added a regeneration-safe title-scoped entry control at
+`rebuildActiveDisplayObjectList`. The first prescribed capture hit the known
+startup crash at guest PC `0x8000834C` before title; an unchanged retry reached
+title origin `0x00790400`, fired the entry control, and emitted 64 entry rows
+plus 1,024 source-writer rows (768 at `0x800644B0`, 256 at `0x80064524`). The
+captured port source-store values were zero. The phase, control, and store rows
+refute gate suppression, missing generated route, no-title-store, and
+control-failure interpretations at this scope. The later
+`musyxSynthFrame+4268` crash does not invalidate the earlier title rows.
+Port-versus-retail value legitimacy remains unevaluable until the rows are
+joined; evidence: [M5-S3460-SOURCE-VALUE-WITNESS.md](M5-S3460-SOURCE-VALUE-WITNESS.md).
+
 ## Next steps
 
-1. Repair or qualify the title-scoped source-writer witness. The current arm
-   reaches origin `0x00790400`, but its control remains width-640-only and its
-   title source table is empty. First establish why the generated store hook
-   does not observe title calls, then run one same-build capture whose control
-   and source rows are both title-scoped. Do not alter waits, slots, dispatch,
-   clear behavior, or PCM writeback.
+1. Join the qualified port title source-writer rows to the independent retail
+   post-store writer/value table by phase, PC, and ordinal. Use the existing
+   title control and source rows as the port positive controls; do not alter
+   waits, slots, dispatch, clear behavior, or PCM writeback. A matching
+   writer/value sequence closes this source boundary; a first value or writer
+   divergence selects the next contract edge.
 2. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 3. Use the producer join to identify the first output/state contract divergence

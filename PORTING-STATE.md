@@ -131764,3 +131764,25 @@ hypotheses and does not justify changing audio behavior. Evidence:
 ORIGIN: the observed crash is in the existing MusyX synth path after title;
 no mitigation was added. Retail post-store values remain legitimate
 single-source observations, without a port-equivalent store in this run.
+
+## Session 3460 (2026-08-31) — qualified title source-writer entry and stores
+
+Added `tools/apply_s3460_m5_writer_witness.py`, a regeneration-safe
+title-scoped entry control at `rebuildActiveDisplayObjectList`. The first
+prescribed LLE/spin-yield capture crashed during startup at guest PC
+`0x8000834C`, before title. An unchanged retry reached title VI 1024 at origin
+`0x00790400`, fired the entry control once, and emitted 64 bounded entry rows
+plus 1,024 source-writer rows: 768 at `0x800644B0` and 256 at `0x80064524`.
+The captured port store values were zero. The run later changed to width 640
+and crashed in `musyxSynthFrame+4268` at guest PC `0x80001B08`.
+
+This selects a live title writer route and refutes gate suppression, missing
+generated route, no-title-store, and control-failure explanations at this
+scope. It does not establish whether zero is legitimate until joined with the
+independent retail writer/value table. No runtime mitigation or audio behavior
+was changed.
+
+ORIGIN: the new entry control and existing source-store witness are diagnostic
+only; the observed zero values are not classified as legitimate without the
+retail join. Evidence: `docs/M5-S3460-SOURCE-VALUE-WITNESS.md` and
+`scratch/agent/s3460_m5_source_value_witness_retry/run.log`.
