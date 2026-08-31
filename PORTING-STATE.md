@@ -130594,19 +130594,20 @@ Slot `0x149764` results:
 
 Combined with s3401's port witness (slot stored `0x80178C80` at title-1024,
 `0x801797B0` at hangar-512 from the same PC `0x8008F2C8`), two independent
-lines of evidence give the following discriminations:
+lines of evidence discriminate among the three hypotheses:
 
 - `H-PortStage3OwnerAbsent` (retail does not write to the slot in target
-  phases): REFUTED. Retail writes to `0x149764` 6 times, pre-phase.
+  phases): refutes this — retail writes to `0x149764` 6 times, all pre-phase.
 - `H-PortStage3Field348ProducerGap` (retail writes a different value):
-  SELECTED for title-1024. Retail stores `0x801797B0` pre-phase; the port
-  stores `0x80178C80` during the title phase — a different buffer address.
-  REFUTED for hangar-512: both retail (pre-phase) and port (during phase) store
-  `0x801797B0`.
-- `H-PortStage3DownstreamGap` (same value, downstream gap): SELECTED for
+  selects this for title-1024 (port stores `0x80178C80`; retail stored
+  `0x801797B0` pre-phase — a different buffer address). refutes it for
+  hangar-512 (both store `0x801797B0`).
+- `H-PortStage3DownstreamGap` (same value, downstream gap): selects this for
   hangar-512. Both retail and port have `field348=0x801797B0` at hangar, but
   port PCM remains zero. The gap is in the dispatch/trigger for `0x8002BEEC`
   (the JAL that calls `0x800078EC`), not in the `field348` pointer value.
+  Next discriminator: oracle `--watch-pc 0x8002BEEC` to capture the exec-prev
+  histogram naming the JAL site that dispatches `0x8002BEEC` in retail.
 
 The slot-level investigation is closed for the hangar-512 scope. The `field348`
 pointer is correct in the port; the open gap is why `0x8002BEEC` never executes
