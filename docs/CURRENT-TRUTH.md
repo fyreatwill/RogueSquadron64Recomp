@@ -4,9 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3351 (2026-08-31). Compacted from
+Current maintenance marker: Session 3352 (2026-08-31). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3352 completed the port M5 consumer-entry qualification. The fresh
+retail pre-capture again passed the whole-RDRAM control and reached hangar
+`512 @ 0x006AB400` with all five target PCs live. The port run passed title
+`1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, host/task/PCM, and gate
+controls, but the regeneration-surviving exact-site markers at
+`0x80094648`, `0x8009B5A8`, `0x8009B600`, `0x8009B85C`, and `0x8009BDE8` all
+remained zero. This selects `H-PortConsumerIndirectGap` for the qualified
+route over a status/slot gate or probe-label mismatch; no behavior change is
+authorized. Evidence: `scratch/agent/s3352_m5_port_consumer_entry.md`.
 
 Session 3351 completed the independent retail M5 consumer-reachability
 capture. The whole-RDRAM positive control fired, the driven run reached hangar

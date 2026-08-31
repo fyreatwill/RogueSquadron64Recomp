@@ -129560,3 +129560,29 @@ because no port arm was part of this work unit. The result rules out only the
 retail-side absence interpretation; it authorizes no behavior change or
 mitigation. Evidence: `scratch/agent/s3351_m5_retail_consumer_oracle.md` and
 `scratch/agent/s3351_retail_consumer_oracle.log`.
+
+## Session 3352 (2026-08-31) — qualified port M5 consumer entry gap
+
+The fresh retail oracle pre-capture again passed the whole-RDRAM positive
+control, reached hangar `512 @ 0x006AB400`, and executed all five target PCs
+with the expected adjacent previous PCs. The port Debug target was regenerated
+with the available native generator, fixup-applied, and linked successfully.
+
+The corrected Darwin run used the validated Start/spin-yield recipe. It passed
+title `1024 @ 0x00790400` at 13.5 seconds and hangar `512 @ 0x006AB400` at
+24.7 seconds. Host/task/PCM controls were positive (135 host rows, 1,867
+audio-task rows, and 94 PCM source/consumer pairs), and the existing M5 gate
+census fired in the target phases. The regeneration-surviving exact-site
+markers at `0x80094648`, `0x8009B5A8`, `0x8009B600`, `0x8009B85C`, and
+`0x8009BDE8` all remained zero; the existing indexed channel-store control
+also remained zero.
+
+This selects `H-PortConsumerIndirectGap` for the qualified route over a
+status/slot gate or probe-label mismatch. It rules out a route-invalid null,
+but does not identify the missing indirect edge and authorizes no behavior
+change. The first launch attempt was invalid because it used the Windows
+`build/Debug` path; the corrected `build/` launch is the only result used.
+The fixup path is recorded in the external N64Recomp checkout; no game logic
+or mitigation was changed. Evidence:
+`scratch/agent/s3352_m5_port_consumer_entry.md` and
+`scratch/agent/s3352_m5_port_consumer_entry.log`.
