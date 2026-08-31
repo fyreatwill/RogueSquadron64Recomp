@@ -131095,3 +131095,26 @@ route, not parity, and does not prove the port count illegitimate. Evidence:
 `docs/M5-S3427-INIT-CALLER-CHAIN.md` and
 `scratch/agent/s3427_m5_init_caller_chain/`. The next work unit witnesses both
 generated callsites directly.
+
+## Session 3428 (2026-08-31) — direct initN64RspMixer callsite witnesses
+
+Ran the independent retail oracle first with a whole-RDRAM positive control,
+Rice video, the validated Start schedule, and execution watches at
+`0x8009189C`, `0x80091C58`, and `0x80091D14`. It reached title 1024 and
+hangar 512; the control produced 10,000 writes. Retail observed two calls from
+`0x80091D14` and none from `0x80091C58`.
+
+Added a regeneration-safe phase-gated witness immediately before both
+generated callsites. The Debug build succeeded. Concurrent silent and Factor 5
+image arms both reached title 1024 and hangar 512 with the init positive
+control and audio ABI/DMA controls live; image-stage was live only in the
+image arm, and neither emitted crash or abort markers. Both arms reported
+`caller=0x80091D14` in title and hangar with the same arguments as the prior
+init witness; neither reported `0x80091C58`.
+
+This selects `H-PortCallerD1D14`, matching retail, and refutes
+`H-PortCallerD1C58` and `H-PortCallerUnresolved` at the observed route. The
+direct caller-site question is closed; the earlier producer of port
+`a1=0x5622` remains unresolved. No runtime behavior changed. Evidence is in
+`docs/M5-S3428-INIT-CALLSITES.md` and
+`scratch/agent/s3428_m5_caller_{groundtruth,pair}/`.

@@ -1,28 +1,27 @@
-# NEXT work unit — witness both initN64RspMixer callsites
+# NEXT work unit — locate the producer of port init mixer count
 
 HYPOTHESIS-ID: m5-port-setup-state-producer
 
-Session 3427 selected a retail/port caller-site asymmetry: retail executes
-`0x80091D14`, while the current port entry witness cannot recover a caller
-because `ctx->r31` is zero. Session 3426 established that retail supplies
-`a1=0x561F` at `0x80091934`, while both port arms supply `a1=0x5622` at the
-same init-to-allocate edge. The port init entry itself has `a1=0x0F`; the
-earlier producer of the eventual `0x5622` remains open.
+Session 3428 directly witnessed both generated callsites. Retail and both
+port arms use `0x80091D14`; neither port arm uses `0x80091C58`. The port init
+entry still has `a1=0x0F`, and its pre-allocate edge has `a1=0x5622`; the
+earlier producer remains open.
 
 Competing hypotheses and the single discriminating measurement:
 
-- `H-PortCallerD1D14`: a direct port callsite witness identifies
-  `0x80091D14`, matching retail's independent `prev_pc`.
-- `H-PortCallerD1C58`: the port reaches init through the other generated
-  callsite `0x80091C58`.
-- `H-PortCallerUnresolved`: neither callsite witness fires despite live phase,
-  init, and audio controls, so the direct-call mapping needs a different edge.
+- `H-PortCountAtReapplyEntry`: port `a1=0x5622` is already present at
+  `reapplyAudioConfig` entry, so its caller supplies the divergent value.
+- `H-PortCountFromInitEntry`: port `a1=0x5622` is first observed at
+  `initAudioSubsystem`/its route, not at `reapplyAudioConfig` entry.
+- `H-PortCountUnresolved`: both entries are live but neither exposes the
+  divergent value, requiring an earlier or indirect producer edge.
 
-Exact work: add one regeneration-safe, phase-gated host witness at each of the
-two generated callsites (`0x80091C58` and `0x80091D14`) recording the callsite
-and `a0..a3`; build once; run the existing silent/image pair concurrently
-with `ROGUESQ_LOG_INIT_VOICE_SAMPLE=1`. Keep title 1024, hangar 512, audio
-ABI/DMA, image-stage, and PCM controls. Matching `0x80091D14` selects
-`H-PortCallerD1D14`; `0x80091C58` selects `H-PortCallerD1C58`; no callsite
-rows with live controls selects `H-PortCallerUnresolved`. Do not change
-waits, slots, dispatch, clear behavior, or PCM writeback.
+Exact work: ask the retail oracle first to watch `0x80091B84` and
+`0x80091848` with whole-RDRAM, title, and hangar controls. Then add one
+regeneration-safe phase-gated host witness at each corresponding generated
+port entry, recording `a0..a3`; build once; run the existing silent/image pair
+concurrently with `ROGUESQ_LOG_INIT_VOICE_SAMPLE=1`. A port `a1=0x5622` at
+`0x80091848` selects `H-PortCountAtReapplyEntry`; only at the `0x80091B84`
+route selects `H-PortCountFromInitEntry`; neither with live controls selects
+`H-PortCountUnresolved`. Do not change waits, slots, dispatch, clear behavior,
+or PCM writeback.

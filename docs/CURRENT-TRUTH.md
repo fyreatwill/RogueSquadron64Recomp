@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3426 (2026-08-31). This file was compacted
+through Session 3428 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -442,19 +442,35 @@ direct caller. This selects a retail/port caller-site asymmetry at the
 observed route, not caller parity; it does not prove the port count
 illegitimate. Evidence is in [M5-S3427-INIT-CALLER-CHAIN.md](M5-S3427-INIT-CALLER-CHAIN.md).
 
+Session 3428 added direct phase-gated witnesses immediately before both
+generated `initN64RspMixer` callsites. The independent retail oracle passed
+its whole-RDRAM control (10,000 writes), reached title/hangar, and again
+observed two `0x80091D14` calls and zero `0x80091C58` calls. The fresh-build
+silent/image pair both reached title 1024 and hangar 512 with init and audio
+ABI/DMA controls live; image-stage was live only in the image arm, and neither
+arm crashed or aborted. Both port arms reported `caller=0x80091D14` in title
+and hangar with the same arguments as the prior init witness; neither reported
+`0x80091C58`. This selects `H-PortCallerD1D14`, matching retail, and closes
+the direct caller-site question. The earlier producer of port `a1=0x5622`
+remains unresolved; no audio behavior changed. Evidence is in
+[M5-S3428-INIT-CALLSITES.md](M5-S3428-INIT-CALLSITES.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Add direct phase-gated witnesses at both generated `initN64RspMixer`
-   callsites (`0x80091C58` and `0x80091D14`) in one build, then rerun the
-   silent/image pair. The discriminator is whether port rows identify
-   `0x80091D14` like retail, identify `0x80091C58`, or show neither while
-   title/hangar and audio controls remain live. Do not infer the caller from
-   `ctx->r31`; it is zero at the current entry witness. Do not change waits,
-   slots, dispatch, clear behavior, or PCM writeback.
-2. The `allocateSongChannelArray` entry/first-malloc boundary and the
+1. Trace caller-entry arguments for `initAudioSubsystem` (`0x80091B84`) and
+   `reapplyAudioConfig` (`0x80091848`) in one fresh-build silent/image pair,
+   after an independent retail oracle watches those same entries. The
+   discriminator is whether port `a1=0x5622` is already present at
+   `reapplyAudioConfig` entry, is produced by its caller, or comes through
+   `initAudioSubsystem`; require whole-RDRAM, title/hangar, init, ABI/DMA, and
+   image-stage controls. Do not change waits, slots, dispatch, clear behavior,
+   or PCM writeback.
+2. The direct `initN64RspMixer` callsite boundary is closed: both retail and
+   port use `0x80091D14` on the qualified route. The
+   `allocateSongChannelArray` entry/first-malloc boundary and the
    init-to-allocate edge are closed at their observed scopes. Port `a1=0x5622`
    is supplied immediately before the allocate call, while retail supplies
    `0x561F`; the callee does not mutate the value at either observed entry.
