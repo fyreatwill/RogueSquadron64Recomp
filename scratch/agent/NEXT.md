@@ -1,37 +1,31 @@
-# NEXT work unit — M5 dynamic consumer-pointer source census
+# NEXT work unit — M5 callback-table writer/alias audit
 
 HYPOTHESIS-ID: m5-consumer-reachability-audit
 
-Session 3353's static census found no direct or literal indirect generated edge
-to `serviceVoicePoolFrame` or `accumulateVoiceSampleOffset`; only generic
-register-loaded `jalr` sites remain. The companion symbol map independently
-confirms the target identities. Keep `H-PortConsumerIndirectGap` selected for
-the qualified route; do not add a status workaround.
+Session 3354 selected `H-PortConsumerIndirectGap`: retail independently shows
+`0x8011A8A4 -> 0x80019B74 -> 0x8009B5A8`, while the qualified port route has a
+live callback loop but only `[80003250,8009123C,8009123C,8009123C]` and zero
+consumer entries. Keep that selection; do not add a status workaround.
 
 Competing hypotheses for the next unit:
 
-- `H-PortConsumerIndirectGap`: retail executes the five bodies, but the port
-  does not reach the corresponding generated entries.
-- `H-PortConsumerGate`: the port reaches the entries, but its slot/status
-  predicate prevents the downstream consumer work.
-- `H-PortProbeMismatch`: the exact-site probe still misses the actual
-  generated indirect consumer entries.
+- `H-PortTableWriter`: a distinct registration path writes the port's three
+  `0x8009123C` callback occupants and prevents the retail target from being
+  installed.
+- `H-PortTableAlias`: the port and retail use different base/address aliases,
+  so the existing census observes different logical tables.
+- `H-PortDispatcher`: the table matches retail, but the generated dispatcher
+  loads or dispatches the wrong slot value.
 
-Discriminator: first use the independent retail oracle to identify the source
-slot/table and dynamic call-site target for the service and accumulator PCs,
-with its whole-RDRAM control and hangar `512 @ 0x006AB400` control. Then, in
-one build, capture the corresponding port source-slot value and dynamic
-target at the same phase while retaining host/task/PCM and title/hangar
-controls. A retail source/target pair absent in the port selects a missing
-publication/dispatch edge; a matching pair with no consumer entry selects a
-port gate; a matching entry with zero exact markers selects probe mismatch.
-If retail cannot identify a source slot after its positive controls, stop and
-record the edge as unresolved rather than instrumenting the port.
+Discriminator: statically enumerate every generated read/write of
+`0x8011A8A4..0x8011A8B4`, every `registerSiCallback` base/alias, and the
+`0x80019B74` load/`jalr` sequence, then reconcile each with the port census.
+A writer that can produce `0x8009123C` at the exact callback-table slot
+selects `H-PortTableWriter`; a base mismatch selects `H-PortTableAlias`; an
+exact table match with a wrong loaded target selects `H-PortDispatcher`.
+If no static source explains the occupants, record the writer as unresolved
+and do not add a probe or behavior change.
 
-Ground-truth preparation:
-
-    sed -n '1,220p' tools/oracle/README.md
-    rg -n "80094648|8009B5A8|8009B600|8009B85C|8009BDE8|jalr|LOOKUP_FUNC|registerSiCallback" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
-
-Do not build until the retail source-slot measurement passes its whole-RDRAM
-positive control and names the exact dynamic source/target relation.
+Ground truth completed in Session 3354. Do not build until the bounded static
+audit selects one writer, alias, or dispatcher outcome; this unit is static
+and should not require a runtime build.

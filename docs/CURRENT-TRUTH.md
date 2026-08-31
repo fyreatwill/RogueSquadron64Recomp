@@ -4,9 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3353 (2026-08-31). Compacted from
+Current maintenance marker: Session 3354 (2026-08-31). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3354 completed the bounded M5 consumer source/target census. Retail
+ground truth passed whole-RDRAM, title, and hangar controls and showed
+`0x80019B74` dispatching the callback-table entry at `0x8011A8A4` to
+`serviceVoicePoolFrame 0x8009B5A8` 2,171 times; the accumulator ran 1,163
+times. The qualified port run passed callback-loop, host/task, PCM, title,
+and hangar controls, but its table stayed
+`[80003250,8009123C,8009123C,8009123C]` and all five consumer markers were
+zero. This selects `H-PortConsumerIndirectGap` over a status/slot gate or
+probe mismatch and identifies the missing table publication/dispatch edge,
+but not its writer. No behavior change was authorized. Evidence:
+`scratch/agent/s3354_m5_consumer_source_census.md`.
 
 Session 3353 completed the bounded M5 indirect consumer-edge census. The
 generated tree has three direct `startSongSequence` callers, but no direct or

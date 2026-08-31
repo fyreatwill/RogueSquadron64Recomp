@@ -129605,3 +129605,25 @@ rules out a name/probe mismatch, but does not identify the dynamic
 pointer/table writer or exact call site. It rules out only static direct-edge
 absence as a complete explanation; no behavior change, mitigation, or build
 was authorized. Evidence: `scratch/agent/s3353_m5_consumer_edge_census.md`.
+## Session 3354 (2026-08-31) — censused M5 consumer source/target relation
+
+The independent retail Rice oracle passed the whole-RDRAM positive control,
+title `1024 @ 0x00790400`, and hangar `512 @ 0x006AB400`. It executed
+`serviceVoicePoolFrame 0x8009B5A8` 2,171 times from dispatcher
+`0x80019B74`, and `accumulateVoiceSampleOffset 0x8009BDE8` 1,163 times. The
+service source context identified the four-entry callback table at
+`0x8011A8A4`; the table range was active.
+
+The Debug target rebuilt successfully. One qualified image-arm port run
+reached title and hangar and passed callback-loop, callback-slot, host,
+task/PCM, and phase controls. Its callback census showed
+`[0x80003250,0x8009123C,0x8009123C,0x8009123C]`; none of the five
+regeneration-surviving consumer markers fired. The run later hit the known
+unaligned PI-read crash after target controls had fired.
+
+Two independent lines select `H-PortConsumerIndirectGap`: retail proves the
+callback-table dispatch to `0x8009B5A8`, while the port proves its live loop
+contains only the synth target. This rules out a consumer status gate and a
+probe-label mismatch, but does not identify the writer of the port occupants.
+No behavior change or mitigation was made. Evidence:
+`scratch/agent/s3354_m5_consumer_source_census.md`.
