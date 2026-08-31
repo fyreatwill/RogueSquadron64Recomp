@@ -4,9 +4,20 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3368 (2026-08-31). Compacted from
+Current maintenance marker: Session 3369 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3369's corrected independent retail status-03 capture passed the
+whole-RDRAM control (36,645,693 writes), reached hangar VI `512 @ 0x006AB400`,
+and observed the named service worker `0x8009B600` plus its status-zero clear
+`0x8009B7EC` four times, including two target-phase entries. The streaming
+status-03 republish `0x8009B7CC` also fired four times; the status-03 publisher
+`0x8009B30C` did not fire on this route. This selects `H-RetailStatus03Reaped`
+and refutes a retail status gate or alternate worker for the observed path.
+Together with the independent generated-source audit in `s3249`, this is
+two-line evidence. No wait or slot change is authorized. Evidence:
+`scratch/agent/s3369_m5_status03_worker_contract.md`.
 
 Session 3368's bounded M3 SP task-pointer audit added the missing full-
 `OSTask` KSEG0 range check to `osSpTaskLoad_recomp`, matching the existing
@@ -666,6 +677,11 @@ and only register-loaded guest-state callback edges remain. Next M5 work must
 obtain independent retail status-03 worker/zeroing evidence before any wait
 or slot change. Evidence:
 `scratch/agent/s3367_m5_consumer_indirect_dispatch_census.md`.
+Session 3369 now supplies the independent retail worker contract: the named
+service path entered and cleared status-03 in hangar. Next M5 work must qualify
+the matching port worker/clear contract on the validated image-arm route;
+do not change a wait, slot, or status edge until the port writer/value and
+return ordering are observed.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
@@ -674,8 +690,11 @@ or slot change. Evidence:
    recipe. The route commits 1024 and 512, and the actual MusyX voice mask is
    zero/max=1 rather than exhausted. Session 3348 found the port slot/status
    activity live in hangar but did not observe the four named consumers,
-   selecting `H-PortConsumerUnreached`. Next: audit the consumer call graph
-   and callback edges. Do not change a contract edge or add a mitigation.
+   selecting `H-PortConsumerUnreached`. Session 3369 independently selected
+   `H-RetailStatus03Reaped`: retail's service worker entered and cleared
+   status-03 in hangar. Next: qualify the matching port worker/clear contract
+   on the validated image-arm route. Do not change a contract edge or add a
+   mitigation.
 3. Keep configured-host PatchesLib validation as an open dependency. When
    that host is available, run `cmake --build build --config Debug --target
    PatchesLib` to distinguish build availability from source/link failures.

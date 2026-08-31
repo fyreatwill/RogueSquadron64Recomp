@@ -1,34 +1,38 @@
-# NEXT work unit — independent retail status-03 worker contract
+# NEXT work unit — qualify the port status-03 worker contract
 
-HYPOTHESIS-ID: m5-status03-worker-contract
+HYPOTHESIS-ID: m5-status03-port-worker-contract
 
-The SP task-pointer API class is now source-complete: both load and start
-boundaries validate a complete `OSTask`. The next unit returns to M5 Step 7,
-but requires independent retail evidence before changing the wait/slot path.
+Retail ground truth now independently shows the named service worker entering
+the status-03 path and clearing a slot. The next unit compares that contract
+with the already qualified port image-arm hangar route; it is diagnostic only.
 
 Competing hypotheses:
 
-- `H-RetailStatus03Reaped`: retail enters the worker, writes status zero, and
-  shutdown/drain returns through that worker contract.
-- `H-RetailStatus03Gate`: retail enters the worker but a slot/status gate
-  prevents the zeroing store on the watched route.
-- `H-RetailStatus03OtherPath`: completion uses an un-watched worker or a
+- `H-PortStatus03Reaped`: port enters `serviceVoicePoolFrame`, reaches the
+  status-zero worker store, and returns through the normal contract.
+- `H-PortStatus03Gate`: port enters the worker but its slot/status gate keeps
+  the status-zero store from executing.
+- `H-PortStatus03OtherPath`: port completion uses an un-watched worker or a
   different status table.
 
-Discriminating measurement: one retail-oracle run with the whole-RDRAM
-positive control, title/hangar route controls, status-03 worker entry, all
-zeroing stores for the actual voice table, and previous-PC attribution.
-Worker entry → zeroing writer → shutdown/drain return selects reaping; entry
-without zero selects the gate only if a gate row also fires; zero hits with
-controls live selects another path. Missing controls make the run invalid.
+Discriminating measurement: one Debug port run with host/task/PCM controls,
+title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, status-table activity,
+worker entry/previous-PC rows, all status-table zero stores, and shutdown or
+drain return markers. Worker entry → zero store → return selects reaping;
+entry without a zero store selects the gate only when the gate row fires; a
+zero store with no named worker selects another path. Missing target controls
+make the run invalid.
 
-Preparation and run surface:
+Preparation and run surface (inspect existing regeneration-surviving markers
+before changing source):
 
 ```sh
-rg -n 'status-03|status03|0x80154620|serviceVoicePoolFrame|zero' tools scratch/agent docs/M5-AUDIO-PLAN.md
-sed -n '1,220p' tools/oracle/README.md
+rg -n 'status-03|status03|0x80154620|serviceVoicePoolFrame|slot-byte|zero' src RecompiledFuncs scratch/agent tools docs/M5-AUDIO-PLAN.md
+sed -n '1,220p' scratch/agent/run_s3327_m5_slot_status_port.sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env ROGUESQ_LOG_ALL=1 zsh <validated-port-driver>
 ```
 
-Use the existing retail-oracle driver. Arm the whole-RDRAM control before the
-bounded status/worker watches in the same run. Do not change behavior or add
-a mitigation until the writer/value contract is captured.
+Before building, write the exact phase-gated worker/zero/return markers into
+this file and batch every arm in one build. Do not change behavior or add a
+mitigation until the port writer/value contract is captured.

@@ -129885,3 +129885,30 @@ This closes the source-level SP task-load/start pointer class without
 selecting an invalid-pointer hypothesis. Next: obtain the independent retail
 status-03 worker-entry and zeroing-writer contract before changing M5 wait or
 slot behavior.
+## Session 3369 (2026-08-31) — independently qualified retail status-03 worker
+
+The corrected retail-oracle run used Rice video, the validated Start schedule,
+whole-RDRAM and complete voice-status-range write controls, plus execution
+watches and previous-PC attribution for the status-03 publisher, service
+worker, status-zero clear, republish, accumulator, and shutdown scan. The
+whole-RDRAM control fired 36,645,693 times; the run reached hangar VI 512 at
+origin `0x006AB400` and completed 4,472 VI in 75.2 seconds.
+
+The service worker dispatch `0x8009B600` executed 6,089 times. Its status-zero
+clear at `0x8009B7EC` executed four times, including two target-phase entries;
+the first target-phase row was at 48.8 seconds with `prev_pc=0x8009B7E8`,
+`v0=0`, `s1=0x80153420`, and `v1=3`. The streaming status-03 republish at
+`0x8009B7CC` executed four times, also with two target-phase entries. The
+status-03 publisher `0x8009B30C` had zero executions on this route. The
+shutdown scan and accumulator were also live (`0x8009BCF8`: 1,
+`0x8009BDE8`: 2,326).
+
+The first attempt omitted the status-range writer histogram and was therefore
+not discriminating; the corrected run added `--first-watch 1` and
+`--pc-hist-watch 1` before rerunning. The corrected result selects
+`H-RetailStatus03Reaped`, refutes a retail status gate or alternate worker on
+the observed route, and does not authorize a wait/slot/status change. The
+generated-source idiom audit in `scratch/agent/s3249_m3_status03_audit.md`
+independently identifies the same worker and state transitions, providing the
+second line of evidence. Full evidence:
+`scratch/agent/s3369_m5_status03_worker_contract.md`.
