@@ -6,6 +6,7 @@ OUT="$ROOT/scratch/agent/s3334_m5_callback_writer_attribution"
 BUILD="$ROOT/build"
 mkdir -p "$OUT"
 LOG="$OUT/port.log"
+rm -f "$LOG"
 
 cleanup() {
     if [[ -n "${KEYPID:-}" ]] && kill -0 "$KEYPID" 2>/dev/null; then kill -9 "$KEYPID" 2>/dev/null || true; fi

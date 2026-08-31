@@ -208,7 +208,8 @@ extern "C" void rs64_m5_callback_writer_event(uint32_t pc,
         (width == 512u && origin == 0x006AB400u);
     const bool registration_callsite =
         pc == 0x80002FDCu || pc == 0x8009BC50u;
-    if (!target_phase && !registration_callsite) return;
+    const bool callback_table_store = pc == 0x80007928u;
+    if (!target_phase && !registration_callsite && !callback_table_store) return;
     const uint32_t next_bucket = (width << 24) ^ origin;
     if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
     if (rows == 0) {

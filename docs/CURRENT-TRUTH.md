@@ -4,9 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3336 (2026-08-30). Compacted from
+Current maintenance marker: Session 3337 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3337 selected the early callback-table store writer. The port passed
+host/task controls and reached title 1024 and hangar 512. An ungated exact
+store hook observed `0x80007928` writing `0x80003250` and then
+`0x8009123C` during phase 2; the callback census changed to
+`[80003250,8009123C,0,0]` in the same early window. This selects
+`H-PortEarlyStore` and refutes a clean-store explanation or census-only
+transient for the observed transition. The exact caller supplying
+`0x8009123C` to `registerSiCallback` remains unresolved. No behavior change is
+authorized. Evidence: `scratch/agent/s3337_m5_callback_early_store.md`.
 
 Session 3336 resolved the phase-gating failure in the callback registration
 callsite probe. Retail passed whole-RDRAM, callback-table, and title/hangar
@@ -192,6 +202,12 @@ the join's 640-only latch filter. Evidence:
 `scratch/agent/s3322_retail_post_swap_join.md`.
 
 ## Live investigation (s3303–s3324)
+
+Session 3337 closes the exact-store discriminator but leaves caller attribution
+open. The next boundary is the caller/return path that supplies
+`0x8009123C` to `registerSiCallback`; retain the retail callback-table baseline
+and the port host/task/title/hangar controls. Do not change behavior based on
+the target mismatch alone.
 
 Session 3333 closes the first reachability boundary: retail has the expected
 initializer, service callback, and child edge, while the port installs and

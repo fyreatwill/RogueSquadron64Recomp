@@ -129288,3 +129288,30 @@ and leaves an early registry-store writer/loader versus a transient census
 observation unresolved. No behavior change or mitigation was made. The next
 unit ungates only the `0x80007928` store mark. Evidence:
 `scratch/agent/s3336_m5_callback_exact_caller.md`.
+
+## Session 3337 (2026-08-30) — captured early M5 callback-table store
+
+The fresh retail oracle rerun was unavailable in this Darwin checkout because
+the debugger-enabled core and Rice plugin are absent. The prior independent
+retail capture remains the ground-truth baseline: it passed whole-RDRAM and
+callback-table controls, reached title/hangar, and observed retail writes of
+`0x80003250` and `0x8009123C` at `0x80007928`.
+
+The Debug target was rebuilt after widening only the exact port store mark at
+`0x80007928` to all phases. The supervised port run passed host boundary (132
+rows) and audio-task join (2,633 rows), reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`, and had no crash or abort marker. It captured
+`0x80007928 -> 0x80003250` at phase 2 and then
+`0x80007928 -> 0x8009123C` at phase 2 / origin `0x6DD280` around 177 ms. The
+callback census changed to `[80003250,8009123C,0,0]` in the same early window.
+Later phase-3 stores of `0x8009123C` also appeared; the known initializer
+registration of `0x8009B5A8` remained separate.
+
+This selects `H-PortEarlyStore` and refutes `H-PortStoreNot9123C` and the
+census-only transient explanation for the observed transition. It leaves the
+exact caller that supplies `0x8009123C` to `registerSiCallback` unresolved,
+because the observed store PC is inside that callee. No M5 contract change or
+mitigation was made.
+
+Evidence: `scratch/agent/s3337_m5_callback_early_store.md` and the port log at
+`scratch/agent/s3334_m5_callback_writer_attribution/port.log`.
