@@ -130903,3 +130903,18 @@ caller-route hypothesis remains open. The result does not establish that the
 zero fill is illegitimate; the next discriminator is a like-for-like retail
 entry tuple. Evidence: `docs/M5-S3419-WRITER-ENTRY-ARGS.md` and
 `scratch/agent/s3411_m5_downstream_join/{silent,image}.log`.
+## Session 3420 (2026-08-31) — qualified retail writer-entry arguments
+
+Ran the independent retail oracle with whole-RDRAM, target-span, producer-PC,
+and target-store controls. The route completed cleanly with 11,166
+whole-RDRAM writes, 1,166 target-span writes, and 1,289,923 producer-PC
+execution hits. All 664 target-span writes from `0x800078EC` had the same
+entry tuple as the port: `a0=0x801797B0`, `a1=0`, `a2=0x298`,
+`ra=0x8008F2D4`. The store callback's live phase was width 1024, origin
+`0x006AB800`, so the previous 512-only field gate was a false zero. Retail
+post-store sampling remained mixed, with 65 nonzero bytes in the final range.
+This selects `H-RetailEntryZero`, refutes `H-RetailEntryNonzero`, and closes
+the entry-argument explanation at this boundary. The next probe is a port
+writer-loop internal-state comparison; no runtime behavior changed.
+Evidence: `docs/M5-S3420-RETAIL-ENTRY-ARGS.md` and
+`scratch/agent/s3422_retail_entry_arguments_capture/oracle.log`.

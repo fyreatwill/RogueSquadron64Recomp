@@ -347,6 +347,7 @@ static int g_n_store_field_dump_rows;
 static long g_store_field_dump_hits;
 static long g_store_field_dump_overflow;
 static long g_store_field_dump_candidate_callbacks;
+static int g_store_field_dump_any_phase;
 static uint32_t g_pc_task_dump_pc;
 static int g_pc_task_dump_enabled;
 static uint32_t g_pc_task_dump_type = 2; /* 0 = any type */
@@ -414,10 +415,12 @@ static int pc_phase_log_match(void)
 
 static int store_field_phase_log_match(void)
 {
+    uint32_t width = pDebugMemRead32(VI_WIDTH_ADDR);
+    uint32_t origin = pDebugMemRead32(VI_ORIGIN_ADDR);
     int i;
     for (i = 0; i < g_n_pc_phase_log_origin; i++)
-        if (g_latched_phase_width == g_pc_phase_log[i].width &&
-            g_latched_phase_origin == g_pc_phase_log[i].origin)
+        if (width == g_pc_phase_log[i].width &&
+            origin == g_pc_phase_log[i].origin)
             return 1;
     return 0;
 }
@@ -535,7 +538,7 @@ static void dump_store_field(int watch, uint32_t pc, uint32_t accessed)
                            (UINT64_C(1) << watch)))
         return;
     g_store_field_dump_candidate_callbacks++;
-    if (!store_field_phase_log_match())
+    if (!g_store_field_dump_any_phase && !store_field_phase_log_match())
         return;
     g_store_field_dump_hits++;
     row.watch = watch;
@@ -2030,6 +2033,7 @@ static void usage(void)
         "  --pc-phase-log-width ORIGIN:WIDTH log watched execs at an explicit VI bucket\n"
         "  --pc-field-dump A[,B...] dump phase-gated $s0/$s1 and pointed fields\n"
         "  --store-field-dump W:A[,B...] dump phase-gated fields at exact writes on watch W\n"
+        "  --store-field-dump-any-phase allow store-field-dump rows in any VI phase\n"
         "  --pc-task-dump A   dump phase-gated OSTask fields at PC A\n"
         "  --pc-task-type N   OSTask type to dump (default 2=audio; 1=gfx; 0=any)\n"
         "  --mode-dump-pc A     dump 640-wide mode descriptors for watched execution PC A\n"
@@ -2129,6 +2133,8 @@ int main(int argc, char **argv)
             add_pc_field_dump_pcs(argv[++i]);
         else if (!strcmp(argv[i], "--store-field-dump") && i + 1 < argc)
             add_store_field_dump(argv[++i]);
+        else if (!strcmp(argv[i], "--store-field-dump-any-phase"))
+            g_store_field_dump_any_phase = 1;
         else if (!strcmp(argv[i], "--pc-task-dump") && i + 1 < argc) {
             g_pc_task_dump_pc = (uint32_t)strtoul(argv[++i], NULL, 0);
             g_pc_task_dump_enabled = 1;

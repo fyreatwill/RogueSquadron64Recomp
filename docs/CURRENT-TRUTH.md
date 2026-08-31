@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3419 (2026-08-31). This file was compacted
+through Session 3420 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -340,20 +340,33 @@ remains open. This does not establish that the zero fill is illegitimate; a
 like-for-like retail entry tuple is the next discriminator. Evidence is in
 M5-S3419-WRITER-ENTRY-ARGS.md.
 
+Session 3420 ran the independent retail oracle with whole-RDRAM, target-span,
+producer-PC, and target-store controls. The route completed cleanly with
+11,166 whole-RDRAM writes, 1,166 target-span writes, and 1,289,923 producer-PC
+execution hits. All 664 target-span writes from `0x800078EC` had the same
+entry tuple as the port: `a0=0x801797B0`, `a1=0`, `a2=0x298`,
+`ra=0x8008F2D4`. They occurred under width 1024/origin `0x006AB800`; the
+prior 512 gate was not the callback's live phase and produced a false zero.
+Retail post-store samples remained mixed, with 65 nonzero bytes in the final
+range. This selects `H-RetailEntryZero`, refutes `H-RetailEntryNonzero`, and
+closes the entry-argument explanation at this boundary. The next discriminator
+is writer-loop internal state or the subsequent publication path; no runtime
+behavior changed. Evidence is in
+[M5-S3420-RETAIL-ENTRY-ARGS.md](M5-S3420-RETAIL-ENTRY-ARGS.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Ask the independent retail oracle for the matching phase-qualified
-   0x800078E0 entry tuple (a0/a1/a2, first v0, and target predicate), with its
-   whole-RDRAM, title, and hangar controls. Compare it to the selected port
-   tuple from Session 3419.
-2. If retail's target entry is nonzero, trace the port's zero-valued
-   entry producer/caller contract. If retail also enters with zero, stop
-   treating the entry value as the missing edge and move to the next
-   publication boundary. Do not repeat the 0x1935E0 destination watch unless
-   this comparison selects a different publication route.
+1. Add one regeneration-safe port writer-loop state witness at `0x800078EC`,
+   collecting the complete internal register/state tuple at the target span,
+   with silent and Factor 5 image arms in one fresh build/run. Compare it to
+   Session 3420's retail tuple and retain phase, whole-route, ABI/DMA,
+   image-stage, and PCM controls.
+2. If the internal tuples match, move the discriminator to the next
+   publication boundary; if they differ, trace the first differing field.
+   Do not change waits, slots, dispatch, clear behavior, or PCM writeback.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
@@ -462,6 +475,7 @@ writer and initializer ordering are the measured explanation.
 Latest M5 evidence:
 
 - `docs/M5-S3409-052C4-JOIN.md`
+- `docs/M5-S3420-RETAIL-ENTRY-ARGS.md`
 - `docs/M5-S3413-RETAIL-SOURCE-SPAN.md`
 - `docs/M5-S3402-SLOT-PREPHASE.md`
 - `docs/M5-S3401-FIELD348-INPUT.md`
