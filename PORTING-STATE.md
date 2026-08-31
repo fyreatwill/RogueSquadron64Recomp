@@ -128791,3 +128791,29 @@ Skip-allow is 1 if incoming `$a0` is set
 discriminator: which of those two operands flips at 48.1 s.
 
 Evidence: `scratch/agent/s3312_retail_cine_init_path.md`.
+
+## Session 3313 (2026-08-30) — retail skip-allow source is the B1C writer
+
+HYPOTHESIS-ID: m5-osvimode-postviewer-continuation
+
+Ran the prescribed independent retail Rice census twice, with no `--press`.
+Both runs watched the whole-RDRAM positive control, physical `0x000B0B1C`,
+and PCs `0x800A5D80`, `0x800A5EE8`, `0x800A6238`, `0x800A6248`,
+`0x800A6274`, and `0x800A62B4`. The fixed rerun also enabled the oracle's
+post-store sampling. No port build or M5 Step 3 change was made.
+
+Both runs passed the 10000-write positive control, `[gpr-ctl]`, VI
+`640 @ 0x0066A500`, cinematic entry, and title VI-1024. At the 48.1–48.5 s
+transition, `0x800A6238` remained not-taken with `$a0=0`; a late write to
+physical `0x000B0B1C` from `0x800A9360` appeared in both runs. The following
+`0x800A6248` rows loaded `$v0=1`, `0x800A6274` proceeded with `$a0=1`, and
+`0x800A62B4` executed. Earlier B1C writes were boot/prologue stores from
+`0x800078EC`, `0x800A5E7C`, `0x800A5EE8`, and `0x800A5F00`.
+
+This selects `H-RetailB1CWrite` and refutes `H-RetailIncomingA0`,
+`H-RetailBoth`, and `H-CoverageInvalid`. The port-side next discriminator is
+the corresponding writer/order census. The oracle did not print a separate
+post-store value tuple; nonzero is established by the subsequent watched
+load of `$v0=1`.
+
+Evidence: `scratch/agent/s3313_retail_skip_source.md`.

@@ -8,7 +8,16 @@ Current maintenance marker: Session 3309 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
-## Live investigation (s3303–s3312)
+## Live investigation (s3303–s3313)
+
+Session 3313 asked independent retail which operand sets skip-allow `$a0`
+before `0x800A6274`. Two no-press Rice runs passed whole-RDRAM 10000-write,
+`[gpr-ctl]`, VI 640, cinematic-entry, and title VI-1024 controls. At
+48.1–48.5 s, `0x800A6238` is not taken with `$a0=0`; a late physical
+`0x000B0B1C` write from `0x800A9360` is followed by `0x800A6248` loading
+`$v0=1`, `0x800A6274` falling through with `$a0=1`, and `0x800A62B4`
+executing. This selects `H-RetailB1CWrite` and refutes the incoming-
+controller arm. Evidence: `scratch/agent/s3313_retail_skip_source.md`.
 
 Session 3312 asked independent retail which skip
 `cinematicLoopBody` takes into `jal cinematicInitializer` at
@@ -211,15 +220,14 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Independent retail Rice census of skip-allow sources into
-   `0x800A6274`: exec `0x800A6238` (incoming `$a0` bne), exec
-   `0x800A6248` (`lbu 0x800B0B1C` beq), write physical
-   `0x000B0B1C`, plus 6274/62B4 as join keys. Split
-   `H-RetailIncomingA0` (6238 taken at 48.1 s, no 0xB1C write)
-   vs `H-RetailB1CWrite` (0xB1C written nonzero, 6248 not-taken)
-   vs `H-RetailBoth` vs `H-CoverageInvalid`. Require 10000-write,
-   `[gpr-ctl]`, VI `640 @ 0x0066A500`, cinematic entry, and 62B4.
-   No `--press`. No port build. No M5 Step 3.
+1. Port census of the same skip-allow source relation in one build/run:
+   phase-gate watches for `0x800A6208`, `0x800A6238`, `0x800A6248`,
+   `0x800A6274`, `0x800A62B4`, and every port writer to `0x800B0B1C`.
+   Split `H-PortIncomingA0` (6238 taken with nonzero `$a0`),
+   `H-PortB1CWriter` (6238 not-taken, named writer makes B1C nonzero),
+   `H-PortBoth`, and `H-PortInputUnavailable`. Require completion-wins,
+   SP-complete, VI-640, cinematic-entry, and whole-run positive controls.
+   No M5 Step 3 until the writer/order edge is named.
 2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
