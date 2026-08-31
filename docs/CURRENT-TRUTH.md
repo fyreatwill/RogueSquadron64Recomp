@@ -165,16 +165,26 @@ same-recipe 45-second retry exited before the 512 phase. The exact target
 watch and both final phase histograms are therefore unavailable; this oracle
 attribution field is unevaluable and no origin hypothesis is selected.
 
+Session 3395 rebuilt the target and ran the existing phase-qualified image /
+silent contract pair after the retail oracle. The oracle positive control
+passed at 10,000 whole-RDRAM callbacks and reached title 1024 and hangar 512,
+but both port arms crashed before any phase-qualified audio row, at the same
+`spTaskSchedulerThread+9536` / guest PC `0x8000834c` scheduler boundary. Each
+arm had zero dispatch, ABI, DMA, image-join, return, service/slot, and PCM
+rows. The candidate image DMEM-to-RDRAM edge is therefore unevaluable; no
+audio edge or behavior change is selected. Evidence is in
+`scratch/agent/s3395_m5_contract_edge_qualification_retry/RESULTS.md`.
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Resume M5 contract qualification from the existing image/silent A/B
-   evidence and identify one named task/output contract edge before any Step 3
-   behavior change. Keep the complete dispatch → DMA/DMEM → SP completion →
-   service/slot → PCM matrix; do not use the unevaluable phase-attribution
-   field as a reason to change output or audio behavior.
+1. Design one completion-safe, phase-qualified independent ground-truth
+   measurement for the M5 image-output edge, then rerun the image/silent pair
+   only if that control can survive the pre-dispatch scheduler crash. Keep the
+   complete dispatch → DMA/DMEM → SP completion → service/slot → PCM matrix;
+   do not use the s3395 zero-row crash as evidence for an audio behavior change.
 2. The dual-origin oracle repair is closed at this scope: its positive control
    fired, but the process did not produce the exact target total and final
    histograms needed to select an origin. A future ground-truth attempt needs

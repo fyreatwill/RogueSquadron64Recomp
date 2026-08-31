@@ -130424,3 +130424,20 @@ unevaluable; no origin hypothesis is selected. No output or audio behavior
 changed. Evidence: `docs/M5-S3394-DUAL-ORIGIN-ATTRIBUTION.md`,
 `scratch/agent/oracle_s3394_dual_origin.log`, and
 `scratch/agent/oracle_s3394_dual_origin_45s.log`.
+
+## Session 3395 (2026-08-31) — M5 contract edge qualification pre-dispatch failure
+
+The target rebuilt with `cmake --build build --target RogueSquadron64Recomp`.
+The first paired launch was interrupted before its oracle gate and left no
+port-arm logs; the exact orphan was SIGKILLed. The fixed retry ran the
+existing phase-qualified image/silent recipe. The independent retail oracle
+passed its whole-RDRAM positive control at 10,000 callbacks and reached title
+VI 1024 and hangar VI 512. Both port arms then crashed before any
+phase-qualified M5 audio row, at host `spTaskSchedulerThread+9536` with guest
+PC `0x8000834c` and fault address `0x400128d47`. Each arm had zero dispatch,
+ABI, DMA, image-join, return, service/slot, and PCM rows; neither had an abort
+marker. This makes the proposed Factor 5 `SP_WR_LEN` DMEM-to-RDRAM output edge
+unevaluable and selects no audio contract hypothesis. It does not justify an
+audio behavior change. It rules out only that this recipe can qualify the
+edge when the port dies pre-dispatch. Evidence:
+`scratch/agent/s3395_m5_contract_edge_qualification_retry/RESULTS.md`.

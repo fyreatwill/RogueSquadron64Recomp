@@ -1,34 +1,38 @@
-# NEXT work unit — qualify one M5 image task/output contract edge
+# NEXT work unit — repair the M5 ground-truth completion path
 
-HYPOTHESIS-ID: m5-contract-edge-qualification
+HYPOTHESIS-ID: m5-ground-truth-completion-safe
 
-The s3394 dual-origin repair is closed as unevaluable: the whole-RDRAM control
-fired, but the long arm stopped before final summaries and the completion retry
-stopped before the target phase. Do not repeat that oracle recipe. Perform one
-bounded M5 contract-qualification experiment using the existing same-build
-image/silent arms and current phase/task/PCM controls. Before any behavior
-change, name one candidate edge from the checked-in task ABI and existing
-evidence (writer, destination, legitimacy, and ordering).
+Do one bounded measurement-design/implementation unit for the M5 image-output
+edge. Do not repeat `run_s2285_m5_step1_contract_pair.sh` unchanged: s3395's
+oracle positive control passed, but both port arms crashed before dispatch at
+guest PC `0x8000834c`, leaving every M5 field absent.
 
 Competing hypotheses:
 
-- `H-ImageEdgeMissing`: the image arm has a specific missing task/output edge
-  that can be implemented and validated without changing unrelated audio state.
-- `H-ImageEdgePresent`: existing task/DMEM/DMA/SP/service/PCM controls already
-  close the contract; no behavior change is justified.
-- `H-PortBoundaryEarlier`: the missing edge is upstream of the observed port
-  output span and cannot be selected from current port evidence.
+- `H-PreDispatchSchedulerCrash`: the paired route dies before M_AUDTASK, so a
+  completion-safe control must distinguish route failure from an audio gap.
+- `H-ImageEdgeMissing`: once the route survives, Factor 5 image output lacks a
+  named DMEM-to-RDRAM contract edge.
+- `H-ImageEdgePresent`: once the route survives, existing image DMA and SP
+  completion already close the output contract.
 
-Discriminator: both image and silent arms must reach title/hangar phase with
-dispatch, task fields, DMEM/DMA, image exit, SP completion, service/slot, and
-PCM controls. A named edge with independent retail evidence and matching port
-ordering selects `H-ImageEdgeMissing`; all controls closing without a gap
-selects `H-ImageEdgePresent`; a missing upstream producer with no legitimate
-candidate selects `H-PortBoundaryEarlier`. Do not implement a contract edge in
-this qualification unit.
+Discriminator: first obtain an independent retail control that reaches the
+target phase and produces a completion-safe summary, then run both port arms in
+one build/run with phase-scoped dispatch, ABI, DMA, image exit, SP completion,
+service/slot, and PCM controls. A pre-dispatch port crash with a live retail
+control selects `H-PreDispatchSchedulerCrash`; matching image DMA/exit and
+completion with no downstream gap selects `H-ImageEdgePresent`; a named
+retail-backed output edge with matching port ordering selects
+`H-ImageEdgeMissing`.
 
-Run from `build/` with the existing phase-qualified M5 A/B recipe and collect
-both arms in one build/run; retain the whole-RDRAM oracle control before adding
-any new port field. The candidate edge must be written into this file before
-building. If no named edge can be supported, stop and record the specific
-missing ground truth rather than adding instrumentation.
+Candidate edge remains Factor 5 `SP_WR_LEN` DMEM-to-RDRAM publication: writer
+is `factor5_ucode_b`, observed destinations are stage-2 `0x166D50`,
+`0x167050`, `0x167350` and stage-3 `0x1935E0`, with OSTask `output_buff=0`.
+Legitimacy is unresolved. Required ordering is image entry -> DMA rows ->
+`Broke`/SP completion -> guest service/slot/PCM.
+
+Before any new port instrument, use the oracle's existing whole-RDRAM positive
+control and replace the incomplete final-summary path with a completion-safe
+measurement. Then build with `cmake --build build --target
+RogueSquadron64Recomp` and run the repaired paired recipe from `build/`; use
+SIGKILL for every timeout and retain both arms in that one run.
