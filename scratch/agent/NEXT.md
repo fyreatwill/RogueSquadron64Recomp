@@ -2,11 +2,10 @@
 
 HYPOTHESIS-ID: m5-patches-host-validation
 
-Session 3316 confirmed this Unix checkout cannot run the configured-host
-discriminator: the cache points to `E:/mips-toolchain`, both MIPS executables
-and `RecompiledPatches/patches.c` are absent, and CMake has no `PatchesLib`
-target. Do not repeat those local checks; run the command below on the
-configured Windows/MIPS host.
+Session 3317 confirmed this Darwin checkout cannot run the configured-host
+discriminator: `E:/mips-toolchain` is absent. Do not repeat local checks or
+the local missing-target build. Run the command below on the configured
+Windows/MIPS host.
 
 Session 3315 found exactly three fixed-address B1C accesses: the reset at
 5EE8 and conditional nonzero stores at 61D0 and 9360. There is no alternate

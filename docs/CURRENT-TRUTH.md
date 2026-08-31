@@ -4,11 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3316 (2026-08-30). Compacted from
+Current maintenance marker: Session 3317 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
-## Live investigation (s3303–s3316)
+Session 3317 could not run the configured-host PatchesLib discriminator in
+this Darwin checkout: `E:/mips-toolchain` is absent. The substitute source
+reconciliation found no M5 Step 3 writer/consumer edge beyond the existing
+A1–A20 inventory in `docs/M5-AUDIO-PLAN.md`; this is single-source evidence
+and authorizes no behavior change. Evidence:
+`scratch/agent/s3317_m5_plan_reconciliation.md`.
+
+## Live investigation (s3303–s3317)
 
 Session 3316 could not run the configured-host `PatchesLib` discriminator.
 Same-iteration checks found the Unix checkout, cached `E:/mips-toolchain`
@@ -251,7 +258,9 @@ target row exists.
 1. On the configured Windows/MIPS host, run
    `cmake --build build --config Debug --target PatchesLib` to distinguish
    patch build availability from source/link failures. Do not repeat the local
-   missing-target check.
+   missing-target check; Session 3317 measured this checkout as Darwin with
+   no `E:/mips-toolchain`. The falsifier is a successful configured-host run
+   or a compiler/linker failure after the target exists.
 2. Treat the B1C source investigation as closed at the observed phase: no
    alternate writer or ordering edge exists in the generated tree, and neither
    conditional nonzero path fired in Session 3314. Do not repeat the same

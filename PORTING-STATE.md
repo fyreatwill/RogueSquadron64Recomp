@@ -128864,3 +128864,21 @@ and no `PatchesLib` target in `cmake --build build --config Debug --target
 help`. This selects `H-GuardHostMissing` for the current environment and does
 not test the patch source or linker contract. No local missing-target build was
 repeated. Evidence: `scratch/agent/s3316_patches_host_validation.md`.
+## Session 3317 (2026-08-30) — reconciled M5 audio plan after host validation was unavailable
+
+The configured-host PatchesLib discriminator could not run in this Darwin
+checkout: `E:/mips-toolchain` was absent. I did not repeat Session 3316's
+local missing-target build. As the one permitted substitution, I reconciled
+the checked-in M5 plan against `main.cpp`, the RSP runtime, and the existing
+inventory. It still has only the default Factor 5 image and explicit
+`musyx_stub` as production `M_AUDTASK` choices; `aspMain`, unknown-task
+handling, yield status, gates, waits, voice guards, AI/SDL, and MORT are not
+independent de-stubbing changes. No named target-phase writer/consumer edge
+was found, so M5 Step 3 remains gated. This is single-source evidence and
+does not establish retail behavior. Evidence:
+`scratch/agent/s3317_m5_plan_reconciliation.md`.
+
+The host-unavailable explanation is falsified only by running
+`cmake --build build --config Debug --target PatchesLib` on the configured
+Windows/MIPS host. The next unit remains that host validation; no local
+retry is authorized.
