@@ -1,10 +1,12 @@
-# NEXT work unit — M5 indirect consumer edge census
+# NEXT work unit — M5 dynamic consumer-pointer source census
 
 HYPOTHESIS-ID: m5-consumer-reachability-audit
 
-Session 3352's same-run port controls were live through hangar, while all five
-exact consumer-site markers were zero. This selects `H-PortConsumerIndirectGap`
-for the qualified route; do not add a status workaround.
+Session 3353's static census found no direct or literal indirect generated edge
+to `serviceVoicePoolFrame` or `accumulateVoiceSampleOffset`; only generic
+register-loaded `jalr` sites remain. The companion symbol map independently
+confirms the target identities. Keep `H-PortConsumerIndirectGap` selected for
+the qualified route; do not add a status workaround.
 
 Competing hypotheses for the next unit:
 
@@ -15,18 +17,21 @@ Competing hypotheses for the next unit:
 - `H-PortProbeMismatch`: the exact-site probe still misses the actual
   generated indirect consumer entries.
 
-Discriminator: perform a bounded static census of every indirect call/table
-edge into the five target bodies, using generated `jalr` sites and callback
-registration data. A complete resolved edge to a target that is never reached
-in the qualified port route selects a missing runtime edge; a complete edge
-whose source is itself absent selects the upstream gate; unresolved generated
-targets leave the probe-label hypothesis open. Do not build until the census
-lists all candidate edges and the single discriminator for each outcome.
+Discriminator: first use the independent retail oracle to identify the source
+slot/table and dynamic call-site target for the service and accumulator PCs,
+with its whole-RDRAM control and hangar `512 @ 0x006AB400` control. Then, in
+one build, capture the corresponding port source-slot value and dynamic
+target at the same phase while retaining host/task/PCM and title/hangar
+controls. A retail source/target pair absent in the port selects a missing
+publication/dispatch edge; a matching pair with no consumer entry selects a
+port gate; a matching entry with zero exact markers selects probe mismatch.
+If retail cannot identify a source slot after its positive controls, stop and
+record the edge as unresolved rather than instrumenting the port.
 
-Exact preparation:
+Ground-truth preparation:
 
-    rg -n "80094648|8009B5A8|8009B600|8009B85C|8009BDE8|jalr|LOOKUP_FUNC|registerSiCallback" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h
-    sed -n '1,220p' scratch/agent/s3352_m5_port_consumer_entry.md
+    sed -n '1,220p' tools/oracle/README.md
+    rg -n "80094648|8009B5A8|8009B600|8009B85C|8009BDE8|jalr|LOOKUP_FUNC|registerSiCallback" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
 
-Ground truth already passed in Session 3352; no new instrument is authorized
-until the static census is complete.
+Do not build until the retail source-slot measurement passes its whole-RDRAM
+positive control and names the exact dynamic source/target relation.

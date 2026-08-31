@@ -4,9 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3352 (2026-08-31). Compacted from
+Current maintenance marker: Session 3353 (2026-08-31). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3353 completed the bounded M5 indirect consumer-edge census. The
+generated tree has three direct `startSongSequence` callers, but no direct or
+literal `LOOKUP_FUNC` edge to `serviceVoicePoolFrame` or
+`accumulateVoiceSampleOffset`; the remaining candidates are register-loaded
+`jalr` sites. The companion symbol map independently confirms the target
+addresses and direct song-call topology. This supports
+`H-PortConsumerIndirectGap` and rules out a name/probe mismatch, but does not
+identify the dynamic pointer/table writer. No behavior change is authorized.
+Evidence: `scratch/agent/s3353_m5_consumer_edge_census.md`.
 
 Session 3352 completed the port M5 consumer-entry qualification. The fresh
 retail pre-capture again passed the whole-RDRAM control and reached hangar
@@ -660,9 +670,16 @@ target row exists.
    `512 @ 0x006AB400`, and executed all five watched PCs with stable
    previous-PC chains. This refutes `H-ConsumerWrongNames` and proves the
    retail route is live, but cannot split a port reachability gap from a port
-   status/slot gate. Next: add one regeneration-surviving port entry probe for
-   the same five PCs, preserving the existing host/task/title/hangar controls;
-   do not change behavior or add a mitigation.
+   status/slot gate. Session 3353's static census found the three direct
+   `startSongSequence` callers but no direct or literal indirect generated edge
+   to `serviceVoicePoolFrame` or `accumulateVoiceSampleOffset`; generic
+   register-loaded `jalr` sites are the remaining unresolved class. The
+   companion symbol map independently confirms the target identities. This
+   supports `H-PortConsumerIndirectGap` and refutes a name/probe mismatch, but
+   does not name the dynamic pointer/table writer. Next: obtain independent
+   retail ground truth for the dynamic callback/function-pointer source and
+   then build one regeneration-surviving port census of the same source/target
+   table; do not change behavior or add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

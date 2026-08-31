@@ -129586,3 +129586,22 @@ The fixup path is recorded in the external N64Recomp checkout; no game logic
 or mitigation was changed. Evidence:
 `scratch/agent/s3352_m5_port_consumer_entry.md` and
 `scratch/agent/s3352_m5_port_consumer_entry.log`.
+
+## Session 3353 (2026-08-31) — censused M5 indirect consumer edges
+
+Performed the required bounded static census before building or adding a
+probe. The current generated tree has three direct calls to
+`startSongSequence`, from `playSongByIdLockCtl` at `0x80097B9C`,
+`0x80097BC4`, and `0x80097CF0`. It has no direct generated call or literal
+`LOOKUP_FUNC` target for `serviceVoicePoolFrame` at `0x8009B5A8` or
+`accumulateVoiceSampleOffset` at `0x8009BD7C`; the interior sites
+`0x8009B600`, `0x8009B85C`, and `0x8009BDE8` therefore require their parent
+entries. The remaining candidates are generic register-loaded `jalr` sites,
+including callback-style sites at `0x80097E48` and `0x80097EBC`.
+
+The companion symbol map independently confirms the target identities and
+the direct song-call topology. This supports `H-PortConsumerIndirectGap` and
+rules out a name/probe mismatch, but does not identify the dynamic
+pointer/table writer or exact call site. It rules out only static direct-edge
+absence as a complete explanation; no behavior change, mitigation, or build
+was authorized. Evidence: `scratch/agent/s3353_m5_consumer_edge_census.md`.
