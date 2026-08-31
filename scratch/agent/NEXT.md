@@ -1,34 +1,34 @@
-# NEXT work unit — locate the first producer of target writer-state divergence
+# NEXT work unit — locate the first producer of target writer setup state
 
-HYPOTHESIS-ID: m5-retail-target-writer-state
+HYPOTHESIS-ID: m5-port-setup-state-producer
 
-Session 3422 selected `H-RetailTargetStateDiffers` with the exact target-row
-join: retail has `s1=0x561F`, `t0=0x2000FF01`, `t1=0x8010FEF8`,
-`ra=0x8008F2D4`, while both port arms have `s1=0x5622`, `t0=1`, `t1=0`,
-`ra=0`. Port `s0=0x12` matches retail.
+Session 3423 selected `H-PortSetupStateDiffers`: both port arms already had
+`s1=0x5622`, `t0=1`, `t1=0`, `ra=0` at caller edge `0x8008F2CC`, and the same
+tuple at `rs_memset` entry. Retail target rows remain `s1=0x561F`,
+`t0=0x2000FF01`, `t1=0x8010FEF8`, `ra=0x8008F2D4`.
 
 Competing hypotheses and the single discriminating measurement:
 
-- `H-PortSetupStateDiffers`: the differing state is established by the port
-  guest caller/setup before `rs_memset`.
-- `H-HostWrapperStateDiffers`: guest setup matches retail and the divergence is
-  introduced by the host wrapper's call/register contract.
-- `H-RetailTargetOtherWriter`: the apparent join is still wrong despite the
-  current 664-row retail attribution.
+- `H-PortEarlierSetupProducer`: an earlier guest instruction establishes the
+  divergent `s1/t0/t1` state before `0x8008F2CC`.
+- `H-PortSetupCallerContract`: the preceding setup matches retail until the
+  caller edge, where the port call contract differs.
+- `H-PortSetupMissing`: the preceding setup witness is absent or the current
+  target row is not the relevant producer.
 
 Run one fresh Debug build and one concurrent silent/image port pair with a
-bounded setup witness immediately before the `rs_memset` host entry. Keep the
-existing whole-route, title 1024, hangar 512, non-target writer-state,
-audio-ABI/DMA, image-stage, and PCM controls. Capture `s1`, `t0`, `t1`, `ra`,
-and the target predicate at the last guest-side setup edge and at host entry.
-If values differ before entry, select `H-PortSetupStateDiffers`; if they first
-differ at entry, select `H-HostWrapperStateDiffers`; if target rows or the
-writer edge disappear, mark the discriminator unevaluable and do not infer
-from the null. Do not change waits, slots, dispatch, clear behavior, or PCM
+bounded witness at the preceding setup edge of `0x8008F2CC`. Keep the existing
+whole-route, title 1024, hangar 512, non-target writer-state, audio-ABI/DMA,
+image-stage, and PCM controls. Capture the first setup instruction that writes
+or loads the divergent `s1/t0/t1` state, then compare it with the existing
+caller and entry rows. If the new edge supplies the state, select
+`H-PortEarlierSetupProducer`; if it matches the retail tuple until that edge,
+select `H-PortSetupCallerContract`; if controls or target rows disappear,
+mark unevaluable. Do not change waits, slots, dispatch, clear behavior, or PCM
 writeback.
 
-The prior retail command used whole-RDRAM and target controls plus
-`--store-field-dump 1:0x800078EC`, with phase buckets
-`0x006AB800:1024` and `0x006AB400:512`. The port command is
-`env zsh scratch/agent/run_s3421_m5_writer_state.sh` after the fresh build,
-extended with the new setup witness.
+Use `cmake --build build --config Debug --target RogueSquadron64Recomp` and
+extend `scratch/agent/run_s3423_m5_writer_setup.sh` with the new preceding-edge
+witness. The prior independent retail control is
+`scratch/agent/s3423_groundtruth/oracle_narrow.log`; its positive control and
+target write fired, but it did not produce a phase-qualified field summary.

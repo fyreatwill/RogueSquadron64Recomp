@@ -130972,3 +130972,30 @@ audio path changed.
 Evidence: `docs/M5-S3422-RETAIL-WRITER-STATE.md`,
 `scratch/agent/s3422_retail_writer_state_join/retail-correct.log`, and
 `scratch/agent/s3421_m5_writer_state/{silent,image}.log`.
+
+## Session 3423 (2026-08-31) — M5 caller setup-state witness
+
+Ran the independent retail preflight before adding the port witness. The
+first command was invalid because of a video-plugin path typo. The corrected
+oracle passed its whole-RDRAM positive control and observed a target write, but
+the execution watch flooded the capture and prevented a shutdown summary. A
+narrow retry again passed the positive control and observed a target write but
+did not produce a phase-qualified field row before it was killed; neither null
+was used as evidence.
+
+Added `tools/apply_s3423_m5_writer_setup.py`, which installs a regeneration-safe
+witness immediately before the target `jal 0x800078E0` at `0x8008F2CC` and at
+`rs_memset` entry. The fresh Debug build succeeded. The first concurrent
+silent/image run hit the known early `spTaskSchedulerThread+9536` / guest
+`0x8000834c` crash in both arms before M5 controls. Same-build single-arm
+retries reached hangar 512 with no crash or abort; non-target setup controls
+fired in both.
+
+Both retries' target caller rows already had `s0=0x12`, `s1=0x5622`, `t0=1`,
+`t1=0`, `ra=0`, `a0=0x801797B0`, and `a2=0x298`. The corresponding entry and
+writer-loop rows retained the same tuple. This selects `H-PortSetupStateDiffers`
+and refutes `H-HostWrapperStateDiffers` for the observed target call: the
+divergence is present before host entry. It rules out neither the earlier
+producer of that state nor the zero PCM cause. Evidence is in
+`docs/M5-S3423-WRITER-SETUP.md` and
+`scratch/agent/s3423_m5_writer_setup/{image_retry,silent_retry}.log`.

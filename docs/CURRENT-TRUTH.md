@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3421 (2026-08-31). This file was compacted
+through Session 3423 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -378,22 +378,33 @@ writer, and moves the probe to the first producer of the differing
 changed. Evidence is in
 [M5-S3422-RETAIL-WRITER-STATE.md](M5-S3422-RETAIL-WRITER-STATE.md).
 
+Session 3423 compared the target writer state immediately before guest caller
+`0x8008F2CC` invokes `rs_memset` and at host entry. The first concurrent pair
+hit the known early scheduler crash before M5 controls; same-build retries
+reached hangar 512 with no crash or abort. Silent and image both fired the
+setup positive control and target row. At the caller edge, both had
+`s1=0x5622`, `t0=1`, `t1=0`, `ra=0`, with `s0=0x12`, `a0=0x801797B0`, and
+`a2=0x298`; host entry retained the same tuple. This selects
+`H-PortSetupStateDiffers` and refutes a first divergence introduced by the
+host wrapper for the observed target call. The earlier producer of this state
+and zero PCM output remain unresolved. Evidence is in
+[M5-S3423-WRITER-SETUP.md](M5-S3423-WRITER-SETUP.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the first producer of the target-row state divergence before
-   `0x800078EC`: port target rows show `s1=0x5622`, `t0=1`, `t1=0`, `ra=0`,
-   while the exact retail join shows `s1=0x561F`, `t0=0x2000FF01`,
+1. Trace the first producer/caller that establishes the already-divergent
+   port target setup state before `0x8008F2CC`: `s1=0x5622`, `t0=1`, `t1=0`,
+   `ra=0`, versus retail `s1=0x561F`, `t0=0x2000FF01`,
    `t1=0x8010FEF8`, `ra=0x8008F2D4`. Use one fresh-build port pair with the
-   existing controls plus a bounded caller/setup witness. The discriminator
-   is whether the first differing field is established before `rs_memset`
-   entry or only by the host wrapper. Do not change waits, slots, dispatch,
-   clear behavior, or PCM writeback.
-2. If port setup state is already divergent before the wrapper, trace its
-   producer/caller; if it matches until wrapper entry, audit the host-call
-   register contract. A missing phase or positive control is unevaluable.
+   existing controls and a bounded witness at the preceding setup edge. Do
+   not change waits, slots, dispatch, clear behavior, or PCM writeback.
+2. The host-wrapper divergence hypothesis is closed for this target call:
+   caller-edge and entry tuples matched in both arms. If the preceding setup
+   witness is absent, treat the discriminator as unevaluable rather than
+   inferring from the null.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
