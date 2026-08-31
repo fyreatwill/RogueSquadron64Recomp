@@ -254,25 +254,34 @@ cross-runtime join is unevaluable, not a null, and neither output-state nor
 later-selection hypothesis is selected. Evidence:
 [M5-S3470-OUTPUT-STATE-JOIN.md](M5-S3470-OUTPUT-STATE-JOIN.md).
 
+Session 3471 qualified the existing regeneration-safe four-PC output/state
+tuple witness. An independent retail preflight passed the whole-RDRAM control
+(29,630 writes), reached title origin `0x00790400`, and produced
+659/763/763/654 unique rows at the four target PCs. The matching port run
+passed the schema control and emitted 514/510/510/514 rows with no crash. At
+the consumer boundary, the port tuple uses `s1=0x80110000` and
+`source_word=0xFF5555FF`, while retail has the qualified
+`s1=0x801B1590`/`source_word=0x00000008` tuple. This selects an upstream
+producer/state-field divergence before downstream output; exact writer
+attribution remains unevaluable because the two logs lack a shared invocation
+ordinal. Evidence: [M5-S3471-OUTPUT-STATE-TUPLE.md](M5-S3471-OUTPUT-STATE-TUPLE.md).
+
 ## Next steps
 
-1. Add one phase-scoped port witness carrying the oracle tuple
-   `(pc,s0,s1,source_word,branch_selector,source_byte,branch_state)` at all
-   four target PCs, then join by phase and ordinal to the existing consumer/
-   output rows. Matching fields close the boundary; the first divergent field
-   selects the missing contract edge; absent ordered rows are unevaluable.
-2. Retain the Session 3468 retail post-store table as the independent baseline;
-   do not repeat the retail-only capture unless the port witness changes.
+1. Identify the writer/producer of the divergent `s1` state field. First ask
+   the independent retail oracle to watch the physical state-pointer/table
+   span with a whole-RDRAM positive control and title phase gate; only if that
+   writer schema fires, add the matching port producer witness in the next
+   single batched build. A writer/value match followed by a port-only pointer
+   divergence selects the pointer contract; a differing writer/value selects
+   the producer/state-field contract; absent controls are unevaluable.
+2. Retain the Session 3468 retail post-store table and Session 3471 tuple rows
+   as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
-4. Use the producer join to identify the first output/state contract divergence
-   after the qualified title pointer boundary. Matching fields close the
-   boundary; the first divergent field selects the missing contract edge.
-5. Locate the first output/state contract divergence after the now-qualified
-   title pointer boundary. Join the retail `0x80001CB8`/`0x80001CC8` rows to
-   output value and state-word fields, then compare the existing port rows;
-   a matching pointer but divergent output selects the output contract, while
-   a missing ordered join remains unevaluable.
+4. After the producer/state field is attributed, locate the first downstream
+   output/state contract divergence. Matching fields close the boundary; the
+   first divergent field selects the missing contract edge.
 7. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation

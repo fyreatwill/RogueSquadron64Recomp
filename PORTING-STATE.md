@@ -132013,3 +132013,27 @@ ordinal cross-runtime match. The next unit adds the phase-scoped oracle tuple
 witness to the port and joins it to the existing port output/state rows.
 
 ORIGIN: no mitigation or runtime behavior change was added.
+
+## Session 3471 (2026-08-31) — qualified port output/state tuple divergence
+
+The independent Rice-oracle preflight used the title route with a whole-RDRAM
+positive control. It recorded 29,630 control writes, reached title origin
+`0x00790400`, and produced 659/763/763/654 unique tuple rows at
+`0x80001C98`/`0x80001CB8`/`0x80001CC8`/`0x80001F84`. The configured port build
+passed its four-PC schema control and emitted 514/510/510/514 rows, 2,048 in
+total, with no crash or abort marker.
+
+The first qualified consumer tuple diverges in the state fields: the port has
+`s1=0x80110000` and `source_word=0xFF5555FF`, while the retail table includes
+the qualified `s1=0x801B1590` and `source_word=0x00000008` tuple at
+`0x80001CB8`. This selects an upstream producer/state-field divergence before
+the downstream output call. Exact writer attribution remains unevaluable
+because the two instruments have no shared invocation ordinal; the port
+ordinal is a per-run emission counter and the retail rows are unique-field
+rows. The work adds no runtime behavior or mitigation. Evidence:
+`docs/M5-S3471-OUTPUT-STATE-TUPLE.md`,
+`scratch/agent/s3471_retail_tuple.log`, and
+`scratch/agent/s3471_m5_port_tuple/run.log`.
+
+ORIGIN: no mitigation or runtime behavior change was added; the observed
+pointer and source values are diagnostic observations, not rewritten state.
