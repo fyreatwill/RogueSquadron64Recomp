@@ -130407,3 +130407,20 @@ run. It does not establish the retail payload contract or prove the zero fill
 illegitimate. The exact census is closed as non-discriminating; the next work
 unit must repair or replace the retail phase-attribution view. No output or
 audio behavior changed. Evidence: `docs/M5-S3393-LOWER-NOISE-TARGET-ATTRIBUTION.md`.
+
+## Session 3394 (2026-08-31) — M5 dual-origin phase attribution
+
+The independent retail oracle ran the prescribed dual-origin repair with
+whole-RDRAM and exact target-span watches, `0x800078E8/0x800078EC` execution
+watches, and 512-wide phase buckets at `0x006AB000` and `0x006AB400`. The
+120-second arm passed the whole-RDRAM positive control (10,000 callbacks and
+the target watch left armed) and reached the target route. Its execution rows
+appeared under `origin=0x006AB400`, with none under `0x006AB000`, but the
+process stopped at 74.2 seconds before final watch totals and histogram
+summaries. A same-recipe 45-second retry stopped at 32.6 seconds before the
+512 phase. Because the exact target total and both final histograms were not
+emitted, this is an invalid discriminator result and the attribution field is
+unevaluable; no origin hypothesis is selected. No output or audio behavior
+changed. Evidence: `docs/M5-S3394-DUAL-ORIGIN-ATTRIBUTION.md`,
+`scratch/agent/oracle_s3394_dual_origin.log`, and
+`scratch/agent/oracle_s3394_dual_origin_45s.log`.

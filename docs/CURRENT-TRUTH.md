@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3393 (2026-08-31). This file was compacted
+through Session 3394 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -157,22 +157,29 @@ source boundary:
 No output substitution or mitigation is authorized. Do not change waits, slots,
 status handling, consumer dispatch, or PCM writeback while tracing the source.
 
+Session 3394 attempted the prescribed dual-origin retail repair. The 120-second
+oracle arm passed the whole-RDRAM control and reached the 512 route, with
+`0x800078E8/0x800078EC` rows under `origin=0x006AB400` and none under
+`0x006AB000`, but stopped before final watch and histogram summaries. A
+same-recipe 45-second retry exited before the 512 phase. The exact target
+watch and both final phase histograms are therefore unavailable; this oracle
+attribution field is unevaluable and no origin hypothesis is selected.
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Repair the retail phase attribution rather than repeating the closed exact
-   census: use the exact target-span watch as the positive control and
-   determine why its `writer-pc-phase origin=0x006AB400 width=512` view reports
-   zero despite 1,125 target writes. Then run one equivalent port census with
-   the existing controls, without changing output or audio behavior.
-2. Discriminator: a repaired retail phase row that names a producer and has no
-   port counterpart keeps `H-EarlierPortContract`; a matching port target row
-   moves the boundary downstream; matching zero rows make the boundary
-   legitimate. If the repaired phase view remains absent while the exact
-   target watch and whole-RDRAM control fire, mark the attribution path
-   unevaluable and pivot away from this oracle field.
+1. Resume M5 contract qualification from the existing image/silent A/B
+   evidence and identify one named task/output contract edge before any Step 3
+   behavior change. Keep the complete dispatch → DMA/DMEM → SP completion →
+   service/slot → PCM matrix; do not use the unevaluable phase-attribution
+   field as a reason to change output or audio behavior.
+2. The dual-origin oracle repair is closed at this scope: its positive control
+   fired, but the process did not produce the exact target total and final
+   histograms needed to select an origin. A future ground-truth attempt needs
+   a completion-safe summary path or a different independent attribution
+   measurement; do not repeat the same recipe.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
@@ -246,6 +253,7 @@ Latest M5 evidence:
 
 - `scratch/agent/s3386_m5_direct_writer_census.md`
 - `docs/M5-S3393-LOWER-NOISE-TARGET-ATTRIBUTION.md`
+- `docs/M5-S3394-DUAL-ORIGIN-ATTRIBUTION.md`
 - `docs/M5-S3389-PREDECESSOR-EDGE.md`
 - `scratch/agent/s3376_m5_zero_pcm_source.md`
 - `scratch/agent/s3379_m5_source_writer.md`
