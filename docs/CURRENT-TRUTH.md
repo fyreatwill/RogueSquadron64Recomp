@@ -246,14 +246,12 @@ the paired logs.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Reconcile the stale `0x8002BEEC` attribution before adding port probes.
-   The completion-safe census now also shows `0x80033300` and both adjacent
-   sites are zero while `0x800078EC` is live only through self-reentry. Use a
-   bounded static callsite/disassembly audit of the retail `0x800078EC` body
-   and its callers to enumerate the actual external dispatch candidates, then
-   run one completion-safe oracle census over that whole candidate table. Do
-   not add port instrumentation until a retail external dispatch address is
-   re-established.
+1. Qualify the port at the retail producer boundary `0x8002BEEC` with one
+   phase-qualified execution/predecessor census, retaining the existing PCM,
+   image-stage, audio ABI/DMA, and title/hangar controls. Retail observed
+   `exec-prev pc=0x800078EC prev=0x8002BEEC n=177`; the static instruction at
+   `0x8002BEEC` is not a direct JAL, so do not change dispatch behavior until
+   the port relation is measured.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
    not repeat the old final-summary-only or dual-origin recipes; use the signal
    checkpoint and retain post-store sampling for all four candidates.
