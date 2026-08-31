@@ -130575,3 +130575,45 @@ not establish that the zero-fill is illegitimate. No audio behavior changed.
 Evidence: `docs/M5-S3401-FIELD348-INPUT.md`,
 `scratch/agent/s3401_m5_field348_input/`, and
 `scratch/agent/s3401_m5_field348_input_retry/`.
+
+## Session 3402 (2026-08-31) — M5 retail slot 0x149764 pre-phase initialization
+
+Work unit: retail-oracle-only capture watching physical slot `0x149764:0x149768`,
+with whole-RDRAM positive control, title/hangar phase gates (`--pc-hist-phase`),
+and `0x1935E0` post-value control. Oracle ran 120 seconds.
+
+Controls all passed: whole-RDRAM positive-control threshold (10,046 callbacks),
+title-1024 (633 VI frames), hangar-512 (1,316 VI frames), `0x1935E0` (40 hits).
+
+Slot `0x149764` results:
+- Total: 6 writes from `pc=0x8008F2C8`, all storing value `0x801797B0`
+  (nonzero, fnv=0x380f190b). Zero writes during title-1024 phase. Zero writes
+  during hangar-512 phase. All 6 writes occurred before the first phase gate.
+- `0x800078EC` had 0 writes to the slot range, as expected (it writes to the
+  buffer the slot points to, not the slot pointer itself).
+
+Combined with s3401's port witness (slot stored `0x80178C80` at title-1024,
+`0x801797B0` at hangar-512 from the same PC `0x8008F2C8`), two independent
+lines of evidence give the following discriminations:
+
+- `H-PortStage3OwnerAbsent` (retail does not write to the slot in target
+  phases): REFUTED. Retail writes to `0x149764` 6 times, pre-phase.
+- `H-PortStage3Field348ProducerGap` (retail writes a different value):
+  SELECTED for title-1024. Retail stores `0x801797B0` pre-phase; the port
+  stores `0x80178C80` during the title phase — a different buffer address.
+  REFUTED for hangar-512: both retail (pre-phase) and port (during phase) store
+  `0x801797B0`.
+- `H-PortStage3DownstreamGap` (same value, downstream gap): SELECTED for
+  hangar-512. Both retail and port have `field348=0x801797B0` at hangar, but
+  port PCM remains zero. The gap is in the dispatch/trigger for `0x8002BEEC`
+  (the JAL that calls `0x800078EC`), not in the `field348` pointer value.
+
+The slot-level investigation is closed for the hangar-512 scope. The `field348`
+pointer is correct in the port; the open gap is why `0x8002BEEC` never executes
+in the port while firing 37,635 times in retail. Next probe: use the oracle's
+`--watch-pc` option to capture the `exec-prev` histogram for `0x8002BEEC`,
+revealing what PC (JAL site) dispatches it in retail. The port contrast then
+shows whether the caller exists in the port or is silenced.
+
+No audio behavior changed. Evidence: `docs/M5-S3402-SLOT-PREPHASE.md` and
+`scratch/agent/s3402_retail_field348_owner/oracle.log`.

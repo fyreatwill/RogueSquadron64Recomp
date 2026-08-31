@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3401 (2026-08-31). This file was compacted
+through Session 3402 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -246,12 +246,13 @@ the paired logs.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Explain the selected `H-PortStage3Field348ProducerGap` by tracing the
-   input to the `0x8008F2C8` store immediately before the `0x8008F2CC`
-   zero-fill of `field348=0x801797B0`. Phase-qualify one same-build census
-   joining that caller input to the `0xCB0` source, DMA completion, guest
-   service, and PCM rows. Retain the retail-backed `0x1935E0` control and both
-   audio arms. Do not change audio behavior or add a destination redirect.
+1. Identify what dispatch path calls `0x8002BEEC` (the JAL that invokes
+   `0x800078EC`, the PCM writer). Use `--watch-pc 0x8002BEEC` in the oracle
+   with phase gates and the whole-RDRAM positive control to capture the
+   `exec-prev` histogram for `0x8002BEEC` in retail. That histogram names the
+   JAL site (or last branch site) that transferred to the containing function.
+   Then confirm whether that caller PC exists and executes in the port.
+   Do not add port instrumentation until the retail caller is named.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
    not repeat the old final-summary-only or dual-origin recipes; use the signal
    checkpoint and retain post-store sampling for all four candidates.
@@ -326,6 +327,7 @@ writer and initializer ordering are the measured explanation.
 
 Latest M5 evidence:
 
+- `docs/M5-S3402-SLOT-PREPHASE.md`
 - `docs/M5-S3401-FIELD348-INPUT.md`
 - `scratch/agent/s3386_m5_direct_writer_census.md`
 - `docs/M5-S3393-LOWER-NOISE-TARGET-ATTRIBUTION.md`
@@ -367,6 +369,22 @@ slot `0x80149764` stored `0x80178C80` at title 1024 and `0x801797B0` at hangar
 512. Because no attempt had both arms phase-qualified, the discriminator is
 unevaluable; no hypothesis is selected and no audio behavior changed. Evidence
 is in [M5-S3401-FIELD348-INPUT.md](M5-S3401-FIELD348-INPUT.md).
+
+Session 3402 ran a retail-oracle-only capture watching slot `0x149764:0x149768`
+with whole-RDRAM positive control, title/hangar phase gates, and `0x1935E0`
+post-value control. All controls passed (10,046 callbacks, 633 title VI, 1,316
+hangar VI, 40 `0x1935E0` hits). Slot `0x149764` had 6 writes total from
+`pc=0x8008F2C8`, all storing `0x801797B0` (fnv=`0x380f190b`), all occurring
+before the first phase gate (0 during title-1024, 0 during hangar-512).
+Combined with s3401's port witness, this gives two independent lines:
+- `H-PortStage3OwnerAbsent` REFUTED: retail writes slot 6 times pre-phase.
+- `H-PortStage3Field348ProducerGap` SELECTED for title-1024: port stores
+  `0x80178C80`; retail stored `0x801797B0` pre-phase.
+- `H-PortStage3DownstreamGap` SELECTED for hangar-512: both store `0x801797B0`
+  but port PCM is zero. The gap is in the dispatch of `0x8002BEEC` (JAL to
+  `0x800078EC`), which fires 37,635 times in retail and 0 times in the port.
+  The slot-level investigation is closed for hangar-512. Evidence is in
+  [M5-S3402-SLOT-PREPHASE.md](M5-S3402-SLOT-PREPHASE.md).
 
 Baseline and independent boundary evidence remains indexed in the ledger and
 PROJECT-OVERVIEW section 54. Use bounded `grep`/ `sed` windows for
