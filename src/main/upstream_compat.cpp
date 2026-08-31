@@ -1995,8 +1995,52 @@ static void sendtgt_note(uint32_t mq, uint64_t tid, bool want_stack) {
     }
 }
 
+static void rs64_m5_frequency_producer(uint8_t* rdram, recomp_context* ctx,
+                                       uint32_t mq_addr, uint32_t msg) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_FREQUENCY_PRODUCERS");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 1024u || (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != bucket) { bucket = key; rows = 0; }
+    if (rows >= 512u) return;
+    const uint32_t s0 = U32(ctx->r16);
+    const uint32_t s1 = U32(ctx->r17);
+    auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
+        const uint32_t p = guest - 0x80000000u;
+        return (static_cast<uint32_t>(rdram[p]) << 24) |
+               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
+               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
+               static_cast<uint32_t>(rdram[p + 3]);
+    };
+    auto byte = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
+        return rdram[guest - 0x80000000u];
+    };
+    std::fprintf(stderr,
+        "[m5-frequency-producer] ordinal=%u phase=%u width=%u origin=0x%06X "
+        "mq=0x%08X msg=0x%08X s0=0x%08X s1=0x%08X source_word=0x%08X "
+        "source_byte=0x%02X branch_selector=0x%08X branch_state=0x%04X "
+        "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X v0=0x%08X v1=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, mq_addr, msg, s0, s1,
+        word(s0 + 0x60u), byte(s0 + 0x22u), U32(ctx->r2),
+        word(s1 + 0x22u) & 0xFFFFu, U32(ctx->r4), U32(ctx->r5),
+        U32(ctx->r6), U32(ctx->r7), U32(ctx->r2), U32(ctx->r3), U32(ctx->r31));
+    std::fflush(stderr);
+}
+
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     const uint32_t mq_addr = (uint32_t)ctx->r4;
+    rs64_m5_frequency_producer(rdram, ctx, mq_addr, (uint32_t)ctx->r5);
     sendtgt_note(mq_addr, GetCurrentThreadId(),
                  recv_trace_enabled() || sendmesg_stack_enabled());
     log_m5_frame_sync_edge(rdram, "send", mq_addr, (uint32_t)ctx->r5,

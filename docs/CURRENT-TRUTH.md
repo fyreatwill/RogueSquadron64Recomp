@@ -568,6 +568,21 @@ but the port caller/retail intersection was zero. This selects
 the earlier producer or establish tuple legitimacy. Evidence is in
 [M5-S3438-FREQUENCY-CALLERS.md](M5-S3438-FREQUENCY-CALLERS.md).
 
+Session 3439 ran the independent retail oracle first with a whole-RDRAM
+positive control, both title origins, hangar, and the four selected
+predecessor PCs. The control reached 10,000 callbacks; the PCs executed
+`12,652/11,527/1,504/5,407` times for `0x80001B04/0x80001CB8/0x80006EFC/0x80006F5C`.
+The fresh-build port route reached title and hangar with phase, caller,
+wrapper, and image-stage controls live and no crash/abort markers. A new
+phase-scoped `osSendMesg_recomp` census reached its 512-row budget: 486 rows
+used queue `0x8010FEE0`, and 490 of 512 published message value zero. The
+producer and receive schemas were not like-for-like, and retail had no send
+publication table, so the exact requested producer/caller/retail tuple join is
+unevaluable. This selects `H-EarlierBoundaryUnevaluable` for this census and
+leaves the earlier input gap open; it does not establish that the zero
+publication is illegitimate. Evidence is in
+[M5-S3439-FREQUENCY-PRODUCER.md](M5-S3439-FREQUENCY-PRODUCER.md).
+
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 

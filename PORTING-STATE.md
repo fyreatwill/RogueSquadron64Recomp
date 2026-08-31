@@ -131344,3 +131344,20 @@ behavior, or PCM writeback changed.
 Evidence: `docs/M5-S3438-FREQUENCY-CALLERS.md`,
 `scratch/agent/s3438_retail_frequency_ground_truth/oracle.log`, and
 `scratch/agent/s3438_m5_frequency_input_retry/run.log`.
+
+## Session 3439 (2026-08-31) — qualified frequency producer boundary
+
+Ran the independent retail oracle first with a whole-RDRAM positive control,
+both title origins, hangar, and predecessor-PC watches. The control reached
+10,000 callbacks; `0x80001B04`, `0x80001CB8`, `0x80006EFC`, and `0x80006F5C`
+executed 12,652, 11,527, 1,504, and 5,407 times. Added a phase-scoped
+`osSendMesg_recomp` producer census, built once, and ran the qualified
+LLE/spin-yield port route. The port reached title and hangar with phase,
+caller, wrapper, and image-stage controls live and no crash/abort markers.
+The producer census reached its 512-row bound; 486 rows used queue
+`0x8010FEE0`, and 490 published message zero. Because the retail arm watched
+receive callsites rather than sends and the producer/receive register schemas
+are not like-for-like, the exact producer/caller/retail tuple intersection was
+unevaluable. This selects `H-EarlierBoundaryUnevaluable` for this census and
+leaves the earlier input gap open. No waits, slots, dispatch, clear behavior,
+or PCM writeback changed. Evidence: `docs/M5-S3439-FREQUENCY-PRODUCER.md`.
