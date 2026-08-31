@@ -447,6 +447,34 @@ extern "C" void rs64_m5_writer_setup_step(uint32_t pc, uint32_t ra,
     ++rows;
 }
 
+extern "C" void rs64_m5_allocate_boundary(uint32_t edge, uint32_t ra,
+                                             uint32_t a0, uint32_t a1,
+                                             uint32_t a2, uint32_t s0,
+                                             uint32_t s1, uint32_t v0) {
+    static int enabled = -1;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    static unsigned rows = 0;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_WRITER_SETUP");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        enabled = ((e && e[0] && e[0] != '0') ||
+                   (all && all[0] && all[0] != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    uint32_t width = rs64_vi_committed_width();
+    uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width == 0u) return;
+    uint32_t next_bucket = (width << 24) ^ origin;
+    if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
+    if (rows >= 64u) return;
+    std::fprintf(stderr,
+        "[m5-allocate-boundary] n=%u edge=0x%08X phase=%u width=%u origin=0x%06X "
+        "ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X s0=0x%08X s1=0x%08X v0=0x%08X\n",
+        rows, edge, rs64_phase_ord(), width, origin, ra, a0, a1, a2, s0, s1, v0);
+    std::fflush(stderr);
+    ++rows;
+}
+
 extern "C" void rs64_m5_static_rs_memset_callsite(uint32_t callsite,
                                                     uint32_t ra,
                                                     uint32_t dst,

@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 ROOT = Path("/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs")
-MARKER = "PATCH: s3424 M5 writer setup predecessor"
+MARKER = "PATCH: s3425 M5 allocate boundary"
 
 
 def main() -> None:
@@ -14,7 +14,7 @@ def main() -> None:
     caller_text = caller.read_text(encoding="utf-8")
     entry_text = entry.read_text(encoding="utf-8")
     if MARKER in caller_text or MARKER in entry_text:
-        print("s3424 writer setup predecessor already present")
+        print("s3425 allocate boundary already present")
         return
     caller_anchor = (
         "    { extern void rs64_m5_static_rs_memset_callsite(unsigned, unsigned, unsigned, unsigned, unsigned); "
@@ -35,6 +35,22 @@ def main() -> None:
     if entry_text.count(entry_anchor) != 1:
         raise SystemExit("s3423: entry anchor is not unique")
     entry_text = entry_text.replace(entry_anchor, entry_anchor + entry_insert, 1)
+    alloc_anchor = "RECOMP_FUNC void allocateSongChannelArray(uint8_t* rdram, recomp_context* ctx) {\n    uint64_t hi = 0, lo = 0, result = 0;\n"
+    alloc_insert = (
+        "    { extern void rs64_m5_allocate_boundary(unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned); "
+        "rs64_m5_allocate_boundary(0x8008F0A0u, U32(ctx->r31), U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r16), U32(ctx->r17), U32(ctx->r2)); } /* PATCH: s3425 M5 allocate entry */\n"
+    )
+    if caller_text.count(alloc_anchor) != 1:
+        raise SystemExit("s3425: allocateSongChannelArray anchor is not unique")
+    caller_text = caller_text.replace(alloc_anchor, alloc_anchor + alloc_insert, 1)
+    malloc_anchor = "    after_4:\n    // 0x8008F2A8: addiu       $a0, $zero, 0x298\n"
+    malloc_insert = (
+        "    { extern void rs64_m5_allocate_boundary(unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned); "
+        "rs64_m5_allocate_boundary(0x8008F2A0u, U32(ctx->r31), U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r16), U32(ctx->r17), U32(ctx->r2)); } /* PATCH: s3425 M5 malloc return */\n"
+    )
+    if caller_text.count(malloc_anchor) != 1:
+        raise SystemExit("s3425: malloc return anchor is not unique")
+    caller_text = caller_text.replace(malloc_anchor, "    after_4:\n" + malloc_insert + "    // 0x8008F2A8: addiu       $a0, $zero, 0x298\n", 1)
     step = (
         "    { extern void rs64_m5_writer_setup_step(unsigned, unsigned, unsigned, unsigned, unsigned); "
         "rs64_m5_writer_setup_step(PCu, U32(ctx->r31), U32(ctx->r17), U32(ctx->r8), U32(ctx->r9)); } /* PATCH: s3424 M5 writer setup predecessor */\n"

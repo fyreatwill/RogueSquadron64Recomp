@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3424 (2026-08-31). This file was compacted
+through Session 3425 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -402,24 +402,39 @@ observed setup edges, and moves the boundary to the caller/entry of
 illegitimate or identify the upstream producer; PCM remains zero. Evidence is
 in [M5-S3424-WRITER-SETUP-PREDECESSOR.md](M5-S3424-WRITER-SETUP-PREDECESSOR.md).
 
+Session 3425 qualified the caller/entry boundary with the independent retail
+oracle first, then ran a fresh-build silent/image port pair. Retail's
+`allocateSongChannelArray` entry at `0x8008F0A0` had `a0=0x12`, `a1=0x561F`,
+and `prev_pc=0x80091934`; its `0x8008F2A0` edge had `a0=0x3C9`, `s1=0x561F`,
+and `v0=0x80175AF0`. Both port arms had live controls and the same entry
+boundary before title: `a1=0x5622`; their `0x8008F2A0` rows had `s1=0x5622`
+and arm-specific allocator returns. This selects `H-UpstreamCallerContract`
+and refutes `H-InternalMallocReturn` at the observed boundary: the divergence
+is already present at function entry, not introduced by the first observed
+malloc return. The caller contract remains unresolved and is not proven
+illegitimate. Evidence is in
+[M5-S3425-ALLOCATE-CALLER-BOUNDARY.md](M5-S3425-ALLOCATE-CALLER-BOUNDARY.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the caller/entry boundary of `allocateSongChannelArray`, where the
-   port target state is already divergent at `0x8008F2A8`: `s1=0x5622`, `t0=1`,
-   `t1=0`, `ra=0`, versus retail `s1=0x561F`, `t0=0x2000FF01`,
-   `t1=0x8010FEF8`, `ra=0x8008F2D4`. Use one fresh-build port pair with the
-   existing controls and bounded witnesses at function entry and the caller's
-   return from `rs_malloc` (`0x8008F2A0`). If entry already has the port tuple,
-   select an upstream caller contract; if it matches retail and diverges after
-   entry, select an internal call/return producer; if controls disappear, mark
-   unevaluable. Do not change waits, slots, dispatch, clear behavior, or PCM
-   writeback.
-2. The host-wrapper divergence hypothesis is closed for this target call:
-   caller-edge and entry tuples matched in both arms. The five setup edges are
-   now also closed; the upstream producer remains unresolved.
+1. Trace the sole caller `initN64RspMixer` at `0x80091934`, which the retail
+   oracle identifies as the previous PC entering `allocateSongChannelArray`.
+   First run a whole-RDRAM-positive-control oracle with `--watch-pc
+   0x80091934,0x8008F0A0` and title/hangar phase logging. Then add one
+   regeneration-safe port entry/caller witness and run the existing fresh-build
+   silent/image pair. Competing outcomes: caller passes `a1=0x561F` and the
+   callee changes it (internal callee contract); caller already passes
+   `0x5622` (upstream caller contract); or the caller control disappears
+   (unevaluable). Keep phase-scoped controls for title 1024, hangar 512,
+   audio ABI/DMA, image stage, and PCM, and do not change waits, slots,
+   dispatch, clear behavior, or PCM writeback.
+2. The `allocateSongChannelArray` entry/first-malloc boundary is closed for
+   this iteration: port `a1=0x5622` is already divergent at entry, selecting
+   `H-UpstreamCallerContract`. The five setup edges and host-wrapper divergence
+   remain closed at their observed boundaries.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

@@ -131021,3 +131021,31 @@ host-wrapper explanation at this target call. It does not establish that the
 port tuple is illegitimate or identify the upstream producer; PCM remained
 zero. Evidence is in `docs/M5-S3424-WRITER-SETUP-PREDECESSOR.md` and
 `scratch/agent/s3423_m5_writer_setup/{driver,silent,image}.log`.
+
+## Session 3425 (2026-08-31) — M5 allocateSongChannelArray caller boundary
+
+Ran the independent retail oracle first with a whole-RDRAM positive control,
+target-span watch, and execution watches at `0x8008F0A0` and `0x8008F2A0`.
+The control reached 10,000 callbacks; retail reached title and hangar. Retail
+entry had `a0=0x12`, `a1=0x561F`, `prev_pc=0x80091934`; its `0x8008F2A0`
+row had `a0=0x3C9`, `s1=0x561F`, and `v0=0x80175AF0`.
+
+Added the regeneration-safe allocate entry and post-malloc witness, rebuilt
+the Debug target, and ran the concurrent silent/image pair. Both arms reached
+title 1024 and hangar 512; phase, setup, target, audio ABI/DMA, and PCM
+controls were live with no crash or abort markers. Port entry rows at
+`0x8008F0A0` had `a1=0x5622` in both arms. Their `0x8008F2A0` rows retained
+`s1=0x5622` and showed allocator returns `0x8016FD20`, `0x80177730`, and
+`0x801772F0` across the route.
+
+The independent retail line and paired port line select
+`H-UpstreamCallerContract` and refute `H-InternalMallocReturn` at this
+boundary: the count divergence is already present at
+`allocateSongChannelArray` entry, before the observed malloc-return edge.
+This does not prove the port count is illegitimate and does not explain zero
+PCM. The wrapper initially failed to finalize its driver summary; both game
+PIDs were then SIGKILLed and the logs were extracted, with the boundary rows
+already present. Evidence is in
+`docs/M5-S3425-ALLOCATE-CALLER-BOUNDARY.md`,
+`scratch/agent/s3425_groundtruth/oracle.log`, and
+`scratch/agent/s3423_m5_writer_setup/{silent,image}.log`.
