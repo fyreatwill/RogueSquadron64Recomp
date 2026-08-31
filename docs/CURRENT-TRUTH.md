@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3435 (2026-08-31). This file was compacted
+through Session 3437 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -542,18 +542,31 @@ tuples. This does not select a missing port tuple family because retail
 and leaves port tuple parity unevaluable. Evidence is in
 [M5-S3436-PORT-FREQUENCY-CONTRACT.md](M5-S3436-PORT-FREQUENCY-CONTRACT.md).
 
+Session 3437 repeated the frequency-contract comparison at the actual common
+`osRecvMesg` entry `0x800331D0`. Retail passed the whole-RDRAM control, both
+title-origin phase gates, and retained 7,815 field rows. The fresh-build port
+image arm reached title and hangar with phase, image-stage, RSP-source, task,
+and PCM controls live and no crash/abort markers; it retained 107 distinct
+normalized tuples. The exact intersection over
+`s0,s1,source_word,source_byte,branch_selector,branch_state` was zero. This
+selects `H-PortTupleFamilyMissing` at the common entry boundary and refutes
+`H-PortTupleFamilyMatch` plus the prior interior-PC/entry-boundary mismatch
+explanation. The missing input/dispatch producer remains unidentified and no
+audio behavior changed. Evidence is in
+[M5-S3437-FREQUENCY-ENTRY.md](M5-S3437-FREQUENCY-ENTRY.md).
+
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Repair the frequency-contract join at the actual common boundary. Run the
-   independent oracle with a phase-gated field dump at `osRecvMesg` entry
-   `0x800331D0` (not interior PC `0x800331E0`) and the whole-RDRAM control,
-   then compare its tuple family with the existing port wrapper-entry
-   witness in one fresh-build port run. Matching tuples select a port-side
-   contract gap; no matching tuples select an earlier port input/dispatch gap;
-   absent entry rows or a still-unjoinable field set select an unevaluable
-   boundary. Do not change waits, slots, dispatch, clear behavior, or PCM
-   writeback.
+1. Trace the earlier port input/dispatch boundary selected by Session 3437.
+   Use one fresh-build image run with the existing phase controls and a
+   phase-scoped census at the callers feeding `osRecvMesg_recomp`, joined to
+   the existing normalized tuple rows and the selected frequency-result
+   consumer. The discriminator is whether a retail-observed entry tuple is
+   absent before the wrapper (earlier port input/dispatch gap), present before
+   but changed at the wrapper (wrapper contract gap), or unavailable despite
+   live controls (boundary still unevaluable). Keep waits, slots, clear
+   behavior, and PCM writeback unchanged.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.

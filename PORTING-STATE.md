@@ -131300,3 +131300,22 @@ clear behavior, PCM writeback, or audio behavior changed.
 Evidence: `docs/M5-S3436-PORT-FREQUENCY-CONTRACT.md`,
 `scratch/agent/s3436_m5_port_frequency_contract/results.txt`, and the paired
 oracle/port logs.
+
+## Session 3437 (2026-08-31) — repaired the frequency-contract entry join
+
+Ran the independent retail oracle with the whole-RDRAM positive control,
+physical `0x165ED0:0x165ED4`, both title origins, and a field dump at the
+actual `osRecvMesg` entry `0x800331D0`. The control fired, both phase buckets
+were live with 632 and 633 VI rows, and the field summary retained 7,815
+rows. The fresh-build port image arm reached title `0x00790400` and hangar
+`0x006AB400`; phase, image-stage, RSP-source, task, and PCM controls were live,
+with no crash or abort markers. Its bounded witness retained 107 distinct
+normalized tuples. The exact intersection over
+`s0,s1,source_word,source_byte,branch_selector,branch_state` was zero.
+
+This selects `H-PortTupleFamilyMissing` at the common entry boundary and
+refutes `H-PortTupleFamilyMatch` plus the prior interior-PC/entry-boundary
+mismatch explanation. It points the investigation earlier into port
+input/dispatch, but does not identify the producer or change audio behavior.
+Evidence: `docs/M5-S3437-FREQUENCY-ENTRY.md` and
+`scratch/agent/s3437_m5_frequency_entry/`.
