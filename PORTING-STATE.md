@@ -128817,3 +128817,26 @@ post-store value tuple; nonzero is established by the subsequent watched
 load of `$v0=1`.
 
 Evidence: `scratch/agent/s3313_retail_skip_source.md`.
+## Session 3314 (2026-08-30) — censused port skip-allow source operands
+
+HYPOTHESIS-ID: m5-osvimode-postviewer-continuation
+
+The required Debug target built successfully. The first harness attempt was
+non-discriminating because its summary searched for controls this binary does
+not emit; it was corrected and rerun with the source probes in one batch.
+The final 127-second run passed four mark-all controls, 64 SP-completion
+rows, 1,395 VI-640 rows, and cinematic entry, then hit the SIGKILL watchdog
+without crash or abort.
+
+The corrected probe observed 6208 once, 6238 18 times, 6248 15 times, and
+6274 139 times. All printed 6238/6248 samples had `$a0=0`/`$v0=0`; 6274 was
+taken and 62B4 never ran. The known B1C writers were instrumented: 5EE8
+fired once with zero, while 61D0 and 9360 did not fire. Title VI-1024 was
+absent. This selects a named-writer absence at the measured phase and rules
+out incoming nonzero `$a0` and a firing 9360 writer, but it does not prove
+`H-PortB1CWriter` or explain retail's late nonzero store.
+
+The batch source instrumentation is maintained by
+`tools/apply_s3314_skip_source.py`; the run recipe and raw evidence are in
+`scratch/agent/s3314_port_skip_source/`. The next work unit is a bounded
+static caller/order audit, not another identical runtime census.

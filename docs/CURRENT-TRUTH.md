@@ -4,11 +4,11 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3309 (2026-08-30). Compacted from
+Current maintenance marker: Session 3314 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
-## Live investigation (s3303–s3313)
+## Live investigation (s3303–s3314)
 
 Session 3313 asked independent retail which operand sets skip-allow `$a0`
 before `0x800A6274`. Two no-press Rice runs passed whole-RDRAM 10000-write,
@@ -18,6 +18,15 @@ before `0x800A6274`. Two no-press Rice runs passed whole-RDRAM 10000-write,
 `$v0=1`, `0x800A6274` falling through with `$a0=1`, and `0x800A62B4`
 executing. This selects `H-RetailB1CWrite` and refutes the incoming-
 controller arm. Evidence: `scratch/agent/s3313_retail_skip_source.md`.
+
+Session 3314 ran the corrected port-side source census. The same build passed
+four mark-all controls, 64 SP completions, 1,395 VI-640 rows, and cinematic
+entry. At the branch sites, `$a0`/`$v0` remained zero; 6274 took 139 times and
+62B4 never ran. The prologue zero writer at `0x800A5EE8` fired once, while
+known writers `0x800A61D0` and `0x800A9360` did not. This rules out incoming
+nonzero input and a firing 9360 writer in the observed phase, but leaves the
+classification as named-writer absence rather than proof of a B1C writer.
+Evidence: `scratch/agent/s3314_port_skip_source.md`.
 
 Session 3312 asked independent retail which skip
 `cinematicLoopBody` takes into `jal cinematicInitializer` at
@@ -220,20 +229,19 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Port census of the same skip-allow source relation in one build/run:
-   phase-gate watches for `0x800A6208`, `0x800A6238`, `0x800A6248`,
-   `0x800A6274`, `0x800A62B4`, and every port writer to `0x800B0B1C`.
-   Split `H-PortIncomingA0` (6238 taken with nonzero `$a0`),
-   `H-PortB1CWriter` (6238 not-taken, named writer makes B1C nonzero),
-   `H-PortBoth`, and `H-PortInputUnavailable`. Require completion-wins,
-   SP-complete, VI-640, cinematic-entry, and whole-run positive controls.
-   No M5 Step 3 until the writer/order edge is named.
-2. Session 3285 moved the 3270 alignment + cycle-cap class onto the
+1. Validate `patches/heap_guards.c` on the configured Windows/MIPS host
+   (`PatchesLib`). Do not repeat the local missing-target build.
+2. Revisit the skip-allow source only with a genuinely new angle: identify
+   the caller/order edge that can make the port's B1C byte differ despite all
+   known funcs_27 writers being inactive in the observed phase. Do not repeat
+   the same 6208/6238/6248/6274/62B4 census. No M5 Step 3 until the
+   writer/order edge is named.
+3. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. Remaining: validate
    `patches/heap_guards.c` on the configured Windows/MIPS host
    (`PatchesLib`). Do not repeat the local missing-target build. The
    guard is not evidence that the VI-640 route or audio is corrupt.
-3. After the pre-VI-640 scheduler crash is repaired or explained, capture
+4. After the pre-VI-640 scheduler crash is repaired or explained, capture
    consumed-message identity at `0x80019CD0` with `ROGUESQ_RECV_TRACE`
    positive controls. Session 3269 selected `H-RecvWatchUnavailable`. Require
    caller, message pointer, type byte, and `89F/28D44` in the same phase.
