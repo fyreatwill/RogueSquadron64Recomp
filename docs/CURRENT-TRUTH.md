@@ -25,6 +25,17 @@ retail writer is not the port source of the problematic callback value, and
 the known `0x80007928` store is. Evidence:
 `scratch/agent/s3361_m5_callback_table_writer_source.md`.
 
+Session 3362's bounded generated-tree census found exactly one inline
+`0x800919D4` load and `0x800919EC` `jalr`, both in `initN64RspMixer`. The
+function loads the target from the global slot initialized at `0x80091900`
+and sets `$a0` to the literal `0x8009123C` immediately before the call. No
+second generated caller, shared-state argument setup, unresolved generated
+edge, or host-side rewrite was found. This classifies the observed transfer
+as a concrete guest caller with a literal argument; the static result is
+single-source, with hardware execution of the same chain independently
+captured in Session 3346. Evidence:
+`scratch/agent/s3362_m5_callback_argument_static_census.md`.
+
 Session 3358 validated the session 3357 task-start pointer guard on the live
 route. The Debug binary reached title VI `1024 @ 0x00790400` at 14.6 s and
 hangar VI `512 @ 0x006AB400` at 26.5 s with 56 audio task dispatches and

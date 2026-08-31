@@ -1,42 +1,37 @@
-# NEXT work unit — trace the upstream argument supplying 0x8009123C
+# NEXT work unit — obtain independent ground truth for the literal callback argument
 
 HYPOTHESIS-ID: m5-callback-table-writer
 
-Session 3361 paired the port callback-table store: `0x80007928` wrote
-`0x8009123C`, `0x80007968` cleared, and `0x80017D08` wrote only `0x400/0x800`
-halfwords. The remaining boundary is upstream of the known table store: what
-caller/path supplies `0x8009123C` as the argument to the indirect callback
-registration chain.
+Session 3362 found the only generated `0x800919D4`/`0x800919EC` site in
+`initN64RspMixer`: `$a0` is set to literal `0x8009123C` immediately before
+the `jalr`, and the target is loaded from the slot initialized at
+`0x80091900`. Session 3361 paired the port callback-table store: `0x80007928`
+wrote `0x8009123C`, `0x80007968` cleared, and `0x80017D08` wrote only
+`0x400/0x800` halfwords.
 
 Competing hypotheses:
 
-- `H-ArgFrom919ECCaller`: the caller of the `0x800919D4/0x800919EC` chain
-  supplies `0x8009123C` directly in its argument register.
-- `H-ArgFromEarlyInit`: an earlier initialization path leaves the argument
-  in a shared state/register before the indirect chain runs.
-- `H-ArgFromUnresolvedJalr`: another register-loaded indirect caller reaches
-  the same registration target with the value.
-- `H-ArgHostDispatch`: host/runtime dispatch changes the argument before the
-  guest registration store.
+- `H-RetailLiteralArgument`: retail executes the same guest chain with
+  physical evidence of the literal `0x8009123C` argument.
+- `H-RetailAlternateArgument`: retail reaches the chain but supplies a
+  different argument, separating port state from the static port literal.
+- `H-RetailChainAbsent`: the port's observed chain is not the retail path.
 
-Discriminating measurement: perform one bounded static census of every
-generated call/edge into `0x800919D4` and `0x800919EC`, including the
-immediately preceding assignments to the argument register, and compare it
-with the existing runtime row `0x800919EC -> 0x80007910, a0=0x8009123C`.
-Every possible result must classify the source as a concrete guest caller,
-an earlier state load, an unresolved jalr, or no guest source (host path).
+Discriminating measurement: use the independent retail oracle to watch the
+physical callback-table slot and guest execution at the corresponding chain,
+retaining `$a0`/target attribution. A whole-RDRAM write control, callback-slot
+write control, title, and hangar controls must all fire. A retail row with
+target `0x80007910` and argument `0x8009123C` selects the literal-argument
+hypothesis; a different argument selects the alternate-argument hypothesis;
+no retail chain row selects the chain-absent hypothesis.
 
-Before building, use only bounded searches around the two symbols and read
-`docs/F5-UCODE-REFERENCE.md` only if the edge is confused with a rendering
-path. Do not add a runtime counter or change behavior unless the static
-census finds a specific missing edge that can be instrumented as one table.
-If instrumentation is required, update its fixup source before regeneration.
-The existing validated run recipe remains:
+Exact bounded preparation before any build:
 
 ```sh
-rg -n -C 8 '800919D4|800919EC|LOOKUP_FUNC' ../N64Recomp/RecompiledFuncs/funcs_*.c
-cmake --build build --config Debug --target RogueSquadron64Recomp
+rg -n -C 8 '800919D4|800919EC' ../N64Recomp/RecompiledFuncs/funcs_*.c
 ```
 
-Retain the retail whole-RDRAM/callback-slot positive controls and port
-host/task/PCM/title/hangar controls for any runtime follow-up.
+Then run the existing retail oracle recipe with its whole-RDRAM, callback-slot,
+title, and hangar positive controls. Do not change behavior. No port build is
+needed unless the oracle exposes an address/argument mismatch requiring a
+same-build port row.

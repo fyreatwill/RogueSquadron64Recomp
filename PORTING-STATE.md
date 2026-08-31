@@ -129757,3 +129757,19 @@ contract, so this instrumentation attributes writes without accepting or
 repairing the `0x8009123C` value.
 
 Evidence: `scratch/agent/s3361_m5_callback_table_writer_source.md`.
+
+## Session 3362 (2026-08-31) — censused callback argument source
+
+Ran the bounded generated-tree census requested by the previous work unit.
+`0x800919D4` and `0x800919EC` occur exactly once each, inline in
+`initN64RspMixer`; there is no generated direct caller or alternate inline
+`jalr` edge. The function loads the target from the slot initialized at
+`0x80091900`, then sets `$a0` to literal `0x8009123C` immediately before the
+indirect call. This selects the concrete guest/literal-argument hypothesis
+for the observed transfer and refutes shared-register, alternate-generated-
+caller, and host-rewrite explanations for this site. It does not explain why
+the table store at `0x80007928` receives that value. The static census is
+single-source; Session 3346 independently established that the same guest
+chain executes on retail. No build or behavior change was made.
+
+Evidence: `scratch/agent/s3362_m5_callback_argument_static_census.md`.
