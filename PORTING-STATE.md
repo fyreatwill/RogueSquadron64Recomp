@@ -130636,3 +130636,21 @@ PCM path. It does not select `H-Dispatch-DirectCaller`,
 changing the port. The next probe extends this same phase-qualified route to
 120 seconds without adding runtime instrumentation. Evidence:
 `scratch/agent/s3403_retail_8002beec_caller/oracle.log`.
+## Session 3404 (2026-08-31) — M5 retail PCM dispatch address qualification
+
+Ran the prescribed 120-second retail oracle caller capture for `0x8002BEEC`,
+retaining whole-RDRAM, title/hangar, and `0x1935E0` controls. The route passed
+all controls: 10,040 whole-RDRAM writes, 40 PCM-control writes, title 1024,
+and hangar 512. `0x8002BEEC` had zero execution hits and no `exec-prev` rows.
+
+Ran the fixed same-route adjacent-PC capture in one watch set. It again passed
+the controls and phases. `0x800078EC` executed 9,699 times, while
+`0x800078E8`, `0x8002BEE8`, and `0x8002BEEC` each had zero hits. The only
+execution histogram row was `exec-prev pc=0x800078ec prev=0x800078ec n=9699`.
+
+This selects `H-Stale-2BEEC-Target` for the current oracle route and refutes
+the direct, indirect, and boot-only caller hypotheses at that target address.
+It does not identify the actual external producer dispatch path, and the
+earlier 37,635 retail attribution remains unreconciled. No port or audio
+behavior changed. Evidence: `docs/M5-S3404-PCM-DISPATCH-ADDRESS.md` and
+`scratch/agent/s3403_retail_8002beec_caller/oracle-corrective.log`.

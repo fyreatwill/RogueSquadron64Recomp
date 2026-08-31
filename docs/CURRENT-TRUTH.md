@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3402 (2026-08-31). This file was compacted
+through Session 3404 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -246,13 +246,14 @@ the paired logs.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Identify what dispatch path calls `0x8002BEEC` (the JAL that invokes
-   `0x800078EC`, the PCM writer). Use `--watch-pc 0x8002BEEC` in the oracle
-   with phase gates and the whole-RDRAM positive control to capture the
-   `exec-prev` histogram for `0x8002BEEC` in retail. That histogram names the
-   JAL site (or last branch site) that transferred to the containing function.
-   Then confirm whether that caller PC exists and executes in the port.
-   Do not add port instrumentation until the retail caller is named.
+1. Reconcile the stale `0x8002BEEC` attribution before adding port probes.
+   The 120-second retail capture and a same-run adjacent-PC capture both
+   reached title/hangar with controls live; `0x800078EC` executed 9,699 times,
+   while `0x8002BEE8` and `0x8002BEEC` were both zero. Use one completion-safe
+   oracle run watching the known producer plus the earlier execution site
+   `0x80033300` (seen in the prior route census), retaining the whole-RDRAM,
+   title/hangar, and `0x1935E0` controls. Do not add port instrumentation until
+   the retail producer dispatch address is re-established.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
    not repeat the old final-summary-only or dual-origin recipes; use the signal
    checkpoint and retain post-store sampling for all four candidates.
@@ -314,6 +315,13 @@ The request-only SP-yield interpretation and viewer-stall chain from sessions
 3288–3302 describe only the old diagnostic arm. Session 3304's
 completion-aware default returns the viewer, so those findings are not the
 current default explanation.
+
+The session-3402 attribution that `0x8002BEEC` is the retail JAL dispatch to
+`0x800078EC` is superseded as a current oracle target. It was believable
+because earlier captures reported execution there, but the same validated
+120-second route plus an adjacent-PC corrective capture found zero executions
+at both `0x8002BEE8` and `0x8002BEEC` while `0x800078EC` was live. The earlier
+route-dependent attribution remains unreconciled rather than discarded.
 
 The old interpretation of the 1,578-entry cinematic dispatcher pool as an
 audio-slot pool was superseded by the actual MusyX voice-table measurement:
@@ -397,6 +405,16 @@ instrument null but not a dispatch discriminator: it selects none of
 `H-Dispatch-BootOnly`. A longer same-route capture is required before adding
 port caller instrumentation. Evidence is in
 `scratch/agent/s3403_retail_8002beec_caller/oracle.log`.
+
+Session 3404 extended the retail `0x8002BEEC` watch to 120 seconds and ran a
+corrective adjacent-PC watch set. Both runs passed whole-RDRAM, title/hangar,
+and PCM controls. The target `0x8002BEEC` and predecessor `0x8002BEE8` were
+both zero, while `0x800078EC` executed 9,699 times; the only `exec-prev` row
+was a self-reentry row for `0x800078EC`. This selects a stale target-address
+explanation for the current oracle route and refutes the three caller-shape
+hypotheses at `0x8002BEEC`; the earlier 37,635 attribution remains
+unreconciled. No audio behavior changed. Evidence is in
+[M5-S3404-PCM-DISPATCH-ADDRESS.md](M5-S3404-PCM-DISPATCH-ADDRESS.md).
 
 Baseline and independent boundary evidence remains indexed in the ledger and
 PROJECT-OVERVIEW section 54. Use bounded `grep`/ `sed` windows for

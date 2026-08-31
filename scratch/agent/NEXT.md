@@ -1,59 +1,46 @@
-# NEXT work unit — extend retail exec-prev capture for 0x8002BEEC
+# NEXT work unit — re-establish the retail PCM producer dispatch address
 
 HYPOTHESIS-ID: m5-image-stage3-destination
 
-The slot-level investigation is closed for hangar-512: both retail and port have
-`field348=0x801797B0` (two independent lines from s3401 + s3402). The first
-60-second caller-watch attempt passed all controls and reached hangar, but
-`0x8002BEEC` had zero hits and the secondary `0x1935E0` control had only 40
-writes. Extend the same route to 120 seconds so the known later retail PCM
-activity has time to appear.
-
-Use `--watch-pc 0x8002BEEC` to capture the oracle's `exec-prev` histogram for
-that PC. The README states: "exec-prev pc=X prev=Y n=N — for each exec hit,
-mupen's PREVIOUS_PC (the jal site that transferred here; $ra is prev+8)." This
-names the JAL that dispatched the containing function.
+The 120-second caller capture and its corrective adjacent-PC capture both
+passed whole-RDRAM, title/hangar, and `0x1935E0` controls. `0x800078EC` ran
+9,699 times, but `0x8002BEE8` and `0x8002BEEC` were zero. The earlier 2BEEC
+attribution is stale or route-dependent and must be reconciled before port
+instrumentation.
 
 Competing hypotheses:
 
-- `H-Dispatch-DirectCaller`: exec-prev names a single JAL site; that site either
-  exists in the port (same function, not called) or is absent (the call chain is
-  missing).
-- `H-Dispatch-IndirectCaller`: exec-prev shows many prev-PC values (indirect
-  jump); the dispatcher is a callback table or function pointer that differs.
-- `H-Dispatch-BootOnly`: exec-prev fires only during boot/init phases, not during
-  title or hangar — which would mean the function IS called but only pre-phase.
+- `H-ProducerDirectCall`: `0x80033300` is the live caller seen in the earlier
+  route census; it executes with a usable `exec-prev` row in this route.
+- `H-ProducerAlternateCall`: the live caller is another watched adjacent PC;
+  `0x80033300` remains zero while `0x800078EC` is live.
+- `H-ProducerSelfLoopOnly`: the observed `0x800078EC` activity is only its
+  internal loop, with no external dispatch site in this route.
 
-Discriminator: the exec-prev histogram combined with phase-gated execution count.
-Phase-gated count > 0 during hangar-512 refutes `H-Dispatch-BootOnly`.
-A single dominant prev-PC points to a named JAL site (then cross-check in port).
-Multiple prev-PCs point at an indirect dispatcher.
+Discriminator: one 120-second retail oracle run watching
+`0x80033300,0x800078EC,0x800078E8,0x8002BEE8,0x8002BEEC`, with the whole-RDRAM
+positive control, `0x1935E0` control, title/hangar phase gates, and phase
+histograms. A nonzero `0x80033300` count and its `exec-prev` row selects the
+direct caller; zero there with another adjacent hit selects an alternate
+caller; only `0x800078EC` live preserves the self-loop explanation.
 
 Command:
 
-    mkdir -p scratch/agent/s3403_retail_8002beec_caller
+    mkdir -p scratch/agent/s3405_retail_pcm_dispatch
     env tools/oracle/build/rs64_oracle \
       --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
       --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
       --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
       --secs 120 \
       --watch-write 0x0:0x800000 \
-      --watch-pc 0x8002BEEC \
+      --watch-pc 0x80033300,0x800078EC,0x800078E8,0x8002BEE8,0x8002BEEC \
       --watch-write 0x1935E0:0x1935F0 \
       --pc-phase-log 0x00790400,0x006AB400 \
       --pc-hist-phase 0x00790400:1024 \
       --pc-hist-phase 0x006AB400:512 \
       --vi-trace \
       --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-      > scratch/agent/s3403_retail_8002beec_caller/oracle.log 2>&1
+      > scratch/agent/s3405_retail_pcm_dispatch/oracle.log 2>&1
 
-Notes:
-- 120 seconds is enough to retain the hangar-512 phase after the ~38s
-  transition; the phase-log restricts logged exec rows to title/hangar to
-  prevent boot noise.
-- Retain whole-RDRAM positive control. Retain `0x1935E0` as a secondary control
-  (confirming retail PCM production path is live).
-- The `exec-prev` lines in the shutdown summary name the JAL dispatch site.
-- After getting the caller PC, grep the port's generated recomp code for that
-  PC's caller chain to determine if the port is missing the dispatch path.
-- Use SIGKILL-only cleanup.
+Keep the capture SIGKILL-safe and do not add port instrumentation until the
+retail dispatch site is named.
