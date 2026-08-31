@@ -20,6 +20,8 @@ static void rs64_m5_static_rs_memset_entry(recomp_context* ctx) {
     extern uint32_t rs64_m5_static_rs_memset_last_ra(void);
     static int enabled = -1;
     static unsigned rows = 0;
+    static unsigned target_rows = 0;
+    static unsigned control_rows = 0;
     static uint32_t bucket = 0xFFFFFFFFu;
     if (enabled < 0) {
         const char* e = getenv("ROGUESQ_LOG_M5_STATIC_CALLS");
@@ -36,8 +38,14 @@ static void rs64_m5_static_rs_memset_entry(recomp_context* ctx) {
     if (next_bucket != bucket) {
         bucket = next_bucket;
         rows = 0;
+        target_rows = 0;
+        control_rows = 0;
     }
-    if (rows >= 512u) return;
+    uint32_t dst = U32(ctx->r4);
+    uint32_t len = U32(ctx->r6);
+    uint32_t end = dst + len;
+    unsigned target = len != 0u && dst < 0x80179A48u && end > 0x801797B0u;
+    if (target ? target_rows >= 512u : control_rows >= 16u) return;
     uint32_t phase = rs64_phase_ord();
     uint32_t ordinal = 0xFFFFFFFFu, row = 0xFFFFFFFFu;
     int exit_reason = 0;
@@ -47,17 +55,18 @@ static void rs64_m5_static_rs_memset_entry(recomp_context* ctx) {
     uint32_t ra = U32(ctx->r31);
     uint32_t callsite = ra >= 8u ? ra - 8u : 0u;
     fprintf(stderr,
-        "[m5-static-rsmemset] n=%u entry=0x800078E0 ra=0x%08X "
+        "[m5-static-rsmemset] n=%u target=%u entry=0x800078E0 ra=0x%08X "
         "caller_callsite=0x%08X caller_ra=0x%08X "
         "callsite=0x%08X breadcrumb=0x%08X phase=%u width=%u "
         "origin=0x%06X arm=%s ordinal=%u row=%u active=%u "
         "dst=0x%08X val=0x%08X len=0x%X exit=%d\n",
-        rows, ra, callsite, rs64_m5_static_rs_memset_last_callsite(),
+        rows, target, ra, callsite, rs64_m5_static_rs_memset_last_callsite(),
         rs64_m5_static_rs_memset_last_ra(), (unsigned)g_rs64_last_guest_pc, phase, width,
         origin, arm ? arm : "n/a", ordinal, row, active,
-        U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), exit_reason);
+        dst, U32(ctx->r5), len, exit_reason);
     fflush(stderr);
     ++rows;
+    if (target) ++target_rows; else ++control_rows;
 }
 '''
 

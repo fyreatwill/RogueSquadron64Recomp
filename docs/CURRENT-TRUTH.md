@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3379 (2026-08-31). This file was compacted
+through Session 3380 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -50,6 +50,14 @@ source boundary:
   spans. This selects `H-PortSourceWriterZero`, refutes writer absence for the
   observed port span, and moves the gap upstream to the writer's input/caller
   contract. Transform behavior on nonzero input remains unevaluable.
+- Session 3380's fixed caller census passed whole-RDRAM, title, hangar,
+  audio-ABI, image-join, PCM-join, and PCM-boundary controls. The port target
+  span was issued by `rs_memset` callsite `0x8008F2CC` with
+  `dst=0x801797B0`, `val=0`, `len=0x298`; retail's target-phase writer
+  predecessor was independently `0x8002BEEC` (399 rows), with the same
+  sampled zero-fill tuple. This selects `H-PortSourceCallerMismatch` at the
+  observed boundary. It does not establish that the zero fill is illegitimate
+  or select a nonzero-input path.
 
 No output substitution or mitigation is authorized. Do not change waits, slots,
 status handling, consumer dispatch, or PCM writeback while tracing the source.
@@ -59,26 +67,26 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the port `0x800078EC` writer's caller and input construction for the
-   zero source spans. Before building instrumentation, confirm retail
-   caller/argument ground truth and the existing port `rs_memset` callsite
-   hooks. Then batch one phase-scoped argument/callsite census and one
-   validated run; do not change the write.
+1. Trace the selected caller mismatch. Before building, ask the retail oracle
+   for phase-gated execution/argument rows at `0x8002BEEC` and `0x8008F2CC`
+   alongside the writer and whole-RDRAM control. Then batch one port census of
+   both callsites' constructed destination/value/length and target task join;
+   do not change the write.
 2. Competing hypotheses for that unit:
-   - `H-PortSourceArgumentGap`: `rs_memset` receives a zero fill or source
-     input before `0x800078EC` stores into the target span.
-   - `H-PortSourceCallerMismatch`: the port caller/callsite or buffer
-     construction differs from retail even though the writer PC is the same.
-   - `H-PortSourceVisibility`: nonzero input reaches the writer but is lost
-     before source DMA; current zero-store evidence disfavors it.
-3. Discriminator: join the `rs_memset` callsite, destination, fill/value,
-   caller PC, and target audio-task ordinal/row. A zero fill at the caller
-   selects `H-PortSourceArgumentGap`; a retail/port callsite or destination
-   mismatch selects `H-PortSourceCallerMismatch`; nonzero input with zero
-   stores selects a writer/ABI visibility edge.
+   - `H-PortCaller8002BEECAbsent`: the port never reaches the retail target
+     caller, so `0x8008F2CC` is a different legitimate initialization path.
+   - `H-PortCallerArgumentConstruction`: both paths are reached, but their
+     destination/length/value or task-row construction differs.
+   - `H-PortCallerDispatchAlias`: the port reaches the retail caller through a
+     dispatch/overlay alias that changes the observed callsite.
+3. Discriminator: same-run rows keyed by caller PC, destination, value, len,
+   phase, and audio-task ordinal/row. Retail caller activity with no matching
+   port row selects `H-PortCaller8002BEECAbsent`; matching activity with a
+   tuple difference selects `H-PortCallerArgumentConstruction`; matching
+   tuple under a distinct dispatch path selects `H-PortCallerDispatchAlias`.
 4. Keep phase, audio-task/ABI, PCM, image-stage/DMA, title, and hangar positive
    controls. Build all desired arms in one iteration if an A/B is needed. Do
-   not change behavior. Evidence: `scratch/agent/s3379_m5_source_writer.md`.
+   not change behavior. Evidence: `scratch/agent/s3380_m5_caller_census.md`.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

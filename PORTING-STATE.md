@@ -130108,3 +130108,25 @@ nonzero writes versus port's zero writes move the gap to the writer's
 input/caller contract. No output, wait, slot, status, consumer, or PCM
 writeback behavior changed. The first two port runs are documented invalid,
 not evidence. Evidence: `scratch/agent/s3379_m5_source_writer.md`.
+## Session 3380 (2026-08-31) — selected M5 source caller mismatch
+
+Ran the retail ground-truth prerequisite with Rice, the canonical Start
+schedule, whole-RDRAM positive control, target-span watches, and the
+`0x800078EC` execution watch. The control fired and retail reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; its target-phase writer
+predecessor histogram included `0x8002BEEC` with 399 rows. The sampled retail
+target tuple was `a0=0x801797B0`, `a1=0`, `a2=0x298`.
+
+The first port run was invalid for caller attribution because the generated
+tree lacked the existing `s2447`/`s2448` probes; unrelated controls fired. I
+reapplied those diagnostics from their scripts, reserved a target-overlap log
+budget, rebuilt, and reran. The fixed run passed title/hangar and audio-ABI,
+image-join, PCM-join, and PCM-boundary controls. It captured the port target
+operation as `rs_memset` callsite `0x8008F2CC`, destination `0x801797B0`, value
+zero, length `0x298`, phase 5. No phase-5 target callsite `0x8002BEEC` appeared.
+
+This selects `H-PortSourceCallerMismatch` at the observed boundary and rules
+out writer absence as the explanation. It does not prove that the zero fill is
+illegitimate; no behavior changed. The helper budget fix is in
+`tools/apply_s2447_m5_static_calls.py`. Evidence is in
+`scratch/agent/s3380_m5_caller_census.md`.
