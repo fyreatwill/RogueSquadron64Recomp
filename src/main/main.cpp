@@ -435,6 +435,53 @@ extern "C" uint32_t rs64_m5_static_rs_memset_last_ra() {
     return g_rs64_m5_static_rs_memset_ra;
 }
 
+extern "C" void rs64_m5_052c4_join(uint8_t* rdram, uint32_t dst,
+                                     uint32_t value, uint32_t len,
+                                     uint32_t edge) {
+    static int enabled = -1;
+    static uint32_t rows = 0;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_052C4_JOIN");
+        enabled = e && e[0] && e[0] != '0' ? 1 : 0;
+    }
+    if (!enabled || g_rs64_m5_static_rs_memset_callsite != 0x800052C4u) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+    uint32_t ordinal = 0xFFFFFFFFu, route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        nullptr, nullptr, nullptr, &ordinal, &route_row, &exit_reason, &arm);
+    uint32_t phys = dst & 0x007FFFFFu;
+    uint32_t nz = 0;
+    uint32_t fnv = 2166136261u;
+    bool valid = len != 0 && len <= 0x4000 && phys < 0x00800000u &&
+                 len <= 0x00800000u - phys;
+    if (valid) {
+        for (uint32_t i = 0; i < len; ++i) {
+            const uint8_t b = rdram[phys + i];
+            fnv ^= b;
+            fnv *= 16777619u;
+            nz += b != 0;
+        }
+    }
+    if (rows < 64u) {
+        std::fprintf(stderr,
+            "[m5-052c4-join] n=%u edge=%u phase=%u width=%u origin=0x%06X "
+            "arm=%s ordinal=%u row=%u active=%u exit=%d caller=0x%08X "
+            "dst=0x%08X phys=0x%06X val=0x%08X len=0x%X valid=%u "
+            "post_fnv=%08X post_nz=%u\n",
+            rows, edge, rs64_phase_ord(), width, origin, arm ? arm : "n/a",
+            ordinal, route_row, active ? 1u : 0u, exit_reason,
+            g_rs64_m5_static_rs_memset_callsite, dst, phys, value, len,
+            valid ? 1u : 0u, fnv, nz);
+        std::fflush(stderr);
+    }
+    ++rows;
+}
+
 namespace {
 struct Rs64PcmWriterState {
     uint32_t last_pc = 0;

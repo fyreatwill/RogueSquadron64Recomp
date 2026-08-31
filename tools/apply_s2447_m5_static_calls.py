@@ -7,6 +7,7 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parents[2] / "N64Recomp" / "RecompiledFuncs"
 TARGET = BASE / "funcs_2.c"
 MARKER = "/* PATCH: s2447 m5 static rs_memset entry table */"
+EXIT_MARKER = "    rs64_m5_052c4_join(rdram, U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), 1u); /* PATCH: s3409 */"
 
 HELPER = r'''/* PATCH: s2447 m5 static rs_memset entry table */
 static void rs64_m5_static_rs_memset_entry(recomp_context* ctx) {
@@ -70,6 +71,26 @@ static void rs64_m5_static_rs_memset_entry(recomp_context* ctx) {
 }
 '''
 
+def inject_exit_join(text: str) -> str:
+    if EXIT_MARKER in text:
+        return text
+    marker = 'RECOMP_FUNC void rs_memset(uint8_t* rdram, recomp_context* ctx) {\n'
+    if text.count(marker) != 1:
+        raise SystemExit("apply_s2447: rs_memset body anchor mismatch")
+    decl = 'extern void rs64_m5_052c4_join(uint8_t*, uint32_t, uint32_t, uint32_t, uint32_t); /* PATCH: s3409 */\n'
+    if decl not in text:
+        include = '#include "funcs.h"\n'
+        if text.count(include) != 1:
+            raise SystemExit("apply_s2447: funcs.h include anchor mismatch")
+        text = text.replace(include, include + decl, 1)
+    start = text.index(marker)
+    end = text.index('\n;}\n', start)
+    body = text[start:end]
+    if body.count('\n    return;') != 1:
+        raise SystemExit("apply_s2447: expected one rs_memset return")
+    body = body.replace('\n    return;', '\n' + EXIT_MARKER + '\n    return;', 1)
+    return text[:start] + body + text[end:]
+
 
 def main() -> None:
     text = TARGET.read_text(encoding="utf-8")
@@ -77,6 +98,7 @@ def main() -> None:
         start = text.index(MARKER)
         end = text.index("\n\nstatic int s_process_scene_node_depth;", start)
         text = text[:start] + HELPER + "\n" + text[end:]
+        text = inject_exit_join(text)
         TARGET.write_text(text, encoding="utf-8")
         print("apply_s2447: refreshed static rs_memset entry table")
         return
@@ -88,6 +110,7 @@ def main() -> None:
     if text.count(include) != 1:
         raise SystemExit("apply_s2447: funcs.h include anchor mismatch")
     text = text.replace(include, include + HELPER + "\n", 1)
+    text = inject_exit_join(text)
     TARGET.write_text(text, encoding="utf-8")
     print("apply_s2447: inserted static rs_memset entry table")
 

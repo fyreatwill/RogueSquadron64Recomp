@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3407 (2026-08-31). This file was compacted
+through Session 3409 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -241,18 +241,26 @@ and zero-output legitimacy remain unresolved; no audio behavior changed.
 Evidence: `scratch/agent/s3399_m5_stage3_destination_contract/driver.log` and
 the paired logs.
 
+Session 3409 joined the port's phase-qualified `0x800052C4` route to
+post-`rs_memset` bytes in one fresh-build concurrent silent/image pair. Both
+arms reached title 1024 and hangar 512 with task ABI/DMA controls live and no
+crash/abort markers. The keyed witness fired 64 bounded rows per arm, proving
+the candidate route is live, but none targeted `0x801797B0` or `0x801798B0`;
+the target clear remained the independent `0x8008F2CC` callsite. This selects
+`H-Port052C4Distinct` and refutes `H-Port052C4Publishes` at the observed
+destinations. The upstream zero-output cause remains unresolved. Evidence is
+in [M5-S3409-052C4-JOIN.md](M5-S3409-052C4-JOIN.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Join the port's phase-qualified `0x800052C4` route to its target payload in
-   one batched runtime witness. The retail oracle proved `0x800052C4` executes
-   in both hangar origins (1,274 at `0x006AB400`, 1,663 at `0x006AB800`) while
-   target-span stores are nonzero in those buckets; s3407 found the same PC
-   dominating port image rows. Add only the smallest call/return or destination
-   join needed to test whether this translated route publishes the zero PCM
-   source. Keep whole-RDRAM, title/hangar, and PCM controls live.
+1. Trace the port's target-field input edge from `0x8008F2C8` through the
+   `0x8008F2CC` zero-fill into the stage-3 publication, with one batched
+   phase-qualified witness. Compare the slot value and post-clear target
+   bytes, keeping whole-RDRAM, title/hangar, image/DMA, and PCM controls live.
+   Do not change the clear or publication behavior.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
    not repeat the old final-summary-only or dual-origin recipes; use the signal
    checkpoint and retain post-store sampling for all four candidates.
@@ -344,6 +352,7 @@ writer and initializer ordering are the measured explanation.
 
 Latest M5 evidence:
 
+- `docs/M5-S3409-052C4-JOIN.md`
 - `docs/M5-S3402-SLOT-PREPHASE.md`
 - `docs/M5-S3401-FIELD348-INPUT.md`
 - `scratch/agent/s3386_m5_direct_writer_census.md`

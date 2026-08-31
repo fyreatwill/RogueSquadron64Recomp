@@ -1,30 +1,37 @@
-# NEXT work unit — join the port 0x800052C4 route to its target payload
+# NEXT work unit — join the port target-field input to publication
 
-HYPOTHESIS-ID: m5-port-052c4-payload-join
+HYPOTHESIS-ID: m5-port-field348-input-join
 
-Session 3408's oracle positive control passed and reached both hangar origins.
-Retail executed `0x800052C4` 1,274 times at `0x006AB400` and 1,663 times at
-`0x006AB800`; target-span stores were nonzero in those same buckets. Session
-3407's port image rows were dominated by `0x800052C4`, but the host witness
-did not join that callsite to its downstream store.
+Session 3409 closed the `0x800052C4` candidate: it is live in the port but
+does not target `0x801797B0` or `0x801798B0`. The remaining measured port
+target is the `0x8008F2CC` zero-fill, reached after the slot read at
+`0x8008F2C8`; stage 3 then copies zero DMEM to `0x801798B0`.
 
 Competing hypotheses:
 
-- `H-Port052C4Publishes`: the port `0x800052C4` route reaches the target
-  publication and its zero payload is produced downstream of that call.
-- `H-Port052C4Distinct`: the callsite is active but publishes a different
-  structure; the zero PCM source has another producer gap.
-- `H-Port052C4JoinGap`: the existing host witness cannot safely join this
-  indirect route to its destination, so the result remains unevaluable.
+- `H-PortField348InputMismatch`: the port slot/input value differs from
+  retail at the target phase and causes a legitimate alternate clear.
+- `H-PortField348ClearIsExpected`: the slot value and clear are equivalent to
+  retail, so the missing nonzero producer is downstream of the clear.
+- `H-PortField348JoinGap`: the existing host witnesses do not join the slot
+  read, clear, and stage-3 publication in one route/ordinal.
 
-Discriminator: batch one port build/run with a phase-scoped `0x800052C4`
-call/return or destination join, plus whole-RDRAM, title/hangar, image/DMA,
-and PCM positive controls. A call joined to the zero target publication selects
-`H-Port052C4Publishes`; a live call with no target join but live independent
-target stores selects `H-Port052C4Distinct`; a failed join with controls live
-selects `H-Port052C4JoinGap`. Do not change waits, slots, dispatch, or PCM
+Discriminator: first use the existing completion-safe oracle checkpoint as
+ground truth, then add one phase-scoped port witness for the `0x8008F2C8`
+slot read, `0x8008F2CC` memset, and stage-3 row keyed by route ordinal. Build
+once and run silent/image arms together with whole-RDRAM, title/hangar,
+image/DMA, and PCM controls. Matching slot values plus a joined zero clear
+selects `H-PortField348ClearIsExpected`; a port-only or mismatched value
+selects `H-PortField348InputMismatch`; live controls with no ordinal join
+selects `H-PortField348JoinGap`.
+
+Run from the repo root:
+
+`python3 tools/apply_s2447_m5_static_calls.py && python3 tools/apply_s2448_m5_static_callers.py`
+
+`cmake --build build --config Debug --target RogueSquadron64Recomp`
+
+Then run the same qualified route as
+`scratch/agent/run_s3409_m5_052c4_join.sh`, with only the new input/join
+witness added. Do not change waits, slots, dispatch, clear behavior, or PCM
 writeback.
-
-Use the existing qualified image/silent route and add only the join witness;
-build once and run both arms in that same iteration. Preserve the oracle log
-at `scratch/agent/s3408_m5_boundary_oracle_run3/oracle.log` as ground truth.

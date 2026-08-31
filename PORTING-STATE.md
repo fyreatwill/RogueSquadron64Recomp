@@ -130727,3 +130727,20 @@ but does not join the port call to the target payload or explain zero PCM.
 No port behavior, waits, slots, dispatch, or PCM writeback changed. Evidence:
 `docs/M5-S3408-PORT-BOUNDARY-ORACLE.md` and
 `scratch/agent/s3408_m5_boundary_oracle_run3/oracle.log`.
+
+## Session 3409 (2026-08-31) — M5 port 0x800052C4 payload join
+
+The fresh build succeeded after adding a regeneration-surviving exit witness
+that joins caller `0x800052C4` to the post-`rs_memset` bytes. A concurrent
+silent/image pair reached title 1024 and hangar 512 in both arms. The keyed
+witness fired 64 bounded rows per arm, proving the route is live, but none
+targeted `0x801797B0` or `0x801798B0`; its destinations were metadata regions
+with zero-valued post-write hashes. The independent target witness remained
+`0x8008F2CC -> rs_memset(dst=0x801797B0,len=0x298)`. Task ABI/DMA controls
+were live (1198/1203 rows), image-stage rows were absent in silent and 4878
+in image, and neither arm had crash/abort markers. This selects
+`H-Port052C4Distinct` and refutes `H-Port052C4Publishes` at the observed
+destinations. It does not explain the zero PCM source. No waits, slots,
+dispatch, clear behavior, or PCM writeback changed. Evidence:
+`docs/M5-S3409-052C4-JOIN.md` and
+`scratch/agent/s3409_m5_052c4_join/driver.log`.
