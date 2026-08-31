@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3455 (2026-08-31). This record was
+Current maintenance marker: Session 3456 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -95,14 +95,24 @@ calls in the port rows, matching the independently observed retail edge. This
 reinforces the upstream producer/input selection, but the callsite witness
 still does not attribute the writer of `s0`. Evidence: [M5-S3455-PRODUCER-JOIN.md](M5-S3455-PRODUCER-JOIN.md).
 
+Session 3456's independent Rice-oracle run passed the whole-RDRAM control,
+reached title, and observed 3,233 executions of `0x80001C98` from
+`0x800645AC`. A new port load witness at `0x800645A8` passed its existing
+four-PC schema control and emitted 1,024 rows. The first ordered prefix
+diverges at the producer/input value: retail has `s0=0x801B4F00` where the
+port loads `0x801B5E70`, while both use source pointer `0x801E8710`; the port
+target preserves that value. This selects the upstream producer/input
+boundary and rules out wrapper/ABI clobber at this scope. It does not name the
+writer of `*(0x801E8710)`. Evidence: [M5-S3456-PRODUCER-INPUT.md](M5-S3456-PRODUCER-INPUT.md).
+
 ## Next steps
 
-1. Trace the actual upstream writer/producer feeding caller-side `s0` before the four
-   target calls, with a phase-scoped positive-control table containing the
-   producer PC, callsite PC, target PC, ordinal, `s0`, `s1`, source word,
-   branch selector, branch state, and output/state fields. The corrected join
-   already selects producer/input over wrapper/ABI clobber; an absent ordered
-   producer join is unevaluable.
+1. Attribute the writer of the shared source slot at `0x801E8710` before
+   `0x800645A8`, with a phase-scoped positive-control table containing writer
+   PC, source address/value, producer PC, callsite PC, target PC, ordinal, and
+   loaded `s0`. The s3456 join already selects producer/input over
+   wrapper/ABI clobber; do not alter waits, slots, dispatch, clear behavior,
+   or PCM writeback.
 2. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 3. Use the producer join to identify the first output/state contract divergence

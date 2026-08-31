@@ -131701,3 +131701,21 @@ this selects the upstream producer/input boundary over wrapper/ABI clobber.
 The actual writer of `s0` remains unattributed, so the next probe must capture
 that writer explicitly. No waits, slots, dispatch, clear behavior, or PCM
 writeback changed. Evidence: `docs/M5-S3455-PRODUCER-JOIN.md`.
+
+## Session 3456 (2026-08-31) — selected producer/input divergence
+
+The independent retail oracle was qualified with Rice video and the documented
+Start schedule. Its whole-RDRAM positive control reached 10,000 callbacks and
+the title phase; it observed 3,233 executions of `0x80001C98` from
+`0x800645AC`. The port build retained the four-PC schema positive control and
+emitted 1,024 rows from a new witness at the `0x800645A8` load immediately
+before that call. Both routes used source pointer `0x801E8710`, but the first
+ordered nonzero input differed: retail loaded `s0=0x801B4F00`, while the port
+loaded `0x801B5E70`. The port target preserved its loaded value. This selects
+the upstream producer/input boundary and rules out wrapper/ABI clobber at this
+scope; it does not identify the writer of `*(0x801E8710)`. The undriven and
+dummy-video oracle attempts were control failures, not evidence. No waits,
+slots, dispatch, clear behavior, or PCM writeback changed. Evidence:
+`docs/M5-S3456-PRODUCER-INPUT.md`,
+`scratch/agent/s3456_oracle_ground_truth_rice.log`, and
+`scratch/agent/s3456_port_producer.log`.

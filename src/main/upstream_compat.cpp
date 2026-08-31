@@ -2065,6 +2065,42 @@ extern "C" void rs64_m5_state_pointer_callsite(recomp_context* ctx,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_producer_input(uint8_t* rdram,
+                                         recomp_context* ctx,
+                                         uint32_t producer_pc,
+                                         uint32_t call_pc,
+                                         uint32_t target_pc) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_OUTPUT_STATE_FIELDS");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 1024u || (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t rows = 0;
+    if (rows >= 1024u) return;
+    const uint32_t source_ptr = U32(ctx->r4);
+    const uint32_t source_word =
+        (source_ptr >= 0x80000000u && source_ptr <= 0x807FFFFCu)
+            ? (static_cast<uint32_t>(rdram[source_ptr - 0x80000000u]) << 24 |
+               static_cast<uint32_t>(rdram[source_ptr - 0x80000000u + 1]) << 16 |
+               static_cast<uint32_t>(rdram[source_ptr - 0x80000000u + 2]) << 8 |
+               static_cast<uint32_t>(rdram[source_ptr - 0x80000000u + 3]))
+            : 0xFFFFFFFFu;
+    std::fprintf(stderr,
+        "[m5-producer-input] ordinal=%u phase=%u width=%u origin=0x%06X "
+        "producer_pc=0x%08X source_ptr=0x%08X source_word=0x%08X "
+        "loaded_s0=0x%08X call_pc=0x%08X target_pc=0x%08X s1=0x%08X "
+        "a0=0x%08X a1=0x%08X a2=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, producer_pc, source_ptr,
+        source_word, U32(ctx->r16), call_pc, target_pc, U32(ctx->r17),
+        U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r31));
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_output_state_fields(uint8_t* rdram,
                                                 recomp_context* ctx,
                                                 uint32_t pc) {

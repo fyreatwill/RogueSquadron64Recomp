@@ -1,37 +1,27 @@
-# NEXT work unit — attribute the upstream writer feeding caller s0
+# NEXT work unit — attribute the writer of the producer source slot
 
 HYPOTHESIS-ID: m5-output-state-contract-boundary
 
-The corrected title callsite join selected producer/input: port `rs_free`
-preserves pre-call `s0` at `0x80001C98` in all 514 captured rows, including 480
-rows from caller `0x80005268`. Find the upstream writer/input supplying that
-caller-side register context.
+Session 3456 selected producer/input: at `0x800645A8`, both routes use source
+pointer `0x801E8710`, but the first ordered nonzero loaded `s0` differs
+(`retail=0x801B4F00`, `port=0x801B5E70`). Attribute who writes that source slot.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-UpstreamProducer`: a phase/ordinal-joined producer row already differs in
-  `s0`;
-  selects the missing producer/input contract.
-- `H-WrapperClobber`: producer-side `s0` matches but target-entry `s0` differs;
-  selects wrapper register capture or ABI clobber.
-- `H-ProducerJoinAbsent`: controls fire but producer rows cannot be joined by
-  title phase, producer PC, target PC, and ordinal; result is unevaluable.
-- `H-ControlFailure`: the producer table's positive control is absent; repair
-  the control before interpreting any null.
+- `H-PortWriter`: a port writer at or before `0x800645A8` supplies the differing
+  word at `0x801E8710`; selects a port-side producer contract defect.
+- `H-RetailWriter`: retail alone writes the differing value before the load;
+  selects a legitimate route/input difference rather than a port writer bug.
+- `H-AddressDivergence`: the source pointer or ordered writer/load join differs;
+  selects address/ordering before value comparison.
+- `H-ControlFailure`: the whole-RDRAM and four-PC controls do not fire in the
+  same run; the result is unevaluable and the control must be repaired.
 
-Build one instrument that captures the actual upstream writer/producer PC and
-its `s0`, then joins it to callsite PC, target PC, per-target ordinal, `s1`,
-source word, branch selector, branch state, and output/state fields; retain the
-existing four-PC positive-control marker.
-The next exact build/run is:
-
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUTOPILOT='3:start,7:start,11:start,15:a,30:start,45:start,60:a' PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_M5_STATE_POINTER=1 ROGUESQ_LOG_M5_OUTPUT_STATE_FIELDS=1 sh -c 'cd build; ./RogueSquadron64Recomp > ../scratch/agent/s3455_port_upstream.log 2>&1 & p=$!; sleep 25; kill -KILL "$p" 2>/dev/null || true; pkill -KILL -x RogueSquadron64Recomp 2>/dev/null || true; wait "$p" 2>/dev/null || true'
-
-Join the new port rows to `scratch/agent/s3455_oracle_ground_truth.log` and the
-prior qualified oracle caller rows by phase,
-producer/callsite PC, target PC, and ordinal. If the new producer value differs,
-`H-UpstreamProducer` is confirmed; if it matches but target entry differs,
-`H-WrapperClobber` reopens; absent ordered producer rows select
-`H-ProducerJoinAbsent`; missing control selects `H-ControlFailure`. Do not
-alter waits, slots, dispatch, clear behavior, or PCM writeback.
+Ask the retail oracle first: use a whole-RDRAM positive control plus a
+phase-gated write watch for physical `0x001E8710:0x001E8714`, and retain the
+`0x800645AC` execution watch. Then add the matching phase-scoped port writer
+table in one build, preserving the existing positive-control marker. The
+discriminator is the writer PC/value at the first joined ordinal: port writer
+selects `H-PortWriter`, retail-only writer selects `H-RetailWriter`, an
+unmatched source address selects `H-AddressDivergence`, and missing controls
+selects `H-ControlFailure`.
