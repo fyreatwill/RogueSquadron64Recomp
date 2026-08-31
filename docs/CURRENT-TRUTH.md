@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3361 (2026-08-31). Compacted from
+Current maintenance marker: Session 3362 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
