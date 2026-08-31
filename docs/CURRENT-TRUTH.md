@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3461 (2026-08-31). This record was
+Current maintenance marker: Session 3463 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -167,16 +167,24 @@ whole-RDRAM control and physical source watch both active, the oracle reached
 step the port-versus-retail ordinal join; it does not select a port/shared
 writer explanation by itself. Evidence: [M5-S3462-RETAIL-ORDERED-SOURCE.md](M5-S3462-RETAIL-ORDERED-SOURCE.md).
 
+Session 3463 joined the qualified port and retail title rows by phase, writer
+PC, and per-PC ordinal. All 768 comparable `0x800644B0` rows match at zero.
+At the shared `0x80064524` writer, the first comparable row diverges: port
+writes zero and retail writes `0x801B4F00`. The independent retail controls
+and the port title control fired. This selects the first value divergence,
+not a writer-route divergence; evidence is
+[M5-S3463-SOURCE-VALUE-JOIN.md](M5-S3463-SOURCE-VALUE-JOIN.md).
+
 ## Next steps
 
-1. Join the qualified port title source-writer rows to the new ordered retail
-   table by phase, PC, and ordinal. A matching writer/value sequence closes
-   this source boundary; a first value or writer divergence selects the next
-   contract edge.
+1. Identify the producer/value path feeding the shared `0x80064524` writer.
+   Use an independent retail writer/value observation before adding port
+   fields. The first joined row is retail `0x801B4F00` versus port zero, while
+   `0x800644B0` matches for all 768 comparable rows.
 2. Preserve the independent whole-RDRAM and physical source-watch controls
-   when interpreting the join; the retail table has positive controls and
-   633 title VI frames. Do not add port fields until the join identifies the
-   first divergent writer or value.
+   when interpreting the producer/value result; the retail table has positive
+   controls and 633 title VI frames. A matching producer/value closes this
+   edge; a different producer or value selects the next contract edge.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 4. Use the producer join to identify the first output/state contract divergence

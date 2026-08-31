@@ -131825,3 +131825,24 @@ writer explanation. Evidence: `docs/M5-S3462-RETAIL-ORDERED-SOURCE.md` and
 ORIGIN: the observed values are post-store values written by the named retail
 guest PCs; they are legitimate retail state observations because the oracle
 reads them immediately after the watched stores. No mitigation was added.
+
+## Session 3463 (2026-08-31) — joined port and retail source values
+
+Joined the qualified port title source-writer sequence to the independent
+ordered retail table by title phase, writer PC, and per-PC ordinal. Both arms
+had positive controls: the port emitted 1,024 title rows; the retail oracle
+recorded 12,734 whole-RDRAM callbacks, 2,734 physical source-watch writes,
+and 633 title VI frames. All 768 comparable rows at `0x800644B0` match at
+`0x00000000`. At the same `0x80064524` writer PC, the first comparable row
+diverges: port value `0x00000000`, retail value `0x801B4F00`.
+
+This selects the first value divergence and rules out a writer-route
+divergence at this boundary. The retail value is legitimate at this scope as
+an immediate post-store observation under the physical watch. The next unit
+must identify the producer/value path feeding `0x80064524`; no audio or PCM
+behavior was changed. Evidence: `docs/M5-S3463-SOURCE-VALUE-JOIN.md`,
+`scratch/agent/s3461_m5_source_value_join/run.log`, and
+`scratch/agent/s3462_m5_retail_ordered_source/oracle.log`.
+
+ORIGIN: no mitigation was added; this iteration only joined observed values
+and named the legitimate retail writer observation.
