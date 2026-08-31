@@ -127045,7 +127045,6 @@ this iteration; it is not a source or runtime result. The guard hypotheses
 remain unresolved, and M5 Step 3 remains gated. No code behavior was changed.
 
 Evidence: `scratch/agent/BLOCKED.md`.
-
 ## Session 3319 (2026-08-30) — audited and rescoped the configured-host block
 
 I worked the unblock routes in order. Route 1 is refuted: `CMakeLists.txt`,
@@ -128913,3 +128912,27 @@ current next-work instructions. This leaves `H-GuardBuildWorks`,
 host; it provides no patch-source, linker, or runtime evidence and authorizes
 no M5 behavior change. BLOCKED pending a human-run command on that host.
 Evidence: `scratch/agent/BLOCKED.md`.
+## Session 3320 (2026-08-30) — captured retail target framebuffer publication edge
+
+Ran the prescribed independent retail publication capture. The first command
+was rejected because this oracle requires `--pc-phase-log-width ORIGIN:WIDTH`.
+The corrected no-video invocation passed the whole-RDRAM positive control but
+was an invalid route: it produced 5,399 VI frames and never armed the deferred
+watch because no video plugin was attached.
+
+The fixed Rice-backed capture passed the positive control (10,000 writes),
+armed at VI 640/origin `0x0066A500`, and observed 3,094 executions of
+`osViSwapBuffer` at `0x80035500`. The final narrowed capture armed at the
+observed pre-target origin `0x00696600:640`, recorded 2,854 executions, and
+recorded the target row `pre-origin=0x00696600`, caller `0x8001BE24`,
+physical `$a0=0x00790000`. The post-swap join was demonstrably live but its
+256-row cap saturated before retaining a target-specific next-VI row:
+`latched=1197`, `joined=256`, `dropped=0`, `overflow=941`.
+
+This selects `H-RetailTargetSwap` and refutes `H-RetailTargetUnreached`.
+It does not support `H-RetailTargetModeOnly`: the target framebuffer is
+directly present on the watched swap edge. The target next-VI origin remains
+unmeasured because of the join cap; no M5 Step 3 or port behavior change is
+authorized by this capture. Evidence:
+`scratch/agent/s3320_retail_target_publication.md` and
+`scratch/agent/s3320_retail_target_publication.log`.

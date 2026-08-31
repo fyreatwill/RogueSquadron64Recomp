@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3319 (2026-08-30). Compacted from
+Current maintenance marker: Session 3320 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -24,7 +24,23 @@ local MIPS compiler/linker, `patches/patches.elf`, or generated
 while the next unit is rescopeable to an independent retail publication
 capture. Evidence: `scratch/agent/s3319_unblock_routes.md`.
 
-## Live investigation (s3303–s3317)
+Session 3320's independent retail capture passed the whole-RDRAM positive
+control, armed at VI 640/origin `0x00696600`, and observed the target
+`osViSwapBuffer` call from `0x8001BE24` with physical `$a0=0x00790000`.
+The post-swap join was live but capped before a target-specific next-VI row
+could be retained. This selects `H-RetailTargetSwap` and establishes the
+retail publication edge, but names no missing port image-task/output edge.
+Evidence: `scratch/agent/s3320_retail_target_publication.md`.
+
+## Live investigation (s3303–s3320)
+
+Session 3320 closed the independent retail target-publication discriminator.
+The no-video setup correction and the join-cap limitation are recorded in the
+evidence file; the final Rice run had 10,000 positive-control writes, 2,854
+watched swap executions, and the target physical framebuffer row. This is
+two-line evidence for the retail swap edge (phase table plus watched caller /
+GPR row), not evidence for a missing M5 consumer. No behavior change is
+authorized.
 
 Session 3316 could not run the configured-host `PatchesLib` discriminator.
 Same-iteration checks found the Unix checkout, cached `E:/mips-toolchain`
@@ -277,14 +293,11 @@ target row exists.
 3. Session 3285 moved the 3270 alignment + cycle-cap class onto the
    generated host walks that link here. The guard is not evidence that the
    VI-640 route or audio is corrupt.
-4. Run one independent retail target-phase publication capture with the
-   existing oracle: whole-RDRAM write control, `--pc-phase-log-width`,
-   `--watch-pc 0x80035500`, `--post-swap-any-vi`, and the target transition.
-   Joined target rows select a retail swap publication edge; target mode rows
-   without a swap select a separate publication edge; no target transition
-   with controls passing selects an unreached target phase. Require caller,
-   physical framebuffer, mode origins, and next VI width/origin in the same
-   joined table.
+4. Retail target publication is now identified as the `osViSwapBuffer` edge
+   (`0x80035500`, caller `0x8001BE24`, physical `$a0=0x00790000`). Do not
+   treat the capped post-swap table as a missing transition. The next M5
+   change remains gated until a port-side like-for-like target row names one
+   missing image-task/output contract edge.
 5. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row names
    one missing image task/output contract edge. Keep the change to exactly one
    proven writer/consumer relation.

@@ -1,38 +1,33 @@
-# NEXT work unit — independent retail target publication capture
+# NEXT work unit — configured-host PatchesLib validation
 
-HYPOTHESIS-ID: m5-retail-target-publication-capture
+HYPOTHESIS-ID: m5-patcheslib-host-validation
 
-Session 3319 rescoped the configured-host PatchesLib validation. The host
-build remains an open dependency, but this next discriminator does not
-require it. Do not repeat the local missing-target build or MIPS inventory.
+Session 3320 established the independent retail target publication edge.
+The M5 behavior change remains gated because the capture did not identify a
+missing port image-task/output relation. The configured Windows/MIPS host is
+still the open dependency; do not repeat its local absence checks here.
 
 ## Competing hypotheses
 
-- `H-RetailTargetSwap`: retail publishes the target framebuffer through the
-  watched `osViSwapBuffer` edge and the post-swap join closes.
-- `H-RetailTargetModeOnly`: retail changes the target mode/context but no
-  watched target swap joins, so publication is a separate edge.
-- `H-RetailTargetUnreached`: the controlled run does not reach the target
-  phase, so a null cannot classify publication.
+- `H-GuardBuildWorks`: the configured host builds `PatchesLib` successfully.
+- `H-GuardSourceFails`: the host reaches the MIPS/build stage and reports a
+  patch-source or linker failure.
+- `H-GuardHostMissing`: the configured host or required MIPS inputs remain
+  unavailable.
 
 ## Discriminator
 
-Run the existing retail oracle once with a whole-RDRAM write positive control,
-phase-gated target execution watch, and post-swap join. Joined rows containing
-the target transition select `H-RetailTargetSwap`; target mode rows without a
-swap select `H-RetailTargetModeOnly`; no target transition with controls
-passing selects `H-RetailTargetUnreached`.
+Run the configured-host build once. A successful `PatchesLib` target selects
+`H-GuardBuildWorks`; a compiler/linker/source diagnostic after the MIPS stage
+selects `H-GuardSourceFails`; inability to invoke the target or find required
+MIPS inputs selects `H-GuardHostMissing`.
 
 ## Exact command
 
 ```sh
-tools/oracle/build/rs64_oracle --core <debugger-core.dylib> \
-  --rom <retail-rom.z64> --secs 90 \
-  --watch-write 0x0:0x800000 \
-  --watch-pc 0x80035500 --pc-phase-log-width \
-  --post-swap-any-vi
+cmake --build build --config Debug --target PatchesLib
 ```
 
-Record the positive-control count, VI transition, watched caller/GPR row, and
-post-swap joined table in a new evidence file. No M5 Step 3 or behavior
-change is authorized by this capture alone.
+Record the host, target result, and any compiler/linker diagnostic in a new
+evidence file. No M5 Step 3 or behavior change is authorized by a failed host
+validation.
