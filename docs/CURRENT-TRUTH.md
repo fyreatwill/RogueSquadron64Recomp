@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3324 (2026-08-30). Compacted from
+Current maintenance marker: Session 3325 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -59,6 +59,17 @@ rerun was attempted but its detached runner did not persist to produce arm
 logs. This is route-invalid evidence: it rejects no audio contract
 hypothesis and authorizes no M5 behavior change. Evidence:
 `scratch/agent/s3324_m5_step1_qualification.md`.
+
+Session 3325 reran M5 Step 1 under the supervised pair driver. The independent
+oracle passed 10,000 whole-RDRAM writes plus title 1024 and hangar 512. Both
+port arms reached target phases without crash/abort. The silent arm produced
+2,425 task-ABI rows but zero DMA-range or image-stage rows; the image arm
+produced 1,436 ABI, 3,019 DMA-range, and 6,162 image-stage rows. Audio-route
+and PCM boundary rows appeared in both arms, while slot allocation/submission
+remained zero in both. This selects `H-ContractGap` for the Step 1
+discriminator: image execution is present but no image-only output/slot edge
+was observed. It names no legitimate missing writer and authorizes no behavior
+change. Evidence: `scratch/agent/s3325_m5_step1_image_vs_silent.md`.
 
 Session 3322 widened the independent retail post-swap table to 4096 rows and
 ran the any-VI join with Rice. The route reached title 1024 at 49.1 s and
@@ -286,13 +297,13 @@ title 1024 rewrites all four OSViMode slot +8 words to `0x00000400`
 via `initVideoSubsystem` (`0x8001B6B0`) from `advanceVideoFrame`
 `0x80018378`. Port Session 3278 never published a 1024 template.
 
-The latest same-build M5 image-versus-silent qualification passed
-dispatch controls in both arms but reached only pre-title VI 640.
-Independent retail controls reached title and hangar. Target-phase
-audio/task/DMA/service/slot/voice/MORT/PCM nulls are unevaluable; no
-audio, route, VI, gate, wait, voice, destination, or output change is
-authorized without a named legitimate writer and ordering edge. Do
-not remove the status-03 wait hatch.
+The latest same-build M5 image-versus-silent qualification passed dispatch,
+whole-RDRAM, title, and hangar controls. The image arm alone executes
+DMA/image stages, but both arms still have PCM boundary and route rows and
+neither has slot allocation/submission. This selects `H-ContractGap` as a
+single-capture discriminator result; it does not name the missing writer or
+authorize an audio, route, VI, gate, wait, voice, destination, or output
+change. Do not remove the status-03 wait hatch.
 
 Retail target-phase `osViSwapBuffer` (`0x80035500`) is caller
 `0x8001BE24`, `$a0=0x80790000` (physical `0x00790000`), origins
@@ -318,12 +329,12 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Re-run M5 plan Step 1 as a supervised, phase-gated image-versus-silent
-   pair using the validated route. Require the same-run whole-RDRAM oracle
-   control, port 1024/512 transitions, and complete dispatch → task fields →
-   DMEM/DMA → SP → service/slot/voice → PCM rows before interpreting nulls.
-   Do not change a contract edge or add a mitigation. The prior s3324 pair
-   was invalid because both arms stopped at VI 640.
+1. M5 Step 1 selected `H-ContractGap`: the image arm reaches DMA/image stages,
+   but no image-only slot or PCM output edge appears. Design the next single
+   discriminator around the named image-to-output writer/consumer boundary;
+   ground it against the retail oracle before adding instrumentation. Do not
+   change a contract edge or add a mitigation. The existing s3325 capture is
+   valid, but it does not identify that writer.
 2. Keep configured-host PatchesLib validation as an open dependency. When
    that host is available, run `cmake --build build --config Debug --target
    PatchesLib` to distinguish build availability from source/link failures.

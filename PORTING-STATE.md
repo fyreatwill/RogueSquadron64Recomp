@@ -129004,3 +129004,24 @@ This rules out only an audio-arm-specific difference before VI 640 in the
 invalid recipe; it does not rule out any target-phase audio hypothesis.
 Evidence: `scratch/agent/s3324_m5_step1_qualification.md` and
 `scratch/agent/s2968_m5_step1_image_vs_silent/audit.md`.
+
+## Session 3325 (2026-08-30) — qualified M5 image task versus silent path
+
+The Debug target rebuilt successfully. I ran the supervised M5 Step 1
+image-versus-silent pair with the retail oracle in the same capture. The
+oracle passed the whole-RDRAM positive control (10,000 writes), title 1024,
+and hangar 512. Both port arms reached target phases and ended by SIGKILL
+without `[CRASH]` or `[ABORT]`.
+
+The silent arm produced 2,425 task-ABI rows but zero DMA-range or image-stage
+rows. The image arm produced 1,436 task-ABI, 3,019 DMA-range, and 6,162
+image-stage rows. Audio-return, audio-route/SP-route, and PCM source/consumer
+rows appeared in both arms; slot allocation and slot submission were zero in
+both. This selects `H-ContractGap` for the planned discriminator: the image
+arm executes the image task path, but the capture shows no image-only
+slot/PCM output edge. It refutes the invalid-route explanation from Session
+3324 and the claim that the image arm is not executing. It does not identify
+the missing writer and authorizes no behavior change.
+
+Evidence: `scratch/agent/s3325_m5_step1_image_vs_silent.md` and the raw
+capture under `scratch/agent/s3325_m5_step1/`.
