@@ -130744,3 +130744,25 @@ destinations. It does not explain the zero PCM source. No waits, slots,
 dispatch, clear behavior, or PCM writeback changed. Evidence:
 `docs/M5-S3409-052C4-JOIN.md` and
 `scratch/agent/s3409_m5_052c4_join/driver.log`.
+
+## Session 3410 (2026-08-31) — M5 port field348 input-to-clear join
+
+The first retail ground-truth arm used the wrong physical slot address; its
+whole-RDRAM and target controls were valid, but the slot watch was not. The
+corrected arm watched physical `0x149764`, passed the whole-RDRAM control with
+11,836 writes, reached title/hangar, recorded six slot writes, 1,830 target
+span writes, seven executions of `0x8008F2C8`, and 189 nonzero target
+post-value samples from `0x800078EC`. The port witness was extended with
+route ordinal/row capture and rebuilt. Both silent and image arms reached
+title 1024 and hangar 512 with no crash/abort markers and live ABI/DMA
+controls (1211/1218 rows). At hangar, both stored `0x801797B0` at slot
+`0x80149764`; the input and `0x8008F2CC` zero-fill joined the same route
+ordinal (1187 silent, 1186 image), with `dst=0x801797B0`, `len=0x298`, and
+zero fill. Image stage 3 consumed that field and copied zero DMEM to
+`0x801798B0`; silent had no image-stage rows as expected. This selects
+`H-PortField348ClearIsExpected`, refutes `H-PortField348InputMismatch`, and
+closes the input-to-clear `H-PortField348JoinGap`. The downstream producer
+and zero PCM source remain unresolved. No waits, slots, dispatch, clear
+behavior, or PCM writeback changed. Evidence is in
+`scratch/agent/s3410_retail_field348_ground_truth/correct-result.txt` and
+`scratch/agent/s3410_m5_field348_input_join/`.

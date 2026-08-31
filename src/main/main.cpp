@@ -822,20 +822,35 @@ extern "C" void rs64_m5_field348_input(uint32_t slot_addr, uint32_t value,
     static bool control[2] = {};
     const uint32_t bucket = width == 1024u ? 0u : 1u;
     std::lock_guard<std::mutex> lock(mutex);
+    uint32_t route_phase = rs64_phase_ord();
+    uint32_t route_width = width;
+    uint32_t route_origin = origin;
+    uint32_t route_ordinal = 0xFFFFFFFFu;
+    uint32_t route_row = 0xFFFFFFFFu;
+    int route_exit = 0;
+    const char* route_arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        &route_phase, &route_width, &route_origin, &route_ordinal,
+        &route_row, &route_exit, &route_arm);
     if (!control[bucket]) {
         control[bucket] = true;
         std::fprintf(stderr,
-            "[field348-input-control] phase=%u width=%u origin=0x%06X guest_pc=0x%08X\n",
-            rs64_phase_ord(), width, origin, guest_pc);
+            "[field348-input-control] phase=%u width=%u origin=0x%06X guest_pc=0x%08X "
+            "arm=%s ordinal=%u row=%u active=%u exit=%d\n",
+            route_phase, route_width, route_origin, guest_pc,
+            route_arm ? route_arm : "n/a", route_ordinal, route_row,
+            active ? 1u : 0u, route_exit);
         std::fflush(stderr);
     }
     if (rows[bucket] >= 512u) return;
     const uint32_t phys = value & 0x007FFFFFu;
     std::fprintf(stderr,
         "[field348-input] row=%u phase=%u width=%u origin=0x%06X slot=0x%08X "
-        "value=0x%08X value_phys=0x%06X guest_pc=0x%08X\n",
-        rows[bucket]++, rs64_phase_ord(), width, origin, slot_addr, value,
-        phys, guest_pc);
+        "value=0x%08X value_phys=0x%06X guest_pc=0x%08X arm=%s ordinal=%u "
+        "route_row=%u active=%u exit=%d\n",
+        rows[bucket]++, route_phase, route_width, route_origin, slot_addr, value,
+        phys, guest_pc, route_arm ? route_arm : "n/a", route_ordinal,
+        route_row, active ? 1u : 0u, route_exit);
     std::fflush(stderr);
 }
 

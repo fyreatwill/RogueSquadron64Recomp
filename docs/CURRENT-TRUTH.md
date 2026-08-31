@@ -256,14 +256,15 @@ in [M5-S3409-052C4-JOIN.md](M5-S3409-052C4-JOIN.md).
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the port's target-field input edge from `0x8008F2C8` through the
-   `0x8008F2CC` zero-fill into the stage-3 publication, with one batched
-   phase-qualified witness. Compare the slot value and post-clear target
-   bytes, keeping whole-RDRAM, title/hangar, image/DMA, and PCM controls live.
-   Do not change the clear or publication behavior.
-2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
-   not repeat the old final-summary-only or dual-origin recipes; use the signal
-   checkpoint and retain post-store sampling for all four candidates.
+1. Trace the downstream missing producer from the joined hangar clear at
+   `0x8008F2CC` to the nonzero PCM/image source, focusing on the retail
+   `0x8002BEEC -> 0x800078EC` indirect edge and its port equivalent. Use one
+   phase-qualified, whole-callsite census with a same-run whole-RDRAM,
+   title/hangar, ABI/DMA, image-stage, and PCM control. Do not change waits,
+   slots, dispatch, clear behavior, or PCM writeback.
+2. Keep the completion-safe oracle checkpoint as the ground-truth control and
+   retain post-store sampling for the target span. The field348 input-to-clear
+   edge is closed; do not repeat it unless a new writer discriminator is added.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
@@ -293,6 +294,25 @@ PC. Combined with s3407's port rows, this selects `H-PortBoundaryDifferent`
 and refutes a missing retail execution boundary at that PC. It does not yet
 join the port call to the target payload or explain the zero PCM source.
 Evidence is in [M5-S3408-PORT-BOUNDARY-ORACLE.md](M5-S3408-PORT-BOUNDARY-ORACLE.md).
+
+Session 3410 completed the field-input join after first correcting the oracle
+physical address and then adding route ordinal/row capture to the port input
+witness. Retail's corrected arm passed the whole-RDRAM control (11,836
+writes), reached title/hangar, wrote slot `0x149764` six times, and wrote the
+target span 1,830 times; its target post-value control contained 189 nonzero
+samples from `0x800078EC`. The paired port arms both reached title 1024 and
+hangar 512 without crash/abort markers and passed ABI/DMA controls (1211/1218
+rows); the input witness stored `0x801797B0` in both arms at hangar and joined
+the active route (ordinals 1187 and 1186 respectively). The target clear at
+`0x8008F2CC` joined the same port ordinal, with `dst=0x801797B0`,
+`len=0x298`, and zero fill. Image stage 3 then consumed that target field at
+`0x801797B0` and copied zero DMEM to `0x801798B0`; silent had no image-stage
+rows as expected. This selects `H-PortField348ClearIsExpected` and refutes
+`H-PortField348InputMismatch` at the observed hangar route. It also closes
+`H-PortField348JoinGap` for the input-to-clear edge, while leaving the
+downstream missing nonzero producer/PCM source unresolved. Evidence is in
+`scratch/agent/s3410_retail_field348_ground_truth/correct-result.txt` and
+`scratch/agent/s3410_m5_field348_input_join/`.
 
 ## Durable boundaries and operating rules
 
