@@ -129025,3 +129025,25 @@ the missing writer and authorizes no behavior change.
 
 Evidence: `scratch/agent/s3325_m5_step1_image_vs_silent.md` and the raw
 capture under `scratch/agent/s3325_m5_step1/`.
+
+## Session 3326 (2026-08-30) — identified retail slot/status boundary
+
+The required ground-truth-first capture watched whole RDRAM, candidate PCM
+spans, slot words, and status words in one retail run. Whole-RDRAM passed
+10,000 callbacks and the route reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. Candidate PCM/output spans had lifetime writers, but no
+phase-gated title or hangar writer rows. The slot range had target-phase
+writes from `0x80094648`; the status range also had target-phase service
+writes.
+
+The same-build supervised pair passed the oracle gate. The image arm reached
+title and hangar and produced image DMA/stage and PCM source/consumer rows,
+but zero slot allocation/submit rows and zero guest kind-1 PCM-writer rows.
+Both arms ended with the known `do_rom_read` crash; the silent arm crashed
+before target phase, so it supplied no audio comparison.
+
+This selects `H-RetailDoesNotWriteOutput` for the watched candidate spans and
+moves the missing-edge search upstream to the slot/status writer-consumer
+relation. It rules out a target-phase retail write to those spans, but does
+not identify the missing port contract. No behavior change or mitigation was
+made. Evidence: `scratch/agent/s3326_m5_retail_boundary.md`.

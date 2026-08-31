@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3325 (2026-08-30). Compacted from
+Current maintenance marker: Session 3326 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -70,6 +70,17 @@ remained zero in both. This selects `H-ContractGap` for the Step 1
 discriminator: image execution is present but no image-only output/slot edge
 was observed. It names no legitimate missing writer and authorizes no behavior
 change. Evidence: `scratch/agent/s3325_m5_step1_image_vs_silent.md`.
+
+Session 3326 ran the required retail-first boundary capture with whole-RDRAM,
+title, and hangar controls. Retail target-phase writes occurred in the slot
+range from `0x80094648` and in the status range, but the candidate PCM/output
+spans had no title or hangar writer rows despite the positive control. The
+same-build image pair reached title/hangar and retained image DMA/stage plus
+PCM source/consumer controls, while slot allocation/submission and guest
+kind-1 writer rows remained zero. This selects `H-RetailDoesNotWriteOutput`
+for those candidate spans and moves the missing-edge search upstream to the
+slot/status relation. Evidence:
+`scratch/agent/s3326_m5_retail_boundary.md`.
 
 Session 3322 widened the independent retail post-swap table to 4096 rows and
 ran the any-VI join with Rice. The route reached title 1024 at 49.1 s and
@@ -329,12 +340,12 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. M5 Step 1 selected `H-ContractGap`: the image arm reaches DMA/image stages,
-   but no image-only slot or PCM output edge appears. Design the next single
-   discriminator around the named image-to-output writer/consumer boundary;
-   ground it against the retail oracle before adding instrumentation. Do not
-   change a contract edge or add a mitigation. The existing s3325 capture is
-   valid, but it does not identify that writer.
+1. M5 Step 1 remains `H-ContractGap`, now narrowed by Session 3326:
+   retail does not write the candidate PCM/output spans during title or
+   hangar, while it does write slot/status words. Design the next single
+   discriminator around the target-phase slot/status writer-to-consumer
+   relation, grounded against retail before adding instrumentation. Do not
+   change a contract edge or add a mitigation.
 2. Keep configured-host PatchesLib validation as an open dependency. When
    that host is available, run `cmake --build build --config Debug --target
    PatchesLib` to distinguish build availability from source/link failures.
