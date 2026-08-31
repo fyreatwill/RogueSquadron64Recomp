@@ -365,19 +365,35 @@ selects `H-PortWriterStateDiffers` at the observed boundary, but does not
 establish whether the difference is caller state or host register setup.
 Evidence is in [M5-S3421-WRITER-STATE.md](M5-S3421-WRITER-STATE.md).
 
+Session 3422 joined the exact retail target-span stores to writer-loop state.
+The corrected oracle passed whole-RDRAM, target-span, producer-PC, and both
+target phase controls; all 664 phase-qualified retail rows at `0x800078EC`
+had `s0=0x12`, `s1=0x561F`, `t0=0x2000FF01`, `t1=0x8010FEF8`, and
+`ra=0x8008F2D4`. The fresh-build silent/image pair reached title and hangar
+with all controls live and no crash/abort; both had target rows with
+`s0=0x12`, `s1=0x5622`, `t0=1`, `t1=0`, and `ra=0`. This selects
+`H-RetailTargetStateDiffers`, refutes matching target state and another retail
+writer, and moves the probe to the first producer of the differing
+`s1/t0/t1/ra` state. The port `v0/v1` loop advanced normally; no audio behavior
+changed. Evidence is in
+[M5-S3422-RETAIL-WRITER-STATE.md](M5-S3422-RETAIL-WRITER-STATE.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Obtain a like-for-like retail target-row state capture for the
-   `0x801797B0..0x80179A48` stores, joining the exact target memory watch to
-   `0x800078EC` execution state. The s3421 port witness found target
-   `s0=0x12`/`s1=0x5622` while its normal-loop control was `s0=a0`/`s1=a2`;
-   do not treat the ordinary retail loop as a target-row substitute.
-2. If retail target state matches the port, inspect the subsequent publication
-   boundary; if it differs, trace the first differing state producer. Do not
-   change waits, slots, dispatch, clear behavior, or PCM writeback.
+1. Trace the first producer of the target-row state divergence before
+   `0x800078EC`: port target rows show `s1=0x5622`, `t0=1`, `t1=0`, `ra=0`,
+   while the exact retail join shows `s1=0x561F`, `t0=0x2000FF01`,
+   `t1=0x8010FEF8`, `ra=0x8008F2D4`. Use one fresh-build port pair with the
+   existing controls plus a bounded caller/setup witness. The discriminator
+   is whether the first differing field is established before `rs_memset`
+   entry or only by the host wrapper. Do not change waits, slots, dispatch,
+   clear behavior, or PCM writeback.
+2. If port setup state is already divergent before the wrapper, trace its
+   producer/caller; if it matches until wrapper entry, audit the host-call
+   register contract. A missing phase or positive control is unevaluable.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

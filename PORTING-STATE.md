@@ -130948,3 +130948,27 @@ Evidence: `docs/M5-S3421-WRITER-STATE.md`,
 `scratch/agent/s3421_retail_writer_state_groundtruth.log`,
 `scratch/agent/s3421_retail_writer_state_exact.log`, and
 `scratch/agent/s3421_m5_writer_state/driver.log`.
+
+## Session 3422 (2026-08-31) — joined retail target writer state
+
+Ran the independent retail oracle before the port build with whole-RDRAM,
+target-span, producer-PC, both target phase buckets, and a target-store field
+join. The first two attempts were instrument-invalid: execution-only field
+dump, then wrong zero-based watch index. The corrected run passed its controls
+with 11,166 whole-RDRAM writes, 1,166 target-span writes, 1,291,783 producer
+executions, and 664 phase-qualified target stores from `0x800078EC`.
+
+Retail target rows had `a0=0x801797B0`, `a1=0`, `a2=0x298`, `ra=0x8008F2D4`,
+`s0=0x12`, `s1=0x561F`, `t0=0x2000FF01`, and `t1=0x8010FEF8`. The fresh-build
+silent/image port pair reached title 1024 and hangar 512 with route,
+audio-ABI/DMA, non-target, and image-stage controls live, and no crash/abort.
+Both port arms had the target shape `s0=0x12`, `s1=0x5622`, `t0=1`, `t1=0`,
+`ra=0`; image had 4,874 image-stage rows and silent had none. Port `v0`/`v1`
+advanced normally. This selects `H-RetailTargetStateDiffers`, refutes matching
+target state and another retail writer at this boundary, and moves the next
+probe to the first producer of the differing state. No runtime behavior or
+audio path changed.
+
+Evidence: `docs/M5-S3422-RETAIL-WRITER-STATE.md`,
+`scratch/agent/s3422_retail_writer_state_join/retail-correct.log`, and
+`scratch/agent/s3421_m5_writer_state/{silent,image}.log`.
