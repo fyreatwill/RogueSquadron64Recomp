@@ -131686,3 +131686,18 @@ not identify the upstream writer. No waits, slots, dispatch, clear behavior,
 or PCM writeback changed. Evidence: `docs/M5-S3454-STATE-POINTER-CALLSITE.md`,
 `scratch/agent/s3454_oracle_caller.log`, and
 `scratch/agent/s3454_port_producer_final.log`.
+
+## Session 3455 (2026-08-31) — qualified upstream producer/input boundary
+
+The independent retail preflight passed its whole-RDRAM positive control with
+18,497 callbacks, reached title VI origin `0x00790400` at width 1024, and
+observed 781 executions of the `0x80005268 -> 0x80001C98` edge plus 2,570
+executions each at `0x80001CB8` and `0x80001CC8`. The batched port run reached
+the same title phase, fired the four-PC schema positive control, and emitted
+1,024 callsite rows and 514/514/510 rows at the three target PCs. Caller-side
+`s0` was varied in the port callsite rows before the target calls. Combined
+with the independent retail edge and Session 3454's pre-call preservation,
+this selects the upstream producer/input boundary over wrapper/ABI clobber.
+The actual writer of `s0` remains unattributed, so the next probe must capture
+that writer explicitly. No waits, slots, dispatch, clear behavior, or PCM
+writeback changed. Evidence: `docs/M5-S3455-PRODUCER-JOIN.md`.

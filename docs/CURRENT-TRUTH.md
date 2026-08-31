@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3454 (2026-08-31). This record was
+Current maintenance marker: Session 3455 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -85,9 +85,19 @@ preserves caller `s0` at `0x80001C98` in all 514 captured rows (480 from
 caller `0x80005268`). The first divergence is already in the producer/input
 register context; wrapper/ABI clobber is ruled out at this boundary.
 
+Session 3455's independent retail preflight passed 18,497 whole-RDRAM control
+callbacks and reached title 1024, with 781 executions of the
+`0x80005268 -> 0x80001C98` edge and 2,570 executions each at
+`0x80001CB8` and `0x80001CC8`. The batched port run reached title 1024, fired
+the four-PC schema control, and emitted 1,024 callsite rows plus 514/514/510
+rows at the three target PCs. Caller-side `s0` was varied before the target
+calls in the port rows, matching the independently observed retail edge. This
+reinforces the upstream producer/input selection, but the callsite witness
+still does not attribute the writer of `s0`. Evidence: [M5-S3455-PRODUCER-JOIN.md](M5-S3455-PRODUCER-JOIN.md).
+
 ## Next steps
 
-1. Trace the upstream producer/input feeding caller-side `s0` before the four
+1. Trace the actual upstream writer/producer feeding caller-side `s0` before the four
    target calls, with a phase-scoped positive-control table containing the
    producer PC, callsite PC, target PC, ordinal, `s0`, `s1`, source word,
    branch selector, branch state, and output/state fields. The corrected join

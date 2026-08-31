@@ -1,4 +1,4 @@
-# NEXT work unit — trace the upstream producer feeding caller s0
+# NEXT work unit — attribute the upstream writer feeding caller s0
 
 HYPOTHESIS-ID: m5-output-state-contract-boundary
 
@@ -19,15 +19,17 @@ Competing hypotheses and discriminating outcomes:
 - `H-ControlFailure`: the producer table's positive control is absent; repair
   the control before interpreting any null.
 
-Build one instrument containing the upstream producer PC, callsite PC, target
-PC, per-target ordinal, `s0`, `s1`, source word, branch selector, branch state,
-and output/state fields; retain the existing four-PC positive-control marker.
+Build one instrument that captures the actual upstream writer/producer PC and
+its `s0`, then joins it to callsite PC, target PC, per-target ordinal, `s1`,
+source word, branch selector, branch state, and output/state fields; retain the
+existing four-PC positive-control marker.
 The next exact build/run is:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
     env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUTOPILOT='3:start,7:start,11:start,15:a,30:start,45:start,60:a' PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_M5_STATE_POINTER=1 ROGUESQ_LOG_M5_OUTPUT_STATE_FIELDS=1 sh -c 'cd build; ./RogueSquadron64Recomp > ../scratch/agent/s3455_port_upstream.log 2>&1 & p=$!; sleep 25; kill -KILL "$p" 2>/dev/null || true; pkill -KILL -x RogueSquadron64Recomp 2>/dev/null || true; wait "$p" 2>/dev/null || true'
 
-Join the new port rows to `scratch/agent/s3454_oracle_caller.log` by phase,
+Join the new port rows to `scratch/agent/s3455_oracle_ground_truth.log` and the
+prior qualified oracle caller rows by phase,
 producer/callsite PC, target PC, and ordinal. If the new producer value differs,
 `H-UpstreamProducer` is confirmed; if it matches but target entry differs,
 `H-WrapperClobber` reopens; absent ordered producer rows select
