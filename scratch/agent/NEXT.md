@@ -1,35 +1,33 @@
-# NEXT work unit — qualify the port route, then source-slot writer value
+# NEXT work unit — repair title-scoped source-writer witness
 
 HYPOTHESIS-ID: m5-output-state-contract-boundary
 
-Session 3458 measured the retail values but could not qualify the port arm.
-Session 3457 selected a retail-side writer/route difference: retail writes
-`0x801E8710` from eight title-phase PCs, while the port table emitted only the
-shared `0x800644B0` and `0x80064524` writers. The current port parity hook
-passes zero for its value field, so actual writer-value attribution remains
-open. At `0x800645A8`, both routes still use source pointer `0x801E8710`, but
-the first ordered nonzero loaded `s0` differs (`retail=0x801B4F00`,
-`port=0x801B5E70`).
+Session 3459 reached title with the prescribed LLE/spin-yield route, but the
+existing writer witness emitted zero title rows. Its positive control fired
+only in width-640 phase, so the source-value join remains unevaluable.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-RetailValue`: a retail-only writer stores the word that leads to
-  retail's loaded `s0`; selects a retail-side producer/value contract
-  difference.
-- `H-SharedValue`: the shared writers store different words or order
-  differently; selects a shared producer/value divergence.
-- `H-PortValue`: a port writer stores the differing word despite the current
-  PC-set difference; selects a port-side producer contract defect.
-- `H-ControlFailure`: either positive control is absent; the result is
-  unevaluable and the control must be repaired.
+- `H-WitnessGate`: title rows are suppressed by the host phase/origin gate; a
+  title-scoped control plus rows after correcting the gate selects this.
+- `H-GeneratedRoute`: title execution does not reach the generated
+  instrumented stores; a title control elsewhere plus absent store rows
+  selects this.
+- `H-TitleNoStore`: the title path reaches the instrumented functions but does
+  not execute the source-slot stores; function-entry evidence plus absent
+  store rows selects this.
+- `H-ControlFailure`: no title-scoped positive control fires; the result is
+  unevaluable and the witness must not be used for value conclusions.
 
-The retail arm is complete. Run the validated port route with
-`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1
-ROGUESQ_SPIN_YIELD=1`, preserving `ROGUESQ_LOG_M5_WRITER_PARITY=1` and the
-phase-relative title key schedule. First repair/qualify the startup SIGBUS at
-guest PC `0x8000834C`; do not alter audio waits, slots, dispatch, clear
-behavior, or PCM writeback. The discriminator remains the first
-phase/PC/ordinal writer value joined to the producer load: retail-only value
-selects `H-RetailValue`, different shared-writer value selects `H-SharedValue`,
-a port-only value selects `H-PortValue`, and missing controls selects
-`H-ControlFailure`.
+Before building, repair only the witness gate or add a regeneration-safe
+title function-entry control so all four outcomes are distinguishable. Then
+build and run:
+`cmake --build build --config Debug --target RogueSquadron64Recomp`
+followed by
+`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_WRITER_PARITY=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 tools/probe.sh scratch/agent/s3460_m5_source_value_witness 45 0.5`.
+The discriminator is a title-scoped positive control plus the first
+phase/PC/ordinal source-writer value joined to the producer load: corrected
+gate selects `H-WitnessGate`, title entry without stores selects
+`H-GeneratedRoute` or `H-TitleNoStore` using the entry control, and absent
+title control selects `H-ControlFailure`. Do not alter audio waits, slots,
+dispatch, clear behavior, or PCM writeback.

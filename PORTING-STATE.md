@@ -131747,3 +131747,20 @@ Thus the retail value result is single-source and the cross-runtime join is
 unevaluable. This rules out treating the prior zero value argument as evidence
 and rules out changing audio behavior based on this run. Evidence:
 `docs/M5-S3458-SOURCE-VALUE.md`.
+## Session 3459 (2026-08-31) — qualified title source-value witness
+
+Built and ran the prescribed LLE/spin-yield port arm with the writer witness,
+gated on VI width 1024. The port reached title origin `0x00790400` at 49.7s
+and produced 20 title captures. The parity control fired in the earlier
+width-640 phase, but there were zero title-scoped control rows and zero
+`m5-source-writer` rows. The run later changed to width 640 and crashed in
+`musyxSynthFrame+4268`, last guest PC `0x80001B08`. Title reachability is
+qualified for this arm, but the title witness is not; the source-value join is
+unevaluable. This rules out using the run to select retail/shared/port value
+hypotheses and does not justify changing audio behavior. Evidence:
+`docs/M5-S3459-SOURCE-VALUE-PORT.md` and
+`scratch/agent/s3459_m5_source_value_port/run.log`.
+
+ORIGIN: the observed crash is in the existing MusyX synth path after title;
+no mitigation was added. Retail post-store values remain legitimate
+single-source observations, without a port-equivalent store in this run.

@@ -127,13 +127,23 @@ rows. Retail value evidence is therefore single-source and the cross-runtime
 writer/value join remains unevaluable. Evidence:
 [M5-S3458-SOURCE-VALUE.md](M5-S3458-SOURCE-VALUE.md).
 
+Session 3459 rebuilt the prescribed LLE/spin-yield port arm and reached title
+origin `0x00790400`, producing 20 title captures. Its parity control fired in
+the earlier width-640 phase, but the title-scoped control and source-writer
+table both emitted zero rows. The run later changed to width 640 and crashed
+in `musyxSynthFrame+4268` (last guest PC `0x80001B08`). Title reachability is
+qualified for this arm, but the title writer witness is not; the source-value
+join remains unevaluable and no audio behavior is implicated. Evidence:
+[M5-S3459-SOURCE-VALUE-PORT.md](M5-S3459-SOURCE-VALUE-PORT.md).
+
 ## Next steps
 
-1. Repair or qualify the validated port title route before repeating the
-   source-value join. The fixed arm must reach origin `0x00790400`, emit its
-   schema positive control and source rows, and retain writer PC, producer PC,
-   callsite PC, target PC, ordinal, and actual value. Do not alter waits,
-   slots, dispatch, clear behavior, or PCM writeback.
+1. Repair or qualify the title-scoped source-writer witness. The current arm
+   reaches origin `0x00790400`, but its control remains width-640-only and its
+   title source table is empty. First establish why the generated store hook
+   does not observe title calls, then run one same-build capture whose control
+   and source rows are both title-scoped. Do not alter waits, slots, dispatch,
+   clear behavior, or PCM writeback.
 2. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 3. Use the producer join to identify the first output/state contract divergence
