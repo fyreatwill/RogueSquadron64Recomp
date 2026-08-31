@@ -72,7 +72,13 @@ env "$ORACLE" \
     --watch-write 0xA0F50:0xA0F54 \
     --watch-write 0x141AD0:0x141AF0 \
     --watch-write 0x1498A:0x1498B \
+    --watch-write 0x166D50:0x166D60 \
+    --watch-write 0x167050:0x167060 \
+    --watch-write 0x167350:0x167360 \
+    --watch-write 0x1935E0:0x1935F0 \
     --watch-pc 0x80091EB0,0x8009B7EC,0x80029E80,0x80029F30 \
+    --pc-hist-watch 4 --pc-hist-watch 5 --pc-hist-watch 6 --pc-hist-watch 7 \
+    --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 \
     --vi-trace \
     --press "$PRESS" \
     > "$OUT/oracle.log" 2>&1 &
@@ -99,6 +105,20 @@ done
 if (( oracle_gate == 0 )); then
     print "oracle_gate=failed deadline_or_missing_control" >> "$OUT/driver.log"
     exit 5
+fi
+
+sleep 2
+if kill -USR1 "$ORACLE_PID" 2>/dev/null; then
+    print "oracle_checkpoint=requested" >> "$OUT/driver.log"
+    for i in {1..10}; do
+        if grep -a -q '^\[oracle-checkpoint\]' "$OUT/oracle.log"; then
+            print "oracle_checkpoint=observed" >> "$OUT/driver.log"
+            break
+        fi
+        sleep 1
+    done
+else
+    print "oracle_checkpoint=signal_failed" >> "$OUT/driver.log"
 fi
 
 launch_arm() {

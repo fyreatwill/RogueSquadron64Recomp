@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #include "m64p_types.h"
 #include "m64p_frontend.h"
@@ -70,6 +71,7 @@
 
 static void *g_core;
 static double g_t0;
+static double now_s(void);
 
 /* core entry points */
 static m64p_error (*pCoreStartup)(int, const char *, const char *, void *,
@@ -124,6 +126,7 @@ static struct writer_pc_hist
 static int g_n_pc_hist_phase;
 static int g_nwatch;
 static long g_hits;
+static volatile sig_atomic_t g_checkpoint_requested;
 static long g_hit_cap = 200;          /* stop logging after this many, keep running */
 static unsigned int g_detail_watch_mask;
 static int g_first_watch = -1;
@@ -1003,6 +1006,45 @@ static void count_writer_pc_phase(int phase, int watch, uint32_t pc)
     }
 }
 
+static void request_checkpoint(int signo)
+{
+    (void)signo;
+    g_checkpoint_requested = 1;
+}
+
+/* Signal only requests a report; all debugger/core reads stay on the emulator
+ * thread in dbg_vi, where they cannot race the interpreter. */
+static void emit_checkpoint(void)
+{
+    int phase, watch, i;
+    unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
+    unsigned origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+
+    printf("[oracle-checkpoint] t=%.1fs vi=%ld width=%u origin=0x%08x hits=%ld pc_hits=%ld\n",
+           now_s() - g_t0, g_vis, width, origin, g_hits, g_pc_hits);
+    for (watch = 0; watch < g_nwatch; watch++)
+        printf("[oracle-checkpoint-watch] watch=%d range=[0x%08x,0x%08x) hits=%ld reads=%ld writes=%ld\n",
+               watch, g_watch[watch].start, g_watch[watch].end,
+               g_watch[watch].hits, g_watch[watch].read_hits,
+               g_watch[watch].write_hits);
+    for (phase = 0; phase < g_n_pc_hist_phase; phase++) {
+        printf("[oracle-checkpoint-phase] origin=0x%08x width=%u vi=%ld\n",
+               g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase],
+               g_pc_hist_phase_vis[phase]);
+        for (watch = 0; watch < g_nwatch; watch++) {
+            if (!(g_pc_hist_watch_mask & (UINT64_C(1) << watch))) continue;
+            printf("[oracle-checkpoint-hist] origin=0x%08x width=%u watch=%d\n",
+                   g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase], watch);
+            for (i = 0; i < g_pc_hist_phase[phase][watch].n; i++)
+                printf("[oracle-checkpoint-writer] origin=0x%08x width=%u watch=%d pc=0x%08x n=%ld\n",
+                       g_pc_hist_phase_origin[phase], g_pc_hist_phase_width[phase],
+                       watch, g_pc_hist_phase[phase][watch].entries[i].pc,
+                       g_pc_hist_phase[phase][watch].entries[i].n);
+        }
+    }
+    fflush(stdout);
+}
+
 static void count_post_value(int watch, uint32_t pc, uint32_t value)
 {
     struct post_value_stats *stats;
@@ -1584,6 +1626,11 @@ static void dbg_vi(void)
     }
 
     g_vis++;
+
+    if (g_checkpoint_requested) {
+        g_checkpoint_requested = 0;
+        emit_checkpoint();
+    }
 
     g_latched_phase_width = pDebugMemRead32(VI_WIDTH_ADDR);
     g_latched_phase_origin = pDebugMemRead32(VI_ORIGIN_ADDR);
@@ -2253,6 +2300,8 @@ int main(int argc, char **argv)
     if (pDebugSetCallbacks(dbg_init, dbg_update, dbg_vi) != M64ERR_SUCCESS) {
         fprintf(stderr, "[oracle] DebugSetCallbacks failed\n"); return 1;
     }
+
+    signal(SIGUSR1, request_checkpoint);
 
     g_t0 = now_s();
     g_poll_running = g_vi_poll || g_status_poll;

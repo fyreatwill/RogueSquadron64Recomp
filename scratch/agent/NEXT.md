@@ -1,29 +1,29 @@
-# NEXT work unit — repair the M5 ground-truth completion path
+# NEXT work unit — qualify M5 image payloads with the live oracle checkpoint
 
-HYPOTHESIS-ID: m5-ground-truth-completion-safe
+HYPOTHESIS-ID: m5-image-output-edge
 
-Do one bounded measurement-design/implementation unit for the M5 image-output
-edge. Do not repeat `run_s2285_m5_step1_contract_pair.sh` unchanged: s3395's
-oracle positive control passed, but both port arms crashed before dispatch at
-guest PC `0x8000834c`, leaving every M5 field absent.
+Do one bounded phase-qualified measurement using the repaired
+`run_s2285_m5_step1_contract_pair.sh`. Add post-store payload sampling for the
+four candidate retail destinations (`0x166D50`, `0x167050`, `0x167350`,
+`0x1935E0`) while retaining the whole-RDRAM positive control and SIGUSR1 live
+checkpoint. Then build once and run both port arms concurrently. Do not use
+the old normal-exit summary path.
 
 Competing hypotheses:
 
-- `H-PreDispatchSchedulerCrash`: the paired route dies before M_AUDTASK, so a
-  completion-safe control must distinguish route failure from an audio gap.
-- `H-ImageEdgeMissing`: once the route survives, Factor 5 image output lacks a
-  named DMEM-to-RDRAM contract edge.
-- `H-ImageEdgePresent`: once the route survives, existing image DMA and SP
-  completion already close the output contract.
+- `H-ImagePayloadZero`: retail candidate stores are zero or absent in the
+  target phase, so they cannot explain the port's zero PCM.
+- `H-ImageEdgeMissing`: retail has a nonzero target-phase payload row, while
+  the port lacks the corresponding DMEM-to-RDRAM edge or ordering.
+- `H-ImageEdgePresent`: retail and port have matching nonzero image publication,
+  exit, and SP-completion ordering; the remaining zero PCM gap is downstream.
 
-Discriminator: first obtain an independent retail control that reaches the
-target phase and produces a completion-safe summary, then run both port arms in
-one build/run with phase-scoped dispatch, ABI, DMA, image exit, SP completion,
-service/slot, and PCM controls. A pre-dispatch port crash with a live retail
-control selects `H-PreDispatchSchedulerCrash`; matching image DMA/exit and
-completion with no downstream gap selects `H-ImageEdgePresent`; a named
-retail-backed output edge with matching port ordering selects
-`H-ImageEdgeMissing`.
+Discriminator: the same run must show positive-control callbacks, retail
+nonzero/zero payload values and writer PCs in the target phase, and paired port
+dispatch → image DMA/exit → SP completion → PCM rows. A zero/absent retail
+payload selects `H-ImagePayloadZero`; a retail-backed payload with a port-side
+ordering/publication gap selects `H-ImageEdgeMissing`; matching publication
+and completion with zero PCM selects `H-ImageEdgePresent`.
 
 Candidate edge remains Factor 5 `SP_WR_LEN` DMEM-to-RDRAM publication: writer
 is `factor5_ucode_b`, observed destinations are stage-2 `0x166D50`,
@@ -31,8 +31,8 @@ is `factor5_ucode_b`, observed destinations are stage-2 `0x166D50`,
 Legitimacy is unresolved. Required ordering is image entry -> DMA rows ->
 `Broke`/SP completion -> guest service/slot/PCM.
 
-Before any new port instrument, use the oracle's existing whole-RDRAM positive
-control and replace the incomplete final-summary path with a completion-safe
-measurement. Then build with `cmake --build build --target
-RogueSquadron64Recomp` and run the repaired paired recipe from `build/`; use
-SIGKILL for every timeout and retain both arms in that one run.
+Before any new port instrument, run the oracle with its whole-RDRAM positive
+control and SIGUSR1 checkpoint plus post-store sampling. Then build with
+`cmake --build build --target RogueSquadron64Recomp` and run the repaired paired
+recipe from `build/`; use SIGKILL for every timeout and retain both arms in that
+one run.

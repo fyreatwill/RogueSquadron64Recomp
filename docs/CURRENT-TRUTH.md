@@ -175,21 +175,40 @@ rows. The candidate image DMEM-to-RDRAM edge is therefore unevaluable; no
 audio edge or behavior change is selected. Evidence is in
 `scratch/agent/s3395_m5_contract_edge_qualification_retry/RESULTS.md`.
 
+Session 3396 repaired the ground-truth completion path by adding a SIGUSR1
+request serviced at the next retail VI callback on the emulator thread. The
+same-run whole-RDRAM control reached 10,000 callbacks; retail reached title
+1024 and hangar 512, and the checkpoint was observed before SIGKILL. At the
+checkpoint, candidate destination watches had 16, 16, 16, and 36 writes at
+`0x166D50`, `0x167050`, `0x167350`, and `0x1935E0`; the four phase histograms
+were emitted, though only the title bucket attributed 16 writes at
+`0x1935E0` to `0x800078EC`. The concurrent port arms both reached title and
+hangar without crash/abort markers: silent had 680 ABI/DMA rows and zero
+image-stage rows; image had 679 ABI rows, 1,370 DMA rows, and 2,749 image-stage
+rows. Both retained zero PCM (`FNV=0xF59C39C5`, `nz=0`). This refutes the
+specific s3395 pre-dispatch failure as a repeatable qualification blocker and
+establishes a completion-safe retail/port comparison path, but does not yet
+select `H-ImageEdgeMissing` or `H-ImageEdgePresent`: the checkpoint has no
+post-store payload values and the retail target writes are not yet a complete
+like-for-like phase attribution. No audio behavior changed. Evidence is in
+`scratch/agent/s3396_m5_checkpoint_pair/driver.log` and the paired logs.
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Design one completion-safe, phase-qualified independent ground-truth
-   measurement for the M5 image-output edge, then rerun the image/silent pair
-   only if that control can survive the pre-dispatch scheduler crash. Keep the
-   complete dispatch → DMA/DMEM → SP completion → service/slot → PCM matrix;
-   do not use the s3395 zero-row crash as evidence for an audio behavior change.
-2. The dual-origin oracle repair is closed at this scope: its positive control
-   fired, but the process did not produce the exact target total and final
-   histograms needed to select an origin. A future ground-truth attempt needs
-   a completion-safe summary path or a different independent attribution
-   measurement; do not repeat the same recipe.
+1. Use the new completion-safe oracle checkpoint with phase-qualified
+   post-store sampling for all four candidate image destinations, then run the
+   existing concurrent image/silent pair with the complete dispatch →
+   DMA/DMEM → SP completion → service/slot → PCM matrix. Select
+   `H-ImageEdgeMissing` only when a retail-backed nonzero output row has a
+   matching port ordering gap; select `H-ImageEdgePresent` only when matching
+   image DMA/exit and completion close the output contract. Keep zero PCM as a
+   measured result, not a reason to alter behavior.
+2. The completion-safe ground-truth path is now qualified. Do not repeat the
+   old final-summary-only or dual-origin recipes; use the signal checkpoint and
+   add payload sampling if attribution is required.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

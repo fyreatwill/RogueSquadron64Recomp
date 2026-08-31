@@ -130441,3 +130441,22 @@ unevaluable and selects no audio contract hypothesis. It does not justify an
 audio behavior change. It rules out only that this recipe can qualify the
 edge when the port dies pre-dispatch. Evidence:
 `scratch/agent/s3395_m5_contract_edge_qualification_retry/RESULTS.md`.
+
+## Session 3396 (2026-08-31) — M5 completion-safe retail checkpoint
+
+The oracle was rebuilt with a SIGUSR1 request serviced at the next VI callback
+on the emulator thread, and the paired recipe was extended to watch the four
+candidate image destinations with phase histograms. Its whole-RDRAM positive
+control reached 10,000 callbacks; retail reached title 1024 and hangar 512,
+and the live checkpoint was observed before SIGKILL. The checkpoint counted
+16, 16, 16, and 36 writes at `0x166D50`, `0x167050`, `0x167350`, and
+`0x1935E0`; only the title bucket attributed a candidate write in the emitted
+histogram (`0x1935E0` from `0x800078EC`, n=16). The concurrent port arms both
+reached title and hangar without crash/abort markers. Silent had 680 ABI/DMA
+rows and zero image-stage rows; image had 679 ABI rows, 1,370 DMA rows, and
+2,749 image-stage rows. Both retained zero PCM (`FNV=0xF59C39C5`, `nz=0`).
+This refutes the specific s3395 pre-dispatch failure as a repeatable blocker and
+qualifies a completion-safe retail/port comparison path. It does not select an
+image-edge hypothesis because post-store payload values and complete like-for-
+like phase attribution were not captured. No audio behavior changed. Evidence:
+`scratch/agent/s3396_m5_checkpoint_pair/driver.log` and its paired logs.
