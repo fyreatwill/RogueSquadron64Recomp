@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3382 (2026-08-31). This file was compacted
+through Session 3383 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -67,48 +67,24 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Re-qualify the validated port route before repeating the direct-writer
-   census. Session 3382 tried three route variants; each crashed before title
-   at `spTaskSchedulerThread+9536` with `si_addr=0x400128d47`, so no target
-   phase armed. First run the last known-good recipe with new M5 logging off.
-2. Trace the selected caller mismatch. Before building, ask the retail oracle
-   for phase-gated execution/argument rows at `0x8002BEEC` and `0x8008F2CC`
-   alongside the writer and whole-RDRAM control. Then batch one port census of
-   both callsites' constructed destination/value/length and target task join;
-   do not change the write.
-3. Competing hypotheses for that unit:
-   - `H-PortCaller8002BEECAbsent`: the port never reaches the retail target
-     caller, so `0x8008F2CC` is a different legitimate initialization path.
-   - `H-PortCallerArgumentConstruction`: both paths are reached, but their
-     destination/length/value or task-row construction differs.
-   - `H-PortCallerDispatchAlias`: the port reaches the retail caller through a
-     dispatch/overlay alias that changes the observed callsite.
-4. Discriminator: same-run rows keyed by caller PC, destination, value, len,
-   phase, and audio-task ordinal/row. Retail caller activity with no matching
-   port row selects `H-PortCaller8002BEECAbsent`; matching activity with a
-  tuple difference selects `H-PortCallerArgumentConstruction`; matching
-  tuple under a distinct dispatch path selects `H-PortCallerDispatchAlias`.
-- Session 3381's oracle-plus-port census passed the whole-RDRAM, title, hangar,
-  audio/image/PCM controls. Retail showed 402 `0x8002BEEC -> 0x800078EC`
-  predecessor executions and two `0x8008F2CC` executions. The port target row
-  matched retail's `dst=0x801797B0`, `val=0`, `len=0x298`, but arrived through
-  `0x8008F2CC -> rs_memset`; no port target row used `0x8002BEEC`. This selects
-  `H-PortCaller8002BEECAbsent` for the direct-writer edge and refutes argument
-  construction mismatch at that tuple. The alias mechanism remains unresolved.
-  Evidence: `scratch/agent/s3381_m5_caller_census.md`.
-- Session 3382's retail prerequisite again passed and observed 398
-  `0x8002BEEC -> 0x800078EC` predecessor executions with nonzero post-store
-  samples. Three port variants all crashed before title at the same scheduler
-  SIGSEGV, so the port direct-writer hypotheses remain unevaluable. Evidence:
-  `scratch/agent/s3382_m5_direct_writer_edge.md`.
-5. Trace the selected direct-writer edge. Before building, ask the oracle for
-   phase-gated rows at `0x8002BEEC` and `0x800078EC` including the predecessor
-   and target bytes, then add one port-side census at the equivalent writer
-   entry that records the guest return/caller edge and target bytes. Keep all
-   existing controls; do not change output or audio behavior.
-6. Discriminator: a port writer edge with `caller=0x8002BEEC` and matching
+1. Trace the selected direct-writer edge. Session 3383 re-qualified the route:
+   the no-log arm reached title/hangar at 14.6s/23.8s, and the established M5
+   logging arm reached them at 11.6s/19.8s; both had zero crash/abort markers.
+   The logging controls positively fired. This refutes the logging-trigger and
+   route-regression explanations for the s3382 early crash and confirms the
+   recipe is reproducible.
+2. Before building, ask the retail oracle for phase-gated rows at
+   `0x8002BEEC` and `0x800078EC`, including predecessor and target bytes, then
+   batch one port census at the equivalent writer entry recording the guest
+   return/caller edge and target bytes. Keep all existing controls; do not
+   change output or audio behavior.
+3. Discriminator: a port writer edge with `caller=0x8002BEEC` and matching
    target bytes selects dispatch alias/translation; no such edge while the
    port zero-fill persists selects an earlier missing dispatch/producer edge.
+   A matching writer with zero bytes, paired with retail nonzero post-store
+   evidence, selects a legitimate-zero writer with an unlocated later producer.
+   Prior caller evidence is `scratch/agent/s3381_m5_caller_census.md`; route
+   qualification is `scratch/agent/s3383_route_requalification.md`.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

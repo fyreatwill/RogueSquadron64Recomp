@@ -130163,3 +130163,17 @@ title at `spTaskSchedulerThread+9536`, `si_addr=0x400128d47`, last guest PC
 writer row appeared. The direct-writer port hypotheses are therefore
 unevaluable this iteration; no behavior changed. Evidence:
 `scratch/agent/s3382_m5_direct_writer_edge.md`.
+## Session 3383 (2026-08-31) — re-qualified the M5 port route
+
+The required route-requalification unit ran two phase-gated arms from
+`build/` with the canonical AUTOPILOT schedule. The no-log arm used the
+validated LLE-only, ungated, spin-yield route with real audio and reached title
+VI 1024 at 14.6s and hangar VI 512 at 23.8s. The same route with the
+established M5 logging set reached title at 11.6s and hangar at 19.8s. Both
+arms had zero `[CRASH]` and `[ABORT]` markers before SIGKILL; the logging arm
+also positively fired 80 callback and 108 PCM-boundary records.
+
+This refutes a route-wide regression and a logging-triggered crash for this
+recipe, and confirms the prior recipe was reproduced. It does not explain the
+zero PCM source; the next unit traces the selected `0x8002BEEC` to
+`0x800078EC` direct-writer edge. Evidence: `scratch/agent/s3383_route_requalification.md`.
