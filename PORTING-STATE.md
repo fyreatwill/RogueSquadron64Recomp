@@ -130177,3 +130177,19 @@ This refutes a route-wide regression and a logging-triggered crash for this
 recipe, and confirms the prior recipe was reproduced. It does not explain the
 zero PCM source; the next unit traces the selected `0x8002BEEC` to
 `0x800078EC` direct-writer edge. Evidence: `scratch/agent/s3383_route_requalification.md`.
+## Session 3384 (2026-08-31) — direct-writer census was not phase-qualified
+
+Ran the required retail oracle first. Its whole-RDRAM positive control reached
+the 10,000-callback threshold; retail executed `0x800078EC` 9,667 times and
+`0x8002BEEC` zero times in 180 seconds. The port build succeeded. An initial
+launch used the wrong logging variable and crashed before title, so it was
+discarded. The corrected phase-gated rerun with the established M5 logging set
+also crashed before title, after reaching VI 640; it recorded 36 crash markers,
+last guest PC `0x8000B650`, and `fillSampleStreamRange` as the crash site.
+
+No target-phase port control or direct-writer row fired. The direct-writer
+hypotheses are therefore unevaluable this iteration; the null is invalid
+because the required phase was not reached. The next unit re-qualifies this
+route before interpreting the edge. Evidence:
+`scratch/agent/s3384_direct_writer_attempt.md` and
+`scratch/agent/oracle_s3384.log`.

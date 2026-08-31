@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3383 (2026-08-31). This file was compacted
+through Session 3384 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -67,18 +67,22 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the selected direct-writer edge. Session 3383 re-qualified the route:
+1. Re-qualify the M5 route before interpreting the direct-writer edge. Session
+   3384's corrected phase-gated rerun crashed before title in
+   `fillSampleStreamRange` (last guest PC `0x8000B650`), so no target-phase row
+   is valid. Do not treat this as evidence for writer absence.
+2. Trace the selected direct-writer edge. Session 3383 re-qualified the route:
    the no-log arm reached title/hangar at 14.6s/23.8s, and the established M5
    logging arm reached them at 11.6s/19.8s; both had zero crash/abort markers.
    The logging controls positively fired. This refutes the logging-trigger and
    route-regression explanations for the s3382 early crash and confirms the
    recipe is reproducible.
-2. Before building, ask the retail oracle for phase-gated rows at
+3. Before building, ask the retail oracle for phase-gated rows at
    `0x8002BEEC` and `0x800078EC`, including predecessor and target bytes, then
    batch one port census at the equivalent writer entry recording the guest
    return/caller edge and target bytes. Keep all existing controls; do not
    change output or audio behavior.
-3. Discriminator: a port writer edge with `caller=0x8002BEEC` and matching
+4. Discriminator: a port writer edge with `caller=0x8002BEEC` and matching
    target bytes selects dispatch alias/translation; no such edge while the
    port zero-fill persists selects an earlier missing dispatch/producer edge.
    A matching writer with zero bytes, paired with retail nonzero post-store
