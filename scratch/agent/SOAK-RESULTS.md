@@ -549,3 +549,4 @@ s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
 20260824-154224 | s2328_m5_drain_tick_validation | rc=1 | 2s | scratch/agent/soak_results/s2328_m5_drain_tick_validation_20260824-154224.log
 20260827-050242 | s2680_m5_step1_validation | rc=127 | 0s | scratch/agent/soak_results/s2680_m5_step1_validation_20260827-050242.log
 20260830-081019 | s3307_cine_loop_600s | rc=137 | 600s | scratch/agent/soak_results/s3307_cine_loop_600s_20260830-081019.log
+20260830-235420 | s3348_m5_slot_status_qualification | target-valid; VI 1024 at 14.5s, VI 512 at 26.3s; slot/status activity present, named consumer PCs 0 hits; game SIGKILLed after wrapper left process alive | scratch/agent/soak_results/s1949_menu_input_yield_20260830-235420/run.log

@@ -1,31 +1,36 @@
-# NEXT work unit — rerun M5 slot/status qualification on validated hangar route
+# NEXT work unit — audit M5 named consumer reachability
 
-HYPOTHESIS-ID: m5-slot-status-contract-gap
+HYPOTHESIS-ID: m5-consumer-reachability-audit
 
-Session 3347 was route-invalid: the current `run_s3327` arm passed host/task/PCM
-controls and reached title VI 1024, but never reached VI 512, so it selected
-none of the slot/status hypotheses. Use the already validated extended
-Start/spin-yield route that reaches hangar, while retaining the same slot,
-status, and named-consumer measurements.
+Session 3348 reached the validated hangar phase with positive controls and
+observed port slot/status activity, but none of the four retail-named
+consumer PCs. Do one bounded static audit before adding instrumentation or
+changing behavior.
 
 Competing hypotheses:
 
-- `H-PortSlotStatusMissing`: the reachable port hangar lacks the retail writer
-  or status transition.
-- `H-PortConsumerUnreached`: the port writes the state, but the named consumer
-  path is not reached.
-- `H-PortProbeGap`: both edges run, but the current instrumentation misses them.
+- `H-ConsumerIndirect`: each named consumer is reached only through an
+  indirect callback/function-pointer edge absent from the direct caller map.
+- `H-ConsumerGate`: direct or indirect callers exist, but a visible status,
+  slot, or phase predicate prevents the port from entering them.
+- `H-ConsumerWrongNames`: the retail PCs are not the corresponding port
+  consumers for this route, so the existing runtime probe is aimed at the
+  wrong bodies.
 
-Discriminator: a target-phase writer plus consumer hit selects a complete port
-edge; writer rows without consumers select `H-PortConsumerUnreached`; neither
-writer nor consumer with positive controls selects `H-PortSlotStatusMissing`;
-positive consumer-PC controls with no target rows select `H-PortProbeGap`.
-If VI 512 is absent again, classify the run route-invalid and select nothing.
+Discriminator: enumerate every generated caller/reference and every callback
+or function-pointer registration edge for `0x80094648`, `0x8009B600`,
+`0x8009B85C`, and `0x8009BDE8`, then reconcile each with the M5 plan's slot,
+status, and voice-table accesses. A complete indirect-only chain selects
+`H-ConsumerIndirect`; an enumerated chain with a reachable predicate selects
+`H-ConsumerGate`; no corresponding port body/edge selects
+`H-ConsumerWrongNames`. An incomplete static map selects none and defines the
+next ground-truth probe.
 
 Exact commands:
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/soak_queue/done/s1949_menu_input_yield_20260818-021858.sh
+    rg -n -S '80094648|8009B600|8009B85C|8009BDE8' ../N64Recomp/RecompiledFuncs docs src
+    rg -n -S 'registerSiCallback|8011A8A4|80141AD8|80154620|startSongSequence|serviceVoicePoolFrame|accumulateVoiceSampleOffset' ../N64Recomp/RecompiledFuncs docs src
+    sed -n '<bounded caller windows>p' ../N64Recomp/RecompiledFuncs/funcs_*.c
 
-Do not change behavior or add a mitigation. The positive controls must fire in
-the same run before interpreting any null target result.
+Do not build, add a probe, change behavior, or add a mitigation until the
+static census identifies the discriminating edge.

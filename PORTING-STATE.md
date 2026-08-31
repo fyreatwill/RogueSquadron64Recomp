@@ -129487,3 +129487,21 @@ route-invalid and selects none of `H-PortSlotStatusMissing`,
 of the current recipe's real audio task and PCM controls, but does not rule
 out any target-phase slot/status explanation. No behavior change or
 mitigation was made. Evidence: `scratch/agent/s3347_m5_slot_status_route_invalid.md`.
+
+## Session 3348 (2026-08-30) — qualified M5 slot/status consumer gap
+
+The Debug target rebuilt successfully. The existing extended Start/spin-yield
+recipe reached title VI 1024 at 14.5 seconds and hangar VI 512 at 26.3 seconds.
+Host/task/PCM and tick/jal/exit controls were positive in the same run, so the
+target phase was valid.
+
+The port emitted target-phase slot/status activity through `slot-byte`,
+`slot-sb`, `drain-slots`, and repeated `drainAudioAndFinalizeSpeechBuffer`
+rows. The named retail consumers `0x80094648`, `0x8009B600`, `0x8009B85C`, and
+`0x8009BDE8` had zero log hits. This selects `H-PortConsumerUnreached`: the
+port slot/status path is active, but the named consumer edge was not reached or
+is not represented by the current consumer probe. It rules out a route-invalid
+interpretation and does not identify the missing caller or authorize a
+behavior change. The wrapper left the game process alive after capture return;
+the process was SIGKILLed. Evidence:
+`scratch/agent/s3348_m5_slot_status_qualification.md`.

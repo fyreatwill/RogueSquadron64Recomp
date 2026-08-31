@@ -4,17 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3347 (2026-08-30). Compacted from
+Current maintenance marker: Session 3348 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
-Session 3347 rebuilt the Debug target and ran the existing M5 slot/status
-qualification recipe. Host/task/PCM controls were positive and the port
-reached title VI 1024, but it did not reach hangar VI 512 before the 180 s
-watchdog. No target-phase slot/status or named consumer rows were available;
-this is route-invalid and selects none of the slot/status hypotheses. The
-next attempt must use the validated extended Start/spin-yield route that
-reaches VI 512, with the same controls and no behavior change.
+Session 3348 rebuilt the Debug target and ran the validated extended
+Start/spin-yield M5 slot/status qualification. Host/task/PCM controls and both
+title VI 1024 and hangar VI 512 controls were positive. Target-phase
+`slot-byte`/`slot-sb`/drain activity was present, but named consumer PCs
+`0x80094648`, `0x8009B600`, `0x8009B85C`, and `0x8009BDE8` had zero hits. This
+selects `H-PortConsumerUnreached`; no behavior change is authorized. The next
+unit is a bounded static audit of those consumer bodies and their indirect
+callers. Evidence: `scratch/agent/s3348_m5_slot_status_qualification.md`.
 
 Session 3346 completed retail indirect execution attribution for the corrected
 callback pointer. With whole-RDRAM and title-phase controls live, the oracle
@@ -561,7 +562,7 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3330–3340:
+1. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3330–3348:
    the reachable port hangar has valid task/PCM controls but no slot/status
    rows or named retail consumer-PC executions, selecting
    `H-PortSlotStatusMissing` on single-source port evidence. The callback audit
@@ -611,16 +612,21 @@ target row exists.
    rows in reachable hangar; do not change a contract edge or add a
    mitigation. Session 3347's rebuilt port run passed host/task/PCM controls
    and reached title 1024 but stalled before hangar, so it selected none of
-   the three hypotheses. Next: use the validated extended Start/spin-yield
-   route that reaches VI 512, retaining the same control matrix.
-2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
+   the three hypotheses. Session 3348 used the validated extended route,
+   reached VI 512 with positive controls, and found target-phase slot/status
+   activity but zero hits for all four named consumer PCs. This selects
+   `H-PortConsumerUnreached`. Next: statically audit those consumer bodies and
+   every indirect caller or callback edge; do not change behavior.
+2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
+   3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
    (`H-RetailSlotConsumer`). The port image arm now reaches hangar with the
    extended autopilot; the prior title stop was schedule-dependent for this
    recipe. The route commits 1024 and 512, and the actual MusyX voice mask is
-   zero/max=1 rather than exhausted. Next: run the slot/status qualification
-   in the reachable hangar phase and compare its writer/consumer rows to the
-   retail capture. Do not change a contract edge or add a mitigation.
+   zero/max=1 rather than exhausted. Session 3348 found the port slot/status
+   activity live in hangar but did not observe the four named consumers,
+   selecting `H-PortConsumerUnreached`. Next: audit the consumer call graph
+   and callback edges. Do not change a contract edge or add a mitigation.
 3. Keep configured-host PatchesLib validation as an open dependency. When
    that host is available, run `cmake --build build --config Debug --target
    PatchesLib` to distinguish build availability from source/link failures.
