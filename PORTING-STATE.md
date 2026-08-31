@@ -131159,8 +131159,9 @@ neither emitted crash or abort markers. Each port arm exposed one
 `set-reapply` row at title with `a0=0x80165ED0, a1=0x12, a2=0, a3=0`; neither
 exposed `set-init`.
 
-This selects `H-DirectSetupCallerParity`: the observed port reapply caller
-matches retail, and the divergent `0x5622` value is not an argument to either
+This selects `H-DirectSetupCallerCountParity`: the observed port reapply caller
+matches retail on the count argument `a1=0x12`, although other arguments are
+not identical, and the divergent `0x5622` value is not an argument to either
 observed audio setup call at this boundary. It refutes
 `H-PortCountAtReapplyCaller` and `H-PortCountAtInitCaller` as explanations for
 the count divergence and closes the direct callsite question at this scope.

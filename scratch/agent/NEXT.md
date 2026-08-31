@@ -2,8 +2,8 @@
 
 HYPOTHESIS-ID: m5-port-init-count-producer
 
-Session 3430 closed the direct `setDisplayMode` audio-call boundary. Retail
-and port both expose `0x8008EBC0` with `a1=0x12` on the qualified route; the
+Session 3430 closed the direct `setDisplayMode` audio-call count boundary.
+Retail and port both expose `0x8008EBC0` with `a1=0x12` on the qualified route;
 port witness saw the same value immediately before `reapplyAudioConfig`.
 Neither qualified target-phase run exposed `0x8008EA78`, so it is not a live
 producer on this route. The divergent port `a1=0x5622` is already present at

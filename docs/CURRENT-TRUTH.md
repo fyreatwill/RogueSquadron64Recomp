@@ -474,9 +474,11 @@ driven route. The fresh-build concurrent silent/image pair reached title 1024
 and hangar 512 with all controls live and no crash/abort markers. The caller
 witness fired only for `set-reapply`, once per arm at title, with
 `a0=0x80165ED0, a1=0x12, a2=0, a3=0`; neither arm exposed `set-init`. This
-selects `H-DirectSetupCallerParity` and refutes the proposed `0x5622` count at
-either observed `setDisplayMode` audio callsite. The earlier producer of the
-init-to-allocate `0x5622` value remains unresolved. Evidence is in
+selects `H-DirectSetupCallerCountParity`: port and retail both pass
+`a1=0x12` at the observed reapply call, although their other arguments are not
+identical. It refutes the proposed `0x5622` count at either observed
+`setDisplayMode` audio callsite. The earlier producer of the init-to-allocate
+`0x5622` value remains unresolved. Evidence is in
 [M5-S3430-SETDISPLAY-CALLERS.md](M5-S3430-SETDISPLAY-CALLERS.md).
 
 ## Next steps
@@ -492,8 +494,9 @@ renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
    discriminator must identify the first port/retail divergence in producer
    arguments or state, not repeat the closed `setDisplayMode` callsite. Do not
    change waits, slots, dispatch, clear behavior, or PCM writeback.
-2. The direct `setDisplayMode` audio callsite boundary is closed: retail and
-   port both pass `a1=0x12` at observed `0x8008EBC0`; neither exposes `0x5622`.
+2. The direct `setDisplayMode` audio callsite boundary is closed for the
+   count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
+   other arguments differ; neither exposes `0x5622`.
    The `0x8008EA78` route was absent in both qualified target-phase captures.
 3. The direct `initN64RspMixer` callsite boundary is closed: both retail and
    port use `0x80091D14` on the qualified route. The

@@ -16,9 +16,10 @@ markers. Each arm exposed one `set-reapply` row at title with
 `a0=0x80165ED0`, `a1=0x12`, `a2=0`, `a3=0`; neither exposed a `set-init` row.
 The image-stage control fired only in the image arm.
 
-This selects `H-DirectSetupCallerParity`: the observed port reapply caller
-passes the same setup arguments as retail, while the divergent `0x5622` value
-is not an argument to either observed audio setup call at this boundary. It
+This selects `H-DirectSetupCallerCountParity`: the observed port reapply caller
+passes the same count argument `a1=0x12` as retail, while other arguments are
+not identical and the divergent `0x5622` value is not an argument to either
+observed audio setup call at this boundary. It
 refutes `H-PortCountAtReapplyCaller` and `H-PortCountAtInitCaller` as proposed
 explanations for the `0x5622` divergence, and closes the direct callsite
 question at this scope. The earlier producer of the init-to-allocate count
