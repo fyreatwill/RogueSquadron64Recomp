@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3391 (2026-08-31). This file was compacted
+through Session 3392 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -130,6 +130,18 @@ source boundary:
   `H-EarlierPortContract` at the observed boundary, but does not establish
   that the zero fill is illegitimate or provide a retail payload comparison.
   Evidence is in [M5-S3391-EARLIER-PRODUCER.md](M5-S3391-EARLIER-PRODUCER.md).
+
+- Session 3392 first ran the independent oracle with the selected predecessor
+  watches. Its whole-RDRAM and predecessor controls fired, but the
+  target-span watch again produced no recognizable target rows, so retail
+  payload attribution was partial. The first port arm hit the known
+  pre-title `filterVoiceSampleBlock` crash; a same-build retry reached title
+  and hangar with controls live and no crash/abort markers. It again exposed
+  only the zero-fill `0x8008F2CC -> rs_memset` row and zero PCM, with no
+  callback or earlier-producer row. This reinforces `H-EarlierPortContract`
+  at the port boundary, but does not add the required like-for-like retail
+  payload edge. Evidence is in
+  [M5-S3392-EARLIER-PRODUCER-RETRY.md](M5-S3392-EARLIER-PRODUCER-RETRY.md).
 
 No output substitution or mitigation is authorized. Do not change waits, slots,
 status handling, consumer dispatch, or PCM writeback while tracing the source.

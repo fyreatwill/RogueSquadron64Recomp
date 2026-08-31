@@ -130360,3 +130360,28 @@ establish that the zero fill is illegitimate and does not claim a like-for-like
 retail payload comparison because the retail target watch was partial. No
 output or audio behavior changed. Evidence: `docs/M5-S3391-EARLIER-PRODUCER.md`
 and `scratch/agent/oracle_s3391/predecessor.log`.
+
+## Session 3392 (2026-08-31) — M5 lower-noise target attribution retry
+
+The independent retail oracle ran first with whole-RDRAM and target-span
+watches plus execution watches for `0x8002BEE8`, `0x800078E8`, and
+`0x800078EC`. The whole-RDRAM control was live; the raw trace contained
+20,716 `0x8002BEE8` rows and 2,652 `0x800078E8` rows. The target-span watch
+produced no recognizable target-address rows, so retail payload attribution
+was partial in this run.
+
+The first port arm crashed before the 1024 phase in the existing
+`filterVoiceSampleBlock` path, with `last-guest-pc=0x8000834C`. The same-build
+retry reached title `0x00790400` at 11.9 seconds and hangar `0x006AB400` at
+20.2 seconds, with no crash or abort markers. Its hangar target row remained
+the zero-fill `0x8008F2CC -> rs_memset` path:
+`entry=0x800078E0`, `dst=0x801797B0`, `val=0`, `len=0x298`. PCM source and
+consumer controls fired with `FNV=0xF59C39C5`, `nz=0`; no callback-writer or
+earlier-producer row appeared.
+
+This reinforces `H-EarlierPortContract` at the observed port boundary and
+refutes a matching port predecessor edge for this run. It does not provide a
+like-for-like retail payload comparison and does not establish that the port
+zero fill is illegitimate. No output or audio behavior changed. Evidence:
+`docs/M5-S3392-EARLIER-PRODUCER-RETRY.md`,
+`scratch/agent/oracle_s3392.log`, and `scratch/agent/port_s3392_retry/run.log`.
