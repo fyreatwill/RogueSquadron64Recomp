@@ -130215,3 +130215,25 @@ this run scope. It does not select a direct-writer hypothesis; that census is
 the next work unit. The stale logging variable `ROGUESQ_LOG_M5_DIRECT_WRITER`
 was not used as evidence; the established callback/PCM controls were used
 after rebuilding.
+
+## Session 3386 (2026-08-31) — phase-qualified M5 direct-writer edge
+
+The retail oracle ran first for 120 seconds with a whole-RDRAM positive-control
+watch and execution watches for `0x8002BEEC` and `0x800078EC`. The positive
+control reached 10,000 callbacks; retail executed `0x800078EC` 9,667 times and
+`0x8002BEEC` zero times on this undriven route. The oracle instrument was live,
+but this route did not provide a driven `0x8002BEEC` row.
+
+The rebuilt port route was phase-gated at title VI 1024 and continued through
+hangar VI 512 with the existing LLE/audio/task/callback/PCM controls and the
+static `rs_memset` caller/entry census. It had no `[CRASH]` or `[ABORT]`
+markers. In the hangar target phase, the only target-overlap row was
+`entry=0x800078E0 caller_ra=0x8008F2CC dst=0x801797B0 val=0 len=0x298`.
+There were no target-phase `0x8002BEEC` caller rows or callback-writer rows;
+paired PCM source/consumer rows remained zero (`FNV=0xF59C39C5`, `nz=0`).
+
+This selects `H-EarlierProducerGap` for the driven port route and refutes a
+port-side dispatch alias at the observed boundary. It does not establish that
+the zero fill is legitimate or locate the missing earlier producer. Evidence:
+`scratch/agent/s3386_m5_direct_writer_census.md` and
+`scratch/agent/oracle_m5_direct_writer.log`.

@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3384 (2026-08-31). This file was compacted
+through Session 3386 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -64,6 +64,14 @@ source boundary:
   sampled zero-fill tuple. This selects `H-PortSourceCallerMismatch` at the
   observed boundary. It does not establish that the zero fill is illegitimate
   or select a nonzero-input path.
+- Session 3386 phase-qualified the direct-writer edge. The port reached title
+  and hangar with all controls live; its only target-overlap row was the
+  zero-fill `0x8008F2CC -> rs_memset` path, with no `0x8002BEEC` caller edge or
+  callback-writer row. The independent retail control fired, and its
+  undriven route executed `0x800078EC` 9,667 times but not `0x8002BEEC`.
+  This selects `H-EarlierProducerGap` for the driven port route and refutes a
+  port-side dispatch alias at the observed boundary. It does not establish
+  whether the zero fill is legitimate.
 
 No output substitution or mitigation is authorized. Do not change waits, slots,
 status handling, consumer dispatch, or PCM writeback while tracing the source.
@@ -73,19 +81,19 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the selected direct-writer edge. Before building, ask the retail
-   oracle for phase-gated rows at
-   `0x8002BEEC` and `0x800078EC`, including predecessor and target bytes, then
-   batch one port census at the equivalent writer entry recording the guest
-   return/caller edge and target bytes. Keep all existing controls; do not
-   change output or audio behavior.
-2. Discriminator: a port writer edge with `caller=0x8002BEEC` and matching
-   target bytes selects dispatch alias/translation; no such edge while the
-   port zero-fill persists selects an earlier missing dispatch/producer edge.
-   A matching writer with zero bytes, paired with retail nonzero post-store
-   evidence, selects a legitimate-zero writer with an unlocated later producer.
-   Prior caller evidence is `scratch/agent/s3381_m5_caller_census.md`; route
-   qualification is `scratch/agent/s3383_route_requalification.md`.
+1. Trace the selected earlier producer edge. First ask the retail oracle on
+   the driven Start schedule for phase-gated execution rows at `0x8002BEEC`
+   and `0x800078EC`, including predecessor and target bytes. Then batch one
+   port census at the equivalent target phase with the existing controls and
+   the landed static `rs_memset` entry/caller fields; do not change output or
+   audio behavior.
+2. Discriminator: driven retail rows showing nonzero target bytes from
+   `0x8002BEEC -> 0x800078EC`, paired with a port zero-fill row and no matching
+   port edge, confirm an upstream producer/dispatch gap. A port row with the
+   matching edge and nonzero bytes selects a route/translation mismatch. A
+   matching edge with zero bytes on both sides selects a legitimate-zero
+   writer and moves the search to the later producer. Missing retail phase
+   rows invalidate the oracle arm rather than supporting a null conclusion.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
@@ -157,6 +165,7 @@ writer and initializer ordering are the measured explanation.
 
 Latest M5 evidence:
 
+- `scratch/agent/s3386_m5_direct_writer_census.md`
 - `scratch/agent/s3376_m5_zero_pcm_source.md`
 - `scratch/agent/s3379_m5_source_writer.md`
 - `scratch/agent/s3375_m5_port_pcm_writer.md`
