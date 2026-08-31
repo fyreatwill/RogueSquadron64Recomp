@@ -129470,3 +129470,20 @@ hangar and the process was SIGKILLed at 36 seconds. Neither capture added a
 new corrected-slot write. No behavior or mitigation changed. The next unit is
 the existing same-build port slot/status qualification in reachable hangar.
 Evidence: `scratch/agent/s3346_m5_retail_indirect_exec.md`.
+
+## Session 3347 (2026-08-30) — M5 slot/status qualification route check
+
+The Debug target rebuilt successfully and the existing LLE/image slot-status
+recipe ran once with phase, task, PCM, route, and voice diagnostics. Host/task/
+PCM controls were positive: the port produced 9,961 audio-task ABI rows,
+9,961 DMA rows, and 9,986 PCM source and consumer rows. It reached VI 320,
+640, and title VI 1024 at `0x00790400`, but never reached the required hangar
+VI 512 at `0x006AB400` before the 180-second watchdog SIGKILL.
+
+No target-phase slot/status rows or named consumer-PC rows for `0x80094648`,
+`0x8009B600`, `0x8009B85C`, or `0x8009BDE8` were available. This is
+route-invalid and selects none of `H-PortSlotStatusMissing`,
+`H-PortConsumerUnreached`, or `H-PortProbeGap`. It rules out a total failure
+of the current recipe's real audio task and PCM controls, but does not rule
+out any target-phase slot/status explanation. No behavior change or
+mitigation was made. Evidence: `scratch/agent/s3347_m5_slot_status_route_invalid.md`.

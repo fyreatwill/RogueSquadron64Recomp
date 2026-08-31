@@ -4,9 +4,17 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3346 (2026-08-30). Compacted from
+Current maintenance marker: Session 3347 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3347 rebuilt the Debug target and ran the existing M5 slot/status
+qualification recipe. Host/task/PCM controls were positive and the port
+reached title VI 1024, but it did not reach hangar VI 512 before the 180 s
+watchdog. No target-phase slot/status or named consumer rows were available;
+this is route-invalid and selects none of the slot/status hypotheses. The
+next attempt must use the validated extended Start/spin-yield route that
+reaches VI 512, with the same controls and no behavior change.
 
 Session 3346 completed retail indirect execution attribution for the corrected
 callback pointer. With whole-RDRAM and title-phase controls live, the oracle
@@ -601,7 +609,10 @@ target row exists.
    the observed occupant transfer. The driven retry stalled before hangar and
    added no slot write. Next: qualify the port slot/status writer and consumer
    rows in reachable hangar; do not change a contract edge or add a
-   mitigation.
+   mitigation. Session 3347's rebuilt port run passed host/task/PCM controls
+   and reached title 1024 but stalled before hangar, so it selected none of
+   the three hypotheses. Next: use the validated extended Start/spin-yield
+   route that reaches VI 512, retaining the same control matrix.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
    (`H-RetailSlotConsumer`). The port image arm now reaches hangar with the
@@ -822,6 +833,7 @@ VI/publication: `s3276_m5_target_vi_publication_audit.md`,
 `s3279_retail_osvimode_slots.md`.
 M5 route: `s3272_m5_step1_pair.md`,
 `s3246_m5_port_vi_boundary_audit.md`.
+Latest route-invalid qualification: `s3347_m5_slot_status_route_invalid.md`.
 M3: `s3285_freelist_live_guard.md`,
 `s3249_m3_status03_audit.md`.
 Use `grep -n` plus a bounded `sed` window for `PORTING-STATE.md`; never

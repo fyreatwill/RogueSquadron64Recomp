@@ -1,35 +1,31 @@
-# NEXT work unit — qualify port slot/status edge against retail
+# NEXT work unit — rerun M5 slot/status qualification on validated hangar route
 
 HYPOTHESIS-ID: m5-slot-status-contract-gap
 
-Session 3346 observed the retail guest indirect edge
-`0x800919D4 -> 0x800919EC -> 0x80007910` with matching `prev_pc`, while the
-positive control and title phase were live. The pointer-source/host-dispatch
-thread is closed for this observed transfer. The remaining M5 Step 1 question
-is the port's missing slot/status consumer relation in reachable hangar.
+Session 3347 was route-invalid: the current `run_s3327` arm passed host/task/PCM
+controls and reached title VI 1024, but never reached VI 512, so it selected
+none of the slot/status hypotheses. Use the already validated extended
+Start/spin-yield route that reaches hangar, while retaining the same slot,
+status, and named-consumer measurements.
 
 Competing hypotheses:
 
-- `H-PortSlotStatusMissing`: the reachable port hangar truly lacks the writer
-  or status transition seen in retail.
+- `H-PortSlotStatusMissing`: the reachable port hangar lacks the retail writer
+  or status transition.
 - `H-PortConsumerUnreached`: the port writes the state, but the named consumer
-  path is not reached on the qualified route.
-- `H-PortProbeGap`: the port has both edges and the current instrumentation
-  misses them.
+  path is not reached.
+- `H-PortProbeGap`: both edges run, but the current instrumentation misses them.
 
-The next discriminating measurement is one same-build port run using the
-validated LLE/image hangar recipe, with whole-run host/task/PCM controls and
-phase-gated rows for the slot/status ranges `0x80141AD8:0x80141AF0` and
-`0x80154620:0x801546A0`, plus execution watches at
-`0x80094648,0x8009B600,0x8009B85C,0x8009BDE8`. A target-phase writer with
-consumer hits selects a complete port edge; writer rows without consumers
-select `H-PortConsumerUnreached`; neither writer nor consumer rows with all
-controls selects `H-PortSlotStatusMissing`; control-positive rows at the
-known consumer PCs with no target rows select `H-PortProbeGap`. Build once,
-run once, and do not change behavior or add a mitigation.
+Discriminator: a target-phase writer plus consumer hit selects a complete port
+edge; writer rows without consumers select `H-PortConsumerUnreached`; neither
+writer nor consumer with positive controls selects `H-PortSlotStatusMissing`;
+positive consumer-PC controls with no target rows select `H-PortProbeGap`.
+If VI 512 is absent again, classify the run route-invalid and select nothing.
 
-Exact command/script:
+Exact commands:
 
-    sed -n '1,220p' scratch/agent/run_s2289_m5_retail_slot_route.sh
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env ROGUESQ_LOG_M5_SLOT_STATUS=1 zsh scratch/agent/run_s2289_m5_retail_slot_route.sh
+    zsh scratch/agent/soak_queue/done/s1949_menu_input_yield_20260818-021858.sh
+
+Do not change behavior or add a mitigation. The positive controls must fire in
+the same run before interpreting any null target result.
