@@ -4,9 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3345 (2026-08-30). Compacted from
+Current maintenance marker: Session 3346 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3346 completed retail indirect execution attribution for the corrected
+callback pointer. With whole-RDRAM and title-phase controls live, the oracle
+observed `0x800919D4` loading `0x80007910`, `0x800919EC` executing with that
+target, and `0x80007910` entered with `prev_pc=0x800919EC`. A driven retry
+reached title 1024 but stalled before hangar, so no new slot-write count was
+obtained. This selects `H-GuestJalr` and refutes host dispatch as the
+explanation for the observed occupant transfer; no behavior change is
+authorized. Evidence: `scratch/agent/s3346_m5_retail_indirect_exec.md`.
 
 Session 3345 completed the static provenance audit for the corrected retail
 pointer slot. `initN64RspMixer` constructs `0x80007910` as an immediate and
@@ -585,8 +594,14 @@ target row exists.
    both retail and port use the legitimate immediate `0x80007910` initializer
    at `0x80091900`; there is no source memory access to instrument. The
    remaining discriminator is retail execution attribution versus host
-   dispatch at the later `0x800919D4`/`0x800919EC` edge. Do not change a
-   contract edge or add a mitigation.
+   dispatch at the later `0x800919D4`/`0x800919EC` edge. Session 3346 observed
+   the complete guest chain `0x800919D4 -> 0x800919EC -> 0x80007910`, with the
+   target entry's `prev_pc` equal to `0x800919EC`, under live whole-RDRAM and
+   title controls. This selects `H-GuestJalr` and refutes host dispatch for
+   the observed occupant transfer. The driven retry stalled before hangar and
+   added no slot write. Next: qualify the port slot/status writer and consumer
+   rows in reachable hangar; do not change a contract edge or add a
+   mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
    (`H-RetailSlotConsumer`). The port image arm now reaches hangar with the

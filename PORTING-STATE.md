@@ -129452,3 +129452,21 @@ mitigation was made. The next discriminator must cover the retail guest
 `jalr`/target attribution with the existing positive controls and corrected
 slot watch. Evidence:
 `scratch/agent/s3345_m5_pointer_provenance_audit.md`.
+## Session 3346 (2026-08-30) — attributed retail indirect callback execution
+
+The independent retail oracle was run with a whole-RDRAM positive control,
+the corrected physical slot watch `0x001499D4:0x001499D8`, and execution
+watches at `0x800919D4`, `0x800919EC`, and `0x80007910`. The positive control
+reached 10,000 callbacks and the run reached title VI 1024. The exact chain
+was observed at 80.4 seconds: `0x800919D4` loaded `0x80007910`,
+`0x800919EC` executed with `$v0=0x80007910` and `$a0=0x8009123C`, and the
+target entered with `prev_pc=0x800919EC`. This is independent evidence that
+the retail callback occupant is consumed by the guest indirect `jalr`; it
+refutes `H-HostDispatch` for that observed transfer.
+
+A fixed Start-press retry also passed the whole-RDRAM control and reached
+title 1024, independently observing the loaded target, but Rice stalled before
+hangar and the process was SIGKILLed at 36 seconds. Neither capture added a
+new corrected-slot write. No behavior or mitigation changed. The next unit is
+the existing same-build port slot/status qualification in reachable hangar.
+Evidence: `scratch/agent/s3346_m5_retail_indirect_exec.md`.
