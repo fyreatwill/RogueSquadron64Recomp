@@ -129773,3 +129773,20 @@ single-source; Session 3346 independently established that the same guest
 chain executes on retail. No build or behavior change was made.
 
 Evidence: `scratch/agent/s3362_m5_callback_argument_static_census.md`.
+## Session 3363 (2026-08-31) — captured retail callback argument ground truth
+
+The independent retail Rice oracle ran for 75 seconds with the validated
+Start schedule and passed all required controls: the whole-RDRAM positive
+control recorded 10,025 writes, the physical callback-table range
+`0x0011A8A4:0x0011A8B8` recorded 25 writes, and the route reached title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400`. It exited normally.
+
+The target-phase execution watch captured the guest chain
+`0x800919EC -> 0x80007910` with `$a0=0x8009123C` and `$v0=0x80007910` in the
+indirect call, and the target entry's previous PC was `0x800919EC`. The same
+run separately observed the direct `0x8009BC50 -> 0x80007910` path with
+`$a0=0x8009B5A8`. This selects `H-RetailLiteralArgument` and refutes an
+alternate retail argument or absent retail chain for the qualified route.
+Together with Session 3362's generated static census, this supplies two-line
+evidence. No behavior change was made. Raw capture:
+`scratch/agent/s3363_m5_retail_callback_argument/oracle.log`.

@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3362 (2026-08-31). Compacted from
+Current maintenance marker: Session 3363 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -35,6 +35,15 @@ as a concrete guest caller with a literal argument; the static result is
 single-source, with hardware execution of the same chain independently
 captured in Session 3346. Evidence:
 `scratch/agent/s3362_m5_callback_argument_static_census.md`.
+
+Session 3363's independent retail oracle passed whole-RDRAM (10,025 writes),
+callback-table (25 writes), title 1024, and hangar 512 controls. It captured
+`0x800919EC -> 0x80007910` with `$a0=0x8009123C` in both target phases, while
+the separate direct `0x8009BC50` path passed `0x8009B5A8`. This selects
+`H-RetailLiteralArgument` and refutes an alternate retail argument or absent
+retail chain. Together with Session 3362's static census this is two-line
+evidence; the missing port source/target census remains open. Evidence:
+`scratch/agent/s3363_m5_retail_callback_argument.md`.
 
 Session 3358 validated the session 3357 task-start pointer guard on the live
 route. The Debug binary reached title VI `1024 @ 0x00790400` at 14.6 s and
