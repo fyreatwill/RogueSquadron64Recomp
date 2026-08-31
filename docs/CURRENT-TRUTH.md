@@ -8,6 +8,16 @@ Current maintenance marker: Session 3326 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
+Session 3327's retail-first slot/status capture passed the whole-RDRAM control,
+observed 108 target-phase writes in `0x141AD0:0x141AF0` and 48,349 writes in
+`0x154620:0x1546A0`, and saw `0x80094648`, `0x8009B600`, `0x8009B85C`, and
+`0x8009BDE8` execute in the hangar phase. The same-build port image arm reached
+title 1024 and produced task/PCM controls but did not reach hangar within the
+lighter 120-second watchdog, so the port-side like-for-like comparison remains
+incomplete. This selects `H-RetailSlotConsumer` for the retail branch only and
+authorizes no behavior change. Evidence:
+`scratch/agent/s3327_m5_slot_status_consumer.md`.
+
 Session 3317 could not run the configured-host PatchesLib discriminator in
 this Darwin checkout: `E:/mips-toolchain` is absent. The substitute source
 reconciliation found no M5 Step 3 writer/consumer edge beyond the existing
@@ -340,12 +350,13 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. M5 Step 1 remains `H-ContractGap`, now narrowed by Session 3326:
+1. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3326–3327:
    retail does not write the candidate PCM/output spans during title or
-   hangar, while it does write slot/status words. Design the next single
-   discriminator around the target-phase slot/status writer-to-consumer
-   relation, grounded against retail before adding instrumentation. Do not
-   change a contract edge or add a mitigation.
+   hangar, while it does write slot/status words and executes the named
+   status-consumer PCs. The retail branch selects `H-RetailSlotConsumer`, but
+   the port arm did not reach hangar, so complete the port route qualification
+   with bounded logging before adding a new probe. Do not change a contract
+   edge or add a mitigation.
 2. Keep configured-host PatchesLib validation as an open dependency. When
    that host is available, run `cmake --build build --config Debug --target
    PatchesLib` to distinguish build availability from source/link failures.

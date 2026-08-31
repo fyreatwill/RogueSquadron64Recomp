@@ -129047,3 +129047,27 @@ moves the missing-edge search upstream to the slot/status writer-consumer
 relation. It rules out a target-phase retail write to those spans, but does
 not identify the missing port contract. No behavior change or mitigation was
 made. Evidence: `scratch/agent/s3326_m5_retail_boundary.md`.
+
+## Session 3327 (2026-08-30) — captured retail slot/status consumers
+
+The required ground-truth-first capture watched whole RDRAM, slot
+`0x141AD0:0x141AF0`, status `0x154620:0x1546A0`, and execution PCs
+`0x80094648`, `0x8009B600`, `0x8009B85C`, and `0x8009BDE8`. Whole-RDRAM
+produced 58,457 writes, the slot range 108 writes, and the status range
+48,349 writes. Retail reached hangar `512 @ 0x006AB400`; the four execution
+counts were 288, 12,703, 12,703, and 3,758. This selects
+`H-RetailSlotConsumer` for the retail branch and proves the positive control.
+
+The Debug target rebuilt. The first port arm used `ROGUESQ_LOG_ALL` and reached
+title 1024 but logging prevented hangar qualification. The lighter same-build
+rerun reached title and produced positive task/PCM controls (18,904 task joins,
+89 PCM source, 89 PCM consumer, 912 audio-route rows), but did not reach hangar
+within the 120-second SIGKILL watchdog. No crash/abort marker appeared. Thus
+`H-PortMatchesRetail` is not selected: the port-side comparison is incomplete,
+and no behavior change or mitigation is authorized. The initial port launch
+failed because `timeout` is unavailable on this Darwin host (`rc=127`); the
+explicit PID watchdog reruns are the valid captures.
+
+Evidence: `scratch/agent/s3327_m5_slot_status_consumer.md` and the captures in
+`scratch/agent/s3327_m5_slot_status_oracle/` and
+`scratch/agent/s3327_m5_slot_status_port/`.

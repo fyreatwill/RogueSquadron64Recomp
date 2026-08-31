@@ -1,14 +1,12 @@
-# NEXT work unit — identify the M5 slot/status consumer boundary
+# NEXT work unit — complete the port-side slot/status route qualification
 
 HYPOTHESIS-ID: m5-step1-slot-status-consumer
 
-Run one ground-truth-first discriminator for the target-phase slot/status
-consumer boundary exposed by Session 3326. The candidate output spans had no
-retail target-phase writes, but slot `0x141AD0:0x141AF0` and status
-`0x154620:0x1546A0` did. Before building anything, use the oracle with the
-whole-RDRAM control and watch those two ranges plus the named PCs
-`0x80094648`, `0x8009B600`, `0x8009B85C`, `0x8009BDE8`. If the control is live,
-build one port probe for the same ranges and run one phase-gated image arm.
+Complete the port-side qualification for the retail slot/status relation. The
+retail oracle result is valid and selects `H-RetailSlotConsumer`; the port image
+arm reached title but not hangar because logging was too heavy. Use the existing
+bounded hooks, no `ROGUESQ_LOG_ALL`, and one 180-second phase-gated image arm.
+Do not add a behavior change or mitigation.
 
 ## Competing hypotheses
 
@@ -18,15 +16,16 @@ build one port probe for the same ranges and run one phase-gated image arm.
   move upstream to the writer's input/dispatch relation.
 - `H-PortMatchesRetail`: the qualified port has the same slot/status writer
   and order, so the current symptom is downstream.
+- `H-PortRouteStillIncomplete`: the port again fails to reach hangar, so no
+  port-side comparison is evaluable.
 
 ## Discriminator
 
-The oracle watch must pass the whole-RDRAM positive control and emit
-target-phase slot/status writes with PC attribution. A slot write followed by
-the named status/consumer order selects `H-RetailSlotConsumer`; status-only
-activity selects `H-RetailStatusOnly`; matching writer/order rows in the
-qualified port select `H-PortMatchesRetail`. A positive control without the
-target slot/status activity is invalid for this unit.
+The prior oracle watch passed whole-RDRAM and emitted target-phase slot/status
+writes plus all four named PC controls. The next port run is valid only if it
+reaches `512 @ 0x006AB400`; matching writer/order rows select
+`H-PortMatchesRetail`, while another pre-hangar stop selects
+`H-PortRouteStillIncomplete` and keeps the missing edge open.
 
 ## Exact starting checks
 
@@ -35,12 +34,12 @@ sed -n '1,220p' tools/oracle/README.md
 rg -n 'slot|output|PCM|B40|route|candidate' docs/M5-AUDIO-PLAN.md docs/CURRENT-TRUTH.md
 ```
 
-Then run the source-grounded oracle watch before any build. If its positive
-control and target phase pass:
+Use the already rebuilt Debug target and run:
 
 ```sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
+zsh scratch/agent/run_s3327_m5_slot_status_port.sh
 ```
 
-Use one phase-gated image-arm capture with all slot/status and PCM controls;
-do not change behavior or add a mitigation.
+The script uses bounded phase/task/PCM diagnostics, a 180-second watchdog, and
+SIGKILL. The expected discriminating outcome is hangar reachability followed
+by matching or absent slot/status rows; no behavior change is authorized.
