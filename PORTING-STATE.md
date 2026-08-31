@@ -129981,3 +129981,25 @@ provisionally selects an output-data gap over a wholly unreached task
 consumer. The exact named `0x80019B74` entry remains unproven, so this
 distinction is single-source. No wait, slot, status, or output behavior
 changed. Evidence: `scratch/agent/s3373_m5_consumer_output_contract.md`.
+
+## Session 3374 (2026-08-31) — independently qualified retail PCM writer
+
+Ran the prescribed retail ground-truth experiment before building any port
+instrument. The oracle used Rice, the canonical Start schedule, four physical
+PCM-span watches, a whole-RDRAM positive control, post-store snapshots, and
+hangar-phase writer histograms. The control fired 12,496 writes; title
+`1024 @ 0x00790400` and hangar `512 @ 0x006AB400` were reached. The three
+primary spans (`0x166450..0x166750`, `0x169150..0x169450`, and
+`0x168E50..0x169150`) each received 768 writes from guest PC `0x800078EC`.
+Post-store snapshots were nonzero (744/768, 754/768, and 747/768 bytes;
+FNV `A222DCFE`, `E71AD8A6`, `A3C7EF13`). The fourth span received 192 writes
+from `0x80022B1C/20/24/28` and was treated as secondary.
+
+Compared with Session 3373's qualified port rows for the same spans (`nz=0`,
+`F59C39C5`), this selects `H-PortPCMWriterGap` and refutes
+`H-RetailZeroPCMIsLegitimate` for the primary spans. It also makes a join-key
+error unlikely, because the watched physical ranges are the same port PCM
+addresses. The result does not identify the missing port source edge, so no
+behavior change was made. It rules out treating the zero PCM payload as
+legitimate silence and moves the next unit to a regeneration-surviving port
+writer/source census. Evidence: `scratch/agent/s3374_m5_retail_pcm_writer.md`.

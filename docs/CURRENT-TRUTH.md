@@ -4,9 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3372 (2026-08-31). Compacted from
+Current maintenance marker: Session 3374 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3374's independent retail PCM watch passed the whole-RDRAM control
+(12,496 writes), reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, and attributed the three primary PCM spans to guest
+`0x800078EC` with nonzero post-store snapshots. The qualified port rows for
+those same spans remained zero-valued (`nz=0`, `F59C39C5`). This selects
+`H-PortPCMWriterGap` and refutes the idea that retail's zero output is a
+legitimate silence path; the writer/value edge is now the active M5 target.
+No output substitution or mitigation is authorized. Evidence:
+`scratch/agent/s3374_m5_retail_pcm_writer.md`.
 
 Session 3373's corrected M5 consumer/output run reached title `1024 @
 0x00790400` and hangar `512 @ 0x006AB400`, with audio-task/PCM/filter
@@ -714,10 +724,11 @@ The remaining M5 discriminator is the named consumer/output/PCM relation; do
 not change a wait, slot, or status edge.
 Session 3373 qualified the existing task/output joins: consumer matches and
 completed tasks were numerous, but the named consumer-entry marker stayed at
-zero and sampled PCM payloads stayed zero-valued. Treat this as a provisional
-output-data gap, not authorization to change a consumer, writer, or gate. The
-next discriminator must independently name the legitimate retail writer/value
-for the zero PCM destination and match it to the existing port join.
+zero and sampled PCM payloads stayed zero-valued. Session 3374 independently
+named the retail guest writer/value for the three primary PCM spans and found
+nonzero data. The next discriminator is a regeneration-surviving port census
+of the writer/source path; do not substitute output data or change waits,
+slots, status, or consumer dispatch until that source edge is named.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
