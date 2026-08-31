@@ -498,7 +498,27 @@ measurement. It does not declare message zero corrupt or identify the
 earlier state-pointer producer. Evidence is in
 [M5-S3443-FREQUENCY-OUTPUT-JOIN.md](M5-S3443-FREQUENCY-OUTPUT-JOIN.md).
 
+Session 3444 ran the state-pointer producer census after the independent
+retail control. Retail passed the whole-RDRAM control, reached both title
+origins and hangar, and its phase-gated field dump showed varied source words
+and branch states for `s1=0x80194B20`. The first port attempt hit the known
+pre-title scheduler crash in the image arm; the immediate retry qualified
+both silent and image arms through title/hangar, with all consumer/output
+positive controls live, 512 consumer rows and 343 output rows per arm, and no
+crash/abort markers. Both port arms matched: `0x80001CB8` used state pointers
+in `0x801BBD..`, their pointed word was zero, and `0x80001CC8` returned `0x2`.
+This selects `H-PortStatePointerGap` at the observed first-output boundary
+and refutes parity there. The first retail state-pointer producer remains
+unresolved; message-zero legitimacy is not established. Evidence is in
+[M5-S3444-STATE-POINTER-PRODUCER.md](M5-S3444-STATE-POINTER-PRODUCER.md).
+
 ## Next steps
+
+Session 3444's next unit is to locate the first producer of the retail
+`0x80194B20` state-pointer family. Ask the oracle first with whole-RDRAM,
+both title origins, hangar, and `--watch-pc 0x80001CB8,0x80001CC8`; then add
+the generated-`jal` caller/entry candidates and `--pc-field-dump` in one
+instrumented build/run. Keep the state-pointer/output join as the discriminator.
 
 Session 3432 repeated the frequency-result work unit. The retail oracle passed
 its whole-RDRAM control (10,041 callbacks) and observed 41 writes to physical

@@ -131458,3 +131458,29 @@ writeback changed.
 Evidence: `docs/M5-S3443-FREQUENCY-OUTPUT-JOIN.md`,
 `scratch/agent/s3443_retail_output_join/oracle.log`, and
 `scratch/agent/s3442_m5_frequency_output_pair/`.
+
+## Session 3444 (2026-08-31) — traced first state-pointer producer
+
+Ran the independent retail oracle first with whole-RDRAM positive control,
+both title origins, hangar origin, and execution/field watches at
+`0x80001CB8`/`0x80001CC8`. The control reached 10,000 callbacks and the
+phase-gated field dump fired. Retail `s1=0x80194B20` rows showed varied source
+words and branch states in both target 512 origins.
+
+Built the target once and ran the silent/Factor 5 image pair. The first image
+arm hit the known pre-title scheduler crash at guest PC `0x8000834c`; the
+immediate retry qualified both arms through title 1024 and hangar 512. Both
+positive controls fired, both arms had 512 consumer rows and 343 output rows,
+and neither had crash/abort markers. The arms matched: port
+`0x80001CB8` used `0x801BBD..` state pointers with pointed word zero, and
+`0x80001CC8` returned `0x2`.
+
+This selects `H-PortStatePointerGap` at the observed first-output boundary
+and refutes state-pointer parity there. It does not identify the first retail
+producer or prove message zero corrupt. The initial crash was not used as
+evidence after the fixed retry. No waits, slots, dispatch, clear behavior, or
+PCM writeback changed.
+
+Evidence: `docs/M5-S3444-STATE-POINTER-PRODUCER.md`,
+`scratch/agent/s3444_m5_state_pointer/oracle/oracle.log`, and
+`scratch/agent/s3442_m5_frequency_output_pair/`.
