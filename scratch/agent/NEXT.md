@@ -1,36 +1,36 @@
-# NEXT work unit — retail ground truth for M5 consumer reachability
+# NEXT work unit — port M5 consumer entry qualification
 
 HYPOTHESIS-ID: m5-consumer-reachability-audit
 
-Session 3350 completed a bounded M3 message-queue API guard audit. The
-internal `do_send`/`do_recv` guard did not protect public entry points because
-`osSendMesg`, `osJamMesg`, `osRecvMesg`, and `osCreateMesgQueue` could call
-`TO_PTR` first. Those entry points now reject out-of-KSEG0 queue pointers;
-the existing valid queue path is unchanged.
+Session 3351's retail oracle passed the whole-RDRAM control, reached hangar
+`512 @ 0x006AB400`, and executed all five named PCs with stable previous-PC
+chains. `H-ConsumerWrongNames` is refuted on retail; the remaining split is
+port reachability versus a port status/slot gate.
 
-Competing hypotheses for the next M5 ground-truth unit:
+Competing hypotheses for the next unit:
 
-- `H-ConsumerIndirect`: retail executes the service/accumulator bodies through
-  an indirect callback edge, while the port has a reachability gap.
-- `H-ConsumerGate`: retail enters the bodies but a status/slot predicate gates
-  the named stores, and the port differs at that predicate.
-- `H-ConsumerWrongNames`: the retail PCs do not represent the corresponding
-  consumer route despite the generated bodies.
+- `H-PortConsumerIndirectGap`: retail executes the five bodies, but the port
+  does not reach the corresponding generated entries.
+- `H-PortConsumerGate`: the port reaches the entries, but its slot/status
+  predicate prevents the downstream consumer work.
+- `H-PortProbeMismatch`: the existing port probe labels do not cover the
+  actual generated consumer entries.
 
-Discriminator: run the retail oracle with a whole-RDRAM positive control and
-phase-gated exact execution watches for `0x8009B5A8`, `0x8009BD7C`,
-`0x8009B600`, `0x8009B85C`, and `0x8009BDE8`, retaining each watch's
-`prev_pc` and hangar origin `0x006AB400`. Retail entry plus named stores with
-an indirect previous-PC chain selects `H-ConsumerIndirect`; entry with stores
-absent and a live status/slot predicate selects `H-ConsumerGate`; no
-corresponding retail entry/store activity selects `H-ConsumerWrongNames`. An
-absent hangar phase or absent whole-RDRAM control is invalid, not a null.
+Discriminator: add regeneration-surviving entry counters for all five PCs to
+the existing port probe, build once, and run the validated extended
+Start/spin-yield recipe with host/task/PCM, title `1024`, and hangar
+`512 @ 0x006AB400` controls. All five port entries zero with live controls
+selects `H-PortConsumerIndirectGap`; entries live while existing slot/status
+rows remain active selects `H-PortConsumerGate`; entries live and the current
+probe remains silent selects `H-PortProbeMismatch`. Missing controls invalidate
+the run, not a null.
 
-Exact command shape from the repo root (substitute the documented debug-core,
-retail-ROM, and Rice-plugin paths):
+Exact preparation and run shape:
 
-    tools/oracle/build/rs64_oracle --core <debug-core.dylib> --rom <retail.z64> --secs 180 --video <rice.dylib> --watch-write 0x0:0x800000 --watch-pc 0x8009B5A8 --watch-pc 0x8009BD7C --watch-pc 0x8009B600 --watch-pc 0x8009B85C --watch-pc 0x8009BDE8 --pc-phase-log-width 0x006AB400:512 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    cd build/Debug
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp > ../../scratch/agent/s3352_m5_port_consumer_entry.log 2>&1
 
-Do not build or add a port instrument until the oracle positive control and
-hangar phase both pass. Capture output to a non-dot final path and use SIGKILL
-if the frontend needs stopping.
+The entry probe must be added to the regeneration/fixup path before this
+build; do not hand-edit generated functions. Use SIGKILL if the watchdog must
+stop the process.

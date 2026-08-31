@@ -4,9 +4,16 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3350 (2026-08-31). Compacted from
+Current maintenance marker: Session 3351 (2026-08-31). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3351 completed the independent retail M5 consumer-reachability
+capture. The whole-RDRAM positive control fired, the driven run reached hangar
+`512 @ 0x006AB400`, and all five named service/consumer PCs executed with
+stable previous-PC chains. This refutes `H-ConsumerWrongNames` and proves the
+retail route is live; it does not distinguish a port reachability gap from a
+port status/slot gate. Evidence: `scratch/agent/s3351_m5_retail_consumer_oracle.md`.
 
 Session 3350 completed a bounded M3 message-queue API guard audit. The
 existing internal `do_send`/`do_recv` guard was bypassed by public
@@ -638,11 +645,14 @@ target row exists.
    `H-PortConsumerUnreached`. Session 3349 found one direct consumer chain for
    `0x80094648`, but no direct or statically resolved indirect chain to the
    service/accumulator consumers. The static map is incomplete and selects
-   none of the three reachability hypotheses. Next: use the independent retail
-   oracle with a whole-RDRAM positive control and phase-gated exact execution
-   watches for service entry, accumulator entry, and the three consumer PCs;
-   retain previous-PC attribution. Do not change behavior or add a port probe
-   before that ground-truth capture.
+   none of the three reachability hypotheses. Session 3351's independent
+   retail oracle passed the whole-RDRAM control, reached hangar
+   `512 @ 0x006AB400`, and executed all five watched PCs with stable
+   previous-PC chains. This refutes `H-ConsumerWrongNames` and proves the
+   retail route is live, but cannot split a port reachability gap from a port
+   status/slot gate. Next: add one regeneration-surviving port entry probe for
+   the same five PCs, preserving the existing host/task/title/hangar controls;
+   do not change behavior or add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

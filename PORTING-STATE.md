@@ -129541,3 +129541,22 @@ corrupted-pointer class; this guard contains the dereference but does not
 identify or repair the guest writer. The change rules out only the public API
 pre-check gap as an unguarded crash site; it does not explain the M5 consumer
 reachability gap. Evidence: `scratch/agent/s3350_m3_mesgqueue_api_guard.md`.
+
+## Session 3351 (2026-08-31) — captured retail M5 consumer reachability
+
+Ran the retail oracle for 180 seconds with Rice, the eleven-Start schedule,
+the whole-RDRAM positive-control watch, and phase-gated execution watches.
+The control reached its 10,000-hit cap and the oracle completed 10,769 VI
+frames; the target hangar phase armed at `512 @ 0x006AB400`. All five named
+PCs executed: `0x8009B5A8` 8,469 times, `0x8009BD7C` 1,879 times,
+`0x8009B600` 8,469 times, `0x8009B85C` 8,469 times, and `0x8009BDE8`
+1,879 times. Their previous-PC histograms were stable and identify the
+service/accumulator route (`0x80019B74`, `0x80097E48`/`0x80097EBC`,
+`0x8009B5FC`, `0x8009B858`, and `0x8009BDE4`).
+
+This refutes `H-ConsumerWrongNames` and proves the retail route is live. It
+does not distinguish a port reachability gap from a port status/slot gate,
+because no port arm was part of this work unit. The result rules out only the
+retail-side absence interpretation; it authorizes no behavior change or
+mitigation. Evidence: `scratch/agent/s3351_m5_retail_consumer_oracle.md` and
+`scratch/agent/s3351_retail_consumer_oracle.log`.
