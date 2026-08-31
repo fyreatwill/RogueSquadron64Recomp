@@ -4,8 +4,8 @@ Operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable backgroun
 is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
-Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3441 (2026-08-31). This file was compacted
+Current maintenance marker: Session 3442 (2026-08-31); active state refreshed
+through Session 3442 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -674,6 +674,19 @@ rows as expected. This selects `H-PortField348ClearIsExpected` and refutes
 downstream missing nonzero producer/PCM source unresolved. Evidence is in
 `scratch/agent/s3410_retail_field348_ground_truth/correct-result.txt` and
 `scratch/agent/s3410_m5_field348_input_join/`.
+
+Session 3442 ran the first post-consumer output-use census. The independent
+retail oracle passed whole-RDRAM control (93,638,451 writes), reached title
+and hangar, and executed `0x80001C0C` 7,875 times and `0x80001CC8` 7,630
+times in the driven route. The fresh-build silent/image pair passed the
+consumer and output positive controls; both arms reached title and produced
+343 joined output rows, with matching initial tuples and `0x80001CC8` output
+`0x2`. An image retry reached the same output count without crash or abort.
+This establishes live first-output use on both port arms and live retail load
+sites, but the oracle watch does not provide a value-level queue/state join.
+It therefore selects `H-OutputValueJoinUnevaluable`, not port divergence or
+parity, and moves the next probe to a retail value-level output join. Evidence
+is in [M5-S3442-FREQUENCY-OUTPUT-USE.md](M5-S3442-FREQUENCY-OUTPUT-USE.md).
 
 ## Durable boundaries and operating rules
 

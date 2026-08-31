@@ -131408,3 +131408,27 @@ dispatch, clear behavior, or PCM writeback changed. Evidence:
 `docs/M5-S3441-FREQUENCY-CONSUMER.md`,
 `scratch/agent/s3441_retail_consumer_groundtruth/oracle.log`, and the final
 pair logs.
+## Session 3442 (2026-08-31) — traced first post-consumer frequency output use
+
+The independent retail oracle passed the whole-RDRAM positive control with
+93,638,451 writes, reached 3,572 VI frames, and executed the selected load
+sites `0x80001C0C` 7,875 times and `0x80001CC8` 7,630 times. Both sites were
+live in the driven title and hangar phases.
+
+The fresh-build silent/image pair passed the consumer and output positive
+controls. Both arms reached title and produced 343 joined output rows; the
+image retry reached the same result without crash or abort. Initial joined
+tuples matched between arms, including `0x80001CC8` output `0x2`, with the
+existing `(queue,msg,callsite,state)` key present.
+
+This establishes live first-output use on both port arms and live retail load
+sites, but the oracle execution watch does not expose a value-level queue/state
+join. It therefore selects `H-OutputValueJoinUnevaluable`, not port divergence
+or parity. The next probe must close the retail value-level join. The missing
+runner referenced by NEXT was recreated as
+`scratch/agent/run_s3442_m5_frequency_output_pair.sh`. No waits, slots,
+dispatch, clear behavior, or PCM writeback changed.
+
+Evidence: `docs/M5-S3442-FREQUENCY-OUTPUT-USE.md`,
+`scratch/agent/s3442_retail_output_sites.log`, and
+`scratch/agent/s3442_m5_frequency_output_pair/`.

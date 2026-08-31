@@ -1995,6 +1995,16 @@ static void sendtgt_note(uint32_t mq, uint64_t tid, bool want_stack) {
     }
 }
 
+struct Rs64M5FrequencyPending {
+    uint32_t queue;
+    uint32_t msg;
+    uint32_t callsite;
+    uint32_t state;
+    bool valid;
+};
+
+static thread_local Rs64M5FrequencyPending g_rs64_m5_frequency_pending{0, 0, 0, 0, false};
+
 static void rs64_m5_frequency_producer(uint8_t* rdram, recomp_context* ctx,
                                        uint32_t mq_addr, uint32_t msg,
                                        int32_t flag) {
@@ -2091,8 +2101,10 @@ extern "C" void rs64_m5_frequency_consumer(uint8_t* rdram,
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_FREQUENCY_CONSUMERS");
+        const char* output = std::getenv("ROGUESQ_LOG_M5_FREQUENCY_OUTPUT");
         return (all && all[0] && all[0] != '0') ||
-               (own && own[0] && own[0] != '0');
+               (own && own[0] && own[0] != '0') ||
+               (output && output[0] && output[0] != '0');
     }();
     if (!enabled || U32(ctx->r4) != 0x8010FEE0u || U32(ctx->r2) != 0) return;
     const uint32_t width = rs64_vi_committed_width();
@@ -2104,6 +2116,7 @@ extern "C" void rs64_m5_frequency_consumer(uint8_t* rdram,
     if (key != bucket) { bucket = key; rows = 0; }
     if (rows >= 512u) return;
     const uint32_t state = U32(ctx->r16);
+    g_rs64_m5_frequency_pending = {U32(ctx->r4), U32(ctx->r5), callsite, state, true};
     auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
         const uint32_t p = guest - 0x80000000u;
@@ -2126,6 +2139,44 @@ extern "C" void rs64_m5_frequency_consumer(uint8_t* rdram,
         std::fprintf(stderr, "[m5-frequency-consumer-positive] post-receive witness is live\n");
         std::fflush(stderr);
     }
+}
+
+extern "C" void rs64_m5_frequency_output_use(uint8_t* rdram,
+                                                 recomp_context* ctx,
+                                                 uint32_t callsite,
+                                                 uint32_t output_pc) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_FREQUENCY_OUTPUT");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    if (!g_rs64_m5_frequency_pending.valid ||
+        g_rs64_m5_frequency_pending.callsite != callsite) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 1024u || (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != bucket) { bucket = key; rows = 0; }
+    if (rows >= 512u) return;
+    std::fprintf(stderr,
+        "[m5-frequency-output] ordinal=%u phase=%u width=%u origin=0x%06X "
+        "queue=0x%08X msg=0x%08X callsite=0x%08X state=0x%08X "
+        "output_pc=0x%08X output=0x%08X a0=0x%08X a1=0x%08X "
+        "a2=0x%08X a3=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, g_rs64_m5_frequency_pending.queue,
+        g_rs64_m5_frequency_pending.msg, callsite,
+        g_rs64_m5_frequency_pending.state, output_pc, U32(ctx->r3), U32(ctx->r4),
+        U32(ctx->r5), U32(ctx->r6), U32(ctx->r7), U32(ctx->r31));
+    std::fflush(stderr);
+    if (rows == 1) {
+        std::fprintf(stderr, "[m5-frequency-output-positive] first post-consumer output is live\n");
+        std::fflush(stderr);
+    }
+    g_rs64_m5_frequency_pending.valid = false;
 }
 
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
