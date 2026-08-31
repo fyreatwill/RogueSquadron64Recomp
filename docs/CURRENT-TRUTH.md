@@ -18,6 +18,18 @@ evidence; it names no missing writer and authorizes no behavior change.
 The run later hit the known unaligned PI-DMA abort after the controls fired.
 Evidence: `scratch/agent/s3330_m5_slot_status_qualification.md`.
 
+Session 3331 statically audited the four retail PCs and both watch ranges.
+All four PCs have generated bodies: `0x80094648` is in `startSongSequence`
+with three direct generated callers, `0x8009B600` and `0x8009B85C` are in
+`serviceVoicePoolFrame`, and `0x8009BDE8` is in
+`accumulateVoiceSampleOffset`. The latter three have no direct generated
+callsite because the audio callback path is indirect. The indexed
+`0x80141AD8+` channel writer and literal `0x80154620` voice-table accesses are
+present; `0x80141AD0` is not a literal generated access. This selects no
+hypothesis: absence and range mismatch are not supported, while a caller gate
+cannot be proven without tracing callback-table population. Evidence:
+`scratch/agent/s3331_m5_slot_status_source_audit.md`.
+
 Session 3329 resolved the apparent title blocker in one phase-gated port run:
 the image arm committed VI-1024 at 50.3 s, reached hangar VI-512 at 94.2 s
 with the extended 60/90/120-second autopilot, and passed task/PCM controls.
@@ -135,6 +147,11 @@ the join's 640-only latch filter. Evidence:
 `scratch/agent/s3322_retail_post_swap_join.md`.
 
 ## Live investigation (s3303–s3324)
+
+The Session 3331 source audit leaves the M5 slot/status edge unresolved. The
+next useful boundary is the callback table around `0x80019B74`: enumerate all
+writers and installed target values for the table slots, then follow its
+initialization chain. Do not change behavior based on the static census.
 
 Session 3320 closed the independent retail target-publication discriminator.
 The no-video setup correction and the join-cap limitation are recorded in the

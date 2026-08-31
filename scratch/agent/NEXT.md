@@ -1,38 +1,39 @@
-# NEXT work unit — audit port callsites for the missing retail slot/status edge
+# NEXT work unit — audit callback-table population for the missing slot/status edge
 
-HYPOTHESIS-ID: m5-step1-slot-status-source-audit
+HYPOTHESIS-ID: m5-slot-status-callback-table-audit
 
-Session 3330 established that the image arm reaches hangar with valid task and
-PCM controls but has no slot/status rows or named retail consumer-PC rows.
-Perform one bounded static audit; do not change behavior or add a mitigation.
+Session 3331 found all four retail consumer PCs as generated bodies, but the
+three voice-side bodies have no direct generated callsite. Perform one bounded
+static audit of the indirect callback table around `0x80019B74`; do not build,
+run, change behavior, or add a mitigation.
 
 ## Competing hypotheses
 
-- `H-PortCallsiteAbsent`: the generated port tree has no reachable references
-  to one or more retail consumer PCs, so the missing edge is dispatch/source
-  coverage.
-- `H-PortCallsiteGated`: the references exist, but a state/route predicate
-  prevents them from executing in the qualified hangar path.
-- `H-PortRangeWriterDifferent`: the port uses different callers or data
-  ranges, so matching the retail PC list is the wrong discriminator.
+- `H-CallbackTargetsInstalled`: the callback table contains the expected
+  `0x8009B5A8` and `0x8009BD7C` targets and its initializer is reachable.
+- `H-CallbackTargetsAbsent`: one or both targets are never written into the
+  table, selecting callback-table/source coverage as the missing edge.
+- `H-CallbackTargetsGated`: the targets are written, but the table initializer
+  is behind a predicate that is false on the qualified port route.
 
 ## Discriminator
 
-No build or runtime run. From the repository root, enumerate the generated
-tree and source symbol maps for all four retail PCs and both retail watch
-ranges, then inspect each containing function and its immediate callers:
+No build or runtime run. From the repository root, inspect the current
+generated tree and callback setup/dispatch code:
 
-    rg -n -i '80094648|8009b600|8009b85c|8009bde8|141ad0|154620' \
-      RecompiledFuncs src lib docs
-    rg -n 'func_80094648|func_8009B600|func_8009B85C|func_8009BDE8' \
-      RecompiledFuncs src
+    rg -n -i '80019b68|80019b74|80019b78|8009b5a8|8009bd7c|8009bde8' \
+      /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+    rg -n -i '8012a4a4|8012a4a8|callback|jalr|0x8009b5a8|0x8009bd7c' \
+      /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+      /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 
-The discriminating result is: no references selects `H-PortCallsiteAbsent`;
-references with a proven blocked predicate selects `H-PortCallsiteGated`;
-different concrete callers/ranges selects `H-PortRangeWriterDifferent`.
-If the audit cannot classify all four PCs and both ranges, do not infer a
-hypothesis; record the unresolved site list and redesign the next probe.
+Enumerate every store feeding the callback slots and the immediate
+initialization/caller chain. `H-CallbackTargetsInstalled` requires both target
+values plus a reachable initializer; `H-CallbackTargetsAbsent` requires a
+complete writer census with neither value; `H-CallbackTargetsGated` requires
+the target writes plus a concrete false predicate. If any slot or writer
+cannot be classified, record the unresolved site list and redesign rather
+than infer a hypothesis.
 
-The Session 3330 evidence remains at
-`scratch/agent/s3330_m5_slot_status_qualification.md`; no Step 3 contract
-change is authorized by this static audit alone.
+The Session 3330 qualification and Session 3331 audit authorize no Step 3
+contract change.

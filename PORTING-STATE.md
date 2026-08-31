@@ -129164,3 +129164,20 @@ single-source on the port side; the independent retail writer/consumer
 capture remains the comparison line.
 
 Evidence: `scratch/agent/s3330_m5_slot_status_qualification.md`.
+
+## Session 3331 (2026-08-30) — audited M5 slot/status source callsites
+
+The prescribed bounded static audit enumerated the generated tree and the
+companion symbol map for retail PCs `0x80094648`, `0x8009B600`, `0x8009B85C`,
+and `0x8009BDE8`, plus ranges `0x80141AD0:0x80141AF0` and
+`0x80154620:0x801546A0`. All four PCs have generated bodies. `0x80094648`
+is in `startSongSequence` and has three direct generated callers; the other
+three are in `serviceVoicePoolFrame` or `accumulateVoiceSampleOffset` and
+have no direct generated callsite because the audio path dispatches through an
+indirect callback table. The indexed channel writer and literal voice-table
+accesses are present; `0x80141AD0` has no literal generated access.
+
+This selects no hypothesis. It rules out a missing generated body and a
+simple range mismatch, but cannot prove a caller gate without classifying the
+callback-table writers and installed target values. No behavior change was
+made. Evidence: `scratch/agent/s3331_m5_slot_status_source_audit.md`.
