@@ -130886,3 +130886,20 @@ for the next port entry comparison. It does not identify the port's missing
 input or establish that any retail zero writes are illegitimate. No port
 instrumentation, runtime behavior, waits, slots, dispatch, clear behavior, or
 PCM writeback changed. Evidence: `scratch/agent/s3420_retail_producer_entry_qualification/oracle_final2.log`.
+## Session 3419 (2026-08-31) — qualified port writer-entry arguments
+
+Added a regeneration-safe fixup witness for the rs_memset entry contract at
+the M5 producer boundary. The fresh Debug build ran silent and Factor 5 image
+arms concurrently with phase, whole-route, audio ABI/DMA, image-stage, and PCM
+controls. Both arms passed title 1024 and hangar 512; both writer-entry
+positive controls fired; neither crashed or aborted.
+
+The first hangar target entry in both arms was identical:
+`a0=0x801797B0`, `a1=0`, `a2=0x298`, and `v0=0x801797B0`. The image arm had
+4,909 image-stage rows and silent had none, while PCM remained zero. This
+selects H-PortEntryArgsZero and refutes matching nonzero port entry arguments
+at the observed boundary. The generated host call exposed `ra=0`, so the
+caller-route hypothesis remains open. The result does not establish that the
+zero fill is illegitimate; the next discriminator is a like-for-like retail
+entry tuple. Evidence: `docs/M5-S3419-WRITER-ENTRY-ARGS.md` and
+`scratch/agent/s3411_m5_downstream_join/{silent,image}.log`.

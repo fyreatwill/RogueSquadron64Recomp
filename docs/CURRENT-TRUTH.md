@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3418 (2026-08-31). This file was compacted
+through Session 3419 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -328,19 +328,32 @@ but is single-source ground truth and does not identify the port's missing
 input or make a legitimacy claim about retail zero writes. Evidence is in
 `scratch/agent/s3420_retail_producer_entry_qualification/oracle_final2.log`.
 
+Session 3419 ran the fresh-build port entry-argument witness in concurrent
+silent and Factor 5 image arms. Both arms passed title 1024 and hangar 512,
+both entry controls fired, and neither crashed or aborted. Their first
+phase-qualified target entries were identical:
+a0=0x801797B0, a1=0, a2=0x298, v0=0x801797B0; the image arm also retained
+4,909 image-stage rows while silent retained none. This selects
+H-PortEntryArgsZero and refutes matching nonzero entry arguments at the
+observed port boundary. The generated host call exposed ra=0, so caller route
+remains open. This does not establish that the zero fill is illegitimate; a
+like-for-like retail entry tuple is the next discriminator. Evidence is in
+M5-S3419-WRITER-ENTRY-ARGS.md.
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Add a regeneration-safe writer-loop-entry witness at the first
-   `0x800078EC` iteration, recording `a0/a1/a2` and computed `v0` with the
-   phase and target-span predicate. Build all required port arms together and
-   retain whole-RDRAM, title, hangar, and producer controls. Do not change
-   waits, slots, dispatch, clear behavior, or PCM writeback.
-2. Keep the completed retail destination map and s3415 source-span result as
-   controls; do not repeat the `0x1935E0` destination watch unless the new
-   entry-argument discriminator selects a different publication route.
+1. Ask the independent retail oracle for the matching phase-qualified
+   0x800078E0 entry tuple (a0/a1/a2, first v0, and target predicate), with its
+   whole-RDRAM, title, and hangar controls. Compare it to the selected port
+   tuple from Session 3419.
+2. If retail's target entry is nonzero, trace the port's zero-valued
+   entry producer/caller contract. If retail also enters with zero, stop
+   treating the entry value as the missing edge and move to the next
+   publication boundary. Do not repeat the 0x1935E0 destination watch unless
+   this comparison selects a different publication route.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
