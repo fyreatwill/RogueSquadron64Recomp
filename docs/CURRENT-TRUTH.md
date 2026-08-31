@@ -289,18 +289,28 @@ instead of retail's qualified `0x801B1590` tuple. This selects
 not name the pointer writer or transformation. Evidence:
 [M5-S3473-PORT-STATE-JOIN.md](M5-S3473-PORT-STATE-JOIN.md).
 
+Session 3474 ran the required independent retail span preflight and a
+regeneration-safe port store census. Retail's whole-RDRAM control fired
+2,255,979 times, the physical `0x00110000:0x00112000` span was active, and the
+run reached 3,269 VI. The final port capture reached title and hangar, passed
+both existing M5 controls, and emitted 1,024 pointer-valued stores in that
+span. The first candidate construction PCs were `0x800027C4`, `0x800027D0`,
+`0x800027DC`, and repeated `0x80003C28` stores forming `0x80111xxx` links.
+Because the rows lack a shared producer/consumer ordinal and do not include
+loads, this narrows the candidate set but selects neither pointer-writer nor
+alternate-dispatch hypothesis. Evidence:
+[M5-S3474-POINTER-WRITER.md](M5-S3474-POINTER-WRITER.md).
+
 ## Next steps
 
-1. Locate the first port-side writer or transformation that turns the
-   qualified table value family into the `0x80110xxx` output/state pointer.
-   Use one batched port instrument covering the producer load, the intervening
-   pointer stores/loads, and the four output/state PCs, with a same-run
-   positive control and title VI phase gate. A matching producer value followed
-   by the first `0x80110xxx` store selects that writer edge; no store before
-   the consumer selects a missing/alternate dispatch edge; absent control is
-   unevaluable.
-2. Retain the Session 3468 retail post-store table and Session 3473 port join
-   as baselines; do not repeat either unchanged capture.
+1. Close the pointer-writer boundary with a selected-address/load witness:
+   join the `0x80003C28`/`0x800027C4` candidate stores and the consumer's
+   actual `s1` address in one title-gated ordinal table. A candidate store
+   whose value becomes the consumer `s1` selects `H-InterveningPointerWriter`;
+   a live consumer with no matching store selects `H-AlternateDispatch`;
+   missing controls remain unevaluable. Keep the existing positive controls.
+2. Retain the Session 3468 retail post-store table and Session 3473/3474 port
+   joins as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 4. After the producer/state field is attributed, locate the first downstream

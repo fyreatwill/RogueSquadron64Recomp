@@ -2220,6 +2220,38 @@ extern "C" void rs64_m5_state_pointer_checkpoint(uint8_t* rdram,
     }
 }
 
+extern "C" void rs64_m5_pointer_span_store(char width, uint32_t pc,
+                                             uint32_t addr, uint32_t value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_STATE_POINTER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t phys = addr & 0x1FFFFFFFu;
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (rs64_vi_committed_width() != 1024u ||
+        (origin != 0x00790400u && origin != 0x00790800u) ||
+        phys < 0x00110000u || phys >= 0x00112000u) return;
+    static uint32_t rows = 0;
+    static bool control = false;
+    if (!control) {
+        std::fprintf(stderr,
+            "[m5-state-pointer-writer-control] phase=%u width=1024 origin=0x%06X\n",
+            rs64_phase_ord(), origin);
+        std::fflush(stderr);
+        control = true;
+    }
+    if (value < 0x80110000u || value >= 0x80112000u) return;
+    if (rows >= 1024u) return;
+    std::fprintf(stderr,
+        "[m5-state-pointer-store] ordinal=%u phase=%u width=1024 origin=0x%06X "
+        "pc=0x%08X width=%c addr=0x%08X phys=0x%06X value=0x%08X\n",
+        rows++, rs64_phase_ord(), origin, pc, width, addr, phys, value);
+    std::fflush(stderr);
+}
+
 static void rs64_m5_frequency_producer(uint8_t* rdram, recomp_context* ctx,
                                        uint32_t mq_addr, uint32_t msg,
                                        int32_t flag) {

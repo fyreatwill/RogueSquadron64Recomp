@@ -132074,3 +132074,23 @@ an absent port observation because both controls and all target buckets fired.
 It does not identify the pointer writer or transformation. No runtime change
 was made. Evidence: `docs/M5-S3473-PORT-STATE-JOIN.md` and
 `scratch/agent/s3473_m5_port_state_join/run.log`.
+
+## Session 3474 (2026-08-31) — censused port state-pointer stores
+
+The independent retail preflight passed the whole-RDRAM positive control with
+2,255,979 callbacks, reached 3,269 VI, and observed writes in physical span
+`0x00110000:0x00112000`. The final regeneration-safe port capture reached
+title origin `0x00790400` and hangar width 512, passed the existing output/state
+and pointer-checkpoint controls, and emitted 1,024 pointer-valued stores in
+the candidate span. The first candidate pointer-chain stores were at
+`0x800027C4`, `0x800027D0`, `0x800027DC`, and repeated `0x80003C28` stores
+forming `0x80111xxx` links. Two earlier attempts were invalid instrument
+placements and were corrected in this iteration. The final rows have no shared
+producer/consumer ordinal and no load witness, so they narrow the candidate
+writer set but select neither pointer-writer nor alternate-dispatch
+hypothesis. No runtime behavior or mitigation changed. Evidence:
+`docs/M5-S3474-POINTER-WRITER.md` and
+`scratch/agent/s3474_m5_pointer_writer_filtered/run.log`.
+
+ORIGIN: the writer census only observes stores; it does not rewrite or skip
+values, and legitimacy of the candidate pointer values is not asserted.
