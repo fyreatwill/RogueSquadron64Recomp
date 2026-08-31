@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3399 (2026-08-31). This file was compacted
+through Session 3401 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -326,6 +326,7 @@ writer and initializer ordering are the measured explanation.
 
 Latest M5 evidence:
 
+- `docs/M5-S3401-FIELD348-INPUT.md`
 - `scratch/agent/s3386_m5_direct_writer_census.md`
 - `docs/M5-S3393-LOWER-NOISE-TARGET-ATTRIBUTION.md`
 - `docs/M5-S3398-STAGE3-DESTINATION.md`
@@ -355,6 +356,17 @@ producer contract and refutes address alias and legitimate-zero explanations
 against the retail publication. The input preceding the zero-fill remains
 unresolved; no audio behavior changed. Evidence is in
 [M5-S3400-FIELD348-PRODUCER.md](M5-S3400-FIELD348-PRODUCER.md).
+
+Session 3401 added the durable `0x8008F2C8` caller-input witness and rebuilt
+successfully. The retail oracle controls passed in both qualification attempts.
+The first attempt reached hangar only in the image arm; the silent arm crashed
+at `spTaskSchedulerThread+9536` / guest PC `0x8000834c`. The retry reached
+hangar only in the silent arm and the image arm crashed at the same boundary.
+In the two valid individual arms, the witness fired positively and repeatedly:
+slot `0x80149764` stored `0x80178C80` at title 1024 and `0x801797B0` at hangar
+512. Because no attempt had both arms phase-qualified, the discriminator is
+unevaluable; no hypothesis is selected and no audio behavior changed. Evidence
+is in [M5-S3401-FIELD348-INPUT.md](M5-S3401-FIELD348-INPUT.md).
 
 Baseline and independent boundary evidence remains indexed in the ledger and
 PROJECT-OVERVIEW section 54. Use bounded `grep`/ `sed` windows for

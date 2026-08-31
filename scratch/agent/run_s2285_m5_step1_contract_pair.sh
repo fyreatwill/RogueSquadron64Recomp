@@ -44,6 +44,7 @@ COMMON=(
     ROGUESQ_LOG_M5_FIELD348_WRITER=1
     ROGUESQ_LOG_M5_FIELD348_CANDIDATES=1
     ROGUESQ_LOG_M5_FIELD348_MEMSET=1
+    ROGUESQ_LOG_M5_FIELD348_INPUT=1
     ROGUESQ_LOG_M5_STATIC_CALLS=1
     ROGUESQ_AUTOPILOT='6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start'
     ROGUESQ_AUTOPILOT_STOP_WIDTH=512
@@ -222,7 +223,7 @@ emit_arm_summary() {
     print -- "--- $name ---" >> "$OUT/driver.log"
     for marker in \
         '[audtask-dispatch]' '[audtask-abi]' '[audtask-dma-row]' '[audtask-dma-range]' \
-        '[audtask-image-stage]' '[audio-return]' '[audio-route]' '[audio-sp-route]' \
+        '[audtask-image-stage]' '[field348-input]' '[audio-return]' '[audio-route]' '[audio-sp-route]' \
         '[m5-gate]' '[slot-alloc]' '[slot-sb]' '[init-desc]' '[filter-voice-audit]' \
         '[pcm-boundary-source]' '[pcm-boundary-consumer]' '[m5-b40-route-control]' \
         '[m5-route-state-control]' '[missing-func]' '[CRASH]' '[ABORT]'; do
@@ -231,7 +232,7 @@ emit_arm_summary() {
     print "title=$(grep -a -c '^\[phase\] vi_width=1024 .*origin=0x00790400' "$log" || true)" >> "$OUT/driver.log"
     print "hangar=$(grep -a -c '^\[phase\] vi_width=512 .*origin=0x006AB400' "$log" || true)" >> "$OUT/driver.log"
     print -- "rows_tail:" >> "$OUT/driver.log"
-    grep -a -E '^\[(audtask-abi|audtask-dma-row|audtask-dma-range|audtask-image-stage|audio-return|audio-route|audio-sp-route|m5-gate|slot-alloc|slot-sb|init-desc|filter-voice-audit|pcm-boundary-source|pcm-boundary-consumer|m5-b40-route|m5-route-state|phase)\]' "$log" | tail -12 >> "$OUT/driver.log" || true
+    grep -a -E '^\[(audtask-abi|audtask-dma-row|audtask-dma-range|audtask-image-stage|field348-input|audio-return|audio-route|audio-sp-route|m5-gate|slot-alloc|slot-sb|init-desc|filter-voice-audit|pcm-boundary-source|pcm-boundary-consumer|m5-b40-route|m5-route-state|phase)\]' "$log" | tail -12 >> "$OUT/driver.log" || true
     print -- "terminal:" >> "$OUT/driver.log"
     grep -a -E '^\[(CRASH|ABORT|last-guest-pc|pc-symbol|phase)\]' "$log" | tail -8 >> "$OUT/driver.log" || true
 }

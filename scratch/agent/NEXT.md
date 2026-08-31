@@ -1,35 +1,27 @@
-# NEXT work unit — trace the field348 zero-fill input
+# NEXT work unit — ground-truth the field348 owner slot
 
 HYPOTHESIS-ID: m5-image-stage3-destination
 
-Add one guest-side probe at the `0x8008F2C8` store immediately before the
-`0x8008F2CC` `rs_memset` call, recording the value written to the owning
-pointer slot, the active audio route, and the resulting memset arguments. Keep
-the existing field348 writer/candidate/memset and image-stage probes. Build
-once, then run the repaired paired recipe with silent and image arms
-concurrently; retain the retail checkpoint and all positive controls.
+Run one retail-oracle-only capture watching physical slot `0x149764:0x149768`,
+with the whole-RDRAM positive control, title/hangar phase gates, and the
+existing `0x1935E0` post-value control. Do not add port probes or repeat the
+invalid paired recipe until this slot contract is known.
 
 Competing hypotheses:
 
-- `H-PortStage3Field348ProducerGap`: the port caller stores a different/null
-  source pointer or otherwise supplies a different input before the zero-fill.
-- `H-PortStage3LegitimateZero`: the zero-fill is the intended contract and the
-  missing nonzero publication is downstream of this caller.
-- `H-PortStage3Alias`: the port pointer slot and destination are an alias of
-  retail's `0x1935E0` publication despite the current address difference.
+- `H-PortStage3Field348ProducerGap`: retail writes a different owner-slot value.
+- `H-PortStage3DownstreamGap`: retail and port store the same pointer before the clear.
+- `H-PortStage3OwnerAbsent`: retail does not use this slot in the target phases.
 
-Discriminator: whole-RDRAM, title/hangar, and retail `0x1935E0` nonzero
-controls must fire in the same run. A port-side pointer/input row that matches
-retail's logical publication and is followed by a zero-only stage selects the
-downstream branch; a null/different input or absent producer row selects the
-field348 producer gap; a retail-equivalent destination/payload selects alias.
-If the new probe does not fire while the existing writer control does, treat
-the caller edge as unevaluable and do not infer from the null.
+Discriminator: whole-RDRAM, title/hangar, and retail `0x1935E0` controls must
+fire in the same run. A phase-qualified retail write to `0x149764` with the
+same values seen by the port selects a downstream/consumer gap; a different
+value selects a caller-contract gap; an absent owner-slot write selects the
+owner-slot hypothesis. A zero result without all controls is unevaluable.
 
-Commands:
+Command:
 
-    cmake --build build --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s2285_m5_step1_contract_pair.sh s3401_m5_field348_input
+    mkdir -p scratch/agent/s3402_retail_field348_owner
+    env tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 120 --watch-write 0x0:0x800000 --watch-write 0x149764:0x149768 --watch-write 0x1935E0:0x1935F0 --pc-hist-watch 1 --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 --post-value-watch 1 --post-value-pc 0x800078EC --post-value-pc-detail --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > scratch/agent/s3402_retail_field348_owner/oracle.log 2>&1
 
-Use SIGKILL-only cleanup and do not change audio behavior, waits, slots, status
-handling, consumer dispatch, or PCM writeback.
+Use SIGKILL-only cleanup; retain the oracle positive-control and phase lines.

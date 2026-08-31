@@ -130551,3 +130551,27 @@ against the retail publication. It does not identify the input preceding the
 zero-fill. No audio behavior changed. Evidence:
 `docs/M5-S3400-FIELD348-PRODUCER.md` and
 `scratch/agent/s3400_m5_field348_producer_census/`.
+
+## Session 3401 (2026-08-31) — M5 field348 caller-input witness
+
+Ran the required retail ground-truth preflight first. Its whole-RDRAM positive
+control reached 10,000 callbacks and its title and hangar VI controls fired.
+Added a durable fixup at guest PC `0x8008F2C8`, immediately before the
+`0x8008F2CC` clear, to report the owner slot and stored pointer. The binary
+rebuilt successfully.
+
+The first paired qualification passed the retail checkpoint and reached hangar
+in the image arm, but silent crashed at `spTaskSchedulerThread+9536` / guest
+PC `0x8000834c` before its target phase. The image witness fired in title and
+hangar: slot `0x80149764` stored `0x80178C80` and `0x801797B0`, respectively.
+The retry produced the complementary outcome: silent reached hangar and
+emitted the same two witness values, while image crashed at the same scheduler
+boundary before target-phase instrumentation.
+
+This proves the new witness is live and repeatable, but neither attempt is a
+valid same-run silent/image discriminator. It rules out an absent probe/control
+and leaves the selected field348 producer-gap hypothesis unevaluated; it does
+not establish that the zero-fill is illegitimate. No audio behavior changed.
+Evidence: `docs/M5-S3401-FIELD348-INPUT.md`,
+`scratch/agent/s3401_m5_field348_input/`, and
+`scratch/agent/s3401_m5_field348_input_retry/`.

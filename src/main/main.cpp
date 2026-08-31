@@ -757,6 +757,41 @@ extern "C" void rs64_m5_field348_set_callsite(uint32_t callsite) {
     g_rs64_m5_field348_static_callsite = callsite;
 }
 
+extern "C" void rs64_m5_field348_input(uint32_t slot_addr, uint32_t value,
+                                         uint32_t guest_pc) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_M5_FIELD348_INPUT");
+        const char* own = std::getenv("ROGUESQ_LOG_ALL");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+    static std::mutex mutex;
+    static uint32_t rows[2] = {};
+    static bool control[2] = {};
+    const uint32_t bucket = width == 1024u ? 0u : 1u;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (!control[bucket]) {
+        control[bucket] = true;
+        std::fprintf(stderr,
+            "[field348-input-control] phase=%u width=%u origin=0x%06X guest_pc=0x%08X\n",
+            rs64_phase_ord(), width, origin, guest_pc);
+        std::fflush(stderr);
+    }
+    if (rows[bucket] >= 512u) return;
+    const uint32_t phys = value & 0x007FFFFFu;
+    std::fprintf(stderr,
+        "[field348-input] row=%u phase=%u width=%u origin=0x%06X slot=0x%08X "
+        "value=0x%08X value_phys=0x%06X guest_pc=0x%08X\n",
+        rows[bucket]++, rs64_phase_ord(), width, origin, slot_addr, value,
+        phys, guest_pc);
+    std::fflush(stderr);
+}
+
 static bool rs64_filter_voice_guest_span_ok(uint32_t base, uint32_t span) {
     const uint32_t segment = base & 0xE0000000u;
     const uint32_t phys = base & 0x1FFFFFFFu;
