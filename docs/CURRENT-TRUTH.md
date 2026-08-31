@@ -247,13 +247,13 @@ Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
 1. Reconcile the stale `0x8002BEEC` attribution before adding port probes.
-   The 120-second retail capture and a same-run adjacent-PC capture both
-   reached title/hangar with controls live; `0x800078EC` executed 9,699 times,
-   while `0x8002BEE8` and `0x8002BEEC` were both zero. Use one completion-safe
-   oracle run watching the known producer plus the earlier execution site
-   `0x80033300` (seen in the prior route census), retaining the whole-RDRAM,
-   title/hangar, and `0x1935E0` controls. Do not add port instrumentation until
-   the retail producer dispatch address is re-established.
+   The completion-safe census now also shows `0x80033300` and both adjacent
+   sites are zero while `0x800078EC` is live only through self-reentry. Use a
+   bounded static callsite/disassembly audit of the retail `0x800078EC` body
+   and its callers to enumerate the actual external dispatch candidates, then
+   run one completion-safe oracle census over that whole candidate table. Do
+   not add port instrumentation until a retail external dispatch address is
+   re-established.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
    not repeat the old final-summary-only or dual-origin recipes; use the signal
    checkpoint and retain post-store sampling for all four candidates.
@@ -415,6 +415,19 @@ explanation for the current oracle route and refutes the three caller-shape
 hypotheses at `0x8002BEEC`; the earlier 37,635 attribution remains
 unreconciled. No audio behavior changed. Evidence is in
 [M5-S3404-PCM-DISPATCH-ADDRESS.md](M5-S3404-PCM-DISPATCH-ADDRESS.md).
+
+Session 3405 repeated the completion-safe 120-second retail census with the
+known producer, the earlier `0x80033300` candidate, both adjacent producer
+sites, whole-RDRAM, title/hangar, and `0x1935E0` controls. All controls passed:
+10,040 whole-RDRAM writes, 40 target-span writes, title histogram VI 632, and
+hangar histogram VI 972. `0x800078EC` had 9,699 execution hits; every
+`exec-prev` row was `prev=0x800078EC`. `0x80033300`, `0x800078E8`,
+`0x8002BEE8`, and `0x8002BEEC` each had zero hits. This selects
+`H-ProducerSelfLoopOnly` for the watched candidate set and refutes a live
+direct or adjacent external caller at those addresses in this route. It does
+not reconcile the earlier `0x8002BEEC` attribution or identify the external
+dispatch site. No port instrumentation or audio behavior changed. Evidence is
+in `scratch/agent/s3405_retail_pcm_dispatch/oracle.log`.
 
 Baseline and independent boundary evidence remains indexed in the ledger and
 PROJECT-OVERVIEW section 54. Use bounded `grep`/ `sed` windows for

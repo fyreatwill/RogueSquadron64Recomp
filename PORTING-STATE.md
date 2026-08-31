@@ -130654,3 +130654,19 @@ It does not identify the actual external producer dispatch path, and the
 earlier 37,635 retail attribution remains unreconciled. No port or audio
 behavior changed. Evidence: `docs/M5-S3404-PCM-DISPATCH-ADDRESS.md` and
 `scratch/agent/s3403_retail_8002beec_caller/oracle-corrective.log`.
+
+## Session 3405 (2026-08-31) — M5 retail PCM external dispatch census
+
+Ran the completion-safe 120-second retail oracle census with whole-RDRAM,
+`0x1935E0`, title/hangar, and phase-histogram controls. All controls passed:
+10,040 whole-RDRAM writes, 40 target-span writes, title histogram VI 632, and
+hangar histogram VI 972.
+
+The watched producer `0x800078EC` executed 9,699 times, and every `exec-prev`
+row was self-reentry (`prev=0x800078EC`). `0x80033300`, `0x800078E8`,
+`0x8002BEE8`, and `0x8002BEEC` each had zero hits. This selects
+`H-ProducerSelfLoopOnly` for the watched candidate set and refutes a live direct
+or adjacent external caller at those addresses in this route. It does not
+reconcile the earlier `0x8002BEEC` attribution or identify the external
+dispatch site. No port instrumentation or audio behavior changed. Evidence:
+`scratch/agent/s3405_retail_pcm_dispatch/oracle.log`.
