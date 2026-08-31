@@ -131432,3 +131432,29 @@ dispatch, clear behavior, or PCM writeback changed.
 Evidence: `docs/M5-S3442-FREQUENCY-OUTPUT-USE.md`,
 `scratch/agent/s3442_retail_output_sites.log`, and
 `scratch/agent/s3442_m5_frequency_output_pair/`.
+
+## Session 3443 (2026-08-31) — closed retail frequency output value join
+
+Ran the independent retail oracle first with the whole-RDRAM positive
+control, both title origins, hangar origin, and execution/field watches at
+`0x80001C0C` and `0x80001CC8`. The control fired, both PCs were live, and the
+field dump positively fired in the target 512 phase. Retail rows using
+`s1=0x80194B20` had `v1` values `{1,4,5,6,9,10,0x1A}` at origin
+`0x006AB400` and `{3,4,5,6,7,8,9,10,0x1A}` at `0x006AB800`.
+
+Built the target and ran the silent/Factor 5 image pair with the existing
+regeneration-safe post-consumer witness. Both arms reached title 1024 and
+hangar 512, passed consumer and output positive controls, retained 512
+consumer rows and 343 output rows, and had no crash or abort markers. The
+arms matched each other; port `0x80001CC8` output was `0x2` and its state keys
+were in the `0x801BBD..` range, unlike retail's target state.
+
+This selects `H-PortOutputUseGap` at the observed first-output boundary and
+refutes `H-OutputValueJoinUnevaluable` for the value-level measurement. It
+does not establish that message zero is corrupt or identify the earlier
+state-pointer producer. No waits, slots, dispatch, clear behavior, or PCM
+writeback changed.
+
+Evidence: `docs/M5-S3443-FREQUENCY-OUTPUT-JOIN.md`,
+`scratch/agent/s3443_retail_output_join/oracle.log`, and
+`scratch/agent/s3442_m5_frequency_output_pair/`.

@@ -481,6 +481,23 @@ identical. It refutes the proposed `0x5622` count at either observed
 `0x5622` value remains unresolved. Evidence is in
 [M5-S3430-SETDISPLAY-CALLERS.md](M5-S3430-SETDISPLAY-CALLERS.md).
 
+Session 3443 closed the retail value-level output join. The independent oracle
+passed its whole-RDRAM control, reached title/hangar, and positively fired
+both selected load sites plus the phase-gated field dump. In the retail
+`0x80001CC8` target-state rows (`s1=0x80194B20`), output `v1` varied across
+`{1,4,5,6,9,10,0x1A}` at origin `0x006AB400` and
+`{3,4,5,6,7,8,9,10,0x1A}` at `0x006AB800`.
+
+The fresh-build silent/image pair both reached title/hangar with consumer and
+output controls live, no crash/abort markers, and 512 consumer plus 343
+output rows per arm. The arms matched each other; port `0x80001CC8` output
+was `0x2` and its state keys were `0x801BBD..`, unlike the retail target
+state. This selects `H-PortOutputUseGap` at the observed first-output
+boundary and refutes `H-OutputValueJoinUnevaluable` for the value-level
+measurement. It does not declare message zero corrupt or identify the
+earlier state-pointer producer. Evidence is in
+[M5-S3443-FREQUENCY-OUTPUT-JOIN.md](M5-S3443-FREQUENCY-OUTPUT-JOIN.md).
+
 ## Next steps
 
 Session 3432 repeated the frequency-result work unit. The retail oracle passed
@@ -610,12 +627,13 @@ is in [M5-S3441-FREQUENCY-CONSUMER.md](M5-S3441-FREQUENCY-CONSUMER.md).
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the later output use after the qualified `0x80001B04` and
-   `0x80001CB8` consumers. Ask retail ground truth for the first state/output
-   writer PCs after these receives, then add one phase-scoped port witness
-   carrying the same queue/message/state join key. Keep the whole-RDRAM and
-   consumer positive controls in the same run. Do not infer that message zero
-   is corrupt; keep waits, slots, clear behavior, and PCM writeback unchanged.
+1. Trace the first state-pointer producer before the divergent
+   `0x80001CB8 -> 0x80001CC8` output use. Ask retail ground truth for the
+   caller/entry tuple that establishes `s1=0x80194B20`, then capture the
+   corresponding port tuple and pointed state word in one phase-qualified
+   silent/image pair. Keep whole-RDRAM, consumer, and output positive controls
+   live. Do not infer that message zero is corrupt; keep waits, slots, clear
+   behavior, and PCM writeback unchanged.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.
