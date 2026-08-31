@@ -131578,3 +131578,26 @@ and omitted the image arm; explicit SIGKILL teardown corrected the recipe.
 No waits, slots, dispatch, clear behavior, or PCM writeback changed. Evidence:
 `docs/M5-S3448-STATE-POINTER-PHASE.md` and
 `scratch/agent/s3448_m5_state_pointer_title_gate/`.
+
+## Session 3449 (2026-08-31) — compared title state tuple context
+
+The independent retail oracle ran first with a whole-RDRAM positive control
+and execution/field watches at `0x80001C98`, `0x80001CB8`, `0x80001CC8`, and
+`0x80001F84`. The control reached its 10,000-callback cap; all four target
+PCs were live and the run completed 3,260 VI. Retail recorded a title row at
+`0x80001CB8` with `s0=0x801B95F0`, `s1=0x801B1590`, and source word `8`.
+
+The wrapper named by NEXT.md was absent. I restored an equivalent wrapper,
+rebuilt once, and ran silent and Factor 5 image arms with explicit SIGKILL
+teardown. Both arms reached title 1024 and emitted 512 state-entry, 1,024
+checkpoint, 512 consumer, and 343 output rows. Both retained
+`s1=0x801B1590` and state pointer `0x801B95F0` through post-receive and
+pre-consumer; the wrapper return address was zero in both arms.
+
+The two port arms plus the independent retail row select
+`H-StatePointerParity` at this boundary and rule out a port-only pointer
+clobber there. They do not locate the downstream output-contract divergence,
+explain the alternate `0x80194B20` context, or resolve the zero host-wrapper
+return address. Evidence: `docs/M5-S3449-STATE-TUPLE-CONTEXT.md`,
+`scratch/agent/oracle_s3449_state_context.log`, and
+`scratch/agent/s3449_m5_state_tuple_context/`.

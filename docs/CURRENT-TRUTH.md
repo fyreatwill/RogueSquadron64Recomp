@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3448 (2026-08-31). This record was
+Current maintenance marker: Session 3449 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -37,13 +37,15 @@ contract:
   Retail-equivalence of these contexts remains unqualified.
 - The generated host wrapper reports `ra=0`; the exact clobber is unresolved.
 
-The s3448 rerun repaired the state-pointer witness's hard-coded hangar-only
+The s3449 rerun repaired the state-pointer witness's hard-coded hangar-only
 phase gate. Both arms emitted 512 title entry and 1,024 title checkpoint rows
 at origin `0x790400`, with no crash; sampled `s1` and pointed-word values
 were unchanged from entry through post-receive and pre-consumer in both arms.
-This closes the phase-mismatch defect and establishes title pointer parity at
-the observed `rs_free` boundary, but does not establish retail equivalence or
-locate the downstream output-contract cause.
+The independent retail field watch also observed the matching title tuple
+(`s1=0x801B1590`, state pointer `0x801B95F0`) at the consumer site. This
+closes the phase-mismatch defect and establishes title pointer parity at the
+observed `rs_free` boundary with two evidence lines, but does not locate the
+downstream output-contract cause or explain the alternate `0x80194B20` route.
 
 M5 audio source work remains unresolved upstream: qualified port image-stage
 rows carry zero source/output PCM, while retail independently writes nonzero
@@ -52,12 +54,12 @@ clear behavior, or PCM writeback while locating the state-pointer edge.
 
 ## Next steps
 
-1. Compare the repaired title `rs_free` state tuples against a like-for-like
-   retail call context, using the existing oracle rows plus one new port
-   witness keyed by `s0`, `s1`, pointed word, and output state. Retail-equivalent
-   tuples close this boundary; a port-only tuple selects the first output/state
-   contract edge; missing context remains unevaluable.
-2. Keep M5 Step 3 gated until a like-for-like target row names one missing
+1. Locate the first output/state contract divergence after the now-qualified
+   title pointer boundary. Join the retail `0x80001CB8`/`0x80001CC8` rows to
+   output value and state-word fields, then compare the existing port rows;
+   a matching pointer but divergent output selects the output contract, while
+   a missing ordered join remains unevaluable.
+2. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
