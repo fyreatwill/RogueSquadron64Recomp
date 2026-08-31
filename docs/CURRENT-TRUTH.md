@@ -246,12 +246,13 @@ the paired logs.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Reconcile the port producer witness with the indirect retail boundary by
-   asking the oracle for phase-qualified execution and target-span writes at
-   `0x800052C4`, retaining whole-RDRAM, title/hangar, and post-store controls.
-   The port witness had no `0x8002BEEC`/`0x800078EC` static-call rows and was
-   dominated by `0x800052C4`; do not add runtime instrumentation until this
-   ground-truth arm names a measurable field or PC.
+1. Join the port's phase-qualified `0x800052C4` route to its target payload in
+   one batched runtime witness. The retail oracle proved `0x800052C4` executes
+   in both hangar origins (1,274 at `0x006AB400`, 1,663 at `0x006AB800`) while
+   target-span stores are nonzero in those buckets; s3407 found the same PC
+   dominating port image rows. Add only the smallest call/return or destination
+   join needed to test whether this translated route publishes the zero PCM
+   source. Keep whole-RDRAM, title/hangar, and PCM controls live.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
    not repeat the old final-summary-only or dual-origin recipes; use the signal
    checkpoint and retain post-store sampling for all four candidates.
@@ -274,6 +275,16 @@ Closed or parked work:
   M5 SP-yield/MORT publication threads parked pending a new discriminator.
 - The corrected MORT descriptor edge is `+0x190` to
   `dmaVoiceSampleAndSignal`.
+
+Session 3408's independent oracle run passed the whole-RDRAM control and
+reached title/hangar. The watched port candidate `0x800052C4` executed 3,728
+times, including 1,274 and 1,663 executions in the two hangar origins. Retail
+target-span writer histograms and post-store samples were live and nonzero in
+those same phase buckets, but `0x800052C4` was not a direct target-span store
+PC. Combined with s3407's port rows, this selects `H-PortBoundaryDifferent`
+and refutes a missing retail execution boundary at that PC. It does not yet
+join the port call to the target payload or explain the zero PCM source.
+Evidence is in [M5-S3408-PORT-BOUNDARY-ORACLE.md](M5-S3408-PORT-BOUNDARY-ORACLE.md).
 
 ## Durable boundaries and operating rules
 

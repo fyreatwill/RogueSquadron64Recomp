@@ -130708,3 +130708,22 @@ It does not distinguish an indirect predecessor from another translated route
 and does not explain the zero payload. No waits, dispatch, slots, or PCM
 writeback changed. Evidence: `docs/M5-S3407-PORT-PRODUCER-BOUNDARY.md` and
 `scratch/agent/s3407_m5_port_producer_boundary/driver.log`.
+
+## Session 3408 (2026-08-31) — M5 port-boundary oracle for 0x800052C4
+
+The independent retail oracle ran the prescribed boundary census with a
+whole-RDRAM positive control, title/hangar VI gates, target-span watches,
+post-store sampling, and an execution watch at `0x800052C4`. The control
+reached 10,000 callbacks; the run reached title 1024 and hangar 512. The
+candidate executed 3,728 times overall, including 1,274 executions at
+hangar origin `0x006AB400` and 1,663 at `0x006AB800`, all with predecessor
+`0x800052C0`. Target-span writer histograms and nonzero post-store samples
+were live in those same hangar buckets, but `0x800052C4` was not itself a
+target-span store PC. Combined with s3407's port rows, this selects
+`H-PortBoundaryDifferent`: the port's `0x800052C4` route is a distinct
+translated producer boundary from retail's indirect `0x8002BEEC ->
+0x800078EC` edge. It refutes a missing retail execution boundary at this PC,
+but does not join the port call to the target payload or explain zero PCM.
+No port behavior, waits, slots, dispatch, or PCM writeback changed. Evidence:
+`docs/M5-S3408-PORT-BOUNDARY-ORACLE.md` and
+`scratch/agent/s3408_m5_boundary_oracle_run3/oracle.log`.

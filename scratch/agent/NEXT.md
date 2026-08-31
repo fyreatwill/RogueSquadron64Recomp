@@ -1,31 +1,30 @@
-# NEXT work unit — reconcile the port producer witness with the indirect boundary
+# NEXT work unit — join the port 0x800052C4 route to its target payload
 
-HYPOTHESIS-ID: m5-port-producer-boundary-reconciliation
+HYPOTHESIS-ID: m5-port-052c4-payload-join
 
-Session 3407 passed the qualified port route in both arms but observed no
-phase-qualified static-call row at `0x8002BEEC` or `0x800078EC`; image rows
-were dominated by callsite `0x800052C4`. The host witness does not expose the
-instruction-level indirect predecessor field.
+Session 3408's oracle positive control passed and reached both hangar origins.
+Retail executed `0x800052C4` 1,274 times at `0x006AB400` and 1,663 times at
+`0x006AB800`; target-span stores were nonzero in those same buckets. Session
+3407's port image rows were dominated by `0x800052C4`, but the host witness
+did not join that callsite to its downstream store.
 
 Competing hypotheses:
 
-- `H-PortBoundaryAbsent`: the port's observed translated producer route never
-  reaches the retail boundary; the missing dispatch remains upstream.
-- `H-PortBoundaryDifferent`: `0x800052C4` is a distinct translated producer
-  route whose input/output contract differs from retail's indirect edge.
-- `H-PortBoundaryInstrumentationGap`: the existing host witness cannot expose
-  the relevant indirect predecessor, so the null is not yet an execution
-  discriminator.
+- `H-Port052C4Publishes`: the port `0x800052C4` route reaches the target
+  publication and its zero payload is produced downstream of that call.
+- `H-Port052C4Distinct`: the callsite is active but publishes a different
+  structure; the zero PCM source has another producer gap.
+- `H-Port052C4JoinGap`: the existing host witness cannot safely join this
+  indirect route to its destination, so the result remains unevaluable.
 
-Discriminator: ask the retail oracle for `0x800052C4` execution and target-span
-writes in the hangar bucket, with whole-RDRAM, title/hangar, and post-store
-controls. A matching nonzero retail edge selects `H-PortBoundaryDifferent`;
-no retail edge with controls live selects `H-PortBoundaryInstrumentationGap`;
-a like-for-like edge selects `H-PortBoundaryAbsent` as a translated-route gap.
-Do not add runtime instrumentation until the retail control names a measurable
-field or PC.
+Discriminator: batch one port build/run with a phase-scoped `0x800052C4`
+call/return or destination join, plus whole-RDRAM, title/hangar, image/DMA,
+and PCM positive controls. A call joined to the zero target publication selects
+`H-Port052C4Publishes`; a live call with no target join but live independent
+target stores selects `H-Port052C4Distinct`; a failed join with controls live
+selects `H-Port052C4JoinGap`. Do not change waits, slots, dispatch, or PCM
+writeback.
 
-Use one oracle run with whole-RDRAM, title/hangar, post-store, and the
-`0x800052C4` execution/target controls. No port build is authorized until that
-ground-truth arm passes and provides a discriminator. Do not alter waits,
-slots, dispatch, or PCM writeback.
+Use the existing qualified image/silent route and add only the join witness;
+build once and run both arms in that same iteration. Preserve the oracle log
+at `scratch/agent/s3408_m5_boundary_oracle_run3/oracle.log` as ground truth.
