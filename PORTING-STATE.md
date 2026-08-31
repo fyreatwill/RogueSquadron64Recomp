@@ -129418,3 +129418,21 @@ pointer-writer discriminator target-valid. It rules out neither the retail
 pointer writer nor a host-dispatch explanation. No behavior change or
 mitigation was made. Evidence:
 `scratch/agent/s3343_m5_callback_writer_aggregate.md`.
+
+## Session 3344 (2026-08-30) — identified retail callback-pointer writer
+
+The independent retail oracle completed the planned 120-second capture. Its
+whole-RDRAM positive control reached 10,006 writes, and the target route passed
+the title `640 -> 1024` transition at 17.3 seconds and hangar `1024 -> 512`
+at 38.4 seconds.
+
+The corrected physical slot watch `[0x001499D4, 0x001499D8)` recorded 6 writes;
+all six were attributed by the writer-PC histogram to guest PC `0x80091900`.
+The run exited normally after 120 seconds. The execution watch had zero hits,
+so this identifies the retail slot writer but does not measure a later indirect
+execution edge.
+
+This selects `H-PointerWriter` and refutes `H-StalePointer` for the target
+route. It weakens, but does not fully measure, `H-HostDispatch`. No runtime
+behavior or mitigation was changed. Evidence:
+`scratch/agent/s3344_m5_retail_pointer_source.md`.

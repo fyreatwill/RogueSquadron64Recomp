@@ -1,31 +1,43 @@
-# NEXT work unit — attribute the retail indirect-pointer writer
+# NEXT work unit — trace the retail pointer writer's provenance
 
 HYPOTHESIS-ID: m5-callback-indirect-pointer-source
 
-Session 3343 made the port writer probe target-valid: its aggregate arm passed
-host/task/title/hangar controls and recorded five target-phase writes at
-`0x80091900 -> 0x80007910`, plus `0x80007928 -> 0x8009123C`. Retail ground
-truth recorded one write at the corrected physical slot `0x001499D4` with the
-whole-RDRAM control active.
+Session 3344 selected `H-PointerWriter`: retail passed the whole-RDRAM,
+title-1024, and hangar-512 controls, and wrote the corrected physical slot
+`0x001499D4` six times, all from guest PC `0x80091900`. The execution watch
+had zero hits. The port aggregate arm independently recorded the corresponding
+`0x80091900 -> 0x80007910` store edge. `H-StalePointer` is closed for this
+route; the next unit must attribute the writer's source value and test whether
+the watched slot is later consumed indirectly.
 
 Competing hypotheses:
 
-- `H-PointerWriter`: retail writes the indirect pointer in the target route.
-- `H-StalePointer`: retail never writes it in the target route; the port's
-  target-phase initializer store is a port-specific stale/early population.
-- `H-HostDispatch`: neither guest writer is responsible; a host/runtime path
-  supplies the effective callback.
+- `H-WriterSource`: `0x80091900` stores a legitimate value derived from a
+  guest-side source or table in the retail route.
+- `H-HostDispatch`: the slot write is incidental and host/runtime dispatch
+  supplies the effective callback without a guest indirect execution.
+- `H-ExecutionWatch`: the zero execution count is a watch/attribution gap;
+  the slot is consumed through an uninstrumented or differently-addressed
+  indirect path.
 
-The discriminating measurement is one retail oracle run with a whole-RDRAM
-positive control, Rice video, the documented Start schedule, and
-`--watch-write 0x1499d4:0x1499d8 --pc-hist-watch 1`, long enough to reach title
-1024 and hangar 512. A target-phase hit and writer-PC histogram supports
-`H-PointerWriter`; a valid target run with no corrected-slot hit, alongside
-the already captured port writer, supports `H-StalePointer`; a valid run with
-the slot hit absent and a matching indirect execution but no guest writer
-keeps `H-HostDispatch` live. A missing title/hangar control or whole-RDRAM
-control invalidates the null. No behavior change is authorized.
+The discriminating measurement is one bounded static provenance audit followed
+by one port run only if it identifies a concrete source access: enumerate the
+instructions immediately before `0x80091900` and the load at `0x800919D4`, then
+capture that source address/value together with the existing callback-writer
+rows and `0x800919EC` transfer rows. A guest source load feeding the store and a
+matching indirect execution supports `H-WriterSource`; a valid slot write with
+no guest execution and a host callback marker supports `H-HostDispatch`; a
+different indirect target or source address supports `H-ExecutionWatch`.
+Missing host/task/title/hangar controls invalidates the port null. No behavior
+change is authorized.
 
-Exact command:
+Exact static commands:
 
-    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 120 --watch-write 0x0:0x800000 --watch-write 0x1499d4:0x1499d8 --pc-hist-watch 1 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
+    rg -n -C 35 '0x80091900|0x800919D4|0x800919EC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c
+    rg -n -C 12 'initN64RspMixer|registerSiCallback|MEM_W\(0X[0-9A-F]+, ctx->r' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_24.c | head -240
+
+If the audit names a concrete source site, add one regeneration-surviving
+probe through the applicable `tools/apply_s*.py`, build once with
+`cmake --build build --config Debug --target RogueSquadron64Recomp`, and run
+the existing phase-gated title/hangar recipe with
+`env ROGUESQ_LOG_M5_CALLBACK_WRITER=1`.

@@ -8,6 +8,14 @@ Current maintenance marker: Session 3343 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
+Session 3344 completed the independent retail pointer-source capture. The
+whole-RDRAM positive control reached 10,006 writes, title 1024 and hangar 512
+controls both passed, and the corrected physical slot `0x001499D4` recorded 6
+writes, all from guest PC `0x80091900`. This selects `H-PointerWriter` and
+refutes `H-StalePointer` for the target route. The execution watch had zero
+hits, so host dispatch remains unmeasured as a separate behavior. Evidence:
+`scratch/agent/s3344_m5_retail_pointer_source.md`.
+
 Session 3343 redesigned callback-writer capture to aggregate rows and drain
 them from the phase poller. In one same-build matrix, both the no-writer and
 aggregate-writer LLE arms passed host/task controls and reached title 1024 and
@@ -559,10 +567,13 @@ target row exists.
    probe arm passed host/task/title/hangar controls and retained five
    target-phase `0x80091900 -> 0x80007910` rows plus the `0x80007928` table-store
    row. The prior logging-perturbation explanation is selected for that route.
-   Next: attribute the single corrected retail write at physical `0x001499D4`
-   with the oracle's writer-PC histogram, retaining its whole-RDRAM and
-   title/hangar controls, then compare it with the target-phase port table.
-   Do not change a contract edge or add a mitigation.
+   Session 3344 completed that capture: retail passed whole-RDRAM, title, and
+   hangar controls and wrote physical `0x001499D4` six times, all from guest
+   PC `0x80091900`; the execution watch had zero hits. This selects
+   `H-PointerWriter` and refutes `H-StalePointer` for the target route. Next:
+   trace the source value and separately validate whether the slot is consumed
+   through an uninstrumented indirect edge. Do not change a contract edge or
+   add a mitigation.
    Do not add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
