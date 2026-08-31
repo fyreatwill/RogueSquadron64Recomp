@@ -131382,3 +131382,29 @@ observed queue contract. It rules out no later consumer/output boundary, and
 zero is not declared illegitimate. Evidence: `docs/M5-S3440-SEND-RECEIVE-JOIN.md`
 and `scratch/agent/s3440_retail_send_groundtruth/oracle.log` plus the final
 pair logs.
+
+## Session 3441 (2026-08-31) — qualified post-receive frequency consumers
+
+Ran the independent retail oracle first with whole-RDRAM positive control,
+both title origins, hangar driving, and the four selected consumer PCs. The
+control reached 10,000 writes; the PCs were live with 8,758, 7,728, 1,282, and
+2,680 execution hits for `0x80001B04`, `0x80001CB8`, `0x80006EFC`, and
+`0x80006F5C`. Added a regeneration-safe, phase-scoped witness immediately
+after the four generated `osRecvMesg` sites, then built successfully.
+
+The first concurrent pair was discarded because the image arm hit the known
+pre-phase scheduler crash. The corrected concurrent silent/image pair reached
+the target phase with no crash or abort markers. Both arms passed the witness
+positive control and retained 512 receive rows and 512 producer rows. The
+frequency queue consumer rows were live at `0x80001B04` (358) and
+`0x80001CB8` (154); each consumed message zero and carried populated
+post-receive state. The service PCs did not consume this queue under the
+phase/filter contract.
+
+This selects `H-RetailConsumerParity` at the observed post-receive boundary
+and refutes consumer-edge absence or a port-only state loss. It does not prove
+that zero is semantically correct or close later output use. No waits, slots,
+dispatch, clear behavior, or PCM writeback changed. Evidence:
+`docs/M5-S3441-FREQUENCY-CONSUMER.md`,
+`scratch/agent/s3441_retail_consumer_groundtruth/oracle.log`, and the final
+pair logs.

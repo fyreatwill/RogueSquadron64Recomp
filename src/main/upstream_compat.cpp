@@ -2085,6 +2085,49 @@ static void rs64_m5_frequency_receive_join(uint8_t* rdram,
     }
 }
 
+extern "C" void rs64_m5_frequency_consumer(uint8_t* rdram,
+                                               recomp_context* ctx,
+                                               uint32_t callsite) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_FREQUENCY_CONSUMERS");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || U32(ctx->r4) != 0x8010FEE0u || U32(ctx->r2) != 0) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 1024u || (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != bucket) { bucket = key; rows = 0; }
+    if (rows >= 512u) return;
+    const uint32_t state = U32(ctx->r16);
+    auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
+        const uint32_t p = guest - 0x80000000u;
+        return (static_cast<uint32_t>(rdram[p]) << 24) |
+               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
+               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
+               static_cast<uint32_t>(rdram[p + 3]);
+    };
+    std::fprintf(stderr,
+        "[m5-frequency-consumer] ordinal=%u phase=%u width=%u origin=0x%06X "
+        "callsite=0x%08X mq=0x%08X msg_slot=0x%08X result=%d state=0x%08X "
+        "state_word=0x%08X state_next=0x%08X a0=0x%08X a1=0x%08X "
+        "a2=0x%08X a3=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, callsite, U32(ctx->r4),
+        U32(ctx->r5), (int)U32(ctx->r2), state, word(state),
+        word(state + 0x1E8u), U32(ctx->r4), U32(ctx->r5), U32(ctx->r6),
+        U32(ctx->r7), U32(ctx->r31));
+    std::fflush(stderr);
+    if (rows == 1) {
+        std::fprintf(stderr, "[m5-frequency-consumer-positive] post-receive witness is live\n");
+        std::fflush(stderr);
+    }
+}
+
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     const uint32_t mq_addr = (uint32_t)ctx->r4;
     rs64_m5_frequency_producer(rdram, ctx, mq_addr, (uint32_t)ctx->r5,

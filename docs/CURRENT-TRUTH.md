@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3437 (2026-08-31). This file was compacted
+through Session 3441 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -595,16 +595,27 @@ illegitimate; the remaining boundary is downstream receive-consumer/output
 use. Evidence is in
 [M5-S3440-SEND-RECEIVE-JOIN.md](M5-S3440-SEND-RECEIVE-JOIN.md).
 
+Session 3441 qualified the selected post-receive consumer edge. Retail's
+whole-RDRAM control reached 10,000 writes and all four selected consumer PCs
+were live in the title/hangar route. The corrected concurrent silent/image
+port pair reached the target phase without crashes or aborts; both passed the
+post-receive witness positive control and retained 512 receive rows. Relevant
+frequency-queue consumers were live at `0x80001B04` (358 rows) and
+`0x80001CB8` (154 rows), with message zero and populated downstream state in
+both arms. This selects `H-RetailConsumerParity` at the observed boundary and
+refutes `H-ConsumerUnevaluable` and a port-only consumer absence. It does not
+close later output use or establish that zero is semantically correct. Evidence
+is in [M5-S3441-FREQUENCY-CONSUMER.md](M5-S3441-FREQUENCY-CONSUMER.md).
+
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the post-receive consumer/output edge selected by Session 3440. Join
-   the phase-scoped `0x8010FEE0` receive rows to the first generated consumer
-   PCs after `osRecvMesg`, beginning with high-count routes
-   `0x80001B04`, `0x80001CB8`, `0x80006EFC`, and `0x80006F5C`. The
-   discriminator is matching retail downstream state, an immediate port
-   state divergence, or an unevaluable consumer edge despite live controls.
-   Keep waits, slots, clear behavior, and PCM writeback unchanged.
+1. Trace the later output use after the qualified `0x80001B04` and
+   `0x80001CB8` consumers. Ask retail ground truth for the first state/output
+   writer PCs after these receives, then add one phase-scoped port witness
+   carrying the same queue/message/state join key. Keep the whole-RDRAM and
+   consumer positive controls in the same run. Do not infer that message zero
+   is corrupt; keep waits, slots, clear behavior, and PCM writeback unchanged.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.

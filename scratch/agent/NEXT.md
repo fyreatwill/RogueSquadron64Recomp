@@ -1,39 +1,43 @@
-# NEXT work unit — trace the post-receive consumer/output edge
+# NEXT work unit — trace the first output use after frequency consumers
 
-HYPOTHESIS-ID: m5-frequency-receive-consumer-contract
+HYPOTHESIS-ID: m5-frequency-output-use-contract
 
-Session 3440 selected `H-RetailSendParity`: retail had 12,534
-phase-qualified sends on `0x8010FEE0`, all `(queue,msg,flag)=(0x8010FEE0,0,0)`;
-the port had 486 matching sends and 512 matching receives. Both port arms
-consumed zero queue-head messages with live positive controls. The send
-boundary is closed; do not infer that zero is corrupt.
+The s3441 consumer witness is positive and selects `H-RetailConsumerParity` at
+the observed `0x8010FEE0` receive boundary. The next bounded unit is the first
+state/output use after the successful consumers at generated callsites
+`0x80001B04` and `0x80001CB8`. Do not treat message zero as corrupt.
 
-Before building, ask ground truth for the selected consumer edge: run the
-retail oracle with whole-RDRAM control, both title origins, hangar, and
-`--watch-pc 0x80001B04,0x80001CB8,0x80006EFC,0x80006F5C`, phase-gated to the
-same width/origin buckets. Then add one port post-receive consumer witness at
-the first generated callsites after `osRecvMesg`, carrying the queue/message
-join key and the first downstream state word. Keep the send/receive controls.
+Before building, ask ground truth with whole-RDRAM control, both title origins,
+hangar, and the first downstream execution/writer candidates obtained from:
+
+    rg -n -A100 '0x80001B04: jal|0x80001CB8: jal' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_0.c
+
+Use one oracle invocation with `--watch-pc` for all selected downstream JAL
+sites and `--pc-phase-log-width 0x00790400:1024
+--pc-phase-log-width 0x00790800:1024 --pc-phase-log-width 0x006AB400:512
+--pc-phase-log-width 0x006AB800:512`, plus `--watch-write 0x0:0x800000`.
+Only instrument sites that the oracle proves live in a target phase. Then add
+one regeneration-safe port witness at the first live output/state site,
+carrying the existing `(queue,msg,callsite,state)` join key and the first
+output value. Build once and run the silent/image pair concurrently on the
+validated LLE/spin-yield route.
 
 Competing hypotheses and the single discriminating measurement:
 
-- `H-RetailConsumerParity`: zero messages reach matching downstream consumer
-  state on retail and port; the gap is later.
-- `H-PortConsumerStateGap`: both receive controls are live, but port diverges
-  at the first consumer/output state after the matched zero message.
-- `H-ConsumerUnevaluable`: retail consumer or port post-receive rows are absent
-  despite live positive controls.
+- `H-RetailOutputParity`: the first post-consumer output/state value is
+  present and equivalent on retail and both port arms; the gap is later.
+- `H-PortOutputUseGap`: the port consumer is live, but its first output/state
+  value diverges from the retail phase row.
+- `H-OutputUnevaluable`: the oracle candidate or port witness is absent despite
+  positive whole-RDRAM, phase, and consumer controls.
 
-The measurement is the first post-receive consumer state tuple for the matched
-`(0x8010FEE0,0,0)` message, compared against the same retail PC phase rows.
-Matching state selects `H-RetailConsumerParity`; a live port receive followed
-by divergent state selects `H-PortConsumerStateGap`; missing consumer rows
-with live send/receive controls select `H-ConsumerUnevaluable`. Do not change
-waits, slots, dispatch, clear behavior, or PCM writeback.
+The measurement is one phase-qualified first-output tuple joined to the
+successful receive row. Matching retail/port tuples select parity; a live
+receive followed by a divergent first-output tuple selects the port gap; a
+missing candidate with live controls selects unevaluable. Do not change waits,
+slots, dispatch, clear behavior, or PCM writeback.
 
-Build once with `cmake --build build --config Debug --target
-RogueSquadron64Recomp`; run the oracle first, then concurrent silent/image port
-arms from `build/` on the validated
-`ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
-ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1` route. Use phase gates and SIGKILL
-cleanup.
+Build and run commands:
+
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    env zsh scratch/agent/run_s3442_m5_frequency_output_pair.sh
