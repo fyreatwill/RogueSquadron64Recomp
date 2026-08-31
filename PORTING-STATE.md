@@ -130482,3 +130482,26 @@ matching nonzero publication at that destination. They do not identify why the
 port destination differs or establish that stage-2 zero output is illegitimate.
 No audio behavior changed. Evidence: `docs/M5-S3397-IMAGE-PAYLOAD.md` and
 `scratch/agent/s3397_m5_image_payload_pair/driver.log`.
+
+## Session 3398 (2026-08-31) — M5 stage-3 destination qualification
+
+The existing checkpointed contract recipe was rebuilt once and run with the
+retail oracle plus concurrent silent and image port arms. The oracle's
+whole-RDRAM positive control reached 10,000 callbacks, and title/hangar phase
+gates fired. Its `0x1935E0` watch had 34 writes; 18 post-store samples were
+retained, including 12 nonzero samples from `0x800078EC`.
+
+Both port arms reached hangar without crash/abort markers. The image arm had
+2,753 image-stage and 1,372 DMA rows. Stage 3 completed from DMEM `0xCB0`,
+length `0x198`, to `0x801798B0` (`0x1798B0` physical), with zero payload
+(`762B22A5`, `nz=0`), and no matching publication to `0x1935E0`. DMA/exit,
+external SP delivery, guest receive, and PCM-boundary rows were present; PCM
+remained zero. Silent supplied the route control with 682 ABI/DMA rows and no
+image-stage rows.
+
+The independent retail writer evidence and same-build port route evidence
+select `H-PortStage3Missing` at the observed publication boundary and refute a
+destination alias or legitimate-zero explanation there. They do not identify
+why the destination differs or establish zero-output legitimacy. No audio
+behavior changed. Evidence: `docs/M5-S3398-STAGE3-DESTINATION.md` and
+`scratch/agent/s3398_m5_stage3_destination_pair/driver.log`.

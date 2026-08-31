@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3394 (2026-08-31). This file was compacted
+through Session 3398 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -210,17 +210,32 @@ not establish why the port destination differs or whether stage-2 zero output
 is legitimate. Evidence is in [M5-S3397-IMAGE-PAYLOAD.md](M5-S3397-IMAGE-PAYLOAD.md)
 and `scratch/agent/s3397_m5_image_payload_pair/driver.log`.
 
+Session 3398 repeated the completion-safe matrix with the existing stage-3
+contract recipe. The retail positive control reached 10,000 callbacks and
+title/hangar; its phase-qualified `0x1935E0` watch had 34 writes, 18 retained
+post-store samples, and 12 nonzero samples from `0x800078EC`. Both port arms
+reached hangar without crash/abort markers. The image arm had 2,753 image-stage
+and 1,372 DMA rows; stage 3 completed from DMEM `0xCB0` to `0x801798B0`
+(`0x1798B0` physical), with zero payload (`762B22A5`, `nz=0`) and no matching
+`0x1935E0` publication. SP completion/delivery, guest receive, and PCM rows
+were present, while PCM remained zero. The two independent lines select
+`H-PortStage3Missing` at the observed publication boundary and refute a
+destination alias or legitimate-zero explanation there. The destination
+contract and output legitimacy remain unresolved. Evidence is in
+[M5-S3398-STAGE3-DESTINATION.md](M5-S3398-STAGE3-DESTINATION.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Explain the selected `H-ImageEdgeMissing` stage-3 destination mismatch:
-   use one phase-qualified, same-build port census that joins the retail-backed
-   `0x1935E0` publication to its source DMEM, DMA completion, and guest service
-   rows, while retaining the existing image/silent controls. Do not change
-   audio behavior or add a destination redirect until the writer and legitimacy
-   of the value are identified.
+1. Explain the selected `H-PortStage3Missing` destination contract: enumerate
+   the stage-3 destination computation and its guest field/caller inputs, then
+   phase-qualify one same-build port census that joins those inputs to the
+   `0xCB0` source, DMA completion, guest service, and PCM rows. Retain the
+   retail-backed `0x1935E0` control and both audio arms. Do not change audio
+   behavior or add a destination redirect until the writer and legitimacy of
+   the value are identified.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
    not repeat the old final-summary-only or dual-origin recipes; use the signal
    checkpoint and retain post-store sampling for all four candidates.
@@ -297,6 +312,7 @@ Latest M5 evidence:
 
 - `scratch/agent/s3386_m5_direct_writer_census.md`
 - `docs/M5-S3393-LOWER-NOISE-TARGET-ATTRIBUTION.md`
+- `docs/M5-S3398-STAGE3-DESTINATION.md`
 - `docs/M5-S3394-DUAL-ORIGIN-ATTRIBUTION.md`
 - `docs/M5-S3389-PREDECESSOR-EDGE.md`
 - `scratch/agent/s3376_m5_zero_pcm_source.md`

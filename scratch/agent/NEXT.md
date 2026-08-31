@@ -1,22 +1,22 @@
-# NEXT work unit — trace the selected M5 stage-3 destination mismatch
+# NEXT work unit — enumerate the selected M5 stage-3 destination contract
 
 HYPOTHESIS-ID: m5-image-stage3-destination
 
-Do one bounded phase-qualified port census using the repaired
-`run_s2285_m5_step1_contract_pair.sh`. Join the retail-backed stage-3
-destination `0x1935E0` to the port image arm's source DMEM, DMA completion,
-guest service, and PCM rows; retain all four destination rows and the silent
-control. Build once and run both port arms concurrently. Do not use the old
-normal-exit summary path.
+First grep-enumerate the existing stage-3 destination computation and all
+guest field/caller inputs feeding it. Then do one bounded phase-qualified
+same-build port census using the repaired
+`run_s2285_m5_step1_contract_pair.sh`, retaining the retail-backed
+`0x1935E0` watch, both port arms, source DMEM, DMA completion, guest service,
+and PCM rows. Do not change audio behavior or use the old normal-exit path.
 
 Competing hypotheses:
 
-- `H-PortStage3Alias`: the port's `0x178D80` stage-3 destination is the same
+- `H-PortStage3Alias`: the port's `0x1798B0` stage-3 destination is the same
   logical publication under a shifted/aliased address contract.
 - `H-PortStage3Missing`: the port lacks the retail-backed `0x1935E0` publication
   edge or its required ordering/completion.
-- `H-PortStage3LegitimateZero`: the port's zero output is legitimate and the
-  remaining PCM gap is downstream.
+- `H-PortStage3LegitimateZero`: the port's zero output and differing
+  destination are legitimate, with the remaining PCM gap downstream.
 
 Discriminator: the same run must show positive-control callbacks, the retail
 nonzero `0x1935E0` payload/writer row, and paired port rows tying stage-3 DMEM
