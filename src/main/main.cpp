@@ -253,6 +253,32 @@ extern "C" void rs64_m5_callback_entry_event(uint32_t value, uint32_t ra,
     ++rows;
 }
 
+extern "C" void rs64_m5_callback_transfer_event(uint32_t pc,
+                                                  uint32_t target,
+                                                  uint32_t value) {
+    static int enabled = -1;
+    static uint32_t rows = 0;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_CALLBACK_TRANSFER");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        enabled = ((e && e[0] && e[0] != '0') ||
+                   (all && all[0] && all[0] != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const uint32_t next_bucket = (width << 24) ^ origin;
+    if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
+    if (rows >= 256u) return;
+    std::fprintf(stderr,
+        "[m5-callback-transfer] n=%u phase=%u width=%u origin=0x%06X "
+        "pc=0x%08X target=0x%08X a0=0x%08X\n",
+        rows, rs64_phase_ord(), width, origin, pc, target, value);
+    std::fflush(stderr);
+    ++rows;
+}
+
 // Wrapper: captures rdram into the watchdog global on first call so the
 // hwbp/poll diagnostic threads can attach. Forwards to the real entrypoint.
 extern "C" volatile uint8_t* volatile g_recomp_rdram_for_wp_raw;

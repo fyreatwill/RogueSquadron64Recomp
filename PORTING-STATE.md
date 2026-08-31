@@ -129336,3 +129336,26 @@ of the planned work unit (transfer hook at generated callers of
 `registerSiCallback`). No new build, no new run, no code change. No conclusion
 changed. The planned work unit is unchanged; NEXT.md carries the exact RESUME
 instruction for the next iteration. OUTCOME: SUBSTITUTED.
+
+## Session 3340 (2026-08-30) — attributed M5 callback transfer site
+
+The independent retail oracle passed the whole-RDRAM positive control at
+10,000 callbacks and watched `registerSiCallback` execute 9 times. Its
+previous-PC histogram was `0x80002FDC` once, `0x8009BC50` three times, and
+`0x800919EC` five times. This supplies an independent ground-truth direct /
+indirect transfer split.
+
+Added regeneration-surviving transfer markers through
+`tools/apply_s3334_m5_callback_writer.py` and rebuilt the Debug target. The
+fixed port recipe passed host/task/PCM controls, reached title VI 1024 at
+`0x00790400`, and reached hangar VI 512 at `0x006AB400`. In both target
+phases, `0x800919EC` passed `0x8009123C` to `registerSiCallback` and was
+immediately followed by the matching entry. The direct `0x8009BC50` site
+passed `0x8009B5A8`; no target-phase `0x80002FDC` transfer occurred.
+
+This selects `H-IndirectTransfer` for the unresolved `0x8009123C` occupant,
+refutes a direct generated caller for that occupant and the context-marker
+explanation, and identifies the next boundary as the writer/source of the
+function pointer loaded at `0x800919D4`. The entry `$ra` remained zero and is
+not used as caller evidence. No behavior change or mitigation was made.
+Evidence: `scratch/agent/s3340_m5_callback_transfer.md`.

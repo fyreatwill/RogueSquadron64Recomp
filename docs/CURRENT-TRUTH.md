@@ -4,9 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3337 (2026-08-30). Compacted from
+Current maintenance marker: Session 3340 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3340 selected `H-IndirectTransfer`: retail's independent
+`registerSiCallback` previous-PC histogram includes `0x800919EC` (5/9), and
+the port's regeneration-surviving transfer marker shows that site passing
+`0x8009123C` directly into the callback in both title and hangar phases. The
+port's direct `0x8009BC50` transfer passes `0x8009B5A8` instead. Host/task/PCM
+controls and title/hangar VI controls passed. This identifies the transfer
+site but not the writer of the indirect function pointer; no behavior change
+is authorized. Evidence: `scratch/agent/s3340_m5_callback_transfer.md`.
 
 Session 3338 added a regeneration-surviving entry probe at
 `registerSiCallback` (`0x80007910`). The valid fixed recipe passed host/task,
@@ -211,11 +220,12 @@ the join's 640-only latch filter. Evidence:
 
 ## Live investigation (s3303–s3324)
 
-Session 3337 closes the exact-store discriminator but leaves caller attribution
-open. The next boundary is the caller/return path that supplies
-`0x8009123C` to `registerSiCallback`; retain the retail callback-table baseline
-and the port host/task/title/hangar controls. Do not change behavior based on
-the target mismatch alone.
+Session 3340 closes the caller attribution discriminator for the observed
+`0x8009123C` registration: the transfer is the indirect call at `0x800919EC`.
+The next boundary is the source/writer of the function pointer loaded before
+that call; retain the retail callback-table baseline and port
+host/task/title/hangar controls. Do not change behavior based on the target
+mismatch alone.
 
 Session 3333 closes the first reachability boundary: retail has the expected
 initializer, service callback, and child edge, while the port installs and
@@ -470,7 +480,7 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3330–3338:
+1. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3330–3340:
    the reachable port hangar has valid task/PCM controls but no slot/status
    rows or named retail consumer-PC executions, selecting
    `H-PortSlotStatusMissing` on single-source port evidence. The callback audit
@@ -487,9 +497,12 @@ target row exists.
    `[80003250,8009123C,0,0]` before the later `0x8009BC50` call. Next: capture
    Session 3338 proves the `0x8009123C` value is already present at
    `registerSiCallback` entry, but generated `$ra` is zero for all entries, so
-   the caller remains unresolved. Next: add a caller-side transfer marker that
-   records the actual generated callsite and entry ordinal in the same build;
-   do not infer a caller from `$ra=0`. Do not change a contract edge or add a
+   the writer remains unresolved. Session 3340 proves the port's
+   `0x800919EC` indirect transfer supplies `0x8009123C`, matching retail's
+   independent previous-PC edge; the direct `0x8009BC50` site supplies
+   `0x8009B5A8`. Next: identify the writer/source of the function pointer
+   loaded at `0x800919D4`, retaining the retail whole-RDRAM and port
+   task/host/title/hangar controls. Do not change a contract edge or add a
    mitigation.
    Do not add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail

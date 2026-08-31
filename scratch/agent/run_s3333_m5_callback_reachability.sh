@@ -26,6 +26,7 @@ env ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_S
     ROGUESQ_LOG_M5_TASK_CONTRACT=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 \
     ROGUESQ_LOG_M5_ROUTE_STATE=1 ROGUESQ_LOG_M5_B40_ROUTE=1 \
     ROGUESQ_LOG_M5_CALLBACK_ENTRY=1 \
+    ROGUESQ_LOG_M5_CALLBACK_TRANSFER=1 \
     ./RogueSquadron64Recomp >"$LOG" 2>&1 &
 PID=$!
 
@@ -37,7 +38,7 @@ done
 
 (
     previous=0
-    for at in 6 11 16 21 26 31 36 41 46 51 56; do
+    for at in 6 11 16 21 26 31 36 41 46 51 56 61 66 71 76 81 86 91 96 101 106 111 116 121 126; do
         sleep "$((at - previous))"
         previous=$at
         kill -0 "$PID" 2>/dev/null || exit 0
@@ -47,10 +48,10 @@ done
 ) &
 KEYPID=$!
 
-for ((i=0; i<150; ++i)); do
+for ((i=0; i<140; ++i)); do
     kill -0 "$PID" 2>/dev/null || break
     grep -a -q 'vi_width=512 .*origin=0x006AB400' "$LOG" 2>/dev/null && break
     sleep 1
 done
-sleep 15
+sleep 10
 exit 0

@@ -19,6 +19,26 @@ def insert_once(path: Path, anchor: str, text: str) -> None:
 
 def main() -> None:
     insert_once(
+        GEN / "funcs_26.c",
+        "    registerSiCallback(rdram, ctx);",
+        "    { extern void rs64_m5_callback_transfer_event(unsigned, unsigned, unsigned);\n"
+        "      rs64_m5_callback_transfer_event(0x8009BC50u, 0x80007910u, U32(ctx->r4)); }\n",
+    )
+    insert_once(
+        GEN / "funcs_0.c",
+        "    registerSiCallback(rdram, ctx);",
+        "    { extern void rs64_m5_callback_transfer_event(unsigned, unsigned, unsigned);\n"
+        "      rs64_m5_callback_transfer_event(0x80002FDCu, 0x80007910u, U32(ctx->r4)); }\n",
+    )
+    insert_once(
+        GEN / "funcs_24.c",
+        "    // 0x800919EC: jalr        $v0\n"
+        "    // 0x800919F0: nop\n\n"
+        "    LOOKUP_FUNC(ctx->r2)(rdram, ctx);",
+        "    { extern void rs64_m5_callback_transfer_event(unsigned, unsigned, unsigned);\n"
+        "      rs64_m5_callback_transfer_event(0x800919ECu, U32(ctx->r2), U32(ctx->r4)); }\n",
+    )
+    insert_once(
         GEN / "funcs_15.c",
         "    initMusyXVoiceTable(rdram, ctx);",
         "    { extern void rs64_m5_callback_writer_event(unsigned, unsigned, unsigned);\n"
