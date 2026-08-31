@@ -2,32 +2,38 @@
 
 HYPOTHESIS-ID: m5-port-zero-pcm-source
 
-Session 3376's batched source-DMEM/DMA join reached both target phases with
-all controls live. Joined stage-2/3 DMA events had zero source-DMEM, zero
-post-transform DMEM, and zero destination payload, while retail independently
-wrote nonzero primary PCM spans. The next question is which upstream producer
-leaves the active RSP input DMEM zero; do not modify output, waits, slots,
-status, or consumer dispatch.
+Do exactly one bounded M5 source census next iteration. Do not modify output,
+waits, slots, status handling, consumer dispatch, or PCM writeback.
 
 Competing hypotheses:
 
-- `H-PortRSPSourceZero`: selected at the observed boundary; the upstream
-  producer feeding the RSP input is absent or writes zero.
-- `H-PortRSPTransformZero`: the source is nonzero, but the active transform
-  emits zero; currently unevaluable because no nonzero source was observed.
-- `H-PortDMADestinationMismatch`: the observed zero DMA is not the PCM source
-  span consumed by the audio callback; refuted for joined stage-2/3 rows.
+- H-PortRSPSourceZero: the upstream producer feeding the active RSP input
+  DMEM is absent or writes zero.
+- H-PortRSPTransformZero: source DMEM is nonzero, but the active transform
+  emits zero; currently unevaluable.
+- H-PortDMADestinationMismatch: the joined DMA targets a different source
+  than the consumer; currently refuted for joined stage-2/3 rows.
 
-Discriminating measurement: enumerate the upstream writes/DMAs that populate
-the stage-2/3 RSP input-DMEM windows (`0x6F0` and `0xCB0`) and join them to
-the same audio task ordinal/row, with the existing phase, task, PCM, and
-image-DMA controls. A producer never populating the window selects the
-upstream-input gap; a nonzero producer followed by zero at the stage call
-selects `H-PortRSPTransformZero`; a producer targeting a different DMEM
-window reopens the DMA/source identity question.
+Discriminating measurement:
 
-Preparation: identify the existing RSP DMEM write/DMA hooks before building
-the instrument. Follow the regeneration order and batch the complete producer
-census in one build and one run. Positive controls must include phase,
-audio-task/ABI, PCM, image stage/DMA join, title, and hangar markers. Do not
-change waits, slots, status handling, consumer dispatch, or PCM writeback.
+Enumerate every upstream write/DMA that populates the stage-2/3 RSP input
+DMEM windows (0x6F0 and 0xCB0), record phase and audio-task ordinal, and join
+each producer to the existing stage/DMA row in one instrument and one run.
+No producer or only zero-valued writes selects H-PortRSPSourceZero. A nonzero
+producer followed by zero at the stage call selects H-PortRSPTransformZero. A
+producer targeting a different DMEM window reopens H-PortDMADestinationMismatch.
+
+Before building, ask ground truth from the retail oracle for the physical
+source-DMEM/input spans and verify the existing port DMEM/DMA hooks. Then
+batch the full producer census into the regeneration-surviving instrumentation
+and follow:
+
+make_elf.py -> N64Recomp -> fixup_game_funcs.py -> CMake
+cmake --build build --config Debug --target RogueSquadron64Recomp
+
+Run from build/ with the ROM present, phase-gated on VI transitions. Require
+same-run positive controls for phase, audio-task/ABI, PCM, image-stage/DMA,
+title 1024, and hangar 512. Kill with SIGKILL and capture output to a
+non-dot-prefixed path. Record the result in a new scratch evidence file and
+PORTING-STATE.md, then update CURRENT-TRUTH and commit.
+

@@ -130048,3 +130048,14 @@ refutes `H-PortDMADestinationMismatch` for the joined rows. It leaves
 `H-PortRSPTransformZero` unevaluable because no nonzero source input was
 observed. No output, wait, slot, status, or consumer behavior changed.
 Evidence: `scratch/agent/s3376_m5_zero_pcm_source.md`.
+
+## Session 3377 (2026-08-31) — compacted current truth after maintenance threshold
+
+Maintenance iteration only; no build, run, soak, or experiment was performed.
+The required size check found `docs/CURRENT-TRUTH.md` at 60,639 bytes and
+991 lines. It was compacted to 8,126 bytes and 153 lines. Durable historical
+material remains in `PROJECT-OVERVIEW.md` and this append-only ledger; the
+active M5 source-DMEM discriminator, competing hypotheses, controls, and
+operational boundaries were retained. The compaction rules out no runtime
+hypothesis and makes no behavior change. Next work remains the upstream
+producer census for zero PCM RSP-DMA input.
