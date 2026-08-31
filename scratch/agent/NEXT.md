@@ -1,27 +1,32 @@
-# NEXT work unit — attribute the writer of the producer source slot
+# NEXT work unit — qualify the source-slot writer value
 
 HYPOTHESIS-ID: m5-output-state-contract-boundary
 
-Session 3456 selected producer/input: at `0x800645A8`, both routes use source
-pointer `0x801E8710`, but the first ordered nonzero loaded `s0` differs
-(`retail=0x801B4F00`, `port=0x801B5E70`). Attribute who writes that source slot.
+Session 3457 selected a retail-side writer/route difference: retail writes
+`0x801E8710` from eight title-phase PCs, while the port table emitted only the
+shared `0x800644B0` and `0x80064524` writers. The current port parity hook
+passes zero for its value field, so actual writer-value attribution remains
+open. At `0x800645A8`, both routes still use source pointer `0x801E8710`, but
+the first ordered nonzero loaded `s0` differs (`retail=0x801B4F00`,
+`port=0x801B5E70`).
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-PortWriter`: a port writer at or before `0x800645A8` supplies the differing
-  word at `0x801E8710`; selects a port-side producer contract defect.
-- `H-RetailWriter`: retail alone writes the differing value before the load;
-  selects a legitimate route/input difference rather than a port writer bug.
-- `H-AddressDivergence`: the source pointer or ordered writer/load join differs;
-  selects address/ordering before value comparison.
-- `H-ControlFailure`: the whole-RDRAM and four-PC controls do not fire in the
-  same run; the result is unevaluable and the control must be repaired.
+- `H-RetailValue`: a retail-only writer stores the word that leads to
+  retail's loaded `s0`; selects a retail-side producer/value contract
+  difference.
+- `H-SharedValue`: the shared writers store different words or order
+  differently; selects a shared producer/value divergence.
+- `H-PortValue`: a port writer stores the differing word despite the current
+  PC-set difference; selects a port-side producer contract defect.
+- `H-ControlFailure`: either positive control is absent; the result is
+  unevaluable and the control must be repaired.
 
-Ask the retail oracle first: use a whole-RDRAM positive control plus a
-phase-gated write watch for physical `0x001E8710:0x001E8714`, and retain the
-`0x800645AC` execution watch. Then add the matching phase-scoped port writer
-table in one build, preserving the existing positive-control marker. The
-discriminator is the writer PC/value at the first joined ordinal: port writer
-selects `H-PortWriter`, retail-only writer selects `H-RetailWriter`, an
-unmatched source address selects `H-AddressDivergence`, and missing controls
-selects `H-ControlFailure`.
+Ask the retail oracle first: use the existing whole-RDRAM control and source
+watch, adding post-store word/value capture for the eight observed writer PCs
+in the title bucket. Then build the matching port arm with actual post-store
+value capture at every source-slot writer, preserving the existing schema
+positive control. The discriminator is the first phase/PC/ordinal writer
+value joined to the producer load: retail-only value selects `H-RetailValue`,
+different shared-writer value selects `H-SharedValue`, a port-only value
+selects `H-PortValue`, and missing controls selects `H-ControlFailure`.

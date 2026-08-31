@@ -131719,3 +131719,17 @@ slots, dispatch, clear behavior, or PCM writeback changed. Evidence:
 `docs/M5-S3456-PRODUCER-INPUT.md`,
 `scratch/agent/s3456_oracle_ground_truth_rice.log`, and
 `scratch/agent/s3456_port_producer.log`.
+## Session 3457 (2026-08-31) — attributed source-slot writer PCs
+
+Ran the retail oracle first with whole-RDRAM positive control, a title-phase
+watch on physical `0x001E8710:0x001E8714`, and an execution watch at
+`0x800645AC`. The control recorded 11,483 writes; the source watch recorded
+1,483 writes, including title writers at `0x800644B0`, `0x80064524`,
+`0x800078EC`, `0x80018F5C`, `0x80018F80`, `0x80028F90`, `0x800C871C`, and
+`0x80006FF4`. Built and ran the matching port arm with the existing four-PC
+schema positive control; it reached title and emitted 1,024 source-writer
+rows only at `0x800644B0` and `0x80064524`. This selects a retail-side
+writer/route difference and rules out a port-only writer at this boundary.
+The generated parity hook passes zero as its value argument, so actual writer
+value and legitimacy remain unevaluable; the next probe must capture the
+post-store word. Evidence: `docs/M5-S3457-SOURCE-WRITER.md`.

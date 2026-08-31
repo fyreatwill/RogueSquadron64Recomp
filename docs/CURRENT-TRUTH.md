@@ -105,14 +105,25 @@ target preserves that value. This selects the upstream producer/input
 boundary and rules out wrapper/ABI clobber at this scope. It does not name the
 writer of `*(0x801E8710)`. Evidence: [M5-S3456-PRODUCER-INPUT.md](M5-S3456-PRODUCER-INPUT.md).
 
+Session 3457's retail source-slot watch passed the whole-RDRAM control with
+11,483 callbacks, recorded 1,483 writes to physical `0x001E8710`, and showed
+title-phase writers at `0x800644B0`, `0x80064524`, `0x800078EC`,
+`0x80018F5C`, `0x80018F80`, `0x80028F90`, `0x800C871C`, and `0x80006FF4`.
+The matching port run passed its four-PC schema control and emitted 1,024
+source-writer rows, but only at `0x800644B0` and `0x80064524`. This selects a
+retail-side writer/route difference at the observed title boundary and rules
+out a port-only writer. The generated parity hook passed zero as its value
+argument, so writer-value legitimacy remains unevaluable. Evidence:
+[M5-S3457-SOURCE-WRITER.md](M5-S3457-SOURCE-WRITER.md).
+
 ## Next steps
 
-1. Attribute the writer of the shared source slot at `0x801E8710` before
-   `0x800645A8`, with a phase-scoped positive-control table containing writer
-   PC, source address/value, producer PC, callsite PC, target PC, ordinal, and
-   loaded `s0`. The s3456 join already selects producer/input over
-   wrapper/ABI clobber; do not alter waits, slots, dispatch, clear behavior,
-   or PCM writeback.
+1. Capture the actual post-store word for the retail-only and shared writers
+   of `0x801E8710`, retaining writer PC, producer PC, callsite PC, target PC,
+   ordinal, and loaded `s0` in one phase-scoped positive-control table. The
+   s3457 writer-PC join selects a retail-side writer/route difference, but its
+   value field is unevaluable because the current parity hook passes zero.
+   Do not alter waits, slots, dispatch, clear behavior, or PCM writeback.
 2. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 3. Use the producer join to identify the first output/state contract divergence
