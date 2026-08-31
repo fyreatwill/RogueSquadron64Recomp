@@ -130766,3 +130766,20 @@ and zero PCM source remain unresolved. No waits, slots, dispatch, clear
 behavior, or PCM writeback changed. Evidence is in
 `scratch/agent/s3410_retail_field348_ground_truth/correct-result.txt` and
 `scratch/agent/s3410_m5_field348_input_join/`.
+
+## Session 3412 (2026-08-31) — M5 downstream producer join
+
+The fresh Debug build reran the phase-qualified silent/image downstream join.
+Both arms reached title 1024 and hangar 512, passed task ABI/DMA controls, and
+had no crash or abort markers. Silent had 1212 ABI/DMA rows and no image-stage
+rows; image had 1209 ABI/DMA rows, 4869 image-stage rows, and 64 joined rows.
+On the image hangar route, `0x8008F2CC` cleared `field348=0x801797B0` with
+`len=0x298`; producer `0x800078EC` did execute and wrote the source span, but
+all observed bytes were zero. Stage 3 copied DMEM `0xCB0..0xE48` to
+`0x801798B0` with `FNV=762B22A5`, `nz=0`; PCM remained zero. The silent arm
+provided the expected no-image-stage control. This selects
+`H-PortImageSourceStillZero` and refutes `H-PortIndirectProducerMissing` at
+the observed edge; it does not identify why the producer input is zero. No
+waits, slots, dispatch, clear behavior, or PCM writeback changed. Evidence is
+`docs/M5-S3412-DOWNSTREAM-PRODUCER.md` and
+`scratch/agent/s3411_m5_downstream_join/driver.log`.

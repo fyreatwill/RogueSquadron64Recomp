@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3409 (2026-08-31). This file was compacted
+through Session 3412 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -251,17 +251,28 @@ the target clear remained the independent `0x8008F2CC` callsite. This selects
 destinations. The upstream zero-output cause remains unresolved. Evidence is
 in [M5-S3409-052C4-JOIN.md](M5-S3409-052C4-JOIN.md).
 
+Session 3412 reran the downstream producer join from a fresh build. Both
+silent and image arms passed title 1024 and hangar 512, with ABI/DMA controls
+live and no crash/abort markers. The image arm joined the hangar clear at
+`0x8008F2CC` to `field348=0x801797B0`; `0x800078EC` executed on that route and
+wrote the source span, but every observed byte was zero. Stage 3 copied zero
+DMEM `0xCB0..0xE48` to `0x801798B0` (`FNV=762B22A5`, `nz=0`), while the silent
+control produced no image-stage rows and PCM stayed zero. This selects
+`H-PortImageSourceStillZero`, refutes a missing producer edge at the observed
+boundary, and does not establish why the producer input is zero. Evidence is
+in [M5-S3412-DOWNSTREAM-PRODUCER.md](M5-S3412-DOWNSTREAM-PRODUCER.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the downstream missing producer from the joined hangar clear at
-   `0x8008F2CC` to the nonzero PCM/image source, focusing on the retail
-   `0x8002BEEC -> 0x800078EC` indirect edge and its port equivalent. Use one
-   phase-qualified, whole-callsite census with a same-run whole-RDRAM,
-   title/hangar, ABI/DMA, image-stage, and PCM control. Do not change waits,
-   slots, dispatch, clear behavior, or PCM writeback.
+1. Ask the independent retail oracle for the corresponding source-span
+   census: phase-gate hangar origin `0x006AB400`, watch physical
+   `0x1797B0:0x179A48` and producer `0x800078EC`, and retain post-store values
+   plus whole-RDRAM/title/hangar controls. Establish the retail value before
+   adding another port instrument. Do not change waits, slots, dispatch, clear
+   behavior, or PCM writeback.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control and
    retain post-store sampling for the target span. The field348 input-to-clear
    edge is closed; do not repeat it unless a new writer discriminator is added.
