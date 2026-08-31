@@ -129328,3 +129328,11 @@ does not identify the caller; `$ra=0` is not evidence of an address-zero
 caller. The next discriminator must mark the transfer at the generated caller
 side. No behavior change or mitigation was made. Evidence:
 `scratch/agent/s3338_m5_callback_entry.md`.
+
+## Session 3339 (2026-08-30) — checkpoint close-out (iteration died before experiment)
+
+No experiment was run. The iteration hit a turn cap before executing any part
+of the planned work unit (transfer hook at generated callers of
+`registerSiCallback`). No new build, no new run, no code change. No conclusion
+changed. The planned work unit is unchanged; NEXT.md carries the exact RESUME
+instruction for the next iteration. OUTCOME: SUBSTITUTED.
