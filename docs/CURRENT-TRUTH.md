@@ -4,11 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3315 (2026-08-30). Compacted from
+Current maintenance marker: Session 3316 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
-## Live investigation (s3303–s3315)
+## Live investigation (s3303–s3316)
+
+Session 3316 could not run the configured-host `PatchesLib` discriminator.
+Same-iteration checks found the Unix checkout, cached `E:/mips-toolchain`
+paths with neither MIPS executable present, no generated
+`RecompiledPatches/patches.c`, and no `PatchesLib` target in CMake's target
+list. This selects `H-GuardHostMissing` for this environment only; it is not
+patch-source or linker evidence. Evidence:
+`scratch/agent/s3316_patches_host_validation.md`.
 
 Session 3315 completed the static B1C caller/order audit. The generated tree
 contains exactly three fixed-address accesses: the zero reset at `0x800A5EE8`,
@@ -240,32 +248,32 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Validate `patches/heap_guards.c` on the configured Windows/MIPS host
-   (`PatchesLib`). Do not repeat the local missing-target build.
+1. On the configured Windows/MIPS host, run
+   `cmake --build build --config Debug --target PatchesLib` to distinguish
+   patch build availability from source/link failures. Do not repeat the local
+   missing-target check.
 2. Treat the B1C source investigation as closed at the observed phase: no
    alternate writer or ordering edge exists in the generated tree, and neither
    conditional nonzero path fired in Session 3314. Do not repeat the same
    6208/6238/6248/6274/62B4 census. Reopen only with a new retail/port
    discriminator for the data-dependent predicates.
 3. Session 3285 moved the 3270 alignment + cycle-cap class onto the
-   generated host walks that link here. Remaining: validate
-   `patches/heap_guards.c` on the configured Windows/MIPS host
-   (`PatchesLib`). Do not repeat the local missing-target build. The
-   guard is not evidence that the VI-640 route or audio is corrupt.
+   generated host walks that link here. The guard is not evidence that the
+   VI-640 route or audio is corrupt.
 4. After the pre-VI-640 scheduler crash is repaired or explained, capture
    consumed-message identity at `0x80019CD0` with `ROGUESQ_RECV_TRACE`
    positive controls. Session 3269 selected `H-RecvWatchUnavailable`. Require
    caller, message pointer, type byte, and `89F/28D44` in the same phase.
-4. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row names
+5. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row names
    one missing image task/output contract edge. Keep the change to exactly one
    proven writer/consumer relation.
-5. Closed static M3 classes, retain existing traps/guards as safety only:
+6. Closed static M3 classes, retain existing traps/guards as safety only:
    A8 key-on divisor, A12 `0x8014974C`, A9 voice-array base, A10 3D voice-list
    head, 43-site `SONGTEMPO_TABLE_GUARD`. `-0x68A8`/`-0x68B0` is
    `H-NotPatchable`. Status-03 is a named `stopVoiceSlotSynced` /
    `serviceVoicePoolFrame` contract.
-6. Generated-symbol sweep remains closed (Sessions 3210/3212/3217).
-7. M4 restage destination is hangar `gspTask` (`0x800377C8`) with physical
+7. Generated-symbol sweep remains closed (Sessions 3210/3212/3217).
+8. M4 restage destination is hangar `gspTask` (`0x800377C8`) with physical
    `output_buff` `0x0075C000` / `0x00781800`. Keep the external retail-entry
    boundary, hangar `0x8000` Y / accumulator arithmetic, and M5 SP-yield/MORT
    publication threads parked pending a new target-phase discriminator. The

@@ -128853,3 +128853,14 @@ exists. This refutes `H-PortB1CUncalled` and `H-PortB1COrder`. Combined with
 Session 3314's positive-control run, where only the reset fired, it selects
 `H-PortB1CDead` for the observed phase, without proving the conditional paths
 globally unreachable. Evidence: `scratch/agent/s3315_b1c_static_audit.md`.
+## Session 3316 (2026-08-30) — configured-host PatchesLib validation unavailable
+
+The planned work unit was to run `cmake --build build --config Debug --target
+PatchesLib` on the configured Windows/MIPS host. This Unix checkout could not
+run that discriminator. Same-iteration checks found the CMake cache pointing
+to `E:/mips-toolchain`, both configured MIPS executables absent, no local
+`mips64-elf-gcc`/`mips64-elf-ld`, no generated `RecompiledPatches/patches.c`,
+and no `PatchesLib` target in `cmake --build build --config Debug --target
+help`. This selects `H-GuardHostMissing` for the current environment and does
+not test the patch source or linker contract. No local missing-target build was
+repeated. Evidence: `scratch/agent/s3316_patches_host_validation.md`.
