@@ -130023,3 +130023,28 @@ the guest hook is scoped to the existing AI-submit store census, not every
 generated MEM store. No behavior change was made.
 
 Evidence: `scratch/agent/s3375_m5_port_pcm_writer.md`.
+
+## Session 3376 (2026-08-31) — traced zero PCM RSP-DMA source boundary
+
+Ran the independent retail prerequisite with Rice, the canonical Start
+schedule, whole-RDRAM control, and the three primary PCM-span watches. The
+control fired 12,496 writes, title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400` were reached, and each primary span received 768 writes
+from guest PC `0x800078EC` with 730–762 nonzero bytes in the final snapshots.
+
+Added source-DMEM FNV/nonzero fields to the existing regeneration-surviving
+RSP-DMA/image-stage join, exported the submodule patch, and rebuilt Debug
+successfully. The qualified port run reached both target phases with phase,
+audio-task/ABI, image-stage/DMA-join, and PCM source/consumer controls live;
+there were zero crash or abort markers. Joined stage-2 (`0x300`) DMA rows
+reported source-DMEM `F59C39C5/nz=0`, post-transform DMEM
+`F59C39C5/nz=0`, and destination `F59C39C5/nz=0`. Stage-3 (`0x198`) rows
+reported `762B22A5/nz=0` at all three boundaries. The stage-2 destination
+was nonzero when sampled before the DMA, confirming the zero is written by
+the observed DMA rather than merely read from an empty destination.
+
+This selects `H-PortRSPSourceZero` at the observed RSP source boundary and
+refutes `H-PortDMADestinationMismatch` for the joined rows. It leaves
+`H-PortRSPTransformZero` unevaluable because no nonzero source input was
+observed. No output, wait, slot, status, or consumer behavior changed.
+Evidence: `scratch/agent/s3376_m5_zero_pcm_source.md`.

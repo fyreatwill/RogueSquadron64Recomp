@@ -1,36 +1,33 @@
-# NEXT work unit — trace the zero PCM RSP-DMA source edge
+# NEXT work unit — trace the upstream producer feeding zero PCM RSP-DMA input
 
 HYPOTHESIS-ID: m5-port-zero-pcm-source
 
-The corrected s3375 port run reached both target phases with live host/task,
-PCM, and filter controls. Its guest-store census found no primary-span store,
-while RSP-DMA writes into the PCM ring were active with zero payload. Retail
-ground truth independently shows guest `0x800078EC` writing each primary span
-with nonzero values. The next question is where the zero enters the port's RSP
-DMA source path; do not modify output, waits, slots, status, or consumer
-dispatch.
+Session 3376's batched source-DMEM/DMA join reached both target phases with
+all controls live. Joined stage-2/3 DMA events had zero source-DMEM, zero
+post-transform DMEM, and zero destination payload, while retail independently
+wrote nonzero primary PCM spans. The next question is which upstream producer
+leaves the active RSP input DMEM zero; do not modify output, waits, slots,
+status, or consumer dispatch.
 
 Competing hypotheses:
 
-- `H-PortRSPSourceZero`: the port's RSP DMEM/input source is already zero
-  before the ring-buffer DMA.
-- `H-PortRSPTransformZero`: the RSP source is nonzero, but the active RSP
-  transform emits a zero output.
+- `H-PortRSPSourceZero`: selected at the observed boundary; the upstream
+  producer feeding the RSP input is absent or writes zero.
+- `H-PortRSPTransformZero`: the source is nonzero, but the active transform
+  emits zero; currently unevaluable because no nonzero source was observed.
 - `H-PortDMADestinationMismatch`: the observed zero DMA is not the PCM source
-  span consumed by the audio callback.
+  span consumed by the audio callback; refuted for joined stage-2/3 rows.
 
-Discriminating measurement: instrument one active factor5 audio task so the
-same DMA event reports source-DMEM FNV/nonzero, post-transform DMEM
-FNV/nonzero, and destination span, with the existing PCM source/consumer
-joins and positive controls in the same run. Source zero selects
-`H-PortRSPSourceZero`; nonzero source plus zero post-transform selects
-`H-PortRSPTransformZero`; a destination outside the joined PCM span selects
-`H-PortDMADestinationMismatch`.
+Discriminating measurement: enumerate the upstream writes/DMAs that populate
+the stage-2/3 RSP input-DMEM windows (`0x6F0` and `0xCB0`) and join them to
+the same audio task ordinal/row, with the existing phase, task, PCM, and
+image-DMA controls. A producer never populating the window selects the
+upstream-input gap; a nonzero producer followed by zero at the stage call
+selects `H-PortRSPTransformZero`; a producer targeting a different DMEM
+window reopens the DMA/source identity question.
 
-Preparation: use the existing fixed port route and follow the regeneration
-order. Ask the retail oracle for the whole-RDRAM control and matching primary
-span writer rows before building the port instrument. Batch all source,
-transform, destination, and join fields into one build and one run; positive
-controls must include host/task/PCM plus title and hangar phase markers. Do not
-change waits, slots, status handling, consumer dispatch, or PCM writeback until
-the source boundary is named.
+Preparation: identify the existing RSP DMEM write/DMA hooks before building
+the instrument. Follow the regeneration order and batch the complete producer
+census in one build and one run. Positive controls must include phase,
+audio-task/ABI, PCM, image stage/DMA join, title, and hangar markers. Do not
+change waits, slots, status handling, consumer dispatch, or PCM writeback.

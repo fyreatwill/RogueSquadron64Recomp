@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3375 (2026-08-31). Compacted from
+Current maintenance marker: Session 3376 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -19,6 +19,17 @@ selects `H-PortWriterPresentButZero` at the port output boundary. The exact
 retail CPU-writer equivalent remains unproven because the guest hook is scoped
 to the existing AI-submit store census. No behavior change is authorized.
 Evidence: `scratch/agent/s3375_m5_port_pcm_writer.md`.
+
+Session 3376 added a regeneration-surviving source-DMEM hash to the active
+RSP-DMA/image-stage join and qualified it on the same route. The port passed
+phase, audio-task/ABI, image-stage/DMA-join, and PCM source/consumer controls,
+with no crash or abort. Joined stage-2/3 rows in both title and hangar had
+zero source-DMEM, zero post-transform DMEM, and zero destination payload
+(`F59C39C5` for stage 2; `762B22A5` for stage 3). Retail independently wrote
+all three primary PCM spans with nonzero payloads. This selects
+`H-PortRSPSourceZero` at the observed RSP source boundary and leaves
+transform behavior on nonzero input unevaluable. No behavior changed.
+Evidence: `scratch/agent/s3376_m5_zero_pcm_source.md`.
 
 Session 3374's independent retail PCM watch passed the whole-RDRAM control
 (12,496 writes), reached title `1024 @ 0x00790400` and hangar
@@ -738,9 +749,13 @@ Session 3373 qualified the existing task/output joins: consumer matches and
 completed tasks were numerous, but the named consumer-entry marker stayed at
 zero and sampled PCM payloads stayed zero-valued. Session 3374 independently
 named the retail guest writer/value for the three primary PCM spans and found
-nonzero data. The next discriminator is a regeneration-surviving port census
-of the writer/source path; do not substitute output data or change waits,
-slots, status, or consumer dispatch until that source edge is named.
+nonzero data. Session 3376 added a batched source-DMEM/DMA join: joined
+stage-2/3 rows had zero source-DMEM, post-transform DMEM, and destination
+payload. This selects `H-PortRSPSourceZero` at the observed boundary and
+refutes destination mismatch for those rows; transform behavior on nonzero
+input remains unevaluable. The next discriminator is the upstream producer
+feeding the stage-2/3 RSP input windows. Do not substitute output data or
+change waits, slots, status, or consumer dispatch.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

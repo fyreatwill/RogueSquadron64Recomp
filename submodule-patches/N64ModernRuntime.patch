@@ -706,7 +706,7 @@ index 4276b7d..830192b 100644
                      game_entry.entrypoint(rdram, context);
                  } catch (ultramodern::thread_terminated& terminated) {
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..35b7009 100644
+index 1cb3f6a..62e5cf0 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,10 @@
@@ -720,7 +720,7 @@ index 1cb3f6a..35b7009 100644
  
  #include "rsp.hpp"
  
-@@ -32,24 +36,1253 @@ void recomp::rsp::constants_init() {
+@@ -32,24 +36,1275 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -816,6 +816,8 @@ index 1cb3f6a..35b7009 100644
 +    uint32_t dmem;
 +    uint32_t payload_fnv;
 +    uint32_t payload_nz;
++    uint32_t source_dmem_fnv;
++    uint32_t source_dmem_nz;
 +    bool output_overlap;
 +    bool yield_overlap;
 +    bool data_overlap;
@@ -850,7 +852,8 @@ index 1cb3f6a..35b7009 100644
 +extern "C" void rs64_audio_join_image_dma(
 +    const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
 +    uint32_t width, uint32_t origin, uint64_t dma_event, uint32_t dram,
-+    uint32_t len, uint32_t fnv, uint32_t nonzero);
++    uint32_t len, uint32_t fnv, uint32_t nonzero,
++    uint32_t source_dmem_fnv, uint32_t source_dmem_nonzero);
 +extern "C" bool rs64_audio_current_route_snapshot(
 +    uint32_t* phase, uint32_t* width, uint32_t* origin, uint32_t* ordinal,
 +    uint32_t* row, int* exit_reason, const char** arm);
@@ -919,6 +922,8 @@ index 1cb3f6a..35b7009 100644
 +    uint32_t dma_len = 0;
 +    uint32_t dma_fnv = 0;
 +    uint32_t dma_nonzero = 0;
++    uint32_t source_dmem_fnv = 0;
++    uint32_t source_dmem_nonzero = 0;
 +    uint64_t complete_event = 0;
 +    int source_pcm = -1;
 +    int consumer_pcm = -1;
@@ -1193,7 +1198,8 @@ index 1cb3f6a..35b7009 100644
 +extern "C" void rs64_audio_join_image_dma(
 +    const char* arm, uint32_t ordinal, uint32_t row, uint32_t phase,
 +    uint32_t width, uint32_t origin, uint64_t dma_event, uint32_t dram,
-+    uint32_t len, uint32_t fnv, uint32_t nonzero) {
++    uint32_t len, uint32_t fnv, uint32_t nonzero,
++    uint32_t source_dmem_fnv, uint32_t source_dmem_nonzero) {
 +    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
 +    audio_image_scope_locked(phase, width, origin);
 +    int best = -1;
@@ -1213,15 +1219,20 @@ index 1cb3f6a..35b7009 100644
 +    stage.dma_len = len;
 +    stage.dma_fnv = fnv;
 +    stage.dma_nonzero = nonzero;
++    stage.source_dmem_fnv = source_dmem_fnv;
++    stage.source_dmem_nonzero = source_dmem_nonzero;
 +    audio_image_match_stage_locked(stage);
 +    fprintf(stderr,
 +            "[audtask-image-dma-join] arm=%s ordinal=%u row=%u phase=%u"
 +            " width=%u origin=0x%06X dma_event=%" PRIu64
 +            " dram=0x%06X len=0x%X fnv=%08X nz=%u stage=%u"
-+            " stage_event=%" PRIu64 "\n",
++            " stage_event=%" PRIu64 " source_dmem_fnv=%08X source_dmem_nz=%u"
++            " post_transform_fnv=%08X post_transform_nz=%u"
++            " destination_fnv=%08X destination_nz=%u\n",
 +            arm ? arm : "n/a", ordinal, row, phase, width, origin, dma_event,
 +            stage.dma_dram, len, fnv, nonzero, stage.stage,
-+            stage.stage_event);
++            stage.stage_event, stage.source_dmem_fnv, stage.source_dmem_nonzero,
++            stage.fnv, stage.nonzero, fnv, nonzero);
 +    fflush(stderr);
 +}
 +
@@ -1592,6 +1603,8 @@ index 1cb3f6a..35b7009 100644
 +        dmem_addr,
 +        0,
 +        0,
++        0,
++        0,
 +        audio_dma_overlaps(dram_addr, len, task.output_buff,
 +                           task.output_buff_size),
 +        audio_dma_overlaps(dram_addr, len, task.yield_data_ptr,
@@ -1608,6 +1621,15 @@ index 1cb3f6a..35b7009 100644
 +    }
 +    probe->ranges.back().payload_fnv = payload_fnv;
 +    probe->ranges.back().payload_nz = payload_nz;
++    uint32_t source_dmem_fnv = 2166136261u;
++    uint32_t source_dmem_nz = 0;
++    for (uint32_t i = 0; i < len; i++) {
++        const uint8_t b = RSP_MEM_BU(0, dmem_addr + i);
++        source_dmem_fnv = (source_dmem_fnv * 16777619u) ^ b;
++        source_dmem_nz += b != 0;
++    }
++    probe->ranges.back().source_dmem_fnv = source_dmem_fnv;
++    probe->ranges.back().source_dmem_nz = source_dmem_nz;
 +    uint32_t route_phase = probe->phase;
 +    uint32_t route_width = probe->width;
 +    uint32_t route_origin = probe->origin;
@@ -1621,7 +1643,7 @@ index 1cb3f6a..35b7009 100644
 +    rs64_audio_join_image_dma(
 +        route_arm, route_ordinal, route_row, route_phase, route_width,
 +        route_origin, probe->ranges.back().event, dram_addr, len,
-+        payload_fnv, payload_nz);
++        payload_fnv, payload_nz, source_dmem_fnv, source_dmem_nz);
 +    static thread_local uint32_t observer_control_key = 0xFFFFFFFFu;
 +    const uint32_t observer_key = (probe->width << 24) ^ probe->origin;
 +    if (observer_control_key != observer_key) {
