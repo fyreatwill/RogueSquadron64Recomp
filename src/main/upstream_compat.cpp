@@ -2030,6 +2030,38 @@ extern "C" void rs64_m5_state_pointer_entry(uint8_t* rdram,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_state_pointer_checkpoint(uint8_t* rdram,
+                                                    recomp_context* ctx,
+                                                    const char* edge) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_STATE_POINTER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u)) return;
+    static uint32_t rows = 0;
+    if (rows >= 1024u) return;
+    const uint32_t s1 = U32(ctx->r17);
+    if (!((s1 >= 0x80194000u && s1 < 0x80196000u) ||
+          (s1 >= 0x801B0000u && s1 < 0x801C0000u))) return;
+    std::fprintf(stderr,
+        "[m5-state-pointer-checkpoint] edge=%s ordinal=%u phase=%u width=%u "
+        "origin=0x%06X s1=0x%08X state_word=0x%08X state=0x%08X "
+        "output_v0=0x%08X output_v1=0x%08X a0=0x%08X a1=0x%08X ra=0x%08X\n",
+        edge, rows++, rs64_phase_ord(), width, origin, s1,
+        U32(MEM_W(0, ctx->r17)), U32(ctx->r16), U32(ctx->r2), U32(ctx->r3),
+        U32(ctx->r4), U32(ctx->r5), U32(ctx->r31));
+    std::fflush(stderr);
+    if (rows == 1) {
+        std::fprintf(stderr, "[m5-state-pointer-checkpoint-positive] ordered witness is live\n");
+        std::fflush(stderr);
+    }
+}
+
 static void rs64_m5_frequency_producer(uint8_t* rdram, recomp_context* ctx,
                                        uint32_t mq_addr, uint32_t msg,
                                        int32_t flag) {

@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3445 (2026-08-31). This record was
+Current maintenance marker: Session 3447 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -36,9 +36,12 @@ contract:
   therefore after that entry and before the consumer witness.
 - The generated host wrapper reports `ra=0`; the exact clobber is unresolved.
 
-This selects `H-PortStatePointerClobber` at the observed boundary and refutes
-an absent upstream producer at the `rs_free` entry boundary. It does not prove
-that message zero is corrupt or identify the clobbering writer.
+The s3447 ordered checkpoint is positive only for hangar-512 calls: both arms
+retain `s1=0x80194B20`, pointed word `0x80194B40`, and state `0x801BEEB0`
+after receive and before the consumer witness. Existing consumer rows are
+title-1024 calls with `0x801BBD..` state pointers, so this run has no ordered
+join across the suspected boundary. `H-PortStatePointerClobber` remains open
+at title 1024; the 512 parity result must not be generalized.
 
 M5 audio source work remains unresolved upstream: qualified port image-stage
 rows carry zero source/output PCM, while retail independently writes nonzero
@@ -47,15 +50,13 @@ clear behavior, or PCM writeback while locating the state-pointer edge.
 
 ## Next steps
 
-1. Locate the first port-side state-pointer change after `rs_free` entry and
-   before `0x80001CB8`. Ask the independent retail oracle first for the
-   caller/entry tuple establishing `s1=0x80194B20`, with whole-RDRAM, title,
-   hangar, consumer, and output controls. Then add regeneration-safe port
-   witnesses immediately after `osRecvMesg_recomp` returns and immediately
-   before the existing consumer witness. Build one paired silent/image route;
-   phase-gate on VI transitions. Parity at all checkpoints closes the clobber
-   hypothesis; the first port-only change selects its boundary; missing joins
-   are unevaluable.
+1. Repeat the state-pointer checkpoint with the title-1024 gate: ask the
+   retail oracle first for `0x80001C98`/`0x80001CB8`/`0x80001CC8` rows in
+   origins `0x00790400`/`0x00790800`, then gate port witnesses on those origins
+   as well as the existing hangar controls. Join post-receive, pre-consumer,
+   and consumer rows by phase and ordinal in one silent/image build.
+   Title-1024 parity closes the clobber at this scope; a first port-only
+   change selects it; missing joins remain unevaluable.
 2. Keep M5 Step 3 gated until a like-for-like target row names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
@@ -122,6 +123,7 @@ independent discriminator.
 Latest state-pointer/output evidence:
 
 - [M5-S3445-STATE-POINTER-ENTRY.md](M5-S3445-STATE-POINTER-ENTRY.md)
+- [M5-S3447-STATE-POINTER-CHECKPOINT.md](M5-S3447-STATE-POINTER-CHECKPOINT.md)
 - [M5-S3444-STATE-POINTER-PRODUCER.md](M5-S3444-STATE-POINTER-PRODUCER.md)
 - [M5-S3443-FREQUENCY-OUTPUT-JOIN.md](M5-S3443-FREQUENCY-OUTPUT-JOIN.md)
 - [M5-S3442-FREQUENCY-OUTPUT-USE.md](M5-S3442-FREQUENCY-OUTPUT-USE.md)

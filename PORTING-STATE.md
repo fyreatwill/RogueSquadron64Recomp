@@ -131523,3 +131523,29 @@ No experiment or runtime change was run in this maintenance iteration. The
 next discriminator remains the first port-side state-pointer change after
 `rs_free` entry and before consumer `0x80001CB8`. The compaction does not
 change the selected hypothesis `H-PortStatePointerClobber`.
+
+## Session 3447 (2026-08-31) — qualified state-pointer checkpoint phase
+
+The independent retail oracle ran with a whole-RDRAM positive control, both
+hangar 512 origins, and watches at `0x80001C98`, `0x80001CB8`, `0x80001CC8`,
+and `0x80001F84`. All controls fired; the dominant retail predecessor of
+`rs_free` was `0x80005268`.
+
+One build added regeneration-safe witnesses immediately after
+`osRecvMesg_recomp` and immediately before the existing consumer witness. A
+concurrent first attempt crashed before the phase gate in the known scheduler
+path and was discarded. The fixed sequential silent/image run reached title
+1024 and hangar 512 in both arms without crash or abort. Entry/post-receive/
+pre-consumer rows were 401/401/401 silent and 408/408/408 image; the existing
+consumer had 512 rows per arm.
+
+Both arms retained `s1=0x80194B20`, pointed word `0x80194B40`, and state
+`0x801BEEB0` at both new hangar-512 checkpoints. Existing consumer rows were
+title-1024 calls with `0x801BBD..` state pointers, so the ordered join was
+missing. This is positive instrumentation but unevaluable for the title-1024
+clobber boundary; it neither proves parity nor identifies a writer there.
+The next work unit extends the checkpoint phase gate to title 1024. No waits,
+slots, dispatch, clear behavior, or PCM writeback changed.
+
+Evidence: `docs/M5-S3447-STATE-POINTER-CHECKPOINT.md` and
+`scratch/agent/s3446_m5_state_pointer_clobber/`.
