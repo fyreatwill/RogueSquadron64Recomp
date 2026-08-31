@@ -376,6 +376,19 @@ unresolved. Evidence: [M5-S3480-LATE-STORE-BOUNDARY.md](M5-S3480-LATE-STORE-BOUN
 ORIGIN: this iteration only observes guest-PC execution and host/task/send
 fields; it does not rewrite or validate guest state.
 
+Session 3481 joined the independent retail `OSTask` dump to the port host
+task/send capture. Both controls and the title phase were live. At enqueue PC
+`0x80033FCC`, both arms used task pointer `0x80149470`, type 2, and zero
+output/yield fields, but retail's first title task had `data_ptr=0x80171CE0`,
+`data_size=2`, while port's first row had `data_ptr=0x8018FB70`,
+`data_size=3`. This selects the first task-field divergence and rules out an
+absent task hook or send-only divergence at this scope. The guest writer and
+payload legitimacy remain unresolved; evidence:
+[M5-S3481-HOST-TASK-JOIN.md](M5-S3481-HOST-TASK-JOIN.md).
+
+ORIGIN: this iteration only observes retail and port task fields and queue
+returns; it does not rewrite, skip, or validate the differing payload.
+
 ## Next steps
 
 1. Join the qualified port host-task rows to a new independent retail

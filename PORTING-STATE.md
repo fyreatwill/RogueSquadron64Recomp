@@ -132226,3 +132226,24 @@ Evidence: `docs/M5-S3480-LATE-STORE-BOUNDARY.md`,
 
 ORIGIN: this iteration only observes guest-PC execution and host/task/send
 fields; it does not rewrite or validate guest state.
+
+## Session 3481 (2026-08-31) — joined retail and port audio task ABI
+
+The paired Rice capture used the whole-RDRAM positive control in the
+independent retail oracle and the host-boundary control in the port. Both
+reached title origin `0x00790400` at width 1024. At shared enqueue PC
+`0x80033FCC`, retail's first type-2 audio task used task pointer
+`0x80149470`, `data_ptr=0x80171CE0`, and `data_size=2`; the port host row used
+the same task pointer/type but `data_ptr=0x8018FB70` and `data_size=3`.
+Output and yield fields were zero in both. Retail reached 10,000 whole-RDRAM
+control callbacks; the port emitted its host control, 482 host-task rows, and
+512 send-return rows. This selects the first task-field divergence at the
+host-task contract boundary and rules out an absent task hook or send-only
+divergence at this scope. It does not identify the guest writer or prove the
+payloads are comparable for the same animated title ordinal.
+
+Evidence: `docs/M5-S3481-HOST-TASK-JOIN.md` and
+`scratch/agent/s3481_m5_host_task_join/`.
+
+ORIGIN: this iteration only observes retail and port task fields and queue
+returns; it does not rewrite, skip, or validate the differing payload.
