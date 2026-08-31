@@ -2134,6 +2134,11 @@ extern "C" void rs64_m5_downstream_store(uint8_t* rdram, recomp_context* ctx,
                (own && own[0] && own[0] != '0');
     }();
     if (!enabled) return;
+    static const bool late_only = [] {
+        const char* e = std::getenv("ROGUESQ_M5_DOWNSTREAM_LATE_ONLY");
+        return e && e[0] && e[0] != '0';
+    }();
+    if (late_only && pc < 0x80001DFCu) return;
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     if (rs64_vi_committed_width() != 1024u ||
         (origin != 0x00790400u && origin != 0x00790800u)) return;

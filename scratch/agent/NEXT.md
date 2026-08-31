@@ -1,10 +1,11 @@
-# NEXT work unit — re-qualify the downstream capture route
+# NEXT work unit — repair regeneration-safe late-store capture
 
 HYPOTHESIS-ID: m5-downstream-output-state
 
-Session 3478 built the post-call `osSendMesg` and host task/output witnesses,
-but all three port route attempts stopped in the 640 phase. Do not interpret
-their zero title rows; first reproduce the known title-reaching image route.
+Session 3479 re-qualified the image route. The late-only run reached title and
+passed host/post-call controls, but the late-store positive control stayed
+zero because the generated `rs_free` path has writer-parity hooks at the six
+late PCs rather than the regeneration-safe downstream hook.
 
 Competing hypotheses and discriminating outcomes:
 
@@ -16,11 +17,14 @@ Competing hypotheses and discriminating outcomes:
 - `H-ObservationInvalid`: controls or entry rows fail; no conclusion is
   allowed without same-run positive controls.
 
-Discriminating measurement: use the exact title-reaching image-arm command
-from the retained s3477 run, first with the existing four-PC positive control.
-If title is reached, use the same built binary with the six later PCs plus
-the `0x80033410` return/callee and host task/output rows. Do not interpret
-nulls without title and control rows.
+Discriminating measurement: update `tools/apply_s3477_m5_downstream.py` (or
+the current fixup path) so all six late PCs call the same
+`rs64_m5_downstream_store` helper, rebuild, and run the title-reaching image
+route with `ROGUESQ_M5_DOWNSTREAM_LATE_ONLY=1`. Title plus the late positive
+control and per-PC rows are required. A matching late mutation selects
+`H-LateGuestWriter`; title/control with no late mutation through
+`0x80033410` selects `H-HostContract`; missing control selects
+`H-ObservationInvalid`.
 
 Before building, inspect the generated path and ask the retail oracle first
 with whole-RDRAM control plus the selected mutation PCs and destination

@@ -132181,3 +132181,27 @@ Evidence: `docs/M5-S3478-DOWNSTREAM-INSTRUMENT.md`,
 
 ORIGIN: the new host and return hooks observe task fields, arguments, and
 return values; they do not rewrite, skip, or validate guest state.
+
+## Session 3479 (2026-08-31) — re-qualified downstream capture route
+
+The independent retail preflight passed the whole-RDRAM positive control,
+reached title origin `0x00790400`, and observed active `0x80033410` execution
+along with the selected late PCs. The initial validated port image arm reached
+title and hangar, passed its downstream-store positive control, and emitted
+481 host-task rows plus 512 `osSendMesg` return rows; its shared 2,048-row
+store budget was consumed by earlier `0x80001D10`/`0x80001D3C` sites. A
+regeneration-safe late-only filter was then built and run on the same route.
+That run reached title, emitted 486 host-task rows and 512 send-return rows,
+but emitted zero late-store positive-control or late-store rows for
+`0x80001DFC`, `0x80001E28`, `0x80001E5C`, `0x80001EE4`, `0x80001F10`, and
+`0x80001F48`, with no crash. The generated `rs_free` source currently has
+writer-parity hooks at those PCs, but not the downstream-store hook, so the
+late null is an instrumentation-path failure rather than evidence about the
+guest stores. No downstream hypothesis is selected; the host boundary remains
+unresolved.
+
+Evidence: `scratch/agent/s3479_m5_downstream_requal/retail/oracle.log` and
+`scratch/agent/s3479_m5_downstream_requal/port/late.log`.
+
+ORIGIN: the late-only change filters diagnostic rows by PC; it does not alter
+guest state or runtime behavior.

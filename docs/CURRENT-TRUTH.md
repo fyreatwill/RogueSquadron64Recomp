@@ -350,15 +350,26 @@ zero. This is an instrument/build result, not a downstream hypothesis
 selection; re-qualify the title route before interpreting the null. Evidence:
 [M5-S3478-DOWNSTREAM-INSTRUMENT.md](M5-S3478-DOWNSTREAM-INSTRUMENT.md).
 
+Session 3479 re-qualified the route. Retail's whole-RDRAM control and title
+phase fired, and `0x80033410` was active. The initial port arm reached title
+and hangar, passed the downstream-store positive control, and produced 481
+host-task plus 512 post-call rows, but its shared store cap was consumed by
+earlier `0x80001D10`/`0x80001D3C` sites. A built late-only filter on the same
+route reached title and produced 486 host-task plus 512 post-call rows, but
+zero late-store control/store rows. The current generated `rs_free` source
+contains writer-parity hooks at the six late PCs, not the regeneration-safe
+downstream hook, so this is an instrument-path gap, not a guest-store null.
+No downstream hypothesis is selected. Evidence is in
+`scratch/agent/s3479_m5_downstream_requal/`.
+
 ## Next steps
 
-1. Re-qualify the exact title-reaching image route with the existing four-PC
-   positive control. Then run the narrowed capture for `0x80001DFC`,
-   `0x80001E28`, `0x80001E5C`, `0x80001EE4`, `0x80001F10`, and `0x80001F48`,
-   together with the new `0x80033410` return and host task/output rows. The
-   first mutation matching the consumer tuple names the missing contract
-   edge; no guest mutation through that boundary leaves the host boundary as
-   the remaining hypothesis.
+1. Repair the regeneration-safe late-store hook in the generated-path fixup,
+   rebuild, and run the existing title-reaching image route with the late-only
+   filter, `0x80033410` return rows, and host task/output rows. The six late
+   stores must pass a same-run positive control before their values are used.
+   A first mutation matching the consumer tuple selects `H-LateGuestWriter`;
+   no late mutation through the host boundary selects `H-HostContract`.
 2. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
