@@ -131666,3 +131666,23 @@ prefixes. This selects a real first output/state-context divergence and rules
 out an absent port hook. It does not identify the writer of `s0`; sequential
 silent/image differences remain unusable as an animated A/B. Evidence is
 archived in `docs/M5-S3453-OUTPUT-STATE-JOIN.md`.
+## Session 3454 (2026-08-31) — qualified state-pointer callsite boundary
+
+The independent driven retail oracle passed its whole-RDRAM positive control
+at 10,000 callbacks, reached title origin `0x00790400`, and reported 825
+executions of caller `0x80005268` immediately before `rs_free` plus 825 target
+entries at `0x80001C98`. A malformed-core-path oracle attempt exited 1 and was
+discarded.
+
+Added the regeneration-safe pre-call witness across generated `rs_free`
+callsites. The first port run used an after-call placement and was discarded;
+the corrected build placed the witness before the call. Its qualified route
+reached title 1024, fired the four-PC positive-control marker, and emitted
+1,024 callsite rows plus 514/510/510/514 target rows. Every 1C98 row's
+thread-local pre-call `s0` equaled target-entry `s0`, including all 480 rows
+whose callsite was `0x80005268`. This selects the upstream producer/input
+boundary and rules out an `rs_free` wrapper/ABI clobber for this field. It does
+not identify the upstream writer. No waits, slots, dispatch, clear behavior,
+or PCM writeback changed. Evidence: `docs/M5-S3454-STATE-POINTER-CALLSITE.md`,
+`scratch/agent/s3454_oracle_caller.log`, and
+`scratch/agent/s3454_port_producer_final.log`.

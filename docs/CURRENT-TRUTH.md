@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3453 (2026-08-31). This record was
+Current maintenance marker: Session 3454 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -80,15 +80,19 @@ selects a real first output/state-context divergence and rules out an absent
 port hook. It does not identify the writer of `s0`; the next probe must trace
 the producer feeding the target calls.
 
+Session 3454's corrected thread-local callsite join shows that port `rs_free`
+preserves caller `s0` at `0x80001C98` in all 514 captured rows (480 from
+caller `0x80005268`). The first divergence is already in the producer/input
+register context; wrapper/ABI clobber is ruled out at this boundary.
+
 ## Next steps
 
-1. Trace the producer/writer of the first divergent `s0` context into the four
+1. Trace the upstream producer/input feeding caller-side `s0` before the four
    target calls, with a phase-scoped positive-control table containing the
-   producer PC, target PC, ordinal, `s0`, `s1`, source word, branch selector,
-   branch state, and output/state fields. If the producer value already
-   differs, select the producer/input contract; if it matches but target-entry
-   `s0` differs, select wrapper/ABI clobber; an absent ordered producer join is
-   unevaluable.
+   producer PC, callsite PC, target PC, ordinal, `s0`, `s1`, source word,
+   branch selector, branch state, and output/state fields. The corrected join
+   already selects producer/input over wrapper/ABI clobber; an absent ordered
+   producer join is unevaluable.
 2. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 3. Use the producer join to identify the first output/state contract divergence

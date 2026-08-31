@@ -2034,6 +2034,37 @@ extern "C" void rs64_m5_state_pointer_entry(uint8_t* rdram,
     std::fflush(stderr);
 }
 
+static thread_local uint32_t g_rs64_m5_state_call_pc = 0;
+static thread_local uint32_t g_rs64_m5_state_call_s0 = 0;
+
+extern "C" void rs64_m5_state_pointer_callsite(recomp_context* ctx,
+                                                 uint32_t call_pc) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_STATE_POINTER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 1024u || (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t bucket = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != bucket) { bucket = key; rows = 0; }
+    if (rows >= 1024u) return;
+    g_rs64_m5_state_call_pc = call_pc;
+    g_rs64_m5_state_call_s0 = U32(ctx->r16);
+    std::fprintf(stderr,
+        "[m5-state-pointer-callsite] ordinal=%u phase=%u width=%u origin=0x%06X "
+        "call_pc=0x%08X s0=0x%08X s1=0x%08X a0=0x%08X a1=0x%08X "
+        "a2=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, call_pc, U32(ctx->r16),
+        U32(ctx->r17), U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r31));
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_output_state_fields(uint8_t* rdram,
                                                 recomp_context* ctx,
                                                 uint32_t pc) {
@@ -2068,11 +2099,13 @@ extern "C" void rs64_m5_output_state_fields(uint8_t* rdram,
         "pc=0x%08X s0=0x%08X s1=0x%08X source_word=0x%08X "
         "branch_selector=0x%08X source_byte=0x%02X branch_state=0x%04X "
         "output_v0=0x%08X output_v1=0x%08X state_word=0x%08X "
-        "a0=0x%08X a1=0x%08X ra=0x%08X\n",
+        "a0=0x%08X a1=0x%08X ra=0x%08X pre_call_pc=0x%08X "
+        "pre_call_s0=0x%08X\n",
         rows++, rs64_phase_ord(), width, origin, pc, s0, s1,
         word(s0 + 0x60u), U32(ctx->r2), byte(s0 + 0x22u),
         word(s1 + 0x22u) & 0xFFFFu, U32(ctx->r2), U32(ctx->r3),
-        word(s1), U32(ctx->r4), U32(ctx->r5), U32(ctx->r31));
+        word(s1), U32(ctx->r4), U32(ctx->r5), U32(ctx->r31),
+        g_rs64_m5_state_call_pc, g_rs64_m5_state_call_s0);
     std::fflush(stderr);
     if (rows == 1) {
         std::fprintf(stderr, "[m5-output-state-fields-positive] four-PC schema witness is live\n");
