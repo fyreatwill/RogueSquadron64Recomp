@@ -132205,3 +132205,24 @@ Evidence: `scratch/agent/s3479_m5_downstream_requal/retail/oracle.log` and
 
 ORIGIN: the late-only change filters diagnostic rows by PC; it does not alter
 guest state or runtime behavior.
+
+## Session 3480 (2026-08-31) — qualified absence of selected late guest stores
+
+The independent retail preflight used the Rice route, a whole-RDRAM positive
+control, and watches at `0x80033410` plus the six selected late `rs_free` PCs.
+It ran 35 seconds, reached title origin `0x00790400` at width 1024, recorded
+10,000 whole-RDRAM control hits, and observed `0x80033410`; each late PC had
+zero executions. The rebuilt port late-only arm reached title 1024, fired
+the host-boundary positive control, and emitted 483 host-task rows plus 512
+`osSendMesg` return rows, but zero late-store control/store rows. The
+regeneration-safe helper is present at all six generated sites, so the port
+null is a qualified unexecuted guest-store path. Two independent lines rule
+out those six late guest PCs as the first mutation at this title boundary;
+the host task/send/output contract remains unresolved.
+
+Evidence: `docs/M5-S3480-LATE-STORE-BOUNDARY.md`,
+`scratch/agent/s3480_retail_preflight.log`, and
+`scratch/agent/s3479_m5_downstream_requal/port/late.log`.
+
+ORIGIN: this iteration only observes guest-PC execution and host/task/send
+fields; it does not rewrite or validate guest state.

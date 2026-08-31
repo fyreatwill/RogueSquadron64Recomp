@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3478 (2026-08-31). This record was
+Current maintenance marker: Session 3480 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -362,14 +362,27 @@ downstream hook, so this is an instrument-path gap, not a guest-store null.
 No downstream hypothesis is selected. Evidence is in
 `scratch/agent/s3479_m5_downstream_requal/`.
 
+Session 3480 rebuilt the late-only capture after the generated-path audit.
+The independent retail preflight passed 10,000 whole-RDRAM control hits,
+reached title 1024, observed `0x80033410`, and recorded zero executions at
+all six selected late `rs_free` PCs. The port reached title 1024, fired its
+host-boundary positive control, and emitted 483 host-task plus 512
+`osSendMesg` return rows, but zero late-store control/store rows. The helper
+is present at all six generated sites, so the null is a qualified absence of
+that guest path. Two independent lines rule out the selected late guest
+writer at this boundary; the host task/send/output contract remains
+unresolved. Evidence: [M5-S3480-LATE-STORE-BOUNDARY.md](M5-S3480-LATE-STORE-BOUNDARY.md).
+
+ORIGIN: this iteration only observes guest-PC execution and host/task/send
+fields; it does not rewrite or validate guest state.
+
 ## Next steps
 
-1. Repair the regeneration-safe late-store hook in the generated-path fixup,
-   rebuild, and run the existing title-reaching image route with the late-only
-   filter, `0x80033410` return rows, and host task/output rows. The six late
-   stores must pass a same-run positive control before their values are used.
-   A first mutation matching the consumer tuple selects `H-LateGuestWriter`;
-   no late mutation through the host boundary selects `H-HostContract`.
+1. Join the qualified port host-task rows to a new independent retail
+   `OSTask` dump at the title task-enqueue execution PC, retaining whole-RDRAM
+   and host-boundary controls. A matching task ABI/output tuple selects a
+   later output/consumer edge; the first task-field divergence selects the
+   host task contract; missing controls make the observation invalid.
 2. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
