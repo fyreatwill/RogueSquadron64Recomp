@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3388 (2026-08-31). This file was compacted
+through Session 3389 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -93,7 +93,18 @@ source boundary:
   `0x8008F2CC -> rs_memset` at `0x801797B0`, with no matching producer edge;
   PCM remained zero. This reinforces `H-RetailDrivenProducer` at the observed
   boundary and points the next census at the predecessor/call chain. Evidence
-  is in [M5-S3388-PRODUCER-PREDECESSOR.md](M5-S3388-PRODUCER-PREDECESSOR.md).
+   is in [M5-S3388-PRODUCER-PREDECESSOR.md](M5-S3388-PRODUCER-PREDECESSOR.md).
+
+- Session 3389 watched the selected predecessor PCs on retail with a
+  whole-RDRAM control. Retail reached title and both `0x8002BEEC` and
+  `0x800078E8` fired there; their immediate predecessors were `0x8002BEE8`
+  and `0x800078E0`. Retail target spans had 502/500 writes, but the explicit
+  hangar 512 bucket had no rows. The port reached title and hangar with
+  controls live and again exposed only `0x8008F2CC -> rs_memset` zero-fill at
+  the target span, with no matching producer or callback row and zero PCM.
+  This reinforces an earlier producer gap at the observed boundaries, but is
+  not a like-for-like hangar discriminator; the next probe moves to
+  `0x800078E0`/`0x8002BEE8`.
 
 No output substitution or mitigation is authorized. Do not change waits, slots,
 status handling, consumer dispatch, or PCM writeback while tracing the source.
@@ -105,15 +116,16 @@ renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
 1. Trace the selected producer family one boundary upstream. Ask the retail
    oracle on the driven Start schedule for phase-gated execution rows at
-   `0x8002BEEC` and `0x800078E8`, retaining predecessor, arguments, and
+   `0x800078E0` and `0x8002BEE8`, retaining predecessor, arguments, and
    target-span bytes, with the whole-RDRAM watch as control. Then batch one
    port census at the equivalent target phase using the existing controls; do
    not change output or audio behavior.
 2. Discriminator: valid retail predecessor rows plus no matching port edge
    select an earlier port producer/call-contract gap; matching nonzero port
    rows select a translation/dispatch mismatch; matching zero rows on both
-   routes make the zero fill legitimate here. Missing retail phase rows
-   invalidate the oracle arm rather than supporting a null conclusion.
+   routes make the zero fill legitimate here. If retail again lacks the
+   hangar bucket, record the oracle arm as partial and do not claim a hangar
+   discriminator.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
@@ -186,6 +198,7 @@ writer and initializer ordering are the measured explanation.
 Latest M5 evidence:
 
 - `scratch/agent/s3386_m5_direct_writer_census.md`
+- `docs/M5-S3389-PREDECESSOR-EDGE.md`
 - `scratch/agent/s3376_m5_zero_pcm_source.md`
 - `scratch/agent/s3379_m5_source_writer.md`
 - `scratch/agent/s3375_m5_port_pcm_writer.md`

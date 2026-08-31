@@ -130283,3 +130283,31 @@ is illegitimate or identify the missing producer's input. No output or audio
 behavior changed. Evidence: `docs/M5-S3388-PRODUCER-PREDECESSOR.md`,
 `scratch/agent/s3388_m5_retail_predecessor/oracle.log`, and
 `scratch/agent/port_s3388/run.log`.
+
+## Session 3389 (2026-08-31) — upstream producer predecessor edge
+
+The retail oracle ran the canonical driven Start schedule under Rice for 120
+seconds with a whole-RDRAM positive-control watch, target-span watches, phase
+buckets, and execution watches at `0x8002BEEC` and `0x800078E8`. The positive
+control recorded 10,693 writes and title VI `0x00790400` was reached. Both
+execution watches fired there: `0x8002BEEC` had 322,412 hits with predecessor
+`0x8002BEE8`, and `0x800078E8` had 21,232 hits with predecessor `0x800078E0`.
+The target spans recorded 502 and 500 writes. The explicit hangar 512 bucket
+had zero rows, so this run did not provide a like-for-like hangar retail
+result.
+
+The rebuilt port reached title at 11.6 seconds and hangar at 19.8 seconds with
+the phase, audio/task, callback-writer, static-call, and PCM controls live. It
+had no crash or abort markers. In the hangar target phase, its only
+target-overlap row was the zero-fill `0x8008F2CC -> rs_memset`, with
+`dst=0x801797B0`, `val=0`, and `len=0x298`; no matching producer or
+callback-writer row appeared, and PCM remained zero.
+
+This reinforces an earlier producer/call-contract gap at the observed
+boundaries, but does not select a like-for-like hangar hypothesis because the
+retail predecessor rows were title-phase rows and the retail 512 bucket was
+absent. It does not establish that the port zero fill is illegitimate. No
+output or audio behavior changed. Evidence:
+`docs/M5-S3389-PREDECESSOR-EDGE.md`,
+`scratch/agent/oracle_s3389_predecessor.log`, and
+`scratch/agent/port_s3389/run.log`.
