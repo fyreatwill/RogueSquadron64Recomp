@@ -129730,3 +129730,30 @@ third guest writer but does not join that PC to the problematic value, so it
 does not yet explain the port's pre-existing `0x8009123C` occupants. The
 result is single-source retail evidence; no behavior change. Evidence:
 `scratch/agent/s3360_m5_callback_table_oracle.md`.
+## Session 3361 (2026-08-31) — paired port callback-table writer values
+
+Extended the regeneration-surviving callback-writer fixup and host event to
+cover the retail-observed writers `0x80007968` and `0x80017D08`, while keeping
+the existing registration and `0x800919EC` indirect-edge rows. The Debug
+`RogueSquadron64Recomp` target rebuilt successfully.
+
+Ran one validated LLE-only AUTOPILOT/spin-yield route from `build/` with
+host/task/PCM controls and VI phase gates. Host-boundary rows: 135; PCM
+source and consumer rows: 92 each; title VI `1024 @ 0x00790400` and hangar
+VI `512 @ 0x006AB400` both fired; `[CRASH]` and `[ABORT]` were zero. The
+task/gate markers were not enabled and are not controls.
+
+The aggregate rows paired `0x80007928 -> 0x8009123C` (3),
+`0x80007968 -> 0` (3), and `0x80017D08 -> 0x400/0x800` halfwords (5).
+Existing rows also showed `0x80091900 -> 0x80007910` and
+`0x8009BC50 -> 0x8009B5A8`. Together with session 3360's independent retail
+watch, this refutes the third-site port-writer hypothesis and identifies the
+known `0x80007928` store as the port writer of the problematic value. It does
+not identify the upstream argument source. No behavior change was made.
+
+ORIGIN: the writer rows observe guest-generated store sites; the callback
+pointer values are legitimate only when supplied by the guest registration
+contract, so this instrumentation attributes writes without accepting or
+repairing the `0x8009123C` value.
+
+Evidence: `scratch/agent/s3361_m5_callback_table_writer_source.md`.

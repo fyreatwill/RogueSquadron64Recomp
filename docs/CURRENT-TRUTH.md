@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3360 (2026-08-31). Compacted from
+Current maintenance marker: Session 3361 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -16,6 +16,14 @@ recorded 20 callback-slot writes. Writers were guest PCs `0x80007928` (9),
 and the claim that only the two known helpers write the range, but does not
 yet pair `0x80017D08` with the problematic value. Evidence:
 `scratch/agent/s3360_m5_callback_table_oracle.md`.
+
+Session 3361's regeneration-surviving port writer census passed host, PCM,
+title, and hangar controls with no crash. It paired `0x80007928` with
+`0x8009123C` (3 stores), `0x80007968` with zero (3 clears), and
+`0x80017D08` with halfword values `0x400/0x800` (5 stores). Thus the third
+retail writer is not the port source of the problematic callback value, and
+the known `0x80007928` store is. Evidence:
+`scratch/agent/s3361_m5_callback_table_writer_source.md`.
 
 Session 3358 validated the session 3357 task-start pointer guard on the live
 route. The Debug binary reached title VI `1024 @ 0x00790400` at 14.6 s and
@@ -569,6 +577,12 @@ target row exists.
    in addition to `0x80007928` and `0x80007968`. The alias/no-write theory is
    refuted; exact writer-to-value pairing remains the next port census. See
    `scratch/agent/s3360_m5_callback_table_oracle.md` (single-source).
+   Session 3361's port census paired the known `0x80007928` store with
+   `0x8009123C`, the `0x80007968` path with zero, and the additional
+   `0x80017D08` writer with `0x400/0x800` halfwords. This refutes
+   `H-PortWriterIsThirdGuestSite` and leaves the upstream source/call path
+   that supplies `0x8009123C` to `registerSiCallback` as the next boundary.
+   Evidence: `scratch/agent/s3361_m5_callback_table_writer_source.md`.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
