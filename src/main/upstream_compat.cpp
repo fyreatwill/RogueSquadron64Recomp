@@ -2113,6 +2113,50 @@ extern "C" void rs64_m5_zcfree_edge(recomp_context* ctx) {
     }
 }
 
+struct Rs64M5DownstreamStore {
+    uint32_t pc;
+    uint32_t addr;
+    uint32_t value;
+    uint32_t edge_ordinal;
+    uint32_t edge_s1;
+    uint32_t ordinal;
+};
+
+static thread_local Rs64M5DownstreamStore g_rs64_m5_downstream_latest{0, 0, 0, 0, 0, 0};
+
+extern "C" void rs64_m5_downstream_store(uint8_t* rdram, recomp_context* ctx,
+                                           char width, uint32_t pc,
+                                           uint32_t addr, uint32_t value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_DOWNSTREAM");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (rs64_vi_committed_width() != 1024u ||
+        (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t rows = 0;
+    if (rows >= 2048u) return;
+    g_rs64_m5_downstream_latest = {
+        pc, addr, value, g_rs64_m5_zcfree_edge.ordinal,
+        g_rs64_m5_zcfree_edge.s1, rows
+    };
+    if (rows == 0) {
+        std::fprintf(stderr, "[m5-downstream-store-positive] downstream store census is live\n");
+        std::fflush(stderr);
+    }
+    std::fprintf(stderr,
+        "[m5-downstream-store] ordinal=%u phase=%u width=1024 origin=0x%06X "
+        "pc=0x%08X width=%c addr=0x%08X value=0x%08X edge_ord=%u edge_s1=0x%08X "
+        "caller_s1=0x%08X caller_ra=0x%08X\n",
+        rows++, rs64_phase_ord(), origin, pc, width, U32(addr), U32(value),
+        g_rs64_m5_zcfree_edge.ordinal, g_rs64_m5_zcfree_edge.s1,
+        U32(ctx->r17), U32(ctx->r31));
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_producer_input(uint8_t* rdram,
                                          recomp_context* ctx,
                                          uint32_t producer_pc,
@@ -2325,7 +2369,8 @@ extern "C" void rs64_m5_state_pointer_consumer(uint32_t s1) {
     std::fprintf(stderr,
         "[m5-state-pointer-consumer] ordinal=%u phase=%u width=1024 origin=0x%06X s1=0x%08X "
         "edge_s1=%08X edge_a0=%08X edge_ra=%08X edge_ord=%u edge_match=%u "
-        "c0=%08X/%08X/%08X/%u c1=%08X/%08X/%08X/%u c2=%08X/%08X/%08X/%u c3=%08X/%08X/%08X/%u\n",
+        "c0=%08X/%08X/%08X/%u c1=%08X/%08X/%08X/%u c2=%08X/%08X/%08X/%u c3=%08X/%08X/%08X/%u "
+        "down_pc=%08X down_addr=%08X down_value=%08X down_ord=%u\n",
         rows++, rs64_phase_ord(), origin, s1,
         g_rs64_m5_zcfree_edge.s1, g_rs64_m5_zcfree_edge.a0,
         g_rs64_m5_zcfree_edge.ra, g_rs64_m5_zcfree_edge.ordinal,
@@ -2337,7 +2382,9 @@ extern "C" void rs64_m5_state_pointer_consumer(uint32_t s1) {
         g_rs64_m5_pointer_latest[2].pc, g_rs64_m5_pointer_latest[2].addr,
         g_rs64_m5_pointer_latest[2].value, g_rs64_m5_pointer_latest[2].phase,
         g_rs64_m5_pointer_latest[3].pc, g_rs64_m5_pointer_latest[3].addr,
-        g_rs64_m5_pointer_latest[3].value, g_rs64_m5_pointer_latest[3].phase);
+        g_rs64_m5_pointer_latest[3].value, g_rs64_m5_pointer_latest[3].phase,
+        g_rs64_m5_downstream_latest.pc, g_rs64_m5_downstream_latest.addr,
+        g_rs64_m5_downstream_latest.value, g_rs64_m5_downstream_latest.ordinal);
     std::fflush(stderr);
 }
 

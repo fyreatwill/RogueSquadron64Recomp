@@ -325,12 +325,31 @@ edge as the source at that scope and rules out an uninstrumented assignment
 between `0x80005268` and `rs_free`, but it does not explain the downstream
 state/output divergence. Evidence: [M5-S3476-ZCFREE-EDGE.md](M5-S3476-ZCFREE-EDGE.md).
 
+Session 3477 ran the independent retail preflight before building the port
+witness. Retail's whole-RDRAM control recorded 4,990,424 writes, title reached
+2,654 VI, and the selected post-edge `rs_free` PCs were live. The corrected
+port image arm reached title with no crash; title, downstream-store, four-PC
+schema, and zcfree controls all fired, producing 2,048 downstream-store rows
+and 512 consumer rows. Zero latest enumerated store addresses equalled `s1`
+or fell within `0x100` bytes of it; 477 rows retained a matching zcfree latch.
+This rules out the enumerated early `rs_free` stores as the first consumer
+state mutation at this scope, but does not distinguish a later guest mutation
+from the host callback/task/output boundary. Later store PCs were hidden by
+the row cap and need a narrower capture. Evidence:
+[s3477_m5_downstream.md](../scratch/agent/s3477_m5_downstream.md).
+
+ORIGIN: the new witness observes generated store addresses and values only;
+it does not rewrite, skip, or validate any pointer or state value.
+
 ## Next steps
 
-1. Locate the first downstream state/output contract divergence after the
-   caller-side `zcfree` edge: join the exact `rs_free` caller identity and
-   incoming `$s1` to the first state-field mutation and the
-   `0x80001CB8`/`0x80001CC8` consumers in one phase/ordinal table.
+1. Extend the downstream boundary past the enumerated early `rs_free` stores:
+   run a narrower title capture for `0x80001DFC`, `0x80001E28`,
+   `0x80001E5C`, `0x80001EE4`, `0x80001F10`, and `0x80001F48`, then instrument
+   the `0x80033410` return/callee and host task/output boundary in the same
+   phase/ordinal table. The first mutation matching the consumer tuple names
+   the missing contract edge; no guest mutation through that boundary leaves
+   the host boundary as the remaining hypothesis.
 2. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare

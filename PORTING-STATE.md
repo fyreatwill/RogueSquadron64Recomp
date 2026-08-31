@@ -132142,3 +132142,24 @@ Evidence: `docs/M5-S3476-ZCFREE-EDGE.md`,
 
 ORIGIN: the witness only observes the inherited register and consumer value;
 it does not rewrite, skip, or validate any pointer or state value.
+
+## Session 3477 (2026-08-31) — censused downstream rs_free stores
+
+The independent retail preflight ran before the port build. Its whole-RDRAM
+positive control recorded 4,990,424 writes, title reached 2,654 VI, and the
+selected post-edge `rs_free` PCs were live. The corrected port image arm
+reached title without `[CRASH]`; its title, downstream-store, four-PC schema,
+and zcfree controls all fired. It emitted 2,048 downstream-store rows and 512
+consumer rows. Zero latest enumerated store addresses equalled `s1`, and zero
+were within `0x100` bytes; 477 consumer rows retained a matching zcfree latch.
+This rules out the enumerated early `rs_free` store set as the first consumer
+state mutation at this scope, while leaving a later guest mutation versus the
+host callback/task/output boundary unresolved. Later PCs were hidden by the
+row cap and need a narrower capture.
+
+Evidence: `scratch/agent/s3477_m5_downstream.md`,
+`scratch/agent/s3477_retail_downstream.log`, and
+`scratch/agent/soak_results/s3477_port_downstream_final/run.log`.
+
+ORIGIN: the new witness observes generated store addresses and values only;
+it does not rewrite, skip, or validate any pointer or state value.
