@@ -132119,3 +132119,26 @@ Evidence: `docs/M5-S3475-POINTER-JOIN.md` and
 
 ORIGIN: the work added observational store/consumer witnesses only; it did
 not rewrite, skip, or validate pointer values as legitimate.
+
+## Session 3476 (2026-08-31) — audited the sole zcfree state edge
+
+The generated caller census found one `rs_zcfree` caller at `0x80029CFC` and
+one direct `0x80005268 -> rs_free` edge; `rs_zcfree` has no `$s1` load or
+assignment between the edge and the call. The independent retail oracle's
+whole-RDRAM control reached 10,000 callbacks, title 1024, and 825 executions
+of the exact edge, whose live `$s1` was visible at the consumer.
+
+The fixed image-arm port run reached title 1024 and emitted 827 sole-edge
+rows, including the positive-control marker, plus 512 consumer rows. 477
+consumer rows matched the latest sole-edge `$s1`; 35 were other `rs_free`
+callers and therefore had a stale sole-edge latch. This selects the inherited
+caller-side state as the source at the audited `zcfree` scope and rules out an
+uninstrumented assignment between `0x80005268` and `rs_free`. It does not
+explain the downstream state/output divergence.
+
+Evidence: `docs/M5-S3476-ZCFREE-EDGE.md`,
+`scratch/agent/s3476_m5_oracle/driven/oracle.log`, and
+`scratch/agent/s3476_m5_port_fixed/run.log`.
+
+ORIGIN: the witness only observes the inherited register and consumer value;
+it does not rewrite, skip, or validate any pointer or state value.

@@ -312,20 +312,32 @@ rules out `H-InterveningPointerWriter` at that scope. An uninstrumented writer
 or route difference remains possible. Evidence:
 [M5-S3475-POINTER-JOIN.md](M5-S3475-POINTER-JOIN.md).
 
+Session 3476 audited the complete generated caller path for the remaining
+`0x80005268 -> rs_free` edge. There is one direct edge, inside `rs_zcfree`,
+and one generated caller at `zcfree` `0x80029CFC`; `rs_zcfree` performs no
+`$s1` load or assignment between them. The independent retail oracle's
+whole-RDRAM control fired 10,000 callbacks, title 1024 was reached, and the
+edge executed 825 times. The fixed image-arm port run reached title 1024,
+emitted 827 sole-edge rows and 512 consumer rows, and 477 consumer rows
+matched the latest sole-edge `$s1`; the 35 nonmatches are other `rs_free`
+callers with a stale sole-edge latch. This selects the inherited caller-side
+edge as the source at that scope and rules out an uninstrumented assignment
+between `0x80005268` and `rs_free`, but it does not explain the downstream
+state/output divergence. Evidence: [M5-S3476-ZCFREE-EDGE.md](M5-S3476-ZCFREE-EDGE.md).
+
 ## Next steps
 
-1. Audit the uninstrumented writer/selection edge supplying incoming `s1`
-   after the four candidate links were ruled out. Enumerate the complete
-   caller-side load/assignment idiom feeding the `0x80005268` call, then
-   instrument all sites in one regeneration-safe table with a positive
-   control; do not repeat the four-store join unchanged.
+1. Locate the first downstream state/output contract divergence after the
+   caller-side `zcfree` edge: join the exact `rs_free` caller identity and
+   incoming `$s1` to the first state-field mutation and the
+   `0x80001CB8`/`0x80001CC8` consumers in one phase/ordinal table.
 2. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
-4. After the producer/state field is attributed, locate the first downstream
-   output/state contract divergence. Matching fields close the boundary; the
-   first divergent field selects the missing contract edge.
+4. Matching fields close the boundary; the first divergent field selects the
+   missing contract edge. Keep the retail oracle and port positive controls
+   in the same run before trusting any null.
 7. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation

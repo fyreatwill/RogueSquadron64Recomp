@@ -2014,6 +2014,16 @@ struct Rs64M5PointerCandidate {
 
 static thread_local Rs64M5PointerCandidate g_rs64_m5_pointer_latest[4]{};
 
+struct Rs64M5ZcfreeEdge {
+    uint32_t s1;
+    uint32_t a0;
+    uint32_t ra;
+    uint32_t ordinal;
+    bool valid;
+};
+
+static thread_local Rs64M5ZcfreeEdge g_rs64_m5_zcfree_edge{0, 0, 0, 0, false};
+
 extern "C" void rs64_m5_state_pointer_entry(uint8_t* rdram,
                                                recomp_context* ctx) {
     static const bool enabled = [] {
@@ -2074,6 +2084,33 @@ extern "C" void rs64_m5_state_pointer_callsite(recomp_context* ctx,
         rows++, rs64_phase_ord(), width, origin, call_pc, U32(ctx->r16),
         U32(ctx->r17), U32(ctx->r4), U32(ctx->r5), U32(ctx->r6), U32(ctx->r31));
     std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_zcfree_edge(recomp_context* ctx) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_STATE_POINTER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 1024u || (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t rows = 0;
+    g_rs64_m5_zcfree_edge = {U32(ctx->r17), U32(ctx->r4), U32(ctx->r31), rows++, true};
+    if (g_rs64_m5_zcfree_edge.ordinal >= 1024u) return;
+    std::fprintf(stderr,
+        "[m5-zcfree-edge] ordinal=%u phase=%u width=%u origin=0x%06X "
+        "s1=0x%08X a0=0x%08X ra=0x%08X\n",
+        g_rs64_m5_zcfree_edge.ordinal, rs64_phase_ord(), width, origin,
+        g_rs64_m5_zcfree_edge.s1, g_rs64_m5_zcfree_edge.a0,
+        g_rs64_m5_zcfree_edge.ra);
+    std::fflush(stderr);
+    if (g_rs64_m5_zcfree_edge.ordinal == 0) {
+        std::fprintf(stderr, "[m5-zcfree-edge-positive] sole caller edge is live\n");
+        std::fflush(stderr);
+    }
 }
 
 extern "C" void rs64_m5_producer_input(uint8_t* rdram,
@@ -2287,8 +2324,12 @@ extern "C" void rs64_m5_state_pointer_consumer(uint32_t s1) {
     if (rows >= 512u) return;
     std::fprintf(stderr,
         "[m5-state-pointer-consumer] ordinal=%u phase=%u width=1024 origin=0x%06X s1=0x%08X "
+        "edge_s1=%08X edge_a0=%08X edge_ra=%08X edge_ord=%u edge_match=%u "
         "c0=%08X/%08X/%08X/%u c1=%08X/%08X/%08X/%u c2=%08X/%08X/%08X/%u c3=%08X/%08X/%08X/%u\n",
         rows++, rs64_phase_ord(), origin, s1,
+        g_rs64_m5_zcfree_edge.s1, g_rs64_m5_zcfree_edge.a0,
+        g_rs64_m5_zcfree_edge.ra, g_rs64_m5_zcfree_edge.ordinal,
+        g_rs64_m5_zcfree_edge.valid && g_rs64_m5_zcfree_edge.s1 == s1 ? 1u : 0u,
         g_rs64_m5_pointer_latest[0].pc, g_rs64_m5_pointer_latest[0].addr,
         g_rs64_m5_pointer_latest[0].value, g_rs64_m5_pointer_latest[0].phase,
         g_rs64_m5_pointer_latest[1].pc, g_rs64_m5_pointer_latest[1].addr,

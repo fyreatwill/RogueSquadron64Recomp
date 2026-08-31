@@ -1,33 +1,33 @@
-# NEXT work unit — audit the caller-side state-pointer selection idiom
+# NEXT work unit — locate the first downstream state/output mutation
 
-HYPOTHESIS-ID: m5-state-pointer-writer
+HYPOTHESIS-ID: m5-downstream-output-state
 
-Session 3475 ruled out the four measured latest candidate links as the direct
-source of incoming `rs_free` `$s1`; do not repeat that join unchanged.
+Session 3476 found the sole `zcfree` caller-side edge and ruled out an
+uninstrumented assignment between `0x80005268` and `rs_free`; do not repeat
+that edge join unchanged.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-UninstrumentedWriter`: a caller-side load/assignment supplies the
-  consumer `$s1`; matching its value to the next `rs_free` entry selects it.
-- `H-AlternateDispatch`: no caller-side assignment/load in the complete
-  enumerated idiom supplies the observed value; live entry rows without a
-  match select this at the audited scope.
+- `H-DownstreamWriter`: the first state/output divergence is a generated
+  store or field mutation after the `zcfree` edge; matching its site/value to
+  the consumer selects it.
+- `H-HostContract`: no guest mutation explains the divergence, while the
+  host callback/task/output boundary changes the observed state.
 - `H-ObservationInvalid`: controls or entry rows fail; no conclusion is
   allowed without same-run positive controls.
 
-Discriminating measurement: enumerate every generated caller-side load or
-assignment of `$s1` feeding the `0x80005268 -> rs_free` edge, then add one
-regeneration-safe, title-gated table containing site PC, loaded source/address,
-value, caller ordinal, and the immediately following `rs_free` `$s1`. Keep the
-pointer-checkpoint and four-PC controls, and run one image arm only.
+Discriminating measurement: enumerate generated stores and field mutations
+on the path from the sole `zcfree` edge to `0x80001CB8`/`0x80001CC8`; add one
+regeneration-safe, title-gated table containing mutation PC,
+destination/field, value, caller identity, ordinal, and the next consumer
+tuple. Keep the four-PC positive control, and run one image arm only.
 
-Before building, inspect all generated callers of `rs_zcfree` and the
-`0x80005268` edge. Ask the retail oracle first with whole-RDRAM control plus
-the identified caller PCs and any source-address watches. Then batch all port
-hooks in one build and run from `build/` using the validated LLE/spin-yield
-route from Session 3475.
+Before building, inspect the generated path and ask the retail oracle first
+with whole-RDRAM control plus the selected mutation PCs and destination
+watches. Then batch all port hooks in one build and run from `build/` using
+the validated LLE/spin-yield route from Session 3476.
 
-Expected outcomes: an exact caller load/value-to-entry match selects
-`H-UninstrumentedWriter`; live controls and consumer rows with no match after
-complete enumeration select `H-AlternateDispatch`; missing controls or
-entries are `H-ObservationInvalid` and require redesign.
+Expected outcomes: an exact post-edge mutation/value-to-consumer match selects
+`H-DownstreamWriter`; live controls and consumer rows with no guest mutation
+select `H-HostContract`; missing controls or entries are
+`H-ObservationInvalid` and require redesign.
