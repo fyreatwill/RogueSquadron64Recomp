@@ -131193,3 +131193,28 @@ and refutes a direct setup-caller argument as the source of `0x5622`. The
 retail value and legitimacy of the port result remain unresolved. No waits,
 slots, dispatch, clear behavior, or PCM writeback changed. Evidence:
 `docs/M5-S3431-REAPPLY-BOUNDARY.md` and `scratch/agent/s3431_m5_*`.
+
+## Session 3432 (2026-08-31) — qualified frequency-result parity and oracle phase failure
+
+Ran the independent retail oracle first with whole-RDRAM and target-word
+watches. The positive control fired 10,041 callbacks and the target word
+`0x165ED0` was written 41 times. The configured title/hangar phase buckets
+remained zero. A lower-noise retry's lifetime writer histogram included
+`0x800331E0` twice, `0x80007670` four times, and several other setup or
+initialization PCs; it therefore did not isolate the exact frequency-return
+edge. The high-frequency execution-watch variant stalled at the initial 320
+VI state and was killed; it is not used as evidence against the route.
+
+Ran the fixed sequential port pair with the existing phase-gated reapply
+witness. Both silent and image arms reached title 1024 and hangar 512 with no
+crash or abort markers. Both returned `0x5622` from `osAiSetFrequency` in both
+phases, and both supplied `a1=0x0F` in title and `a1=0x12` in hangar before the
+`0x8009192C` reload. The earlier concurrent pair hit the known pre-phase
+scheduler crash in both arms and was excluded from the boundary comparison.
+
+This gives two independent lines for stable port-side frequency-result
+behavior and refutes a silent/image arm divergence at the observed boundary.
+It does not select among the retail writer hypotheses because the oracle phase
+signal did not arm and its lifetime target writers were mixed. No runtime
+behavior changed. Evidence: `docs/M5-S3432-FREQUENCY-WRITER.md` and
+`scratch/agent/s3432_m5_frequency_writer/`.

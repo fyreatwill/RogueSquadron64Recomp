@@ -483,29 +483,29 @@ identical. It refutes the proposed `0x5622` count at either observed
 
 ## Next steps
 
-Session 3431 traced the next port boundary in one phase-gated table. At the
-post-`osAiSetFrequency` point, port returned `0x5622`; the following
-`initN64RspMixer` call entered with `a1=0x0F` or `0x12`, then its
-`0x8009192C` reload supplied `a1=0x5622` to `allocateSongChannelArray`.
-Hangar reapply entry remained `a1=0x12`. The independent retail oracle passed
-the whole-RDRAM control and saw 5,643 writes to physical `0x165ED0`, including
-1,125 title-phase writes with nonzero post-values. Its broad writer histogram
-is not exact frequency-return attribution. This selects
-`H-PortFrequencyResultProducer` for the observed port flow and refutes a
-direct setup-caller argument as the source of `0x5622`; legitimacy and the
-retail result remain unresolved. Evidence is in
-[M5-S3431-REAPPLY-BOUNDARY.md](M5-S3431-REAPPLY-BOUNDARY.md).
+Session 3432 repeated the frequency-result work unit. The retail oracle passed
+its whole-RDRAM control (10,041 callbacks) and observed 41 writes to physical
+`0x165ED0`, but its configured title/hangar phase buckets remained zero. The
+lifetime writer histogram included `0x800331E0` twice and `0x80007670` four
+times among several setup/initialization writers, so exact frequency-return
+attribution is unevaluable. The sequential port pair independently qualified
+both silent and image arms through title 1024 and hangar 512 without crash or
+abort; both returned `0x5622` from `osAiSetFrequency` and supplied the same
+title/hangar count tuples to the downstream chain. This refutes a silent/image
+arm divergence at the observed port boundary, but selects none of the retail
+writer hypotheses. Evidence is in
+[M5-S3432-FREQUENCY-WRITER.md](M5-S3432-FREQUENCY-WRITER.md).
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Attribute the exact retail writer/return edge for the shared frequency
-   result at physical `0x165ED0`. Use whole-RDRAM control, title/hangar gates,
-   bounded target post-values, and an exact writer-PC/callsite watch in one
-   oracle run. Retain the three port reapply boundaries in the paired run. A
-   matching nonzero retail result selects a shared frequency contract; a
-   different result from the same writer selects a port-side input divergence.
-   Do not change waits, slots, dispatch, clear behavior, or PCM writeback.
+1. Repair the retail phase signal before retrying frequency-result attribution:
+   run the oracle with `--vi-trace` plus the validated target-origin discovery
+   route, then use the observed origin/width in one whole-RDRAM-positive-control
+   run with the exact target watch and writer histogram. Do not add more port
+   fields until the oracle phase bucket is nonzero; retain the qualified port
+   boundary as the comparison. Do not change waits, slots, dispatch, clear
+   behavior, or PCM writeback.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.
