@@ -130385,3 +130385,25 @@ like-for-like retail payload comparison and does not establish that the port
 zero fill is illegitimate. No output or audio behavior changed. Evidence:
 `docs/M5-S3392-EARLIER-PRODUCER-RETRY.md`,
 `scratch/agent/oracle_s3392.log`, and `scratch/agent/port_s3392_retry/run.log`.
+
+## Session 3393 (2026-08-31) — M5 lower-noise target attribution
+
+The independent retail oracle ran first with whole-RDRAM and exact target-span
+watches plus only the `0x800078E8` and `0x800078EC` execution watches. Positive
+controls fired: 11,125 whole-RDRAM writes, 1,125 target-span writes,
+6,507 `0x800078E8` executions, and 3,244,851 `0x800078EC` executions. The
+target-span phase attribution for `origin=0x006AB400`, width 512, was still
+zero, so the retail payload edge remains partial despite the exact target
+watch firing.
+
+The paired port build completed and reached title origin `0x00790400`, width
+1024, and hangar origin `0x006AB400`, width 512. Phase and PCM controls fired.
+The only target-area event was the zero-fill
+`0x8008F2CC -> rs_memset` at `0x801797B0`, length `0x298`; no
+`0x800078E8/0x800078EC` producer row appeared and PCM remained
+`FNV=0xF59C39C5`, `nz=0`. This reinforces `H-EarlierPortContract` only at
+the observed port boundary and refutes a matching port producer row in this
+run. It does not establish the retail payload contract or prove the zero fill
+illegitimate. The exact census is closed as non-discriminating; the next work
+unit must repair or replace the retail phase-attribution view. No output or
+audio behavior changed. Evidence: `docs/M5-S3393-LOWER-NOISE-TARGET-ATTRIBUTION.md`.

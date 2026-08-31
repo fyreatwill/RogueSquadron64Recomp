@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3392 (2026-08-31). This file was compacted
+through Session 3393 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -143,6 +143,17 @@ source boundary:
   payload edge. Evidence is in
   [M5-S3392-EARLIER-PRODUCER-RETRY.md](M5-S3392-EARLIER-PRODUCER-RETRY.md).
 
+- Session 3393 lowered oracle noise to the exact target span and only the
+  `0x800078E8/0x800078EC` execution watches. Retail controls fired: 11,125
+  whole-RDRAM writes, 1,125 target-span writes, 6,507 `0x800078E8` executions,
+  and 3,244,851 `0x800078EC` executions. The target-span phase attribution
+  remained zero, so payload attribution is still partial. The port reached
+  title and hangar with phase and PCM controls live; it exposed only the
+  `0x8008F2CC -> rs_memset` zero fill at `0x801797B0` and no matching producer
+  row. This reinforces `H-EarlierPortContract` only at the observed port
+  boundary and closes this exact census as non-discriminating. Evidence is in
+  [M5-S3393-LOWER-NOISE-TARGET-ATTRIBUTION.md](M5-S3393-LOWER-NOISE-TARGET-ATTRIBUTION.md).
+
 No output substitution or mitigation is authorized. Do not change waits, slots,
 status handling, consumer dispatch, or PCM writeback while tracing the source.
 
@@ -151,18 +162,17 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Refine the selected earlier producer/call contract with a bounded oracle
-   run retaining only `0x8002BEE8`, `0x800078E8`, and `0x800078EC` execution
-   rows plus the exact target-span watch, avoiding the noisy `0x800078E0`
-   field table. Keep whole-RDRAM control and the canonical driven Rice route.
-   Batch one equivalent port census with the existing controls; do not change
-   output or audio behavior.
-2. Discriminator: a phase-gated retail target write with a valid predecessor
-   and no port counterpart keeps `H-EarlierPortContract`; a matching port
-   predecessor and target write moves the boundary downstream; matching zero
-   writes on both routes make the boundary legitimate. If either target watch
-   is absent while its whole-RDRAM control fires, record that arm as partial
-   and do not select a payload hypothesis.
+1. Repair the retail phase attribution rather than repeating the closed exact
+   census: use the exact target-span watch as the positive control and
+   determine why its `writer-pc-phase origin=0x006AB400 width=512` view reports
+   zero despite 1,125 target writes. Then run one equivalent port census with
+   the existing controls, without changing output or audio behavior.
+2. Discriminator: a repaired retail phase row that names a producer and has no
+   port counterpart keeps `H-EarlierPortContract`; a matching port target row
+   moves the boundary downstream; matching zero rows make the boundary
+   legitimate. If the repaired phase view remains absent while the exact
+   target watch and whole-RDRAM control fire, mark the attribution path
+   unevaluable and pivot away from this oracle field.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
@@ -235,6 +245,7 @@ writer and initializer ordering are the measured explanation.
 Latest M5 evidence:
 
 - `scratch/agent/s3386_m5_direct_writer_census.md`
+- `docs/M5-S3393-LOWER-NOISE-TARGET-ATTRIBUTION.md`
 - `docs/M5-S3389-PREDECESSOR-EDGE.md`
 - `scratch/agent/s3376_m5_zero_pcm_source.md`
 - `scratch/agent/s3379_m5_source_writer.md`
