@@ -1,8 +1,9 @@
-# NEXT work unit — attribute the retail source-table entry writer
+# NEXT work unit — join retail table-entry writer values
 
 HYPOTHESIS-ID: m5-output-state-contract-boundary
 
-Session 3465 showed that retail's intervening load at `0x800644DC` feeds
+Session 3466 identified retail table-span writers, but detailed watch rows did
+not expose their stored words. Retail's intervening load at `0x800644DC` feeds
 nonzero values such as `0x801B4F00` into `0x80064524`, while the qualified port
 store remains zero. The load's `v1` table-entry addresses are now observed;
 the instruction that writes those entries is not.
@@ -17,19 +18,18 @@ Competing hypotheses and discriminating outcomes:
   of both positive controls in the same run.
 
 Work unit: run one independent retail capture retaining the whole-RDRAM and
-physical source-watch controls, with a title-gated watch on the candidate
-source-table entry writer discovered from the table walk, plus the existing
-`0x800644DC`, `0x800644A8`, and `0x80064524` execution rows and post-store
-values. Join by title phase and per-PC ordinal.
+physical source-watch controls, with detailed watches on the candidate
+title-phase writer PCs `0x80064350,0x80064360,0x80064378,0x800646D8` and the
+entry span `0x001B4AA0:0x001B4B24`, plus the existing execution rows and
+post-store values. Join writer address/value to load/store rows by title phase
+and per-PC ordinal.
 
-Exact commands: first use `rg -n "801B4AA0|801B4AA8|801B4B20|800644DC"
-tools syms RecompiledFuncs` to identify the candidate store instruction; then
-run `tools/oracle/build/rs64_oracle` with `--watch-write 0x0:0x800000
---watch-write 0x001e8710:0x001e8714`, `--watch-pc` for the candidate plus
-`0x800644A8,0x800644DC,0x80064524`, `--pc-phase-log-width
-0x00790400:1024 --pc-phase-log-width 0x00790800:1024`, and
-`--post-value-watch 1 --post-value-pc 0x80064524 --vi-trace` using the
-validated Rice/Start schedule.
+Exact command: rerun the validated Rice/Start command from Session 3466 with
+`--watch-write 0x0:0x800000 --watch-write 0x1b4aa0:0x1b4b24
+--watch-write 0x1e8710:0x1e8714 --detail-watch 1`, the four candidate PCs
+plus `0x800644a8,0x800644dc,0x80064524`, both title phase gates, and
+`--post-value-watch 2 --post-value-pc 0x80064524 --vi-trace`. Keep the run
+inside the 35-second title window so the oracle flushes its summaries.
 
 Expected discriminator: same table pointer with a different stored entry value
 selects `H-SourceWriterValue`; a different table pointer/selection selects

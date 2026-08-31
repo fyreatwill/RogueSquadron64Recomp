@@ -131893,3 +131893,31 @@ differs. Evidence: `docs/M5-S3465-RETAIL-TABLE-LOAD.md` and
 ORIGIN: the nonzero values are legitimate retail state pointers observed at
 the shared writer and post-store watch; no mitigation or runtime behavior
 change was added.
+
+## Session 3466 (2026-08-31) — identified retail source-table entry writers
+
+Ran one independent Rice oracle capture with the whole-RDRAM positive control,
+physical source-slot watch, title phase gates, and a detailed physical watch
+on `0x001B4AA0:0x001B4B24`. The corrected 35-second run recorded 14,948
+whole-RDRAM writes, 1,916 source-slot writes, 535 title VI frames, and 3,032
+table-span writes. Execution watches at `0x800644A8`, `0x800644DC`, and
+`0x80064524` fired 2,619, 7,479, and 7,186 times.
+
+Title-phase writer attribution identified `0x80064350`, `0x80064360`,
+`0x80064378`, and `0x800646D8`, with additional active writers
+`0x800078EC`, `0x80028F30`, `0x80028F40`, `0x80028F90`, and `0x80029034`.
+Initialization/copy writers `0x80018F5C`, `0x80018F60`, and `0x80018F80`
+also fired. The table-entry write route is therefore present and its
+candidate PCs are known, but the detailed rows expose address and PC rather
+than the written word, so the exact writer/value join remains unevaluable.
+The first 90-second attempt stopped before flushing summaries during a later
+attract transition; the bounded retry and detail capture corrected that setup
+failure. This rules out an absent retail table-write route, not the pointer
+versus value hypotheses.
+
+Evidence: `docs/M5-S3466-RETAIL-ENTRY-WRITER.md` and
+`scratch/agent/s3466_m5_retail_entry_writer_detail/oracle.log`.
+
+ORIGIN: no mitigation or runtime behavior change was added; all observed
+table writes are legitimate retail data activity, and the next probe must
+attribute the stored value before changing code.

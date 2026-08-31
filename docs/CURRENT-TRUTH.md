@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3465 (2026-08-31). This record was
+Current maintenance marker: Session 3466 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -186,6 +186,18 @@ unresolved edge to the table load between `0x800644A8` and `0x80064524`, but
 does not yet name the exact table-entry writer. Evidence:
 [s3464_m5_retail_producer_value.md](../scratch/agent/s3464_m5_retail_producer_value.md).
 
+Session 3466 captured the source-table entry span in the independent retail
+oracle. The whole-RDRAM and physical-source controls fired 14,948 and 1,916
+times; title phase reached 535 VI frames; and the observed table span
+`0x001B4AA0:0x001B4B24` recorded 3,032 writes. Title-phase writer attribution
+includes `0x80064350`, `0x80064360`, `0x80064378`, and `0x800646D8`, while
+`0x80018F5C`, `0x80018F60`, and `0x80018F80` are active initialization/copy
+writers. The existing `0x800644A8`/`0x800644DC`/`0x80064524` watches also
+fired. This rules out an absent retail table-write route and identifies the
+candidate writer set, but detailed write rows do not expose stored word
+values, so the exact writer/value join remains unevaluable. Evidence:
+[M5-S3466-RETAIL-ENTRY-WRITER.md](M5-S3466-RETAIL-ENTRY-WRITER.md).
+
 Session 3465 captured the intervening retail table-load site at `0x800644DC`
 in the same controlled run as `0x800644A8` and `0x80064524`. Whole-RDRAM and
 physical-source controls fired 12,666 and 2,666 times; title-gated execution
@@ -199,13 +211,12 @@ whether the port table pointer differs. Evidence:
 
 ## Next steps
 
-1. Identify the exact source-table writer feeding the retail table entries
-   consumed at `0x800644DC` and later stored by `0x80064524`. Add one
-   independent retail watch for the candidate table-entry write path, retaining
-   the whole-RDRAM and physical-source controls, then join writer value to the
-   existing load/store rows by title phase and per-PC ordinal. The retail load
-   path produces nonzero values such as `0x801B4F00`; the qualified port store
-   remains zero.
+1. Capture the exact value written by the identified title-phase table writers
+   (`0x80064350`, `0x80064360`, `0x80064378`, `0x800646D8`) at entries such as
+   `0x801B4AA0`/`0x801B4AA8`, retaining both positive controls and the existing
+   load/store watches. A matching entry pointer with a divergent stored value
+   selects `H-SourceWriterValue`; a different pointer/selection selects
+   `H-TablePointerDivergence`; missing ordered values remain unevaluable.
 2. Determine whether the next divergence is the table pointer or the table
    entry's writer/value. A matching pointer with a different entry value names
    the source-table contract; a different pointer names the producer/selection
