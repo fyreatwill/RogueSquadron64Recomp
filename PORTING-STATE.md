@@ -129116,3 +129116,28 @@ No behavior change or mitigation is authorized. Single-source evidence.
 
 Evidence: `scratch/agent/s3327_m5_slot_status_port/image.log` (556,576 lines,
 180 s run, SIGKILL).
+## Session 3329 (2026-08-30) — discriminated M5 route and MusyX voice-slot blockers
+
+Ground truth was queried before changing the port instrument. The retail
+oracle passed the whole-RDRAM positive control at 10,000 writes and reached
+title VI-1024 at 17.3 s; this bounded oracle run did not reach hangar, so its
+title result is control evidence only. Existing Session 3327 supplies the
+independent retail hangar control.
+
+The Debug target was rebuilt with a diagnostic poller for the actual MusyX
+voice table at `0x80154620` (stride `0x1228`, active byte `+0x4620`, max count
+`0x800A5121`). The poller records active-mask changes at 10 ms cadence. The
+port image arm used phase-gated capture and `ROGUESQ_AUTOPILOT=`
+`60:start,90:start,120:start`. It passed 105 `audtask-dispatch` rows and 244
+PCM-boundary rows, committed VI-1024 (`seq=10`, origin `0x790400`), and
+reached hangar VI-512 at `0x6AB400` after 94.2 s. The voice probe observed
+`max=1 active=0 mask=0` through the title/hangar transition. The existing
+1,578 count is the cinematic dispatcher pool at `0x80130BB0`, not the MusyX
+voice pool.
+
+This selects `H-PortHangarReachable` and refutes `H-VICommitAbsent` and
+`H-VoiceReapingAbsent` as blockers for this recipe. The run later hit the
+known abort/crash path during continued hangar capture; the earlier phase and
+task/PCM controls remain valid. No behavior change or mitigation was made.
+ORIGIN: diagnostic-only voice-table poll; no gameplay value was changed.
+Evidence: `scratch/agent/s3329_m5_slot_status_discriminator.md`.

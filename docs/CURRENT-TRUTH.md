@@ -4,9 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3326 (2026-08-30). Compacted from
+Current maintenance marker: Session 3329 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3329 resolved the apparent title blocker in one phase-gated port run:
+the image arm committed VI-1024 at 50.3 s, reached hangar VI-512 at 94.2 s
+with the extended 60/90/120-second autopilot, and passed task/PCM controls.
+The actual MusyX voice table stayed at max=1, active mask 0 through the
+transition; the existing 1,578-entry count was the cinematic dispatcher pool,
+not audio slots. This refutes `H-VICommitAbsent` and `H-VoiceReapingAbsent` as
+route blockers for this recipe. Evidence:
+`scratch/agent/s3329_m5_slot_status_discriminator.md`.
 
 Session 3328 ran the port-side slot/status qualification (180 s watchdog,
 bounded logging). The image arm reached VI-1024 at 14.6 s with autopilot and
@@ -363,17 +372,14 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3328: retail
+1. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
-   (`H-RetailSlotConsumer`); the port image arm cannot reach hangar even at
-   180 s. Two new blocking observations: the M5 route vi-commit for VI-1024 is
-   absent (last commit is seq=9 with committed_width=640, key_match=0 on all
-   7,796 phase-4 route-prepare rows), and the audio slot-pool count grows
-   monotonically from 4 to 1578 in the title phase with no slot freeing.
-   Before adding a slot/status probe, identify why the port is stuck at VI-1024:
-   the discriminating question is whether the missing vi-commit for 1024 or the
-   slot-pool exhaustion is the causal blocker. Design the next instrument to
-   cover both in one build. Do not change a contract edge or add a mitigation.
+   (`H-RetailSlotConsumer`). The port image arm now reaches hangar with the
+   extended autopilot; the prior title stop was schedule-dependent for this
+   recipe. The route commits 1024 and 512, and the actual MusyX voice mask is
+   zero/max=1 rather than exhausted. Next: run the slot/status qualification
+   in the reachable hangar phase and compare its writer/consumer rows to the
+   retail capture. Do not change a contract edge or add a mitigation.
 2. Keep configured-host PatchesLib validation as an open dependency. When
    that host is available, run `cmake --build build --config Debug --target
    PatchesLib` to distinguish build availability from source/link failures.
@@ -496,6 +502,15 @@ Session 3307 left the stuck 6074 `$v0` as a skip/stage/dt
 predicate or a too-slow loop. Believable because retail needed
 ~1003 iters / 48.8 s. Session 3308 measured `$v1=0` at
 `0x800AF55C` on every call, so the stage/dt path never runs.
+
+Session 3328's `H-PortRouteStillIncomplete` interpretation treated the
+1,578-entry `0x80130BB0` cinematic dispatcher pool as an audio slot pool and
+read its title plateau as a causal hang. It was believable because the poll
+was labelled slot-pool and the run stopped at title VI-1024. Session 3329's
+same-build extended-autopilot run reached hangar VI-512, committed both 1024
+and 512, and sampled the actual MusyX voice table separately; the title stop
+was schedule-dependent for that recipe. The old interpretation is superseded
+for this route, while the slot/status contract gap remains open.
 
 Session 3308 treated `cinematicInitializer` `sw` at `0x800AF4B8`
 as a setup writer that should have run before the first

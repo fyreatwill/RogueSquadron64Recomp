@@ -3772,6 +3772,46 @@ static void start_phase_poller() {
     t.detach();
 }
 
+static void start_m5_voice_slot_poller() {
+    if (!std::getenv("ROGUESQ_LOG_M5_VOICE_SLOTS")) return;
+    static std::thread t{[]{
+        uint8_t* rdram = nullptr;
+        while (!(rdram = (uint8_t*)g_recomp_rdram_for_wp_raw)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        uint8_t prev_max = 0xFF;
+        uint32_t prev_mask = 0xFFFFFFFFu;
+        uint64_t start_ms = GetTickCount64();
+        for (int i = 0; i < 4800; ++i) {
+            uint8_t max_slots = rdram[0xA5121 ^ 3];
+            if (max_slots > 32) max_slots = 32;
+            uint32_t active_mask = 0;
+            unsigned active_count = 0;
+            for (uint8_t slot = 0; slot < max_slots; ++slot) {
+                uint32_t off = 0x154620u + (uint32_t)slot * 0x1228u + 0x4620u;
+                uint8_t active = rdram[off ^ 3];
+                if (active) {
+                    active_mask |= 1u << slot;
+                    ++active_count;
+                }
+            }
+            if (max_slots != prev_max || active_mask != prev_mask) {
+                const auto* vi = ultramodern::renderer::get_vi_regs();
+                std::fprintf(stderr,
+                    "[m5-voice-slots] t=%llums max=%u active=%u mask=0x%08X width=%u origin=0x%06X\n",
+                    (unsigned long long)(GetTickCount64() - start_ms),
+                    max_slots, active_count, active_mask,
+                    vi->VI_WIDTH_REG, vi->VI_ORIGIN_REG & 0x00FFFFFFu);
+                std::fflush(stderr);
+                prev_max = max_slots;
+                prev_mask = active_mask;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    }};
+    t.detach();
+}
+
 // ROGUESQ_LOG_FS_SLOT: macOS-friendly substitute for HWBP on the fixed
 // FULL_SYNC side-slot (default phys 0x76DF60). Polls 16 bytes every 250us
 // and logs any mutation + a 5s heartbeat (positive control). Discriminates
@@ -5490,6 +5530,7 @@ int main(int argc, char* argv[]) {
     start_b50_poller();
     start_state_poller();
     start_phase_poller();
+    start_m5_voice_slot_poller();
     {
         const char* e = std::getenv("ROGUESQ_LOG_FS_SLOT");
         if (e && *e && *e != '0') {
