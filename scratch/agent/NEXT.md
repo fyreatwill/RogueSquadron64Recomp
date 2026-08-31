@@ -1,37 +1,30 @@
-# NEXT work unit — M5 port callback-table host-boundary census
+# NEXT work unit — validate task-start pointer guard on qualified route
 
-HYPOTHESIS-ID: m5-consumer-reachability-audit
+HYPOTHESIS-ID: m3-host-entry-pointer-guards
 
-Retail ground truth passed whole-RDRAM, title, and hangar controls. Its 19
-callback-table writes all came from guest `registerSiCallback` (`0x80007928`)
-or guest clear (`0x80007968`); no host writer or stale transition was observed.
-The port still starts with three `0x8009123C` occupants before the legitimate
-`0x8009B5A8` registration.
+Session 3357 added a full-width KSEG0 guard before every `OSTask`
+dereference in the active strong `osSpTaskStartGo_recomp` override. The Debug
+target built successfully, but no game route was run in that change unit.
 
 Competing hypotheses:
 
-- `H-PortHostBoundary`: a host/runtime helper writes the port guest table.
-- `H-PortIndirectGuestWriter`: an unresolved generated indirect path writes
-  the occupants.
-- `H-PortPreinitializedImage`: the occupants are initialized before generated
-  execution and are legitimate overlay/image state.
+- `H-TaskPtrAlwaysValid`: valid task/SP completion and title/hangar VI controls
+  remain unchanged after the guard.
+- `H-TaskPtrWrongRangeModel`: the predicate rejects a legitimate task pointer;
+  task dispatch or route controls disappear.
+- `H-TaskPtrCorruptionReachable`: the guard fires on an invalid task pointer;
+  the game avoids the former host-entry dereference failure.
 
-Discriminator: enumerate the host-side guest-memory write boundary and build
-one regeneration-surviving port census that records every write to physical
-`0x0011A8A4:0x0011A8B4`, its host caller/classification, and post-table values
-through title and hangar. A host caller writing `0x8009123C` selects
-`H-PortHostBoundary`; a generated/indirect writer selects
-`H-PortIndirectGuestWriter`; no write with the occupants already present at
-first valid RDRAM observation selects `H-PortPreinitializedImage`. Do not
-change behavior or add a mitigation.
+Discriminator: run the existing validated AUTOPILOT/phase-gated task, host,
+title `1024`, and hangar `512` recipe once from `build/`, with the normal
+positive controls. Any task/SP/VI continuity selects `H-TaskPtrAlwaysValid`
+and refutes the range-model hypothesis; a guard-fire row plus continued
+process selects `H-TaskPtrCorruptionReachable`. Do not add another pointer
+guard or alter audio behavior.
 
-Exact preparation commands:
+Exact commands:
 
 ```sh
-rg -n 'rdram|RDRAM|write.*memory|memcpy|TO_PTR|callback_table|11A8A4|07928|07968' src lib
-rg -n 'callback_table|11A8A4|registerSiCallback' tools RecompiledFuncs
+rg -n -C 5 'osSpTaskStartGo_recomp|rs64_guest_range_valid|TO_PTR\(OSTask' src/main/upstream_compat.cpp
+cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
-
-Before any build, record the full hypothesis table and positive-control result
-in the session evidence. Build all host-boundary fields in one instrument and
-run the validated title/hangar recipe once; do not spend a build per counter.

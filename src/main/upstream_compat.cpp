@@ -1529,7 +1529,21 @@ extern "C" void rs64_set_pending_task_guest_ptr(uint32_t guest_ptr);
 extern "C" void rs64_m5_descriptor_start(uint8_t* rdram, uint32_t task_ptr);
 extern "C" void rs64_sp_reset_yield_request();
 
+static bool rs64_guest_range_valid(uint64_t addr, uint64_t size) {
+    constexpr uint64_t kseg0_base = 0xFFFFFFFF80000000ull;
+    constexpr uint64_t kseg0_end = 0xFFFFFFFF80800000ull;
+    if (addr >= kseg0_base && size <= kseg0_end - addr) return true;
+
+    const uint32_t low = static_cast<uint32_t>(addr);
+    return (addr >> 32) == 0 && low >= 0x80000000u &&
+           size <= 0x00800000ull - (low - 0x80000000u);
+}
+
 extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
+    if (!rs64_guest_range_valid(static_cast<uint64_t>(ctx->r4), sizeof(OSTask))) {
+        ctx->r2 = 0;
+        return;
+    }
     rs64_sp_reset_yield_request();
     rs64_m5_descriptor_start(rdram, (uint32_t)ctx->r4);
     rs64_set_pending_task_guest_ptr((uint32_t)ctx->r4);

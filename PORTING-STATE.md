@@ -129657,3 +129657,24 @@ the port's pre-existing `0x8009123C` occupants remain unexplained. The first
 matrix's global hit cap hid writer attribution; the corrected matrix fixed
 that instrumentation issue in the same work unit. No behavior change.
 Evidence: `scratch/agent/s3356_m5_callback_table_oracle.md`.
+
+## Session 3357 (2026-08-31) — guarded task-start guest-pointer boundary
+
+Performed a bounded M3 audit of the active `osSpTaskStartGo_recomp` host-entry
+idiom. The strong project override dereferenced `ctx->r4` as an `OSTask` in
+three paths before validation; the weak runtime implementation is shadowed.
+Added one full-width KSEG0 range predicate covering the complete `OSTask`
+object before all three dereferences. It accepts both sign-extended and
+zero-extended 8 MiB KSEG0 addresses, returns from the void wrapper with zero
+for an invalid pointer, and leaves the valid submission path unchanged.
+
+The Debug `RogueSquadron64Recomp` target rebuilt successfully. This proves the
+new guard compiles and does not select the wrong-range hypothesis; the route's
+existing task/title/hangar runtime qualification remains the follow-up
+positive control. ORIGIN: the task pointer is supplied by the guest scheduler
+and is legitimate only when it identifies an `OSTask` fully inside KSEG0 RDRAM;
+an out-of-range value is upstream corrupted input, so rejecting it before
+`TO_PTR` is the guard's intended boundary. The change rules out an unchecked
+host-entry dereference as a future crash source but does not explain the M5
+callback-table occupants. Evidence: source diff and successful Debug build;
+no runtime route was run in this bounded guard unit.
