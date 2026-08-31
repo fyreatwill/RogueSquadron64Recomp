@@ -1,33 +1,37 @@
-# NEXT work unit — M5 callback-table runtime writer attribution
+# NEXT work unit — M5 port callback-table host-boundary census
 
 HYPOTHESIS-ID: m5-consumer-reachability-audit
 
-Session 3355 refuted a generated-table alias and dispatcher explanation. The
-remaining candidate is a host/runtime or unresolved indirect writer that
-populates the port's `0x8009123C` callback occupants before the qualified
-consumer route, preventing `0x8009B5A8` from being installed.
+Retail ground truth passed whole-RDRAM, title, and hangar controls. Its 19
+callback-table writes all came from guest `registerSiCallback` (`0x80007928`)
+or guest clear (`0x80007968`); no host writer or stale transition was observed.
+The port still starts with three `0x8009123C` occupants before the legitimate
+`0x8009B5A8` registration.
 
-Competing hypotheses for the next unit:
+Competing hypotheses:
 
-- `H-RuntimeTableWrite`: host/runtime code writes the guest callback table
-  outside generated MIPS execution.
-- `H-IndirectGuestTableWrite`: a generated indirect path writes the table but
-  is absent from the literal/static census.
-- `H-StaleTableState`: the table is not reset between overlay/runtime phases,
-  so the occupants are valid earlier state rather than a writer defect.
+- `H-PortHostBoundary`: a host/runtime helper writes the port guest table.
+- `H-PortIndirectGuestWriter`: an unresolved generated indirect path writes
+  the occupants.
+- `H-PortPreinitializedImage`: the occupants are initialized before generated
+  execution and are legitimate overlay/image state.
 
-Discriminator: first ask the retail oracle for a physical watch on all four
-callback slots, with whole-RDRAM and title/hangar controls, and capture each
-write's guest PC/value. In parallel, inspect the host write boundary exposed
-by the existing callback-table census and runtime memory helpers; only build a
-port instrument after the oracle control confirms the watch is live. A retail
-write with no guest PC plus a matching port transition selects
-`H-RuntimeTableWrite`; a guest PC outside the known generated writers selects
-`H-IndirectGuestTableWrite`; a reset/phase transition with no corresponding
-write selects `H-StaleTableState`. A null watch without its positive control is
-unevaluable.
+Discriminator: enumerate the host-side guest-memory write boundary and build
+one regeneration-surviving port census that records every write to physical
+`0x0011A8A4:0x0011A8B4`, its host caller/classification, and post-table values
+through title and hangar. A host caller writing `0x8009123C` selects
+`H-PortHostBoundary`; a generated/indirect writer selects
+`H-PortIndirectGuestWriter`; no write with the occupants already present at
+first valid RDRAM observation selects `H-PortPreinitializedImage`. Do not
+change behavior or add a mitigation.
 
-Exact commands: inspect `tools/oracle/README.md` and the existing oracle recipe
-before preparing one watch matrix; use `rg -n
-'callback_table|11A8A4|registerSiCallback' src lib tools`; do not build or
-change behavior until the oracle watch/control is positively armed.
+Exact preparation commands:
+
+```sh
+rg -n 'rdram|RDRAM|write.*memory|memcpy|TO_PTR|callback_table|11A8A4|07928|07968' src lib
+rg -n 'callback_table|11A8A4|registerSiCallback' tools RecompiledFuncs
+```
+
+Before any build, record the full hypothesis table and positive-control result
+in the session evidence. Build all host-boundary fields in one instrument and
+run the validated title/hangar recipe once; do not spend a build per counter.

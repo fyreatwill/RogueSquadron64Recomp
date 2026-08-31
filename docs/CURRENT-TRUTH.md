@@ -4,9 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3355 (2026-08-31). Compacted from
+Current maintenance marker: Session 3356 (2026-08-31). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3356 completed the independent retail callback-table writer capture.
+The whole-RDRAM control fired 10,019 writes and the driven run reached title
+1024 and hangar 512. The callback range fired 19 writes: 11 from guest PC
+`0x80007928` and 8 from `0x80007968`; post-values were only
+`0x8009B5A8`, `0x8009123C`, or zero. Retail therefore refutes an unobserved
+host/runtime table writer and stale-state explanation for these transitions;
+all observed writes use the known registration/clear helpers. This does not
+explain the port's pre-existing `0x8009123C` occupants. Evidence:
+`scratch/agent/s3356_m5_callback_table_oracle.md`.
 
 Session 3354 completed the bounded M5 consumer source/target census. Retail
 ground truth passed whole-RDRAM, title, and hangar controls and showed
@@ -28,6 +38,13 @@ but not its writer. No behavior change was authorized. Evidence:
    for all callback slots, then inspect/build one host-boundary census only
    after the watch's positive control fires. Evidence:
    `scratch/agent/s3355_m5_callback_table_static_audit.md` (single-source).
+   Session 3356's independent retail oracle passed whole-RDRAM, title, and
+   hangar controls and attributed all 19 callback-table writes to guest
+   `0x80007928` (11) or `0x80007968` (8), with post-values only
+   `0x8009B5A8`, `0x8009123C`, or zero. This refutes a retail host/runtime
+   writer and stale-state transition for the observed writes. Next: build one
+   regeneration-surviving port host-boundary census for the same table; do not
+   change behavior or add a mitigation.
 
 Session 3355 completed the bounded M5 callback-table static audit. The only
 generated table writer is `registerSiCallback` at `0x80007928`, with the

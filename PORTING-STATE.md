@@ -129642,3 +129642,18 @@ alternate alias, or dispatcher defect explains the port's three
 `H-PortDispatcher`; it leaves a runtime or unresolved indirect writer class,
 not a behavior change. Evidence:
 `scratch/agent/s3355_m5_callback_table_static_audit.md` (single-source).
+
+## Session 3356 (2026-08-31) — captured retail callback-table writer ground truth
+
+Ran the independent retail Rice oracle with a whole-RDRAM positive control and
+the physical four-slot callback-table watch. The positive control fired 10,019
+writes, title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400` were reached,
+and the callback range recorded 19 writes. All were attributed to the known
+guest helpers: `0x80007928` wrote 11 and `0x80007968` cleared 8. Post-store
+values were only `0x8009B5A8`, `0x8009123C`, or zero; the dispatcher and both
+named callback targets were live. This refutes an unobserved retail
+host/runtime writer and stale-state explanation for the observed transitions;
+the port's pre-existing `0x8009123C` occupants remain unexplained. The first
+matrix's global hit cap hid writer attribution; the corrected matrix fixed
+that instrumentation issue in the same work unit. No behavior change.
+Evidence: `scratch/agent/s3356_m5_callback_table_oracle.md`.
