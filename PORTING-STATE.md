@@ -131361,3 +131361,24 @@ are not like-for-like, the exact producer/caller/retail tuple intersection was
 unevaluable. This selects `H-EarlierBoundaryUnevaluable` for this census and
 leaves the earlier input gap open. No waits, slots, dispatch, clear behavior,
 or PCM writeback changed. Evidence: `docs/M5-S3439-FREQUENCY-PRODUCER.md`.
+## Session 3440 (2026-08-31) — joined phase-qualified send and receive rows
+
+Ran the independent retail oracle first with whole-RDRAM positive control,
+both title origins, hangar driving, and `--watch-pc 0x80033410`. The control
+reached 10,000 writes, the send entry fired 169,394 times, and the run reached
+7,178 VI frames. The phase-qualified target queue `0x8010FEE0` had 12,534
+normalized retail rows, all `(queue,msg,flag)=(0x8010FEE0,0,0)`.
+
+Added a bounded, phase-scoped port send sequence field and a receive join. The
+first receive witness exposed a null output-slot ABI, so it was corrected to
+sample the queue's pre-receive head entry. After rebuilding, concurrent silent
+and Factor 5 image arms both reached title 1024 with positive controls live
+and no crash/abort markers. The final pair retained 486 target-queue send rows
+and 512 target-queue receive rows per arm; every consumed queue-head message
+was zero. The send tuple is therefore present and consumed on both sides.
+
+This selects `H-RetailSendParity` and refutes `H-EarlierPortSendGap` at the
+observed queue contract. It rules out no later consumer/output boundary, and
+zero is not declared illegitimate. Evidence: `docs/M5-S3440-SEND-RECEIVE-JOIN.md`
+and `scratch/agent/s3440_retail_send_groundtruth/oracle.log` plus the final
+pair logs.

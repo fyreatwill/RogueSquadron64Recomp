@@ -583,17 +583,28 @@ leaves the earlier input gap open; it does not establish that the zero
 publication is illegitimate. Evidence is in
 [M5-S3439-FREQUENCY-PRODUCER.md](M5-S3439-FREQUENCY-PRODUCER.md).
 
+Session 3440 qualified the selected send/receive queue boundary. Retail's
+whole-RDRAM control reached 10,000 writes, `0x80033410` fired 169,394 times,
+and 12,534 phase-qualified rows used queue `0x8010FEE0`, all normalized as
+`(queue=0x8010FEE0,msg=0,flag=0)`. The fresh-build silent/image port pair
+reached title 1024 with controls live and no crash/abort markers. Port had 486
+matching target sends and 512 target receives; every consumed queue-head
+message was zero. This selects `H-RetailSendParity` and refutes
+`H-EarlierPortSendGap` at the queue contract. Zero is not treated as
+illegitimate; the remaining boundary is downstream receive-consumer/output
+use. Evidence is in
+[M5-S3440-SEND-RECEIVE-JOIN.md](M5-S3440-SEND-RECEIVE-JOIN.md).
+
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the earlier port producer selected by Session 3438. Use the 53
-   generated caller sites, beginning with the high-count `0x80001B04`,
-   `0x80001CB8`, `0x80006EFC`, and `0x80006F5C` routes, and one phase-scoped
-   census at the first input-producing edge before those calls. The
-   discriminator is whether a retail-observed tuple appears at that earlier
-   edge and is preserved into the caller, is absent there too, or the edge is
-   unevaluable despite live controls. Keep waits, slots, clear behavior, and
-   PCM writeback unchanged.
+1. Trace the post-receive consumer/output edge selected by Session 3440. Join
+   the phase-scoped `0x8010FEE0` receive rows to the first generated consumer
+   PCs after `osRecvMesg`, beginning with high-count routes
+   `0x80001B04`, `0x80001CB8`, `0x80006EFC`, and `0x80006F5C`. The
+   discriminator is matching retail downstream state, an immediate port
+   state divergence, or an unevaluable consumer edge despite live controls.
+   Keep waits, slots, clear behavior, and PCM writeback unchanged.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.

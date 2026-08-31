@@ -1,44 +1,39 @@
-# NEXT work unit — obtain a like-for-like send/receive join
+# NEXT work unit — trace the post-receive consumer/output edge
 
-HYPOTHESIS-ID: m5-frequency-writer-contract
+HYPOTHESIS-ID: m5-frequency-receive-consumer-contract
 
-Session 3439 found the send hook live but not comparable: the port producer
-census reached 512 rows, with 486 rows on queue `0x8010FEE0` and 490 message
-values equal to zero, while the retail arm only watched receive-side PCs.
-The earlier input gap remains open.
+Session 3440 selected `H-RetailSendParity`: retail had 12,534
+phase-qualified sends on `0x8010FEE0`, all `(queue,msg,flag)=(0x8010FEE0,0,0)`;
+the port had 486 matching sends and 512 matching receives. Both port arms
+consumed zero queue-head messages with live positive controls. The send
+boundary is closed; do not infer that zero is corrupt.
 
-Before building, ask ground truth for the missing like-for-like edge: run the
+Before building, ask ground truth for the selected consumer edge: run the
 retail oracle with whole-RDRAM control, both title origins, hangar, and
-`--watch-pc 0x80033410` (the retail `osSendMesg` entry), phase-gated to the
-same width/origin buckets. Then add one port join at `osRecvMesg_recomp` after
-the receive call: record the delivered message value and a bounded producer
-sequence/queue key alongside the existing caller and wrapper rows. Keep the
-existing send census.
-Build once with `cmake --build build --config Debug --target
-RogueSquadron64Recomp`, and run from `build/` with the validated
-`ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
-ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1` route, title/hangar phase gates, and
-SIGKILL cleanup.
+`--watch-pc 0x80001B04,0x80001CB8,0x80006EFC,0x80006F5C`, phase-gated to the
+same width/origin buckets. Then add one port post-receive consumer witness at
+the first generated callsites after `osRecvMesg`, carrying the queue/message
+join key and the first downstream state word. Keep the send/receive controls.
 
 Competing hypotheses and the single discriminating measurement:
 
-- `H-RetailSendParity`: retail and port share normalized `(queue,msg,flag)`
-  send publications that reach the selected receive rows; the gap is later.
-- `H-EarlierPortSendGap`: retail has phase-qualified send tuples absent from
-  the port send table and no delivered-message join exists.
-- `H-SendJoinUnevaluable`: retail send execution or port delivered-message rows
-  are absent despite live controls.
+- `H-RetailConsumerParity`: zero messages reach matching downstream consumer
+  state on retail and port; the gap is later.
+- `H-PortConsumerStateGap`: both receive controls are live, but port diverges
+  at the first consumer/output state after the matched zero message.
+- `H-ConsumerUnevaluable`: retail consumer or port post-receive rows are absent
+  despite live positive controls.
 
-The measurement is the exact normalized `(queue,msg,flag)` intersection
-between retail `0x80033410` rows and port send rows, plus the same-run join of
-port sent `(queue,msg)` to post-receive delivered `(queue,msg)`. A retail/port
-send intersection with delivered joins selects a later boundary; retail-only
-tuples select `H-EarlierPortSendGap`; missing retail or delivered rows with
-live positive controls select `H-SendJoinUnevaluable`. Do not change waits,
-slots, dispatch, clear behavior, or PCM writeback.
+The measurement is the first post-receive consumer state tuple for the matched
+`(0x8010FEE0,0,0)` message, compared against the same retail PC phase rows.
+Matching state selects `H-RetailConsumerParity`; a live port receive followed
+by divergent state selects `H-PortConsumerStateGap`; missing consumer rows
+with live send/receive controls select `H-ConsumerUnevaluable`. Do not change
+waits, slots, dispatch, clear behavior, or PCM writeback.
 
 Build once with `cmake --build build --config Debug --target
-RogueSquadron64Recomp`; run the oracle first, then the port from `build/` on
-the validated `ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1
-ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1` route with
-phase/caller/wrapper/producer controls and SIGKILL cleanup.
+RogueSquadron64Recomp`; run the oracle first, then concurrent silent/image port
+arms from `build/` on the validated
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
+ROGUESQ_LLE_SOLO=1 ROGUESQ_AUDIO_UCODE=1` route. Use phase gates and SIGKILL
+cleanup.
