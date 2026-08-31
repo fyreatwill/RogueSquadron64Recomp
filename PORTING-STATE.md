@@ -131118,3 +131118,25 @@ direct caller-site question is closed; the earlier producer of port
 `a1=0x5622` remains unresolved. No runtime behavior changed. Evidence is in
 `docs/M5-S3428-INIT-CALLSITES.md` and
 `scratch/agent/s3428_m5_caller_{groundtruth,pair}/`.
+
+## Session 3429 (2026-08-31) — setup-state entry label census
+
+Ran the independent retail oracle first with a whole-RDRAM positive control,
+Rice video, the validated Start schedule, and execution watches at `0x80091B84`
+and `0x80091848`. It reached title 1024 and hangar 512; the control produced
+10,000 writes. Retail observed 9,753 executions at `0x80091848` and none at
+`0x80091B84`. Static symbols show those PCs are instructions inside generated
+functions, not the named `reapplyAudioConfig` and `initAudioSubsystem` entry
+points.
+
+Added a regeneration-safe, phase-gated witness at the actual generated
+function entries. The Debug build succeeded. Concurrent silent and Factor 5
+image arms both reached title 1024 and hangar 512 with init and audio ABI/DMA
+controls live; image-stage was live only in the image arm, and neither emitted
+crash or abort markers. Each port arm saw one `reapply` entry row with
+`a0=0x80165ED0, a1=0x12, a2=0, a3=0`; no target-phase `init` row occurred.
+
+This refutes interpreting the requested labels as the named function entries,
+but does not measure the proposed `0x5622` producer boundary. The next probe
+moves to the real `setDisplayMode` callsites at `0x8008EA78` and `0x8008EBC0`.
+No runtime behavior changed. Evidence: `docs/M5-S3429-SETUP-STATE-ENTRY.md`.

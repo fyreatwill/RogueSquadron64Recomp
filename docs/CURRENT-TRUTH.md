@@ -455,19 +455,29 @@ the direct caller-site question. The earlier producer of port `a1=0x5622`
 remains unresolved; no audio behavior changed. Evidence is in
 [M5-S3428-INIT-CALLSITES.md](M5-S3428-INIT-CALLSITES.md).
 
+Session 3429 tested the prescribed setup-state labels with ground truth first.
+The retail whole-RDRAM control reached title/hangar and fired 10,000 writes;
+retail executed `0x80091848` 9,753 times and `0x80091B84` zero times. Static
+symbols show these are instructions inside generated functions, not the named
+function entries. A fresh-build silent/image pair reached title/hangar with
+controls live and no crash/abort. Actual generated entry witnesses saw only
+`reapplyAudioConfig` once per arm, with `a1=0x12`; no target-phase
+`initAudioSubsystem` row occurred. This refutes the current labels as a
+like-for-like count boundary but leaves the producer unevaluable. Evidence is
+in [M5-S3429-SETUP-STATE-ENTRY.md](M5-S3429-SETUP-STATE-ENTRY.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace caller-entry arguments for `initAudioSubsystem` (`0x80091B84`) and
-   `reapplyAudioConfig` (`0x80091848`) in one fresh-build silent/image pair,
-   after an independent retail oracle watches those same entries. The
-   discriminator is whether port `a1=0x5622` is already present at
-   `reapplyAudioConfig` entry, is produced by its caller, or comes through
-   `initAudioSubsystem`; require whole-RDRAM, title/hangar, init, ABI/DMA, and
-   image-stage controls. Do not change waits, slots, dispatch, clear behavior,
-   or PCM writeback.
+1. Witness caller arguments immediately before the real `setDisplayMode`
+   callsites `0x8008EA78 -> initAudioSubsystem` and `0x8008EBC0 ->
+   reapplyAudioConfig`, after the independent oracle watches those two PCs.
+   The discriminator is whether either caller carries `a1=0x5622` or another
+   setup-count value before entry; require whole-RDRAM, title/hangar, init,
+   ABI/DMA, and image-stage controls. Do not change waits, slots, dispatch,
+   clear behavior, or PCM writeback.
 2. The direct `initN64RspMixer` callsite boundary is closed: both retail and
    port use `0x80091D14` on the qualified route. The
    `allocateSongChannelArray` entry/first-malloc boundary and the
