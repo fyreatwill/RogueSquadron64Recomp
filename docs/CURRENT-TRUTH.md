@@ -296,17 +296,30 @@ absence and a nonzero port producer at the observed edge, and leaves the
 producer entry-input/transform contract unresolved. Evidence is in
 `scratch/agent/s3411_m5_downstream_join/{silent,image}.log`.
 
+Session 3416 attempted the producer-entry contract census. The debugger-heavy
+oracle arm did not reach shutdown because watched-execution detail flooded the
+capture; the retained s3414 retail control remains valid with whole-RDRAM,
+title/hangar, and nonzero target-span writer controls. The fresh-build port
+pair was asymmetric: image reached title and hangar with 1,176 audio ABI/DMA
+rows and 768 field-writer rows, all target-span producer bytes zero; silent
+crashed at `spTaskSchedulerThread+9536` / guest PC `0x8000834c` before target
+phase. The port entry witness captured the title zero-fill
+`0x8008F2CC -> dst=0x801797B0, val=0, len=0x298`, but no like-for-like hangar
+producer-entry tuple. This selects none of `H-PortEntryInputZero`,
+`H-PortEntryTransformZero`, or `H-PortEntryRouteMismatch`; it is a
+qualification failure, not evidence that the zero is legitimate.
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Ask the retail oracle for a phase-qualified `0x800078EC` entry-argument
-   table, with whole-RDRAM, title/hangar, and target-span controls. Then add
-   one batched port entry witness for the same producer and rerun the paired
-   route. Classify whether the port has the retail input tuple, a different
-   tuple, or the same nonzero input followed by zeroing. Do not change waits,
-   slots, dispatch, clear behavior, or PCM writeback.
+1. Add a regeneration-safe writer-loop-entry witness at the first
+   `0x800078EC` iteration, recording `a0/a1/a2` and computed `v0` with the
+   phase and target-span predicate. Re-run the retail oracle with a bounded
+   target-span store-field table and the same positive controls, then run both
+   fresh-build port arms in one batch. Do not change waits, slots, dispatch,
+   clear behavior, or PCM writeback.
 2. Keep the completed retail destination map and s3415 source-span result as
    controls; do not repeat the `0x1935E0` destination watch unless the new
    entry-argument discriminator selects a different publication route.

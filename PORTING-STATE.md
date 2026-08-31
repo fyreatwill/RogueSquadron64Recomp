@@ -130835,3 +130835,24 @@ entry inputs are zero or an internal transform/loop is zeroing them. The
 retail nonzero result remains the independent second line of evidence. It
 rules out changing waits, slot handling, dispatch, clear behavior, or PCM
 writeback as a justified response to this result.
+
+## Session 3416 (2026-08-31) — M5 producer loop-entry qualification
+
+Attempted the prescribed producer-entry contract census. The debugger-heavy
+retail command fired its whole-RDRAM positive control but ended before a
+shutdown summary because watched execution detail flooded the capture; the
+validated s3414 Rice-route retail control remains the independent comparison,
+with title/hangar phase rows and nonzero `0x1797B0:0x179A48` writes from
+`0x800078EC`. The fresh-build pair used the existing regeneration-safe
+`rs_memset` entry witness and ran from `build/` with silent and image arms.
+Image reached title 1024 and hangar 512, produced 1,176 audio ABI/DMA rows and
+768 field-writer rows, and wrote zero bytes in the target span. Its entry
+witness captured the title clear `0x8008F2CC -> dst=0x801797B0, val=0,
+len=0x298`, but no like-for-like hangar entry tuple. Silent crashed at the
+known `spTaskSchedulerThread+9536` / guest PC `0x8000834c` boundary before
+target phase. The entry-input, transform, and route-mismatch hypotheses are
+therefore unevaluable; this does not establish that the zero is legitimate.
+The next probe adds a bounded loop-entry witness at `0x800078EC` and keeps all
+wait, slot, dispatch, clear, and PCM behavior unchanged. Evidence:
+`scratch/agent/s3416_m5_retail_entry_input_final.log`,
+`scratch/agent/s3416_m5_entry_input/{driver,silent,image}.log`.
