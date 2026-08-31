@@ -1,44 +1,37 @@
-# NEXT work unit — qualify the remaining M5 consumer/output contract
+# NEXT work unit — independently qualify the zero PCM output writer
 
-HYPOTHESIS-ID: m5-consumer-output-contract
+HYPOTHESIS-ID: m5-zero-pcm-output-writer
 
-The port status-03 worker/store contract is now observed at class level on a
-valid hangar route. The remaining M5 Step 1 discriminator is whether the
-named consumer/output path is absent or merely not joined by the current
-instrumentation. Do not change a wait, slot, or status edge.
+The corrected s3373 port run reached both target phases with live audio-task,
+PCM, and filter controls. Its named `m5-consumer-entry` marker stayed at zero,
+but task joins showed consumer matches and completions; PCM source and
+consumer rows were present with `nz=0`. This is a provisional output-data
+gap, not permission to modify a gate or consumer.
 
 Competing hypotheses:
 
-- `H-PortConsumerReachable`: the named consumer executes after the worker
-  contract and consumes the produced voice/output state.
-- `H-PortConsumerIndirectGap`: status/worker rows remain live but the named
-  consumer PC stays absent; an indirect edge or output relation is missing.
-- `H-PortOutputGap`: the consumer executes, but its output/PCM join is absent
-  or remains zero despite live source and task controls.
+- `H-RetailZeroPCMIsLegitimate`: retail writes the observed zero PCM spans as
+  a legitimate silence/clear path; the port matches the same writer/value.
+- `H-PortPCMWriterGap`: retail has a guest writer/value transition for the
+  destination spans that is absent from the port, despite task completion.
+- `H-PortPCMJoinMisattribution`: the port PCM join observes a different
+  buffer than retail's output consumer, so the zero result is a join-key error.
 
-Discriminating measurement: one Debug port run with host/task/PCM controls,
-title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, status/worker controls,
-named consumer entry rows, output-task completion rows, and PCM source and
-consumer joins. Consumer entry plus matching nonzero output selects
-reachability; live worker/status plus no consumer selects the indirect gap;
-consumer entry with zero/missing output selects the output gap. Missing target
-controls make the run invalid.
+Discriminating measurement: first use the oracle's whole-RDRAM positive
+control, then one retail target-phase watch for the exact PCM destination
+spans already emitted by `[pcm-boundary-source]` and
+`[pcm-boundary-consumer]`, recording guest PC, value/hash, and ordering. In
+the same iteration compare those spans with the existing port rows and
+controls; do not change behavior. Retail writer/value matching port selects
+`H-RetailZeroPCMIsLegitimate`; a retail nonzero/clear writer absent from port
+selects `H-PortPCMWriterGap`; mismatched addresses or ordering selects
+`H-PortPCMJoinMisattribution`. Missing whole-RDRAM control makes the run
+invalid and selects nothing.
 
-Exact phase-gated rows: `[phase] width=1024` and `[phase] width=512` are the
-target controls; positive controls are `[pcm-boundary-source]`,
-`[pcm-boundary-consumer]`, `[audtask-abi]`, and the existing host/filter
-controls. Count only rows after the 512 transition. The discriminator rows
-are `[m5-consumer-entry]`, `[audtask-image-join]`, `[audtask-join]`,
-`[pcm-boundary-source]`, and `[pcm-boundary-consumer]`.
-
-Preparation and run surface:
-
-```sh
-rg -n 'm5-consumer-entry|audtask-image-join|audtask-join|pcm-boundary' src tools scratch/agent docs/M5-AUDIO-PLAN.md
-cmake --build build --config Debug --target RogueSquadron64Recomp
-env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a' ROGUESQ_AUTOPILOT_STOP_WIDTH=512 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=110 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/s3373_m5_consumer_output_contract 90 0.5
-```
-
-Before building, inspect the existing regeneration-surviving consumer and
-audio-task joins. Add no new field unless the existing rows cannot answer the
-table. Do not change behavior or add a mitigation.
+Preparation: read `tools/oracle/README.md`, identify the existing watch and
+positive-control recipe, and do not build a new port instrument first. Arm
+both retail watches in one run, retaining title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400` controls. Use the existing fixed port recipe only
+for comparison if the oracle control passes. Do not change waits, slots,
+status handling, consumer dispatch, or PCM writeback until the independent
+writer/value result names one legitimate edge.

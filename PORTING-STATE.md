@@ -129958,3 +129958,26 @@ The first census activation exposed a fixup layout assumption rather than a
 runtime failure; the external fixup now falls back to the end of `funcs_26.c`
 when the following function is in `funcs_27.c`. The initial failed activation
 and the corrected chain are recorded in the evidence note.
+
+## Session 3373 (2026-08-31) — qualified M5 consumer/output contract
+
+The first requested probe was route-invalid: it omitted the canonical
+LLE/solo/spin-yield controls, crashed in `spTaskSchedulerThread`, and exited
+at VI width 320 before the title control. Its null result was discarded. The
+fixed Debug target rebuilt successfully, and the corrected phase-gated run
+used the canonical route and autopilot. It reached title VI `1024 @
+0x00790400` at 11.5 s and hangar VI `512 @ 0x006AB400` at 19.8 s, captured
+141 frames, and had no `[CRASH]` or `[ABORT]` marker. Positive controls were
+live: 2,978 audio-task ABI rows, 101 PCM source rows, 101 PCM consumer rows,
+and the filter-audit control.
+
+After the 512 transition, the named `m5-consumer-entry` marker remained zero.
+The existing task joins nevertheless recorded 2,359 consumer-matched rows
+and 1,899 completed rows; PCM source and consumer joins remained live, with
+58 each in the bounded post-transition scan. Completed joins paired source
+and consumer spans, but the PCM rows reported `nz=0`. This rejects the simple
+“no audio-task consumer/output path is reachable” interpretation and
+provisionally selects an output-data gap over a wholly unreached task
+consumer. The exact named `0x80019B74` entry remains unproven, so this
+distinction is single-source. No wait, slot, status, or output behavior
+changed. Evidence: `scratch/agent/s3373_m5_consumer_output_contract.md`.

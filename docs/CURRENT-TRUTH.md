@@ -8,6 +8,17 @@ Current maintenance marker: Session 3372 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
+Session 3373's corrected M5 consumer/output run reached title `1024 @
+0x00790400` and hangar `512 @ 0x006AB400`, with audio-task/PCM/filter
+positive controls and no crash/abort markers. The exact named consumer-entry
+marker remained zero, but existing task joins recorded 2,359
+consumer-matched rows and 1,899 completed rows after the hangar transition;
+PCM source/consumer joins remained live while sampled PCM payloads were zero
+(`nz=0`). This provisionally selects an output-data gap over a wholly
+unreached task consumer, while leaving the exact `0x80019B74` guest entry
+unproven. This distinction is single-source; no behavior change is
+authorized. Evidence: `scratch/agent/s3373_m5_consumer_output_contract.md`.
+
 Session 3369's corrected independent retail status-03 capture passed the
 whole-RDRAM control (36,645,693 writes), reached hangar VI `512 @ 0x006AB400`,
 and observed the named service worker `0x8009B600` plus its status-zero clear
@@ -701,6 +712,12 @@ Session 3369 supplied the independent retail worker contract, and Session
 3372 qualified the matching port worker/store contract on the validated route.
 The remaining M5 discriminator is the named consumer/output/PCM relation; do
 not change a wait, slot, or status edge.
+Session 3373 qualified the existing task/output joins: consumer matches and
+completed tasks were numerous, but the named consumer-entry marker stayed at
+zero and sampled PCM payloads stayed zero-valued. Treat this as a provisional
+output-data gap, not authorization to change a consumer, writer, or gate. The
+next discriminator must independently name the legitimate retail writer/value
+for the zero PCM destination and match it to the existing port join.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
