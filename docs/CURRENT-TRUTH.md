@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3430 (2026-08-31). This file was compacted
+through Session 3433 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -496,16 +496,30 @@ arm divergence at the observed port boundary, but selects none of the retail
 writer hypotheses. Evidence is in
 [M5-S3432-FREQUENCY-WRITER.md](M5-S3432-FREQUENCY-WRITER.md).
 
+Session 3433 repaired the retail phase signal. A `--vi-trace` arm with the
+whole-RDRAM positive control observed the title's width-1024 origins alternating
+between `0x00790400` and `0x00790800`. A second arm configured both origins and
+again passed the control; physical `0x165ED0` had 12,536 lifetime writes, with
+634 VI rows in the `0x00790400` bucket and 633 in the `0x00790800` bucket.
+Phase writer histograms were nonempty in both buckets and post-value samples
+included nonzero `0x5622` and `0x561F`. This selects `H-OraclePhaseOriginMismatch`
+and refutes phase-signal absence at the observed title route, but does not yet
+identify the exact frequency writer because each phase bucket still contains
+multiple writers. Evidence is in [M5-S3433-FREQUENCY-PHASE.md](M5-S3433-FREQUENCY-PHASE.md).
+
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Repair the retail phase signal before retrying frequency-result attribution:
-   run the oracle with `--vi-trace` plus the validated target-origin discovery
-   route, then use the observed origin/width in one whole-RDRAM-positive-control
-   run with the exact target watch and writer histogram. Do not add more port
-   fields until the oracle phase bucket is nonzero; retain the qualified port
-   boundary as the comparison. Do not change waits, slots, dispatch, clear
-   behavior, or PCM writeback.
+1. Use the repaired retail phase signal to isolate the frequency-result writer:
+   run one oracle arm with whole-RDRAM control, target `0x165ED0:0x165ED4`,
+   both title buckets `0x00790400:1024` and `0x00790800:1024`, and a bounded
+   execution-watch set for `0x800331E0`, `0x80033420`, `0x80007670`, and the
+   `osAiSetFrequency` call/return boundary. A candidate whose execution and
+   target writes join in one phase bucket selects that writer; live target
+   buckets with no candidate join selects an unlisted writer and requires the
+   phase writer histogram to enumerate it. Keep the qualified port boundary as
+   comparison. Do not change waits, slots, dispatch, clear behavior, or PCM
+   writeback.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.
@@ -624,6 +638,7 @@ writer and initializer ordering are the measured explanation.
 Latest M5 evidence:
 
 - `docs/M5-S3409-052C4-JOIN.md`
+- `docs/M5-S3433-FREQUENCY-PHASE.md`
 - `docs/M5-S3420-RETAIL-ENTRY-ARGS.md`
 - `docs/M5-S3426-INIT-MIXER-CALLER.md`
 - `docs/M5-S3413-RETAIL-SOURCE-SPAN.md`

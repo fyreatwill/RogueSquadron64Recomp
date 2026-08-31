@@ -1,25 +1,25 @@
-# NEXT work unit — repair and qualify the retail frequency phase signal
+# NEXT work unit — isolate the retail frequency-result writer
 
 HYPOTHESIS-ID: m5-frequency-result-writer
 
-Session 3432 showed that the port result is stable across silent/image arms,
-but the retail oracle's expected title/hangar phase buckets remained zero.
-Its lifetime target histogram is therefore not a phase discriminator.
+Session 3433 repaired the retail phase signal: the title route alternates
+between width-1024 origins `0x00790400` and `0x00790800`, and both phase
+buckets contain writes to `0x165ED0`.
 
 Competing hypotheses and the single discriminating measurement:
 
-- `H-OraclePhaseOriginMismatch`: the configured origins/widths do not match
-  the oracle's actual VI transition, so target attribution is merely hidden.
-- `H-OracleDrivenRouteStallsBeforeTarget`: the oracle does not reach the
-  target route, despite its whole-RDRAM control and VI count.
-- `H-TargetWritesArePrephaseOnly`: the 41 target writes are genuinely limited
-  to boot/pre-phase state and cannot answer the title/hangar question.
+- `H-Candidate331E0`: `0x800331E0` is the frequency-result writer and its
+  execution joins target writes in one corrected title bucket.
+- `H-Candidate33420`: `0x80033420` is the frequency-result writer and joins
+  target writes instead.
+- `H-UnlistedFrequencyWriter`: neither candidate is the writer; the phase
+  histogram's remaining PCs contain the responsible store.
 
-Exact work: run the oracle first with `--vi-trace`, whole-RDRAM control, the
-validated input schedule, and no high-frequency execution watch. Use the
-observed target VI origin/width to configure a second same-run target watch
-with `--pc-hist-phase`, `--post-value-watch`, and `--pc-hist-watch`. A nonzero
-title/hangar bucket selects `H-OraclePhaseOriginMismatch`; a zero bucket with
-only prephase target writes selects `H-TargetWritesArePrephaseOnly`; no target
-route despite a live control selects `H-OracleDrivenRouteStallsBeforeTarget`.
+Exact work: run one oracle arm with whole-RDRAM control, target
+`0x165ED0:0x165ED4`, both phase buckets `0x00790400:1024` and
+`0x00790800:1024`, and bounded execution watches for `0x800331E0`,
+`0x80033420`, `0x80007670`, and the `osAiSetFrequency` call/return boundary.
+A candidate execution joined to target writes in one phase bucket selects that
+writer; live target buckets with no candidate join selects an unlisted writer
+and makes the phase histogram the enumeration source.
 Do not change waits, slots, dispatch, clear behavior, or PCM writeback.

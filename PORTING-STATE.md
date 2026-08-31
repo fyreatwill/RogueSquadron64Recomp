@@ -131218,3 +131218,25 @@ It does not select among the retail writer hypotheses because the oracle phase
 signal did not arm and its lifetime target writers were mixed. No runtime
 behavior changed. Evidence: `docs/M5-S3432-FREQUENCY-WRITER.md` and
 `scratch/agent/s3432_m5_frequency_writer/`.
+
+## Session 3433 (2026-08-31) — repaired retail frequency phase attribution
+
+Ran the independent retail oracle first with `--vi-trace`, a whole-RDRAM
+positive-control watch, the exact `0x165ED0` target watch, and the validated
+Start schedule. The control passed 10,000 callbacks. The title transition was
+width 1024 at `0x00790400`, followed by alternating `0x00790400` and
+`0x00790800` origins. The prior single-origin phase configuration was therefore
+incomplete.
+
+Ran a second arm with both observed width-1024 origins, phase writer
+histograms, and post-value sampling. The control again passed; the target had
+12,536 lifetime writes, with 634 VI rows in the `0x00790400` bucket and 633 in
+the `0x00790800` bucket. Both phase writer histograms were nonempty, and
+post-value samples included nonzero `0x5622` and `0x561F`. The bucket writer
+sets remained mixed, including `0x800331E0` once and twice respectively.
+
+This selects `H-OraclePhaseOriginMismatch` and refutes phase-signal absence at
+the observed title route. It does not identify the exact frequency writer;
+that remains the next bounded probe. No port behavior changed. Evidence:
+`docs/M5-S3433-FREQUENCY-PHASE.md` and
+`scratch/agent/s3433_m5_frequency_phase/`.
