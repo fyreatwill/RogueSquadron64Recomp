@@ -131275,3 +131275,28 @@ each target result to a field tuple, so the finer result/tuple join remains
 open. No port code or audio behavior changed. Evidence:
 `docs/M5-S3435-FREQUENCY-CONTRACT.md` and
 `scratch/agent/s3435_m5_frequency_contract/oracle.log`.
+## Session 3436 (2026-08-31) — qualified the port frequency-contract witness boundary
+
+The required retail ground-truth attempt passed its whole-RDRAM positive
+control and armed both title origins, but watched-PC output flooded the
+capture; the oracle was SIGKILLed before final summaries. The qualified
+Session 3435 retail field-family census was retained as ground truth.
+
+The fresh-build port image arm reached title VI 1024 and hangar VI 512, with
+phase and image-stage controls live, no `[CRASH]` or `[ABORT]` markers, and
+256 bounded `[m5-frequency-contract]` rows. All rows were in origin
+`0x00790400`; 107 distinct normalized tuples were observed. There was no
+exact intersection with the 6,825 distinct retail field-dump tuples from the
+ground-truth capture.
+
+This does not select `H-PortTupleFamilyMissing`. Retail `0x800331E0` is an
+instruction inside `osRecvMesg`, while the port witness is at the host
+`osRecvMesg_recomp` entry, so the `$s0/$s1` and pointed fields are sampled at
+different execution boundaries. The result selects `H-PhaseJoinMissing` for
+this instrument and leaves port tuple parity unevaluable. It rules out only
+the current interior-PC-to-wrapper-entry join; no waits, slots, dispatch,
+clear behavior, PCM writeback, or audio behavior changed.
+
+Evidence: `docs/M5-S3436-PORT-FREQUENCY-CONTRACT.md`,
+`scratch/agent/s3436_m5_port_frequency_contract/results.txt`, and the paired
+oracle/port logs.

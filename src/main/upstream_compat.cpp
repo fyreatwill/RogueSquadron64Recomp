@@ -2017,10 +2017,61 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     }
 }
 
+static void rs64_m5_frequency_contract(uint8_t* rdram, recomp_context* ctx) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_FREQUENCY_CONTRACT");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 1024u || (origin != 0x00790400u && origin != 0x00790800u)) return;
+
+    static uint32_t bucket = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != bucket) {
+        bucket = key;
+        rows = 0;
+    }
+    if (rows >= 256u) return;
+
+    const uint32_t s0 = U32(ctx->r16);
+    const uint32_t s1 = U32(ctx->r17);
+    auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
+        const uint32_t p = guest - 0x80000000u;
+        return (static_cast<uint32_t>(rdram[p]) << 24) |
+               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
+               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
+               static_cast<uint32_t>(rdram[p + 3]);
+    };
+    auto byte = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest >= 0x80800000u) return 0xFFFFFFFFu;
+        return rdram[guest - 0x80000000u];
+    };
+    const uint32_t source_word = word(s0 + 0x60u);
+    const uint32_t source_byte = byte(s0 + 0x22u);
+    const uint32_t branch_state = word(s1 + 0x22u) & 0xFFFFu;
+    std::fprintf(stderr,
+        "[m5-frequency-contract] n=%u phase=%u width=%u origin=0x%06X "
+        "s0=0x%08X s1=0x%08X source_word=0x%08X source_byte=0x%02X "
+        "branch_selector=0x%08X branch_state=0x%04X a0=0x%08X a1=0x%08X "
+        "a2=0x%08X a3=0x%08X v0=0x%08X v1=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, s0, s1, source_word,
+        source_byte, U32(ctx->r2), branch_state, U32(ctx->r4), U32(ctx->r5),
+        U32(ctx->r6), U32(ctx->r7), U32(ctx->r2), U32(ctx->r3), U32(ctx->r31));
+    std::fflush(stderr);
+}
+
 extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     const uint32_t mq_addr = (uint32_t)ctx->r4;
     const int32_t flag = (s32)ctx->r6;
     const uint64_t tid = GetCurrentThreadId();
+    rs64_m5_frequency_contract(rdram, ctx);
     recv_trace_enter(rdram, mq_addr, flag, tid);
     log_m5_frame_sync_edge(rdram, "recv", mq_addr, (uint32_t)ctx->r5, flag);
     if (mq_addr == 0x8011A818u || mq_addr == 0x8011A7E8u || mq_addr == 0x8011A408u) {

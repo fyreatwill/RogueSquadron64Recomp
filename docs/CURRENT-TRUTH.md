@@ -528,18 +528,32 @@ target post-value to one tuple, so `H-PhaseJoinMissing` remains open only for
 the finer producer/result join. Evidence is in
 [M5-S3435-FREQUENCY-CONTRACT.md](M5-S3435-FREQUENCY-CONTRACT.md).
 
+Session 3436 added the port-side frequency-contract witness after the retail
+ground-truth attempt. The oracle whole-RDRAM control and both title origins
+fired, but watched-PC output flooded the capture and it was SIGKILLed before
+final summaries; Session 3435 remains the qualified retail field-family
+source. The fresh-build port image route reached title and hangar with phase
+and image-stage controls live, no crash/abort markers, and 256 bounded witness
+rows. All rows were in origin `0x00790400`; the port set had 107 distinct
+tuples and no exact intersection with the 6,825 distinct retail field-dump
+tuples. This does not select a missing port tuple family because retail
+`0x800331E0` is inside `osRecvMesg`, while the port witness is at the host
+`osRecvMesg_recomp` entry. It selects `H-PhaseJoinMissing` for this instrument
+and leaves port tuple parity unevaluable. Evidence is in
+[M5-S3436-PORT-FREQUENCY-CONTRACT.md](M5-S3436-PORT-FREQUENCY-CONTRACT.md).
+
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace caller-specific parity for the selected retail `0x800331E0`
-   frequency-result writer. First enumerate the distinct phase-gated field
-   tuples from Session 3435, then build one port census that records the same
-   tuple fields at `0x800331E0`, phase-gated on title VI transitions, with a
-   whole-RDRAM control and the target/result witness. A matching tuple family
-   selects a port-side contract gap; no matching family selects an earlier
-   port input/dispatch gap; a direct tuple-to-target join failure keeps the
-   join hypothesis open. Do not change waits, slots, dispatch, clear behavior,
-   or PCM writeback.
+1. Repair the frequency-contract join at the actual common boundary. Run the
+   independent oracle with a phase-gated field dump at `osRecvMesg` entry
+   `0x800331D0` (not interior PC `0x800331E0`) and the whole-RDRAM control,
+   then compare its tuple family with the existing port wrapper-entry
+   witness in one fresh-build port run. Matching tuples select a port-side
+   contract gap; no matching tuples select an earlier port input/dispatch gap;
+   absent entry rows or a still-unjoinable field set select an unevaluable
+   boundary. Do not change waits, slots, dispatch, clear behavior, or PCM
+   writeback.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.
