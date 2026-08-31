@@ -131549,3 +131549,32 @@ slots, dispatch, clear behavior, or PCM writeback changed.
 
 Evidence: `docs/M5-S3447-STATE-POINTER-CHECKPOINT.md` and
 `scratch/agent/s3446_m5_state_pointer_clobber/`.
+
+## Session 3448 (2026-08-31) — qualified state-pointer title phase
+
+The independent retail oracle ran first with a whole-RDRAM positive control
+and execution/field watches at `0x80001C98`, `0x80001CB8`, `0x80001CC8`, and
+`0x80001F84`. The control fired, the run completed 2,656 VI, and retail
+recorded title-1024 rows at origin `0x00790400` for the three state-related
+PCs. This confirms the target PCs and title phase are live independently.
+
+After one rebuild, the silent and Factor 5 image port arms both reached title
+1024 and hangar 512. The frequency consumer/output controls were live in both
+arms, and the state-pointer checkpoint positive control fired. The new entry,
+post-receive, and pre-consumer witnesses emitted only hangar-512 rows; neither
+arm emitted a title-1024 state-pointer row despite live title consumer/output
+rows. At hangar, both arms retained `s1=0x80194B20` and pointed word
+`0x80194B40` across the ordered checkpoints.
+
+The original witness hard-coded hangar-only gating. After changing it to accept
+the established title origins and rebuilding, both arms emitted 512 title
+entry and 1,024 title checkpoint rows at `0x790400`, with no crash. Sampled
+`s1` and pointed-word values were unchanged through post-receive and
+pre-consumer in both arms; consumer/output controls were live. This closes the
+phase-mismatch defect and selects title pointer parity at the observed
+`rs_free` boundary, but does not establish retail equivalence or locate the
+downstream output-contract cause. The first wrapper failed to kill its child
+and omitted the image arm; explicit SIGKILL teardown corrected the recipe.
+No waits, slots, dispatch, clear behavior, or PCM writeback changed. Evidence:
+`docs/M5-S3448-STATE-POINTER-PHASE.md` and
+`scratch/agent/s3448_m5_state_pointer_title_gate/`.

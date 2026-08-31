@@ -2016,7 +2016,11 @@ extern "C" void rs64_m5_state_pointer_entry(uint8_t* rdram,
     if (!enabled) return;
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
-    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u)) return;
+    const bool title_phase = width == 1024u &&
+        (origin == 0x00790400u || origin == 0x00790800u);
+    const bool hangar_phase = width == 512u &&
+        (origin == 0x006AB400u || origin == 0x006AB800u);
+    if (!title_phase && !hangar_phase) return;
     const uint32_t s1 = U32(ctx->r17);
     if (!((s1 >= 0x80194000u && s1 < 0x80196000u) ||
           (s1 >= 0x801B0000u && s1 < 0x801C0000u))) return;
@@ -2042,7 +2046,11 @@ extern "C" void rs64_m5_state_pointer_checkpoint(uint8_t* rdram,
     if (!enabled) return;
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
-    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u)) return;
+    const bool title_phase = width == 1024u &&
+        (origin == 0x00790400u || origin == 0x00790800u);
+    const bool hangar_phase = width == 512u &&
+        (origin == 0x006AB400u || origin == 0x006AB800u);
+    if (!title_phase && !hangar_phase) return;
     static uint32_t rows = 0;
     if (rows >= 1024u) return;
     const uint32_t s1 = U32(ctx->r17);

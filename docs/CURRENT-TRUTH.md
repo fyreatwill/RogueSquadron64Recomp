@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3447 (2026-08-31). This record was
+Current maintenance marker: Session 3448 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -31,17 +31,19 @@ contract:
 - Retail `0x80001CC8` sees varied `v1` values while `s1=0x80194B20`.
 - Both port arms reach the same consumer/output controls, but
   `0x80001CB8` sees `0x801Bxxxx` state pointers and `0x80001CC8` returns `2`.
-- At `rs_free` entry both port arms still have retail-shaped `s1=0x80194B20`,
-  pointed word `0x80194B40`, and `a0=0x801BEEB0`; the first divergence is
-  therefore after that entry and before the consumer witness.
+- Earlier hangar-qualified `rs_free` rows still had `s1=0x80194B20`, pointed
+  word `0x80194B40`, and `a0=0x801BEEB0`; the repaired title route instead
+  shows stable `s1`/pointed-word tuples in the `0x801Bxxxx` state family.
+  Retail-equivalence of these contexts remains unqualified.
 - The generated host wrapper reports `ra=0`; the exact clobber is unresolved.
 
-The s3447 ordered checkpoint is positive only for hangar-512 calls: both arms
-retain `s1=0x80194B20`, pointed word `0x80194B40`, and state `0x801BEEB0`
-after receive and before the consumer witness. Existing consumer rows are
-title-1024 calls with `0x801BBD..` state pointers, so this run has no ordered
-join across the suspected boundary. `H-PortStatePointerClobber` remains open
-at title 1024; the 512 parity result must not be generalized.
+The s3448 rerun repaired the state-pointer witness's hard-coded hangar-only
+phase gate. Both arms emitted 512 title entry and 1,024 title checkpoint rows
+at origin `0x790400`, with no crash; sampled `s1` and pointed-word values
+were unchanged from entry through post-receive and pre-consumer in both arms.
+This closes the phase-mismatch defect and establishes title pointer parity at
+the observed `rs_free` boundary, but does not establish retail equivalence or
+locate the downstream output-contract cause.
 
 M5 audio source work remains unresolved upstream: qualified port image-stage
 rows carry zero source/output PCM, while retail independently writes nonzero
@@ -50,13 +52,11 @@ clear behavior, or PCM writeback while locating the state-pointer edge.
 
 ## Next steps
 
-1. Repeat the state-pointer checkpoint with the title-1024 gate: ask the
-   retail oracle first for `0x80001C98`/`0x80001CB8`/`0x80001CC8` rows in
-   origins `0x00790400`/`0x00790800`, then gate port witnesses on those origins
-   as well as the existing hangar controls. Join post-receive, pre-consumer,
-   and consumer rows by phase and ordinal in one silent/image build.
-   Title-1024 parity closes the clobber at this scope; a first port-only
-   change selects it; missing joins remain unevaluable.
+1. Compare the repaired title `rs_free` state tuples against a like-for-like
+   retail call context, using the existing oracle rows plus one new port
+   witness keyed by `s0`, `s1`, pointed word, and output state. Retail-equivalent
+   tuples close this boundary; a port-only tuple selects the first output/state
+   contract edge; missing context remains unevaluable.
 2. Keep M5 Step 3 gated until a like-for-like target row names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
@@ -123,6 +123,7 @@ independent discriminator.
 Latest state-pointer/output evidence:
 
 - [M5-S3445-STATE-POINTER-ENTRY.md](M5-S3445-STATE-POINTER-ENTRY.md)
+- [M5-S3448-STATE-POINTER-PHASE.md](M5-S3448-STATE-POINTER-PHASE.md)
 - [M5-S3447-STATE-POINTER-CHECKPOINT.md](M5-S3447-STATE-POINTER-CHECKPOINT.md)
 - [M5-S3444-STATE-POINTER-PRODUCER.md](M5-S3444-STATE-POINTER-PRODUCER.md)
 - [M5-S3443-FREQUENCY-OUTPUT-JOIN.md](M5-S3443-FREQUENCY-OUTPUT-JOIN.md)
