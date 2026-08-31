@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3434 (2026-08-31). This file was compacted
+through Session 3435 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -517,17 +517,29 @@ nonzero result writer, and makes an unlisted writer unlikely at this boundary.
 The caller/input contract remains unresolved. Evidence is in
 [M5-S3434-FREQUENCY-WRITER.md](M5-S3434-FREQUENCY-WRITER.md).
 
+Session 3435 traced the selected `0x800331E0` writer with both title origins,
+the whole-RDRAM control, field dumps, and post-value sampling. The control
+reached 10,000 callbacks. Phase-gated field tuples were highly non-unique:
+3,735 distinct tuples in `0x00790400` and 4,088 in `0x00790800`. The target
+post-value watch retained 701 samples with 64 distinct values, including 450
+`0x00000001` samples. This selects `H-Multiple331E0Inputs` and refutes a
+single stable writer-input tuple. The field dump did not directly join each
+target post-value to one tuple, so `H-PhaseJoinMissing` remains open only for
+the finer producer/result join. Evidence is in
+[M5-S3435-FREQUENCY-CONTRACT.md](M5-S3435-FREQUENCY-CONTRACT.md).
+
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the selected retail `0x800331E0` frequency-result writer's caller/input
-   contract: use the same whole-RDRAM control, both title phase buckets, the
-   target watch, `--watch-pc 0x800331E0`, `--pc-field-dump 0x800331E0`, and
-   `--post-value-pc 0x800331E0`. Compare whether its phase-gated arguments and
-   nonzero result are supplied by one stable caller or by multiple callers.
-   A stable caller/input tuple selects a port-side contract census; divergent
-   tuples select caller-specific parity as the next boundary. Do not change
-   waits, slots, dispatch, clear behavior, or PCM writeback.
+1. Trace caller-specific parity for the selected retail `0x800331E0`
+   frequency-result writer. First enumerate the distinct phase-gated field
+   tuples from Session 3435, then build one port census that records the same
+   tuple fields at `0x800331E0`, phase-gated on title VI transitions, with a
+   whole-RDRAM control and the target/result witness. A matching tuple family
+   selects a port-side contract gap; no matching family selects an earlier
+   port input/dispatch gap; a direct tuple-to-target join failure keeps the
+   join hypothesis open. Do not change waits, slots, dispatch, clear behavior,
+   or PCM writeback.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.
@@ -648,6 +660,7 @@ Latest M5 evidence:
 - `docs/M5-S3409-052C4-JOIN.md`
 - `docs/M5-S3433-FREQUENCY-PHASE.md`
 - `docs/M5-S3434-FREQUENCY-WRITER.md`
+- `docs/M5-S3435-FREQUENCY-CONTRACT.md`
 - `docs/M5-S3420-RETAIL-ENTRY-ARGS.md`
 - `docs/M5-S3426-INIT-MIXER-CALLER.md`
 - `docs/M5-S3413-RETAIL-SOURCE-SPAN.md`

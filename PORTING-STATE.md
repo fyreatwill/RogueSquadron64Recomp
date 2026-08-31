@@ -131256,3 +131256,22 @@ boundary. The caller/input contract remains unresolved; no port behavior or
 audio path changed. Evidence is in
 [M5-S3434-FREQUENCY-WRITER.md](docs/M5-S3434-FREQUENCY-WRITER.md) and
 `scratch/agent/s3434_m5_frequency_writer/oracle.log`.
+
+## Session 3435 (2026-08-31) — traced multiple frequency-writer inputs
+
+Ran the independent retail oracle with a whole-RDRAM positive-control watch,
+the physical `0x165ED0:0x165ED4` target, both observed title origins,
+`0x800331E0` execution/field watches, post-value sampling, and the validated
+Start schedule. The control reached 10,000 callbacks. The phase-gated field
+census contained 3,735 distinct tuples in origin `0x00790400` and 4,088 in
+`0x00790800`. The target post-value watch retained 701 samples with 64
+distinct values, including 450 samples of `0x00000001`; the explicit retained
+target rows were all `0x00000001` in the 512-width bucket.
+
+This selects `H-Multiple331E0Inputs` and refutes a single stable input tuple
+for the selected writer. It rules out the need to explain the observed field
+multiplicity as a null control or absent writer. The run did not directly join
+each target result to a field tuple, so the finer result/tuple join remains
+open. No port code or audio behavior changed. Evidence:
+`docs/M5-S3435-FREQUENCY-CONTRACT.md` and
+`scratch/agent/s3435_m5_frequency_contract/oracle.log`.
