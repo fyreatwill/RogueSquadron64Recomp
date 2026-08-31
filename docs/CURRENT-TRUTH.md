@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3475 (2026-08-31). This record was
+Current maintenance marker: Session 3478 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -341,15 +341,24 @@ the row cap and need a narrower capture. Evidence:
 ORIGIN: the new witness observes generated store addresses and values only;
 it does not rewrite, skip, or validate any pointer or state value.
 
+Session 3478 added regeneration-safe post-call `osSendMesg` and host
+audio-task enqueue/output witnesses. The independent retail preflight passed
+the whole-RDRAM control, reached title origin `0x00790400`, and found the six
+selected late `rs_free` PCs absent while `0x80033410` was active. Three port
+route attempts stopped in the 640 phase, so the new title-gated rows were
+zero. This is an instrument/build result, not a downstream hypothesis
+selection; re-qualify the title route before interpreting the null. Evidence:
+[M5-S3478-DOWNSTREAM-INSTRUMENT.md](M5-S3478-DOWNSTREAM-INSTRUMENT.md).
+
 ## Next steps
 
-1. Extend the downstream boundary past the enumerated early `rs_free` stores:
-   run a narrower title capture for `0x80001DFC`, `0x80001E28`,
-   `0x80001E5C`, `0x80001EE4`, `0x80001F10`, and `0x80001F48`, then instrument
-   the `0x80033410` return/callee and host task/output boundary in the same
-   phase/ordinal table. The first mutation matching the consumer tuple names
-   the missing contract edge; no guest mutation through that boundary leaves
-   the host boundary as the remaining hypothesis.
+1. Re-qualify the exact title-reaching image route with the existing four-PC
+   positive control. Then run the narrowed capture for `0x80001DFC`,
+   `0x80001E28`, `0x80001E5C`, `0x80001EE4`, `0x80001F10`, and `0x80001F48`,
+   together with the new `0x80033410` return and host task/output rows. The
+   first mutation matching the consumer tuple names the missing contract
+   edge; no guest mutation through that boundary leaves the host boundary as
+   the remaining hypothesis.
 2. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare

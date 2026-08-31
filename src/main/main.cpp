@@ -1937,6 +1937,36 @@ extern "C" void rs64_m5_task_lifetime_edge(const char* edge,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_host_task_boundary(const char* edge,
+                                             uint32_t task_ptr,
+                                             const OSTask* task) {
+    static const bool enabled = [] {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_DOWNSTREAM");
+        return e && e[0] && e[0] != '0';
+    }();
+    if (!enabled || !task || task->t.type != M_AUDTASK) return;
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (rs64_vi_committed_width() != 1024u ||
+        (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (1024u << 24) ^ origin;
+    if (key != phase_key) { phase_key = key; rows = 0; }
+    if (rows >= 512u) return;
+    std::fprintf(stderr,
+        "[m5-host-task-boundary] ordinal=%u phase=%u origin=0x%06X edge=%s "
+        "task_ptr=0x%08X type=0x%08X flags=0x%08X data_ptr=0x%08X data_size=0x%08X "
+        "output=0x%08X output_size=0x%08X yield=0x%08X yield_size=0x%08X\n",
+        rows++, rs64_phase_ord(), origin, edge ? edge : "?", task_ptr,
+        (uint32_t)task->t.type, (uint32_t)task->t.flags, (uint32_t)task->t.data_ptr,
+        (uint32_t)task->t.data_size, (uint32_t)task->t.output_buff,
+        (uint32_t)task->t.output_buff_size, (uint32_t)task->t.yield_data_ptr,
+        (uint32_t)task->t.yield_data_size);
+    std::fflush(stderr);
+}
+
 static void rs64_m5_task_handoff(const OSTask* task) {
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");

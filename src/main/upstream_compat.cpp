@@ -2584,6 +2584,26 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     } else {
         ctx->r2 = osSendMesg(rdram, (int32_t)ctx->r4, (OSMesg)ctx->r5, (s32)ctx->r6);
     }
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_M5_DOWNSTREAM");
+        return all && all[0] && all[0] != '0';
+    }();
+    if (enabled) {
+        const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+        if (rs64_vi_committed_width() == 1024u &&
+            (origin == 0x00790400u || origin == 0x00790800u)) {
+            static uint32_t rows = 0;
+            if (rows < 512u) {
+                std::fprintf(stderr,
+                    "[m5-os-send-return] ordinal=%u phase=%u origin=0x%06X "
+                    "caller_ra=0x%08X mq=0x%08X msg=0x%08X flag=0x%08X result=0x%08X "
+                    "s1=0x%08X s0=0x%08X\n",
+                    rows++, rs64_phase_ord(), origin, U32(ctx->r31), U32(ctx->r4),
+                    U32(ctx->r5), U32(ctx->r6), U32(ctx->r2), U32(ctx->r17), U32(ctx->r16));
+                std::fflush(stderr);
+            }
+        }
+    }
 }
 
 static void rs64_m5_frequency_contract(uint8_t* rdram, recomp_context* ctx) {

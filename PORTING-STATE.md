@@ -132163,3 +132163,21 @@ Evidence: `scratch/agent/s3477_m5_downstream.md`,
 
 ORIGIN: the new witness observes generated store addresses and values only;
 it does not rewrite, skip, or validate any pointer or state value.
+
+## Session 3478 (2026-08-31) — instrumented downstream host boundary
+
+The independent retail preflight passed the whole-RDRAM positive control,
+reached title origin `0x00790400` at width 1024, and found the six selected
+late `rs_free` PCs absent while `0x80033410` was active. The port build added
+phase-gated post-call `osSendMesg` rows and host audio-task enqueue/output
+rows. Three port attempts stopped in the 640 phase, so none reached the title
+gate and the new rows were zero. This is an unevaluable port capture, not a
+downstream hypothesis selection. It rules out only build failure and records
+that route qualification must precede interpretation.
+
+Evidence: `docs/M5-S3478-DOWNSTREAM-INSTRUMENT.md`,
+`scratch/agent/s3478_retail_preflight_fixed.log`, and
+`scratch/agent/s3478_port_downstream_paced.log`.
+
+ORIGIN: the new host and return hooks observe task fields, arguments, and
+return values; they do not rewrite, skip, or validate guest state.

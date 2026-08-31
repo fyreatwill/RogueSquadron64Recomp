@@ -1,10 +1,10 @@
-# NEXT work unit — extend the downstream state/output boundary
+# NEXT work unit — re-qualify the downstream capture route
 
 HYPOTHESIS-ID: m5-downstream-output-state
 
-Session 3477 found that the enumerated early `rs_free` stores do not mutate the
-consumer's `s1`: 0/512 joins matched exactly or within `0x100`. Do not repeat
-that bounded store set unchanged; later PCs were hidden by the 2048-row cap.
+Session 3478 built the post-call `osSendMesg` and host task/output witnesses,
+but all three port route attempts stopped in the 640 phase. Do not interpret
+their zero title rows; first reproduce the known title-reaching image route.
 
 Competing hypotheses and discriminating outcomes:
 
@@ -16,18 +16,18 @@ Competing hypotheses and discriminating outcomes:
 - `H-ObservationInvalid`: controls or entry rows fail; no conclusion is
   allowed without same-run positive controls.
 
-Discriminating measurement: keep the regeneration-safe store table, raise its
-budget only for the six later PCs, and add the `0x80033410` return/callee plus
-host task/output boundary to the same title-gated table. Each row contains
-mutation PC, destination/field, value, caller identity, ordinal, and the next
-consumer tuple. Keep the four-PC positive control and run one image arm only.
+Discriminating measurement: use the exact title-reaching image-arm command
+from the retained s3477 run, first with the existing four-PC positive control.
+If title is reached, use the same built binary with the six later PCs plus
+the `0x80033410` return/callee and host task/output rows. Do not interpret
+nulls without title and control rows.
 
 Before building, inspect the generated path and ask the retail oracle first
 with whole-RDRAM control plus the selected mutation PCs and destination
 watches. Then batch all port hooks in one build and run from `build/` using
 the validated LLE/spin-yield route from Session 3476.
 
-Expected outcomes: an exact late mutation/value-to-consumer match selects
-`H-LateGuestWriter`; live controls and consumer rows with no guest mutation
-through the host boundary select `H-HostContract`; missing controls or entries are
-`H-ObservationInvalid` and require redesign.
+Expected outcomes: title/control live then an exact late mutation/value match
+selects `H-LateGuestWriter`; title/control live with no guest mutation through
+the host boundary selects `H-HostContract`; missing title or controls select
+`H-ObservationInvalid` and require route repair.
