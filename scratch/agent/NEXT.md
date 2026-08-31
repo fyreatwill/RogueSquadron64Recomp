@@ -1,34 +1,34 @@
-# NEXT work unit — exact attribution of the second callback-table registration
+# NEXT work unit — capture the early callback-table store writer
 
-HYPOTHESIS-ID: m5-callback-occupant-exact-caller
+HYPOTHESIS-ID: m5-callback-occupant-store-writer
 
-Session 3335 selected generated runtime population at the class level, but the
-1-ms snapshot's `0x80007A68` marker is not an exact store PC. Identify the
-generated callsite that registers the second/third `0x8009123C` occupant.
+Session 3336 found no direct generated callsite registering `0x8009123C`, but
+the port census saw that value appear at 164 ms. Capture the registry store
+itself before target-phase gating.
 
 ## Competing hypotheses
 
-- `H-PortSecondRegistrationCallsite`: a generated callsite invokes
-  `registerSiCallback(0x8009123C)`; direct callsite instrumentation will name it.
-- `H-PortCallbackOccupantIsOverlayData`: overlay load/DMA or data initialization
-  populates an occupant without a registration call.
-- `H-PortCallbackOccupantIsTransient`: the table changes between snapshots and
-  the callsite census needs finer phase gating or a direct store hook.
+- `H-PortEarlyStore`: `0x80007928` stores `0x8009123C` during boot/phase 2;
+  an ungated store hook will report the value and its nearest guest marker.
+- `H-PortStoreNot9123C`: the store hook sees only `0x80003250` or other
+  values, so the census value comes from an alternate writer/loader.
+- `H-PortCensusTransient`: the store hook and 1-ms census disagree in timing
+  or value, indicating a transient observation or instrumentation race.
 
-## Discriminator
+## Discriminator and exact commands
 
-Ask the independent retail oracle first, retaining whole-RDRAM, callback-table
-write, and the existing retail callback PCs. Then build one port instrument
-that marks every generated `registerSiCallback` callsite, including the
-existing `0x80002FDC` and `0x8009BC50` edges, alongside the full-table census
-and task/host controls. A marked call with argument `0x8009123C` before the
-occupant transition selects `H-PortSecondRegistrationCallsite`; a clean call
-census with a table transition and overlay/DMA evidence selects
-`H-PortCallbackOccupantIsOverlayData`; a positive-control run with a table
-transition but no marked call selects `H-PortCallbackOccupantIsTransient`.
-Any missing positive control invalidates the run and requires a fixed rerun.
+First retain the Session 3336 retail oracle command and controls. Then change
+`rs64_m5_callback_writer_event` so `pc == 0x80007928` is admitted at every
+phase, while keeping its bounded per-bucket rows; retain the two direct
+registration callsite marks and full callback census. Run:
 
-Exact prior-arm commands are in
-`scratch/agent/run_s3334_m5_callback_writer_attribution.sh`; extend that one
-script only after the new writer instrument is built. No Step 3 contract
-change or mitigation is authorized.
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    zsh scratch/agent/run_s3334_m5_callback_writer_attribution.sh
+
+The positive-control rows must include the host boundary/task controls and
+the run must reach title 1024 and hangar 512. A pre-target store row with
+`pc=0x80007928 value=0x8009123C` selects `H-PortEarlyStore`; a clean store
+census despite the table transition selects `H-PortStoreNot9123C`; a store
+row that disagrees with the adjacent census transition selects
+`H-PortCensusTransient`. Missing controls invalidate the run and require a
+fixed rerun. No contract change or mitigation is authorized.

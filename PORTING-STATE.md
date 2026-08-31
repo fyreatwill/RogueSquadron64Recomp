@@ -129268,3 +129268,23 @@ generated runtime population as a class and leaves the exact
 only populated by the later initializer and provides no basis for an overlay
 or audio-contract change. No behavior change or mitigation was made.
 Evidence: `scratch/agent/s3335_m5_callback_occupant_writer.md`.
+
+## Session 3336 (2026-08-30) — tested exact M5 callback occupant callsites
+
+The retail-first oracle passed the whole-RDRAM positive control with 10,022
+writes, watched 22 callback-table writes, and reached title 1024 and hangar
+512. It executed `0x80007928` 18 times and the known callback consumers.
+
+The first port run passed controls and reached both target phases, but its
+phase gate hid the early direct registration callsite. The fixed same-build
+rerun admitted only the two direct registration callsites outside target
+phases. It observed `0x80002FDC -> 0x80003250` at phase 2 and
+`0x8009BC50 -> 0x8009B5A8` at phase 3; neither registered `0x8009123C`.
+The callback census still changed to `[80003250,8009123C,0,0]` at 164 ms,
+before the later `0x8009BC50` call.
+
+This refutes `H-PortSecondRegistrationCallsite` for the observed transition
+and leaves an early registry-store writer/loader versus a transient census
+observation unresolved. No behavior change or mitigation was made. The next
+unit ungates only the `0x80007928` store mark. Evidence:
+`scratch/agent/s3336_m5_callback_exact_caller.md`.

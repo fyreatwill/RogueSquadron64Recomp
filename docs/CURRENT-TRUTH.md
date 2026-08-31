@@ -4,9 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3335 (2026-08-30). Compacted from
+Current maintenance marker: Session 3336 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3336 resolved the phase-gating failure in the callback registration
+callsite probe. Retail passed whole-RDRAM, callback-table, and title/hangar
+controls; the port passed host/task/phase controls and reached 1024 and 512.
+The only direct callsite rows were `0x80002FDC -> 0x80003250` and
+`0x8009BC50 -> 0x8009B5A8`; neither registered `0x8009123C`. The port table
+still changed to `[80003250,8009123C,0,0]` before those later calls. This
+refutes a direct generated callsite for the observed occupant transition and
+leaves the exact registry-store writer/loader unresolved. No behavior change
+is authorized. Evidence: `scratch/agent/s3336_m5_callback_exact_caller.md`.
 
 Session 3335 selected the runtime-writer class for the pre-existing callback
 occupants. Retail passed the whole-RDRAM control, watched 19 callback-table
@@ -448,8 +458,12 @@ target row exists.
    `0x8009B5A8`, but `registerSiCallback` finds the table full and cannot store
    it; the three `0x8009123C` occupants remain unattributed. Next: identify
    the writer/loader that populated those occupants, retaining the retail
-   whole-RDRAM and port task/host controls. Do not change a contract edge or
-   add a mitigation.
+   whole-RDRAM and port task/host controls. Session 3336 found no direct
+   generated callsite registering `0x8009123C`; the table is already
+   `[80003250,8009123C,0,0]` before the later `0x8009BC50` call. Next: capture
+   `0x80007928` store events outside target phases to distinguish an early
+   store from a transient census observation. Do not change a contract edge
+   or add a mitigation.
    Do not add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

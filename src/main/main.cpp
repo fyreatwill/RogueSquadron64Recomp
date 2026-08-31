@@ -203,8 +203,12 @@ extern "C" void rs64_m5_callback_writer_event(uint32_t pc,
     if (!enabled) return;
     const uint32_t width = rs64_vi_committed_width();
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
-    if (!((width == 1024u && origin == 0x00790400u) ||
-          (width == 512u && origin == 0x006AB400u))) return;
+    const bool target_phase =
+        (width == 1024u && origin == 0x00790400u) ||
+        (width == 512u && origin == 0x006AB400u);
+    const bool registration_callsite =
+        pc == 0x80002FDCu || pc == 0x8009BC50u;
+    if (!target_phase && !registration_callsite) return;
     const uint32_t next_bucket = (width << 24) ^ origin;
     if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
     if (rows == 0) {

@@ -37,6 +37,12 @@ def main() -> None:
         "      rs64_m5_callback_writer_event(0x8009BC50u, 3u, U32(ctx->r4)); }\n",
     )
     insert_once(
+        GEN / "funcs_0.c",
+        "    registerSiCallback(rdram, ctx);",
+        "    { extern void rs64_m5_callback_writer_event(unsigned, unsigned, unsigned);\n"
+        "      rs64_m5_callback_writer_event(0x80002FDCu, 5u, U32(ctx->r4)); }\n",
+    )
+    insert_once(
         GEN / "funcs_2.c",
         "    rs64_m5_writer_parity('W', 0x80007928u",
         "    { extern void rs64_m5_callback_writer_event(unsigned, unsigned, unsigned);\n"
