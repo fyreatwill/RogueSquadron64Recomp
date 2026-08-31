@@ -129392,3 +129392,29 @@ does not distinguish scheduler perturbation from a probe-side generated
 control-flow/data effect. The logging arm is route-invalid, so no
 pointer-source hypothesis is selected and no behavior change is authorized.
 Evidence: `scratch/agent/s3342_m5_scheduler_route_control.md`.
+
+## Session 3343 (2026-08-30) — scheduler-safe callback-writer capture
+
+The retail ground-truth precheck passed the whole-RDRAM positive control with
+10,001 writes and recorded one write at the corrected physical pointer slot
+`0x001499D4`; the earlier `0x001099D4` watch was the wrong address.
+
+Changed the callback-writer probe to aggregate bounded `(PC, edge, value,
+count)` rows and drain snapshots from the existing phase poller, eliminating
+synchronous per-event `fprintf`/`fflush` from the generated callback path.
+The Debug target built successfully.
+
+The same-build 120-second matrix had three concurrent arms. The LLE baseline
+passed host/task/PCM controls and reached title 1024 and hangar 512 with no
+crash. The aggregate-writer LLE arm did the same and retained five target-phase
+`0x80091900 -> 0x80007910` rows, plus `0x80007928 -> 0x8009123C` and the
+legitimate `0x8009BC50 -> 0x8009B5A8` registration. The separate audio/image
+arm crashed in `spTaskSchedulerThread` at guest PC `0x8000834c` before controls,
+so it was route-invalid and not used against the probe.
+
+This selects `H-SchedulerPerturbation` for the prior synchronous logging path,
+refutes an aggregate probe-arm scheduler failure, and makes the port
+pointer-writer discriminator target-valid. It rules out neither the retail
+pointer writer nor a host-dispatch explanation. No behavior change or
+mitigation was made. Evidence:
+`scratch/agent/s3343_m5_callback_writer_aggregate.md`.

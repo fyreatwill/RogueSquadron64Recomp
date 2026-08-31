@@ -4,9 +4,31 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3340 (2026-08-30). Compacted from
+Current maintenance marker: Session 3343 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3343 redesigned callback-writer capture to aggregate rows and drain
+them from the phase poller. In one same-build matrix, both the no-writer and
+aggregate-writer LLE arms passed host/task controls and reached title 1024 and
+hangar 512 without a crash; the aggregate arm retained target-phase rows for
+`0x80091900 -> 0x80007910` and `0x80007928 -> 0x8009123C`. This refutes the
+prior per-event-output scheduler perturbation and makes the port pointer-writer
+discriminator target-valid. A separate audio/image arm crashed before controls
+and is route-invalid. Retail ground truth independently recorded one write at
+the corrected physical `0x001499D4` slot. Evidence:
+`scratch/agent/s3343_m5_callback_writer_aggregate.md`.
+
+Session 3343 redesigned callback-writer capture to aggregate rows and drain
+them from the phase poller. In one same-build matrix, both the no-writer and
+aggregate-writer LLE arms passed host/task controls and reached title 1024 and
+hangar 512 without a crash; the aggregate arm retained target-phase rows for
+`0x80091900 -> 0x80007910` and `0x80007928 -> 0x8009123C`. This refutes the
+prior per-event-output scheduler perturbation and makes the port pointer-writer
+discriminator target-valid. A separate audio/image arm crashed before controls
+and is route-invalid. Retail ground truth independently recorded one write at
+the corrected physical `0x001499D4` slot. Evidence:
+`scratch/agent/s3343_m5_callback_writer_aggregate.md`.
 
 Session 3341's retail ground truth passed the whole-RDRAM control and recorded
 zero writes at the requested physical `0x001099D4` watch, while generated
@@ -240,7 +262,10 @@ the join's 640-only latch filter. Evidence:
 
 Session 3342 closes the current route-validity attempt: retain the no-probe
 validated route and redesign the callback-writer probe so it cannot perturb
-the scheduler before repeating the pointer-source census.
+the scheduler before repeating the pointer-source census. Session 3343
+completed that redesign: the aggregate arm reached both target phases and
+retained the pointer/table rows, while the baseline also remained valid. The
+separate audio/image arm crashed before controls and is not a discriminator.
 
 Session 3340 closes the caller attribution discriminator for the observed
 `0x8009123C` registration: the transfer is the indirect call at `0x800919EC`.
@@ -530,9 +555,14 @@ target row exists.
    phases, so this is route-invalid and selects no pointer-source hypothesis.
    The s3342 paired control shows the no-probe route reaches title/hangar but
    the callback-writer logging arm crashes in `spTaskSchedulerThread` before
-   target VI. Redesign the probe to remove scheduler-sensitive logging (or
-   capture the value through a non-perturbing path), then rerun the same
-   writer census. Do not change a contract edge or add a mitigation.
+   target VI. Session 3343's aggregate table removed the per-event output: the
+   probe arm passed host/task/title/hangar controls and retained five
+   target-phase `0x80091900 -> 0x80007910` rows plus the `0x80007928` table-store
+   row. The prior logging-perturbation explanation is selected for that route.
+   Next: attribute the single corrected retail write at physical `0x001499D4`
+   with the oracle's writer-PC histogram, retaining its whole-RDRAM and
+   title/hangar controls, then compare it with the target-phase port table.
+   Do not change a contract edge or add a mitigation.
    Do not add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

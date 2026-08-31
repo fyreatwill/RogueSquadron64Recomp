@@ -188,12 +188,25 @@ extern "C" void rs64_m5_dynamic_callback(uint32_t context,
     ++rows;
 }
 
+namespace {
+struct M5CallbackWriterRow {
+    uint32_t pc;
+    uint32_t edge;
+    uint32_t value;
+    uint32_t count;
+};
+
+std::mutex g_m5_callback_writer_mutex;
+M5CallbackWriterRow g_m5_callback_writer_rows[32] = {};
+uint32_t g_m5_callback_writer_row_count = 0;
+uint32_t g_m5_callback_writer_total = 0;
+uint32_t g_m5_callback_writer_dumped = 0;
+}
+
 extern "C" void rs64_m5_callback_writer_event(uint32_t pc,
                                                 uint32_t edge,
                                                 uint32_t value) {
     static int enabled = -1;
-    static uint32_t rows = 0;
-    static uint32_t bucket = 0xFFFFFFFFu;
     if (enabled < 0) {
         const char* e = std::getenv("ROGUESQ_LOG_M5_CALLBACK_WRITER");
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
@@ -212,21 +225,45 @@ extern "C" void rs64_m5_callback_writer_event(uint32_t pc,
     const bool callback_pointer_store = pc == 0x80091900u;
     if (!target_phase && !registration_callsite && !callback_table_store &&
         !callback_pointer_store) return;
-    const uint32_t next_bucket = (width << 24) ^ origin;
-    if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
-    if (rows == 0) {
-        std::fprintf(stderr,
-            "[m5-callback-writer-control] phase=%u width=%u origin=0x%06X\n",
-            rs64_phase_ord(), width, origin);
-        std::fflush(stderr);
+    std::lock_guard<std::mutex> lock(g_m5_callback_writer_mutex);
+    ++g_m5_callback_writer_total;
+    for (uint32_t i = 0; i < g_m5_callback_writer_row_count; ++i) {
+        auto& row = g_m5_callback_writer_rows[i];
+        if (row.pc == pc && row.edge == edge && row.value == value) {
+            ++row.count;
+            return;
+        }
     }
-    if (rows >= 256u) return;
-    std::fprintf(stderr,
-        "[m5-callback-writer] n=%u phase=%u width=%u origin=0x%06X "
-        "edge=%u pc=0x%08X value=0x%08X\n",
-        rows, rs64_phase_ord(), width, origin, edge, pc, value);
+    if (g_m5_callback_writer_row_count < 32u) {
+        auto& row = g_m5_callback_writer_rows[g_m5_callback_writer_row_count++];
+        row = {pc, edge, value, 1};
+    }
+}
+
+static void rs64_m5_callback_writer_snapshot() {
+    static int enabled = -1;
+    if (enabled < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_M5_CALLBACK_WRITER");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        enabled = ((e && e[0] && e[0] != '0') ||
+                   (all && all[0] && all[0] != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+    std::lock_guard<std::mutex> lock(g_m5_callback_writer_mutex);
+    if (g_m5_callback_writer_total == g_m5_callback_writer_dumped) return;
+    std::fprintf(stderr, "[m5-callback-writer-control] phase=%u width=%u "
+                         "origin=0x%06X total=%u unique=%u\n",
+                 rs64_phase_ord(), rs64_vi_committed_width(),
+                 rs64_vi_committed_origin() & 0x00FFFFFFu,
+                 g_m5_callback_writer_total, g_m5_callback_writer_row_count);
+    for (uint32_t i = 0; i < g_m5_callback_writer_row_count; ++i) {
+        const auto& row = g_m5_callback_writer_rows[i];
+        std::fprintf(stderr, "[m5-callback-writer-row] n=%u edge=%u pc=0x%08X "
+                             "value=0x%08X count=%u\n",
+                     i, row.edge, row.pc, row.value, row.count);
+    }
     std::fflush(stderr);
-    ++rows;
+    g_m5_callback_writer_dumped = g_m5_callback_writer_total;
 }
 
 extern "C" void rs64_m5_callback_entry_event(uint32_t value, uint32_t ra,
@@ -3800,6 +3837,7 @@ static void start_phase_poller() {
                     ++callback_rows;
                 }
             }
+            rs64_m5_callback_writer_snapshot();
             for (int j = 0; j < 6; ++j) {
                 if (active[j] != prev_active[j]) { changed = true; break; }
             }
