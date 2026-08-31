@@ -1,39 +1,33 @@
-# NEXT work unit — trace the upstream producer feeding zero PCM RSP-DMA input
+# NEXT work unit — attribute writers of zero PCM source spans
 
 HYPOTHESIS-ID: m5-port-zero-pcm-source
 
-Do exactly one bounded M5 source census next iteration. Do not modify output,
+Do exactly one bounded M5 writer census next iteration. Do not modify output,
 waits, slots, status handling, consumer dispatch, or PCM writeback.
 
 Competing hypotheses:
 
-- H-PortRSPSourceZero: the upstream producer feeding the active RSP input
-  DMEM is absent or writes zero.
-- H-PortRSPTransformZero: source DMEM is nonzero, but the active transform
-  emits zero; currently unevaluable.
-- H-PortDMADestinationMismatch: the joined DMA targets a different source
-  than the consumer; currently refuted for joined stage-2/3 rows.
+- `H-PortSourceWriterAbsent`: no guest store populates RDRAM `0x1797B0` or
+  `0x1798B0` on the target route.
+- `H-PortSourceWriterZero`: a guest writer reaches those spans but stores only
+  zero, so the zero source is produced upstream.
+- `H-PortSourceVisibility`: nonzero writer activity exists, but the port source
+  DMA reads a different or stale span.
 
-Discriminating measurement:
+Discriminating measurement: first ask the retail oracle for writer-PC
+histograms on physical `0x1797B0:0x1798B0` with a whole-RDRAM positive control
+and the canonical title/hangar schedule. Then batch a phase-scoped port store
+census for those same spans, joined to the source-DMA route ordinal/row. No
+writer selects `H-PortSourceWriterAbsent`; only-zero writer values selects
+`H-PortSourceWriterZero`; nonzero writer values with zero source-DMA payload
+selects `H-PortSourceVisibility` or a stale/ordering edge.
 
-Enumerate every upstream write/DMA that populates the stage-2/3 RSP input
-DMEM windows (0x6F0 and 0xCB0), record phase and audio-task ordinal, and join
-each producer to the existing stage/DMA row in one instrument and one run.
-No producer or only zero-valued writes selects H-PortRSPSourceZero. A nonzero
-producer followed by zero at the stage call selects H-PortRSPTransformZero. A
-producer targeting a different DMEM window reopens H-PortDMADestinationMismatch.
+Before building, verify oracle watch indices and existing generated-store hook
+coverage. Keep phase, audio-task/ABI, PCM, image-stage/DMA, title, and hangar
+controls live. If code under `lib/` changes, run
+`./submodule-patches/export.sh` in the same iteration.
 
-Before building, ask ground truth from the retail oracle for the physical
-source-DMEM/input spans and verify the existing port DMEM/DMA hooks. Then
-batch the full producer census into the regeneration-surviving instrumentation
-and follow:
-
-make_elf.py -> N64Recomp -> fixup_game_funcs.py -> CMake
-cmake --build build --config Debug --target RogueSquadron64Recomp
-
-Run from build/ with the ROM present, phase-gated on VI transitions. Require
-same-run positive controls for phase, audio-task/ABI, PCM, image-stage/DMA,
-title 1024, and hangar 512. Kill with SIGKILL and capture output to a
-non-dot-prefixed path. Record the result in a new scratch evidence file and
-PORTING-STATE.md, then update CURRENT-TRUTH and commit.
-
+Run from `build/` with the validated route and canonical Start schedule; phase
+gate on VI 512 via `probe.sh`, use a non-dot-prefixed capture path, and kill
+with SIGKILL. Record the result in a new scratch evidence file, update the
+ledger and CURRENT-TRUTH, then commit.

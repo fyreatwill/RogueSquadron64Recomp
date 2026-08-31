@@ -630,6 +630,67 @@ extern "C" void rs64_m5_pcm_writer_dma(uint32_t addr, uint32_t len,
     rs64_pcm_writer_note(g_rs64_pcm_last_dma_phys, len, 0u, 2u, 0u);
 }
 
+extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
+                                           uint32_t len, uint32_t dmem_addr) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_RSP_SOURCE");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || len == 0) return;
+
+    static std::atomic<uint32_t> hook_control{0};
+    if (hook_control.fetch_add(1, std::memory_order_relaxed) == 0) {
+        std::fprintf(stderr,
+            "[m5-rsp-source-hook-control] dram=0x%06X dmem=0x%03X len=0x%X\n",
+            dram_addr, dmem_addr, len);
+        std::fflush(stderr);
+    }
+
+    uint32_t phase = 0, width = 0, origin = 0, route_ordinal = 0xFFFFFFFFu,
+             route_row = 0xFFFFFFFFu;
+    int exit_reason = 0;
+    const char* arm = "n/a";
+    const bool active = rs64_audio_current_route_snapshot(
+        &phase, &width, &origin, &route_ordinal, &route_row, &exit_reason,
+        &arm);
+    if (!active || !((width == 1024u && origin == 0x00790400u) ||
+                     (width == 512u && origin == 0x006AB400u))) return;
+
+    const bool window2 = dmem_addr < 0x9F0u && dmem_addr + len > 0x6F0u;
+    const bool window3 = dmem_addr < 0xE48u && dmem_addr + len > 0xCB0u;
+    uint32_t fnv = 2166136261u, nonzero = 0;
+    for (uint32_t i = 0; i < len; ++i) {
+        const uint8_t b = rdram[(dram_addr + i) & 0x007FFFFFu];
+        fnv = (fnv * 16777619u) ^ b;
+        nonzero += b != 0;
+    }
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t key = (width << 24) ^ origin;
+    if (key != phase_key) {
+        phase_key = key;
+        rows = 0;
+        std::fprintf(stderr,
+            "[m5-rsp-source-control] phase=%u width=%u origin=0x%06X\n",
+            phase, width, origin);
+        std::fflush(stderr);
+    }
+    if (rows >= 512u) return;
+    std::fprintf(stderr,
+        "[m5-rsp-source] row=%u phase=%u width=%u origin=0x%06X arm=%s "
+        "route_ordinal=%u route_row=%u dmem=0x%03X len=0x%X window2=%u "
+        "window3=%u dram=0x%06X fnv=%08X nz=%u exit=%d\n",
+        rows, phase, width, origin, arm ? arm : "n/a", route_ordinal,
+        route_row, dmem_addr, len, window2 ? 1u : 0u, window3 ? 1u : 0u,
+        dram_addr, fnv, nonzero, exit_reason);
+    std::fflush(stderr);
+    ++rows;
+}
+
 extern "C" void rs64_m5_ai_table_row(uint32_t index, uint32_t root,
                                        uint32_t entry, uint32_t is_root) {
     static const bool enabled = [] {

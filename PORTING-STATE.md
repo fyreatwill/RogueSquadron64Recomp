@@ -130059,3 +130059,27 @@ active M5 source-DMEM discriminator, competing hypotheses, controls, and
 operational boundaries were retained. The compaction rules out no runtime
 hypothesis and makes no behavior change. Next work remains the upstream
 producer census for zero PCM RSP-DMA input.
+
+## Session 3378 (2026-08-31) — censused upstream PCM source DMAs
+
+Ran the independent retail oracle with Rice, the canonical Start schedule,
+whole-RDRAM positive control, candidate source-span watches, and the known
+guest writer PC. The whole-RDRAM control fired 3,614,621 writes; title
+`1024 @ 0x00790400` and the 512 route were reached, and the candidate
+`0x167000:0x169B00` span had target-phase activity from `0x800078EC`.
+
+Added and exported a regeneration-surviving RDRAM-to-DMEM source-DMA callback,
+including a same-run callback control, then rebuilt Debug successfully. The
+validated port probe reached title at 14.1 seconds and hangar at 25.9 seconds
+with no crash or abort. It produced 1,024 bounded source rows; in the target
+phase, 7 narrow DMAs loaded DMEM `0x6F0` from `0x1797B0` and 5 loaded DMEM
+`0xCB0` from `0x1798B0`. All twelve payloads were zero (`E6A1D1C5` or
+`762B22A5`, `nz=0`). Broad task-data DMAs were excluded from the narrow count.
+
+This selects `H-PortRSPSourceZero` at the upstream RDRAM-to-DMEM boundary and
+leaves transform-zero unevaluable. It does not yet attribute the writer of
+`0x1797B0/0x1798B0`; the next census must do that. The source-DMA boundary is
+not a mitigation and no output, wait, slot, status, consumer, or PCM-writeback
+behavior changed. The initial no-target run was invalid because it crashed
+before title; the fixed canonical probe supplied the result. Evidence:
+`scratch/agent/s3378_m5_source_census.md`.

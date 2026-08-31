@@ -40,6 +40,11 @@ source boundary:
 - This selects `H-PortRSPSourceZero` at the observed boundary and refutes
   `H-PortDMADestinationMismatch` for those joined rows. Transform behavior
   on nonzero input is unevaluable.
+- Session 3378's source-DMA census passed its hook control and found 12 narrow
+  target-phase DMAs: 7 from `0x1797B0` into DMEM `0x6F0` and 5 from
+  `0x1798B0` into `0xCB0`; all payloads were zero. Broad task-data DMAs were
+  excluded from the narrow count. The upstream zero-source boundary is now
+  selected; the writer of those RDRAM spans remains open.
 
 No output substitution or mitigation is authorized. Do not change waits, slots,
 status handling, consumer dispatch, or PCM writeback while tracing the source.
@@ -49,21 +54,20 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the upstream producer feeding zero PCM RSP-DMA input. Before building
-   instrumentation, obtain/confirm ground truth for the physical source-DMEM
-   windows and the existing port hooks. Then batch one regeneration-surviving
-   census and one validated run.
+1. Attribute writers of zero source spans `0x1797B0` and `0x1798B0`. Before
+   building instrumentation, obtain/confirm retail writer-PC ground truth for
+   those physical ranges and the existing port store hooks. Then batch one
+   phase-scoped writer census and one validated run.
 2. Competing hypotheses for that unit:
    - `H-PortRSPSourceZero`: the upstream producer is absent or writes zero.
    - `H-PortRSPTransformZero`: source is nonzero but the transform emits zero;
      this remains unevaluable until a nonzero source is observed.
    - `H-PortDMADestinationMismatch`: the joined DMA is not the PCM source;
      currently refuted for joined stage-2/3 rows.
-3. Discriminator: enumerate upstream writes/DMAs populating stage-2/3 RSP
-   input-DMEM windows (`0x6F0` and `0xCB0`) and join each producer with the
-   same audio-task ordinal/row. A never-populated window selects the upstream
-   gap; nonzero input followed by zero at the stage call selects transform
-   zero; a different target window reopens source identity.
+3. Discriminator: join every writer of `0x1797B0/0x1798B0` to the target
+   audio-task ordinal/row. No writer or only zero stores selects an absent/
+   zero producer; nonzero writes followed by zero source-DMEM selects a DMA
+   visibility/ordering edge; a different source range reopens source identity.
 4. Keep phase, audio-task/ABI, PCM, image-stage/DMA, title, and hangar positive
    controls. Build all desired arms in one iteration if an A/B is needed. Do
    not change behavior. Evidence: `scratch/agent/s3376_m5_zero_pcm_source.md`.
@@ -150,4 +154,3 @@ Baseline and independent boundary evidence remains indexed in the ledger and
 PROJECT-OVERVIEW section 54. Use bounded `grep`/ `sed` windows for
 PORTING-STATE.md; never read it wholesale. The soak queue is consumed by
 automation; fold only new tail lines into the next audit.
-
