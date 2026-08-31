@@ -130856,3 +130856,13 @@ The next probe adds a bounded loop-entry witness at `0x800078EC` and keeps all
 wait, slot, dispatch, clear, and PCM behavior unchanged. Evidence:
 `scratch/agent/s3416_m5_retail_entry_input_final.log`,
 `scratch/agent/s3416_m5_entry_input/{driver,silent,image}.log`.
+## Session 3417 (2026-08-31) — qualified retail producer-entry ground truth
+
+The prescribed independent retail producer-entry probe passed its positive
+control (10,000 whole-RDRAM callbacks) and observed 9,667 executions at
+`0x800078EC`, but its requested hangar phase bucket had zero rows. The fixed
+Rice/Start-driven route also passed its positive control and reached title
+1024 (VI 2037), then stopped at about 34.6 seconds before hangar and emitted
+no final target histogram. No port entry witness was added. This rules out
+using either oracle capture to discriminate the producer entry hypotheses; the
+next unit repairs and qualifies the retail route first.
