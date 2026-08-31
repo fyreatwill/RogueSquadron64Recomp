@@ -129678,3 +129678,24 @@ an out-of-range value is upstream corrupted input, so rejecting it before
 host-entry dereference as a future crash source but does not explain the M5
 callback-table occupants. Evidence: source diff and successful Debug build;
 no runtime route was run in this bounded guard unit.
+
+## Session 3358 (2026-08-31) — validated task-start pointer guard on the live route
+
+Ran the Debug target from session 3357 once with the validated AUTOPILOT/spin-yield
+recipe (phase-gate on VI 512, eleven Start presses from boot). The route was the
+same recipe used to confirm hangar reachability in sessions 3348–3356.
+
+Positive controls: 56 `[audtask-dispatch]` rows (`real_ucode=1`), title VI
+`1024 @ 0x00790400` at 14.6 s (#788), and hangar VI `512 @ 0x006AB400` at
+26.5 s (#1506). No crash, SIGBUS, SIGSEGV, or `last-guest-pc` marker appeared
+in the 180 s run.
+
+This selects `H-TaskPtrAlwaysValid` and refutes `H-TaskPtrWrongRangeModel`: all
+legitimate task pointers on this route lie within the KSEG0 RDRAM window, the
+guard never fires, and task/SP/VI continuity is fully preserved. The unchecked
+host-entry dereference class at `osSpTaskStartGo_recomp` is now closed with a
+positive runtime confirmation. ORIGIN: the guest scheduler supplies the task
+pointer; it is legitimate when the full OSTask object lies within KSEG0 RDRAM;
+rejecting out-of-range values before `TO_PTR` is the guard's intended contract.
+
+Evidence: `scratch/agent/s3358_task_ptr_guard_validation.md`.

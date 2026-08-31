@@ -4,19 +4,26 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3357 (2026-08-31). Compacted from
+Current maintenance marker: Session 3358 (2026-08-31). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3358 validated the session 3357 task-start pointer guard on the live
+route. The Debug binary reached title VI `1024 @ 0x00790400` at 14.6 s and
+hangar VI `512 @ 0x006AB400` at 26.5 s with 56 audio task dispatches and
+zero crashes. This selects `H-TaskPtrAlwaysValid` and refutes
+`H-TaskPtrWrongRangeModel`: the guard accepts all legitimate task pointers
+and the route is unchanged. The unchecked host-entry dereference class at
+`osSpTaskStartGo_recomp` is closed with both build and runtime confirmation.
+Evidence: `scratch/agent/s3358_task_ptr_guard_validation.md`.
 
 Session 3357 completed a bounded M3 audit of the active task-start host
 boundary. `osSpTaskStartGo_recomp` now validates the complete `OSTask` range
 before each of its three `TO_PTR` dereferences, accepting both sign-extended
 and zero-extended KSEG0 addresses and returning cleanly for invalid input.
-The Debug target rebuilt successfully. ORIGIN: the guest supplies the task
-pointer; it is legitimate only when the full object lies in KSEG0 RDRAM.
-This closes the unchecked host-entry dereference class without explaining the
-M5 callback-table occupants. Evidence is the source diff and build result;
-no runtime route was run for this guard unit.
+ORIGIN: the guest supplies the task pointer; it is legitimate only when the
+full object lies in KSEG0 RDRAM. Evidence: source diff and successful Debug
+build.
 
 Session 3356 completed the independent retail callback-table writer capture.
 The whole-RDRAM control fired 10,019 writes and the driven run reached title
@@ -668,12 +675,15 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. M3 task-start guest-pointer guard is landed at the active strong
-   `osSpTaskStartGo_recomp` boundary. The full-width KSEG0 predicate preserves
-   valid task dispatch and rejects only an `OSTask` range outside 8 MiB RDRAM.
-   Next: run the existing task/title/hangar positive-control recipe once to
-   verify task/SP/VI continuity after the guard; do not broaden the guard or
-   add a new pointer class in that run.
+1. M3 task-start guest-pointer guard is landed and runtime-validated. The
+   full-width KSEG0 predicate at `osSpTaskStartGo_recomp` passes all
+   legitimate task dispatches; title `1024 @ 0x00790400` and hangar
+   `512 @ 0x006AB400` were both reached in the validation run with 56 audio
+   task dispatches and zero crashes (`H-TaskPtrAlwaysValid` selected,
+   `H-TaskPtrWrongRangeModel` refuted). This class is closed. Evidence:
+   `scratch/agent/s3358_task_ptr_guard_validation.md`.
+   Next: choose the next M3 idiom class to audit systematically (see item 7),
+   or advance M5 Step 1 consumer-dispatch investigation (item 2).
 2. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3330–3348:
    the reachable port hangar has valid task/PCM controls but no slot/status
    rows or named retail consumer-PC executions, selecting
