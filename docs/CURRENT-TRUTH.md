@@ -428,21 +428,32 @@ at the observed init-to-allocate edge and refutes `H-CalleeMutatesCount` and
 or identify the earlier producer. Evidence is in
 [M5-S3426-INIT-MIXER-CALLER.md](M5-S3426-INIT-MIXER-CALLER.md).
 
+Session 3427 corrected a stale caller-watch address: `0x80091898` is the
+delay-slot NOP; the function entry is `0x8009189C`. Generated-source census
+found two JALs, at `0x80091C58` and `0x80091D14`. The corrected retail oracle
+passed its whole-RDRAM control, title/hangar gates, and watched the entry
+twice, both from `prev_pc=0x80091D14`, with `a0=0x80165ED0, a1=0x12, a2=0,
+v0=1`; no `0x80091C58` hit occurred on the driven route. A retry of the
+same-build silent/image port pair qualified both arms through title and
+hangar with init and audio ABI/DMA controls live and no crash/abort markers.
+Both port arms retained the Session 3426 init/pre-allocate tuples, but the
+entry witness's `ra` was zero in every sampled row, so it cannot identify a
+direct caller. This selects a retail/port caller-site asymmetry at the
+observed route, not caller parity; it does not prove the port count
+illegitimate. Evidence is in [M5-S3427-INIT-CALLER-CHAIN.md](M5-S3427-INIT-CALLER-CHAIN.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the caller chain that supplies `initN64RspMixer`'s port arguments.
-   Enumerate every generated JAL to `0x80091898`, then run one retail oracle
-   with whole-RDRAM control and `--watch-pc 0x80091898` plus phase logging.
-   Add one phase-gated port witness at init entry that records the caller PC
-   and `a0..a3`, and run the existing silent/image pair. If retail and port
-   caller/argument tuples match, select `H-InitCallerParity`; if retail has a
-   different caller or argument tuple, select `H-InitCallerContractGap`; if
-   the caller watch or phase controls disappear, select
-   `H-InitCallerUnevaluable`. Do not change waits, slots, dispatch, clear
-   behavior, or PCM writeback.
+1. Add direct phase-gated witnesses at both generated `initN64RspMixer`
+   callsites (`0x80091C58` and `0x80091D14`) in one build, then rerun the
+   silent/image pair. The discriminator is whether port rows identify
+   `0x80091D14` like retail, identify `0x80091C58`, or show neither while
+   title/hangar and audio controls remain live. Do not infer the caller from
+   `ctx->r31`; it is zero at the current entry witness. Do not change waits,
+   slots, dispatch, clear behavior, or PCM writeback.
 2. The `allocateSongChannelArray` entry/first-malloc boundary and the
    init-to-allocate edge are closed at their observed scopes. Port `a1=0x5622`
    is supplied immediately before the allocate call, while retail supplies

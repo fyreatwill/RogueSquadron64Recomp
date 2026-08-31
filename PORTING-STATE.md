@@ -131072,3 +131072,26 @@ positive controls. It does not establish that `0x5622` is legitimate or
 identify its earlier producer. Evidence is in
 `docs/M5-S3426-INIT-MIXER-CALLER.md` and
 `scratch/agent/s3426_m5_init_mixer_{groundtruth,pair}/`.
+
+## Session 3427 (2026-08-31) — corrected initN64RspMixer caller-chain census
+
+The first oracle arm used stale address `0x80091898`, the delay-slot NOP, and
+was discarded: its whole-RDRAM and phase controls fired but its caller watch
+had zero hits. Generated-source census found the actual entry `0x8009189C` and
+two JAL sites, `0x80091C58` and `0x80091D14`.
+
+The corrected retail oracle passed the whole-RDRAM positive control at 10,000
+writes and reached title 1024 and hangar 512. The entry watch fired twice,
+both from `prev_pc=0x80091D14`, with `a0=0x80165ED0, a1=0x12, a2=0, v0=1`; no
+`0x80091C58` execution was observed on the driven route.
+
+The first port pair was invalid because the image arm crashed before phase 4.
+A retry qualified both silent and Factor 5 image arms through title and
+hangar, with init and audio ABI/DMA controls live and no crash/abort markers.
+Both arms retained the Session 3426 init/pre-allocate tuples, but the entry
+witness reported `ra=0` in every sampled row, so it cannot identify the direct
+caller. This selects a retail/port caller-site asymmetry at the observed
+route, not parity, and does not prove the port count illegitimate. Evidence:
+`docs/M5-S3427-INIT-CALLER-CHAIN.md` and
+`scratch/agent/s3427_m5_init_caller_chain/`. The next work unit witnesses both
+generated callsites directly.
