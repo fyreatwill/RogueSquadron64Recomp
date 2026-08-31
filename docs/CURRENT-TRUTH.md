@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3423 (2026-08-31). This file was compacted
+through Session 3424 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -390,21 +390,36 @@ host wrapper for the observed target call. The earlier producer of this state
 and zero PCM output remain unresolved. Evidence is in
 [M5-S3423-WRITER-SETUP.md](M5-S3423-WRITER-SETUP.md).
 
+Session 3424 extended the setup witness to guest PCs `0x8008F2A8`,
+`0x8008F2BC`, `0x8008F2C0`, `0x8008F2C4`, and `0x8008F2C8`. Both concurrent
+silent and image arms reached title/hangar with phase, ABI/DMA, setup, target,
+and image controls live and no crash/abort markers. Both arms already had
+`s1=0x5622`, `t0=1`, `t1=0`, and `ra=0` at the first edge `0x8008F2A8`, and
+the tuple stayed unchanged through the target caller. This selects
+`H-PortEarlierSetupProducer`, refutes an internal divergence in the five
+observed setup edges, and moves the boundary to the caller/entry of
+`allocateSongChannelArray`. It does not establish that the port tuple is
+illegitimate or identify the upstream producer; PCM remains zero. Evidence is
+in [M5-S3424-WRITER-SETUP-PREDECESSOR.md](M5-S3424-WRITER-SETUP-PREDECESSOR.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the first producer/caller that establishes the already-divergent
-   port target setup state before `0x8008F2CC`: `s1=0x5622`, `t0=1`, `t1=0`,
-   `ra=0`, versus retail `s1=0x561F`, `t0=0x2000FF01`,
+1. Trace the caller/entry boundary of `allocateSongChannelArray`, where the
+   port target state is already divergent at `0x8008F2A8`: `s1=0x5622`, `t0=1`,
+   `t1=0`, `ra=0`, versus retail `s1=0x561F`, `t0=0x2000FF01`,
    `t1=0x8010FEF8`, `ra=0x8008F2D4`. Use one fresh-build port pair with the
-   existing controls and a bounded witness at the preceding setup edge. Do
-   not change waits, slots, dispatch, clear behavior, or PCM writeback.
+   existing controls and bounded witnesses at function entry and the caller's
+   return from `rs_malloc` (`0x8008F2A0`). If entry already has the port tuple,
+   select an upstream caller contract; if it matches retail and diverges after
+   entry, select an internal call/return producer; if controls disappear, mark
+   unevaluable. Do not change waits, slots, dispatch, clear behavior, or PCM
+   writeback.
 2. The host-wrapper divergence hypothesis is closed for this target call:
-   caller-edge and entry tuples matched in both arms. If the preceding setup
-   witness is absent, treat the discriminator as unevaluable rather than
-   inferring from the null.
+   caller-edge and entry tuples matched in both arms. The five setup edges are
+   now also closed; the upstream producer remains unresolved.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

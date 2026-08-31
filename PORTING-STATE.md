@@ -130999,3 +130999,25 @@ divergence is present before host entry. It rules out neither the earlier
 producer of that state nor the zero PCM cause. Evidence is in
 `docs/M5-S3423-WRITER-SETUP.md` and
 `scratch/agent/s3423_m5_writer_setup/{image_retry,silent_retry}.log`.
+
+## Session 3424 (2026-08-31) — M5 first divergent writer setup edge
+
+Extended the regeneration-safe setup witness to `0x8008F2A8`, `0x8008F2BC`,
+`0x8008F2C0`, `0x8008F2C4`, and `0x8008F2C8`, immediately before the target
+`jal 0x800078E0`. The fresh Debug build succeeded. One concurrent silent/image
+pair reached the qualified title/hangar route: silent had 134 phase rows,
+1189 ABI/DMA rows, 72 writer-state rows, 5 setup-step rows, and 0 image-stage
+rows; image had 148 phase rows, 1188 ABI/DMA rows, 72 writer-state rows, 5
+setup-step rows, and 4833 image-stage rows. Both had 0 crash and 0 abort
+markers.
+
+Every setup-step row in both arms already had `s1=0x5622`, `t0=1`, `t1=0`, and
+`ra=0` at the first observed edge `0x8008F2A8`; the tuple remained unchanged
+through `0x8008F2C8`, the caller, and `rs_memset` entry. Compared with the
+independent retail target tuple (`s1=0x561F`, `t0=0x2000FF01`,
+`t1=0x8010FEF8`, `ra=0x8008F2D4`), this selects `H-PortEarlierSetupProducer`
+and refutes an internal divergence in the five observed setup edges and the
+host-wrapper explanation at this target call. It does not establish that the
+port tuple is illegitimate or identify the upstream producer; PCM remained
+zero. Evidence is in `docs/M5-S3424-WRITER-SETUP-PREDECESSOR.md` and
+`scratch/agent/s3423_m5_writer_setup/{driver,silent,image}.log`.
