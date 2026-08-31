@@ -131601,3 +131601,27 @@ explain the alternate `0x80194B20` context, or resolve the zero host-wrapper
 return address. Evidence: `docs/M5-S3449-STATE-TUPLE-CONTEXT.md`,
 `scratch/agent/oracle_s3449_state_context.log`, and
 `scratch/agent/s3449_m5_state_tuple_context/`.
+
+## Session 3450 (2026-08-31) — completed retail output-state control
+
+The first oracle invocation used a stale core-library filename. A corrected
+invocation was cut off while printing the verbose whole-RDRAM control and was
+not treated as a run. The fixed invocation retained the four target PCs and
+title phase, passed a 1,000-hit whole-RDRAM positive control, completed 3,273
+VI, and hit `0x80001C98`/`0x80001CB8`/`0x80001CC8`/`0x80001F84`
+742/742/742/741 times. Its field tables contained 460/511/511/458 unique
+rows. This rules out the prior context-mismatch result and confirms the
+retail target PCs are live.
+
+The port was rebuilt once and the prescribed sequential silent and Factor 5
+image arms completed with SIGKILL teardown. Each reached title 1024 and
+emitted 512 state-entry, 1,024 checkpoint, 512 consumer, and 343 output rows.
+The arms matched each other in the sampled output/state stream, including
+`output=0x2`, queue `0x8010FEE0`, and the `0x801Bxxxx` state family. Retail's
+field dump uses `s0`, `s1`, source word, branch selector, source byte, and
+branch state, which the current port witness does not expose. The contract is
+therefore still unevaluable; no waits, slots, dispatch, clear behavior, or PCM
+writeback changed.
+
+Evidence: `scratch/agent/s3450_oracle_fixed.log` and
+`scratch/agent/s3449_m5_state_tuple_context/`.
