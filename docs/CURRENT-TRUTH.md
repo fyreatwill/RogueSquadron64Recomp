@@ -4,9 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3348 (2026-08-30). Compacted from
+Current maintenance marker: Session 3350 (2026-08-31). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3350 completed a bounded M3 message-queue API guard audit. The
+existing internal `do_send`/`do_recv` guard was bypassed by public
+`osSendMesg`, `osJamMesg`, `osRecvMesg`, and `osCreateMesgQueue` entry points
+that called `TO_PTR` first. Those four entry points now reject out-of-KSEG0
+queue pointers before conversion; the valid queue path is unchanged. The
+Debug target rebuilt successfully. ORIGIN: the queue pointer is supplied by
+guest queue setup/callers and is legitimate when it is in KSEG0 RDRAM; an
+out-of-range value is the upstream corrupted-pointer class this guard is
+intended to contain. Evidence: `scratch/agent/s3350_m3_mesgqueue_api_guard.md`.
 
 Session 3349 statically audited the four M5 named consumer PCs. The
 `0x80094648` store is in `startSongSequence`, which has three direct generated

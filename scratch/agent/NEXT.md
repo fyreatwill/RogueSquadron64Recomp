@@ -2,13 +2,13 @@
 
 HYPOTHESIS-ID: m5-consumer-reachability-audit
 
-Session 3349 completed the bounded static audit. `startSongSequence` directly
-reaches `0x80094648`; `serviceVoicePoolFrame` and
-`accumulateVoiceSampleOffset` have no direct generated callers, and their
-possible callback route is unresolved `LOOKUP_FUNC` state. The audit selected
-none of the hypotheses and authorizes no behavior change.
+Session 3350 completed a bounded M3 message-queue API guard audit. The
+internal `do_send`/`do_recv` guard did not protect public entry points because
+`osSendMesg`, `osJamMesg`, `osRecvMesg`, and `osCreateMesgQueue` could call
+`TO_PTR` first. Those entry points now reject out-of-KSEG0 queue pointers;
+the existing valid queue path is unchanged.
 
-Competing hypotheses:
+Competing hypotheses for the next M5 ground-truth unit:
 
 - `H-ConsumerIndirect`: retail executes the service/accumulator bodies through
   an indirect callback edge, while the port has a reachability gap.

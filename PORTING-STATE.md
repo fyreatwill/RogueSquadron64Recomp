@@ -129525,3 +129525,19 @@ behavior change is authorized. The next unit is a retail-oracle capture with
 whole-RDRAM control and phase-gated exact execution watches for the service,
 accumulator, and three named consumer PCs, retaining previous-PC attribution.
 Evidence: `scratch/agent/s3349_m5_consumer_reachability_audit.md`.
+## Session 3350 (2026-08-31) — audited message-queue API guard class
+
+Audited the complete public `OSMesgQueue` API entry class against the existing
+`mesgqueue_guard_refuse` checks. `do_send` and `do_recv` guarded their queue
+arguments, but `osCreateMesgQueue`, `osSendMesg`, `osJamMesg`, and
+`osRecvMesg` could call `TO_PTR` first; the public wrappers now reject
+out-of-KSEG0 queue pointers before conversion. The valid queue path is
+unchanged, and the Debug target rebuilt successfully through final executable
+linkage.
+
+ORIGIN: `mq_` is supplied by guest queue setup/callers and is legitimate when
+it lies in KSEG0 RDRAM. An out-of-range value is the existing upstream
+corrupted-pointer class; this guard contains the dereference but does not
+identify or repair the guest writer. The change rules out only the public API
+pre-check gap as an unguarded crash site; it does not explain the M5 consumer
+reachability gap. Evidence: `scratch/agent/s3350_m3_mesgqueue_api_guard.md`.
