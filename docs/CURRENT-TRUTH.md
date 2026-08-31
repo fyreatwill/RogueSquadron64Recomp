@@ -246,12 +246,12 @@ the paired logs.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Qualify the port at the retail producer boundary `0x8002BEEC` with one
-   phase-qualified execution/predecessor census, retaining the existing PCM,
-   image-stage, audio ABI/DMA, and title/hangar controls. Retail observed
-   `exec-prev pc=0x800078EC prev=0x8002BEEC n=177`; the static instruction at
-   `0x8002BEEC` is not a direct JAL, so do not change dispatch behavior until
-   the port relation is measured.
+1. Reconcile the port producer witness with the indirect retail boundary by
+   asking the oracle for phase-qualified execution and target-span writes at
+   `0x800052C4`, retaining whole-RDRAM, title/hangar, and post-store controls.
+   The port witness had no `0x8002BEEC`/`0x800078EC` static-call rows and was
+   dominated by `0x800052C4`; do not add runtime instrumentation until this
+   ground-truth arm names a measurable field or PC.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
    not repeat the old final-summary-only or dual-origin recipes; use the signal
    checkpoint and retain post-store sampling for all four candidates.
@@ -442,3 +442,16 @@ observed producer predecessor. This selects `H-IndirectDispatch` at the
 measured boundary and refutes `H-StaticCallsite` and `H-RouteMismatch`; the
 predecessor-field/static-instruction reconciliation remains open. Evidence is
 in [M5-S3406-RETAIL-PRODUCER-DISPATCH.md](M5-S3406-RETAIL-PRODUCER-DISPATCH.md).
+
+Session 3407 ran the port producer-boundary witness after an initial
+concurrent attempt hit the known pre-phase scheduler crash. The fixed
+sequential qualification passed title 1024 and hangar 512 in both silent and
+image arms, with no crash/abort markers. The phase-qualified static-call
+witness produced 512 silent and 1024 image rows; image hangar rows were
+dominated by callsite `0x800052C4` (508), with one each at `0x8008F2CC`,
+`0x800B33BC`, `0x800B3490`, and `0x800B3500`, and zero rows at `0x8002BEEC`
+or `0x800078EC`. This selects `H-PortBoundaryAbsent` at the measured port
+witness and refutes a matching port predecessor relation there. The host
+witness cannot distinguish an indirect predecessor from another translated
+route, and target PCM payload remains zero. Evidence is in
+[M5-S3407-PORT-PRODUCER-BOUNDARY.md](M5-S3407-PORT-PRODUCER-BOUNDARY.md).

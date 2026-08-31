@@ -130691,3 +130691,20 @@ predecessor field names a statically non-JAL instruction, so the next work unit
 qualifies this boundary on the port. No port or audio behavior changed.
 Evidence: `docs/M5-S3406-RETAIL-PRODUCER-DISPATCH.md` and
 `scratch/agent/s3406_retail_producer_dispatch/oracle-focused.log`.
+
+## Session 3407 (2026-08-31) — M5 port producer-boundary qualification
+
+The first concurrent port pair hit the known pre-phase scheduler crash at
+guest PC `0x8000834c` in both arms and was invalid. The fixed same-build
+sequential pair passed title 1024 and hangar 512 in silent and image arms,
+with no crash or abort markers. The phase-qualified static-call witness had
+512 silent and 1024 image rows. In image hangar, 508 rows named callsite
+`0x800052C4`, with one each at `0x8008F2CC`, `0x800B33BC`, `0x800B3490`, and
+`0x800B3500`; zero rows named `0x8002BEEC` or `0x800078EC`. Image target-span
+source rows were live but zero-valued (`0x1798B0` FNV `762B22A5`, `nz=0`; the
+stage-2 span also had `nz=0`). This selects `H-PortBoundaryAbsent` at the
+measured host witness and refutes a matching port predecessor relation there.
+It does not distinguish an indirect predecessor from another translated route
+and does not explain the zero payload. No waits, dispatch, slots, or PCM
+writeback changed. Evidence: `docs/M5-S3407-PORT-PRODUCER-BOUNDARY.md` and
+`scratch/agent/s3407_m5_port_producer_boundary/driver.log`.
