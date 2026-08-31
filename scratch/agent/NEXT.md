@@ -1,27 +1,27 @@
-# NEXT work unit — qualify initN64RspMixer caller arguments
+# NEXT work unit — qualify initN64RspMixer's caller chain
 
 HYPOTHESIS-ID: m5-port-setup-state-producer
 
-Session 3425 selected `H-UpstreamCallerContract`: retail enters
-`allocateSongChannelArray` from `0x80091934` with `a1=0x561F`, while both
-port arms enter it with `a1=0x5622`; the port divergence exists before the
-observed `0x8008F2A0` malloc-return edge.
+Session 3426 selected `H-CallerPassesPortCount`: retail supplies
+`a1=0x561F` at `0x80091934`, while both port arms supply `a1=0x5622` at the
+same init-to-allocate edge. The port init entry itself has `a1=0x0F`; the
+earlier producer of the eventual `0x5622` remains open.
 
 Competing hypotheses and the single discriminating measurement:
 
-- `H-CallerPassesPortCount`: `initN64RspMixer` supplies `a1=0x5622`; the
-  mismatch is upstream of `allocateSongChannelArray`.
-- `H-CalleeMutatesCount`: the caller supplies retail `a1=0x561F`, but the
-  callee-entry witness differs, exposing a dispatch/wrapper boundary.
-- `H-CallerUnevaluable`: caller or callee controls disappear despite the
-  whole-RDRAM and phase controls, so no contract conclusion is allowed.
+- `H-InitCallerParity`: retail and port enter `initN64RspMixer` from the same
+  caller with matching `a0..a3`; the mismatch is in a later setup edge.
+- `H-InitCallerContractGap`: retail and port have different init callers or
+  entry arguments, locating the divergence before `initN64RspMixer`.
+- `H-InitCallerUnevaluable`: the caller watch or phase controls disappear, so
+  no init-caller conclusion is allowed.
 
-First run the retail oracle with whole-RDRAM control and
-`--watch-pc 0x80091934,0x8008F0A0`, phase-gated to title/hangar. Add one
-regeneration-safe port witness at `initN64RspMixer` entry/call and run the
-existing fresh-build silent/image pair. Keep title 1024, hangar 512, audio
-ABI/DMA, image-stage, and PCM controls. If the caller has `a1=0x5622`, select
-`H-CallerPassesPortCount`; if it has `0x561F` but the callee has `0x5622`,
-select `H-CalleeMutatesCount`; if controls disappear, select
-`H-CallerUnevaluable`. Do not change waits, slots, dispatch, clear behavior,
-or PCM writeback.
+Exact work: enumerate generated JALs to `0x80091898`; run the retail oracle
+with `--watch-write 0x0:0x800000 --watch-pc 0x80091898
+--pc-phase-log-width 0x00790400:1024 --pc-phase-log-width 0x006AB400:512`
+and the validated Start schedule; then use the already-built Debug target
+with `ROGUESQ_LOG_INIT_VOICE_SAMPLE=1` and the existing silent/image pair.
+Keep title 1024, hangar 512, audio ABI/DMA, image-stage, and PCM controls.
+Matching caller/argument tuples select parity; a retail/port mismatch selects
+the contract gap; absent controls select unevaluable. Do not change waits,
+slots, dispatch, clear behavior, or PCM writeback.

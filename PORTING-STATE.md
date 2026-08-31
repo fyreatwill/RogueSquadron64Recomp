@@ -131049,3 +131049,26 @@ already present. Evidence is in
 `docs/M5-S3425-ALLOCATE-CALLER-BOUNDARY.md`,
 `scratch/agent/s3425_groundtruth/oracle.log`, and
 `scratch/agent/s3423_m5_writer_setup/{silent,image}.log`.
+## Session 3426 (2026-08-31) — qualified initN64RspMixer caller arguments
+
+Ran the independent retail oracle first with a whole-RDRAM positive control,
+execution watches at `0x80091934` and `0x8008F0A0`, and title/hangar phase
+logging. The control reached 10,000 callbacks and both phase gates fired.
+Retail supplied `a1=0x561F` at `0x80091934`; the callee entry retained
+`a1=0x561F` in title and hangar rows.
+
+Added a regeneration-safe, phase-gated port witness at `initN64RspMixer` entry
+and immediately before its `0x80091934` call to `allocateSongChannelArray`.
+The fresh Debug build succeeded. Concurrent silent and Factor 5 image arms
+both reached title 1024 and hangar 512. The witness positive control fired in
+both arms; ABI/DMA controls were live, image-stage was live in the image arm,
+and neither arm emitted crash or abort markers. Both arms had entry
+`a0=0x80165ED0, a1=0x0F, a2=0xA0, a3=1`, followed by pre-allocate
+`a0=0x0F, a1=0x5622, a2=0xA0, a3=1`.
+
+This selects `H-CallerPassesPortCount` and refutes `H-CalleeMutatesCount` at
+the observed init-to-allocate edge. `H-CallerUnevaluable` is refuted by the
+positive controls. It does not establish that `0x5622` is legitimate or
+identify its earlier producer. Evidence is in
+`docs/M5-S3426-INIT-MIXER-CALLER.md` and
+`scratch/agent/s3426_m5_init_mixer_{groundtruth,pair}/`.

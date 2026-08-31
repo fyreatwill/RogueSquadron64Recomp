@@ -1381,6 +1381,28 @@ extern "C" void rs64_m5_init_voice_caller_event(uint32_t caller_pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_init_mixer_args(uint32_t edge, uint32_t ra,
+                                           uint32_t a0, uint32_t a1,
+                                           uint32_t a2, uint32_t a3) {
+    if (!rs64_m5_init_voice_probe_enabled()) return;
+
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!rs64_m5_init_voice_target_phase(width, origin)) return;
+
+    static std::atomic<uint32_t> emitted{0};
+    const uint32_t n = emitted.fetch_add(1, std::memory_order_relaxed);
+    if (n >= 256u) return;
+    std::fprintf(stderr,
+                 "[m5-init-mixer-args] n=%u edge=%s phase=%u width=%u"
+                 " origin=0x%06X ra=0x%08X a0=0x%08X a1=0x%08X"
+                 " a2=0x%08X a3=0x%08X\n",
+                 n, edge == 0u ? "entry" : "pre-allocate", phase, width,
+                 origin, ra, a0, a1, a2, a3);
+    std::fflush(stderr);
+}
+
 static std::atomic<uint32_t> g_rs64_m5_b40_writer_seq{0};
 
 extern "C" uint32_t rs64_m5_b40_writer_event(uint32_t pc,

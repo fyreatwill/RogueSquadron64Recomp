@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3425 (2026-08-31). This file was compacted
+through Session 3426 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -415,26 +415,38 @@ malloc return. The caller contract remains unresolved and is not proven
 illegitimate. Evidence is in
 [M5-S3425-ALLOCATE-CALLER-BOUNDARY.md](M5-S3425-ALLOCATE-CALLER-BOUNDARY.md).
 
+Session 3426 qualified the preceding `initN64RspMixer` edge. Retail's
+independent oracle saw `0x80091934` enter `allocateSongChannelArray` with
+`a1=0x561F`, and the callee retained that value. In both fresh-build port
+arms, the phase-gated init witness saw entry
+`a0=0x80165ED0, a1=0x0F, a2=0xA0, a3=1`; immediately before the
+`0x80091934` call it saw `a0=0x0F, a1=0x5622, a2=0xA0, a3=1`.
+Whole-RDRAM, title, hangar, witness, and audio ABI/DMA controls were live, and
+both arms had no crash/abort markers. This selects `H-CallerPassesPortCount`
+at the observed init-to-allocate edge and refutes `H-CalleeMutatesCount` and
+`H-CallerUnevaluable` there. It does not establish that `0x5622` is legitimate
+or identify the earlier producer. Evidence is in
+[M5-S3426-INIT-MIXER-CALLER.md](M5-S3426-INIT-MIXER-CALLER.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the sole caller `initN64RspMixer` at `0x80091934`, which the retail
-   oracle identifies as the previous PC entering `allocateSongChannelArray`.
-   First run a whole-RDRAM-positive-control oracle with `--watch-pc
-   0x80091934,0x8008F0A0` and title/hangar phase logging. Then add one
-   regeneration-safe port entry/caller witness and run the existing fresh-build
-   silent/image pair. Competing outcomes: caller passes `a1=0x561F` and the
-   callee changes it (internal callee contract); caller already passes
-   `0x5622` (upstream caller contract); or the caller control disappears
-   (unevaluable). Keep phase-scoped controls for title 1024, hangar 512,
-   audio ABI/DMA, image stage, and PCM, and do not change waits, slots,
-   dispatch, clear behavior, or PCM writeback.
-2. The `allocateSongChannelArray` entry/first-malloc boundary is closed for
-   this iteration: port `a1=0x5622` is already divergent at entry, selecting
-   `H-UpstreamCallerContract`. The five setup edges and host-wrapper divergence
-   remain closed at their observed boundaries.
+1. Trace the caller chain that supplies `initN64RspMixer`'s port arguments.
+   Enumerate every generated JAL to `0x80091898`, then run one retail oracle
+   with whole-RDRAM control and `--watch-pc 0x80091898` plus phase logging.
+   Add one phase-gated port witness at init entry that records the caller PC
+   and `a0..a3`, and run the existing silent/image pair. If retail and port
+   caller/argument tuples match, select `H-InitCallerParity`; if retail has a
+   different caller or argument tuple, select `H-InitCallerContractGap`; if
+   the caller watch or phase controls disappear, select
+   `H-InitCallerUnevaluable`. Do not change waits, slots, dispatch, clear
+   behavior, or PCM writeback.
+2. The `allocateSongChannelArray` entry/first-malloc boundary and the
+   init-to-allocate edge are closed at their observed scopes. Port `a1=0x5622`
+   is supplied immediately before the allocate call, while retail supplies
+   `0x561F`; the callee does not mutate the value at either observed entry.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
@@ -544,6 +556,7 @@ Latest M5 evidence:
 
 - `docs/M5-S3409-052C4-JOIN.md`
 - `docs/M5-S3420-RETAIL-ENTRY-ARGS.md`
+- `docs/M5-S3426-INIT-MIXER-CALLER.md`
 - `docs/M5-S3413-RETAIL-SOURCE-SPAN.md`
 - `docs/M5-S3402-SLOT-PREPHASE.md`
 - `docs/M5-S3401-FIELD348-INPUT.md`
