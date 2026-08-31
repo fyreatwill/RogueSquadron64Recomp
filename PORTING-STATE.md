@@ -130259,3 +130259,27 @@ matching port producer edge. It rules out neither a legitimate port zero fill
 nor the producer's missing input/dispatch contract. Evidence:
 `docs/M5-S3387-PRODUCER-EDGE.md`, `scratch/agent/oracle_s3387_fixed.log`,
 and `scratch/agent/port_s3387/run.log`.
+
+## Session 3388 (2026-08-31) — phase-qualified producer predecessor census
+
+The retail oracle ran the canonical driven Start schedule under Rice with a
+whole-RDRAM positive-control watch, both target-span watches, phase writer
+histograms, post-value sampling, and execution watches at `0x80007670` and
+`0x800078EC`. The positive control recorded 11,830 writes; title VI
+`0x00790400` and hangar VI `0x006AB400` were reached. Target-span writer
+histograms included 116/184 writes from `0x80007670` and 512/816 from
+`0x800078EC`; `0x8002BEEC` preceded `0x800078EC` in 387 execution rows.
+
+The rebuilt port reached title at 11.7 seconds and hangar at 19.8 seconds with
+the established phase, audio-task, callback-writer, static-call, and PCM
+controls live. Its only target-overlap row was the zero-fill
+`0x8008F2CC -> rs_memset` (`dst=0x801797B0`, `val=0`, `len=0x298`); no matching
+`0x80007670` or `0x800078EC` producer row appeared, and hangar PCM remained
+`F59C39C5`, `nz=0`.
+
+This reinforces `H-RetailDrivenProducer` at the observed boundary and refutes
+a matching port producer edge there. It does not establish that the zero fill
+is illegitimate or identify the missing producer's input. No output or audio
+behavior changed. Evidence: `docs/M5-S3388-PRODUCER-PREDECESSOR.md`,
+`scratch/agent/s3388_m5_retail_predecessor/oracle.log`, and
+`scratch/agent/port_s3388/run.log`.

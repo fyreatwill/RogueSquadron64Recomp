@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3387 (2026-08-31). This file was compacted
+through Session 3388 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -85,6 +85,16 @@ source boundary:
   input/dispatch contract. Detailed evidence is in
   [M5-S3387-PRODUCER-EDGE.md](M5-S3387-PRODUCER-EDGE.md).
 
+- Session 3388 repeated the qualified pair with both producer execution
+  watches. Retail's whole-RDRAM control and both phase gates fired; target
+  writer histograms included `0x80007670` (116/184) and `0x800078EC`
+  (512/816), and `0x8002BEEC` preceded `0x800078EC` in 387 execution rows.
+  The port reached title and hangar but exposed only the zero-fill
+  `0x8008F2CC -> rs_memset` at `0x801797B0`, with no matching producer edge;
+  PCM remained zero. This reinforces `H-RetailDrivenProducer` at the observed
+  boundary and points the next census at the predecessor/call chain. Evidence
+  is in [M5-S3388-PRODUCER-PREDECESSOR.md](M5-S3388-PRODUCER-PREDECESSOR.md).
+
 No output substitution or mitigation is authorized. Do not change waits, slots,
 status handling, consumer dispatch, or PCM writeback while tracing the source.
 
@@ -93,19 +103,17 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the selected producer family upstream. First ask the retail oracle
-   on the driven Start schedule for phase-gated execution rows at `0x80007670`
-   and `0x800078EC`, including each PC's predecessor and target-span bytes.
-   Then batch one port census at the equivalent target phase with the existing
-   phase, audio-task, PCM, callback-writer, and static-call controls; do not
-   change output or audio behavior.
-2. Discriminator: valid retail rows with nonzero target bytes plus no matching
-   port producer edge confirm the missing edge is upstream of the current
-   port target writer. A matching port producer row with nonzero bytes selects
-   a translation/dispatch mismatch. Matching producer rows with zero bytes on
-   both routes make the zero fill legitimate at this boundary and move the
-   search to the later producer. Missing retail phase rows invalidate the
-   oracle arm rather than supporting a null conclusion.
+1. Trace the selected producer family one boundary upstream. Ask the retail
+   oracle on the driven Start schedule for phase-gated execution rows at
+   `0x8002BEEC` and `0x800078E8`, retaining predecessor, arguments, and
+   target-span bytes, with the whole-RDRAM watch as control. Then batch one
+   port census at the equivalent target phase using the existing controls; do
+   not change output or audio behavior.
+2. Discriminator: valid retail predecessor rows plus no matching port edge
+   select an earlier port producer/call-contract gap; matching nonzero port
+   rows select a translation/dispatch mismatch; matching zero rows on both
+   routes make the zero fill legitimate here. Missing retail phase rows
+   invalidate the oracle arm rather than supporting a null conclusion.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

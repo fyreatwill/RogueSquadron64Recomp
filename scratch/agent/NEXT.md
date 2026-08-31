@@ -1,34 +1,30 @@
-# NEXT work unit — M5 producer-family predecessor census
+# NEXT work unit — M5 predecessor/call-chain census
 
-HYPOTHESIS-ID: m5-producer-family-predecessor
+HYPOTHESIS-ID: m5-producer-predecessor-edge
 
-Before building, ask the retail oracle for driven, phase-gated rows at
-`0x80007670` and `0x800078EC`, with the whole-RDRAM watch as the same-run
-positive control. Use Rice and the canonical Start schedule from
-`tools/oracle/README.md`; retain predecessor and target-byte fields. Then
+Before building, ask the retail oracle for driven, phase-gated execution rows
+at `0x8002BEEC` and `0x800078E8`, retaining predecessor, arguments, and
+target-span bytes, with the whole-RDRAM watch as the same-run positive control.
+Use Rice and the canonical Start schedule from `tools/oracle/README.md`. Then
 build once and run one port census with the existing phase, audio-task,
 callback-writer, PCM, and static-call controls. Do not change output or audio
 behavior.
 
 Competing hypotheses:
 
-- `H-RetailFamilyInput`: retail shows nonzero target writes from the
-  `0x80007670`/`0x800078EC` family while the port still has only the
-  `0x8008F2CC` zero-fill; the missing edge is upstream of the observed port
-  writer.
-- `H-PortMatchingFamily`: the port exposes the same producer family and
-  target bytes; the gap is an execution/translation mismatch after the
-  producer.
-- `H-LegitimateZeroBoundary`: both routes expose the producer family but
-  write zero; the zero fill is legitimate at this boundary and the missing
-  data is later.
+- `H-EarlierRetailProducer`: retail predecessor rows are valid and nonzero
+  while the port still has only the `0x8008F2CC` zero-fill; the gap is earlier
+  than the observed port writer.
+- `H-PortPredecessorMatch`: the port exposes the same predecessor edge with
+  nonzero target bytes; the gap is a translation/dispatch mismatch after it.
+- `H-LegitimateZeroBoundary`: both routes expose the predecessor edge but
+  write zero; the zero fill is legitimate here and the data is produced later.
 
-Discriminator: valid driven retail rows with nonzero target bytes plus no
-matching port producer edge select `H-RetailFamilyInput`; a matching nonzero
-port edge selects `H-PortMatchingFamily`; matching zero producer rows on both
-routes select `H-LegitimateZeroBoundary`. If the retail phase markers or
-whole-RDRAM control do not fire, the oracle arm is invalid and no hypothesis
-is selected.
+Discriminator: valid driven retail predecessor rows plus no matching port edge
+select `H-EarlierRetailProducer`; matching nonzero port rows select
+`H-PortPredecessorMatch`; matching zero rows on both routes select
+`H-LegitimateZeroBoundary`. If the retail phase markers or whole-RDRAM control
+do not fire, the oracle arm is invalid and no hypothesis is selected.
 
 Exact port route shape:
 
