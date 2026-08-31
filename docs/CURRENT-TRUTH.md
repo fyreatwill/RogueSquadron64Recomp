@@ -4,7 +4,8 @@ Operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable backgroun
 is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
-Current maintenance marker: Session 3377 (2026-08-31). This file was compacted
+Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
+through Session 3379 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -43,8 +44,12 @@ source boundary:
 - Session 3378's source-DMA census passed its hook control and found 12 narrow
   target-phase DMAs: 7 from `0x1797B0` into DMEM `0x6F0` and 5 from
   `0x1798B0` into `0xCB0`; all payloads were zero. Broad task-data DMAs were
-  excluded from the narrow count. The upstream zero-source boundary is now
-  selected; the writer of those RDRAM spans remains open.
+  excluded from the narrow count. Session 3379 attributed 512 target-phase
+  port stores into `0x1797B0:0x1798B0` to `0x800078EC`; every observed byte was
+  zero. Retail independently attributes that PC to nonzero writes in both
+  spans. This selects `H-PortSourceWriterZero`, refutes writer absence for the
+  observed port span, and moves the gap upstream to the writer's input/caller
+  contract. Transform behavior on nonzero input remains unevaluable.
 
 No output substitution or mitigation is authorized. Do not change waits, slots,
 status handling, consumer dispatch, or PCM writeback while tracing the source.
@@ -54,23 +59,26 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Attribute writers of zero source spans `0x1797B0` and `0x1798B0`. Before
-   building instrumentation, obtain/confirm retail writer-PC ground truth for
-   those physical ranges and the existing port store hooks. Then batch one
-   phase-scoped writer census and one validated run.
+1. Trace the port `0x800078EC` writer's caller and input construction for the
+   zero source spans. Before building instrumentation, confirm retail
+   caller/argument ground truth and the existing port `rs_memset` callsite
+   hooks. Then batch one phase-scoped argument/callsite census and one
+   validated run; do not change the write.
 2. Competing hypotheses for that unit:
-   - `H-PortRSPSourceZero`: the upstream producer is absent or writes zero.
-   - `H-PortRSPTransformZero`: source is nonzero but the transform emits zero;
-     this remains unevaluable until a nonzero source is observed.
-   - `H-PortDMADestinationMismatch`: the joined DMA is not the PCM source;
-     currently refuted for joined stage-2/3 rows.
-3. Discriminator: join every writer of `0x1797B0/0x1798B0` to the target
-   audio-task ordinal/row. No writer or only zero stores selects an absent/
-   zero producer; nonzero writes followed by zero source-DMEM selects a DMA
-   visibility/ordering edge; a different source range reopens source identity.
+   - `H-PortSourceArgumentGap`: `rs_memset` receives a zero fill or source
+     input before `0x800078EC` stores into the target span.
+   - `H-PortSourceCallerMismatch`: the port caller/callsite or buffer
+     construction differs from retail even though the writer PC is the same.
+   - `H-PortSourceVisibility`: nonzero input reaches the writer but is lost
+     before source DMA; current zero-store evidence disfavors it.
+3. Discriminator: join the `rs_memset` callsite, destination, fill/value,
+   caller PC, and target audio-task ordinal/row. A zero fill at the caller
+   selects `H-PortSourceArgumentGap`; a retail/port callsite or destination
+   mismatch selects `H-PortSourceCallerMismatch`; nonzero input with zero
+   stores selects a writer/ABI visibility edge.
 4. Keep phase, audio-task/ABI, PCM, image-stage/DMA, title, and hangar positive
    controls. Build all desired arms in one iteration if an A/B is needed. Do
-   not change behavior. Evidence: `scratch/agent/s3376_m5_zero_pcm_source.md`.
+   not change behavior. Evidence: `scratch/agent/s3379_m5_source_writer.md`.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
@@ -143,6 +151,7 @@ writer and initializer ordering are the measured explanation.
 Latest M5 evidence:
 
 - `scratch/agent/s3376_m5_zero_pcm_source.md`
+- `scratch/agent/s3379_m5_source_writer.md`
 - `scratch/agent/s3375_m5_port_pcm_writer.md`
 - `scratch/agent/s3374_m5_retail_pcm_writer.md`
 - `scratch/agent/s3373_m5_consumer_output_contract.md`

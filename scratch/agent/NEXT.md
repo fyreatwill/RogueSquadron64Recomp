@@ -1,29 +1,29 @@
-# NEXT work unit — attribute writers of zero PCM source spans
+# NEXT work unit — trace the zero-input caller contract
 
 HYPOTHESIS-ID: m5-port-zero-pcm-source
 
-Do exactly one bounded M5 writer census next iteration. Do not modify output,
+Do exactly one bounded M5 caller/argument census next iteration. Do not modify output,
 waits, slots, status handling, consumer dispatch, or PCM writeback.
 
 Competing hypotheses:
 
-- `H-PortSourceWriterAbsent`: no guest store populates RDRAM `0x1797B0` or
-  `0x1798B0` on the target route.
-- `H-PortSourceWriterZero`: a guest writer reaches those spans but stores only
-  zero, so the zero source is produced upstream.
-- `H-PortSourceVisibility`: nonzero writer activity exists, but the port source
-  DMA reads a different or stale span.
+- `H-PortSourceArgumentGap`: `rs_memset` receives a zero fill or source input
+  before `0x800078EC` stores into the target span.
+- `H-PortSourceCallerMismatch`: the port caller/callsite or buffer construction
+  differs from retail even though the writer PC is the same.
+- `H-PortSourceVisibility`: nonzero input reaches the writer but is lost
+  between the writer and source DMA; current zero-store evidence disfavors it.
 
-Discriminating measurement: first ask the retail oracle for writer-PC
-histograms on physical `0x1797B0:0x1798B0` with a whole-RDRAM positive control
-and the canonical title/hangar schedule. Then batch a phase-scoped port store
-census for those same spans, joined to the source-DMA route ordinal/row. No
-writer selects `H-PortSourceWriterAbsent`; only-zero writer values selects
-`H-PortSourceWriterZero`; nonzero writer values with zero source-DMA payload
-selects `H-PortSourceVisibility` or a stale/ordering edge.
+Discriminating measurement: first ask the retail oracle for the known writer's
+caller/argument rows, with a whole-RDRAM positive control and canonical
+title/hangar schedule. Then batch a phase-scoped port census of `rs_memset`
+callsite, destination, fill/value, caller PC, and source-DMA route ordinal/row.
+A zero fill before the stores selects `H-PortSourceArgumentGap`; a retail/
+port callsite or destination mismatch selects `H-PortSourceCallerMismatch`;
+nonzero input followed by zero stores selects a writer/ABI edge.
 
-Before building, verify oracle watch indices and existing generated-store hook
-coverage. Keep phase, audio-task/ABI, PCM, image-stage/DMA, title, and hangar
+Before building, verify oracle watch indices and existing `rs_memset` caller
+hooks. Keep phase, audio-task/ABI, PCM, image-stage/DMA, title, and hangar
 controls live. If code under `lib/` changes, run
 `./submodule-patches/export.sh` in the same iteration.
 

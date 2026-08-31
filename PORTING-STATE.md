@@ -130083,3 +130083,28 @@ not a mitigation and no output, wait, slot, status, consumer, or PCM-writeback
 behavior changed. The initial no-target run was invalid because it crashed
 before title; the fixed canonical probe supplied the result. Evidence:
 `scratch/agent/s3378_m5_source_census.md`.
+
+## Session 3379 (2026-08-31) — attributed zero PCM source writer
+
+Ran the independent retail oracle first with Rice, the canonical Start
+schedule, exact watches for `0x1797B0:0x1798B0` and `0x1798B0:0x179A48`, a
+whole-RDRAM positive control, writer histograms, and target-phase execution
+controls. The control fired 3,601,920 writes; title `1024 @ 0x00790400` and
+the 512 route were reached. Retail attributed `0x800078EC` to both spans and
+showed nonzero post-store data.
+
+Two initial port attempts were invalid because they withheld the boot Start
+schedule and died before title. The canonical AUTOPILOT route was then run
+with the existing regeneration-surviving writer/source controls. It reached
+title at 13.3 seconds; phase, PCM-writer, RSP-source, and field-writer
+controls fired. The target-phase port census recorded 512 stores overlapping
+`0x1797B0:0x1798B0`; every observed byte was written by `0x800078EC` as zero,
+including the first row at `phys=0x1797B0`. Nonzero source-DMEM rows outside
+the narrow PCM windows confirmed the source hook was live.
+
+This selects `H-PortSourceWriterZero`, refutes writer absence for the observed
+span, and makes a simple DMA visibility explanation insufficient. Retail's
+nonzero writes versus port's zero writes move the gap to the writer's
+input/caller contract. No output, wait, slot, status, consumer, or PCM
+writeback behavior changed. The first two port runs are documented invalid,
+not evidence. Evidence: `scratch/agent/s3379_m5_source_writer.md`.
