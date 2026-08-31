@@ -60,35 +60,45 @@ rows carry zero source/output PCM, while retail independently writes nonzero
 PCM spans. Do not change waits, slots, status handling, consumer dispatch,
 clear behavior, or PCM writeback while locating the state-pointer edge.
 
-Session 3451 added the oracle-compatible port field schema at all four target
-PCs. The silent arm's positive control fired and produced 2,048 rows across
-the four PCs, with early `s1=0x80110000`/`0x80110ECC` contexts unlike the first
-retail rows. The image arm produced zero new schema rows even though its older
-consumer/output hooks proved title execution at `0x80001CB8`/`0x80001CC8`.
-This is single-source field evidence and a control-path defect, not a parity
-closure; repair the image-arm positive control before joining either arm.
+Session 3451's image-arm zero-row verdict was a stale interpretation of the
+retained log. Session 3452's fresh build and two-arm run showed the schema
+positive control and all four target-PC buckets in both arms: 2,048 rows per
+arm, with target counts 514/510/510/514, plus 512 consumer and 343 output
+rows. The retained s3449 logs independently show the same image control. This
+closes the image-arm control defect and permits the planned join.
+
+The sequential silent/image rows diverge from ordinal 4, including `s1` and
+source fields. That difference is not a contract selection because the arms
+run separately through an animating title scene. Output/state parity remains
+unevaluable until port rows are joined to retail by phase, PC, and ordinal.
 
 ## Next steps
 
-1. Repair the image-arm control failure for the new four-PC field witness;
-   retain the silent-arm positive control and make both arms emit ordered rows.
-2. Add one phase-scoped port witness table matching the oracle's
+1. Join the now-controlled port schema rows to the oracle's phase-scoped
+   `(pc,s0,s1,source_word,branch_selector,source_byte,branch_state)` rows by
+   phase, PC, and ordinal; do not compare sequential silent/image rows as an
+   animated A/B.
+2. Use the joined table to identify the first output/state contract divergence
+   after the qualified title pointer boundary. Matching fields close the
+   boundary; the first divergent field selects the missing contract edge;
+   absent ordered rows remain unevaluable.
+3. Add one phase-scoped port witness table matching the oracle's
    `(pc,s0,s1,source_word,branch_selector,source_byte,branch_state)` fields at
    all four target PCs, then join it by phase and ordinal to the existing
    consumer/output rows. Matching fields close the boundary; the first
    divergent field selects the missing contract edge; absent ordered rows are
    unevaluable.
-3. Locate the first output/state contract divergence after the now-qualified
+4. Locate the first output/state contract divergence after the now-qualified
    title pointer boundary. Join the retail `0x80001CB8`/`0x80001CC8` rows to
    output value and state-word fields, then compare the existing port rows;
    a matching pointer but divergent output selects the output contract, while
    a missing ordered join remains unevaluable.
-4. Keep M5 Step 3 gated until that output comparison names one missing
+5. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
    generated patch input.
-5. After M5 closes or a new discriminator is found, resume only systematic M3
+6. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep external retail-entry, hangar `0x8000`
    Y/accumulator arithmetic, and SP-yield/MORT publication threads parked.
    Generated-symbol renaming is last priority and remains closed at its

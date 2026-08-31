@@ -131625,6 +131625,22 @@ writeback changed.
 
 Evidence: `scratch/agent/s3450_oracle_fixed.log` and
 `scratch/agent/s3449_m5_state_tuple_context/`.
+## Session 3452 (2026-08-31) — qualified image-arm schema control
+
+The fresh Debug build succeeded and the prescribed two-arm run reached title
+VI 1024 in both arms. Both emitted the four-PC schema positive-control marker
+and 2,048 rows, with target counts 514/510/510/514 at
+`0x80001C98`/`0x80001CB8`/`0x80001CC8`/`0x80001F84`; each also had 512
+consumer rows and 343 output rows. Neither log had a crash or abort marker.
+The retained s3449 logs independently show the same image control, so the
+s3451 zero-row verdict was stale and the image control is now qualified.
+
+Sequential silent/image rows diverged from ordinal 4, including `s1` and
+source fields. Since the arms run separately through an animating title scene,
+this cannot select an output contract edge. It rules out an absent image hook,
+but does not establish port/retail parity. The next work unit joins the
+controlled port schema to `scratch/agent/s3450_oracle_fixed.log` by phase, PC,
+and ordinal. No game behavior or mitigation changed.
 ## Session 3451 (2026-08-31) — added four-PC output-state schema witness
 
 Added a phase-scoped port witness matching the retail oracle fields at

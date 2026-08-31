@@ -1,27 +1,28 @@
-# NEXT work unit — repair the image-arm output/state witness control
+# NEXT work unit — join controlled port schema to retail output/state rows
 
 HYPOTHESIS-ID: m5-output-state-contract-boundary
 
-The new four-PC port schema is present and the silent arm is controlled, but
-the image arm emitted zero new rows while older hooks proved its title path
-live. Repair this control-path defect, then rerun both arms in one batch. The
-oracle baseline is `scratch/agent/s3450_oracle_fixed.log`.
+Both port arms are now controlled: each emitted 2,048 schema rows and the
+four-PC positive-control marker. The sequential arm difference is unusable as
+an animated A/B. Join each port arm to the independent retail baseline by
+phase, target PC, and ordinal. The oracle baseline is
+`scratch/agent/s3450_oracle_fixed.log`.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-ImageHookLive`: image positive control and all four new target buckets fire;
-  run the planned phase/ordinal join.
-- `H-ImageHookAbsent`: the new hook remains absent while older title hooks fire;
-  the gate/control wiring is still wrong and no parity conclusion is allowed.
-- `H-FieldDivergence`: both arms are controlled and the first mapped field
-  differs; that field selects the missing contract edge.
-- `H-JoinMismatch`: both arms are controlled but phase/ordinal cannot join;
-  redesign only the join key.
+- `H-JoinParity`: ordered port/retail rows match through the target fields;
+  close the qualified boundary.
+- `H-FirstFieldDivergence`: the first mapped field differs with valid controls;
+  that field selects the missing contract edge.
+- `H-JoinMismatch`: controls fire but phase/PC/ordinal cannot join; redesign
+  only the join key and make the rows unevaluable.
+- `H-PortAbsent`: a selected port phase/PC bucket is absent despite the
+  positive control; fix the phase mapping before interpreting parity.
 
 Commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env zsh scratch/agent/run_s3449_m5_state_tuple_context.sh
+    # Extract/join fresh port rows against scratch/agent/s3450_oracle_fixed.log
+    # using phase, target PC, and ordinal; do not use sequential arm equality.
 
-Keep waits, slots, dispatch, clear behavior, and PCM writeback unchanged. Use
-SIGKILL teardown and capture under the existing non-dot output path.
+Keep waits, slots, dispatch, clear behavior, and PCM writeback unchanged.
