@@ -131870,3 +131870,26 @@ Evidence: `scratch/agent/s3464_m5_retail_producer_value.md` and
 ORIGIN: the nonzero values are legitimate retail state pointers observed
 immediately at the shared store; no mitigation or runtime behavior change was
 added.
+## Session 3465 (2026-08-31) — captured retail table-load boundary
+
+Ran one independent retail oracle capture with Rice, the validated Start
+schedule, title phase gates at `0x00790400`/`0x00790800` width 1024, a
+whole-RDRAM positive control, and the physical source watch at
+`0x001E8710`. Execution watches at `0x800644A8`, `0x800644DC`, and
+`0x80064524` fired 3,971, 16,905, and 16,745 title-gated times. The controls
+recorded 12,666 and 2,666 callbacks.
+
+Retail's `0x800644DC` table walk observed entry addresses including
+`0x801B4AA0`, `0x801B4AA8`, and `0x801B4B20`; corresponding `0x80064524`
+rows carried nonzero `s0` values including `0x801B4F00`, `0x801B4EC0`, and
+`0x801B5E70`, while the qualified port rows remain zero. The retail
+post-store sample recorded 617 nonzero `0x80064524` values and 101 zero
+`0x800644B0` values. This selects a table-entry/value divergence and rules
+out absent load/writer routes and failed controls at this scope. It does not
+name the source-table writer or establish whether the port table pointer
+differs. Evidence: `docs/M5-S3465-RETAIL-TABLE-LOAD.md` and
+`scratch/agent/s3465_m5_retail_table_load/oracle.log`.
+
+ORIGIN: the nonzero values are legitimate retail state pointers observed at
+the shared writer and post-store watch; no mitigation or runtime behavior
+change was added.

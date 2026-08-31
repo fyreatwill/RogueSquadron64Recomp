@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3463 (2026-08-31). This record was
+Current maintenance marker: Session 3465 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -186,18 +186,30 @@ unresolved edge to the table load between `0x800644A8` and `0x80064524`, but
 does not yet name the exact table-entry writer. Evidence:
 [s3464_m5_retail_producer_value.md](../scratch/agent/s3464_m5_retail_producer_value.md).
 
+Session 3465 captured the intervening retail table-load site at `0x800644DC`
+in the same controlled run as `0x800644A8` and `0x80064524`. Whole-RDRAM and
+physical-source controls fired 12,666 and 2,666 times; title-gated execution
+rows fired 16,905, 3,971, and 16,745 times respectively. Retail table-entry
+addresses such as `0x801B4AA0` led to nonzero shared-writer values including
+`0x801B4F00`, while the qualified port rows remain zero. This selects a
+table-entry/value divergence and rules out absent load/writer routes and failed
+controls at this scope. It does not name the table-entry writer or establish
+whether the port table pointer differs. Evidence:
+[M5-S3465-RETAIL-TABLE-LOAD.md](M5-S3465-RETAIL-TABLE-LOAD.md).
+
 ## Next steps
 
-1. Identify the exact table-entry producer feeding the shared `0x80064524`
-   writer. Add one independent retail watch at the intervening `0x800644DC`
-   load and its source-table write path; join by title phase and ordinal to
-   the existing producer/store/value rows. The retail first value is
-   `0x801B4F00` versus port zero, while `0x800644B0` matches for all 768
-   comparable rows.
-2. Preserve the independent whole-RDRAM and physical source-watch controls
-   when interpreting the table-load result; Session 3464 has positive controls
-   and 630 title VI frames. A matching table entry closes this edge; a
-   different producer or value selects the next contract edge.
+1. Identify the exact source-table writer feeding the retail table entries
+   consumed at `0x800644DC` and later stored by `0x80064524`. Add one
+   independent retail watch for the candidate table-entry write path, retaining
+   the whole-RDRAM and physical-source controls, then join writer value to the
+   existing load/store rows by title phase and per-PC ordinal. The retail load
+   path produces nonzero values such as `0x801B4F00`; the qualified port store
+   remains zero.
+2. Determine whether the next divergence is the table pointer or the table
+   entry's writer/value. A matching pointer with a different entry value names
+   the source-table contract; a different pointer names the producer/selection
+   contract; missing ordered rows remain unevaluable.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 4. Use the producer join to identify the first output/state contract divergence
