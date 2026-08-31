@@ -1,38 +1,39 @@
-# NEXT work unit — census M5 consumer indirect dispatch
+# NEXT work unit — independent retail status-03 worker contract
 
-HYPOTHESIS-ID: m5-consumer-indirect-dispatch
+HYPOTHESIS-ID: m5-status03-worker-contract
 
-Session 3366 selected `H-PortConsumerIndirectGap`: the valid qualified route
-reached title and hangar, the callback edge and PCM source/consumer controls
-fired, but the named `0x80019B74` consumer-entry marker stayed zero. Audio task
-joins used `musyx_stub` and were incomplete by design.
+Session 3367 completed the generated static census: no literal generated
+indirect target resolves to the named service/child/accumulator consumers;
+only register-loaded guest-state callback edges remain. Further static
+enumeration is not discriminating. The next M5 unit must obtain independent
+retail evidence for the status-03 reaping contract before any wait/slot edit.
 
-Competing hypotheses for the next unit:
+Competing hypotheses:
 
-- `H-GeneratedConsumerEdgePresent`: an existing generated indirect call feeds
-  one or more named consumer PCs, but the current marker misses that edge.
-- `H-GeneratedConsumerEdgeAbsent`: no generated caller reaches the named
-  consumers; the unresolved dispatch is outside the generated static map.
-- `H-ConsumerNameOrPCMismatch`: the runtime marker names or keys the wrong
-  consumer PCs despite the callback edge being valid.
+- `H-RetailStatus03Reaped`: retail enters the worker, writes status zero, and
+  the shutdown/drain returns through that worker contract.
+- `H-RetailStatus03Gate`: retail enters the worker but a slot/status gate
+  prevents the zeroing store on the watched route.
+- `H-RetailStatus03OtherPath`: completion occurs through an un-watched worker
+  or a different status table.
 
-Discriminating measurement: a bounded static census, not a new runtime field.
-Enumerate every generated `jalr`/`LOOKUP_FUNC` site whose target can reach the
-four named consumer PCs, classify its source register/constant and overlay,
-and compare it with the existing consumer-entry marker definitions. A concrete
-generated edge selects `H-GeneratedConsumerEdgePresent`; no edge after a
-complete census selects `H-GeneratedConsumerEdgeAbsent`; a mismatch between
-the four named PCs and their marker wiring selects `H-ConsumerNameOrPCMismatch`.
-An incomplete symbol/overlay map is unresolved, not a null result.
+Discriminating measurement: one independent retail oracle capture with the
+whole-RDRAM positive control, title/hangar route controls, status-03 entry
+watch, all status-zero stores for the actual voice table, and previous-PC
+attribution. Reaped requires worker entry → zeroing writer → shutdown/drain
+return in the same target phase. Entry without zero selects the gate
+hypothesis only if a status/slot gate row is also captured; zero hits with
+the positive controls live selects the other-path hypothesis. Missing
+whole-RDRAM or target-route control is invalid, not a null result.
 
-Exact commands:
+Exact preparation:
 
 ```sh
-rg -n -C 8 'serviceVoicePoolFrame|0x80019B74|consumer_entry|pcm-boundary' src tools ../N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n 'jalr|LOOKUP_FUNC' ../N64Recomp/RecompiledFuncs/funcs_*.c | rg '8009B5A8|8009BD7C|80019B74|consumer|voice|slot'
+rg -n 'status-03|status03|0x80154620|serviceVoicePoolFrame|zero' tools scratch/agent docs/M5-AUDIO-PLAN.md
+sed -n '1,220p' tools/oracle/README.md
 ```
 
-Inspect only the existing regeneration-safe marker definitions and generated
-call sites; no build or runtime experiment is needed unless the census finds
-missing marker wiring that can be corrected without changing behavior. No
-behavior change or mitigation.
+Use the existing retail-oracle driver and arm the whole-RDRAM control before
+the bounded status/worker watches in the same run. Do not change behavior or
+add a mitigation; if the oracle lacks the required watch surface, report the
+missing capability rather than repeating the static census.

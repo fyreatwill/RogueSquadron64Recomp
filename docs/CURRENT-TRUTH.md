@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3366 (2026-08-31). Compacted from
+Current maintenance marker: Session 3367 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -73,6 +73,16 @@ source and consumer boundaries both fired. Audio task joins used the
 `complete=0`. This selects `H-PortConsumerIndirectGap` and records the stubbed
 audio divergence; it does not implicate the PCM boundary. Evidence:
 `scratch/agent/s3366_m5_downstream_contract.md`.
+
+Session 3367 completed the generated-tree consumer indirect-dispatch census:
+150 `LOOKUP_FUNC` sites were enumerated, with no literal target matching the
+named service, child stores, accumulator, or `startSongSequence` consumer.
+`startSongSequence` has three direct callers; the service and accumulator
+remain definitions reached only through register-loaded guest-state edges.
+The companion symbol references independently confirm the target identities,
+so this supports `H-GeneratedConsumerEdgeAbsent` only for the static map and
+does not prove runtime absence. Evidence:
+`scratch/agent/s3367_m5_consumer_indirect_dispatch_census.md`.
 
 Session 3358 validated the session 3357 task-start pointer guard on the live
 route. The Debug binary reached title VI `1024 @ 0x00790400` at 14.6 s and
@@ -641,6 +651,12 @@ target row exists.
    Next: qualify the downstream service/slot/voice/PCM contract in one
    phase-gated port run. Evidence:
    `scratch/agent/s3364_m5_port_callback_edge.md`.
+Session 3367 closes further static consumer enumeration as a discriminator:
+the generated tree has no literal indirect target for the named consumers,
+and only register-loaded guest-state callback edges remain. Next M5 work must
+obtain independent retail status-03 worker/zeroing evidence before any wait
+or slot change. Evidence:
+`scratch/agent/s3367_m5_consumer_indirect_dispatch_census.md`.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

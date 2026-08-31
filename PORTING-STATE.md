@@ -129844,3 +129844,19 @@ no active voice contract completed. This selects
 `H-PortConsumerIndirectGap` and records the stubbed audio divergence; it does
 not implicate the PCM boundary. No behavior change was made. Evidence:
 `scratch/agent/s3366_m5_downstream_contract.md`.
+## Session 3367 (2026-08-31) — completed M5 consumer indirect-dispatch census
+
+The planned static M5 work unit enumerated the checked-out generated tree's
+150 `LOOKUP_FUNC` sites and exact named-consumer references. No literal
+indirect target matched `0x80094648`, `0x8009B5A8`, `0x8009B600`,
+`0x8009B85C`, or `0x8009BDE8`. `startSongSequence` has three direct callers;
+`serviceVoicePoolFrame` and `accumulateVoiceSampleOffset` have definitions but
+only unresolved register-loaded audio callback candidates. Companion symbol
+references confirm the target identities, ruling out a naming/marker mismatch.
+
+This supports `H-GeneratedConsumerEdgeAbsent` only for the generated static
+map and `H-PortConsumerIndirectGap`; it does not prove runtime absence. No
+build, runtime probe, behavior change, or mitigation was performed. Further
+static enumeration is not discriminating. Next: obtain independent retail
+status-03 worker-entry and zeroing-writer evidence before changing a wait or
+slot contract. Evidence: `scratch/agent/s3367_m5_consumer_indirect_dispatch_census.md`.
