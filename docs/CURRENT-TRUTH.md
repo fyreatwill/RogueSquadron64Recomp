@@ -15,6 +15,13 @@ A1–A20 inventory in `docs/M5-AUDIO-PLAN.md`; this is single-source evidence
 and authorizes no behavior change. Evidence:
 `scratch/agent/s3317_m5_plan_reconciliation.md`.
 
+Session 3318 is blocked on the configured-host discriminator. This
+iteration's environment check reports Darwin 25.4.0 arm64, no local
+`mips64-elf-gcc`, no `RecompiledPatches/patches.c`, and no mounted
+`mips-toolchain`. The required Windows/MIPS build cannot be run here, and the
+local missing-target build is explicitly not to be repeated. Evidence is in
+the session entry and `scratch/agent/BLOCKED.md`.
+
 ## Live investigation (s3303–s3317)
 
 Session 3316 could not run the configured-host `PatchesLib` discriminator.
@@ -255,7 +262,8 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. On the configured Windows/MIPS host, run
+1. BLOCKED pending access to the configured Windows/MIPS host. Once available,
+   run
    `cmake --build build --config Debug --target PatchesLib` to distinguish
    patch build availability from source/link failures. Do not repeat the local
    missing-target check; Session 3317 measured this checkout as Darwin with

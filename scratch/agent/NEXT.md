@@ -2,10 +2,10 @@
 
 HYPOTHESIS-ID: m5-patches-host-validation
 
-Session 3317 confirmed this Darwin checkout cannot run the configured-host
-discriminator: `E:/mips-toolchain` is absent. Do not repeat local checks or
-the local missing-target build. Run the command below on the configured
-Windows/MIPS host.
+Session 3318 is blocked: this environment is Darwin arm64, with no mounted
+MIPS toolchain and no generated patch source. Do not repeat local checks or
+the local missing-target build. A human must provide access to the configured
+Windows/MIPS host, then run the command below.
 
 Session 3315 found exactly three fixed-address B1C accesses: the reset at
 5EE8 and conditional nonzero stores at 61D0 and 9360. There is no alternate

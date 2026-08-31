@@ -128882,3 +128882,16 @@ The host-unavailable explanation is falsified only by running
 `cmake --build build --config Debug --target PatchesLib` on the configured
 Windows/MIPS host. The next unit remains that host validation; no local
 retry is authorized.
+## Session 3318 (2026-08-30) — configured-host PatchesLib remains unavailable
+
+The prescribed work unit was to run `cmake --build build --config Debug
+--target PatchesLib` on the configured Windows/MIPS host. This iteration's
+environment check measured Darwin 25.4.0 arm64, no executable local
+`mips64-elf-gcc`, no `RecompiledPatches/patches.c`, and no mounted
+`mips-toolchain`. The build cache exists, but it does not supply the missing
+host or inputs. The local missing-target build was not repeated, per the
+current next-work instructions. This leaves `H-GuardBuildWorks`,
+`H-GuardSourceFails`, and `H-GuardHostMissing` unresolved for the configured
+host; it provides no patch-source, linker, or runtime evidence and authorizes
+no M5 behavior change. BLOCKED pending a human-run command on that host.
+Evidence: `scratch/agent/BLOCKED.md`.
