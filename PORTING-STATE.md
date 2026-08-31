@@ -130801,3 +130801,20 @@ both the port span and the previously observed retail destination
 `docs/M5-S3413-RETAIL-SOURCE-SPAN.md`,
 `scratch/agent/s3413_retail_source_span/oracle.log`, and
 `scratch/agent/s3413_retail_source_span_glide/oracle.log`.
+
+## Session 3414 (2026-08-31) — M5 retail producer destination map
+
+The first prescribed capture was incomplete because it used the undriven
+Glide route and a default 640-wide phase bucket: the positive control and
+producer watch fired, but no hangar phase rows were emitted. The fixed run used
+Rice video, the documented Start schedule, and explicit `0x006AB400:512`
+phase options. It passed the whole-RDRAM control with 11,866 writes and ran
+7,173 VI frames; the hangar bucket contained 1,540 VI rows. In that bucket,
+physical `0x1797B0:0x179A48` had 664 writes attributed to `0x800078EC`, while
+`0x1935E0:0x1935F0` had no writes from that producer. Producer post-store
+sampling for the source span had 340 nonzero samples. This selects
+`H-RetailPublishes1797B0` and refutes a retail-only destination mismatch at
+`0x1935E0`; it leaves the port-side producer input/payload formation open. No
+runtime or audio behavior changed. Evidence:
+`docs/M5-S3414-RETAIL-DESTINATION-MAP.md` and
+`scratch/agent/s3414_retail_destination_map_final/oracle.log`.

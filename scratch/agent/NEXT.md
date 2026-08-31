@@ -1,32 +1,33 @@
-# NEXT work unit — map retail producer destination
+# NEXT work unit — join port producer payload
 
-HYPOTHESIS-ID: m5-retail-producer-destination-map
+HYPOTHESIS-ID: m5-port-producer-payload-join
 
-Session 3413 established only a global retail negative: the producer executed
-9,667 times, but the port source span had zero writes and no phase-qualified
-rows. The next unit must determine whether retail publishes to the previously
-observed destination instead.
+Session 3414 established the independent retail destination: in the
+512-wide `0x006AB400` hangar bucket, `0x800078EC` wrote the port source span
+`0x1797B0:0x179A48` 664 times with nonzero post-store samples, and did not write
+the alternate `0x1935E0` destination. The next unit must compare the port
+producer's call/input/payload contract against that ground truth.
 
 Competing hypotheses and discriminating measurement:
 
-- H-RetailPublishes1935E0: hangar-phase writes from `0x800078EC` land in
-  physical `0x1935E0:0x1935F0`, with nonzero post-store values; this selects a
-  retail destination mismatch against the port span.
-- H-RetailPublishes1797B0: hangar-phase writes land in physical
-  `0x1797B0:0x179A48`; nonzero post-store values select the corresponding
-  source-span contract.
-- H-RetailPublishesNeither: both destination watches remain empty in the
-  hangar bucket while producer execution is controlled; this selects an
-  unresolved producer-route/phase attribution problem.
+- H-PortProducerNonzero: port `0x800078EC` writes the hangar source span with
+  nonzero payload matching the retail contract; the remaining zero PCM is
+  downstream of this edge.
+- H-PortProducerZero: port `0x800078EC` is phase-live but its source span is
+  zero, selecting a producer-input or transform gap.
+- H-PortProducerAbsent: port has no phase-qualified producer edge, selecting
+  a dispatch/caller gap despite the retail destination match.
 
-The single discriminator is one retail-oracle run with whole-RDRAM positive
-control, the producer execution watch, both destination watches, post-store
-sampling, and a hangar-phase writer histogram. Require complete controls and
-both destination histograms before classifying.
+The single discriminator is one fresh-build port silent/image pair with the
+existing phase, audio-task/ABI, image-stage, and PCM controls plus one batched
+producer witness. Require title and hangar gates, both arm controls, and a
+hangar source-span payload summary before classifying.
 
 Exact commands:
 
-1. `mkdir -p scratch/agent/s3414_retail_destination_map && tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-glide64mk2.dylib --secs 120 --watch-write 0x0:0x800000 --watch-write 0x1797B0:0x179A48 --watch-write 0x1935E0:0x1935F0 --watch-pc 0x800078EC --pc-phase-log 0x006AB400 --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-phase 0x006AB400 --post-value-watch 1 --post-value-watch 2 --post-value-pc 0x800078EC > scratch/agent/s3414_retail_destination_map/oracle.log 2>&1`
-2. Check whole-RDRAM, title/hangar, producer execution, both destination
-   histograms, and retained post-values; classify only if the controls and
-   hangar bucket are complete.
+1. Reuse the existing qualified port pair recipe (the M5 task/image/PCM
+   controls) and add one phase-scoped witness for producer `0x800078EC` and
+   physical span `0x1797B0:0x179A48`; build once with all counters enabled.
+2. Run both silent and image arms from `build/`, then require title 1024,
+   hangar 512, ABI/DMA, image-stage, and PCM controls before classifying the
+   producer payload result.

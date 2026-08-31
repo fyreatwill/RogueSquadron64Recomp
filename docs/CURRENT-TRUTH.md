@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3413 (2026-08-31). This file was compacted
+through Session 3414 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -273,21 +273,33 @@ classification is unevaluable because the phase bucket was absent; it selects
 neither retail-nonzero nor shared-zero. Evidence is in
 [M5-S3413-RETAIL-SOURCE-SPAN.md](M5-S3413-RETAIL-SOURCE-SPAN.md).
 
+Session 3414 corrected the retail route to Rice video, driven Start presses,
+and an explicit hangar phase width. The whole-RDRAM control reached 11,866
+writes and the run reached 7,173 VI frames. In the 512-wide
+`0x006AB400` hangar bucket (1,540 VI rows), `0x800078EC` wrote the port source
+span `0x1797B0:0x179A48` 664 times; it wrote none of the previously observed
+`0x1935E0:0x1935F0` destination. Source-span post-store samples included 340
+nonzero producer samples. This selects `H-RetailPublishes1797B0` and refutes a
+retail-only destination mismatch at `0x1935E0`; the remaining gap is the
+port-side producer input/payload formation. Evidence is in
+[M5-S3414-RETAIL-DESTINATION-MAP.md](M5-S3414-RETAIL-DESTINATION-MAP.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Ask the independent retail oracle to map the producer destination in one
-   run: retain the whole-RDRAM control and producer watch, and watch both the
-   port source span `0x1797B0:0x179A48` and the previously observed retail
-   destination `0x1935E0:0x1935F0`, with post-store values and the hangar phase
-   gate. The s3413 global negative is not phase-qualified and cannot classify
-   the source. Do not add port instrumentation or change waits, slots,
-   dispatch, clear behavior, or PCM writeback.
-2. Keep the completion-safe oracle checkpoint as the ground-truth control and
-   retain post-store sampling for the target span. The field348 input-to-clear
-   edge is closed; do not repeat it unless a new writer discriminator is added.
+1. Run one fresh-build, phase-qualified port contract pair with the existing
+   audio/image/PCM controls plus a payload join at producer `0x800078EC`:
+   capture its hangar call arguments, source-span write count, and source-span
+   FNV/nonzero values against the silent control. The retail ground truth now
+   proves that the legitimate producer writes nonzero data to
+   `0x1797B0:0x179A48`; classify only with title/hangar, ABI/DMA, image-stage,
+   and PCM controls all live. Do not change waits, slots, dispatch, clear
+   behavior, or PCM writeback.
+2. Keep the completed retail destination map as the independent control; do
+   not repeat the `0x1935E0` destination watch unless a new producer or phase
+   discriminator is added.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open
