@@ -130505,3 +130505,26 @@ destination alias or legitimate-zero explanation there. They do not identify
 why the destination differs or establish zero-output legitimacy. No audio
 behavior changed. Evidence: `docs/M5-S3398-STAGE3-DESTINATION.md` and
 `scratch/agent/s3398_m5_stage3_destination_pair/driver.log`.
+
+## Session 3399 (2026-08-31) — M5 stage-3 destination contract repeat
+
+The rebuilt completion-safe contract recipe ran the retail oracle with
+concurrent silent and image port arms. The oracle whole-RDRAM positive control
+reached 10,000 callbacks and both title/hangar phase gates. Its checkpoint
+retained 16 post-store samples at `0x1935E0` from `0x800078EC`, including 12
+nonzero samples. Both port arms reached hangar without crash/abort markers.
+
+The image arm had 2,742 image-stage and 1,365 DMA-range rows. Stage 3 again
+reported `r2=0x350`, `field348=0x801797B0`, `field44=0`, and
+`dest=0x801798B0` (`0x1798B0` physical), copying DMEM `0xCB0..0xE48`
+(`len=0x198`) with `762B22A5`, `nz=0`. The image joins were `stage-only`;
+SP completion/delivery, guest receive, and PCM-boundary rows were present.
+The silent arm had 673 ABI/DMA rows and no image-stage rows. PCM stayed zero
+in both relevant port observations.
+
+This repeats the selection of `H-PortStage3Missing` at the observed
+publication boundary and refutes a destination alias or legitimate-zero
+explanation there. It does not identify the guest producer of `field348` or
+establish zero-output legitimacy. No audio behavior changed. Evidence:
+`scratch/agent/s3399_m5_stage3_destination_contract/driver.log` and paired
+port/oracle logs.

@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3398 (2026-08-31). This file was compacted
+through Session 3399 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -224,18 +224,35 @@ destination alias or legitimate-zero explanation there. The destination
 contract and output legitimacy remain unresolved. Evidence is in
 [M5-S3398-STAGE3-DESTINATION.md](M5-S3398-STAGE3-DESTINATION.md).
 
+Session 3399 repeated the completion-safe destination-contract matrix after a
+fresh build. The oracle whole-RDRAM control reached 10,000 callbacks, both
+title/hangar phase gates fired, and its checkpoint retained 16 post-store
+samples at `0x1935E0` from `0x800078EC`, with 12 nonzero. Both port arms
+reached hangar without crash/abort markers. The image arm again enumerated
+stage 3 as `r2=0x350`, `field348=0x801797B0`, `field44=0`, and
+`dest=0x801798B0` (`0x1798B0` physical), copying DMEM `0xCB0..0xE48`
+(`len=0x198`) with `762B22A5`, `nz=0`; its join rows were `stage-only`,
+while DMA/exit, SP delivery, guest receive, and PCM rows were present. The
+silent arm supplied the expected ABI/DMA and completion controls, and PCM
+remained zero. This independently repeats the selection of
+`H-PortStage3Missing` at the observed publication boundary and refutes an
+address-alias or legitimate-zero explanation there. The field/caller origin
+and zero-output legitimacy remain unresolved; no audio behavior changed.
+Evidence: `scratch/agent/s3399_m5_stage3_destination_contract/driver.log` and
+the paired logs.
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Explain the selected `H-PortStage3Missing` destination contract: enumerate
-   the stage-3 destination computation and its guest field/caller inputs, then
-   phase-qualify one same-build port census that joins those inputs to the
-   `0xCB0` source, DMA completion, guest service, and PCM rows. Retain the
-   retail-backed `0x1935E0` control and both audio arms. Do not change audio
-   behavior or add a destination redirect until the writer and legitimacy of
-   the value are identified.
+1. Explain the selected `H-PortStage3Missing` destination contract by tracing
+   the guest producer of `field348=0x801797B0` and its caller inputs upstream
+   of the image-stage hook. Phase-qualify one same-build census joining that
+   producer to the `0xCB0` source, DMA completion, guest service, and PCM
+   rows. Retain the retail-backed `0x1935E0` control and both audio arms. Do
+   not change audio behavior or add a destination redirect until the writer
+   and legitimacy of the value are identified.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
    not repeat the old final-summary-only or dual-origin recipes; use the signal
    checkpoint and retain post-store sampling for all four candidates.
