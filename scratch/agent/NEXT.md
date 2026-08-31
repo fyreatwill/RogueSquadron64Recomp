@@ -1,31 +1,32 @@
-# NEXT work unit — identify the producer feeding the shared source writer
+# NEXT work unit — identify the table-entry producer feeding the shared writer
 
 HYPOTHESIS-ID: m5-output-state-contract-boundary
 
-Session 3463 joined the qualified sequences. All 768 comparable
-`0x800644B0` rows match at zero. At shared writer `0x80064524`, the first
-comparable row is port zero versus retail `0x801B4F00`; writer PC matches.
+Session 3464 showed that the retail producer callsite `0x800644A8` is active,
+but the intervening table walk loads the nonzero `s0` values observed at
+`0x80064524`. The first joined store row remains port zero versus retail
+`0x801B4F00`; all 768 comparable `0x800644B0` rows match at zero.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-RetailProducerMatched`: the producer/value feeding `0x80064524` matches
-  across runtimes, closing this value edge.
-- `H-ProducerValueDivergence`: producer or value differs, selecting the next
-  contract edge.
-- `H-RetailObservationInvalid`: the independent writer/value observation is
-  invalid; this requires failure of both positive controls in the same run.
+- `H-TableLoadMatched`: retail and port load the same table entry at
+  `0x800644DC`, closing this edge at the store's input.
+- `H-TableEntryDivergence`: the loaded table entry or its producer differs,
+  selecting the source-table contract edge.
+- `H-ObservationInvalid`: the retail table is invalid; this requires failure
+  of both positive controls in the same run.
 
-Work unit: obtain an independent retail producer/value table for the store at
-`0x80064524`, retaining the whole-RDRAM and physical source-watch controls.
-Use the existing oracle build and a single run, with ordered post-store rows
-and title phase gating. Then join it to the existing qualified port rows by
-title phase and per-PC ordinal.
+Work unit: run one independent retail capture retaining the whole-RDRAM and
+physical source-watch controls, with title-gated ordered execution rows at
+`0x800644DC` (the `lw s0,0(v1)` table-entry load), `0x800644A8`, and
+`0x80064524`, plus post-store values. Join by title phase and per-PC ordinal
+to the existing port source-writer rows.
 
-Expected discriminator: matching producer/value rows select
-`H-RetailProducerMatched`; a first producer or value difference selects
-`H-ProducerValueDivergence`; a control failure selects
-`H-RetailObservationInvalid`. Do not add port fields or alter audio waits,
-slots, dispatch, clear behavior, or PCM writeback.
+Expected discriminator: matching `s0`/table-entry rows select
+`H-TableLoadMatched`; a first table-entry or producer difference selects
+`H-TableEntryDivergence`; control failure selects `H-ObservationInvalid`.
+Do not add port fields or alter audio waits, slots, status handling, consumer
+dispatch, clear behavior, or PCM writeback.
 
-Evidence inputs: `scratch/agent/s3461_m5_source_value_join/run.log` and
-`scratch/agent/s3462_m5_retail_ordered_source/oracle.log`.
+Evidence inputs: `scratch/agent/s3464_m5_retail_producer_value/oracle.log` and
+`scratch/agent/s3460_m5_source_value_witness_retry/run.log`.

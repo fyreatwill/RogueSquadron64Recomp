@@ -131846,3 +131846,27 @@ behavior was changed. Evidence: `docs/M5-S3463-SOURCE-VALUE-JOIN.md`,
 
 ORIGIN: no mitigation was added; this iteration only joined observed values
 and named the legitimate retail writer observation.
+
+## Session 3464 (2026-08-31) — captured retail producer/store context
+
+Ran one independent retail oracle capture with Rice, the validated Start
+schedule, title phase gating at `0x00790400`/1024, a whole-RDRAM positive
+control, and a physical watch at `0x001E8710`. Execution watches at the
+producer callsite `0x800644A8` and shared store `0x80064524` fired 18,554
+times. The whole-RDRAM and physical-source controls recorded 12,706 and 2,706
+callbacks, and the run reached 630 title VI frames.
+
+The ordered retail store rows at `0x80064524` include legitimate nonzero
+state pointers such as `0x801B4F00`, while the qualified port join's first
+matching writer row is zero. Retail `0x800644A8` is active with previous PC
+`0x80001C90`; its observed context precedes the intervening table walk that
+loads the stored `s0`. This selects a producer/value divergence and rules out
+an absent retail writer, absent port store route, and failed oracle controls at
+this scope. It does not name the exact table-entry writer; the next probe must
+watch the intervening load at `0x800644DC` and its source-table producer.
+Evidence: `scratch/agent/s3464_m5_retail_producer_value.md` and
+`scratch/agent/s3464_m5_retail_producer_value/oracle.log`.
+
+ORIGIN: the nonzero values are legitimate retail state pointers observed
+immediately at the shared store; no mitigation or runtime behavior change was
+added.

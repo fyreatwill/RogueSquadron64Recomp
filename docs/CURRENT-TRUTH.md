@@ -175,16 +175,29 @@ and the port title control fired. This selects the first value divergence,
 not a writer-route divergence; evidence is
 [M5-S3463-SOURCE-VALUE-JOIN.md](M5-S3463-SOURCE-VALUE-JOIN.md).
 
+Session 3464 captured the independent retail producer/store table in one
+controlled run. Whole-RDRAM and physical-source controls fired (12,706 and
+2,706 callbacks), title reached 630 VI frames, and execution watches at
+`0x800644A8` and `0x80064524` fired 18,554 times. Retail's ordered
+`0x80064524` rows include nonzero values such as `0x801B4F00`, while the
+qualified port rows remain zero; `0x800644A8` is active with caller
+`0x80001C90`. This selects the producer/value divergence and narrows the
+unresolved edge to the table load between `0x800644A8` and `0x80064524`, but
+does not yet name the exact table-entry writer. Evidence:
+[s3464_m5_retail_producer_value.md](../scratch/agent/s3464_m5_retail_producer_value.md).
+
 ## Next steps
 
-1. Identify the producer/value path feeding the shared `0x80064524` writer.
-   Use an independent retail writer/value observation before adding port
-   fields. The first joined row is retail `0x801B4F00` versus port zero, while
-   `0x800644B0` matches for all 768 comparable rows.
+1. Identify the exact table-entry producer feeding the shared `0x80064524`
+   writer. Add one independent retail watch at the intervening `0x800644DC`
+   load and its source-table write path; join by title phase and ordinal to
+   the existing producer/store/value rows. The retail first value is
+   `0x801B4F00` versus port zero, while `0x800644B0` matches for all 768
+   comparable rows.
 2. Preserve the independent whole-RDRAM and physical source-watch controls
-   when interpreting the producer/value result; the retail table has positive
-   controls and 633 title VI frames. A matching producer/value closes this
-   edge; a different producer or value selects the next contract edge.
+   when interpreting the table-load result; Session 3464 has positive controls
+   and 630 title VI frames. A matching table entry closes this edge; a
+   different producer or value selects the next contract edge.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 4. Use the producer join to identify the first output/state contract divergence
