@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3354 (2026-08-31). Compacted from
+Current maintenance marker: Session 3355 (2026-08-31). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -18,7 +18,27 @@ and hangar controls, but its table stayed
 zero. This selects `H-PortConsumerIndirectGap` over a status/slot gate or
 probe mismatch and identifies the missing table publication/dispatch edge,
 but not its writer. No behavior change was authorized. Evidence:
-`scratch/agent/s3354_m5_consumer_source_census.md`.
+   `scratch/agent/s3354_m5_consumer_source_census.md`. Session 3355's static
+   callback-table census found only the generated writer at `0x80007928` and
+   clear at `0x80007968`; direct registrations provide only `0x80003250` and
+   `0x8009B5A8`. The dispatcher uses the same base and correct four-slot
+   indirect call. This refutes table alias and dispatcher explanations and
+   leaves a runtime/unresolved-indirect writer for the pre-existing
+   `0x8009123C` occupants. Next: obtain independent retail physical watches
+   for all callback slots, then inspect/build one host-boundary census only
+   after the watch's positive control fires. Evidence:
+   `scratch/agent/s3355_m5_callback_table_static_audit.md` (single-source).
+
+Session 3355 completed the bounded M5 callback-table static audit. The only
+generated table writer is `registerSiCallback` at `0x80007928`, with the
+matching clear helper at `0x80007968`; the only direct registration callers
+provide `0x80003250` and `0x8009B5A8`. The dispatcher reads the same
+`0x8011A8A4` base and indirect-calls the loaded slot at `0x80019B74`. No
+generated writer or alternate alias explains the port's three pre-existing
+`0x8009123C` occupants. This refutes `H-PortTableAlias` and
+`H-PortDispatcher`, and leaves an unresolved runtime/indirect writer class;
+no behavior change is authorized. Evidence:
+`scratch/agent/s3355_m5_callback_table_static_audit.md` (single-source).
 
 Session 3353 completed the bounded M5 indirect consumer-edge census. The
 generated tree has three direct `startSongSequence` callers, but no direct or

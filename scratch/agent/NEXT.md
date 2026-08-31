@@ -1,31 +1,33 @@
-# NEXT work unit — M5 callback-table writer/alias audit
+# NEXT work unit — M5 callback-table runtime writer attribution
 
 HYPOTHESIS-ID: m5-consumer-reachability-audit
 
-Session 3354 selected `H-PortConsumerIndirectGap`: retail independently shows
-`0x8011A8A4 -> 0x80019B74 -> 0x8009B5A8`, while the qualified port route has a
-live callback loop but only `[80003250,8009123C,8009123C,8009123C]` and zero
-consumer entries. Keep that selection; do not add a status workaround.
+Session 3355 refuted a generated-table alias and dispatcher explanation. The
+remaining candidate is a host/runtime or unresolved indirect writer that
+populates the port's `0x8009123C` callback occupants before the qualified
+consumer route, preventing `0x8009B5A8` from being installed.
 
 Competing hypotheses for the next unit:
 
-- `H-PortTableWriter`: a distinct registration path writes the port's three
-  `0x8009123C` callback occupants and prevents the retail target from being
-  installed.
-- `H-PortTableAlias`: the port and retail use different base/address aliases,
-  so the existing census observes different logical tables.
-- `H-PortDispatcher`: the table matches retail, but the generated dispatcher
-  loads or dispatches the wrong slot value.
+- `H-RuntimeTableWrite`: host/runtime code writes the guest callback table
+  outside generated MIPS execution.
+- `H-IndirectGuestTableWrite`: a generated indirect path writes the table but
+  is absent from the literal/static census.
+- `H-StaleTableState`: the table is not reset between overlay/runtime phases,
+  so the occupants are valid earlier state rather than a writer defect.
 
-Discriminator: statically enumerate every generated read/write of
-`0x8011A8A4..0x8011A8B4`, every `registerSiCallback` base/alias, and the
-`0x80019B74` load/`jalr` sequence, then reconcile each with the port census.
-A writer that can produce `0x8009123C` at the exact callback-table slot
-selects `H-PortTableWriter`; a base mismatch selects `H-PortTableAlias`; an
-exact table match with a wrong loaded target selects `H-PortDispatcher`.
-If no static source explains the occupants, record the writer as unresolved
-and do not add a probe or behavior change.
+Discriminator: first ask the retail oracle for a physical watch on all four
+callback slots, with whole-RDRAM and title/hangar controls, and capture each
+write's guest PC/value. In parallel, inspect the host write boundary exposed
+by the existing callback-table census and runtime memory helpers; only build a
+port instrument after the oracle control confirms the watch is live. A retail
+write with no guest PC plus a matching port transition selects
+`H-RuntimeTableWrite`; a guest PC outside the known generated writers selects
+`H-IndirectGuestTableWrite`; a reset/phase transition with no corresponding
+write selects `H-StaleTableState`. A null watch without its positive control is
+unevaluable.
 
-Ground truth completed in Session 3354. Do not build until the bounded static
-audit selects one writer, alias, or dispatcher outcome; this unit is static
-and should not require a runtime build.
+Exact commands: inspect `tools/oracle/README.md` and the existing oracle recipe
+before preparing one watch matrix; use `rg -n
+'callback_table|11A8A4|registerSiCallback' src lib tools`; do not build or
+change behavior until the oracle watch/control is positively armed.

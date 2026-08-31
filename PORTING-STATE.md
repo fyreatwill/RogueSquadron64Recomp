@@ -129627,3 +129627,18 @@ contains only the synth target. This rules out a consumer status gate and a
 probe-label mismatch, but does not identify the writer of the port occupants.
 No behavior change or mitigation was made. Evidence:
 `scratch/agent/s3354_m5_consumer_source_census.md`.
+## Session 3355 (2026-08-31) — audited M5 callback-table writers and dispatcher
+
+Ran the bounded static census required by Session 3354: searched the current
+generated tree for every effective-address construction of
+`0x8011A8A4..0x8011A8B0`, all `registerSiCallback` callers, and the
+`0x80019B68` load / `0x80019B74` indirect-dispatch sequence. The only
+generated writer is `registerSiCallback` at `0x80007928`, the only generated
+clear is `findAndZeroTableSlotMatching` at `0x80007968`, and the direct
+callers supply `0x80003250` and `0x8009B5A8`. The dispatcher uses the same
+base and correct four-slot `LOOKUP_FUNC` sequence. No generated writer,
+alternate alias, or dispatcher defect explains the port's three
+`0x8009123C` occupants. This refutes `H-PortTableAlias` and
+`H-PortDispatcher`; it leaves a runtime or unresolved indirect writer class,
+not a behavior change. Evidence:
+`scratch/agent/s3355_m5_callback_table_static_audit.md` (single-source).
