@@ -129181,3 +129181,24 @@ This selects no hypothesis. It rules out a missing generated body and a
 simple range mismatch, but cannot prove a caller gate without classifying the
 callback-table writers and installed target values. No behavior change was
 made. Evidence: `scratch/agent/s3331_m5_slot_status_source_audit.md`.
+
+## Session 3332 (2026-08-30) — audited M5 callback-table population
+
+The prescribed bounded static audit inspected the generated tree and
+companion symbols for the `0x80019B74` dispatcher, callback table, and named
+voice PCs. No build or game run was performed. `viRetraceHandlerThread`
+walks four entries at `0x8011A8A4` and invokes non-null entries through
+`jalr` at `0x80019B74`. The only two generated `registerSiCallback` callsites
+are `startSiPollingThread` `0x80002FDC`, which passes `0x80003250`, and
+`initMusyXVoiceTable` `0x8009BC50`, which passes `0x8009B5A8`.
+
+This selects `H-CallbackTargetsInstalled` for `0x8009B5A8` and refutes
+callback-target absence for that target. `0x8009BD7C` is
+`accumulateVoiceSampleOffset`, a downstream voice routine with no generated
+registration callsite; the premise that it is a second callback-table target
+is unsupported. Static source shows no local predicate around the
+`initMusyXVoiceTable` registration, but does not prove initializer reachability
+on the qualified port route or classify the indirect child edge. This is
+single-source evidence and authorizes no M5 Step 3 change.
+
+Evidence: `scratch/agent/s3332_m5_callback_table_audit.md`.

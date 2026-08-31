@@ -1,39 +1,37 @@
-# NEXT work unit — audit callback-table population for the missing slot/status edge
+# NEXT work unit — capture callback registration and voice-child reachability
 
-HYPOTHESIS-ID: m5-slot-status-callback-table-audit
+HYPOTHESIS-ID: m5-callback-reachability-after-static-audit
 
-Session 3331 found all four retail consumer PCs as generated bodies, but the
-three voice-side bodies have no direct generated callsite. Perform one bounded
-static audit of the indirect callback table around `0x80019B74`; do not build,
-run, change behavior, or add a mitigation.
+Session 3332 proved that `0x80019B74` walks the SI callback table at
+`0x8011A8A4`, and that `initMusyXVoiceTable` registers `0x8009B5A8` while
+`0x8009BD7C` is a child routine with no registration callsite. Perform one
+ground-truth-first reachability capture; do not change behavior or add a
+mitigation.
 
 ## Competing hypotheses
 
-- `H-CallbackTargetsInstalled`: the callback table contains the expected
-  `0x8009B5A8` and `0x8009BD7C` targets and its initializer is reachable.
-- `H-CallbackTargetsAbsent`: one or both targets are never written into the
-  table, selecting callback-table/source coverage as the missing edge.
-- `H-CallbackTargetsGated`: the targets are written, but the table initializer
-  is behind a predicate that is false on the qualified port route.
+- `H-PortInitAndChildReached`: port reaches `initMusyXVoiceTable`, dispatches
+  `0x8009B5A8`, and reaches the indirect `0x8009BD7C` child in hangar.
+- `H-PortInitReachedChildMissing`: port registers/dispatches `0x8009B5A8`,
+  but the child edge remains absent while retail reaches it.
+- `H-PortInitializerMissing`: positive callback controls fire, but the port
+  never reaches `initMusyXVoiceTable` or registers `0x8009B5A8`.
 
 ## Discriminator
 
-No build or runtime run. From the repository root, inspect the current
-generated tree and callback setup/dispatch code:
+Ask the independent retail oracle first for the same target-phase controls,
+then build one port instrument containing all arms and controls. Retain the
+whole-RDRAM positive control, callback-registration source `0x80007910`, VI
+dispatcher `0x80019B74`, `initMusyXVoiceTable` entry `0x8009BBA0`,
+`serviceVoicePoolFrame` entry `0x8009B5A8`, and `accumulateVoiceSampleOffset`
+entry `0x8009BD7C`, plus the existing slot/status rows. Phase-gate at VI-512.
 
-    rg -n -i '80019b68|80019b74|80019b78|8009b5a8|8009bd7c|8009bde8' \
-      /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
-    rg -n -i '8012a4a4|8012a4a8|callback|jalr|0x8009b5a8|0x8009bd7c' \
-      /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
-      /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+A port row for initializer + dispatcher target + child, with retail rows for
+the same PCs, selects the first hypothesis. Initializer/registration and
+dispatcher rows without the child select the second. Missing initializer or
+registration rows with positive callback controls select the third. Any
+missing positive control makes the capture unevaluable and requires a fixed
+rerun in the same iteration.
 
-Enumerate every store feeding the callback slots and the immediate
-initialization/caller chain. `H-CallbackTargetsInstalled` requires both target
-values plus a reachable initializer; `H-CallbackTargetsAbsent` requires a
-complete writer census with neither value; `H-CallbackTargetsGated` requires
-the target writes plus a concrete false predicate. If any slot or writer
-cannot be classified, record the unresolved site list and redesign rather
-than infer a hypothesis.
-
-The Session 3330 qualification and Session 3331 audit authorize no Step 3
-contract change.
+The Sessions 3330–3332 qualification/audit authorize no Step 3 contract
+change.
