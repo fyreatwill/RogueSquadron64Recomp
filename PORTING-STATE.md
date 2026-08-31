@@ -131994,3 +131994,22 @@ SIGKILLed after the capture window with no crash marker. Evidence:
 
 ORIGIN: no mitigation or runtime behavior change was added; the observed port
 table selections are legitimate game-state pointers.
+
+## Session 3470 (2026-08-31) — audited port selection/output join
+
+The prescribed join used the qualified Session 3469 port capture and the
+corrected Session 3468 retail post-value capture. Port controls were live:
+2,048 ordered output/state rows and 2,048 ordered table-selection rows were
+present in the title phase. Retail retained 2,261 ordered post-value rows at
+the title origins. The join was not discriminating because port rows carry
+per-call `entry`/`selected` identity while retail rows carry VI ordinal,
+writer PC, store address, and value; no shared invocation or selected-entry
+key exists. The nonempty rows and controls rule out an absent port
+observation, but neither output-state nor later-selection hypothesis is
+selected. Evidence: `docs/M5-S3470-OUTPUT-STATE-JOIN.md`.
+
+This rules out treating the aggregate `0x801Bxxxx` family overlap as an
+ordinal cross-runtime match. The next unit adds the phase-scoped oracle tuple
+witness to the port and joins it to the existing port output/state rows.
+
+ORIGIN: no mitigation or runtime behavior change was added.

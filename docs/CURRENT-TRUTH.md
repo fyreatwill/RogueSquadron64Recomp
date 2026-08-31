@@ -246,13 +246,21 @@ and selects the downstream output/state value contract as the next boundary;
 it does not yet provide an ordinal cross-runtime join. Evidence:
 [M5-S3469-PORT-TABLE-SELECTION.md](M5-S3469-PORT-TABLE-SELECTION.md).
 
+Session 3470 attempted the prescribed port-selection/output-state join. The
+port controls and ordered rows were live, but the retained retail post-value
+rows are keyed by VI ordinal, writer PC, store address, and value; they lack
+the port selection entry/identity and shared invocation ordinal. Thus the
+cross-runtime join is unevaluable, not a null, and neither output-state nor
+later-selection hypothesis is selected. Evidence:
+[M5-S3470-OUTPUT-STATE-JOIN.md](M5-S3470-OUTPUT-STATE-JOIN.md).
+
 ## Next steps
 
-1. Join the qualified port table-selection and output/state rows to the
-   Session 3468 retail post-store values by title phase, selected entry, and
-   ordinal. Matching selections with divergent output/state values select the
-   output contract; a divergent entry selects a later selection edge; absent
-   ordered rows remain unevaluable.
+1. Add one phase-scoped port witness carrying the oracle tuple
+   `(pc,s0,s1,source_word,branch_selector,source_byte,branch_state)` at all
+   four target PCs, then join by phase and ordinal to the existing consumer/
+   output rows. Matching fields close the boundary; the first divergent field
+   selects the missing contract edge; absent ordered rows are unevaluable.
 2. Retain the Session 3468 retail post-store table as the independent baseline;
    do not repeat the retail-only capture unless the port witness changes.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
@@ -260,13 +268,7 @@ it does not yet provide an ordinal cross-runtime join. Evidence:
 4. Use the producer join to identify the first output/state contract divergence
    after the qualified title pointer boundary. Matching fields close the
    boundary; the first divergent field selects the missing contract edge.
-5. Add one phase-scoped port witness table matching the oracle's
-   `(pc,s0,s1,source_word,branch_selector,source_byte,branch_state)` fields at
-   all four target PCs, then join it by phase and ordinal to the existing
-   consumer/output rows. Matching fields close the boundary; the first
-   divergent field selects the missing contract edge; absent ordered rows are
-   unevaluable.
-6. Locate the first output/state contract divergence after the now-qualified
+5. Locate the first output/state contract divergence after the now-qualified
    title pointer boundary. Join the retail `0x80001CB8`/`0x80001CC8` rows to
    output value and state-word fields, then compare the existing port rows;
    a matching pointer but divergent output selects the output contract, while
