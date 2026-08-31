@@ -129202,3 +129202,27 @@ on the qualified port route or classify the indirect child edge. This is
 single-source evidence and authorizes no M5 Step 3 change.
 
 Evidence: `scratch/agent/s3332_m5_callback_table_audit.md`.
+
+## Session 3333 (2026-08-30) — qualified M5 callback reachability and port target mismatch
+
+The ground-truth-first retail Rice capture passed its whole-RDRAM positive
+control with 38,859 writes, callback-table writes with 19 hits, and both
+target phases. Retail executed `initMusyXVoiceTable` (`0x8009BBA0`) twice,
+`serviceVoicePoolFrame` (`0x8009B5A8`) 2,169 times, and
+`accumulateVoiceSampleOffset` (`0x8009BD7C`) 1,163 times in the 75-second
+route; the child had both expected caller PCs.
+
+The single qualified port run passed the VI, audio-task/DMA, PCM, route, and
+filter positive controls and reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. Its callback-table state poll contained `0x80003250` and
+`0x8009123C`, but never `0x8009B5A8`. Its dispatcher trace likewise observed
+the synth target rather than `serviceVoicePoolFrame`; no initializer, service,
+or child rows fired. Hangar voice-slot polling did fire and observed a
+`max=1` slot transition from inactive to active, so the null was not caused by
+missing phase coverage or an inert probe.
+
+This selects `H-PortInitializerMissing` for the qualified route and rules out
+the hypothesis that the port merely reaches the service callback but misses
+its child. It does not identify the writer that installed `0x8009123C`, so no
+behavior change or mitigation was made. Evidence:
+`scratch/agent/s3333_m5_callback_reachability.md`.

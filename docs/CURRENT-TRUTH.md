@@ -4,9 +4,19 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3332 (2026-08-30). Compacted from
+Current maintenance marker: Session 3333 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3333 completed the M5 callback reachability capture. Retail reaches
+`initMusyXVoiceTable` (`0x8009BBA0`), dispatches `0x8009B5A8`, and reaches
+`0x8009BD7C` in hangar. The qualified port reaches the same title/hangar
+phases and all positive task/PCM controls, but its callback table contains
+`0x8009123C` rather than `0x8009B5A8`; no port initializer, service, or child
+rows fire. This selects `H-PortInitializerMissing` for the route. The result
+identifies a missing registration/initializer path but not its writer, so no
+behavior change is authorized. Evidence:
+`scratch/agent/s3333_m5_callback_reachability.md`.
 
 Session 3332 completed the M5 callback-table population audit. The
 `0x80019B74` VI-retrace dispatcher walks the four-entry SI callback table at
@@ -158,12 +168,12 @@ the join's 640-only latch filter. Evidence:
 
 ## Live investigation (s3303–s3324)
 
-The Session 3332 source audit proves the callback table's registration edge
-for `0x8009B5A8` but leaves its qualified-route reachability and the indirect
-`0x8009BD7C` child edge unresolved. The next useful boundary is a
-ground-truth-first reachability capture retaining callback registration,
-dispatcher target, `initMusyXVoiceTable` entry, and the existing slot/status
-controls. Do not change behavior based on the static census.
+Session 3333 closes the first reachability boundary: retail has the expected
+initializer, service callback, and child edge, while the port installs and
+dispatches `0x8009123C` in their place. The next boundary is writer/source
+attribution for the port's callback-table population, retaining the same
+retail whole-RDRAM and target-phase controls. Do not change behavior based on
+the target mismatch alone.
 
 Session 3320 closed the independent retail target-publication discriminator.
 The no-video setup correction and the join-cap limitation are recorded in the
@@ -411,16 +421,19 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3330–3332:
+1. M5 Step 1 remains `H-ContractGap`, now narrowed by Sessions 3330–3333:
    the reachable port hangar has valid task/PCM controls but no slot/status
    rows or named retail consumer-PC executions, selecting
    `H-PortSlotStatusMissing` on single-source port evidence. The callback audit
    proves `0x8009B5A8` is registered by `initMusyXVoiceTable`, while
    `0x8009BD7C` is not a table target. The voice probe is inactive
    (`max=1 active=0`) but this is not yet a replacement for the
-   slot/status finding. Next: capture initializer, callback-dispatch, and
-   indirect-child reachability on qualified port/retail routes, retaining the
-   slot/status controls before any Step 3 change.
+   slot/status finding. Session 3333 shows retail reaches the initializer,
+   service callback, and child, while the port callback table installs the
+   synth target `0x8009123C` instead of `0x8009B5A8`. Next: attribute the port
+   callback-table writer and initializer caller on a qualified route, keeping
+   the slot/status controls and retail whole-RDRAM control. Do not change a
+   contract edge or add a mitigation.
    Do not add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

@@ -1,37 +1,34 @@
-# NEXT work unit — capture callback registration and voice-child reachability
+# NEXT work unit — attribute the port callback-table writer
 
-HYPOTHESIS-ID: m5-callback-reachability-after-static-audit
+HYPOTHESIS-ID: m5-callback-writer-attribution-after-reachability
 
-Session 3332 proved that `0x80019B74` walks the SI callback table at
-`0x8011A8A4`, and that `initMusyXVoiceTable` registers `0x8009B5A8` while
-`0x8009BD7C` is a child routine with no registration callsite. Perform one
-ground-truth-first reachability capture; do not change behavior or add a
-mitigation.
+Session 3333 showed retail reaches `initMusyXVoiceTable`, dispatches
+`0x8009B5A8`, and reaches `0x8009BD7C`, while the port reaches the same target
+phase but installs/dispatches `0x8009123C` and has no initializer/service/child
+rows. Attribute the port-side writer/caller before considering any behavior
+change.
 
 ## Competing hypotheses
 
-- `H-PortInitAndChildReached`: port reaches `initMusyXVoiceTable`, dispatches
-  `0x8009B5A8`, and reaches the indirect `0x8009BD7C` child in hangar.
-- `H-PortInitReachedChildMissing`: port registers/dispatches `0x8009B5A8`,
-  but the child edge remains absent while retail reaches it.
-- `H-PortInitializerMissing`: positive callback controls fire, but the port
-  never reaches `initMusyXVoiceTable` or registers `0x8009B5A8`.
+- `H-PortCallbackWriterIsInit`: the port reaches `initMusyXVoiceTable`, but a
+  wrong callback value is written at its registration site.
+- `H-PortCallbackWriterIsOther`: another qualified caller writes
+  `0x8009123C`, and the initializer is not the source of the mismatch.
+- `H-PortCallbackWriterUnobserved`: callback-table polling misses a transient
+  registration or the initializer/caller instrumentation is not on the live
+  path.
 
 ## Discriminator
 
-Ask the independent retail oracle first for the same target-phase controls,
-then build one port instrument containing all arms and controls. Retain the
-whole-RDRAM positive control, callback-registration source `0x80007910`, VI
-dispatcher `0x80019B74`, `initMusyXVoiceTable` entry `0x8009BBA0`,
-`serviceVoicePoolFrame` entry `0x8009B5A8`, and `accumulateVoiceSampleOffset`
-entry `0x8009BD7C`, plus the existing slot/status rows. Phase-gate at VI-512.
+Ask the independent retail oracle first, retaining whole-RDRAM, callback-table
+write, `0x80007910`, `0x80019B74`, `0x8009BBA0`, `0x8009B5A8`, and
+`0x8009BD7C` controls. Then build one port instrument with entry/callsite marks
+for `0x80066AA4 -> 0x8009BBA0`, the `0x8009BC50` registration call, and the
+callback-table state poll, plus the existing slot/status controls. Phase-gate
+at VI-512. Init plus registration-site rows with a wrong stored value select
+`H-PortCallbackWriterIsInit`; callback-table writes without init rows select
+`H-PortCallbackWriterIsOther`; no writer rows despite positive controls select
+`H-PortCallbackWriterUnobserved`. Any missing positive control invalidates the
+run and requires a fixed rerun in this iteration.
 
-A port row for initializer + dispatcher target + child, with retail rows for
-the same PCs, selects the first hypothesis. Initializer/registration and
-dispatcher rows without the child select the second. Missing initializer or
-registration rows with positive callback controls select the third. Any
-missing positive control makes the capture unevaluable and requires a fixed
-rerun in the same iteration.
-
-The Sessions 3330–3332 qualification/audit authorize no Step 3 contract
-change.
+No Step 3 contract change or mitigation is authorized.
