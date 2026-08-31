@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3451 (2026-08-31). This record was
+Current maintenance marker: Session 3453 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -72,33 +72,45 @@ source fields. That difference is not a contract selection because the arms
 run separately through an animating title scene. Output/state parity remains
 unevaluable until port rows are joined to retail by phase, PC, and ordinal.
 
+Session 3453 performed that controlled join. At title origin `0x00790400`,
+the first joined row diverges in `s0` at all four target PCs for both port
+arms; no exact six-field tuple matches in the common prefixes. The port
+four-PC control and independent retail whole-RDRAM control both fired, so this
+selects a real first output/state-context divergence and rules out an absent
+port hook. It does not identify the writer of `s0`; the next probe must trace
+the producer feeding the target calls.
+
 ## Next steps
 
-1. Join the now-controlled port schema rows to the oracle's phase-scoped
-   `(pc,s0,s1,source_word,branch_selector,source_byte,branch_state)` rows by
-   phase, PC, and ordinal; do not compare sequential silent/image rows as an
-   animated A/B.
-2. Use the joined table to identify the first output/state contract divergence
+1. Trace the producer/writer of the first divergent `s0` context into the four
+   target calls, with a phase-scoped positive-control table containing the
+   producer PC, target PC, ordinal, `s0`, `s1`, source word, branch selector,
+   branch state, and output/state fields. If the producer value already
+   differs, select the producer/input contract; if it matches but target-entry
+   `s0` differs, select wrapper/ABI clobber; an absent ordered producer join is
+   unevaluable.
+2. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
+   sequential silent/image rows as an animated A/B.
+3. Use the producer join to identify the first output/state contract divergence
    after the qualified title pointer boundary. Matching fields close the
-   boundary; the first divergent field selects the missing contract edge;
-   absent ordered rows remain unevaluable.
-3. Add one phase-scoped port witness table matching the oracle's
+   boundary; the first divergent field selects the missing contract edge.
+4. Add one phase-scoped port witness table matching the oracle's
    `(pc,s0,s1,source_word,branch_selector,source_byte,branch_state)` fields at
    all four target PCs, then join it by phase and ordinal to the existing
    consumer/output rows. Matching fields close the boundary; the first
    divergent field selects the missing contract edge; absent ordered rows are
    unevaluable.
-4. Locate the first output/state contract divergence after the now-qualified
+5. Locate the first output/state contract divergence after the now-qualified
    title pointer boundary. Join the retail `0x80001CB8`/`0x80001CC8` rows to
    output value and state-word fields, then compare the existing port rows;
    a matching pointer but divergent output selects the output contract, while
    a missing ordered join remains unevaluable.
-5. Keep M5 Step 3 gated until that output comparison names one missing
+6. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
    generated patch input.
-6. After M5 closes or a new discriminator is found, resume only systematic M3
+7. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep external retail-entry, hangar `0x8000`
    Y/accumulator arithmetic, and SP-yield/MORT publication threads parked.
    Generated-symbol renaming is last priority and remains closed at its

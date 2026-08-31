@@ -131655,3 +131655,14 @@ retail oracle rows, but that field divergence is single-source because the
 image schema control failed. This rules out closing the output/state boundary
 or declaring parity; the next work unit repairs the image control and reruns
 both arms. No mitigation or game behavior was changed.
+## Session 3453 (2026-08-31) — joined controlled output-state schema
+
+Joined the existing controlled silent and Factor 5 image port logs to the
+independent retail oracle by title phase, PC, and per-PC ordinal. Both port
+arms had the four-PC positive-control marker; the oracle had the independent
+whole-RDRAM control. The first joined row diverged in `s0` at all four target
+PCs in both arms, with zero exact six-field tuple matches in the common
+prefixes. This selects a real first output/state-context divergence and rules
+out an absent port hook. It does not identify the writer of `s0`; sequential
+silent/image differences remain unusable as an animated A/B. Evidence is
+archived in `docs/M5-S3453-OUTPUT-STATE-JOIN.md`.
