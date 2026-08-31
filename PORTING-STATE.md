@@ -130783,3 +130783,21 @@ the observed edge; it does not identify why the producer input is zero. No
 waits, slots, dispatch, clear behavior, or PCM writeback changed. Evidence is
 `docs/M5-S3412-DOWNSTREAM-PRODUCER.md` and
 `scratch/agent/s3411_m5_downstream_join/driver.log`.
+
+## Session 3413 (2026-08-31) — M5 retail source-span ground truth
+
+The prescribed retail source-span oracle first failed with Rice during GLSL
+compilation (117 undeclared-identifier errors, exit 138 before summaries).
+The identical watch recipe rerun with installed Glide64mk2 completed the full
+120-second window and 7,171 VI frames. Its whole-RDRAM positive control
+reached 10,000 writes; `0x800078EC` executed 9,667 times, all with
+`prev=0x800078EC`; and physical `0x1797B0:0x179A48` had zero writes. No
+phase-qualified source-span rows were emitted, so the planned hangar
+classification is unevaluable. This provides a valid global negative but
+selects neither retail-nonzero nor shared-zero and does not establish that
+the port zero span is legitimate. The next probe maps the producer against
+both the port span and the previously observed retail destination
+`0x1935E0`. No port behavior or audio path changed. Evidence:
+`docs/M5-S3413-RETAIL-SOURCE-SPAN.md`,
+`scratch/agent/s3413_retail_source_span/oracle.log`, and
+`scratch/agent/s3413_retail_source_span_glide/oracle.log`.

@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3412 (2026-08-31). This file was compacted
+through Session 3413 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -262,17 +262,29 @@ control produced no image-stage rows and PCM stayed zero. This selects
 boundary, and does not establish why the producer input is zero. Evidence is
 in [M5-S3412-DOWNSTREAM-PRODUCER.md](M5-S3412-DOWNSTREAM-PRODUCER.md).
 
+Session 3413 ran the prescribed retail source-span oracle. The Rice-plugin
+attempt failed during GLSL compilation, so it was rerun with the installed
+Glide64mk2 plugin. The repaired run completed 120 seconds, passed the
+whole-RDRAM positive control at 10,000 writes, and observed `0x800078EC`
+9,667 times, but recorded zero writes to physical `0x1797B0:0x179A48` and no
+phase-qualified source-span rows. All producer execution rows had
+`prev=0x800078EC`. This is a valid global negative but the planned hangar
+classification is unevaluable because the phase bucket was absent; it selects
+neither retail-nonzero nor shared-zero. Evidence is in
+[M5-S3413-RETAIL-SOURCE-SPAN.md](M5-S3413-RETAIL-SOURCE-SPAN.md).
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Ask the independent retail oracle for the corresponding source-span
-   census: phase-gate hangar origin `0x006AB400`, watch physical
-   `0x1797B0:0x179A48` and producer `0x800078EC`, and retain post-store values
-   plus whole-RDRAM/title/hangar controls. Establish the retail value before
-   adding another port instrument. Do not change waits, slots, dispatch, clear
-   behavior, or PCM writeback.
+1. Ask the independent retail oracle to map the producer destination in one
+   run: retain the whole-RDRAM control and producer watch, and watch both the
+   port source span `0x1797B0:0x179A48` and the previously observed retail
+   destination `0x1935E0:0x1935F0`, with post-store values and the hangar phase
+   gate. The s3413 global negative is not phase-qualified and cannot classify
+   the source. Do not add port instrumentation or change waits, slots,
+   dispatch, clear behavior, or PCM writeback.
 2. Keep the completion-safe oracle checkpoint as the ground-truth control and
    retain post-store sampling for the target span. The field348 input-to-clear
    edge is closed; do not repeat it unless a new writer discriminator is added.
@@ -384,6 +396,7 @@ writer and initializer ordering are the measured explanation.
 Latest M5 evidence:
 
 - `docs/M5-S3409-052C4-JOIN.md`
+- `docs/M5-S3413-RETAIL-SOURCE-SPAN.md`
 - `docs/M5-S3402-SLOT-PREPHASE.md`
 - `docs/M5-S3401-FIELD348-INPUT.md`
 - `scratch/agent/s3386_m5_direct_writer_census.md`

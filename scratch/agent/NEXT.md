@@ -1,31 +1,32 @@
-# NEXT work unit — retail source-span ground truth
+# NEXT work unit — map retail producer destination
 
-HYPOTHESIS-ID: m5-retail-source-span-ground-truth
+HYPOTHESIS-ID: m5-retail-producer-destination-map
 
-Session 3412 port result: both phase-qualified arms completed; `0x800078EC`
-ran on the joined hangar route but wrote only zero bytes into the source span,
-and stage 3 copied zero DMEM to `0x801798B0`. The next unit must establish the
-retail value at the same physical span before any new port instrumentation.
+Session 3413 established only a global retail negative: the producer executed
+9,667 times, but the port source span had zero writes and no phase-qualified
+rows. The next unit must determine whether retail publishes to the previously
+observed destination instead.
 
 Competing hypotheses and discriminating measurement:
 
-- H-RetailSourceNonzero: retail writes nonzero bytes in the corresponding
-  hangar source span from `0x800078EC`; nonzero post-store samples select this.
-- H-RetailSourceZero: retail reaches the producer but all corresponding
-  post-store samples are zero; this selects a shared legitimate-zero/input
-  explanation over a port-only producer gap.
-- H-RetailProducerAbsent: controls pass, but no producer or span writes occur in
-  the hangar bucket; this selects a route or attribution mismatch and requires
-  a new discriminator.
+- H-RetailPublishes1935E0: hangar-phase writes from `0x800078EC` land in
+  physical `0x1935E0:0x1935F0`, with nonzero post-store values; this selects a
+  retail destination mismatch against the port span.
+- H-RetailPublishes1797B0: hangar-phase writes land in physical
+  `0x1797B0:0x179A48`; nonzero post-store values select the corresponding
+  source-span contract.
+- H-RetailPublishesNeither: both destination watches remain empty in the
+  hangar bucket while producer execution is controlled; this selects an
+  unresolved producer-route/phase attribution problem.
 
 The single discriminator is one retail-oracle run with whole-RDRAM positive
-control, title/hangar VI gates, `--watch-write 0x1797B0:0x179A48`,
-`--watch-pc 0x800078EC`, phase logging for origin `0x006AB400`, and post-store
-sampling for `0x800078EC`. Require complete controls and a hangar-bucket
-payload histogram before classifying.
+control, the producer execution watch, both destination watches, post-store
+sampling, and a hangar-phase writer histogram. Require complete controls and
+both destination histograms before classifying.
 
 Exact commands:
 
-1. `mkdir -p scratch/agent/s3413_retail_source_span && tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 120 --watch-write 0x0:0x800000 --watch-write 0x1797B0:0x179A48 --watch-pc 0x800078EC --pc-phase-log 0x006AB400 --post-value-pc 0x800078EC > scratch/agent/s3413_retail_source_span/oracle.log 2>&1`
-2. Check whole-RDRAM, title/hangar, producer execution, and span/post-value
-   summaries; classify only if all controls and the hangar bucket are present.
+1. `mkdir -p scratch/agent/s3414_retail_destination_map && tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-glide64mk2.dylib --secs 120 --watch-write 0x0:0x800000 --watch-write 0x1797B0:0x179A48 --watch-write 0x1935E0:0x1935F0 --watch-pc 0x800078EC --pc-phase-log 0x006AB400 --pc-hist-watch 1 --pc-hist-watch 2 --pc-hist-phase 0x006AB400 --post-value-watch 1 --post-value-watch 2 --post-value-pc 0x800078EC > scratch/agent/s3414_retail_destination_map/oracle.log 2>&1`
+2. Check whole-RDRAM, title/hangar, producer execution, both destination
+   histograms, and retained post-values; classify only if the controls and
+   hangar bucket are complete.
