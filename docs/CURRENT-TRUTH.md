@@ -8,6 +8,15 @@ Current maintenance marker: Session 3340 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
+Session 3341's retail ground truth passed the whole-RDRAM control and recorded
+zero writes at the requested physical `0x001099D4` watch, while generated
+address arithmetic shows the indirect load at `0x800919D4` actually reads
+physical `0x001499D4`, initialized by store PC `0x80091900`. A port probe
+observed that store writing `0x80007910` in phase 2, but both corrected port
+retries crashed in the scheduler before title/hangar controls. The pointer
+source remains unresolved; no behavior change is authorized. Evidence:
+`scratch/agent/s3341_m5_callback_pointer_source.md`.
+
 Session 3340 selected `H-IndirectTransfer`: retail's independent
 `registerSiCallback` previous-PC histogram includes `0x800919EC` (5/9), and
 the port's regeneration-surviving transfer marker shows that site passing
@@ -502,8 +511,12 @@ target row exists.
    independent previous-PC edge; the direct `0x8009BC50` site supplies
    `0x8009B5A8`. Next: identify the writer/source of the function pointer
    loaded at `0x800919D4`, retaining the retail whole-RDRAM and port
-   task/host/title/hangar controls. Do not change a contract edge or add a
-   mitigation.
+   task/host/title/hangar controls. Session 3341's retail watch at
+   `0x001099D4` was quiet, while the port's concrete initializer store at
+   `0x80091900` emitted `0x80007910`; both port retries crashed before target
+   phases, so this is route-invalid and selects no pointer-source hypothesis.
+   Re-run the same probe only after restoring a target-valid route; do not
+   change a contract edge or add a mitigation.
    Do not add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

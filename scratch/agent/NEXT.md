@@ -1,47 +1,35 @@
-# NEXT work unit — identify the indirect callback pointer source
+# NEXT work unit — restore a valid route for the pointer-source capture
 
 HYPOTHESIS-ID: m5-callback-indirect-pointer-source
 
-## What has run and what artifacts exist
+Session 3341 added a regeneration-safe probe at the concrete port store
+`0x80091900` and observed `0x80007910`, but two retries crashed in the
+scheduler before target phases. Retail's requested `0x001099D4` watch passed
+the positive control and remained at zero writes; the actual generated load
+address is physical `0x001499D4`.
 
-Session 3340 proved that retail reaches `registerSiCallback` from
-`0x800919EC` five times, and the port's marker at that indirect site passes
-`0x8009123C` into the entry in title and hangar phases. The load immediately
-before the call is `lw $v0, -0x662C($v0)` at `0x800919D4`, reading physical
-`0x001099D4`; the next writer/source boundary is unresolved.
+Competing hypotheses remain:
 
-## Competing hypotheses
-
-- `H-PointerWriter`: a generated guest writer sets the indirect function
-  pointer at `0x801099D4` to `0x80007910` or an equivalent callback target.
+- `H-PointerWriter`: a guest writer sets the indirect callback pointer.
 - `H-StalePointer`: the port's pointer is pre-existing/stale and the indirect
-  call is only a consumer; no target-phase writer occurs.
-- `H-HostDispatch`: the pointer is supplied by a host/runtime overlay or
-  loader path, so neither generated writer census nor retail guest writes
-  identifies it.
+  call is only a consumer.
+- `H-HostDispatch`: a host/runtime path supplies the pointer.
 
-The discriminating measurement is one same-run writer census for physical
-`0x001099D4:0x001099D8`, with retail and port arms plus whole-RDRAM positive
-controls. A target-phase retail writer identifies `H-PointerWriter`; no
-retail writer but a target-phase port writer selects `H-StalePointer` as a
-port-only defect; no writer in either arm with valid indirect transfers
-selects `H-HostDispatch`. A null is invalid unless the whole-RDRAM control
-fires.
+The discriminating measurement remains a same-run writer census with retail
+and port arms plus whole-RDRAM positive controls, but the port route must first
+reach title 1024 and hangar 512. A target-phase retail writer at the actual
+physical slot identifies `H-PointerWriter`; no retail writer but a target-phase
+port writer selects `H-StalePointer`; no writer in either arm with valid
+indirect transfers selects `H-HostDispatch`. A null is invalid unless the
+whole-RDRAM control fires.
 
-## Exact next commands
-
-Before adding a new instrument, run the retail oracle with the existing
-whole-RDRAM positive control and a physical write watch on
-`0x001099D4:0x001099D8`, plus the existing callback execution watch:
-
-    tools/oracle/build/rs64_oracle --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom ../rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 120 --watch-write 0x0:0x800000 --watch-write 0x1099D4:0x1099D8 --watch-pc 0x80007910 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150
-
-Then add the corresponding phase-gated port writer census through the fixup
-path, build once, and run:
+The fixup and current generated artifact contain the port writer census. First
+diagnose/restore the early scheduler crash without changing behavior; then
+rebuild once and run:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/run_s3333_m5_callback_reachability.sh
+    env ROGUESQ_LOG_M5_CALLBACK_WRITER=1 zsh scratch/agent/run_s3333_m5_callback_reachability.sh
 
 The positive-control rows must include host-boundary and task-handoff controls,
-and the run must reach title 1024 and hangar 512. No pointer writer or
-behavioral change is authorized until both arms are valid.
+and the run must reach title 1024 and hangar 512. No pointer-source conclusion
+or behavioral change is authorized until the port arm is valid.

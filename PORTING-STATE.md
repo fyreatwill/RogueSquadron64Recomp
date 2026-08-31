@@ -129359,3 +129359,20 @@ explanation, and identifies the next boundary as the writer/source of the
 function pointer loaded at `0x800919D4`. The entry `$ra` remained zero and is
 not used as caller evidence. No behavior change or mitigation was made.
 Evidence: `scratch/agent/s3340_m5_callback_transfer.md`.
+
+## Session 3341 (2026-08-30) — instrumented indirect callback pointer store
+
+The independent retail oracle passed the whole-RDRAM positive control at
+10,000 writes, recorded zero writes at the requested physical
+`0x001099D4:0x001099D8` watch, and executed `registerSiCallback` 11 times.
+Static address arithmetic shows the generated load at `0x800919D4` reads
+physical `0x001499D4`, initialized by store PC `0x80091900`; the requested
+watch was a distinct address.
+
+Added the regeneration-safe pointer-store marker to the fixup and rebuilt the
+Debug target. The first port attempt emitted `0x80091900 -> 0x80007910` in
+phase 2 but crashed in the scheduler before target phases. A retry emitted the
+same row and the same early scheduler crash. Host/target phase controls
+therefore did not validate this port arm; no pointer-source hypothesis is
+selected and no behavior change was made.
+Evidence: `scratch/agent/s3341_m5_callback_pointer_source.md`.
