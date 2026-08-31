@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3460 (2026-08-31). This record was
+Current maintenance marker: Session 3461 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -148,36 +148,47 @@ control-failure interpretations at this scope. The later
 Port-versus-retail value legitimacy remains unevaluable until the rows are
 joined; evidence: [M5-S3460-SOURCE-VALUE-WITNESS.md](M5-S3460-SOURCE-VALUE-WITNESS.md).
 
+Session 3461 repeated the prescribed title source-writer capture. The port
+reached origin `0x00790400`, passed the earlier width-640 writer control, and
+emitted 1,024 ordered rows: 768 at `0x800644B0` and 256 at `0x80064524`, all
+with value zero. It later left title and crashed in the existing
+`musyxSynthFrame+4268` path. The retained retail artifact has only phase/PC
+totals and value histograms, not ordered phase/PC/value rows, so the planned
+cross-runtime ordinal join is unevaluable; no source-contract hypothesis is
+selected. Evidence: [M5-S3461-SOURCE-VALUE-JOIN.md](M5-S3461-SOURCE-VALUE-JOIN.md).
+
 ## Next steps
 
-1. Join the qualified port title source-writer rows to the independent retail
-   post-store writer/value table by phase, PC, and ordinal. Use the existing
-   title control and source rows as the port positive controls; do not alter
-   waits, slots, dispatch, clear behavior, or PCM writeback. A matching
-   writer/value sequence closes this source boundary; a first value or writer
-   divergence selects the next contract edge.
-2. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
+1. Obtain a new independent retail oracle capture with ordered title
+   phase/PC/post-store-value rows for physical `0x001E8710:0x001E8714`, plus
+   the whole-RDRAM positive control. The existing retail histogram cannot
+   discriminate the source-writer hypotheses; do not add port fields.
+2. Join the qualified port title source-writer rows to that ordered retail
+   table by phase, PC, and ordinal. A matching writer/value sequence closes
+   this source boundary; a first value or writer divergence selects the next
+   contract edge.
+3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
-3. Use the producer join to identify the first output/state contract divergence
+4. Use the producer join to identify the first output/state contract divergence
    after the qualified title pointer boundary. Matching fields close the
    boundary; the first divergent field selects the missing contract edge.
-4. Add one phase-scoped port witness table matching the oracle's
+5. Add one phase-scoped port witness table matching the oracle's
    `(pc,s0,s1,source_word,branch_selector,source_byte,branch_state)` fields at
    all four target PCs, then join it by phase and ordinal to the existing
    consumer/output rows. Matching fields close the boundary; the first
    divergent field selects the missing contract edge; absent ordered rows are
    unevaluable.
-5. Locate the first output/state contract divergence after the now-qualified
+6. Locate the first output/state contract divergence after the now-qualified
    title pointer boundary. Join the retail `0x80001CB8`/`0x80001CC8` rows to
    output value and state-word fields, then compare the existing port rows;
    a matching pointer but divergent output selects the output contract, while
    a missing ordered join remains unevaluable.
-6. Keep M5 Step 3 gated until that output comparison names one missing
+7. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
    generated patch input.
-7. After M5 closes or a new discriminator is found, resume only systematic M3
+8. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep external retail-entry, hangar `0x8000`
    Y/accumulator arithmetic, and SP-yield/MORT publication threads parked.
    Generated-symbol renaming is last priority and remains closed at its

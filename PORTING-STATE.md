@@ -131786,3 +131786,24 @@ ORIGIN: the new entry control and existing source-store witness are diagnostic
 only; the observed zero values are not classified as legitimate without the
 retail join. Evidence: `docs/M5-S3460-SOURCE-VALUE-WITNESS.md` and
 `scratch/agent/s3460_m5_source_value_witness_retry/run.log`.
+
+## Session 3461 (2026-08-31) — qualified port source rows, retail join unevaluable
+
+Built the Debug target and ran the prescribed LLE/spin-yield port capture
+gated on title VI width 1024. The port reached origin `0x00790400`, passed the
+width-640 writer control, and emitted 1,024 ordered source-writer rows: 768
+at `0x800644B0` and 256 at `0x80064524`, all with value zero. It later left
+title and crashed in the existing `musyxSynthFrame+4268` path at guest PC
+`0x80001B08`, after the qualified rows.
+
+The planned discriminator did not select a source-contract hypothesis. The
+retained independent retail artifact contains phase/PC totals and value
+histograms (`0x800644B0`: 807 zero; `0x80064524`: 269 nonzero), but no ordered
+phase/PC/value rows or ordinals, so the cross-runtime join is unevaluable.
+This rules out treating the port zeros as legitimate or defective based on
+the aggregate alone. Evidence: `docs/M5-S3461-SOURCE-VALUE-JOIN.md` and
+`scratch/agent/s3461_m5_source_value_join/run.log`.
+
+ORIGIN: the zero values are generated port source stores at the named PCs;
+their legitimacy remains unevaluable because the independent retail sequence
+is missing.
