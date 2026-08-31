@@ -131625,3 +131625,17 @@ writeback changed.
 
 Evidence: `scratch/agent/s3450_oracle_fixed.log` and
 `scratch/agent/s3449_m5_state_tuple_context/`.
+## Session 3451 (2026-08-31) — added four-PC output-state schema witness
+
+Added a phase-scoped port witness matching the retail oracle fields at
+`0x80001C98`, `0x80001CB8`, `0x80001CC8`, and `0x80001F84`, with a same-run
+positive-control marker. The Debug build succeeded. In the 80-second silent
+arm the control fired and emitted 2,048 rows (514/510/510/514 by target PC).
+The Factor 5 image arm emitted zero new witness rows, although its pre-existing
+consumer/output hooks proved title execution at `0x80001CB8` and
+`0x80001CC8`; this selects an image-arm hook/control defect rather than proving
+target absence. The silent rows show early port contexts unlike the first
+retail oracle rows, but that field divergence is single-source because the
+image schema control failed. This rules out closing the output/state boundary
+or declaring parity; the next work unit repairs the image control and reruns
+both arms. No mitigation or game behavior was changed.

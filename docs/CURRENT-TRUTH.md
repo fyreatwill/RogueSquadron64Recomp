@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3450 (2026-08-31). This record was
+Current maintenance marker: Session 3451 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -60,25 +60,35 @@ rows carry zero source/output PCM, while retail independently writes nonzero
 PCM spans. Do not change waits, slots, status handling, consumer dispatch,
 clear behavior, or PCM writeback while locating the state-pointer edge.
 
+Session 3451 added the oracle-compatible port field schema at all four target
+PCs. The silent arm's positive control fired and produced 2,048 rows across
+the four PCs, with early `s1=0x80110000`/`0x80110ECC` contexts unlike the first
+retail rows. The image arm produced zero new schema rows even though its older
+consumer/output hooks proved title execution at `0x80001CB8`/`0x80001CC8`.
+This is single-source field evidence and a control-path defect, not a parity
+closure; repair the image-arm positive control before joining either arm.
+
 ## Next steps
 
-1. Add one phase-scoped port witness table matching the oracle's
+1. Repair the image-arm control failure for the new four-PC field witness;
+   retain the silent-arm positive control and make both arms emit ordered rows.
+2. Add one phase-scoped port witness table matching the oracle's
    `(pc,s0,s1,source_word,branch_selector,source_byte,branch_state)` fields at
    all four target PCs, then join it by phase and ordinal to the existing
    consumer/output rows. Matching fields close the boundary; the first
    divergent field selects the missing contract edge; absent ordered rows are
    unevaluable.
-2. Locate the first output/state contract divergence after the now-qualified
+3. Locate the first output/state contract divergence after the now-qualified
    title pointer boundary. Join the retail `0x80001CB8`/`0x80001CC8` rows to
    output value and state-word fields, then compare the existing port rows;
    a matching pointer but divergent output selects the output contract, while
    a missing ordered join remains unevaluable.
-3. Keep M5 Step 3 gated until that output comparison names one missing
+4. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
    generated patch input.
-4. After M5 closes or a new discriminator is found, resume only systematic M3
+5. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep external retail-entry, hangar `0x8000`
    Y/accumulator arithmetic, and SP-yield/MORT publication threads parked.
    Generated-symbol renaming is last priority and remains closed at its
