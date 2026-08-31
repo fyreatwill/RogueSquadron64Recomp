@@ -1,33 +1,34 @@
-# NEXT work unit — join port producer payload
+# NEXT work unit — producer entry-input contract
 
-HYPOTHESIS-ID: m5-port-producer-payload-join
+HYPOTHESIS-ID: m5-producer-entry-input-contract
 
-Session 3414 established the independent retail destination: in the
-512-wide `0x006AB400` hangar bucket, `0x800078EC` wrote the port source span
-`0x1797B0:0x179A48` 664 times with nonzero post-store samples, and did not write
-the alternate `0x1935E0` destination. The next unit must compare the port
-producer's call/input/payload contract against that ground truth.
+Session 3415 selected `H-PortProducerZero`: the phase-qualified port pair
+reached title and hangar, and `0x800078EC` wrote 384 zero-valued bytes per arm
+into `0x1797B0:0x179A48`. Retail s3414 independently wrote nonzero data to the
+same span. The next unit must locate the zeroing boundary at producer entry.
 
-Competing hypotheses and discriminating measurement:
+Competing hypotheses and the single discriminating measurement:
 
-- H-PortProducerNonzero: port `0x800078EC` writes the hangar source span with
-  nonzero payload matching the retail contract; the remaining zero PCM is
-  downstream of this edge.
-- H-PortProducerZero: port `0x800078EC` is phase-live but its source span is
-  zero, selecting a producer-input or transform gap.
-- H-PortProducerAbsent: port has no phase-qualified producer edge, selecting
-  a dispatch/caller gap despite the retail destination match.
+- H-PortEntryInputZero: port enters `0x800078EC` with the source pointer or
+  input bytes already zero; entry arguments/pointed payload differ from retail.
+- H-PortEntryTransformZero: port entry arguments and pointed input match the
+  retail contract, but the producer's internal loop emits zero bytes.
+- H-PortEntryRouteMismatch: port reaches the same numeric PC through a
+  different caller/route or with a different control tuple, so the apparent
+  producer comparison is not like-for-like.
 
-The single discriminator is one fresh-build port silent/image pair with the
-existing phase, audio-task/ABI, image-stage, and PCM controls plus one batched
-producer witness. Require title and hangar gates, both arm controls, and a
-hangar source-span payload summary before classifying.
+The discriminator is one phase-qualified retail oracle entry-argument table
+and one fresh-build port silent/image pair with the same batched entry witness.
+Require whole-RDRAM, title 1024, hangar 512, producer, ABI/DMA, image-stage,
+and PCM controls. An identical nonzero entry tuple with zero port stores selects
+H-PortEntryTransformZero; a zero/different input selects H-PortEntryInputZero;
+a different caller/control tuple selects H-PortEntryRouteMismatch. If the
+retail phase bucket or any positive control is absent, classify unevaluable.
 
-Exact commands:
+Exact ground-truth command shape:
 
-1. Reuse the existing qualified port pair recipe (the M5 task/image/PCM
-   controls) and add one phase-scoped witness for producer `0x800078EC` and
-   physical span `0x1797B0:0x179A48`; build once with all counters enabled.
-2. Run both silent and image arms from `build/`, then require title 1024,
-   hangar 512, ABI/DMA, image-stage, and PCM controls before classifying the
-   producer payload result.
+`tools/oracle/build/rs64_oracle --core <debug-core> --rom <retail-rom> --secs 120 --watch-write 0x0:0x800000 --watch-pc 0x800078EC --pc-phase-log-width 0x006AB400:512 --pc-field-dump 0x800078EC`
+
+Then add only the matching phase-scoped port entry witness, build once, and
+run both arms from `build/` using the s3411 route controls. Do not change
+waits, slots, dispatch, clear behavior, or PCM writeback.

@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3414 (2026-08-31). This file was compacted
+through Session 3415 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -284,22 +284,32 @@ retail-only destination mismatch at `0x1935E0`; the remaining gap is the
 port-side producer input/payload formation. Evidence is in
 [M5-S3414-RETAIL-DESTINATION-MAP.md](M5-S3414-RETAIL-DESTINATION-MAP.md).
 
+Session 3415 ran the fresh-build phase-qualified port silent/image pair with
+the producer witness. Both arms reached title 1024 and hangar 512; phase,
+field-writer, PCM-writer, audio ABI/DMA, and route controls fired, with no
+crash/abort markers. In the hangar bucket, `0x800078EC` wrote 384 bytes into
+`0x1797B0:0x179A48` in each arm, all with `value_nz=0`; the writer PC was
+`0x800078EC` for every row. The image arm also produced 1,209 ABI/DMA rows
+and 1,209 stage-3 rows; stage 3 copied `0xCB0..0xE48` to `0x801798B0` with
+`FNV=0x762B22A5`, `nz=0`. This selects `H-PortProducerZero`, refutes producer
+absence and a nonzero port producer at the observed edge, and leaves the
+producer entry-input/transform contract unresolved. Evidence is in
+`scratch/agent/s3411_m5_downstream_join/{silent,image}.log`.
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Run one fresh-build, phase-qualified port contract pair with the existing
-   audio/image/PCM controls plus a payload join at producer `0x800078EC`:
-   capture its hangar call arguments, source-span write count, and source-span
-   FNV/nonzero values against the silent control. The retail ground truth now
-   proves that the legitimate producer writes nonzero data to
-   `0x1797B0:0x179A48`; classify only with title/hangar, ABI/DMA, image-stage,
-   and PCM controls all live. Do not change waits, slots, dispatch, clear
-   behavior, or PCM writeback.
-2. Keep the completed retail destination map as the independent control; do
-   not repeat the `0x1935E0` destination watch unless a new producer or phase
-   discriminator is added.
+1. Ask the retail oracle for a phase-qualified `0x800078EC` entry-argument
+   table, with whole-RDRAM, title/hangar, and target-span controls. Then add
+   one batched port entry witness for the same producer and rerun the paired
+   route. Classify whether the port has the retail input tuple, a different
+   tuple, or the same nonzero input followed by zeroing. Do not change waits,
+   slots, dispatch, clear behavior, or PCM writeback.
+2. Keep the completed retail destination map and s3415 source-span result as
+   controls; do not repeat the `0x1935E0` destination watch unless the new
+   entry-argument discriminator selects a different publication route.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

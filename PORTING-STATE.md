@@ -130818,3 +130818,20 @@ sampling for the source span had 340 nonzero samples. This selects
 runtime or audio behavior changed. Evidence:
 `docs/M5-S3414-RETAIL-DESTINATION-MAP.md` and
 `scratch/agent/s3414_retail_destination_map_final/oracle.log`.
+## Session 3415 (2026-08-31) — M5 port producer payload join
+
+Ran `scratch/agent/run_s3411_m5_downstream_join.sh` after a successful fresh
+Debug build. The silent and Factor 5 image arms were run together from
+`build/` with phase-gated audio ABI/DMA, image-stage, PCM, field-writer, and
+producer controls. Both reached title VI 1024 and hangar VI 512 and had no
+`CRASH` or `ABORT` markers. The producer witness saw 384 hangar source-span
+bytes per arm in `0x1797B0:0x179A48`; all were written by `0x800078EC` with
+zero values. The image arm had 1,209 ABI/DMA rows and 1,209 image-stage rows;
+its stage-3 copy to `0x801798B0` remained zero (`FNV=0x762B22A5`, `nz=0`).
+
+This selects `H-PortProducerZero` and refutes producer absence and a nonzero
+port producer at the observed edge. It does not identify whether the producer
+entry inputs are zero or an internal transform/loop is zeroing them. The
+retail nonzero result remains the independent second line of evidence. It
+rules out changing waits, slot handling, dispatch, clear behavior, or PCM
+writeback as a justified response to this result.
