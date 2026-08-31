@@ -131970,3 +131970,27 @@ port pointer witness. Evidence: `docs/M5-S3468-RETAIL-POST-VALUE.md` and
 
 ORIGIN: no mitigation or runtime behavior change was added; the observed
 retail post-store pointer values are legitimate.
+
+## Session 3469 (2026-08-31) — qualified port table selection
+
+The first two independent oracle attempts passed the whole-RDRAM positive
+control but stayed at 320-wide attract and produced no target rows; they were
+not treated as null evidence. The port witness was then installed through
+`tools/apply_s3469_m5_table_selection.py` and the Debug target rebuilt
+successfully. The validated autopilot LLE/spin-yield run reached title
+`0x00790400` at width 1024 and hangar `0x006AB400` at width 512.
+
+The existing four-PC output/state control fired. The new witness emitted 1,024
+title-gated rows at `0x800644DC` and 1,024 at `0x80064524`; the existing
+output/state witness emitted 2,048 rows. Port selections included
+`0x801B4AA0 -> 0x801B4F00` and `0x801B4B20 -> 0x801B5E70`, matching the known
+retail pointer family and values from the independent Session 3468 baseline.
+This rules out a port-side table-pointer-family divergence at this boundary
+and selects the downstream output/state value contract as the next boundary;
+it does not provide an ordinal cross-runtime join. The port process was
+SIGKILLed after the capture window with no crash marker. Evidence:
+`docs/M5-S3469-PORT-TABLE-SELECTION.md` and
+`scratch/agent/s3469_m5_port_pointer/run_autopilot.log`.
+
+ORIGIN: no mitigation or runtime behavior change was added; the observed port
+table selections are legitimate game-state pointers.

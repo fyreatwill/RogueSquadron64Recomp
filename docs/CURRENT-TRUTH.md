@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3467 (2026-08-31). This record was
+Current maintenance marker: Session 3469 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -234,13 +234,25 @@ not expose the port-side table pointer or selection. Therefore neither
 `H-SourceWriterValue` nor `H-TablePointerDivergence` is selected across
 runtimes. Evidence: [M5-S3468-RETAIL-POST-VALUE.md](M5-S3468-RETAIL-POST-VALUE.md).
 
+Session 3469 added a regeneration-safe port table-selection witness at
+`0x800644DC` and `0x80064524`. The corrected autopilot run reached title
+`0x00790400` at width 1024 and hangar `0x006AB400` at width 512. The existing
+four-PC schema control fired, and the witness emitted 1,024 rows at each edge;
+the existing output/state witness emitted 2,048 rows. Port selections include
+`0x801B4AA0 -> 0x801B4F00` and `0x801B4B20 -> 0x801B5E70`, matching the known
+retail pointer family and values from the independent Session 3468 baseline.
+This rules out a port-side table-pointer-family divergence at this boundary
+and selects the downstream output/state value contract as the next boundary;
+it does not yet provide an ordinal cross-runtime join. Evidence:
+[M5-S3469-PORT-TABLE-SELECTION.md](M5-S3469-PORT-TABLE-SELECTION.md).
+
 ## Next steps
 
-1. Capture the port-side table pointer/selection at the intervening
-   `0x800644DC`/`0x80064524` edge, then join it to the qualified retail
-   post-store values and entry ordinals. Matching pointers with divergent
-   values select `H-SourceWriterValue`; different pointers select
-   `H-TablePointerDivergence`; missing ordered rows remain unevaluable.
+1. Join the qualified port table-selection and output/state rows to the
+   Session 3468 retail post-store values by title phase, selected entry, and
+   ordinal. Matching selections with divergent output/state values select the
+   output contract; a divergent entry selects a later selection edge; absent
+   ordered rows remain unevaluable.
 2. Retain the Session 3468 retail post-store table as the independent baseline;
    do not repeat the retail-only capture unless the port witness changes.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare

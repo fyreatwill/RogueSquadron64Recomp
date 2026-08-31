@@ -2149,6 +2149,41 @@ extern "C" void rs64_m5_output_state_fields(uint8_t* rdram,
     }
 }
 
+extern "C" void rs64_m5_table_selection(uint8_t* rdram,
+                                           recomp_context* ctx,
+                                           uint32_t pc) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_TABLE_SELECTION");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 1024u || (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t rows = 0;
+    if (rows >= 2048u) return;
+    auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
+        const uint32_t p = guest - 0x80000000u;
+        return (static_cast<uint32_t>(rdram[p]) << 24) |
+               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
+               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
+               static_cast<uint32_t>(rdram[p + 3]);
+    };
+    const uint32_t entry = U32(ctx->r3);
+    const uint32_t selected = U32(ctx->r16);
+    std::fprintf(stderr,
+        "[m5-table-selection] ordinal=%u phase=%u width=%u origin=0x%06X "
+        "pc=0x%08X entry=0x%08X index=0x%08X table_base=0x%08X "
+        "selected=0x%08X selected_word=0x%08X a0=0x%08X s1=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, pc, entry, U32(ctx->r6),
+        word(U32(ctx->r17)), selected, word(selected), U32(ctx->r4),
+        U32(ctx->r17), U32(ctx->r31));
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_state_pointer_checkpoint(uint8_t* rdram,
                                                     recomp_context* ctx,
                                                     const char* edge) {
