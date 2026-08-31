@@ -4824,3 +4824,25 @@ Session 3303 selected `H-FalseYieldStatus` (completion-wins vs
 request-only A/B); Session 3304 promoted completion-wins to the
 default. Those two sessions, and the cinematic-exit thread they
 unblocked, remain in CURRENT-TRUTH.
+
+## 55. M5 state-pointer/output boundary archive (s3442–s3445)
+
+Sessions 3442–3445 moved the active M5 discriminator downstream from the
+zero-message receive boundary. The independent retail oracle and fresh-build
+silent/image pair both had live consumer/output controls. Retail's
+`0x80001CC8` output-use rows used `s1=0x80194B20` and varied `v1` values; both
+port arms instead returned `0x2` after observing `0x801Bxxxx` state pointers.
+At `rs_free` entry, however, both port arms still held retail-shaped
+`s1=0x80194B20`, pointed word `0x80194B40`, and `a0=0x801BEEB0`. The current
+boundary is therefore the first state-pointer change after `rs_free` entry and
+before consumer `0x80001CB8`; the generated host wrapper's `ra=0` leaves the
+exact writer unresolved. These sessions do not establish that message zero is
+corrupt.
+
+The paired-route result selects `H-PortStatePointerClobber`, refutes a missing
+upstream producer at the entry boundary, and supersedes the broader
+`H-PortStatePointerGap` label as the active hypothesis. Evidence is in
+`docs/M5-S3442-FREQUENCY-OUTPUT-USE.md`,
+`docs/M5-S3443-FREQUENCY-OUTPUT-JOIN.md`,
+`docs/M5-S3444-STATE-POINTER-PRODUCER.md`, and
+`docs/M5-S3445-STATE-POINTER-ENTRY.md`.

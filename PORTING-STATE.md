@@ -131508,3 +131508,18 @@ PCM writeback changed.
 Evidence: `docs/M5-S3444-STATE-POINTER-PRODUCER.md`,
 `scratch/agent/s3444_m5_state_pointer/oracle/oracle.log`, and
 `scratch/agent/s3442_m5_frequency_output_pair/`.
+
+## Session 3446 (2026-08-31) — compacted current truth and refreshed durable M5 handoff
+
+Maintenance iteration. `docs/CURRENT-TRUTH.md` exceeded the maintenance
+threshold at 59,708 bytes and 927 lines. It was compacted to 7,831 bytes and
+140 lines, removing duplicated historical session blocks and retaining the
+active M5 state-pointer boundary, operating rules, superseded explanations,
+and evidence index. Durable s3442–s3445 state-pointer/output conclusions were
+migrated to section 55 of `docs/PROJECT-OVERVIEW.md`; detailed evidence remains
+in the append-only ledger and linked M5 documents.
+
+No experiment or runtime change was run in this maintenance iteration. The
+next discriminator remains the first port-side state-pointer change after
+`rs_free` entry and before consumer `0x80001CB8`. The compaction does not
+change the selected hypothesis `H-PortStatePointerClobber`.
