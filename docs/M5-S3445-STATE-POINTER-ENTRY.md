@@ -15,4 +15,5 @@ the entry boundary. The generated host wrapper still reports `ra=0`, so the
 exact clobbering call remains open. No runtime behavior changed.
 
 Evidence: `scratch/agent/s3445_m5_state_pointer_producer/port/{silent,image}.log`
-and the independent capture in `oracle_fixed.log`.
+and the independent capture in `oracle_fixed.log`. The first broad-range
+capture remains separately as an unevaluable raw diagnostic artifact.

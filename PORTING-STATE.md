@@ -131450,7 +131450,8 @@ This selects `H-PortStatePointerClobber` between `rs_free` entry and
 `0x80001CB8`, and refutes `H-PortStatePointerGap` at the entry boundary and
 `H-StatePointerProducerAbsent` for this route. The generated host wrapper
 reports `ra=0`, so the exact clobbering call remains open. The broad-watch
-capture was removed after the bounded retry; no runtime behavior changed.
+capture remains as a failed raw diagnostic artifact; no runtime behavior
+changed.
 
 Evidence: `docs/M5-S3445-STATE-POINTER-ENTRY.md`,
 `scratch/agent/s3445_m5_state_pointer_producer/port/`, and
