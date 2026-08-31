@@ -130460,3 +130460,25 @@ qualifies a completion-safe retail/port comparison path. It does not select an
 image-edge hypothesis because post-store payload values and complete like-for-
 like phase attribution were not captured. No audio behavior changed. Evidence:
 `scratch/agent/s3396_m5_checkpoint_pair/driver.log` and its paired logs.
+
+## Session 3397 (2026-08-31) — M5 image payload checkpoint
+
+The oracle checkpoint was rebuilt to emit post-store payload words, then run
+with the whole-RDRAM positive control, title/hangar gates, four candidate
+destination watches, and the `0x800078EC` writer filter. The positive control
+reached 10,000 callbacks and both phase gates fired. At the checkpoint, retail
+had 16 writes each at `0x166D50`, `0x167050`, and `0x167350`, with no retained
+post-value samples. It had 36 writes at `0x1935E0`, including 18 post-value
+samples and 12 nonzero samples from `0x800078EC`.
+
+The paired port build reached title and hangar in both concurrent arms with no
+crash or abort. Silent had 678 ABI/DMA rows and no image-stage rows. Image had
+673 ABI rows and 2,740 image-stage rows. Its stage-2 candidate publications
+were zero (`FNV=F59C39C5`, `nz=0`); stage 3 published mainly to `0x178D80`
+(651 rows), not retail's `0x1935E0`, and its two `0x1935E0` rows were also
+zero. PCM remained zero. The two independent lines select
+`H-ImageEdgeMissing` for the observed stage-3 publication contract and refute
+matching nonzero publication at that destination. They do not identify why the
+port destination differs or establish that stage-2 zero output is illegitimate.
+No audio behavior changed. Evidence: `docs/M5-S3397-IMAGE-PAYLOAD.md` and
+`scratch/agent/s3397_m5_image_payload_pair/driver.log`.

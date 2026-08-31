@@ -1042,6 +1042,21 @@ static void emit_checkpoint(void)
                        g_pc_hist_phase[phase][watch].entries[i].n);
         }
     }
+    for (watch = 0; watch < g_nwatch; watch++) {
+        struct post_value_stats *stats;
+        if (!(g_post_value_watch_mask & (UINT64_C(1) << watch)))
+            continue;
+        stats = &g_post_value_stats[watch];
+        printf("[oracle-checkpoint-post-value] watch=%d samples=%ld unique=%d overflow=%ld\n",
+               watch, stats->samples, stats->n_hist, stats->overflow);
+        for (i = 0; i < stats->n_hist; i++)
+            printf("[oracle-checkpoint-post-value-word] watch=%d value=0x%08x n=%ld\n",
+                   watch, stats->hist[i].value, stats->hist[i].n);
+        for (i = 0; i < stats->n_pc; i++)
+            printf("[oracle-checkpoint-post-value-pc] watch=%d pc=0x%08x samples=%ld zero=%ld nonzero=%ld\n",
+                   watch, stats->pc[i].pc, stats->pc[i].samples,
+                   stats->pc[i].zero_words, stats->pc[i].nonzero_words);
+    }
     fflush(stdout);
 }
 

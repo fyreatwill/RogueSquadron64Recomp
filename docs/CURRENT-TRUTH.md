@@ -193,22 +193,37 @@ post-store payload values and the retail target writes are not yet a complete
 like-for-like phase attribution. No audio behavior changed. Evidence is in
 `scratch/agent/s3396_m5_checkpoint_pair/driver.log` and the paired logs.
 
+Session 3397 rebuilt the oracle checkpoint to emit post-store values, then ran
+the complete retail/port matrix. Retail's positive control reached 10,000
+callbacks and both title/hangar gates. At the checkpoint, retail had 16 writes
+each at `0x166D50`, `0x167050`, and `0x167350`, with no retained post-value
+samples, and 36 writes at `0x1935E0`, including 18 retained post-value samples
+and 12 nonzero samples from writer `0x800078EC`. The paired port arms reached
+title and hangar without crash/abort. Silent had 678 ABI/DMA rows and no
+image-stage rows; image had 673 ABI rows and 2,740 image-stage rows. Image's
+stage-2 candidate publications were zero (`FNV=F59C39C5`, `nz=0`), while its
+stage-3 publication went mainly to `0x178D80` (651 rows), not retail's
+`0x1935E0`; its two `0x1935E0` rows were also zero. PCM remained zero. This
+selects `H-ImageEdgeMissing` for the observed stage-3 publication contract and
+refutes matching nonzero retail/port publication at that destination. It does
+not establish why the port destination differs or whether stage-2 zero output
+is legitimate. Evidence is in [M5-S3397-IMAGE-PAYLOAD.md](M5-S3397-IMAGE-PAYLOAD.md)
+and `scratch/agent/s3397_m5_image_payload_pair/driver.log`.
+
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Use the new completion-safe oracle checkpoint with phase-qualified
-   post-store sampling for all four candidate image destinations, then run the
-   existing concurrent image/silent pair with the complete dispatch →
-   DMA/DMEM → SP completion → service/slot → PCM matrix. Select
-   `H-ImageEdgeMissing` only when a retail-backed nonzero output row has a
-   matching port ordering gap; select `H-ImageEdgePresent` only when matching
-   image DMA/exit and completion close the output contract. Keep zero PCM as a
-   measured result, not a reason to alter behavior.
-2. The completion-safe ground-truth path is now qualified. Do not repeat the
-   old final-summary-only or dual-origin recipes; use the signal checkpoint and
-   add payload sampling if attribution is required.
+1. Explain the selected `H-ImageEdgeMissing` stage-3 destination mismatch:
+   use one phase-qualified, same-build port census that joins the retail-backed
+   `0x1935E0` publication to its source DMEM, DMA completion, and guest service
+   rows, while retaining the existing image/silent controls. Do not change
+   audio behavior or add a destination redirect until the writer and legitimacy
+   of the value are identified.
+2. Keep the completion-safe oracle checkpoint as the ground-truth control. Do
+   not repeat the old final-summary-only or dual-origin recipes; use the signal
+   checkpoint and retain post-store sampling for all four candidates.
 
 M5 Step 3 remains gated until a like-for-like target row names one missing image
 task/output contract edge. Configured-host PatchesLib validation is an open

@@ -79,6 +79,8 @@ env "$ORACLE" \
     --watch-pc 0x80091EB0,0x8009B7EC,0x80029E80,0x80029F30 \
     --pc-hist-watch 4 --pc-hist-watch 5 --pc-hist-watch 6 --pc-hist-watch 7 \
     --pc-hist-phase 0x00790400:1024 --pc-hist-phase 0x006AB400:512 \
+    --post-value-watch 4 --post-value-watch 5 --post-value-watch 6 --post-value-watch 7 \
+    --post-value-pc 0x800078EC --post-value-pc-detail \
     --vi-trace \
     --press "$PRESS" \
     > "$OUT/oracle.log" 2>&1 &
@@ -208,7 +210,7 @@ oracle_rc=$?
 print "oracle_rc=$oracle_rc oracle_killed=$oracle_killed silent_rc=$silent_rc image_rc=$image_rc" >> "$OUT/driver.log"
 
 print -- "--- retail controls ---" >> "$OUT/driver.log"
-grep -a -E 'positive-control threshold|watch write|origin=0x00790400 width=1024|origin=0x006ab400 width=512|\[oracle\] done' "$OUT/oracle.log" | tail -20 >> "$OUT/driver.log" || true
+grep -a -E 'positive-control threshold|watch write|origin=0x00790400 width=1024|origin=0x006ab400 width=512|oracle-checkpoint-post-value|oracle-checkpoint-post-value-pc|\[oracle\] done' "$OUT/oracle.log" | tail -40 >> "$OUT/driver.log" || true
 
 emit_arm_summary() {
     local name="$1"

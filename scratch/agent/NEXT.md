@@ -1,38 +1,32 @@
-# NEXT work unit — qualify M5 image payloads with the live oracle checkpoint
+# NEXT work unit — trace the selected M5 stage-3 destination mismatch
 
-HYPOTHESIS-ID: m5-image-output-edge
+HYPOTHESIS-ID: m5-image-stage3-destination
 
-Do one bounded phase-qualified measurement using the repaired
-`run_s2285_m5_step1_contract_pair.sh`. Add post-store payload sampling for the
-four candidate retail destinations (`0x166D50`, `0x167050`, `0x167350`,
-`0x1935E0`) while retaining the whole-RDRAM positive control and SIGUSR1 live
-checkpoint. Then build once and run both port arms concurrently. Do not use
-the old normal-exit summary path.
+Do one bounded phase-qualified port census using the repaired
+`run_s2285_m5_step1_contract_pair.sh`. Join the retail-backed stage-3
+destination `0x1935E0` to the port image arm's source DMEM, DMA completion,
+guest service, and PCM rows; retain all four destination rows and the silent
+control. Build once and run both port arms concurrently. Do not use the old
+normal-exit summary path.
 
 Competing hypotheses:
 
-- `H-ImagePayloadZero`: retail candidate stores are zero or absent in the
-  target phase, so they cannot explain the port's zero PCM.
-- `H-ImageEdgeMissing`: retail has a nonzero target-phase payload row, while
-  the port lacks the corresponding DMEM-to-RDRAM edge or ordering.
-- `H-ImageEdgePresent`: retail and port have matching nonzero image publication,
-  exit, and SP-completion ordering; the remaining zero PCM gap is downstream.
+- `H-PortStage3Alias`: the port's `0x178D80` stage-3 destination is the same
+  logical publication under a shifted/aliased address contract.
+- `H-PortStage3Missing`: the port lacks the retail-backed `0x1935E0` publication
+  edge or its required ordering/completion.
+- `H-PortStage3LegitimateZero`: the port's zero output is legitimate and the
+  remaining PCM gap is downstream.
 
-Discriminator: the same run must show positive-control callbacks, retail
-nonzero/zero payload values and writer PCs in the target phase, and paired port
-dispatch → image DMA/exit → SP completion → PCM rows. A zero/absent retail
-payload selects `H-ImagePayloadZero`; a retail-backed payload with a port-side
-ordering/publication gap selects `H-ImageEdgeMissing`; matching publication
-and completion with zero PCM selects `H-ImageEdgePresent`.
+Discriminator: the same run must show positive-control callbacks, the retail
+nonzero `0x1935E0` payload/writer row, and paired port rows tying stage-3 DMEM
+source, destination, DMA/exit, guest service, and PCM. Matching source bytes
+and completion with only a destination shift selects `H-PortStage3Alias`; a
+missing `0x1935E0` publication/order selects `H-PortStage3Missing`; a matching
+legitimate zero path with completion selects `H-PortStage3LegitimateZero`.
 
-Candidate edge remains Factor 5 `SP_WR_LEN` DMEM-to-RDRAM publication: writer
-is `factor5_ucode_b`, observed destinations are stage-2 `0x166D50`,
-`0x167050`, `0x167350` and stage-3 `0x1935E0`, with OSTask `output_buff=0`.
-Legitimacy is unresolved. Required ordering is image entry -> DMA rows ->
-`Broke`/SP completion -> guest service/slot/PCM.
-
-Before any new port instrument, run the oracle with its whole-RDRAM positive
-control and SIGUSR1 checkpoint plus post-store sampling. Then build with
-`cmake --build build --target RogueSquadron64Recomp` and run the repaired paired
-recipe from `build/`; use SIGKILL for every timeout and retain both arms in that
-one run.
+The oracle checkpoint and positive control are qualified in s3397. Before
+adding a new port field, use that ground-truth result; then batch the port
+census, build with `cmake --build build --target RogueSquadron64Recomp`, and
+run the repaired paired recipe from `build/`. Use SIGKILL for every timeout and
+retain both arms in that one run.
