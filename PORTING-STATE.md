@@ -129860,3 +129860,28 @@ build, runtime probe, behavior change, or mitigation was performed. Further
 static enumeration is not discriminating. Next: obtain independent retail
 status-03 worker-entry and zeroing-writer evidence before changing a wait or
 slot contract. Evidence: `scratch/agent/s3367_m5_consumer_indirect_dispatch_census.md`.
+## Session 3368 (2026-08-31) — added SP task-load pointer guard
+
+The bounded M3 class was the two host SP task-pointer entry points. The
+existing `osSpTaskStartGo_recomp` validated a complete `OSTask`, but
+`osSpTaskLoad_recomp` passed its pointer directly to the port task-load
+callback. Added the same sign-extended/zero-extended KSEG0 full-object check
+to the load boundary; invalid input returns zero before dereference.
+
+ORIGIN: the guest supplies the task pointer. It is legitimate only when the
+full `OSTask` object lies in KSEG0 RDRAM; this is a safety guard, not an audio
+or task-data correction.
+
+The Debug target built successfully. The direct macOS validation run produced
+real Factor 5 audio dispatch rows through n=1920 and no crash/abort markers,
+but remained in VI-640 attract for the 40-second window and never reached
+title/hangar controls. It is route-invalid for runtime guard validation and
+no refusal was observed. The initial process-group recipe could not launch
+because `setsid` is unavailable; the fallback direct process was SIGKILLed.
+The source/build change is valid, but this run does not prove a wild pointer.
+Evidence: `scratch/agent/s3368_m3_sp_task_pointer_guard.md`.
+
+This closes the source-level SP task-load/start pointer class without
+selecting an invalid-pointer hypothesis. Next: obtain the independent retail
+status-03 worker-entry and zeroing-writer contract before changing M5 wait or
+slot behavior.

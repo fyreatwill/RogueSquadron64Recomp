@@ -1975,10 +1975,10 @@ index 1cb3f6a..35b7009 100644
      // Ensure that the ucode exited correctly
      if (exit_reason != RspExitReason::Broke) {
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
-index ae0f44f..2ea90f5 100644
+index ae0f44f..05e2375 100644
 --- a/librecomp/src/sp.cpp
 +++ b/librecomp/src/sp.cpp
-@@ -1,15 +1,44 @@
+@@ -1,15 +1,58 @@
  #include <cstdio>
 +#include <cstdlib>
  #include <fstream>
@@ -1989,6 +1989,16 @@ index ae0f44f..2ea90f5 100644
 +extern "C" void rs64_m5_port_task_load(uint8_t* rdram, uint32_t task_ptr);
 +
 +static std::atomic<bool> g_sp_yield_requested{false};
++
++static bool rs64_sp_task_range_valid(uint64_t addr, uint64_t size) {
++    constexpr uint64_t kseg0_base = 0xFFFFFFFF80000000ull;
++    constexpr uint64_t kseg0_end = 0xFFFFFFFF80800000ull;
++    if (addr >= kseg0_base && size <= kseg0_end - addr) return true;
++
++    const uint32_t low = static_cast<uint32_t>(addr);
++    return (addr >> 32) == 0 && low >= 0x80000000u &&
++           size <= 0x00800000ull - (low - 0x80000000u);
++}
 +
 +static bool log_sp_yielded_ab() {
 +    static const bool enabled = [] {
@@ -2014,6 +2024,10 @@ index ae0f44f..2ea90f5 100644
 +
  extern "C" void osSpTaskLoad_recomp(uint8_t* rdram, recomp_context* ctx) {
 -    // Nothing to do here
++    if (!rs64_sp_task_range_valid(static_cast<uint64_t>(ctx->r4), sizeof(OSTask))) {
++        ctx->r2 = 0;
++        return;
++    }
 +    rs64_m5_port_task_load(rdram, static_cast<uint32_t>(ctx->r4));
  }
  
@@ -2025,7 +2039,7 @@ index ae0f44f..2ea90f5 100644
      //printf("[sp] osSpTaskStartGo(0x%08X)\n", (uint32_t)ctx->r4);
      OSTask* task = TO_PTR(OSTask, ctx->r4);
      if (task->t.type == M_GFXTASK) {
-@@ -37,12 +66,31 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -37,12 +80,31 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
  }
  
  extern "C" void osSpTaskYield_recomp(uint8_t* rdram, recomp_context* ctx) {

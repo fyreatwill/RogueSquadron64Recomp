@@ -4,9 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3367 (2026-08-31). Compacted from
+Current maintenance marker: Session 3368 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3368's bounded M3 SP task-pointer audit added the missing full-
+`OSTask` KSEG0 range check to `osSpTaskLoad_recomp`, matching the existing
+`osSpTaskStartGo_recomp` boundary. ORIGIN: the guest supplies the pointer; it
+is legitimate only when the complete object lies in KSEG0 RDRAM. The Debug
+target rebuilt successfully. A direct 40-second macOS run produced audio
+dispatch rows and no crash/abort markers but stayed in VI-640 attract without
+title/hangar controls, so it is route-invalid for runtime guard validation and
+no refusal was observed. Evidence: `scratch/agent/s3368_m3_sp_task_pointer_guard.md`.
 
 Session 3360's independent retail callback-table watch passed the whole-RDRAM
 positive control (10,020 writes), reached title 1024 and hangar 512, and
