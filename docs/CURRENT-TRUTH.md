@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3323 (2026-08-30). Compacted from
+Current maintenance marker: Session 3324 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -51,6 +51,15 @@ overflow; every row was 640→640/other 640-origin or 1024→1024, with no
 but is single-source evidence and does not name the transition publisher.
 Evidence: `scratch/agent/s3323_retail_all_width.md`.
 
+Session 3324 rebuilt the Debug target and attempted the M5 Step 1
+image-versus-silent qualification. The oracle passed whole-RDRAM, title
+1024, and hangar 512 controls, but both port arms stalled at VI 640 before
+the target phase and produced no task/audio joins. A fixed lighter-route
+rerun was attempted but its detached runner did not persist to produce arm
+logs. This is route-invalid evidence: it rejects no audio contract
+hypothesis and authorizes no M5 behavior change. Evidence:
+`scratch/agent/s3324_m5_step1_qualification.md`.
+
 Session 3322 widened the independent retail post-swap table to 4096 rows and
 ran the any-VI join with Rice. The route reached title 1024 at 49.1 s and
 returned to 640. Positive controls passed: 10,000 whole-RDRAM writes, 1,852
@@ -61,7 +70,7 @@ no-following-VI, but does not yet distinguish a non-immediate title swap from
 the join's 640-only latch filter. Evidence:
 `scratch/agent/s3322_retail_post_swap_join.md`.
 
-## Live investigation (s3303–s3323)
+## Live investigation (s3303–s3324)
 
 Session 3320 closed the independent retail target-publication discriminator.
 The no-video setup correction and the join-cap limitation are recorded in the
@@ -309,21 +318,27 @@ null. Session 3276's `H-PortTargetPublicationAbsent` still holds.
 No M5 Step 3 audio change is authorized until a like-for-like
 target row exists.
 
-1. Keep configured-host PatchesLib validation as an open dependency. When
+1. Re-run M5 plan Step 1 as a supervised, phase-gated image-versus-silent
+   pair using the validated route. Require the same-run whole-RDRAM oracle
+   control, port 1024/512 transitions, and complete dispatch → task fields →
+   DMEM/DMA → SP → service/slot/voice → PCM rows before interpreting nulls.
+   Do not change a contract edge or add a mitigation. The prior s3324 pair
+   was invalid because both arms stopped at VI 640.
+2. Keep configured-host PatchesLib validation as an open dependency. When
    that host is available, run `cmake --build build --config Debug --target
    PatchesLib` to distinguish build availability from source/link failures.
    Do not repeat the local missing-target check; Session 3319 confirmed the
    missing MIPS stage and generated input here.
-2. Treat the B1C source investigation as closed at the observed phase: no
+3. Treat the B1C source investigation as closed at the observed phase: no
    alternate writer or ordering edge exists in the generated tree, and neither
    conditional nonzero path fired in Session 3314. Do not repeat the same
    6208/6238/6248/6274/62B4 census. Reopen only with a new retail/port
    discriminator for the data-dependent predicates.
-3. Session 3321 completed the generated free-list-walk census: all six
+4. Session 3321 completed the generated free-list-walk census: all six
    traversal dereferences and three cache-head loads are guarded. The guard
    is not evidence that the VI-640 route or audio is corrupt; do not reopen
    this class without a new writer or an unguarded generated site.
-4. Retail target publication remains an `osViSwapBuffer`-related edge
+5. Retail target publication remains an `osViSwapBuffer`-related edge
    (`0x80035500`, usually caller `0x8001BE24`, physical `$a0=0x00790000`),
    but Session 3323's all-width join found no 640→1024 row. Treat the title
    transition as non-immediate relative to that watched edge; identify the
@@ -331,16 +346,16 @@ target row exists.
    missing port edge. The next discriminator should watch the retail mode
    setup/apply callers in one capture; the next M5 change remains gated until a port-side
    like-for-like target row names one missing image-task/output contract edge.
-5. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row names
+6. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row names
    one missing image task/output contract edge. Keep the change to exactly one
    proven writer/consumer relation.
-6. Closed static M3 classes, retain existing traps/guards as safety only:
+7. Closed static M3 classes, retain existing traps/guards as safety only:
    A8 key-on divisor, A12 `0x8014974C`, A9 voice-array base, A10 3D voice-list
    head, 43-site `SONGTEMPO_TABLE_GUARD`. `-0x68A8`/`-0x68B0` is
    `H-NotPatchable`. Status-03 is a named `stopVoiceSlotSynced` /
    `serviceVoicePoolFrame` contract.
-7. Generated-symbol sweep remains closed (Sessions 3210/3212/3217).
-8. M4 restage destination is hangar `gspTask` (`0x800377C8`) with physical
+8. Generated-symbol sweep remains closed (Sessions 3210/3212/3217).
+9. M4 restage destination is hangar `gspTask` (`0x800377C8`) with physical
    `output_buff` `0x0075C000` / `0x00781800`. Keep the external retail-entry
    boundary, hangar `0x8000` Y / accumulator arithmetic, and M5 SP-yield/MORT
    publication threads parked pending a new target-phase discriminator. The

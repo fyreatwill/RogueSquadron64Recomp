@@ -128988,3 +128988,19 @@ zero pending, dropped, or overflow. Every row was 640→640/other 640-origin or
 and the old 640-only latch filter, but is single-source evidence: it does not
 identify the actual title-transition publisher and authorizes no port or M5
 behavior change. Full evidence: `scratch/agent/s3323_retail_all_width.md`.
+
+## Session 3324 (2026-08-30) — qualified M5 Step 1 route controls
+
+The Debug target rebuilt successfully. I ran the M5 Step 1 image-versus-
+silent qualification with the existing phase-gated recipe. The independent
+oracle passed the whole-RDRAM positive control, title 1024, and hangar 512,
+but both port arms stalled at VI 640 before the target phase. They emitted no
+task-contract, image-stage, service/slot, or PCM rows, so the A/B discriminator
+was route-invalid and selected neither audio degeneracy nor an image contract
+gap. A fixed lighter-route rerun was started, but its detached runner did not
+persist long enough to produce arm logs. No M5 behavior change was made.
+
+This rules out only an audio-arm-specific difference before VI 640 in the
+invalid recipe; it does not rule out any target-phase audio hypothesis.
+Evidence: `scratch/agent/s3324_m5_step1_qualification.md` and
+`scratch/agent/s2968_m5_step1_image_vs_silent/audit.md`.
