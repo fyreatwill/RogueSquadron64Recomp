@@ -131733,3 +131733,17 @@ writer/route difference and rules out a port-only writer at this boundary.
 The generated parity hook passes zero as its value argument, so actual writer
 value and legitimacy remain unevaluable; the next probe must capture the
 post-store word. Evidence: `docs/M5-S3457-SOURCE-WRITER.md`.
+
+## Session 3458 (2026-08-31) — measured source-slot writer values
+
+Ran the retail oracle first with whole-RDRAM and source-write positive
+controls. Title post-store sampling showed `0x800644B0` zero in 807 samples,
+`0x80064524` nonzero in 269, and nonzero samples at multiple retail-only
+writers, including `0x800078EC` and `0x80018F80`; `0x801B4F00` matched the
+producer witness. Rebuilt and ran the port arm. The first arm had an invalid
+route; the corrected LLE/spin-yield arm crashed before title at
+`spTaskSchedulerThread` / guest PC `0x8000834C` and emitted zero source rows.
+Thus the retail value result is single-source and the cross-runtime join is
+unevaluable. This rules out treating the prior zero value argument as evidence
+and rules out changing audio behavior based on this run. Evidence:
+`docs/M5-S3458-SOURCE-VALUE.md`.

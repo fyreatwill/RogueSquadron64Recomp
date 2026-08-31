@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3456 (2026-08-31). This record was
+Current maintenance marker: Session 3458 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -116,14 +116,24 @@ out a port-only writer. The generated parity hook passed zero as its value
 argument, so writer-value legitimacy remains unevaluable. Evidence:
 [M5-S3457-SOURCE-WRITER.md](M5-S3457-SOURCE-WRITER.md).
 
+Session 3458's retail post-store arm passed the whole-RDRAM control (11,198
+callbacks), reached title origin `0x00790400`, and measured the actual source
+word: `0x800644B0` stored zero in 807 samples, `0x80064524` stored nonzero in
+269, and retail-only writers such as `0x800078EC` and `0x80018F80` also had
+nonzero samples. The matching port arm was rebuilt, but the first attempt used
+an invalid route and the corrected LLE/spin-yield attempt crashed at startup
+(`spTaskSchedulerThread`, guest PC `0x8000834C`) before title, with zero source
+rows. Retail value evidence is therefore single-source and the cross-runtime
+writer/value join remains unevaluable. Evidence:
+[M5-S3458-SOURCE-VALUE.md](M5-S3458-SOURCE-VALUE.md).
+
 ## Next steps
 
-1. Capture the actual post-store word for the retail-only and shared writers
-   of `0x801E8710`, retaining writer PC, producer PC, callsite PC, target PC,
-   ordinal, and loaded `s0` in one phase-scoped positive-control table. The
-   s3457 writer-PC join selects a retail-side writer/route difference, but its
-   value field is unevaluable because the current parity hook passes zero.
-   Do not alter waits, slots, dispatch, clear behavior, or PCM writeback.
+1. Repair or qualify the validated port title route before repeating the
+   source-value join. The fixed arm must reach origin `0x00790400`, emit its
+   schema positive control and source rows, and retain writer PC, producer PC,
+   callsite PC, target PC, ordinal, and actual value. Do not alter waits,
+   slots, dispatch, clear behavior, or PCM writeback.
 2. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 3. Use the producer join to identify the first output/state contract divergence

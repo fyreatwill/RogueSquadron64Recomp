@@ -1,7 +1,8 @@
-# NEXT work unit — qualify the source-slot writer value
+# NEXT work unit — qualify the port route, then source-slot writer value
 
 HYPOTHESIS-ID: m5-output-state-contract-boundary
 
+Session 3458 measured the retail values but could not qualify the port arm.
 Session 3457 selected a retail-side writer/route difference: retail writes
 `0x801E8710` from eight title-phase PCs, while the port table emitted only the
 shared `0x800644B0` and `0x80064524` writers. The current port parity hook
@@ -22,11 +23,13 @@ Competing hypotheses and discriminating outcomes:
 - `H-ControlFailure`: either positive control is absent; the result is
   unevaluable and the control must be repaired.
 
-Ask the retail oracle first: use the existing whole-RDRAM control and source
-watch, adding post-store word/value capture for the eight observed writer PCs
-in the title bucket. Then build the matching port arm with actual post-store
-value capture at every source-slot writer, preserving the existing schema
-positive control. The discriminator is the first phase/PC/ordinal writer
-value joined to the producer load: retail-only value selects `H-RetailValue`,
-different shared-writer value selects `H-SharedValue`, a port-only value
-selects `H-PortValue`, and missing controls selects `H-ControlFailure`.
+The retail arm is complete. Run the validated port route with
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1
+ROGUESQ_SPIN_YIELD=1`, preserving `ROGUESQ_LOG_M5_WRITER_PARITY=1` and the
+phase-relative title key schedule. First repair/qualify the startup SIGBUS at
+guest PC `0x8000834C`; do not alter audio waits, slots, dispatch, clear
+behavior, or PCM writeback. The discriminator remains the first
+phase/PC/ordinal writer value joined to the producer load: retail-only value
+selects `H-RetailValue`, different shared-writer value selects `H-SharedValue`,
+a port-only value selects `H-PortValue`, and missing controls selects
+`H-ControlFailure`.
