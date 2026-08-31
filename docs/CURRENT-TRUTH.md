@@ -266,15 +266,27 @@ producer/state-field divergence before downstream output; exact writer
 attribution remains unevaluable because the two logs lack a shared invocation
 ordinal. Evidence: [M5-S3471-OUTPUT-STATE-TUPLE.md](M5-S3471-OUTPUT-STATE-TUPLE.md).
 
+Session 3472 asked the independent oracle to watch physical table span
+`0x001B4AA0..0x001B4B24` with a same-run whole-RDRAM control. The control
+recorded 13,527 writes, the span 3,527 writes, and the title phase reached
+634 width-1024 VI frames. Title-gated writer rows were live at
+`0x800078EC`, `0x80064350`, `0x80064360`, `0x80064378`, and `0x800646D8`;
+post-store sampling recorded 267 samples with 115 nonzero bytes and the
+candidate writers were each observed with nonzero values. This refutes
+`H-ObservationInvalid` and establishes active retail producer writers, but
+does not select `H-RetailStateWriter` over `H-PortPointerSelection` because
+the oracle has no selected-entry identity for an ordinal join. Evidence:
+[M5-S3472-RETAIL-STATE-WRITER.md](M5-S3472-RETAIL-STATE-WRITER.md).
+
 ## Next steps
 
-1. Identify the writer/producer of the divergent `s1` state field. First ask
-   the independent retail oracle to watch the physical state-pointer/table
-   span with a whole-RDRAM positive control and title phase gate; only if that
-   writer schema fires, add the matching port producer witness in the next
-   single batched build. A writer/value match followed by a port-only pointer
-   divergence selects the pointer contract; a differing writer/value selects
-   the producer/state-field contract; absent controls are unevaluable.
+1. With the retail writer schema qualified, run one image-arm port capture
+   using the existing regeneration-safe table-selection, state-pointer, and
+   four-PC output/state witnesses in the same title-gated log. Join selected
+   entry/value and `s1`/state-word rows within that run. Matching retail value
+   family plus a different selected pointer selects `H-PortPointerSelection`;
+   a different port producer/value selects `H-RetailStateWriter`; missing
+   port controls is unevaluable.
 2. Retain the Session 3468 retail post-store table and Session 3471 tuple rows
    as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare

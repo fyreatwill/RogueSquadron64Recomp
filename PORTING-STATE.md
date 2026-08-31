@@ -132037,3 +132037,23 @@ rows. The work adds no runtime behavior or mitigation. Evidence:
 
 ORIGIN: no mitigation or runtime behavior change was added; the observed
 pointer and source values are diagnostic observations, not rewritten state.
+
+## Session 3472 (2026-08-31) — qualified retail state-table writer observation
+
+The independent Rice-oracle capture watched physical `0x001B4AA0..0x001B4B24`
+with a same-run whole-RDRAM positive control. The control recorded 13,527
+writes, the target span 3,527 writes, and title reached 634 width-1024 VI
+frames at origin `0x00790400`. Title-gated writer rows were live at
+`0x800078EC`, `0x80064350`, `0x80064360`, `0x80064378`, and `0x800646D8`.
+Post-store sampling recorded 267 samples, 64 unique values, and 115 nonzero
+bytes; each candidate writer had a nonzero sampled value. The positive
+control and target rows refute `H-ObservationInvalid` and establish active
+retail producer writers, but the oracle rows lack selected-entry identity, so
+they do not choose `H-RetailStateWriter` versus `H-PortPointerSelection`.
+The first capture lacked the phase histogram; the corrected run added the
+explicit title phase histogram and post-value sampler. No runtime behavior or
+mitigation changed. Evidence: `docs/M5-S3472-RETAIL-STATE-WRITER.md` and
+`scratch/agent/s3472_retail_state_writer_postvalue.log`.
+
+ORIGIN: no mitigation or runtime behavior change was added; the watched
+state-table writes are observations, not rewritten values.
