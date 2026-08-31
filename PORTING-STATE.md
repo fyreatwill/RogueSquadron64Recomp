@@ -130237,3 +130237,25 @@ port-side dispatch alias at the observed boundary. It does not establish that
 the zero fill is legitimate or locate the missing earlier producer. Evidence:
 `scratch/agent/s3386_m5_direct_writer_census.md` and
 `scratch/agent/oracle_m5_direct_writer.log`.
+
+## Session 3387 (2026-08-31) — retail producer family confirmed, port edge absent
+
+The retail oracle was rerun with the canonical driven Start schedule, Rice,
+phase-gated target watches, and a whole-RDRAM positive control. The control
+crossed 10,000 callbacks, title VI 1024 and hangar VI 512 were observed, and
+each target span had 449 writes in hangar origin `0x006AB400`. The phase writer
+histograms attributed 256 writes per span to `0x800078EC`, 116 to `0x80007670`,
+and seven each to the small initialization PCs. The oracle exited cleanly
+after 2,850 VI.
+
+The rebuilt port route reached title and hangar with its phase, audio/task,
+PCM, callback-writer, and static-call controls live. Its only target-overlap
+row was the zero-fill `0x8008F2CC -> rs_memset`, with `dst=0x801797B0`,
+`val=0`, and `len=0x298`; no port row named `0x8002BEEC`, `0x800078EC`, or
+`0x80007670` at the target edge. Hangar PCM boundary samples remained zero.
+
+This selects `H-RetailDrivenProducer` for the observed boundary and refutes a
+matching port producer edge. It rules out neither a legitimate port zero fill
+nor the producer's missing input/dispatch contract. Evidence:
+`docs/M5-S3387-PRODUCER-EDGE.md`, `scratch/agent/oracle_s3387_fixed.log`,
+and `scratch/agent/port_s3387/run.log`.
