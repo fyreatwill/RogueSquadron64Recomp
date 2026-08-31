@@ -129226,3 +129226,25 @@ the hypothesis that the port merely reaches the service callback but misses
 its child. It does not identify the writer that installed `0x8009123C`, so no
 behavior change or mitigation was made. Evidence:
 `scratch/agent/s3333_m5_callback_reachability.md`.
+
+## Session 3334 (2026-08-30) — attributed M5 callback registration edge
+
+The ground-truth-first retail Rice capture passed the whole-RDRAM positive
+control with 10,019 writes, callback-table writes with 19 hits, and the
+target 512 phase. Retail executed `0x80066AA4 -> 0x8009BBA0` twice,
+`0x8009BC50 -> 0x80007910` three times, `0x8009B5A8` 2,166 times, and
+`0x8009BD7C` 1,163 times.
+
+The single rebuilt port arm reached title 1024 and hangar 512 and passed the
+task/host positive controls (512 and 132 rows). The new phase-gated probe
+showed `0x80066AA4`, `0x8009BBA0`, and `0x8009BC50` three times per target
+bucket; the registration argument was the legitimate `0x8009B5A8`. The
+`0x80007928` callback-table store fired zero times, while the state poll showed
+`[0x80003250,0x8009123C,0x8009123C,0x8009123C]`.
+
+This refutes `H-PortCallbackWriterIsInit` and `H-PortCallbackWriterUnobserved`
+for the qualified route: the initializer runs and the registration function
+is reached, but the table is already full so no store occurs. It leaves the
+writer/loader of the pre-existing `0x8009123C` occupants unresolved. No
+behavior change or mitigation was made. Evidence:
+`scratch/agent/s3334_m5_callback_writer_attribution.md`.
