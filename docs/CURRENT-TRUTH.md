@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3433 (2026-08-31). This file was compacted
+through Session 3434 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -507,19 +507,27 @@ and refutes phase-signal absence at the observed title route, but does not yet
 identify the exact frequency writer because each phase bucket still contains
 multiple writers. Evidence is in [M5-S3433-FREQUENCY-PHASE.md](M5-S3433-FREQUENCY-PHASE.md).
 
+Session 3434 isolated the retail frequency-result writer with the repaired
+phase signal. The oracle positive control reached 10,000 callbacks and both
+title buckets recorded 632 VI rows. Target writes at `0x165ED0` joined
+`0x800331E0` in both buckets; its post-store samples were 442/442 nonzero.
+`0x80033420` joined only the second bucket and its 8/8 post-store samples were
+zero. This selects `H-Candidate331E0`, refutes `H-Candidate33420` as the
+nonzero result writer, and makes an unlisted writer unlikely at this boundary.
+The caller/input contract remains unresolved. Evidence is in
+[M5-S3434-FREQUENCY-WRITER.md](M5-S3434-FREQUENCY-WRITER.md).
+
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Use the repaired retail phase signal to isolate the frequency-result writer:
-   run one oracle arm with whole-RDRAM control, target `0x165ED0:0x165ED4`,
-   both title buckets `0x00790400:1024` and `0x00790800:1024`, and a bounded
-   execution-watch set for `0x800331E0`, `0x80033420`, `0x80007670`, and the
-   `osAiSetFrequency` call/return boundary. A candidate whose execution and
-   target writes join in one phase bucket selects that writer; live target
-   buckets with no candidate join selects an unlisted writer and requires the
-   phase writer histogram to enumerate it. Keep the qualified port boundary as
-   comparison. Do not change waits, slots, dispatch, clear behavior, or PCM
-   writeback.
+1. Trace the selected retail `0x800331E0` frequency-result writer's caller/input
+   contract: use the same whole-RDRAM control, both title phase buckets, the
+   target watch, `--watch-pc 0x800331E0`, `--pc-field-dump 0x800331E0`, and
+   `--post-value-pc 0x800331E0`. Compare whether its phase-gated arguments and
+   nonzero result are supplied by one stable caller or by multiple callers.
+   A stable caller/input tuple selects a port-side contract census; divergent
+   tuples select caller-specific parity as the next boundary. Do not change
+   waits, slots, dispatch, clear behavior, or PCM writeback.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.
@@ -639,6 +647,7 @@ Latest M5 evidence:
 
 - `docs/M5-S3409-052C4-JOIN.md`
 - `docs/M5-S3433-FREQUENCY-PHASE.md`
+- `docs/M5-S3434-FREQUENCY-WRITER.md`
 - `docs/M5-S3420-RETAIL-ENTRY-ARGS.md`
 - `docs/M5-S3426-INIT-MIXER-CALLER.md`
 - `docs/M5-S3413-RETAIL-SOURCE-SPAN.md`

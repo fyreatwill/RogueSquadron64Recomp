@@ -131240,3 +131240,19 @@ the observed title route. It does not identify the exact frequency writer;
 that remains the next bounded probe. No port behavior changed. Evidence:
 `docs/M5-S3433-FREQUENCY-PHASE.md` and
 `scratch/agent/s3433_m5_frequency_phase/`.
+
+## Session 3434 (2026-08-31) — isolated retail frequency-result writer
+
+Ran the independent retail oracle with a whole-RDRAM positive-control watch,
+the physical `0x165ED0:0x165ED4` target, both observed width-1024 title origins,
+candidate execution watches, phase writer histograms, and post-store sampling.
+The control reached 10,000 callbacks; both phase buckets recorded 632 VI rows.
+The target had 19,029 lifetime writes. `0x800331E0` joined target writes in
+both buckets and its post-store samples were 442/442 nonzero. `0x80033420`
+joined only the second bucket and its post-store samples were 0/8 nonzero.
+This selects `H-Candidate331E0`, refutes `H-Candidate33420` as the nonzero
+frequency-result writer, and makes an unlisted writer unlikely at this target
+boundary. The caller/input contract remains unresolved; no port behavior or
+audio path changed. Evidence is in
+[M5-S3434-FREQUENCY-WRITER.md](docs/M5-S3434-FREQUENCY-WRITER.md) and
+`scratch/agent/s3434_m5_frequency_writer/oracle.log`.
