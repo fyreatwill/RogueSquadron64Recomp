@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3466 (2026-08-31). This record was
+Current maintenance marker: Session 3467 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -209,9 +209,21 @@ controls at this scope. It does not name the table-entry writer or establish
 whether the port table pointer differs. Evidence:
 [M5-S3465-RETAIL-TABLE-LOAD.md](M5-S3465-RETAIL-TABLE-LOAD.md).
 
+Session 3467 repeated the independent Rice capture with candidate writer
+execution watches and store-field rows. Whole-RDRAM and physical source-slot
+controls fired 14,936 and 1,904 times; title phase reached 533/534 VI frames;
+and the table span recorded 3,032 writes. Candidate writers
+`0x80064350`, `0x80064360`, `0x80064378`, and `0x800646D8` all fired in both
+title origins, with rows tied to entries such as `0x801B4AA0`. The shared
+`0x80064524` post-value sampler again saw 398 nonzero samples, including
+`0x801B4F00` and `0x801B5E70`. The candidate rows expose pre-store words, not
+post-store values, so the exact writer/value join remains unevaluable; this
+confirms active legitimate retail writers but selects neither pointer nor
+value divergence. Evidence: [M5-S3467-RETAIL-WRITER-VALUES.md](M5-S3467-RETAIL-WRITER-VALUES.md).
+
 ## Next steps
 
-1. Capture the exact value written by the identified title-phase table writers
+1. Capture the post-store word for the identified title-phase table writers
    (`0x80064350`, `0x80064360`, `0x80064378`, `0x800646D8`) at entries such as
    `0x801B4AA0`/`0x801B4AA8`, retaining both positive controls and the existing
    load/store watches. A matching entry pointer with a divergent stored value

@@ -131921,3 +131921,27 @@ Evidence: `docs/M5-S3466-RETAIL-ENTRY-WRITER.md` and
 ORIGIN: no mitigation or runtime behavior change was added; all observed
 table writes are legitimate retail data activity, and the next probe must
 attribute the stored value before changing code.
+
+## Session 3467 (2026-08-31) — qualified retail candidate writer activity
+
+Ran one independent Rice oracle capture with whole-RDRAM and physical
+source-slot positive controls, title phase gates, the table-entry span, the
+four candidate table writers, and the existing load/store watches. The 35
+second run recorded 14,936 whole-RDRAM writes, 1,904 source-slot writes, 533
+and 534 title VI frames at origins `0x00790400` and `0x00790800`, and 3,032
+table-span writes. Candidate writers `0x80064350`, `0x80064360`,
+`0x80064378`, and `0x800646D8` fired in both title origins and produced
+store-field rows tied to entries such as `0x801B4AA0`.
+
+The post-value sampler at the shared source-slot watch recorded 398 nonzero
+samples at `0x80064524`, including `0x801B4F00` and `0x801B5E70`. The
+candidate writer rows expose the pre-store word, not the value written after
+the breakpoint, so the exact writer/value join remains unevaluable. This
+rules out an absent retail writer route and failed controls, but selects
+neither `H-SourceWriterValue` nor `H-TablePointerDivergence`. Evidence:
+`docs/M5-S3467-RETAIL-WRITER-VALUES.md` and
+`scratch/agent/s3467_m5_retail_writer_values/oracle.log`.
+
+ORIGIN: no mitigation or runtime behavior change was added; the observed
+retail state-pointer values are legitimate, and candidate post-store values
+remain unmeasured.
