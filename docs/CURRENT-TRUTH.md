@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3417 (2026-08-31). This file was compacted
+through Session 3418 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -315,27 +315,30 @@ callbacks) and observed 9,667 executions at `0x800078EC`, but its requested
 hangar phase bucket contained zero rows. The fixed Rice/Start-driven route
 passed the same control and reached title 1024 (VI 2037), then stopped at about
 34.6 seconds before hangar and emitted no final target histogram. No port entry
-witness was added or run. The producer-entry discriminator is therefore still
-unevaluable; the next unit must repair and qualify the retail route before any
-port instrumentation.
+witness was added or run. This was a qualification failure, not evidence about
+the producer inputs.
+
+Session 3418 reran the retail arm in the foreground with the validated Rice/
+Start route and preserved its final summaries. The whole-RDRAM control reached
+10,000 callbacks; title 1024 and hangar 512 at `0x006AB400` were observed, with
+1,540 VI rows in the hangar bucket. The target span had 1,166 writes, including
+664 from `0x800078EC`; post-store sampling reported 325 nonzero and 339 zero
+samples. This qualifies the independent retail phase and producer controls,
+but is single-source ground truth and does not identify the port's missing
+input or make a legitimacy claim about retail zero writes. Evidence is in
+`scratch/agent/s3420_retail_producer_entry_qualification/oracle_final2.log`.
 
 ## Next steps
 
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Repair and qualify the retail ground-truth route for the producer-entry
-   unit: use the validated Rice/input recipe, ensure it reaches hangar 512,
-   and retain whole-RDRAM, title, hangar, and producer controls. Diagnose the
-   s3417 early stop from the run output/configuration; do not add port
-   instrumentation until the phase-qualified retail arm is valid.
-2. Once qualified, add a regeneration-safe writer-loop-entry witness at the first
+1. Add a regeneration-safe writer-loop-entry witness at the first
    `0x800078EC` iteration, recording `a0/a1/a2` and computed `v0` with the
-   phase and target-span predicate. Re-run the retail oracle with a bounded
-   target-span store-field table and the same positive controls, then run both
-   fresh-build port arms in one batch. Do not change waits, slots, dispatch,
-   clear behavior, or PCM writeback.
-3. Keep the completed retail destination map and s3415 source-span result as
+   phase and target-span predicate. Build all required port arms together and
+   retain whole-RDRAM, title, hangar, and producer controls. Do not change
+   waits, slots, dispatch, clear behavior, or PCM writeback.
+2. Keep the completed retail destination map and s3415 source-span result as
    controls; do not repeat the `0x1935E0` destination watch unless the new
    entry-argument discriminator selects a different publication route.
 

@@ -1,34 +1,44 @@
-# NEXT work unit — qualify retail producer-entry ground truth
+# NEXT work unit — compare port producer loop-entry arguments
 
-HYPOTHESIS-ID: m5-producer-entry-ground-truth-qualification
+HYPOTHESIS-ID: m5-producer-entry-argument-qualification
 
-Session 3417 left the producer entry contract unevaluable before any port
-instrumentation: the prescribed oracle had no hangar phase rows, and the fixed
-Rice route stopped at title VI 1024 / VI 2037 around 34.6 seconds. The next
-unit must make the independent retail arm reach hangar 512 with its controls
-and final summaries intact.
+The retail ground-truth route is now qualified: the whole-RDRAM control fires,
+hangar `512 @ 0x006AB400` is present, and `0x800078EC` writes the target span
+with nonzero values. The next unit is one regeneration-safe port witness and
+one fresh-build batch containing silent and Factor 5 image arms.
 
 Competing hypotheses and the single discriminating measurement:
 
-- H-RetailRouteRecipe: the s3417 early stop is caused by a stale or incomplete
-  video/input/configuration recipe.
-- H-RetailOracleRuntime: the route is correct but the debugger/video core stops
-  before hangar independently of the recipe.
-- H-RetailPhaseArm: the route reaches hangar, but the phase/histogram arm is
-  wrong and hides the target rows.
+- `H-PortEntryArgsMatch`: the port reaches `0x800078EC` with the same effective
+  destination/length/value contract as retail, so nonzero target-span stores
+  should appear in the phase-qualified first-loop rows.
+- `H-PortEntryArgsZero`: the port reaches the loop with a zero or malformed
+  `a0/a1/a2`/value contract, explaining its zero target span upstream of the
+  RSP transform.
+- `H-PortRouteMismatch`: the port's observed `0x800078EC` stores come through a
+  different caller/route than retail, so entry fields differ even if the loop
+  itself is correct.
 
-The discriminator is one fresh retail-only run using the validated Rice/input
-recipe, with whole-RDRAM, title 1024, hangar 512, producer execution, explicit
-hangar phase, and final histogram controls. Reaching hangar with target rows
-qualifies the next unit. Reaching hangar with no phase rows selects
-H-RetailPhaseArm. An early stop with the recipe independently verified selects
-H-RetailOracleRuntime; a stop that changes with recipe correction selects
-H-RetailRouteRecipe. Any missing positive control is unevaluable.
+The discriminator is the complete phase-qualified entry table: first
+`0x800078E0`/`0x800078EC` iteration per invocation, `a0/a1/a2`, computed `v0`,
+stored value, caller/return edge, and target-span classification, with bounded
+rows for both port arms. A matching nonzero tuple selects
+`H-PortEntryArgsMatch`; a zero/malformed tuple selects `H-PortEntryArgsZero`;
+different caller/route with otherwise valid fields selects `H-PortRouteMismatch`.
+Missing positive controls or missing hangar rows are unevaluable.
 
-Exact qualification command should be derived from the known s3414 Rice route
-and run from the repo root, capturing output under a non-dot final path:
+Before building, add the witness through the regeneration path and verify its
+hook is in the fixup input:
 
-`tools/oracle/build/rs64_oracle --core <debug-core> --rom <retail-rom> --video <rice-plugin> --secs 120 --watch-write 0x0:0x800000 --watch-write 0x1797B0:0x179A48 --watch-pc 0x800078EC --pc-hist-phase 0x006AB400:512 --pc-hist-watch 1 --post-value-watch 1 --post-value-pc 0x800078EC --vi-trace --press <validated-s3414-presses>`
+`rg -n 'func_800078EC|L_800078EC|rs64_m5_writer_parity' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/N64Recomp/tools`
 
-Do not add port instrumentation, change waits, slots, dispatch, clear behavior,
-or PCM writeback until this command reaches hangar and emits its summaries.
+Build and run the existing two-arm contract driver after the hook is added:
+
+`cmake --build build --config Debug --target RogueSquadron64Recomp`
+
+`zsh scratch/agent/run_s3411_m5_downstream_join.sh`
+
+Keep whole-RDRAM, title, hangar, audio ABI/DMA, image-stage, and PCM controls
+armed. Do not change waits, slots, dispatch, clear behavior, or PCM writeback.
+Capture the new witness under `scratch/agent/s3421_m5_entry_arguments/` and
+report both arms together.

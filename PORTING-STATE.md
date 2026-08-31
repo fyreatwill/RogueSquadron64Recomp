@@ -130866,3 +130866,23 @@ Rice/Start-driven route also passed its positive control and reached title
 no final target histogram. No port entry witness was added. This rules out
 using either oracle capture to discriminate the producer entry hypotheses; the
 next unit repairs and qualifies the retail route first.
+## Session 3418 (2026-08-31) — qualified retail producer-entry ground truth retry
+
+The prescribed independent retail producer-entry capture was rerun with the
+validated Rice video, documented Start schedule, and explicit 512-wide phase
+measurement. A first wrapper attempt was invalid because `timeout` is absent
+on this host; its orphaned oracle was killed with SIGKILL and supplied no
+evidence. The corrected foreground capture ran for 50 seconds and retained
+its final summaries.
+
+The whole-RDRAM positive control reached 10,000 callbacks. Retail reached
+title 1024 and hangar 512 at origin `0x006AB400`; the hangar phase bucket had
+1,540 VI rows. The target span `0x1797B0:0x179A48` had 1,166 writes, including
+664 from `0x800078EC`; producer post-store sampling reported 325 nonzero
+samples (339 zero) and the writer histogram reported the same 664 phase
+writes. The execution watch was live at 9,095,243 hits. This qualifies the
+retail phase and producer controls and preserves the independent retail line
+for the next port entry comparison. It does not identify the port's missing
+input or establish that any retail zero writes are illegitimate. No port
+instrumentation, runtime behavior, waits, slots, dispatch, clear behavior, or
+PCM writeback changed. Evidence: `scratch/agent/s3420_retail_producer_entry_qualification/oracle_final2.log`.
