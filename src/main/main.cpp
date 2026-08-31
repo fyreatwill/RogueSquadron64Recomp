@@ -1445,6 +1445,28 @@ extern "C" void rs64_m5_setup_state_args(const char* edge, uint32_t ra,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_reapply_boundary(const char* edge, uint32_t ra,
+                                           uint32_t a0, uint32_t a1,
+                                           uint32_t a2, uint32_t a3,
+                                           uint32_t s1, uint32_t s2,
+                                           uint32_t s3, uint32_t v0) {
+    if (!rs64_m5_init_voice_probe_enabled()) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!rs64_m5_init_voice_target_phase(width, origin)) return;
+    static std::atomic<uint32_t> emitted{0};
+    const uint32_t n = emitted.fetch_add(1, std::memory_order_relaxed);
+    if (n >= 256u) return;
+    std::fprintf(stderr,
+                 "[m5-reapply-boundary] n=%u edge=%s phase=%u width=%u"
+                 " origin=0x%06X ra=0x%08X a0=0x%08X a1=0x%08X"
+                 " a2=0x%08X a3=0x%08X s1=0x%08X s2=0x%08X"
+                 " s3=0x%08X v0=0x%08X\n",
+                 n, edge, rs64_phase_ord(), width, origin, ra, a0, a1,
+                 a2, a3, s1, s2, s3, v0);
+    std::fflush(stderr);
+}
+
 static std::atomic<uint32_t> g_rs64_m5_b40_writer_seq{0};
 
 extern "C" uint32_t rs64_m5_b40_writer_event(uint32_t pc,

@@ -131167,3 +131167,29 @@ observed audio setup call at this boundary. It refutes
 the count divergence and closes the direct callsite question at this scope.
 The earlier producer of the init-to-allocate count remains unresolved. No
 runtime behavior changed. Evidence: `docs/M5-S3430-SETDISPLAY-CALLERS.md`.
+
+## Session 3431 (2026-08-31) — traced reapply frequency-result boundary
+
+Traced the generated `reapplyDisplayMode -> reapplyAudioConfig ->
+initN64RspMixer -> allocateSongChannelArray` chain and added a
+regeneration-safe, phase-gated port witness at reapply entry, after
+`osAiSetFrequency`, and before mixer argument formation. The Debug target
+rebuilt successfully. In the port title capture, `osAiSetFrequency` returned
+`0x5622`; mixer entry had `a1=0x0F`, then the `0x8009192C` reload supplied
+`a1=0x5622` to the allocate call. In hangar the same return was `0x5622` and
+mixer/entry `a1` was `0x12`. The concurrent image arm hit the known pre-phase
+scheduler crash; the silent arm reached both phases, so image was not used for
+the boundary conclusion.
+
+The independent retail oracle passed its whole-RDRAM positive control. Two
+execution-watch attempts were unevaluable because their PC watches armed after
+the relevant phase. A corrected memory-watch run found 5,643 writes to
+physical `0x165ED0`, including 1,125 title-phase writes; post-value sampling
+retained 32 nonzero values. The broad phase writer histogram included
+`0x800331E0` once, but did not isolate the exact frequency-return edge.
+
+This selects `H-PortFrequencyResultProducer` for the observed port dataflow
+and refutes a direct setup-caller argument as the source of `0x5622`. The
+retail value and legitimacy of the port result remain unresolved. No waits,
+slots, dispatch, clear behavior, or PCM writeback changed. Evidence:
+`docs/M5-S3431-REAPPLY-BOUNDARY.md` and `scratch/agent/s3431_m5_*`.

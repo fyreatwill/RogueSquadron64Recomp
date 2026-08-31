@@ -483,17 +483,29 @@ identical. It refutes the proposed `0x5622` count at either observed
 
 ## Next steps
 
+Session 3431 traced the next port boundary in one phase-gated table. At the
+post-`osAiSetFrequency` point, port returned `0x5622`; the following
+`initN64RspMixer` call entered with `a1=0x0F` or `0x12`, then its
+`0x8009192C` reload supplied `a1=0x5622` to `allocateSongChannelArray`.
+Hangar reapply entry remained `a1=0x12`. The independent retail oracle passed
+the whole-RDRAM control and saw 5,643 writes to physical `0x165ED0`, including
+1,125 title-phase writes with nonzero post-values. Its broad writer histogram
+is not exact frequency-return attribution. This selects
+`H-PortFrequencyResultProducer` for the observed port flow and refutes a
+direct setup-caller argument as the source of `0x5622`; legitimacy and the
+retail result remain unresolved. Evidence is in
+[M5-S3431-REAPPLY-BOUNDARY.md](M5-S3431-REAPPLY-BOUNDARY.md).
+
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the remaining producer of port `a1=0x5622` before the closed
-   `initN64RspMixer -> allocateSongChannelArray` edge. First qualify the
-   corresponding retail producer/caller boundary with whole-RDRAM, title,
-   hangar, and a positive execution control; then batch the complete port
-   caller-state witness in one build and concurrent silent/image run. The
-   discriminator must identify the first port/retail divergence in producer
-   arguments or state, not repeat the closed `setDisplayMode` callsite. Do not
-   change waits, slots, dispatch, clear behavior, or PCM writeback.
+1. Attribute the exact retail writer/return edge for the shared frequency
+   result at physical `0x165ED0`. Use whole-RDRAM control, title/hangar gates,
+   bounded target post-values, and an exact writer-PC/callsite watch in one
+   oracle run. Retain the three port reapply boundaries in the paired run. A
+   matching nonzero retail result selects a shared frequency contract; a
+   different result from the same writer selects a port-side input divergence.
+   Do not change waits, slots, dispatch, clear behavior, or PCM writeback.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.
