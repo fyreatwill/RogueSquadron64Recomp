@@ -131807,3 +131807,21 @@ the aggregate alone. Evidence: `docs/M5-S3461-SOURCE-VALUE-JOIN.md` and
 ORIGIN: the zero values are generated port source stores at the named PCs;
 their legitimacy remains unevaluable because the independent retail sequence
 is missing.
+
+## Session 3462 (2026-08-31) — captured ordered retail source values
+
+Ran the independent retail oracle with the whole-RDRAM positive control, the
+physical source watch at `0x001E8710:0x001E8714`, and ordered post-store
+sampling for `0x800644B0` and `0x80064524`. The control produced 12,734 writes,
+the source watch produced 2,734 writes, and the run reached 633 title VI
+frames. It emitted 1,294 ordered title rows at origin `0x00790400`: 978
+zero-valued rows from `0x800644B0`, and 316 rows from `0x80064524`, carrying
+`0x80194EA0` in 19, `0x801B4F00` in 165, and `0x801B5E70` in 132 rows. This
+selects the ordered-retail-data hypothesis and makes the next work unit the
+port-versus-retail ordinal join. It does not by itself select a port/shared
+writer explanation. Evidence: `docs/M5-S3462-RETAIL-ORDERED-SOURCE.md` and
+`scratch/agent/s3462_m5_retail_ordered_source/oracle.log`.
+
+ORIGIN: the observed values are post-store values written by the named retail
+guest PCs; they are legitimate retail state observations because the oracle
+reads them immediately after the watched stores. No mitigation was added.

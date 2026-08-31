@@ -157,16 +157,26 @@ totals and value histograms, not ordered phase/PC/value rows, so the planned
 cross-runtime ordinal join is unevaluable; no source-contract hypothesis is
 selected. Evidence: [M5-S3461-SOURCE-VALUE-JOIN.md](M5-S3461-SOURCE-VALUE-JOIN.md).
 
+Session 3462 obtained the missing independent retail table. With the
+whole-RDRAM control and physical source watch both active, the oracle reached
+633 title VI frames and emitted 1,294 ordered title rows at origin
+`0x00790400`: 978 zero-valued stores from `0x800644B0`, and 316 stores from
+`0x80064524` with values `0x80194EA0` (19), `0x801B4F00` (165), or
+`0x801B5E70` (132). The control recorded 12,734 writes and the source watch
+2,734. This selects the ordered-retail-data hypothesis and makes the next
+step the port-versus-retail ordinal join; it does not select a port/shared
+writer explanation by itself. Evidence: [M5-S3462-RETAIL-ORDERED-SOURCE.md](M5-S3462-RETAIL-ORDERED-SOURCE.md).
+
 ## Next steps
 
-1. Obtain a new independent retail oracle capture with ordered title
-   phase/PC/post-store-value rows for physical `0x001E8710:0x001E8714`, plus
-   the whole-RDRAM positive control. The existing retail histogram cannot
-   discriminate the source-writer hypotheses; do not add port fields.
-2. Join the qualified port title source-writer rows to that ordered retail
+1. Join the qualified port title source-writer rows to the new ordered retail
    table by phase, PC, and ordinal. A matching writer/value sequence closes
    this source boundary; a first value or writer divergence selects the next
    contract edge.
+2. Preserve the independent whole-RDRAM and physical source-watch controls
+   when interpreting the join; the retail table has positive controls and
+   633 title VI frames. Do not add port fields until the join identifies the
+   first divergent writer or value.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
 4. Use the producer join to identify the first output/state contract divergence
