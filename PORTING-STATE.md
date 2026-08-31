@@ -128954,3 +128954,23 @@ same-file guard block at every candidate site. This is static single-source
 evidence only: it closes the class as safety-only, does not prove guard
 semantics on retail, and authorizes no M5 or allocator behavior change.
 Evidence: `scratch/agent/s3321_generated_freelist_walk_audit.md`.
+
+## Session 3322 (2026-08-30) — widened retail post-swap join
+
+Raised `MAX_MODE_DUMP_ROWS` in the independent oracle from 256 to 4096,
+rebuilt it, and ran one 90-second Rice-backed capture with the whole-RDRAM
+positive control, `osViSwapBuffer` watch, 1024 phase gate, any-VI join, and VI
+trace. The route reached title 1024 at 49.1 seconds and returned to 640.
+Controls passed: 10,000 whole-RDRAM writes, 1,852 watched swap executions,
+and 5,374 VI frames.
+
+The join retained 195 rows from 195 latches, with zero pending, dropped, or
+overflow rows at capacity 4096. All retained rows were 640-to-640 joins;
+none captured the 640-to-1024 title transition. This selects
+`H-NextVIIsNonTarget` for the retained rows, refutes `H-NoNextVI`, and refutes
+the Session 3320 explanation that the 256-row cap alone hid the transition.
+It does not yet distinguish a non-immediate title swap from the join's
+640-only latch filter. No port or M5 behavior change was made.
+
+Evidence: `scratch/agent/s3322_retail_post_swap_join.md` and
+`scratch/agent/s3322_retail_post_swap_join.log`.

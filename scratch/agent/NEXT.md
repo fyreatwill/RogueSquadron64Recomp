@@ -1,37 +1,37 @@
-# NEXT work unit — widen retail post-swap join
+# NEXT work unit — capture retail title transition with all-width latches
 
-HYPOTHESIS-ID: m5-retail-post-swap-transition
+HYPOTHESIS-ID: retail-title-transition-all-width
 
-The configured Windows/MIPS PatchesLib host remains an external dependency.
-The next target-phase discriminator addresses Session 3320's live but
-overflowing post-swap join without changing the runtime.
+Session 3322 showed the 4096-row any-VI join is live and not overflowing,
+but its 640-only latch filter retained no 640→1024 row. The configured
+Windows/MIPS PatchesLib host remains an external dependency.
 
 ## Competing hypotheses
 
-- `H-TargetTransitionCaptured`: increasing the join capacity retains a
-  target-origin next-VI row, making the port/retail target relation testable.
-- `H-NextVIIsNonTarget`: the join remains live but all retained next-VI rows
-  are non-target, separating callback timing/transition from row overflow.
-- `H-NoNextVI`: the watched swap has no subsequent VI callback in the run,
-  which would identify a publication/termination issue in the oracle route.
+- `H-ImmediateTitleSwap`: an all-width latch retains a row with pre-width 640
+  and next width 1024, identifying the exact retail publication ordering.
+- `H-NonImmediateTitleSwap`: title 1024 occurs, but no 640-pre-width latch
+  joins to it, so the mode transition is not immediately after that swap edge.
+- `H-OtherCaller`: the target transition follows a swap from a different
+  caller or width, naming a distinct retail publication path.
 
 ## Discriminator
 
-Raise `MAX_MODE_DUMP_ROWS` in `tools/oracle/rs64_oracle.c` from 256 to 4096,
-build the oracle, and run the existing target publication recipe with
-`--post-swap-table-pc 0x80035500 --post-swap-any-vi` added. The whole-RDRAM
-watch and VI trace are positive controls; classify the retained next-VI rows
-by width/origin and verify the shutdown overflow is zero. A target row selects
-`H-TargetTransitionCaptured`; only non-target rows select `H-NextVIIsNonTarget`;
-no joined row with live latches selects `H-NoNextVI`.
+Change the oracle post-swap latch to accept every watched swap width while
+recording and printing the pre-width. Build once and run the same Rice-backed
+90-second capture. The whole-RDRAM watch and VI trace are positive controls.
+Classify rows where `pre_width=640` and `next_width=1024`, retaining swap
+caller/origin and pending/dropped/overflow counts. A matching row selects
+`H-ImmediateTitleSwap`; no matching row with title 1024 live selects
+`H-NonImmediateTitleSwap`; a matching row with a different caller selects
+`H-OtherCaller`.
 
 ## Exact command
 
 ```sh
-apply_patch  # change only MAX_MODE_DUMP_ROWS to 4096
+apply_patch  # latch all swap widths, retain/report pre_width
 tools/oracle/build.sh
 tools/oracle/build/rs64_oracle --core "$PWD/../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" --rom "$PWD/../rogue_squadron64/rogue_squadron.z64" --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 90 --watch-write 0x0:0x800000 --watch-pc 0x80035500 --pc-phase-log-width 0x00790400:1024 --post-swap-table-pc 0x80035500 --post-swap-any-vi --vi-trace
 ```
 
-Record the phase/row table and controls in a new evidence file. No M5 Step 3
-or behavior change is authorized by this capture alone.
+No M5 Step 3 or port behavior change is authorized by this capture alone.

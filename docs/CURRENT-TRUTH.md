@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3321 (2026-08-30). Compacted from
+Current maintenance marker: Session 3322 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -41,7 +41,17 @@ generic guards. This closes the generated free-list-walk class as safety-only
 and authorizes no behavior change. Evidence:
 `scratch/agent/s3321_generated_freelist_walk_audit.md`.
 
-## Live investigation (s3303–s3321)
+Session 3322 widened the independent retail post-swap table to 4096 rows and
+ran the any-VI join with Rice. The route reached title 1024 at 49.1 s and
+returned to 640. Positive controls passed: 10,000 whole-RDRAM writes, 1,852
+`osViSwapBuffer` executions, and 5,374 VI frames. The join retained 195/195
+rows with zero pending, dropped, or overflow; all were 640→640 rows and none
+was the 640→1024 title transition. This refutes table-capacity saturation and
+no-following-VI, but does not yet distinguish a non-immediate title swap from
+the join's 640-only latch filter. Evidence:
+`scratch/agent/s3322_retail_post_swap_join.md`.
+
+## Live investigation (s3303–s3322)
 
 Session 3320 closed the independent retail target-publication discriminator.
 The no-video setup correction and the join-cap limitation are recorded in the
@@ -304,10 +314,13 @@ target row exists.
    is not evidence that the VI-640 route or audio is corrupt; do not reopen
    this class without a new writer or an unguarded generated site.
 4. Retail target publication is now identified as the `osViSwapBuffer` edge
-   (`0x80035500`, caller `0x8001BE24`, physical `$a0=0x00790000`). Do not
-   treat the capped post-swap table as a missing transition. The next M5
-   change remains gated until a port-side like-for-like target row names one
-   missing image-task/output contract edge.
+   (`0x80035500`, caller `0x8001BE24`, physical `$a0=0x00790000`). The
+   4096-row any-VI join proved that the earlier cap was not the missing
+   transition: 195 joins survived with zero overflow, all 640→640. Run one
+   direct all-width swap/next-VI capture retaining the pre-width before
+   treating the title transition as a missing port edge. The next M5 change
+   remains gated until a port-side like-for-like target row names one missing
+   image-task/output contract edge.
 5. Execute M5 plan Step 3 only after a valid target-phase Step 1/2 row names
    one missing image task/output contract edge. Keep the change to exactly one
    proven writer/consumer relation.
@@ -474,6 +487,7 @@ scheduler and submit loop.
 ## Evidence index
 
 Live-thread evidence:
+`scratch/agent/s3322_retail_post_swap_join.md`,
 `scratch/agent/s3312_retail_cine_init_path.md`,
 `scratch/agent/s3311_cine_init_jal.md`,
 `scratch/agent/s3310_retail_b0934_writer.md`,
