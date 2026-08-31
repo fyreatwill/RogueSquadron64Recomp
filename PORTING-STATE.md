@@ -129376,3 +129376,19 @@ same row and the same early scheduler crash. Host/target phase controls
 therefore did not validate this port arm; no pointer-source hypothesis is
 selected and no behavior change was made.
 Evidence: `scratch/agent/s3341_m5_callback_pointer_source.md`.
+
+## Session 3342 (2026-08-30) — controlled M5 scheduler route sensitivity
+
+Built the Debug target once and ran concurrent no-probe and callback-writer
+probe arms with identical LLE/solo/spin-yield settings and input timing. The
+no-probe arm passed the host-boundary control and reached VI-1024 and hangar
+VI-512 without a crash. The probe arm passed its callback-writer positive
+control and emitted the `0x80091900 -> 0x80007910` row, but crashed in
+`spTaskSchedulerThread` before any target VI; it had no host control because it
+died first.
+
+This refutes a build-wide scheduler failure for this binary and recipe, but
+does not distinguish scheduler perturbation from a probe-side generated
+control-flow/data effect. The logging arm is route-invalid, so no
+pointer-source hypothesis is selected and no behavior change is authorized.
+Evidence: `scratch/agent/s3342_m5_scheduler_route_control.md`.

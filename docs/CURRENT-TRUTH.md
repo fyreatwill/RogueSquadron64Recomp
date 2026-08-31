@@ -17,6 +17,15 @@ retries crashed in the scheduler before title/hangar controls. The pointer
 source remains unresolved; no behavior change is authorized. Evidence:
 `scratch/agent/s3341_m5_callback_pointer_source.md`.
 
+Session 3342 built once and ran concurrent no-probe/probe route controls. The
+no-probe arm passed host control and reached VI-1024 and hangar VI-512 without
+crashing; the callback-writer probe arm passed its positive store control but
+crashed in `spTaskSchedulerThread` before target phases. This selects
+instrumentation-sensitive route invalidity for the current recipe, refutes a
+build-wide scheduler failure, and leaves logging perturbation versus a
+probe-side generated effect unresolved. The pointer-source census remains
+unauthorized. Evidence: `scratch/agent/s3342_m5_scheduler_route_control.md`.
+
 Session 3340 selected `H-IndirectTransfer`: retail's independent
 `registerSiCallback` previous-PC histogram includes `0x800919EC` (5/9), and
 the port's regeneration-surviving transfer marker shows that site passing
@@ -228,6 +237,10 @@ the join's 640-only latch filter. Evidence:
 `scratch/agent/s3322_retail_post_swap_join.md`.
 
 ## Live investigation (s3303–s3324)
+
+Session 3342 closes the current route-validity attempt: retain the no-probe
+validated route and redesign the callback-writer probe so it cannot perturb
+the scheduler before repeating the pointer-source census.
 
 Session 3340 closes the caller attribution discriminator for the observed
 `0x8009123C` registration: the transfer is the indirect call at `0x800919EC`.
@@ -515,8 +528,11 @@ target row exists.
    `0x001099D4` was quiet, while the port's concrete initializer store at
    `0x80091900` emitted `0x80007910`; both port retries crashed before target
    phases, so this is route-invalid and selects no pointer-source hypothesis.
-   Re-run the same probe only after restoring a target-valid route; do not
-   change a contract edge or add a mitigation.
+   The s3342 paired control shows the no-probe route reaches title/hangar but
+   the callback-writer logging arm crashes in `spTaskSchedulerThread` before
+   target VI. Redesign the probe to remove scheduler-sensitive logging (or
+   capture the value through a non-perturbing path), then rerun the same
+   writer census. Do not change a contract edge or add a mitigation.
    Do not add a mitigation.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

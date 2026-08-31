@@ -2,7 +2,7 @@
 set -u
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-OUT="$ROOT/scratch/agent/s3333_m5_callback_reachability"
+OUT="$ROOT/scratch/agent/s3333_m5_callback_reachability${RS64_RUN_TAG:-}"
 BUILD="$ROOT/build"
 mkdir -p "$OUT"
 LOG="$OUT/port.log"

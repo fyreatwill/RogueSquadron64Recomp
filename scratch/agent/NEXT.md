@@ -1,4 +1,4 @@
-# NEXT work unit — restore a valid route for the pointer-source capture
+# NEXT work unit — redesign the scheduler-safe pointer-source capture
 
 HYPOTHESIS-ID: m5-callback-indirect-pointer-source
 
@@ -23,13 +23,41 @@ port writer selects `H-StalePointer`; no writer in either arm with valid
 indirect transfers selects `H-HostDispatch`. A null is invalid unless the
 whole-RDRAM control fires.
 
-The fixup and current generated artifact contain the port writer census. First
-diagnose/restore the early scheduler crash without changing behavior; then
-rebuild once and run:
+The s3342 control showed that the no-probe route reaches title/hangar, while
+enabling the callback-writer logger crashes `spTaskSchedulerThread` before
+target VI. The logger is therefore not a valid target-phase instrument on this
+recipe. The next single work unit is to redesign that existing probe to record
+the complete writer table without scheduler-sensitive per-event output, then
+build once and run the same concurrent control/probe arms:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
     env ROGUESQ_LOG_M5_CALLBACK_WRITER=1 zsh scratch/agent/run_s3333_m5_callback_reachability.sh
 
 The positive-control rows must include host-boundary and task-handoff controls,
-and the run must reach title 1024 and hangar 512. No pointer-source conclusion
-or behavioral change is authorized until the port arm is valid.
+and the probe arm must reach title 1024 and hangar 512. If the redesigned
+probe reaches both phases and records the store table, resume the pointer
+writer discriminator. If it still crashes while the no-probe arm remains
+valid, classify the probe as perturbing and redesign once more; do not infer a
+pointer source. No behavioral change is authorized.
+
+Before the route rebuild, the scheduler failure has these competing hypotheses:
+
+- `H-SchedulerData`: the new probe changed generated scheduler data/control
+  flow or exposed a bad guest value, so the baseline and instrumented route
+  differ before VI-1024.
+- `H-SchedulerRuntime`: the crash is an existing runtime/submodule scheduler
+  failure independent of the pointer probe; the same failure appears in a
+  no-probe control built from the current tree.
+- `H-SchedulerRoute`: the recipe's LLE/solo/spin-yield route is the trigger,
+  and the normal validated image route remains target-valid.
+- `H-Environmental`: the binary/ROM/build or stale process state is invalid;
+  a clean build plus the documented launch directory and controls changes the
+  outcome.
+
+The discriminating measurement is one same-build, same-run control matrix:
+baseline/no new probe, current probe, and normal validated image route, all
+with host/task/phase positive controls. A crash only in the probe arm selects
+`H-SchedulerData`; matching baseline/probe crashes select
+`H-SchedulerRuntime`; only the LLE/solo recipe crash selects `H-SchedulerRoute`;
+all arms must reach their expected VI controls before the pointer-source run is
+repeated. A missing positive control makes that arm invalid, not a null result.
