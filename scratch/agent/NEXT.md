@@ -1,33 +1,36 @@
-# NEXT work unit — census the port-side PCM writer/source edge
+# NEXT work unit — trace the zero PCM RSP-DMA source edge
 
-HYPOTHESIS-ID: m5-port-pcm-writer-source
+HYPOTHESIS-ID: m5-port-zero-pcm-source
 
-The corrected s3373 port run reached both target phases with live audio-task,
-PCM, and filter controls. Its named `m5-consumer-entry` marker stayed at zero,
-but task joins showed consumer matches and completions; PCM source and
-consumer rows were present with `nz=0`. Retail ground truth now shows a
-nonzero guest writer for the same primary spans. This names a port-side
-writer/source gap, not permission to modify a gate or consumer.
+The corrected s3375 port run reached both target phases with live host/task,
+PCM, and filter controls. Its guest-store census found no primary-span store,
+while RSP-DMA writes into the PCM ring were active with zero payload. Retail
+ground truth independently shows guest `0x800078EC` writing each primary span
+with nonzero values. The next question is where the zero enters the port's RSP
+DMA source path; do not modify output, waits, slots, status, or consumer
+dispatch.
 
 Competing hypotheses:
 
-- `H-PortWriterAbsent`: the port has no execution/store path corresponding to
-  retail `0x800078EC` for the primary spans.
-- `H-PortWriterPresentButZero`: the port executes the corresponding writer
-  path, but its source/value is zero before the PCM callback.
-- `H-PortPCMJoinMisattribution`: the port's zero rows are not the same physical
-  spans as the retail writer ranges.
+- `H-PortRSPSourceZero`: the port's RSP DMEM/input source is already zero
+  before the ring-buffer DMA.
+- `H-PortRSPTransformZero`: the RSP source is nonzero, but the active RSP
+  transform emits a zero output.
+- `H-PortDMADestinationMismatch`: the observed zero DMA is not the PCM source
+  span consumed by the audio callback.
 
-Discriminating measurement: first use the oracle's whole-RDRAM positive
-control, then enumerate every port-side store/copy source for
-`0x166450..0x166750`, `0x169150..0x169450`, and `0x168E50..0x169150` in one
-regeneration-surviving instrument. A matching port writer with zero source
-selects `H-PortWriterPresentButZero`; no matching writer selects
-`H-PortWriterAbsent`; rows outside the three ranges select
-`H-PortPCMJoinMisattribution`. Do not change behavior.
+Discriminating measurement: instrument one active factor5 audio task so the
+same DMA event reports source-DMEM FNV/nonzero, post-transform DMEM
+FNV/nonzero, and destination span, with the existing PCM source/consumer
+joins and positive controls in the same run. Source zero selects
+`H-PortRSPSourceZero`; nonzero source plus zero post-transform selects
+`H-PortRSPTransformZero`; a destination outside the joined PCM span selects
+`H-PortDMADestinationMismatch`.
 
 Preparation: use the existing fixed port route and follow the regeneration
-order. Batch the writer/source census into one build and one run; positive
-controls must include host/task/PCM plus title and hangar phase markers. Do
-not change waits, slots, status handling, consumer dispatch, or PCM writeback
-until the writer source is named.
+order. Ask the retail oracle for the whole-RDRAM control and matching primary
+span writer rows before building the port instrument. Batch all source,
+transform, destination, and join fields into one build and one run; positive
+controls must include host/task/PCM plus title and hangar phase markers. Do not
+change waits, slots, status handling, consumer dispatch, or PCM writeback until
+the source boundary is named.

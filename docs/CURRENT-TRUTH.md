@@ -4,9 +4,21 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3374 (2026-08-31). Compacted from
+Current maintenance marker: Session 3375 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3375's qualified port writer census reached title `1024 @
+0x00790400` and hangar `512 @ 0x006AB400`, with host/task, PCM, and filter
+controls live and no crash or abort. The regeneration-surviving guest-store
+probe found no store in the three primary PCM spans; its rows were metadata or
+secondary-range stores. RSP-DMA writes into the PCM ring were active but zero
+valued (`F59C39C5`, `nz=0`). Together with the independent retail result that
+guest `0x800078EC` writes each primary span 768 times with nonzero values, this
+selects `H-PortWriterPresentButZero` at the port output boundary. The exact
+retail CPU-writer equivalent remains unproven because the guest hook is scoped
+to the existing AI-submit store census. No behavior change is authorized.
+Evidence: `scratch/agent/s3375_m5_port_pcm_writer.md`.
 
 Session 3374's independent retail PCM watch passed the whole-RDRAM control
 (12,496 writes), reached title `1024 @ 0x00790400` and hangar

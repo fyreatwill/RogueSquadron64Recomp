@@ -130003,3 +130003,23 @@ addresses. The result does not identify the missing port source edge, so no
 behavior change was made. It rules out treating the zero PCM payload as
 legitimate silence and moves the next unit to a regeneration-surviving port
 writer/source census. Evidence: `scratch/agent/s3374_m5_retail_pcm_writer.md`.
+
+## Session 3375 (2026-08-31) — qualified port PCM writer/source census
+
+Ran the retail ground-truth prerequisite first. The whole-RDRAM control
+reached 10,000 callbacks, title `1024 @ 0x00790400`, and hangar
+`512 @ 0x006AB400`; each primary span again had 768 writes from guest
+`0x800078EC`. The regeneration-surviving port probe then rebuilt the Debug
+target successfully and reached both target phases with host/task, PCM, and
+filter controls live and no crash or abort.
+
+The port guest-store census recorded 512 rows, but none in the three primary
+PCM spans; rows were metadata or secondary-range stores. RSP-DMA writes into
+the PCM ring were active, including the primary slots, with zero payload
+`F59C39C5`/`nz=0`. This selects `H-PortWriterPresentButZero` at the port
+output boundary and refutes treating the zero output as legitimate silence.
+It does not prove the retail CPU-writer equivalent is absent globally because
+the guest hook is scoped to the existing AI-submit store census, not every
+generated MEM store. No behavior change was made.
+
+Evidence: `scratch/agent/s3375_m5_port_pcm_writer.md`.
