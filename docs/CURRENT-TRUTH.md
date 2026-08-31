@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3320 (2026-08-30). Compacted from
+Current maintenance marker: Session 3321 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -32,7 +32,16 @@ could be retained. This selects `H-RetailTargetSwap` and establishes the
 retail publication edge, but names no missing port image-task/output edge.
 Evidence: `scratch/agent/s3320_retail_target_publication.md`.
 
-## Live investigation (s3303–s3320)
+Session 3321 completed a bounded static census of the linked generated host
+allocator consumers. All six free-list traversal dereferences in
+`allocateDisplayListBuffer` and `allocDLBlockToFillRectList` have adjacent
+KSEG0/alignment guards; both loop-back sites also have the s3285 cycle cap.
+The three separate cache-head loads in the same functions have existing
+generic guards. This closes the generated free-list-walk class as safety-only
+and authorizes no behavior change. Evidence:
+`scratch/agent/s3321_generated_freelist_walk_audit.md`.
+
+## Live investigation (s3303–s3321)
 
 Session 3320 closed the independent retail target-publication discriminator.
 The no-video setup correction and the join-cap limitation are recorded in the
@@ -290,9 +299,10 @@ target row exists.
    conditional nonzero path fired in Session 3314. Do not repeat the same
    6208/6238/6248/6274/62B4 census. Reopen only with a new retail/port
    discriminator for the data-dependent predicates.
-3. Session 3285 moved the 3270 alignment + cycle-cap class onto the
-   generated host walks that link here. The guard is not evidence that the
-   VI-640 route or audio is corrupt.
+3. Session 3321 completed the generated free-list-walk census: all six
+   traversal dereferences and three cache-head loads are guarded. The guard
+   is not evidence that the VI-640 route or audio is corrupt; do not reopen
+   this class without a new writer or an unguarded generated site.
 4. Retail target publication is now identified as the `osViSwapBuffer` edge
    (`0x80035500`, caller `0x8001BE24`, physical `$a0=0x00790000`). Do not
    treat the capped post-swap table as a missing transition. The next M5

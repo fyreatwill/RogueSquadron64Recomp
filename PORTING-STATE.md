@@ -128936,3 +128936,21 @@ unmeasured because of the join cap; no M5 Step 3 or port behavior change is
 authorized by this capture. Evidence:
 `scratch/agent/s3320_retail_target_publication.md` and
 `scratch/agent/s3320_retail_target_publication.log`.
+
+## Session 3321 (2026-08-30) — audited generated free-list walks
+
+Ran a bounded static census over the linked generated host file
+`../N64Recomp/RecompiledFuncs/funcs_3.c`, covering the two allocator
+consumers patched by the s3285 alignment/cycle class. The six candidate
+free-list traversal dereferences are at `0x80007D9C`, `0x80007DA8`,
+`0x80007DAC`, `0x80007E84`, `0x80007E90`, and `0x80007E94`; all six have
+adjacent KSEG0/alignment guards, and both loop-back sites include the s3285
+cycle cap. The three separate cache-head loads at `0x80007D50`,
+`0x80007DE8`, and `0x80007ED0` also have generic guards.
+
+This selects `H-AllWalksCovered` and refutes `H-UnguardedWalkExists` and
+`H-NonTraversalMatch` within the bounded class. The positive control was the
+same-file guard block at every candidate site. This is static single-source
+evidence only: it closes the class as safety-only, does not prove guard
+semantics on retail, and authorizes no M5 or allocator behavior change.
+Evidence: `scratch/agent/s3321_generated_freelist_walk_audit.md`.
