@@ -4,7 +4,7 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3370 (2026-08-31). Compacted from
+Current maintenance marker: Session 3372 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
 
@@ -28,6 +28,16 @@ showed status `02` rows. This selects the qualified port no-clear/gate result,
 not a behavior explanation; the legitimate clear writer remains established
 by the static s3249 audit. No wait or slot change is authorized. Evidence:
 `scratch/agent/s3370_m5_status03_worker_contract.md`.
+
+Session 3372's regeneration-surviving `s2028` worker/status census reached
+title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, with PCM/filter
+controls live and no crash or abort. It observed status-03 worker entries and
+the exact legitimate `0x8009B7EC` store clearing slot 0 from `03` to `00` on
+the valid hangar route. The service exits are live, but the existing entry and
+exit counters are independent, so same-call entry→store→return ordering is
+not proven. This selects the port worker/store contract at class level and
+does not authorize a wait or slot change. Evidence:
+`scratch/agent/s3371_m5_status03_port_contract.md`.
 
 Session 3368's bounded M3 SP task-pointer audit added the missing full-
 `OSTask` KSEG0 range check to `osSpTaskLoad_recomp`, matching the existing
@@ -678,8 +688,8 @@ target row exists.
    `0x80007928 -> 0x8009123C` and `0x80091900 -> 0x80007910`. This selects
    `H-PortMatchesRetail` and refutes `H-PortWriterMismatch` and
    `H-PortProbeGap`; the callback source/target qualification is closed.
-   Next: qualify the downstream service/slot/voice/PCM contract in one
-   phase-gated port run. Evidence:
+   The downstream service/slot/voice/PCM contract is now the active M5
+   discriminator. Evidence:
    `scratch/agent/s3364_m5_port_callback_edge.md`.
 Session 3367 closes further static consumer enumeration as a discriminator:
 the generated tree has no literal indirect target for the named consumers,
@@ -687,11 +697,10 @@ and only register-loaded guest-state callback edges remain. Next M5 work must
 obtain independent retail status-03 worker/zeroing evidence before any wait
 or slot change. Evidence:
 `scratch/agent/s3367_m5_consumer_indirect_dispatch_census.md`.
-Session 3369 now supplies the independent retail worker contract: the named
-service path entered and cleared status-03 in hangar. Next M5 work must qualify
-the matching port worker/clear contract on the validated image-arm route;
-do not change a wait, slot, or status edge until the port writer/value and
-return ordering are observed.
+Session 3369 supplied the independent retail worker contract, and Session
+3372 qualified the matching port worker/store contract on the validated route.
+The remaining M5 discriminator is the named consumer/output/PCM relation; do
+not change a wait, slot, or status edge.
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase
@@ -702,8 +711,9 @@ return ordering are observed.
    activity live in hangar but did not observe the four named consumers,
    selecting `H-PortConsumerUnreached`. Session 3369 independently selected
    `H-RetailStatus03Reaped`: retail's service worker entered and cleared
-   status-03 in hangar. Next: qualify the matching port worker/clear contract
-   on the validated image-arm route. Do not change a contract edge or add a
+   status-03 in hangar. Session 3372 observed the port worker's legitimate
+   `0x8009B7EC` clear from `03` to `00`; the remaining contract gap is the
+   consumer/output relation. Do not change a contract edge or add a
    mitigation.
 3. Keep configured-host PatchesLib validation as an open dependency. When
    that host is available, run `cmake --build build --config Debug --target

@@ -129932,3 +129932,29 @@ No new experiment was run. Session s3370 rebuilt the Debug target during its
 cmake build, regenerating `ucode_024A10.bin`, but did not stage the binary
 before committing. This iteration commits only that artifact; all conclusions
 and next steps remain those of s3370.
+
+## Session 3372 (2026-08-31) — qualified port status-03 worker/store contract
+
+The existing regeneration fixup census was activated after adapting its
+function-slice boundary to this generated layout: `shutdownMusyXVoices` ends
+`funcs_26.c` and `accumulateVoiceSampleOffset` begins `funcs_27.c`. The Debug
+target rebuilt successfully. The fixed phase-gated port run used
+`ROGUESQ_AUDIO_UCODE=1`, reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, captured 141 frames, and emitted PCM/filter positive
+controls with no `[CRASH]` or `[ABORT]` marker.
+
+The `s2028` census emitted 3,110 worker-dispatch rows and 5,376 service
+entry/exit rows. It observed five status-03 reads and one exact
+`0x8009B7EC` store in the valid hangar phase: slot 0, old status `0x03`, new
+value `0x00`. A target-phase status-03 service entry preceded that store in
+the event stream. Service exits and status-03 exits were live, but the
+existing entry/exit counters are independent, so same-call
+entry→store→return ordering is not proven. This selects the port worker/store
+contract at class level and rules out the prior “missing exact clear witness”
+instrumentation explanation for this route. No wait, slot, or status behavior
+changed. Evidence: `scratch/agent/s3371_m5_status03_port_contract.md`.
+
+The first census activation exposed a fixup layout assumption rather than a
+runtime failure; the external fixup now falls back to the end of `funcs_26.c`
+when the following function is in `funcs_27.c`. The initial failed activation
+and the corrected chain are recorded in the evidence note.
