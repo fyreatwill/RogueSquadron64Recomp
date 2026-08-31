@@ -132057,3 +132057,20 @@ mitigation changed. Evidence: `docs/M5-S3472-RETAIL-STATE-WRITER.md` and
 
 ORIGIN: no mitigation or runtime behavior change was added; the watched
 state-table writes are observations, not rewritten values.
+## Session 3473 (2026-08-31) — joined port table and output state
+
+The prescribed title-gated image-arm port capture reached title origin
+`0x00790400` and later the 512-wide hangar phase. The output/state and state-
+pointer positive controls both fired. It emitted 2,048 table-selection rows,
+1,024 producer-input rows, and 514/510/510/514 rows at the four target PCs
+`0x80001C98`/`0x80001CB8`/`0x80001CC8`/`0x80001F84`; no crash or abort marker
+appeared. Producer values included `0x801B4F00` (183) and `0x801B5E70` (4),
+matching the qualified retail value family, while output/state pointers were
+in the `0x80110xxx` family rather than retail's qualified `0x801B1590`.
+
+This selects `H-PortPointerSelection`: the port reaches the qualified table
+value family but diverges at downstream state-pointer selection. It rules out
+an absent port observation because both controls and all target buckets fired.
+It does not identify the pointer writer or transformation. No runtime change
+was made. Evidence: `docs/M5-S3473-PORT-STATE-JOIN.md` and
+`scratch/agent/s3473_m5_port_state_join/run.log`.

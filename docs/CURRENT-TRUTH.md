@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3469 (2026-08-31). This record was
+Current maintenance marker: Session 3473 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -278,16 +278,28 @@ does not select `H-RetailStateWriter` over `H-PortPointerSelection` because
 the oracle has no selected-entry identity for an ordinal join. Evidence:
 [M5-S3472-RETAIL-STATE-WRITER.md](M5-S3472-RETAIL-STATE-WRITER.md).
 
+Session 3473 joined the existing port table-selection, producer-input, and
+output/state witnesses in one title-gated image-arm capture. Both positive
+controls fired; the run produced 2,048 table rows, 1,024 producer rows, and
+514/510/510/514 rows at the four target PCs. Port producer values included
+`0x801B4F00` and `0x801B5E70`, matching the qualified retail value family,
+while the downstream port state pointers were in the `0x80110xxx` family
+instead of retail's qualified `0x801B1590` tuple. This selects
+`H-PortPointerSelection` and rules out an absent port observation, but does
+not name the pointer writer or transformation. Evidence:
+[M5-S3473-PORT-STATE-JOIN.md](M5-S3473-PORT-STATE-JOIN.md).
+
 ## Next steps
 
-1. With the retail writer schema qualified, run one image-arm port capture
-   using the existing regeneration-safe table-selection, state-pointer, and
-   four-PC output/state witnesses in the same title-gated log. Join selected
-   entry/value and `s1`/state-word rows within that run. Matching retail value
-   family plus a different selected pointer selects `H-PortPointerSelection`;
-   a different port producer/value selects `H-RetailStateWriter`; missing
-   port controls is unevaluable.
-2. Retain the Session 3468 retail post-store table and Session 3471 tuple rows
+1. Locate the first port-side writer or transformation that turns the
+   qualified table value family into the `0x80110xxx` output/state pointer.
+   Use one batched port instrument covering the producer load, the intervening
+   pointer stores/loads, and the four output/state PCs, with a same-run
+   positive control and title VI phase gate. A matching producer value followed
+   by the first `0x80110xxx` store selects that writer edge; no store before
+   the consumer selects a missing/alternate dispatch edge; absent control is
+   unevaluable.
+2. Retain the Session 3468 retail post-store table and Session 3473 port join
    as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
