@@ -1,28 +1,29 @@
-# NEXT work unit — M5 upstream predecessor census
+# NEXT work unit — M5 earlier producer/call-contract census
 
-HYPOTHESIS-ID: m5-producer-predecessor-edge
+HYPOTHESIS-ID: m5-earlier-producer-contract
 
-Before building, ask the retail oracle for driven, phase-gated execution rows
-at `0x800078E0` and `0x8002BEE8`, retaining predecessor, arguments, and
-target-span bytes, with the whole-RDRAM positive control in the same run. Use
-Rice and the canonical Start schedule. Then build once and run one port census
-with the existing phase, audio-task, callback-writer, PCM, and static-call
-controls. Do not change output or audio behavior.
+Before building, enumerate static callers and generated callsites feeding the
+selected `0x8002BEE8`/`0x800078E0` family. Then ask the retail oracle for one
+driven, phase-gated run retaining those caller PCs, arguments, and target-span
+bytes, with whole-RDRAM control. Use Rice and the canonical Start schedule.
+Then build once and run one port census with the existing phase, audio-task,
+callback-writer, PCM, and static-call controls. Do not change output or audio
+behavior.
 
 Competing hypotheses:
 
-- `H-EarlierRetailProducer`: valid like-for-like retail hangar predecessor
-  rows are nonzero while the port still has only `0x8008F2CC` zero-fill; the
-  gap is earlier than the observed port writer.
-- `H-PortPredecessorMatch`: the port exposes the same predecessor edge with
-  nonzero target bytes; the gap is a translation/dispatch mismatch after it.
-- `H-LegitimateZeroBoundary`: both routes expose the predecessor edge but
-  write zero; the zero fill is legitimate here and data is produced later.
+- `H-EarlierPortContract`: retail caller/input rows are valid and nonzero while
+  the port still has only `0x8008F2CC` zero-fill; the gap is earlier than the
+  observed port writer.
+- `H-DownstreamPortMismatch`: the port exposes matching caller/input rows with
+  nonzero target bytes; the gap is downstream of this boundary.
+- `H-LegitimateEarlierZero`: both routes expose the caller/input edge but write
+  zero; the zero fill is legitimate here and data is produced later.
 
-Discriminator: valid retail hangar predecessor rows plus no matching port edge
-select `H-EarlierRetailProducer`; matching nonzero port rows select
-`H-PortPredecessorMatch`; matching zero rows on both routes select
-`H-LegitimateZeroBoundary`. If the retail hangar phase bucket is absent, the
+Discriminator: a valid retail caller/input row with no port counterpart selects
+`H-EarlierPortContract`; matching nonzero port rows select
+`H-DownstreamPortMismatch`; matching zero rows on both routes select
+`H-LegitimateEarlierZero`. If the retail hangar phase bucket is absent, the
 oracle arm is partial and no hangar hypothesis is selected.
 
 Exact port route shape:
