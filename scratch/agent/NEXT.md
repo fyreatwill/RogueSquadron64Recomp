@@ -1,33 +1,32 @@
-# NEXT work unit — identify the pre-existing callback-table occupant writer
+# NEXT work unit — exact attribution of the second callback-table registration
 
-HYPOTHESIS-ID: m5-callback-occupant-writer
+HYPOTHESIS-ID: m5-callback-occupant-exact-caller
 
-Session 3334 showed the port reaches `initMusyXVoiceTable` and calls
-`registerSiCallback` with `0x8009B5A8`, but `0x80007928` never stores because
-the table is already full of `0x8009123C` occupants. Identify the writer or
-loader that populated those occupants before considering behavior change.
+Session 3335 selected generated runtime population at the class level, but the
+1-ms snapshot's `0x80007A68` marker is not an exact store PC. Identify the
+generated callsite that registers the second/third `0x8009123C` occupant.
 
 ## Competing hypotheses
 
-- `H-PortCallbackOccupantIsRuntime`: a generated runtime writer stores
-  `0x8009123C` before `initMusyXVoiceTable` reaches the full table.
+- `H-PortSecondRegistrationCallsite`: a generated callsite invokes
+  `registerSiCallback(0x8009123C)`; direct callsite instrumentation will name it.
 - `H-PortCallbackOccupantIsOverlayData`: overlay load/DMA or data initialization
-  populates the three entries without a generated store in the live path.
-- `H-PortCallbackOccupantIsTransient`: the current state poll misses a transient
-  writer, so a write watch or finer-grained entry capture is required.
+  populates an occupant without a registration call.
+- `H-PortCallbackOccupantIsTransient`: the table changes between snapshots and
+  the callsite census needs finer phase gating or a direct store hook.
 
 ## Discriminator
 
 Ask the independent retail oracle first, retaining whole-RDRAM, callback-table
 write, and the existing retail callback PCs. Then build one port instrument
-with a phase-gated write census for the full callback-table range, plus entry
-marks for every generated function that writes or copies the table and the
-existing task/host controls. A runtime writer row with value `0x8009123C`
-selects `H-PortCallbackOccupantIsRuntime`; a clean full-table range with no
-generated writer but an overlay/DMA event selects `H-PortCallbackOccupantIsOverlayData`;
-a positive-control run with a state change but no retained writer row selects
-`H-PortCallbackOccupantIsTransient`. Any missing positive control invalidates
-the run and requires a fixed rerun in that iteration.
+that marks every generated `registerSiCallback` callsite, including the
+existing `0x80002FDC` and `0x8009BC50` edges, alongside the full-table census
+and task/host controls. A marked call with argument `0x8009123C` before the
+occupant transition selects `H-PortSecondRegistrationCallsite`; a clean call
+census with a table transition and overlay/DMA evidence selects
+`H-PortCallbackOccupantIsOverlayData`; a positive-control run with a table
+transition but no marked call selects `H-PortCallbackOccupantIsTransient`.
+Any missing positive control invalidates the run and requires a fixed rerun.
 
 Exact prior-arm commands are in
 `scratch/agent/run_s3334_m5_callback_writer_attribution.sh`; extend that one

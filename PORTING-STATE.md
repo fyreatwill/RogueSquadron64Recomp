@@ -129248,3 +129248,23 @@ is reached, but the table is already full so no store occurs. It leaves the
 writer/loader of the pre-existing `0x8009123C` occupants unresolved. No
 behavior change or mitigation was made. Evidence:
 `scratch/agent/s3334_m5_callback_writer_attribution.md`.
+
+## Session 3335 (2026-08-30) — selected generated callback occupant population
+
+The ground-truth-first retail Rice capture passed the whole-RDRAM positive
+control at 10,000 writes, watched 19 writes in the callback-table range, and
+reached the driven title/hangar route. Retail executed `0x80007928` with
+`$a0=0x80003250` and later `$a0=0x8009123C`, plus the known callback consumers
+`0x8009B5A8` and `0x8009BD7C`.
+
+The rebuilt port passed task/host controls, title 1024, and hangar 512. Its
+1-ms callback census observed `[80003250,0,0,0]`, then
+`[80003250,8009123C,0,0]`, then `[80003250,8009123C,8009123C,0]`.
+The asynchronous last-PC markers were `0x80001F88`, `0x80007A68`, and
+`0x80001F88`; the first is the return delay slot after the generated caller
+at `0x80002FDC` invokes `registerSiCallback(0x80003250)`. This selects
+generated runtime population as a class and leaves the exact
+`0x8009123C` registration caller unresolved. It rules out a table that is
+only populated by the later initializer and provides no basis for an overlay
+or audio-contract change. No behavior change or mitigation was made.
+Evidence: `scratch/agent/s3335_m5_callback_occupant_writer.md`.

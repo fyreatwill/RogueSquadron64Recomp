@@ -3658,6 +3658,10 @@ static void start_b50_poller() {
 static void start_phase_poller() {
     if (!std::getenv("ROGUESQ_LOG_PHASE")) return;
     static std::thread t{[]{
+        const bool callback_census = [] {
+            const char* e = std::getenv("ROGUESQ_LOG_M5_CALLBACK_CENSUS");
+            return e && e[0] && e[0] != '0';
+        }();
         uint8_t* rdram = nullptr;
         while (!(rdram = (uint8_t*)g_recomp_rdram_for_wp_raw)) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -3721,6 +3725,22 @@ static void start_phase_poller() {
             if (cur_ovl   != prev_cur_ovl)   changed = true;
             if (star_word != prev_star_word) changed = true;
             if (cb0 != prev_cb0 || cb1 != prev_cb1 || cb2 != prev_cb2 || cb3 != prev_cb3) changed = true;
+            if (callback_census &&
+                (cb0 != prev_cb0 || cb1 != prev_cb1 ||
+                 cb2 != prev_cb2 || cb3 != prev_cb3)) {
+                static uint32_t callback_rows = 0;
+                if (callback_rows < 256u) {
+                    fprintf(stderr,
+                        "[m5-callback-census] n=%u t=%llu phase=%u "
+                        "last_pc=0x%08X cb=[%08X,%08X,%08X,%08X]\n",
+                        callback_rows,
+                        (unsigned long long)(GetTickCount64() - start_ms),
+                        rs64_phase_ord(), (unsigned)g_rs64_last_guest_pc,
+                        cb0, cb1, cb2, cb3);
+                    fflush(stderr);
+                    ++callback_rows;
+                }
+            }
             for (int j = 0; j < 6; ++j) {
                 if (active[j] != prev_active[j]) { changed = true; break; }
             }
@@ -3800,7 +3820,8 @@ static void start_phase_poller() {
                         (unsigned long long)(GetTickCount64() - start_ms), total_pop);
                 fflush(stderr);
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            std::this_thread::sleep_for(std::chrono::milliseconds(
+                callback_census ? 1 : 50));
         }
     }};
     t.detach();

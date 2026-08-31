@@ -4,9 +4,22 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3334 (2026-08-30). Compacted from
+Current maintenance marker: Session 3335 (2026-08-30). Compacted from
 61,424 bytes / 1,094 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3335 selected the runtime-writer class for the pre-existing callback
+occupants. Retail passed the whole-RDRAM control, watched 19 callback-table
+writes, and executed `0x80007928` with `0x80003250` and `0x8009123C`. The
+qualified port passed task/host, title 1024, and hangar 512 controls; its 1-ms
+callback census observed `[80003250,0,0,0]`, then
+`[80003250,8009123C,0,0]`, then `[80003250,8009123C,8009123C,0]`. The
+captured last PCs (`0x80001F88`, `0x80007A68`) are asynchronous nearby
+markers, not exact store PCs; the first maps to the caller returning after
+`registerSiCallback(0x80003250)`. This selects runtime-generated population
+as a class, leaves the exact `0x8009123C` caller unresolved, and authorizes
+no behavior change. Evidence: `scratch/agent/s3335_m5_callback_occupant_writer.md`.
+
 
 Session 3334 completed callback-writer attribution through the registration
 edge. Retail passed the whole-RDRAM and callback-table controls, reached
