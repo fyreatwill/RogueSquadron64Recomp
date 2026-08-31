@@ -1,37 +1,33 @@
-# NEXT work unit — join candidate pointer stores to consumer loads
+# NEXT work unit — audit the caller-side state-pointer selection idiom
 
 HYPOTHESIS-ID: m5-state-pointer-writer
 
-Session 3474's qualified store census found title-scoped pointer-valued stores
-at `0x800027C4`, `0x800027D0`, `0x800027DC`, and repeated `0x80003C28`, but
-did not capture loads or a shared producer/consumer ordinal. Do not repeat the
-span census unchanged.
+Session 3475 ruled out the four measured latest candidate links as the direct
+source of incoming `rs_free` `$s1`; do not repeat that join unchanged.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-InterveningPointerWriter`: a candidate store value becomes the consumer's
-  `s1`; a same-ordinal store-to-load match selects this.
-- `H-AlternateDispatch`: the consumer `s1` is supplied without a matching
-  candidate store; live target rows plus no match select this.
-- `H-ObservationInvalid`: controls or target rows fail; no conclusion is
-  allowed until the same run's positive controls fire.
+- `H-UninstrumentedWriter`: a caller-side load/assignment supplies the
+  consumer `$s1`; matching its value to the next `rs_free` entry selects it.
+- `H-AlternateDispatch`: no caller-side assignment/load in the complete
+  enumerated idiom supplies the observed value; live entry rows without a
+  match select this at the audited scope.
+- `H-ObservationInvalid`: controls or entry rows fail; no conclusion is
+  allowed without same-run positive controls.
 
-Discriminating measurement: one regeneration-safe, title-gated table that
-records candidate pointer stores, loads of the actual consumer state source,
-the producer input, and all four output/state PCs with a shared in-run ordinal.
-The candidate store PCs are `0x800027C4`, `0x800027D0`, `0x800027DC`, and
-`0x80003C28`; include the actual `s1` source/load sites discovered from the
-generated `rs_free` path. Build all hooks together, retain the four-PC and
-pointer-checkpoint positive controls, and use one image-arm run only.
+Discriminating measurement: enumerate every generated caller-side load or
+assignment of `$s1` feeding the `0x80005268 -> rs_free` edge, then add one
+regeneration-safe, title-gated table containing site PC, loaded source/address,
+value, caller ordinal, and the immediately following `rs_free` `$s1`. Keep the
+pointer-checkpoint and four-PC controls, and run one image arm only.
 
-Before building, inspect generated code around `rs_free` and the candidate
-sites to identify exact load addresses. Then use the validated route:
+Before building, inspect all generated callers of `rs_zcfree` and the
+`0x80005268` edge. Ask the retail oracle first with whole-RDRAM control plus
+the identified caller PCs and any source-address watches. Then batch all port
+hooks in one build and run from `build/` using the validated LLE/spin-yield
+route from Session 3475.
 
-`cmake --build build --config Debug --target RogueSquadron64Recomp`
-
-`mkdir -p scratch/agent/s3475_m5_pointer_join && cd build && env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUTOPILOT='3:start,7:start,11:start,15:a,30:start,45:start,60:a' PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 ROGUESQ_LOG_PHASE=1 ROGUESQ_LOG_M5_TABLE_SELECTION=1 ROGUESQ_LOG_M5_STATE_POINTER=1 ROGUESQ_LOG_M5_OUTPUT_STATE_FIELDS=1 ROGUESQ_AUDIO_UCODE=1 ./RogueSquadron64Recomp > ../scratch/agent/s3475_m5_pointer_join/run.log 2>&1 & pid=$!; sleep 80; kill -KILL "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true`
-
-Expected outcomes: matching store/load/consumer ordinals select
-`H-InterveningPointerWriter`; live controls and consumers without a match
-select `H-AlternateDispatch`; absent controls or target rows are
-`H-ObservationInvalid` and require redesign, not a null conclusion.
+Expected outcomes: an exact caller load/value-to-entry match selects
+`H-UninstrumentedWriter`; live controls and consumer rows with no match after
+complete enumeration select `H-AlternateDispatch`; missing controls or
+entries are `H-ObservationInvalid` and require redesign.

@@ -2005,6 +2005,15 @@ struct Rs64M5FrequencyPending {
 
 static thread_local Rs64M5FrequencyPending g_rs64_m5_frequency_pending{0, 0, 0, 0, false};
 
+struct Rs64M5PointerCandidate {
+    uint32_t pc;
+    uint32_t addr;
+    uint32_t value;
+    uint32_t phase;
+};
+
+static thread_local Rs64M5PointerCandidate g_rs64_m5_pointer_latest[4]{};
+
 extern "C" void rs64_m5_state_pointer_entry(uint8_t* rdram,
                                                recomp_context* ctx) {
     static const bool enabled = [] {
@@ -2024,6 +2033,8 @@ extern "C" void rs64_m5_state_pointer_entry(uint8_t* rdram,
     const uint32_t s1 = U32(ctx->r17);
     if (!((s1 >= 0x80194000u && s1 < 0x80196000u) ||
           (s1 >= 0x801B0000u && s1 < 0x801C0000u))) return;
+    extern void rs64_m5_state_pointer_consumer(uint32_t s1);
+    rs64_m5_state_pointer_consumer(s1);
     static uint32_t rows = 0;
     if (rows >= 512u) return;
     std::fprintf(stderr,
@@ -2244,11 +2255,48 @@ extern "C" void rs64_m5_pointer_span_store(char width, uint32_t pc,
         control = true;
     }
     if (value < 0x80110000u || value >= 0x80112000u) return;
+    static constexpr uint32_t candidate_pcs[4] = {
+        0x800027C4u, 0x800027D0u, 0x800027DCu, 0x80003C28u
+    };
+    for (unsigned i = 0; i < 4; ++i) {
+        if (pc == candidate_pcs[i]) {
+            g_rs64_m5_pointer_latest[i] = {pc, addr, value, rs64_phase_ord()};
+            break;
+        }
+    }
     if (rows >= 1024u) return;
     std::fprintf(stderr,
         "[m5-state-pointer-store] ordinal=%u phase=%u width=1024 origin=0x%06X "
         "pc=0x%08X width=%c addr=0x%08X phys=0x%06X value=0x%08X\n",
         rows++, rs64_phase_ord(), origin, pc, width, addr, phys, value);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_state_pointer_consumer(uint32_t s1) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_STATE_POINTER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (width != 1024u || (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t rows = 0;
+    if (rows >= 512u) return;
+    std::fprintf(stderr,
+        "[m5-state-pointer-consumer] ordinal=%u phase=%u width=1024 origin=0x%06X s1=0x%08X "
+        "c0=%08X/%08X/%08X/%u c1=%08X/%08X/%08X/%u c2=%08X/%08X/%08X/%u c3=%08X/%08X/%08X/%u\n",
+        rows++, rs64_phase_ord(), origin, s1,
+        g_rs64_m5_pointer_latest[0].pc, g_rs64_m5_pointer_latest[0].addr,
+        g_rs64_m5_pointer_latest[0].value, g_rs64_m5_pointer_latest[0].phase,
+        g_rs64_m5_pointer_latest[1].pc, g_rs64_m5_pointer_latest[1].addr,
+        g_rs64_m5_pointer_latest[1].value, g_rs64_m5_pointer_latest[1].phase,
+        g_rs64_m5_pointer_latest[2].pc, g_rs64_m5_pointer_latest[2].addr,
+        g_rs64_m5_pointer_latest[2].value, g_rs64_m5_pointer_latest[2].phase,
+        g_rs64_m5_pointer_latest[3].pc, g_rs64_m5_pointer_latest[3].addr,
+        g_rs64_m5_pointer_latest[3].value, g_rs64_m5_pointer_latest[3].phase);
     std::fflush(stderr);
 }
 

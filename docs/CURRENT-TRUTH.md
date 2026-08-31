@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current maintenance marker: Session 3473 (2026-08-31). This record was
+Current maintenance marker: Session 3475 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -301,15 +301,25 @@ loads, this narrows the candidate set but selects neither pointer-writer nor
 alternate-dispatch hypothesis. Evidence:
 [M5-S3474-POINTER-WRITER.md](M5-S3474-POINTER-WRITER.md).
 
+Session 3475 joined the four candidate port store PCs to the title-gated
+`rs_free` consumer boundary. All three port controls fired and the run
+emitted 1,024 candidate stores plus 512 consumer rows. No consumer row's
+nonzero latest candidate value matched its incoming `s1`; repeated
+`0x80003C28` values were different `0x80111xxx` links. The independent retail
+preflight also had live consumer execution and candidate-span activity. This
+selects `H-AlternateDispatch` for the four measured latest-store links and
+rules out `H-InterveningPointerWriter` at that scope. An uninstrumented writer
+or route difference remains possible. Evidence:
+[M5-S3475-POINTER-JOIN.md](M5-S3475-POINTER-JOIN.md).
+
 ## Next steps
 
-1. Close the pointer-writer boundary with a selected-address/load witness:
-   join the `0x80003C28`/`0x800027C4` candidate stores and the consumer's
-   actual `s1` address in one title-gated ordinal table. A candidate store
-   whose value becomes the consumer `s1` selects `H-InterveningPointerWriter`;
-   a live consumer with no matching store selects `H-AlternateDispatch`;
-   missing controls remain unevaluable. Keep the existing positive controls.
-2. Retain the Session 3468 retail post-store table and Session 3473/3474 port
+1. Audit the uninstrumented writer/selection edge supplying incoming `s1`
+   after the four candidate links were ruled out. Enumerate the complete
+   caller-side load/assignment idiom feeding the `0x80005268` call, then
+   instrument all sites in one regeneration-safe table with a positive
+   control; do not repeat the four-store join unchanged.
+2. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
 3. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.

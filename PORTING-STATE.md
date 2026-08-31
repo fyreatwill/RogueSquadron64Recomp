@@ -132094,3 +132094,28 @@ hypothesis. No runtime behavior or mitigation changed. Evidence:
 
 ORIGIN: the writer census only observes stores; it does not rewrite or skip
 values, and legitimacy of the candidate pointer values is not asserted.
+## Session 3475 (2026-08-31) — joined candidate pointer stores to consumer state
+
+The independent retail preflight used a whole-RDRAM positive control, the
+physical `0x00110000:0x00112000` candidate span, and title-phase execution
+watches at the four output/state PCs. The control and span were active;
+consumer execution produced 20,950 hits and retail rows showed live `s1`
+values in both the `0x80110xxx` and `0x801Bxxxx` families.
+
+The regeneration-safe port witness passed the pointer-writer,
+pointer-checkpoint, and four-PC output/state controls. It emitted 1,024
+candidate stores and 512 title-gated consumer rows, retaining the latest
+store tuple for `0x800027C4`, `0x800027D0`, `0x800027DC`, and `0x80003C28`.
+No nonzero latest candidate value matched incoming `s1` in any consumer row.
+The recurring `0x80003C28` value was a different `0x80111xxx` link, such as
+`0x80111100` versus consumer `s1=0x80110D70`. This selects
+`H-AlternateDispatch` for the four measured latest-store links and rules out
+`H-InterveningPointerWriter` at that scope. It does not rule out an
+uninstrumented writer or a route difference.
+
+Evidence: `docs/M5-S3475-POINTER-JOIN.md` and
+`scratch/agent/s3475_retail_pointer_groundtruth/run.log` plus
+`scratch/agent/s3475_m5_pointer_join/run.log`.
+
+ORIGIN: the work added observational store/consumer witnesses only; it did
+not rewrite, skip, or validate pointer values as legitimate.
