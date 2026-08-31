@@ -555,18 +555,30 @@ explanation. The missing input/dispatch producer remains unidentified and no
 audio behavior changed. Evidence is in
 [M5-S3437-FREQUENCY-ENTRY.md](M5-S3437-FREQUENCY-ENTRY.md).
 
+Session 3438 qualified the earlier caller boundary after first running the
+independent retail oracle with the whole-RDRAM control. Retail reached both
+title origins and produced 7,806 unique normalized rows at `0x800331D0`. The
+fresh-build port image arm used the validated LLE/spin-yield route, reached
+title 1024 and hangar 512 with task/RSP/PCM controls live, and emitted 256
+caller rows plus 107 unique tuples at generated `osRecvMesg` callsites. The
+wrapper emitted the same 107 tuples; the caller/wrapper intersection was 107,
+but the port caller/retail intersection was zero. This selects
+`H-EarlierPortInputGap` and refutes `H-PortWrapperContractGap` and
+`H-EarlierBoundaryUnevaluable` at the observed scope. It does not identify
+the earlier producer or establish tuple legitimacy. Evidence is in
+[M5-S3438-FREQUENCY-CALLERS.md](M5-S3438-FREQUENCY-CALLERS.md).
+
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the earlier port input/dispatch boundary selected by Session 3437.
-   Use one fresh-build image run with the existing phase controls and a
-   phase-scoped census at the callers feeding `osRecvMesg_recomp`, joined to
-   the existing normalized tuple rows and the selected frequency-result
-   consumer. The discriminator is whether a retail-observed entry tuple is
-   absent before the wrapper (earlier port input/dispatch gap), present before
-   but changed at the wrapper (wrapper contract gap), or unavailable despite
-   live controls (boundary still unevaluable). Keep waits, slots, clear
-   behavior, and PCM writeback unchanged.
+1. Trace the earlier port producer selected by Session 3438. Use the 53
+   generated caller sites, beginning with the high-count `0x80001B04`,
+   `0x80001CB8`, `0x80006EFC`, and `0x80006F5C` routes, and one phase-scoped
+   census at the first input-producing edge before those calls. The
+   discriminator is whether a retail-observed tuple appears at that earlier
+   edge and is preserved into the caller, is absent there too, or the edge is
+   unevaluable despite live controls. Keep waits, slots, clear behavior, and
+   PCM writeback unchanged.
 2. The direct `setDisplayMode` audio callsite boundary is closed for the
    count: retail and port both pass `a1=0x12` at observed `0x8008EBC0`, though
    other arguments differ; neither exposes `0x5622`.

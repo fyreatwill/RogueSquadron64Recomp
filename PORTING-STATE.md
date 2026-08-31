@@ -131319,3 +131319,28 @@ mismatch explanation. It points the investigation earlier into port
 input/dispatch, but does not identify the producer or change audio behavior.
 Evidence: `docs/M5-S3437-FREQUENCY-ENTRY.md` and
 `scratch/agent/s3437_m5_frequency_entry/`.
+
+## Session 3438 (2026-08-31) — traced frequency caller boundary
+
+Ran the independent retail oracle first with a whole-RDRAM positive control,
+both title origins, and the `0x800331D0` field dump. It reached 10,000 control
+writes, 95,359 execution hits at the common entry, and 7,806 unique normalized
+field tuples. Added a regeneration-safe caller census to all 53 generated
+`osRecvMesg` callsites, then built once and ran the validated image route with
+spin-yield, phase, task, RSP-source, PCM, and wrapper controls. The port reached
+title 1024 and hangar 512 with no crash or abort markers. Caller rows retained
+107 unique tuples; the wrapper retained the same 107, with exact intersection
+107. Port caller versus retail intersection was zero. High-count callsites were
+`0x80001B04` (152), `0x80001CB8` (52), `0x80006EFC` (22), and `0x80006F5C`
+(8). The first port attempt omitted spin-yield and stayed at 640, so its null
+was discarded.
+
+This selects `H-EarlierPortInputGap` and refutes `H-PortWrapperContractGap`
+and `H-EarlierBoundaryUnevaluable` at the observed scope. It rules out a
+wrapper-side loss of the observed port tuple, but does not identify the earlier
+producer or establish tuple legitimacy. No waits, slots, dispatch, clear
+behavior, or PCM writeback changed.
+
+Evidence: `docs/M5-S3438-FREQUENCY-CALLERS.md`,
+`scratch/agent/s3438_retail_frequency_ground_truth/oracle.log`, and
+`scratch/agent/s3438_m5_frequency_input_retry/run.log`.
