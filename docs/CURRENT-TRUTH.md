@@ -4,9 +4,18 @@ Operational state for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable
 background is in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); exact run
 recipes and evidence remain in the ledger and `scratch/agent/`.
 
-Current maintenance marker: Session 3359 (2026-08-31). Compacted from
+Current maintenance marker: Session 3360 (2026-08-31). Compacted from
 60,004 bytes / 986 lines to 47,173 bytes / 786 lines; durable s3201–s3302 archive is
 PROJECT-OVERVIEW section 54.
+
+Session 3360's independent retail callback-table watch passed the whole-RDRAM
+positive control (10,020 writes), reached title 1024 and hangar 512, and
+recorded 20 callback-slot writes. Writers were guest PCs `0x80007928` (9),
+`0x80007968` (6), and new writer `0x80017D08` (5); one sampled post-value was
+`0x8009123C`. This refutes the callback-table physical-alias/no-write theory
+and the claim that only the two known helpers write the range, but does not
+yet pair `0x80017D08` with the problematic value. Evidence:
+`scratch/agent/s3360_m5_callback_table_oracle.md`.
 
 Session 3358 validated the session 3357 task-start pointer guard on the live
 route. The Debug binary reached title VI `1024 @ 0x00790400` at 14.6 s and
@@ -555,6 +564,11 @@ target row exists.
    retail ground truth for the dynamic callback/function-pointer source and
    then build one regeneration-surviving port census of the same source/target
    table; do not change behavior or add a mitigation.
+   Session 3360's retail physical callback-table watch passed the whole-RDRAM
+   control and recorded 20 slot writes, including guest writer `0x80017D08`
+   in addition to `0x80007928` and `0x80007968`. The alias/no-write theory is
+   refuted; exact writer-to-value pairing remains the next port census. See
+   `scratch/agent/s3360_m5_callback_table_oracle.md` (single-source).
 2. M5 Step 1 remains `H-ContractGap`, narrowed by Sessions 3326–3329 and
    3348: retail
    writes slot/status and executes the named consumer PCs in the hangar phase

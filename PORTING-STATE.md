@@ -129713,3 +129713,20 @@ The required next unit remains the M5 callback-table writer/source census with
 its three competing hypotheses and retail/port positive controls in
 `scratch/agent/NEXT.md`. This maintenance result rules out no runtime
 hypothesis and changes no behavior.
+
+## Session 3360 (2026-08-31) — captured retail callback-table writer ground truth
+
+Ran the independent retail Rice oracle with two physical write watches in one
+run: whole RDRAM as the positive control and callback slots
+`0x0011A8A4:0x0011A8B8` as the target. The control fired 10,020 writes and was
+removed at its 10,000 threshold; the target fired 20 writes. The route reached
+title VI 1024 and hangar VI 512. Target writer PCs were `0x80007928` (9),
+`0x80007968` (6), and the additional guest PC `0x80017D08` (5). Sampled
+post-values included `0x8009B5A8`, zero, `0x04000000`, and `0x8009123C`.
+
+This refutes the callback-table physical-alias/no-write hypothesis and the
+narrow claim that only the two known helpers write the range. It identifies a
+third guest writer but does not join that PC to the problematic value, so it
+does not yet explain the port's pre-existing `0x8009123C` occupants. The
+result is single-source retail evidence; no behavior change. Evidence:
+`scratch/agent/s3360_m5_callback_table_oracle.md`.

@@ -1,54 +1,40 @@
-# NEXT work unit — port host-boundary census for callback-table writer (post-maintenance)
+# NEXT work unit — port callback-table writer/source census
 
 HYPOTHESIS-ID: m5-callback-table-writer
 
-Maintenance session 3359 completed; run this bounded census next. No audio
-behavior change or mitigation is authorized.
-
-Session 3356's independent retail oracle attributed all 19 callback-table
-writes to guest PCs `0x80007928` (11) and `0x80007968` (8), with post-values
-only `0x8009B5A8`, `0x8009123C`, or zero. This refutes a retail host/runtime
-writer. The port table pre-populates three `0x8009123C` occupants before
-the known direct callers run (sessions 3334–3337).
-
-The unresolved question: which port code path writes `0x8009123C` into the
-callback table before the known `0x8009BC50` registration call?
+Session 3360's independent retail oracle passed the whole-RDRAM positive
+control, reached title 1024 and hangar 512, and recorded 20 callback-table
+writes. Writers were `0x80007928` (9), `0x80007968` (6), and `0x80017D08`
+(5). Sampled values included `0x8009123C`; the new writer-to-value pairing is
+not yet joined. The port table pre-populates three `0x8009123C` occupants
+before the known direct callers run.
 
 Competing hypotheses:
 
-- `H-PortWriterIsIndirectJalr`: an untraced port jalr at or near `0x800919EC`
-  writes `0x8009123C` as the registered value (the store is in the same
-  function body that loads and calls the pointer, and the store uses `0x8009123C`
-  as its argument rather than `0x8009B5A8`).
-- `H-PortWriterIsEarlyInit`: a port-only early initialization path writes
-  `0x8009123C` before the main registration loop, not through `registerSiCallback`
-  at all.
-- `H-PortWriterIsStoreViaAlias`: the callback table alias or base address
-  differs in the port, causing a write to an untraced physical address.
+- `H-PortWriterIsIndirectJalr`: an untraced port jalr near `0x800919EC`
+  writes `0x8009123C` as the registered value.
+- `H-PortWriterIsEarlyInit`: a port-only early initialization path writes the
+  value before the main registration loop, outside `registerSiCallback`.
+- `H-PortWriterIsThirdGuestSite`: a port guest-side store corresponding to
+  retail `0x80017D08` supplies the problematic value.
+- `H-PortWriterIsStoreViaAlias`: the port writes the table through a different
+  base, so the expected physical range is unobserved.
 
-Discriminating measurement: obtain independent retail physical watches for the
-four callback slot words (physical range covering `0x8011A8A4`–`0x8011A8B4`).
-Arm a positive control (whole-RDRAM watch) and confirm the slot addresses match
-expectations. Run the port with an aggregated table-write log (build one
-regeneration-surviving fprintf covering all `registerSiCallback` store sites
-and the `0x800919EC` jalr site), one build, one run with the validated route
-(spin-yield, title 1024, hangar 512 controls).
+Discriminating measurement: build one regeneration-surviving aggregated port
+log recording every callback-table store's site, slot, and value, plus the
+`0x800919EC` indirect edge. Run once with the validated task/host/title/hangar
+controls. A third-site/value pairing selects `H-PortWriterIsThirdGuestSite`;
+only known sites with `0x8009123C` select the indirect/argument path; no target
+rows select alias or route invalidity. Positive controls must all fire in that
+same run.
 
-Do NOT change audio behavior or add a mitigation. Do NOT add per-event output
-that perturbs the scheduler — use the aggregated drain model from session 3343.
+Before building, inspect the existing aggregate instrumentation and update
+the fixup source that regenerates it. Then run:
 
-Exact commands for the retail watch (positive control first):
 ```sh
-cd tools/oracle
-# Physical address of callback table base 0x8011A8A4 → 0x0011A8A4
-# Whole-RDRAM control must fire first
-python3 run_oracle.py --watch-write 0x000000:0x800000 --watchdog 90 --reach-phase 512
-python3 run_oracle.py --watch-write 0x11A8A4:0x11A8B8 --watchdog 90 --reach-phase 512
+cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-Outcomes:
-- Watch fires, writers are `0x80007928` and `0x80007968` only → refutes
-  `H-PortWriterIsIndirectJalr` (same writers as retail, port anomaly is in
-  argument not writer).
-- Watch fires with a new writer PC → identifies the actual port writer.
-- Watch does not fire → `H-PortWriterIsStoreViaAlias` (wrong physical address).
+Use the established Debug AUTOPILOT/spin-yield recipe, with task/host probes,
+VI phase gates, and aggregated drain output. Do not change audio behavior, do
+not add a mitigation, and do not emit one line per store from the hot path.
