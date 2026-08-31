@@ -1,34 +1,30 @@
-# NEXT work unit — trace the selected direct-writer edge
+# NEXT work unit — re-qualify the port route before the direct-writer edge
 
-HYPOTHESIS-ID: m5-port-zero-pcm-source
+HYPOTHESIS-ID: m5-port-route-requalification
 
-Do exactly one bounded M5 direct-writer edge census next iteration. Do not
-modify output, waits, slots, status handling, consumer dispatch, or PCM
-writeback.
+Do exactly one bounded route-requalification experiment next iteration. Run
+the last known-good port recipe from `build/` with all new M5 logging disabled.
+If it reaches title and hangar, repeat the same binary invocation with the
+existing M5 logs enabled. Do not modify output, waits, slots, status handling,
+consumer dispatch, or PCM writeback.
 
 Competing hypotheses:
 
-- `H-PortDirectWriterMissing`: the port never reaches the retail direct-writer
-  edge `0x8002BEEC -> 0x800078EC`.
-- `H-PortWriterDispatchAlias`: the port reaches the same writer through a
-  translated/aliased caller edge that is currently hidden by the host probe.
-- `H-PortWriterBytesDiffer`: the port reaches the edge but target bytes differ
-  before the writer, so the zero PCM source is produced there.
+- `H-PortLoggingTrigger`: the new M5 logging combination triggers the early
+  scheduler crash.
+- `H-PortRouteRegression`: the current binary or route fails independently of
+  the new logging.
+- `H-PortRecipeMismatch`: the prior known-good recipe is not the recipe being
+  invoked by the current launcher.
 
-Discriminating measurement: ask the retail oracle for phase-gated execution
-rows at `0x8002BEEC` and `0x800078EC`, including predecessor and target bytes;
-batch one port writer-entry census keyed by caller/return edge, target bytes,
-phase, and audio-task ordinal/row. No port `0x8002BEEC` edge selects
-`H-PortDirectWriterMissing`; a matching writer with a different caller selects
-`H-PortWriterDispatchAlias`; a matching caller with zero/different bytes
-selects `H-PortWriterBytesDiffer`.
+Discriminating measurement: title and hangar VI transitions plus crash/exit
+status in the no-log baseline. Reachability in the no-log arm with failure in
+the logging arm selects `H-PortLoggingTrigger`; the same scheduler SIGSEGV in
+both selects `H-PortRouteRegression`; a different early failure selects
+`H-PortRecipeMismatch`.
 
-Before building, verify oracle watch indices and existing port writer hooks.
-Keep phase, audio-task/ABI, PCM, image-stage/DMA, title, and hangar controls
-live. If code under `lib/` changes, run
-`./submodule-patches/export.sh` in the same iteration.
-
-Run from `build/` with the validated route and canonical Start schedule; phase
-gate on VI 512 via `probe.sh`, use a non-dot-prefixed capture path, and kill
-with SIGKILL. Record the result in a new scratch evidence file, update the
-ledger and CURRENT-TRUTH, then commit.
+Exact constraints: launch from `build/`, use the ROM there, arm the canonical
+Start schedule, use a non-dot-prefixed capture path, and terminate with
+SIGKILL. No oracle or new instrumentation is needed before this baseline;
+Session 3382 already supplied the retail ground truth and passed its positive
+control.

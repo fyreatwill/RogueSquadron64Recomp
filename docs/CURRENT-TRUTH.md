@@ -5,7 +5,7 @@ is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed run evidence remains
 in `scratch/agent/` and the append-only ledger.
 
 Current maintenance marker: Session 3377 (2026-08-31); active state refreshed
-through Session 3381 (2026-08-31). This file was compacted
+through Session 3382 (2026-08-31). This file was compacted
 from 991 lines / 60,639 bytes to a concise active-state record; sessions
 s3201–s3376 remain in the ledger and archived overview.
 
@@ -67,19 +67,23 @@ status handling, consumer dispatch, or PCM writeback while tracing the source.
 Priority is maintenance, M5 de-stubbing, systematic M3, then generated-symbol
 renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
 
-1. Trace the selected caller mismatch. Before building, ask the retail oracle
+1. Re-qualify the validated port route before repeating the direct-writer
+   census. Session 3382 tried three route variants; each crashed before title
+   at `spTaskSchedulerThread+9536` with `si_addr=0x400128d47`, so no target
+   phase armed. First run the last known-good recipe with new M5 logging off.
+2. Trace the selected caller mismatch. Before building, ask the retail oracle
    for phase-gated execution/argument rows at `0x8002BEEC` and `0x8008F2CC`
    alongside the writer and whole-RDRAM control. Then batch one port census of
    both callsites' constructed destination/value/length and target task join;
    do not change the write.
-2. Competing hypotheses for that unit:
+3. Competing hypotheses for that unit:
    - `H-PortCaller8002BEECAbsent`: the port never reaches the retail target
      caller, so `0x8008F2CC` is a different legitimate initialization path.
    - `H-PortCallerArgumentConstruction`: both paths are reached, but their
      destination/length/value or task-row construction differs.
    - `H-PortCallerDispatchAlias`: the port reaches the retail caller through a
      dispatch/overlay alias that changes the observed callsite.
-3. Discriminator: same-run rows keyed by caller PC, destination, value, len,
+4. Discriminator: same-run rows keyed by caller PC, destination, value, len,
    phase, and audio-task ordinal/row. Retail caller activity with no matching
    port row selects `H-PortCaller8002BEECAbsent`; matching activity with a
   tuple difference selects `H-PortCallerArgumentConstruction`; matching
@@ -92,12 +96,17 @@ renaming. M5 design is in [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md).
   `H-PortCaller8002BEECAbsent` for the direct-writer edge and refutes argument
   construction mismatch at that tuple. The alias mechanism remains unresolved.
   Evidence: `scratch/agent/s3381_m5_caller_census.md`.
-4. Trace the selected direct-writer edge. Before building, ask the oracle for
+- Session 3382's retail prerequisite again passed and observed 398
+  `0x8002BEEC -> 0x800078EC` predecessor executions with nonzero post-store
+  samples. Three port variants all crashed before title at the same scheduler
+  SIGSEGV, so the port direct-writer hypotheses remain unevaluable. Evidence:
+  `scratch/agent/s3382_m5_direct_writer_edge.md`.
+5. Trace the selected direct-writer edge. Before building, ask the oracle for
    phase-gated rows at `0x8002BEEC` and `0x800078EC` including the predecessor
    and target bytes, then add one port-side census at the equivalent writer
    entry that records the guest return/caller edge and target bytes. Keep all
    existing controls; do not change output or audio behavior.
-5. Discriminator: a port writer edge with `caller=0x8002BEEC` and matching
+6. Discriminator: a port writer edge with `caller=0x8002BEEC` and matching
    target bytes selects dispatch alias/translation; no such edge while the
    port zero-fill persists selects an earlier missing dispatch/producer edge.
 

@@ -130147,3 +130147,19 @@ and refutes argument construction mismatch at the observed tuple. It leaves
 the alias/translation mechanism unresolved and does not establish that the
 zero fill is illegitimate. No behavior changed. Evidence:
 `scratch/agent/s3381_m5_caller_census.md`.
+
+## Session 3382 (2026-08-31) — M5 direct-writer route was not phase-qualified
+
+Ran the retail oracle first with whole-RDRAM, target-span, phase, and execution
+controls. The positive control fired; title and hangar were reached; retail
+showed 398 `0x8002BEEC -> 0x800078EC` predecessor executions and nonzero
+post-store samples in the target spans. This independently confirms the
+direct-writer edge.
+
+The port build succeeded, but three bounded launches using the prior ungated,
+explicit-real-audio, and documented non-ungated LLE variants all crashed before
+title at `spTaskSchedulerThread+9536`, `si_addr=0x400128d47`, last guest PC
+`0x8000834C`. The source-DMA hook control fired, but no target-phase caller or
+writer row appeared. The direct-writer port hypotheses are therefore
+unevaluable this iteration; no behavior changed. Evidence:
+`scratch/agent/s3382_m5_direct_writer_edge.md`.
