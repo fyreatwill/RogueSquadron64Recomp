@@ -512,13 +512,25 @@ and refutes parity there. The first retail state-pointer producer remains
 unresolved; message-zero legitimacy is not established. Evidence is in
 [M5-S3444-STATE-POINTER-PRODUCER.md](M5-S3444-STATE-POINTER-PRODUCER.md).
 
+Session 3445 added an entry witness at `rs_free` and ran the validated
+silent/image pair after the independent retail control. Both port arms reached
+hangar 512 with consumer/output controls live and no crash/abort markers; the
+entry witness fired 512 rows per arm. Both entered `rs_free` with retail-shaped
+`s1=0x80194B20`, pointed word `0x80194B40`, and `a0=0x801BEEB0`, while the
+post-receive consumer later saw `0x801Bxxxx` and output `0x2`. This selects
+`H-PortStatePointerClobber` between `rs_free` entry and `0x80001CB8`, and
+refutes a missing upstream producer at the entry boundary. The generated host
+wrapper still reports `ra=0`, so the exact clobber remains open. Evidence is
+in [M5-S3445-STATE-POINTER-ENTRY.md](M5-S3445-STATE-POINTER-ENTRY.md).
+
 ## Next steps
 
-Session 3444's next unit is to locate the first producer of the retail
-`0x80194B20` state-pointer family. Ask the oracle first with whole-RDRAM,
-both title origins, hangar, and `--watch-pc 0x80001CB8,0x80001CC8`; then add
-the generated-`jal` caller/entry candidates and `--pc-field-dump` in one
-instrumented build/run. Keep the state-pointer/output join as the discriminator.
+Session 3445's next unit is to locate the first port-side clobber after
+`rs_free` entry and before `0x80001CB8`. Use one fresh paired build/run with
+phase-qualified checkpoints at the `osRecvMesg_recomp` return and immediately
+before the existing consumer witness. Parity at every checkpoint closes the
+clobber hypothesis; a first port-only change selects its boundary; missing
+controls are unevaluable.
 
 Session 3432 repeated the frequency-result work unit. The retail oracle passed
 its whole-RDRAM control (10,041 callbacks) and observed 41 writes to physical

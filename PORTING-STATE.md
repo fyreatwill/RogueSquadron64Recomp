@@ -131433,6 +131433,29 @@ Evidence: `docs/M5-S3442-FREQUENCY-OUTPUT-USE.md`,
 `scratch/agent/s3442_retail_output_sites.log`, and
 `scratch/agent/s3442_m5_frequency_output_pair/`.
 
+## Session 3445 (2026-08-31) — located the port state-pointer clobber boundary
+
+The first retail oracle attempt used a broad PC-range watch and flooded its
+capture, so it was unevaluable. The corrected oracle retained the whole-RDRAM
+positive control, title/hangar phase controls, and the retail
+`s1=0x80194B20` field rows. A fresh build added a regeneration-safe witness at
+`rs_free` entry and ran silent and Factor 5 image arms concurrently. Both arms
+reached hangar VI 512 without crash or abort; existing consumer/output controls
+were live, and the new entry witness fired 512 rows per arm. Both port arms
+entered `rs_free` with `s1=0x80194B20`, pointed word `0x80194B40`, and
+`a0=0x801BEEB0`. The post-receive consumer later saw `0x801Bxxxx` state
+pointers and output `0x2` in both arms.
+
+This selects `H-PortStatePointerClobber` between `rs_free` entry and
+`0x80001CB8`, and refutes `H-PortStatePointerGap` at the entry boundary and
+`H-StatePointerProducerAbsent` for this route. The generated host wrapper
+reports `ra=0`, so the exact clobbering call remains open. The broad-watch
+capture was removed after the bounded retry; no runtime behavior changed.
+
+Evidence: `docs/M5-S3445-STATE-POINTER-ENTRY.md`,
+`scratch/agent/s3445_m5_state_pointer_producer/port/`, and
+`scratch/agent/s3445_m5_state_pointer_producer/oracle_fixed.log`.
+
 ## Session 3443 (2026-08-31) — closed retail frequency output value join
 
 Ran the independent retail oracle first with the whole-RDRAM positive
