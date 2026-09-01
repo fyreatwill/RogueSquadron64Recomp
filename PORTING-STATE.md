@@ -132547,3 +132547,24 @@ watchdog; prior s3494 success remains a qualification baseline only.
 
 Evidence: `docs/M5-S3495-SELECTOR-COMPARISON.md` and
 `scratch/agent/s3495_m5_selector_comparison/`.
+
+## Session 3496 (2026-08-31) — real-audio route failed before title
+
+Ran one fresh direct-PID port arm from `build/` with the prescribed
+real-audio/LLE/spin-yield, phase, task-writer, selector, and audio-return
+controls. The process exited with SIGSEGV after 11 seconds; the watchdog did
+not need to kill it. No title or selector controls/rows fired. The last guest
+PC was `0x8000B650` (`fillSampleStreamRange`), and the host crash stack was in
+RT64 framebuffer writeback. This is distinct from Session 3495's `0x8000834C`
+failure.
+
+The selector comparison remains unevaluable: this run supplies no qualified
+port arm and selects neither selector parity nor source divergence. It rules
+out only interpreting the selector null as a qualified-route result. The
+route-failure family remains unresolved. Evidence:
+`docs/M5-S3496-REAL-AUDIO-ROUTE.md` and
+`scratch/agent/s3496_m5_real_audio_route_20260831-184412.log`.
+
+ORIGIN: diagnostic-only route, phase, selector, audio-return, and crash
+observations; no audio state, selector value, task field, or route behavior was
+rewritten, skipped, or validated.

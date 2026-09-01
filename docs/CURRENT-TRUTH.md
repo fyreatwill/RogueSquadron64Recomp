@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3495 (2026-08-31). This record was
+Current active marker: Session 3496 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -594,13 +594,28 @@ ORIGIN: diagnostic-only oracle and port route/selector observations; no audio
 state, selector value, task field, or route behavior was rewritten, skipped,
 or validated.
 
+Session 3496 ran one fresh direct-PID real-audio/LLE/spin-yield port arm with
+the existing phase, task-writer, selector, and audio-return controls. It
+exited with SIGSEGV before title after 11 seconds; no title or selector
+controls/rows fired. The last guest PC was `0x8000B650`
+(`fillSampleStreamRange`), while the host stack was in RT64 framebuffer
+writeback. This fresh failure is distinct from Session 3495's `0x8000834C`
+failure, so the selector comparison remains unevaluable and no selector
+parity/source hypothesis is selected. Evidence:
+[M5-S3496-REAL-AUDIO-ROUTE.md](M5-S3496-REAL-AUDIO-ROUTE.md).
+
+ORIGIN: diagnostic-only route, phase, selector, audio-return, and crash
+observations; no audio state, selector value, task field, or route behavior was
+rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Re-qualify the real-audio/LLE/spin-yield route with a direct-PID watchdog
-   and the existing selector positive controls. The discriminator is whether
-   the route reaches title and both selector controls fire; a repeat of the
-   `0x8000834C` crash keeps the selector comparison unevaluable and requires a
-   new route-failure angle.
+1. Execute M5 plan Step 1: one build and one phase-gated run containing the
+   silent control and the default real image arm, with task dispatch/exit,
+   DMEM/DMA, SP completion, service/slot, PCM, and route controls. The
+   discriminator is whether the image arm reaches the target phase and shows
+   downstream progress beyond the silent arm; a pre-title image crash remains
+   a route qualification failure, not evidence about selector data.
 2. After the real-audio route and both selector controls fire, run the
    selector-load/writer capture with the existing four-PC controls and the
    independent retail task-dispatch control in the same iteration. The
@@ -610,8 +625,8 @@ or validated.
    trace the
    upstream selector/table producer feeding `0x80091074` with one batched
    retail/port discriminator keyed by source family and title origin.
-4. Keep Session 3494's route qualification and Session 3492's dispatch result
-   as baselines; do not repeat either unchanged.
+4. Keep Sessions 3494–3496's real-audio route outcomes and Session 3492's
+   dispatch result as baselines; do not repeat any unchanged route retry.
 4. Keep Session 3488's silent route as the qualification baseline; do not
    repeat the same silent gate audit unchanged.
 5. Retain the Session 3486 pointer-word result; do not repeat the exact
