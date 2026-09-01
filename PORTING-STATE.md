@@ -133773,3 +133773,34 @@ gap. No audio, PCM, image-task, or output state was changed.
 Evidence: `scratch/agent/retail_preclear_groundtruth.log`,
 `scratch/agent/s3544_m5_preclear_writer/run.log`, and
 `docs/M5-S3544-PRECLEAR-WRITER.md`.
+
+## Session 3545 (2026-09-01) — qualified texture-record destination context
+
+Ground truth first: the retained retail oracle capture was extended with a
+whole-RDRAM positive control and execution watches for the texture-record
+family at `0x8001FACC`–`0x8001FD2C`. The control reached 10,000 callbacks and
+the oracle reached title VI 1024 and hangar VI 512. The same-build real-audio
+port also reached both target VIs and emitted destination-control rows in both
+phases.
+
+The batched instrument captured PC, base, index, effective destination,
+payload, and saved-register context for the generated scalar stores. Retail
+hangar rows used record bases around `0x8016F768`, `s2=0x1A2`,
+`s3=s4=0x2004`, and `s1=0x3AC8`; port rows used
+`0x8016D440`/`0x8016D464`, `s2=0xA8`/`0xA9`, `s3=s4=0x4004`, and
+`s1=0x17A0`/`0x17C4`. At `0x8001FAF8`, the port's effective destinations
+were `0x8016D44A`/`0x8016D46E`, distinct from retail's corresponding
+`v1+0xA` destinations. This selects `H-PortWrongDestination` and rules out
+shared destination context as the explanation for the port/retail gap. The
+writer PCs and values are legitimate texture-record writes; no mitigation was
+added. The next boundary is the producer of the divergent base/index
+selection.
+
+Evidence: `scratch/agent/s3545_m5_destination_contract/oracle.log`,
+`scratch/agent/s3545_m5_destination_contract/port.log`,
+`docs/M5-S3545-DESTINATION-CONTRACT.md`, and the retained
+`scratch/agent/retail_preclear_groundtruth.log`.
+
+ORIGIN: the texture-record stores are legitimate game writes; the observed
+defect is the differing upstream destination/context, not a value to skip or
+rewrite.

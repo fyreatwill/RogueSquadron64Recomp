@@ -2,7 +2,16 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3544 (2026-09-01).
+evidence documents are listed below. Updated for session 3545 (2026-09-01).
+
+Session 3545 paired a new context witness with the independent retail oracle.
+Both arms passed positive controls and reached title 1024 and hangar 512.
+Retail's texture-record family used record bases around `0x8016F768` in hangar
+with `s2=0x1A2`, `s3=s4=0x2004`, while the port used `0x8016D440`/`0x8016D464`
+with `s2=0xA8`/`0xA9`, `s3=s4=0x4004`; the effective `0x8001FAF8`
+destinations therefore differ. This selects `H-PortWrongDestination`: the
+writes are legitimate, but the port's base/index selection diverges upstream.
+See [M5-S3545-DESTINATION-CONTRACT.md](M5-S3545-DESTINATION-CONTRACT.md).
 
 Session 3544 extended the scalar source-span census across the pre-target
 run. The port reached both target VIs with positive controls live and logged
@@ -313,11 +322,10 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Resolve the higher-level destination/producer contract behind the
-   pre-target CPU stores at `0x8001FAF8` and its sibling texture-record sites.
-   Use one independent retail execution watch plus a same-build port context
-   capture; do not repeat the closed pre-clear census or change audio, PCM, or
-   output state.
+1. Resolve the producer of the divergent texture-record base/index context
+   feeding `0x8001FACC`–`0x8001FD2C`. Use one independent retail execution
+   watch plus a same-build port producer witness; do not repeat the closed
+   destination capture or change audio, PCM, output, or record writes.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -341,14 +349,13 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the image-task output payload producer. Session
-3538 selected `H-PortMissingWriter` at the observed destination scope:
-retail's independent writer watches produced legitimate nonzero bytes, while
-the port's phase-qualified DMA writer read and wrote zero payloads, with no
-CPU/host writer and no later overwrite. The legitimate port-side source
-writer is still unidentified, so no output state is to be rewritten. The
-`0x80091CC8` internal return contract is closed by Sessions 3534–3535. The
-silent-arm route defect is parked separately.
+The active work unit is now the producer of the texture-record base/index
+context. Session 3545 selected `H-PortWrongDestination`: retail and port both
+execute the family, but their phase-matched record bases, indices, and saved
+register contexts differ before the legitimate writes. The next witness must
+move upstream into that producer; no record, audio, PCM, or output state is to
+be rewritten. The `0x80091CC8` internal return contract is closed by Sessions
+3534–3535. The silent-arm route defect is parked separately.
 
 Session 3541 moved the live boundary to the port's zero-fill writer origin.
 The corrected writer hook records zero-valued writes at `0x178C80` from one
