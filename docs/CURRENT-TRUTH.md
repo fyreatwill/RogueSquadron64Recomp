@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3595 (2026-09-01).
+notes are linked below. Updated for session 3596 (2026-09-01).
 
 ## Current state
 
@@ -102,6 +102,13 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    word aliases and no complete caller-proven slot bound. This selects the
    same structural unevaluability boundary; no guard was added. See
    [M3-S3595-VOICE-30-40-FIELD-AUDIT.md](../scratch/agent/M3-S3595-VOICE-30-40-FIELD-AUDIT.md).
+   Session 3596 audited `+0x28..+0x2C`: accesses split across stack
+   temporaries, source/command descriptors, and global voice slots. The slot
+   writers are identified initialization/copy paths, but the 64-slot bound
+   and secondary unmasked-index contract are not proven; no concrete invalid
+   writer/value was found. Runtime index, allocator, lifetime, and value
+   legitimacy remain unproven. See
+   [M3-S3596-VOICE-28-2C-FIELD-AUDIT.md](../scratch/agent/M3-S3596-VOICE-28-2C-FIELD-AUDIT.md).
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -205,6 +212,13 @@ and evidence notes retain the full history.
   and stack frames. Mixed widths and layouts prevent a complete object-level
   classification; no concrete invalid writer/value was found and no guard was
   added. See [M3-S3595-VOICE-30-40-FIELD-AUDIT.md](../scratch/agent/M3-S3595-VOICE-30-40-FIELD-AUDIT.md).
+- **3596 — MusyX voice `+0x28..+0x2C` field audit:** generated accesses split
+  across stack temporaries, source/command descriptors, and global voice
+  slots. Initialization/copy writers have identified sources, but the
+  64-slot bound and secondary unmasked-index contract are not proven; no
+  concrete invalid writer/value was found. This selects
+  `H-NextClassUnevaluable`. See
+  [M3-S3596-VOICE-28-2C-FIELD-AUDIT.md](../scratch/agent/M3-S3596-VOICE-28-2C-FIELD-AUDIT.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies

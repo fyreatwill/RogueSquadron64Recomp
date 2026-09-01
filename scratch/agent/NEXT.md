@@ -1,15 +1,15 @@
-# NEXT work unit — audit the MusyX voice `+0x28..+0x2C` field family
+# NEXT work unit — audit the MusyX voice `+0x18..+0x24` field family
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
 Next work unit: perform one complete static census of the MusyX voice
-`+0x28..+0x2C` field family in `RecompiledFuncs/funcs_24.c`. Enumerate every
-word/halfword writer and reader, effective base/layout, index derivation,
+`+0x18..+0x24` field family in `RecompiledFuncs/funcs_24.c`. Enumerate every
+word/halfword/byte writer and reader, effective base/layout, index derivation,
 reset/free ordering, and consumer bound. Do not repeat the closed `+0x60`,
-`+0x30..+0x40`,
-MORT publication, mix-table, pan-input, or hangar-Y audits. Do not change
-runtime code unless a concrete invalid writer/value is identified; any
-mitigation needs an ORIGIN line naming the writer and assessing legitimacy.
+`+0x30..+0x40`, `+0x28..+0x2C`, MORT publication, mix-table, pan-input, or
+hangar-Y audits. Do not change runtime code unless a concrete invalid
+writer/value is identified; any mitigation needs an ORIGIN line naming the
+writer and assessing legitimacy.
 
 Competing hypotheses and discriminator:
 
@@ -17,16 +17,16 @@ Competing hypotheses and discriminator:
   unchecked writer-to-consumer edge.
 - H-NextClassComplete: every writer, consumer, base, lifetime, and bound is
   structurally covered and only runtime legitimacy remains.
-- H-NextClassUnevaluable: word/halfword aliases or mixed layouts prevent a
-  complete object-level classification.
+- H-NextClassUnevaluable: aliases or mixed layouts prevent a complete
+  object-level classification.
 
-Discriminator: the single complete `+0x28..+0x2C` census. Select Gap only
+Discriminator: the single complete `+0x18..+0x24` census. Select Gap only
 with a concrete invalid edge; select Complete only when all edges are covered;
 otherwise select Unevaluable.
 
 Exact checks before any build:
 
-    rg -n 'MEM_[BHW].*(0X28|0X2A|0X2C)' ../N64Recomp/RecompiledFuncs/funcs_24.c
+    rg -n 'MEM_[BHW].*(0X18|0X1A|0X1C|0X1E|0X20|0X22|0X24)' ../N64Recomp/RecompiledFuncs/funcs_24.c
     rg -n 'RECOMP_FUNC|musyx(RenderVoiceSamples|KeyOnVoice|MixActiveVoices|InitVoiceFromSample|StartVoiceRelease)' ../N64Recomp/RecompiledFuncs/funcs_24.c
 
 No build or runtime run is expected for this static audit. If the census is

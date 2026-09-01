@@ -134950,3 +134950,23 @@ identified sources, and no invalid value or demonstrably unchecked store edge
 was found. Runtime index, allocator, lifetime, and value legitimacy remain
 open. No build, run, guard, or mitigation was performed. Evidence is recorded
 in `scratch/agent/M3-S3595-VOICE-30-40-FIELD-AUDIT.md`.
+## Session 3596 (2026-09-01) — audited MusyX voice 0x28-0x2C field family
+
+Performed the planned static census of every generated `MEM_[BHW]` access to
+`0x28`, `0x2A`, and `0x2C` in `RecompiledFuncs/funcs_24.c`. The accesses split
+across stack temporaries, sample/command descriptors, and global voice-table
+slots. The global writers are identified initialization or descriptor-copy
+paths, but the 64-slot bound is not caller-proven and the secondary
+initialization path retains an unmasked original index.
+
+The result selects structural unevaluability, not a concrete invalid writer:
+no wild value or invalid source was demonstrated, while object layout,
+caller bounds, allocator/lifetime state, and runtime value legitimacy remain
+open. No build, run, guard, or mitigation was performed. Evidence is recorded
+in `scratch/agent/M3-S3596-VOICE-28-2C-FIELD-AUDIT.md`.
+
+ORIGIN: visible `+0x28..+0x2C` stores originate in
+`musyxInitVoiceFromSample`, `musyxStoreVoiceAdsrParams`, `musyxKeyOnVoice`,
+and render-path descriptor updates; zero initialization is legitimate and
+copied values have identified descriptor sources, while the unmasked
+secondary index is a contract gap, not proof of a bad runtime value.
