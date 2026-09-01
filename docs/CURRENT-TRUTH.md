@@ -722,13 +722,27 @@ ORIGIN: diagnostic-only route, phase, selector, audio-dispatch, and crash
 observations; no audio state, selector value, task field, or output was
 rewritten, skipped, or validated.
 
+Session 3504 changed only the graphics route to `ROGUESQ_LLE_FORCE=0` while
+keeping real audio, spin-yield, the existing controls, and the validated
+autopilot. The startup control fired and real audio dispatched at least 1,664
+tasks; the prior `spTaskSchedulerThread+9556`, guest PC `0x8000834C` crash did
+not recur. The run reached VI 640 at `0x00696100` but not title 1024 or hangar
+512, and emitted no audio-return or selector rows. This refutes “real audio
+always reproduces the 0x8000834C crash” but selects a new LLE-off pre-title
+route/advance blocker; selector hypotheses remain unevaluable. Evidence:
+[M5-S3504-LLE-OFF-REAL-AUDIO.md](M5-S3504-LLE-OFF-REAL-AUDIO.md).
+
+ORIGIN: diagnostic-only route, phase, audio-dispatch, and selector
+observations; no audio state, selector value, task field, or output was
+rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Re-qualify the real-audio title route with a genuinely new, bounded route
-   discriminator before resuming selector-table attribution. Require the
-   whole-RDRAM oracle control, port route control, and a 1024 title transition;
-   the repeated `0x8000834C` pre-title crash is a blocker, not a selector null.
-   Do not repeat the unchanged route recipe again.
+1. Test the next real-audio route discriminator with `ROGUESQ_LLE_FORCE=0`
+   and `ROGUESQ_SPIN_YIELD=0`. Require the startup control and a 1024 title
+   transition; title reach selects a spin-yield dependency, continued VI 640
+   selects the LLE-off advance blocker, and a new crash selects a distinct
+   route failure. Do not repeat either unchanged route recipe.
 2. Once that route is qualified, trace the writer/initializer and selector-index source feeding the
    `0x80150000`/`0x80150004` table entries used by `0x8009131C`, with one
    batched retail/port discriminator keyed by title origin, table address,

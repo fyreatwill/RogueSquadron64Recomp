@@ -132733,3 +132733,25 @@ skipped, or validated. Evidence: `docs/M5-S3503-REAL-AUDIO-ROUTE.md`.
 
 ORIGIN: diagnostic-only route, phase, selector, audio-dispatch, and crash
 observations; the run added no mitigation or behavior change.
+
+## Session 3504 (2026-08-31) — real audio survives with forced LLE disabled
+
+Ran one bounded real-audio route arm from `build/` with the existing phase,
+dispatch, audio-return, selector, caller, producer, and autopilot controls.
+Compared with Sessions 3502–3503, the arm set `ROGUESQ_LLE_FORCE=0` while
+retaining `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_SPIN_YIELD=1`, and
+`ROGUESQ_STUB_MISSING_FUNCS=1`. The startup control fired; the run reached VI
+640 at origin `0x00696100`; and real audio dispatch continued through at
+least 1,664 tasks. It did not crash at `spTaskSchedulerThread+9556`, guest PC
+`0x8000834C`, but it also did not reach title 1024 or hangar 512 and emitted
+no audio-return or selector rows before the 30-second SIGKILL.
+
+This refutes the narrower claim that real audio necessarily reproduces the
+`0x8000834C` crash and selects a new LLE-off pre-title route/advance failure.
+It does not qualify selector-table writer/index/value hypotheses. The route
+result is single-source this session; the prior crash remains independently
+covered by Sessions 3502–3503. Evidence: [M5-S3504-LLE-OFF-REAL-AUDIO.md](docs/M5-S3504-LLE-OFF-REAL-AUDIO.md).
+
+ORIGIN: diagnostic-only route, phase, audio-dispatch, and selector
+observations; no audio state, selector value, task field, or output was
+rewritten, skipped, or validated.
