@@ -85,6 +85,22 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
+The active work unit is now the pre-title audio-route blocker. Selector
+producer/context hypotheses are parked until a port route reaches hangar.
+
+For the pre-title route:
+
+- `H-RealAudioRouteCrash`: real audio crashes before title while silent audio
+  reaches the target phase.
+- `H-SilentRouteIndependentBlocker`: both arms stop before title, selecting a
+  shared blocker.
+- `H-RealAudioReachesTarget`: real audio reaches the target phase and reopens
+  the selector join.
+- `H-CaptureInvalid`: startup or phase controls fail.
+
+The discriminator is same-build silent/real audio phase and crash behavior;
+zero target-phase rows are not evidence.
+
 For the next producer boundary:
 
 - `H-ContextProducerParity`: predecessor context matches; an earlier
