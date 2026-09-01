@@ -133923,3 +133923,32 @@ The failed no-row capture is retained at
 and regeneration hook are diagnostic-only; audio, PCM, image-task, output,
 and texture-record writes were unchanged. Next work is static role mapping of
 the tuple before another run.
+
+## Session 3550 (2026-09-01) — HMT role table selected valid input
+
+The generated `parseHmtMaterials` body was inspected before changing the
+probe. It uses scalar material index `a0`, output record pointer `a1`, nullable
+material-entry pointer `a2`, and mode byte `a3`; it branches on null `a2`
+before reading the entry. The host classifier was corrected accordingly and
+entry fields `+0x28/+0x2A/+0x2C/+0x2D/+0x2E` were decoded only for mapped
+non-null entries. The first corrected capture exposed the role reversal and
+was not treated as evidence; the fixed build/run followed immediately.
+
+The final Debug build completed successfully. The canonical real-audio,
+LLE-solo, spin-yield, autopilot run passed `[m5-hmt-input-control]`, emitted
+1,557 HMT rows, and reached the 640-wide pre-title origin `0x0066A500`.
+There were zero `[m5-hmt-input] ... bad=1` rows; every sampled parse row had
+mapped output `a1` and either mapped or null `a2`, matching the generated
+null-handling branch. The process then crashed in `heapFreeListDequeue` with
+`last-guest-pc=0x8000D704`, before title or hangar.
+
+This selects `H-HmtInputValid` at the current discriminator and rules out the
+provisional scalar/non-pointer HMT classifier as well as a required-pointer
+violation in the sampled calls. It does not prove all future HMT inputs valid;
+the next boundary is the heap operation and its state/writer. No game, heap,
+audio, PCM, image-task, output, or texture-record state was changed.
+
+Evidence: `docs/M5-S3550-HMT-ROLE-TABLE.md` and
+`scratch/agent/s3550_m5_hmt_role_table/run-final2.log`.
+
+ORIGIN: diagnostic-only role and field observation; no mitigation was added.

@@ -1,31 +1,31 @@
-# NEXT work unit — statically qualify the HMT tuple roles before another run
+# NEXT work unit — qualify the pre-title heap failure
 
-HYPOTHESIS-ID: m5-preclear-caller-input-producer
+HYPOTHESIS-ID: m5-pretitle-heap-failure
 
-Use the generated MIPS body and the HMT format notes to classify which
-captured fields are pointers, indices, counts, or scalar payloads, then make
-one regeneration-safe replacement of the provisional `bad` classifier. Do
-not run the game until the role map makes each possible `bad` outcome
-interpretable; then rebuild and run one canonical real-audio capture.
+Use the generated body around `heapFreeListDequeue` and its callers to identify
+the exact operation at guest PC `0x8000D704`, then add one regeneration-safe,
+phase-scoped caller/state witness. Run one canonical real-audio/LLE/spin-yield/
+autopilot capture after the role map is complete.
 
 Competing hypotheses and the discriminator:
 
-- `H-HmtInputValid`: every role-mapped pointer is mapped and the crash is a
-  later dereference or route issue.
-- `H-HmtInputMalformed`: a role-mapped pointer/count violates the HMT contract
-  immediately before `parseHmtMaterials+3588`; its producer is next.
-- `H-HmtRoleUnknown`: the static body cannot distinguish a field role, so no
-  malformed-input conclusion is permitted and the probe must move to the
-  exact crash dereference.
+- `H-HeapStateLegitimate`: the freelist operation receives valid state and the
+  crash is a later route/runtime issue.
+- `H-HeapStateCorrupt`: a mapped writer leaves an invalid freelist link or
+  count immediately before `0x8000D704`; that writer is next.
+- `H-HeapRoleUnknown`: the generated body cannot identify the operation or
+  state fields; move to the exact dereference without classifying heap state.
 
-The single discriminating table is the role-mapped `[m5-hmt-input]` table plus
-the existing positive control and VI/crash markers. Each row includes the
-classified pointer/index/count tuple, stack context, return address, and the
-first contract violation.
+The single discriminating table is the heap-entry/state witness plus the
+existing positive control and VI/crash markers. Each row must identify the
+guest PC, caller edge, freelist head/node fields, mappedness, and first
+contract violation. A valid-state row selects the later runtime path; an
+invalid-state row selects its mapped writer; an unclassifiable row moves to the
+exact dereference.
 
-Before building, inspect `funcs_6.c` around `0x80022A00-0x80022BFC` and update
-the regeneration hook in `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.
+Before building, inspect the generated body and all callers of
+`heapFreeListDequeue` at `0x8000D704`; update the regeneration hook in
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.
 Then run the normal make_elf -> N64Recomp -> fixup -> cmake order and capture
-under `scratch/agent/s3550_m5_hmt_role_table/`, using the validated real-audio
-route and SIGKILL cleanup. Do not change audio, PCM, image-task, output, or
-texture-record writes.
+under `scratch/agent/s3551_m5_heap_failure/`, with SIGKILL cleanup. Do not
+change heap, audio, PCM, image-task, output, or texture-record writes.

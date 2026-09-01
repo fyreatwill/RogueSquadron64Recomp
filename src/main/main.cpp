@@ -311,7 +311,7 @@ extern "C" void rs64_m5_callback_transfer_event(uint32_t pc,
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     const uint32_t next_bucket = (width << 24) ^ origin;
     if (next_bucket != bucket) { bucket = next_bucket; rows = 0; }
-    if (rows >= 256u) return;
+    if (rows >= 4096u) return;
     std::fprintf(stderr,
         "[m5-callback-transfer] n=%u phase=%u width=%u origin=0x%06X "
         "pc=0x%08X target=0x%08X a0=0x%08X\n",
@@ -688,7 +688,7 @@ extern "C" void rs64_m5_caller_input_producer(
 }
 
 extern "C" void rs64_m5_hmt_input(
-    uint8_t*, uint32_t pc, const char* label, uint32_t a0, uint32_t a1,
+    uint8_t* rdram, uint32_t pc, const char* label, uint32_t a0, uint32_t a1,
     uint32_t a2, uint32_t a3, uint32_t sp, uint32_t w10, uint32_t w14,
     uint32_t w18, uint32_t w1c, uint32_t w20, uint32_t w24, uint32_t w28,
     uint32_t w2c, uint32_t w30, uint32_t ra) {
@@ -702,27 +702,45 @@ extern "C" void rs64_m5_hmt_input(
     static std::mutex mutex;
     static uint32_t rows = 0;
     std::lock_guard<std::mutex> lock(mutex);
-    if (rows >= 256u) return;
+    if (rows >= 4096u) return;
     auto guest_ptr = [](uint32_t value) {
         return value >= 0x80000000u && value < 0x80800000u;
     };
-    auto suspicious = [guest_ptr](uint32_t value) {
-        return value != 0 && !guest_ptr(value) &&
-               (value >= 0x01000000u || value < 0x00100000u);
-    };
-    const uint32_t bad = suspicious(a0) || suspicious(a1) || suspicious(w10) ||
-                         suspicious(w14) || suspicious(w18) || suspicious(w1c) ||
-                         suspicious(w20) || suspicious(w24) || suspicious(w28) ||
-                         suspicious(w2c) || suspicious(w30);
+    const bool parse = pc == 0x80022A00u;
+    const bool a1_ptr_ok = !parse || guest_ptr(a1);
+    const bool a2_ptr_ok = !parse || a2 == 0u || guest_ptr(a2);
+    const uint32_t bad = parse && (!a1_ptr_ok || !a2_ptr_ok);
+    uint32_t entry_28 = 0, entry_2a = 0, entry_2c = 0, entry_2d = 0, entry_2e = 0;
+    if (parse && a2_ptr_ok) {
+        const uint32_t phys = a2 & 0x007FFFFFu;
+        auto rd16 = [rdram, phys](uint32_t offset) {
+            return (static_cast<uint32_t>(rdram[phys + offset]) << 8) |
+                   static_cast<uint32_t>(rdram[phys + offset + 1]);
+        };
+        entry_28 = rd16(0x28);
+        entry_2a = rd16(0x2A);
+        entry_2c = rdram[phys + 0x2C];
+        entry_2d = rdram[phys + 0x2D];
+        entry_2e = rd16(0x2E);
+    }
     if (rows == 0u) {
-        std::fprintf(stderr, "[m5-hmt-input-control] enabled=1\n");
+        std::fprintf(stderr, "[m5-hmt-input-control] enabled=1 roles=pointer-only\n");
     }
     std::fprintf(stderr,
         "[m5-hmt-input] row=%u pc=0x%08X label=%s bad=%u "
+        "a0_role=%s a1_role=%s a2_role=%s a3_role=%s "
+        "a1_ptr_ok=%u a2_ptr_ok=%u entry28=0x%04X entry2a=0x%04X "
+        "entry2c=0x%02X entry2d=0x%02X entry2e=0x%04X "
         "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X sp=0x%08X "
         "w10=0x%08X w14=0x%08X w18=0x%08X w1c=0x%08X "
         "w20=0x%08X w24=0x%08X w28=0x%08X w2c=0x%08X w30=0x%08X ra=0x%08X\n",
-        rows++, pc, label, bad, a0, a1, a2, a3, sp, w10, w14, w18, w1c,
+        rows++, pc, label, bad,
+        parse ? "material_index" : "entry_or_table_ptr",
+        parse ? "output_record_ptr" : "material_or_index",
+        parse ? "nullable_material_entry_ptr" : "scalar_or_mode",
+        parse ? "mode_u8" : "mode_u8",
+        a1_ptr_ok, a2_ptr_ok, entry_28, entry_2a, entry_2c, entry_2d, entry_2e,
+        a0, a1, a2, a3, sp, w10, w14, w18, w1c,
         w20, w24, w28, w2c, w30, ra);
     std::fflush(stderr);
 }

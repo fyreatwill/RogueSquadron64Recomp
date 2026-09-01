@@ -2,7 +2,16 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3549 (2026-09-01).
+evidence documents are listed below. Updated for session 3550 (2026-09-01).
+
+Session 3550 statically corrected the HMT tuple roles and reran the canonical
+real-audio/LLE/spin-yield/autopilot capture. `parseHmtMaterials` uses scalar
+`a0`, output pointer `a1`, nullable material-entry pointer `a2`, and mode
+`a3`; 1,557 rows produced zero required-pointer violations. The run reached
+the 640-wide pre-title phase, then crashed in `heapFreeListDequeue` with
+`last-guest-pc=0x8000D704`. This selects `H-HmtInputValid` at the current
+discriminator and moves the next probe to the heap failure. See
+[M5-S3550-HMT-ROLE-TABLE.md](M5-S3550-HMT-ROLE-TABLE.md).
 
 Session 3549 added and ran a regeneration-safe, phase-independent entry table
 for `loadDebugAssets`, `registerHmtTextureInTable`, and `parseHmtMaterials`.
@@ -363,11 +372,15 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Re-establish a phase-valid real-audio port route past the existing
-   `parseHmtMaterials+3588`/`loadDebugAssets` SIGBUS, then rerun the bounded
-   caller/input table at `0x80022ACC`; do not interpret the retail-only rows as
-   parity/divergence or change audio, PCM, output, or record writes.
-2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
+1. Qualify the new pre-title `heapFreeListDequeue` failure at guest
+   `0x8000D704` with a bounded caller/input or freelist-state table, first
+   identifying the exact heap operation and its writer; do not add a
+   mitigation until its origin and legitimacy are established.
+2. Keep the HMT role result as valid at this discriminator: nullable `a2` is
+   an intended branch, and the sampled required pointers were mapped. Do not
+   repeat the provisional non-pointer scalar classifier or treat its old
+   `bad` rows as malformed-input evidence.
+3. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
 3. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
