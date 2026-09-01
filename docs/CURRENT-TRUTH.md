@@ -2,7 +2,20 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3561 (2026-09-01).
+documents are listed below. Updated for session 3562 (2026-09-01).
+
+Session 3562 closed the target-validity question for the downstream image-task
+contract on a standalone image arm. The same-build pair was route-invalid in
+this environment and both arms stopped at VI 640, so those target nulls are
+discarded. The fixed standalone image run reached title 1024 and hangar 512
+with all controls live. Image-task stage/completion/DMA rows were active, but
+the stage destinations were zero-valued and remained `stage-only` with zero
+PCM source/consumer joins (1,059 title rows and 1,060 hangar rows); title had
+13 independent consumer-only rows plus downstream slot/key-on activity. This
+selects `H-ImageTaskOutputGap` at a single-source port discriminator and moves
+the next boundary to the first legitimate producer of the image-stage output.
+The oracle was unavailable because its debugger core and retail ROM are absent.
+See [M5-S3562-IMAGE-TASK-CONTRACT.md](M5-S3562-IMAGE-TASK-CONTRACT.md).
 
 Session 3561 closed the paired-contention question with a target-valid
 standalone image retry. The concurrent image arm was route-invalid and
@@ -484,12 +497,10 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. M5 Step 3 route repair: qualify the pre-title image-arm boundary at guest
-   PC `0x8000834C` with the missing deeper caller/input/route table. Keep the
-   silent arm as the same-build route control and retain the independent retail
-   whole-RDRAM and target-phase controls. Shared contention is refuted; do not
-   interpret image-output joins or change behavior until the first route/input
-   divergence is attributed.
+0. M5 Step 3 output boundary: follow the first legitimate producer of the
+   image-task stage destination. The standalone image arm reached title 1024
+   and hangar 512 with stage/completion/DMA/PCM controls live, but stage rows
+   were zero-valued and `stage-only`; do not rewrite output or PCM state.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -524,7 +535,11 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 image-route qualification. Session 3560
+The active work unit is now M5 Step 3 image-task output qualification. Session 3562
+selected `H-ImageTaskOutputGap`: a target-valid standalone image arm had zero
+valued stage rows with no source/consumer joins, despite completion/DMA and
+title downstream consumer activity. The next witness must identify the first
+legitimate producer of the stage destination. Session 3560
 refuted `H-SharedContention`: paired and standalone image arms reached title
 and hangar with task/return/PCM controls live. The next witness must split
 `H-ImageInputBoundary` from `H-ImageRouteGate` using the deeper caller/input/

@@ -134237,3 +134237,30 @@ slot, PCM, or writeback behavior changed. See
 
 ORIGIN: diagnostic-only route, task, audio-return, PCM, and phase observations;
 no mitigation or value rewrite was added.
+
+## Session 3562 (2026-09-01) — image-task stage output stayed unjoined
+
+The oracle preflight was unavailable because its debugger core and retail ROM
+were absent. The full target rebuilt successfully. A same-build image/silent
+pair was route-invalid: both arms stopped at VI 640 before the required 1024
+control, so their target-phase nulls are unevaluable. A fixed standalone image
+retry reached title 1024 at 16.2s and hangar 512 at 25.4s, captured 65 frames,
+and had no crash marker.
+
+The standalone image arm had positive controls live: 2,589 image completion
+rows, 10,271 image-stage rows, 7,773 DMA-range rows, 98 PCM source and 98 PCM
+consumer rows, 530 audio returns, 1,024 task-lifetime rows, and the explicit
+downstream-store control. Its target-phase summaries showed 1,059 title and
+1,060 hangar stage rows, zero nonzero stage rows, zero source matches, zero
+consumer matches, and `stage-only` classification; title also had 13
+consumer-only rows plus downstream slot/key-on activity. PCM source and
+consumer rows matched each other by address and FNV in title. This selects
+`H-ImageTaskOutputGap` at a single-source port discriminator and moves the
+next boundary to the first legitimate producer of the image-stage output.
+
+No game state, task field, output, gate, slot, PCM, or writeback behavior
+changed. The paired route failure is not used for animated A/B comparison.
+See `docs/M5-S3562-IMAGE-TASK-CONTRACT.md`.
+
+ORIGIN: diagnostic-only phase, task, DMA, completion, PCM, slot, and output
+observations; no mitigation or value rewrite was added.
