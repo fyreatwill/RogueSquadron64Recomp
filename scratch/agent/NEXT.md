@@ -1,34 +1,31 @@
-# NEXT work unit — implement actual AI-frequency return semantics
+# NEXT work unit — qualify one image-task/output contract edge
 
-HYPOTHESIS-ID: m5-ai-frequency-contract-fix
+HYPOTHESIS-ID: m5-output-contract-boundary
 
-Session 3534 resolved the split from the retail ELF: `osAiSetFrequency`
-returns `osViClock / round(osViClock / frequency)`, so `0x5622` maps to
-`0x561F` at the NTSC clock. The host implementation currently returns its
-input.
+Session 3535 landed and validated the retail-equivalent `osAiSetFrequency`
+actual-frequency contract. Do not repeat the AI-return probe.
 
-Next unit: make the regeneration-safe host implementation match that actual
-frequency contract, then build and run the qualified real-audio route. Do not
-change selector/task/output state.
+Next unit: use the existing phase-keyed image-task/DMEM/DMA/PCM diagnostics and
+independent retail ground truth to name one missing output contract edge. Do
+not modify selector, task, or output state until a writer and legitimate value
+are selected.
 
 Competing hypotheses and discriminator:
 
-- `H-ContractFix`: the standard actual-frequency calculation makes the port
-  setup return `0x561F` for `0x5622` and preserves title/hangar reachability.
-- `H-AudioAbstractionMismatch`: the calculation is right but the runtime's
-  audio-register abstraction requires a different clock/register treatment;
-  the returned value or route will diverge.
-- `H-RouteRegression`: the contract fix changes audio lifecycle behavior and
-  causes a new pre-title/target-route failure.
-- `H-CaptureInvalid`: startup positive control or title/hangar phase witness
-  is absent; no route conclusion is allowed.
+- `H-MissingOutputWriter`: a retail-attributed writer/value/completion edge is
+  absent or differs in the port, selecting the next contract change.
+- `H-OutputParity`: task, DMEM/DMA, completion, and PCM joins match at the
+  qualified scope; Step 3 remains gated for a new discriminator.
+- `H-OutputRouteMismatch`: the port reaches target phases but an output join is
+  route-gated or ordered differently.
+- `H-CaptureInvalid`: whole-RDRAM/port controls or a target phase is absent.
 
-Required discriminator: one same-build run with the startup control plus
-phase-keyed setup rows. `H-ContractFix` requires target rows showing input
-`0x5622` and return/store `0x561F`, with title 1024 and hangar 512 reached;
-the other outcomes select the corresponding hypothesis above.
+Required discriminator: one batch-instrumented, phase-keyed comparison covering
+dispatch, task fields/source, DMEM/DMA, image exit, SP completion, service,
+slot/voice, MORT class, PCM source, and PCM consumer. Require an independent
+retail control and a named writer/value before selecting `H-MissingOutputWriter`.
 
-Build/run shape: edit `lib/N64ModernRuntime/librecomp/src/ai.cpp`, export
-`./submodule-patches/export.sh`, build the normal Debug target, then use the
-existing real-audio LLE/spin-yield/autopilot recipe with all passive
-breadcrumbs. Do not repeat the silent arm.
+Build/run shape: first inspect the existing task/PCM instrumentation and
+`tools/oracle/README.md` ground-truth capability; then build all required arms
+in one build and run phase-gated real-audio plus retail controls. Do not repeat
+the silent arm or add a single-field diagnostic.

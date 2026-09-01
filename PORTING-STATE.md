@@ -133521,3 +133521,21 @@ ORIGIN: retail ELF disassembly plus independent retail/port return evidence;
 the legitimate writer is `osAiSetFrequency`, whose contract returns actual
 programmed frequency, not requested frequency. See
 `docs/M5-S3534-AI-FREQUENCY-CONTRACT.md`.
+
+## Session 3535 (2026-08-31) — validated AI-frequency contract correction
+
+The bounded unit implemented the retail-equivalent `osAiSetFrequency`
+calculation in `librecomp/src/ai.cpp`, exported the submodule patch, and
+rebuilt the Debug target successfully. One real-audio LLE/spin-yield/autopilot
+run fired its startup AI positive control, reached title VI 1024 and hangar VI
+512, and produced phase-keyed setup rows with input `0x5622` and return/store
+`0x561F` in both target phases. No crash marker appeared before the required
+SIGKILL watchdog termination.
+
+This validates the contract correction and preserves the qualified route. It
+rules out the host's previous input-return behavior as the explanation for the
+selector split, but does not identify the next image-task/output edge.
+
+ORIGIN: retail ELF semantics plus same-build port phase/route evidence; the
+legitimate writer is `osAiSetFrequency`, and the change matches its actual
+programmed-frequency return contract.

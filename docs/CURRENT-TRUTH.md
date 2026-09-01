@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3534 (2026-08-31).
+evidence documents are listed below. Updated for session 3535 (2026-08-31).
 
 ## Current state
 
@@ -182,11 +182,17 @@ retail ELF body of `osAiSetFrequency` at `0x80029D20`. Retail rounds
 `osViClock / frequency` to `dacRate`, programs the AI registers, and returns
 `osViClock / dacRate`; with NTSC clock 48,681,812 and input `0x5622`, this is
 `dacRate=2208` and return `0x561F`. The result exactly explains the
-independent retail return, while the current host implementation returns its
-input because the equivalent calculation is commented out. This selects
-`H-InternalReturnSemantics` and refutes a later store/ABI mutation at the
-qualified boundary. No behavior change was made. See
+independent retail return. This selects `H-InternalReturnSemantics` and
+refutes a later store/ABI mutation at the qualified boundary. See
 [M5-S3534-AI-FREQUENCY-CONTRACT.md](M5-S3534-AI-FREQUENCY-CONTRACT.md).
+
+Session 3535 validated the host correction in one same-build real-audio
+LLE/spin-yield/autopilot run. Startup AI controls fired; title 1024 and hangar
+512 were reached; phase-keyed setup rows showed input `0x5622` and return/store
+`0x561F` in both target phases. This closes the AI-frequency contract edge and
+preserves the qualified route. The next M5 discriminator is an output/task
+comparison, not another AI-return probe. See
+[M5-S3535-AI-FREQUENCY-VALIDATION.md](M5-S3535-AI-FREQUENCY-VALIDATION.md).
 
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
@@ -214,10 +220,9 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Implement the now-qualified `osAiSetFrequency` actual-frequency contract
-   in the host primitive, using the NTSC calculation and existing audio
-   register abstraction, then validate the real-audio title/hangar route. This
-   is a named contract correction, not a selector/audio-state mitigation.
+1. Identify one missing image-task/output contract edge using the existing
+   phase-keyed task/DMEM/DMA/PCM joins plus independent retail ground truth;
+   only then implement that single selected edge.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -231,7 +236,8 @@ to be rewritten as a diagnostic mitigation.
    unevaluable; matching fields close a boundary and the first divergent field
    selects the next producer edge.
 6. M5 Step 3 remains gated until one output comparison names a missing
-   image-task/output contract edge. `docs/M5-AUDIO-PLAN.md` is complete;
+   image-task/output contract edge. The AI-frequency contract is now corrected;
+   `docs/M5-AUDIO-PLAN.md` is complete;
    configured-host PatchesLib validation is unavailable in this Unix checkout.
 7. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep retail-entry, hangar `0x8000` Y/accumulator, and
