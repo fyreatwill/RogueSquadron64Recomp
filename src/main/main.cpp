@@ -651,6 +651,42 @@ extern "C" void rs64_m5_base_index_producer(
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_caller_input_producer(
+    uint8_t*, uint32_t pc, char stage, uint32_t a0, uint32_t a1,
+    uint32_t a2, uint32_t a3, uint32_t field20, uint32_t field24,
+    uint32_t v0, uint32_t ra) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_CALLER_INPUT");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (own && own[0] && own[0] != '0') ||
+               (all && all[0] && all[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (key != phase_key) { phase_key = key; rows = 0; }
+    if (rows >= 256u) return;
+    if (rows == 0u) {
+        std::fprintf(stderr,
+            "[m5-caller-input-control] phase=%u width=%u origin=0x%06X\n",
+            rs64_phase_ord(), width, origin);
+    }
+    std::fprintf(stderr,
+        "[m5-caller-input] row=%u phase=%u width=%u origin=0x%06X "
+        "pc=0x%08X stage=%c a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X "
+        "field20=0x%08X field24=0x%08X v0=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, pc, stage, a0, a1, a2,
+        a3, field20, field24, v0, ra);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_052c4_join(uint8_t* rdram, uint32_t dst,
                                      uint32_t value, uint32_t len,
                                      uint32_t edge) {

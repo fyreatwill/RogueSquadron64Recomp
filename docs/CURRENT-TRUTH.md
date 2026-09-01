@@ -2,7 +2,17 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3546 (2026-09-01).
+evidence documents are listed below. Updated for session 3547 (2026-09-01).
+
+Session 3547 added the caller/input witness immediately around the direct
+`loadTextureToMemory` call at `0x80022ACC`. The independent retail oracle
+passed its whole-RDRAM control, reached title 1024 and hangar 512, and
+observed the caller predecessor plus the existing texture-index PCs. The
+same-build real-audio port crashed before any target phase in the existing
+`parseHmtMaterials+3588`/`loadDebugAssets` path (`last-guest-pc=0x80001F88`,
+SIGBUS), so all new port rows were absent. This selects `H-CaptureInvalid`
+for the join; caller parity/divergence remains open. See
+[M5-S3547-CALLER-INPUT-PRODUCER.md](M5-S3547-CALLER-INPUT-PRODUCER.md).
 
 Session 3546 qualified the producer boundary for `loadTextureToMemory` with
 matching phase-gated port and retail execution witnesses. Both arms passed
@@ -332,11 +342,10 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Resolve the caller/input producer immediately before `loadTextureToMemory`
-   forms the divergent index at `0x8001FAA0` (retail predecessor
-   `0x80022ACC`). Use one independent retail execution watch plus a same-build
-   port witness; do not repeat the closed destination/producer captures or
-   change audio, PCM, output, or record writes.
+1. Re-establish a phase-valid real-audio port route past the existing
+   `parseHmtMaterials+3588`/`loadDebugAssets` SIGBUS, then rerun the bounded
+   caller/input table at `0x80022ACC`; do not interpret the retail-only rows as
+   parity/divergence or change audio, PCM, output, or record writes.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.

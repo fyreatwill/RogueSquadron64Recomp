@@ -133835,3 +133835,40 @@ Evidence: `scratch/agent/s3546_m5_base_index_producer/oracle.log`,
 
 ORIGIN: the texture-record stores are legitimate game operations; this
 iteration only observed their upstream inputs and formed pointers.
+
+## Session 3547 (2026-09-01) — caller/input producer capture was route-invalid
+
+Added the regeneration-safe caller/input witness immediately before and after
+the direct `loadTextureToMemory` call at `0x80022ACC`/`0x80022AD4`. The Debug
+build completed. The witness records caller registers, the `0x20`/`0x24`
+fields, and the post-call return; no game state or texture-record write was
+changed.
+
+The independent Rice oracle used the required Start schedule, passed the
+whole-RDRAM positive control, reached title VI 1024 and hangar VI 512, and
+observed `0x80022ACC` with predecessor `0x80022AC8` 910 times. The existing
+index/table-base PCs also fired 907 times, and phase-gated field rows were
+present in both target phases. This qualifies the retail arm.
+
+The same-build real-audio port arm was not phase-valid. Three corrected launch
+attempts all stopped before the first target VI in the existing
+`parseHmtMaterials+3588`/`loadDebugAssets` path with SIGBUS and
+`last-guest-pc=0x80001F88`; the new caller, base/index, and destination
+witnesses emitted zero rows. This selects `H-CaptureInvalid` for the port
+comparison, not caller parity or divergence, and leaves the caller/input
+boundary open. The first two attempts also exposed missing launch conditions
+(wrong cwd/capture path); the final attempt used the build cwd and still
+reproduced the crash.
+
+The retail execution witness and port crash are independent evidence lines,
+but no cross-arm caller tuple comparison is valid until the port reaches both
+target phases. The next work unit is to restore that phase-valid real-audio
+route, then rerun this retained caller table.
+
+ORIGIN: diagnostic-only caller and execution witnesses; the legitimate
+texture-record operations and all audio/PCM/output state remain unchanged.
+
+Evidence: `docs/M5-S3547-CALLER-INPUT-PRODUCER.md`,
+`scratch/agent/s3547_m5_caller_input_producer/oracle_gpr.log`,
+`scratch/agent/s3547_m5_caller_input_producer/port_target.log`, and the
+other launch-attempt logs in that directory.

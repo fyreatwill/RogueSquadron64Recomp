@@ -1,28 +1,31 @@
-# NEXT work unit — resolve the caller/input producer before texture indexing
+# NEXT work unit — restore a phase-valid port route for caller/input capture
 
 HYPOTHESIS-ID: m5-preclear-caller-input-producer
 
-Session 3546 selected `H-ProducerDivergence`: retail and port both executed
-`loadTextureToMemory`, with a shared family input tuple but divergent formed
-indices and record pointers. Do not repeat the destination or producer capture.
+Session 3547 selected `H-CaptureInvalid` for the new caller comparison: the
+retail oracle was phase-valid, but the real-audio port SIGBUSed in
+`parseHmtMaterials+3588` before target entry. Do not repeat the caller table
+until the port route is phase-valid.
 
-Do exactly one bounded work unit: instrument the caller/input edge immediately
-before `loadTextureToMemory` at retail predecessor `0x80022ACC`, including its
-arguments/returns and the input fields used to form the `0x8001FAA0` index.
-Run one independent retail execution watch and one same-build real-audio port
-capture. Keep all audio, PCM, image-task, output, and texture-record writes
-unchanged.
+Do exactly one bounded work unit: identify and correct the existing pre-title
+port launch/runtime condition that produces `parseHmtMaterials+3588` with
+`last-guest-pc=0x80001F88`, using one controlled real-audio run. Preserve the
+caller witness in the generated fixup and keep all audio, PCM, image-task,
+output, and texture-record writes unchanged.
 
 Competing hypotheses and discriminator:
 
-- `H-CallerParity`: caller inputs/returns match and the remaining gap is
-  earlier than the caller.
-- `H-CallerDivergence`: the caller input or returned producer state differs
-  before index formation.
-- `H-RetailOnlyFamily`: retail executes the caller/family in the target phase
-  but the port does not; the observed port rows belong to another route/use.
-- `H-CaptureInvalid`: whole-RDRAM and both phase controls or the paired family
-  witnesses are absent.
+- `H-PortRouteRestored`: the port reaches title and hangar with positive
+  controls, so the caller table can be rerun next.
+- `H-PortPreTitleCrash`: the same pre-title HMT crash reproduces before any
+  phase; the route repair hypothesis is not yet tested.
+- `H-PortLaunchInvalid`: the process fails to launch or the positive control
+  is absent, so no runtime conclusion is allowed.
+
+The single discriminating measurement is the phase/control/crash table:
+positive control, title VI, hangar VI, crash PC, and last guest PC. A restored
+route selects `H-PortRouteRestored`; the same SIGBUS selects
+`H-PortPreTitleCrash`; missing launch/control selects `H-PortLaunchInvalid`.
 
 The single discriminating table must include caller PC, predecessor, phase/VI,
 caller inputs/returns, the fields feeding the index, and the first family
