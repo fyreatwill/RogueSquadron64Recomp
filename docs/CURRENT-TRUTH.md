@@ -2,7 +2,17 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3545 (2026-09-01).
+evidence documents are listed below. Updated for session 3546 (2026-09-01).
+
+Session 3546 qualified the producer boundary for `loadTextureToMemory` with
+matching phase-gated port and retail execution witnesses. Both arms passed
+positive controls and reached title 1024 and hangar 512. In the hangar
+texture-record family, both had `a0=0x8016BCA0`, `a1=0x8003B6E0`, and
+`s3=0x2004`, but retail's formed indices began `0x37, 0x39` while the port's
+began `0x25, 0x27`; the resulting record pointers also differed. This selects
+`H-ProducerDivergence` and moves the boundary to the caller/input producer
+before `0x8001FAA0`; the legitimate stores remain unchanged. See
+[M5-S3546-BASE-INDEX-PRODUCER.md](M5-S3546-BASE-INDEX-PRODUCER.md).
 
 Session 3545 paired a new context witness with the independent retail oracle.
 Both arms passed positive controls and reached title 1024 and hangar 512.
@@ -322,10 +332,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Resolve the producer of the divergent texture-record base/index context
-   feeding `0x8001FACC`–`0x8001FD2C`. Use one independent retail execution
-   watch plus a same-build port producer witness; do not repeat the closed
-   destination capture or change audio, PCM, output, or record writes.
+1. Resolve the caller/input producer immediately before `loadTextureToMemory`
+   forms the divergent index at `0x8001FAA0` (retail predecessor
+   `0x80022ACC`). Use one independent retail execution watch plus a same-build
+   port witness; do not repeat the closed destination/producer captures or
+   change audio, PCM, output, or record writes.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -349,12 +360,12 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the producer of the texture-record base/index
-context. Session 3545 selected `H-PortWrongDestination`: retail and port both
-execute the family, but their phase-matched record bases, indices, and saved
-register contexts differ before the legitimate writes. The next witness must
-move upstream into that producer; no record, audio, PCM, or output state is to
-be rewritten. The `0x80091CC8` internal return contract is closed by Sessions
+The active work unit is now the caller/input producer before the texture-record
+index formation. Session 3546 selected `H-ProducerDivergence`: retail and port
+both execute `loadTextureToMemory` with matching family inputs, but their
+phase-matched formed indices and record pointers diverge before the legitimate
+writes. The next witness must move to predecessor `0x80022ACC`; no record,
+audio, PCM, or output state is to be rewritten. The `0x80091CC8` internal return contract is closed by Sessions
 3534–3535. The silent-arm route defect is parked separately.
 
 Session 3541 moved the live boundary to the port's zero-fill writer origin.

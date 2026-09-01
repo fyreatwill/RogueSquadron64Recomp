@@ -133804,3 +133804,34 @@ Evidence: `scratch/agent/s3545_m5_destination_contract/oracle.log`,
 ORIGIN: the texture-record stores are legitimate game writes; the observed
 defect is the differing upstream destination/context, not a value to skip or
 rewrite.
+
+## Session 3546 (2026-09-01) — qualified texture-record base-index producer
+
+The batched producer witness covered `loadTextureToMemory` entry
+`0x8001F954`, index formation `0x8001FAA0`, table-base reload
+`0x8001FAB4`, and combined pointer `0x8001FAC4`. The independent retail arm
+passed its whole-RDRAM control with 10,674 writes and its source-span control
+with 674 writes; both retail and port reached title VI 1024 and hangar VI 512.
+
+In hangar, both arms executed the shared texture-record family with
+`a0=0x8016BCA0`, `a1=0x8003B6E0`, and `s3=0x2004`. Retail's formed indices
+began `0x37, 0x39`, while the port's began `0x25, 0x27`; the stage-P record
+pointers diverged accordingly. This selects `H-ProducerDivergence` and moves
+the live boundary upstream of `0x8001FAA0`, toward the caller at retail
+predecessor `0x80022ACC`. It rules out the scalar record stores and the
+writeback clear as the first divergence. The writes remain legitimate; no
+mitigation or state rewrite was added.
+
+The comparison is two-source but not ordinally joined because the arms are
+independent executions; the shared input tuple and repeated phase/stage shape
+are the comparison key. The failed summary-count grep in the first recipe
+was a reporting-only bracket-expression error; direct log inspection retained
+the controls and rows, and the recipe was corrected to fixed-string matching.
+
+Evidence: `scratch/agent/s3546_m5_base_index_producer/oracle.log`,
+`scratch/agent/s3546_m5_base_index_producer/port.log`,
+`docs/M5-S3546-BASE-INDEX-PRODUCER.md`, and
+`scratch/agent/retail_preclear_groundtruth.log`.
+
+ORIGIN: the texture-record stores are legitimate game operations; this
+iteration only observed their upstream inputs and formed pointers.

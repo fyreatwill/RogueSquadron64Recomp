@@ -613,6 +613,44 @@ extern "C" void rs64_m5_destination_contract(uint8_t*, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_base_index_producer(
+    uint8_t*, uint32_t pc, char stage, uint32_t a0, uint32_t a1,
+    uint32_t a2, uint32_t a3, uint32_t base, uint32_t index, uint32_t ptr,
+    uint32_t s0, uint32_t s1, uint32_t s2, uint32_t s3, uint32_t s4,
+    uint32_t fp, uint32_t ra) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_BASE_INDEX");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (own && own[0] && own[0] != '0') ||
+               (all && all[0] && all[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+    static std::mutex mutex;
+    static uint32_t phase_key = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t key = (width << 24) ^ origin;
+    std::lock_guard<std::mutex> lock(mutex);
+    if (key != phase_key) { phase_key = key; rows = 0; }
+    if (rows >= 512u) return;
+    if (rows == 0u) {
+        std::fprintf(stderr,
+                     "[m5-base-index-control] phase=%u width=%u origin=0x%06X\n",
+                     rs64_phase_ord(), width, origin);
+    }
+    std::fprintf(stderr,
+        "[m5-base-index] row=%u phase=%u width=%u origin=0x%06X pc=0x%08X "
+        "stage=%c a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X "
+        "base=0x%08X index=0x%08X ptr=0x%08X s0=0x%08X s1=0x%08X "
+        "s2=0x%08X s3=0x%08X s4=0x%08X fp=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), width, origin, pc, stage, a0, a1, a2, a3,
+        base, index, ptr, s0, s1, s2, s3, s4, fp, ra);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_052c4_join(uint8_t* rdram, uint32_t dst,
                                      uint32_t value, uint32_t len,
                                      uint32_t edge) {
