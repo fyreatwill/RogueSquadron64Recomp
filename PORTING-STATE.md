@@ -132797,3 +132797,24 @@ Evidence: `docs/M5-S3506-LLE-ON-NO-SPIN.md`.
 ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
 audio state, selector value, task field, or output was rewritten, skipped, or
 validated.
+
+## Session 3507 (2026-08-31) — silent LLE-on no-spin remains pre-title blocked
+
+Ran one bounded silent route arm from `build/` with
+`ROGUESQ_AUDIO_UCODE=0`, `ROGUESQ_LLE_FORCE=1`, and
+`ROGUESQ_SPIN_YIELD=0`, retaining the Session 3506 autopilot and existing
+controls. Startup and phase controls fired: widths 0 and 320 appeared,
+followed by VI 640 at origin `0x0066A500`. The route remained in the VI-640
+scheduler path through the 30-second SIGKILL. Silent audio dispatch/return
+and target-phase selector rows were zero. No crash or abort marker appeared;
+the existing `[audio-wait-pump-stall]` marker fired after 64
+`musyxSynthFrame` pumps.
+
+This selects `H-AudioIndependentNoSpinBlocker` and rejects
+`H-RealAudioDependency` for the forced-LLE/no-spin route. Selector-table
+writer/index/value hypotheses remain unevaluable because title was not
+reached. Evidence: `docs/M5-S3507-LLE-ON-NO-SPIN-SILENT.md`.
+
+ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
+audio state, selector value, task field, or output was rewritten, skipped, or
+validated.

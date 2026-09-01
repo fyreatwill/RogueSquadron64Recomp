@@ -764,20 +764,30 @@ ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
 audio state, selector value, task field, or output was rewritten, skipped, or
 validated.
 
+Session 3507 repeated the no-spin forced-LLE route with audio disabled. The
+startup and phase controls fired; the route reached VI 640 at origin
+`0x0066A500` and stayed there through the 30-second SIGKILL. Silent audio
+dispatch/return and target-phase selector rows were zero, with no crash or
+abort marker; the existing audio-wait-pump-stall breadcrumb fired. This
+selects the audio-independent no-spin advance blocker and rejects a
+real-audio dependency for this route. Selector-table hypotheses remain
+unevaluable because title was not reached. Evidence:
+[M5-S3507-LLE-ON-NO-SPIN-SILENT.md](M5-S3507-LLE-ON-NO-SPIN-SILENT.md).
+
+ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
+audio state, selector value, task field, or output was rewritten, skipped, or
+validated.
+
 ## Next steps
 
-1. Test a new silent-control route with `ROGUESQ_AUDIO_UCODE=0`,
-   `ROGUESQ_LLE_FORCE=1`, and `ROGUESQ_SPIN_YIELD=0`, retaining the validated
-   autopilot and controls. Require startup and phase controls: title 1024
-   selects a real-audio dependency, continued VI 640 selects an audio-
-   independent no-spin blocker, and a new crash selects a silent-LLE route
-   failure. Do not repeat the real-audio/LLE/no-spin arm unchanged.
-2. Once that route is qualified, trace the writer/initializer and selector-index source feeding the
+1. Trace the writer/initializer and selector-index source feeding the
    `0x80150000`/`0x80150004` table entries used by `0x8009131C`, with one
    batched retail/port discriminator keyed by title origin, table address,
    stored value, index, and caller arguments. Keep the independent
    whole-RDRAM control and port pre-call/caller controls positive; the first
    matching or differing table write selects the next edge.
+2. Keep the silent forced-LLE/no-spin result as the route blocker baseline;
+   do not repeat that arm unchanged.
 3. Keep Sessions 3494–3498's real-audio route and selector outcomes and Session 3492's
    dispatch result as baselines; do not repeat any unchanged route retry.
 4. Keep Session 3488's silent route as the qualification baseline; do not

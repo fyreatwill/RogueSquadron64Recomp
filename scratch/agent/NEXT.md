@@ -1,33 +1,33 @@
-# NEXT work unit — M5 silent LLE-on no-spin discriminator
+# NEXT work unit — M5 selector-table writer boundary
 
-HYPOTHESIS-ID: m5-real-audio-route-pivot
+HYPOTHESIS-ID: m5-selector-table-writer-boundary
 
-Session 3506 restored forced LLE while keeping spin-yield disabled. It still
-stopped at VI 640 with live controls and no crash, selecting the broader
-no-spin advance blocker. The next unit must test whether that blocker depends
-on real audio before selector rows are interpreted.
+Session 3507 disabled audio on the same forced-LLE/no-spin route. It also
+stopped at VI 640 with live controls and no crash, so selector rows must now
+be collected on the already-qualified real-image/LLE/spin-yield route.
 
 Competing hypotheses and discriminating measurement:
 
-- `H-RealAudioDependency`: silent LLE-on/no-spin reaches title, showing the
-  VI-640 blocker depends on real-audio work.
-- `H-AudioIndependentNoSpinBlocker`: silent LLE-on/no-spin remains at VI 640,
-  showing the blocker is independent of the audio route.
-- `H-SilentLLERouteFailure`: a new crash or distinct pre-title failure appears
-  and becomes the next route discriminator.
-- `H-AudioRouteInstrumentation`: the startup control or phase is absent,
-  proving the capture setup is invalid rather than the route being blocked.
+- `H-TableWriterParity`: retail and port table writes match at the first
+  common title-origin/index/address/value boundary, closing this edge.
+- `H-TableWriterDivergence`: the first ordered table write differs, selecting
+  its writer/initializer or selector-index producer as the next edge.
+- `H-TableRouteAbsence`: a candidate writer is live in retail but absent in
+  port while both positive controls fire, selecting a route difference.
+- `H-CaptureInvalid`: the retail whole-RDRAM or port title/pre-call control is
+  absent, making the table comparison unevaluable rather than null.
 
-Discriminating measurement: run one bounded silent retry with
-`ROGUESQ_AUDIO_UCODE=0`, `ROGUESQ_LLE_FORCE=1`, and `ROGUESQ_SPIN_YIELD=0`,
-while keeping the same startup, phase, dispatch, audio-return, and selector
-controls. A 1024 title transition selects `H-RealAudioDependency`; continued
-VI 640 selects `H-AudioIndependentNoSpinBlocker`; a new crash selects
-`H-SilentLLERouteFailure`; missing startup/phase controls select
-`H-AudioRouteInstrumentation`. The independent retail control remains a
-required preflight, not a substitute for port title reachability.
+Discriminating measurement: first run the independent retail preflight with
+the whole-RDRAM positive control, title phase, and watches for the
+`0x8009131C` predecessor/table-selection range. In the same build, run the
+qualified real-image/LLE/spin-yield port arm with the existing pre-call,
+caller, producer, and selector controls plus a bounded table-write witness.
+Join by title origin, table address, stored value, selector index, and caller
+arguments; the first matching or differing write selects the boundary. A
+missing control makes the result unevaluable.
 
-Run `scratch/agent/s3505_lle_off_no_spin_real_audio.sh` as the template, change
-only `ROGUESQ_AUDIO_UCODE=0`, capture to a non-dot final path under
-`scratch/agent/`, and SIGKILL any watchdog survivor.
-Do not interpret a pre-title selector null as a table-writer result.
+Use the existing Session 3501 selector-load instrumentation and its validated
+real-image/LLE/spin-yield/autopilot recipe as the route template; capture to a
+non-dot final path under `scratch/agent/` and SIGKILL any watchdog survivor.
+Do not interpret pre-title nulls from the silent/no-spin arm as table-writer
+evidence.
