@@ -132776,3 +132776,24 @@ hypotheses because their target phase was not reached. Evidence:
 ORIGIN: diagnostic-only route, phase, audio-return, and selector observations;
 no audio state, selector value, task field, or output was rewritten, skipped,
 or validated.
+
+## Session 3506 (2026-08-31) — LLE-on no-spin remains pre-title blocked
+
+Ran one bounded real-audio route arm from `build/` with
+`ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_LLE_FORCE=1`, and
+`ROGUESQ_SPIN_YIELD=0`, retaining the validated autopilot and existing
+startup, phase, dispatch, audio-return, selector, and writer controls. Startup,
+phase, dispatch, frame-sync, DP, host-boundary, and writer controls all fired;
+real audio dispatched through at least 1,664 tasks; and the run reached VI 640
+at origin `0x0066A500`. It stayed in that scheduler path through the 30-second
+SIGKILL. It did not reach title 1024 or hangar 512, emitted no target-phase
+selector rows, and showed no crash or abort marker.
+
+This selects `H-AudioIndependentNoSpinBlocker` and rejects a spin-yield
+dependency within the forced-LLE arm. Selector-table writer/index/value
+hypotheses remain unevaluable because their target phase was not reached.
+Evidence: `docs/M5-S3506-LLE-ON-NO-SPIN.md`.
+
+ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
+audio state, selector value, task field, or output was rewritten, skipped, or
+validated.

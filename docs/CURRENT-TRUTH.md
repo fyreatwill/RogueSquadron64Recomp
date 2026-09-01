@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3504 (2026-08-31). This record was
+Current active marker: Session 3506 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -750,14 +750,28 @@ ORIGIN: diagnostic-only route, phase, audio-return, and selector observations;
 no audio state, selector value, task field, or output was rewritten, skipped,
 or validated.
 
+Session 3506 ran the new real-audio arm with `ROGUESQ_LLE_FORCE=1` and
+`ROGUESQ_SPIN_YIELD=0`, retaining the validated autopilot and existing
+controls. Startup, phase, dispatch, frame-sync, DP, host-boundary, and writer
+controls all fired; real audio dispatched through at least 1,664 tasks; and
+the run reached VI 640 at origin `0x0066A500`. It stayed in that scheduler
+path through the 30-second SIGKILL, with no title 1024, hangar 512, selector
+rows, crash, or abort marker. This selects the broader no-spin advance blocker
+and rules out a spin-yield dependency within the forced-LLE arm. Evidence:
+[M5-S3506-LLE-ON-NO-SPIN.md](M5-S3506-LLE-ON-NO-SPIN.md).
+
+ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
+audio state, selector value, task field, or output was rewritten, skipped, or
+validated.
+
 ## Next steps
 
-1. Test the next route discriminator with real audio, `ROGUESQ_LLE_FORCE=1`,
-   and `ROGUESQ_SPIN_YIELD=0`, retaining the validated autopilot and controls.
-   Require startup control and phase-gated outcome: title 1024 selects a
-   spin-yield dependency, continued VI 640 selects a broader no-spin advance
-   blocker, and a new crash selects a distinct LLE-on route failure. Do not
-   repeat either unchanged route recipe.
+1. Test a new silent-control route with `ROGUESQ_AUDIO_UCODE=0`,
+   `ROGUESQ_LLE_FORCE=1`, and `ROGUESQ_SPIN_YIELD=0`, retaining the validated
+   autopilot and controls. Require startup and phase controls: title 1024
+   selects a real-audio dependency, continued VI 640 selects an audio-
+   independent no-spin blocker, and a new crash selects a silent-LLE route
+   failure. Do not repeat the real-audio/LLE/no-spin arm unchanged.
 2. Once that route is qualified, trace the writer/initializer and selector-index source feeding the
    `0x80150000`/`0x80150004` table entries used by `0x8009131C`, with one
    batched retail/port discriminator keyed by title origin, table address,
