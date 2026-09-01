@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3527 (2026-08-31).
+evidence documents are listed below. Updated for session 3528 (2026-08-31).
 
 ## Current state
 
@@ -121,6 +121,15 @@ scope and moves the discriminator later inside the producer path. It is
 single-source port evidence; see
 [M5-S3527-SELECTOR-MIXER-CALLERS.md](M5-S3527-SELECTOR-MIXER-CALLERS.md).
 
+Session 3528 qualified all three allocation edges inside
+`allocateSongChannelArray` with a same-build real-audio port run and an
+independent retail oracle. Effective allocation inputs and returned pointers
+matched at `0x8008F0D0`, `0x8008F210`, and `0x8008F23C`; retail's `$s1=0x561F`
+versus the port's `$s1=0x5622` is already an entry-argument difference, not an
+allocator-return defect. This selects `H-AllocParity` and moves the active
+boundary upstream to the producer of `allocateSongChannelArray`'s `a1`/`s1`.
+See [M5-S3528-SELECTOR-ALLOC-BOUNDARY.md](M5-S3528-SELECTOR-ALLOC-BOUNDARY.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -148,7 +157,11 @@ to be rewritten as a diagnostic mitigation.
 ## Next steps
 
 1. Build one new producer/context discriminator between the live
-   `initN64RspMixer` entry and selector stores at `0x8008F228`/`0x8008F264`.
+   `allocateSongChannelArray`'s `a1`/`s1` argument. Keep the allocation table,
+   caller, entry, store, producer-context, mixer, phase, and positive controls
+   in one build/run. A differing producer argument selects that edge; matching
+   context moves the search to the next boundary; missing controls invalidate
+   the join.
    Keep the new caller table, entry, producer-context, store-context, mixer,
    phase, and positive controls in one build/run. A first differing producer
    argument or context selects that edge; matching context through the next
@@ -176,9 +189,9 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the producer/context boundary after the live
-`reapplyAudioConfig` → `initN64RspMixer` → `allocateSongChannelArray` path on
-the real-audio route. The silent-arm route defect is parked separately.
+The active work unit is now the upstream producer of
+`allocateSongChannelArray`'s `a1`/`s1` argument on the real-audio route. The
+silent-arm route defect is parked separately.
 
 For the silent-arm route:
 
@@ -193,14 +206,14 @@ Session 3518 selected `H-SilentRouteCrash`: oracle controls passed, the silent
 arm crashed pre-title at `0x8000B650`, and the real image arm reached title and
 hangar. The crash origin remains unresolved.
 
-For the next producer boundary:
+For the next upstream argument boundary:
 
-- `H-ContextProducerParity`: predecessor context matches; an earlier
-  initializer or later mutation remains.
-- `H-ContextProducerDivergence`: predecessor supplies different `s1` or related
-  context; that producer edge is selected.
-- `H-LaterContextMutation`: predecessor matches, but an intervening guest
-  instruction mutates context before the writer.
+- `H-AllocParity`: all three allocator edges match retail through their
+  returns, so the divergence is upstream of the callee entry.
+- `H-CallerArgDivergence`: the producer of the caller's `a1` differs, selecting
+  that argument edge.
+- `H-CaptureInvalid`: a same-run positive control or phase-matched writer
+  control fails; the join is unevaluable.
 - `H-CaptureInvalid`: a same-run positive control or phase-matched writer
   control fails; the join is unevaluable.
 
@@ -235,6 +248,11 @@ caller scope: the new hangar rows show a live `reapplyAudioConfig` route and
 the sole direct allocate edge with matching arguments. The remaining open
 question is the first producer/context divergence between mixer entry and the
 selector stores.
+
+Session 3528 narrows that open question upstream: the three allocator edges
+are parity-qualified by retail and port, so no allocator or freelist
+mitigation is warranted. The legitimate pointer difference is already
+present in the callee's entry argument.
 
 Session 3514 adds a retail-qualified mixer-entry candidate at `0x80090E04`,
 but the port did not reach its target phase on either tested arm. See
@@ -309,6 +327,7 @@ the oracle did not provide a matching register tuple.
 Latest selector boundary:
 
 - [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
+- [M5-S3528-SELECTOR-ALLOC-BOUNDARY.md](M5-S3528-SELECTOR-ALLOC-BOUNDARY.md)
 - [M5-S3525-SELECTOR-STORE-ENTRY.md](M5-S3525-SELECTOR-STORE-ENTRY.md)
 - [M5-S3519-SELECTOR-CALLSITE-CONTEXT.md](M5-S3519-SELECTOR-CALLSITE-CONTEXT.md)
 - [M5-S3520-SELECTOR-AI-BOUNDARY.md](M5-S3520-SELECTOR-AI-BOUNDARY.md)

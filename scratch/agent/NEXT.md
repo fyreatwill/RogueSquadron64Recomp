@@ -1,54 +1,46 @@
-# NEXT work unit — qualify the producer/context edge after mixer entry
+# NEXT work unit — qualify mixer input load before allocate call
 
-HYPOTHESIS-ID: m5-selector-store-caller-boundary
+HYPOTHESIS-ID: m5-selector-caller-input-boundary
 
-Session 3527 completed the caller/route census: startup controls fired, title
-1024 and hangar 512 were reached, and the target entry plus producer/store
-contexts fired. The known caller, route, and AI-boundary rows were absent in
-hangar; entry `$ra` was `0`, so alternate caller versus route gate remains
-unresolved. The new table showed `reapplyAudioConfig` → `initN64RspMixer` →
-the sole `allocateSongChannelArray` call in hangar, with matching arguments;
-`initAudioSubsystem` was absent in hangar. The generated caller/route gate is
-therefore no longer the active discriminator. See
-`docs/M5-S3527-SELECTOR-MIXER-CALLERS.md`.
+Session 3528 parity-qualified all three `rs_malloc` edges inside
+`allocateSongChannelArray` against the retail oracle. The first divergence is
+already at the callee's `a1`/`s1` argument: retail `0x561F`, port `0x5622`.
+Static inspection identifies the immediate producer in `initN64RspMixer`:
+the `lw a1, 0(s1)` at `0x8009192C`, immediately before the direct call at
+`0x80091934`.
 
-Next unit: add one regeneration-safe witness at the next producer/context
-edge after `initN64RspMixer` entry and before the two selector stores. First
-enumerate that function's generated callsites and the immediate context
-predecessors in the source; write all competing hypotheses and the split
-outcomes here before building. Retain the three s3527 caller rows, the
-entry/store/producer/mixer controls, and the retail-range/phase controls in
-one build and run the canonical real-audio/LLE/spin-yield/autopilot arm.
-
-Expected discriminator: a hangar row with a changed producer argument/context
-selects that producer edge; a matching row through the next witness selects a
-later mutation; absent startup or phase controls makes the comparison invalid.
-Do not repeat the s3527 caller census unchanged and do not rewrite audio or
-selector state.
+Next unit: add a regeneration-safe witness after the `0x8009192C` load and
+retain the s3528 allocation table, s3527 caller/entry rows, store contexts,
+producer/mixer controls, phase controls, and positive controls in one build.
+Run the canonical real-audio/LLE/spin-yield/autopilot port arm and the retail
+oracle with whole-RDRAM control plus phase-gated watches at `0x8009192C` and
+`0x80091934`.
 
 Competing hypotheses and discriminator:
 
-- `H-StoreCallerAlternate`: a hangar callsite row exists without the known
-  route row, selecting an alternate caller or indirect path.
-- `H-StoreCallerGate`: a route-edge row exists while the known callsite row is
-  absent, selecting the enclosing gate.
-- `H-StoreCallerParity`: callsite and route rows match, selecting a later
-  internal mismatch.
-- `H-CaptureInvalid`: startup controls or title/hangar phase rows are absent;
-  no comparison is valid.
+- `H-InputLoadDivergence`: retail and port differ immediately after the
+  `0x8009192C` load, selecting the load's source field or its writer.
+- `H-InputLoadParity`: the loaded value matches but differs before the call,
+  selecting an intervening generated instruction or wrapper contract.
+- `H-CaptureInvalid`: a same-run positive control or title/hangar phase bucket
+  is absent; no comparison is valid.
 
-The discriminating table is phase-gated title 1024/hangar 512 rows for every
-generated direct callsite of `allocateSongChannelArray`, its enclosing route
-edge, the existing entry (`pc=0x8008F000`, `$ra`, `a0..a3`), both store
-contexts, producer context, mixer entry, known route, and AI boundary. Build
-all callsite and route arms in one build and run the canonical real-audio arm
-once. A same-run positive control must fire before interpreting null rows.
-Use `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`,
-`ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
-`ROGUESQ_STUB_MISSING_FUNCS=1`, the documented autopilot, and
-`ROGUESQ_AUDIO_UCODE=1`. Do not rewrite audio or selector state.
+The discriminating table is phase-keyed title 1024/hangar 512 rows for the
+load result, the direct-call arguments, allocate entry `a1`, both selector
+stores, and the existing controls. A differing load result selects the
+caller-input producer; a matching load and call but differing entry selects
+the call/ABI boundary; matching entry moves the search to the load's source
+writer. Do not rewrite audio, selector, task, or output state.
 
-Before building, enumerate the callsites from the generated source and record
-the hypotheses and outcome table above in the regeneration-safe probe script.
-Build once, run once, and capture under
-`scratch/agent/s3527_selector_callers_port.log`; SIGKILL the game.
+Before building, enumerate the load and call PCs from the generated source
+and add the witness to `fixup_game_funcs.py` plus a bounded host hook. Build
+once with `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+Run from `build/` with `ROGUESQ_AUDIO_UCODE=1`,
+`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_LLE_UNGATED=1`,
+`ROGUESQ_LLE_SOLO=1`, `ROGUESQ_STUB_MISSING_FUNCS=1`,
+`ROGUESQ_AUTOPILOT='3:start,6:start,9:start,12:start,16:a,20:a,24:start,28:a'`,
+`PROBE_PHASE_WIDTH=1024`, `PROBE_PHASE_TIMEOUT=180`,
+`PROBE_KEYS_FROM_PHASE=1`, `PROBE_LEAVE_OK=1`, and space-delimited
+`PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start'`.
+Capture under `scratch/agent/s3529_selector_input_port/run.log` and SIGKILL
+the game.

@@ -133337,3 +133337,33 @@ output state was rewritten.
 
 ORIGIN: diagnostic-only phase, caller, route, entry, argument, and store
 observations.
+
+## Session 3528 (2026-08-31) — qualified selector allocation boundary
+
+Enumerated the three `rs_malloc` edges inside `allocateSongChannelArray` at
+`0x8008F0D0`, `0x8008F210`, and `0x8008F23C`. Added a regeneration-safe
+phase-keyed pre/post allocation table and retained the s3527 caller, entry,
+producer, store, mixer, phase, and positive controls. The Debug build
+completed successfully.
+
+The first port launch was invalid for hangar because its `PROBE_KEYS` value
+was comma-delimited and `probe.sh` treated it as one malformed entry. The
+fixed run used the documented space-delimited form, passed controls, reached
+title VI 1024 and hangar VI 512, and captured all six allocation rows in
+hangar. Effective sizes were `0x990`, `0x1E30`, and `0x1E30`; returns were
+`0x801714D0`, `0x80171E70`, and `0x80173CB0`.
+
+The independent retail oracle ran with a whole-RDRAM positive control,
+reached the target route, and observed matching effective inputs and returns
+at the same PCs. Retail's pre-delay-slot `$s1/a1` was `0x561F`, whereas the
+port's allocate entry/store context was `0x5622`; this difference is already
+present at callee entry and is not caused by any of the three allocators.
+
+This selects `H-AllocParity`, rules out the allocation edges as the source of
+the selector pointer difference, and moves the next discriminator upstream to
+the producer of the caller's `a1`/`s1`. The initial malformed-key attempt is
+documented as capture-invalid and was not used as evidence. No audio,
+selector, task, or output state was rewritten.
+
+ORIGIN: diagnostic-only pre/post allocation, entry, store, phase, and oracle
+execution observations. Allocator and selector state remained untouched.
