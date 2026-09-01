@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3509 (2026-08-31). This record was
+Current active marker: Session 3511 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -795,6 +795,21 @@ validated.
 
 ## Next steps
 
+Session 3511 phase-matched the corrected selector-table stores. The independent
+retail capture passed the whole-RDRAM control (10,000 callbacks), reached title,
+and observed the writer PCs plus hangar post-values
+`0x80171E70`/`0x80173CB0`. The corrected port witness reached title and hangar,
+passed selector controls, and emitted title values `0x80171CE0`/`0x80173B20`
+followed by hangar values `0x80171E70`/`0x80173CB0` at the same writer PCs. At
+the matched hangar stores, values and PCs agree but writer context diverges
+(`retail s1=0x0000561F`, `port s1=0x00005622`; shared `s0=0x12`, `a0=0`).
+This selects the upstream writer-input divergence and rules out a route-only
+explanation and invalid capture at this scope. The exact producer remains
+unresolved. Evidence: [M5-S3511-SELECTOR-TABLE-PHASE-JOIN.md](M5-S3511-SELECTOR-TABLE-PHASE-JOIN.md).
+
+ORIGIN: diagnostic-only phase-matched writer observations; no table, selector,
+audio, task, or output value was rewritten, skipped, or validated.
+
 Session 3509 added the corrected selector-table store witness. The independent
 retail control reached title, recorded 8 writes to `0x00149758..0x00149760`,
 and observed `0x80171E70`/`0x80173CB0` at writer PCs `0x8008F228`/`0x8008F264`.
@@ -821,14 +836,12 @@ initializer, index, or route hypothesis is selected. Evidence:
 ORIGIN: diagnostic-only oracle and port observations; no table, selector,
 audio, task, or output value was rewritten, skipped, or validated.
 
-1. Trace the writer input/initializer and selector-index source producing the
-   differing values at the corrected `0x80149758`/`0x8014975C` table entries
-   using a phase-matched hangar capture. Extend the port table-store witness to
-   origin `0x006AB400`/width 1024 while retaining the title bucket, then join
-   retail/port rows by origin, table address, stored value, writer PC, and
-   writer inputs. Matching inputs with differing values selects an initializer
-   edge; a first differing input/index selects its producer; missing controls
-   make the join unevaluable.
+1. Trace the producer of the first differing writer context (`s1`/related
+   inputs) before `0x8008F228`/`0x8008F264`, retaining the same-run controls and
+   qualified title/hangar phase buckets. Matching predecessor fields with a
+   later writer difference selects a later mutation; the first differing
+   predecessor field selects its producer; missing controls make the join
+   unevaluable.
 2. Keep the silent forced-LLE/no-spin result as the route blocker baseline;
    do not repeat that arm unchanged.
 3. Keep Sessions 3494–3498's real-audio route and selector outcomes and Session 3492's

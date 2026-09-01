@@ -2559,23 +2559,26 @@ extern "C" void rs64_m5_selector_table_store(uint32_t pc, uint32_t addr,
     }();
     if (!enabled) return;
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
-    if (rs64_vi_committed_width() != 1024u ||
-        (origin != 0x00790400u && origin != 0x00790800u)) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const bool selector_table_phase =
+        (width == 1024u && (origin == 0x00790400u || origin == 0x00790800u)) ||
+        (width == 512u && origin == 0x006AB400u);
+    if (!selector_table_phase) return;
     if (addr != 0x80149758u && addr != 0x8014975Cu) return;
     static uint32_t rows = 0;
     if (rows == 0) {
         std::fprintf(stderr,
-            "[m5-selector-table-control] phase=%u width=1024 origin=0x%06X\n",
-            rs64_phase_ord(), origin);
+            "[m5-selector-table-control] phase=%u width=%u origin=0x%06X\n",
+            rs64_phase_ord(), width, origin);
         std::fflush(stderr);
     }
     if (rows >= 1024u) return;
     std::fprintf(stderr,
-        "[m5-selector-table-store] ordinal=%u phase=%u width=1024 origin=0x%06X "
+        "[m5-selector-table-store] ordinal=%u phase=%u width=%u origin=0x%06X "
         "pc=0x%08X addr=0x%08X value=0x%08X v0=0x%08X s0=0x%08X "
         "s1=0x%08X s2=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X "
         "a3=0x%08X ra=0x%08X\n",
-        rows++, rs64_phase_ord(), origin, pc, addr, value, v0, s0, s1, s2,
+        rows++, rs64_phase_ord(), width, origin, pc, addr, value, v0, s0, s1, s2,
         a0, a1, a2, a3, ra);
     std::fflush(stderr);
 }

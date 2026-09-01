@@ -132798,6 +132798,36 @@ ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
 audio state, selector value, task field, or output was rewritten, skipped, or
 validated.
 
+## Session 3511 (2026-08-31) — phase-matched selector-table writer inputs
+
+Ran the required independent retail preflight before the port build. Its
+whole-RDRAM positive control reached 10,000 callbacks and the title phase
+reached 632 VI frames. The corrected writer PCs were live; post-value watches
+observed hangar stores at `0x8008F228`/`0x8008F264` with values
+`0x80171E70`/`0x80173CB0`.
+
+The first port run reached title and hangar but exposed only title table rows,
+because the port hangar phase is width 512. After correcting the phase gate to
+`width=512, origin=0x006AB400`, the fixed real-image/LLE/spin-yield/autopilot
+run passed the selector controls and emitted title values
+`0x80171CE0`/`0x80173B20`, then hangar values `0x80171E70`/`0x80173CB0` at
+the same writer PCs. Load, writer, and producer witnesses each emitted 1,013
+rows; no crash or abort marker appeared.
+
+At the phase-matched hangar stores, values and writer PCs agree across retail
+and port, but writer context already differs: retail `s1=0x0000561F` versus
+port `s1=0x00005622`; `s0=0x12` and `a0=0` agree. This selects the upstream
+writer-input divergence and rules out a writer-route-only explanation at the
+measured PCs. The retail writer-field phase bucket was empty because its
+phase-arm was title-only, but its direct PC and post-value controls were
+positive, so capture invalidity is refuted.
+
+The fixed host witness is diagnostic-only; it does not rewrite, skip, or
+validate table or selector values. Evidence: `docs/M5-S3511-SELECTOR-TABLE-PHASE-JOIN.md`.
+
+ORIGIN: the phase-gate change only admits the observed legitimate hangar
+VI phase for logging; no guest value is mitigated or altered.
+
 ## Session 3510 (2026-08-31) — selector-table input join phase mismatch
 
 Ran the independent retail oracle before the port with whole-RDRAM and
