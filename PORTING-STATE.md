@@ -132528,3 +132528,22 @@ stable pre-title `fillSampleStreamRange` failure for this recipe. It does not
 yet compare selector data with retail; the next unit is that selector
 load/writer comparison. The capture was diagnostic-only and rewrote no game
 state. Evidence: `docs/M5-S3494-REAL-AUDIO-ROUTE.md`.
+
+## Session 3495 (2026-08-31) — selector comparison blocked by route crash
+
+Ran the independent retail selector arm first. The whole-RDRAM positive control
+reached 10,000 callbacks; title origin `0x00790400` appeared; and watched
+`0x80091060`/`0x80091074` produced 78 rows each, with load index `0x4` and
+source `0x80173B20`. The first real-audio/LLE/spin-yield port arm emitted 48
+dispatch rows but no title or selector controls. A fixed direct-PID retry of
+the same recipe also emitted zero selector controls/rows and crashed at guest
+PC `0x8000834C` in the width-640 scheduler/audio path.
+
+The planned selector comparison is unevaluable: the fresh retail rows cannot
+be compared to a failed animated port arm. This rules out an absent retail
+selector observation, but selects neither selector parity nor source
+divergence. The next work unit is route requalification with a direct-PID
+watchdog; prior s3494 success remains a qualification baseline only.
+
+Evidence: `docs/M5-S3495-SELECTOR-COMPARISON.md` and
+`scratch/agent/s3495_m5_selector_comparison/`.

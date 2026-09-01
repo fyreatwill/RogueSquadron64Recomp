@@ -1,28 +1,32 @@
-# NEXT work unit — compare selector load/writer rows against retail
+# NEXT work unit — re-qualify the real-audio selector route
 
-HYPOTHESIS-ID: m5-selector-load-writer-comparison
+HYPOTHESIS-ID: m5-real-audio-route-qualification
 
-Session 3494 qualified the real-audio route on retry: title and both selector
-controls fired, with 1,024 load rows and 1,024 writer rows. Evidence is in
-`docs/M5-S3494-REAL-AUDIO-ROUTE.md` and
-`scratch/agent/s3493_m5_real_selector/`.
+Session 3495's fresh retail arm qualified its controls and observed 78 title
+rows at each selector PC, but both fresh port attempts failed before title;
+the fixed direct-PID retry crashed at guest PC `0x8000834C`. Do not use the
+prior s3494 port log as an animated A/B arm.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-SelectorParity`: title-gated port selector source/value families match
-  the independently captured retail families.
-- `H-SelectorSourceDivergence`: both controls fire, but the first stable
-  source/value family differs between port and retail.
-- `H-SelectorRouteNull`: one selector control or its title rows are absent in
-  the new port capture despite the route qualification.
+- `H-TransientAudioScheduler`: the real-audio/LLE route is flaky and a fresh
+  direct-PID run reaches title and fires both selector controls.
+- `H-StableAudioSchedulerCrash`: the same route consistently dies at
+  `0x8000834C` before title and selector controls.
+- `H-SelectorRouteOther`: the route reaches title but selector controls are
+  absent, separating selector wiring from the scheduler/audio failure.
 
-Discriminating measurement: one batched port/retail selector-load/writer
-comparison keyed by title origin, writer PC, source/value family, and
-phase-scoped ordinal. Positive controls must fire in both runtimes. Matching
-families select parity; a first stable mismatch selects source divergence;
-missing controls make the result unevaluable and require route repair.
+Discriminating measurement: one direct-PID port run with the existing
+real-audio/LLE/spin-yield environment, title VI gating, selector controls,
+and audio-return/dispatch breadcrumbs. Title plus both controls selects the
+qualified arm and permits the selector comparison next iteration; another
+`0x8000834C` pre-title crash selects stable route failure; title without
+controls selects a selector-route defect. No selector values are interpreted
+unless the positive controls fire.
 
-Exact starting point: reuse the existing selector capture and independent
-retail task-dispatch recipe referenced by Sessions 3490–3493; build all arms
-once, then run the controlled comparison. Keep SIGKILL watchdog behavior,
-title VI phase gating, and capture paths under `scratch/agent/`.
+Exact starting point: use the direct-PID watchdog form from Session 3495,
+launching from `build/` with `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_SPIN_YIELD=1`,
+`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+`ROGUESQ_LOG_PHASE=1`, `ROGUESQ_LOG_VI_TRANSITION=1`,
+`ROGUESQ_LOG_M5_TASK_WRITER=1`, and `ROGUESQ_LOG_AUDIO_RETURN=1`.
+Use SIGKILL and a capture path under `scratch/agent/`.

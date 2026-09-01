@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3494 (2026-08-31). This record was
+Current active marker: Session 3495 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -578,18 +578,39 @@ ORIGIN: diagnostic-only route, selector, audio-dispatch, and audio-return
 observations; no audio state, selector value, task field, or route behavior
 was rewritten, skipped, or validated.
 
+Session 3495 ran the independent retail selector arm first. Its whole-RDRAM
+control passed with 10,000 callbacks, title reached origin `0x00790400`, and
+the two watched selector PCs produced 78 rows each: load index `0x4` and
+source `0x80173B20`. The first real-audio port invocation emitted 48 dispatch
+rows but no title or selector controls. A fixed direct-PID retry of the same
+route again emitted zero selector controls/rows and crashed at guest PC
+`0x8000834C` in the width-640 scheduler/audio path. The selector comparison
+is unevaluable; the retail data is not a valid animated A/B against the failed
+port route. This selects a transient route-qualification blocker and rules
+out an absent retail selector observation, but selects neither selector parity
+nor source divergence. Evidence: [M5-S3495-SELECTOR-COMPARISON.md](M5-S3495-SELECTOR-COMPARISON.md).
+
+ORIGIN: diagnostic-only oracle and port route/selector observations; no audio
+state, selector value, task field, or route behavior was rewritten, skipped,
+or validated.
+
 ## Next steps
 
-1. After the real-audio route and both selector controls fire, run the
+1. Re-qualify the real-audio/LLE/spin-yield route with a direct-PID watchdog
+   and the existing selector positive controls. The discriminator is whether
+   the route reaches title and both selector controls fire; a repeat of the
+   `0x8000834C` crash keeps the selector comparison unevaluable and requires a
+   new route-failure angle.
+2. After the real-audio route and both selector controls fire, run the
    selector-load/writer capture with the existing four-PC controls and the
    independent retail task-dispatch control in the same iteration. The
    discriminator is whether both port selector controls fire at title and
    whether their source/value rows match the retail title route.
-2. If the selector comparison identifies a first divergent source/value,
+3. If the selector comparison identifies a first divergent source/value,
    trace the
    upstream selector/table producer feeding `0x80091074` with one batched
    retail/port discriminator keyed by source family and title origin.
-3. Keep Session 3494's route qualification and Session 3492's dispatch result
+4. Keep Session 3494's route qualification and Session 3492's dispatch result
    as baselines; do not repeat either unchanged.
 4. Keep Session 3488's silent route as the qualification baseline; do not
    repeat the same silent gate audit unchanged.
