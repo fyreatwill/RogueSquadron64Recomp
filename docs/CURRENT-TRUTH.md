@@ -2,7 +2,15 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3574 (2026-09-01).
+documents are listed below. Updated for session 3575 (2026-09-01).
+
+Session 3575 passed the retail whole-RDRAM, source-span, and target-phase
+controls: 10,674, 674, and 3,166 hits respectively. Retail executed
+`0x800078E0` in the `0x006AB400:512` bucket, but presumed caller
+`0x8008F2CC` had zero hits. The entry is live, while tuple parity and ordering
+remain unevaluable; observed entry predecessors are led by `0x800C825C` and
+`0x800052C4`. See
+[M5-S3575-RETAIL-ZERO-FILL-CALLER.md](M5-S3575-RETAIL-ZERO-FILL-CALLER.md).
 
 Session 3574 qualified the retail entry watch as live in the target bucket:
 the oracle recorded 3,165 executions of `0x800078E0` at
@@ -633,8 +641,10 @@ to be rewritten as a diagnostic mitigation.
    Session 3573 found the port tuple `0x801797B0/0/0x298` but the retail
    `0x800078EC` watch was inside the loop. Session 3574 showed the retail
    entry executes in the target bucket, but did not retain a
-   caller-filtered `0x8008F2CC` row; parity and ordering remain open. Watch
-   caller `0x8008F2CC` and entry `0x800078E0` together next.
+   caller-filtered `0x8008F2CC` row. Session 3575 confirmed the caller watch
+   itself had zero hits while entry execution and controls were positive;
+   parity and ordering remain unevaluable. Watch observed predecessors
+   `0x800C825C` and `0x800052C4` with entry `0x800078E0` next.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -670,11 +680,11 @@ to be rewritten as a diagnostic mitigation.
 ### Active hypothesis table
 
 The active work unit is now M5 Step 3 retail caller-to-entry zero-fill join.
-Session 3574's target-bucket oracle watch was live (3,165 entry executions),
-and its source-span and whole-RDRAM controls were positive, but its bounded
-rows did not retain a `0x8008F2CC` caller match. The exact retail tuple and
-ordering are therefore still unevaluable; see
-[M5-S3574-RETAIL-ZERO-FILL-ENTRY.md](M5-S3574-RETAIL-ZERO-FILL-ENTRY.md).
+Session 3575 recorded 3,166 target-bucket executions of `0x800078E0` and
+positive whole-RDRAM/source-span controls, but zero executions of presumed
+caller `0x8008F2CC`; observed entry predecessors were led by `0x800C825C` and
+`0x800052C4`. The exact retail tuple and ordering remain unevaluable; see
+[M5-S3575-RETAIL-ZERO-FILL-CALLER.md](M5-S3575-RETAIL-ZERO-FILL-CALLER.md).
 
 The prior active work unit was retail zero-fill entry qualification.
 Session 3573 established the port tuple `dst=0x801797B0`, `fill=0`,

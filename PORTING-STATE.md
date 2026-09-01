@@ -134526,6 +134526,25 @@ output, PCM, task, DMA, or source contents were changed.
 ORIGIN: diagnostic-only writer-entry witness. The observed writer is the
 legitimate guest `rs_memset` at `0x800078EC`; no mitigation was added.
 
+## Session 3575 (2026-09-01) — qualified retail zero-fill caller absence
+
+The retail oracle ran the planned caller-to-entry table with positive
+controls. Whole-RDRAM writes were 10,674, source-span writes were 674, and
+the target phase `0x006AB400:512` contained 3,166 executions of
+`0x800078E0`. The presumed caller `0x8008F2CC` had zero executions. The
+retail entry is therefore live, but the port tuple
+`dst=0x801797B0`, `fill=0`, `len=0x298` cannot be joined to it, and caller /
+entry ordering cannot be measured. The entry predecessor histogram instead
+led with `0x800C825C` (2,260) and `0x800052C4` (867); these are the next
+candidate edges. This rules out only an absent retail entry and selects none
+of the parity, input, or ordering hypotheses. No game state, output, PCM,
+task, DMA, or source contents were changed. See
+`docs/M5-S3575-RETAIL-ZERO-FILL-CALLER.md`.
+
+ORIGIN: diagnostic-only retail caller/entry qualification. The zero-hit
+caller result is a route/address mismatch or an unobserved edge, not a value
+mitigation.
+
 ## Session 3574 (2026-09-01) — qualified retail zero-fill entry bucket
 
 The initial port capture was route-invalid (640 only) because the scheduled
