@@ -134382,3 +134382,23 @@ producer of the source-range RDRAM bytes open. The retail source-span activity
 is independent evidence that the range is legitimate and active; it does not
 attribute the port writer. No behavior change was made. See
 `docs/M5-S3567-DMEM-PAYLOAD-PRODUCER.md`.
+
+## Session 3568 (2026-09-01) — identified image source-range DMA writer
+
+The debugger-enabled retail oracle core was absent in this checkout, so this
+iteration's result is port-only. The existing regeneration-safe writer census
+was run once on the validated standalone real-audio/LLE-solo/spin-yield/
+autopilot route. Positive controls reached title VI 1024 at origin `0x790400`
+and hangar VI 512 at origin `0x6AB400`; RSP-source controls fired in both
+phases and the source-range writer control fired in hangar. No crash marker
+appeared before deliberate SIGKILL.
+
+The hangar table produced 512 `dmem_to_rdram` rows overlapping physical
+`0x1797B0..0x179930`. The rows wrote from DMEM `0xC30`/`0xCB0`, with zero
+payload and zero post-write hashes/nonzero counts, and were associated with
+the same route ordinals as the later zero RDRAM-to-DMEM reads. CPU source-range
+candidate and memset rows were absent, while their phase controls were live.
+This selects `H-SourceRangeOtherDma` as the immediate writer and rules out an
+immediate CPU writer or stale-only explanation at this boundary. It leaves the
+producer or clear that makes the writeback DMEM payload zero open. No behavior
+change was made. See `docs/M5-S3568-SOURCE-RANGE-PRODUCER.md`.
