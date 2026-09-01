@@ -132925,3 +132925,26 @@ reached. Evidence: `docs/M5-S3507-LLE-ON-NO-SPIN-SILENT.md`.
 ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
 audio state, selector value, task field, or output was rewritten, skipped, or
 validated.
+## Session 3512 (2026-08-31) — selector predecessor boundary was unevaluable
+
+The planned M5 selector-table predecessor experiment used one independent
+retail capture and one qualified port capture. The retail whole-RDRAM positive
+control reached 10,010 callbacks, the selector span watch recorded 10 writes,
+and the writer histogram showed five stores each at `0x8008F228` and
+`0x8008F264` in the hangar-qualified run. Exact phase-gated watches at
+function entry `0x8008F0A0`, pre-store `0x8008F1F0`, and caller `0x80091934`
+all recorded zero execution rows; a corrected whole-function range produced
+the same result. The port passed its host positive control, reached title and
+hangar, and captured the existing pre-allocate row with `a1/s1=0x00005622`
+and the title stores, but did not re-enter the initializer in hangar.
+
+This makes the proposed predecessor join unevaluable and selects capture
+invalidity for that measurement only. It does not overturn the qualified
+writer-context divergence or identify its producer. It rules out treating the
+zero predecessor callbacks as evidence for parity, divergence, or a later
+mutation. Evidence: `docs/M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md` and the
+four captured logs under `scratch/agent/`.
+
+ORIGIN: diagnostic-only oracle and port predecessor/store observations; no
+selector, table, audio, task, or output value was rewritten, skipped, or
+validated.

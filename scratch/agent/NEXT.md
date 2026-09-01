@@ -1,8 +1,10 @@
-# NEXT work unit — M5 selector-table writer-input producer boundary
+# NEXT work unit — M5 selector-table writer-input producer boundary (new angle)
 
 HYPOTHESIS-ID: m5-selector-writer-input-producer
 
-Session 3511 phase-matched the hangar stores. Retail and port agree on writer
+Session 3512 showed that the guessed retail predecessor PCs are not observable
+as execution callbacks even though the stores are live. Do not repeat those
+watches. Session 3511 phase-matched the hangar stores. Retail and port agree on writer
 PCs and stored values, but port already differs in writer `s1` (`0x5622` vs
 retail `0x561F`). Trace the producer feeding that context before the two table
 stores; do not repeat the completed store census.
@@ -25,10 +27,12 @@ ordinal, value, and predecessor-to-writer context. Matching predecessor fields
 with a later writer difference selects a later mutation; the first differing
 predecessor field selects its producer; failed controls make it unevaluable.
 
-Before building, ask the independent retail oracle for the predecessor
-boundary and whole-RDRAM control. Then add one regeneration-safe port witness
-at that predecessor and run the validated real-image/LLE/spin-yield/autopilot
-route with title and hangar buckets. Do not repeat the unchanged store census.
+Before building, ask the independent retail oracle for a genuinely new
+producer boundary, not `0x8008F0A0`, `0x8008F1F0`, or `0x80091934`. Retain the
+whole-RDRAM control and selector store control, then add one regeneration-safe
+port witness at the same new boundary and run the validated
+real-image/LLE/spin-yield/autopilot route with title and hangar buckets. Do not
+repeat the unchanged store census.
 
 Expected outcomes: positive controls plus matching predecessor context selects
 an intervening mutation or initializer; the first differing predecessor field

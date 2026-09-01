@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3511 (2026-08-31). This record was
+Current active marker: Session 3512 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -794,6 +794,22 @@ no table, selector, audio, task, or output value was rewritten, skipped, or
 validated.
 
 ## Next steps
+
+Session 3512 attempted the selector-table predecessor boundary. The retail
+oracle's whole-RDRAM control and selector-store watch were positive, with five
+stores at each writer PC in the hangar-qualified run. Exact watches at function
+entry `0x8008F0A0`, pre-store `0x8008F1F0`, and caller `0x80091934` all produced
+zero phase-gated execution rows; a whole-function range reproduced the same
+absence. The qualified port run captured the existing pre-allocate `a1/s1`
+row (`0x00005622`) and title stores, but did not re-enter the initializer in
+hangar. Therefore the predecessor join is unevaluable and selects capture
+invalidity for that measurement only; it does not explain the already-qualified
+writer-context divergence. Evidence:
+[M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md](M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md).
+
+ORIGIN: diagnostic-only oracle and port predecessor/store observations; no
+selector, table, audio, task, or output value was rewritten, skipped, or
+validated.
 
 Session 3511 phase-matched the corrected selector-table stores. The independent
 retail capture passed the whole-RDRAM control (10,000 callbacks), reached title,
