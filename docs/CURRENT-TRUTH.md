@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3515 (2026-08-31).
+documents are listed below. Updated for session 3516 (2026-08-31).
 
 ## Current state
 
@@ -24,6 +24,14 @@ fired, retail reached title and the 512 hangar, and `musyxMixActiveVoices`
 entry `0x80090E04` fired in the hangar. The known port crash PC
 `0x8000B650` did not execute in that retail capture. This keeps the retail
 mixer boundary valid but leaves the port pre-title route blocker unresolved.
+
+Session 3516 qualified the selector-store boundary independently: retail
+whole-RDRAM and selector-span controls fired, with five executions at each of
+`0x8008F228` and `0x8008F264` in hangar. The port context hook at those same
+stores reached hangar and captured `s0=0x12`, `s1=0x5622`, and values
+`0x80171E70`/`0x80173CB0`; the oracle field-dump mode emitted no comparable
+register rows. The earlier `0x8009192C` candidate was absent and is not a
+valid predecessor on this route, so parity/divergence remains unresolved.
 
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
@@ -51,12 +59,13 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Trace a new producer/context boundary before `0x8008F228`/`0x8008F264`.
-   Ask the independent retail oracle first, retaining its whole-RDRAM and
-   selector-store positive controls. Add one regeneration-safe port witness at
-   the same boundary, then run the validated real-image/LLE/spin-yield/
-   autopilot route with title and hangar buckets. Join by hangar origin,
-   writer PC, store ordinal, value, and predecessor-to-writer context.
+1. Trace a new upstream producer/context boundary for the live
+   `0x8008F228`/`0x8008F264` stores. Ask the independent retail oracle first
+   with a phase-gated execution range over `0x8009189C..0x80091B3C`, retaining
+   whole-RDRAM and selector-store controls. Add one regeneration-safe port
+   witness at the first live caller/context edge, then run the validated
+   real-image/LLE/spin-yield/autopilot route with title and hangar buckets.
+   Join by hangar origin, writer PC, store ordinal, value, and context.
 2. Resolve or newly qualify the pre-title audio route before attempting the
    mixer-entry join: Session 3514's real-audio arm crashed in
    `fillSampleStreamRange` and its silent retry stopped before title. Do not
@@ -157,11 +166,17 @@ divergence, or later mutation. The stores and controls were live, but the
 chosen predecessor addresses were not phase-observable; this invalidates that
 measurement only, not the qualified writer-context divergence.
 
+Session 3516's `0x8009192C` zero is likewise a capture-invalid predecessor
+measurement, not evidence about selector parity or divergence. The corrected
+live-store watches were positive, and the port store context was observed, but
+the oracle did not provide a matching register tuple.
+
 ## Evidence index
 
 Latest selector boundary:
 
 - [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
+- [M5-S3516-SELECTOR-STORE-CONTEXT.md](M5-S3516-SELECTOR-STORE-CONTEXT.md)
 - [M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md](M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md)
 - [M5-S3511-SELECTOR-TABLE-PHASE-JOIN.md](M5-S3511-SELECTOR-TABLE-PHASE-JOIN.md)
 - [M5-S3510-SELECTOR-TABLE-PHASE-MISMATCH.md](M5-S3510-SELECTOR-TABLE-PHASE-MISMATCH.md)

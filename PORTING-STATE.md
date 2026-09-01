@@ -133014,3 +133014,39 @@ selector value, task field, or output was rewritten or skipped.
 
 Evidence: `scratch/agent/s3515_oracle_route/oracle.log` and
 `docs/M5-S3515-ORACLE-ROUTE.md`.
+
+## Session 3516 (2026-08-31) — qualified live selector-store context boundary
+
+The planned M5 producer/context work first ran the independent retail oracle
+with a whole-RDRAM positive control, the corrected physical selector-store
+watch, and phase-gated execution watches at `0x8008F228` and `0x8008F264`.
+Whole-RDRAM reached 10,000 callbacks; the selector span recorded 10 writes;
+and each writer PC executed five times in the hangar bucket. A first candidate
+reload at `0x8009192C` was absent under the same phase gate, so that proposed
+predecessor was invalid. The oracle's additional field-dump mode emitted no
+register rows despite positive PC counts, leaving retail register parity
+unqualified.
+
+Added the regeneration-safe `rs64_m5_selector_store_context` witness through
+`tools/apply_s3516_m5_selector_store_context.py`, inserted at both generated
+selector stores. The Debug build passed. The port's validated silent
+LLE/spin-yield/autopilot run reached hangar origin `0x006AB400`, fired the new
+control at both stores, and captured `s0=0x12`, `s1=0x5622`, and values
+`0x80171E70`/`0x80173CB0`, matching the existing port store witness. It emitted
+no crash or abort marker.
+
+This qualifies the live store boundary and rules out `0x8009192C` as a
+phase-observable predecessor on this route. It does not select parity,
+divergence, or later mutation because the oracle did not expose a comparable
+register tuple. It rules out only the invalid predecessor measurement, not the
+remaining upstream producer/context gap. No audio, selector, table, task, or
+output value was rewritten, skipped, or validated.
+
+ORIGIN: diagnostic-only independent oracle watches and port execution-context
+witness; the selector stores and all observed values remained untouched.
+
+Evidence: `docs/M5-S3516-SELECTOR-STORE-CONTEXT.md`,
+`scratch/agent/s3516_selector_context_oracle_fixed.log`,
+`scratch/agent/s3516_selector_writer_context_oracle.log`,
+`scratch/agent/s3516_selector_writer_context_oracle_fields.log`, and
+`scratch/agent/s3516_selector_writer_context_port/run.log`.

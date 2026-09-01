@@ -1,31 +1,41 @@
-# NEXT work unit — capture a new selector-producer context boundary
+# NEXT work unit — trace an upstream selector-store caller/context edge
 
 HYPOTHESIS-ID: m5-selector-producer-context
 
-Session 3515 requalified retail `musyxMixActiveVoices` at `0x80090E04` in the
-hangar with a whole-RDRAM positive control. Do not repeat the unchanged port
-audio arms or unchanged retail capture.
+Session 3516 qualified the live selector stores and added a port context hook,
+but the retail oracle's field-dump mode emitted no comparable register tuple.
+Do not repeat `0x8009192C`, which was absent in the hangar phase, or repeat the
+completed live-store context capture unchanged.
 
-Before building, identify one concrete new producer/context witness immediately
-before selector stores at `0x8008F228`/`0x8008F264`; ask the retail oracle first
-with whole-RDRAM and existing selector-store controls. Then add one
-regeneration-safe port witness, build once, and run the validated
-real-image/LLE/spin-yield/autopilot route with title and hangar buckets.
+The next witness is the first live execution/caller edge in the function range
+`0x8009189C..0x80091B3C`, which contains the mixer initialization and its
+selector-store path. Ask the independent retail oracle first with whole-RDRAM
+and selector-store controls plus a phase-gated PC range. Then add one
+regeneration-safe port witness at the first live caller/context edge, build
+once, and run the validated real-image/LLE/spin-yield/autopilot route with
+title and hangar buckets.
 
 Competing hypotheses:
 
-- `H-ContextProducerParity`: predecessor context matches retail; an earlier
-  initializer or later mutation remains.
-- `H-ContextProducerDivergence`: predecessor supplies different `s1` or related
-  context; that producer edge is selected.
-- `H-LaterContextMutation`: predecessor matches, but an intervening guest
-  instruction mutates context before the writer.
-- `H-CaptureInvalid`: whole-RDRAM, selector-store, or phase controls fail.
+- `H-ContextProducerParity`: the first live upstream context matches; the
+  differing value is introduced earlier or by a later mutation.
+- `H-ContextProducerDivergence`: the first live upstream context differs in
+  `s1` or related fields; that producer edge is selected.
+- `H-LaterContextMutation`: upstream context matches, but an intervening guest
+  instruction changes it before the store.
+- `H-CaptureInvalid`: whole-RDRAM, selector-store, phase, or range controls
+  fail, making the join unevaluable.
 
-Discriminating measurement: matching predecessor fields with a later writer
-difference selects mutation; the first differing predecessor field selects its
-producer; failed controls select capture invalidity. Exact first command:
+The discriminator is the first live PC and its phase-matched context joined to
+the existing writer PC, store ordinal, and value. Matching upstream context
+with a later writer difference selects mutation; the first differing context
+field selects producer divergence; failed controls select capture invalidity.
+
+Exact first command shape:
 `tools/oracle/build/rs64_oracle ... --watch-write 0x0:0x800000
---watch-write <new-boundary> --watch-write 0x1149758:0x1149760 --vi-trace`.
-Then run the one-build port capture with `ROGUESQ_LOG_M5_MIX_ENTRY=1` and the
-new witness. Use SIGKILL, a non-dot final capture path, and run from `build/`.
+--watch-write 0x00149758:0x00149760 --watch-pc-range 0x8009189C:0x80091B3C
+--pc-phase-log-width 0x006AB400:512 --pc-hist-watch 1 --vi-trace`.
+Retain the verified Rice video and Start schedule. The port command must use
+`ROGUESQ_LOG_M5_SELECTOR_STORE_CONTEXT=1`, `PROBE_PHASE_WIDTH=1024`, and
+`PROBE_KEYS_FROM_PHASE=1`; use SIGKILL, a non-dot final capture path, and run
+from `build/`.
