@@ -134934,3 +134934,19 @@ ORIGIN: visible `+0x60` writers are `musyxStartVoiceRelease`,
 `advanceVolumeFadeEnvelope`, `tickAudioChannel`, and
 `musyxRenderVoiceSamples`; their zero/reset values are legitimate transitions,
 while wild-value or stale-lifetime legitimacy remains unobserved.
+
+## Session 3595 (2026-09-01) — audited MusyX voice 0x30-0x40 field family
+
+Performed the planned static census of every generated `MEM_[BHW]` access to
+`0x30`, `0x34`, `0x38`, `0x3C`, `0x40`, `0x42`, and `0x44` in
+`RecompiledFuncs/funcs_24.c`. The accesses split across global voice-table
+slots, sample/command descriptors, and stack frames; the descriptor path
+also aliases byte, halfword, and word fields. `musyxInitVoiceFromSample`,
+`musyxKeyOnVoice`, render/release paths, and ADSR storage were covered.
+
+The result selects structural unevaluability, not a concrete invalid writer:
+reset/cleanup stores are legitimate state transitions, input copies have
+identified sources, and no invalid value or demonstrably unchecked store edge
+was found. Runtime index, allocator, lifetime, and value legitimacy remain
+open. No build, run, guard, or mitigation was performed. Evidence is recorded
+in `scratch/agent/M3-S3595-VOICE-30-40-FIELD-AUDIT.md`.

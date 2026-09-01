@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3594 (2026-09-01).
+notes are linked below. Updated for session 3595 (2026-09-01).
 
 ## Current state
 
@@ -97,6 +97,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    slot bounds. This selects structural unevaluability, not a concrete bad
    writer, so no guard was added. See
    [M3-S3594-VOICE-60-FIELD-AUDIT.md](../scratch/agent/M3-S3594-VOICE-60-FIELD-AUDIT.md).
+   Session 3595 audited `+0x30..+0x40`: accesses split across global voice
+   slots, sample/command descriptors, and stack frames, with byte/halfword/
+   word aliases and no complete caller-proven slot bound. This selects the
+   same structural unevaluability boundary; no guard was added. See
+   [M3-S3595-VOICE-30-40-FIELD-AUDIT.md](../scratch/agent/M3-S3595-VOICE-30-40-FIELD-AUDIT.md).
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -195,6 +200,11 @@ and evidence notes retain the full history.
   slot bound, or lifetime chain is exposed. This selects
   `H-NextClassUnevaluable`, not a concrete invalid writer. See
   [M3-S3594-VOICE-60-FIELD-AUDIT.md](../scratch/agent/M3-S3594-VOICE-60-FIELD-AUDIT.md).
+- **3595 — MusyX voice `+0x30..+0x40` field audit:** the complete generated
+  access census split across global voice slots, sample/command descriptors,
+  and stack frames. Mixed widths and layouts prevent a complete object-level
+  classification; no concrete invalid writer/value was found and no guard was
+  added. See [M3-S3595-VOICE-30-40-FIELD-AUDIT.md](../scratch/agent/M3-S3595-VOICE-30-40-FIELD-AUDIT.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies
