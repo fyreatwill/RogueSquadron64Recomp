@@ -1,33 +1,28 @@
-# NEXT work unit — qualify selector capture on the real-audio arm
+# NEXT work unit — qualify the real-audio route at fillSampleStreamRange
 
-HYPOTHESIS-ID: m5-real-audio-selector-capture
+HYPOTHESIS-ID: m5-real-audio-route-qualification
 
-Session 3492 positively showed that `ROGUESQ_AUDIO_UCODE=0` selects
-`musyx_stub` (47 samples through `n=896`), but that arm stalls in the existing
-audio wait-pump before title. The independent retail control observed 666
-type-2 tasks at `0x80033FCC`, so the next unit must use the qualified
-real-audio route to exercise the selector boundary.
+Session 3493 selected `H-RealAudioRouteFails`: dispatch selected
+`real_ucode=1`, but the port crashed before title at guest PC `0x8000B650`
+inside `fillSampleStreamRange`. The independent retail control was positive,
+so the zero selector rows are unevaluable.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-RealSelectorReachable`: real audio reaches title and both selector
-  controls plus selector rows fire.
-- `H-RealSelectorSuppressed`: real audio reaches title, but one or both
-  selector controls/rows remain absent.
-- `H-RealAudioRouteFails`: real audio fails before title again; the failure
-  site and positive dispatch marker identify route qualification as unresolved.
+- `H-RealAudioRouteTransient`: a bounded retry with the same qualified route
+  reaches title and fires the selector controls.
+- `H-RealAudioRouteStableCrash`: the same route reproducibly fails at or below
+  `0x8000B650` before title, despite positive dispatch and phase controls.
+- `H-RouteFailureElsewhere`: the retry reaches title or fails at a different
+  audio/scheduler boundary, moving the next probe to that site.
 
-Discriminating measurement: one real-audio run using the existing
-`run_s3490_m5_upstream_selector.sh` environment, with its route arm changed
-from `ROGUESQ_AUDIO_UCODE=0` to `1`; retain the selector controls, phase log,
-and `ROGUESQ_LOG_AUDIO_RETURN=1`. Require the existing four-PC positive
-control, title origin, selector-load/writer controls, and the independent
-retail handoff control before interpreting any zero.
+Discriminating measurement: one same-build real-audio route capture with the
+existing whole-RDRAM/dispatch/phase controls and `ROGUESQ_LOG_AUDIO_RETURN=1`;
+the outcome is title reachability plus the first crash guest PC. Do not
+interpret selector zeros unless title is reached.
 
-Exact command: create a session-specific copy of the existing script, change
-only its `ROGUESQ_AUDIO_UCODE=0` assignment to `1`, and run it from the repo
-root with `env ROGUESQ_LOG_AUDIO_RETURN=1 zsh
-scratch/agent/run_s3493_m5_real_selector.sh`. Before that run, repeat the
-oracle command from `s3492_audio_dispatch_ground_truth` with its whole-RDRAM
-and `0x80033FCC` controls; do not add another port hook. Use SIGKILL for the
-watchdog and capture all results under `scratch/agent/`.
+Exact command: use `env ROGUESQ_LOG_AUDIO_RETURN=1 zsh
+scratch/agent/run_s3493_m5_real_selector.sh`. Keep SIGKILL watchdog behavior
+and capture under `scratch/agent/s3493_m5_real_selector/`. If title is reached,
+then the following iteration may run the selector join; otherwise record the
+route failure and choose the newly identified boundary.

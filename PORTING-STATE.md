@@ -132490,3 +132490,26 @@ runtime behavior changed. Evidence: `docs/M5-S3492-AUDIO-DISPATCH-GATE.md`.
 
 ORIGIN: the dispatch marker and oracle task watch are observational; no task
 routing, audio state, wait behavior, or selector data was rewritten.
+
+## Session 3493 (2026-08-31) — qualified real-audio selector route
+
+Ran the independent retail oracle first with the whole-RDRAM positive control
+and phase-qualified `0x80033FCC` task handoff. The control reached 10,000
+writes; the execution watch recorded 6,358 hits and the task dump recorded
+1,257 phase-qualified type-2 rows, including title origins.
+
+Ran the prescribed real-audio LLE/spin-yield/ungated port arm with
+`ROGUESQ_AUDIO_UCODE=1` and `ROGUESQ_LOG_AUDIO_RETURN=1`. The port dispatch
+control fired 48 times with `real_ucode=1`, but the run crashed before title
+in `fillSampleStreamRange` at guest PC `0x8000B650`. Selector-load and
+selector-writer controls/rows and the audio-return marker were zero.
+
+This selects `H-RealAudioRouteFails` and refutes a dispatch-setting failure at
+this scope: the port dispatch marker and independent retail task control both
+fired, and the selected route was explicit. It does not select a selector
+contract hypothesis because the selector phase was never reached. Evidence:
+`docs/M5-S3493-REAL-AUDIO-SELECTOR.md`.
+
+ORIGIN: diagnostic-only oracle, dispatch, phase, selector, and crash
+observations; no audio state, selector value, task field, or route behavior was
+rewritten, skipped, or validated.
