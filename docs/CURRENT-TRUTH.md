@@ -692,37 +692,58 @@ the `0x80150000` table remains unresolved. Evidence:
 ORIGIN: diagnostic-only post-load table/register observations; no selector,
 audio, task, or output state was rewritten, skipped, or validated.
 
+Session 3502 attempted the planned selector-table writer attribution after an
+independent retail preflight. The oracle whole-RDRAM control fired, reached
+title origin `0x00790400`, and showed the target execution range live,
+including `0x80091320` with `a0=0x801772F0`; its retained physical
+`0x00150000..0x00150008` table-write detail was unavailable because the
+whole-RDRAM watch consumed the printed hit budget and the run did not emit the
+requested shutdown detail. Two prescribed real-image/LLE/spin-yield port
+retries both crashed before title at `spTaskSchedulerThread+9556`, guest PC
+`0x8000834C`, with zero title or selector controls/rows. This does not select a
+table-writer, route, or index hypothesis; it establishes a reproducible
+real-audio route qualification blocker. Evidence:
+[M5-S3502-SELECTOR-ROUTE-BLOCKED.md](M5-S3502-SELECTOR-ROUTE-BLOCKED.md).
+
+ORIGIN: diagnostic-only retail and port route, phase, selector, and crash
+observations; no audio state, selector value, task field, or output was
+rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Trace the writer/initializer and selector-index source feeding the
+1. Re-qualify the real-audio title route with a new, bounded route
+   discriminator before resuming selector-table attribution. Require the
+   whole-RDRAM oracle control, port route control, and a 1024 title transition;
+   the known `0x8000834C` pre-title crash is a blocker, not a selector null.
+2. Once that route is qualified, trace the writer/initializer and selector-index source feeding the
    `0x80150000`/`0x80150004` table entries used by `0x8009131C`, with one
    batched retail/port discriminator keyed by title origin, table address,
    stored value, index, and caller arguments. Keep the independent
    whole-RDRAM control and port pre-call/caller controls positive; the first
    matching or differing table write selects the next edge.
-2. Keep Sessions 3494–3498's real-audio route and selector outcomes and Session 3492's
+3. Keep Sessions 3494–3498's real-audio route and selector outcomes and Session 3492's
    dispatch result as baselines; do not repeat any unchanged route retry.
-3. Keep Session 3488's silent route as the qualification baseline; do not
+4. Keep Session 3488's silent route as the qualification baseline; do not
    repeat the same silent gate audit unchanged.
-4. Retain the Session 3486 pointer-word result; do not repeat the exact
+5. Retain the Session 3486 pointer-word result; do not repeat the exact
    pointer-word writer histogram unchanged.
-5. Retain the Session 3484 retail writer census and port source-span rows; do
+6. Retain the Session 3484 retail writer census and port source-span rows; do
    not repeat the rejected candidate-span store capture unchanged.
-6. Retain the Session 3483 retail post-store table and Session 3482 port
+7. Retain the Session 3483 retail post-store table and Session 3482 port
    writer/enqueue rows; do not repeat either unchanged capture.
-7. Retain the Session 3468 retail post-store table and Session 3473–3475 port
+8. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
-8. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
+9. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
-9. Matching fields close the boundary; the first divergent field selects the
+10. Matching fields close the boundary; the first divergent field selects the
    missing contract edge. Keep the retail oracle and port positive controls
    in the same run before trusting any null.
-10. Keep M5 Step 3 gated until that output comparison names one missing
+11. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
    generated patch input.
-11. After M5 closes or a new discriminator is found, resume only systematic M3
+12. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep external retail-entry, hangar `0x8000`
    Y/accumulator arithmetic, and SP-yield/MORT publication threads parked.
    Generated-symbol renaming is last priority and remains closed at its

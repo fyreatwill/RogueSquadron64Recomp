@@ -132695,3 +132695,27 @@ or selector-index source remains unresolved. Evidence:
 
 ORIGIN: diagnostic-only post-load table/register observations; no selector,
 audio, task, or output state was rewritten, skipped, or validated.
+
+## Session 3502 (2026-08-31) — selector comparison blocked by real-audio route
+
+Ran the independent retail oracle first with Rice video, title-driving Start
+presses, a whole-RDRAM positive control, a physical watch on
+`0x00150000..0x00150008`, and an execution range covering
+`0x8009131C..0x80091333`. The control fired, title origin `0x00790400`
+appeared, and `0x80091320` was live with `a0=0x801772F0`; the oracle ended
+normally after 3,565 VI. The retained physical table-write detail was not
+available because the whole-RDRAM watch consumed the printed hit budget and
+the requested shutdown detail did not print.
+
+Built the existing selector witnesses successfully. Two direct-PID retries
+from `build/` used the prescribed real-image/LLE/spin-yield/autopilot route;
+both crashed before title at host `spTaskSchedulerThread+9556`, guest PC
+`0x8000834C`, with zero 1024 phase or selector controls/rows. This does not
+select table-writer value, writer route, or index selection. It establishes a
+reproducible real-audio route qualification blocker and rules out interpreting
+the missing selector rows as a post-title null. Evidence:
+`docs/M5-S3502-SELECTOR-ROUTE-BLOCKED.md`.
+
+ORIGIN: diagnostic-only retail and port route, phase, selector, and crash
+observations; no audio state, selector value, task field, or output was
+rewritten, skipped, or validated.
