@@ -2,7 +2,19 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3571 (2026-09-01).
+documents are listed below. Updated for session 3572 (2026-09-01).
+
+Session 3572 completed the phase-independent source-transition join. The
+target-valid port arm passed title 1024, hangar 512, and all positive controls.
+Before the first hangar source DMA it recorded nonzero CPU initialization from
+`0x80007670` and the `0x8001FAxx` texture-record family, followed in phase 5
+by zero stores from `0x800078EC` across `0x1797B0..0x179930`; the first target
+DMA then carried zero payload. The retail oracle independently passed its
+whole-RDRAM control, reached the target route, and recorded the same writer
+family in the source span, including `0x800078EC`. This selects
+`H-PreTaskCpuInit` at the transition boundary and moves the live question to
+the zero-fill call/input contract. Numeric retail store-value parity remains
+unmeasured. See [M5-S3572-SOURCE-TRANSITION-JOIN.md](M5-S3572-SOURCE-TRANSITION-JOIN.md).
 
 Session 3571 ran the corrected target-valid standalone image arm for the
 pre-task source initializer boundary. Title 1024 and hangar 512 controls,
@@ -598,6 +610,10 @@ to be rewritten as a diagnostic mitigation.
    phase-gated hooks could not see the earlier transition. Add one bounded,
    phase-independent source-span transition table and join its last event to
    the first target source DMA; do not rewrite output or PCM state.
+   Session 3572 closed that transition: nonzero CPU initialization precedes a
+   target-phase zero-fill from `0x800078EC`, and the first source DMA is zero.
+   The next boundary is the zero-fill call/input contract and its ordering
+   relative to the image-task handoff; do not add another broad source census.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -632,7 +648,16 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 source initialization qualification.
+The active work unit is now M5 Step 3 zero-fill call/input qualification.
+Session 3572 selected `H-PreTaskCpuInit`: the phase-independent port table
+found nonzero source-span CPU initialization before the first target source DMA,
+then zero stores from `0x800078EC` immediately before that DMA. Retail's
+independent target-phase writer histogram included the same writer family and
+`0x800078EC`, but did not capture values. The next witness must qualify the
+zero-fill call/input contract and ordering; see
+[M5-S3572-SOURCE-TRANSITION-JOIN.md](M5-S3572-SOURCE-TRANSITION-JOIN.md).
+
+The prior target-handoff result remains narrower:
 Session 3571 selected `H-PreTaskZeroContract` at the target handoff: 14 source
 DMAs read zero, source-range writebacks were zero, and 244 hangar source-span
 CPU rows from `0x800078EC` stored zero. The hooks were phase-gated, so the

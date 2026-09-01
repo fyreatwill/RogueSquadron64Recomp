@@ -1085,19 +1085,26 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_SOURCE_WRITER");
+        const char* transition = std::getenv("ROGUESQ_LOG_M5_SOURCE_TRANSITION");
         return (all && all[0] && all[0] != '0') ||
-               (own && own[0] && own[0] != '0');
+               (own && own[0] && own[0] != '0') ||
+               (transition && transition[0] && transition[0] != '0');
     }();
     if (!enabled || len == 0u) return;
+    static const bool transition_enabled = [] {
+        const char* value = std::getenv("ROGUESQ_LOG_M5_SOURCE_TRANSITION");
+        return value && value[0] && value[0] != '0';
+    }();
     uint32_t phase = 0, width = 0, origin = 0, route_ordinal = 0xFFFFFFFFu,
              route_row = 0xFFFFFFFFu;
     int exit_reason = 0;
     const char* arm = "n/a";
-    if (!rs64_audio_current_route_snapshot(
+    const bool route_active = rs64_audio_current_route_snapshot(
             &phase, &width, &origin, &route_ordinal, &route_row,
-            &exit_reason, &arm)) return;
-    if (!((width == 1024u && origin == 0x00790400u) ||
-          (width == 512u && origin == 0x006AB400u))) return;
+            &exit_reason, &arm);
+    const bool target_phase = (width == 1024u && origin == 0x00790400u) ||
+                              (width == 512u && origin == 0x006AB400u);
+    if (!transition_enabled && (!route_active || !target_phase)) return;
 
     const uint32_t first = 0x1797B0u, last = 0x179930u;
     const uint32_t end = dram_addr + len;
@@ -1118,6 +1125,23 @@ extern "C" void rs64_m5_source_range_dma_write(uint8_t* rdram,
     static uint32_t rows[2] = {};
     std::lock_guard<std::mutex> lock(mutex);
     const uint32_t slot = width == 1024u ? 0u : 1u;
+    if (transition_enabled) {
+        static uint32_t transition_rows = 0;
+        if (transition_rows < 4096u) {
+            std::fprintf(stderr,
+                "[m5-source-transition] event=%llu op=dma_to_rdram "
+                "phase=%u width=%u origin=0x%06X route_ordinal=%u "
+                "route_row=%u dram=0x%06X len=0x%X dmem=0x%03X "
+                "overlap=0x%06X..0x%06X payload_fnv=%08X payload_nz=%u "
+                "post_fnv=%08X post_nz=%u\n",
+                static_cast<unsigned long long>(g_rs64_m5_source_event++),
+                phase, width, origin, route_ordinal, route_row, dram_addr,
+                len, dmem_addr, overlap_first, overlap_last, payload_fnv,
+                payload_nz, post_fnv, post_nz);
+            std::fflush(stderr);
+            ++transition_rows;
+        }
+    }
     if (rows[slot] >= 512u) return;
     const uint64_t event = g_rs64_m5_source_event++;
     std::fprintf(stderr,
@@ -2724,6 +2748,28 @@ extern "C" void rs64_m5_field348_store(char width, uint32_t pc,
     const bool overlaps_field348 =
         (phys < spans[0] + 0x180u && phys + len > spans[0]) ||
         (phys < spans[1] + 0x180u && phys + len > spans[1]);
+    static const bool transition_enabled = [] {
+        const char* value = std::getenv("ROGUESQ_LOG_M5_SOURCE_TRANSITION");
+        return value && value[0] && value[0] != '0';
+    }();
+    if (transition_enabled && overlaps_field348) {
+        static uint32_t transition_rows = 0;
+        if (transition_rows < 4096u) {
+            std::fprintf(stderr,
+                "[m5-source-transition] event=%llu op=cpu_store "
+                "phase=%u width=%u origin=0x%06X route_ordinal=%u "
+                "route_row=%u pc=0x%08X phys=0x%06X len=%u value=0x%08X "
+                "value_fnv=%08X value_nz=%u span=%u\n",
+                static_cast<unsigned long long>(g_rs64_m5_source_event++),
+                phase, width_n, origin,
+                g_rs64_audio_identity.valid ? g_rs64_audio_identity.ordinal : 0xFFFFFFFFu,
+                g_rs64_audio_identity.valid ? g_rs64_audio_identity.row : 0xFFFFFFFFu,
+                pc, phys, len, logged_value, value_fnv, value_nz,
+                phys >= spans[1] ? 2u : 1u);
+            std::fflush(stderr);
+            ++transition_rows;
+        }
+    }
     if (control_phase_key[phase_slot] != phase_key &&
         !overlaps_field348) {
         control_phase_key[phase_slot] = phase_key;
@@ -2866,6 +2912,27 @@ extern "C" void rs64_m5_field348_memset(uint32_t dst, uint32_t fill,
     const uint64_t ordinal = call_ordinal++;
     const uint32_t row = phase_rows[slot]++;
     const uint32_t callsite = ra >= 8u ? ra - 8u : 0u;
+    static const bool transition_enabled = [] {
+        const char* value = std::getenv("ROGUESQ_LOG_M5_SOURCE_TRANSITION");
+        return value && value[0] && value[0] != '0';
+    }();
+    if (transition_enabled && span != 0u) {
+        static uint32_t transition_rows = 0;
+        if (transition_rows < 4096u) {
+            std::fprintf(stderr,
+                "[m5-source-transition] event=%llu op=memset "
+                "phase=%u width=%u origin=0x%06X route_ordinal=%u "
+                "route_row=%u dst=0x%08X phys=0x%06X fill=0x%02X len=0x%X "
+                "span=%u ra=0x%08X callsite=0x%08X guest_pc=0x%08X\n",
+                static_cast<unsigned long long>(g_rs64_m5_source_event++),
+                rs64_phase_ord(), width, origin,
+                g_rs64_audio_identity.valid ? g_rs64_audio_identity.ordinal : 0xFFFFFFFFu,
+                g_rs64_audio_identity.valid ? g_rs64_audio_identity.row : 0xFFFFFFFFu,
+                dst, phys, fill & 0xFFu, len, span, ra, callsite, guest_pc);
+            std::fflush(stderr);
+            ++transition_rows;
+        }
+    }
     if (span == 0u && !control_seen[slot]) {
         control_seen[slot] = true;
         std::fprintf(stderr,

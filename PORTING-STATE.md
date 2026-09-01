@@ -134482,3 +134482,29 @@ single-source port evidence. See `docs/M5-S3571-PRE-TASK-SOURCE-INITIALIZER.md`.
 
 ORIGIN: diagnostic-only source handoff census. No output, PCM, task, DMA, or
 source state was rewritten.
+
+## Session 3572 (2026-09-01) — joined the phase-independent source transition
+
+The required oracle preflight found the debug core and retail ROM and reached
+the 10,000-callback whole-RDRAM positive-control threshold. The instrumented
+port build then reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`, with phase, RSP/source, and writer controls live. Its new
+phase-independent source-transition table emitted 2,044 rows: 1,036 CPU
+stores and 1,008 source-range DMA writebacks. Before the first hangar source
+DMA, nonzero CPU stores came from `0x80007670` and the `0x8001FAxx`
+texture-record family; target-phase `0x800078EC` then wrote zero bytes across
+`0x1797B0..0x179930`, followed by a zero-payload source DMA. No source-range
+DMA or memset preceded that first target DMA.
+
+The independent retail run passed its whole-RDRAM control, reached the target
+route, and recorded 1,166 exact-span writes. Its target-phase writer histogram
+included the same `0x80007670`, `0x8001FAxx`, and `0x800078EC` family, with 664
+writes from `0x800078EC`. It did not capture store values, so numeric parity is
+not claimed. This selects `H-PreTaskCpuInit` at the transition boundary,
+refutes the earlier no-transition alternatives, and moves the live boundary to
+the zero-fill call/input contract and ordering. The source-transition table
+was diagnostic only; no game state, output, PCM, task, or DMA behavior was
+changed. See `docs/M5-S3572-SOURCE-TRANSITION-JOIN.md`.
+
+ORIGIN: diagnostic-only source-transition census. The observed zero-fill
+writer is guest PC `0x800078EC`; its legitimacy and ordering remain open.
