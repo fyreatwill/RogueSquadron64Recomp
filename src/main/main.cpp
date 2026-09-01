@@ -599,6 +599,8 @@ uint32_t g_rs64_pcm_last_dma_len = 0;
 uint32_t g_rs64_pcm_guest_rows = 0;
 uint32_t g_rs64_m5_second_range_rows = 0;
 std::atomic<uint32_t> g_rs64_pcm_task_data_ptr{0};
+uint64_t g_rs64_m5_source_event = 0;
+uint32_t g_rs64_m5_source_window_rows = 0;
 
 bool rs64_pcm_writer_enabled() {
     static int enabled = -1;
@@ -814,16 +816,43 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
             phase, width, origin);
         std::fflush(stderr);
     }
-    if (rows >= 512u) return;
-    std::fprintf(stderr,
-        "[m5-rsp-source] row=%u phase=%u width=%u origin=0x%06X arm=%s "
-        "route_ordinal=%u route_row=%u dmem=0x%03X len=0x%X window2=%u "
-        "window3=%u dram=0x%06X fnv=%08X nz=%u exit=%d\n",
-        rows, phase, width, origin, arm ? arm : "n/a", route_ordinal,
-        route_row, dmem_addr, len, window2 ? 1u : 0u, window3 ? 1u : 0u,
-        dram_addr, fnv, nonzero, exit_reason);
-    std::fflush(stderr);
-    ++rows;
+    if (rows < 512u) {
+        std::fprintf(stderr,
+            "[m5-rsp-source] row=%u phase=%u width=%u origin=0x%06X arm=%s "
+            "route_ordinal=%u route_row=%u dmem=0x%03X len=0x%X window2=%u "
+            "window3=%u dram=0x%06X fnv=%08X nz=%u exit=%d\n",
+            rows, phase, width, origin, arm ? arm : "n/a", route_ordinal,
+            route_row, dmem_addr, len, window2 ? 1u : 0u, window3 ? 1u : 0u,
+            dram_addr, fnv, nonzero, exit_reason);
+        std::fflush(stderr);
+        ++rows;
+    }
+
+    if ((window2 || window3) && g_rs64_m5_source_window_rows < 4096u) {
+        const uint32_t windows[][2] = {{0x6F0u, 0x9F0u}, {0xCB0u, 0xE48u}};
+        for (uint32_t window = 0; window < 2u; ++window) {
+            const uint32_t first = windows[window][0];
+            const uint32_t last = windows[window][1];
+            if (dmem_addr >= last || dmem_addr + len <= first) continue;
+            uint32_t exact_fnv = 2166136261u;
+            uint32_t exact_nz = 0;
+            for (uint32_t i = first; i < last; ++i) {
+                const uint8_t b = dmem[i ^ 3u];
+                exact_fnv = (exact_fnv * 16777619u) ^ b;
+                exact_nz += b != 0;
+            }
+            std::fprintf(stderr,
+                "[m5-source-window] event=%llu op=dma phase=%u width=%u "
+                "origin=0x%06X route_ordinal=%u route_row=%u window=%u "
+                "dmem=0x%03X len=0x%X post_fnv=%08X post_nz=%u "
+                "dram=0x%06X\n",
+                static_cast<unsigned long long>(g_rs64_m5_source_event++),
+                phase, width, origin, route_ordinal, route_row, window + 2u,
+                dmem_addr, len, exact_fnv, exact_nz, dram_addr);
+            ++g_rs64_m5_source_window_rows;
+        }
+        std::fflush(stderr);
+    }
 }
 
 extern "C" void rs64_m5_ai_table_row(uint32_t index, uint32_t root,
@@ -2339,6 +2368,31 @@ extern "C" void rs64_m5_audio_dmem_store(uint32_t dmem_addr,
         value, value_nz, fnv, nonzero,
         route.prepare_seq, g_rs64_audio_identity_edge_seq.load());
     std::fflush(stderr);
+
+    if (g_rs64_m5_source_window_rows < 4096u) {
+        const uint32_t windows[][2] = {{0x6F0u, 0x9F0u}, {0xCB0u, 0xE48u}};
+        for (uint32_t window = 0; window < 2u; ++window) {
+            const uint32_t first = windows[window][0];
+            const uint32_t last = windows[window][1];
+            if (dmem_addr >= last || end <= first) continue;
+            uint32_t exact_fnv = 2166136261u;
+            uint32_t exact_nz = 0;
+            for (uint32_t i = first; i < last; ++i) {
+                const uint8_t b = dmem[i ^ 3u];
+                exact_fnv = (exact_fnv * 16777619u) ^ b;
+                exact_nz += b != 0;
+            }
+            std::fprintf(stderr,
+                "[m5-source-window] event=%llu op=store phase=%u width=%u "
+                "origin=0x%06X route_ordinal=%u route_row=%u window=%u "
+                "dmem=0x%03X len=0x%X post_fnv=%08X post_nz=%u\n",
+                static_cast<unsigned long long>(g_rs64_m5_source_event++),
+                rs64_phase_ord(), route.width, route.origin, route.ordinal,
+                route.row, window + 2u, dmem_addr, len, exact_fnv, exact_nz);
+            ++g_rs64_m5_source_window_rows;
+        }
+        std::fflush(stderr);
+    }
     ++rows;
 }
 

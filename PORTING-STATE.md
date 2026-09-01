@@ -133651,3 +133651,26 @@ RSP producer and the scalar-only coverage explanation. Exact per-window
 ordering remains open because this census records broad post-store hashes
 rather than a per-window snapshot at every event. No audio, PCM, or output
 state was changed.
+## Session 3540 (2026-09-01) — attributed title-phase image-task source-window zeroing
+
+The build succeeded after making the source-DMA witness post-copy and adding
+bounded exact post-event hashes for DMEM windows `0x6F0..0x9F0` and
+`0xCB0..0xE48`, shared across scalar/vector stores and RDRAM-to-DMEM DMA
+events. In one real-audio LLE/spin-yield/autopilot capture, the source-window,
+stage, stage-byte, and PCM controls fired and title VI 1024 was reached. The
+run did not reach 512 hangar before the capture ended, so this is title-phase
+evidence only.
+
+Window 2 became nonzero at event 26 (`nz=332`), returned to the all-zero hash
+`F59C39C5` at event 113, became nonzero again at event 492, and returned to
+zero at event 581. A post-copy DMA from RDRAM `0x178C80` into DMEM `0x6F0`
+with length `0x100` produced the zero state at event 842; a later DMA from
+`0x1E2FC0` refilled the window (`nz=396`, event 843). Window 3 remained zero
+with hash `762B22A5`. Stage 2 consumed zero source and produced zero output
+while its joins remained live.
+
+This selects `H-SourceWindowOverwritten` for the title-phase port path and
+moves the active boundary to the writer of RDRAM `0x178C80`. The exact RDRAM
+writer remains open. The ordering is single-source port evidence, paired with
+session 3539's independent retail nonzero-writer result. No audio, PCM, or
+output state was changed.

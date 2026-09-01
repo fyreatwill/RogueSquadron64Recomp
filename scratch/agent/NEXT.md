@@ -1,42 +1,43 @@
-# NEXT work unit — locate the exact zeroing edge in image-task DMEM
+# NEXT work unit — attribute the zero source DMA for image-task DMEM
 
 HYPOTHESIS-ID: m5-output-source-writer
 
-Session 3539 extended the source census to vector stores. The real-audio port
-reached title and hangar, logged vector writes in both source-window classes,
-and showed nonzero broad-span DMEM contents during the producer sequence; the
-later stage-2 source snapshot and PCM output remained zero. Retail independently
-passed its whole-RDRAM control and wrote nonzero bytes in both watched ranges.
-See `docs/M5-S3539-SOURCE-WRITER.md`.
+Session 3540 completed the title-phase source-window ordering probe. Window 2
+became nonzero, then zero; a post-copy DMA from RDRAM `0x178C80` produced the
+zero state and a later `0x1E2FC0` DMA refilled it. Window 3 stayed zero. The
+run reached title 1024 but not hangar 512. Retail independently passed its
+whole-RDRAM control and wrote nonzero bytes in the corresponding ranges. See
+`docs/M5-S3540-SOURCE-WINDOWS.md`.
 
-Next unit: refine the existing source census to hash each source window
-separately after every vector/scalar store and after every RSP DMA read. Join
-each row to the image-stage, source-DMA, completion, PCM-source, and
-PCM-consumer event ordinals. Keep the retail PCs as attribution anchors only.
+Next unit: attribute the writer that makes RDRAM `0x178C80` zero before the
+source DMA. Join phase-qualified port writes to the selected source-window
+event and arm a retail physical watch on the same range, with the whole-RDRAM
+control in the same oracle run.
 
 Competing hypotheses and discriminator:
 
-- `H-SourceWindowAbsent`: one individual source window has no producer; select
-  a window with no store/read row before its stage snapshot.
-- `H-SourceWindowZeroed`: a producer/read reaches a window with zero bytes;
-  select that producer event and its zero post-hash.
-- `H-SourceWindowOverwritten`: a window becomes nonzero, then a later DMA or
-  vector/scalar store makes it zero; select the ordered nonzero-to-zero pair.
+- `H-RdramWriterAbsent`: no port or retail writer reaches `0x178C80`.
+- `H-RdramWriterPort`: the port has a writer at the selected predecessor and
+  retail does not; select a route-specific producer contract gap.
+- `H-RdramWriterParity`: both sides have the same legitimate writer class and
+  ordering; move the boundary to source-DMA input or task sequencing.
 - `H-CaptureInvalid`: any positive control, target phase, or event join fails.
 
-The one-run table must contain phase, window, event ordinal, writer kind,
-DMEM/RDRAM range, pre/post FNV/nonzero counts, and nearest stage/completion/
-PCM ordinals. A missing row selects `H-SourceWindowAbsent`; zero at the first
-producer selects `H-SourceWindowZeroed`; nonzero followed by zero selects
-`H-SourceWindowOverwritten`; failed controls select `H-CaptureInvalid`.
+The one-run table must contain phase, source range, writer PC/kind, event
+ordinal, value hashes, and nearest source-DMA/stage/completion/PCM ordinals.
+Missing controls or phase rows select `H-CaptureInvalid`; a port-only writer
+selects `H-RdramWriterPort`; matching writer class and ordering selects
+`H-RdramWriterParity`; absent writers on both sides select
+`H-RdramWriterAbsent`.
 
 Exact commands:
 
     cmake --build build -j8
-    # run one real-audio LLE/spin-yield/autopilot capture from build/ with
+    # first run the retail oracle with whole-RDRAM control plus a watch on
+    # 0x178C80:0x178D80, then run one real-audio LLE/spin-yield/autopilot capture from build/ with
     # ROGUESQ_LOG_M5_SOURCE_WRITER=1, ROGUESQ_LOG_M5_RSP_SOURCE=1,
     # ROGUESQ_LOG_M5_STAGE_CALLS=1, ROGUESQ_LOG_M5_STAGE_BYTES=1,
     # ROGUESQ_LOG_PCM_BOUNDARY=1, ROGUESQ_LOG_M5_PCM_WRITER=1,
-    # ROGUESQ_LOG_M5_TASK_CONTRACT=1, and the independent retail controls.
+    # ROGUESQ_LOG_M5_TASK_CONTRACT=1.
 
 Do not change audio, PCM, or output state.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3539 (2026-09-01).
+evidence documents are listed below. Updated for session 3540 (2026-09-01).
 
 ## Current state
 
@@ -239,6 +239,16 @@ This selects `H-PortSourceOverwritten` at the broad DMEM-span boundary and
 rules out an absent RSP producer and scalar-only coverage. Exact per-window
 ordering remains open; see [M5-S3539-SOURCE-WRITER.md](M5-S3539-SOURCE-WRITER.md).
 
+Session 3540 completed the exact source-window ordering probe in the title
+phase. Window 2 (`0x6F0..0x9F0`) became nonzero, then returned to the all-zero
+hash before stage consumption; window 3 stayed zero. A post-copy DMA from RDRAM
+`0x178C80` produced the zero state, followed by a later nonzero refill. This
+selects `H-SourceWindowOverwritten` for the title-phase port path and moves the
+active boundary to the writer of RDRAM `0x178C80`. The run did not reach 512
+hangar, so this exact ordering is single-source title evidence; session 3539's
+retail nonzero-writer result remains the independent second line. See
+[M5-S3540-SOURCE-WINDOWS.md](M5-S3540-SOURCE-WINDOWS.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -265,11 +275,10 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Identify the exact zeroing edge after the port's vector source writes: add
-   per-window (`0x6F0..0x9F0`, `0xCB0..0xE48`) pre/post hashes and event joins
-   at every RSP DMA read and vector store, then compare the result with the
-   existing image-stage/source-DMA/completion/PCM ordinals. Do not copy retail
-   bytes; see Session 3539.
+1. Identify the writer that makes RDRAM `0x178C80` zero before the port's
+   source DMA: join phase-qualified port writes to the selected source-window
+   event and qualify the result with a retail physical watch. Do not copy
+   retail bytes or change output state; see Session 3540.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.

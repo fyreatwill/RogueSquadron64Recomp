@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..05eadcd 100644
+index b0d6bef..217c8b4 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -90,7 +90,7 @@ index b0d6bef..05eadcd 100644
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
      rd_len += 1; // Read length is inclusive
      dram_addr &= 0xFFFFF8;
-@@ -101,11 +142,99 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -101,14 +142,103 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
      // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
      // the recompiled ucode running as C — silently skip so it doesn't corrupt
      // DMEM at the masked offset.
@@ -146,7 +146,6 @@ index b0d6bef..05eadcd 100644
      if (dmem_addr + rd_len > 0x1000) rd_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + rd_len > 0x800000) rd_len = 0x800000 - dram_addr;
-+    rs64_m5_audio_source_dma(rdram, dram_addr, rd_len, dmem_addr);
 +    // Record only window-targeted small fetches (actual DL chunk staging,
 +    // dmem 0x170 len ~0x110) — NOT full segment images that merely cover the
 +    // window, or the replay below would self-defeat.
@@ -186,12 +185,17 @@ index b0d6bef..05eadcd 100644
 +        for (uint32_t i = 0; i < rd_len; i++) {
 +            RSP_MEM_B(i, dmem_addr) = g_rsp_dma_shadow2_data[off + i];
 +        }
++        rs64_m5_audio_source_dma(rdram, dram_addr, rd_len, dmem_addr);
 +        return;
 +    }
      for (uint32_t i = 0; i < rd_len; i++) {
          RSP_MEM_B(i, dmem_addr) = MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000));
      }
-@@ -121,9 +250,11 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
++    rs64_m5_audio_source_dma(rdram, dram_addr, rd_len, dmem_addr);
+ }
+ 
+ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t wr_len) {
+@@ -121,9 +251,11 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
