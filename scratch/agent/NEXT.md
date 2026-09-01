@@ -1,30 +1,33 @@
-# NEXT work unit — select the next highest-information-value M3 audio idiom
+# NEXT work unit — audit the MusyX voice `+0x30..+0x40` field family
 
 HYPOTHESIS-ID: m3-next-audio-idiom-audit
 
-Next work unit: select and execute one new complete grep-enumerate/classify
-M3 audio idiom audit from the unresolved runtime-legitimacy boundaries. Start
-by enumerating candidate unchecked fields/consumers and choose the class with
-the strongest concrete writer-to-consumer discriminator; do not re-audit the
-closed MORT publication, mix-table, pan-input, or hangar-Y classes. Do not
-change runtime code unless a concrete invalid writer/value is identified. Any
+Next work unit: perform one complete static census of the MusyX voice
+`+0x30..+0x40` field family in `RecompiledFuncs/funcs_24.c`. Enumerate every
+word/halfword writer and reader, effective base/layout, index derivation,
+reset/free ordering, and consumer bound. Do not repeat the closed `+0x60`,
+MORT publication, mix-table, pan-input, or hangar-Y audits. Do not change
+runtime code unless a concrete invalid writer/value is identified; any
 mitigation needs an ORIGIN line naming the writer and assessing legitimacy.
 
-Competing hypotheses and discriminator for this selection:
+Competing hypotheses and discriminator:
 
-- H-NextClassGap: the selected unresolved class contains a concrete invalid
-  writer/value or unchecked edge.
-- H-NextClassComplete: the selected class is structurally complete and only
-  runtime legitimacy remains.
-- H-NextClassUnevaluable: generated code does not expose a complete edge set.
+- H-NextClassGap: the field family contains a concrete invalid writer/value or
+  unchecked writer-to-consumer edge.
+- H-NextClassComplete: every writer, consumer, base, lifetime, and bound is
+  structurally covered and only runtime legitimacy remains.
+- H-NextClassUnevaluable: word/halfword aliases or mixed layouts prevent a
+  complete object-level classification.
 
-Discriminator: one ranked candidate table followed by one complete audit of
-the selected class, with every writer, consumer, base, and bound classified.
-Select H-NextClassGap only with a concrete invalid edge; select
-H-NextClassComplete only when every edge is covered; otherwise leave it
-unclassified.
+Discriminator: the single complete `+0x30..+0x40` census. Select Gap only
+with a concrete invalid edge; select Complete only when all edges are covered;
+otherwise select Unevaluable.
 
 Exact checks before any build:
 
-    rg -n 'MEM_[BHW].*(0X[0-9A-F]+|-[0-9A-F]+)|LOOKUP_FUNC|jalr' ../N64Recomp/RecompiledFuncs/funcs_{22,23,24,25,26,27}.c
-    rg -n 'RECOMP_FUNC|<candidate-symbol>|<candidate-offset>' ../N64Recomp/RecompiledFuncs/funcs_*.c
+    rg -n 'MEM_[BHW].*(0X30|0X34|0X38|0X3C|0X40|0X42|0X44)' ../N64Recomp/RecompiledFuncs/funcs_24.c
+    rg -n 'RECOMP_FUNC|musyx(RenderVoiceSamples|KeyOnVoice|MixActiveVoices|InitVoiceFromSample|StartVoiceRelease)' ../N64Recomp/RecompiledFuncs/funcs_24.c
+
+No build or runtime run is expected for this static audit. If the census is
+complete, write a new `scratch/agent/M3-S<session>-...md` evidence note and
+update CURRENT-TRUTH, the ledger, status, outcome, and commit.

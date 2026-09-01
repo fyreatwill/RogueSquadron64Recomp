@@ -134913,3 +134913,24 @@ H-PanInputsMisread plus a concrete H-PanInputsGap. Runtime source contents,
 allocator state, and DMA timing remain unproven. No guard or runtime change was
 made. Evidence is recorded in
 `docs/M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md`.
+
+## Session 3594 (2026-09-01) — audited MusyX voice 0x60 field
+
+Performed the planned static grep-enumerate audit of the MusyX voice `+0x60`
+field class across the generated audio overlays. The accesses split across
+channel state, envelope state, the render voice halfword pair, and the source
+voice descriptor consumed by key-on. Reset writers store legitimate zero state
+transitions, but the generated code does not provide one object identity,
+caller-proven slot bound, or complete writer-to-consumer lifetime chain; word
+and halfword accesses also alias across these layouts.
+
+This selects `H-NextClassUnevaluable`, rather than a concrete invalid writer
+or value. It rules out landing a `+0x60` guard from static evidence alone; no
+runtime or generated behavior was changed. Evidence is recorded in
+`scratch/agent/M3-S3594-VOICE-60-FIELD-AUDIT.md`.
+
+ORIGIN: visible `+0x60` writers are `musyxStartVoiceRelease`,
+`musyxTriggerVoiceAttack`, `beginVoiceFadeRelease`,
+`advanceVolumeFadeEnvelope`, `tickAudioChannel`, and
+`musyxRenderVoiceSamples`; their zero/reset values are legitimate transitions,
+while wild-value or stale-lifetime legitimacy remains unobserved.

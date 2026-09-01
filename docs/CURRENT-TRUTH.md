@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3593 (2026-09-01).
+notes are linked below. Updated for session 3594 (2026-09-01).
 
 ## Current state
 
@@ -91,6 +91,12 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    [M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md](M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md).
    The next M3 unit is the highest-information-value remaining audio idiom
    audit; do not add a pan guard without a new runtime writer discriminator.
+   Session 3594 audited the MusyX voice `+0x60` class. Generated accesses
+   split across channel, envelope, render-voice, and source-descriptor
+   layouts, with word/halfword differences and no complete caller-proven
+   slot bounds. This selects structural unevaluability, not a concrete bad
+   writer, so no guard was added. See
+   [M3-S3594-VOICE-60-FIELD-AUDIT.md](../scratch/agent/M3-S3594-VOICE-60-FIELD-AUDIT.md).
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -183,6 +189,12 @@ and evidence notes retain the full history.
   source pointer, object base, or unchecked count was found. Runtime source
   contents, allocator state, and DMA timing remain unproven. See
   [M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md](M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md).
+- **3594 — MusyX voice `+0x60` field audit:** generated accesses split across
+  channel, envelope, render-voice, and source-descriptor layouts; reset values
+  are legitimate transitions, but no complete object identity, caller-proven
+  slot bound, or lifetime chain is exposed. This selects
+  `H-NextClassUnevaluable`, not a concrete invalid writer. See
+  [M3-S3594-VOICE-60-FIELD-AUDIT.md](../scratch/agent/M3-S3594-VOICE-60-FIELD-AUDIT.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies
