@@ -2,11 +2,15 @@
 
 HYPOTHESIS-ID: m3-voice-table-consumer-audit
 
-Session 3586 completed the `voice_record+0x64` writer audit. The field is a
+Session 3587 completed the `allocateSynthVoice` 0x17C-stride scan audit. The
+allocator's table indices are loop counters bounded by the slot-count byte;
+the selected candidates are checked against `-1` and per-slot limits before
+the record is returned. No invalid writer/value or unchecked index was found
+in this class. The field audit from session 3586 remains closed: the field is a
 packed handle, not a standalone slot index: `startNoteOnVoice` writes the
 allocator-returned slot in the low byte and cleanup/reset paths write `-1`.
-No concrete invalid low-byte writer was found. Do not repeat this class or add
-a guard.
+No concrete invalid low-byte writer was found. Do not repeat either closed
+class or add a guard.
 
 Next work unit: select the next M3 idiom class from the generated audio path
 with an unchecked voice-table index or record-derived address, enumerate the

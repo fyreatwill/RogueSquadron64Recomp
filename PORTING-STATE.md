@@ -134784,3 +134784,18 @@ instrument, guard, or behavior change was made. See
 ORIGIN: no mitigation was added. The non-sentinel origin is
 `startNoteOnVoice:0x80087294`, whose low byte is legitimate if the allocator
 contract holds; cleanup writers deliberately publish `-1`.
+
+## Session 3587 (2026-09-01) — audited allocateSynthVoice stride scans
+
+Audited the complete `allocateSynthVoice` 0x17C-stride voice-table indexing
+class in `RecompiledFuncs/funcs_21.c`. The slot-count-bounded scan counters
+advance by 0x17C; preferred and fallback candidates reject `-1`, and the
+returned candidate is checked against its per-slot `-0x2752` limit. No concrete
+invalid writer/value or unchecked index was found, selecting the bounded
+hypothesis for this class. This rules out this allocator scan as the next M3
+guard target, but does not prove runtime allocator/lifetime legitimacy. No
+build, instrument, guard, or behavior change was made. See
+`docs/M3-S3587-ALLOCATOR-STRIDE-AUDIT.md`.
+
+ORIGIN: no mitigation was added. Candidate indices originate from the bounded
+slot-count scans; no invalid value was observed or introduced.

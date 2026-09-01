@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3586 (2026-09-01).
+notes are linked below. Updated for session 3587 (2026-09-01).
 
 ## Current state
 
@@ -116,6 +116,11 @@ and evidence notes retain the full history.
   index. No concrete invalid low-byte writer was found, but runtime allocator
   state and record lifetime remain unproven. See
   [M3-S3586-VOICE-INDEX-WRITERS.md](M3-S3586-VOICE-INDEX-WRITERS.md).
+- **3587 — `allocateSynthVoice` stride-scan audit:** the complete allocator
+  scan class uses 0x17C-stride indices bounded by the slot-count byte; each
+  selected candidate is checked against `-1` and its per-slot limit before
+  returning. No concrete invalid writer/value or unchecked index was found,
+  so no guard was added. See [M3-S3587-ALLOCATOR-STRIDE-AUDIT.md](M3-S3587-ALLOCATOR-STRIDE-AUDIT.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies
