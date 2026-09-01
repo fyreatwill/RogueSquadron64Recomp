@@ -134582,3 +134582,20 @@ DMA, or source contents were changed. See
 
 ORIGIN: diagnostic-only retail predecessor/entry qualification. No
 mitigation was added.
+
+## Session 3577 (2026-09-01) — qualified retail remaining zero-fill edge
+
+The retail oracle repeated the target-phase table with positive controls:
+whole-RDRAM writes were 10,674, source-span writes were 674, and the
+`0x006AB400:512` bucket was reached. It recorded 3,166 executions of
+`0x800078E0`, 2,260 executions of `0x800C825C`, and 2,259 entry joins from
+that predecessor. The joined `0x800C825C` rows passed `a2=0x80` with changing
+structure pointers, unlike the port tuple `dst=0x801797B0`, `fill=0`,
+`len=0x298`. This selects `H-RemainingEdgeInput` and moves the boundary to
+the legitimate retail source writer and its ordering against the first source
+DMA. Exact retail-to-port source-DMA ordering remains unevaluable. No game
+state, output, PCM, task, DMA, or source contents were changed. See
+`docs/M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md`.
+
+ORIGIN: diagnostic-only retail predecessor/entry qualification. No
+mitigation was added.

@@ -2,7 +2,17 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3576 (2026-09-01).
+documents are listed below. Updated for session 3577 (2026-09-01).
+
+Session 3577 qualified the remaining retail predecessor edge. The oracle
+passed whole-RDRAM and source-span controls (10,674 and 674 writes), reached
+the target `0x006AB400:512` bucket, and recorded 3,166 executions of
+`0x800078E0`, including 2,259 joins from `0x800C825C`. Those joined rows had
+`a2=0x80` and changing structure pointers, unlike the port's
+`0x801797B0/0/0x298` tuple. This selects an input divergence for the
+`0x800C825C` edge; source-DMA ordering and the legitimate retail writer
+context remain open. See
+[M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md](M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md).
 
 Session 3576 passed the retail whole-RDRAM, source-span, and target-phase
 controls: 10,674, 674, and 3,165 entry hits respectively. Retail's observed
@@ -646,7 +656,11 @@ to be rewritten as a diagnostic mitigation.
    itself had zero hits while entry execution and controls were positive;
    parity and ordering remain unevaluable. Session 3576 found a varied
    non-port input tuple on the observed `0x800052C4` edge; qualify
-   `0x800C825C` separately or move upstream to the writer context.
+   `0x800C825C` separately or move upstream to the writer context. Session
+   3577 qualified that edge too: it repeatedly passed `a2=0x80` and a changing
+   structure pointer to `0x800078E0`, not the port's `0x801797B0/0/0x298`.
+   The next boundary is the legitimate retail source writer and its ordering
+   against the first source DMA.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -681,11 +695,11 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 retail zero-fill input qualification.
-Session 3576 retained positive whole-RDRAM/source-span controls and found
-`0x800052C4`-to-`0x800078E0` calls with lengths unlike the port's `0x298`.
-The `0x800C825C` tuple and source-DMA ordering remain open; see
-[M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md](M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md).
+The active work unit is now M5 Step 3 retail source-writer qualification.
+Session 3577 retained positive whole-RDRAM/source-span controls and found
+`0x800C825C`-to-`0x800078E0` calls with `a2=0x80`, unlike the port's
+`0x298`; source-DMA ordering remains open. See
+[M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md](M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md).
 
 The prior active work unit was retail zero-fill entry qualification.
 Session 3573 established the port tuple `dst=0x801797B0`, `fill=0`,
@@ -904,6 +918,7 @@ Latest output boundary:
 
 - [M5-S3573-ZERO-FILL-CONTRACT.md](M5-S3573-ZERO-FILL-CONTRACT.md)
 - [M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md](M5-S3576-RETAIL-ZERO-FILL-PREDECESSOR.md)
+- [M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md](M5-S3577-RETAIL-ZERO-FILL-REMAINING-EDGE.md)
 - [M5-S3572-SOURCE-TRANSITION-JOIN.md](M5-S3572-SOURCE-TRANSITION-JOIN.md)
 - [M5-S3565-IMAGE-STAGING-SOURCE.md](M5-S3565-IMAGE-STAGING-SOURCE.md)
 - [M5-S3566-SOURCE-RANGE-WRITER.md](M5-S3566-SOURCE-RANGE-WRITER.md)
