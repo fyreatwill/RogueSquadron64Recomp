@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3496 (2026-08-31). This record was
+Current active marker: Session 3498 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -625,40 +625,54 @@ ORIGIN: diagnostic-only task, DMA, route, PCM, and phase observations; no
 audio state, task field, selector value, or output was rewritten, skipped, or
 validated.
 
+Session 3498 ran the independent retail selector capture before the port. Its
+whole-RDRAM control reached 10,000 callbacks and title; the watched selector
+PCs were live, with the 51 printed title pairs showing index `v1=0x4` and
+source `0x80171CE0`. The first port attempt crashed before title at
+`spTaskSchedulerThread`, guest PC `0x8000834C`, and is unevaluable. The
+qualified autopilot/LLE/spin-yield real-image retry reached title, fired the
+task and both selector controls, and emitted 660 load plus 660 writer rows,
+257 audio returns, and 1,332 image-stage rows without crash or abort. Its
+source/value classes were `0x8018DD30` (1), `0x80171CE0` (330), and
+`0x80173B20` (329), and the writer preserved each loaded value. The independent
+retail control and port controls were positive, so this selects selector-input
+divergence at the non-ordinal source-class scope and refutes observation
+failure. It does not identify the upstream selector/table producer. Evidence:
+[M5-S3498-SELECTOR-COMPARISON.md](M5-S3498-SELECTOR-COMPARISON.md).
+
+ORIGIN: diagnostic-only retail and port selector observations; no selector,
+task field, audio state, or output was rewritten, skipped, or validated.
+
 ## Next steps
 
-1. After the real-audio route and both selector controls fire, run the
-   selector-load/writer capture with the existing four-PC controls and the
-   independent retail task-dispatch control in the same iteration. The
-   discriminator is whether both port selector controls fire at title and
-   whether their source/value rows match the retail title route.
-2. If the selector comparison identifies a first divergent source/value,
-   trace the
-   upstream selector/table producer feeding `0x80091074` with one batched
-   retail/port discriminator keyed by source family and title origin.
-3. Keep Sessions 3494–3497's real-audio route outcomes and Session 3492's
+1. Trace the upstream selector/table producer feeding `0x80091060`/`0x80091074`
+   with one batched retail/port discriminator keyed by title origin, selector
+   index, table address, and loaded source/value class. Keep the independent
+   whole-RDRAM control and both port selector controls positive; the first
+   matching or differing producer class selects the next edge.
+2. Keep Sessions 3494–3498's real-audio route and selector outcomes and Session 3492's
    dispatch result as baselines; do not repeat any unchanged route retry.
-4. Keep Session 3488's silent route as the qualification baseline; do not
+3. Keep Session 3488's silent route as the qualification baseline; do not
    repeat the same silent gate audit unchanged.
-5. Retain the Session 3486 pointer-word result; do not repeat the exact
+4. Retain the Session 3486 pointer-word result; do not repeat the exact
    pointer-word writer histogram unchanged.
-7. Retain the Session 3484 retail writer census and port source-span rows; do
+5. Retain the Session 3484 retail writer census and port source-span rows; do
    not repeat the rejected candidate-span store capture unchanged.
-8. Retain the Session 3483 retail post-store table and Session 3482 port
+6. Retain the Session 3483 retail post-store table and Session 3482 port
    writer/enqueue rows; do not repeat either unchanged capture.
-9. Retain the Session 3468 retail post-store table and Session 3473–3475 port
+7. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
-10. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
+8. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
-11. Matching fields close the boundary; the first divergent field selects the
+9. Matching fields close the boundary; the first divergent field selects the
    missing contract edge. Keep the retail oracle and port positive controls
    in the same run before trusting any null.
-12. Keep M5 Step 3 gated until that output comparison names one missing
+10. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
    generated patch input.
-13. After M5 closes or a new discriminator is found, resume only systematic M3
+11. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep external retail-entry, hangar `0x8000`
    Y/accumulator arithmetic, and SP-yield/MORT publication threads parked.
    Generated-symbol renaming is last priority and remains closed at its

@@ -132592,3 +132592,26 @@ controls were positive. Evidence:
 ORIGIN: diagnostic-only task, DMA, route, PCM, and phase observations; no
 audio state, task field, selector value, or output was rewritten, skipped, or
 validated.
+## Session 3498 (2026-08-31) — selected upstream selector-input divergence
+
+Ran the independent retail selector capture first. Its whole-RDRAM positive
+control reached 10,000 callbacks and title origin `0x00790400`; watched PCs
+`0x80091060` and `0x80091074` were live, with 51 printed title pairs showing
+selector index `v1=0x4` and source `0x80171CE0`.
+
+The first port attempt was invalid for comparison: it crashed before title in
+`spTaskSchedulerThread`, last guest PC `0x8000834C`, with zero phase and
+selector rows. The corrective retry used the qualified autopilot/LLE/spin-
+yield real-image route. It reached title, fired the task and both selector
+controls, and emitted 660 selector-load plus 660 selector-writer rows, 257
+audio-return rows, and 1,332 image-stage rows, with no crash or abort. Port
+source/value classes were `0x8018DD30` (1), `0x80171CE0` (330), and
+`0x80173B20` (329); writer rows preserved the loaded values.
+
+This selects selector/input divergence at the non-ordinal source-class scope
+and refutes observation failure. It does not identify the upstream producer;
+the next work unit is a phase-gated retail/port producer comparison. The
+failed first attempt is documented as unevaluable, not as selector evidence.
+
+ORIGIN: diagnostic-only retail and port selector observations; no selector,
+task field, audio state, or output was rewritten, skipped, or validated.
