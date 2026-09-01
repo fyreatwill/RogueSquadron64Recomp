@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3491 (2026-08-31). This record was
+Current active marker: Session 3492 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -533,37 +533,55 @@ Evidence: [M5-S3491-ROUTE-REQUALIFICATION.md](M5-S3491-ROUTE-REQUALIFICATION.md)
 ORIGIN: diagnostic-only route and crash observations; no audio state,
 selector value, or task field was rewritten, skipped, or validated.
 
+Session 3492 asked the independent retail oracle first: its whole-RDRAM
+control fired 10,000 writes and the phase-qualified `0x80033FCC` handoff
+observed 666 type-2 tasks with `task_ptr=0x80149470` and
+`data_ptr=0x80171CE0`. The matching silent port arm, with
+`ROGUESQ_LOG_AUDIO_RETURN=1`, passed its dispatch positive control: 47
+`[audtask-dispatch]` samples through `n=896` all reported `real_ucode=0`.
+No real MusyX function or audio-return row appeared. The run instead reached
+the existing `[audio-wait-pump-stall] countdown=16 after 64 musyxSynthFrame
+pumps` and never reached title. This selects `H-SilentGateHonored` at the
+dispatch boundary and refutes `H-SilentGateBypassed`; it does not qualify the
+silent route or select a non-audio scheduler fault. The selector witness
+remains unevaluable on this arm. Evidence: [M5-S3492-AUDIO-DISPATCH-GATE.md](M5-S3492-AUDIO-DISPATCH-GATE.md).
+
+ORIGIN: the dispatch witness is observational; it does not alter task routing,
+audio state, wait behavior, or selector data.
+
 ## Next steps
 
-1. Audit the audio-dispatch gate for the prescribed silent route. Confirm in
-   one build/run whether `ROGUESQ_AUDIO_UCODE=0` reaches `musyx_stub` for the
-   failing pre-title task or still enters `fillSampleStreamRange`; use the
-   existing audio-dispatch marker and the crash PC as the discriminator.
-   Do not change audio behavior in this audit.
-2. After the route is re-qualified and both selector controls fire, trace the
+1. Run the selector-load/writer capture on the already-qualified real-audio
+   arm (`ROGUESQ_AUDIO_UCODE=1`) with the existing four-PC controls and the
+   independent retail task-dispatch control in the same iteration. The
+   discriminator is whether both port selector controls fire at title and
+   whether their source/value rows match the retail title route.
+2. After the real-audio route and both selector controls fire, trace the
    upstream selector/table producer feeding `0x80091074` with one batched
    retail/port discriminator keyed by source family and title origin.
-3. Keep the Session 3488 silent route as the qualification baseline; do not
+3. Keep Session 3492's dispatch result as the silent-route baseline; do not
+   repeat the same silent gate audit unchanged.
+4. Keep the Session 3488 silent route as the qualification baseline; do not
    repeat the audio-disabled reachability run unchanged.
-3. Retain the Session 3486 pointer-word result; do not repeat the exact
+5. Retain the Session 3486 pointer-word result; do not repeat the exact
    pointer-word writer histogram unchanged.
-4. Retain the Session 3484 retail writer census and port source-span rows; do
+6. Retain the Session 3484 retail writer census and port source-span rows; do
    not repeat the rejected candidate-span store capture unchanged.
-5. Retain the Session 3483 retail post-store table and Session 3482 port
+7. Retain the Session 3483 retail post-store table and Session 3482 port
    writer/enqueue rows; do not repeat either unchanged capture.
-6. Retain the Session 3468 retail post-store table and Session 3473–3475 port
+8. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
-7. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
+9. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
-8. Matching fields close the boundary; the first divergent field selects the
+10. Matching fields close the boundary; the first divergent field selects the
    missing contract edge. Keep the retail oracle and port positive controls
    in the same run before trusting any null.
-9. Keep M5 Step 3 gated until that output comparison names one missing
+11. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
    generated patch input.
-10. After M5 closes or a new discriminator is found, resume only systematic M3
+12. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep external retail-entry, hangar `0x8000`
    Y/accumulator arithmetic, and SP-yield/MORT publication threads parked.
    Generated-symbol renaming is last priority and remains closed at its

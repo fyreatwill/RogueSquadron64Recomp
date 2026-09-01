@@ -132465,3 +132465,28 @@ the next probe. Evidence: `docs/M5-S3491-ROUTE-REQUALIFICATION.md` and
 
 ORIGIN: diagnostic-only route and crash observations; no audio state,
 selector value, or task field was rewritten, skipped, or validated.
+
+## Session 3492 (2026-08-31) — qualified silent audio dispatch gate
+
+Before using the port witness, ran the independent retail oracle with a
+whole-RDRAM positive control and the `0x80033FCC` task handoff watch. The
+control reached 10,000 writes; the phase-qualified task dump observed 666
+type-2 tasks, with `task_ptr=0x80149470`, `data_ptr=0x80171CE0`, and size 1–2.
+
+Ran the prescribed silent LLE/spin-yield/ungated port recipe with
+`ROGUESQ_AUDIO_UCODE=0` and `ROGUESQ_LOG_AUDIO_RETURN=1`. The existing
+dispatch marker positively fired 47 times through `n=896`, always with
+`real_ucode=0`, proving that the task selected `musyx_stub`. No real MusyX
+function, audio-return row, or `fillSampleStreamRange` crash appeared. The
+run reached VI 640 origin `0x0066A500` and then reported the existing
+`audio-wait-pump-stall` after 64 `musyxSynthFrame` pumps; it did not reach
+title or selector controls.
+
+This selects `H-SilentGateHonored` at the dispatch boundary and refutes
+`H-SilentGateBypassed` for the observed tasks. It does not qualify the silent
+route or select a non-audio scheduler fault: the separate wait-pump stall
+remains. The selector discriminator is unevaluable on this arm. No code or
+runtime behavior changed. Evidence: `docs/M5-S3492-AUDIO-DISPATCH-GATE.md`.
+
+ORIGIN: the dispatch marker and oracle task watch are observational; no task
+routing, audio state, wait behavior, or selector data was rewritten.
