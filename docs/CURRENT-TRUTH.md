@@ -503,9 +503,26 @@ producer is unresolved. Evidence: [M5-S3489-NONORDINAL-WRITER-JOIN.md](M5-S3489-
 ORIGIN: diagnostic-only parsing of existing rows; no selector or task field
 was rewritten, skipped, or validated.
 
+Session 3490 qualified the independent retail predecessor boundary before
+building. The oracle whole-RDRAM control fired, both title origins appeared,
+and paired execution watches at `0x80091060` and `0x80091074` each produced
+2,555 rows; retail's indexed load returned selector indices 0/4 before
+publishing the known `0x80171CE0`/`0x80173B20` source family. A new
+regeneration-safe port witness was added immediately after the `0x80091060`
+load and the full build succeeded. The fixed silent LLE/spin-yield retry,
+however, remained in the 640 route for its 30-second watchdog and emitted zero
+title controls, load rows, and writer rows. The port-vs-retail discriminator is
+therefore unevaluable, not null; route re-qualification is required before
+interpreting the witness. Evidence: [M5-S3490-UPSTREAM-SELECTOR-LOAD.md](M5-S3490-UPSTREAM-SELECTOR-LOAD.md).
+
+ORIGIN: the new witness observes selector index, table address, loaded value,
+and register context; it does not rewrite, skip, or validate selector state.
+
 ## Next steps
 
-1. Trace the upstream selector/table producer feeding `0x80091074`. Use a
+1. Re-qualify the Session 3488 silent LLE/spin-yield route with the new
+   `0x80091060` witness. Only after both title controls fire, trace the
+   upstream selector/table producer feeding `0x80091074`. Use a
    single batched retail/port discriminator keyed by the selected source
    families (`0x80171CE0`, `0x80173B20`, `0x8018DD30`), the preceding selector
    load, and the same title origin. Positive controls must fire in both arms;

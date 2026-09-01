@@ -132424,3 +132424,23 @@ Evidence: [M5-S3489-NONORDINAL-WRITER-JOIN.md](docs/M5-S3489-NONORDINAL-WRITER-J
 
 ORIGIN: diagnostic-only parsing of existing retail and port rows; no selector
 or task field was rewritten, skipped, or validated.
+
+## Session 3490 (2026-08-31) — added upstream selector-load witness
+
+Ground truth ran before the port change. The independent Rice oracle passed the
+whole-RDRAM positive control, reached both title origins `0x00790400` and
+`0x00790800`, and produced 2,555 executions at each of `0x80091060` and
+`0x80091074`. Retail's indexed load returned selector indices 0/4 and the
+following writer published `0x80171CE0`/`0x80173B20`.
+
+The generated MusyX function received a regeneration-safe witness immediately
+after the `0x80091060` load; `fixup_game_funcs.py` carries the same transform.
+The Debug build succeeded. The fixed silent LLE/spin-yield retry reached the
+640 route but remained there for its 30-second SIGKILL watchdog, with zero
+title controls, selector-load rows, or selector-writer rows. This makes the
+port-vs-retail discriminator unevaluable, not null, and rules out no selector
+hypothesis. Evidence: `docs/M5-S3490-UPSTREAM-SELECTOR-LOAD.md` and
+`scratch/agent/s3490_m5_upstream_selector/`.
+
+ORIGIN: the witness observes selector index, table address, loaded value, and
+register context; it does not rewrite, skip, or validate selector state.
