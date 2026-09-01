@@ -134763,3 +134763,24 @@ change. See `docs/M3-S3585-STOP-VOICES-HANDLE-AUDIT.md`.
 
 ORIGIN: no mitigation was added. The unresolved value originates at the
 `voice_record+0x64` writer/lifecycle boundary; legitimacy is unknown.
+
+## Session 3586 (2026-09-01) — audited voice-record field writers
+
+Ran the bounded static writer/lifecycle audit specified in `scratch/agent/NEXT.md`.
+All generated stores to the voice-table field at `D_8013D880 + slot*0x17C +
+0x64` were enumerated: `startNoteOnVoice` writes a packed handle with the
+allocator-returned slot in the low byte, while note-stop, macro-stop, release,
+handle-stop, and engine-reset paths write the `-1` sentinel. The direct
+sequencer callers and reset callers were also enumerated.
+
+This corrects the prior semantic description of `voice_record+0x64` as a
+standalone slot index. `stopVoicesByHandle` compares the complete packed
+handle, then masks its low byte for table indexing. No concrete invalid
+low-byte writer was found, so the unsafe-writer hypothesis is not selected;
+allocator state and record lifetime remain runtime-unproven. No build,
+instrument, guard, or behavior change was made. See
+`docs/M3-S3586-VOICE-INDEX-WRITERS.md`.
+
+ORIGIN: no mitigation was added. The non-sentinel origin is
+`startNoteOnVoice:0x80087294`, whose low byte is legitimate if the allocator
+contract holds; cleanup writers deliberately publish `-1`.

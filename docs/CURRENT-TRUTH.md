@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3585 (2026-09-01).
+notes are linked below. Updated for session 3586 (2026-09-01).
 
 ## Current state
 
@@ -52,8 +52,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    real-audio target path, and do not infer target behavior from it.
 4. M5's exact DMA ordering remains unresolved and unavailable to the current
    oracle. While it is parked, perform only systematic M3 idiom-class audits;
-   the s3585 `stopVoicesByHandle` class remains open at the
-   `voice_record+0x64` writer/lifecycle boundary. Retail-entry, hangar
+   the s3586 `stopVoicesByHandle` class is structurally closed for writer
+   identity and low-byte range, but runtime allocator/lifetime legitimacy
+   remains unproven. Retail-entry, hangar
    `0x8000` Y/accumulator, and SP-yield/MORT publication threads remain parked.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
@@ -108,6 +109,13 @@ and evidence notes retain the full history.
   and no stable distinct constructor/DMA PC. The earlier-constructor boundary
   is unavailable to this oracle; exact DMA ordering remains open. See
   [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md).
+- **3586 — `voice_record+0x64` writer/lifecycle audit:** every generated field
+  writer was enumerated. `startNoteOnVoice` writes a packed handle whose low
+  byte is the allocator-returned slot; cleanup and reset paths write `-1`.
+  This corrects the prior semantic label of the field as a standalone slot
+  index. No concrete invalid low-byte writer was found, but runtime allocator
+  state and record lifetime remain unproven. See
+  [M3-S3586-VOICE-INDEX-WRITERS.md](M3-S3586-VOICE-INDEX-WRITERS.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies
@@ -188,6 +196,11 @@ a new independent discriminator.
 Sessions 3512 and 3516 selected non-observable predecessor watches. Their
 positive stores/controls remain useful, but the absent predecessor rows are
 capture-invalid and do not establish parity, divergence, or mutation.
+
+The s3585 description of `voice_record+0x64` as a standalone slot index is
+superseded by s3586's writer audit: the field is a packed handle; only its low
+byte indexes the voice table. The writer list still found no concrete invalid
+low byte, so the runtime allocator/lifetime boundary remains open.
 
 ## Evidence index
 
