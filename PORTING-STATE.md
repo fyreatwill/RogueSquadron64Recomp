@@ -132361,3 +132361,20 @@ Evidence: [M5-S3486-SELECTOR-POINTER.md](docs/M5-S3486-SELECTOR-POINTER.md).
 
 ORIGIN: the witness observes the pointer word, selector registers, and writer
 PC/value; it does not rewrite, skip, or validate task fields.
+## Session 3487 (2026-08-31) — qualified selector writer join preflight
+
+The independent retail preflight for the planned `0x80091074` writer
+input/value join passed its positive controls: whole-RDRAM writes fired
+12,029 times, physical selector word `0x00149750` fired 2,029 times, and the
+execution watch at `0x80091074` fired 3,096 times with title-phase rows. Its
+rows showed `v0=0x80171CE0`, `s1/a0=0x801772F0`, and varying selector operands.
+
+The regeneration-safe port hook built successfully, but the prescribed
+LLE/spin-yield port arm with `ROGUESQ_AUDIO_UCODE=1` crashed before title in
+`fillSampleStreamRange` at guest PC `0x8000B650` on two unchanged retries. No
+port title writer rows were emitted, so the cross-runtime writer join is
+unevaluable. This rules out neither writer-input divergence nor a later
+transform; it does establish a route-specific audio blocker for this capture.
+
+ORIGIN: the new hook only observes registers and the stored word at
+`0x80091074`; it does not rewrite, skip, or validate task fields.

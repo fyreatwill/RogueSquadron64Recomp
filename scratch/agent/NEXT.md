@@ -1,34 +1,31 @@
-# NEXT work unit — join writer inputs and values for extra selector operands
+# NEXT work unit — qualify audio-enabled route for selector writer join
 
 HYPOTHESIS-ID: m5-task-field-writer
 
-Session 3486 found the same pointer-word writer PC (`0x80091074`) in retail
-and port, with one qualified port-only `0x8018DD30` value and no
-`0x8018FB70` in the retry. The next unit must join that writer's inputs and
-stored values to the selector output.
+Session 3487 qualified retail but both prescribed audio-enabled port retries
+crashed before title in `fillSampleStreamRange` at guest PC `0x8000B650`.
+The next unit tests whether disabling the audio image makes the route reach
+title; only then can the writer join resume.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-WriterInputDivergence`: the same writer PC receives or stores different
-  inputs across runtimes; joined writer rows with different values select it.
-- `H-SharedWriterTransform`: writer inputs and stored values match, but the
-  selector later differs; matching writer rows plus divergent selector rows
-  select it.
-- `H-ObservationInvalid`: controls or the title phase fail; no conclusion is
-  valid without both positive controls and title rows.
+- `H-AudioRouteBlocker`: the audio-enabled port route crashes before title; a
+  silent route reaches title while the same schema controls fire.
+- `H-OtherRouteBlocker`: disabling audio still crashes before title, so the
+  current writer join remains unevaluable.
+- `H-WriterInputDivergence`: if title becomes reachable, joined writer rows
+  differ from retail in source inputs or stored values.
+- `H-SharedWriterTransform`: if title becomes reachable and writer rows match,
+  but selector operands diverge afterward.
 
-Discriminating measurement: one title-gated oracle-and-port capture of the
-`0x80091074` writer's source registers and stored value, joined to selected
-`a0/a2` rows. Divergent writer inputs/values select `H-WriterInputDivergence`;
-matching writer rows followed by different selector operands select
-`H-SharedWriterTransform`; absent controls make the result invalid. Ground
-truth already qualifies the writer PC, so add the port hook only after
-preserving the same control schema.
+Discriminating measurement: one port run with `ROGUESQ_AUDIO_UCODE=0`, using
+the existing positive controls and title phase gate. Title rows select
+`H-AudioRouteBlocker`; a pre-title crash selects `H-OtherRouteBlocker` and
+leaves the join unevaluable. If title is reached, the existing writer rows
+split `H-WriterInputDivergence` from `H-SharedWriterTransform`.
 
-Expected commands: run the independent Rice oracle with whole-RDRAM control,
-the exact pointer-word writer PC `0x80091074`, and source-register capture;
-then build the regeneration-safe port hook. Run the port from `build/` with
-`ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_UNGATED=1
-ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1`,
-`ROGUESQ_LOG_M5_TASK_WRITER=1`, and the existing title phase controls. Use
-SIGKILL watchdog cleanup and do not compare sequential animation ordinals.
+Expected command: run the built port from `build/` with the prescribed
+LLE/spin-yield flags, but `ROGUESQ_AUDIO_UCODE=0`, plus
+`ROGUESQ_LOG_M5_TASK_WRITER=1` and the existing title phase controls. Use a
+SIGKILL watchdog and do not compare sequential animation ordinals. If title
+is reached, perform the writer-input/value join in that same iteration.

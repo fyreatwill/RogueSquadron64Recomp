@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3486 (2026-08-31). This record was
+Current active marker: Session 3487 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -461,29 +461,44 @@ value join remains unresolved. Evidence:
 ORIGIN: the witness observes the pointer word, selector registers, and writer
 PC/value; it does not rewrite, skip, or validate task fields.
 
+Session 3487 qualified the independent retail side of the planned writer
+input/value join: whole-RDRAM control fired 12,029 times, physical selector
+word `0x00149750` was written 2,029 times, and the `0x80091074` execution watch
+fired 3,096 times including title rows. The matching port hook built
+successfully, but two unchanged prescribed LLE/spin-yield retries with
+`ROGUESQ_AUDIO_UCODE=1` crashed before title in `fillSampleStreamRange` at
+guest PC `0x8000B650`; both emitted zero title writer rows. The join is
+therefore unevaluable and no writer-input or later-transform hypothesis is
+selected. Evidence: [M5-S3487-WRITER-INPUTS.md](M5-S3487-WRITER-INPUTS.md).
+
+ORIGIN: diagnostic-only writer-register/value observation at `0x80091074`; it
+does not rewrite, skip, or validate task fields.
+
 ## Next steps
 
-1. Join the writer inputs/values at `0x80091074` to the selector output for
-   `0x8018DD30` and `0x8018FB70`. Session 3486 showed the same writer PC in
-   retail and port, so capture the writer's source registers and stored value
-   in one title-gated bounded run with both positive controls. Identical
-   writer inputs with a port-only selector value selects a later transform;
-   divergent writer inputs/values selects the upstream producer. A missing
-   control or title rows invalidates the result.
-2. Retain the Session 3486 pointer-word result; do not repeat the exact
+1. Qualify the port route needed for the `0x80091074` writer join. Run the
+   same built arm once with `ROGUESQ_AUDIO_UCODE=0` to test whether the
+   pre-title `fillSampleStreamRange` crash is specific to the audio image;
+   title rows would refute the route-specific audio blocker and permit the
+   writer join, while another pre-title crash leaves the join unevaluable.
+   Keep the existing retail capture and port positive controls.
+2. If title is reachable, join writer inputs/values at `0x80091074` to the
+   selector output for `0x8018DD30` and `0x8018FB70`; do not repeat the exact
+   pointer-word histogram unchanged.
+3. Retain the Session 3486 pointer-word result; do not repeat the exact
    pointer-word writer histogram unchanged.
-3. Retain the Session 3484 retail writer census and port source-span rows; do
+4. Retain the Session 3484 retail writer census and port source-span rows; do
    not repeat the rejected candidate-span store capture unchanged.
-4. Retain the Session 3483 retail post-store table and Session 3482 port
+5. Retain the Session 3483 retail post-store table and Session 3482 port
    writer/enqueue rows; do not repeat either unchanged capture.
-5. Retain the Session 3468 retail post-store table and Session 3473–3475 port
+6. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
-6. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
+7. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
-7. Matching fields close the boundary; the first divergent field selects the
+8. Matching fields close the boundary; the first divergent field selects the
    missing contract edge. Keep the retail oracle and port positive controls
    in the same run before trusting any null.
-8. Keep M5 Step 3 gated until that output comparison names one missing
+9. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
