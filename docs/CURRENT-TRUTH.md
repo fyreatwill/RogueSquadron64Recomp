@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3518 (2026-08-31).
+documents are listed below. Updated for session 3519 (2026-08-31).
 
 ## Current state
 
@@ -26,6 +26,14 @@ reached title and hangar on real audio, while the silent arm crashed pre-title
 at guest PC `0x8000B650` in the `fillSampleStreamRange` family. This selects a
 route-specific silent-arm failure and reopens target-phase port measurements;
 it does not establish the writer of the crash input.
+
+Session 3519 independently qualified the internal callsite boundary. Retail
+and the real-audio port agree on `a0=0x80165ED0` and `a1=0x12` entering the
+selector path, while the later store context still differs (`s1=0x561F` retail
+versus `0x5622` port). Retail identifies `0x80029E78` as the next internal
+call before the differing value is observed, selecting a later mixer-path
+mutation rather than an upstream producer divergence. The writer or return
+contract at that internal boundary remains open.
 
 Session 3516 qualified the selector-store boundary independently: retail
 whole-RDRAM and selector-span controls fired, with five executions at each of
@@ -61,9 +69,10 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Revisit the selector producer/context join on the qualified real-audio port
-   route. Session 3518 reached the 512 hangar; capture the new producer
-   context and selector-store rows with independent retail controls.
+1. Capture the first internal selector-path boundary at `0x80029E78` on
+   retail and the qualified real-audio port route, with whole-RDRAM and
+   selector-store controls. Compare call inputs and the resulting selector
+   store context; do not rewrite the value.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -86,7 +95,7 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the selector producer/context join on the
+The active work unit is now the first internal selector-path boundary on the
 real-audio route. The silent-arm route defect is parked separately.
 
 For the silent-arm route:
@@ -112,6 +121,15 @@ For the next producer boundary:
   instruction mutates context before the writer.
 - `H-CaptureInvalid`: a same-run positive control or phase-matched writer
   control fails; the join is unevaluable.
+
+Session 3519 selected `H-ContextProducerParity` at the callsite and
+`H-LaterContextMutation` for the first observed value difference: retail and
+port agree on the call inputs, but retail's internal call returns/feeds
+`0x561F` while the port store context remains `0x5622`. The next discriminator
+is the phase-matched context at `0x80029E78` and the following store. A differing
+call input selects that function's producer; matching input with differing
+output/store selects its internal contract or a subsequent mutation; failed
+controls make the capture invalid.
 
 The discriminating measurement is one independent retail capture and one
 qualified port capture at the new boundary plus existing phase/store controls.
@@ -192,6 +210,7 @@ the oracle did not provide a matching register tuple.
 Latest selector boundary:
 
 - [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
+- [M5-S3519-SELECTOR-CALLSITE-CONTEXT.md](M5-S3519-SELECTOR-CALLSITE-CONTEXT.md)
 - [M5-S3516-SELECTOR-STORE-CONTEXT.md](M5-S3516-SELECTOR-STORE-CONTEXT.md)
 - [M5-S3517-SELECTOR-PRODUCER-CONTEXT.md](M5-S3517-SELECTOR-PRODUCER-CONTEXT.md)
 - [M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md](M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md)
@@ -210,7 +229,7 @@ Earlier active M5 boundaries:
 - [M5-S3376-ZERO-PCM-SOURCE.md](M5-S3376-ZERO-PCM-SOURCE.md)
 - [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md)
 
-Sessions 1–3512 remain in the append-only ledger; archived background and
+Sessions 1–3519 remain in the append-only ledger; archived background and
 closed boundary detail remain in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 Use bounded `grep`/`sed` windows for `PORTING-STATE.md`, never read it whole.
 The soak queue is consumed by automation; fold only new tail lines into the

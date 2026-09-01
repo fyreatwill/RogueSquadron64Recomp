@@ -133100,3 +133100,30 @@ identify the writer of the silent-arm crash input or prove the image audio
 contract correct. No state was rewritten or skipped. Evidence is recorded in
 `docs/M5-S3518-AUDIO-ROUTE-PAIR.md` and
 `scratch/agent/s3518_m5_audio_route_pair/`.
+## Session 3519 (2026-08-31) — qualified selector callsite context boundary
+
+Ran the independent retail oracle first with whole-RDRAM and selector-span
+controls plus the new execution range `0x80091C58..0x80091D18`. The positive
+control reached 10,000 callbacks, the selector span remained armed, and the
+range fired in the 512 hangar at `0x006AB400`. Retail carried
+`a0=0x80165ED0`, `a1=0x12` into the callsite; at `0x80091CC0` it passed
+`a0=0x5622` to `0x80029E78` and observed `v0=0x561F`.
+
+Rebuilt the existing Debug tree and ran the qualified real-audio
+LLE/spin-yield/autopilot port arm with the producer-context and selector-store
+controls. It reached title 1024 and hangar 512. The port producer context
+matched the meaningful retail call inputs (`a0=0x80165ED0`, `a1=0x12`), while
+the port selector stores remained `0x80171E70`/`0x80173CB0` with store `s1`
+`0x5622`.
+
+This selects context parity at the producer/call boundary and a later
+mixer-path mutation as the first observed difference. It rules out the
+upstream producer edge as the explanation at this qualified scope, but does
+not identify whether `0x80029E78` input, return value, or a later instruction
+writes the differing field. No state was rewritten or skipped. Evidence is
+recorded in `docs/M5-S3519-SELECTOR-CALLSITE-CONTEXT.md` and
+`scratch/agent/s3519_selector_callsite_{oracle,port}/`.
+
+ORIGIN: diagnostic-only oracle execution watches and port context/store
+witnesses; no audio, selector, task, or output state was rewritten or
+skipped.
