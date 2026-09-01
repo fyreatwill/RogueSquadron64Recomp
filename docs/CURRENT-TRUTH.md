@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3584 (2026-09-01).
+notes are linked below. Updated for session 3585 (2026-09-01).
 
 ## Current state
 
@@ -50,9 +50,11 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
    real-audio target path, and do not infer target behavior from it.
-4. After M5 closes or gains a new discriminator, perform only systematic M3
-   idiom-class audits. Retail-entry, hangar `0x8000` Y/accumulator, and
-   SP-yield/MORT publication threads remain parked.
+4. M5's exact DMA ordering remains unresolved and unavailable to the current
+   oracle. While it is parked, perform only systematic M3 idiom-class audits;
+   the s3585 `stopVoicesByHandle` class remains open at the
+   `voice_record+0x64` writer/lifecycle boundary. Retail-entry, hangar
+   `0x8000` Y/accumulator, and SP-yield/MORT publication threads remain parked.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -106,6 +108,14 @@ and evidence notes retain the full history.
   and no stable distinct constructor/DMA PC. The earlier-constructor boundary
   is unavailable to this oracle; exact DMA ordering remains open. See
   [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md).
+- **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
+  callers iterate the two linked-list heads and pass node `+0x8`; the visible
+  constructor stores the generated handle at `+0x8` and copies
+  `voice_record+0x64` to node `+0xC`. The node/layout interpretation is
+  consistent, but the consumer has no local bound check on the copied slot
+  index and its complete writer/lifecycle legitimacy remains unclassified.
+  No guard or runtime change followed. See
+  [M3-S3585-STOP-VOICES-HANDLE-AUDIT.md](M3-S3585-STOP-VOICES-HANDLE-AUDIT.md).
 - **3576 — retail predecessor input:** retail `0x800052C4` reached
   `0x800078E0` with varied lengths (`0x18`, `0x3C`, `0x208`, `0x4F0`,
   `0x1008`, `0x8000`), not the port tuple. This selected an observed-edge

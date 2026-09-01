@@ -1,35 +1,43 @@
-# NEXT work unit — M5 contract-edge selection after source-buffer boundary
+# NEXT work unit — trace `voice_record+0x64` writers
 
-HYPOTHESIS-ID: m5-image-task-retail-source-writer
+HYPOTHESIS-ID: m3-stop-voices-handle-provenance
 
-Session 3584 ran the qualified source-buffer watch with all controls. It found
-no stable earlier constructor or distinct DMA/copy PC. Do not repeat this
-capture or the saturated field table. The earlier-constructor boundary is
-unavailable to the current oracle; exact DMA order remains open.
+M5 exact DMA ordering remains unresolved and unavailable to the current
+retail oracle. Do not repeat the source-buffer watch or add another DMA
+counter. Session 3585 completed the `stopVoicesByHandle` consumer audit:
+the node/layout interpretation is consistent, but `node+0xC` comes from
+`voice_record+0x64` and is used as a voice-table index without a local bound
+check.
 
-Competing hypotheses and the discriminating result:
+Next work unit: complete the static writer/lifecycle audit for
+`voice_record+0x64`, covering every generated read/write site and every
+producer of the voice-record base. No game build or runtime instrument is
+authorized unless the static audit identifies a concrete, ground-truthable
+writer boundary.
 
-- H-RetailSourceWriter: REFUTED at this oracle scope; no stable distinct
-  constructor appeared.
-- H-RetailCopyOrDma: REFUTED at this oracle scope; no stable distinct DMA/copy
-  PC appeared.
-- H-RetailNoStableSourceWriter: SELECTED; phase histogram was mixed, with 176
-  `0x800078EC` hits and only low-frequency other PCs.
-- H-CaptureInvalid: REFUTED; whole-RDRAM, image-span, source-buffer, and target
-  phase controls all fired.
+Competing hypotheses and the discriminator:
 
-The bounded capability check requested for this iteration found existing
-port-side event IDs in `rsp.cpp` and `main.cpp` (`audtask-dma-*` and
-`m5-source-*`), but the retail oracle exposes no corresponding DMA event
-identifier. Therefore the next work unit is not authorized until a new
-independent retail/order discriminator is available. Do not build or add
-another source-buffer counter.
+- H-VoiceIndexBounded: all writers establish `-1 <= voice_record+0x64 < 32`
+  before a live handle node copies it.
+- H-VoiceIndexUnsafe: a concrete writer can publish a value outside the
+  32-record range while the node remains reachable by a consumer.
+- H-VoiceRecordMisread: `+0x64` is not the slot index or the table is not the
+  32-record `0x17C` array identified by the companion map.
 
-The exact check that established this was:
+Discriminator: enumerate every `+0x64` writer and every base-producing call
+edge, classify each value range and invalidation path, and reconcile the
+result with `allocVoiceHandleNode`, `freeSynthVoiceFromActiveList`, and the
+four `stopVoicesByHandle` edges. Select unsafe only with a concrete writer
+and value; select bounded only when every writer is covered; otherwise leave
+the boundary unclassified. No guard is authorized without an ORIGIN naming
+the legitimate writer and assessing the value.
 
-    rg -n -i 'dma.*(event|trace|id)|event.*dma|audtask-dma' tools src lib/N64ModernRuntime | head -80
+Exact checks:
 
-It selected the second outcome: port event IDs alone cannot establish retail
-DMA ordering. The next human/oracle capability decision is whether to expose
-an event ID in the retail capture; otherwise move to the first systematic M3
-idiom-class audit after recording M5's DMA-order boundary as unresolved.
+    rg -n -i '0x64|0X64|allocVoiceHandleNode|freeSynthVoiceFromActiveList|stopVoicesByHandle' ../N64Recomp/RecompiledFuncs ../rogue_squadron64
+    rg -n 'RECOMP_FUNC void ' ../N64Recomp/RecompiledFuncs/funcs_21.c | head -80
+    sed -n '4700,4940p' ../N64Recomp/RecompiledFuncs/funcs_21.c
+    sed -n '7780,8060p' ../N64Recomp/RecompiledFuncs/funcs_23.c
+
+Record the result in a new `docs/M3-S3586-VOICE-INDEX-WRITERS.md`, update
+`docs/CURRENT-TRUTH.md` and `PORTING-STATE.md`, then set the iteration outcome.

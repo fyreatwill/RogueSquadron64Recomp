@@ -134743,3 +134743,23 @@ and phase transition. See `docs/M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md`.
 
 ORIGIN: diagnostic-only retail source-buffer qualification. No mitigation was
 added.
+
+## Session 3585 (2026-09-01) — audited stop-voices handle provenance
+
+Ran the bounded static `stopVoicesByHandle` idiom-class audit from
+`scratch/agent/NEXT.md`. The generated tree contains four direct call sites,
+all walking the two linked-list heads and loading node `+0x8` as the handle.
+The visible constructor `allocVoiceHandleNode` stores the generated handle at
+node `+0x8` and copies `voice_record+0x64` into node `+0xC`; companion symbols
+agree with the 32-record `0x17C` voice table and active-count field.
+
+The node/layout hypothesis is therefore supported, and no register-indirect
+consumer was found in the generated tree. The consumer has no local bound
+check on the copied node `+0xC` index before its voice-table access, but this
+audit found no concrete invalid writer: complete writer/lifecycle legitimacy
+of `voice_record+0x64` remains unclassified. This is a single-source static
+result and does not authorize a guard, runtime instrument, build, or behavior
+change. See `docs/M3-S3585-STOP-VOICES-HANDLE-AUDIT.md`.
+
+ORIGIN: no mitigation was added. The unresolved value originates at the
+`voice_record+0x64` writer/lifecycle boundary; legitimacy is unknown.
