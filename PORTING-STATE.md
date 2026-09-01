@@ -133474,3 +133474,28 @@ watches remained live.
 ORIGIN: diagnostic-only independent retail and same-build port execution and
 return observations. The setup write is legitimate game audio state; no audio,
 selector, task, or output state was rewritten.
+
+## Session 3533 (2026-08-31) — qualified internal AI return boundary
+
+Verified the DEBUGGER-enabled oracle exports before building; both
+`DebugBreakpointCommand` and `DebugGetCPUDataPtr` were present. Added one
+regeneration-safe host-side return probe around `osAiSetFrequency_recomp`,
+exported the submodule patch, and built the full target. The initial target
+gate was corrected in the same iteration after the oracle showed hangar
+execution at origin `0x006AB800`; the corrected port run still reached title
+1024 and hangar 512.
+
+The port's positive control and existing phase-keyed setup table were live. Its
+post-call setup row reported input `0x5622` and return/store `v0=0x5622`. The
+new host return probe fired its startup control but no target-phase row, so it
+is not evidence about target execution. The independent retail oracle's
+whole-RDRAM control fired 10,000 times, and its hangar watches saw `a0=0x5622`
+at `0x80091CB8` and `0x80029D20`, followed by `v0=0x561F` at `0x80091CC4`.
+
+This selects `H-SetupWriterReturnDivergence` at the internal AI-frequency
+callee/return contract and rules out input, source-writer, load-only, and
+allocator divergence at this qualified scope. It does not yet explain why
+retail maps `0x5622` to `0x561F`; that semantic/host contract is next.
+
+ORIGIN: independent retail execution/GPR evidence plus same-build port setup
+return evidence; no audio, selector, task, or output state was rewritten.

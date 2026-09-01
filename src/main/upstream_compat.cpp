@@ -3051,7 +3051,7 @@ extern "C" void rs64_m5_selector_ai_boundary(uint32_t pc, uint32_t ra,
     }
     const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
     const uint32_t width = rs64_vi_committed_width();
-    if (width != 512u || origin != 0x006AB400u) return;
+    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u)) return;
     static uint32_t phase_seen = 0xFFFFFFFFu;
     static uint32_t rows = 0;
     const uint32_t phase = rs64_phase_ord();
@@ -3071,6 +3071,40 @@ extern "C" void rs64_m5_selector_ai_boundary(uint32_t pc, uint32_t ra,
         "pc=0x%08X ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X "
         "s0=0x%08X s1=0x%08X v0=0x%08X\n",
         rows++, phase, origin, pc, ra, a0, a1, a2, s0, s1, v0);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_selector_ai_return(uint32_t input, uint32_t result) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SELECTOR_AI_RETURN");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    static bool control_seen = false;
+    if (!control_seen) {
+        control_seen = true;
+        std::fprintf(stderr,
+            "[m5-selector-ai-return-control] input=0x%08X result=0x%08X\n",
+            input, result);
+        std::fflush(stderr);
+    }
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const uint32_t width = rs64_vi_committed_width();
+    if (width != 512u || origin != 0x006AB400u) return;
+    static uint32_t phase_seen = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase != phase_seen) {
+        phase_seen = phase;
+        rows = 0;
+    }
+    if (rows >= 256u) return;
+    std::fprintf(stderr,
+        "[m5-selector-ai-return] ordinal=%u phase=%u width=512 origin=0x%06X "
+        "input=0x%08X result=0x%08X\n",
+        rows++, phase, origin, input, result);
     std::fflush(stderr);
 }
 

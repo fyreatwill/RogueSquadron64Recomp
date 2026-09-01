@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3532 (2026-08-31).
+evidence documents are listed below. Updated for session 3533 (2026-08-31).
 
 ## Current state
 
@@ -166,6 +166,17 @@ port's `v0=0x5622`. This selects a return-contract divergence after the shared
 source argument and rules out a source-value, load-only, or allocator cause at
 this boundary. See [M5-S3532-SELECTOR-SETUP-RETURN.md](M5-S3532-SELECTOR-SETUP-RETURN.md).
 
+Session 3533 independently requalified the return split at the internal AI
+frequency boundary. The oracle's whole-RDRAM control fired 10,000 times and
+its hangar-phase watches saw `a0=0x5622` entering `0x80029D20` from
+`0x80091CB8`, then `v0=0x561F` at `0x80091CC4`. The same-build real-audio port
+reached title and hangar with its phase-keyed setup return row showing
+`v0=0x5622`. This selects the internal callee/return contract and rules out
+input-load, source-writer, and allocator divergence at this scope. A new
+host-side return hook fired its startup positive control but no target-phase
+row; that hook is not evidence. See
+[M5-S3533-SELECTOR-AI-RETURN.md](M5-S3533-SELECTOR-AI-RETURN.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -192,14 +203,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Qualify the internal AI-frequency return boundary that produces the
-   retail/port `v0` split (`0x561F` versus `0x5622`). Build one regeneration-safe
-   port witness for the internal call/return and run it alongside the existing
-   title/hangar setup table; pair it with the restored oracle's same phase-keyed
-   execution watch. Matching internal input with divergent return selects the
-   callee/host contract; divergent input selects its producer; failed controls
-   invalidate the comparison. Do not repeat the valid setup capture alone or
-   rewrite audio/selector state.
+1. Identify the semantic/host contract of internal AI-frequency function
+   `0x80029D20`: retail enters with `a0=0x5622` and returns `0x561F`, while the
+   current port host implementation returns its input `0x5622`. Use static
+   contract evidence or a new paired boundary before any behavior change; do
+   not rewrite audio/selector state as a mitigation.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -368,6 +376,7 @@ the oracle did not provide a matching register tuple.
 
 Latest selector boundary:
 
+- [M5-S3533-SELECTOR-AI-RETURN.md](M5-S3533-SELECTOR-AI-RETURN.md)
 - [M5-S3530-SELECTOR-SOURCE-WRITER.md](M5-S3530-SELECTOR-SOURCE-WRITER.md)
 - [M5-S3532-SELECTOR-SETUP-RETURN.md](M5-S3532-SELECTOR-SETUP-RETURN.md)
 - [M5-S3529-SELECTOR-INPUT-BOUNDARY.md](M5-S3529-SELECTOR-INPUT-BOUNDARY.md)

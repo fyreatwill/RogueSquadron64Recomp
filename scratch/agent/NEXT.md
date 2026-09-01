@@ -1,30 +1,27 @@
-# NEXT work unit — qualify internal setup return boundary
+# NEXT work unit — identify internal AI-frequency return semantics
 
-HYPOTHESIS-ID: m5-selector-setup-return-contract
+HYPOTHESIS-ID: m5-selector-ai-return-semantics
 
-Session 3532 qualified the missing retail half. Whole-RDRAM control fired and
-the retail run reached hangar 512. Retail had the same AI input `a0=0x5622`
-as the port but returned/stored `v0=0x561F`; the port returned/stored
-`v0=0x5622`.
+Session 3533 qualified the split independently: retail entered `0x80029D20`
+with `a0=0x5622` and had `v0=0x561F` at `0x80091CC4`; the port setup return
+row had `v0=0x5622`. The new host return probe had a startup control but no
+target-phase row and is not evidence.
 
-Next unit: add one regeneration-safe, phase-keyed port witness around the
-internal AI-frequency call/return that feeds `0x80091CC4`, then run the port
-and restored retail oracle arms in the same iteration. Use the canonical
-Rice/autopilot route, explicit title/hangar width buckets, and a whole-RDRAM
-positive control in the oracle arm. Do not repeat the valid port setup capture
-alone or rewrite audio/selector/task/output state.
+Next unit: use static source/ABI evidence or one genuinely new paired boundary
+to identify why `0x80029D20` returns `0x561F` on retail but the port host
+implementation returns its input `0x5622`. Do not change audio/selector/task/
+output state.
 
 Competing hypotheses and discriminator:
 
-- `H-SetupWriterReturnDivergence`: internal input matches but retail return is
-  `0x561F` versus port `0x5622`; the callee/host return contract is next.
-- `H-SetupWriterReturnParity`: internal input and return match in the new
-  witness; the divergence is later in the store/ABI edge.
-- `H-SetupWriterInputDivergence`: the new internal input differs; its producer
-  is next.
-- `H-CaptureInvalid`: a positive control, target phase, or execution witness
-  is absent; no parity conclusion is allowed.
+- `H-InternalReturnSemantics`: retail's internal function contract differs
+  from the port host implementation; static semantics or a new boundary
+  should explain the mapped return.
+- `H-LaterStoreABI`: the internal return matches but the port's setup/store
+  context changes it later.
+- `H-CaptureInvalid`: a required positive control or target execution witness
+  is absent; no semantic conclusion is allowed.
 
-Required setup check before building: verify the existing DEBUGGER-enabled
-core exports `DebugBreakpointCommand` and `DebugGetCPUDataPtr`; if absent,
-`tools/oracle/build_core.sh` is the falsifying rebuild command.
+Required discriminator: source-level contract or paired observation that
+either explains the `0x561F` return from `0x5622`, or proves the value changes
+after `0x80029D20` and before `0x80091CC4`.
