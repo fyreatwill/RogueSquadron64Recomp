@@ -133674,3 +133674,24 @@ moves the active boundary to the writer of RDRAM `0x178C80`. The exact RDRAM
 writer remains open. The ordering is single-source port evidence, paired with
 session 3539's independent retail nonzero-writer result. No audio, PCM, or
 output state was changed.
+
+## Session 3541 (2026-09-01) — attributed port source-RDRAM zero-fill writer
+
+The build succeeded. The retail oracle used whole-RDRAM positive control plus
+a physical watch on `0x178C80..0x178D80`, reached title VI 1024 and hangar VI
+512, and recorded target writes with a nonzero final snapshot. Its hangar
+writer histogram contained a distinct multi-PC guest writer family.
+
+The first port capture reached both target phases and had live downstream
+controls, but omitted `ROGUESQ_LOG_M5_FIELD348_WRITER`; its writer null was
+discarded as capture-invalid. The corrected same-build capture enabled the
+span-writer, candidate-store, and memset hooks. It recorded 768 span-writer
+rows with no crash or abort. The selected `0x178C80` span was written as zero
+bytes by one port writer PC, `0x800078EC`; candidate-store and memset rows were
+zero, while image-stage and join controls remained live.
+
+This selects `H-RdramWriterPort`: the port's zero-fill writer path differs
+from retail's independently observed writer family and nonzero final range.
+It rules out an absent writer and invalid phase capture. The host/writeback
+origin and legitimacy of the zero payload remain open. No audio, PCM, or
+output state was changed. See `docs/M5-S3541-SOURCE-RDRAM-WRITER.md`.

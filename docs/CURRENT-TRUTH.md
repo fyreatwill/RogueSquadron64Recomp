@@ -2,7 +2,17 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3540 (2026-09-01).
+evidence documents are listed below. Updated for session 3541 (2026-09-01).
+
+Session 3541 attributed the selected source-range zeroing on the corrected
+real-audio port arm: the phase-qualified `0x178C80` RDRAM span received zero
+byte writes from one port writer PC, `0x800078EC` (768 rows across the two
+watched spans, with no candidate-store or memset rows). Retail independently
+reached title and hangar, passed the whole-RDRAM control, and showed a
+different multi-PC writer family plus a nonzero final source snapshot. This
+selects `H-RdramWriterPort` and moves the boundary to the host/writeback
+origin of the `0x800078EC` zero-fill path. See
+[M5-S3541-SOURCE-RDRAM-WRITER.md](M5-S3541-SOURCE-RDRAM-WRITER.md).
 
 ## Current state
 
@@ -275,10 +285,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Identify the writer that makes RDRAM `0x178C80` zero before the port's
-   source DMA: join phase-qualified port writes to the selected source-window
-   event and qualify the result with a retail physical watch. Do not copy
-   retail bytes or change output state; see Session 3540.
+1. Identify the port-side writeback/DMA path represented by writer PC
+   `0x800078EC`, including its source address, length, and payload hash at the
+   same phase-qualified zero write. Use static callsite enumeration plus one
+   same-build capture with the existing positive control and downstream joins;
+   do not change audio, PCM, or output state.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -310,6 +321,12 @@ CPU/host writer and no later overwrite. The legitimate port-side source
 writer is still unidentified, so no output state is to be rewritten. The
 `0x80091CC8` internal return contract is closed by Sessions 3534–3535. The
 silent-arm route defect is parked separately.
+
+Session 3541 moves the live boundary to the port's zero-fill writer origin.
+The corrected writer hook records zero-valued writes at `0x178C80` from one
+port PC (`0x800078EC`), while retail independently records a distinct writer
+family and a nonzero final range. The next discriminator is the source and
+writeback contract behind that port PC.
 
 Session 3539 moves the live boundary upstream into the image-task DMEM source.
 Vector stores execute in both source-window address classes and broad-span
