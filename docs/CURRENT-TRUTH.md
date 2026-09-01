@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3588 (2026-09-01).
+notes are linked below. Updated for session 3589 (2026-09-01).
 
 ## Current state
 
@@ -54,7 +54,9 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    oracle. While it is parked, perform only systematic M3 idiom-class audits;
    the s3588 `-0x271C` packed voice-handle writer class is structurally closed
    for writer identity and sentinel/slot provenance, but runtime allocator/
-   lifetime legitimacy remains unproven. Retail-entry, hangar `0x8000`
+   lifetime legitimacy remains unproven. Session 3589 found no concrete
+   invalid writer in the `0x4E/0x4F` audio-record/table-address class; its
+   source-field ranges remain unclassified. Retail-entry, hangar `0x8000`
    Y/accumulator, and SP-yield/MORT publication threads remain parked.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
@@ -127,6 +129,13 @@ and evidence notes retain the full history.
   Low-byte consumers were classified; runtime allocator/lifetime legitimacy
   remains unproven, so no guard was added. See
   [M3-S3588-VOICE-HANDLE-TABLE-WRITERS.md](M3-S3588-VOICE-HANDLE-TABLE-WRITERS.md).
+- **3589 — audio record field/table-address audit:** all 29 distinct generated
+  writer PCs and 13 `-0x7C30` consumer PCs were enumerated. The relevant audio
+  writers are `musyxKeyOnVoice` (`+0x64` to field `0x4E`) and
+  `tickAudioChannel` (`+0x58/+0x59` to fields `0x4E/0x4F`); no concrete
+  invalid value was found. The source-field ranges remain unclassified and
+  no guard was added. See
+  [M3-S3589-AUDIO-RECORD-FIELDS.md](M3-S3589-AUDIO-RECORD-FIELDS.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies

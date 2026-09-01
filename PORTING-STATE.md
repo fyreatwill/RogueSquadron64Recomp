@@ -134818,3 +134818,16 @@ unproven. No build, instrument, guard, or behavior change was made. See
 ORIGIN: no mitigation was added. The only non-sentinel origin is
 `startNoteOnVoice:0x80087294`; its slot component is allocator-selected and
 the cleanup/reset writers deliberately publish `-1`.
+## Session 3589 (2026-09-01) — audited audio record selector source fields
+
+Enumerated the generated tree's distinct writers of audio-record offsets
+`0x4E/0x4F` and every `0x801483D0` (`-0x7C30`) table consumer. The relevant
+writers are `musyxKeyOnVoice` at `0x80090B70/0x80090C50`, which copies source
+`+0x64` to destination `+0x4E`, and `tickAudioChannel` at
+`0x8008BD50/0x8008BD5C`, which copies `+0x59/+0x58` to `+0x4F/+0x4E`.
+Other matches are stack locals or unrelated manifest, NPC, effect, menu, and
+vehicle structures. All 13 table consumers use the same `0xFF` fallback
+shape; no concrete invalid writer/value was found. This rules out a selected
+unsafe writer and a structural table misread, but does not prove the runtime
+ranges of source `+0x64/+0x58/+0x59`; the boundary remains unclassified and
+no guard was added. See `docs/M3-S3589-AUDIO-RECORD-FIELDS.md`.
