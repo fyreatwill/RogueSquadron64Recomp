@@ -134311,3 +134311,25 @@ changed. See `docs/M5-S3564-IMAGE-DMEM-PRODUCER.md`.
 
 ORIGIN: diagnostic-only DMEM store/DMA/source-window observations; no
 mitigation or value rewrite was added.
+
+## Session 3565 (2026-09-01) — ordered image-task staging source DMAs
+
+The first planned standalone image capture used an invalid route: it reached
+title but crashed before hangar at guest PC `0x80001B08`, so its missing rows
+were discarded. The corrected real-audio/LLE-solo/spin-yield/autopilot route
+was rebuilt and rerun after resetting the shared source-window diagnostic
+budget at each target phase. Title `1024` and hangar `512` controls fired;
+there were 3,244 image-stage rows, 8,316 source-window rows, 2,048 DMEM
+writer rows, 505 audio returns, and no crash or abort before deliberate
+SIGKILL.
+
+Stage 2/3 were zero in both phases (566/560 title rows and 247/245 hangar
+rows, all `nz_a=0`). In hangar task ordinal 560, nonzero DMEM staging appeared
+at source-window events 4101–4104, stores then left the target span zero at
+4484–4485, and zero stage-3/2 DMAs followed at 4488–4489 from RDRAM
+`0x1798B0`/`0x1797B0`. The stage DMEM addresses and lengths matched contract.
+This selects `H-ZeroDmaOrdering`, refutes a stage-DMA contract mismatch, and
+leaves the legitimate RDRAM source-range writer open. The retail oracle was
+unavailable, so this is single-source port evidence. The only code change was
+diagnostic budget scoping; no game state or mitigation was added. See
+`docs/M5-S3565-IMAGE-STAGING-SOURCE.md`.

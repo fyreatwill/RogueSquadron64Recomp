@@ -2,7 +2,17 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3564 (2026-09-01).
+documents are listed below. Updated for session 3565 (2026-09-01).
+
+Session 3565 closed the immediate image-task staging-DMA ordering question on
+a target-valid standalone image arm. After fixing a process-lifetime source-
+window budget that hid hangar rows, title and hangar controls both fired. In
+the same hangar task ordinal, nonzero DMEM staging was followed by a clear and
+then zero stage-2/3 DMAs from `0x1797B0`/`0x1798B0`; the stage addresses and
+lengths matched contract. This selects `H-ZeroDmaOrdering` and leaves the
+legitimate RDRAM source-range writer open. It is single-source port evidence;
+the retail oracle was unavailable. See
+[M5-S3565-IMAGE-STAGING-SOURCE.md](M5-S3565-IMAGE-STAGING-SOURCE.md).
 
 Session 3564 closed the immediate image-task DMEM-producer absence question
 on a target-valid standalone image arm. Title and hangar controls fired, and
@@ -744,6 +754,7 @@ the oracle did not provide a matching register tuple.
 
 Latest output boundary:
 
+- [M5-S3565-IMAGE-STAGING-SOURCE.md](M5-S3565-IMAGE-STAGING-SOURCE.md)
 - [M5-S3564-IMAGE-DMEM-PRODUCER.md](M5-S3564-IMAGE-DMEM-PRODUCER.md)
 - [M5-S3539-SOURCE-WRITER.md](M5-S3539-SOURCE-WRITER.md)
 - [M5-S3536-OUTPUT-CONTRACT.md](M5-S3536-OUTPUT-CONTRACT.md)

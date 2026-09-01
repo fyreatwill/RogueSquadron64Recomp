@@ -1033,6 +1033,7 @@ extern "C" void rs64_m5_audio_source_dma(uint8_t* rdram, uint32_t dram_addr,
     if (key != phase_key) {
         phase_key = key;
         rows = 0;
+        g_rs64_m5_source_window_rows = 0;
         std::fprintf(stderr,
             "[m5-rsp-source-control] phase=%u width=%u origin=0x%06X\n",
             phase, width, origin);
