@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3517 (2026-08-31).
+documents are listed below. Updated for session 3518 (2026-08-31).
 
 ## Current state
 
@@ -21,9 +21,11 @@ machine.
 
 Session 3515 independently requalified the retail route: whole-RDRAM control
 fired, retail reached title and the 512 hangar, and `musyxMixActiveVoices`
-entry `0x80090E04` fired in the hangar. The known port crash PC
-`0x8000B650` did not execute in that retail capture. This keeps the retail
-mixer boundary valid but leaves the port pre-title route blocker unresolved.
+entry `0x80090E04` fired in the hangar. Session 3518's same-build port pair
+reached title and hangar on real audio, while the silent arm crashed pre-title
+at guest PC `0x8000B650` in the `fillSampleStreamRange` family. This selects a
+route-specific silent-arm failure and reopens target-phase port measurements;
+it does not establish the writer of the crash input.
 
 Session 3516 qualified the selector-store boundary independently: retail
 whole-RDRAM and selector-span controls fired, with five executions at each of
@@ -59,13 +61,12 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Resolve or newly qualify the pre-title audio route before attempting the
-   mixer-entry join: Session 3514's real-audio arm crashed in
-   `fillSampleStreamRange` and its silent retry stopped before title. Do not
-   treat zero mixer rows as evidence.
-2. Revisit the selector producer/context join only after a port route reaches
-   the 512 hangar phase. Session 3517's retail range was positive, but both
-   port attempts remained at VI 640; do not repeat those schedules unchanged.
+1. Revisit the selector producer/context join on the qualified real-audio port
+   route. Session 3518 reached the 512 hangar; capture the new producer
+   context and selector-store rows with independent retail controls.
+2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
+   defect. Do not infer target-phase behavior from the silent arm or treat it
+   as evidence that the real-audio mixer boundary is broken.
 3. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
    baseline; do not repeat that arm unchanged.
 4. Keep Sessions 3494–3498 real-audio route results, Session 3492 dispatch,
@@ -85,21 +86,21 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the pre-title audio-route blocker. Selector
-producer/context hypotheses are parked until a port route reaches hangar.
+The active work unit is now the selector producer/context join on the
+real-audio route. The silent-arm route defect is parked separately.
 
-For the pre-title route:
+For the silent-arm route:
 
-- `H-RealAudioRouteCrash`: real audio crashes before title while silent audio
-  reaches the target phase.
-- `H-SilentRouteIndependentBlocker`: both arms stop before title, selecting a
-  shared blocker.
-- `H-RealAudioReachesTarget`: real audio reaches the target phase and reopens
-  the selector join.
-- `H-CaptureInvalid`: startup or phase controls fail.
+- `H-SilentRouteCrash`: the silent route has a route-specific failure in the
+  `fillSampleStreamRange` family while real audio reaches the target phase.
+- `H-SharedRouteBlocker`: both arms stop before title, selecting a shared
+  blocker.
+- `H-RealAudioRouteFailure`: real audio fails before the target phase.
+- `H-CaptureInvalid`: startup, oracle, or phase controls fail.
 
-The discriminator is same-build silent/real audio phase and crash behavior;
-zero target-phase rows are not evidence.
+Session 3518 selected `H-SilentRouteCrash`: oracle controls passed, the silent
+arm crashed pre-title at `0x8000B650`, and the real image arm reached title and
+hangar. The crash origin remains unresolved.
 
 For the next producer boundary:
 
@@ -124,6 +125,9 @@ but the port did not reach its target phase on either tested arm. See
 
 Session 3515 independently requalified that retail entry in the hangar with a
 positive control; see [M5-S3515-ORACLE-ROUTE.md](M5-S3515-ORACLE-ROUTE.md).
+
+Session 3518 requalified the real-audio port route and isolated a silent-arm
+pre-title crash; see [M5-S3518-AUDIO-ROUTE-PAIR.md](M5-S3518-AUDIO-ROUTE-PAIR.md).
 
 ## Durable boundaries and operating rules
 

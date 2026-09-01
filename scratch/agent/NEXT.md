@@ -1,30 +1,31 @@
-# NEXT work unit — qualify the pre-title audio route blocker
+# NEXT work unit — capture selector producer/context on real audio
 
-HYPOTHESIS-ID: m5-pretitle-audio-route
+HYPOTHESIS-ID: m5-selector-producer-context
 
-Session 3517 qualified the retail producer range and added a port entry witness,
-but both port attempts remained at VI 640 and never reached the 512 target
-phase. Do not repeat those schedules unchanged.
+Session 3518 resolved the route gate: independent retail controls passed; the
+real image arm reached title and hangar, while the silent arm crashed pre-title
+at `fillSampleStreamRange` (`0x8000B650`). Use the real image arm next.
 
-The single work unit is one bounded audio-route qualification: inspect the
-existing audio dispatch/gate and run one fresh silent-control route plus one
-fresh real-audio route in the same built tree, both with phase and crash
-controls. The discriminator is whether real audio crashes before title in the
-known `fillSampleStreamRange` family while silent audio reaches the same phase;
-failed phase controls make the arm unevaluable.
+The single work unit is one bounded producer/context capture. First ask ground
+truth for a newly chosen retail producer range, with whole-RDRAM, selector-span,
+and title/hangar controls. Then run one real-audio port capture with
+`ROGUESQ_LOG_M5_SELECTOR_STORE_CONTEXT=1` and the existing selector-store
+control. Build before the run; use `PROBE_PHASE_WIDTH=1024` and
+`PROBE_KEYS_FROM_PHASE=1`. Do not use the silent arm or repeat the blocked
+VI-640 schedule.
 
 Competing hypotheses:
 
-- `H-RealAudioRouteCrash`: real audio crashes before title while silent audio
-  reaches title/hangar; the audio route is the blocker.
-- `H-SilentRouteIndependentBlocker`: both arms stop before title, selecting a
-  shared route blocker rather than audio-specific corruption.
-- `H-RealAudioReachesTarget`: real audio reaches the target phase, reopening
-  the selector producer/context join.
-- `H-CaptureInvalid`: startup, phase, or crash controls fail, so neither arm
-  is interpretable.
+- `H-ContextProducerParity`: producer context matches retail; divergence is
+  later in the path.
+- `H-ContextProducerDivergence`: the producer supplies a differing field,
+  selecting that producer edge.
+- `H-LaterContextMutation`: producer context matches, but a later guest write
+  changes the selector writer input.
+- `H-CaptureInvalid`: an independent control or target phase is absent.
 
-Run from `build/` with the existing validated autopilot and phase-gated probe;
-retain `ROGUESQ_LOG_M5_SELECTOR_STORE_CONTEXT=1` and the new producer context
-log. Build both audio arms before running them. Use SIGKILL and non-dot final
-capture paths.
+The discriminator is the first phase-matched difference between retail
+producer/context rows and port producer/context plus selector-store rows:
+matching producer fields with a differing store selects later mutation; a
+first differing producer field selects its upstream edge; failed controls make
+the capture unevaluable.

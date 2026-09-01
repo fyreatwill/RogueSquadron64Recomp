@@ -133081,3 +133081,22 @@ Evidence: `docs/M5-S3517-SELECTOR-PRODUCER-CONTEXT.md`,
 `scratch/agent/oracle_s3517_selector_producer.log`,
 `scratch/agent/s3517_selector_producer_port/run.log`, and
 `scratch/agent/s3517_selector_producer_port_fixed/run.log`.
+## Session 3518 (2026-08-31) — qualified same-build audio route pair
+
+Rebuilt the existing Debug tree, then ran the independent retail oracle and
+concurrent silent/image port arms with the validated LLE, spin-yield,
+autopilot, and phase controls. The oracle passed the whole-RDRAM positive
+control (10,000 callbacks) and reached title VI 1024 and hangar VI 512.
+
+The silent arm (`ROGUESQ_AUDIO_UCODE=0`) crashed before title with
+`last-guest-pc=0x8000B650` in the `fillSampleStreamRange` family. The real
+image arm (`ROGUESQ_AUDIO_UCODE=1`) reached title and hangar, emitted 87
+audio-task dispatch rows and 533 audio-return rows, and had no crash before
+the bounded stop. This selects a route-specific silent-arm failure and
+reopens the selector producer/context join on the real-audio route.
+
+It rules out a shared pre-title blocker for this build and route, but does not
+identify the writer of the silent-arm crash input or prove the image audio
+contract correct. No state was rewritten or skipped. Evidence is recorded in
+`docs/M5-S3518-AUDIO-ROUTE-PAIR.md` and
+`scratch/agent/s3518_m5_audio_route_pair/`.
