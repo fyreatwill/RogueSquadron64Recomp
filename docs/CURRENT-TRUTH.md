@@ -500,9 +500,10 @@ to be rewritten as a diagnostic mitigation.
    A/B rows are not evidence. A missing positive control makes a comparison
    unevaluable; matching fields close a boundary and the first divergent field
    selects the next producer edge.
-7. M5 Step 3 is now the active boundary: the image task/output comparison
-   named a missing destination/join edge, but the writer and legitimacy are
-   still open. The AI-frequency contract is now corrected;
+7. M5 Step 3 is now the active boundary: the image route survived paired
+   contention, but its deeper input-versus-route edge remains open. The old
+   image task/output join is parked until that edge is qualified. The
+   AI-frequency contract is now corrected;
    `docs/M5-AUDIO-PLAN.md` is complete;
    configured-host PatchesLib validation is unavailable in this Unix checkout.
 8. After M5 closes or a new discriminator is found, resume only systematic M3
@@ -512,12 +513,15 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 image-task/output qualification. Session
-3558 selected `H-ImageTaskContractGap`: the corrected same-build image/silent
-pair reached title and hangar; image DMEM/DMA/stage activity and nonzero PCM
-were present, while the image-stage summary had zero source/consumer matches
-and no named slot/status or MORT join. The next witness must name the image
-writer/destination relation before any writeback or gate change. Session 3557
+The active work unit is now M5 Step 3 image-route qualification. Session 3560
+refuted `H-SharedContention`: paired and standalone image arms reached title
+and hangar with task/return/PCM controls live. The next witness must split
+`H-ImageInputBoundary` from `H-ImageRouteGate` using the deeper caller/input/
+route table. Session 3558 selected `H-ImageTaskContractGap`: the corrected
+same-build image/silent pair reached title and hangar; image DMEM/DMA/stage
+activity and nonzero PCM were present, while the image-stage summary had zero
+source/consumer matches and no named slot/status or MORT join. That downstream
+join remains parked until the route edge is qualified. Session 3557
 selected `H-SlotCrashAbsent` for the separate s3554 slot-dispatch failure:
 the route-valid table had valid KSEG0 inputs and no failing consumer, so the
 slot input/lifecycle/overlay hypotheses remain parked. Session 3556
