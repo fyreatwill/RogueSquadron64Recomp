@@ -523,6 +523,55 @@ extern "C" uint32_t rs64_m5_static_rs_memset_last_ra() {
     return g_rs64_m5_static_rs_memset_ra;
 }
 
+extern "C" void rs64_m5_preclear_snapshot(uint8_t* rdram, uint32_t dst,
+                                             uint32_t fill, uint32_t len,
+                                             uint32_t ra, uint32_t guest_pc,
+                                             uint32_t edge) {
+    static const bool enabled = [] {
+        const char* own = std::getenv("ROGUESQ_LOG_M5_PRECLEAR");
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        return (own && own[0] && own[0] != '0') ||
+               (all && all[0] && all[0] != '0');
+    }();
+    if (!enabled || len == 0u) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (!((width == 1024u && origin == 0x00790400u) ||
+          (width == 512u && origin == 0x006AB400u))) return;
+    const uint32_t phys = dst & 0x007FFFFFu;
+    const uint64_t end = static_cast<uint64_t>(phys) + len;
+    const uint32_t spans[][2] = {{0x178C80u, 0x178E00u},
+                                 {0x1797B0u, 0x179930u}};
+    uint32_t span = 0;
+    for (uint32_t i = 0; i < 2u; ++i) {
+        if (phys < spans[i][1] && end > spans[i][0]) { span = i + 1u; break; }
+    }
+    if (span == 0u) return;
+    const uint32_t first = spans[span - 1u][0];
+    const uint32_t last = spans[span - 1u][1];
+    uint32_t fnv = 2166136261u, nonzero = 0;
+    for (uint32_t i = first; i < last; ++i) {
+        const uint8_t b = rdram[i];
+        fnv = (fnv * 16777619u) ^ b;
+        nonzero += b != 0;
+    }
+    static std::mutex mutex;
+    static uint64_t ordinal = 0;
+    static uint32_t phase_rows[2] = {};
+    std::lock_guard<std::mutex> lock(mutex);
+    const uint32_t slot = width == 1024u ? 0u : 1u;
+    const uint32_t row = phase_rows[slot]++;
+    if (row >= 512u) return;
+    std::fprintf(stderr,
+        "[m5-preclear] ordinal=%llu edge=%u row=%u phase=%u width=%u "
+        "origin=0x%06X span=%u dst=0x%08X phys=0x%06X fill=0x%02X len=0x%X "
+        "pre_fnv=%08X pre_nz=%u ra=0x%08X guest_pc=0x%08X\n",
+        static_cast<unsigned long long>(ordinal++), edge, row,
+        rs64_phase_ord(), width, origin, span, dst, phys, fill & 0xFFu, len,
+        fnv, nonzero, ra, guest_pc);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_052c4_join(uint8_t* rdram, uint32_t dst,
                                      uint32_t value, uint32_t len,
                                      uint32_t edge) {

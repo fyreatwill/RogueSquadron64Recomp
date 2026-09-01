@@ -2,7 +2,16 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3542 (2026-09-01).
+evidence documents are listed below. Updated for session 3543 (2026-09-01).
+
+Session 3543 phase-qualified the source-range state immediately before and
+after the two `rs_memset` clears. Title entered `0x178C80:0x178E00` already
+zero; hangar entered `0x1797B0:0x179930` with 344 nonzero bytes and exited
+zero. Retail independently passed the whole-RDRAM control, reached both
+phases, and wrote both ranges. This selects a real pre-clear producer for the
+hangar bytes while leaving its port writer identity open; title remains a
+clear-before-producer case at this boundary. See
+[M5-S3543-PRECLEAR-PRODUCER.md](M5-S3543-PRECLEAR-PRODUCER.md).
 
 Session 3541 attributed the selected source-range zeroing on the corrected
 real-audio port arm: the phase-qualified `0x178C80` RDRAM span received zero

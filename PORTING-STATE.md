@@ -133717,3 +133717,33 @@ This selects `H-WritebackOrigin` and rules out an unattributed DMA write or a
 per-byte hook mismatch. It moves the active boundary upstream to the
 producer of the source range before this legitimate clear. No audio, PCM, or
 output state was changed. See `docs/M5-S3542-WRITEBACK-ORIGIN.md`.
+## Session 3543 (2026-09-01) — qualified source-range pre-clear ordering
+
+Ground truth first: the retail oracle passed its whole-RDRAM positive control
+with 11,058 writes, reached title VI 1024 and hangar VI 512, and wrote 384
+bytes in physical `0x178C80:0x178E00` plus 674 bytes in
+`0x1797B0:0x179930`. Its writer census included `0x800078EC` for the first
+range and `0x8001E2C0`, `0x80007670`, and the `0x8001FAxx` family for the
+second.
+
+Added a regeneration-safe `rs_memset` entry/exit snapshot hook and ran one
+real-audio LLE/spin-yield/autopilot port capture. The phase control and
+existing source-DMA, field-writer, image-stage, and paired PCM controls all
+fired; there were 1,024 source-DMA rows, 768 field-range writer rows, 4,075
+image-stage rows, and 87 PCM source/consumer pairs, with no crash or abort.
+Title entered the `0x178C80` clear with `pre_nz=0` and exited zero. Hangar
+entered the `0x1797B0` clear with `pre_nz=344` and exited zero.
+
+This selects a real pre-clear producer for the hangar bytes and separately
+supports clear-before-producer for title. It does not identify the port writer
+that established the hangar bytes: the target-phase scalar census saw only the
+legitimate zero-fill loop, and no candidate scalar rows were present. The next
+work unit is a process-start-to-hangar writer census. No audio, PCM, or output
+state was changed.
+
+Evidence: `scratch/agent/retail_preclear_groundtruth.log`,
+`scratch/agent/s3543_m5_preclear_capture/run.log`, and
+`docs/M5-S3543-PRECLEAR-PRODUCER.md`.
+
+ORIGIN: the only mitigation-shaped operation observed was the legitimate
+`rs_memset` zero fill at `0x800078EC`; no guard or skip was added.
