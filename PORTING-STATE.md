@@ -133952,3 +133952,32 @@ Evidence: `docs/M5-S3550-HMT-ROLE-TABLE.md` and
 `scratch/agent/s3550_m5_hmt_role_table/run-final2.log`.
 
 ORIGIN: diagnostic-only role and field observation; no mitigation was added.
+## Session 3551 (2026-09-01) — heap dequeue path did not reproduce the store
+
+The generated body identifies guest `0x8000D704` as `sw $zero, 0x4($v0)`,
+after the cached free-list head load at `0x8000D6F4` from `0x801163B0`; the two
+generated caller edges are `0x800104A8` and `0x80010CD8`.
+
+A regeneration-safe phase-bucketed table was added and validated through
+make_elf -> N64Recomp -> fixup -> cmake. The final real-audio/LLE-solo,
+spin-yield/autopilot run reached title `0x00790400` and hangar `0x006AB400`,
+emitted 96 entry rows, and emitted zero `0x8000D704` rows, zero existing
+heap-list guard rows, and no crash before deliberate SIGKILL. Port cached heads
+were mapped KSEG0 values, but the failure path was absent, so legitimacy was
+not classified. The first instrument attempt had a memory-helper/sign-extension
+contract error and was discarded; the fixed version ran afterward.
+
+The independent retail oracle passed its whole-RDRAM positive control (10,000
+callbacks before cap; 58,148 total) and reached title 1024. Its physical watch
+on `0x1163B0:0x1163C0` observed 48,148 writes, establishing cache activity but
+not a writer PC or equivalence to the port state.
+
+This closes `H-HeapRoleUnknown`, leaves state legitimacy unresolved, and
+selects a joined `0x8000D6F4` load / `0x8000D700` branch / `0x8000D704` store
+table as the next discriminator. No heap, audio, PCM, image-task, output, or
+texture-record write changed.
+
+Evidence: `docs/M5-S3551-HEAP-FAILURE.md` and
+`scratch/agent/s3551_m5_heap_failure_final/run.log`.
+
+ORIGIN: diagnostic-only observation; no mitigation was added.

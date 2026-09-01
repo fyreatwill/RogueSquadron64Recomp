@@ -2,7 +2,17 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3550 (2026-09-01).
+evidence documents are listed below. Updated for session 3551 (2026-09-01).
+
+Session 3551 resolved guest `0x8000D704` as the cached free-list head cleanup
+store after the `0x801163B0` load at `0x8000D6F4`. The final phase-bucketed
+real-audio/LLE/spin-yield/autopilot capture reached title and hangar, emitted
+96 heap-dequeue entry rows but no store rows, heap guards, or crash before
+deliberate SIGKILL. Port cached heads were mapped KSEG0 values; legitimacy
+remains unresolved because the failing path did not execute. Retail independently
+passed its whole-RDRAM control and wrote the watched cache region 48,148 times,
+but that watch was not PC-attributed. See
+[M5-S3551-HEAP-FAILURE.md](M5-S3551-HEAP-FAILURE.md).
 
 Session 3550 statically corrected the HMT tuple roles and reran the canonical
 real-audio/LLE/spin-yield/autopilot capture. `parseHmtMaterials` uses scalar
@@ -372,10 +382,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Qualify the new pre-title `heapFreeListDequeue` failure at guest
-   `0x8000D704` with a bounded caller/input or freelist-state table, first
-   identifying the exact heap operation and its writer; do not add a
-   mitigation until its origin and legitimacy are established.
+1. Requalify the pre-title `heapFreeListDequeue` path with one phase-bucketed
+   table joining the `0x8000D6F4` cached-head load, `0x8000D700` branch outcome,
+   `0x8000D704` store, and both caller edges. The current run did not execute
+   the failing store, so do not classify the node words or add a mitigation
+   until the failing path and its writer are observed.
 2. Keep the HMT role result as valid at this discriminator: nullable `a2` is
    an intended branch, and the sampled required pointers were mapped. Do not
    repeat the provisional non-pointer scalar classifier or treat its old
