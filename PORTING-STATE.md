@@ -132568,3 +132568,27 @@ route-failure family remains unresolved. Evidence:
 ORIGIN: diagnostic-only route, phase, selector, audio-return, and crash
 observations; no audio state, selector value, task field, or route behavior was
 rewritten, skipped, or validated.
+
+## Session 3497 (2026-08-31) — qualified M5 Step 1 audio contract pair
+
+Ran the phase-gated Step 1 driver with the independent retail oracle
+preflight, then launched silent and default real-image arms from the same
+build. The oracle whole-RDRAM positive control reached 10,000 callbacks and
+both title and hangar phases. Both port arms reached title and hangar without
+crash or abort, with 668 task-ABI rows each. The silent arm had zero
+DMA-range/image-stage rows; the image arm had 1,359/2,738. Audio-return rows
+were 294/296, audio/SP-route rows 951/960, and PCM source/consumer rows
+84/84 versus 85/85. Slot-allocation rows were absent and sampled PCM was
+zero in both arms.
+
+This selects image-task progress at the dispatch/task boundary and clears
+the real-audio route qualification blocker for the selector comparison. It
+does not select selector parity, source divergence, slot behavior, or a
+downstream PCM contract. The independent oracle control and both port phase
+controls were positive. Evidence:
+`docs/M5-S3497-STEP1-CONTRACT-PAIR.md` and
+`scratch/agent/s3497_m5_step1_contract_pair/`.
+
+ORIGIN: diagnostic-only task, DMA, route, PCM, and phase observations; no
+audio state, task field, selector value, or output was rewritten, skipped, or
+validated.

@@ -608,24 +608,35 @@ ORIGIN: diagnostic-only route, phase, selector, audio-return, and crash
 observations; no audio state, selector value, task field, or route behavior was
 rewritten, skipped, or validated.
 
+Session 3497 completed M5 plan Step 1 as a same-build silent/image pair after
+the independent retail preflight. The oracle whole-RDRAM control reached
+10,000 callbacks and both title and hangar phases. Both port arms reached
+title and hangar without crash or abort with 668 task-ABI rows each. The
+silent arm had zero DMA-range and image-stage rows; the image arm had 1,359
+DMA-range and 2,738 image-stage rows, plus 960 audio/SP-route rows versus 951
+silent rows. Both arms had PCM source/consumer rows (84/84 silent, 85/85
+image), but sampled PCM was zero and slot-allocation rows were absent. This
+selects image-task progress at the dispatch/task boundary and clears the
+real-audio route qualification blocker; it does not select selector parity,
+source divergence, or a downstream PCM contract. Evidence:
+[M5-S3497-STEP1-CONTRACT-PAIR.md](M5-S3497-STEP1-CONTRACT-PAIR.md).
+
+ORIGIN: diagnostic-only task, DMA, route, PCM, and phase observations; no
+audio state, task field, selector value, or output was rewritten, skipped, or
+validated.
+
 ## Next steps
 
-1. Execute M5 plan Step 1: one build and one phase-gated run containing the
-   silent control and the default real image arm, with task dispatch/exit,
-   DMEM/DMA, SP completion, service/slot, PCM, and route controls. The
-   discriminator is whether the image arm reaches the target phase and shows
-   downstream progress beyond the silent arm; a pre-title image crash remains
-   a route qualification failure, not evidence about selector data.
-2. After the real-audio route and both selector controls fire, run the
+1. After the real-audio route and both selector controls fire, run the
    selector-load/writer capture with the existing four-PC controls and the
    independent retail task-dispatch control in the same iteration. The
    discriminator is whether both port selector controls fire at title and
    whether their source/value rows match the retail title route.
-3. If the selector comparison identifies a first divergent source/value,
+2. If the selector comparison identifies a first divergent source/value,
    trace the
    upstream selector/table producer feeding `0x80091074` with one batched
    retail/port discriminator keyed by source family and title origin.
-4. Keep Sessions 3494–3496's real-audio route outcomes and Session 3492's
+3. Keep Sessions 3494–3497's real-audio route outcomes and Session 3492's
    dispatch result as baselines; do not repeat any unchanged route retry.
 4. Keep Session 3488's silent route as the qualification baseline; do not
    repeat the same silent gate audit unchanged.
