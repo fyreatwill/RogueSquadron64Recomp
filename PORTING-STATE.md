@@ -132798,6 +132798,34 @@ ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
 audio state, selector value, task field, or output was rewritten, skipped, or
 validated.
 
+## Session 3508 (2026-08-31) — corrected selector-table writer boundary
+
+The first retail capture used the stale physical `0x00150000..0x00150008`
+watch. Its whole-RDRAM control and title predecessor range were positive, but
+the stale span had zero writes and zero post-store samples. The matching port
+retry used a non-autopilot route and crashed before title in
+`fillSampleStreamRange`, so that attempt was unevaluable.
+
+The corrected real-image/LLE/spin-yield/autopilot port route reached title
+origin `0x00790400`, fired the selector-load and selector-writer controls, and
+emitted 1,024 rows at each site without a crash. Those rows identified the live
+table addresses as `0x80149758` and `0x8014975C` and included source classes
+`0x8018DD30`, `0x80171CE0`, and `0x80173B20`.
+
+The corrected independent retail run retained the whole-RDRAM positive
+control, reached 633 title VIs, and recorded 12 writes to physical
+`0x00149758..0x00149760`. Post-store sampling saw values `0x80171E70` and
+`0x80173CB0`, with writer PCs `0x8008F228` and `0x8008F264`. This selects the
+corrected retail table-writer/value boundary and rejects invalid capture, but
+does not yet establish a corresponding port-side table store.
+
+Evidence: `docs/M5-S3508-SELECTOR-TABLE-WRITER.md` and the four captured logs
+under `scratch/agent/s3508_m5_selector_*`.
+
+ORIGIN: diagnostic-only oracle memory/PC watches and port selector witnesses;
+no table, selector, audio, task, or output value was rewritten, skipped, or
+validated.
+
 ## Session 3507 (2026-08-31) — silent LLE-on no-spin remains pre-title blocked
 
 Ran one bounded silent route arm from `build/` with

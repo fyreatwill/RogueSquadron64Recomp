@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3506 (2026-08-31). This record was
+Current active marker: Session 3508 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -778,10 +778,25 @@ ORIGIN: diagnostic-only route, phase, audio, and selector observations; no
 audio state, selector value, task field, or output was rewritten, skipped, or
 validated.
 
+Session 3508 corrected the stale selector-table target. The independent retail
+capture kept the whole-RDRAM control positive, reached 633 title VIs, and
+recorded 12 writes to physical `0x00149758..0x00149760`; post-store values were
+`0x80171E70`/`0x80173CB0`, written at `0x8008F228`/`0x8008F264`. The corrected
+real-image/LLE/spin-yield/autopilot port route reached title, fired both
+selector controls, and emitted 1,024 load and 1,024 writer rows using table
+addresses `0x80149758`/`0x8014975C`. This selects the corrected retail
+table-writer/value boundary and rejects capture invalidity, but does not yet
+qualify a corresponding port-side table store. Evidence:
+[M5-S3508-SELECTOR-TABLE-WRITER.md](M5-S3508-SELECTOR-TABLE-WRITER.md).
+
+ORIGIN: diagnostic-only oracle memory/PC watches and port selector witnesses;
+no table, selector, audio, task, or output value was rewritten, skipped, or
+validated.
+
 ## Next steps
 
 1. Trace the writer/initializer and selector-index source feeding the
-   `0x80150000`/`0x80150004` table entries used by `0x8009131C`, with one
+   corrected `0x80149758`/`0x8014975C` table entries used by `0x8009131C`, with one
    batched retail/port discriminator keyed by title origin, table address,
    stored value, index, and caller arguments. Keep the independent
    whole-RDRAM control and port pre-call/caller controls positive; the first
