@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3514 (2026-08-31).
+documents are listed below. Updated for session 3515 (2026-08-31).
 
 ## Current state
 
@@ -18,6 +18,12 @@ loop, but the stage advancer sees null `0x800B0934`; the initializer at
 `0x800A62B4` is skipped while port skip-allow is zero. Retail independently
 sets that byte and reaches title. Do not force the flag or bypass the state
 machine.
+
+Session 3515 independently requalified the retail route: whole-RDRAM control
+fired, retail reached title and the 512 hangar, and `musyxMixActiveVoices`
+entry `0x80090E04` fired in the hangar. The known port crash PC
+`0x8000B650` did not execute in that retail capture. This keeps the retail
+mixer boundary valid but leaves the port pre-title route blocker unresolved.
 
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
@@ -94,6 +100,9 @@ the first differing predecessor field selects its producer; failed controls
 Session 3514 adds a retail-qualified mixer-entry candidate at `0x80090E04`,
 but the port did not reach its target phase on either tested arm. See
 [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md).
+
+Session 3515 independently requalified that retail entry in the hangar with a
+positive control; see [M5-S3515-ORACLE-ROUTE.md](M5-S3515-ORACLE-ROUTE.md).
 
 ## Durable boundaries and operating rules
 

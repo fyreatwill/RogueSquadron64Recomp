@@ -132995,3 +132995,22 @@ selector, task field, or output value was rewritten, skipped, or validated.
 Evidence: `scratch/agent/oracle_s3514_m5_new_boundary.log`,
 `scratch/agent/s3514_m5_mix_entry/port.log`, and
 `scratch/agent/s3514_m5_mix_entry_silent/port.log`.
+## Session 3515 (2026-08-31) — independently requalified retail mixer route
+
+Ran the independent retail oracle before any port build or new instrument,
+using a whole-RDRAM write positive control and the driven Rice route. The
+positive control reached 10,000 callbacks and was removed; retail reached
+title (1024 VI) and the 512 hangar at about 38.4 seconds. Retail
+`musyxMixActiveVoices` entry `0x80090E04` fired 12 times in the hangar bucket.
+The known `fillSampleStreamRange` PC at `0x8000B650` had no hits.
+
+This requalifies the retail mixer boundary and its phase/control path. It does
+not explain the port's pre-title blocker or distinguish the two unrun port
+audio hypotheses. It rules out only the possibility that the retail mixer
+entry is absent from this driven hangar route.
+
+ORIGIN: independent retail execution capture; no game state, audio state,
+selector value, task field, or output was rewritten or skipped.
+
+Evidence: `scratch/agent/s3515_oracle_route/oracle.log` and
+`docs/M5-S3515-ORACLE-ROUTE.md`.
