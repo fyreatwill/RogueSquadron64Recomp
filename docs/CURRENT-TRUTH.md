@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3490 (2026-08-31). This record was
+Current active marker: Session 3491 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -518,17 +518,32 @@ interpreting the witness. Evidence: [M5-S3490-UPSTREAM-SELECTOR-LOAD.md](M5-S349
 ORIGIN: the new witness observes selector index, table address, loaded value,
 and register context; it does not rewrite, skip, or validate selector state.
 
+Session 3491 retried the prescribed silent LLE/spin-yield route with the new
+selector-load witness. The 30-second arm crashed before title at guest PC
+`0x8000834C`, with host `spTaskSchedulerThread+9556`; all title controls and
+selector rows were zero. A corrective 60-second retry of the same route also
+crashed before title, now at `fillSampleStreamRange+932` below
+`musyxRenderVoiceSamples`/`musyxSynthFrame`, again with zero title controls
+and rows. This makes the route failure reproducible and rules out watchdog
+duration as its explanation, but leaves the selector discriminator
+unevaluable. It selects the immediate audio/scheduler qualification blocker;
+whether `ROGUESQ_AUDIO_UCODE=0` is honored for every task remains unresolved.
+Evidence: [M5-S3491-ROUTE-REQUALIFICATION.md](M5-S3491-ROUTE-REQUALIFICATION.md).
+
+ORIGIN: diagnostic-only route and crash observations; no audio state,
+selector value, or task field was rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Re-qualify the Session 3488 silent LLE/spin-yield route with the new
-   `0x80091060` witness. Only after both title controls fire, trace the
-   upstream selector/table producer feeding `0x80091074`. Use a
-   single batched retail/port discriminator keyed by the selected source
-   families (`0x80171CE0`, `0x80173B20`, `0x8018DD30`), the preceding selector
-   load, and the same title origin. Positive controls must fire in both arms;
-   a matching producer input closes the selector boundary, while a
-   route-exclusive producer value selects the next missing contract edge.
-2. Keep the Session 3488 silent route as the qualification baseline; do not
+1. Audit the audio-dispatch gate for the prescribed silent route. Confirm in
+   one build/run whether `ROGUESQ_AUDIO_UCODE=0` reaches `musyx_stub` for the
+   failing pre-title task or still enters `fillSampleStreamRange`; use the
+   existing audio-dispatch marker and the crash PC as the discriminator.
+   Do not change audio behavior in this audit.
+2. After the route is re-qualified and both selector controls fire, trace the
+   upstream selector/table producer feeding `0x80091074` with one batched
+   retail/port discriminator keyed by source family and title origin.
+3. Keep the Session 3488 silent route as the qualification baseline; do not
    repeat the audio-disabled reachability run unchanged.
 3. Retain the Session 3486 pointer-word result; do not repeat the exact
    pointer-word writer histogram unchanged.

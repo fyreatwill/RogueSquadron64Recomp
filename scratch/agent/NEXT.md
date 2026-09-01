@@ -1,27 +1,33 @@
-# NEXT work unit — re-qualify silent route for selector-load capture
+# NEXT work unit — audit silent-route audio dispatch before selector capture
 
-HYPOTHESIS-ID: m5-task-field-writer
+HYPOTHESIS-ID: m5-silent-audio-dispatch-gate
 
-Session 3490 added the selector-load witness, but the port arm did not reach
-the title phase, so the selector discriminator is not evaluable.
+Session 3491 reproduced the pre-title failure in both a 30-second prescribed
+arm and a 60-second corrective retry. Both used `ROGUESQ_AUDIO_UCODE=0`; the
+first stopped at guest PC `0x8000834C` in `spTaskSchedulerThread`, and the
+second crashed at `fillSampleStreamRange+932` below `musyxSynthFrame`. No title
+controls or selector rows fired.
 
 Competing hypotheses and discriminating outcomes:
 
-- `H-SilentRouteNondeterminism`: the silent route occasionally stalls in 640;
-  a retry reaches title and fires both controls.
-- `H-RecipeMismatch`: the capture recipe differs materially from Session 3488;
-  restoring its exact environment reaches title and fires both controls.
-- `H-BuildRegression`: the newly linked generated call changes the route;
-  a probe-off same-binary arm reaches 640 while the probe-on arm does not.
+- `H-SilentGateHonored`: `ROGUESQ_AUDIO_UCODE=0` dispatches the failing task to
+  `musyx_stub`; the audio-dispatch marker appears and no
+  `fillSampleStreamRange` crash occurs.
+- `H-SilentGateBypassed`: the failing task still enters real MusyX processing;
+  the marker is absent and `fillSampleStreamRange` remains the crash site.
+- `H-NonAudioSchedulerFault`: the crash is independent of audio dispatch;
+  the same task reaches a non-MusyX scheduler/guest fault when the dispatch
+  marker is positively shown.
 
-Discriminating measurement: run the same binary with the selector-load probe
-enabled, requiring the title transition and both
-`m5-selector-load-control` and `m5-selector-writer-control` markers. If title
-is reached and controls fire, proceed to the planned load/source join. If an
-exact-recipe retry reaches title, select `H-RecipeMismatch`; if a probe-off
-same-binary arm also stalls at 640, select `H-SilentRouteNondeterminism` or
-`H-BuildRegression` only after that route-specific comparison.
+Discriminating measurement: in one instrumented build/run, enable the
+existing audio-dispatch log alongside the route and phase logs, and capture
+the first pre-title audio task through termination. A `musyx_stub` marker
+paired with a later non-MusyX crash selects `H-NonAudioSchedulerFault`; no
+marker plus `fillSampleStreamRange` selects `H-SilentGateBypassed`; a stub
+marker with no crash and title controls selects `H-SilentGateHonored`.
 
-Exact command: `zsh scratch/agent/run_s3490_m5_upstream_selector.sh` after
-restoring the Session 3488 environment; keep the SIGKILL watchdog and run from
-`build/`. Do not build another selector instrument until title controls fire.
+Exact command: create one batched route capture from the existing
+`run_s3490_m5_upstream_selector.sh` environment, adding only the documented
+audio-dispatch env var; run from `build/` with a SIGKILL watchdog. Ask the
+retail oracle for the same-task dispatch ground truth before adding any new
+port hook. Do not build another selector instrument until title controls fire.

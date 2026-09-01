@@ -132444,3 +132444,24 @@ hypothesis. Evidence: `docs/M5-S3490-UPSTREAM-SELECTOR-LOAD.md` and
 
 ORIGIN: the witness observes selector index, table address, loaded value, and
 register context; it does not rewrite, skip, or validate selector state.
+
+## Session 3491 (2026-08-31) — re-qualified the silent selector-load route
+
+The prescribed silent LLE/spin-yield route was retried with the new
+`0x80091060` selector-load witness. The 30-second arm crashed before title at
+guest PC `0x8000834C`, with host `spTaskSchedulerThread+9556`; selector-load
+and selector-writer controls and rows were zero. A corrective 60-second retry
+of the same route also crashed before title, at
+`fillSampleStreamRange+932` below `musyxRenderVoiceSamples` and
+`musyxSynthFrame`, again with zero title controls and rows.
+
+This makes the route failure reproducible and rules out watchdog duration as
+its explanation. It selects the immediate audio/scheduler qualification
+blocker, while the selector discriminator remains unevaluable. It does not
+establish whether `ROGUESQ_AUDIO_UCODE=0` was honored for every task; that is
+the next probe. Evidence: `docs/M5-S3491-ROUTE-REQUALIFICATION.md` and
+`scratch/agent/s3490_m5_upstream_selector/` plus
+`scratch/agent/s3490_m5_fixed_retry/`.
+
+ORIGIN: diagnostic-only route and crash observations; no audio state,
+selector value, or task field was rewritten, skipped, or validated.
