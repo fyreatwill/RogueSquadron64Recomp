@@ -2,7 +2,16 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3563 (2026-09-01).
+documents are listed below. Updated for session 3564 (2026-09-01).
+
+Session 3564 closed the immediate image-task DMEM-producer absence question
+on a target-valid standalone image arm. Title and hangar controls fired, and
+the census observed nonzero vector-store staging activity in both target DMEM
+windows, followed by repeated zero-valued RDRAM-to-DMEM DMAs and zero stage
+payload/destination hashes. This refutes `H-DmemProducerMissing` and selects
+`H-DmemProducerWrong` at the staging/clear boundary as a single-source port
+result. The next boundary is the source and ordering of those zero DMAs. See
+[M5-S3564-IMAGE-DMEM-PRODUCER.md](M5-S3564-IMAGE-DMEM-PRODUCER.md).
 
 Session 3562 closed the target-validity question for the downstream image-task
 contract on a standalone image arm. The same-build pair was route-invalid in
@@ -508,11 +517,12 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. M5 Step 3 image-task producer: identify the first producer of the image
-   task's DMEM payload before its legitimate zero-valued DMA. The target-valid
-   arm showed matching zero source-DMEM, DMA-payload, and destination hashes;
-   do not rewrite output or PCM state. The next census must cover the producer
-   stores/transforms feeding DMEM `0x6F0..0x9F0` and `0xCB0..0xE48`.
+0. M5 Step 3 image-task staging/clear: identify the source and ordering of the
+   zero-valued RDRAM-to-DMEM DMAs that overwrite the image-task windows. The
+   target-valid arm observed nonzero vector staging before those DMAs, then
+   zero stage-2/3 payload and destination hashes. Do not rewrite output or PCM
+   state. The next census must join each zero DMA's source range and ordering
+   to the preceding DMEM stores and source-range writer.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -547,11 +557,13 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 image-task producer qualification. Session 3563
-selected `H-StageWriterMissing`: the target-valid standalone image arm reached
-both title and hangar with all controls live, but the legitimate stage DMA
-carried zero source-DMEM payloads and no CPU writer rows were observed. The
-next witness must identify the first producer feeding the stage DMEM windows.
+The active work unit is now M5 Step 3 image-task staging/clear qualification.
+Session 3564 selected `H-DmemProducerWrong`: target DMEM windows received
+nonzero vector-store staging activity, but repeated zero-valued source DMAs
+preceded zero stage payload and destination hashes. The next witness must
+identify the source and ordering of those zero DMAs. Session 3563's
+`H-StageWriterMissing` result is superseded at this narrower scope because its
+writer census did not include the upstream DMEM stores; no behavior changed.
 Session 3562
 selected `H-ImageTaskOutputGap`: a target-valid standalone image arm had zero
 valued stage rows with no source/consumer joins, despite completion/DMA and
@@ -732,6 +744,7 @@ the oracle did not provide a matching register tuple.
 
 Latest output boundary:
 
+- [M5-S3564-IMAGE-DMEM-PRODUCER.md](M5-S3564-IMAGE-DMEM-PRODUCER.md)
 - [M5-S3539-SOURCE-WRITER.md](M5-S3539-SOURCE-WRITER.md)
 - [M5-S3536-OUTPUT-CONTRACT.md](M5-S3536-OUTPUT-CONTRACT.md)
 - [M5-S3552-HEAP-BRANCH.md](M5-S3552-HEAP-BRANCH.md)

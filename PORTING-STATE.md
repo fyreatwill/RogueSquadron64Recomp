@@ -134283,3 +134283,31 @@ destination for this run, but remains single-source port evidence because
 the retail oracle could not run. No mitigation or behavior change was made.
 
 See `docs/M5-S3563-IMAGE-STAGE-WRITER.md`.
+
+## Session 3564 (2026-09-01) — image-task DMEM had a productive staging path
+
+The oracle preflight was unavailable because this checkout lacks both the
+retail ROM and its documented debugger core. The existing target-valid
+standalone image capture was rebuilt once and reached title VI
+`0x00790400`/1024 and hangar VI `0x006AB400`/512. Positive controls fired:
+both target phases, image-stage rows, RSP DMA rows, PCM source/consumer rows,
+audio returns, and the DMEM source-hook control. No crash marker appeared
+before the deliberate SIGKILL at the end of the 75-second capture.
+
+The phase-keyed census observed 2,048 bounded vector-store rows across the
+target phases and 4,096 bounded source-window rows, including repeated
+RDRAM-to-DMEM DMAs overlapping the target windows. The DMEM windows were
+nonzero during staging, but zero-valued DMAs from the `0x178C80`/`0x178D80`
+source family repeatedly left the exact stage spans zero; later stage-2/3
+source, DMA, and destination hashes all remained zero. This refutes
+`H-DmemProducerMissing` and selects `H-DmemProducerWrong` at the staging/clear
+boundary. It rules out an absent producer, but does not yet identify the
+legitimate writer or ordering of the zero source range; the next discriminator
+is that source/range/order join. This is single-source port evidence because
+the retail oracle was unavailable.
+
+No game state, task field, output, gate, slot, PCM, or writeback behavior
+changed. See `docs/M5-S3564-IMAGE-DMEM-PRODUCER.md`.
+
+ORIGIN: diagnostic-only DMEM store/DMA/source-window observations; no
+mitigation or value rewrite was added.
