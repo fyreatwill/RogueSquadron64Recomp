@@ -2,7 +2,16 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3559 (2026-09-01).
+documents are listed below. Updated for session 3560 (2026-09-01).
+
+Session 3560 refuted shared contention as the explanation for the s3559 image
+route failure. A same-build image/silent pair and a standalone image arm all
+passed controls, reached title VI 1024 and hangar VI 512, and continued task
+handoff, audio-return, and PCM source/consumer activity. The deeper
+caller/input and route-edge table was not enabled, so
+`H-ImageInputBoundary` versus `H-ImageRouteGate` remains unevaluable. No
+behavior changed. See
+[M5-S3560-IMAGE-ROUTE-CONTENTION.md](M5-S3560-IMAGE-ROUTE-CONTENTION.md).
 
 Session 3559 attempted the planned same-build image-versus-silent output join
 after an independent retail control. Retail passed the whole-RDRAM positive
@@ -465,10 +474,11 @@ to be rewritten as a diagnostic mitigation.
 ## Next steps
 
 0. M5 Step 3 route repair: qualify the pre-title image-arm boundary at guest
-   PC `0x8000834C` with a complete caller/input/phase table. Keep the silent
-   arm as the same-build route control and retain the independent retail
-   whole-RDRAM and target-phase controls. Do not interpret image-output joins
-   or change behavior until the image arm reaches title and hangar.
+   PC `0x8000834C` with the missing deeper caller/input/route table. Keep the
+   silent arm as the same-build route control and retain the independent retail
+   whole-RDRAM and target-phase controls. Shared contention is refuted; do not
+   interpret image-output joins or change behavior until the first route/input
+   divergence is attributed.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not

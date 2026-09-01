@@ -134182,3 +134182,31 @@ scratch/agent/s3559_m5_image_output_single/run.log.
 
 ORIGIN: diagnostic-only retail watches, route controls, and output-join
 observations; no mitigation or value rewrite was added.
+
+## Session 3560 (2026-09-01) — image route did not depend on paired contention
+
+Ran the required retail control first. The whole-RDRAM positive control fired
+10,000 times, retail reached title VI 1024 and hangar VI 512, and the retail
+watch at `0x8000834C` had zero hits. This validates the control and does not
+attribute the port boundary to retail.
+
+Ran the validated same-build LLE-solo/spin-yield/autopilot route with image and
+silent arms together, then an image arm alone. Both paired arms reached title
+1024 and hangar origin `0x006AB400`; the standalone image arm did too. Paired
+image produced 512 task handoffs, 527 audio returns, and 96 PCM source and
+consumer rows. Standalone image produced 512 handoffs, 528 returns, and 97
+source and consumer rows. No crash marker or `0x8000834C` last-PC failure
+appeared.
+
+This refutes `H-SharedContention` with paired-versus-standalone port evidence.
+It does not split `H-ImageInputBoundary` from `H-ImageRouteGate`, because the
+run did not enable the deeper caller/input/HMT/texture/route table. No game
+state, output, gate, or task field was changed. See
+`docs/M5-S3560-IMAGE-ROUTE-CONTENTION.md`.
+
+Evidence: `docs/M5-S3560-IMAGE-ROUTE-CONTENTION.md`,
+`scratch/agent/s3560_image_route/oracle.log`, and the paired/standalone run
+logs under `scratch/agent/s3560_image_route/`.
+
+ORIGIN: diagnostic-only route controls and task/return/PCM observations; no
+mitigation or value rewrite was added.
