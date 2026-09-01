@@ -1,48 +1,42 @@
-# NEXT work unit — attribute the port-side output writer/order edge
+# NEXT work unit — identify the port-side zero-payload source writer
 
-HYPOTHESIS-ID: m5-output-contract-boundary
+HYPOTHESIS-ID: m5-output-source-writer
 
-Session 3537 selected `H-MissingOutputWriter`/`H-OutputContractGap`: retail
-produced legitimate nonzero PCM/image output at the watched destinations,
-while the real-audio port reached both title and hangar and completed the
-corresponding joins with zero payloads. No output state was changed.
+Session 3538 completed the batched output writer/order table. Retail passed
+the whole-RDRAM control, reached title 1024 and hangar 512, and wrote
+nonzero PCM bytes. The real-audio port reached both phases with live source,
+consumer, image-stage, and completion controls; all sampled output writes
+were RSP DMA rows with zero source and destination payloads, there were zero
+guest/CPU writer rows, and joins were stage-only with no ordering violation.
+See `docs/M5-S3538-OUTPUT-WRITER.md`.
 
-Next unit: add one batch instrument that phase-keys every write path into the
-observed port output destinations and joins it to source-DMA, image-stage,
-completion, PCM source, and PCM consumer rows. Cover CPU stores, RSP DMA
-writebacks, and any host callback copy. Use the retail PCs
-`0x800078EC`, `0x80018F5C`, and `0x80018F60` only as attribution anchors, not
-as values to copy.
+Next unit: add one phase-keyed producer census immediately upstream of the
+zero RSP source. Cover every CPU/RSP/host write into the image-task source
+DMEM ranges and the PCM source state, and join each row to the existing
+`audtask-image-stage`, source-DMA, completion, PCM-source, and PCM-consumer
+ordinals. Keep the retail PCs `0x800078EC`, `0x80018F5C`, and `0x80018F60` as
+attribution anchors only.
 
 Competing hypotheses and discriminator:
 
-- `H-PortMissingWriter`: the port has no CPU/host writer for the nonzero
-  output edge; select the first missing port writer and its legitimate source.
-- `H-PortOrdering`: the port writer exists but a later zero DMA/clear overwrites
-  it; select the ordered writer/overwrite pair.
-- `H-PortOutputParity`: port and retail writers/order are equivalent and the
-  hash observation is not comparable; keep the edge open for a new join.
-- `H-CaptureInvalid`: a positive control, target phase, or join key is absent.
+- `H-PortSourceAbsent`: no legitimate producer reaches the source before the
+  RSP DMA; select the first missing producer edge.
+- `H-PortSourceZeroed`: a producer runs but writes zero before the DMA; select
+  its writer PC and source value.
+- `H-PortSourceOverwritten`: a nonzero producer runs, then a later clear
+  zeroes the source; select the ordered writer/clear pair.
+- `H-CaptureInvalid`: a positive control or target-phase join is absent.
 
-The discriminating measurement is one table in one run: phase, destination,
-writer kind/PC, payload hash/nonzero count before and after each writer, and
-the nearest source/consumer event. Positive controls must include whole-RDRAM
-port writes and the existing image/PCM route controls; both title
-`0x00790400/1024` and hangar `0x006AB400/512` must be present. Missing writer
-selects `H-PortMissingWriter`; nonzero-then-zero ordering selects
-`H-PortOrdering`; matching nonzero rows selects `H-PortOutputParity`; failed
-controls select `H-CaptureInvalid`.
+The discriminating table is one run: phase, source address/range, writer
+kind/PC, pre/post hash and nonzero count, RSP-DMA event, and nearest consumer.
+A missing producer selects `H-PortSourceAbsent`; nonzero-then-zero selects
+`H-PortSourceOverwritten`; a live zero-valued producer selects
+`H-PortSourceZeroed`; failed controls select `H-CaptureInvalid`.
 
 Exact starting commands:
 
-    sed -n '1,260p' tools/oracle/README.md
-    rg -n "pcm|DMA|image-stage|writer|consumer|memset|memcpy" src lib/N64ModernRuntime --glob '!**/*.log'
-    zsh scratch/agent/run_s3537_m5_output_writer.sh
-
-Build once after the complete table is designed:
-
+    rg -n "audtask-image-stage|pcm-boundary|pcm-writer|DMA|memset|memcpy" src/main tools --glob '!**/*.log'
     cmake --build build -j8
 
-Run the full table with the validated real-audio LLE/spin-yield/autopilot
-route and the independent retail oracle controls. Do not repeat the silent
-arm, copy retail bytes, or add a single-field diagnostic.
+Run one real-audio LLE/spin-yield/autopilot capture with the independent
+retail controls. Do not change output state or copy retail bytes.

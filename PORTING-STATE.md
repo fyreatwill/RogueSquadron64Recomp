@@ -133600,3 +133600,26 @@ destinations, while port dispatch/completion and the corresponding joins are
 live but payloads remain zero. It rules out missing task dispatch, missing SP
 completion, and a simple target-phase capture failure. It does not identify
 the port-side writer or ordering, so no output state was changed.
+
+## Session 3538 (2026-09-01) — qualified port output source writer boundary
+
+Ran the prescribed output-writer/order discriminator after first running the
+independent retail oracle with a whole-RDRAM positive control. Retail's
+control fired 7,175,370 writes, reached title VI `0x00790400/1024` and hangar
+VI `0x006AB400/512`, wrote nonzero PCM ranges (`12115/12288`, `760/768`, and
+`757/768` nonzero bytes), and observed `0x800078EC` in title plus
+`0x80018F5C`/`0x80018F60` in hangar. The build completed cleanly.
+
+The same-build real-audio LLE/spin-yield/autopilot port reached both target
+phases. Phase, source, consumer, image-stage, and completion controls were
+live. The batch produced 1,024 phase-qualified output-writer rows and 5,104
+image-stage joins. Every output write was an RSP DMA (`kind=2`, `pc=0`) whose
+source and destination payloads were zero (`fnv=F59C39C5`, `nz=0`); there were
+zero guest/CPU writer rows. Joins classified as `stage-only`, with no
+ordering violation.
+
+This selects `H-PortMissingWriter` at the nonzero payload-producer edge and
+rules out missing task dispatch/completion, a later zero overwrite, and an
+invalid target-phase capture. The DMA writer is present but receives zero
+source data; the legitimate source writer remains open. No output state was
+changed.
