@@ -133539,3 +133539,32 @@ selector split, but does not identify the next image-task/output edge.
 ORIGIN: retail ELF semantics plus same-build port phase/route evidence; the
 legitimate writer is `osAiSetFrequency`, and the change matches its actual
 programmed-frequency return contract.
+
+## Session 3536 (2026-08-31) — qualified image-task output contract
+
+Ran one rebuilt, phase-gated real-audio port arm together with an independent
+retail oracle. The oracle whole-RDRAM positive control fired 10,329 times and
+retail reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`; target
+execution watches also fired at `0x80033FCC` (10,144), `0x80090E04` (13,568),
+and `0x80029D20` (6). The oracle task dump was not phase-qualified and was
+discarded as task-field evidence.
+
+The port reached both target phases with live controls. The real image arm
+dispatched 86 tasks, recorded task ABI, DMA-range, image-stage, completion,
+audio/SP-route, host-boundary, and paired PCM source/consumer rows. Image
+tasks returned at generated `break_pc=0x1328` with `exit=1`; SP completion,
+external delivery, and guest receive were observed. Every sampled image-stage
+and PCM payload was zero (`fnv=0xF59C39C5`, `nz=0`) in title and hangar.
+
+This selects `H-ContractGap` at the output-payload scope and rules out a
+missing dispatch or SP-completion edge for this run. It does not identify a
+writer, prove zero is legitimate, or authorize a writeback/state change.
+`H-CaptureInvalid` is ruled out by the positive controls; `H-OutputParity` is
+not accepted because matching zero payloads are not correctness evidence.
+Next work is a new phase-qualified source-payload writer/consumer join with
+independent retail writer attribution. Details:
+`docs/M5-S3536-OUTPUT-CONTRACT.md`.
+
+ORIGIN: diagnostic-only task, DMA, completion, route, host-boundary, and PCM
+observations; no audio state, task field, selector value, writeback, or output
+was rewritten, skipped, or validated.

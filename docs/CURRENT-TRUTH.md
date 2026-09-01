@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3535 (2026-08-31).
+evidence documents are listed below. Updated for session 3536 (2026-08-31).
 
 ## Current state
 
@@ -194,6 +194,17 @@ preserves the qualified route. The next M5 discriminator is an output/task
 comparison, not another AI-return probe. See
 [M5-S3535-AI-FREQUENCY-VALIDATION.md](M5-S3535-AI-FREQUENCY-VALIDATION.md).
 
+Session 3536 qualified the output/task contract with an independent retail
+oracle and a same-build real-audio port run. Whole-RDRAM and both port phase
+controls were live; retail reached title and hangar and observed the target
+task/mixer PCs. The port image arm dispatched and completed tasks, performed
+phase-keyed image-stage DMEM/DMA work, delivered SP completion, and produced
+paired PCM source/consumer rows in both phases. Every sampled image-stage and
+PCM payload was nevertheless zero (`fnv=0xF59C39C5`, `nz=0`) at both endpoints.
+This selects `H-ContractGap` at the payload scope, not a missing dispatch or
+completion edge. No writer/value was identified, so no output state may be
+changed. See [M5-S3536-OUTPUT-CONTRACT.md](M5-S3536-OUTPUT-CONTRACT.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -220,9 +231,9 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Identify one missing image-task/output contract edge using the existing
-   phase-keyed task/DMEM/DMA/PCM joins plus independent retail ground truth;
-   only then implement that single selected edge.
+1. Identify one phase-qualified source-payload writer/consumer edge behind the
+   zero image-stage and PCM payloads, using a new independent retail writer
+   attribution; only then implement that single selected edge.
 2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
@@ -246,8 +257,8 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the internal return contract feeding the
-`0x80091CC8` setup writer on the real-audio route. The
+The active work unit is now the image-task output payload contract. The
+`0x80091CC8` internal return contract is closed by Sessions 3534–3535. The
 silent-arm route defect is parked separately.
 
 For the silent-arm route:
@@ -389,6 +400,10 @@ live-store watches were positive, and the port store context was observed, but
 the oracle did not provide a matching register tuple.
 
 ## Evidence index
+
+Latest output boundary:
+
+- [M5-S3536-OUTPUT-CONTRACT.md](M5-S3536-OUTPUT-CONTRACT.md)
 
 Latest selector boundary:
 
