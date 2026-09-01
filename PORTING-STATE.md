@@ -132948,3 +132948,21 @@ four captured logs under `scratch/agent/`.
 ORIGIN: diagnostic-only oracle and port predecessor/store observations; no
 selector, table, audio, task, or output value was rewritten, skipped, or
 validated.
+
+## Session 3513 (2026-08-31) — compacted current truth during maintenance
+
+The maintenance gate found `docs/CURRENT-TRUTH.md` at 60,747 bytes. I compacted
+the active-state document to retain the current M5 selector-table boundary,
+the competing hypotheses and discriminator, durable operating rules, and
+links to the latest evidence. Long chronological detail remains in this
+append-only ledger and the project overview. The backlog is now one monotonic
+sequence rather than several colliding numbered lists.
+
+No build, runtime, oracle capture, or soak was run, as required for a
+maintenance iteration. The new current-truth file is 9,126 bytes (checked
+after the edit), a net reduction of more than 200 lines. Session 3512's
+unevaluable predecessor watches were retained as a superseded measurement,
+not promoted to a runtime conclusion.
+
+ORIGIN: documentation-only maintenance; no selector, table, audio, task, or
+output value was rewritten, skipped, or validated.
