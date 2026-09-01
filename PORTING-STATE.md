@@ -133211,3 +133211,27 @@ selector, task, or output state was rewritten or skipped.
 
 ORIGIN: the new caller-entry witness observes caller registers and phase only;
 it performs no guest-memory or control-flow mutation.
+## Session 3523 (2026-08-31) — requalified selector route gate
+
+Ran the independent retail oracle with whole-RDRAM and selector-span positive
+controls plus the selector execution watches. The oracle controls fired and
+the retail run reached title, but the selected 0x80029E78 watch did not fire
+in this undriven 70-second route, so it supplied route qualification only.
+
+Ran the corrected real-audio/LLE ungated+solo/spin-yield/autopilot port arm
+with the existing caller, producer, table, producer-context, store-context,
+AI-callsite, AI-boundary, and precall diagnostics. The port reached title VI
+1024 and hangar VI 512. Startup and phase controls were live; in hangar the
+producer-context and both selector-store controls fired, while the known
+setDisplayMode/reapplyDisplayMode route witness appeared only in title and
+the known AI-callsite and AI-boundary rows were absent.
+
+This selects a phase-gated route-path difference at the known caller scope:
+the stores are live in hangar without the known display-mode caller path. It
+rules out the prior capture-invalid explanation and a target-phase argument
+mismatch at that caller, but does not identify an alternate caller because no
+alternate caller was instrumented in this unit. No audio, selector, task, or
+output state was rewritten or skipped.
+
+ORIGIN: all session-3523 probes are diagnostic-only; they observe phase,
+registers, and existing selector events without changing guest state.

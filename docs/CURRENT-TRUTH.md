@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3522 (2026-08-31).
+documents are listed below. Updated for session 3523 (2026-08-31).
 
 ## Current state
 
@@ -70,6 +70,16 @@ stores reached hangar and captured `s0=0x12`, `s1=0x5622`, and values
 register rows. The earlier `0x8009192C` candidate was absent and is not a
 valid predecessor on this route, so parity/divergence remains unresolved.
 
+Session 3523 re-qualified the real-audio port with corrected control names.
+The run reached title 1024 and hangar 512; startup, title, hangar, producer,
+producer-context, table, and selector-store controls were live. The known
+`setDisplayMode`/`reapplyDisplayMode` route witness appeared only in title,
+and neither known AI callsite nor AI-boundary row appeared in hangar, while
+the two selector stores and their producer context did. This selects a
+phase-gated route-path difference at the known caller scope, not a target
+phase argument mismatch. It does not identify an alternate caller, which was
+not instrumented in this unit.
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -96,32 +106,26 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Re-qualify the real-audio port route with the new `setDisplayMode` /
-   `reapplyDisplayMode` caller-entry witness before interpreting route-gate or
-   alternate-caller rows. Session 3522's corrected canonical arm crashed at
-   `0x8000B650`, so its port discriminator was invalid; retain the independent
-   retail `0x80029E78` and whole-RDRAM/selector controls.
-8. Identify the route gate or alternate caller that suppresses the two known
-   port AI callsites in hangar once the port reaches that phase. The static
-   census finds no additional direct generated caller; distinguish a
-   route-gated enclosing caller from a semantic retail-equivalence mismatch
-   without rewriting audio or selector state.
-2. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
+1. Identify the enclosing route gate or alternate caller after Session 3523
+   selected a phase-gated path difference: instrument the already-known
+   `runVideoFrameTick` callers/branch around `reapplyDisplayMode`, and pair it
+   with the same title/hangar controls. Do not rewrite audio or selector state.
+3. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.
-3. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
+4. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
    baseline; do not repeat that arm unchanged.
-4. Keep Sessions 3494–3498 real-audio route results, Session 3492 dispatch,
+5. Keep Sessions 3494–3498 real-audio route results, Session 3492 dispatch,
    Session 3488 silent qualification, and Sessions 3482–3486 producer/pointer
    captures as baselines; do not repeat unchanged captures.
-5. Keep the controlled phase/PC/ordinal join rule: sequential animated-scene
+6. Keep the controlled phase/PC/ordinal join rule: sequential animated-scene
    A/B rows are not evidence. A missing positive control makes a comparison
    unevaluable; matching fields close a boundary and the first divergent field
    selects the next producer edge.
-6. M5 Step 3 remains gated until one output comparison names a missing
+7. M5 Step 3 remains gated until one output comparison names a missing
    image-task/output contract edge. `docs/M5-AUDIO-PLAN.md` is complete;
    configured-host PatchesLib validation is unavailable in this Unix checkout.
-7. After M5 closes or a new discriminator is found, resume only systematic M3
+8. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep retail-entry, hangar `0x8000` Y/accumulator, and
    SP-yield/MORT publication threads parked. Generated-symbol renaming remains
    last priority and closed at its measured scope.
@@ -174,6 +178,13 @@ Session 3521 selected `H-PortCallMissing`: both labeled generated calls had
 startup controls but zero hangar rows, while retail's independent watch and the
 port producer/store controls were live. The next discriminator is a route-gate
 or alternate-caller census, not another repeat of these two callsites.
+
+Session 3523 selected `H-RouteGate` at the qualified caller scope: the
+real-audio port reached title and hangar with live producer/store controls,
+but the known display-mode route witness and known AI callsite/boundary rows
+were title-only or absent in hangar. This is a phase-gated path result, not a
+proof that an alternate caller exists; the next discriminator is the enclosing
+`runVideoFrameTick` branch/caller or a separately instrumented alternate path.
 
 Session 3514 adds a retail-qualified mixer-entry candidate at `0x80090E04`,
 but the port did not reach its target phase on either tested arm. See
