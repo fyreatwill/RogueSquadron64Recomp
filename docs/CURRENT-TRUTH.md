@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3523 (2026-08-31).
+documents are listed below. Updated for session 3524 (2026-08-31).
 
 ## Current state
 
@@ -80,6 +80,16 @@ phase-gated route-path difference at the known caller scope, not a target
 phase argument mismatch. It does not identify an alternate caller, which was
 not instrumented in this unit.
 
+Session 3524 independently qualified that route boundary with a phase-keyed
+`runVideoFrameTick` caller/guard table. Retail again reached title and hangar
+and executed `0x80029E78` in hangar. The port's positive control and title
+rows were live, but no known direct caller or guard row appeared in hangar,
+while producer-context, both selector stores, and mixer entry remained live.
+All four generated direct callers were covered. This selects a route-path
+difference at static caller scope: an enclosing route gate or a
+non-generated/indirect alternate path reaches the stores. See
+[M5-S3524-SELECTOR-TICK-ROUTE.md](M5-S3524-SELECTOR-TICK-ROUTE.md).
+
 M5 remains the active engineering thread. The status-03 worker/clear contract,
 task ABI, completion/delivery, callback table, field348 input-to-clear edge,
 send/receive zero-message boundary, first consumer boundary, source-table
@@ -106,10 +116,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-1. Identify the enclosing route gate or alternate caller after Session 3523
-   selected a phase-gated path difference: instrument the already-known
-   `runVideoFrameTick` callers/branch around `reapplyDisplayMode`, and pair it
-   with the same title/hangar controls. Do not rewrite audio or selector state.
+1. Trace the immediate callers/entry boundary of selector stores
+   `0x8008F228` and `0x8008F264`, using the same retail execution watch and
+   port title/hangar controls. Distinguish a store reached without
+   `runVideoFrameTick` from an enclosing route gate. Do not rewrite audio or
+   selector state.
 3. Keep the silent-arm `fillSampleStreamRange` crash as a separate route
    defect. Do not infer target-phase behavior from the silent arm or treat it
    as evidence that the real-audio mixer boundary is broken.

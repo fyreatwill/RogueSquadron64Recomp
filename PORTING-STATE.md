@@ -133235,3 +133235,33 @@ output state was rewritten or skipped.
 
 ORIGIN: all session-3523 probes are diagnostic-only; they observe phase,
 registers, and existing selector events without changing guest state.
+## Session 3524 (2026-08-31) — qualified selector tick route boundary
+
+Ran the independent retail oracle with whole-RDRAM positive control and the
+existing `0x80029E78` execution watch. Controls passed; retail reached title
+1024 and hangar 512, and the watch fired in hangar from `0x80029E64` with the
+known context.
+
+Added a fixer-backed, diagnostic-only `runVideoFrameTick` route table covering
+all four generated direct callers, `advanceVideoFrame` return, and the three
+guards before `reapplyDisplayMode`. The first post-regeneration run showed
+the new control/title rows but lacked prior selector controls because those
+were incremental scripts. Applied the existing selector scripts, rebuilt, and
+reran the same real-audio canonical arm.
+
+The corrected port run reached title 1024 and hangar 512. The new table's
+positive control and five title rows were live, but it had zero hangar rows.
+Producer-context, both selector-store, and mixer-entry controls were live in
+hangar; the known route was title-only and the AI-boundary witness was absent.
+All four direct callers were covered statically.
+
+This selects a route-path difference at static caller scope: an enclosing
+route gate or a non-generated/indirect alternate path reaches the live stores
+without the known `runVideoFrameTick` path. It rules out capture invalidity
+and a target-phase argument mismatch at that known path, but does not yet
+distinguish gate from alternate path. The first regenerated build also exposed
+the missing existing host diagnostic symbol `rs64_s3352_m5_consumer_entry`; a
+documented diagnostic-only definition was restored so the build could link.
+
+ORIGIN: all session-3524 probes observe phase, PCs, arguments, and branch
+outcomes; no guest state or control flow was changed.

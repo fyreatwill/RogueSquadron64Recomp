@@ -979,6 +979,74 @@ extern "C" void rs64_m5_selector_route_caller(const char* name, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_s3352_m5_consumer_entry(uint8_t* rdram, uint32_t pc) {
+    (void)rdram;
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_CONSUMER_ENTRY");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    static bool control_seen = false;
+    if (!control_seen) {
+        control_seen = true;
+        std::fprintf(stderr,
+            "[m5-consumer-entry-control] pc=0x%08X width=%u origin=0x%06X\n",
+            pc, width, origin);
+        std::fflush(stderr);
+    }
+    if (!((width == 1024u && (origin == 0x00790400u || origin == 0x00790800u)) ||
+          (width == 512u && (origin == 0x006AB400u || origin == 0x006AB800u)))) return;
+    static uint32_t phase_seen = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase != phase_seen) { phase_seen = phase; rows = 0; }
+    if (rows >= 128u) return;
+    std::fprintf(stderr,
+        "[m5-consumer-entry] ordinal=%u phase=%u width=%u origin=0x%06X pc=0x%08X\n",
+        rows++, phase, width, origin, pc);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_selector_tick_edge(const char* edge, uint32_t pc,
+                                              uint32_t taken, uint32_t a0,
+                                              uint32_t a1, uint32_t a2,
+                                              uint32_t a3, uint32_t value) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SELECTOR_TICK");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    static bool control_seen = false;
+    if (!control_seen) {
+        control_seen = true;
+        std::fprintf(stderr,
+            "[m5-selector-tick-control] pc=0x%08X width=%u origin=0x%06X\n",
+            pc, width, origin);
+        std::fflush(stderr);
+    }
+    if (!((width == 1024u && (origin == 0x00790400u || origin == 0x00790800u)) ||
+          (width == 512u && (origin == 0x006AB400u || origin == 0x006AB800u)))) return;
+    static uint32_t phase_seen = 0xFFFFFFFFu;
+    static uint32_t rows = 0;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase != phase_seen) { phase_seen = phase; rows = 0; }
+    if (rows >= 256u) return;
+    std::fprintf(stderr,
+        "[m5-selector-tick] ordinal=%u phase=%u width=%u origin=0x%06X "
+        "edge=%s pc=0x%08X taken=%u a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X value=0x%08X\n",
+        rows++, phase, width, origin, edge ? edge : "?", pc, taken,
+        a0, a1, a2, a3, value);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_route_candidate(uint8_t* rdram, uint32_t pc,
                                            uint32_t caller, uint32_t s0,
                                            uint32_t s1, uint32_t a0,
