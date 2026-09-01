@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3580 (2026-09-01).
+notes are linked below. Updated for session 3581 (2026-09-01).
 
 ## Current state
 
@@ -21,10 +21,11 @@ Retail independently reaches the target phase, writes the watched source
 span, and repeatedly calls `0x800078E0` with `a2=0x80` and changing structure
 pointers from `0x800C825C`, unlike the port tuple. The target-phase retail
 source writer is `0x800078EC` and runs before the first observed target VI. A
-new oracle capture observed nonzero words in that target-phase source span,
-selecting a retail-versus-port stored-value divergence at the writer boundary.
-This is single-source oracle evidence; the producer and exact DMA ordering
-remain open.
+new oracle capture observed nonzero words and joined the
+`0x800052C4 -> 0x800078E0 -> 0x800078EC` path with changing buffer/length
+tuples. This selects a retail-versus-port stored-value divergence at the
+writer boundary; the earlier producer and exact DMA ordering remain open.
+This is single-source oracle evidence.
 
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
@@ -36,11 +37,11 @@ real-audio route is the comparison arm.
 The backlog is one monotonic sequence. Work only the first applicable item.
 
 1. M5 Step 3: independently qualify the nonzero retail source value and its
-   producer/order. The oracle selects nonzero target-phase words at
-   `0x800078EC`, but has no separate DMA event identifier and is one evidence
-   line. Use a new phase-gated table that joins the writer's source pointer,
-   post-value word, and first source-span DMA payload/order; exact command is
-   in `scratch/agent/NEXT.md`.
+   producer/order. The oracle selects nonzero target-phase words and joins
+   changing buffers and lengths through `0x800078EC`, but has no separate DMA
+   event identifier. Use the source-span writer histogram plus phase-gated
+   field table in `scratch/agent/NEXT.md`; keep DMA ordering open if no event
+   is exposed.
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -59,6 +60,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-RetailWriterOther | Refuted for the target-phase write; earlier setup writers are separate activity. |
 | H-RetailOrdering | Exact DMA ordering remains unmeasured. |
 | H-RetailValue | Nonzero target-phase words selected; parity against the port remains open. |
+| H-RetailProducer | `0x800052C4` is the immediate caller of `0x800078E0`; the earlier constructor of the nonzero words remains unresolved. |
+| H-RetailDmaOrder | No separate DMA event identifier was exposed; ordering remains open. |
 | H-CaptureInvalid | Refuted for this run: whole-RDRAM, source-span, writer-PC, and target-phase controls all fired. |
 
 The current work-unit slug is `m5-image-task-retail-source-writer`.
@@ -77,6 +80,11 @@ and evidence notes retain the full history.
   first 512-wide target VI at 48.5 s. Writer identity and pre-target order
   selected; ordinary watch rows did not report stored values, so value parity
   remains open. See [M5-S3579-RETAIL-SOURCE-WRITER.md](M5-S3579-RETAIL-SOURCE-WRITER.md).
+- **3581 — retail source producer/value:** controls fired; the target
+  transition joined `0x800052C4 -> 0x800078E0 -> 0x800078EC` with buffer/
+  length tuples and nonzero post-store words. No independent DMA event was
+  exposed, so producer construction and exact DMA order remain open. See
+  [M5-S3581-RETAIL-SOURCE-PRODUCER.md](M5-S3581-RETAIL-SOURCE-PRODUCER.md).
 - **3576 — retail predecessor input:** retail `0x800052C4` reached
   `0x800078E0` with varied lengths (`0x18`, `0x3C`, `0x208`, `0x4F0`,
   `0x1008`, `0x8000`), not the port tuple. This selected an observed-edge

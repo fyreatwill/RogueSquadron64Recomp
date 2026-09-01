@@ -134653,3 +134653,25 @@ single-source oracle result; see `docs/M5-S3580-RETAIL-SOURCE-VALUE.md`.
 
 ORIGIN: diagnostic-only retail source-value qualification. No mitigation was
 added.
+
+## Session 3581 (2026-09-01) — qualified retail source producer context
+
+Ran one corrected 60-second retail oracle capture after the prescribed ROM
+path was found to be stale. Whole-RDRAM and source-span controls fired with
+10,674 and 674 writes. VI tracing reached the 1024-to-512 transition at
+47.4s (VI 2792, origin `0x006AB800`) and the first target origin
+`0x006AB400` at 48.5s (VI 2825). The phase-gated execution rows joined
+`0x800052C4 -> 0x800078E0 -> 0x800078EC` with buffers `0x80656010`/length
+`0x18`, then `0x80656040`/length `0x3C`; a separate `0x8002BEEC` predecessor
+reached `0x800078EC` with buffer `0x80656090`/length `0x8000`. Post-value
+rows included nonzero words such as `0x00941376`, `0x008317BD`, and
+`0x0042154D`.
+
+This qualifies nonzero retail target-phase values and the immediate writer
+context. It rules out a target-phase all-zero store, but does not identify
+the earlier constructor of those words or a separate DMA event, so exact
+DMA-versus-writer ordering remains open. This is single-source oracle
+evidence; no runtime behavior changed. Capture: `/tmp/rs64_next_oracle.log`.
+
+ORIGIN: diagnostic-only retail producer/value qualification. No mitigation
+was added.
