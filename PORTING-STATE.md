@@ -132966,3 +132966,32 @@ not promoted to a runtime conclusion.
 
 ORIGIN: documentation-only maintenance; no selector, table, audio, task, or
 output value was rewritten, skipped, or validated.
+## Session 3514 (2026-08-31) — qualified mixer-entry retail boundary; port remained pre-title
+
+The independent retail oracle ran first with a whole-RDRAM positive control,
+the selector-store control at physical `0x00149758..0x00149760`, and a new
+execution range covering `0x80090E04..0x80091034`. Whole-RDRAM recorded
+2,589,720 writes; selector stores recorded five writes at each writer PC; and
+the retail `musyxMixActiveVoices` entry `0x80090E04` was live in title with
+344 executions. The selector load and writer each had 1,960 executions.
+
+Added the regeneration-safe port witness `rs64_m5_mix_entry` at
+`0x80090E04`, with a phase-scoped positive-control line and bounded register
+rows. The real-audio/LLE/spin-yield/autopilot arm crashed at 20.9 seconds in
+the known audio-thread `fillSampleStreamRange` family
+(`last-guest-pc=0x8000834C`) before target VI. The required silent-control
+retry reached only VI 320/640 and produced no title/hangar, mixer, or selector
+rows and no crash/abort marker.
+
+This does not select parity, divergence, later mutation, or capture invalidity
+for the cross-runtime mixer tuple because neither port arm reached a comparable
+phase. It rules out only that the join is currently runnable on those two
+unchanged arms. The pre-title route blocker is the next work unit; zero port
+rows are not evidence.
+
+ORIGIN: diagnostic-only oracle and port execution witnesses; no audio state,
+selector, task field, or output value was rewritten, skipped, or validated.
+
+Evidence: `scratch/agent/oracle_s3514_m5_new_boundary.log`,
+`scratch/agent/s3514_m5_mix_entry/port.log`, and
+`scratch/agent/s3514_m5_mix_entry_silent/port.log`.

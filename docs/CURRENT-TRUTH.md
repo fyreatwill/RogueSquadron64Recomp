@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for maintenance session 3513 (2026-08-31).
+documents are listed below. Updated for session 3514 (2026-08-31).
 
 ## Current state
 
@@ -51,19 +51,23 @@ to be rewritten as a diagnostic mitigation.
    the same boundary, then run the validated real-image/LLE/spin-yield/
    autopilot route with title and hangar buckets. Join by hangar origin,
    writer PC, store ordinal, value, and predecessor-to-writer context.
-2. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
+2. Resolve or newly qualify the pre-title audio route before attempting the
+   mixer-entry join: Session 3514's real-audio arm crashed in
+   `fillSampleStreamRange` and its silent retry stopped before title. Do not
+   treat zero mixer rows as evidence.
+3. Keep the silent forced-LLE/no-spin result as a pre-title route-blocker
    baseline; do not repeat that arm unchanged.
-3. Keep Sessions 3494–3498 real-audio route results, Session 3492 dispatch,
+4. Keep Sessions 3494–3498 real-audio route results, Session 3492 dispatch,
    Session 3488 silent qualification, and Sessions 3482–3486 producer/pointer
    captures as baselines; do not repeat unchanged captures.
-4. Keep the controlled phase/PC/ordinal join rule: sequential animated-scene
+5. Keep the controlled phase/PC/ordinal join rule: sequential animated-scene
    A/B rows are not evidence. A missing positive control makes a comparison
    unevaluable; matching fields close a boundary and the first divergent field
    selects the next producer edge.
-5. M5 Step 3 remains gated until one output comparison names a missing
+6. M5 Step 3 remains gated until one output comparison names a missing
    image-task/output contract edge. `docs/M5-AUDIO-PLAN.md` is complete;
    configured-host PatchesLib validation is unavailable in this Unix checkout.
-6. After M5 closes or a new discriminator is found, resume only systematic M3
+7. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep retail-entry, hangar `0x8000` Y/accumulator, and
    SP-yield/MORT publication threads parked. Generated-symbol renaming remains
    last priority and closed at its measured scope.
@@ -85,7 +89,11 @@ The discriminating measurement is one independent retail capture and one
 qualified port capture at the new boundary plus existing phase/store controls.
 Matching predecessor fields with a later writer difference selects a mutation;
 the first differing predecessor field selects its producer; failed controls
-select capture invalidity only.
+ select capture invalidity only.
+
+Session 3514 adds a retail-qualified mixer-entry candidate at `0x80090E04`,
+but the port did not reach its target phase on either tested arm. See
+[M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md).
 
 ## Durable boundaries and operating rules
 
@@ -144,6 +152,7 @@ measurement only, not the qualified writer-context divergence.
 
 Latest selector boundary:
 
+- [M5-S3514-MIX-ENTRY-BOUNDARY.md](M5-S3514-MIX-ENTRY-BOUNDARY.md)
 - [M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md](M5-S3512-SELECTOR-PREDECESSOR-BOUNDARY.md)
 - [M5-S3511-SELECTOR-TABLE-PHASE-JOIN.md](M5-S3511-SELECTOR-TABLE-PHASE-JOIN.md)
 - [M5-S3510-SELECTOR-TABLE-PHASE-MISMATCH.md](M5-S3510-SELECTOR-TABLE-PHASE-MISMATCH.md)
