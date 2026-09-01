@@ -132615,3 +132615,29 @@ failed first attempt is documented as unevaluable, not as selector evidence.
 
 ORIGIN: diagnostic-only retail and port selector observations; no selector,
 task field, audio state, or output was rewritten, skipped, or validated.
+
+## Session 3499 (2026-08-31) — selected upstream selector producer divergence
+
+Ran the independent retail oracle first with a whole-RDRAM positive control,
+Rice video, title-driving presses, and execution watches for the predecessor
+range plus `0x80091060`/`0x80091074`. The control recorded 1,013,172 writes;
+the producer and selector boundary were live at title origin `0x00790400`.
+
+Added a regeneration-safe producer witness at `0x80091038` and ran the
+qualified real-image/LLE/spin-yield/autopilot port arm. Title, selector-load,
+and selector-writer controls fired, with 1,024 producer, load, and writer
+rows. Retail producer inputs included `a0=0x801772F0`, `a1=0x2`, `a2=0x1`,
+while port producer inputs varied between `a0=0x801772F0`/`0x80175960` and
+`a1=0/1/...`. This selects `H-ProducerDivergence` at the upstream
+producer/input boundary and rules out an absent producer observation or a
+downstream-only explanation. The caller supplying `musyxBuildVoiceCommandList`
+remains unresolved.
+
+The first port launch used the nonexistent Unix `build/Debug` path and
+produced no game data. The corrected non-autopilot route crashed at
+`0x8000834C` before title. Neither failed attempt is selector evidence. The
+final qualified run is documented in
+`docs/M5-S3499-SELECTOR-PRODUCER.md`.
+
+ORIGIN: diagnostic-only producer/input observation; no selector, task field,
+audio state, or output was rewritten, skipped, or validated.

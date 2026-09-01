@@ -2217,7 +2217,7 @@ extern "C" void rs64_m5_output_state_fields(uint8_t* rdram,
     const uint32_t s1 = U32(ctx->r17);
     auto word = [rdram](uint32_t guest) -> uint32_t {
         if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
-        const uint32_t p = guest - 0x80000000u;
+        const uint32_t p = (guest - 0x80000000u) ^ 3u;
         return (static_cast<uint32_t>(rdram[p]) << 24) |
                (static_cast<uint32_t>(rdram[p + 1]) << 16) |
                (static_cast<uint32_t>(rdram[p + 2]) << 8) |
@@ -2502,6 +2502,46 @@ extern "C" void rs64_m5_selector_load(uint32_t index, uint32_t table_addr,
         "s0=0x%08X s1=0x%08X s2=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X ra=0x%08X\n",
         rows++, rs64_phase_ord(), origin, index, table_addr, value,
         s0, s1, s2, a0, a1, a2, ra);
+    std::fflush(stderr);
+}
+
+extern "C" void rs64_m5_selector_producer(uint8_t* rdram, uint32_t pc,
+                                             uint32_t a0, uint32_t a1,
+                                             uint32_t a2, uint32_t a3,
+                                             uint32_t index, uint32_t ra) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SELECTOR_PRODUCER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled || !rdram) return;
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (rs64_vi_committed_width() != 1024u ||
+        (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t rows = 0;
+    if (rows == 0) {
+        std::fprintf(stderr,
+            "[m5-selector-producer-control] phase=%u width=1024 origin=0x%06X pc=0x%08X\n",
+            rs64_phase_ord(), origin, pc);
+        std::fflush(stderr);
+    }
+    if (rows >= 1024u) return;
+    const auto word = [rdram](uint32_t guest) -> uint32_t {
+        if (guest < 0x80000000u || guest > 0x807FFFFCu) return 0xFFFFFFFFu;
+        const uint32_t p = guest - 0x80000000u;
+        return (static_cast<uint32_t>(rdram[p]) << 24) |
+               (static_cast<uint32_t>(rdram[p + 1]) << 16) |
+               (static_cast<uint32_t>(rdram[p + 2]) << 8) |
+               static_cast<uint32_t>(rdram[p + 3]);
+    };
+    const uint32_t table = 0x80149758u + ((index & 0xFFu) * 4u);
+    std::fprintf(stderr,
+        "[m5-selector-producer] ordinal=%u phase=%u width=1024 origin=0x%06X "
+        "pc=0x%08X index=0x%08X table=0x%08X table_word=0x%08X "
+        "a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X ra=0x%08X\n",
+        rows++, rs64_phase_ord(), origin, pc, index, table, word(table),
+        a0, a1, a2, a3, ra);
     std::fflush(stderr);
 }
 

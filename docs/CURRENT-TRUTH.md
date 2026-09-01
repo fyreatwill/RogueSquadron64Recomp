@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3498 (2026-08-31). This record was
+Current active marker: Session 3499 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -643,13 +643,27 @@ failure. It does not identify the upstream selector/table producer. Evidence:
 ORIGIN: diagnostic-only retail and port selector observations; no selector,
 task field, audio state, or output was rewritten, skipped, or validated.
 
+Session 3499 compared the upstream selector producer. The independent retail
+oracle passed its whole-RDRAM control with 1,013,172 writes, reached title, and
+observed the producer entry and selector boundary. The qualified real-image
+port arm passed title, selector-load, and selector-writer controls and emitted
+1,024 producer rows. Retail producer inputs at the title boundary used
+`a0=0x801772F0`, `a1=0x2`, `a2=0x1`; port inputs varied between
+`a0=0x801772F0`/`0x80175960` and `a1=0/1/...`. This selects producer/input
+divergence and rules out an absent producer observation or downstream-only
+explanation at this boundary. The caller supplying `musyxBuildVoiceCommandList`
+remains unresolved. Evidence: [M5-S3499-SELECTOR-PRODUCER.md](M5-S3499-SELECTOR-PRODUCER.md).
+
+ORIGIN: diagnostic-only producer/input observation; no selector, task field,
+audio state, or output was rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Trace the upstream selector/table producer feeding `0x80091060`/`0x80091074`
-   with one batched retail/port discriminator keyed by title origin, selector
-   index, table address, and loaded source/value class. Keep the independent
-   whole-RDRAM control and both port selector controls positive; the first
-   matching or differing producer class selects the next edge.
+1. Trace the caller supplying `musyxBuildVoiceCommandList` at
+   `0x80091330 -> 0x80091034` with one batched retail/port discriminator keyed
+   by title origin, caller registers, and producer input class. Keep the
+   independent whole-RDRAM control and both port selector controls positive;
+   the first matching or differing caller class selects the next edge.
 2. Keep Sessions 3494–3498's real-audio route and selector outcomes and Session 3492's
    dispatch result as baselines; do not repeat any unchanged route retry.
 3. Keep Session 3488's silent route as the qualification baseline; do not
