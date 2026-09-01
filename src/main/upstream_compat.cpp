@@ -2545,6 +2545,35 @@ extern "C" void rs64_m5_selector_producer(uint8_t* rdram, uint32_t pc,
     std::fflush(stderr);
 }
 
+extern "C" void rs64_m5_selector_caller(uint32_t caller_pc,
+                                           uint32_t ra, uint32_t a0,
+                                           uint32_t a1, uint32_t a2,
+                                           uint32_t a3) {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SELECTOR_CALLER");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    if (!enabled) return;
+    const uint32_t origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    if (rs64_vi_committed_width() != 1024u ||
+        (origin != 0x00790400u && origin != 0x00790800u)) return;
+    static uint32_t rows = 0;
+    if (rows == 0) {
+        std::fprintf(stderr,
+            "[m5-selector-caller-control] phase=%u width=1024 origin=0x%06X pc=0x%08X\n",
+            rs64_phase_ord(), origin, caller_pc);
+        std::fflush(stderr);
+    }
+    if (rows >= 1024u) return;
+    std::fprintf(stderr,
+        "[m5-selector-caller] ordinal=%u phase=%u width=1024 origin=0x%06X "
+        "pc=0x%08X ra=0x%08X a0=0x%08X a1=0x%08X a2=0x%08X a3=0x%08X\n",
+        rows++, rs64_phase_ord(), origin, caller_pc, ra, a0, a1, a2, a3);
+    std::fflush(stderr);
+}
+
 extern "C" void rs64_m5_state_pointer_consumer(uint32_t s1) {
     static const bool enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");

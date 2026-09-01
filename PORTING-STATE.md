@@ -132641,3 +132641,31 @@ final qualified run is documented in
 
 ORIGIN: diagnostic-only producer/input observation; no selector, task field,
 audio state, or output was rewritten, skipped, or validated.
+
+## Session 3500 (2026-08-31) — selected selector caller divergence
+
+Ran the independent retail oracle first with a whole-RDRAM positive control,
+Rice video, title-driving presses, and execution watches at `0x80091330` and
+`0x80091034`. The control recorded 10,000 writes; both PCs executed 765 times
+in the title phase, with `0x80091330` directly preceding `0x80091034`.
+
+Added a regeneration-safe caller witness at `0x80091330` and built the full
+target successfully. The first port launch crashed at startup in
+`spTaskSchedulerThread` before title, so it was unevaluable. The corrected
+real-image/LLE/spin-yield/autopilot retry reached title and hangar, fired the
+caller, producer, and selector-load controls, and emitted 1,024 rows at each
+boundary with no crash or abort marker.
+
+Retail caller inputs were dominated by `a0=0x801772F0`, `a1=0x2`, `a2=0x1`.
+Port caller rows included 432 `a0=0x80175960`, `a1=0`, `a2=1` rows plus the
+mixed classes seen at the producer. Caller and producer rows were adjacent in
+the same port invocation. This selects `H-CallerDivergence` and rules out an
+absent caller observation and a producer-only transformation below the
+callsite. The writer or selector state feeding caller `a0`/`a1` remains
+unresolved. Evidence: `docs/M5-S3500-SELECTOR-CALLER.md`.
+
+The caller probe is diagnostic-only and does not rewrite, skip, or validate
+audio state, selector data, task fields, or output.
+
+ORIGIN: the new witness observes caller registers at the guest callsite; the
+writer of those arguments and legitimacy of the differing values remain open.

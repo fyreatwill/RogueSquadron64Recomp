@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3499 (2026-08-31). This record was
+Current active marker: Session 3500 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -657,13 +657,30 @@ remains unresolved. Evidence: [M5-S3499-SELECTOR-PRODUCER.md](M5-S3499-SELECTOR-
 ORIGIN: diagnostic-only producer/input observation; no selector, task field,
 audio state, or output was rewritten, skipped, or validated.
 
+Session 3500 compared the caller at `0x80091330 -> 0x80091034`. The
+independent retail oracle passed its 10,000-write whole-RDRAM control and
+recorded 765 executions at each PC in the title phase. The qualified port
+retry reached title and hangar, passed caller, producer, and selector-load
+controls, and emitted 1,024 rows at each boundary. Retail caller inputs were
+dominated by `a0=0x801772F0`, `a1=0x2`, `a2=0x1`; port caller inputs included
+432 `a0=0x80175960`, `a1=0`, `a2=1` rows and the mixed classes already seen at
+the producer. Because the caller and producer rows are adjacent in the same
+port invocation, this selects caller/input divergence and rules out an absent
+caller witness or producer-only transformation below the callsite. The writer
+feeding the caller's `a0`/`a1` remains unresolved. Evidence:
+[M5-S3500-SELECTOR-CALLER.md](M5-S3500-SELECTOR-CALLER.md).
+
+ORIGIN: diagnostic-only caller-register observation; no audio state, selector,
+task field, or output was rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Trace the caller supplying `musyxBuildVoiceCommandList` at
-   `0x80091330 -> 0x80091034` with one batched retail/port discriminator keyed
-   by title origin, caller registers, and producer input class. Keep the
-   independent whole-RDRAM control and both port selector controls positive;
-   the first matching or differing caller class selects the next edge.
+1. Trace the writer/selector state feeding the caller's `a0`/`a1` immediately
+   before `0x80091330`, with one batched retail/port discriminator keyed by
+   title origin, caller registers, and the preceding table/slot loads. Keep
+   the independent whole-RDRAM control and the port caller/producer controls
+   positive; the first matching or differing pre-call class selects the next
+   edge.
 2. Keep Sessions 3494–3498's real-audio route and selector outcomes and Session 3492's
    dispatch result as baselines; do not repeat any unchanged route retry.
 3. Keep Session 3488's silent route as the qualification baseline; do not
