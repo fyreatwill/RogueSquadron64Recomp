@@ -134892,7 +134892,24 @@ consumes eight paired entries and dispatches through the four known
 return-link-derived targets supplied by `renderVoiceAudioBlock`. Other literal
 matches were classified as stack slots, unrelated structures, or sequence
 helpers. No concrete invalid base, selector, count, writer, or target was
-found, so no guard or runtime change was made. This structurally closes the
-mix-table class; runtime descriptor contents, allocator state, and DMA timing
-remain unproven. It rules out a generated writer/consumer mismatch, not a
-runtime value defect.
+  found, so no guard or runtime change was made. This structurally closes the
+  mix-table class; runtime descriptor contents, allocator state, and DMA timing
+  remain unproven. It rules out a generated writer/consumer mismatch, not a
+  runtime value defect.
+
+## Session 3593 (2026-09-01) — audited audio pan-input provenance
+
+Performed the prescribed static grep-enumerate audit of
+`computeVoicePanCoefficients` (`0x8009C2D0`), all three direct callers, their
+16-byte source-vector inputs, and the `voice+0x188` selector lifecycle. The
+callers are `updateVoiceChannelParams` at `0x8009C584`,
+`updateVoiceChannelParamsLarge` at `0x8009C8C4`, and `decodeAndFillVoiceBlock`
+at `0x8009D778`; each supplies the expected voice/source layout and fixed
+four-pass filter/delay preparation. The selector is a two-bank halfword toggle
+and has no concrete invalid writer, alternate base, or unchecked bank bound.
+
+This selects structural completeness for H-PanInputsComplete and rules out
+H-PanInputsMisread plus a concrete H-PanInputsGap. Runtime source contents,
+allocator state, and DMA timing remain unproven. No guard or runtime change was
+made. Evidence is recorded in
+`docs/M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md`.

@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3592 (2026-09-01).
+notes are linked below. Updated for session 3593 (2026-09-01).
 
 ## Current state
 
@@ -83,9 +83,14 @@ The backlog is one monotonic sequence. Work only the first applicable item.
    Runtime descriptor contents, allocator state, and DMA timing remain
    unproven. See
    [M3-S3592-AUDIO-MIX-TABLE-PROVENANCE-AUDIT.md](M3-S3592-AUDIO-MIX-TABLE-PROVENANCE-AUDIT.md).
-   The next M3 unit is a provenance audit of the pan-coefficient inputs and
-   selector lifecycle at `computeVoicePanCoefficients`, including all callers
-   and writes to its source structures.
+   Session 3593 structurally closed the pan-coefficient input and selector
+   provenance class: all three direct callers and their 16-byte source-vector
+   paths are covered; `voice+0x188` is a bounded two-bank toggle with no
+   concrete invalid writer or base. Runtime source contents, allocator state,
+   and DMA timing remain unproven. See
+   [M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md](M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md).
+   The next M3 unit is the highest-information-value remaining audio idiom
+   audit; do not add a pan guard without a new runtime writer discriminator.
 5. Generated-symbol renaming remains last priority. Resume only when M5 is
    closed and M3 is parked with no new discriminator.
 
@@ -104,7 +109,7 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-MortGap | No concrete missing/invalid writer, consumer, base, or bound was found. |
 | H-MortMisread | Not supported: the range is a coherent CPU voice-filter/mix/compand path. |
 
-The current work-unit slug is `m3-audio-mix-table-provenance-audit`.
+The current work-unit slug is `m3-next-audio-idiom-audit`.
 
 ## Recent evidence ledger
 
@@ -172,6 +177,12 @@ and evidence notes retain the full history.
   publication edges. No concrete invalid writer/value, alternate base, or
   unchecked count was found; runtime legitimacy remains unproven. See
   [M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md](M3-S3592-MORT-PUBLICATION-IDIOM-AUDIT.md).
+- **3593 — pan-coefficient input/selector provenance audit:** all three direct
+  callers and the 16-byte source-vector paths were enumerated. The selector is
+  a bounded two-bank toggle at `voice+0x188`; no concrete invalid writer,
+  source pointer, object base, or unchecked count was found. Runtime source
+  contents, allocator state, and DMA timing remain unproven. See
+  [M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md](M3-S3593-AUDIO-PAN-INPUT-PROVENANCE-AUDIT.md).
 - **3585 — `stopVoicesByHandle` handle-provenance audit:** all four direct
   callers iterate the two linked-list heads and pass node `+0x8`; the visible
   constructor stores the generated handle at `+0x8` and copies
