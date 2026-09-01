@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3583 (2026-09-01).
+notes are linked below. Updated for session 3584 (2026-09-01).
 
 ## Current state
 
@@ -23,12 +23,14 @@ pointers from `0x800C825C`, unlike the port tuple. The target-phase retail
 source writer is `0x800078EC` and runs before the first observed target VI. A
 new oracle capture observed nonzero words and joined the
 `0x800052C4 -> 0x800078E0 -> 0x800078EC` path with changing buffer/length
-tuples. Session 3582 passed both positive controls, recorded 384 target-phase
-writer hits, and observed nonzero post-store words. This selects a
-retail-versus-port stored-value divergence at the writer boundary and
-qualifies the immediate producer context; the earlier producer and exact DMA
-ordering remain open. See
-[M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md](M5-S3582-RETAIL-SOURCE-WRITER-TABLE.md).
+tuples. Session 3584 watched the qualified source buffer itself: all controls
+and the target phase fired, but its phase histogram was mixed and exposed no
+stable earlier constructor or distinct DMA/copy PC. The earlier-constructor
+boundary is therefore unavailable to this oracle, not disproven; exact DMA
+ordering remains open. This still selects a retail-versus-port stored-value
+divergence at the writer boundary and qualifies the immediate producer
+context. See
+[M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md).
 
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
@@ -39,12 +41,11 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. M5 Step 3: use one new ground-truth watch on the qualified target source
-   buffer (`0x8065FA30`/physical `0x0065FA30`) to identify its construction
-   writer, with the same positive controls and target-phase gate. Do not repeat
-   the saturated PC field table. If that watch cannot identify a stable writer,
-   close the earlier-constructor boundary as unavailable and leave DMA order
-   explicitly open.
+1. M5 Step 3: the source-buffer oracle boundary is now closed as unavailable;
+   do not repeat that watch or the saturated field table. Exact DMA ordering
+   remains open, but no DMA identifier is exposed by the current capture. Do
+   not implement a writeback or zero-fill mitigation without a new independent
+   writer/order discriminator.
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -100,6 +101,11 @@ and evidence notes retain the full history.
   `0x59050000`; post-value rows again contained nonzero words. No earlier
   constructor or DMA event identifier was exposed, so those boundaries stay
   open. See [M5-S3583-RETAIL-PRODUCER-REPEAT.md](M5-S3583-RETAIL-PRODUCER-REPEAT.md).
+- **3584 — retail source-buffer writer:** all three watches and the target phase
+  fired; source-buffer writes were mixed, with 176 phase hits at `0x800078EC`
+  and no stable distinct constructor/DMA PC. The earlier-constructor boundary
+  is unavailable to this oracle; exact DMA ordering remains open. See
+  [M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md](M5-S3584-RETAIL-SOURCE-BUFFER-WRITER.md).
 - **3576 — retail predecessor input:** retail `0x800052C4` reached
   `0x800078E0` with varied lengths (`0x18`, `0x3C`, `0x208`, `0x4F0`,
   `0x1008`, `0x8000`), not the port tuple. This selected an observed-edge
