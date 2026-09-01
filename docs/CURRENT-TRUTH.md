@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3483 (2026-08-31). This record was
+Current active marker: Session 3484 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -420,29 +420,46 @@ and rules out an intervening payload mutation there. It does not identify the
 upstream producer of the extra port operands. Evidence:
 [scratch/agent/s3483_m5_task_field_writer/RESULTS.md](../scratch/agent/s3483_m5_task_field_writer/RESULTS.md).
 
+Session 3484 performed the planned producer-span capture. The retail oracle's
+whole-RDRAM control fired 24,592 times, candidate spans
+`0x18DD20:0x18DD50` and `0x18FB60:0x18FB90` fired 4,681 and 4,673 times, and
+the task-field watch fired 5,238 times across 632 title VIs. The port reached
+title, fired the source-span and task-writer controls, and emitted nine source
+rows: initialization and nearby-field stores at `0x80091078`, `0x8009114C`,
+`0x80091168`, and `0x80091170`; it did not store either extra operand into the
+candidate spans. The same port capture emitted 205 rows for each normal task
+operand but one row each for `0x8018DD30` and `0x8018FB70`. This rejects the
+candidate-span-store producer hypothesis at the measured scope and moves the
+unresolved edge to the upstream read/table-selection path. Evidence:
+[M5-S3484-PRODUCER-SPAN.md](../M5-S3484-PRODUCER-SPAN.md).
+
 ## Next steps
 
-1. Trace the upstream producer of the extra port writer operands
-   `0x8018FB70`/size 3 and `0x8018DD30`/size 1. Use one title-gated, bounded
-   writer census for the source spans feeding `0x1494A0`/`0x1494A4`, with the
-   existing whole-RDRAM and task-writer controls. A producer row preceding the
-   extra operand selects the producer divergence; matching producer values
-   followed by a writer mismatch selects a guest transformation boundary.
-2. Retain the Session 3483 retail post-store table and Session 3482 port
+1. Trace the upstream read/table-selection path for the extra port writer
+   operands `0x8018FB70`/size 3 and `0x8018DD30`/size 1. The Session 3484
+   candidate-span store census found initialization and nearby-field stores,
+   not the extra values. Use one title-gated bounded capture of the table reads
+   or selector inputs feeding `0x8009177C/0x80091784`, with both positive
+   controls. A matching source value followed by a writer mismatch selects a
+   guest transformation boundary; a divergent selector/read selects the
+   upstream producer boundary.
+2. Retain the Session 3484 retail writer census and port source-span rows; do
+   not repeat the rejected candidate-span store capture unchanged.
+3. Retain the Session 3483 retail post-store table and Session 3482 port
    writer/enqueue rows; do not repeat either unchanged capture.
-3. Retain the Session 3468 retail post-store table and Session 3473–3475 port
+4. Retain the Session 3468 retail post-store table and Session 3473–3475 port
    joins as baselines; do not repeat either unchanged capture.
-4. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
+5. Keep the controlled phase/PC/ordinal join as the baseline; do not compare
    sequential silent/image rows as an animated A/B.
-5. Matching fields close the boundary; the first divergent field selects the
+6. Matching fields close the boundary; the first divergent field selects the
    missing contract edge. Keep the retail oracle and port positive controls
    in the same run before trusting any null.
-6. Keep M5 Step 3 gated until that output comparison names one missing
+7. Keep M5 Step 3 gated until that output comparison names one missing
    image-task/output contract edge. The M5 design inventory is complete in
    [M5-AUDIO-PLAN.md](M5-AUDIO-PLAN.md). Configured-host PatchesLib validation
    is an external dependency; this Unix checkout lacks its MIPS toolchain and
    generated patch input.
-8. After M5 closes or a new discriminator is found, resume only systematic M3
+9. After M5 closes or a new discriminator is found, resume only systematic M3
    idiom-class audits. Keep external retail-entry, hangar `0x8000`
    Y/accumulator arithmetic, and SP-yield/MORT publication threads parked.
    Generated-symbol renaming is last priority and remains closed at its

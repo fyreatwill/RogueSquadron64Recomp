@@ -132288,3 +132288,29 @@ extra port operands. Evidence:
 
 ORIGIN: this iteration only observes independent retail stores and port writer/
 enqueue fields; it does not rewrite, skip, or validate task payloads.
+
+## Session 3484 (2026-08-31) — traced candidate producer spans for extra task operands
+
+The independent Rice oracle ran for 45 seconds with a whole-RDRAM positive
+control, physical watches on `0x18DD20:0x18DD50`, `0x18FB60:0x18FB90`, and the
+task-field span `0x1494A0:0x1494A8`. The control fired 24,592 times; the two
+candidate spans fired 4,681 and 4,673 times; the task-field watch fired 5,238
+times; and title reached 632 VIs. Candidate-span writers included retail
+initialization at `0x80018F5C/0x80018F60` and active title PCs
+`0x80091078`, `0x8009114C`, `0x80091168`, `0x80091170`, `0x80090CA4`,
+`0x80090CB0`, `0x80090CBC`, `0x80090CC8`, and `0x80090DE4`.
+
+The rebuilt port reached title origin `0x00790400` and fired both the new
+source-span control and the existing task-writer control. Its nine bounded
+source rows were initialization of the candidate records at `0x80091078` and
+nearby-field stores from `0x8009114C`, `0x80091168`, and `0x80091170`; none
+stored `0x8018DD30` or `0x8018FB70` into the candidate spans. The task writer
+emitted 205 rows for each normal operand but one row each for the two extra
+operands. The independent retail controls and port controls were live, so this
+rejects the candidate-span-store producer hypothesis at the measured scope.
+It leaves the upstream read/table-selection path unresolved and rules out no
+guest transformation after that path. Evidence:
+[M5-S3484-PRODUCER-SPAN.md](M5-S3484-PRODUCER-SPAN.md).
+
+ORIGIN: the new source-span hook is phase-gated and observational; it does not
+rewrite, skip, or validate task fields.

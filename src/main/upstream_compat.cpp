@@ -2319,6 +2319,42 @@ extern "C" void rs64_m5_state_pointer_checkpoint(uint8_t* rdram,
 
 extern "C" void rs64_m5_pointer_span_store(char width, uint32_t pc,
                                              uint32_t addr, uint32_t value) {
+    static const bool source_span_enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_M5_SOURCE_SPAN");
+        return (all && all[0] && all[0] != '0') ||
+               (own && own[0] && own[0] != '0');
+    }();
+    const uint32_t source_phys = addr & 0x1FFFFFFFu;
+    const uint32_t source_size = width == 'B' ? 1u : (width == 'H' ? 2u : 4u);
+    const uint32_t source_origin = rs64_vi_committed_origin() & 0x00FFFFFFu;
+    const bool source_title = rs64_vi_committed_width() == 1024u &&
+        (source_origin == 0x00790400u || source_origin == 0x00790800u);
+    const bool source_hit = source_phys < 0x0018DD50u &&
+        source_phys + source_size > 0x0018DD20u;
+    const bool source_hit2 = source_phys < 0x0018FB90u &&
+        source_phys + source_size > 0x0018FB60u;
+    if (source_span_enabled && source_title && (source_hit || source_hit2)) {
+        static uint32_t source_rows = 0;
+        static bool source_control = false;
+        if (!source_control) {
+            std::fprintf(stderr,
+                "[m5-source-span-control] phase=%u width=1024 origin=0x%06X "
+                "spans=0x18DD20:0x18DD50,0x18FB60:0x18FB90\n",
+                rs64_phase_ord(), source_origin);
+            std::fflush(stderr);
+            source_control = true;
+        }
+        if (source_rows < 4096u) {
+            std::fprintf(stderr,
+                "[m5-source-span] ordinal=%u phase=%u width=1024 origin=0x%06X "
+                "pc=0x%08X width=%c phys=0x%06X span=%s offset=0x%X value=0x%08X\n",
+                source_rows++, rs64_phase_ord(), source_origin, pc, width,
+                source_phys, source_hit ? "dd" : "fb",
+                source_phys - (source_hit ? 0x0018DD20u : 0x0018FB60u), value);
+            std::fflush(stderr);
+        }
+    }
     static const bool task_writer_enabled = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");
         const char* own = std::getenv("ROGUESQ_LOG_M5_TASK_WRITER");
