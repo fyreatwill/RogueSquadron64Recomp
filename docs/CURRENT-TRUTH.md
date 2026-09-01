@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-notes are linked below. Updated for session 3579 (2026-09-01).
+notes are linked below. Updated for session 3580 (2026-09-01).
 
 ## Current state
 
@@ -20,8 +20,11 @@ from `0x800078EC` (`rs_memset`, with tuples such as
 Retail independently reaches the target phase, writes the watched source
 span, and repeatedly calls `0x800078E0` with `a2=0x80` and changing structure
 pointers from `0x800C825C`, unlike the port tuple. The target-phase retail
-source writer is `0x800078EC` and runs before the first observed target VI;
-stored-value parity against the first source DMA remains open.
+source writer is `0x800078EC` and runs before the first observed target VI. A
+new oracle capture observed nonzero words in that target-phase source span,
+selecting a retail-versus-port stored-value divergence at the writer boundary.
+This is single-source oracle evidence; the producer and exact DMA ordering
+remain open.
 
 Do not force the cinematic flag at `0x800B0934`, bypass the state machine, or
 rewrite task, audio, PCM, selector, or output state. The default route's null
@@ -32,12 +35,12 @@ real-audio route is the comparison arm.
 
 The backlog is one monotonic sequence. Work only the first applicable item.
 
-1. M5 Step 3: resolve retail source value and DMA ordering. The retail oracle
-   identifies `0x800078EC` as the target-phase source-span writer at 47.4 s,
-   before the first observed `0x006AB400:512` VI at 48.5 s. Run one
-   phase-gated oracle table with post-value sampling; stored-value parity
-   against the port's zero-fill remains open. Exact command is in
-   `scratch/agent/NEXT.md`.
+1. M5 Step 3: independently qualify the nonzero retail source value and its
+   producer/order. The oracle selects nonzero target-phase words at
+   `0x800078EC`, but has no separate DMA event identifier and is one evidence
+   line. Use a new phase-gated table that joins the writer's source pointer,
+   post-value word, and first source-span DMA payload/order; exact command is
+   in `scratch/agent/NEXT.md`.
 2. Keep the s3554 slot-dispatch failure parked as route-specific absence.
    Revisit only with a new route discriminator; do not add a slot guard.
 3. Keep the silent-arm `fillSampleStreamRange` crash separate from the
@@ -55,8 +58,8 @@ The backlog is one monotonic sequence. Work only the first applicable item.
 | H-RetailWriterSame | Selected for target-phase identity/order: `0x800078EC` writes at 47.4 s before target VI at 48.5 s. |
 | H-RetailWriterOther | Refuted for the target-phase write; earlier setup writers are separate activity. |
 | H-RetailOrdering | Exact DMA ordering remains unmeasured. |
-| H-RetailValue | Stored-word parity remains open. |
-| H-CaptureInvalid | Whole-RDRAM, source-span, or target-phase control fails; no conclusion. |
+| H-RetailValue | Nonzero target-phase words selected; parity against the port remains open. |
+| H-CaptureInvalid | Refuted for this run: whole-RDRAM, source-span, writer-PC, and target-phase controls all fired. |
 
 The current work-unit slug is `m5-image-task-retail-source-writer`.
 

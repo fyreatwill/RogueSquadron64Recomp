@@ -134636,3 +134636,20 @@ runtime behavior was changed. Capture: `/tmp/rs64_next_oracle.log`.
 
 ORIGIN: diagnostic-only retail source-writer attribution. No mitigation was
 added.
+
+## Session 3580 (2026-09-01) — qualified retail source value
+
+Ran the prescribed 60-second retail oracle capture with positive controls,
+target-phase VI gating, writer/consumer PC watches, and post-value sampling.
+The whole-RDRAM control fired 10,674 times and the source-span watch fired
+674 times. The target phase occurred at VI 2803 / 47.4 s (width 512,
+`0x006AB400`); `0x800078EC` wrote 384 source-span locations at that time.
+Post-value rows contained nonzero words including `0x00941376`, `0x008317BD`,
+and `0x0042154D`, selecting H-RetailValueNonzero and ruling out a target-phase
+all-zero store. Earlier source-span setup activity occurred at 7.0–7.2 s.
+The capture exposed no separate DMA event identifier, so exact DMA-versus-
+writer ordering and the producer of the nonzero words remain open. This is a
+single-source oracle result; see `docs/M5-S3580-RETAIL-SOURCE-VALUE.md`.
+
+ORIGIN: diagnostic-only retail source-value qualification. No mitigation was
+added.
