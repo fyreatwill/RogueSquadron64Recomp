@@ -134070,3 +134070,27 @@ Evidence: `docs/M5-S3555-SLOT-DISPATCH-ROUTE.md` and
 `scratch/agent/slot_dispatch_s3555/run.log`.
 
 ORIGIN: diagnostic-only table; no mitigation or value rewrite was added.
+
+## Session 3556 (2026-09-01) — requalified the port-only pre-title MusyX boundary
+
+The required census showed that guest PC `0x80001B08` is the delay slot of
+`osRecvMesg` in `rs_malloc`, not an instruction in `musyxSynthFrame`. Retail
+ground truth passed its whole-RDRAM positive control with 10,000 callbacks but
+recorded zero execution hits in `0x80001ACC:0x80001B20` over 2,662 VIs. This
+means the reported port PC range is not a direct retail execution counterpart.
+
+Added a regeneration-safe, phase-gated port table at `rs_malloc` entry,
+pre/post receive, heap-state read, and return. The canonical real-audio/LLE-
+solo/spin-yield/autopilot run passed autopilot, reached the 512 hangar phase,
+kept the existing slot-dispatch positive control live, and emitted 2,759 entry,
+10,068 pre-receive, 10,068 post-receive, 4,279 heap-read, and 10,068 return
+rows. No crash marker appeared before deliberate SIGKILL. This selects
+`H-StaleCrashLabel` for this boundary and rules out a repeatable pre-title
+failure in this capture; it does not explain the separate s3554 dispatcher
+crash or establish heap-value legitimacy.
+
+Evidence: docs/M5-S3556-PRETITLE-MUSYX-ROUTE.md and
+scratch/agent/soak_results/s3556_pretitle_musyx/run.log.
+
+ORIGIN: diagnostic-only route table; no mitigation, guard, or value rewrite was
+added.

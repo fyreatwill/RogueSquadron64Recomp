@@ -2,7 +2,17 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3555 (2026-09-01).
+documents are listed below. Updated for session 3556 (2026-09-01).
+
+Session 3556 requalified the port-only boundary reported as
+`musyxSynthFrame+3828` with last guest PC `0x80001B08`. Static inspection shows
+that PC is the delay slot of `osRecvMesg` in `rs_malloc`; retail ground truth
+passed its whole-RDRAM control but had zero executions in the corresponding
+range. A same-build phase-gated port table emitted 2,759 entry, 10,068
+pre-receive, 10,068 post-receive, 4,279 heap-read, and 10,068 return rows,
+reached the 512 hangar phase, and had no crash before SIGKILL. This selects
+`H-StaleCrashLabel` at this boundary and leaves the separate s3554 dispatcher
+crash unresolved. See [M5-S3556-PRETITLE-MUSYX-ROUTE.md](M5-S3556-PRETITLE-MUSYX-ROUTE.md).
 
 Session 3555 ran the existing regeneration-safe slot-dispatch table with
 positive controls live: autopilot fired, VI widths reached 640 and 1024, and
@@ -419,16 +429,14 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. Requalify the canonical real-audio/LLE-solo/spin-yield/autopilot route at
-   the pre-title `musyxSynthFrame` crash (`last guest PC 0x80001B08`) using a
-   new phase-scoped boundary that names the immediate voice/state read and its
-   writer, while retaining the existing autopilot, VI, and slot-dispatch
-   controls. Do not interpret the slot table until the run reaches
-   `slotDispatcherIter` guest PC `0x80007904`.
+0. Requalify the separate s3554 `slotDispatcherIter` failure using a new
+   discriminator that joins the valid pre-call slot rows to the caller/entry
+   route and records the first failing consumer. Do not reuse
+   `0x80001B08` as a MusyX boundary; s3556 selected `H-StaleCrashLabel` there.
 
-1. After a route-valid capture, use the existing slot-dispatch table to
+1. In that route-valid capture, use the existing slot-dispatch table to
    distinguish invalid input from lifecycle/overlay mismatch. Session 3555's
-   valid KSEG0 pre-call rows are not evidence about the s3554 failure.
+   valid KSEG0 pre-call rows remain unevaluable for the s3554 failure.
 2. Keep the HMT role result as valid at this discriminator: nullable `a2` is
    an intended branch, and the sampled required pointers were mapped. Do not
    repeat the provisional non-pointer scalar classifier or treat its old
@@ -456,12 +464,13 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now the caller/input producer before the texture-record
-index formation. Session 3546 selected `H-ProducerDivergence`: retail and port
-both execute `loadTextureToMemory` with matching family inputs, but their
-phase-matched formed indices and record pointers diverge before the legitimate
-writes. The next witness must move to predecessor `0x80022ACC`; no record,
-audio, PCM, or output state is to be rewritten. The `0x80091CC8` internal return contract is closed by Sessions
+The active work unit is the separate s3554 slot-dispatch failure. Session 3556
+selected `H-StaleCrashLabel` at the previously reported `0x80001B08` boundary:
+that PC is the delay slot of `osRecvMesg` in port `rs_malloc`, and a validated
+same-build route completed through hangar with the new table live. The next
+witness must return to `slotDispatcherIter` guest PC `0x80007904` and join its
+caller/entry route, without rewriting heap, audio, PCM, image-task, output, or
+texture state. The `0x80091CC8` internal return contract is closed by Sessions
 3534–3535. The silent-arm route defect is parked separately.
 
 Session 3541 moved the live boundary to the port's zero-fill writer origin.
