@@ -134264,3 +134264,22 @@ See `docs/M5-S3562-IMAGE-TASK-CONTRACT.md`.
 
 ORIGIN: diagnostic-only phase, task, DMA, completion, PCM, slot, and output
 observations; no mitigation or value rewrite was added.
+## Session 3563 (2026-09-01) — image-stage DMA had no productive payload
+
+The independent retail oracle was unavailable because this checkout lacks its
+documented debugger core. The existing target-valid standalone image capture
+was rebuilt once and reached title VI `0x00790400`/1024 and hangar VI
+`0x006AB400`/512. Positive controls fired: image-stage, completion, RSP DMA,
+PCM source/consumer, audio return, downstream store, and both target phases.
+
+The phase-keyed writer census produced 2,131 title image-stage rows and 4,152
+hangar rows. Stage-2/3 source DMEM hashes, DMA payload hashes, and destination
+hashes were zero; the observed writer was the legitimate `dmem_to_rdram` DMA.
+Sixteen title destination samples were nonzero only as preexisting bytes before
+the zero DMA. No CPU/guest writer rows fired. This selects
+`H-StageWriterMissing` at the port discriminator and moves the next boundary
+to the producer of the image-task DMEM payload. It rules out a wrong
+destination for this run, but remains single-source port evidence because
+the retail oracle could not run. No mitigation or behavior change was made.
+
+See `docs/M5-S3563-IMAGE-STAGE-WRITER.md`.

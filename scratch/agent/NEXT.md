@@ -1,26 +1,27 @@
-# NEXT work unit — identify the image-task stage-output producer
+# NEXT work unit — identify the image-task DMEM producer
 
 HYPOTHESIS-ID: m5-image-task-output-producer
 
-Session 3562 found a target-valid standalone image arm, but its stage output
-was zero-valued and did not join PCM source/consumer rows. The concurrent pair
-was route-invalid and is discarded for target-phase comparison. Continue at
-the first legitimate producer of the stage destination. Before building, the
-competing hypotheses and one discriminator are:
+Session 3563 found the legitimate image-stage DMA writer, but its source DMEM,
+DMA payload, and destination were all zero. The concurrent pair remains
+route-invalid and is discarded. Continue at the first producer feeding the
+stage DMEM windows. Before building, the competing hypotheses and one
+discriminator are:
 
-- H-StageWriterMissing: the stage destination is never legitimately populated;
-  the producer census has no nonzero writer before task completion.
-- H-StageWriterWrong: a legitimate writer populates a different destination or
-  writes the wrong span; the census shows a stable divergent address/length.
-- H-StageOutputValid: a legitimate writer populates the observed destination;
-  the zero stage rows were a sampling or post-write interpretation error.
+- H-DmemProducerMissing: no legitimate producer populates the stage DMEM
+  windows before the image-stage hooks; the producer census remains zero.
+- H-DmemProducerWrong: a legitimate producer writes a divergent DMEM span or
+  transforms the wrong source; the census shows a stable address/length or
+  transform mismatch.
+- H-DmemPayloadValid: a legitimate producer populates the observed DMEM
+  windows and the zero hash was a later clearing/interpretation error.
 
-The single discriminator is one phase-keyed writer table for the image-stage
-destination, including every candidate CPU store/DMA write, writer PC, value,
-span, task ordinal, completion event, and the existing stage row. Positive
-controls required in the valid image arm are title 1024, hangar 512, image
-completion/DMA activity, and the existing PCM source/consumer controls. A
-zero writer census is meaningful only after those controls fire.
+The single discriminator is one phase-keyed producer table for DMEM
+`0x6F0..0x9F0` and `0xCB0..0xE48`, including every scalar/vector store or DMA,
+writer PC, value/hash, span, task ordinal, and the existing stage/DMA row.
+Positive controls required in the valid image arm are title 1024, hangar 512,
+image completion/DMA activity, and the existing PCM source/consumer controls.
+A zero producer census is meaningful only after those controls fire.
 
 Run the oracle control first if its debugger core and retail ROM are present.
 Then build once and run the target-valid standalone image recipe:
@@ -38,6 +39,6 @@ Then build once and run the target-valid standalone image recipe:
       zsh tools/probe.sh scratch/agent/NEXT_IMAGE_STAGE_WRITER 75 1
 
 Do not change task fields, output, gates, slots, PCM, writeback, or add a
-guard. If a writer exists, follow its input producer; if no writer exists,
-audit destination formation before completion. The retail oracle remains
+guard. If a producer exists, follow its input; if no producer exists, audit
+the DMEM staging/clear formation before completion. The retail oracle remains
 optional until its core and ROM are present.

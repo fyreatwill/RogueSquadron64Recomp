@@ -2,7 +2,7 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-documents are listed below. Updated for session 3562 (2026-09-01).
+documents are listed below. Updated for session 3563 (2026-09-01).
 
 Session 3562 closed the target-validity question for the downstream image-task
 contract on a standalone image arm. The same-build pair was route-invalid in
@@ -16,6 +16,17 @@ selects `H-ImageTaskOutputGap` at a single-source port discriminator and moves
 the next boundary to the first legitimate producer of the image-stage output.
 The oracle was unavailable because its debugger core and retail ROM are absent.
 See [M5-S3562-IMAGE-TASK-CONTRACT.md](M5-S3562-IMAGE-TASK-CONTRACT.md).
+
+Session 3563 closed the immediate image-stage writer discriminator on a
+target-valid standalone image arm. Title and hangar controls fired, with
+2,131 and 4,152 image-stage rows respectively; stage completion and RSP DMA
+controls were live. Stage-2/3 source DMEM, DMA payload, and destination
+hashes were zero, and the only observed writer was the legitimate
+`dmem_to_rdram` DMA. Title's occasional nonzero destination bytes were
+preexisting residue overwritten by that zero DMA. No CPU writer rows fired.
+This selects `H-StageWriterMissing` as a single-source port result and moves
+the boundary to the producer of the image-task DMEM payload. See
+[M5-S3563-IMAGE-STAGE-WRITER.md](M5-S3563-IMAGE-STAGE-WRITER.md).
 
 Session 3561 closed the paired-contention question with a target-valid
 standalone image retry. The concurrent image arm was route-invalid and
@@ -497,10 +508,11 @@ to be rewritten as a diagnostic mitigation.
 
 ## Next steps
 
-0. M5 Step 3 output boundary: follow the first legitimate producer of the
-   image-task stage destination. The standalone image arm reached title 1024
-   and hangar 512 with stage/completion/DMA/PCM controls live, but stage rows
-   were zero-valued and `stage-only`; do not rewrite output or PCM state.
+0. M5 Step 3 image-task producer: identify the first producer of the image
+   task's DMEM payload before its legitimate zero-valued DMA. The target-valid
+   arm showed matching zero source-DMEM, DMA-payload, and destination hashes;
+   do not rewrite output or PCM state. The next census must cover the producer
+   stores/transforms feeding DMEM `0x6F0..0x9F0` and `0xCB0..0xE48`.
 
 1. Keep the s3554 slot-dispatch failure parked as route-specific absence. The
    s3557 table had valid KSEG0 inputs and no `0x80007904` failure, so do not
@@ -535,7 +547,12 @@ to be rewritten as a diagnostic mitigation.
 
 ### Active hypothesis table
 
-The active work unit is now M5 Step 3 image-task output qualification. Session 3562
+The active work unit is now M5 Step 3 image-task producer qualification. Session 3563
+selected `H-StageWriterMissing`: the target-valid standalone image arm reached
+both title and hangar with all controls live, but the legitimate stage DMA
+carried zero source-DMEM payloads and no CPU writer rows were observed. The
+next witness must identify the first producer feeding the stage DMEM windows.
+Session 3562
 selected `H-ImageTaskOutputGap`: a target-valid standalone image arm had zero
 valued stage rows with no source/consumer joins, despite completion/DMA and
 title downstream consumer activity. The next witness must identify the first
