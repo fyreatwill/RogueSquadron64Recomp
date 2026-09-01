@@ -133836,6 +133836,31 @@ Evidence: `scratch/agent/s3546_m5_base_index_producer/oracle.log`,
 ORIGIN: the texture-record stores are legitimate game operations; this
 iteration only observed their upstream inputs and formed pointers.
 
+## Session 3548 (2026-09-01) — requalified real-audio pre-title route
+
+The independent retail oracle could not be rerun because this checkout lacks
+its required `libmupen64plus.dylib` core; the retained retail capture remains
+qualified by its whole-RDRAM control and title/hangar VIs. I ran one fresh
+canonical real-audio/LLE/spin-yield/autopilot port arm from `build/` with
+SIGKILL cleanup and the existing caller/input, base/index, destination,
+audio-return, and task controls.
+
+Startup and 320-VI phase controls fired. The port again SIGBUSed before title
+in `parseHmtMaterials+3588` via `loadDebugAssets`, with `si_addr=0x3800007e0`
+and stale `last-guest-pc=0x80001F88`. Audio dispatch, caller, base/index,
+destination, and task witnesses were all zero. This reproduces the route-
+invalid capture and selects `H-PortAssetInput`: the crash precedes audio task
+dispatch, so this run does not support an audio-scheduling explanation. It
+does not yet identify the malformed HMT/texture input or its writer.
+
+No audio, PCM, image-task, output, or texture-record state was changed.
+
+ORIGIN: diagnostic-only route and phase observations; no value was suppressed,
+rewritten, skipped, or guarded.
+
+Evidence: `scratch/agent/s3548_m5_route_requalification/port.log` and
+`result.txt`. See `scratch/agent/NEXT.md`.
+
 ## Session 3547 (2026-09-01) — caller/input producer capture was route-invalid
 
 Added the regeneration-safe caller/input witness immediately before and after

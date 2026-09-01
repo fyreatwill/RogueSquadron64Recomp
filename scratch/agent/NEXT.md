@@ -1,4 +1,4 @@
-# NEXT work unit — restore a phase-valid port route for caller/input capture
+# NEXT work unit — identify the malformed pre-title HMT input
 
 HYPOTHESIS-ID: m5-preclear-caller-input-producer
 
@@ -7,25 +7,28 @@ retail oracle was phase-valid, but the real-audio port SIGBUSed in
 `parseHmtMaterials+3588` before target entry. Do not repeat the caller table
 until the port route is phase-valid.
 
-Do exactly one bounded work unit: identify and correct the existing pre-title
-port launch/runtime condition that produces `parseHmtMaterials+3588` with
-`last-guest-pc=0x80001F88`, using one controlled real-audio run. Preserve the
-caller witness in the generated fixup and keep all audio, PCM, image-task,
-output, and texture-record writes unchanged.
+Do exactly one bounded work unit: add a regeneration-safe, phase-independent
+entry table for `loadDebugAssets` -> `registerHmtTextureInTable` ->
+`parseHmtMaterials`, rebuild once, and run the canonical real-audio route once.
+Capture every call's pointer/index/count tuple and the first malformed pointer
+before the existing crash. Preserve all existing witnesses and keep all audio,
+PCM, image-task, output, and texture-record writes unchanged.
 
 Competing hypotheses and discriminator:
 
-- `H-PortRouteRestored`: the port reaches title and hangar with positive
-  controls, so the caller table can be rerun next.
-- `H-PortPreTitleCrash`: the same pre-title HMT crash reproduces before any
-  phase; the route repair hypothesis is not yet tested.
-- `H-PortLaunchInvalid`: the process fails to launch or the positive control
-  is absent, so no runtime conclusion is allowed.
+- `H-HmtInputValid`: all three entry tuples are valid and the route reaches a
+  target VI; the caller/input table can be rerun.
+- `H-HmtInputMalformed`: a specific pre-title tuple or pointer is outside the
+  mapped RDRAM range before `parseHmtMaterials`; that producer is the next
+  correction boundary.
+- `H-HmtEntryAbsent`: the positive control or entry table is absent, so the
+  capture is invalid and no input conclusion is allowed.
 
-The single discriminating measurement is the phase/control/crash table:
-positive control, title VI, hangar VI, crash PC, and last guest PC. A restored
-route selects `H-PortRouteRestored`; the same SIGBUS selects
-`H-PortPreTitleCrash`; missing launch/control selects `H-PortLaunchInvalid`.
+The single discriminating measurement is one joined table containing positive
+control, each HMT entry tuple, pointer validity, title/hangar VI, crash PC,
+and last guest PC. Valid tuples plus target VI select `H-HmtInputValid`; an
+invalid tuple immediately before the crash selects `H-HmtInputMalformed`;
+missing controls select `H-HmtEntryAbsent`.
 
 The single discriminating table must include caller PC, predecessor, phase/VI,
 caller inputs/returns, the fields feeding the index, and the first family

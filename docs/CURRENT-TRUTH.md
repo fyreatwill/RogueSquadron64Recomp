@@ -2,7 +2,18 @@
 
 Compact operational state for [PORTING-STATE.md](../PORTING-STATE.md). Durable
 background is in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md); detailed evidence
-evidence documents are listed below. Updated for session 3547 (2026-09-01).
+evidence documents are listed below. Updated for session 3548 (2026-09-01).
+
+Session 3548 re-ran the canonical real-audio/LLE/spin-yield/autopilot port
+route from `build/`. Startup and 320-VI controls fired, but it again SIGBUSed
+before title in `parseHmtMaterials+3588`/`loadDebugAssets` with
+`si_addr=0x3800007e0`; audio-dispatch, caller, base/index, destination, and
+task witnesses were zero. The retained retail oracle remains phase-valid, but
+the fresh oracle cannot run because this checkout lacks its required
+`libmupen64plus.dylib`. This selects `H-PortAssetInput` at the current
+discriminator and moves the next probe to the HMT/texture input at
+`registerHmtTextureInTable`; it does not identify that input's writer. See
+[M5-S3548-PORT-ROUTE-REQUALIFICATION.md](M5-S3548-PORT-ROUTE-REQUALIFICATION.md).
 
 Session 3547 added the caller/input witness immediately around the direct
 `loadTextureToMemory` call at `0x80022ACC`. The independent retail oracle
