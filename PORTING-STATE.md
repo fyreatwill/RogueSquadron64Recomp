@@ -132719,3 +132719,17 @@ the missing selector rows as a post-title null. Evidence:
 ORIGIN: diagnostic-only retail and port route, phase, selector, and crash
 observations; no audio state, selector value, task field, or output was
 rewritten, skipped, or validated.
+## Session 3503 (2026-08-31) — real-audio route retry remains pre-title blocked
+
+Ran one phase-gated real-audio/LLE/spin-yield/autopilot retry from `build/`
+with the existing phase, dispatch, audio-return, selector, caller, and
+producer controls. The startup path reached VI widths 0 and 320, then emitted
+a SIGSEGV at host `spTaskSchedulerThread+9556`, guest PC `0x8000834C`.
+The startup control was live, but title, audio-return, and selector controls
+and rows were zero. This fresh retry reproduces the Session 3502 route blocker
+and selects `H-AudioRouteCrash`; selector-table writer/index/value hypotheses
+remain unevaluable. No audio, selector, task, or output state was rewritten,
+skipped, or validated. Evidence: `docs/M5-S3503-REAL-AUDIO-ROUTE.md`.
+
+ORIGIN: diagnostic-only route, phase, selector, audio-dispatch, and crash
+observations; the run added no mitigation or behavior change.

@@ -5,7 +5,7 @@ and archived session detail are in [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 This file is the compact active-state record; full run logs live under
 `scratch/agent/` and the session evidence documents.
 
-Current active marker: Session 3501 (2026-08-31). This record was
+Current active marker: Session 3503 (2026-08-31). This record was
 compacted during the next maintenance iteration; sessions 3201–3445 remain in
 the append-only ledger and overview archive.
 
@@ -709,12 +709,26 @@ ORIGIN: diagnostic-only retail and port route, phase, selector, and crash
 observations; no audio state, selector value, task field, or output was
 rewritten, skipped, or validated.
 
+Session 3503 repeated the bounded real-audio/LLE/spin-yield/autopilot route
+with the existing phase, dispatch, audio-return, selector, caller, and
+producer controls. The startup path reached VI widths 0 and 320, then
+crashed before title at `spTaskSchedulerThread+9556`, guest PC `0x8000834C`.
+The startup path was live, but title, audio-return, and selector controls/rows
+were zero. This independently reproduces the Session 3502 route blocker and
+selects `H-AudioRouteCrash`; selector-table writer/index/value hypotheses are
+unevaluable, not null. Evidence: [M5-S3503-REAL-AUDIO-ROUTE.md](M5-S3503-REAL-AUDIO-ROUTE.md).
+
+ORIGIN: diagnostic-only route, phase, selector, audio-dispatch, and crash
+observations; no audio state, selector value, task field, or output was
+rewritten, skipped, or validated.
+
 ## Next steps
 
-1. Re-qualify the real-audio title route with a new, bounded route
+1. Re-qualify the real-audio title route with a genuinely new, bounded route
    discriminator before resuming selector-table attribution. Require the
    whole-RDRAM oracle control, port route control, and a 1024 title transition;
-   the known `0x8000834C` pre-title crash is a blocker, not a selector null.
+   the repeated `0x8000834C` pre-title crash is a blocker, not a selector null.
+   Do not repeat the unchanged route recipe again.
 2. Once that route is qualified, trace the writer/initializer and selector-index source feeding the
    `0x80150000`/`0x80150004` table entries used by `0x8009131C`, with one
    batched retail/port discriminator keyed by title origin, table address,
